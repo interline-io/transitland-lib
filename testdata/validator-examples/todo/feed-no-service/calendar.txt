@@ -1,0 +1,2 @@
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+WKDY,0,0,0,0,0,0,0,20180526,20190701

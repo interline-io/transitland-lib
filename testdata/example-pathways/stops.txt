@@ -1,0 +1,132 @@
+stop_id,stop_name,stop_lat,stop_lon,wheelchair_boarding,stop_timezone,location_type,parent_station,level_id
+4900ZZLUKSX1,King's Cross St. Pancras Underground Station,51.530205,-0.123822,1,,2,940GZZLUKSX,
+4900ZZLUKSX2,King's Cross St. Pancras Underground Station,51.530247,-0.123517,1,,2,940GZZLUKSX,
+4900ZZLUKSX3,King's Cross St. Pancras Underground Station,51.530155,-0.123406,1,,2,940GZZLUKSX,
+4900ZZLUKSX4,King's Cross St. Pancras Underground Station,51.53006,-0.123612,1,,2,940GZZLUKSX,
+4900ZZLUKSX5,King's Cross St. Pancras Underground Station,51.530083,-0.124072,1,,2,940GZZLUKSX,
+4900ZZLUKSX6,King's Cross St. Pancras Underground Station,51.530708,-0.124378,1,,2,940GZZLUKSX,
+4900ZZLUKSX7,King's Cross St. Pancras Underground Station,51.530922,-0.124239,1,,2,940GZZLUKSX,
+4900ZZLUKSX8,King's Cross St. Pancras Underground Station,51.530491,-0.123738,1,,2,940GZZLUKSX,
+4900ZZLUKSX9,King's Cross St. Pancras Underground Station,51.530849,-0.120385,1,,2,940GZZLUKSX,
+4900ZZLUKSXA,King's Cross St. Pancras Underground Station,51.532131,-0.126122,1,,2,940GZZLUKSX,
+4900ZZLUKSXB,King's Cross St. Pancras Underground Station,51.532116,-0.124709,1,,2,940GZZLUKSX,
+4900ZZLUKSXC,King's Cross St. Pancras Underground Station,51.530125,-0.124835,1,,2,940GZZLUKSX,
+ITO650,King's Cross St. Pancras Underground Station,51.533147,-0.124915,1,,2,940GZZLUKSX,
+9400ZZLUKSX1,King's Cross St. Pancras Underground Station,51.530434,-0.122284,1,,0,940GZZLUKSX,
+9400ZZLUKSX2,King's Cross St. Pancras Underground Station,51.530468,-0.122182,1,,0,940GZZLUKSX,
+9400ZZLUKSX3,King's Cross St. Pancras Underground Station,51.529911,-0.123935,1,,0,940GZZLUKSX,
+9400ZZLUKSX4,King's Cross St. Pancras Underground Station,51.530834,-0.121965,1,,0,940GZZLUKSX,
+9400ZZLUKSX5,King's Cross St. Pancras Underground Station,51.530838,-0.121849,1,,0,940GZZLUKSX,
+9400ZZLUKSX6,King's Cross St. Pancras Underground Station,51.531288,-0.122984,1,,0,940GZZLUKSX,
+9400ZZLUKSX7,King's Cross St. Pancras Underground Station,51.531361,-0.122981,1,,0,940GZZLUKSX,
+ITO42,King's Cross St. Pancras Underground Station,51.52991072,-0.12396071,1,,0,940GZZLUKSX,
+940GZZLUKSX,King's Cross St. Pancras,51.530407,-0.123798,1,Europe/London,1,,
+access11,,,,,,3,940GZZLUKSX,-1
+access12,,,,,,3,940GZZLUKSX,-1
+access17,,,,,,3,940GZZLUKSX,0
+access21,,,,,,3,940GZZLUKSX,-1
+access26,,,,,,3,940GZZLUKSX,0
+access33,,,,,,3,940GZZLUKSX,0
+access35,,,,,,3,940GZZLUKSX,-1
+access38,,,,,,3,940GZZLUKSX,-1
+access42,,,,,,3,940GZZLUKSX,-2
+access45,,,,,,3,940GZZLUKSX,-2
+boarding48,,,,,,4,ITO42,
+boarding49,,,,,,4,9400ZZLUKSX3,
+boarding50,,,,,,4,ITO42,
+boarding51,,,,,,4,9400ZZLUKSX3,
+access56,,,,,,3,940GZZLUKSX,0
+access58,,,,,,3,940GZZLUKSX,-1
+access60,,,,,,3,940GZZLUKSX,-1
+access62,,,,,,3,940GZZLUKSX,0
+access64,,,,,,3,940GZZLUKSX,0
+access66,,,,,,3,940GZZLUKSX,0
+access71,,,,,,3,940GZZLUKSX,0
+access77,,,,,,3,940GZZLUKSX,0
+access80,,,,,,3,940GZZLUKSX,0
+access82,,,,,,3,940GZZLUKSX,-1
+access84,,,,,,3,940GZZLUKSX,-2
+boarding87,,,,,,4,9400ZZLUKSX4,
+boarding88,,,,,,4,9400ZZLUKSX5,
+access91,,,,,,3,940GZZLUKSX,0
+access97,,,,,,3,940GZZLUKSX,-3
+boarding101,,,,,,4,9400ZZLUKSX5,
+access105,,,,,,3,940GZZLUKSX,-1
+access107,,,,,,3,940GZZLUKSX,0
+access108,,,,,,3,940GZZLUKSX,-2
+boarding111,,,,,,4,9400ZZLUKSX7,
+boarding112,,,,,,4,9400ZZLUKSX7,
+boarding113,,,,,,4,9400ZZLUKSX7,
+boarding114,,,,,,4,9400ZZLUKSX6,
+boarding115,,,,,,4,9400ZZLUKSX6,
+boarding116,,,,,,4,9400ZZLUKSX6,
+access125,,,,,,3,940GZZLUKSX,0
+access129,,,,,,3,940GZZLUKSX,0
+access130,,,,,,3,940GZZLUKSX,0
+access131,,,,,,3,940GZZLUKSX,-2
+access132,,,,,,3,940GZZLUKSX,-1
+boarding137,,,,,,4,9400ZZLUKSX2,
+boarding138,,,,,,4,9400ZZLUKSX2,
+boarding139,,,,,,4,9400ZZLUKSX1,
+boarding142,,,,,,4,9400ZZLUKSX2,
+boarding143,,,,,,4,9400ZZLUKSX1,
+boarding144,,,,,,4,9400ZZLUKSX2,
+boarding145,,,,,,4,9400ZZLUKSX1,
+access153,,,,,,3,940GZZLUKSX,0
+boarding163,,,,,,4,9400ZZLUKSX1,
+access172,,,,,,3,940GZZLUKSX,0
+boarding174,,,,,,4,ITO42,
+boarding175,,,,,,4,9400ZZLUKSX3,
+boarding189,,,,,,4,9400ZZLUKSX7,
+boarding192,,,,,,4,9400ZZLUKSX6,
+access200,,,,,,3,940GZZLUKSX,-2
+boarding204,,,,,,4,9400ZZLUKSX5,
+boarding205,,,,,,4,9400ZZLUKSX4,
+boarding218,,,,,,4,9400ZZLUKSX4,
+access224,,,,,,3,940GZZLUKSX,-1
+access231,,,,,,3,940GZZLUKSX,0
+access234,,,,,,3,940GZZLUKSX,0
+access237,,,,,,3,940GZZLUKSX,0
+access239,,,,,,3,940GZZLUKSX,0
+access242,,,,,,3,940GZZLUKSX,0
+boarding246,,,,,,4,9400ZZLUKSX2,
+boarding248,,,,,,4,9400ZZLUKSX1,
+boarding257,,,,,,4,9400ZZLUKSX2,
+boarding258,,,,,,4,9400ZZLUKSX1,
+boarding259,,,,,,4,9400ZZLUKSX2,
+boarding260,,,,,,4,9400ZZLUKSX1,
+boarding269,,,,,,4,9400ZZLUKSX4,
+boarding272,,,,,,4,9400ZZLUKSX5,
+access277,,,,,,3,940GZZLUKSX,0
+access281,,,,,,3,940GZZLUKSX,0
+access291,,,,,,3,940GZZLUKSX,0
+access301,,,,,,3,940GZZLUKSX,
+boarding303,,,,,,4,9400ZZLUKSX4,
+boarding306,,,,,,4,9400ZZLUKSX5,
+access309,,,,,,3,940GZZLUKSX,
+access311,,,,,,3,940GZZLUKSX,-2
+access312,,,,,,3,940GZZLUKSX,
+access315,,,,,,3,940GZZLUKSX,
+access317,,,,,,3,940GZZLUKSX,
+access318,,,,,,3,940GZZLUKSX,
+access319,,,,,,3,940GZZLUKSX,
+access326,,,,,,3,940GZZLUKSX,
+access328,,,,,,3,940GZZLUKSX,
+access329,,,,,,3,940GZZLUKSX,
+access332,,,,,,3,940GZZLUKSX,
+access334,,,,,,3,940GZZLUKSX,-2
+access335,,,,,,3,940GZZLUKSX,-1
+access337,,,,,,3,940GZZLUKSX,
+access339,,,,,,3,940GZZLUKSX,
+access341,,,,,,3,940GZZLUKSX,
+access343,,,,,,3,940GZZLUKSX,
+access345,,,,,,3,940GZZLUKSX,
+access347,,,,,,3,940GZZLUKSX,-1
+access356,,,,,,3,940GZZLUKSX,-2
+access359,,,,,,3,940GZZLUKSX,-2
+access403,,,,,,3,940GZZLUKSX,
+access406,,,,,,3,940GZZLUKSX,
+access409,,,,,,3,940GZZLUKSX,
+access410,,,,,,3,940GZZLUKSX,
+access414,,,,,,3,940GZZLUKSX,
+access433,,,,,,3,940GZZLUKSX,

@@ -1,0 +1,4 @@
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,timepoint,expect_error
+2230435WKDY,05:00:00,05:00:00,19TH,8,Fremont,,,,1
+2230435WKDY,05:02:00,05:02:00,12TH,9,Fremont,,,,1
+xyz,05:05:00,05:05:00,LAKE,10,Fremont,,,,1,InvalidReferenceError:trip_id

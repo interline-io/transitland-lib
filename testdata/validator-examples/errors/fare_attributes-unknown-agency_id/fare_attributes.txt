@@ -1,0 +1,2 @@
+fare_id,price,currency_type,payment_method,transfers,transfer_duration,agency_id,expect_error
+50,2.50,USD,1,,,xyz,InvalidReferenceError:agency_id

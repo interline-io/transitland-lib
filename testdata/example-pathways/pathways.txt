@@ -1,0 +1,189 @@
+pathway_id,is_bidirectional,cover_type,length,max_slope,min_width,pathway_mode,reversed_signposted_as,signposted_as,stair_count,traversal_time,wheelchair_assistance,from_stop_id,to_stop_id
+link330,1,0,0,,,1,,,,,,access329,access328
+link331,1,0,0,,,1,,,,,,access328,access108
+link338,1,0,0,,,1,Euston Road Way Out,,,,,access337,4900ZZLUKSX5
+link342,1,0,0,,,1,St Pancras International,"Euston Road, Buses, Underground",,,,access341,access26
+link344,1,0,0,,,1,,,,,,access343,access33
+link405,0,0,2,,,7,,,,,,access58,access403
+link408,0,0,2,,,7,,,,,,access66,access406
+link413,0,0,2,,,7,,,,,,access409,access410
+link416,0,0,2,,,7,,,,,,access414,access234
+link404,0,0,2,,,6,,,,,,access403,access58
+link407,0,0,2,,,6,,,,,,access406,access66
+link412,0,0,2,,,6,,,,,,access410,access409
+link415,0,0,2,,,6,,,,,,access234,access414
+link89,1,0,6,,,1,"Kings Cross, St Pancras",Northern Line Northbound Platform,,5,,access301,boarding87
+link90,1,0,6,,,1,"Kings Cross, St Pancras",Northern Line Southbound Platform,,5,,access301,boarding88
+link102,1,0,6,,,1,"Kings Cross, St Pancras, Lift",Northern Line Southbound Platform,,5,,access97,boarding272
+link121,1,0,6,,,1,"Victoria Line, Kings Cross, St Pancras",Piccadilly Line Westbound Platform,,5,,access329,boarding113
+link122,1,0,6,,,1,"Victoria Line, Kings Cross, St Pancras",Piccadilly Line Eastbound Platform,,5,,access329,boarding114
+link123,1,0,6,,,1,"Victoria Line, Kings Cross, St Pancras",Piccadilly Line Westbound Platform,,5,,access107,boarding111
+link124,1,0,6,,,1,"Victoria Line, Kings Cross, St Pancras",Piccadilly Line Eastbound Platform,,5,,access107,boarding116
+link146,1,0,6,,,1,"Way Out, Trains, Hammersmith & City, Metropolitan and Circle Lines",Victoria Line Northbound Platform,,5,,access317,boarding145
+link147,1,0,6,,,1,"Way Out, Trains, Hammersmith & City, Metropolitan and Circle Lines",Victoria Line Northbound Platform,,5,,access318,boarding143
+link149,1,0,6,,,1,"Way Out, Trains, Hammersmith & City, Metropolitan and Circle Lines",Victoria Line Southbound Platform,,5,,access317,boarding144
+link150,1,0,6,,,1,"Way Out, Trains, Hammersmith & City, Metropolitan and Circle Lines",Victoria Line Southbound Platform,,5,,access318,boarding142
+link156,1,0,6,,,1,,,,5,,boarding144,boarding142
+link158,1,0,6,,,1,,,,5,,boarding142,boarding257
+link160,1,0,6,,,1,,,,5,,boarding145,boarding143
+link162,1,0,6,,,1,,,,5,,boarding143,boarding258
+link170,1,0,6,,,1,"Piccadilly Line, Kings Cross, St Pancras International",Victoria Line Southbound Platform,,5,,boarding137,access129
+link171,1,0,6,,,1,"Piccadilly Line, Kings Cross, St Pancras International",Victoria Line Northbound Platform,,5,,boarding163,access129
+link195,1,0,6,,,1,"Victoria Line, Kings Cross, St Pancras, Lift",Piccadilly Line Eastbound Platform,,5,,boarding192,access108
+link196,1,0,6,,,1,"Victoria Line, Kings Cross, St Pancras, Lift",Piccadilly Line Westbound Platform,,5,,access108,boarding112
+link244,1,0,6,,,1,,,,5,,access343,access242
+link267,1,0,6,,,1,"Piccadilly Line, Kings Cross, St Pancras International, Lift, Way Out Regent's Canal, Pentonville Road",,,5,,boarding139,access130
+link268,1,0,6,,,1,"Piccadilly Line, Kings Cross, St Pancras International, Lift",Victoria Line Southbound Platform,,5,,access130,boarding138
+link273,1,0,6,,,1,"Kings Cross, St Pancras, Lift",Northern Line Northbound Platform,,5,,access97,boarding269
+link286,1,0,6,,,1,"Victoria Line, Kings Cross, St Pancras",Piccadilly Line Eastbound Platform,,5,,access328,boarding115
+link287,1,0,6,,,1,"Victoria Line, Kings Cross, St Pancras",Piccadilly Line Westbound Platform,,5,,access328,boarding189
+link289,1,0,6,,,1,"Way Out, Trains, Hammersmith & City, Metropolitan and Circle Lines",Victoria Line Southbound Platform,,5,,access319,boarding257
+link290,1,0,6,,,1,"Way Out, Trains, Hammersmith & City, Metropolitan and Circle Lines",Victoria Line Northbound Platform,,5,,access319,boarding258
+link54,1,0,13,,,1,"Way Out, Kings Cross, St Pancras","Hammersmith & City, Metropolitan and Circle Lines Platform 1 via Baker Street",,10,,access312,boarding49
+link55,1,0,13,,,1,"Way Out, Kings Cross, St Pancras","Hammersmith & City, Metropolitan and Circle Lines Platform 2 via Liverpool Street",,10,,access312,boarding48
+link241,1,0,13,,,1,"Buses, Euston Road (North Side)",Tickets and Trains St Pancras International,,10,,access239,access337
+link254,1,0,13,,,1,Victoria Line Southbound Platform,,,10,,boarding246,boarding248
+link261,1,0,13,,,1,Victoria Line Southbound Platform,Victoria Line Northbound Platform,,10,,boarding259,boarding260
+link302,1,0,13,,,1,,,,10,,access84,access301
+link310,1,0,13,,,1,,,,10,,access42,access309
+link313,1,0,13,,,1,,,,10,,access45,access312
+link320,1,0,13,,,1,,,,10,,access317,access318
+link322,1,0,13,,,1,,,,10,,access318,access319
+link327,1,0,13,,,1,,,,10,,access125,access326
+link350,1,0,13,,,1,,,,10,,access347,access17
+link352,1,0,13,,,1,,,,10,,access335,access406
+link354,1,0,13,,,1,,,,10,,access334,access77
+link360,1,0,13,,,1,,,,10,,access58,access359
+link411,0,0,13,,,1,,,,10,,4900ZZLUKSX9,access410
+link30,1,0,19,,,1,St Pancras International,"Kings Cross, Pancras Road, To Underground across Pancras Road, Lift",,15,,4900ZZLUKSX1,access242
+link32,1,0,19,,,1,,,,15,,access237,access26
+link40,1,0,19,,,1,,"Hammersmith & City, Metropolitan and Circle Lines",,15,,access35,access234
+link117,1,0,19,,,1,,,,15,,boarding114,boarding115
+link133,1,0,19,,,1,,,,15,,access326,access132
+link176,1,0,19,,,1,"Way Out, Kings Cross, St Pancras","Hammersmith & City, Metropolitan and Circle Lines Platform 1 via Baker Street",,15,,access172,boarding175
+link177,1,0,19,,,1,"Way Out, Kings Cross, St Pancras","Hammersmith & City, Metropolitan and Circle Lines Platform 2 via Liverpool Street",,15,,access172,boarding174
+link190,1,0,19,,,1,,,,15,,boarding113,boarding189
+link191,1,0,19,,,1,,,,15,,boarding189,boarding112
+link193,1,0,19,,,1,,,,15,,boarding115,boarding192
+link221,1,0,19,,,1,Northern Line Southbound Platform,Northern Line Northbound Platform,,15,,boarding218,boarding101
+link222,1,0,19,,,1,Northern Line Southbound Platform,Northern Line Northbound Platform,,15,,boarding303,boarding306
+link232,1,0,19,,,1,Victoria Line,Piccadilly Line,,15,,access231,access64
+link235,1,0,19,,,1,"Way Out, Kings Cross, St Pancras International","Hammersmith & City, Metropolitan and Circle Lines",,15,,access414,access38
+link250,1,0,19,,,1,,,,15,,boarding246,boarding138
+link253,1,0,19,,,1,,,,15,,boarding248,boarding139
+link262,1,0,19,,,1,,,,15,,boarding259,boarding246
+link263,1,0,19,,,1,,,,15,,boarding257,boarding259
+link264,1,0,19,,,1,,,,15,,boarding258,boarding260
+link265,1,0,19,,,1,,,,15,,boarding260,boarding248
+link266,1,0,19,,,1,Lift,Victoria Line Northbound Platform,,15,,access131,boarding139
+link305,1,0,19,,,1,,,,15,,boarding303,boarding218
+link307,1,0,19,,,1,,,,15,,boarding306,boarding101
+link314,1,0,19,,,1,,,,15,,access311,access172
+link321,1,0,19,,,1,,,,15,,access153,access317
+link324,1,0,19,,,1,,,,15,,access130,access131
+link333,1,0,19,,,1,,,,15,,access332,access107
+link346,1,0,19,,,1,,"Victoria Line, Piccadilly Line",,15,,access58,access345
+link434,1,0,19,,,1,,,,15,,access77,access433
+link16,1,0,25,,,1,Euston Road (South Side),"Kings Cross, St Pancras, Underground",,20,,access11,access12
+link28,1,0,25,,,1,,,,20,,4900ZZLUKSXC,access341
+link29,1,0,25,,,1,,,,20,,access339,access341
+link39,1,0,25,,,1,St Pancras,"Hammersmith & City, Metropolitan and Circle Lines",,20,,access21,access234
+link52,1,0,25,,,1,"Way Out, Kings Cross, St Pancras","Hammersmith & City, Metropolitan and Circle Lines Platform 1 via Baker Street",,20,,access309,boarding51
+link53,1,0,25,,,1,"Way Out, Kings Cross, St Pancras","Hammersmith & City, Metropolitan and Circle Lines Platform 2 via Liverpool Street",,20,,access309,boarding50
+link57,1,0,25,,,1,,,,20,,access17,access56
+link154,1,0,25,,,1,"Hammersmith & City, Metropolitan and Circle Lines; Euston Road; Trains; Way Out",Piccadilly Line,,20,,access62,access153
+link179,1,0,25,,,1,,,,20,,boarding174,boarding48
+link180,1,0,25,,,1,,,,20,,boarding175,boarding49
+link228,1,0,25,,,1,"Hammersmith & City, Metropolitan and Circle Lines, Victoria Line, Euston Road, Trains",Lift,,20,,access200,access315
+link34,1,0,31,,,1,"Lift, To Underground",,,25,,access337,access343
+link67,1,0,31,,,1,"Piccadilly Line, Northern Line, Victoria Line, Kings Cross","Hammersmith & City, Circle and Metropolitan lines",0,25,,access56,access91
+link103,1,0,31,,,1,,,,25,,boarding306,boarding88
+link178,1,0,31,,,1,,,,25,,access172,access312
+link219,1,0,31,,,1,,,,25,,boarding87,boarding303
+link226,1,0,31,,,1,,,,25,,boarding218,boarding269
+link233,1,0,31,,,1,"Northern Line, Victoria Line",Piccadilly Line,,25,,access231,boarding113
+link270,1,0,31,,,1,,,,25,,boarding269,boarding205
+link274,1,0,31,,,1,,,,25,,boarding272,boarding101
+link275,1,0,31,,,1,,,,25,,boarding272,boarding204
+link278,1,0,31,,,1,St Pancras International,Kings Cross/Underground,,25,,access277,access71
+link207,1,0,38,,,1,"Kings Cross, St Pancras",Northern Line Northbound Platform,,30,,access315,boarding205
+link208,1,0,38,,,1,"Kings Cross, St Pancras",Northern Line Southbound Platform,,30,,access315,boarding204
+link225,1,0,38,,,1,,Lift,,30,,access66,access224
+link353,1,0,38,,,1,,,,30,,access277,access335
+link18,1,0,44,,,1,Euston Road (South Side),"Kings Cross, St Pancras, Underground",,35,,access17,access12
+link288,1,0,44,,,1,"Hammersmith & City, Metropolitan and Circle Lines, Victoria Line, Nothern Line, Euston Road, Trains",Piccadilly line,,35,,access64,access329
+link37,1,0,50,,,1,"Nothern Line, Piccadilly Line, Victoria Line, Kings Cross","Hammersmith & City, Metropolitan and Circle Lines; St Pancras International",,40,,access35,access17
+link72,1,0,50,,,1,St Pancras International,"Kings Cross, Underground",,40,,access277,access406
+link83,1,0,50,,,1,,Northern Line,,40,,access80,access82
+link119,1,0,50,,,1,,,,40,,boarding112,boarding111
+link159,1,0,50,,,1,,,,40,,boarding138,boarding137
+link166,1,0,50,,,1,,,,40,,boarding139,boarding163
+link186,1,0,50,,,1,"Hammersmith & City, Metropolitan and Circle Lines",Lift,,40,,access45,access42
+link194,1,0,50,,,1,,,,40,,boarding192,boarding116
+link243,1,0,50,,,1,,St Pancras International,,40,,access242,access339
+link279,1,0,50,,,1,Granary Square and Pancras Square,"Underground, Kings Cross, St Pancras International",,40,,access277,access281
+link316,1,0,50,,,1,,,,40,,access315,access97
+link61,1,0,56,,,1,,"Hammersmith & City, Metropolitan and Circle Lines",,45,,access58,access60
+link181,1,0,63,,,1,,,,50,,boarding49,boarding51
+link182,1,0,63,,,1,,,,50,,boarding50,boarding48
+link402,1,0,75,,,1,"Nothern Line, Piccadilly Line, Victoria Line, Kings Cross","Hammersmith & City, Metropolitan and Circle Lines; St Pancras International",,60,,access234,access17
+link96,1,0,80,0,,1,"Piccadilly Line, Northern Line, Kings Cross, St Pancras","Piccadilly Line, Northern Line, St Pancras",0,64,,access91,access406
+link106,1,0,81,,,1,"Kings Cross, St Pancras International, Northern Line","Piccadilly Line, Victoria Line",0,65,,access77,access105
+link127,1,0,94,,,1,"Way Out Regents Canal, Kings Cross, St Pancras","Victoria Line, Exit to Pentonville Road",0,75,,access105,access125
+link128,1,0,113,,,1,Way Out Pentonville Road,"Kings Cross; St Pancras; Northern Line; Piccadilly Line; Victoria Line; Hammersmith & City, Metropolitan and Circle Lines",,90,,access125,access291
+link41,1,0,,,,5,,,,15,,access26,access21
+link44,1,0,,,,5,,,,25,,access38,access42
+link76,1,0,,,,5,,,,30,,4900ZZLUKSXA,access71
+link79,1,0,,,,5,,Lift H,,30,,access224,access334
+link94,1,0,,,,5,,Lift C,,30,,4900ZZLUKSX8,access91
+link98,1,0,,,,5,,,,40,,access359,access97
+link109,1,0,,,,5,,Lift J,,30,,access105,access108
+link134,1,0,,,,5,,Lift K,,25,,access132,access131
+link223,1,0,,,,5,,Lift A,,30,,4900ZZLUKSXB,access335
+link348,1,0,,,,5,,Lift D,,20,,4900ZZLUKSX2,access347
+link357,1,0,,,,5,,,,10,,access347,access356
+link358,1,0,,,,5,,,,20,,4900ZZLUKSX2,access356
+link432,1,0,,,,5,,Kings Cross St Pancras,,30,,ITO650,access281
+link63,0,0,,,,4,,Victoria Line,,30,,access345,access62
+link65,0,0,,,,4,,"Piccadilly Line, Northern Line",,60,,access345,access64
+link74,0,0,,,,4,,Kings Cross St Pancras Underground Station,,30,,4900ZZLUKSXA,access71
+link78,0,0,,,,4,,"Piccadilly Line, Northern Line, Victoria Line",,30,,access66,access77
+link81,0,0,,,,4,,Northern Line,,43,,access433,access80
+link110,0,0,,,,4,,,,25,,access105,access332
+link201,0,0,,,,4,,Northern Line,,20,,access231,access200
+link285,0,0,,,,4,Underground,,,30,,4900ZZLUKSX7,access406
+link417,0,0,,,,4,,"Piccadilly Line, Northern Line, Victoria Line",,30,,access66,access77
+link418,0,0,,,,4,,"Kings Cross, St Pancras, Hammersmith & City, Circle and Metropolitan Lines",,30,,access77,access66
+link419,0,0,,,,4,,"Kings Cross, St Pancras, Hammersmith & City, Circle and Metropolitan Lines",,30,,access77,access66
+link420,0,0,,,,4,,,,43,,access80,access433
+link422,0,0,,,,4,,"Piccadilly Line, Victoria Line",,20,,access200,access231
+link423,0,0,,,,4,,"Piccadilly Line, Victoria Line",,20,,access200,access231
+link424,0,0,,,,4,,"Kings Cross, St Pancras, Hammersmith & City, Metropolitan and Circle Lines",,60,,access64,access345
+link425,0,0,,,,4,,"Kings Cross, St Pancras, Hammersmith & City, Metropolitan and Circle Lines",,60,,access64,access345
+link426,0,0,,,,4,,"Kings Cross, St Pancras, Hammersmith & City, Metropolitan and Circle Lines",,30,,access62,access345
+link427,0,0,,,,4,,"Kings Cross, St Pancras, Hammersmith & City, Metropolitan and Circle Lines",,30,,access62,access345
+link428,0,0,,,,4,,,,43,,access80,access433
+link429,0,0,,,,4,,St Pancras International,,30,,access71,4900ZZLUKSXA
+link430,0,0,,,,4,,,,20,,ITO650,access281
+link431,0,0,,,,4,,Kings Cross St Pancras,,20,,access281,ITO650
+link435,0,0,,,,4,,,,25,,access332,access105
+link436,0,0,,,,4,,,,25,,access332,access105
+link14,1,0,,,,2,Euston Road (South Side),"Kings Cross, St Pancras, Underground",26,25,,4900ZZLUKSX4,access12
+link15,1,0,,,,2,Euston Road (South Side),"Kings Cross, St Pancras, Underground",23,25,,4900ZZLUKSX3,access11
+link20,1,0,,,,2,,,25,20,,4900ZZLUKSX2,access347
+link27,1,0,,,,2,"Buses, St Pancras International","Picadilly Line, Victoria Line, Northern Line, Hammersmith and City, Metropolitan and Circle Lines",15,15,,access26,access21
+link36,1,0,,,,2,,"Victoria Line, Piccadilly Line, Northern Line",30,25,,access33,access35
+link43,1,0,,,,2,"Way Out, Kings Cross, St Pancras","Hammersmith & City, Metropolitan and Circle Lines",25,25,,access38,access42
+link46,1,0,,,,2,"Way Out, Kings Cross, St Pancras","Hammersmith & City, Metropolitan and Circle Lines",25,25,,access38,access45
+link59,1,0,,,,2,,"Picadilly Line, Victoria Line, Northern Line",,15,,access56,access403
+link75,1,0,,,,2,,,27,20,,4900ZZLUKSXA,access71
+link86,1,0,,,,2,"Kings Cross, St Pancras",Northern Line,25,15,,access82,access84
+link95,1,0,,,,2,Kings Cross Rail,Kings Cross St Pancras Underground,20,12,,4900ZZLUKSX8,access91
+link135,1,0,,,,2,"Piccadilly Line, Kings Cross, St Pancras International, Lift",Victoria Line,27,25,,access326,access130
+link136,1,0,,,,2,"Piccadilly Line, Kings Cross, St Pancras International, Lift",Victoria Line,21,20,,access125,access129
+link155,1,0,,,,2,,,33,30,,access231,access153
+link173,1,0,,,,2,"Way Out, Kings Cross, St Pancras","Hammersmith & City, Metropolitan and Circle Lines",,30,,access60,access311
+link240,1,0,,,,2,,,5,5,,access237,access239
+link282,1,0,,,,2,,Kings Cross St Pancras,26,20,,access281,ITO650
+link283,1,0,,,,2,"Pancras Road, Regents Canal, Buses",Underground,30,30,,4900ZZLUKSXB,access406
+link292,1,0,,,,2,Way Out Pentonville Road,Underground,72,60,,access291,access409

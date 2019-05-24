@@ -1,0 +1,4 @@
+shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,expect_error
+04_shp,37.937192,-122.353449,0,SequenceError:shape_pt_sequence
+04_shp,37.936814,-122.353085,1
+04_shp,37.936532,-122.352827,0
