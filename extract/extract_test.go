@@ -13,22 +13,13 @@ func printVisited(em *extractMarker) {
 	}
 }
 
-func TestExtract_VisitAndMark(t *testing.T) {
-	em := NewExtractMarker()
-	reader, err := gtcsv.NewReader("../testdata/bart.zip")
-	if err != nil {
-		t.Error(err)
-	}
-	em.VisitAndMark(reader)
-}
-
 func TestExtract_Filter(t *testing.T) {
 	em := NewExtractMarker()
 	reader, err := gtcsv.NewReader("../testdata/bart.zip")
 	if err != nil {
 		t.Error(err)
 	}
-	em.VisitAndMark(reader)
+	em.Load(reader)
 	fm := map[string][]string{}
 	fm["trips.txt"] = []string{"3792107WKDY"}
 	em.Filter(fm)

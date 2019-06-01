@@ -12,7 +12,7 @@ type extractMarker struct {
 	found map[*node]bool
 }
 
-// newextractMarker returns a new extractMarker.
+// NewExtractMarker returns a new extractMarker.
 func NewExtractMarker() extractMarker {
 	return extractMarker{
 		graph: newEntityGraph(),
@@ -32,11 +32,12 @@ func (em *extractMarker) IsMarked(filename, eid string) bool {
 
 // IsVisited returns if an Entity was visited.
 func (em *extractMarker) IsVisited(filename, eid string) bool {
-	return true
+	_, ok := em.graph.Node(newNode(filename, eid))
+	return ok
 }
 
-// VisitAndMark .
-func (em *extractMarker) VisitAndMark(reader gotransit.Reader) error {
+// Load .
+func (em *extractMarker) Load(reader gotransit.Reader) error {
 	eg := em.graph
 	var dan *node
 	for ent := range reader.Agencies() {
