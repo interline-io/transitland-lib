@@ -349,6 +349,15 @@ func (copier *Copier) copyStopsAndFares() {
 	}
 	// FareRules
 	for e := range copier.Reader.FareRules() {
+		// Explicitly check if the FareID is Marked
+		// FareAttributes are named entities and it's up to the Marker
+		// TODO: Should I just check the EntityMap instead?
+		//     Do I care if it is marked, or it if was actually written OK?
+		//     Same pattern for CalendarDates?
+		if !copier.isMarked(&gotransit.FareAttribute{FareID: e.FareID}) {
+			continue
+		}
+		// Add reference errors if we didn't add this farezone to the output
 		if _, ok := farezones[e.OriginID]; len(e.OriginID) > 0 && !ok {
 			e.AddError(causes.NewInvalidFarezoneError("origin_id", e.OriginID))
 		}
@@ -376,7 +385,7 @@ func (copier *Copier) copyRoutes() {
 	}
 }
 
-// copyCalendarDates copies CalendarDates
+// copyCalendars copies Calendars and CalendarDates
 func (copier *Copier) copyCalendars() {
 	// Calendars
 	for e := range copier.Reader.Calendars() {

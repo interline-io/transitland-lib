@@ -22,6 +22,9 @@ func NewExtractMarker() extractMarker {
 
 // IsMarked returns if an Entity is marked.
 func (em *extractMarker) IsMarked(filename, eid string) bool {
+	if len(eid) == 0 {
+		return true
+	}
 	if n, ok := em.graph.Node(newNode(filename, eid)); !ok {
 		return false
 	} else if _, ok2 := em.found[n]; ok2 {
@@ -87,11 +90,16 @@ func (em *extractMarker) Load(reader gotransit.Reader) error {
 	}
 	//
 	ps := map[string]string{}
+	farezones := map[string][]string{}
 	for ent := range reader.Stops() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
 		if len(ent.ParentStation) > 0 {
 			ps[ent.StopID] = ent.ParentStation
+		}
+		// Care fare edges
+		if len(ent.ZoneID) > 0 {
+			farezones[ent.ZoneID] = append(farezones[ent.ZoneID], ent.StopID)
 		}
 	}
 	for k, v := range ps {
@@ -104,6 +112,36 @@ func (em *extractMarker) Load(reader gotransit.Reader) error {
 		t, _ := eg.Node(newNode("trips.txt", ent.TripID))
 		s, _ := eg.Node(newNode("stops.txt", ent.StopID))
 		eg.AddEdge(t, s)
+	}
+	// Add FareAttributes - FareRules will create child edges from Stops and Routes
+	for ent := range reader.FareAttributes() {
+		eg.AddNode(entityNode(&ent))
+	}
+	for ent := range reader.FareRules() {
+		n, ok := eg.Node(newNode("fare_attributes.txt", ent.FareID))
+		if !ok {
+			continue
+		}
+		if len(ent.RouteID) > 0 {
+			if rn, ok := eg.Node(newNode("routes.txt", ent.RouteID)); ok {
+				eg.AddEdge(rn, n)
+			}
+		}
+		for _, sid := range farezones[ent.OriginID] {
+			if sn, ok := eg.Node(newNode("stops.txt", sid)); ok {
+				eg.AddEdge(sn, n)
+			}
+		}
+		for _, sid := range farezones[ent.DestinationID] {
+			if sn, ok := eg.Node(newNode("stops.txt", sid)); ok {
+				eg.AddEdge(sn, n)
+			}
+		}
+		for _, sid := range farezones[ent.ContainsID] {
+			if sn, ok := eg.Node(newNode("stops.txt", sid)); ok {
+				eg.AddEdge(sn, n)
+			}
+		}
 	}
 	return nil
 }
