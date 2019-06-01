@@ -8,7 +8,7 @@ import (
 )
 
 // showVisited prints info about a fileInfo map
-func showVisited(marker marker, s0 string, s1 string, s2 string) bool {
+func showVisited(marker Marker, s0 string, s1 string, s2 string) bool {
 	fis := map[string]fileInfo{}
 	switch v := marker.(type) {
 	case *allMarker:
@@ -70,7 +70,7 @@ func showVisited(marker marker, s0 string, s1 string, s2 string) bool {
 }
 
 // createExpectMarker marks all entities from Reader, with the marked entities of m2 as Visited
-func createExpectMarker(reader gotransit.Reader, m2 marker) allMarker {
+func createExpectMarker(reader gotransit.Reader, m2 Marker) allMarker {
 	m1 := newAllMarker()
 	m1.VisitAndMark(reader)
 	// Get Marked entities from m2

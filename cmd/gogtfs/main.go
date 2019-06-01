@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/gotransit/copier"
 	_ "github.com/interline-io/gotransit/ext/pathways"
 	_ "github.com/interline-io/gotransit/ext/plus"
+	"github.com/interline-io/gotransit/extract"
 	_ "github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/validator"
@@ -19,6 +20,36 @@ import (
 func exit(fmts string, args ...interface{}) {
 	fmt.Printf(fmts+"\n", args...)
 	os.Exit(1)
+}
+
+func getReader(inurl string) gotransit.Reader {
+	if len(inurl) == 0 {
+		exit("No reader specified")
+	}
+	// Reader
+	reader, err := gotransit.NewReader(inurl)
+	if err != nil {
+		exit("No known reader for '%s': %s", inurl, err)
+	}
+	if err := reader.Open(); err != nil {
+		exit("Could not open '%s': %s", inurl, err)
+	}
+	return reader
+}
+
+func getWriter(outurl string) gotransit.Writer {
+	if len(outurl) == 0 {
+		exit("No writer specified")
+	}
+	// Writer
+	writer, err := gotransit.NewWriter(outurl)
+	if err != nil {
+		exit("No known writer for '%s': %s", outurl, err)
+	}
+	if err := writer.Open(); err != nil {
+		exit("Could not open '%s': %s", outurl, err)
+	}
+	return writer
 }
 
 func btos(b bool) string {
@@ -41,10 +72,12 @@ func (i *arrayFlags) Set(value string) error {
 }
 
 func main() {
+	// Validate
 	validateCommand := flag.NewFlagSet("validate", flag.ExitOnError)
 	validateExtensions := arrayFlags{}
 	validateCommand.Var(&validateExtensions, "ext", "Include GTFS Extension")
 
+	// Copy
 	copyCommand := flag.NewFlagSet("copy", flag.ExitOnError)
 	// Multiple flags e.g. "--ext a --ext b"
 	copyExtensions := arrayFlags{}
@@ -63,10 +96,23 @@ func main() {
 	_ = copyResults
 	var copyNormalizeServiceIDs = copyCommand.Bool("normalizeserviceids", false, "Normalize ServiceIDs")
 
+	// Extract
+	extractCommand := flag.NewFlagSet("extract", flag.ExitOnError)
+	extractAgencies := arrayFlags{}
+	extractCommand.Var(&extractAgencies, "agency", "Extract Agency")
+	extractStops := arrayFlags{}
+	extractCommand.Var(&extractStops, "stop", "Extract Stop")
+	extractTrip := arrayFlags{}
+	extractCommand.Var(&extractTrip, "trip", "Extract Trip")
+	extractCalendar := arrayFlags{}
+	extractCommand.Var(&extractCalendar, "calendar", "Extract Calendar")
+
+	//
 	if len(os.Args) == 1 {
 		fmt.Println("usage: gotransit <command> [<args>]")
 		fmt.Println("Commands:")
 		fmt.Println("  copy")
+		fmt.Println("  extract")
 		fmt.Println("  validate")
 		return
 	}
@@ -76,20 +122,14 @@ func main() {
 		copyCommand.Parse(os.Args[2:])
 	case "validate":
 		validateCommand.Parse(os.Args[2:])
+	case "extract":
+		extractCommand.Parse(os.Args[2:])
 	default:
 		exit("%q is not valid command.", os.Args[1])
 	}
 
 	if validateCommand.Parsed() {
-		inurl := validateCommand.Arg(0)
-		if len(inurl) == 0 {
-			exit("No reader specified")
-		}
-		reader, err := gotransit.NewReader(inurl)
-		if err != nil {
-			exit("No known reader for '%s': %s", inurl, err)
-		}
-		reader.Open()
+		reader := getReader(validateCommand.Arg(0))
 		defer reader.Close()
 		v, err := validator.NewValidator(reader)
 		if err != nil {
@@ -105,32 +145,31 @@ func main() {
 		v.Validate()
 	}
 
+	if extractCommand.Parsed() {
+		reader := getReader(extractCommand.Arg(0))
+		defer reader.Close()
+		writer := getWriter(extractCommand.Arg(1))
+		defer writer.Close()
+		//
+		em := extract.NewExtractMarker()
+		em.VisitAndMark(reader)
+		fm := map[string][]string{}
+		fm["trips.txt"] = []string{"3730533WKDY"}
+		em.Filter(fm)
+		cp := copier.NewCopier(reader, writer)
+		// Set options
+		cp.Marker = &em
+		cp.AllowEntityErrors = false
+		cp.AllowReferenceErrors = false
+		cp.Copy()
+	}
+
 	if copyCommand.Parsed() {
 		inurl := copyCommand.Arg(0)
-		if len(inurl) == 0 {
-			exit("No reader specified")
-		}
-		outurl := copyCommand.Arg(1)
-		if len(outurl) == 0 {
-			exit("No writer specified")
-		}
 		// Reader
-		reader, err := gotransit.NewReader(inurl)
-		if err != nil {
-			exit("No known reader for '%s': %s", inurl, err)
-		}
-		if err := reader.Open(); err != nil {
-			exit("Could not open '%s': %s", inurl, err)
-		}
+		reader := getReader(copyCommand.Arg(0))
 		defer reader.Close()
-		// Writer
-		writer, err := gotransit.NewWriter(outurl)
-		if err != nil {
-			exit("No known writer for '%s': %s", outurl, err)
-		}
-		if err := writer.Open(); err != nil {
-			exit("Could not open '%s': %s", inurl, err)
-		}
+		writer := getWriter(copyCommand.Arg(1))
 		defer writer.Close()
 
 		// If a DBWriter, create a FV

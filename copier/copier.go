@@ -71,12 +71,13 @@ type Copier struct {
 	NormalizeServiceIDs bool
 	// Default AgencyID
 	DefaultAgencyID string
+	// Entity selection strategy
+	Marker Marker
 	// book keeping
 	agencyCount  int
-	extensions   []copyableExtension   // interface
+	extensions   []copyableExtension      // interface
 	filters      []gotransit.EntityFilter // interface
 	geomCache    *geomCache
-	marker       marker
 	stopPatterns map[string]int
 	*CopyResult
 	*gotransit.EntityMap
@@ -97,7 +98,7 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	// Result
 	copier.CopyResult = NewCopyResult()
 	// Default Markers
-	copier.marker = newYesMarker()
+	copier.Marker = newYesMarker()
 	// Default EntityMap
 	copier.EntityMap = gotransit.NewEntityMap()
 	// Default filters
@@ -140,7 +141,7 @@ func (copier *Copier) isMarked(ent gotransit.Entity) bool {
 	eid := ent.EntityID()
 	if len(eid) == 0 {
 		// ok
-	} else if !copier.marker.IsMarked(efn, eid) {
+	} else if !copier.Marker.IsMarked(efn, eid) {
 		return false
 	}
 	return true
@@ -222,14 +223,14 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 func (copier *Copier) CopyVisited() *CopyResult {
 	m := newVisitedMarker()
 	m.VisitAndMark(copier.Reader)
-	copier.marker = &m
+	copier.Marker = &m
 	copier.copyEntities()
 	return copier.CopyResult
 }
 
 // Copy copies Base GTFS Entities from the Reader to the Writer, returning the summary as a CopyResult.
 func (copier *Copier) Copy() *CopyResult {
-	copier.marker = newYesMarker()
+	// copier.Marker = newYesMarker()
 	copier.copyEntities()
 	return copier.CopyResult
 }
