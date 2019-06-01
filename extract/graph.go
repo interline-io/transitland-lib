@@ -49,18 +49,10 @@ func (eg *entityGraph) AddNode(n *node) bool {
 		return false
 	}
 	eg.nodes[*n] = n
-	// fmt.Println("node: ", *n)
 	return true
 }
 
 func (eg *entityGraph) AddEdge(n1, n2 *node) bool {
-	// fmt.Println("edge:", *n1, "->", *n2)
-	// if _, ok := eg.nodes[*n1]; !ok {
-	// 	panic("no node n1")
-	// }
-	// if _, ok := eg.nodes[*n2]; !ok {
-	// 	panic("no node n2")
-	// }
 	eg.children[*n1] = append(eg.children[*n1], n2) // deref
 	eg.parents[*n2] = append(eg.parents[*n2], n1) // deref
 	return true
@@ -75,9 +67,6 @@ func (eg *entityGraph) Parents(n *node) ([]*node, bool) {
 	e, ok := eg.parents[*n]
 	return e, ok
 }
-
-
-////
 
 func (eg *entityGraph) Search(queue []*node, up bool, f func(*node)) {
 	visited := map[*node]bool{}
