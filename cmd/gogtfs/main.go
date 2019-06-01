@@ -152,7 +152,7 @@ func main() {
 		defer writer.Close()
 		//
 		em := extract.NewExtractMarker()
-		em.VisitAndMark(reader)
+		em.Load(reader)
 		fm := map[string][]string{}
 		fm["trips.txt"] = []string{"3730533WKDY"}
 		em.Filter(fm)
