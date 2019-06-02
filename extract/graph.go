@@ -44,12 +44,12 @@ func (eg *entityGraph) Node(n *node) (*node, bool) {
 	return found, ok
 }
 
-func (eg *entityGraph) AddNode(n *node) bool {
-	if _, ok := eg.nodes[*n]; ok {
-		return false
-	}
+func (eg *entityGraph) AddNode(n *node) (*node, bool) {
+	if found, ok := eg.nodes[*n]; ok {
+		return found, false
+	} 
 	eg.nodes[*n] = n
-	return true
+	return n, true
 }
 
 func (eg *entityGraph) AddEdge(n1, n2 *node) bool {
