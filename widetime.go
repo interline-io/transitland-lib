@@ -30,6 +30,12 @@ func slowStringToSeconds(value string) (int, error) {
 
 // SecondsToString takes seconds-since-midnight and returns a GTFS-style time.
 func SecondsToString(secs int) string {
+	if secs < 0 {
+		return ""
+	}
+	if secs > 1<<31 {
+		return ""
+	}
 	hours := secs / 3600
 	minutes := (secs % 3600) / 60
 	seconds := (secs % 3600) % 60

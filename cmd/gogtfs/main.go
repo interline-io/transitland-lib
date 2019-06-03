@@ -104,14 +104,16 @@ func main() {
 	extractCommand.Var(&extractAgencies, "agency", "Extract Agency")
 	extractStops := arrayFlags{}
 	extractCommand.Var(&extractStops, "stop", "Extract Stop")
-	extractTrip := arrayFlags{}
-	extractCommand.Var(&extractTrip, "trip", "Extract Trip")
-	extractCalendar := arrayFlags{}
-	extractCommand.Var(&extractCalendar, "calendar", "Extract Calendar")
-	extractRouteType := arrayFlags{}
-	extractCommand.Var(&extractRouteType, "route_type", "Extract Routes matching route_type")
-	extractRouteTypeCategory := arrayFlags{}
-	extractCommand.Var(&extractRouteTypeCategory, "route_type_category", "Extracr Routes matching this route_type category")
+	extractTrips := arrayFlags{}
+	extractCommand.Var(&extractTrips, "trip", "Extract Trip")
+	extractCalendars := arrayFlags{}
+	extractCommand.Var(&extractCalendars, "calendar", "Extract Calendar")
+	extractRoutes := arrayFlags{}
+	extractCommand.Var(&extractRoutes, "route", "Extract Route")
+	extractRouteTypes := arrayFlags{}
+	extractCommand.Var(&extractRouteTypes, "route_type", "Extract Routes matching route_type")
+	extractRouteTypeCategories := arrayFlags{}
+	extractCommand.Var(&extractRouteTypeCategories, "route_type_category", "Extracr Routes matching this route_type category")
 	//
 	if len(os.Args) == 1 {
 		fmt.Println("usage: gotransit <command> [<args>]")
@@ -157,27 +159,39 @@ func main() {
 		defer writer.Close()
 		//
 		fm := map[string][]string{}
-		if len(extractRouteTypeCategory) > 0 {
-			for _, i := range extractRouteTypeCategory {
-				for _, rt := range enums.GetRouteCategory(i) {
-					extractRouteType = append(extractRouteType, strconv.Itoa(rt.Code))
-				}
+		for _, i := range extractRouteTypeCategories {
+			for _, rt := range enums.GetRouteCategory(i) {
+				extractRouteTypes = append(extractRouteTypes, strconv.Itoa(rt.Code))
 			}
 		}
-		if len(extractRouteType) > 0 {
-			rthits := map[int]bool{}
-			for _, i := range extractRouteType {
-				if v, err := strconv.Atoi(i); err == nil {
-					rthits[v] = true
-				} else {
-					fmt.Println("invalid route_type:", i)
-				}
+		rthits := map[int]bool{}
+		for _, i := range extractRouteTypes {
+			if v, err := strconv.Atoi(i); err == nil {
+				rthits[v] = true
+			} else {
+				fmt.Println("invalid route_type:", i)
 			}
-			for ent := range reader.Routes() {
-				if _, ok := rthits[ent.RouteType]; ok {
-					fm["routes.txt"] = append(fm["routes.txt"], ent.RouteID)
-				}
+		}
+		for ent := range reader.Routes() {
+			if _, ok := rthits[ent.RouteType]; ok {
+				fm["routes.txt"] = append(fm["routes.txt"], ent.RouteID)
 			}
+		}
+		// Regular IDs
+		for _, i := range extractTrips {
+			fm["trips.txt"] = append(fm["trips.txt"], i)
+		}
+		for _, i := range extractAgencies {
+			fm["agency.txt"] = append(fm["agency.txt"], i)
+		}
+		for _, i := range extractRoutes {
+			fm["routes.txt"] = append(fm["routes.txt"], i)
+		}
+		for _, i := range extractCalendars {
+			fm["calendar.txt"] = append(fm["calendar.txt"], i)
+		}
+		for _, i := range extractStops {
+			fm["stops.txt"] = append(fm["stops.txt"], i)
 		}
 		fmt.Printf("Extract filter: %#v\n", fm)
 
@@ -186,7 +200,7 @@ func main() {
 		fmt.Println("Loading graph")
 		em.Load(reader)
 		// Apply filters
-		fmt.Println("Searching graph to apply filters")
+		fmt.Println("Appling filters")
 		em.Filter(fm)
 		fmt.Println("Copying...")
 		cp := copier.NewCopier(reader, writer)

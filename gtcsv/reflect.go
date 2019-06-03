@@ -193,8 +193,6 @@ func dumpRow(ent gotransit.Entity, header []string) ([]string, error) {
 			// TODO: Remove special case
 			if v == math.MaxInt64 {
 				value = ""
-			} else if k == "arrival_time" || k == "departure_time" {
-				value, _ = gotransit.WideTime{Seconds: v}.String()
 			} else {
 				value = strconv.Itoa(v)
 			}
