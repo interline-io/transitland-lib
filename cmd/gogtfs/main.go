@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/interline-io/gotransit"
@@ -13,6 +14,7 @@ import (
 	"github.com/interline-io/gotransit/extract"
 	_ "github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/enums"
 	"github.com/interline-io/gotransit/validator"
 )
 
@@ -106,7 +108,10 @@ func main() {
 	extractCommand.Var(&extractTrip, "trip", "Extract Trip")
 	extractCalendar := arrayFlags{}
 	extractCommand.Var(&extractCalendar, "calendar", "Extract Calendar")
-
+	extractRouteType := arrayFlags{}
+	extractCommand.Var(&extractRouteType, "route_type", "Extract Routes matching route_type")
+	extractRouteTypeCategory := arrayFlags{}
+	extractCommand.Var(&extractRouteTypeCategory, "route_type_category", "Extracr Routes matching this route_type category")
 	//
 	if len(os.Args) == 1 {
 		fmt.Println("usage: gotransit <command> [<args>]")
@@ -151,16 +156,45 @@ func main() {
 		writer := getWriter(extractCommand.Arg(1))
 		defer writer.Close()
 		//
-		em := extract.NewExtractMarker()
-		em.Load(reader)
 		fm := map[string][]string{}
-		fm["trips.txt"] = []string{"3730533WKDY"}
+		if len(extractRouteTypeCategory) > 0 {
+			for _, i := range extractRouteTypeCategory {
+				for _, rt := range enums.GetRouteCategory(i) {
+					extractRouteType = append(extractRouteType, strconv.Itoa(rt.Code))
+				}
+			}
+		}
+		if len(extractRouteType) > 0 {
+			rthits := map[int]bool{}
+			for _, i := range extractRouteType {
+				if v, err := strconv.Atoi(i); err == nil {
+					rthits[v] = true
+				} else {
+					fmt.Println("invalid route_type:", i)
+				}
+			}
+			for ent := range reader.Routes() {
+				if _, ok := rthits[ent.RouteType]; ok {
+					fm["routes.txt"] = append(fm["routes.txt"], ent.RouteID)
+				}
+			}
+		}
+		fmt.Printf("Extract filter: %#v\n", fm)
+
+		// Load graph
+		em := extract.NewExtractMarker()
+		fmt.Println("Loading graph")
+		em.Load(reader)
+		// Apply filters
+		fmt.Println("Searching graph to apply filters")
 		em.Filter(fm)
+		fmt.Println("Copying...")
 		cp := copier.NewCopier(reader, writer)
-		// Set options
+		// Set copier options
 		cp.Marker = &em
 		cp.AllowEntityErrors = false
 		cp.AllowReferenceErrors = false
+		// Copy
 		cp.Copy()
 	}
 
