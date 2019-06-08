@@ -20,7 +20,7 @@ type s2D = [][]string
 
 // Reader reads GTFS entities from CSV files.
 type Reader struct {
-	Adapter Adapter
+	Adapter ReaderAdapter
 }
 
 // NewReader returns an initialized CSV Reader.
