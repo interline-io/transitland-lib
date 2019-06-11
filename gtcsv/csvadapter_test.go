@@ -81,7 +81,7 @@ func Test_URLAdapter_Download(t *testing.T) {
 		w.Write(buf)
 	}))
 	defer ts.Close()
-	adapter := URLAdapter{URL: ts.URL}
+	adapter := URLAdapter{url: ts.URL}
 	if err := adapter.Open(); err != nil {
 		t.Error(err)
 	}
@@ -131,5 +131,54 @@ func TestDirAdapter_ReadRows_errors(t *testing.T) {
 	}
 	if errcount != 3 {
 		t.Error("expected 3 parse errors from malformed csv test file")
+	}
+}
+
+func TestZipWriterAdapter(t *testing.T) {
+	// Perform various tests of the ZipWriterAdapter:
+	// creates temporary shadow directory
+	// removes temporary shadow directory
+	// creates zip file when closed
+	outf, err := ioutil.TempFile("", "zip")
+	outpath := outf.Name()
+	defer os.Remove(outpath)
+	if err != nil {
+		t.Error(err)
+	}
+	adapter := NewZipWriterAdapter(outpath)
+	// Header
+	if err := adapter.WriteRow("hello.txt", []string{"one", "two", "three"}); err != nil {
+		t.Error(err)
+	}
+	// Body
+	if err := adapter.WriteRow("hello.txt", []string{"1", "2", "3"}); err != nil {
+		t.Error(err)
+	}
+	// Create Zip
+	if err := adapter.Close(); err != nil {
+		t.Error(err)
+	}
+	// Check that no temp files exist
+	if _, err := os.Stat(adapter.path); !os.IsNotExist(err) {
+		t.Errorf("expected temporary directory '%s' to have been removed", adapter.path)
+	}
+	// Read zip
+	reader := ZipAdapter{path: outpath}
+	if !reader.Exists() {
+		t.Error("outpath does not exist")
+	}
+	reader.Open()
+	defer reader.Close()
+	rows := [][]string{}
+	reader.ReadRows("hello.txt", func(row Row) {
+		rows = append(rows, row.Row)
+	})
+	if len(rows) != 1 {
+		t.Errorf("got %d rows, expected %d", len(rows), 1)
+	} else {
+		r := rows[0]
+		if r[0] != "1" {
+			t.Errorf("got %s expect %s", r[0], "1")
+		}
 	}
 }
