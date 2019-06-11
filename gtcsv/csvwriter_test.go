@@ -51,5 +51,3 @@ func TestWriter_NewReader(t *testing.T) {
 	defer writer.Close()
 	testutil.WriterTesterRoundTrip(reader, writer, t)
 }
-
-// Writer specific tests.
