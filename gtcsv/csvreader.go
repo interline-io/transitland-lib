@@ -25,7 +25,15 @@ type Reader struct {
 
 // NewReader returns an initialized CSV Reader.
 func NewReader(path string) (*Reader, error) {
-	return &Reader{Adapter: NewAdapter(path)}, nil
+	var a Adapter
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		a = &URLAdapter{url: path}
+	} else if strings.HasSuffix(path, ".zip") {
+		a = &ZipAdapter{path: path}
+	} else {
+		a = NewDirAdapter(path)
+	}
+	return &Reader{Adapter: a}, nil
 }
 
 // Open the source for reading.
@@ -35,8 +43,7 @@ func (reader *Reader) Open() error {
 
 // Close the source.
 func (reader *Reader) Close() error {
-	reader.Adapter.Close()
-	return nil
+	return reader.Adapter.Close()
 }
 
 // ReadEntities provides a generic interface for reading Entities.
