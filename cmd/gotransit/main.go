@@ -15,6 +15,7 @@ import (
 	_ "github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/enums"
+	"github.com/interline-io/gotransit/internal/log"
 	"github.com/interline-io/gotransit/validator"
 )
 
@@ -193,16 +194,21 @@ func main() {
 		for _, i := range extractStops {
 			fm["stops.txt"] = append(fm["stops.txt"], i)
 		}
-		fmt.Printf("Extract filter: %#v\n", fm)
+		log.Debug("Extract filter:")
+		for k, v := range fm {
+			for _, i := range v {
+				log.Debug("\t%s: %s", k, i)
+			}
+		}
 
 		// Load graph
 		em := extract.NewExtractMarker()
-		fmt.Println("Loading graph")
+		log.Debug("Loading graph")
 		em.Load(reader)
 		// Apply filters
-		fmt.Println("Appling filters")
+		log.Debug("Appling filters")
 		em.Filter(fm)
-		fmt.Println("Copying...")
+		log.Debug("Copying...")
 		cp := copier.NewCopier(reader, writer)
 		// Set copier options
 		cp.Marker = &em

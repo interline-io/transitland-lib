@@ -74,7 +74,10 @@ func loadRowReflect(ent gotransit.Entity, row Row) {
 	// For each struct tag, set the field value
 	val := reflect.ValueOf(ent).Elem()
 	for _, h := range row.Header {
-		strv, _ := row.Get(h)
+		strv, ok := row.Get(h)
+		if !ok {
+			strv = ""
+		}
 		k, ok := fmap[h]
 		// Add to extra fields if there's no struct tag
 		if !ok {
@@ -211,8 +214,9 @@ func dumpRow(ent gotransit.Entity, header []string) ([]string, error) {
 				value = v.Format("20060102")
 			}
 		case gotransit.WideTime:
-			t, _ := v.String()
-			value = t
+			if t, err := v.String(); err == nil {
+				value = t
+			}
 		default:
 			p = errors.New("unknown field type")
 		}

@@ -175,7 +175,7 @@ func (em *extractMarker) Filter(fm map[string][]string) {
 	// Find all children
 	result := map[*node]bool{}
 	em.graph.Search(foundNodes[:], false, func(n *node) {
-		// fmt.Println("child:", n)
+		// log.Trace("child: %s", n)
 		result[n] = true
 	})
 	// Now find parents of all found children
