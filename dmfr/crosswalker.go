@@ -1,6 +1,8 @@
 package dmfr
 
-import "fmt"
+import (
+	"github.com/interline-io/gotransit/internal/log"
+)
 
 // AddCrosswalkIDs TODO
 func AddCrosswalkIDs(baseRegistry *Registry, comparisonRegistries map[string]*Registry) *Registry {
@@ -9,7 +11,7 @@ func AddCrosswalkIDs(baseRegistry *Registry, comparisonRegistries map[string]*Re
 	// Pass 2: by URL + spec type
 	for _, baseFeed := range baseRegistry.Feeds {
 		if comparisonRegistryID, comparisonFeed := findMatchingFeed(baseFeed.Spec, baseFeed.URL, comparisonRegistries); comparisonFeed != nil {
-			fmt.Printf("baseFeed: %#v\n", baseFeed)
+			log.Trace("baseFeed: %#v", baseFeed)
 			baseFeed.IDCrosswalk[comparisonRegistryID] = comparisonFeed.ID
 		}
 	}
@@ -19,7 +21,7 @@ func AddCrosswalkIDs(baseRegistry *Registry, comparisonRegistries map[string]*Re
 
 func findMatchingFeed(feedSpec string, feedURL string, comparisonRegistries map[string]*Registry) (string, *Feed) {
 	for comparisonRegistryID, comparisonRegistry := range comparisonRegistries {
-		fmt.Printf("TEST: %#v\n", comparisonRegistry)
+		log.Trace("test: %#v", comparisonRegistry)
 		for _, comparisonFeed := range comparisonRegistry.Feeds {
 			if feedURL == comparisonFeed.URL && feedSpec == comparisonFeed.Spec {
 				return comparisonRegistryID, &comparisonFeed

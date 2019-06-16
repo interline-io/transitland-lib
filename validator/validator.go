@@ -1,11 +1,10 @@
 package validator
 
 import (
-	"fmt"
-
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/interline-io/gotransit/copier"
+	"github.com/interline-io/gotransit/internal/log"
 )
 
 // Validator checks a GTFS source for errors and warnings.
@@ -49,7 +48,7 @@ func displayCopyResult(result *copier.CopyResult) {
 		keys[efn] = append(keys[efn], err)
 	}
 	for k, v := range keys {
-		fmt.Printf("filename: %s\n", k)
+		log.Info("filename: %s", k)
 		group := map[string][]error{}
 		for _, err := range v {
 			eid := ""
@@ -60,9 +59,9 @@ func displayCopyResult(result *copier.CopyResult) {
 			group[eid] = append(group[eid], err)
 		}
 		for k, v := range group {
-			fmt.Printf("\t%s:\n", k)
+			log.Info("\t%s:", k)
 			for _, err := range v {
-				fmt.Printf("\t\t%s\n", err)
+				log.Info("\t\t%s", err)
 			}
 		}
 	}

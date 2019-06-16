@@ -5,7 +5,7 @@ import (
 )
 
 func Test_AddCrosswalkIDs(t *testing.T) {
-	fakeTransitlandRegistry, _ := ParseString(`{
+	fakeTransitlandRegistry, err := ParseString(`{
 		"feeds": [
 			{
 				"id": "f-eth-tenerife~titsa",
@@ -14,6 +14,9 @@ func Test_AddCrosswalkIDs(t *testing.T) {
 			}
 		]
 	}`)
+	if err != nil {
+		t.Error(err)
+	}
 	fakeTransitFeedsRegistry, err := ParseString(`{
 		"feeds": [
 			{
@@ -24,7 +27,7 @@ func Test_AddCrosswalkIDs(t *testing.T) {
 		]
 	}`)
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
 	v := map[string]*Registry{"transitfeeds": fakeTransitFeedsRegistry}
 	fakeTransitlandRegistry = AddCrosswalkIDs(fakeTransitlandRegistry, v)

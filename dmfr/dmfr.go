@@ -29,7 +29,10 @@ type Feed struct {
 
 // NewRegistry TODO
 func NewRegistry(reader io.Reader) (*Registry, error) {
-	contents, _ := ioutil.ReadAll(reader)
+	contents, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
 	var registry Registry
 	if err := json.Unmarshal([]byte(contents), &registry); err != nil {
 		return nil, err
@@ -53,7 +56,10 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 }
 
 func (registry *Registry) writeToJSONFile(path string) error {
-	registryJSON, _ := json.Marshal(registry)
+	registryJSON, err := json.Marshal(registry)
+	if err != nil {
+		return err
+	}
 	return ioutil.WriteFile(path, registryJSON, 0644)
 }
 
