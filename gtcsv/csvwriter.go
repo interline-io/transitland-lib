@@ -1,47 +1,45 @@
 package gtcsv
 
 import (
-	"encoding/csv"
 	"math"
-	"os"
-	"path/filepath"
+	"strings"
 
 	"github.com/interline-io/gotransit"
 )
 
 // Writer implements a GTFS CSV Writer.
 type Writer struct {
-	Adapter Adapter
+	Adapter WriterAdapter
 	headers map[string][]string
-	files   map[string]*os.File
 }
 
 // NewWriter returns a new Writer.
 func NewWriter(path string) (*Writer, error) {
+	var a WriterAdapter
+	if strings.HasSuffix(path, ".zip") {
+		a = NewZipWriterAdapter(path)
+	} else {
+		a = NewDirAdapter(path)
+	}
 	return &Writer{
-		Adapter: NewAdapter(path),
+		Adapter: a,
 		headers: map[string][]string{},
-		files:   map[string]*os.File{},
 	}, nil
 }
 
 // Open the Writer.
 func (writer *Writer) Open() error {
-	return nil
+	return writer.Adapter.Open()
 }
 
 // Close the Writer.
 func (writer *Writer) Close() error {
-	for _, f := range writer.files {
-		if err := f.Close(); err != nil {
-			return err
-		}
-	}
-	return nil
+	return writer.Adapter.Close()
 }
 
 // Create the necessary files for the Writer.
 func (writer *Writer) Create() error {
+	// Todo: return error when output path exists
 	return nil
 }
 
@@ -63,30 +61,29 @@ func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
 			stoptimes = append(stoptimes, v)
 		}
 	}
-
-	for i := 0; i < len(stoptimes); i++ {
-		if stoptimes[i].ArrivalTime == 0 {
-			stoptimes[i].ArrivalTime = math.MaxInt64
-		}
-		if stoptimes[i].DepartureTime == 0 {
-			stoptimes[i].DepartureTime = math.MaxInt64
-		}
-	}
-
-	// Set any zeros to NaN
-	cur := stoptimes[0].ShapeDistTraveled
-	for i := 1; i < len(stoptimes); i++ {
-		if stoptimes[i].ShapeDistTraveled <= cur {
-			stoptimes[i].ShapeDistTraveled = math.NaN()
-		} else {
-			cur = stoptimes[i].ShapeDistTraveled
-		}
-	}
-	if cur == 0.0 {
-		for i := 0; i < len(stoptimes); i++ {
-			stoptimes[i].ShapeDistTraveled = math.NaN()
-		}
-	}
+	// Set empty values to -1 to get empty string
+	// for i := 0; i < len(stoptimes); i++ {
+	// 	if stoptimes[i].ArrivalTime == 0 {
+	// 		stoptimes[i].ArrivalTime = -1
+	// 	}
+	// 	if stoptimes[i].DepartureTime == 0 {
+	// 		stoptimes[i].DepartureTime = -1
+	// 	}
+	// }
+	// Set any zeros to NaN to get empty string
+	// cur := stoptimes[0].ShapeDistTraveled
+	// for i := 1; i < len(stoptimes); i++ {
+	// 	if stoptimes[i].ShapeDistTraveled <= cur {
+	// 		stoptimes[i].ShapeDistTraveled = math.NaN()
+	// 	} else {
+	// 		cur = stoptimes[i].ShapeDistTraveled
+	// 	}
+	// }
+	// if cur == 0.0 {
+	// 	for i := 0; i < len(stoptimes); i++ {
+	// 		stoptimes[i].ShapeDistTraveled = math.NaN()
+	// 	}
+	// }
 
 	for _, ent := range ents {
 		writer.AddEntity(ent)
@@ -110,19 +107,7 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 }
 
 func (writer *Writer) addEntity(ent gotransit.Entity) (string, error) {
-	// Is this file open
 	efn := ent.Filename()
-	filename := filepath.Join(writer.Adapter.Path(), efn)
-	in, ok := writer.files[efn]
-	if !ok {
-		i, err := os.Create(filename)
-		if err != nil {
-			return "", err
-		}
-		in = i
-		writer.files[efn] = in
-	}
-	w := csv.NewWriter(in)
 	header, ok := writer.headers[efn]
 	if !ok {
 		h, err := dumpHeader(ent)
@@ -131,19 +116,12 @@ func (writer *Writer) addEntity(ent gotransit.Entity) (string, error) {
 		}
 		header = h
 		writer.headers[efn] = header
-		w.Write(header)
+		writer.Adapter.WriteRow(efn, header)
 	}
-	row, err := dumpRow(ent, header)
-	if err != nil {
+	if row, err := dumpRow(ent, header); err != nil {
 		return "", err
-	}
-	w.Write(row)
-	if err := w.Error(); err != nil {
-		panic(err)
-	}
-	w.Flush()
-	if err := w.Error(); err != nil {
-		panic(err)
+	} else if err := writer.Adapter.WriteRow(efn, row); err != nil {
+		return "", err
 	}
 	return ent.EntityID(), nil
 }

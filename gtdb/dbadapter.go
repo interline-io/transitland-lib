@@ -26,8 +26,10 @@ import (
 func init() {
 	// Register spatialite with GORM
 	sql.Register("spatialite", &sqlite3.SQLiteDriver{Extensions: []string{"mod_spatialite"}})
-	d, _ := gorm.GetDialect("sqlite3")
-	gorm.RegisterDialect("spatialite", d)
+	d, ok := gorm.GetDialect("sqlite3")
+	if ok {
+		gorm.RegisterDialect("spatialite", d)
+	}
 }
 
 // NewAdapter returns a Adapter for the given dburl.

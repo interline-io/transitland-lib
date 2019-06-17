@@ -3,7 +3,6 @@ package gotransit
 import (
 	"errors"
 	"fmt"
-	"math"
 	"strconv"
 
 	"github.com/interline-io/gotransit/causes"
@@ -50,7 +49,7 @@ func (ent *StopTime) Errors() []error {
 	if ent.DropOffType < 0 || ent.DropOffType > 3 {
 		errs = append(errs, causes.NewInvalidFieldError("drop_off_type", "", fmt.Errorf("drop_off_type out of bounds: %d", ent.DropOffType)))
 	}
-	if ent.ShapeDistTraveled < 0 {
+	if ent.ShapeDistTraveled < 0 && ent.ShapeDistTraveled != -1.0 {
 		errs = append(errs, causes.NewInvalidFieldError("shape_dist_traveled", "", fmt.Errorf("negative shape_dist_traveled: %f", ent.ShapeDistTraveled)))
 	}
 	if ent.Timepoint < -1 || ent.Timepoint > 1 {
@@ -115,9 +114,8 @@ func (ent *StopTime) GetString(key string) (string, error) {
 	case "drop_off_type":
 		v = strconv.Itoa(ent.DropOffType)
 	case "shape_dist_traveled":
-		sdt := ent.ShapeDistTraveled
-		if !math.IsNaN(sdt) {
-			v = fmt.Sprintf("%0.5f", sdt)
+		if ent.ShapeDistTraveled >= 0 {
+			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled)
 		}
 	case "timepoint":
 		if ent.Timepoint > -1 {
@@ -141,13 +139,17 @@ func (ent *StopTime) SetString(key, value string) error {
 	case "stop_id":
 		ent.StopID = hi
 	case "arrival_time":
-		if s, err := StringToSeconds(hi); err != nil {
+		if hi == "" {
+			ent.ArrivalTime = -1
+		} else if s, err := StringToSeconds(hi); err != nil {
 			perr = causes.NewFieldParseError("arrival_time", hi)
 		} else {
 			ent.ArrivalTime = s
 		}
 	case "departure_time":
-		if s, err := StringToSeconds(hi); err != nil {
+		if hi == "" {
+			ent.DepartureTime = -1
+		} else if s, err := StringToSeconds(hi); err != nil {
 			perr = causes.NewFieldParseError("departure_time", hi)
 		} else {
 			ent.DepartureTime = s
@@ -176,7 +178,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "shape_dist_traveled":
 		if len(hi) == 0 {
-			ent.ShapeDistTraveled = 0.0
+			ent.ShapeDistTraveled = -1.0
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
 		} else {
@@ -207,7 +209,7 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 	if len(stoptimes) < 2 {
 		errs = append(errs, causes.NewEmptyTripError(len(stoptimes)))
 	}
-	if stoptimes[len(stoptimes)-1].ArrivalTime == 0 {
+	if stoptimes[len(stoptimes)-1].ArrivalTime <= 0 {
 		errs = append(errs, causes.NewSequenceError("arrival_time", ""))
 	}
 	lastDist := stoptimes[0].ShapeDistTraveled

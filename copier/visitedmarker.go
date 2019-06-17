@@ -199,5 +199,4 @@ func (marker *visitedMarker) VisitAndMark(reader gt.Reader) error {
 	}
 	marker.fileInfos = fis
 	return nil
-
 }

@@ -2,27 +2,17 @@ package gtcsv
 
 import (
 	"archive/zip"
+	"encoding/csv"
 	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/interline-io/gotransit/causes"
 	"github.com/interline-io/gotransit/internal/log"
 )
-
-// NewAdapter returns an Adapter based on the provided path or url.
-func NewAdapter(path string) Adapter {
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-		return &URLAdapter{URL: path}
-	} else if strings.HasSuffix(path, ".zip") {
-		return &ZipAdapter{path}
-	}
-	return &DirAdapter{path}
-}
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.
 type Adapter interface {
@@ -34,16 +24,24 @@ type Adapter interface {
 	Path() string
 }
 
+// WriterAdapter provides a writing interface.
+type WriterAdapter interface {
+	WriteRow(string, []string) error
+	Adapter
+}
+
+/////////////////////
+
 // URLAdapter downloads a GTFS URL to a temporary file, and removes the file when it is closed.
 type URLAdapter struct {
-	URL string
+	url string
 	ZipAdapter
 }
 
 // Open the adapter, and download the provided URL to a temporary file.
 func (adapter *URLAdapter) Open() error {
 	// Get the data
-	resp, err := http.Get(adapter.URL)
+	resp, err := http.Get(adapter.url)
 	if err != nil {
 		return err
 	}
@@ -58,15 +56,20 @@ func (adapter *URLAdapter) Open() error {
 	tmpfilepath := tmpfile.Name()
 	// Write the body to file
 	_, err = io.Copy(tmpfile, resp.Body)
-	log.Debug("Downloaded %s to %s", adapter.URL, tmpfilepath)
+	log.Debug("Downloaded %s to %s", adapter.url, tmpfilepath)
 	adapter.ZipAdapter = ZipAdapter{path: tmpfilepath}
-	return nil
+	return adapter.ZipAdapter.Open()
 }
 
 // Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
 func (adapter *URLAdapter) Close() error {
-	return os.Remove(adapter.ZipAdapter.path)
+	if err := os.Remove(adapter.ZipAdapter.path); err != nil {
+		return err
+	}
+	return adapter.ZipAdapter.Close()
 }
+
+/////////////////////
 
 // ZipAdapter supports zip archives.
 type ZipAdapter struct {
@@ -136,13 +139,24 @@ func (adapter ZipAdapter) ReadRows(filename string, cb func(Row)) error {
 	})
 }
 
+/////////////////////
+
 // DirAdapter supports plain directories of CSV files.
 type DirAdapter struct {
-	path string
+	path  string
+	files map[string]*os.File
+}
+
+// NewDirAdapter returns an initialized DirAdapter
+func NewDirAdapter(path string) *DirAdapter {
+	return &DirAdapter{
+		path:  path,
+		files: map[string]*os.File{},
+	}
 }
 
 // Open the adapter. Return an error if the directory does not exist.
-func (adapter DirAdapter) Open() error {
+func (adapter *DirAdapter) Open() error {
 	if !adapter.Exists() {
 		return errors.New("file does not exist")
 	}
@@ -150,17 +164,22 @@ func (adapter DirAdapter) Open() error {
 }
 
 // Close the adapter.
-func (adapter DirAdapter) Close() error {
+func (adapter *DirAdapter) Close() error {
+	for _, f := range adapter.files {
+		if err := f.Close(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // Path returns the directory path.
-func (adapter DirAdapter) Path() string {
+func (adapter *DirAdapter) Path() string {
 	return adapter.path
 }
 
 // OpenFile opens a file in the directory. Returns an error if the file cannot be read.
-func (adapter DirAdapter) OpenFile(filename string, cb func(io.Reader)) error {
+func (adapter *DirAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 	in, err := os.Open(filepath.Join(adapter.path, filename))
 	if err != nil {
 		return err
@@ -171,18 +190,94 @@ func (adapter DirAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 }
 
 // ReadRows opens the file and runs the callback for each row. An error is returned if the file cannot be read.
-func (adapter DirAdapter) ReadRows(filename string, cb func(Row)) error {
+func (adapter *DirAdapter) ReadRows(filename string, cb func(Row)) error {
 	return adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
 }
 
 // Exists checks if the specified directory exists.
-func (adapter DirAdapter) Exists() bool {
+func (adapter *DirAdapter) Exists() bool {
 	// Is the path a directory
 	fi, err := os.Stat(adapter.path)
 	if err != nil {
 		return false
 	}
 	return fi.Mode().IsDir()
+}
+
+// WriteRow adds a single row to an output file.
+func (adapter *DirAdapter) WriteRow(filename string, row []string) error {
+	// Is this file open
+	in, ok := adapter.files[filename]
+	if !ok {
+		i, err := os.Create(filepath.Join(adapter.path, filename))
+		if err != nil {
+			return err
+		}
+		in = i
+		adapter.files[filename] = in
+	}
+	w := csv.NewWriter(in)
+	w.Write(row)
+	if err := w.Error(); err != nil {
+		return err
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return err
+	}
+	return nil
+}
+
+/////////////////////
+
+// ZipWriterAdapter functions the same as DirAdapter, but writes to a temporary directory, and creates a zip archive when closed.
+type ZipWriterAdapter struct {
+	outpath string
+	DirAdapter
+}
+
+// NewZipWriterAdapter returns a new ZipWriterAdapter.
+func NewZipWriterAdapter(path string) *ZipWriterAdapter {
+	tmpdir, err := ioutil.TempDir("", "gtfs")
+	if err != nil {
+		return nil
+	}
+	return &ZipWriterAdapter{
+		outpath:    path,
+		DirAdapter: *NewDirAdapter((tmpdir)),
+	}
+}
+
+// Close creates a zip archive of all the written files at the specified destination.
+func (adapter *ZipWriterAdapter) Close() error {
+	out, err := os.Create(adapter.outpath)
+	if err != nil {
+		return nil
+	}
+	w := zip.NewWriter(out)
+	defer w.Close()
+	for k, f := range adapter.DirAdapter.files {
+		// Seek to beginning of file
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			return err
+		}
+		// Create zip name and copy to zip
+		if wf, err := w.Create(k); err != nil {
+			return err
+		} else if _, err := io.Copy(wf, f); err != nil {
+			return err
+		}
+		// Close and remove file
+		if err := f.Close(); err != nil {
+			return err
+		} else if err := os.Remove(f.Name()); err != nil {
+			return err
+		}
+	}
+	if err := os.Remove(adapter.DirAdapter.path); err != nil {
+		return err
+	}
+	return nil
 }
