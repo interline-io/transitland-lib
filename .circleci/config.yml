@@ -22,7 +22,10 @@ workflows:
       - test
   tagged-build:
     jobs:
+      - test
       - build:
+          requires:
+            - test
           filters:
             tags:
               only: /^v.*/
