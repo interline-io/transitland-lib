@@ -5,7 +5,7 @@ jobs:
       - image: circleci/golang:1.12
     steps:
       - checkout
-      - run: go test
+      - run: go test -coverprofile c.out
       - run: go tool cover -html=c.out -o coverage.html
       - store_artifacts:
           path: coverage.html
