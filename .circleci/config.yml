@@ -7,6 +7,7 @@ jobs:
       - checkout
       - run: go test -coverprofile c.out
       - run: go tool cover -html=c.out -o coverage.html
+      # TODO: add profiling
       - store_artifacts:
           path: coverage.html
   build:
