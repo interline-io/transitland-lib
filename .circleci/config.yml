@@ -11,8 +11,7 @@ jobs:
       - image: circleci/golang:1.12
     steps:
       - checkout
-      - run: scoop bucket add goreleaser https://github.com/goreleaser/scoop-bucket.git
-      - run: scoop install goreleaser
+      - run: snap install --classic goreleaser
       - run: goreleaser
 
 workflows:
