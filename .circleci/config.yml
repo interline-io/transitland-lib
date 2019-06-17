@@ -1,0 +1,34 @@
+version: 2
+jobs:
+  test:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run: go test -coverprofile c.out
+      - run: go tool cover -html=c.out -o coverage.html
+      # TODO: add profiling
+      - store_artifacts:
+          path: coverage.html
+  build:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run: wget https://github.com/goreleaser/goreleaser/releases/download/v0.110.0/goreleaser_amd64.deb
+      - run: dpkg -i goreleaser_amd64.deb
+      - run: goreleaser
+
+workflows:
+  version: 2
+  test-n-build:
+    jobs:
+      - test
+      - build:
+          requires:
+            - test
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
