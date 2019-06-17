@@ -17,10 +17,7 @@ jobs:
 
 workflows:
   version: 2
-  untagged-test:
-    jobs:
-      - test
-  tagged-build:
+  test-n-build:
     jobs:
       - test
       - build:
@@ -29,3 +26,5 @@ workflows:
           filters:
             tags:
               only: /^v.*/
+            branches:
+              ignore: /.*/
