@@ -6,6 +6,9 @@ jobs:
     steps:
       - checkout
       - run: go test
+      - run: go tool cover -html=coverage.html
+      - store_artifacts:
+          path: coverage.html
   build:
     docker:
       - image: circleci/golang:1.12
