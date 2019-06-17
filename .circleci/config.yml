@@ -11,9 +11,8 @@ jobs:
       - image: circleci/golang:1.12
     steps:
       - checkout
-      - run: >
-          wget https://github.com/goreleaser/goreleaser/releases/download/v0.110.0/goreleaser_amd64.deb
-          dpkg -i goreleaser_amd64.deb
+      - run: wget https://github.com/goreleaser/goreleaser/releases/download/v0.110.0/goreleaser_amd64.deb
+      - run: dpkg -i goreleaser_amd64.deb
       - run: goreleaser
 
 workflows:
