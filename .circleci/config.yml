@@ -1,0 +1,28 @@
+version: 2
+jobs:
+  test:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run: go test
+  build:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run: scoop bucket add goreleaser https://github.com/goreleaser/scoop-bucket.git
+      - run: scoop install goreleaser
+      - run: goreleaser
+
+workflows:
+  version: 2
+  untagged-test:
+    jobs:
+      - test
+  tagged-build:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /^v.*/
