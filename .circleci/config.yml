@@ -6,7 +6,7 @@ jobs:
     steps:
       - checkout
       - run: go test
-      - run: go tool cover -html=coverage.html
+      - run: go tool cover -html=c.out -o coverage.html
       - store_artifacts:
           path: coverage.html
   build:
