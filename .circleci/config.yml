@@ -23,7 +23,10 @@ workflows:
   version: 2
   test-n-build:
     jobs:
-      - test
+      - test:
+          filters:
+            tags:
+              only: /^.*/
       - build:
           requires:
             - test
