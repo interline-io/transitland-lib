@@ -17,6 +17,7 @@ jobs:
       - checkout
       - run: wget https://github.com/goreleaser/goreleaser/releases/download/v0.110.0/goreleaser_amd64.deb
       - run: sudo dpkg -i goreleaser_amd64.deb
+      - run: rm goreleaser_amd64.deb
       - run: goreleaser
 
 workflows:
