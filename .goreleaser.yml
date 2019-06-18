@@ -9,10 +9,13 @@ builds:
 - main: ./cmd/gotransit/main.go
   env:
   - CGO_ENABLED=0
-goos:
+  goos:
   - linux
-goarch:
+  goarch:
   - amd64
+dockers:
+  - image_templates:
+    - interline-io/gotransit
 checksum:
   name_template: 'checksums.txt'
 changelog:
