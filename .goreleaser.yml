@@ -9,13 +9,12 @@ builds:
 - main: ./cmd/gotransit/main.go
   env:
   - CGO_ENABLED=0
-archives:
-- replacements:
-    linux: Linux
+goos:
+  - linux
+goarch:
+  - amd64
 checksum:
   name_template: 'checksums.txt'
-snapshot:
-  name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:

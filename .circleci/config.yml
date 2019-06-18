@@ -18,6 +18,7 @@ jobs:
       - run: wget https://github.com/goreleaser/goreleaser/releases/download/v0.110.0/goreleaser_amd64.deb
       - run: sudo dpkg -i goreleaser_amd64.deb
       - run: rm goreleaser_amd64.deb
+      - run: sudo apt-get install sqlite3 libsqlite3-dev libspatialite-dev
       - run: goreleaser
 
 workflows:
