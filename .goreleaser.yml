@@ -13,9 +13,9 @@ builds:
   - linux
   goarch:
   - amd64
-dockers:
-  - image_templates:
-    - interline-io/gotransit
+# dockers:
+#   - image_templates:
+#     - interline-io/gotransit
 checksum:
   name_template: 'checksums.txt'
 changelog:
