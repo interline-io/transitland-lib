@@ -1,12 +1,11 @@
 package enums
 
 import (
-	"fmt"
 	"sort"
 	"testing"
 )
 
-func TestGetPrimitiveRouteType(t *testing.T) {
+func TestGetBasicRouteType(t *testing.T) {
 	tests := []struct {
 		code      int
 		primitive int
@@ -21,7 +20,8 @@ func TestGetPrimitiveRouteType(t *testing.T) {
 		{400, 1, true},
 		{700, 3, true},
 		{800, 3, true},
-		{900, 2, true},
+		{900, 0, true},
+		{901, 0, true},
 		{1000, 4, true},
 		{1200, 4, true},
 		{1300, 6, true},
@@ -34,13 +34,13 @@ func TestGetPrimitiveRouteType(t *testing.T) {
 		{100000, 0, false},
 	}
 	for _, i := range tests {
-		rt, ok := GetPrimitiveRouteType((i.code))
+		rt, ok := GetBasicRouteType((i.code))
 		result := rt.Code
 		if ok != i.ok {
-			t.Errorf("got %t expect %t", ok, i.ok)
+			t.Errorf("code %d: got %t expect %t", i.code, ok, i.ok)
 		}
 		if result != i.primitive {
-			t.Errorf("got %d expect %d", result, i.primitive)
+			t.Errorf("code %d: got %d expect %d", i.code, result, i.primitive)
 		}
 	}
 }
@@ -59,10 +59,10 @@ func TestGetRouteType(t *testing.T) {
 	for _, i := range tests {
 		rt, ok := GetRouteType(i.code)
 		if ok != i.ok {
-			t.Errorf("got %t expect %t", ok, i.ok)
+			t.Errorf("code %d: got %t expect %t", i.code, ok, i.ok)
 		}
 		if ok && rt.Code != i.code {
-			t.Errorf("got %d expect %d", rt.Code, i.code)
+			t.Errorf("code %d: got %d expect %d", i.code, rt.Code, i.code)
 		}
 	}
 }
@@ -82,15 +82,14 @@ func TestGetRouteChildren(t *testing.T) {
 		for _, i := range GetRouteChildren(testcase.code) {
 			rets = append(rets, i.Code)
 		}
-		fmt.Println(rets)
 		sort.Ints(rets)
 		sort.Ints(testcase.rets)
 		if len(rets) != len(testcase.rets) {
-			t.Errorf("got len %d expect len %d", len(rets), len(testcase.rets))
+			t.Errorf("code %d: got len %d expect len %d", testcase.code, len(rets), len(testcase.rets))
 		} else {
 			for i := range rets {
 				if rets[i] != testcase.rets[i] {
-					t.Errorf("got %d expect %d", rets[i], testcase.rets[i])
+					t.Errorf("code %d: got %d expect %d", testcase.code, rets[i], testcase.rets[i])
 				}
 			}
 		}

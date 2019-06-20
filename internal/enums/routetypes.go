@@ -163,16 +163,21 @@ var RouteTypes = []RouteType{
 	{Code: 1702, Name: "Horse-drawn Carriage", Parent: 1700},
 }
 
-func GetRouteType(code int) (RouteType, bool) {
-	for _, i := range RouteTypes {
-		if i.Code == code {
-			return i, true
-		}
+var RouteTypesMap map[int]RouteType
+
+func init() {
+	RouteTypesMap = map[int]RouteType{}
+	for _, rt := range RouteTypes {
+		RouteTypesMap[rt.Code] = rt
 	}
-	return RouteType{}, false
 }
 
-func GetPrimitiveRouteType(code int) (RouteType, bool) {
+func GetRouteType(code int) (RouteType, bool) {
+	rt, ok := RouteTypesMap[code]
+	return rt, ok
+}
+
+func GetBasicRouteType(code int) (RouteType, bool) {
 	parents := map[int]int{}
 	for _, i := range RouteTypes {
 		if i.Code > 7 {

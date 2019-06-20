@@ -2,10 +2,12 @@ package copier
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/interline-io/gotransit/causes"
 
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/internal/enums"
 	"github.com/interline-io/gotransit/internal/log"
 )
 
@@ -69,6 +71,8 @@ type Copier struct {
 	CreateMissingShapes bool
 	// Create missing Calendar entries
 	NormalizeServiceIDs bool
+	// Convert extended route types to primitives
+	UseBasicRouteTypes bool
 	// Default AgencyID
 	DefaultAgencyID string
 	// Entity selection strategy
@@ -379,6 +383,14 @@ func (copier *Copier) copyRoutes() {
 			e.AgencyID = copier.DefaultAgencyID // todo - as else below?
 			if copier.agencyCount > 1 {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
+			}
+		}
+		// Use basic route types
+		if copier.UseBasicRouteTypes {
+			if rt, ok := enums.GetBasicRouteType(e.RouteType); ok {
+				e.RouteType = rt.Code
+			} else {
+				e.AddError(causes.NewInvalidFieldError("route_type", strconv.Itoa(e.RouteType), fmt.Errorf("cannot convert route_type %d to basic route type", e.RouteType)))
 			}
 		}
 		copier.CopyEntity(&e)
