@@ -1,6 +1,6 @@
 # Interline GoTransit
 
-building blocks for processing transit data. can be used either on the command line or within wrappers/programs
+modular building blocks for processing transit data in pipelines. can be used either as a command-line utility or as a library within wrappers/programs
 
 including GTFS, GTFS-Realtime, future potential for GBFS, MDS, etc, etc
 
@@ -47,6 +47,11 @@ Optional dependencies:
 ### validate command
 
 `gotransit validate`
+
+## Usage as a library
+
+See API docs at https://godoc.org/github.com/interline-io/gotransit
+[TODO: check after this repo is public]
 
 ## Development
 
