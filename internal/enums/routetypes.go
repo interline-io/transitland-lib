@@ -80,14 +80,14 @@ var RouteTypes = []RouteType{
 
 	{Code: 800, Name: "Trolleybus Service", Parent: 3},
 
-	{Code: 900, Name: "Tram Service", Parent: 2},
-	{Code: 901, Name: "City Tram Service", Parent: 2},
-	{Code: 902, Name: "Local Tram Service", Parent: 2},
-	{Code: 903, Name: "Regional Tram Service", Parent: 2},
-	{Code: 904, Name: "Sightseeing Tram Service", Parent: 2},
-	{Code: 905, Name: "Shuttle Tram Service", Parent: 2},
-	{Code: 906, Name: "All Tram Services", Parent: 2},
-	{Code: 907, Name: "Cable Tram", Parent: 2},
+	{Code: 900, Name: "Tram Service", Parent: 0},
+	{Code: 901, Name: "City Tram Service", Parent: 0},
+	{Code: 902, Name: "Local Tram Service", Parent: 0},
+	{Code: 903, Name: "Regional Tram Service", Parent: 0},
+	{Code: 904, Name: "Sightseeing Tram Service", Parent: 0},
+	{Code: 905, Name: "Shuttle Tram Service", Parent: 0},
+	{Code: 906, Name: "All Tram Services", Parent: 0},
+	{Code: 907, Name: "Cable Tram", Parent: 0},
 
 	{Code: 1000, Name: "Water Transport Service", Parent: 4},
 	{Code: 1001, Name: "International Car Ferry Service", Parent: 4},
@@ -189,12 +189,33 @@ func GetPrimitiveRouteType(code int) (RouteType, bool) {
 	return GetRouteType(code)
 }
 
-func GetRouteCategory(category string) []RouteType {
-	rt := []RouteType{}
+func GetRouteChildren(code int) []RouteType {
+	children := map[int][]int{}
 	for _, i := range RouteTypes {
-		if i.Category == category {
-			rt = append(rt, i)
+		if i.Code > 7 {
+			children[i.Parent] = append(children[i.Parent], i.Code)
 		}
 	}
-	return rt
+	queue := []int{}
+	visited := map[int]bool{}
+	if rt, ok := GetRouteType(code); ok {
+		queue = append(queue, rt.Code)
+	}
+	for len(queue) > 0 {
+		item := queue[0]
+		queue = queue[1:len(queue)]
+		visited[item] = true
+		for _, child := range children[item] {
+			if !visited[child] {
+				queue = append(queue, child)
+			}
+		}
+	}
+	ret := []RouteType{}
+	for _, rt := range RouteTypes {
+		if _, ok := visited[rt.Code]; ok {
+			ret = append(ret, rt)
+		}
+	}
+	return ret
 }
