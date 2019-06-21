@@ -29,13 +29,13 @@ func SetString(ent gotransit.Entity, key string, value string) error {
 		return fastent.SetString(key, value)
 	}
 	fmap := tags.GetStructTagMap(ent)
-	val := reflect.ValueOf(ent).Elem()
-	if k, ok := fmap[key]; !ok {
+	if _, ok := fmap[key]; !ok {
 		// only SetExtra when loading from csv...
 		// ent.SetExtra(key, value)
 		return errors.New("unknown field")
 	} else {
-		valueField := val.Field(k.Index)
+		// Already known valid field
+		valueField := reflect.ValueOf(ent).Elem().FieldByName(key)
 		if err := valSetString(valueField, value); err != nil {
 			return err
 		}
@@ -43,7 +43,7 @@ func SetString(ent gotransit.Entity, key string, value string) error {
 	return nil
 }
 
-// valSetString .
+// valSetString sets the field from a CSV representation of the value.
 func valSetString(valueField reflect.Value, strv string) error {
 	var p error
 	switch valueField.Interface().(type) {
@@ -81,9 +81,69 @@ type canGetString interface {
 	GetString(string) (string, error)
 }
 
-// func GetString(ent gotransit.Entity, key string) (string, error) {
-// 	return "", nil
-// }
+// GetString convenience method; gets a String representation of a field.
+func GetString(ent gotransit.Entity, key string) (string, error) {
+	if fastent, ok := ent.(canGetString); ok {
+		return fastent.GetString(key)
+	}
+	strv := ""
+	fmap := tags.GetStructTagMap(ent)
+	if _, ok := fmap[key]; !ok {
+		// only SetExtra when loading from csv...
+		// ent.SetExtra(key, value)
+		return "", errors.New("unknown field")
+	} else {
+		// Already known valid field
+		valueField := reflect.ValueOf(ent).Elem().FieldByName(key)
+		v, err := valGetString(valueField, key)
+		if err != nil {
+			return "", err
+		}
+		strv = v
+	}
+	return strv, nil
+}
+
+// valGetString returns a CSV representation of the field.
+func valGetString(valueField reflect.Value, k string) (string, error) {
+	value := ""
+	switch v := valueField.Interface().(type) {
+	case string:
+		// TODO: Remove special case
+		if strings.HasSuffix(k, "_id") && v == "0" {
+			v = ""
+		}
+		value = v
+	case int:
+		// TODO: Remove special case
+		if v == math.MaxInt64 {
+			value = ""
+		} else {
+			value = strconv.Itoa(v)
+		}
+	case bool:
+		value = strconv.Itoa(boolToInt(v))
+	case float64:
+		if math.IsNaN(v) {
+			value = ""
+		} else {
+			value = fmt.Sprintf("%0.5f", v)
+		}
+	case time.Time:
+		if v.Year() < 1970 {
+			value = ""
+		} else {
+			value = v.Format("20060102")
+		}
+	case gotransit.WideTime:
+		if t, err := v.String(); err == nil {
+			value = t
+		}
+	default:
+		return "", errors.New("unknown field type")
+	}
+	return value, nil
+}
 
 // Loading: fast and reflect paths //
 
@@ -204,7 +264,7 @@ func dumpRow(ent gotransit.Entity, header []string) ([]string, error) {
 		for _, k := range header {
 			v, err := a.GetString(k)
 			if err != nil {
-				p = err
+				return row, err
 			}
 			row = append(row, v)
 		}
@@ -221,43 +281,12 @@ func dumpRow(ent gotransit.Entity, header []string) ([]string, error) {
 		if len(field.Csv) == 0 {
 			continue
 		}
-		value := ""
-		switch v := val.Field(field.Index).Interface().(type) {
-		case string:
-			// TODO: Remove special case
-			if strings.HasSuffix(k, "_id") && v == "0" {
-				v = ""
-			}
-			value = v
-		case int:
-			// TODO: Remove special case
-			if v == math.MaxInt64 {
-				value = ""
-			} else {
-				value = strconv.Itoa(v)
-			}
-		case bool:
-			value = strconv.Itoa(boolToInt(v))
-		case float64:
-			if math.IsNaN(v) {
-				value = ""
-			} else {
-				value = fmt.Sprintf("%0.5f", v)
-			}
-		case time.Time:
-			if v.Year() < 1970 {
-				value = ""
-			} else {
-				value = v.Format("20060102")
-			}
-		case gotransit.WideTime:
-			if t, err := v.String(); err == nil {
-				value = t
-			}
-		default:
-			p = errors.New("unknown field type")
+		valueField := val.Field(field.Index)
+		value, err := valGetString(valueField, k)
+		if err != nil {
+			return row, err
 		}
 		row = append(row, value)
 	}
-	return row, p
+	return row, nil
 }
