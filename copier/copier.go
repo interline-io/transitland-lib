@@ -415,6 +415,9 @@ func (copier *Copier) copyCalendars() {
 	dups := map[calkey]int{}
 	// Add CalendarDates
 	for e := range copier.Reader.CalendarDates() {
+		if !copier.Marker.IsMarked("calendar.txt", e.ServiceID) {
+			continue
+		}
 		key := calkey{
 			ServiceID: e.ServiceID,
 			Date:      e.Date.Format("20060102"),
