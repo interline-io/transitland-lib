@@ -14,7 +14,6 @@ import (
 	"github.com/interline-io/gotransit/extract"
 	_ "github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/enums"
 	"github.com/interline-io/gotransit/internal/log"
 	"github.com/interline-io/gotransit/validator"
 )
@@ -113,8 +112,6 @@ func main() {
 	extractCommand.Var(&extractRoutes, "route", "Extract Route")
 	extractRouteTypes := arrayFlags{}
 	extractCommand.Var(&extractRouteTypes, "route_type", "Extract Routes matching route_type")
-	extractRouteTypeCategories := arrayFlags{}
-	extractCommand.Var(&extractRouteTypeCategories, "route_type_category", "Extracr Routes matching this route_type category")
 	//
 	if len(os.Args) == 1 {
 		fmt.Println("usage: gotransit <command> [<args>]")
@@ -160,11 +157,6 @@ func main() {
 		defer writer.Close()
 		//
 		fm := map[string][]string{}
-		for _, i := range extractRouteTypeCategories {
-			for _, rt := range enums.GetRouteCategory(i) {
-				extractRouteTypes = append(extractRouteTypes, strconv.Itoa(rt.Code))
-			}
-		}
 		rthits := map[int]bool{}
 		for _, i := range extractRouteTypes {
 			if v, err := strconv.Atoi(i); err == nil {
@@ -214,6 +206,7 @@ func main() {
 		cp.Marker = &em
 		cp.AllowEntityErrors = false
 		cp.AllowReferenceErrors = false
+		cp.UseBasicRouteTypes = true
 		// Copy
 		cp.Copy()
 	}
