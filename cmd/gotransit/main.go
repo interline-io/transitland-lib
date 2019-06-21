@@ -112,6 +112,8 @@ func main() {
 	extractCommand.Var(&extractRoutes, "route", "Extract Route")
 	extractRouteTypes := arrayFlags{}
 	extractCommand.Var(&extractRouteTypes, "route_type", "Extract Routes matching route_type")
+	extractSet := arrayFlags{}
+	extractCommand.Var(&extractSet, "set", "Set values on output; format is filename,id,key,value")
 	//
 	if len(os.Args) == 1 {
 		fmt.Println("usage: gotransit <command> [<args>]")
@@ -155,7 +157,29 @@ func main() {
 		defer reader.Close()
 		writer := getWriter(extractCommand.Arg(1))
 		defer writer.Close()
-		//
+		// Setup copier
+		cp := copier.NewCopier(reader, writer)
+		// Set copier options
+		cp.AllowEntityErrors = false
+		cp.AllowReferenceErrors = false
+		cp.UseBasicRouteTypes = true
+		// Set values
+		setvalues := [][]string{}
+		for _, setv := range extractSet {
+			setvalues = append(setvalues, strings.Split(setv, ","))
+		}
+		if len(setvalues) > 0 {
+			tx := extract.NewSetterFilter()
+			for _, setv := range setvalues {
+				if len(setv) != 4 {
+					fmt.Println("invalid set argument")
+					continue
+				}
+				tx.AddValue(setv[0], setv[1], setv[2], setv[3])
+			}
+			cp.AddEntityFilter(tx)
+		}
+		// Extract entities
 		fm := map[string][]string{}
 		rthits := map[int]bool{}
 		for _, i := range extractRouteTypes {
@@ -192,7 +216,6 @@ func main() {
 				log.Debug("\t%s: %s", k, i)
 			}
 		}
-
 		// Load graph
 		em := extract.NewExtractMarker()
 		log.Debug("Loading graph")
@@ -200,14 +223,9 @@ func main() {
 		// Apply filters
 		log.Debug("Appling filters")
 		em.Filter(fm)
-		log.Debug("Copying...")
-		cp := copier.NewCopier(reader, writer)
-		// Set copier options
 		cp.Marker = &em
-		cp.AllowEntityErrors = false
-		cp.AllowReferenceErrors = false
-		cp.UseBasicRouteTypes = true
-		// Copy
+		//
+		log.Debug("Copying...")
 		cp.Copy()
 	}
 
