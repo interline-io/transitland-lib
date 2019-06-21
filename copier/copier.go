@@ -154,6 +154,13 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		return "", false
 	}
 	ret := true
+	// Check the entity against filters.
+	for _, ef := range copier.filters {
+		if err := ef.Filter(ent, copier.EntityMap); err != nil {
+			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
+			ret = false
+		}
+	}
 	// Check the entity for errors.
 	if errs := ent.Errors(); len(errs) > 0 {
 		for _, i := range errs {
@@ -180,13 +187,6 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 			log.Debug("%s '%s' failed to update keys, allowing: %s", efn, eid, err)
 		} else {
 			log.Debug("%s '%s' failed to update keys, skipping: %s", efn, eid, err)
-			ret = false
-		}
-	}
-	// Check the entity against filters.
-	for _, ef := range copier.filters {
-		if err := ef.Filter(ent, copier.EntityMap); err != nil {
-			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
 			ret = false
 		}
 	}
