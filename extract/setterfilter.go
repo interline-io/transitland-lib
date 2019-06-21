@@ -1,9 +1,8 @@
 package extract
 
 import (
-	"fmt"
-
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/gtcsv"
 )
 
 type setterFilter struct {
@@ -16,20 +15,12 @@ func newSetterFilter() *setterFilter {
 	}
 }
 
-type canSetString interface {
-	SetString(string, string) error
-}
-
 func (tx *setterFilter) Filter(ent gotransit.Entity, emap *gotransit.EntityMap) error {
-	ent2, ok := ent.(canSetString)
-	if !ok {
-		return nil
-	}
 	if entv, ok := tx.nodes[*entityNode(ent)]; ok {
-		fmt.Println("found: ", entv)
 		for k, v := range entv {
-			fmt.Println(k, v)
-			ent2.SetString(k, v)
+			if err := gtcsv.SetString(ent, k, v); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

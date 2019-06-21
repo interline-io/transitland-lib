@@ -29,13 +29,14 @@ func SetString(ent gotransit.Entity, key string, value string) error {
 		return fastent.SetString(key, value)
 	}
 	fmap := tags.GetStructTagMap(ent)
-	if _, ok := fmap[key]; !ok {
+	if k, ok := fmap[key]; !ok {
 		// only SetExtra when loading from csv...
 		// ent.SetExtra(key, value)
 		return errors.New("unknown field")
 	} else {
 		// Already known valid field
-		valueField := reflect.ValueOf(ent).Elem().FieldByName(key)
+		elem := reflect.ValueOf(ent).Elem()
+		valueField := elem.Field(k.Index)
 		if err := valSetString(valueField, value); err != nil {
 			return err
 		}
@@ -88,13 +89,14 @@ func GetString(ent gotransit.Entity, key string) (string, error) {
 	}
 	strv := ""
 	fmap := tags.GetStructTagMap(ent)
-	if _, ok := fmap[key]; !ok {
+	if k, ok := fmap[key]; !ok {
 		// only SetExtra when loading from csv...
 		// ent.SetExtra(key, value)
 		return "", errors.New("unknown field")
 	} else {
 		// Already known valid field
-		valueField := reflect.ValueOf(ent).Elem().FieldByName(key)
+		elem := reflect.ValueOf(ent).Elem()
+		valueField := elem.Field(k.Index)
 		v, err := valGetString(valueField, key)
 		if err != nil {
 			return "", err
