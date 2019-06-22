@@ -13,7 +13,6 @@ import (
 	_ "github.com/interline-io/gotransit/ext/plus"
 	"github.com/interline-io/gotransit/extract"
 	_ "github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
 	"github.com/interline-io/gotransit/validator"
 )
@@ -73,48 +72,213 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
-func main() {
-	// Validate
-	validateCommand := flag.NewFlagSet("validate", flag.ExitOnError)
-	validateExtensions := arrayFlags{}
-	validateCommand.Var(&validateExtensions, "ext", "Include GTFS Extension")
+// copyCommand
+type copyCommand struct {
+	create               bool
+	allowEntityErrors    bool
+	allowReferenceErrors bool
+	extensions           arrayFlags
+	filters              arrayFlags
+	args                 []string
+}
 
+func (cmd *copyCommand) run(args []string) {
+	fl := flag.NewFlagSet("copy", flag.ExitOnError)
+	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+	fl.BoolVar(&cmd.create, "create", false, "Create")
+	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "")
+	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "")
+	// fl.BoolVar(&cmd.copyNewfv, "newfv", false, "Create new Feed Version")
+	// fl.BoolVar(&cmd.copyResults, "results", false, "Show entity counts in output")
+	// fl.IntVar(&cmd.copyFvid, "fv", 0, "Feed Version ID")
+	fl.Parse(args)
+	cmd.args = fl.Args()
+	if len(cmd.args) < 2 {
+		exit("requires input and output")
+	}
+	// Reader
+	reader := getReader(cmd.args[0])
+	defer reader.Close()
+	writer := getWriter(cmd.args[1])
+	defer writer.Close()
+	if cmd.create {
+		if err := writer.Create(); err != nil {
+			exit("%s", err)
+		}
+	}
+	// Add extensions
+	cp := copier.NewCopier(reader, writer)
+	for _, ext := range cmd.extensions {
+		e, err := gotransit.GetExtension(ext)
+		if err != nil {
+			exit("no extension for: %s", ext)
+		}
+		cp.AddExtension(e)
+		e.Create(writer)
+	}
+	// Add filters
+	for _, ext := range cmd.filters {
+		ef, err := gotransit.GetEntityFilter(ext)
+		if err != nil {
+			exit("no filter for '%s': %s", ext, err)
+		}
+		cp.AddEntityFilter(ef)
+	}
 	// Copy
-	copyCommand := flag.NewFlagSet("copy", flag.ExitOnError)
-	// Multiple flags e.g. "--ext a --ext b"
-	copyExtensions := arrayFlags{}
-	copyCommand.Var(&copyExtensions, "ext", "Include GTFS Extension")
-	var copyFilters arrayFlags
-	copyCommand.Var(&copyFilters, "filter", "Apply GTFS Filter")
-	// Regular flags
-	var copyCreate = copyCommand.Bool("create", false, "Create new database")
-	var copyDelete = copyCommand.Bool("delete", false, "Delete data from Feed Version before copying")
-	var copyNewfv = copyCommand.Bool("newfv", false, "Create new Feed Version")
-	var copyFvid = copyCommand.Int("fv", 0, "Feed Version ID")
-	var copyOnlyVisited = copyCommand.Bool("visited", false, "Copy only visited entities")
-	var copyInterpolate = copyCommand.Bool("interpolate", false, "Interpolate missing StopTime values")
-	var copyCreateShapes = copyCommand.Bool("createshapes", false, "Create any missing Trip Shapes")
-	var copyResults = copyCommand.Bool("results", false, "Show entity counts in output")
-	_ = copyResults
-	var copyNormalizeServiceIDs = copyCommand.Bool("normalizeserviceids", false, "Normalize ServiceIDs")
+	cp.Copy()
+	cp.CopyExtensions()
+}
 
-	// Extract
-	extractCommand := flag.NewFlagSet("extract", flag.ExitOnError)
-	extractAgencies := arrayFlags{}
-	extractCommand.Var(&extractAgencies, "agency", "Extract Agency")
-	extractStops := arrayFlags{}
-	extractCommand.Var(&extractStops, "stop", "Extract Stop")
-	extractTrips := arrayFlags{}
-	extractCommand.Var(&extractTrips, "trip", "Extract Trip")
-	extractCalendars := arrayFlags{}
-	extractCommand.Var(&extractCalendars, "calendar", "Extract Calendar")
-	extractRoutes := arrayFlags{}
-	extractCommand.Var(&extractRoutes, "route", "Extract Route")
-	extractRouteTypes := arrayFlags{}
-	extractCommand.Var(&extractRouteTypes, "route_type", "Extract Routes matching route_type")
-	extractSet := arrayFlags{}
-	extractCommand.Var(&extractSet, "set", "Set values on output; format is filename,id,key,value")
+// extractCommand
+type extractCommand struct {
+	create               bool
+	allowEntityErrors    bool
+	allowReferenceErrors bool
+	extensions           arrayFlags
+	filters              arrayFlags
+	args                 []string
+	// extract specific arguments
+	onlyVisitedEntities  bool
+	allEntities          bool
+	interpolateStopTimes bool
+	createMissingShapes  bool
+	normalizeServiceIDs  bool
+	useBasicRouteTypes   bool
+	extractAgencies      arrayFlags
+	extractStops         arrayFlags
+	extractTrips         arrayFlags
+	extractCalendars     arrayFlags
+	extractRoutes        arrayFlags
+	extractRouteTypes    arrayFlags
+	extractSet           arrayFlags
+}
+
+func (cmd *extractCommand) run(args []string) {
+	fl := flag.NewFlagSet("extract", flag.ExitOnError)
+	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+	fl.BoolVar(&cmd.create, "create", false, "Create")
+	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "")
+	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "")
+	// Extract options
+	fl.BoolVar(&cmd.interpolateStopTimes, "interpolate-stop-times", false, "")
+	fl.BoolVar(&cmd.createMissingShapes, "create-missing-shapes", false, "")
+	fl.BoolVar(&cmd.normalizeServiceIDs, "normalize-service-ids", false, "")
+	fl.BoolVar(&cmd.useBasicRouteTypes, "use-basic-route-types", false, "")
+	// Entity selection options
+	fl.BoolVar(&cmd.onlyVisitedEntities, "only-visited-entities", false, "")
+	fl.BoolVar(&cmd.allEntities, "all-entities", false, "")
+	fl.Var(&cmd.extractAgencies, "extract-agency", "Extract Agency")
+	fl.Var(&cmd.extractStops, "extract-stop", "Extract Stop")
+	fl.Var(&cmd.extractTrips, "extract-trip", "Extract Trip")
+	fl.Var(&cmd.extractCalendars, "extract-calendar", "Extract Calendar")
+	fl.Var(&cmd.extractRoutes, "extract-route", "Extract Route")
+	fl.Var(&cmd.extractRouteTypes, "extract-route-type", "Extract Routes matching route_type")
+	fl.Var(&cmd.extractSet, "set", "Set values on output; format is filename,id,key,value")
+	fl.Parse(args)
+	cmd.args = fl.Args()
 	//
+	reader := getReader(cmd.args[0])
+	defer reader.Close()
+	writer := getWriter(cmd.args[1])
+	defer writer.Close()
+	// Setup copier
+	cp := copier.NewCopier(reader, writer)
+	// Set copier options
+	cp.AllowEntityErrors = cmd.allowEntityErrors
+	cp.AllowReferenceErrors = cmd.allowReferenceErrors
+	cp.UseBasicRouteTypes = cmd.useBasicRouteTypes
+	// Set values
+	setvalues := [][]string{}
+	for _, setv := range cmd.extractSet {
+		setvalues = append(setvalues, strings.Split(setv, ","))
+	}
+	if len(setvalues) > 0 {
+		tx := extract.NewSetterFilter()
+		for _, setv := range setvalues {
+			if len(setv) != 4 {
+				fmt.Println("invalid set argument")
+				continue
+			}
+			tx.AddValue(setv[0], setv[1], setv[2], setv[3])
+		}
+		cp.AddEntityFilter(tx)
+	}
+	// Extract entities
+	fm := map[string][]string{}
+	rthits := map[int]bool{}
+	for _, i := range cmd.extractRouteTypes {
+		if v, err := strconv.Atoi(i); err == nil {
+			rthits[v] = true
+		} else {
+			fmt.Println("invalid route_type:", i)
+		}
+	}
+	for ent := range reader.Routes() {
+		if _, ok := rthits[ent.RouteType]; ok {
+			fm["routes.txt"] = append(fm["routes.txt"], ent.RouteID)
+		}
+	}
+	// Regular IDs
+	for _, i := range cmd.extractTrips {
+		fm["trips.txt"] = append(fm["trips.txt"], i)
+	}
+	for _, i := range cmd.extractAgencies {
+		fm["agency.txt"] = append(fm["agency.txt"], i)
+	}
+	for _, i := range cmd.extractRoutes {
+		fm["routes.txt"] = append(fm["routes.txt"], i)
+	}
+	for _, i := range cmd.extractCalendars {
+		fm["calendar.txt"] = append(fm["calendar.txt"], i)
+	}
+	for _, i := range cmd.extractStops {
+		fm["stops.txt"] = append(fm["stops.txt"], i)
+	}
+	log.Debug("Extract filter:")
+	for k, v := range fm {
+		for _, i := range v {
+			log.Debug("\t%s: %s", k, i)
+		}
+	}
+	// Marker
+	em := extract.NewExtractMarker()
+	em.Load(reader)
+	em.Filter(fm)
+	cp.Marker = &em
+	// Copy
+	cp.Copy()
+	cp.CopyExtensions()
+}
+
+// validateCommand
+type validateCommand struct {
+	validateExtensions arrayFlags
+	args               []string
+}
+
+func (cmd *validateCommand) run(args []string) {
+	fl := flag.NewFlagSet("validate", flag.ExitOnError)
+	fl.Var(&cmd.validateExtensions, "ext", "Include GTFS Extension")
+	fl.Parse(args)
+	cmd.args = fl.Args()
+	//
+	reader := getReader(cmd.args[0])
+	defer reader.Close()
+	v, err := validator.NewValidator(reader)
+	if err != nil {
+		panic(err)
+	}
+	for _, ext := range cmd.validateExtensions {
+		e, err := gotransit.GetExtension(ext)
+		if err != nil {
+			exit("No extension for: %s", ext)
+		}
+		v.Copier.AddExtension(e)
+	}
+	v.Validate()
+}
+
+func main() {
 	if len(os.Args) == 1 {
 		fmt.Println("usage: gotransit <command> [<args>]")
 		fmt.Println("Commands:")
@@ -123,183 +287,47 @@ func main() {
 		fmt.Println("  validate")
 		return
 	}
-
 	switch os.Args[1] {
 	case "copy":
-		copyCommand.Parse(os.Args[2:])
+		cmd := copyCommand{}
+		cmd.run(os.Args[2:])
 	case "validate":
-		validateCommand.Parse(os.Args[2:])
+		cmd := validateCommand{}
+		cmd.run(os.Args[2:])
 	case "extract":
-		extractCommand.Parse(os.Args[2:])
+		cmd := extractCommand{}
+		cmd.run(os.Args[2:])
 	default:
 		exit("%q is not valid command.", os.Args[1])
 	}
-
-	if validateCommand.Parsed() {
-		reader := getReader(validateCommand.Arg(0))
-		defer reader.Close()
-		v, err := validator.NewValidator(reader)
-		if err != nil {
-			panic(err)
-		}
-		for _, ext := range validateExtensions {
-			e, err := gotransit.GetExtension(ext)
-			if err != nil {
-				exit("No extension for: %s", ext)
-			}
-			v.Copier.AddExtension(e)
-		}
-		v.Validate()
-	}
-
-	if extractCommand.Parsed() {
-		reader := getReader(extractCommand.Arg(0))
-		defer reader.Close()
-		writer := getWriter(extractCommand.Arg(1))
-		defer writer.Close()
-		// Setup copier
-		cp := copier.NewCopier(reader, writer)
-		// Set copier options
-		cp.AllowEntityErrors = false
-		cp.AllowReferenceErrors = false
-		cp.UseBasicRouteTypes = true
-		// Set values
-		setvalues := [][]string{}
-		for _, setv := range extractSet {
-			setvalues = append(setvalues, strings.Split(setv, ","))
-		}
-		if len(setvalues) > 0 {
-			tx := extract.NewSetterFilter()
-			for _, setv := range setvalues {
-				if len(setv) != 4 {
-					fmt.Println("invalid set argument")
-					continue
-				}
-				tx.AddValue(setv[0], setv[1], setv[2], setv[3])
-			}
-			cp.AddEntityFilter(tx)
-		}
-		// Extract entities
-		fm := map[string][]string{}
-		rthits := map[int]bool{}
-		for _, i := range extractRouteTypes {
-			if v, err := strconv.Atoi(i); err == nil {
-				rthits[v] = true
-			} else {
-				fmt.Println("invalid route_type:", i)
-			}
-		}
-		for ent := range reader.Routes() {
-			if _, ok := rthits[ent.RouteType]; ok {
-				fm["routes.txt"] = append(fm["routes.txt"], ent.RouteID)
-			}
-		}
-		// Regular IDs
-		for _, i := range extractTrips {
-			fm["trips.txt"] = append(fm["trips.txt"], i)
-		}
-		for _, i := range extractAgencies {
-			fm["agency.txt"] = append(fm["agency.txt"], i)
-		}
-		for _, i := range extractRoutes {
-			fm["routes.txt"] = append(fm["routes.txt"], i)
-		}
-		for _, i := range extractCalendars {
-			fm["calendar.txt"] = append(fm["calendar.txt"], i)
-		}
-		for _, i := range extractStops {
-			fm["stops.txt"] = append(fm["stops.txt"], i)
-		}
-		log.Debug("Extract filter:")
-		for k, v := range fm {
-			for _, i := range v {
-				log.Debug("\t%s: %s", k, i)
-			}
-		}
-		// Load graph
-		em := extract.NewExtractMarker()
-		log.Debug("Loading graph")
-		em.Load(reader)
-		// Apply filters
-		log.Debug("Appling filters")
-		em.Filter(fm)
-		cp.Marker = &em
-		//
-		log.Debug("Copying...")
-		cp.Copy()
-	}
-
-	if copyCommand.Parsed() {
-		inurl := copyCommand.Arg(0)
-		// Reader
-		reader := getReader(copyCommand.Arg(0))
-		defer reader.Close()
-		writer := getWriter(copyCommand.Arg(1))
-		defer writer.Close()
-
-		// If a DBWriter, create a FV
-		if v, ok := writer.(*gtdb.Writer); ok {
-			// If writing to database, we must normalize calendars
-			nsids := true
-			copyNormalizeServiceIDs = &nsids
-			db := v.Adapter.DB()
-			if *copyCreate == true {
-				writer.Create()
-			}
-			if *copyNewfv == true {
-				fv, err := gotransit.NewFeedVersion(reader)
-				if err != nil {
-					exit("Could not create FeedVersion: %s", err)
-				}
-				dberr := db.
-					Where(gotransit.FeedVersion{URL: inurl, SHA1: fv.SHA1}).
-					FirstOrCreate(&fv).
-					Error
-				if dberr != nil {
-					exit("Could not create FeedVersion: %s", dberr)
-				}
-				copyFvid = &fv.ID
-			}
-			if *copyFvid > 0 {
-				v.FeedVersionID = *copyFvid
-			}
-			if *copyDelete == true {
-				v.Delete()
-			}
-		}
-
-		// Create Copier
-		// Add extensions
-		cp := copier.NewCopier(reader, writer)
-		for _, ext := range copyExtensions {
-			e, err := gotransit.GetExtension(ext)
-			if err != nil {
-				exit("No extension for: %s", ext)
-			}
-			cp.AddExtension(e)
-			e.Create(writer)
-		}
-		// Add filters
-		for _, ext := range copyFilters {
-			ef, err := gotransit.GetEntityFilter(ext)
-			if err != nil {
-				exit("No filter for '%s': %s", ext, err)
-			}
-			cp.AddEntityFilter(ef)
-		}
-		// Set options
-		cp.AllowEntityErrors = true
-		cp.AllowReferenceErrors = false
-		cp.NormalizeServiceIDs = *copyNormalizeServiceIDs
-		cp.InterpolateStopTimes = *copyInterpolate
-		cp.CreateMissingShapes = *copyCreateShapes
-		// Copy
-		if *copyOnlyVisited == true {
-			cp.CopyVisited()
-		} else {
-			cp.Copy()
-		}
-		// Copy Extensions
-		cp.CopyExtensions()
-	}
 }
+
+// if v, ok := writer.(*gtdb.Writer); ok {
+// 	// If writing to database, we must normalize calendars
+// 	nsids := true
+// 	copyNormalizeServiceIDs = &nsids
+// 	db := v.Adapter.DB()
+// 	if *copyCreate == true {
+// 		writer.Create()
+// 	}
+// 	if *copyNewfv == true {
+// 		fv, err := gotransit.NewFeedVersion(reader)
+// 		if err != nil {
+// 			exit("Could not create FeedVersion: %s", err)
+// 		}
+// 		dberr := db.
+// 			Where(gotransit.FeedVersion{URL: inurl, SHA1: fv.SHA1}).
+// 			FirstOrCreate(&fv).
+// 			Error
+// 		if dberr != nil {
+// 			exit("Could not create FeedVersion: %s", dberr)
+// 		}
+// 		copyFvid = &fv.ID
+// 	}
+// 	if *copyFvid > 0 {
+// 		v.FeedVersionID = *copyFvid
+// 	}
+// 	if *copyDelete == true {
+// 		v.Delete()
+// 	}
+// }
