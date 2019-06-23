@@ -1,4 +1,4 @@
-package copier
+package extract
 
 // fileInfo helps manage details about a GTFS table
 type fileInfo struct {

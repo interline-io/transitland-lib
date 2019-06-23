@@ -1,4 +1,4 @@
-package copier
+package extract
 
 import (
 	"github.com/interline-io/gotransit"

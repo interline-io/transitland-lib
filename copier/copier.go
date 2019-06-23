@@ -216,32 +216,8 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 ////////// Copy Methods //////////
 //////////////////////////////////
 
-// CopyVisited copies Entities that are referenced by at least one other Entity or are global.
-func (copier *Copier) CopyVisited() *CopyResult {
-	m := newVisitedMarker()
-	m.VisitAndMark(copier.Reader)
-	copier.Marker = &m
-	copier.copyEntities()
-	return copier.CopyResult
-}
-
 // Copy copies Base GTFS Entities from the Reader to the Writer, returning the summary as a CopyResult.
 func (copier *Copier) Copy() *CopyResult {
-	// copier.Marker = newYesMarker()
-	copier.copyEntities()
-	return copier.CopyResult
-}
-
-// CopyExtensions copies Entities defined by each added Extension.
-func (copier *Copier) CopyExtensions() error {
-	for _, ext := range copier.extensions {
-		ext.Copy(copier)
-	}
-	return nil
-}
-
-// copyEntities copies all marked entities.
-func (copier *Copier) copyEntities() error {
 	for _, err := range copier.Reader.ValidateStructure() {
 		copier.AddError(err)
 	}
@@ -255,7 +231,10 @@ func (copier *Copier) copyEntities() error {
 	copier.copyFrequencies()
 	copier.copyTransfers()
 	copier.copyFeedInfos()
-	return nil
+	for _, ext := range copier.extensions {
+		ext.Copy(copier)
+	}
+	return copier.CopyResult
 }
 
 /////////////////////////////////////////
@@ -415,7 +394,7 @@ func (copier *Copier) copyCalendars() {
 	dups := map[calkey]int{}
 	// Add CalendarDates
 	for e := range copier.Reader.CalendarDates() {
-		if !copier.Marker.IsMarked("calendar.txt", e.ServiceID) {
+		if !copier.isMarked(&gotransit.Calendar{ServiceID: e.ServiceID}) {
 			continue
 		}
 		key := calkey{
