@@ -1,0 +1,4 @@
+trip_id,start_time,end_time,headway_secs
+DTA1,6:00:00,7:59:59,1800
+DTA2,6:00:00,7:59:59,1800
+OK1,6:00:00,7:59:59,1800

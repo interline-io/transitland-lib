@@ -1,0 +1,9 @@
+shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence
+DTA1,1.0,1.0,1
+DTA1,2.0,4.0,2
+DTA1,3.0,9.0,3
+DTA1,4.0,16.0,4
+OK1,1.0,1.0,1
+OK1,2.0,4.0,2
+OK1,3.0,9.0,3
+OK1,4.0,16.0,4

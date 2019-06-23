@@ -1,0 +1,4 @@
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+DTA,1,1,1,1,1,1,1,20070101,20101231
+OK,1,1,1,1,1,1,1,20070101,20101231
+UNUSED,0,0,0,0,0,1,1,20070101,20101231
