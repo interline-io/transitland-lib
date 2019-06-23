@@ -441,7 +441,10 @@ func (copier *Copier) copyFeedInfos() {
 // copyTransfers writes Transfers
 func (copier *Copier) copyTransfers() {
 	for e := range copier.Reader.Transfers() {
-		copier.CopyEntity(&e)
+		// Check if Transfer stops are marked
+		if copier.isMarked(&gotransit.Stop{StopID: e.FromStopID}) && copier.isMarked(&gotransit.Stop{StopID: e.ToStopID}) {
+			copier.CopyEntity(&e)
+		}
 	}
 }
 
@@ -458,7 +461,10 @@ func (copier *Copier) copyShapes() {
 // copyFrequencies writes Frequencies
 func (copier *Copier) copyFrequencies() {
 	for e := range copier.Reader.Frequencies() {
-		copier.CopyEntity(&e)
+		// Check if Trip is marked
+		if copier.isMarked(&gotransit.Trip{TripID: e.TripID}) {
+			copier.CopyEntity(&e)
+		}
 	}
 }
 
