@@ -1,0 +1,11 @@
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled
+DTA1,6:00:00,6:00:00,DTA1,1,,,,
+DTA1,6:05:00,6:07:00,DTA2,2,,,,
+DTA1,6:12:00,6:14:00,DTA3,3,,,,
+DTA2,7:00:00,7:00:00,DTA1,1,,,,
+DTA2,7:05:00,7:07:00,DTA2,2,,,,
+DTA2,7:12:00,7:14:00,DTA3,3,,,,
+DTA_STOP4,7:05:00,7:07:00,DTA3,2,,,,
+DTA_STOP4,7:12:00,7:14:00,DTA4,3,,,,
+OK1,6:00:00,6:00:00,OK1,1,,,,
+OK1,6:05:00,6:07:00,OK2,2,,,,

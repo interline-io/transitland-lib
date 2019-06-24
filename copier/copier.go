@@ -2,10 +2,12 @@ package copier
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/interline-io/gotransit/causes"
 
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/internal/enums"
 	"github.com/interline-io/gotransit/internal/log"
 )
 
@@ -69,6 +71,8 @@ type Copier struct {
 	CreateMissingShapes bool
 	// Create missing Calendar entries
 	NormalizeServiceIDs bool
+	// Convert extended route types to primitives
+	UseBasicRouteTypes bool
 	// Default AgencyID
 	DefaultAgencyID string
 	// Entity selection strategy
@@ -150,6 +154,13 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		return "", false
 	}
 	ret := true
+	// Check the entity against filters.
+	for _, ef := range copier.filters {
+		if err := ef.Filter(ent, copier.EntityMap); err != nil {
+			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
+			ret = false
+		}
+	}
 	// Check the entity for errors.
 	if errs := ent.Errors(); len(errs) > 0 {
 		for _, i := range errs {
@@ -179,13 +190,6 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 			ret = false
 		}
 	}
-	// Check the entity against filters.
-	for _, ef := range copier.filters {
-		if err := ef.Filter(ent, copier.EntityMap); err != nil {
-			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
-			ret = false
-		}
-	}
 	// Refresh EntityID after UpdateKeys/Filters
 	eid = ent.EntityID()
 	// Check for duplicate entities.
@@ -212,32 +216,8 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 ////////// Copy Methods //////////
 //////////////////////////////////
 
-// CopyVisited copies Entities that are referenced by at least one other Entity or are global.
-func (copier *Copier) CopyVisited() *CopyResult {
-	m := newVisitedMarker()
-	m.VisitAndMark(copier.Reader)
-	copier.Marker = &m
-	copier.copyEntities()
-	return copier.CopyResult
-}
-
 // Copy copies Base GTFS Entities from the Reader to the Writer, returning the summary as a CopyResult.
 func (copier *Copier) Copy() *CopyResult {
-	// copier.Marker = newYesMarker()
-	copier.copyEntities()
-	return copier.CopyResult
-}
-
-// CopyExtensions copies Entities defined by each added Extension.
-func (copier *Copier) CopyExtensions() error {
-	for _, ext := range copier.extensions {
-		ext.Copy(copier)
-	}
-	return nil
-}
-
-// copyEntities copies all marked entities.
-func (copier *Copier) copyEntities() error {
 	for _, err := range copier.Reader.ValidateStructure() {
 		copier.AddError(err)
 	}
@@ -251,7 +231,10 @@ func (copier *Copier) copyEntities() error {
 	copier.copyFrequencies()
 	copier.copyTransfers()
 	copier.copyFeedInfos()
-	return nil
+	for _, ext := range copier.extensions {
+		ext.Copy(copier)
+	}
+	return copier.CopyResult
 }
 
 /////////////////////////////////////////
@@ -381,6 +364,14 @@ func (copier *Copier) copyRoutes() {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
 		}
+		// Use basic route types
+		if copier.UseBasicRouteTypes {
+			if rt, ok := enums.GetBasicRouteType(e.RouteType); ok {
+				e.RouteType = rt.Code
+			} else {
+				e.AddError(causes.NewInvalidFieldError("route_type", strconv.Itoa(e.RouteType), fmt.Errorf("cannot convert route_type %d to basic route type", e.RouteType)))
+			}
+		}
 		copier.CopyEntity(&e)
 	}
 }
@@ -403,6 +394,9 @@ func (copier *Copier) copyCalendars() {
 	dups := map[calkey]int{}
 	// Add CalendarDates
 	for e := range copier.Reader.CalendarDates() {
+		if !copier.isMarked(&gotransit.Calendar{ServiceID: e.ServiceID}) {
+			continue
+		}
 		key := calkey{
 			ServiceID: e.ServiceID,
 			Date:      e.Date.Format("20060102"),
@@ -426,7 +420,10 @@ func (copier *Copier) copyFeedInfos() {
 // copyTransfers writes Transfers
 func (copier *Copier) copyTransfers() {
 	for e := range copier.Reader.Transfers() {
-		copier.CopyEntity(&e)
+		// Check if Transfer stops are marked
+		if copier.isMarked(&gotransit.Stop{StopID: e.FromStopID}) && copier.isMarked(&gotransit.Stop{StopID: e.ToStopID}) {
+			copier.CopyEntity(&e)
+		}
 	}
 }
 
@@ -443,7 +440,10 @@ func (copier *Copier) copyShapes() {
 // copyFrequencies writes Frequencies
 func (copier *Copier) copyFrequencies() {
 	for e := range copier.Reader.Frequencies() {
-		copier.CopyEntity(&e)
+		// Check if Trip is marked
+		if copier.isMarked(&gotransit.Trip{TripID: e.TripID}) {
+			copier.CopyEntity(&e)
+		}
 	}
 }
 

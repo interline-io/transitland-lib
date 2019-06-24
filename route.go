@@ -1,7 +1,11 @@
 package gotransit
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/internal/enums"
 )
 
 // Route routes.txt
@@ -48,6 +52,9 @@ func (ent *Route) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.loadErrors...)
 	if len(ent.RouteShortName) == 0 && len(ent.RouteLongName) == 0 {
 		errs = append(errs, causes.NewRequiredFieldError("route_short_name"))
+	}
+	if _, ok := enums.GetRouteType(ent.RouteType); !ok {
+		errs = append(errs, causes.NewInvalidFieldError("route_type", strconv.Itoa(ent.RouteType), fmt.Errorf("invalid route_type %d", ent.RouteType)))
 	}
 	return errs
 }
