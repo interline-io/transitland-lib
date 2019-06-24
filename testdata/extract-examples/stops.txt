@@ -2,6 +2,7 @@ stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url
 DTA1,DTA Stop 1,,36.425288,-117.133162,,
 DTA2,DTA Stop 2,,36.868446,-116.784582,,
 DTA3,DTA Stop 3,,36.88108,-116.81797,,
+DTA4,DTA Stop 4,,36.88108,-116.81797,,
 OK1,OK Stop 1,,36.915682,-116.751677,,
 OK2,OK Stop 2,,36.914893,-116.76821,,
 UNUSED1,Unused Stop 1,,36.914944,-116.761472,,
