@@ -7,22 +7,21 @@ import (
 	"github.com/interline-io/gotransit/gtcsv"
 )
 
-func printVisited(em *extractMarker) {
+func printVisited(em *Marker) {
 	for k, v := range em.found {
 		fmt.Println(*k, v)
 	}
 }
 
 func TestExtract_Filter(t *testing.T) {
-	em := NewExtractMarker()
-	reader, err := gtcsv.NewReader("../testdata/bart.zip")
+	em := NewMarker()
+	reader, err := gtcsv.NewReader("../../testdata/bart.zip")
 	if err != nil {
 		t.Error(err)
 	}
-	em.Load(reader)
 	fm := map[string][]string{}
 	fm["trips.txt"] = []string{"3792107WKDY"}
-	em.Filter(fm)
+	em.Filter(reader, fm)
 	if !em.IsMarked("stops.txt", "MCAR") {
 		t.Error("expected stop MCAR")
 	}
