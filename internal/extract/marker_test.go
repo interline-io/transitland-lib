@@ -1,17 +1,10 @@
 package extract
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/interline-io/gotransit/gtcsv"
 )
-
-func printVisited(em *Marker) {
-	for k, v := range em.found {
-		fmt.Println(*k, v)
-	}
-}
 
 func TestExtract_Filter(t *testing.T) {
 	em := NewMarker()
