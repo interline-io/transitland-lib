@@ -11,8 +11,8 @@ import (
 	"github.com/interline-io/gotransit/copier"
 	_ "github.com/interline-io/gotransit/ext/pathways"
 	_ "github.com/interline-io/gotransit/ext/plus"
-	"github.com/interline-io/gotransit/extract"
 	_ "github.com/interline-io/gotransit/gtcsv"
+	"github.com/interline-io/gotransit/internal/extract"
 	"github.com/interline-io/gotransit/internal/log"
 	"github.com/interline-io/gotransit/validator"
 )
@@ -134,7 +134,6 @@ func (cmd *copyCommand) run(args []string) {
 		cp.AddEntityFilter(ef)
 	}
 	cp.Copy()
-	cp.CopyExtensions()
 }
 
 // extractCommand
@@ -168,8 +167,8 @@ func (cmd *extractCommand) run(args []string) {
 	fl.BoolVar(&cmd.normalizeServiceIDs, "normalize-service-ids", false, "Create Calendar entities for CalendarDate service_id's")
 	fl.BoolVar(&cmd.useBasicRouteTypes, "use-basic-route-types", false, "Collapse extended route_type's into basic GTFS values")
 	// Entity selection options
-	fl.BoolVar(&cmd.onlyVisitedEntities, "only-visited-entities", false, "Only copy visited entities")
-	fl.BoolVar(&cmd.allEntities, "all-entities", false, "Copy all entities")
+	// fl.BoolVar(&cmd.onlyVisitedEntities, "only-visited-entities", false, "Only copy visited entities")
+	// fl.BoolVar(&cmd.allEntities, "all-entities", false, "Copy all entities")
 	fl.Var(&cmd.extractAgencies, "extract-agency", "Extract Agency")
 	fl.Var(&cmd.extractStops, "extract-stop", "Extract Stop")
 	fl.Var(&cmd.extractTrips, "extract-trip", "Extract Trip")
@@ -204,7 +203,6 @@ func (cmd *extractCommand) run(args []string) {
 			}
 		}
 	}
-	// Add filters
 	for _, ext := range cmd.filters {
 		ef, err := gotransit.GetEntityFilter(ext)
 		if err != nil {
@@ -229,57 +227,45 @@ func (cmd *extractCommand) run(args []string) {
 		cp.AddEntityFilter(tx)
 	}
 	// Create Marker
-	if cmd.allEntities {
-		// copier default is YesMarker
-	} else if cmd.onlyVisitedEntities {
-		// visitedmarker
-		// TODO: refactor based on ExtractMarker
-	} else {
-		fm := map[string][]string{}
-		rthits := map[int]bool{}
-		for _, i := range cmd.extractRouteTypes {
-			if v, err := strconv.Atoi(i); err == nil {
-				rthits[v] = true
-			} else {
-				fmt.Println("invalid route_type:", i)
-			}
+	rthits := map[int]bool{}
+	for _, i := range cmd.extractRouteTypes {
+		// TODO: Use enums.GetRouteType
+		if v, err := strconv.Atoi(i); err == nil {
+			rthits[v] = true
+		} else {
+			fmt.Println("invalid route_type:", i)
 		}
-		for ent := range reader.Routes() {
-			if _, ok := rthits[ent.RouteType]; ok {
-				fm["routes.txt"] = append(fm["routes.txt"], ent.RouteID)
-			}
+	}
+	for ent := range reader.Routes() {
+		if _, ok := rthits[ent.RouteType]; ok {
+			cmd.extractRoutes = append(cmd.extractRoutes, ent.RouteID)
 		}
-		// Regular IDs
-		for _, i := range cmd.extractTrips {
-			fm["trips.txt"] = append(fm["trips.txt"], i)
-		}
-		for _, i := range cmd.extractAgencies {
-			fm["agency.txt"] = append(fm["agency.txt"], i)
-		}
-		for _, i := range cmd.extractRoutes {
-			fm["routes.txt"] = append(fm["routes.txt"], i)
-		}
-		for _, i := range cmd.extractCalendars {
-			fm["calendar.txt"] = append(fm["calendar.txt"], i)
-		}
-		for _, i := range cmd.extractStops {
-			fm["stops.txt"] = append(fm["stops.txt"], i)
-		}
+	}
+	//
+	fm := map[string][]string{}
+	fm["trips.txt"] = cmd.extractTrips[:]
+	fm["agency.txt"] = cmd.extractAgencies[:]
+	fm["routes.txt"] = cmd.extractRoutes[:]
+	fm["calendar.txt"] = cmd.extractCalendars[:]
+	fm["stops.txt"] = cmd.extractStops[:]
+	count := 0
+	for _, v := range fm {
+		count += len(v)
+	}
+	// Marker
+	if count > 0 {
 		log.Debug("Extract filter:")
 		for k, v := range fm {
 			for _, i := range v {
 				log.Debug("\t%s: %s", k, i)
 			}
 		}
-		// Marker
-		em := extract.NewExtractMarker()
-		em.Load(reader)
-		em.Filter(fm)
+		em := extract.NewMarker()
+		em.Filter(reader, fm)
 		cp.Marker = &em
 	}
 	// Copy
 	cp.Copy()
-	cp.CopyExtensions()
 }
 
 // validateCommand
