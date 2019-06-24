@@ -261,8 +261,10 @@ func (cmd *extractCommand) run(args []string) {
 			}
 		}
 		em := extract.NewMarker()
+		log.Debug("Loading graph")
 		em.Filter(reader, fm)
 		cp.Marker = &em
+		log.Debug("Graph loading complete")
 	}
 	// Copy
 	cp.Copy()
