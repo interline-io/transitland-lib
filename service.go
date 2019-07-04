@@ -22,6 +22,27 @@ func NewService(c Calendar, cds ...CalendarDate) *Service {
 	return &s
 }
 
+// NewServicesFromReader returns
+func NewServicesFromReader(reader Reader) []*Service {
+	ret := []*Service{}
+	cds := map[string][]CalendarDate{}
+	for cd := range reader.CalendarDates() {
+		sid := cd.ServiceID
+		cds[sid] = append(cds[sid], cd)
+	}
+	for c := range reader.Calendars() {
+		sid := c.ServiceID
+		s := NewService(c, cds[sid]...)
+		ret = append(ret, s)
+		delete(cds, sid)
+	}
+	for k, v := range cds {
+		s := NewService(Calendar{ServiceID: k}, v...)
+		ret = append(ret, s)
+	}
+	return ret
+}
+
 // AddCalendarDate adds a service exception.
 func (s *Service) AddCalendarDate(cd CalendarDate) {
 	if cd.ExceptionType == 1 {
@@ -29,6 +50,20 @@ func (s *Service) AddCalendarDate(cd CalendarDate) {
 	} else if cd.ExceptionType == 2 {
 		s.ExceptDates = append(s.ExceptDates, cd.Date)
 	}
+}
+
+// ServicePeriod returns the widest possible range of days with transit service, including service exceptions.
+func (s *Service) ServicePeriod() (time.Time, time.Time) {
+	start, end := s.StartDate, s.EndDate
+	for _, d := range s.AddedDates {
+		if d.Before(start) {
+			start = d
+		}
+		if d.After(end) {
+			end = d
+		}
+	}
+	return start, end
 }
 
 // IsActive returns if this Service period is active on a specified date.
