@@ -21,10 +21,17 @@ type Registry struct {
 
 // Feed listed in a parsed DMFR file
 type Feed struct {
-	Spec        string
-	ID          string
-	URL         string
-	IDCrosswalk map[string]string `json:"id_crosswalk"`
+	ID              string
+	FeedNamespaceID string
+	Spec            string
+	URL             string
+	URLs            map[string]string
+	AssociatedFeeds []string
+	Languages       []string
+	License         map[string]string
+	Authorization   map[string]string
+	OtherIDs        map[string]string `json:"other_ids"`
+	IDCrosswalk     map[string]string `json:"id_crosswalk"`
 }
 
 // NewRegistry TODO
