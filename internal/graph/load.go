@@ -67,8 +67,8 @@ func BuildGraph(reader gotransit.Reader) (*EntityGraph, error) {
 	for ent := range reader.Stops() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
-		if len(ent.ParentStation) > 0 {
-			ps[ent.StopID] = ent.ParentStation
+		if ent.ParentStation.String != "" {
+			ps[ent.StopID] = ent.ParentStation.String
 		}
 		if len(ent.ZoneID) > 0 {
 			fz[ent.ZoneID] = append(fz[ent.ZoneID], ent.StopID)

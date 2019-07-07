@@ -289,14 +289,14 @@ func (copier *Copier) copyStopsAndFares() {
 			continue
 		}
 		// Confirm the parent station location_type != 0
-		if len(e.ParentStation) == 0 {
+		if len(e.ParentStation.String) == 0 {
 			// ok
-		} else if pstype, ok := parents[e.ParentStation]; ok && pstype != 1 {
+		} else if pstype, ok := parents[e.ParentStation.String]; ok && pstype != 1 {
 			// ParentStation found, not correct LocationType
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation))
+			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.String))
 		} else if !ok {
 			// ParentStation not found
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation))
+			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.String))
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
@@ -308,10 +308,10 @@ func (copier *Copier) copyStopsAndFares() {
 	// Finally, boarding areas
 	for _, e := range boards {
 		// Confirm the parent station location_type != 0
-		if len(e.ParentStation) == 0 {
+		if len(e.ParentStation.String) == 0 {
 			// ok
-		} else if pstype := parents[e.ParentStation]; pstype != 0 {
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation))
+		} else if pstype := parents[e.ParentStation.String]; pstype != 0 {
+			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.String))
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()

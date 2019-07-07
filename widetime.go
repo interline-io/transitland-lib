@@ -75,10 +75,12 @@ func (wt *WideTime) String() (string, error) {
 	return SecondsToString(wt.Seconds), nil
 }
 
+// Value implements driver.Value
 func (wt WideTime) Value() (driver.Value, error) {
 	return int64(wt.Seconds), nil
 }
 
+// Scan implements sql.Scanner
 func (wt *WideTime) Scan(src interface{}) error {
 	if a, ok := src.(int64); ok {
 		wt.Seconds = int(a)

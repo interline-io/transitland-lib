@@ -8,20 +8,20 @@ import (
 
 // Stop stops.txt
 type Stop struct {
-	StopID             string  `db:"stop_id" csv:"stop_id" required:"true" gorm:"index;not null"`
-	StopName           string  `db:"stop_name" csv:"stop_name" gorm:"not null"` // conditionally required
-	StopCode           string  `db:"stop_code" csv:"stop_code"`
-	StopDesc           string  `db:"stop_desc" csv:"stop_desc"`
-	StopLat            float64 `db:"-" csv:"stop_lat" min:"-90" max:"90" gorm:"-"` // required handled below
-	StopLon            float64 `db:"-" csv:"stop_lon" min:"-180" max:"180" gorm:"-"`
-	ZoneID             string  `db:"zone_id" csv:"zone_id"`
-	StopURL            string  `db:"stop_url" csv:"stop_url" validator:"url"`
-	LocationType       int     `db:"location_type" csv:"location_type" min:"0" max:"4"`
-	ParentStation      string  `db:"parent_station" csv:"parent_station" gorm:"type:int;index"`
-	StopTimezone       string  `db:"stop_timezone" csv:"stop_timezone" validator:"timezone"`
-	WheelchairBoarding int     `db:"wheelchair_boarding" csv:"wheelchair_boarding" min:"0" max:"2"`
-	LevelID            string  `db:"level_id" csv:"level_id"`
-	Geometry           *Point  `db:"geometry" gorm:"column:geometry;type:geography(POINT, 4326);not null"`
+	StopID             string               `db:"stop_id" csv:"stop_id" required:"true" gorm:"index;not null"`
+	StopName           string               `db:"stop_name" csv:"stop_name" gorm:"not null"` // conditionally required
+	StopCode           string               `db:"stop_code" csv:"stop_code"`
+	StopDesc           string               `db:"stop_desc" csv:"stop_desc"`
+	StopLat            float64              `db:"-" csv:"stop_lat" min:"-90" max:"90" gorm:"-"` // required handled below
+	StopLon            float64              `db:"-" csv:"stop_lon" min:"-180" max:"180" gorm:"-"`
+	ZoneID             string               `db:"zone_id" csv:"zone_id"`
+	StopURL            string               `db:"stop_url" csv:"stop_url" validator:"url"`
+	LocationType       int                  `db:"location_type" csv:"location_type" min:"0" max:"4"`
+	ParentStation      OptionalRelationship `db:"parent_station" csv:"parent_station" gorm:"type:int;index"`
+	StopTimezone       string               `db:"stop_timezone" csv:"stop_timezone" validator:"timezone"`
+	WheelchairBoarding int                  `db:"wheelchair_boarding" csv:"wheelchair_boarding" min:"0" max:"2"`
+	LevelID            string               `db:"level_id" csv:"level_id"`
+	Geometry           *Point               `db:"geometry,insert=ST_GeomFromWKB(?@4326)"`
 	BaseEntity
 }
 
@@ -75,10 +75,10 @@ func (ent *Stop) Errors() (errs []error) {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_name"))
 	}
 	// Check for "0" value...
-	if ent.LocationType == 1 && len(ent.ParentStation) > 0 && ent.ParentStation != "0" {
+	if ent.LocationType == 1 && ent.ParentStation.String != "" {
 		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("station cannot have parent_station")))
 	}
-	if ent.LocationType > 1 && len(ent.ParentStation) == 0 {
+	if ent.LocationType > 1 && ent.ParentStation.String == "" {
 		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("must have parent_station"))) // ConditionallyRequiredFieldError
 	}
 	return errs
@@ -97,11 +97,11 @@ func (ent *Stop) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Adjust ParentStation
-	if len(ent.ParentStation) > 0 {
-		if parentID, ok := emap.Get(&Stop{StopID: ent.ParentStation}); ok {
-			ent.ParentStation = parentID
+	if ent.ParentStation.String != "" {
+		if parentID, ok := emap.Get(&Stop{StopID: ent.ParentStation.String}); ok {
+			ent.ParentStation = OptionalRelationship{parentID, false}
 		} else {
-			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation)
+			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.String)
 		}
 	}
 	return nil
