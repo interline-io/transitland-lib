@@ -1,24 +1,9 @@
 package gotransit
 
 import (
-	"database/sql/driver"
 	"strconv"
 	"time"
 )
-
-// OptionalRelationship is a nullable foreign key constraint, similar to sql.NullString
-type OptionalRelationship struct {
-	String string
-	Valid  bool
-}
-
-// Value returns nil if empty
-func (r OptionalRelationship) Value() (driver.Value, error) {
-	if r.String == "" || !r.Valid {
-		return nil, nil
-	}
-	return r.String, nil
-}
 
 // EntityError is an interface for GTFS Errors
 type EntityError interface {
@@ -45,10 +30,10 @@ type Entity interface {
 
 // BaseEntity provides default methods.
 type BaseEntity struct {
-	ID            int        `db:"id"`
-	FeedVersionID int        `db:"feed_version_id" gorm:"index;not null"`
-	CreatedAt     *time.Time `db:"created_at"`
-	UpdatedAt     *time.Time `db:"updated_at"`
+	ID            int       `db:"id"`
+	FeedVersionID int       `db:"feed_version_id" gorm:"index;not null"`
+	CreatedAt     time.Time `db:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at"`
 	extra         []string
 	loadErrors    []error
 }

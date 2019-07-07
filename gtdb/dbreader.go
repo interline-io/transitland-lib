@@ -277,9 +277,6 @@ func (reader *Reader) FareRules() chan gotransit.FareRule {
 			ents := []gotransit.FareRule{}
 			reader.Where().Order("id").Offset(offset).Limit(reader.PageSize).Find(&ents)
 			for _, ent := range ents {
-				if ent.RouteID == "0" {
-					ent.RouteID = ""
-				}
 				out <- ent
 			}
 			if len(ents) < reader.PageSize {

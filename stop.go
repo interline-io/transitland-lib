@@ -75,10 +75,10 @@ func (ent *Stop) Errors() (errs []error) {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_name"))
 	}
 	// Check for "0" value...
-	if ent.LocationType == 1 && ent.ParentStation.String != "" {
+	if ent.LocationType == 1 && ent.ParentStation.Key != "" {
 		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("station cannot have parent_station")))
 	}
-	if ent.LocationType > 1 && ent.ParentStation.String == "" {
+	if ent.LocationType > 1 && ent.ParentStation.Key == "" {
 		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("must have parent_station"))) // ConditionallyRequiredFieldError
 	}
 	return errs
@@ -97,11 +97,11 @@ func (ent *Stop) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Adjust ParentStation
-	if ent.ParentStation.String != "" {
-		if parentID, ok := emap.Get(&Stop{StopID: ent.ParentStation.String}); ok {
+	if ent.ParentStation.Key != "" {
+		if parentID, ok := emap.Get(&Stop{StopID: ent.ParentStation.Key}); ok {
 			ent.ParentStation = OptionalRelationship{parentID, false}
 		} else {
-			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.String)
+			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Key)
 		}
 	}
 	return nil

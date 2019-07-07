@@ -69,10 +69,11 @@ func StringToSeconds(value string) (int, error) {
 // WideTime handles seconds since midnight, allows >24 hours.
 type WideTime struct {
 	Seconds int
+	Valid   bool
 }
 
-func (wt *WideTime) String() (string, error) {
-	return SecondsToString(wt.Seconds), nil
+func (wt *WideTime) String() string {
+	return SecondsToString(wt.Seconds)
 }
 
 // Value implements driver.Value
@@ -82,11 +83,26 @@ func (wt WideTime) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (wt *WideTime) Scan(src interface{}) error {
-	if a, ok := src.(int64); ok {
-		wt.Seconds = int(a)
-		return nil
+	wt.Valid = false
+	var p error
+	switch v := src.(type) {
+	case string:
+		if s, err := StringToSeconds(v); err == nil {
+			wt.Seconds = s
+		} else {
+			p = err
+		}
+	case int:
+		wt.Seconds = v
+	case int64:
+		wt.Seconds = int(v)
+	default:
+		p = errors.New("cant scan")
 	}
-	return errors.New("invalid widetime")
+	if p == nil {
+		wt.Valid = true
+	}
+	return p
 }
 
 // NewWideTime converts the csv string to a WideTime.

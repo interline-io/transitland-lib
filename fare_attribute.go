@@ -8,13 +8,13 @@ import (
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
-	FareID           string  `csv:"fare_id" required:"true" gorm:"index;not null"`
-	Price            float64 `csv:"price" required:"true" min:"0" gorm:"not null"`
-	CurrencyType     string  `csv:"currency_type" required:"true" validator:"currency" gorm:"not null"`
-	PaymentMethod    int     `csv:"payment_method" required:"true" min:"0" max:"1" gorm:"not null"`
-	Transfers        string  `csv:"transfers" gorm:"not null"` // string, empty is meaningful
-	AgencyID         string  `csv:"agency_id" gorm:"type:int"`
-	TransferDuration int     `csv:"transfer_duration" min:"0"`
+	FareID           string               `csv:"fare_id" required:"true" gorm:"index;not null"`
+	Price            float64              `csv:"price" required:"true" min:"0" gorm:"not null"`
+	CurrencyType     string               `csv:"currency_type" required:"true" validator:"currency" gorm:"not null"`
+	PaymentMethod    int                  `csv:"payment_method" required:"true" min:"0" max:"1" gorm:"not null"`
+	Transfers        string               `csv:"transfers" gorm:"not null"` // string, empty is meaningful
+	AgencyID         OptionalRelationship `csv:"agency_id" gorm:"type:int"`
+	TransferDuration int                  `csv:"transfer_duration" min:"0"`
 	BaseEntity
 }
 
@@ -56,11 +56,11 @@ func (ent *FareAttribute) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *FareAttribute) UpdateKeys(emap *EntityMap) error {
 	// Adjust AgencyID - optional
-	if len(ent.AgencyID) > 0 {
-		if agencyID, ok := emap.Get(&Agency{AgencyID: ent.AgencyID}); ok {
-			ent.AgencyID = agencyID
+	if len(ent.AgencyID.Key) > 0 {
+		if agencyID, ok := emap.Get(&Agency{AgencyID: ent.AgencyID.Key}); ok {
+			ent.AgencyID.Key = agencyID
 		} else {
-			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID)
+			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Key)
 		}
 	}
 	return nil

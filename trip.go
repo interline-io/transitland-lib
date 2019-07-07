@@ -6,17 +6,17 @@ import (
 
 // Trip trips.txt
 type Trip struct {
-	RouteID              string `csv:"route_id" required:"true" gorm:"type:int;index;not null"`
-	ServiceID            string `csv:"service_id" required:"true" gorm:"type:int;index;not null"`
-	TripID               string `csv:"trip_id" required:"true" gorm:"index:idx_trips_trip_id;index;not null"`
-	TripHeadsign         string `csv:"trip_headsign"`
-	TripShortName        string `csv:"trip_short_name"`
-	DirectionID          int    `csv:"direction_id" min:"0" max:"1"`
-	BlockID              string `csv:"block_id"`
-	ShapeID              string `csv:"shape_id" gorm:"type:int;index"`
-	WheelchairAccessible int    `csv:"wheelchair_accessible" min:"0" max:"2"`
-	BikesAllowed         int    `csv:"bikes_allowed" min:"0" max:"2"`
-	StopPatternID        int    `gorm:"index"`
+	RouteID              string               `csv:"route_id" required:"true" gorm:"type:int;index;not null"`
+	ServiceID            string               `csv:"service_id" required:"true" gorm:"type:int;index;not null"`
+	TripID               string               `csv:"trip_id" required:"true" gorm:"index:idx_trips_trip_id;index;not null"`
+	TripHeadsign         string               `csv:"trip_headsign"`
+	TripShortName        string               `csv:"trip_short_name"`
+	DirectionID          int                  `csv:"direction_id" min:"0" max:"1"`
+	BlockID              string               `csv:"block_id"`
+	ShapeID              OptionalRelationship `csv:"shape_id" gorm:"type:int;index"`
+	WheelchairAccessible int                  `csv:"wheelchair_accessible" min:"0" max:"2"`
+	BikesAllowed         int                  `csv:"bikes_allowed" min:"0" max:"2"`
+	StopPatternID        int                  `gorm:"index"`
 	BaseEntity
 }
 
@@ -61,11 +61,11 @@ func (ent *Trip) UpdateKeys(emap *EntityMap) error {
 		return causes.NewInvalidReferenceError("route_id", ent.RouteID)
 	}
 	// Adjust ShapeID
-	if len(ent.ShapeID) > 0 {
-		if shapeID, ok := emap.Get(&Shape{ShapeID: ent.ShapeID}); ok {
-			ent.ShapeID = shapeID
+	if len(ent.ShapeID.Key) > 0 {
+		if shapeID, ok := emap.Get(&Shape{ShapeID: ent.ShapeID.Key}); ok {
+			ent.ShapeID.Key = shapeID
 		} else {
-			return causes.NewInvalidReferenceError("shape_id", ent.ShapeID)
+			return causes.NewInvalidReferenceError("shape_id", ent.ShapeID.Key)
 		}
 	}
 	return nil

@@ -48,7 +48,7 @@ func TestReader_Sqlx(t *testing.T) {
 
 func TestReader_SpatiaLite(t *testing.T) {
 	// dburl := os.Getenv("GOTRANSIT_TEST_SQLITE_URL")
-	dburl := "sqlite3://test.db"
+	dburl := "sqlite3://:memory:"
 	if len(dburl) == 0 {
 		t.Skip()
 		return

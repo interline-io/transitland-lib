@@ -7,13 +7,22 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/interline-io/gotransit/internal/tags"
 )
+
+type canString interface {
+	String() string
+}
+
+type canScan interface {
+	Scan(src interface{}) error
+}
+
+// TODO: use reflectx.Mapper for consistency
 
 // SetString //
 
@@ -66,12 +75,13 @@ func valSetString(valueField reflect.Value, strv string) error {
 		v, e := time.Parse("20060102", strv)
 		p = e
 		valueField.Set(reflect.ValueOf(v))
-	case gotransit.WideTime:
-		v, e := gotransit.NewWideTime(strv)
-		p = e
-		valueField.Set(reflect.ValueOf(v))
 	default:
-		p = errors.New("unknown field type")
+		z := valueField.Addr().Interface()
+		if cs, ok := z.(canScan); ok {
+			p = cs.Scan(strv)
+		} else {
+			p = errors.New("field not scannable")
+		}
 	}
 	return p
 }
@@ -111,18 +121,9 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 	value := ""
 	switch v := valueField.Interface().(type) {
 	case string:
-		// TODO: Remove special case
-		if strings.HasSuffix(k, "_id") && v == "0" {
-			v = ""
-		}
 		value = v
 	case int:
-		// TODO: Remove special case
-		if v == math.MaxInt64 {
-			value = ""
-		} else {
-			value = strconv.Itoa(v)
-		}
+		value = strconv.Itoa(v)
 	case bool:
 		value = strconv.Itoa(boolToInt(v))
 	case float64:
@@ -132,17 +133,18 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 			value = fmt.Sprintf("%0.5f", v)
 		}
 	case time.Time:
-		if v.Year() < 1970 {
+		if v.IsZero() {
 			value = ""
 		} else {
 			value = v.Format("20060102")
 		}
-	case gotransit.WideTime:
-		if t, err := v.String(); err == nil {
-			value = t
-		}
 	default:
-		return "", errors.New("unknown field type")
+		z := valueField.Addr().Interface()
+		if cs, ok := z.(canString); ok {
+			value = cs.String()
+		} else {
+			return "", errors.New("field not stringable")
+		}
 	}
 	return value, nil
 }
