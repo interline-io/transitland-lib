@@ -1,7 +1,7 @@
 package gtdb
 
 import (
-	"os"
+	"fmt"
 	"testing"
 
 	"github.com/interline-io/gotransit"
@@ -14,15 +14,15 @@ func filldb(writer *Writer) {
 	r1, _ := gtcsv.NewReader("../testdata/example")
 	r1.Open()
 	defer r1.Close()
-
 	cp := copier.NewCopier(r1, writer)
 	cp.NormalizeServiceIDs = true
 	cp.Copy()
-
 }
 
-func TestReaderSqlx(t *testing.T) {
-	dburl := "postgres://localhost/tl?binary_parameters=yes&sslmode=disable"
+// Reader interface tests.
+
+func TestReader_Sqlx(t *testing.T) {
+	dburl := "postgres://localhost/tl?binary_parameters=no&sslmode=disable"
 	if len(dburl) == 0 {
 		t.Skip()
 		return
@@ -32,7 +32,7 @@ func TestReaderSqlx(t *testing.T) {
 	writer.Adapter = &adapter
 	writer.Open()
 	fv := gotransit.FeedVersion{}
-	eid, err := Insert(adapter.db, "feed_versions", &fv)
+	eid, err := adapter.Insert("feed_versions", &fv)
 	if err != nil {
 		panic(err)
 	}
@@ -41,43 +41,27 @@ func TestReaderSqlx(t *testing.T) {
 	filldb(writer)
 	reader, _ := writer.NewReader()
 	testutil.ReaderTester(reader, t)
+	for stop := range reader.Stops() {
+		fmt.Println(stop.ID, stop.Coordinates())
+	}
 }
 
-// Reader interface tests.
-func TestReader(t *testing.T) {
-	t.Run("SpatiaLite", func(t *testing.T) {
-		// dburl := os.Getenv("GOTRANSIT_TEST_SQLITE_URL")
-		dburl := "sqlite3://:memory:"
-		if len(dburl) == 0 {
-			t.Skip()
-			return
-		}
-		writer, _ := NewWriter(dburl)
-		writer.Open()
-		writer.Create()
-		writer.Delete()
-		defer writer.Close()
-		filldb(writer)
-		reader, _ := writer.NewReader()
-		testutil.ReaderTester(reader, t)
-	})
-	t.Run("PostGIS", func(t *testing.T) {
-		dburl := os.Getenv("GOTRANSIT_TEST_DB_URL")
-		if len(dburl) == 0 {
-			t.Skip()
-			return
-		}
-		writer, _ := NewWriter(dburl)
-		writer.Open()
-		writer.Create()
-		writer.Delete()
-		defer writer.Close()
-		filldb(writer)
-		reader, _ := writer.NewReader()
-		testutil.ReaderTester(reader, t)
-	})
-	t.Run("PostGIS", func(t *testing.T) {
-	})
+func TestReader_SpatiaLite(t *testing.T) {
+	// dburl := os.Getenv("GOTRANSIT_TEST_SQLITE_URL")
+	dburl := "sqlite3://test.db"
+	if len(dburl) == 0 {
+		t.Skip()
+		return
+	}
+	writer, _ := NewWriter(dburl)
+	writer.Open()
+	writer.Create()
+	writer.Delete()
+	defer writer.Close()
+	filldb(writer)
+	reader, _ := writer.NewReader()
+	testutil.ReaderTester(reader, t)
+	for stop := range reader.Stops() {
+		fmt.Println(stop.ID, stop.Coordinates())
+	}
 }
-
-// Reader specific tests.

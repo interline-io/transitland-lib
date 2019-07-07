@@ -1,6 +1,8 @@
 package gtdb
 
 import (
+	"strconv"
+
 	"github.com/interline-io/gotransit"
 	"github.com/jinzhu/gorm"
 )
@@ -127,29 +129,13 @@ type feedVersionSetter interface {
 
 // AddEntity writes an entity to the database.
 func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
-	// Type specific updates
-	switch et := ent.(type) {
-	case *gotransit.Stop:
-		et.Geometry.Encoding = writer.Adapter.GeomEncoding()
-		if len(et.ParentStation) == 0 {
-			et.ParentStation = "0"
-		}
-	case *gotransit.Trip:
-		if len(et.ShapeID) == 0 {
-			et.ShapeID = "0"
-		}
-	case *gotransit.Shape:
-		et.Geometry.Encoding = writer.Adapter.GeomEncoding()
-	case *gotransit.FareRule:
-		et.RouteID = "0"
-	}
 	// Set the FeedVersionID
 	if z, ok := ent.(feedVersionSetter); ok {
 		z.SetFeedVersionID(writer.FeedVersionID)
 	}
 	// Save
-	err := writer.Adapter.Insert(ent)
-	return ent.EntityID(), err
+	eid, err := writer.Adapter.Insert("", ent)
+	return strconv.Itoa(eid), err
 }
 
 // AddEntities provides a generic interface for adding Entities to the database.

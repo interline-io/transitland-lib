@@ -21,7 +21,7 @@ func TestSQLXAdapter(t *testing.T) {
 
 	// writer.Create()
 	fv := gotransit.FeedVersion{}
-	eid, err := Insert(adapter.db, "feed_versions", &fv)
+	eid, err := adapter.Insert("feed_versions", &fv)
 	writer.FeedVersionID = eid
 	if err != nil {
 		t.Error(err)
