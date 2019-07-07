@@ -2,7 +2,6 @@ package gtdb
 
 import (
 	"errors"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
@@ -31,14 +30,15 @@ func (adapter *SQLXAdapter) Insert(table string, ent interface{}) (int, error) {
 		Suffix("RETURNING \"id\"").
 		RunWith(adapter.db).
 		PlaceholderFormat(sq.Dollar)
-	if sql, _, err := q.ToSql(); err == nil {
-		fmt.Println(sql)
+	if a, _, err := q.ToSql(); err == nil {
+		_ = a
+		// fmt.Println(sql)
 	} else {
 		return 0, err
 	}
 	eid := 0
 	err := q.QueryRow().Scan(&eid)
-	fmt.Println("eid:", eid, "err:", err)
+	// fmt.Println("eid:", eid, "err:", err)
 	if v, ok := ent.(canSetID); ok {
 		v.SetID(eid)
 	}

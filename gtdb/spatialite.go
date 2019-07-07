@@ -3,7 +3,6 @@ package gtdb
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 
 	// Log
@@ -99,7 +98,7 @@ func (adapter *SpatiaLiteAdapter) Insert(table string, ent interface{}) (int, er
 		Values(vals...).
 		RunWith(adapter.db)
 	if sql, _, err := q.ToSql(); err == nil {
-		fmt.Println(sql)
+		_ = sql
 	} else {
 		return 0, err
 	}
