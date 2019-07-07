@@ -28,7 +28,7 @@ CREATE TABLE public.current_feeds (
     last_successful_fetch_at timestamp without time zone,
     last_fetch_error character varying NOT NULL,
     deleted_at timestamp without time zone,
-    license public.hstore,`
+    license public.hstore,
     other_ids public.hstore,
     associated_feeds character varying[],
     languages character varying[],
