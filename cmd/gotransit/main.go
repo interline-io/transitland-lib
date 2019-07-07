@@ -321,33 +321,3 @@ func main() {
 		exit("%q is not valid command.", os.Args[1])
 	}
 }
-
-// if v, ok := writer.(*gtdb.Writer); ok {
-// 	// If writing to database, we must normalize calendars
-// 	nsids := true
-// 	copyNormalizeServiceIDs = &nsids
-// 	db := v.Adapter.DB()
-// 	if *copyCreate == true {
-// 		writer.Create()
-// 	}
-// 	if *copyNewfv == true {
-// 		fv, err := gotransit.NewFeedVersion(reader)
-// 		if err != nil {
-// 			exit("Could not create FeedVersion: %s", err)
-// 		}
-// 		dberr := db.
-// 			Where(gotransit.FeedVersion{URL: inurl, SHA1: fv.SHA1}).
-// 			FirstOrCreate(&fv).
-// 			Error
-// 		if dberr != nil {
-// 			exit("Could not create FeedVersion: %s", dberr)
-// 		}
-// 		copyFvid = &fv.ID
-// 	}
-// 	if *copyFvid > 0 {
-// 		v.FeedVersionID = *copyFvid
-// 	}
-// 	if *copyDelete == true {
-// 		v.Delete()
-// 	}
-// }

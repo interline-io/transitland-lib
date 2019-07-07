@@ -22,6 +22,7 @@ type Entity interface {
 	Errors() []error
 	Warnings() []error
 	AddError(error)
+	SetID(int)
 	SetExtra(string, string)
 	Extra() map[string]string
 	UpdateKeys(*EntityMap) error
@@ -29,12 +30,16 @@ type Entity interface {
 
 // BaseEntity provides default methods.
 type BaseEntity struct {
-	ID            int
-	FeedVersionID int `gorm:"index;not null"`
-	CreatedAt     *time.Time
-	UpdatedAt     *time.Time
+	ID            int        `db:"id"`
+	FeedVersionID int        `db:"feed_version_id" gorm:"index;not null"`
+	CreatedAt     *time.Time `db:"created_at"`
+	UpdatedAt     *time.Time `db:"updated_at"`
 	extra         []string
 	loadErrors    []error
+}
+
+func (ent *BaseEntity) SetID(id int) {
+	ent.ID = id
 }
 
 // SetFeedVersionID sets the Entity's FeedVersionID.

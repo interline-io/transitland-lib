@@ -11,17 +11,17 @@ import (
 
 // FeedVersion represents a single GTFS data source.
 type FeedVersion struct {
-	FeedID               int    `gorm:"index"`
-	FeedType             string `gorm:"index"`
-	Active               bool   `gorm:"-"`
-	SHA1                 string `gorm:"index"`
-	File                 string
-	URL                  string
-	EarliestCalendarDate *time.Time `gorm:"index;not null"`
-	LatestCalendarDate   *time.Time `gorm:"index;not null"`
-	FetchedAt            *time.Time
-	ID                   int
-	// BaseEntity
+	FeedID               int        `db:"feed_id" gorm:"index"`
+	FeedType             string     `db:"feed_type" gorm:"index"`
+	SHA1                 string     `db:"sha1" gorm:"index"`
+	File                 string     `db:"file"`
+	URL                  string     `db:"url"`
+	EarliestCalendarDate *time.Time `db:"earliest_calendar_date" gorm:"index;not null"`
+	LatestCalendarDate   *time.Time `db:"latest_calendar_date" gorm:"index;not null"`
+	FetchedAt            *time.Time `db:"fetched_at"`
+	ID                   int        `db:"id"`
+	CreatedAt            *time.Time `db:"created_at"`
+	UpdatedAt            *time.Time `db:"updated_at"`
 }
 
 // TableName sets the table name prefix.

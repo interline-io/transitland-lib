@@ -1,6 +1,7 @@
 package gotransit
 
 import (
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"strconv"
@@ -70,8 +71,20 @@ type WideTime struct {
 	Seconds int
 }
 
-func (wt WideTime) String() (string, error) {
+func (wt *WideTime) String() (string, error) {
 	return SecondsToString(wt.Seconds), nil
+}
+
+func (wt WideTime) Value() (driver.Value, error) {
+	return int64(wt.Seconds), nil
+}
+
+func (wt *WideTime) Scan(src interface{}) error {
+	if a, ok := src.(int64); ok {
+		wt.Seconds = int(a)
+		return nil
+	}
+	return errors.New("invalid widetime")
 }
 
 // NewWideTime converts the csv string to a WideTime.

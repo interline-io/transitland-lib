@@ -66,7 +66,7 @@ func (writer *Writer) Create() error {
 	db.AutoMigrate(&gotransit.FareRule{})
 	db.AutoMigrate(&gotransit.FareAttribute{})
 	// FeedVersion Relationships
-	x := "RESTRICT"
+	// x := "RESTRICT"
 	// db.Model(&gotransit.FeedVersion{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
 	// db.Model(&gotransit.Stop{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
 	// db.Model(&gotransit.Shape{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
@@ -82,17 +82,17 @@ func (writer *Writer) Create() error {
 	// db.Model(&gotransit.FareRule{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
 	// db.Model(&gotransit.FareAttribute{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
 	// Required relations
-	db.Model(&gotransit.Trip{}).AddForeignKey("route_id", "gtfs_routes(id)", x, x)
-	db.Model(&gotransit.Trip{}).AddForeignKey("service_id", "gtfs_calendars(id)", x, x)
-	db.Model(&gotransit.CalendarDate{}).AddForeignKey("service_id", "gtfs_calendars(id)", x, x)
-	db.Model(&gotransit.FareAttribute{}).AddForeignKey("agency_id", "gtfs_agencies(id)", x, x)
-	db.Model(&gotransit.FareRule{}).AddForeignKey("fare_id", "gtfs_fare_attributes(id)", x, x)
-	db.Model(&gotransit.Frequency{}).AddForeignKey("trip_id", "gtfs_trips(id)", x, x)
-	db.Model(&gotransit.Route{}).AddForeignKey("agency_id", "gtfs_agencies(id)", x, x)
-	db.Model(&gotransit.StopTime{}).AddForeignKey("trip_id", "gtfs_trips(id)", x, x)
-	db.Model(&gotransit.StopTime{}).AddForeignKey("stop_id", "gtfs_stops(id)", x, x)
-	db.Model(&gotransit.Transfer{}).AddForeignKey("from_stop_id", "gtfs_stops(id)", x, x)
-	db.Model(&gotransit.Transfer{}).AddForeignKey("to_stop_id", "gtfs_stops(id)", x, x)
+	// db.Model(&gotransit.Trip{}).AddForeignKey("route_id", "gtfs_routes(id)", x, x)
+	// db.Model(&gotransit.Trip{}).AddForeignKey("service_id", "gtfs_calendars(id)", x, x)
+	// db.Model(&gotransit.CalendarDate{}).AddForeignKey("service_id", "gtfs_calendars(id)", x, x)
+	// db.Model(&gotransit.FareAttribute{}).AddForeignKey("agency_id", "gtfs_agencies(id)", x, x)
+	// db.Model(&gotransit.FareRule{}).AddForeignKey("fare_id", "gtfs_fare_attributes(id)", x, x)
+	// db.Model(&gotransit.Frequency{}).AddForeignKey("trip_id", "gtfs_trips(id)", x, x)
+	// db.Model(&gotransit.Route{}).AddForeignKey("agency_id", "gtfs_agencies(id)", x, x)
+	// db.Model(&gotransit.StopTime{}).AddForeignKey("trip_id", "gtfs_trips(id)", x, x)
+	// db.Model(&gotransit.StopTime{}).AddForeignKey("stop_id", "gtfs_stops(id)", x, x)
+	// db.Model(&gotransit.Transfer{}).AddForeignKey("from_stop_id", "gtfs_stops(id)", x, x)
+	// db.Model(&gotransit.Transfer{}).AddForeignKey("to_stop_id", "gtfs_stops(id)", x, x)
 	// Optional relations
 	// db.Model(&gotransit.Stop{}).AddForeignKey("parent_station", "gtfs_stops(id)", x, x)
 	// db.Model(&gotransit.Trip{}).AddForeignKey("shape_id", "gtfs_shapes(id)", x, x)
@@ -127,8 +127,6 @@ type feedVersionSetter interface {
 
 // AddEntity writes an entity to the database.
 func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
-	db := writer.Adapter.DB()
-	var err error
 	// Type specific updates
 	switch et := ent.(type) {
 	case *gotransit.Stop:
@@ -150,7 +148,7 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 		z.SetFeedVersionID(writer.FeedVersionID)
 	}
 	// Save
-	err = db.Create(ent).Error
+	err := writer.Adapter.Insert(ent)
 	return ent.EntityID(), err
 }
 

@@ -14,7 +14,7 @@ type FeedInfo struct {
 	FeedLang          string    `csv:"feed_lang" validator:"lang" required:"true" gorm:"not null"`
 	FeedStartDate     time.Time `csv:"feed_start_date"`
 	FeedEndDate       time.Time `csv:"feed_end_date"`
-	FeedVersion       string    `csv:"feed_version"`
+	FeedVersion       string    `csv:"feed_version" db:"feed_version_name"`
 	BaseEntity
 }
 

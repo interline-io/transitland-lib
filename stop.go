@@ -8,20 +8,20 @@ import (
 
 // Stop stops.txt
 type Stop struct {
-	StopID             string  `csv:"stop_id" required:"true" gorm:"index;not null"`
-	StopName           string  `csv:"stop_name" gorm:"not null"` // conditionally required
-	StopCode           string  `csv:"stop_code"`
-	StopDesc           string  `csv:"stop_desc"`
-	StopLat            float64 `csv:"stop_lat" min:"-90" max:"90" gorm:"-"` // required handled below
-	StopLon            float64 `csv:"stop_lon" min:"-180" max:"180" gorm:"-"`
-	ZoneID             string  `csv:"zone_id"`
-	StopURL            string  `csv:"stop_url" validator:"url"`
-	LocationType       int     `csv:"location_type" min:"0" max:"4"`
-	ParentStation      string  `csv:"parent_station" gorm:"type:int;index"`
-	StopTimezone       string  `csv:"stop_timezone" validator:"timezone"`
-	WheelchairBoarding int     `csv:"wheelchair_boarding" min:"0" max:"2"`
-	LevelID            string  `csv:"level_id"`
-	Geometry           *Point  `gorm:"column:geometry;type:geography(POINT, 4326);not null"`
+	StopID             string  `db:"stop_id" csv:"stop_id" required:"true" gorm:"index;not null"`
+	StopName           string  `db:"stop_name" csv:"stop_name" gorm:"not null"` // conditionally required
+	StopCode           string  `db:"stop_code" csv:"stop_code"`
+	StopDesc           string  `db:"stop_desc" csv:"stop_desc"`
+	StopLat            float64 `db:"-" csv:"stop_lat" min:"-90" max:"90" gorm:"-"` // required handled below
+	StopLon            float64 `db:"-" csv:"stop_lon" min:"-180" max:"180" gorm:"-"`
+	ZoneID             string  `db:"zone_id" csv:"zone_id"`
+	StopURL            string  `db:"stop_url" csv:"stop_url" validator:"url"`
+	LocationType       int     `db:"location_type" csv:"location_type" min:"0" max:"4"`
+	ParentStation      string  `db:"parent_station" csv:"parent_station" gorm:"type:int;index"`
+	StopTimezone       string  `db:"stop_timezone" csv:"stop_timezone" validator:"timezone"`
+	WheelchairBoarding int     `db:"wheelchair_boarding" csv:"wheelchair_boarding" min:"0" max:"2"`
+	LevelID            string  `db:"level_id" csv:"level_id"`
+	Geometry           *Point  `db:"geometry" gorm:"column:geometry;type:geography(POINT, 4326);not null"`
 	BaseEntity
 }
 

@@ -47,6 +47,7 @@ type Adapter interface {
 	Open() error
 	Close() error
 	Create() error
+	Insert(gotransit.Entity) error
 	DB() *gorm.DB
 	SetDB(*gorm.DB)
 	GeomEncoding() int
@@ -96,6 +97,10 @@ func (adapter *PostGISAdapter) Create() error {
 // DB returns the gorm DB.
 func (adapter *PostGISAdapter) DB() *gorm.DB {
 	return adapter.db
+}
+
+func (adapter *PostGISAdapter) Insert(ent gotransit.Entity) error {
+	return adapter.db.Create(ent).Error
 }
 
 // BatchInsert provides a fast path for creating StopTimes.
@@ -216,6 +221,10 @@ func (adapter *SpatiaLiteAdapter) GeomEncoding() int {
 // DB provides the underlying gorm DB.
 func (adapter *SpatiaLiteAdapter) DB() *gorm.DB {
 	return adapter.db
+}
+
+func (adapter *SpatiaLiteAdapter) Insert(ent gotransit.Entity) error {
+	return adapter.db.Create(ent).Error
 }
 
 // BatchInsert provides a fast path for creating StopTimes.
