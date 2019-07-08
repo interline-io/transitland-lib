@@ -31,11 +31,12 @@ type Entity interface {
 // BaseEntity provides default methods.
 type BaseEntity struct {
 	ID            int
-	FeedVersionID int `gorm:"index;not null"`
+	FeedVersionID int
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	extra         []string
 	loadErrors    []error
+	// DeletedAt     OptionalTime
 }
 
 // SetID sets the integer ID.

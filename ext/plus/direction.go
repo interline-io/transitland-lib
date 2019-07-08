@@ -7,7 +7,7 @@ import (
 
 // Direction directions.txt
 type Direction struct {
-	RouteID     string `csv:"route_id" gorm:"type:int"`
+	RouteID     string `csv:"route_id"`
 	DirectionID string `csv:"direction_id"`
 	Direction   string `csv:"direction"`
 	gotransit.BaseEntity
