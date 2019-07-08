@@ -30,10 +30,10 @@ type Entity interface {
 
 // BaseEntity provides default methods.
 type BaseEntity struct {
-	ID            int       `db:"id"`
-	FeedVersionID int       `db:"feed_version_id" gorm:"index;not null"`
-	CreatedAt     time.Time `db:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at"`
+	ID            int
+	FeedVersionID int `gorm:"index;not null"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	extra         []string
 	loadErrors    []error
 }

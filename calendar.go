@@ -19,7 +19,7 @@ type Calendar struct {
 	Sunday    int       `csv:"sunday" required:"true" min:"0" max:"1" gorm:"index;not null"`
 	StartDate time.Time `csv:"start_date" required:"true" min:"0" max:"1" gorm:"index;not null"`
 	EndDate   time.Time `csv:"end_date" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	Generated bool      `db:"generated"`
+	Generated bool
 	BaseEntity
 }
 
