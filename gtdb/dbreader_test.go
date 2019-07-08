@@ -2,6 +2,7 @@ package gtdb
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -22,8 +23,8 @@ func filldb(writer *Writer) {
 
 // Reader interface tests.
 
-func TestReader_Sqlx(t *testing.T) {
-	dburl := "postgres://localhost/tl?binary_parameters=no&sslmode=disable"
+func TestReader_Postgres(t *testing.T) {
+	dburl := os.Getenv("GOTRANSIT_TEST_POSTGRES_URL")
 	if len(dburl) == 0 {
 		t.Skip()
 		return
