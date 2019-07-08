@@ -13,7 +13,7 @@ CREATE TABLE public.current_feeds (
     license_use_without_attribution character varying,
     license_create_derived_product character varying,
     license_redistribute character varying,
-    version integer,
+    version integer NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     created_or_updated_in_changeset_id integer,
@@ -144,7 +144,7 @@ CREATE TABLE public.gtfs_fare_attributes (
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     feed_version_id integer NOT NULL,
-    agency_id integer NOT NULL,
+    agency_id integer,
     transfers integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_fare_attributes_id_seq
@@ -184,8 +184,7 @@ CREATE TABLE public.gtfs_feed_infos (
     feed_version_name character varying NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    feed_version character varying NOT NULL
+    feed_version_id integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_feed_infos_id_seq
     AS integer
@@ -354,7 +353,7 @@ CREATE TABLE public.gtfs_trips (
     updated_at timestamp without time zone NOT NULL,
     feed_version_id integer NOT NULL,
     route_id integer NOT NULL,
-    shape_id integer NOT NULL,
+    shape_id integer,
     stop_pattern_id integer NOT NULL,
     service_id integer NOT NULL
 );
