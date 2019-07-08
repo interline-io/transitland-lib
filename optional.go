@@ -7,10 +7,17 @@ import (
 	"time"
 )
 
+// The only nullable types in the database are foreign-key constraints and some times.
+
 // OptionalRelationship is a nullable foreign key constraint, similar to sql.NullString
 type OptionalRelationship struct {
 	Key   string
 	Valid bool
+}
+
+// IsZero returns if this is a zero value.
+func (r *OptionalRelationship) IsZero() bool {
+	return r.Key == ""
 }
 
 func (r *OptionalRelationship) String() string {
@@ -19,10 +26,10 @@ func (r *OptionalRelationship) String() string {
 
 // Value returns nil if empty
 func (r OptionalRelationship) Value() (driver.Value, error) {
-	if r.Key == "" || !r.Valid {
+	if r.IsZero() || !r.Valid {
 		return nil, nil
 	}
-	return r.String, nil
+	return r.Key, nil
 }
 
 // Scan implements sql.Scanner
@@ -34,8 +41,9 @@ func (r *OptionalRelationship) Scan(src interface{}) error {
 		r.Key = v
 	case int:
 		r.Key = strconv.Itoa(v)
+	case int64:
+		r.Key = strconv.Itoa(int(v))
 	default:
-		r.Valid = false
 		p = errors.New("cant convert")
 	}
 	if p == nil {
@@ -48,6 +56,11 @@ func (r *OptionalRelationship) Scan(src interface{}) error {
 type OptionalTime struct {
 	Time  time.Time
 	Valid bool
+}
+
+// IsZero returns if this is a zero value.
+func (r *OptionalTime) IsZero() bool {
+	return r.Time.IsZero()
 }
 
 func (r *OptionalTime) String() string {
