@@ -1,6 +1,8 @@
 package gtdb
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -18,32 +20,48 @@ func toSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-// getInsert returns column names and a slice of placeholders or squirrel expressions.
-func getInsert(ent interface{}) ([]string, []interface{}) {
-	cols := make([]string, 0)
-	vals := make([]interface{}, 0)
-	m := reflectx.NewMapperFunc("db", toSnakeCase)
-	val := reflect.ValueOf(ent).Elem()
-	fm := m.FieldMap(val)
-	typ := reflect.TypeOf(ent)
-	fields := m.TypeMap(typ)
-	for k, v := range fm {
-		v2 := v.Interface()
-		fi := fields.GetByPath(k)
-		if _, pk := fi.Options["pk"]; pk || fi.Name == "id" || fi.Name == "ID" || fi.Field.Tag == "" {
+func getFieldNameIndexes(m *reflectx.Mapper, ent interface{}) ([]string, []string) {
+	names := []string{}
+	wraps := []string{}
+	fields := m.TypeMap(reflect.TypeOf(ent))
+	for _, fi := range fields.Index {
+		if fi.Embedded == true || fi.Name == "id" || strings.Contains(fi.Path, ".") {
 			continue
 		}
+		w := ""
 		if wrap, ok := fi.Options["insert"]; ok {
-			a := strings.Replace(wrap, "@", ",", -1)
-			vals = append(vals, sq.Expr(a, v2))
+			w = strings.Replace(wrap, "@", ",", -1)
+		}
+		names = append(names, fi.Path)
+		wraps = append(wraps, w)
+	}
+	return names, wraps
+}
+
+// getInsert returns column names and a slice of placeholders or squirrel expressions.
+func getInsert(m *reflectx.Mapper, ent interface{}) ([]string, []interface{}, error) {
+	vals := make([]interface{}, 0)
+	val := reflect.ValueOf(ent).Elem()
+	fm := m.FieldMap(val)
+	names, wraps := getFieldNameIndexes(m, ent)
+	for i, name := range names {
+		v, ok := fm[name]
+		if !ok {
+			// This should not happen.
+			return names[0:0], vals[0:0], fmt.Errorf("unknown field: %s", name)
+		}
+		v2 := v.Interface()
+		w := wraps[i]
+		if w != "" {
+			vals = append(vals, sq.Expr(w, v2))
 		} else {
 			vals = append(vals, v2)
 		}
-		// fmt.Println(fi.Name)
-		// fmt.Printf("%#v\n\n", fi)
-		cols = append(cols, fi.Name)
 	}
-	return cols, vals
+	if len(names) == 0 || len(names) != len(vals) {
+		return names[0:0], vals[0:0], errors.New("no columns or values")
+	}
+	return names, vals, nil
 }
 
 // // getSelectStar returns column names for a SELECT * query.

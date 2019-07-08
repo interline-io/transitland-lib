@@ -11,6 +11,7 @@ import (
 	"github.com/interline-io/gotransit/causes"
 	"github.com/jinzhu/gorm"
 	"github.com/jmoiron/sqlx"
+	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/mattn/go-sqlite3"
 	// Drivers
 )
@@ -28,6 +29,7 @@ func init() {
 type SpatiaLiteAdapter struct {
 	DBURL string
 	db    *sqlx.DB
+	m     *reflectx.Mapper
 }
 
 // Open implements Adapter Open.
@@ -51,15 +53,6 @@ func (adapter *SpatiaLiteAdapter) Close() error {
 
 // Create implements Adapter Create.
 func (adapter *SpatiaLiteAdapter) Create() error {
-	db := adapter.db
-	// Init SpatiaLite
-	db.Exec("SELECT InitSpatialMetaData(1)")
-	// Yuck :( This is the ONLY WAY to add a geometry column in SpatiaLite.
-	db.Exec(`CREATE TABLE "gtfs_stops" ("id" integer primary key autoincrement,"feed_version_id" integer,"created_at" datetime,"updated_at" datetime,"stop_id" varchar(255),"stop_name" varchar(255),"stop_code" varchar(255),"stop_desc" varchar(255),"stop_lat" real,"stop_lon" real,"zone_id" varchar(255),"stop_url" varchar(255),"location_type" integer,"parent_station" varchar(255),"stop_timezone" varchar(255),"wheelchair_boarding" integer )`)
-	db.Exec("SELECT AddGeometryColumn('gtfs_stops', 'geometry', 4326, 'POINT', 'XY', 0);")
-	// Yuck again :(
-	db.Exec(`CREATE TABLE "gtfs_shapes" ("id" integer primary key autoincrement,"feed_version_id" integer,"created_at" datetime,"updated_at" datetime,"shape_id" varchar(255),"shape_pt_lat" real,"shape_pt_lon" real,"shape_pt_sequence" integer,"shape_dist_traveled" real )`)
-	db.Exec("SELECT AddGeometryColumn('gtfs_shapes', 'geometry', 4326, 'LINESTRING', 'XYM', 1);")
 	return nil
 }
 
@@ -91,7 +84,14 @@ func (adapter *SpatiaLiteAdapter) Insert(table string, ent interface{}) (int, er
 	if table == "" {
 		return 0, errors.New("no tablename")
 	}
-	cols, vals := getInsert(ent)
+	// Keep the mapper to use cache.
+	if adapter.m == nil {
+		adapter.m = reflectx.NewMapperFunc("db", toSnakeCase)
+	}
+	cols, vals, err := getInsert(adapter.m, ent)
+	if err != nil {
+		return 0, err
+	}
 	q := sq.
 		Insert(table).
 		Columns(cols...).
@@ -114,16 +114,19 @@ func (adapter *SpatiaLiteAdapter) Insert(table string, ent interface{}) (int, er
 }
 
 // BatchInsert provides a fast path for creating StopTimes.
-func (adapter *SpatiaLiteAdapter) BatchInsert(stoptimes *[]gotransit.StopTime) error {
-	objArr := *stoptimes
-	// tx := db.Begin()
-	for _, d := range objArr {
-		_, err := adapter.Insert("gtfs_stop_times", &d)
-		if err != nil {
-			// tx.Rollback()
-			return err
-		}
+func (adapter *SpatiaLiteAdapter) BatchInsert(table string, ents []gotransit.Entity) error {
+	if len(ents) == 0 {
+		return nil
 	}
-	// tx.Commit()
-	return nil
+	if adapter.m == nil {
+		adapter.m = reflectx.NewMapperFunc("db", toSnakeCase)
+	}
+	cols, _, err := getInsert(adapter.m, ents[0])
+	q := sq.Insert(table).Columns(cols...)
+	for _, d := range ents {
+		_, vals, _ := getInsert(adapter.m, d)
+		q = q.Values(vals...)
+	}
+	_, err = q.RunWith(adapter.db).Exec()
+	return err
 }

@@ -50,62 +50,13 @@ func (writer *Writer) NewReader() (gotransit.Reader, error) {
 
 // Create the database.
 func (writer *Writer) Create() error {
-	// TODO: Move to extension Create()
-	db := writer.Adapter.DB()
-	writer.Adapter.Create()
-	db.AutoMigrate(&gotransit.FeedVersion{})
-	db.AutoMigrate(&gotransit.Stop{})
-	db.AutoMigrate(&gotransit.Shape{})
-	db.AutoMigrate(&gotransit.FeedInfo{})
-	db.AutoMigrate(&gotransit.Frequency{})
-	db.AutoMigrate(&gotransit.Trip{})
-	db.AutoMigrate(&gotransit.Agency{})
-	db.AutoMigrate(&gotransit.Transfer{})
-	db.AutoMigrate(&gotransit.Calendar{})
-	db.AutoMigrate(&gotransit.CalendarDate{})
-	db.AutoMigrate(&gotransit.Route{})
-	db.AutoMigrate(&gotransit.StopTime{})
-	db.AutoMigrate(&gotransit.FareRule{})
-	db.AutoMigrate(&gotransit.FareAttribute{})
-	// FeedVersion Relationships
-	// x := "RESTRICT"
-	// db.Model(&gotransit.FeedVersion{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.Stop{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.Shape{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.FeedInfo{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.Frequency{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.Trip{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.Agency{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.Transfer{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.Calendar{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.CalendarDate{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.Route{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.StopTime{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.FareRule{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// db.Model(&gotransit.FareAttribute{}).AddForeignKey("feed_version_id", "feed_versions(id)", x, x)
-	// Required relations
-	// db.Model(&gotransit.Trip{}).AddForeignKey("route_id", "gtfs_routes(id)", x, x)
-	// db.Model(&gotransit.Trip{}).AddForeignKey("service_id", "gtfs_calendars(id)", x, x)
-	// db.Model(&gotransit.CalendarDate{}).AddForeignKey("service_id", "gtfs_calendars(id)", x, x)
-	// db.Model(&gotransit.FareAttribute{}).AddForeignKey("agency_id", "gtfs_agencies(id)", x, x)
-	// db.Model(&gotransit.FareRule{}).AddForeignKey("fare_id", "gtfs_fare_attributes(id)", x, x)
-	// db.Model(&gotransit.Frequency{}).AddForeignKey("trip_id", "gtfs_trips(id)", x, x)
-	// db.Model(&gotransit.Route{}).AddForeignKey("agency_id", "gtfs_agencies(id)", x, x)
-	// db.Model(&gotransit.StopTime{}).AddForeignKey("trip_id", "gtfs_trips(id)", x, x)
-	// db.Model(&gotransit.StopTime{}).AddForeignKey("stop_id", "gtfs_stops(id)", x, x)
-	// db.Model(&gotransit.Transfer{}).AddForeignKey("from_stop_id", "gtfs_stops(id)", x, x)
-	// db.Model(&gotransit.Transfer{}).AddForeignKey("to_stop_id", "gtfs_stops(id)", x, x)
-	// Optional relations
-	// db.Model(&gotransit.Stop{}).AddForeignKey("parent_station", "gtfs_stops(id)", x, x)
-	// db.Model(&gotransit.Trip{}).AddForeignKey("shape_id", "gtfs_shapes(id)", x, x)
-	// db.Model(&gotransit.FareRule{}).AddForeignKey("route_id", "gtfs_routes(id)", x, x)
+	// TODO: Load schema
 	return nil
 }
 
 // Delete any entities associated with the FeedVersion.
 func (writer *Writer) Delete() error {
 	// TODO: Move to extension Delete() ?
-	// force feed_version_id
 	db := writer.Where().Where("feed_version_id = ?", writer.FeedVersionID)
 	db.Delete(&gotransit.Stop{})
 	db.Delete(&gotransit.Shape{})
@@ -140,28 +91,10 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 
 // AddEntities provides a generic interface for adding Entities to the database.
 func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
-	errs := []error{}
-	stoptimes := []gotransit.StopTime{}
 	for _, ent := range ents {
-		switch v := ent.(type) {
-		case *gotransit.StopTime:
-			v.SetFeedVersionID(writer.FeedVersionID)
-			stoptimes = append(stoptimes, *v)
+		if z, ok := ent.(feedVersionSetter); ok {
+			z.SetFeedVersionID(writer.FeedVersionID)
 		}
 	}
-	if len(stoptimes) == len(ents) {
-		if err := writer.Adapter.BatchInsert(&stoptimes); err != nil {
-			errs = append(errs, err)
-		}
-	} else {
-		for _, ent := range ents {
-			if _, err := writer.AddEntity(ent); err != nil {
-				errs = append(errs, err)
-			}
-		}
-	}
-	if len(errs) > 0 {
-		return errs[0]
-	}
-	return nil
+	return writer.Adapter.BatchInsert("gtfs_stop_times", ents)
 }

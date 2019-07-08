@@ -33,5 +33,5 @@ type Adapter interface {
 	DB() *gorm.DB
 	SetDB(*gorm.DB)
 	GeomEncoding() int
-	BatchInsert(*[]gotransit.StopTime) error
+	BatchInsert(string, []gotransit.Entity) error
 }
