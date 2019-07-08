@@ -12,6 +12,7 @@ import (
 	_ "github.com/interline-io/gotransit/ext/pathways"
 	_ "github.com/interline-io/gotransit/ext/plus"
 	_ "github.com/interline-io/gotransit/gtcsv"
+	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/extract"
 	"github.com/interline-io/gotransit/internal/log"
 	"github.com/interline-io/gotransit/validator"
@@ -79,6 +80,7 @@ func (i *arrayFlags) Set(value string) error {
 
 // basicCopyOptions
 type basicCopyOptions struct {
+	newfv                bool
 	create               bool
 	allowEntityErrors    bool
 	allowReferenceErrors bool
@@ -95,10 +97,10 @@ type copyCommand struct {
 func (cmd *copyCommand) run(args []string) {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+	fl.BoolVar(&cmd.newfv, "newfv", false, "Create a new FeedVersion from Reader")
 	fl.BoolVar(&cmd.create, "create", false, "Create")
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entity-level errors")
 	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "Allow reference errors")
-	// TODO: fvids
 	fl.Parse(args)
 	cmd.args = fl.Args()
 	if len(cmd.args) < 2 {
@@ -109,6 +111,17 @@ func (cmd *copyCommand) run(args []string) {
 	defer reader.Close()
 	writer := getWriter(cmd.args[1], cmd.create)
 	defer writer.Close()
+	// Setup FeedVersion
+	if cmd.newfv {
+		fv := gotransit.NewFeedVersionFromReader(reader)
+		if dbw, ok := writer.(*gtdb.Writer); ok {
+			eid, err := dbw.Adapter.Insert("feed_versions", fv)
+			if err != nil {
+				exit("could not create FeedVersion: %s", err)
+			}
+			dbw.FeedVersionID = eid
+		}
+	}
 	// Setup copier
 	cp := copier.NewCopier(reader, writer)
 	cp.AllowEntityErrors = cmd.allowEntityErrors

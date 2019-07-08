@@ -46,6 +46,17 @@ func (reader *Reader) Close() error {
 	return reader.Adapter.Close()
 }
 
+// SHA1 gets checksum when the adapter is a zip.
+func (reader *Reader) SHA1() (string, error) {
+	type canSHA1 interface {
+		SHA1() (string, error)
+	}
+	if a, ok := reader.Adapter.(canSHA1); ok {
+		return a.SHA1()
+	}
+	return "", errors.New("adapter does not support signatures")
+}
+
 // ReadEntities provides a generic interface for reading Entities.
 func (reader *Reader) ReadEntities(c interface{}) error {
 	// Magic

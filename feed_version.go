@@ -1,25 +1,21 @@
 package gotransit
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
-	"io"
-	"os"
 	"sort"
 	"time"
 )
 
 // FeedVersion represents a single GTFS data source.
 type FeedVersion struct {
-	FeedID               int    `gorm:"index"`
-	FeedType             string `gorm:"index"`
-	SHA1                 string `gorm:"index"`
+	ID                   int
+	FeedID               int
+	FeedType             string
+	SHA1                 string
 	File                 string
 	URL                  string
-	EarliestCalendarDate OptionalTime `gorm:"index;not null"`
-	LatestCalendarDate   OptionalTime `gorm:"index;not null"`
-	FetchedAt            OptionalTime
-	ID                   int
+	EarliestCalendarDate time.Time
+	LatestCalendarDate   time.Time
+	FetchedAt            time.Time
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -29,8 +25,8 @@ func (ent *FeedVersion) TableName() string {
 	return "feed_versions"
 }
 
-// NewFeedVersion returns a FeedVersion from a Reader.
-func NewFeedVersion(reader Reader) (FeedVersion, error) {
+// NewFeedVersionFromReader returns a FeedVersion from a Reader.
+func NewFeedVersionFromReader(reader Reader) *FeedVersion {
 	fv := FeedVersion{}
 	// Get Calendar Dates
 	times := []time.Time{}
@@ -48,26 +44,17 @@ func NewFeedVersion(reader Reader) (FeedVersion, error) {
 	})
 	if len(times) > 0 {
 		if times[0].Before(times[len(times)-1]) {
-			fv.EarliestCalendarDate.Time = times[0]
-			fv.LatestCalendarDate.Time = times[len(times)-1]
+			fv.EarliestCalendarDate = times[0]
+			fv.LatestCalendarDate = times[len(times)-1]
 		}
 	}
-	return fv, nil
-}
-
-// fileSHA1 returns the SHA1 hash of the zip file
-func fileSHA1(path string) (string, error) {
-	var sha1string string
-	file, err := os.Open(path)
-	if err != nil {
-		return sha1string, err
+	type canSHA1 interface {
+		SHA1() (string, error)
 	}
-	defer file.Close()
-	hash := sha1.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return sha1string, err
+	if s, ok := reader.(canSHA1); ok {
+		if h, err := s.SHA1(); err == nil {
+			fv.SHA1 = h
+		}
 	}
-	sha1bytes := hash.Sum(nil)[:20]
-	sha1string = hex.EncodeToString(sha1bytes)
-	return sha1string, nil
+	return &fv
 }

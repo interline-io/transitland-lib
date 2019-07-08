@@ -3,6 +3,7 @@ package gtdb
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
@@ -32,6 +33,10 @@ func TestReader_Sqlx(t *testing.T) {
 	writer.Adapter = &adapter
 	writer.Open()
 	fv := gotransit.FeedVersion{}
+	fv.EarliestCalendarDate = time.Now()
+	fv.LatestCalendarDate = time.Now()
+	fv.FetchedAt = time.Now()
+
 	eid, err := adapter.Insert("feed_versions", &fv)
 	if err != nil {
 		panic(err)
