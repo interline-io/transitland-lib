@@ -10,12 +10,12 @@ import (
 
 // Route routes.txt
 type Route struct {
-	RouteID        string `csv:"route_id" required:"true" gorm:"index;not null"`
-	AgencyID       string `csv:"agency_id" gorm:"type:int;index;not null"`
+	RouteID        string `csv:"route_id" required:"true"`
+	AgencyID       string `csv:"agency_id"`
 	RouteShortName string `csv:"route_short_name"`
 	RouteLongName  string `csv:"route_long_name"`
 	RouteDesc      string `csv:"route_desc"`
-	RouteType      int    `csv:"route_type" min:"0" required:"true" gorm:"index;not null"`
+	RouteType      int    `csv:"route_type" min:"0" required:"true"`
 	RouteURL       string `csv:"route_url" validator:"url"`
 	RouteColor     string `csv:"route_color" validator:"color"`
 	RouteTextColor string `csv:"route_text_color" validator:"color"`

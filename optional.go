@@ -11,7 +11,7 @@ import (
 
 // OptionalRelationship is a nullable foreign key constraint, similar to sql.NullString
 type OptionalRelationship struct {
-	Key   string
+	Key   string `abc:"test"`
 	Valid bool
 }
 
@@ -26,7 +26,7 @@ func (r *OptionalRelationship) String() string {
 
 // Value returns nil if empty
 func (r OptionalRelationship) Value() (driver.Value, error) {
-	if r.IsZero() || !r.Valid {
+	if r.IsZero() {
 		return nil, nil
 	}
 	return r.Key, nil

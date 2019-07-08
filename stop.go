@@ -8,16 +8,16 @@ import (
 
 // Stop stops.txt
 type Stop struct {
-	StopID             string               `csv:"stop_id" required:"true" gorm:"index;not null"`
-	StopName           string               `csv:"stop_name" gorm:"not null"` // conditionally required
+	StopID             string               `csv:"stop_id" required:"true"`
+	StopName           string               `csv:"stop_name"` // conditionally required
 	StopCode           string               `csv:"stop_code"`
 	StopDesc           string               `csv:"stop_desc"`
-	StopLat            float64              `db:"-" csv:"stop_lat" min:"-90" max:"90" gorm:"-"` // required handled below
-	StopLon            float64              `db:"-" csv:"stop_lon" min:"-180" max:"180" gorm:"-"`
+	StopLat            float64              `db:"-" csv:"stop_lat" min:"-90" max:"90"` // required handled below
+	StopLon            float64              `db:"-" csv:"stop_lon" min:"-180" max:"180"`
 	ZoneID             string               `csv:"zone_id"`
 	StopURL            string               `csv:"stop_url" validator:"url"`
 	LocationType       int                  `csv:"location_type" min:"0" max:"4"`
-	ParentStation      OptionalRelationship `csv:"parent_station" gorm:"type:int;index"`
+	ParentStation      OptionalRelationship `csv:"parent_station"`
 	StopTimezone       string               `csv:"stop_timezone" validator:"timezone"`
 	WheelchairBoarding int                  `csv:"wheelchair_boarding" min:"0" max:"2"`
 	LevelID            string               `csv:"level_id"`

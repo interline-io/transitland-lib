@@ -6,17 +6,17 @@ import (
 
 // Trip trips.txt
 type Trip struct {
-	RouteID              string               `csv:"route_id" required:"true" gorm:"type:int;index;not null"`
-	ServiceID            string               `csv:"service_id" required:"true" gorm:"type:int;index;not null"`
-	TripID               string               `csv:"trip_id" required:"true" gorm:"index:idx_trips_trip_id;index;not null"`
+	RouteID              string               `csv:"route_id" required:"true"`
+	ServiceID            string               `csv:"service_id" required:"true"`
+	TripID               string               `csv:"trip_id" required:"true"`
 	TripHeadsign         string               `csv:"trip_headsign"`
 	TripShortName        string               `csv:"trip_short_name"`
 	DirectionID          int                  `csv:"direction_id" min:"0" max:"1"`
 	BlockID              string               `csv:"block_id"`
-	ShapeID              OptionalRelationship `csv:"shape_id" gorm:"type:int;index"`
+	ShapeID              OptionalRelationship `csv:"shape_id"`
 	WheelchairAccessible int                  `csv:"wheelchair_accessible" min:"0" max:"2"`
 	BikesAllowed         int                  `csv:"bikes_allowed" min:"0" max:"2"`
-	StopPatternID        int                  `gorm:"index"`
+	StopPatternID        int
 	BaseEntity
 }
 
