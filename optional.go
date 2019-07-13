@@ -37,15 +37,14 @@ func (r OptionalRelationship) Value() (driver.Value, error) {
 func (r *OptionalRelationship) Scan(src interface{}) error {
 	r.Valid = false
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
 		r.Key = v
 	case int:
 		r.Key = strconv.Itoa(v)
 	case int64:
 		r.Key = strconv.Itoa(int(v))
-	case nil:
-		r.Valid = false
-		return nil
 	default:
 		fmt.Printf("src: %T %#v\n", src, src)
 		return errors.New("cant convert")
@@ -82,6 +81,8 @@ func (r *OptionalTime) Scan(src interface{}) error {
 	r.Valid = false
 	var p error
 	switch v := src.(type) {
+	case nil:
+		// pass
 	case string:
 		if t, err := time.Parse("20060102", v); err == nil {
 			r.Time = t
@@ -89,7 +90,7 @@ func (r *OptionalTime) Scan(src interface{}) error {
 	case time.Time:
 		r.Time = v
 	default:
-		p = errors.New("cant convert")
+		p = fmt.Errorf("cant convert %T to OptionalTime", src)
 	}
 	if p == nil {
 		r.Valid = true

@@ -4,37 +4,49 @@ import (
 	"os"
 	"testing"
 
+	"github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/internal/testutil"
 )
 
 // Writer interface tests.
 func TestWriter_Postgres(t *testing.T) {
-	// dburl := os.Getenv("GOTRANSIT_TEST_SQLITE_URL")
-	dburl := "sqlite3://:memory:"
+	dburl := os.Getenv("GOTRANSIT_TEST_POSTGRES_URL")
 	if len(dburl) == 0 {
 		t.Skip()
 		return
 	}
-	writer, _ := NewWriter(dburl)
-	writer.Open()
-	writer.Create()
-	writer.Delete()
+	adapter := SQLXAdapter{DBURL: dburl}
+	writer := Writer{Adapter: &adapter}
+	if err := writer.Open(); err != nil {
+		t.Error(err)
+	}
+	if err := writer.Create(); err != nil {
+		t.Error(err)
+	}
 	defer writer.Close()
-	testutil.WriterTester(writer, t)
+	r1, _ := gtcsv.NewReader("../testdata/example")
+	if _, err := writer.CreateFeedVersion(r1); err != nil {
+		t.Error(err)
+	}
+	testutil.WriterTester(&writer, t)
 }
 
 func TestWriter_SpatiaLite(t *testing.T) {
-	dburl := os.Getenv("GOTRANSIT_TEST_DB_URL")
-	if len(dburl) == 0 {
-		t.Skip()
-		return
+	dburl := "sqlite3://:memory:"
+	adapter := SpatiaLiteAdapter{DBURL: dburl}
+	writer := Writer{Adapter: &adapter}
+	if err := writer.Open(); err != nil {
+		t.Error(err)
 	}
-	writer, _ := NewWriter(dburl)
-	writer.Open()
-	writer.Create()
-	writer.Delete()
+	if err := writer.Create(); err != nil {
+		t.Error(err)
+	}
 	defer writer.Close()
-	testutil.WriterTester(writer, t)
+	r1, _ := gtcsv.NewReader("../testdata/example")
+	if _, err := writer.CreateFeedVersion(r1); err != nil {
+		t.Error(err)
+	}
+	testutil.WriterTester(&writer, t)
 }
 
 // Writer Round Trip tests are handled by the copy operation in dbreader_test.go.

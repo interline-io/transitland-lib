@@ -3,7 +3,6 @@ package plus
 import (
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
 )
 
@@ -18,14 +17,14 @@ type Ext struct {
 
 // Create the necessary database tables.
 func (ext Ext) Create(writer gotransit.Writer) error {
-	w, ok := writer.(*gtdb.Writer)
-	if !ok {
-		return nil
-	}
-	db := w.Adapter.DB()
-	for _, e := range ext.Entities() {
-		db.AutoMigrate(e)
-	}
+	// w, ok := writer.(*gtdb.Writer)
+	// if !ok {
+	// 	return nil
+	// }
+	// db := w.Adapter.DB()
+	// for _, e := range ext.Entities() {
+	// 	db.AutoMigrate(e)
+	// }
 	return nil
 
 }

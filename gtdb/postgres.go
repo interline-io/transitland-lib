@@ -2,11 +2,9 @@ package gtdb
 
 import (
 	"errors"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
-	"github.com/jinzhu/gorm"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/reflectx"
 )
@@ -35,18 +33,8 @@ func (adapter *SQLXAdapter) Create() error {
 	return nil
 }
 
-func (adapter *SQLXAdapter) DB() *gorm.DB {
-	// Temporary compat...
-	gormdb, err := gorm.Open("postgres", adapter.db.DB)
-	if err != nil {
-		panic(err)
-	}
-	return gormdb
-}
-
-func (adapter *SQLXAdapter) SetDB(db *gorm.DB) {
-	ddb := db.DB()
-	adapter.db = sqlx.NewDb(ddb, "postgres")
+func (adapter *SQLXAdapter) DB() *sqlx.DB {
+	return adapter.db
 }
 
 func (adapter *SQLXAdapter) DBX() *sqlx.DB {
@@ -62,7 +50,10 @@ func (adapter *SQLXAdapter) Find(dest interface{}) error {
 	if err != nil {
 		return err
 	}
-	qstr, args, _ := adapter.Sqrl().Select("*").From(getTableName(dest)).Where("id = ?", eid).ToSql()
+	qstr, args, err := adapter.Sqrl().Select("*").From(getTableName(dest)).Where("id = ?", eid).ToSql()
+	if err != nil {
+		return err
+	}
 	return adapter.Get(dest, qstr, args...)
 }
 
@@ -102,8 +93,6 @@ func (adapter *SQLXAdapter) BatchInsert(ents []gotransit.Entity) error {
 	for _, ent := range ents {
 		if st, ok := ent.(*gotransit.StopTime); ok {
 			sts = append(sts, st)
-		} else {
-			fmt.Printf("st: %#v\n", ent)
 		}
 	}
 	if len(sts) == 0 {

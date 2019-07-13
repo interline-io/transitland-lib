@@ -51,7 +51,7 @@ func readerTesterReadEntities(reader gotransit.Reader, t *testing.T) {
 	}
 	expect := 5
 	if c := len(count); c != expect {
-		t.Errorf("expected %d entities, got %d", c, expect)
+		t.Errorf("got %d expect %d", c, expect)
 	}
 
 }
@@ -218,7 +218,7 @@ func readerTesterFeedInfos(reader gotransit.Reader, t *testing.T) {
 	expected := map[string]int{"Google": 1}
 	for k, v := range expected {
 		if i := m[k]; v != i {
-			t.Error("expeced", k, "=", i)
+			t.Errorf("got %d expected %d", i, v)
 		}
 	}
 }
@@ -265,8 +265,11 @@ func readerTesterTrips(reader gotransit.Reader, t *testing.T) {
 	}
 }
 
-// TODO: example feed needs transfers
-func readerTesterTransfers(reader gotransit.Reader, t *testing.T) {}
+func readerTesterTransfers(reader gotransit.Reader, t *testing.T) {
+	for ent := range reader.Transfers() {
+		_ = ent
+	}
+}
 
 // TODO: example feed needs shapes
 func readerTesterShapes(reader gotransit.Reader, t *testing.T) {}

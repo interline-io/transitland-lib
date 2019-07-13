@@ -55,15 +55,17 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	if !ok {
 		return causes.NewSourceUnreadableError("not an entity", nil)
 	}
-	_ = ent
 	slice := reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(outInner.Interface())), 0, 0)
 	// Create a pointer to a slice value and set it to the slice
 	x := reflect.New(slice.Type())
 	z := x.Elem()
 	z.Set(slice)
 	//
-	db := reader.Adapter.DB()
-	db.Find(x.Interface())
+	// qstr, args := reader.Adapter.Sqrl().Select("*").From(getTableName(ent)).MustSql()
+	qstr, args := reader.where().From(getTableName(ent)).MustSql()
+	if err := reader.Adapter.DB().Select(x.Interface(), qstr, args...); err != nil {
+		panic(err)
+	}
 	go func() {
 		for i := 0; i < z.Len(); i++ {
 			p := z.Index(i)
@@ -109,7 +111,7 @@ func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gotransit.Shape
 		for _, shapeID := range shapeIDs {
 			ents := []gotransit.Shape{}
 			qstr, args := reader.where().From("gtfs_shapes").Where("id = ?", shapeID).MustSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			if len(ents) > 0 {
 				out <- ents
 			}
@@ -122,7 +124,7 @@ func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gotransit.Shape
 // StopTimesByTripID sends StopTimes grouped by TripID.
 func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gotransit.StopTime {
 	if len(tripIDs) == 0 {
-		q := reader.Adapter.Sqrl().Select("id").Distinct().From("gtfs_shapes")
+		q := reader.Adapter.Sqrl().Select("id").Distinct().From("gtfs_trips")
 		if reader.FeedVersionID > 0 {
 			q = q.Where("feed_version_id = ?", reader.FeedVersionID)
 		}
@@ -141,8 +143,8 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gotransit.Stop
 	go func() {
 		for _, tripID := range tripIDs {
 			ents := []gotransit.StopTime{}
-			qstr, args := reader.where().From("gtfs_stop_times").Where("id = ?", tripID).MustSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_stop_times").Where("trip_id = ?", tripID).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			if len(ents) > 0 {
 				out <- ents
 			}
@@ -159,8 +161,8 @@ func (reader *Reader) Stops() chan gotransit.Stop {
 		offset := 0
 		for {
 			ents := []gotransit.Stop{}
-			qstr, args, _ := reader.where().From("gtfs_stops").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_stops").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -182,8 +184,8 @@ func (reader *Reader) StopTimes() chan gotransit.StopTime {
 		ps := uint64(reader.PageSize)
 		for {
 			ents := []gotransit.StopTime{}
-			qstr, args, _ := reader.where().From("gtfs_stop_times").OrderBy("id").Offset(offset).Limit(ps).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_stop_times").OrderBy("id").Offset(offset).Limit(ps).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -204,8 +206,8 @@ func (reader *Reader) Agencies() chan gotransit.Agency {
 		offset := 0
 		for {
 			ents := []gotransit.Agency{}
-			qstr, args, _ := reader.where().From("gtfs_agencies").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_agencies").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -226,8 +228,8 @@ func (reader *Reader) Calendars() chan gotransit.Calendar {
 		offset := 0
 		for {
 			ents := []gotransit.Calendar{}
-			qstr, args, _ := reader.where().From("gtfs_calendars").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_calendars").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -248,8 +250,8 @@ func (reader *Reader) CalendarDates() chan gotransit.CalendarDate {
 		offset := 0
 		for {
 			ents := []gotransit.CalendarDate{}
-			qstr, args, _ := reader.where().From("gtfs_calendar_dates").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_calendar_dates").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -270,8 +272,8 @@ func (reader *Reader) FareAttributes() chan gotransit.FareAttribute {
 		offset := 0
 		for {
 			ents := []gotransit.FareAttribute{}
-			qstr, args, _ := reader.where().From("gtfs_fare_attributes").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_fare_attributes").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -292,8 +294,8 @@ func (reader *Reader) FareRules() chan gotransit.FareRule {
 		offset := 0
 		for {
 			ents := []gotransit.FareRule{}
-			qstr, args, _ := reader.where().From("gtfs_fare_rules").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_fare_rules").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -314,8 +316,8 @@ func (reader *Reader) FeedInfos() chan gotransit.FeedInfo {
 		offset := 0
 		for {
 			ents := []gotransit.FeedInfo{}
-			qstr, args, _ := reader.where().From("gtfs_feed_infos").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_feed_infos").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -336,8 +338,8 @@ func (reader *Reader) Frequencies() chan gotransit.Frequency {
 		offset := 0
 		for {
 			ents := []gotransit.Frequency{}
-			qstr, args, _ := reader.where().From("gtfs_frequencies").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_frequencies").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -358,8 +360,8 @@ func (reader *Reader) Routes() chan gotransit.Route {
 		offset := 0
 		for {
 			ents := []gotransit.Route{}
-			qstr, args, _ := reader.where().From("gtfs_routes").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_routes").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -380,8 +382,8 @@ func (reader *Reader) Shapes() chan gotransit.Shape {
 		offset := 0
 		for {
 			ents := []gotransit.Shape{}
-			qstr, args, _ := reader.where().From("gtfs_shapes").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_shapes").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -402,8 +404,8 @@ func (reader *Reader) Transfers() chan gotransit.Transfer {
 		offset := 0
 		for {
 			ents := []gotransit.Transfer{}
-			qstr, args, _ := reader.where().From("gtfs_transfers").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_transfers").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -424,8 +426,8 @@ func (reader *Reader) Trips() chan gotransit.Trip {
 		offset := 0
 		for {
 			ents := []gotransit.Trip{}
-			qstr, args, _ := reader.where().From("gtfs_trips").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
-			reader.Adapter.Select(&ents, qstr, args...)
+			qstr, args := reader.where().From("gtfs_trips").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).MustSql()
+			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}

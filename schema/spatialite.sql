@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_feed_infos" (
   "feed_lang" varchar(255) NOT NULL, 
   "feed_start_date" datetime, 
   "feed_end_date" datetime, 
-  "feed_version" varchar(255) NOT NULL, 
+  "feed_version_name" varchar(255) NOT NULL, 
   "id" integer primary key autoincrement, 
   "feed_version_id" integer NOT NULL, 
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 

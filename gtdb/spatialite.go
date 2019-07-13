@@ -57,19 +57,8 @@ func (adapter *SpatiaLiteAdapter) Create() error {
 }
 
 // DB provides the underlying gorm DB.
-func (adapter *SpatiaLiteAdapter) DB() *gorm.DB {
-	gormdb, err := gorm.Open("spatialite", adapter.db.DB)
-	if err != nil {
-		panic(err)
-	}
-	return gormdb
-}
-
-// SetDB sets the database handle.
-func (adapter *SpatiaLiteAdapter) SetDB(db *gorm.DB) {
-	a := db.DB()
-	b := sqlx.NewDb(a, "spatialite")
-	adapter.db = b
+func (adapter *SpatiaLiteAdapter) DB() *sqlx.DB {
+	return adapter.db
 }
 
 func (adapter *SpatiaLiteAdapter) DBX() *sqlx.DB {
@@ -85,7 +74,10 @@ func (adapter *SpatiaLiteAdapter) Find(dest interface{}) error {
 	if err != nil {
 		return err
 	}
-	qstr, args, _ := adapter.Sqrl().Select("*").From(getTableName(dest)).Where("id = ?", eid).ToSql()
+	qstr, args, err := adapter.Sqrl().Select("*").From(getTableName(dest)).Where("id = ?", eid).ToSql()
+	if err != nil {
+		return err
+	}
 	return adapter.db.Get(dest, qstr, args...)
 }
 
@@ -109,11 +101,6 @@ func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 		Columns(cols...).
 		Values(vals...).
 		RunWith(adapter.db)
-	if sql, _, err := q.ToSql(); err == nil {
-		_ = sql
-	} else {
-		return 0, err
-	}
 	result, err := q.Exec()
 	if err != nil {
 		return 0, err

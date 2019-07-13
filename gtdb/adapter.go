@@ -6,9 +6,9 @@ import (
 	// Log
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
+	"github.com/jmoiron/sqlx"
 
 	// GORM
-	"github.com/jinzhu/gorm"
 
 	// Postgres
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -30,8 +30,7 @@ type Adapter interface {
 	Open() error
 	Close() error
 	Create() error
-	DB() *gorm.DB
-	SetDB(*gorm.DB)
+	DB() *sqlx.DB
 	Sqrl() sq.StatementBuilderType
 	Insert(interface{}) (int, error)
 	Find(interface{}) error

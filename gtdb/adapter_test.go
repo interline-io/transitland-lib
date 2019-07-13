@@ -15,8 +15,10 @@ func filldb(writer *Writer) {
 	r1, _ := gtcsv.NewReader("../testdata/example")
 	r1.Open()
 	defer r1.Close()
+	if _, err := writer.CreateFeedVersion(r1); err != nil {
+		panic(err)
+	}
 	cp := copier.NewCopier(r1, writer)
-	cp.NormalizeServiceIDs = true
 	cp.Copy()
 }
 
@@ -52,7 +54,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	})
 	t.Run("Select", func(t *testing.T) {
 		ents := []gotransit.Stop{}
-		if err := adapter.Select(&ents, "SELECT * FROM gtfs_stops WHERE id IN (?,?) AND feed_version_id = ?", m.StopID1, m.StopID2, m.FeedVersionID); err != nil {
+		if err := adapter.Select(&ents, "SELECT * FROM gtfs_stops WHERE id IN (?,?) AND feed_version_id = ? ORDER BY id ASC", m.StopID1, m.StopID2, m.FeedVersionID); err != nil {
 			t.Error(err)
 		}
 		if len(ents) == 0 {
