@@ -3,6 +3,7 @@ package gotransit
 import (
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -35,7 +36,6 @@ func (r OptionalRelationship) Value() (driver.Value, error) {
 // Scan implements sql.Scanner
 func (r *OptionalRelationship) Scan(src interface{}) error {
 	r.Valid = false
-	var p error
 	switch v := src.(type) {
 	case string:
 		r.Key = v
@@ -43,13 +43,15 @@ func (r *OptionalRelationship) Scan(src interface{}) error {
 		r.Key = strconv.Itoa(v)
 	case int64:
 		r.Key = strconv.Itoa(int(v))
+	case nil:
+		r.Valid = false
+		return nil
 	default:
-		p = errors.New("cant convert")
+		fmt.Printf("src: %T %#v\n", src, src)
+		return errors.New("cant convert")
 	}
-	if p == nil {
-		r.Valid = true
-	}
-	return p
+	r.Valid = true
+	return nil
 }
 
 // OptionalTime is a nullable time.

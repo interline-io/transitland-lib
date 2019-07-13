@@ -1,17 +1,16 @@
 package gtdb
 
 import (
-	"os"
 	"testing"
 )
 
-func TestPostgresAdapter(t *testing.T) {
-	dburl := os.Getenv("GOTRANSIT_TEST_POSTGRES_URL")
+func TestSpatiaLiteAdapter(t *testing.T) {
+	dburl := "sqlite3://:memory:"
 	if len(dburl) == 0 {
 		t.Skip()
 		return
 	}
-	adapter := SQLXAdapter{DBURL: dburl}
+	adapter := SpatiaLiteAdapter{DBURL: dburl}
 	if err := adapter.Open(); err != nil {
 		t.Error(err)
 	}

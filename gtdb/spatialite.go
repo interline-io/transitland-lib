@@ -2,7 +2,6 @@ package gtdb
 
 import (
 	"database/sql"
-	"errors"
 	"strings"
 
 	// Log
@@ -29,7 +28,6 @@ func init() {
 type SpatiaLiteAdapter struct {
 	DBURL string
 	db    *sqlx.DB
-	m     *reflectx.Mapper
 }
 
 // Open implements Adapter Open.
@@ -43,6 +41,7 @@ func (adapter *SpatiaLiteAdapter) Open() error {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
 	adapter.db = db
+	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
 	return nil
 }
 
@@ -53,19 +52,8 @@ func (adapter *SpatiaLiteAdapter) Close() error {
 
 // Create implements Adapter Create.
 func (adapter *SpatiaLiteAdapter) Create() error {
-	return nil
-}
-
-// SetDB sets the database handle.
-func (adapter *SpatiaLiteAdapter) SetDB(db *gorm.DB) {
-	a := db.DB()
-	b := sqlx.NewDb(a, "spatialite")
-	adapter.db = b
-}
-
-// GeomEncoding returns 1, the encoding internal format code for SpatiaLite blobs.
-func (adapter *SpatiaLiteAdapter) GeomEncoding() int {
-	return 0
+	_, err := sqlx.LoadFile(adapter.DBX(), "../schema/spatialite.sql")
+	return err
 }
 
 // DB provides the underlying gorm DB.
@@ -77,18 +65,42 @@ func (adapter *SpatiaLiteAdapter) DB() *gorm.DB {
 	return gormdb
 }
 
-func (adapter *SpatiaLiteAdapter) Insert(table string, ent interface{}) (int, error) {
-	if table == "" {
-		table = getTableName(ent)
+// SetDB sets the database handle.
+func (adapter *SpatiaLiteAdapter) SetDB(db *gorm.DB) {
+	a := db.DB()
+	b := sqlx.NewDb(a, "spatialite")
+	adapter.db = b
+}
+
+func (adapter *SpatiaLiteAdapter) DBX() *sqlx.DB {
+	return adapter.db
+}
+
+func (adapter *SpatiaLiteAdapter) Sqrl() sq.StatementBuilderType {
+	return sq.StatementBuilder.RunWith(adapter.db)
+}
+
+func (adapter *SpatiaLiteAdapter) Find(dest interface{}) error {
+	eid, err := getID(dest)
+	if err != nil {
+		return err
 	}
-	if table == "" {
-		return 0, errors.New("no tablename")
-	}
+	qstr, args, _ := adapter.Sqrl().Select("*").From(getTableName(dest)).Where("id = ?", eid).ToSql()
+	return adapter.db.Get(dest, qstr, args...)
+}
+
+func (adapter *SpatiaLiteAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
+	return adapter.db.Get(dest, qstr, args...)
+}
+
+func (adapter *SpatiaLiteAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
+	return adapter.db.Select(dest, qstr, args...)
+}
+
+func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 	// Keep the mapper to use cache.
-	if adapter.m == nil {
-		adapter.m = reflectx.NewMapperFunc("db", toSnakeCase)
-	}
-	cols, vals, err := getInsert(adapter.m, ent)
+	table := getTableName(ent)
+	cols, vals, err := getInsert(adapter.db.Mapper, ent)
 	if err != nil {
 		return 0, err
 	}
@@ -114,17 +126,15 @@ func (adapter *SpatiaLiteAdapter) Insert(table string, ent interface{}) (int, er
 }
 
 // BatchInsert provides a fast path for creating StopTimes.
-func (adapter *SpatiaLiteAdapter) BatchInsert(table string, ents []gotransit.Entity) error {
+func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
-	if adapter.m == nil {
-		adapter.m = reflectx.NewMapperFunc("db", toSnakeCase)
-	}
-	cols, _, err := getInsert(adapter.m, ents[0])
+	cols, _, err := getInsert(adapter.db.Mapper, ents[0])
+	table := "gtfs_stop_times"
 	q := sq.Insert(table).Columns(cols...)
 	for _, d := range ents {
-		_, vals, _ := getInsert(adapter.m, d)
+		_, vals, _ := getInsert(adapter.db.Mapper, d)
 		q = q.Values(vals...)
 	}
 	_, err = q.RunWith(adapter.db).Exec()

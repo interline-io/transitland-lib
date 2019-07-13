@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	// Log
+	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 
 	// GORM
@@ -29,9 +30,12 @@ type Adapter interface {
 	Open() error
 	Close() error
 	Create() error
-	Insert(string, interface{}) (int, error)
 	DB() *gorm.DB
 	SetDB(*gorm.DB)
-	GeomEncoding() int
-	BatchInsert(string, []gotransit.Entity) error
+	Sqrl() sq.StatementBuilderType
+	Insert(interface{}) (int, error)
+	Find(interface{}) error
+	Get(interface{}, string, ...interface{}) error
+	Select(interface{}, string, ...interface{}) error
+	BatchInsert([]gotransit.Entity) error
 }

@@ -30,11 +30,7 @@ func (writer *Writer) Close() error {
 
 // Where returns a *gorm.DB with base clauses already set.
 func (writer *Writer) Where() *gorm.DB {
-	db := writer.Adapter.DB()
-	if writer.FeedVersionID > 0 {
-		db = db.Where("feed_version_id = ?", writer.FeedVersionID)
-	}
-	return db
+	return nil
 }
 
 // NewReader returns a new Reader with the same adapter.
@@ -57,25 +53,7 @@ func (writer *Writer) Create() error {
 // Delete any entities associated with the FeedVersion.
 func (writer *Writer) Delete() error {
 	// TODO: Move to extension Delete() ?
-	db := writer.Where().Where("feed_version_id = ?", writer.FeedVersionID)
-	db.Delete(&gotransit.Stop{})
-	db.Delete(&gotransit.Shape{})
-	db.Delete(&gotransit.FeedInfo{})
-	db.Delete(&gotransit.Frequency{})
-	db.Delete(&gotransit.Trip{})
-	db.Delete(&gotransit.Agency{})
-	db.Delete(&gotransit.Transfer{})
-	db.Delete(&gotransit.Calendar{})
-	db.Delete(&gotransit.CalendarDate{})
-	db.Delete(&gotransit.Route{})
-	db.Delete(&gotransit.StopTime{})
-	db.Delete(&gotransit.FareRule{})
-	db.Delete(&gotransit.FareAttribute{})
 	return nil
-}
-
-type feedVersionSetter interface {
-	SetFeedVersionID(int)
 }
 
 // AddEntity writes an entity to the database.
@@ -85,7 +63,7 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 		z.SetFeedVersionID(writer.FeedVersionID)
 	}
 	// Save
-	eid, err := writer.Adapter.Insert("", ent)
+	eid, err := writer.Adapter.Insert(ent)
 	return strconv.Itoa(eid), err
 }
 
@@ -96,5 +74,5 @@ func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
 			z.SetFeedVersionID(writer.FeedVersionID)
 		}
 	}
-	return writer.Adapter.BatchInsert("gtfs_stop_times", ents)
+	return writer.Adapter.BatchInsert(ents)
 }

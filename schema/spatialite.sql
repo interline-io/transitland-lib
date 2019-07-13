@@ -235,8 +235,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_fare_attributes" (
 );
 CREATE INDEX idx_gtfs_fare_attributes_fare_id ON "gtfs_fare_attributes"(fare_id);
 CREATE INDEX idx_gtfs_fare_attributes_feed_version_id ON "gtfs_fare_attributes"(feed_version_id);
-SELECT 
-  load_extension("mod_spatialite");
+-- SELECT 
+--   load_extension("mod_spatialite");
 SELECT 
   InitSpatialMetaData(1);
 SELECT 

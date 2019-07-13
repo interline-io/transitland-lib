@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
@@ -88,9 +89,25 @@ func getTableName(ent interface{}) string {
 	if v, ok := ent.(hasTableName); ok {
 		return v.TableName()
 	}
-	return ""
+	s := strings.Split(fmt.Sprintf("%T", ent), ".")
+	return toSnakeCase(s[len(s)-1])
 }
 
 type canSetID interface {
 	SetID(int)
+}
+
+type canGetID interface {
+	EntityID() string
+}
+
+func getID(ent interface{}) (int, error) {
+	if v, ok := ent.(canGetID); ok {
+		return strconv.Atoi(v.EntityID())
+	}
+	return 0, errors.New("no ID")
+}
+
+type feedVersionSetter interface {
+	SetFeedVersionID(int)
 }
