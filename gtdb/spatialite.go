@@ -8,7 +8,6 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
-	"github.com/jinzhu/gorm"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/mattn/go-sqlite3"
@@ -18,10 +17,6 @@ import (
 // Register.
 func init() {
 	sql.Register("spatialite", &sqlite3.SQLiteDriver{Extensions: []string{"mod_spatialite"}})
-	d, ok := gorm.GetDialect("sqlite3")
-	if ok {
-		gorm.RegisterDialect("spatialite", d)
-	}
 }
 
 // SpatiaLiteAdapter provides implementation details for SpatiaLite.
@@ -56,7 +51,7 @@ func (adapter *SpatiaLiteAdapter) Create() error {
 	return err
 }
 
-// DB provides the underlying gorm DB.
+// DB provides the underlying Sqlx DB.
 func (adapter *SpatiaLiteAdapter) DB() *sqlx.DB {
 	return adapter.db
 }

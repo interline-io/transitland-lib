@@ -12,7 +12,7 @@ import (
 
 // OptionalRelationship is a nullable foreign key constraint, similar to sql.NullString
 type OptionalRelationship struct {
-	Key   string `abc:"test"`
+	Key   string
 	Valid bool
 }
 
@@ -84,13 +84,11 @@ func (r *OptionalTime) Scan(src interface{}) error {
 	case nil:
 		// pass
 	case string:
-		if t, err := time.Parse("20060102", v); err == nil {
-			r.Time = t
-		}
+		r.Time, p = time.Parse("20060102", v)
 	case time.Time:
 		r.Time = v
 	default:
-		p = fmt.Errorf("cant convert %T to OptionalTime", src)
+		p = fmt.Errorf("cant convert %T", src)
 	}
 	if p == nil {
 		r.Valid = true

@@ -8,10 +8,7 @@ import (
 	"github.com/interline-io/gotransit"
 	"github.com/jmoiron/sqlx"
 
-	// GORM
-
 	// Postgres
-	_ "github.com/jinzhu/gorm/dialects/postgres"
 	// Drivers
 )
 
