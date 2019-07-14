@@ -26,7 +26,10 @@ func TestReader_Postgres(t *testing.T) {
 	writer := Writer{Adapter: &adapter}
 	defer writer.Close()
 	filldb(&writer)
-	reader, _ := writer.NewReader()
+	reader, err := writer.NewReader()
+	if err != nil {
+		t.Error(err)
+	}
 	testutil.ReaderTester(reader, t)
 }
 
@@ -43,6 +46,9 @@ func TestReader_SpatiaLite(t *testing.T) {
 	writer := Writer{Adapter: &adapter}
 	defer writer.Close()
 	filldb(&writer)
-	reader, _ := writer.NewReader()
+	reader, err := writer.NewReader()
+	if err != nil {
+		t.Error(err)
+	}
 	testutil.ReaderTester(reader, t)
 }

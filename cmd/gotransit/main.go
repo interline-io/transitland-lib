@@ -80,6 +80,7 @@ func (i *arrayFlags) Set(value string) error {
 
 // basicCopyOptions
 type basicCopyOptions struct {
+	fvid                 int
 	newfv                bool
 	create               bool
 	allowEntityErrors    bool
@@ -97,6 +98,7 @@ type copyCommand struct {
 func (cmd *copyCommand) run(args []string) {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID")
 	fl.BoolVar(&cmd.newfv, "newfv", false, "Create a new FeedVersion from Reader")
 	fl.BoolVar(&cmd.create, "create", false, "Create")
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entity-level errors")
@@ -104,32 +106,31 @@ func (cmd *copyCommand) run(args []string) {
 	fl.Parse(args)
 	cmd.args = fl.Args()
 	if len(cmd.args) < 2 {
-		exit("requires input and output")
+		exit("Requires input and output")
 	}
 	// Reader / Writer
 	reader := getReader(cmd.args[0])
 	defer reader.Close()
 	writer := getWriter(cmd.args[1], cmd.create)
 	defer writer.Close()
-	// Setup FeedVersion
-	if cmd.newfv {
-		fv := gotransit.NewFeedVersionFromReader(reader)
-		if dbw, ok := writer.(*gtdb.Writer); ok {
-			eid, err := dbw.Adapter.Insert("feed_versions", fv)
-			if err != nil {
-				exit("could not create FeedVersion: %s", err)
-			}
-			dbw.FeedVersionID = eid
-		}
-	}
 	// Setup copier
 	cp := copier.NewCopier(reader, writer)
 	cp.AllowEntityErrors = cmd.allowEntityErrors
 	cp.AllowReferenceErrors = cmd.allowReferenceErrors
+	if dbw, ok := writer.(*gtdb.Writer); ok {
+		if cmd.fvid != 0 {
+			dbw.FeedVersionID = cmd.fvid
+		} else if cmd.newfv {
+			if _, err := dbw.CreateFeedVersion(reader); err != nil {
+				exit("Error creating FeedVersion: %s", err)
+			}
+		}
+		cp.NormalizeServiceIDs = true
+	}
 	for _, ext := range cmd.extensions {
 		e, err := gotransit.GetExtension(ext)
 		if err != nil {
-			exit("no extension for: %s", ext)
+			exit("No extension for: %s", ext)
 		}
 		cp.AddExtension(e)
 		if cmd.create {
@@ -142,7 +143,7 @@ func (cmd *copyCommand) run(args []string) {
 	for _, ext := range cmd.filters {
 		ef, err := gotransit.GetEntityFilter(ext)
 		if err != nil {
-			exit("no filter for '%s': %s", ext, err)
+			exit("No filter for '%s': %s", ext, err)
 		}
 		cp.AddEntityFilter(ef)
 	}
@@ -171,6 +172,8 @@ type extractCommand struct {
 func (cmd *extractCommand) run(args []string) {
 	fl := flag.NewFlagSet("extract", flag.ExitOnError)
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID")
+	fl.BoolVar(&cmd.newfv, "newfv", false, "Create a new FeedVersion from Reader")
 	fl.BoolVar(&cmd.create, "create", false, "Create")
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entity-level errors")
 	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "Allow reference errors")
@@ -204,10 +207,20 @@ func (cmd *extractCommand) run(args []string) {
 	cp.InterpolateStopTimes = cmd.interpolateStopTimes
 	cp.CreateMissingShapes = cmd.createMissingShapes
 	cp.NormalizeServiceIDs = cmd.normalizeServiceIDs
+	if dbw, ok := writer.(*gtdb.Writer); ok {
+		if cmd.fvid != 0 {
+			dbw.FeedVersionID = cmd.fvid
+		} else if cmd.newfv {
+			if _, err := dbw.CreateFeedVersion(reader); err != nil {
+				exit("Error creating FeedVersion: %s", err)
+			}
+		}
+		cp.NormalizeServiceIDs = true
+	}
 	for _, ext := range cmd.extensions {
 		e, err := gotransit.GetExtension(ext)
 		if err != nil {
-			exit("no extension for: %s", ext)
+			exit("No extension for: %s", ext)
 		}
 		cp.AddExtension(e)
 		if cmd.create {
@@ -219,7 +232,7 @@ func (cmd *extractCommand) run(args []string) {
 	for _, ext := range cmd.filters {
 		ef, err := gotransit.GetEntityFilter(ext)
 		if err != nil {
-			exit("no filter for '%s': %s", ext, err)
+			exit("No filter for '%s': %s", ext, err)
 		}
 		cp.AddEntityFilter(ef)
 	}
@@ -232,8 +245,7 @@ func (cmd *extractCommand) run(args []string) {
 		tx := extract.NewSetterFilter()
 		for _, setv := range setvalues {
 			if len(setv) != 4 {
-				fmt.Println("invalid set argument")
-				continue
+				exit("Invalid set argument")
 			}
 			tx.AddValue(setv[0], setv[1], setv[2], setv[3])
 		}
@@ -246,7 +258,7 @@ func (cmd *extractCommand) run(args []string) {
 		if v, err := strconv.Atoi(i); err == nil {
 			rthits[v] = true
 		} else {
-			fmt.Println("invalid route_type:", i)
+			exit("Invalid route_type: %s", i)
 		}
 	}
 	for ent := range reader.Routes() {

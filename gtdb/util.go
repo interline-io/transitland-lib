@@ -111,9 +111,3 @@ func getID(ent interface{}) (int, error) {
 type feedVersionSetter interface {
 	SetFeedVersionID(int)
 }
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
-}

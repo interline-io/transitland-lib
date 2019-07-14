@@ -17,16 +17,7 @@ type Ext struct {
 
 // Create the necessary database tables.
 func (ext Ext) Create(writer gotransit.Writer) error {
-	// w, ok := writer.(*gtdb.Writer)
-	// if !ok {
-	// 	return nil
-	// }
-	// db := w.Adapter.DB()
-	// for _, e := range ext.Entities() {
-	// 	db.AutoMigrate(e)
-	// }
 	return nil
-
 }
 
 // Entities returns the Entities defined by GTFS Plus.

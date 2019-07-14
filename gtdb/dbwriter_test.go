@@ -24,7 +24,10 @@ func TestWriter_Postgres(t *testing.T) {
 		t.Error(err)
 	}
 	defer writer.Close()
-	r1, _ := gtcsv.NewReader("../testdata/example")
+	r1, err := gtcsv.NewReader("../testdata/example")
+	if err != nil {
+		t.Error(err)
+	}
 	if _, err := writer.CreateFeedVersion(r1); err != nil {
 		t.Error(err)
 	}
@@ -42,7 +45,10 @@ func TestWriter_SpatiaLite(t *testing.T) {
 		t.Error(err)
 	}
 	defer writer.Close()
-	r1, _ := gtcsv.NewReader("../testdata/example")
+	r1, err := gtcsv.NewReader("../testdata/example")
+	if err != nil {
+		t.Error(err)
+	}
 	if _, err := writer.CreateFeedVersion(r1); err != nil {
 		t.Error(err)
 	}
