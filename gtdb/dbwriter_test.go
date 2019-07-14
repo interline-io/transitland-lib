@@ -15,7 +15,7 @@ func TestWriter_Postgres(t *testing.T) {
 		t.Skip()
 		return
 	}
-	adapter := SQLXAdapter{DBURL: dburl}
+	adapter := PostgresAdapter{DBURL: dburl}
 	writer := Writer{Adapter: &adapter}
 	if err := writer.Open(); err != nil {
 		t.Error(err)

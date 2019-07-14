@@ -4,14 +4,12 @@ import (
 	"database/sql"
 	"strings"
 
-	// Log
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/mattn/go-sqlite3"
-	// Drivers
 )
 
 // Register.
@@ -47,7 +45,11 @@ func (adapter *SpatiaLiteAdapter) Close() error {
 
 // Create implements Adapter Create.
 func (adapter *SpatiaLiteAdapter) Create() error {
-	_, err := sqlx.LoadFile(adapter.DBX(), "../schema/spatialite.sql")
+	schema, err := getSchema("/spatialite.sql")
+	if err != nil {
+		return err
+	}
+	_, err = adapter.db.Exec(schema)
 	return err
 }
 

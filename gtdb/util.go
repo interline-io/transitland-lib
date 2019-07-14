@@ -3,6 +3,7 @@ package gtdb
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -10,10 +11,27 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx/reflectx"
+	"github.com/rakyll/statik/fs"
+
+	// Static assets
+	_ "github.com/interline-io/gotransit/internal/schema"
 )
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+func getSchema(filename string) (string, error) {
+	statikFS, err := fs.New()
+	if err != nil {
+		return "", err
+	}
+	f, err := statikFS.Open(filename)
+	if err != nil {
+		return "", err
+	}
+	data, err := ioutil.ReadAll(f)
+	return string(data), err
+}
 
 func toSnakeCase(str string) string {
 	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")

@@ -7,7 +7,6 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/jmoiron/sqlx"
-
 	// Postgres
 	// Drivers
 )
@@ -15,7 +14,7 @@ import (
 // NewAdapter returns a Adapter for the given dburl.
 func NewAdapter(dburl string) Adapter {
 	if strings.HasPrefix(dburl, "postgres://") {
-		return &SQLXAdapter{DBURL: dburl}
+		return &PostgresAdapter{DBURL: dburl}
 	} else if strings.HasPrefix(dburl, "sqlite3://") {
 		return &SpatiaLiteAdapter{DBURL: dburl}
 	}

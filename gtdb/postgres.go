@@ -9,13 +9,13 @@ import (
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
-// SQLXAdapter .
-type SQLXAdapter struct {
+// PostgresAdapter .
+type PostgresAdapter struct {
 	DBURL string
 	db    *sqlx.DB
 }
 
-func (adapter *SQLXAdapter) Open() error {
+func (adapter *PostgresAdapter) Open() error {
 	db, err := sqlx.Open("postgres", adapter.DBURL)
 	if err != nil {
 		return err
@@ -25,27 +25,33 @@ func (adapter *SQLXAdapter) Open() error {
 	return nil
 }
 
-func (adapter *SQLXAdapter) Close() error {
+func (adapter *PostgresAdapter) Close() error {
 	return adapter.db.Close()
 }
 
-func (adapter *SQLXAdapter) Create() error {
-	return nil
+func (adapter *PostgresAdapter) Create() error {
+	schema, err := getSchema("/postgres.pgsql")
+	if err != nil {
+		return err
+	}
+	_, err = adapter.db.Exec(schema)
+	return err
+
 }
 
-func (adapter *SQLXAdapter) DB() *sqlx.DB {
+func (adapter *PostgresAdapter) DB() *sqlx.DB {
 	return adapter.db
 }
 
-func (adapter *SQLXAdapter) DBX() *sqlx.DB {
+func (adapter *PostgresAdapter) DBX() *sqlx.DB {
 	return adapter.db
 }
 
-func (adapter *SQLXAdapter) Sqrl() sq.StatementBuilderType {
+func (adapter *PostgresAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db).PlaceholderFormat(sq.Dollar)
 }
 
-func (adapter *SQLXAdapter) Find(dest interface{}) error {
+func (adapter *PostgresAdapter) Find(dest interface{}) error {
 	eid, err := getID(dest)
 	if err != nil {
 		return err
@@ -57,15 +63,15 @@ func (adapter *SQLXAdapter) Find(dest interface{}) error {
 	return adapter.Get(dest, qstr, args...)
 }
 
-func (adapter *SQLXAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
+func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
 	return adapter.db.Get(dest, adapter.db.Rebind(qstr), args...)
 }
 
-func (adapter *SQLXAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
+func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
 	return adapter.db.Select(dest, adapter.db.Rebind(qstr), args...)
 }
 
-func (adapter *SQLXAdapter) Insert(ent interface{}) (int, error) {
+func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	table := getTableName(ent)
 	cols, vals, err := getInsert(adapter.db.Mapper, ent)
 	if err != nil {
@@ -88,7 +94,7 @@ func (adapter *SQLXAdapter) Insert(ent interface{}) (int, error) {
 	return eid, err
 }
 
-func (adapter *SQLXAdapter) BatchInsert(ents []gotransit.Entity) error {
+func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	sts := []*gotransit.StopTime{}
 	for _, ent := range ents {
 		if st, ok := ent.(*gotransit.StopTime); ok {

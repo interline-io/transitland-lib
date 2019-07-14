@@ -11,7 +11,7 @@ func TestPostgresAdapter(t *testing.T) {
 		t.Skip()
 		return
 	}
-	adapter := SQLXAdapter{DBURL: dburl}
+	adapter := PostgresAdapter{DBURL: dburl}
 	if err := adapter.Open(); err != nil {
 		t.Error(err)
 	}
