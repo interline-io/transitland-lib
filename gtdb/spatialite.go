@@ -45,6 +45,9 @@ func (adapter *SpatiaLiteAdapter) Close() error {
 
 // Create implements Adapter Create.
 func (adapter *SpatiaLiteAdapter) Create() error {
+	if _, err := adapter.db.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
+		return nil
+	}
 	schema, err := getSchema("/spatialite.sql")
 	if err != nil {
 		return err

@@ -30,6 +30,9 @@ func (adapter *PostgresAdapter) Close() error {
 }
 
 func (adapter *PostgresAdapter) Create() error {
+	if _, err := adapter.db.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
+		return nil
+	}
 	schema, err := getSchema("/postgres.pgsql")
 	if err != nil {
 		return err
