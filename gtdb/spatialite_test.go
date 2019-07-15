@@ -11,11 +11,5 @@ func TestSpatiaLiteAdapter(t *testing.T) {
 		return
 	}
 	adapter := SpatiaLiteAdapter{DBURL: dburl}
-	if err := adapter.Open(); err != nil {
-		t.Error(err)
-	}
-	if err := adapter.Create(); err != nil {
-		t.Error(err)
-	}
 	testAdapter(t, &adapter)
 }

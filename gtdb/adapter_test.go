@@ -22,11 +22,18 @@ func filldb(writer *Writer) error {
 		return err
 	}
 	cp := copier.NewCopier(r1, writer)
+	cp.NormalizeServiceIDs = true
 	cp.Copy()
 	return nil
 }
 
 func testAdapter(t *testing.T, adapter Adapter) {
+	if err := adapter.Open(); err != nil {
+		t.Error(err)
+	}
+	if err := adapter.Create(); err != nil {
+		t.Error(err)
+	}
 	// need a feedversion...
 	var err error
 	var m minEnts

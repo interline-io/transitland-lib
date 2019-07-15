@@ -12,11 +12,5 @@ func TestPostgresAdapter(t *testing.T) {
 		return
 	}
 	adapter := PostgresAdapter{DBURL: dburl}
-	if err := adapter.Open(); err != nil {
-		t.Error(err)
-	}
-	if err := adapter.Create(); err != nil {
-		t.Error(err)
-	}
 	testAdapter(t, &adapter)
 }

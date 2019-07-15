@@ -3,12 +3,9 @@ package gtdb
 import (
 	"strings"
 
-	// Log
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/jmoiron/sqlx"
-	// Postgres
-	// Drivers
 )
 
 // NewAdapter returns a Adapter for the given dburl.

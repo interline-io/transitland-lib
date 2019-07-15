@@ -11,7 +11,7 @@ import (
 
 func check(err error) {
 	if err != nil {
-		log.Debug("error generating sql: %s", err)
+		log.Debug("error: %s", err)
 	}
 }
 
