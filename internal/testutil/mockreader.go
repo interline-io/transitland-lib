@@ -35,9 +35,18 @@ func (mr *MockReader) ValidateStructure() []error {
 }
 
 func (mr *MockReader) StopTimesByTripID(...string) chan []gotransit.StopTime {
-	c := make(chan []gotransit.StopTime, 1000)
-	close(c)
-	return c
+	out := make(chan []gotransit.StopTime, 1000)
+	go func() {
+		sts := map[string][]gotransit.StopTime{}
+		for _, ent := range mr.StopTimeList {
+			sts[ent.TripID] = append(sts[ent.TripID], ent)
+		}
+		for _, v := range sts {
+			out <- v
+		}
+		close(out)
+	}()
+	return out
 }
 
 func (mr *MockReader) ShapesByShapeID(...string) chan []gotransit.Shape {
@@ -47,9 +56,14 @@ func (mr *MockReader) ShapesByShapeID(...string) chan []gotransit.Shape {
 }
 
 func (mr *MockReader) ShapeLinesByShapeID(...string) chan gotransit.Shape {
-	c := make(chan gotransit.Shape, 1000)
-	close(c)
-	return c
+	out := make(chan gotransit.Shape, 1000)
+	go func() {
+		for _, ent := range mr.ShapeList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
 }
 
 func (mr *MockReader) ReadEntities(c interface{}) error {

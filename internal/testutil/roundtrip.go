@@ -15,6 +15,7 @@ func msisum(m map[string]int) int {
 }
 
 type FeedExpect struct {
+	Reader             gotransit.Reader
 	URL                string
 	AgencyCount        int
 	RouteCount         int
@@ -48,7 +49,9 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			t.Errorf("got %d expected %d", s, exp)
 		}
 		for _, k := range fe.ExpectAgencyIDs {
-			t.Errorf("did not find expected entity '%s'", k)
+			if _, ok := ids[k]; !ok {
+				t.Errorf("did not find expected entity '%s'", k)
+			}
 		}
 	})
 	t.Run("Routes", func(t *testing.T) {
@@ -56,11 +59,13 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 		for ent := range reader.Routes() {
 			ids[ent.RouteID]++
 		}
-		if exp := fe.RouteCount; len(ids) != exp {
+		if s, exp := msisum(ids), fe.RouteCount; s != exp {
 			t.Errorf("got %d expected %d", len(ids), exp)
 		}
 		for _, k := range fe.ExpectRouteIDs {
-			t.Errorf("did not find expected entity '%s'", k)
+			if _, ok := ids[k]; !ok {
+				t.Errorf("did not find expected entity '%s'", k)
+			}
 		}
 	})
 	t.Run("Trips", func(t *testing.T) {
@@ -68,11 +73,13 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 		for ent := range reader.Trips() {
 			ids[ent.TripID]++
 		}
-		if exp := fe.TripCount; len(ids) != exp {
+		if s, exp := msisum(ids), fe.TripCount; s != exp {
 			t.Errorf("got %d expected %d", len(ids), exp)
 		}
 		for _, k := range fe.ExpectTripIDs {
-			t.Errorf("did not find expected entity '%s'", k)
+			if _, ok := ids[k]; !ok {
+				t.Errorf("did not find expected entity '%s'", k)
+			}
 		}
 	})
 	t.Run("Stops", func(t *testing.T) {
@@ -80,11 +87,13 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 		for ent := range reader.Stops() {
 			ids[ent.StopID]++
 		}
-		if exp := fe.StopCount; len(ids) != exp {
+		if s, exp := msisum(ids), fe.StopCount; s != exp {
 			t.Errorf("got %d expected %d", len(ids), exp)
 		}
-		for _, k := range fe.ExpectTripIDs {
-			t.Errorf("did not find expected entity '%s'", k)
+		for _, k := range fe.ExpectStopIDs {
+			if _, ok := ids[k]; !ok {
+				t.Errorf("did not find expected entity '%s'", k)
+			}
 		}
 	})
 	t.Run("Shapes", func(t *testing.T) {
@@ -92,11 +101,13 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 		for ent := range reader.Shapes() {
 			ids[ent.ShapeID]++
 		}
-		if exp := fe.ShapeCount; len(ids) != exp {
+		if s, exp := msisum(ids), fe.ShapeCount; s != exp {
 			t.Errorf("got %d expected %d", len(ids), exp)
 		}
 		for _, k := range fe.ExpectShapeIDs {
-			t.Errorf("did not find expected entity '%s'", k)
+			if _, ok := ids[k]; !ok {
+				t.Errorf("did not find expected entity '%s'", k)
+			}
 		}
 	})
 	t.Run("Calendars", func(t *testing.T) {
@@ -104,11 +115,36 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 		for ent := range reader.Calendars() {
 			ids[ent.ServiceID]++
 		}
-		if exp := fe.CalendarCount; len(ids) != exp {
+		if s, exp := msisum(ids), fe.CalendarCount; s != exp {
 			t.Errorf("got %d expected %d", len(ids), exp)
 		}
 		for _, k := range fe.ExpectCalendarIDs {
-			t.Errorf("did not find expected entity '%s'", k)
+			if _, ok := ids[k]; !ok {
+				t.Errorf("did not find expected entity '%s'", k)
+			}
+		}
+	})
+	t.Run("CalendarDates", func(t *testing.T) {
+		ids := map[string]int{}
+		for ent := range reader.CalendarDates() {
+			ids[ent.ServiceID]++
+		}
+		if s, exp := msisum(ids), fe.CalendarDateCount; s != exp {
+			t.Errorf("got %d expected %d", len(ids), exp)
+		}
+		for _, k := range fe.ExpectCalendarIDs {
+			if _, ok := ids[k]; !ok {
+				t.Errorf("did not find expected entity '%s'", k)
+			}
+		}
+	})
+	t.Run("StopTimes", func(t *testing.T) {
+		ids := map[string]int{}
+		for ent := range reader.StopTimes() {
+			ids[ent.TripID]++
+		}
+		if s, exp := msisum(ids), fe.StopTimeCount; s != exp {
+			t.Errorf("got %d expected %d", len(ids), exp)
 		}
 	})
 	t.Run("FareAttributes", func(t *testing.T) {
@@ -116,23 +152,49 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 		for ent := range reader.FareAttributes() {
 			ids[ent.FareID]++
 		}
-		if exp := fe.FareAttributeCount; len(ids) != exp {
+		if s, exp := msisum(ids), fe.FareAttributeCount; s != exp {
 			t.Errorf("got %d expected %d", len(ids), exp)
 		}
 		for _, k := range fe.ExpectFareIDs {
-			t.Errorf("did not find expected entity '%s'", k)
+			if _, ok := ids[k]; !ok {
+				t.Errorf("did not find expected entity '%s'", k)
+			}
 		}
 	})
-	// t.Run("FareRules", func(t *testing.T) {
-	// 	ids := map[string]int{}
-	// 	for ent := range reader.FareRules() {
-	// 		ids[ent.FareID]++
-	// 	}
-	// 	if exp := fe.FareAttributeCount; len(ids) != exp {
-	// 		t.Errorf("got %d expected %d", len(ids), exp)
-	// 	}
-	// 	for _, k := range fe.ExpectFareIDs {
-	// 		t.Errorf("did not find expected entity '%s'", k)
-	// 	}
-	// })
+	t.Run("FareRules", func(t *testing.T) {
+		ids := map[string]int{}
+		for ent := range reader.FareRules() {
+			ids[ent.FareID]++
+		}
+		if s, exp := msisum(ids), fe.FareRuleCount; s != exp {
+			t.Errorf("got %d expected %d", len(ids), exp)
+		}
+	})
+	t.Run("Frequencies", func(t *testing.T) {
+		ids := map[string]int{}
+		for ent := range reader.Frequencies() {
+			ids[ent.TripID]++
+		}
+		if s, exp := msisum(ids), fe.FrequencyCount; s != exp {
+			t.Errorf("got %d expected %d", len(ids), exp)
+		}
+	})
+	t.Run("Transfers", func(t *testing.T) {
+		ids := map[string]int{}
+		for ent := range reader.Transfers() {
+			ids[ent.FromStopID]++
+		}
+		if s, exp := msisum(ids), fe.TransferCount; s != exp {
+			t.Errorf("got %d expected %d", len(ids), exp)
+		}
+	})
+	t.Run("FeedInnfos", func(t *testing.T) {
+		ids := map[string]int{}
+		for ent := range reader.FeedInfos() {
+			ids[ent.FeedVersion]++
+		}
+		if s, exp := msisum(ids), fe.FeedInfoCount; s != exp {
+			t.Errorf("got %d expected %d", len(ids), exp)
+		}
+	})
 }

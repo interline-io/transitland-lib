@@ -65,6 +65,11 @@ func (mw *MockWriter) AddEntity(ent gotransit.Entity) (string, error) {
 	return ent.EntityID(), nil
 }
 
-func (mw *MockWriter) AddEntities([]gotransit.Entity) error {
+func (mw *MockWriter) AddEntities(ents []gotransit.Entity) error {
+	for _, ent := range ents {
+		if _, err := mw.AddEntity(ent); err != nil {
+			return err
+		}
+	}
 	return nil
 }

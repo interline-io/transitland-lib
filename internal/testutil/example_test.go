@@ -2,15 +2,82 @@ package testutil
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/interline-io/gotransit/copier"
+	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/gtcsv"
 )
 
 func TestMockReader(t *testing.T) {
-	r := ExampleReader()
+	r := NewExampleExpect()
+	TestReader(t, *r, r.Reader)
+}
+
+func TestMockWriter(t *testing.T) {
+	r := NewExampleExpect()
 	writer := MockWriter{}
-	cp := copier.NewCopier(r, &writer)
-	err := cp.Copy()
-	fmt.Printf("err: %#v\n", err)
+	MockCopy(r.Reader, &writer)
+	r2, err := writer.NewReader()
+	if err != nil {
+		t.Error(err)
+	}
+	TestReader(t, *r, r2)
+}
+
+func TestPrintFeed(t *testing.T) {
+	reader, err := gtcsv.NewReader("../../testdata/example")
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	replace := `, BaseEntity:gotransit.BaseEntity{ID:0, FeedVersionID:0, CreatedAt:time.Time{wall:0x0, ext:0, loc:(*time.Location)(nil)}, UpdatedAt:time.Time{wall:0x0, ext:0, loc:(*time.Location)(nil)}, extra:[]string(nil), loadErrors:[]error(nil)}`
+	baseent := gotransit.BaseEntity{}
+	mr := &MockReader{}
+	for ent := range reader.Agencies() {
+		ent.BaseEntity = baseent
+		mr.AgencyList = append(mr.AgencyList, ent)
+	}
+	for ent := range reader.Routes() {
+		ent.BaseEntity = baseent
+		mr.RouteList = append(mr.RouteList, ent)
+	}
+	for ent := range reader.Trips() {
+		ent.BaseEntity = baseent
+		mr.TripList = append(mr.TripList, ent)
+	}
+	for ent := range reader.Stops() {
+		ent.BaseEntity = baseent
+		mr.StopList = append(mr.StopList, ent)
+	}
+	for ent := range reader.StopTimes() {
+		ent.BaseEntity = baseent
+		mr.StopTimeList = append(mr.StopTimeList, ent)
+	}
+	for ent := range reader.ShapeLinesByShapeID() {
+		ent.BaseEntity = baseent
+		mr.ShapeList = append(mr.ShapeList, ent)
+	}
+	now := time.Time{}
+	for ent := range reader.Calendars() {
+		ent.BaseEntity = baseent
+		ent.StartDate = now
+		ent.EndDate = now
+		mr.CalendarList = append(mr.CalendarList, ent)
+	}
+	replacements := []string{
+		replace,
+		"",
+		fmt.Sprintf("%#v", now),
+		"time.Time{}",
+	}
+	s := fmt.Sprintf("%#v\n", mr)
+	for i := 0; i < len(replacements); i += 2 {
+		s = strings.Replace(s, replacements[i], replacements[i+1], -1)
+	}
+	fmt.Println(s)
+	a := MockReader{AgencyList: []gotransit.Agency{gotransit.Agency{AgencyID: "DTA", AgencyName: "Demo Transit Authority", AgencyURL: "http://google.com", AgencyTimezone: "America/Los_Angeles", AgencyLang: "", AgencyPhone: "", AgencyFareURL: "", AgencyEmail: ""}}, RouteList: []gotransit.Route{gotransit.Route{RouteID: "AB", AgencyID: "DTA", RouteShortName: "10", RouteLongName: "Airport - Bullfrog", RouteDesc: "", RouteType: 3, RouteURL: "", RouteColor: "", RouteTextColor: "", RouteSortOrder: 0}, gotransit.Route{RouteID: "BFC", AgencyID: "DTA", RouteShortName: "20", RouteLongName: "Bullfrog - Furnace Creek Resort", RouteDesc: "", RouteType: 3, RouteURL: "", RouteColor: "", RouteTextColor: "", RouteSortOrder: 0}, gotransit.Route{RouteID: "STBA", AgencyID: "DTA", RouteShortName: "30", RouteLongName: "Stagecoach - Airport Shuttle", RouteDesc: "", RouteType: 3, RouteURL: "", RouteColor: "", RouteTextColor: "", RouteSortOrder: 0}, gotransit.Route{RouteID: "CITY", AgencyID: "DTA", RouteShortName: "40", RouteLongName: "City", RouteDesc: "", RouteType: 3, RouteURL: "", RouteColor: "", RouteTextColor: "", RouteSortOrder: 0}, gotransit.Route{RouteID: "AAMV", AgencyID: "DTA", RouteShortName: "50", RouteLongName: "Airport - Amargosa Valley", RouteDesc: "", RouteType: 3, RouteURL: "", RouteColor: "", RouteTextColor: "", RouteSortOrder: 0}}, TripList: []gotransit.Trip{gotransit.Trip{RouteID: "AB", ServiceID: "FULLW", TripID: "AB1", TripHeadsign: "to Bullfrog", TripShortName: "", DirectionID: 0, BlockID: "1", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "AB", ServiceID: "FULLW", TripID: "AB2", TripHeadsign: "to Airport", TripShortName: "", DirectionID: 1, BlockID: "2", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "STBA", ServiceID: "FULLW", TripID: "STBA", TripHeadsign: "Shuttle", TripShortName: "", DirectionID: 0, BlockID: "", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "CITY", ServiceID: "FULLW", TripID: "CITY1", TripHeadsign: "", TripShortName: "", DirectionID: 0, BlockID: "", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "CITY", ServiceID: "FULLW", TripID: "CITY2", TripHeadsign: "", TripShortName: "", DirectionID: 1, BlockID: "", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "BFC", ServiceID: "FULLW", TripID: "BFC1", TripHeadsign: "to Furnace Creek Resort", TripShortName: "", DirectionID: 0, BlockID: "1", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "BFC", ServiceID: "FULLW", TripID: "BFC2", TripHeadsign: "to Bullfrog", TripShortName: "", DirectionID: 1, BlockID: "2", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "AAMV", ServiceID: "WE", TripID: "AAMV1", TripHeadsign: "to Amargosa Valley", TripShortName: "", DirectionID: 0, BlockID: "", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "AAMV", ServiceID: "WE", TripID: "AAMV2", TripHeadsign: "to Airport", TripShortName: "", DirectionID: 1, BlockID: "", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "AAMV", ServiceID: "WE", TripID: "AAMV3", TripHeadsign: "to Amargosa Valley", TripShortName: "", DirectionID: 0, BlockID: "", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}, gotransit.Trip{RouteID: "AAMV", ServiceID: "WE", TripID: "AAMV4", TripHeadsign: "to Airport", TripShortName: "", DirectionID: 1, BlockID: "", ShapeID: gotransit.OptionalRelationship{Key: "", Valid: false}, WheelchairAccessible: 0, BikesAllowed: 0, StopPatternID: 0}}, StopList: []gotransit.Stop{gotransit.Stop{StopID: "FUR_CREEK_RES", StopName: "Furnace Creek Resort (Demo)", StopCode: "", StopDesc: "", StopLat: 36.425288, StopLon: -117.133162, ZoneID: "", StopURL: "", LocationType: 0, ParentStation: gotransit.OptionalRelationship{Key: "", Valid: false}, StopTimezone: "", WheelchairBoarding: 0, LevelID: "", Geometry: gotransit.NewPoint(-117.13316, 36.42529)}, gotransit.Stop{StopID: "BEATTY_AIRPORT", StopName: "Nye County Airport (Demo)", StopCode: "", StopDesc: "", StopLat: 36.868446, StopLon: -116.784582, ZoneID: "", StopURL: "", LocationType: 0, ParentStation: gotransit.OptionalRelationship{Key: "", Valid: false}, StopTimezone: "", WheelchairBoarding: 0, LevelID: "", Geometry: gotransit.NewPoint(-116.78458, 36.86845)}, gotransit.Stop{StopID: "BULLFROG", StopName: "Bullfrog (Demo)", StopCode: "", StopDesc: "", StopLat: 36.88108, StopLon: -116.81797, ZoneID: "", StopURL: "", LocationType: 0, ParentStation: gotransit.OptionalRelationship{Key: "", Valid: false}, StopTimezone: "", WheelchairBoarding: 0, LevelID: "", Geometry: gotransit.NewPoint(-116.81797, 36.88108)}, gotransit.Stop{StopID: "STAGECOACH", StopName: "Stagecoach Hotel & Casino (Demo)", StopCode: "", StopDesc: "", StopLat: 36.915682, StopLon: -116.751677, ZoneID: "", StopURL: "", LocationType: 0, ParentStation: gotransit.OptionalRelationship{Key: "", Valid: false}, StopTimezone: "", WheelchairBoarding: 0, LevelID: "", Geometry: gotransit.NewPoint(-116.75168, 36.91568)}, gotransit.Stop{StopID: "NADAV", StopName: "North Ave / D Ave N (Demo)", StopCode: "", StopDesc: "", StopLat: 36.914893, StopLon: -116.76821, ZoneID: "", StopURL: "", LocationType: 0, ParentStation: gotransit.OptionalRelationship{Key: "", Valid: false}, StopTimezone: "", WheelchairBoarding: 0, LevelID: "", Geometry: gotransit.NewPoint(-116.76821, 36.91489)}, gotransit.Stop{StopID: "NANAA", StopName: "North Ave / N A Ave (Demo)", StopCode: "", StopDesc: "", StopLat: 36.914944, StopLon: -116.761472, ZoneID: "", StopURL: "", LocationType: 0, ParentStation: gotransit.OptionalRelationship{Key: "", Valid: false}, StopTimezone: "", WheelchairBoarding: 0, LevelID: "", Geometry: gotransit.NewPoint(-116.76147, 36.91494)}, gotransit.Stop{StopID: "DADAN", StopName: "Doing Ave / D Ave N (Demo)", StopCode: "", StopDesc: "", StopLat: 36.909489, StopLon: -116.768242, ZoneID: "", StopURL: "", LocationType: 0, ParentStation: gotransit.OptionalRelationship{Key: "", Valid: false}, StopTimezone: "", WheelchairBoarding: 0, LevelID: "", Geometry: gotransit.NewPoint(-116.76824, 36.90949)}, gotransit.Stop{StopID: "EMSI", StopName: "E Main St / S Irving St (Demo)", StopCode: "", StopDesc: "", StopLat: 36.905697, StopLon: -116.76218, ZoneID: "", StopURL: "", LocationType: 0, ParentStation: gotransit.OptionalRelationship{Key: "", Valid: false}, StopTimezone: "", WheelchairBoarding: 0, LevelID: "", Geometry: gotransit.NewPoint(-116.76218, 36.90570)}, gotransit.Stop{StopID: "AMV", StopName: "Amargosa Valley (Demo)", StopCode: "", StopDesc: "", StopLat: 36.641496, StopLon: -116.40094, ZoneID: "", StopURL: "", LocationType: 0, ParentStation: gotransit.OptionalRelationship{Key: "", Valid: false}, StopTimezone: "", WheelchairBoarding: 0, LevelID: "", Geometry: gotransit.NewPoint(-116.40094, 36.64150)}}, StopTimeList: []gotransit.StopTime{gotransit.StopTime{TripID: "STBA", ArrivalTime: 21600, DepartureTime: 21600, StopID: "STAGECOACH", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "STBA", ArrivalTime: 22800, DepartureTime: 22800, StopID: "BEATTY_AIRPORT", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY1", ArrivalTime: 21600, DepartureTime: 21600, StopID: "STAGECOACH", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY1", ArrivalTime: 21900, DepartureTime: 22020, StopID: "NANAA", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY1", ArrivalTime: 22320, DepartureTime: 22440, StopID: "NADAV", StopSequence: 3, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY1", ArrivalTime: 22740, DepartureTime: 22860, StopID: "DADAN", StopSequence: 4, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY1", ArrivalTime: 23160, DepartureTime: 23280, StopID: "EMSI", StopSequence: 5, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY2", ArrivalTime: 23280, DepartureTime: 23400, StopID: "EMSI", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY2", ArrivalTime: 23700, DepartureTime: 23820, StopID: "DADAN", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY2", ArrivalTime: 24120, DepartureTime: 24240, StopID: "NADAV", StopSequence: 3, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY2", ArrivalTime: 24540, DepartureTime: 24660, StopID: "NANAA", StopSequence: 4, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "CITY2", ArrivalTime: 24960, DepartureTime: 25080, StopID: "STAGECOACH", StopSequence: 5, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AB1", ArrivalTime: 28800, DepartureTime: 28800, StopID: "BEATTY_AIRPORT", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AB1", ArrivalTime: 29400, DepartureTime: 29700, StopID: "BULLFROG", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AB2", ArrivalTime: 43500, DepartureTime: 43500, StopID: "BULLFROG", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: -1, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AB2", ArrivalTime: 44100, DepartureTime: 44100, StopID: "BEATTY_AIRPORT", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "BFC1", ArrivalTime: 30000, DepartureTime: 30000, StopID: "BULLFROG", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "BFC1", ArrivalTime: 33600, DepartureTime: 33600, StopID: "FUR_CREEK_RES", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "BFC2", ArrivalTime: 39600, DepartureTime: 39600, StopID: "FUR_CREEK_RES", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "BFC2", ArrivalTime: 43200, DepartureTime: 43200, StopID: "BULLFROG", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AAMV1", ArrivalTime: 28800, DepartureTime: 28800, StopID: "BEATTY_AIRPORT", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AAMV1", ArrivalTime: 32400, DepartureTime: 32400, StopID: "AMV", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AAMV2", ArrivalTime: 36000, DepartureTime: 36000, StopID: "AMV", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AAMV2", ArrivalTime: 39600, DepartureTime: 39600, StopID: "BEATTY_AIRPORT", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AAMV3", ArrivalTime: 46800, DepartureTime: 46800, StopID: "BEATTY_AIRPORT", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AAMV3", ArrivalTime: 50400, DepartureTime: 50400, StopID: "AMV", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AAMV4", ArrivalTime: 54000, DepartureTime: 54000, StopID: "AMV", StopSequence: 1, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}, gotransit.StopTime{TripID: "AAMV4", ArrivalTime: 57600, DepartureTime: 57600, StopID: "BEATTY_AIRPORT", StopSequence: 2, StopHeadsign: "", PickupType: 0, DropOffType: 0, ShapeDistTraveled: 0, Timepoint: 0, Interpolated: 0}}, ShapeList: []gotransit.Shape{gotransit.Shape{ShapeID: "ok", ShapePtLat: 0, ShapePtLon: 0, ShapePtSequence: 0, ShapeDistTraveled: 0, Geometry: gotransit.NewLineStringFromFlatCoords([]float64{1.00000, 1.00000, 0.00000, 4.00000, 2.00000, 0.00000, 9.00000, 3.00000, 0.00000, 16.00000, 4.00000, 0.00000}), Generated: false}, gotransit.Shape{ShapeID: "a", ShapePtLat: 0, ShapePtLon: 0, ShapePtSequence: 0, ShapeDistTraveled: 0, Geometry: gotransit.NewLineStringFromFlatCoords([]float64{10.00000, 10.00000, 0.00000, 20.00000, 20.00000, 0.00000, 30.00000, 30.00000, 0.00000}), Generated: false}, gotransit.Shape{ShapeID: "c", ShapePtLat: 0, ShapePtLon: 0, ShapePtSequence: 0, ShapeDistTraveled: 0, Geometry: gotransit.NewLineStringFromFlatCoords([]float64{40.00000, -40.00000, 0.00000, 50.00000, -50.00000, 0.00000}), Generated: false}}, CalendarList: []gotransit.Calendar{gotransit.Calendar{ServiceID: "FULLW", Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1, Saturday: 1, Sunday: 1, StartDate: time.Time{}, EndDate: time.Time{}, Generated: false}, gotransit.Calendar{ServiceID: "WE", Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0, Saturday: 1, Sunday: 1, StartDate: time.Time{}, EndDate: time.Time{}, Generated: false}}, CalendarDateList: []gotransit.CalendarDate(nil), FeedInfoList: []gotransit.FeedInfo(nil), FareRuleList: []gotransit.FareRule(nil), FareAttributeList: []gotransit.FareAttribute(nil), FrequencyList: []gotransit.Frequency(nil), TransferList: []gotransit.Transfer(nil)}
+	_ = a
+
 }
