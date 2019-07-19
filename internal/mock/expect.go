@@ -1,4 +1,4 @@
-package testutil
+package mock
 
 import (
 	"testing"
@@ -14,7 +14,8 @@ func msisum(m map[string]int) int {
 	return count
 }
 
-type FeedExpect struct {
+// Expect contains information about the number and types of identities expected in a Reader.
+type Expect struct {
 	Reader             gotransit.Reader
 	URL                string
 	AgencyCount        int
@@ -39,7 +40,8 @@ type FeedExpect struct {
 	ExpectFareIDs      []string
 }
 
-func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
+// TestExpect evalutes a Reader & Expect.
+func TestExpect(t *testing.T, fe Expect, reader gotransit.Reader) {
 	t.Run("Agencies", func(t *testing.T) {
 		ids := map[string]int{}
 		for ent := range reader.Agencies() {
@@ -60,7 +62,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.RouteID]++
 		}
 		if s, exp := msisum(ids), fe.RouteCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 		for _, k := range fe.ExpectRouteIDs {
 			if _, ok := ids[k]; !ok {
@@ -74,7 +76,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.TripID]++
 		}
 		if s, exp := msisum(ids), fe.TripCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 		for _, k := range fe.ExpectTripIDs {
 			if _, ok := ids[k]; !ok {
@@ -88,7 +90,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.StopID]++
 		}
 		if s, exp := msisum(ids), fe.StopCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 		for _, k := range fe.ExpectStopIDs {
 			if _, ok := ids[k]; !ok {
@@ -102,7 +104,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.ShapeID]++
 		}
 		if s, exp := msisum(ids), fe.ShapeCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 		for _, k := range fe.ExpectShapeIDs {
 			if _, ok := ids[k]; !ok {
@@ -116,7 +118,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.ServiceID]++
 		}
 		if s, exp := msisum(ids), fe.CalendarCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 		for _, k := range fe.ExpectCalendarIDs {
 			if _, ok := ids[k]; !ok {
@@ -130,12 +132,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.ServiceID]++
 		}
 		if s, exp := msisum(ids), fe.CalendarDateCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
-		}
-		for _, k := range fe.ExpectCalendarIDs {
-			if _, ok := ids[k]; !ok {
-				t.Errorf("did not find expected entity '%s'", k)
-			}
+			t.Errorf("got %d expected %d", s, exp)
 		}
 	})
 	t.Run("StopTimes", func(t *testing.T) {
@@ -144,7 +141,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.TripID]++
 		}
 		if s, exp := msisum(ids), fe.StopTimeCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 	})
 	t.Run("FareAttributes", func(t *testing.T) {
@@ -153,7 +150,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.FareID]++
 		}
 		if s, exp := msisum(ids), fe.FareAttributeCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 		for _, k := range fe.ExpectFareIDs {
 			if _, ok := ids[k]; !ok {
@@ -167,7 +164,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.FareID]++
 		}
 		if s, exp := msisum(ids), fe.FareRuleCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 	})
 	t.Run("Frequencies", func(t *testing.T) {
@@ -176,7 +173,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.TripID]++
 		}
 		if s, exp := msisum(ids), fe.FrequencyCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 	})
 	t.Run("Transfers", func(t *testing.T) {
@@ -185,7 +182,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.FromStopID]++
 		}
 		if s, exp := msisum(ids), fe.TransferCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 	})
 	t.Run("FeedInnfos", func(t *testing.T) {
@@ -194,7 +191,7 @@ func TestReader(t *testing.T, fe FeedExpect, reader gotransit.Reader) {
 			ids[ent.FeedVersion]++
 		}
 		if s, exp := msisum(ids), fe.FeedInfoCount; s != exp {
-			t.Errorf("got %d expected %d", len(ids), exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 	})
 }

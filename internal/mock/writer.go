@@ -1,4 +1,4 @@
-package testutil
+package mock
 
 import (
 	"fmt"
@@ -6,31 +6,38 @@ import (
 	"github.com/interline-io/gotransit"
 )
 
-type MockWriter struct {
-	Reader MockReader
+// Writer is a mocked up Writer used in tests.
+type Writer struct {
+	Reader Reader
 }
 
-func (mw *MockWriter) Open() error {
+// Open .
+func (mw *Writer) Open() error {
 	return nil
 }
 
-func (mw *MockWriter) Close() error {
+// Close .
+func (mw *Writer) Close() error {
 	return nil
 }
 
-func (w *MockWriter) Create() error {
+// Create .
+func (mw *Writer) Create() error {
 	return nil
 }
 
-func (mw *MockWriter) Delete() error {
+// Delete .
+func (mw *Writer) Delete() error {
 	return nil
 }
 
-func (mw *MockWriter) NewReader() (gotransit.Reader, error) {
+// NewReader .
+func (mw *Writer) NewReader() (gotransit.Reader, error) {
 	return &mw.Reader, nil
 }
 
-func (mw *MockWriter) AddEntity(ent gotransit.Entity) (string, error) {
+// AddEntity .
+func (mw *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 	// fmt.Printf("writing: %#v\n", ent)
 	switch v := ent.(type) {
 	case *gotransit.Stop:
@@ -65,7 +72,8 @@ func (mw *MockWriter) AddEntity(ent gotransit.Entity) (string, error) {
 	return ent.EntityID(), nil
 }
 
-func (mw *MockWriter) AddEntities(ents []gotransit.Entity) error {
+// AddEntities .
+func (mw *Writer) AddEntities(ents []gotransit.Entity) error {
 	for _, ent := range ents {
 		if _, err := mw.AddEntity(ent); err != nil {
 			return err

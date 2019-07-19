@@ -1,9 +1,9 @@
-package testutil
+package mock
 
 import "github.com/interline-io/gotransit"
 
-// MockCopy does a direct reader->writer copy.
-func MockCopy(reader gotransit.Reader, writer gotransit.Writer) {
+// DirectCopy does a direct reader->writer copy.
+func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) {
 	for ent := range reader.Agencies() {
 		writer.AddEntity(&ent)
 	}

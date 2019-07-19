@@ -1,4 +1,4 @@
-package testutil
+package mock
 
 import (
 	"github.com/interline-io/gotransit"
@@ -6,7 +6,8 @@ import (
 
 var bufferSize = 1000
 
-type MockReader struct {
+// Reader is a mocked up Reader used for testing.
+type Reader struct {
 	AgencyList        []gotransit.Agency
 	RouteList         []gotransit.Route
 	TripList          []gotransit.Trip
@@ -22,19 +23,23 @@ type MockReader struct {
 	TransferList      []gotransit.Transfer
 }
 
-func (mr *MockReader) Open() error {
+// Open .
+func (mr *Reader) Open() error {
 	return nil
 }
 
-func (mr *MockReader) Close() error {
+// Close .
+func (mr *Reader) Close() error {
 	return nil
 }
 
-func (mr *MockReader) ValidateStructure() []error {
+// ValidateStructure .
+func (mr *Reader) ValidateStructure() []error {
 	return []error{}
 }
 
-func (mr *MockReader) StopTimesByTripID(...string) chan []gotransit.StopTime {
+// StopTimesByTripID .
+func (mr *Reader) StopTimesByTripID(...string) chan []gotransit.StopTime {
 	out := make(chan []gotransit.StopTime, 1000)
 	go func() {
 		sts := map[string][]gotransit.StopTime{}
@@ -49,13 +54,15 @@ func (mr *MockReader) StopTimesByTripID(...string) chan []gotransit.StopTime {
 	return out
 }
 
-func (mr *MockReader) ShapesByShapeID(...string) chan []gotransit.Shape {
+// ShapesByShapeID .
+func (mr *Reader) ShapesByShapeID(...string) chan []gotransit.Shape {
 	c := make(chan []gotransit.Shape, 1000)
 	close(c)
 	return c
 }
 
-func (mr *MockReader) ShapeLinesByShapeID(...string) chan gotransit.Shape {
+// ShapeLinesByShapeID .
+func (mr *Reader) ShapeLinesByShapeID(...string) chan gotransit.Shape {
 	out := make(chan gotransit.Shape, 1000)
 	go func() {
 		for _, ent := range mr.ShapeList {
@@ -66,11 +73,13 @@ func (mr *MockReader) ShapeLinesByShapeID(...string) chan gotransit.Shape {
 	return out
 }
 
-func (mr *MockReader) ReadEntities(c interface{}) error {
+// ReadEntities .
+func (mr *Reader) ReadEntities(c interface{}) error {
 	return nil
 }
 
-func (mr *MockReader) Stops() chan gotransit.Stop {
+// Stops .
+func (mr *Reader) Stops() chan gotransit.Stop {
 	out := make(chan gotransit.Stop, bufferSize)
 	go func() {
 		for _, ent := range mr.StopList {
@@ -81,7 +90,8 @@ func (mr *MockReader) Stops() chan gotransit.Stop {
 	return out
 }
 
-func (mr *MockReader) StopTimes() chan gotransit.StopTime {
+// StopTimes .
+func (mr *Reader) StopTimes() chan gotransit.StopTime {
 	out := make(chan gotransit.StopTime, bufferSize)
 	go func() {
 		for _, ent := range mr.StopTimeList {
@@ -92,7 +102,8 @@ func (mr *MockReader) StopTimes() chan gotransit.StopTime {
 	return out
 }
 
-func (mr *MockReader) Agencies() chan gotransit.Agency {
+// Agencies .
+func (mr *Reader) Agencies() chan gotransit.Agency {
 	out := make(chan gotransit.Agency, bufferSize)
 	go func() {
 		for _, ent := range mr.AgencyList {
@@ -103,7 +114,8 @@ func (mr *MockReader) Agencies() chan gotransit.Agency {
 	return out
 }
 
-func (mr *MockReader) Calendars() chan gotransit.Calendar {
+// Calendars .
+func (mr *Reader) Calendars() chan gotransit.Calendar {
 	out := make(chan gotransit.Calendar, bufferSize)
 	go func() {
 		for _, ent := range mr.CalendarList {
@@ -114,7 +126,8 @@ func (mr *MockReader) Calendars() chan gotransit.Calendar {
 	return out
 }
 
-func (mr *MockReader) CalendarDates() chan gotransit.CalendarDate {
+// CalendarDates .
+func (mr *Reader) CalendarDates() chan gotransit.CalendarDate {
 	out := make(chan gotransit.CalendarDate, bufferSize)
 	go func() {
 		for _, ent := range mr.CalendarDateList {
@@ -125,7 +138,8 @@ func (mr *MockReader) CalendarDates() chan gotransit.CalendarDate {
 	return out
 }
 
-func (mr *MockReader) FareAttributes() chan gotransit.FareAttribute {
+// FareAttributes .
+func (mr *Reader) FareAttributes() chan gotransit.FareAttribute {
 	out := make(chan gotransit.FareAttribute, bufferSize)
 	go func() {
 		for _, ent := range mr.FareAttributeList {
@@ -136,7 +150,8 @@ func (mr *MockReader) FareAttributes() chan gotransit.FareAttribute {
 	return out
 }
 
-func (mr *MockReader) FareRules() chan gotransit.FareRule {
+// FareRules .
+func (mr *Reader) FareRules() chan gotransit.FareRule {
 	out := make(chan gotransit.FareRule, bufferSize)
 	go func() {
 		for _, ent := range mr.FareRuleList {
@@ -147,7 +162,8 @@ func (mr *MockReader) FareRules() chan gotransit.FareRule {
 	return out
 }
 
-func (mr *MockReader) FeedInfos() chan gotransit.FeedInfo {
+// FeedInfos .
+func (mr *Reader) FeedInfos() chan gotransit.FeedInfo {
 	out := make(chan gotransit.FeedInfo, bufferSize)
 	go func() {
 		for _, ent := range mr.FeedInfoList {
@@ -158,7 +174,8 @@ func (mr *MockReader) FeedInfos() chan gotransit.FeedInfo {
 	return out
 }
 
-func (mr *MockReader) Frequencies() chan gotransit.Frequency {
+// Frequencies .
+func (mr *Reader) Frequencies() chan gotransit.Frequency {
 	out := make(chan gotransit.Frequency, bufferSize)
 	go func() {
 		for _, ent := range mr.FrequencyList {
@@ -169,7 +186,8 @@ func (mr *MockReader) Frequencies() chan gotransit.Frequency {
 	return out
 }
 
-func (mr *MockReader) Routes() chan gotransit.Route {
+// Routes .
+func (mr *Reader) Routes() chan gotransit.Route {
 	out := make(chan gotransit.Route, bufferSize)
 	go func() {
 		for _, ent := range mr.RouteList {
@@ -180,7 +198,8 @@ func (mr *MockReader) Routes() chan gotransit.Route {
 	return out
 }
 
-func (mr *MockReader) Shapes() chan gotransit.Shape {
+// Shapes .
+func (mr *Reader) Shapes() chan gotransit.Shape {
 	out := make(chan gotransit.Shape, bufferSize)
 	go func() {
 		for _, ent := range mr.ShapeList {
@@ -191,7 +210,8 @@ func (mr *MockReader) Shapes() chan gotransit.Shape {
 	return out
 }
 
-func (mr *MockReader) Transfers() chan gotransit.Transfer {
+// Transfers .
+func (mr *Reader) Transfers() chan gotransit.Transfer {
 	out := make(chan gotransit.Transfer, bufferSize)
 	go func() {
 		for _, ent := range mr.TransferList {
@@ -202,7 +222,8 @@ func (mr *MockReader) Transfers() chan gotransit.Transfer {
 	return out
 }
 
-func (mr *MockReader) Trips() chan gotransit.Trip {
+// Trips .
+func (mr *Reader) Trips() chan gotransit.Trip {
 	out := make(chan gotransit.Trip, bufferSize)
 	go func() {
 		for _, ent := range mr.TripList {
