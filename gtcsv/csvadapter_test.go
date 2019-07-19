@@ -11,6 +11,14 @@ import (
 	"github.com/interline-io/gotransit"
 )
 
+func compareMap(t *testing.T, result map[string]int, expect map[string]int) {
+	for k, v := range expect {
+		if i := result[k]; v != i {
+			t.Error("expeced", k, "=", i)
+		}
+	}
+}
+
 // Test adapters
 func Test_ZipAdapter_Exists(t *testing.T) {
 	expect := map[string]bool{

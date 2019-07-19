@@ -2,37 +2,17 @@ package gtcsv
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 
-	"github.com/interline-io/gotransit/internal/testutil"
+	"github.com/interline-io/gotransit/internal/mock"
 )
-
-// Writer interface tests.
-func TestWriter(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "gtfs")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer os.RemoveAll(tmpdir)
-	writer, _ := NewWriter(tmpdir)
-	writer.Open()
-	writer.Create()
-	writer.Delete()
-	defer writer.Close()
-	testutil.WriterTester(writer, t)
-}
 
 // Round trip test.
 func TestWriter_NewReader(t *testing.T) {
-	reader, err := NewReader("../testdata/example")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	reader.Open()
-	defer reader.Close()
+	fe := mock.NewExampleExpect()
+	fe.Reader.Open()
+	defer fe.Reader.Close()
 
 	tmpdir, err := ioutil.TempDir("", "gtfs")
 	if err != nil {
@@ -46,8 +26,8 @@ func TestWriter_NewReader(t *testing.T) {
 		return
 	}
 	writer.Open()
-	writer.Create()
-	writer.Delete()
 	defer writer.Close()
-	testutil.WriterTesterRoundTrip(reader, writer, t)
+	mock.DirectCopy(fe.Reader, writer)
+	r2, _ := writer.NewReader()
+	mock.TestExpect(t, *fe, r2)
 }
