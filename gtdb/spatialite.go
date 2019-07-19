@@ -56,19 +56,22 @@ func (adapter *SpatiaLiteAdapter) Create() error {
 	return err
 }
 
-// DB provides the underlying Sqlx DB.
-func (adapter *SpatiaLiteAdapter) DB() *sqlx.DB {
-	return adapter.db
+// DB returns the underlying Sql DB.
+func (adapter *SpatiaLiteAdapter) DB() *sql.DB {
+	return adapter.db.DB
 }
 
+// DBX returns the underlying Sqlx DB.
 func (adapter *SpatiaLiteAdapter) DBX() *sqlx.DB {
 	return adapter.db
 }
 
+// Sqrl returns a properly configured Squirrel StatementBuilder.
 func (adapter *SpatiaLiteAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db)
 }
 
+// Find finds a single entity based on the EntityID()
 func (adapter *SpatiaLiteAdapter) Find(dest interface{}) error {
 	eid, err := getID(dest)
 	if err != nil {
@@ -81,14 +84,17 @@ func (adapter *SpatiaLiteAdapter) Find(dest interface{}) error {
 	return adapter.db.Get(dest, qstr, args...)
 }
 
+// Get wraps sqlx.Get
 func (adapter *SpatiaLiteAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
 	return adapter.db.Get(dest, qstr, args...)
 }
 
+// Select wraps sqlx.Select
 func (adapter *SpatiaLiteAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
 	return adapter.db.Select(dest, qstr, args...)
 }
 
+// Insert builds and executes an insert statement for the given entity.
 func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 	// Keep the mapper to use cache.
 	table := getTableName(ent)

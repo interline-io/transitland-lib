@@ -1,6 +1,7 @@
 package gtdb
 
 import (
+	"database/sql"
 	"errors"
 
 	sq "github.com/Masterminds/squirrel"
@@ -9,12 +10,13 @@ import (
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
-// PostgresAdapter .
+// PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
 	DBURL string
 	db    *sqlx.DB
 }
 
+// Open the adapter.
 func (adapter *PostgresAdapter) Open() error {
 	db, err := sqlx.Open("postgres", adapter.DBURL)
 	if err != nil {
@@ -25,10 +27,12 @@ func (adapter *PostgresAdapter) Open() error {
 	return nil
 }
 
+// Close the adapter.
 func (adapter *PostgresAdapter) Close() error {
 	return adapter.db.Close()
 }
 
+// Create an initial database schema.
 func (adapter *PostgresAdapter) Create() error {
 	if _, err := adapter.db.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
@@ -42,18 +46,22 @@ func (adapter *PostgresAdapter) Create() error {
 
 }
 
-func (adapter *PostgresAdapter) DB() *sqlx.DB {
-	return adapter.db
+// DB returns a plain *sql.DB.
+func (adapter *PostgresAdapter) DB() *sql.DB {
+	return adapter.db.DB
 }
 
+// DBX returns *sqlx.DB
 func (adapter *PostgresAdapter) DBX() *sqlx.DB {
 	return adapter.db
 }
 
+// Sqrl returns a properly configured Squirrel StatementBuilder.
 func (adapter *PostgresAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db).PlaceholderFormat(sq.Dollar)
 }
 
+// Find finds a single entity based on the EntityID()
 func (adapter *PostgresAdapter) Find(dest interface{}) error {
 	eid, err := getID(dest)
 	if err != nil {
@@ -66,14 +74,17 @@ func (adapter *PostgresAdapter) Find(dest interface{}) error {
 	return adapter.Get(dest, qstr, args...)
 }
 
+// Get wraps sqlx.Get
 func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
 	return adapter.db.Get(dest, adapter.db.Rebind(qstr), args...)
 }
 
+// Select wraps sqlx.Select
 func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
 	return adapter.db.Select(dest, adapter.db.Rebind(qstr), args...)
 }
 
+// Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	table := getTableName(ent)
 	cols, vals, err := getInsert(adapter.db.Mapper, ent)
@@ -97,6 +108,7 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	return eid, err
 }
 
+// BatchInsert builds and executes a multi-insert statement for the given entities.
 func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	sts := []*gotransit.StopTime{}
 	for _, ent := range ents {

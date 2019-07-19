@@ -53,7 +53,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		t.Error(err)
 		t.FailNow()
 	}
-	t.Run("Find", func(t *testing.T) {
+	t.Run("Get", func(t *testing.T) {
 		ent := gotransit.Trip{}
 		ent.ID = m.TripID
 		if err := adapter.Find(&ent); err != nil {

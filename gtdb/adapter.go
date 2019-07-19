@@ -1,6 +1,7 @@
 package gtdb
 
 import (
+	"database/sql"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
@@ -23,7 +24,8 @@ type Adapter interface {
 	Open() error
 	Close() error
 	Create() error
-	DB() *sqlx.DB
+	DB() *sql.DB
+	DBX() *sqlx.DB
 	Sqrl() sq.StatementBuilderType
 	Insert(interface{}) (int, error)
 	Find(interface{}) error
