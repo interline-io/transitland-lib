@@ -86,50 +86,6 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	return nil
 }
 
-// ShapeLinesByShapeID sends single-geometry LineString Shapes
-func (reader *Reader) ShapeLinesByShapeID(shapeIDs ...string) chan gotransit.Shape {
-	out := make(chan gotransit.Shape, bufferSize)
-	go func() {
-		for shapes := range reader.ShapesByShapeID(shapeIDs...) {
-			out <- shapes[0]
-		}
-		close(out)
-	}()
-	return out
-}
-
-// ShapesByShapeID sends shapes grouped by ShapeID.
-func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gotransit.Shape {
-	if len(shapeIDs) == 0 {
-		q := reader.Adapter.Sqrl().Select("id").Distinct().From("gtfs_shapes")
-		if reader.FeedVersionID > 0 {
-			q = q.Where("feed_version_id = ?", reader.FeedVersionID)
-		}
-		rows, err := q.Query()
-		check(err)
-		defer rows.Close()
-		for rows.Next() {
-			shapeID := ""
-			rows.Scan(&shapeID)
-			shapeIDs = append(shapeIDs, shapeID)
-		}
-	}
-	out := make(chan []gotransit.Shape, bufferSize)
-	go func() {
-		for _, shapeID := range shapeIDs {
-			ents := []gotransit.Shape{}
-			qstr, args, err := reader.where().From("gtfs_shapes").Where("id = ?", shapeID).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			if len(ents) > 0 {
-				out <- ents
-			}
-		}
-		close(out)
-	}()
-	return out
-}
-
 // StopTimesByTripID sends StopTimes grouped by TripID.
 func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gotransit.StopTime {
 	if len(tripIDs) == 0 {

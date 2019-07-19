@@ -227,11 +227,11 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gotransit.Stop
 	return out
 }
 
-// ShapeLinesByShapeID sends single-geometry LineString Shapes
-func (reader *Reader) ShapeLinesByShapeID(shapeIDs ...string) chan gotransit.Shape {
+// Shapes sends single-geometry LineString Shapes
+func (reader *Reader) Shapes() chan gotransit.Shape {
 	out := make(chan gotransit.Shape, bufferSize)
 	go func() {
-		for shapes := range reader.ShapesByShapeID(shapeIDs...) {
+		for shapes := range reader.shapesByShapeID() {
 			shape := gotransit.NewShapeFromShapes(shapes)
 			shape.ShapeID = shapes[0].ShapeID
 			out <- shape
@@ -241,8 +241,8 @@ func (reader *Reader) ShapeLinesByShapeID(shapeIDs ...string) chan gotransit.Sha
 	return out
 }
 
-// ShapesByShapeID returns a map with grouped Shapes.
-func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gotransit.Shape {
+// shapesByShapeID returns a map with grouped Shapes.
+func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []gotransit.Shape {
 	chunks := s2D{}
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
@@ -464,11 +464,6 @@ func (reader *Reader) Routes() (out chan gotransit.Route) {
 		close(out)
 	}()
 	return out
-}
-
-// Shapes sends individual Shapes.
-func (reader *Reader) Shapes() (out chan gotransit.Shape) {
-	return reader.ShapeLinesByShapeID()
 }
 
 // Transfers sends Tranfers.
