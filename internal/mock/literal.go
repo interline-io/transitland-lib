@@ -65,7 +65,7 @@ func ReaderLiteral(reader gotransit.Reader) (string, error) {
 		ent.BaseEntity = baseent
 		mr.StopTimeList = append(mr.StopTimeList, ent)
 	}
-	for ent := range reader.ShapeLinesByShapeID() {
+	for ent := range reader.Shapes() {
 		ent.BaseEntity = baseent
 		coords := []string{}
 		for _, c := range ent.Geometry.FlatCoords() {

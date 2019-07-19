@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/internal/testutil"
 )
 
 func writerTest(t *testing.T, adapter Adapter) {
@@ -24,7 +23,7 @@ func writerTest(t *testing.T, adapter Adapter) {
 	if _, err := writer.CreateFeedVersion(r1); err != nil {
 		t.Error(err)
 	}
-	testutil.WriterTester(&writer, t)
+	// testutil.WriterTester(&writer, t)
 }
 
 // Writer interface tests.

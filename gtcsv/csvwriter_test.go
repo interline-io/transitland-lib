@@ -13,7 +13,6 @@ func TestWriter_NewReader(t *testing.T) {
 	fe := mock.NewExampleExpect()
 	fe.Reader.Open()
 	defer fe.Reader.Close()
-
 	tmpdir, err := ioutil.TempDir("", "gtfs")
 	if err != nil {
 		t.Error(err)

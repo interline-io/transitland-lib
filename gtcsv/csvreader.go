@@ -468,17 +468,7 @@ func (reader *Reader) Routes() (out chan gotransit.Route) {
 
 // Shapes sends individual Shapes.
 func (reader *Reader) Shapes() (out chan gotransit.Shape) {
-	out = make(chan gotransit.Shape, bufferSize)
-	go func() {
-		ent := gotransit.Shape{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Shape{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return reader.ShapeLinesByShapeID()
 }
 
 // Transfers sends Tranfers.

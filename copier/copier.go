@@ -429,7 +429,7 @@ func (copier *Copier) copyTransfers() {
 
 // copyShapes writes Shapes
 func (copier *Copier) copyShapes() {
-	for e := range copier.Reader.ShapeLinesByShapeID() {
+	for e := range copier.Reader.Shapes() {
 		sid := e.EntityID()
 		if _, ok := copier.CopyEntity(&e); ok {
 			copier.geomCache.AddShape(sid, e)

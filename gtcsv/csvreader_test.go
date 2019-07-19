@@ -22,7 +22,7 @@ func NewCSVExampleExpect() *mock.Expect {
 		TripCount:          11,
 		StopCount:          9,
 		StopTimeCount:      28,
-		ShapeCount:         9,
+		ShapeCount:         3,
 		CalendarCount:      2,
 		CalendarDateCount:  2,
 		FeedInfoCount:      1,

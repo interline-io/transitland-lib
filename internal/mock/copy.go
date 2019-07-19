@@ -19,7 +19,7 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) {
 	for ent := range reader.CalendarDates() {
 		writer.AddEntity(&ent)
 	}
-	for ent := range reader.ShapeLinesByShapeID() {
+	for ent := range reader.Shapes() {
 		writer.AddEntity(&ent)
 	}
 	for ent := range reader.Trips() {
