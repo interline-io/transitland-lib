@@ -185,7 +185,7 @@ func TestExpect(t *testing.T, fe Expect, reader gotransit.Reader) {
 			t.Errorf("got %d expected %d", s, exp)
 		}
 	})
-	t.Run("FeedInnfos", func(t *testing.T) {
+	t.Run("FeedInfos", func(t *testing.T) {
 		ids := map[string]int{}
 		for ent := range reader.FeedInfos() {
 			ids[ent.FeedVersion]++

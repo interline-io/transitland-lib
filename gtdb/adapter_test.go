@@ -7,25 +7,7 @@ import (
 	"time"
 
 	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/gtcsv"
 )
-
-func filldb(writer *Writer) error {
-	r1, err := gtcsv.NewReader("../testdata/example")
-	if err != nil {
-		return err
-	}
-	r1.Open()
-	defer r1.Close()
-	if _, err := writer.CreateFeedVersion(r1); err != nil {
-		return err
-	}
-	cp := copier.NewCopier(r1, writer)
-	cp.NormalizeServiceIDs = true
-	cp.Copy()
-	return nil
-}
 
 func testAdapter(t *testing.T, adapter Adapter) {
 	if err := adapter.Open(); err != nil {
