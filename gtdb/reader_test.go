@@ -36,7 +36,7 @@ func testReader(t *testing.T, adapter Adapter) {
 	if err != nil {
 		t.Error(err)
 	}
-	testutil.TestExpectEntities(t, *me, r2)
+	testutil.CheckExpectEntities(t, *me, r2)
 }
 
 // Reader interface tests.

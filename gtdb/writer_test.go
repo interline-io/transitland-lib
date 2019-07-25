@@ -31,7 +31,7 @@ func writerTest(t *testing.T, adapter Adapter) {
 	if err != nil {
 		t.Error(err)
 	}
-	testutil.TestExpectEntities(t, *fe, reader2)
+	testutil.CheckExpectEntities(t, *fe, reader2)
 }
 
 // Writer interface tests.

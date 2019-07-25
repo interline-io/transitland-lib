@@ -48,7 +48,7 @@ func TestReader(t *testing.T) {
 			t.Error(err)
 		}
 		defer r.Close()
-		testutil.TestExpectEntities(t, *fe, r)
+		testutil.CheckExpectEntities(t, *fe, r)
 	})
 	t.Run("Zip", func(t *testing.T) {
 		fe, _ := NewExampleExpect()
@@ -60,7 +60,7 @@ func TestReader(t *testing.T) {
 			t.Error(err)
 		}
 		defer reader.Close()
-		testutil.TestExpectEntities(t, *fe, reader)
+		testutil.CheckExpectEntities(t, *fe, reader)
 	})
 	t.Run("URL", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -81,6 +81,6 @@ func TestReader(t *testing.T) {
 			t.Error(err)
 		}
 		defer reader.Close()
-		testutil.TestExpectEntities(t, *fe, reader)
+		testutil.CheckExpectEntities(t, *fe, reader)
 	})
 }
