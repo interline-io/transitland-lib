@@ -39,8 +39,8 @@ type ExpectEntities struct {
 	ExpectFareIDs      []string
 }
 
-// TestExpect evalutes a Reader & Expect.
-func TestExpect(t *testing.T, fe ExpectEntities, reader gotransit.Reader) {
+// TestExpectEntities evalutes a Reader & Expect.
+func TestExpectEntities(t *testing.T, fe ExpectEntities, reader gotransit.Reader) {
 	t.Run("Agencies", func(t *testing.T) {
 		ids := map[string]int{}
 		for ent := range reader.Agencies() {
