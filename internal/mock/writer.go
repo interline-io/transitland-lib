@@ -67,7 +67,7 @@ func (mw *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 	case *gotransit.Trip:
 		mw.Reader.TripList = append(mw.Reader.TripList, *v)
 	default:
-		fmt.Printf("mockreader cannot handle type: %T\n", v)
+		return "", fmt.Errorf("mockreader cannot handle type: %T", v)
 	}
 	return ent.EntityID(), nil
 }

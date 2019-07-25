@@ -322,8 +322,8 @@ func (copier *Copier) copyStopsAndFares() {
 	}
 	// FareAttributes
 	for e := range copier.Reader.FareAttributes() {
-		if len(e.AgencyID) == 0 {
-			e.AgencyID = copier.DefaultAgencyID // todo: as else below?
+		if len(e.AgencyID.Key) == 0 {
+			e.AgencyID.Key = copier.DefaultAgencyID // todo: as else below?
 			if copier.agencyCount > 1 {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}

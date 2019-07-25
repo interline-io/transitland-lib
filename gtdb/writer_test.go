@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/interline-io/gotransit/gtcsv"
+	"github.com/interline-io/gotransit/internal/testutil"
 )
 
 func writerTest(t *testing.T, adapter Adapter) {
@@ -16,14 +16,22 @@ func writerTest(t *testing.T, adapter Adapter) {
 		t.Error(err)
 	}
 	defer writer.Close()
-	r1, err := gtcsv.NewReader("../testdata/example")
+	fe, reader := testutil.NewMinimalExpect()
+	if err := reader.Open(); err != nil {
+		t.Error(err)
+	}
+	defer reader.Close()
+	if _, err := writer.CreateFeedVersion(reader); err != nil {
+		t.Error(err)
+	}
+	if err := testutil.DirectCopy(reader, &writer); err != nil {
+		t.Error(err)
+	}
+	reader2, err := writer.NewReader()
 	if err != nil {
 		t.Error(err)
 	}
-	if _, err := writer.CreateFeedVersion(r1); err != nil {
-		t.Error(err)
-	}
-	// testutil.WriterTester(&writer, t)
+	testutil.TestExpect(t, *fe, reader2)
 }
 
 // Writer interface tests.

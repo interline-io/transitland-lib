@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/internal/mock"
+	"github.com/interline-io/gotransit/internal/testutil"
 )
 
 func testReader(t *testing.T, adapter Adapter) {
@@ -21,13 +21,12 @@ func testReader(t *testing.T, adapter Adapter) {
 	}
 	defer writer.Close()
 	// Get mock reader
-	me := mock.NewExampleExpect()
-	// TODO: Use code generation to create example expect, and also generate raw sql inserts
+	me, reader := testutil.NewMinimalExpect()
 	// Create FeedVersion - required for foreign key constraints
-	if _, err := writer.CreateFeedVersion(me.Reader); err != nil {
+	if _, err := writer.CreateFeedVersion(reader); err != nil {
 		t.Error(err)
 	}
-	cp := copier.NewCopier(me.Reader, &writer)
+	cp := copier.NewCopier(reader, &writer)
 	result := cp.Copy()
 	if len(result.Errors) > 0 {
 		t.Error(result.Errors[0])
@@ -37,7 +36,7 @@ func testReader(t *testing.T, adapter Adapter) {
 	if err != nil {
 		t.Error(err)
 	}
-	mock.TestExpect(t, *me, r2)
+	testutil.TestExpect(t, *me, r2)
 }
 
 // Reader interface tests.

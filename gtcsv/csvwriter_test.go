@@ -5,14 +5,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/interline-io/gotransit/internal/mock"
+	"github.com/interline-io/gotransit/internal/testutil"
 )
 
 // Round trip test.
 func TestWriter_NewReader(t *testing.T) {
-	fe := mock.NewExampleExpect()
-	fe.Reader.Open()
-	defer fe.Reader.Close()
+	fe, reader := testutil.NewMinimalExpect()
+	reader.Open()
+	defer reader.Close()
 	tmpdir, err := ioutil.TempDir("", "gtfs")
 	if err != nil {
 		t.Error(err)
@@ -26,7 +26,9 @@ func TestWriter_NewReader(t *testing.T) {
 	}
 	writer.Open()
 	defer writer.Close()
-	mock.DirectCopy(fe.Reader, writer)
+	if err := testutil.DirectCopy(reader, writer); err != nil {
+		t.Error(err)
+	}
 	r2, _ := writer.NewReader()
-	mock.TestExpect(t, *fe, r2)
+	testutil.TestExpect(t, *fe, r2)
 }

@@ -6,17 +6,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/interline-io/gotransit/internal/mock"
+	"github.com/interline-io/gotransit/internal/testutil"
 )
 
 // Reader interface tests.
 
-func NewCSVExampleExpect() *mock.Expect {
+func NewExampleExpect() (*testutil.ExpectEntities, *Reader) {
 	reader, err := NewReader("../testdata/example")
 	if err != nil {
 		panic(err)
 	}
-	return &mock.Expect{
+	fe := &testutil.ExpectEntities{
 		AgencyCount:        1,
 		RouteCount:         5,
 		TripCount:          11,
@@ -37,24 +37,30 @@ func NewCSVExampleExpect() *mock.Expect {
 		ExpectShapeIDs:     []string{"ok", "a", "c"},
 		ExpectCalendarIDs:  []string{"FULLW", "WE"},
 		ExpectFareIDs:      []string{"p", "a"},
-		Reader:             reader,
 	}
+	return fe, reader
 }
 
 func TestReader(t *testing.T) {
 	t.Run("Dir", func(t *testing.T) {
-		fe := NewCSVExampleExpect()
-		fe.Reader.Open()
-		defer fe.Reader.Close()
-		mock.TestExpect(t, *fe, fe.Reader)
+		fe, r := NewExampleExpect()
+		if err := r.Open(); err != nil {
+			t.Error(err)
+		}
+		defer r.Close()
+		testutil.TestExpect(t, *fe, r)
 	})
 	t.Run("Zip", func(t *testing.T) {
-		fe := NewCSVExampleExpect()
-		reader, _ := NewReader("../testdata/example.zip")
-		fe.Reader = reader
-		fe.Reader.Open()
-		defer fe.Reader.Close()
-		mock.TestExpect(t, *fe, fe.Reader)
+		fe, _ := NewExampleExpect()
+		reader, err := NewReader("../testdata/example.zip")
+		if err != nil {
+			t.Error(err)
+		}
+		if err := reader.Open(); err != nil {
+			t.Error(err)
+		}
+		defer reader.Close()
+		testutil.TestExpect(t, *fe, reader)
 	})
 	t.Run("URL", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -66,11 +72,15 @@ func TestReader(t *testing.T) {
 		}))
 		defer ts.Close()
 		//
-		fe := NewCSVExampleExpect()
-		reader, _ := NewReader(ts.URL)
-		fe.Reader = reader
-		fe.Reader.Open()
-		defer fe.Reader.Close()
-		mock.TestExpect(t, *fe, fe.Reader)
+		fe, _ := NewExampleExpect()
+		reader, err := NewReader(ts.URL)
+		if err != nil {
+			t.Error(err)
+		}
+		if err := reader.Open(); err != nil {
+			t.Error(err)
+		}
+		defer reader.Close()
+		testutil.TestExpect(t, *fe, reader)
 	})
 }
