@@ -9,6 +9,7 @@ import (
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
+	"github.com/interline-io/gotransit/dmfr"
 	_ "github.com/interline-io/gotransit/ext/pathways"
 	_ "github.com/interline-io/gotransit/ext/plus"
 	_ "github.com/interline-io/gotransit/gtcsv"
@@ -298,6 +299,32 @@ func (cmd *validateCommand) run(args []string) {
 	v.Validate()
 }
 
+type dmfrCommand struct {
+	args []string
+}
+
+func (cmd *dmfrCommand) run(args []string) {
+	fl := flag.NewFlagSet("dmfr", flag.ExitOnError)
+	fl.Parse(args)
+	cmd.args = fl.Args()
+	switch os.Args[2] {
+	case "validate":
+		// TODO
+	case "merge":
+		// TODO
+	default:
+		exit("%q is not valid subcommand.", os.Args[2])
+	}
+	for _, arg := range os.Args[2:] {
+		log.Info("Loading DMFR: %s", arg)
+		registry, err := dmfr.LoadAndParseRegistry(arg)
+		if err != nil {
+			exit("Error when loading DMFR: %s", err)
+		}
+		log.Info("Success loading DMFR with %d feeds", len(registry.Feeds))
+	}
+}
+
 func main() {
 	if len(os.Args) == 1 {
 		fmt.Println("usage: gotransit <command> [<args>]")
@@ -305,6 +332,7 @@ func main() {
 		fmt.Println("  copy")
 		fmt.Println("  extract")
 		fmt.Println("  validate")
+		fmt.Println("  dmfr")
 		return
 	}
 	switch os.Args[1] {
@@ -316,6 +344,9 @@ func main() {
 		cmd.run(os.Args[2:])
 	case "extract":
 		cmd := extractCommand{}
+		cmd.run(os.Args[2:])
+	case "dmfr":
+		cmd := dmfrCommand{}
 		cmd.run(os.Args[2:])
 	default:
 		exit("%q is not valid command.", os.Args[1])
