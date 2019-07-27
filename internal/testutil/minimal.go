@@ -7,7 +7,7 @@ import (
 	"github.com/interline-io/gotransit/internal/mock"
 )
 
-// NewMinimalExpect returns a minimal MockReader & Expect values.
+// NewMinimalExpect returns a minimal mock Reader & ExpectEntities values.
 func NewMinimalExpect() (*ExpectEntities, *mock.Reader) {
 	r := &mock.Reader{
 		AgencyList: []gotransit.Agency{
