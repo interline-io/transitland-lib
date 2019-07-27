@@ -10,11 +10,11 @@ import (
 
 // StopTime stop_times.txt
 type StopTime struct {
-	TripID            string  `csv:"trip_id" gorm:"type:int;index:idx_stop_times_trip_id;not null"`
-	ArrivalTime       int     `csv:"arrival_time" gorm:"type:int"`
-	DepartureTime     int     `csv:"departure_time" gorm:"type:int"`
-	StopID            string  `csv:"stop_id" required:"true" gorm:"type:int;index;not null"`
-	StopSequence      int     `csv:"stop_sequence" required:"true" min:"0" gorm:"not null"`
+	TripID            string  `csv:"trip_id"`
+	ArrivalTime       int     `csv:"arrival_time" `
+	DepartureTime     int     `csv:"departure_time" `
+	StopID            string  `csv:"stop_id" required:"true"`
+	StopSequence      int     `csv:"stop_sequence" required:"true" min:"0"`
 	StopHeadsign      string  `csv:"stop_headsign"`
 	PickupType        int     `csv:"pickup_type" min:"0" max:"3"`
 	DropOffType       int     `csv:"drop_off_type" min:"0" max:"3"`

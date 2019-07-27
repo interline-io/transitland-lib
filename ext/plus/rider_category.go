@@ -7,7 +7,7 @@ import (
 
 // RiderCategory rider_categories.txt
 type RiderCategory struct {
-	AgencyID                 string `csv:"agency_id" gorm:"type:int"`
+	AgencyID                 string `csv:"agency_id"`
 	RiderCategoryID          int    `csv:"rider_category_id"`
 	RiderCategoryDescription string `csv:"rider_category_description"`
 	gotransit.BaseEntity

@@ -2,8 +2,10 @@ package gtcsv
 
 import (
 	"archive/zip"
+	"crypto/sha1"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -137,6 +139,19 @@ func (adapter ZipAdapter) ReadRows(filename string, cb func(Row)) error {
 	return adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
+}
+
+// SHA1 returns the SHA1 checksum of the zip archive.
+func (adapter ZipAdapter) SHA1() (string, error) {
+	f, err := os.Open(adapter.path)
+	if err != nil {
+		return "", err
+	}
+	h := sha1.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 /////////////////////

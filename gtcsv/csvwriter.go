@@ -61,30 +61,6 @@ func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
 			stoptimes = append(stoptimes, v)
 		}
 	}
-	// Set empty values to -1 to get empty string
-	// for i := 0; i < len(stoptimes); i++ {
-	// 	if stoptimes[i].ArrivalTime == 0 {
-	// 		stoptimes[i].ArrivalTime = -1
-	// 	}
-	// 	if stoptimes[i].DepartureTime == 0 {
-	// 		stoptimes[i].DepartureTime = -1
-	// 	}
-	// }
-	// Set any zeros to NaN to get empty string
-	// cur := stoptimes[0].ShapeDistTraveled
-	// for i := 1; i < len(stoptimes); i++ {
-	// 	if stoptimes[i].ShapeDistTraveled <= cur {
-	// 		stoptimes[i].ShapeDistTraveled = math.NaN()
-	// 	} else {
-	// 		cur = stoptimes[i].ShapeDistTraveled
-	// 	}
-	// }
-	// if cur == 0.0 {
-	// 	for i := 0; i < len(stoptimes); i++ {
-	// 		stoptimes[i].ShapeDistTraveled = math.NaN()
-	// 	}
-	// }
-
 	for _, ent := range ents {
 		writer.AddEntity(ent)
 	}

@@ -9,7 +9,7 @@ import (
 
 // FareRiderCategory fare_rider_categories.txt
 type FareRiderCategory struct {
-	FareID           string    `csv:"fare_id" gorm:"type:int"`
+	FareID           string    `csv:"fare_id"`
 	RiderCategoryID  int       `csv:"rider_category_id"`
 	Price            float64   `csv:"price"`
 	ExpirationDate   time.Time `csv:"expiration_date"`

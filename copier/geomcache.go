@@ -77,7 +77,7 @@ func (g *geomCache) MakeShape(stopids ...string) (gotransit.Shape, error) {
 func (g *geomCache) InterpolateStopTimes(trip gotransit.Trip, stoptimes []gotransit.StopTime) ([]gotransit.StopTime, error) {
 	// Check cache; make stopline
 	stopline := make([][2]float64, len(stoptimes))
-	shapeid := trip.ShapeID
+	shapeid := trip.ShapeID.Key
 	k := strings.Join([]string{shapeid, strconv.Itoa(trip.StopPatternID)}, "|")
 	for i := 0; i < len(stoptimes); i++ {
 		point, ok := g.stops[stoptimes[i].StopID]

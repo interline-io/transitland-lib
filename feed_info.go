@@ -2,19 +2,18 @@ package gotransit
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/interline-io/gotransit/causes"
 )
 
 // FeedInfo feed_info.txt
 type FeedInfo struct {
-	FeedPublisherName string    `csv:"feed_publisher_name" required:"true" gorm:"not null"`
-	FeedPublisherURL  string    `csv:"feed_publisher_url" required:"true" validator:"url" gorm:"not null"`
-	FeedLang          string    `csv:"feed_lang" validator:"lang" required:"true" gorm:"not null"`
-	FeedStartDate     time.Time `csv:"feed_start_date"`
-	FeedEndDate       time.Time `csv:"feed_end_date"`
-	FeedVersion       string    `csv:"feed_version"`
+	FeedPublisherName string       `csv:"feed_publisher_name" required:"true"`
+	FeedPublisherURL  string       `csv:"feed_publisher_url" required:"true" validator:"url"`
+	FeedLang          string       `csv:"feed_lang" validator:"lang" required:"true"`
+	FeedStartDate     OptionalTime `csv:"feed_start_date"`
+	FeedEndDate       OptionalTime `csv:"feed_end_date"`
+	FeedVersion       string       `csv:"feed_version" db:"feed_version_name"`
 	BaseEntity
 }
 
@@ -32,9 +31,12 @@ func (ent *FeedInfo) Warnings() (errs []error) {
 func (ent *FeedInfo) Errors() (errs []error) {
 	errs = ValidateTags(ent)
 	errs = append(errs, ent.BaseEntity.loadErrors...)
-	if ent.FeedEndDate.Before(ent.FeedStartDate) {
-		errs = append(errs, causes.NewInvalidFieldError("feed_end_date", "", fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate, ent.FeedStartDate)))
-
+	if ent.FeedStartDate.IsZero() && ent.FeedEndDate.IsZero() {
+		// skip
+	} else {
+		if ent.FeedEndDate.Time.Before(ent.FeedStartDate.Time) {
+			errs = append(errs, causes.NewInvalidFieldError("feed_end_date", "", fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Time, ent.FeedStartDate.Time)))
+		}
 	}
 	return errs
 }

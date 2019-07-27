@@ -7,7 +7,7 @@ import (
 
 // CalendarAttribute calendar_attributes.txt
 type CalendarAttribute struct {
-	ServiceID          string `csv:"service_id" gorm:"type:int"`
+	ServiceID          string `csv:"service_id"`
 	ServiceDescription string `csv:"service_description"`
 	gotransit.BaseEntity
 }

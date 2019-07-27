@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/interline-io/gotransit"
@@ -15,13 +14,23 @@ import (
 	"github.com/interline-io/gotransit/internal/tags"
 )
 
-// SetString //
-
 // check for SetString interface
 type canSetString interface {
 	SetString(string, string) error
 	AddError(error)
 }
+
+type canString interface {
+	String() string
+}
+
+type canScan interface {
+	Scan(src interface{}) error
+}
+
+// TODO: use reflectx.Mapper for consistency
+
+// SetString //
 
 // SetString convenience method; checks for SetString method.
 func SetString(ent gotransit.Entity, key string, value string) error {
@@ -29,17 +38,17 @@ func SetString(ent gotransit.Entity, key string, value string) error {
 		return fastent.SetString(key, value)
 	}
 	fmap := tags.GetStructTagMap(ent)
-	if k, ok := fmap[key]; !ok {
+	k, ok := fmap[key]
+	if !ok {
 		// only SetExtra when loading from csv...
 		// ent.SetExtra(key, value)
 		return errors.New("unknown field")
-	} else {
-		// Already known valid field
-		elem := reflect.ValueOf(ent).Elem()
-		valueField := elem.Field(k.Index)
-		if err := valSetString(valueField, value); err != nil {
-			return err
-		}
+	}
+	// Already known valid field
+	elem := reflect.ValueOf(ent).Elem()
+	valueField := elem.Field(k.Index)
+	if err := valSetString(valueField, value); err != nil {
+		return err
 	}
 	return nil
 }
@@ -54,10 +63,6 @@ func valSetString(valueField reflect.Value, strv string) error {
 		v, e := strconv.ParseInt(strv, 0, 0)
 		p = e
 		valueField.SetInt(v)
-	case bool:
-		v, e := strconv.ParseBool(strv)
-		p = e
-		valueField.SetBool(v)
 	case float64:
 		v, e := strconv.ParseFloat(strv, 64)
 		p = e
@@ -66,12 +71,13 @@ func valSetString(valueField reflect.Value, strv string) error {
 		v, e := time.Parse("20060102", strv)
 		p = e
 		valueField.Set(reflect.ValueOf(v))
-	case gotransit.WideTime:
-		v, e := gotransit.NewWideTime(strv)
-		p = e
-		valueField.Set(reflect.ValueOf(v))
 	default:
-		p = errors.New("unknown field type")
+		z := valueField.Addr().Interface()
+		if cs, ok := z.(canScan); ok {
+			p = cs.Scan(strv)
+		} else {
+			p = errors.New("field not scannable")
+		}
 	}
 	return p
 }
@@ -87,23 +93,21 @@ func GetString(ent gotransit.Entity, key string) (string, error) {
 	if fastent, ok := ent.(canGetString); ok {
 		return fastent.GetString(key)
 	}
-	strv := ""
 	fmap := tags.GetStructTagMap(ent)
-	if k, ok := fmap[key]; !ok {
+	k, ok := fmap[key]
+	if !ok {
 		// only SetExtra when loading from csv...
 		// ent.SetExtra(key, value)
 		return "", errors.New("unknown field")
-	} else {
-		// Already known valid field
-		elem := reflect.ValueOf(ent).Elem()
-		valueField := elem.Field(k.Index)
-		v, err := valGetString(valueField, key)
-		if err != nil {
-			return "", err
-		}
-		strv = v
 	}
-	return strv, nil
+	// Already known valid field
+	elem := reflect.ValueOf(ent).Elem()
+	valueField := elem.Field(k.Index)
+	v, err := valGetString(valueField, key)
+	if err != nil {
+		return "", err
+	}
+	return v, nil
 }
 
 // valGetString returns a CSV representation of the field.
@@ -111,20 +115,9 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 	value := ""
 	switch v := valueField.Interface().(type) {
 	case string:
-		// TODO: Remove special case
-		if strings.HasSuffix(k, "_id") && v == "0" {
-			v = ""
-		}
 		value = v
 	case int:
-		// TODO: Remove special case
-		if v == math.MaxInt64 {
-			value = ""
-		} else {
-			value = strconv.Itoa(v)
-		}
-	case bool:
-		value = strconv.Itoa(boolToInt(v))
+		value = strconv.Itoa(v)
 	case float64:
 		if math.IsNaN(v) {
 			value = ""
@@ -132,17 +125,18 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 			value = fmt.Sprintf("%0.5f", v)
 		}
 	case time.Time:
-		if v.Year() < 1970 {
+		if v.IsZero() {
 			value = ""
 		} else {
 			value = v.Format("20060102")
 		}
-	case gotransit.WideTime:
-		if t, err := v.String(); err == nil {
-			value = t
-		}
 	default:
-		return "", errors.New("unknown field type")
+		z := valueField.Addr().Interface()
+		if cs, ok := z.(canString); ok {
+			value = cs.String()
+		} else {
+			return "", errors.New("field not stringable")
+		}
 	}
 	return value, nil
 }
