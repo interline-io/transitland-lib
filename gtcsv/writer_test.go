@@ -10,7 +10,7 @@ import (
 
 // Round trip test.
 func TestWriter_NewReader(t *testing.T) {
-	fe, reader := testutil.NewMinimalExpect()
+	fe, reader := testutil.NewMinimalTestFeed()
 	reader.Open()
 	defer reader.Close()
 	tmpdir, err := ioutil.TempDir("", "gtfs")

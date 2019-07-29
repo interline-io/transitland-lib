@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/interline-io/gotransit"
@@ -8,9 +9,12 @@ import (
 
 func msisum(m map[string]int) int {
 	count := 0
-	for _, v := range m {
+	keys := []string{}
+	for k, v := range m {
+		keys = append(keys, k)
 		count += v
 	}
+	fmt.Printf("keys: %#v\n", keys)
 	return count
 }
 
