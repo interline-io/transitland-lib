@@ -21,7 +21,7 @@ func testReader(t *testing.T, adapter Adapter) {
 	}
 	defer writer.Close()
 	// Get mock reader
-	me, reader := testutil.NewMinimalExpect()
+	fe, reader := testutil.NewMinimalTestFeed()
 	// Create FeedVersion - required for foreign key constraints
 	if _, err := writer.CreateFeedVersion(reader); err != nil {
 		t.Error(err)
@@ -36,7 +36,7 @@ func testReader(t *testing.T, adapter Adapter) {
 	if err != nil {
 		t.Error(err)
 	}
-	testutil.CheckExpectEntities(t, *me, r2)
+	fe.Test(t, r2)
 }
 
 // Reader interface tests.

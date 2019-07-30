@@ -16,7 +16,7 @@ func writerTest(t *testing.T, adapter Adapter) {
 		t.Error(err)
 	}
 	defer writer.Close()
-	fe, reader := testutil.NewMinimalExpect()
+	fe, reader := testutil.NewMinimalTestFeed()
 	if err := reader.Open(); err != nil {
 		t.Error(err)
 	}
@@ -31,7 +31,7 @@ func writerTest(t *testing.T, adapter Adapter) {
 	if err != nil {
 		t.Error(err)
 	}
-	testutil.CheckExpectEntities(t, *fe, reader2)
+	fe.Test(t, reader2)
 }
 
 // Writer interface tests.

@@ -22,20 +22,6 @@ func makehindex(header []string) map[string]int {
 	return hindex
 }
 
-func Benchmark_TrimSpace(b *testing.B) {
-	const space = ' '
-	a := []string{"one", "two", "three", "four", "five", ""}
-	for n := 0; n < b.N; n++ {
-		for i := 0; i < len(a); i++ {
-			v := a[i]
-			if len(v) > 0 && (v[0] == space || v[len(v)-1] == space) {
-				z := strings.TrimSpace(v)
-				_ = z
-			}
-		}
-	}
-}
-
 func Benchmark_StopTime_Memory(b *testing.B) {
 	count := 1000
 	b.ReportAllocs()
@@ -139,5 +125,21 @@ func Benchmark_loadRow_Trip(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		e := gotransit.Trip{}
 		loadRow(&e, row)
+	}
+}
+
+func Benchmark_dumpRow_StopTime(b *testing.B) {
+	ent := gotransit.StopTime{
+		TripID:            "xyz",
+		StopID:            "abc",
+		StopHeadsign:      "hello",
+		StopSequence:      123,
+		ArrivalTime:       3600,
+		DepartureTime:     7200,
+		ShapeDistTraveled: 123.456,
+	}
+	header := strings.Split("trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled", ",")
+	for n := 0; n < b.N; n++ {
+		dumpRow(&ent, header)
 	}
 }

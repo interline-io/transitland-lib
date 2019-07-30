@@ -254,7 +254,6 @@ func dumpHeader(ent gotransit.Entity) ([]string, error) {
 // dumpRow returns a []string for the Entity.
 func dumpRow(ent gotransit.Entity, header []string) ([]string, error) {
 	row := []string{}
-	var p error
 	// Fast path
 	if a, ok := ent.(canGetString); ok {
 		for _, k := range header {
@@ -264,7 +263,7 @@ func dumpRow(ent gotransit.Entity, header []string) ([]string, error) {
 			}
 			row = append(row, v)
 		}
-		return row, p
+		return row, nil
 	}
 	// Reflect path
 	val := reflect.ValueOf(ent).Elem()

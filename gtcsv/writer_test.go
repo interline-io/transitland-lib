@@ -30,5 +30,5 @@ func TestWriter_NewReader(t *testing.T) {
 		t.Error(err)
 	}
 	r2, _ := writer.NewReader()
-	testutil.CheckExpectEntities(t, *fe, r2)
+	fe.Test(t, r2)
 }

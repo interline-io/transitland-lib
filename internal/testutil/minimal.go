@@ -7,8 +7,8 @@ import (
 	"github.com/interline-io/gotransit/internal/mock"
 )
 
-// NewMinimalTestFeed returns a minimal mock Reader & ExpectEntities values.
-func NewMinimalTestFeed() (*ExpectEntities, *mock.Reader) {
+// NewMinimalTestFeed returns a minimal mock Reader & ReaderTester values.
+func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 	r := &mock.Reader{
 		AgencyList: []gotransit.Agency{
 			{AgencyID: "agency1", AgencyName: "Agency 1", AgencyTimezone: "America/Los_Angeles", AgencyURL: "http://example.com"},
@@ -52,27 +52,31 @@ func NewMinimalTestFeed() (*ExpectEntities, *mock.Reader) {
 			{FromStopID: "stop1", ToStopID: "stop2", TransferType: 1},
 		},
 	}
-	fe := &ExpectEntities{
-		AgencyCount:        1,
-		RouteCount:         1,
-		TripCount:          1,
-		StopCount:          2,
-		StopTimeCount:      2,
-		ShapeCount:         1,
-		CalendarCount:      1,
-		CalendarDateCount:  1,
-		FeedInfoCount:      1,
-		FareRuleCount:      1,
-		FareAttributeCount: 1,
-		FrequencyCount:     1,
-		TransferCount:      1,
-		ExpectAgencyIDs:    []string{"agency1"},
-		ExpectRouteIDs:     []string{"route1"},
-		ExpectTripIDs:      []string{"trip1"},
-		ExpectStopIDs:      []string{"stop1", "stop2"},
-		ExpectShapeIDs:     []string{"shape1"},
-		ExpectCalendarIDs:  []string{"service1"},
-		ExpectFareIDs:      []string{"fare1"},
+	fe := &ReaderTester{
+		Counts: map[string]int{
+			"agency.txt":          1,
+			"routes.txt":          1,
+			"trips.txt":           1,
+			"stops.txt":           2,
+			"stop_times.txt":      2,
+			"shapes.txt":          1,
+			"calendar.txt":        1,
+			"calendar_dates.txt":  1,
+			"feed_info.txt":       1,
+			"fare_rules.txt":      1,
+			"fare_attributes.txt": 1,
+			"frequency.txt":       1,
+			"transfers.txt":       1,
+		},
+		EntityIDs: map[string][]string{
+			"agency.txt":          {"agency1"},
+			"routes.txt":          {"route1"},
+			"trips.txt":           {"trip1"},
+			"stops.txt":           {"stop1", "stop2"},
+			"shapes.txt":          {"shape1"},
+			"calendar.txt":        {"service1"},
+			"fare_attributes.txt": {"fare1"},
+		},
 	}
 	return fe, r
 }

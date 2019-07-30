@@ -9,11 +9,8 @@ import (
 	"github.com/interline-io/gotransit/internal/testutil"
 )
 
-func NewTestFeed(name string) (*testutil.ExpectEntities, *Reader) {
-	fe, ok := testutil.TestFeed(name)
-	if !ok {
-		panic("no such example feed")
-	}
+func NewExampleReader() (*testutil.ReaderTester, *Reader) {
+	fe := testutil.ExampleFeed
 	reader, err := NewReader(fe.URL)
 	if err != nil {
 		panic(err)
@@ -23,15 +20,15 @@ func NewTestFeed(name string) (*testutil.ExpectEntities, *Reader) {
 
 func TestReader(t *testing.T) {
 	t.Run("Dir", func(t *testing.T) {
-		fe, r := NewTestFeed("example")
+		fe, r := NewExampleReader()
 		if err := r.Open(); err != nil {
 			t.Error(err)
 		}
 		defer r.Close()
-		testutil.CheckExpectEntities(t, *fe, r)
+		fe.Test(t, r)
 	})
 	t.Run("Zip", func(t *testing.T) {
-		fe, _ := NewTestFeed("example")
+		fe, _ := NewExampleReader()
 		reader, err := NewReader("../testdata/example.zip")
 		if err != nil {
 			t.Error(err)
@@ -40,7 +37,7 @@ func TestReader(t *testing.T) {
 			t.Error(err)
 		}
 		defer reader.Close()
-		testutil.CheckExpectEntities(t, *fe, reader)
+		fe.Test(t, reader)
 	})
 	t.Run("URL", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +49,7 @@ func TestReader(t *testing.T) {
 		}))
 		defer ts.Close()
 		//
-		fe, _ := NewTestFeed("example")
+		fe, _ := NewExampleReader()
 		reader, err := NewReader(ts.URL)
 		if err != nil {
 			t.Error(err)
@@ -61,6 +58,6 @@ func TestReader(t *testing.T) {
 			t.Error(err)
 		}
 		defer reader.Close()
-		testutil.CheckExpectEntities(t, *fe, reader)
+		fe.Test(t, reader)
 	})
 }

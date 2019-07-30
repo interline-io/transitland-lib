@@ -8,7 +8,7 @@ import (
 
 func BenchmarkReader(b *testing.B) {
 	b.SetParallelism(1)
-	for k, fe := range testutil.TestFeeds {
+	for k, fe := range testutil.ExternalTestFeeds {
 		b.Run(k, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				reader, err := NewReader(fe.URL)
@@ -19,7 +19,7 @@ func BenchmarkReader(b *testing.B) {
 					b.Error(err)
 				}
 				defer reader.Close()
-				testutil.CheckExpectEntities(b, fe, reader)
+				fe.Benchmark(b, reader)
 			}
 		})
 	}
