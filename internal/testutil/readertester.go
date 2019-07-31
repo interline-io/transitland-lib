@@ -74,6 +74,7 @@ type ReaderTester struct {
 func (fe ReaderTester) Benchmark(b *testing.B, reader gotransit.Reader) {
 	ids := map[string]map[string]int{}
 	add := func(ent gotransit.Entity) {
+		ent.SetID(0) // TODO: This is a HORRIBLE UGLY HACK :( it sets db ID to zero value to get GTFS ID.
 		m, ok := ids[ent.Filename()]
 		if !ok {
 			m = map[string]int{}

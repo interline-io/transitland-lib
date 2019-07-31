@@ -110,6 +110,9 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 
 // BatchInsert builds and executes a multi-insert statement for the given entities.
 func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
+	if len(ents) == 0 {
+		return nil
+	}
 	sts := []*gotransit.StopTime{}
 	for _, ent := range ents {
 		if st, ok := ent.(*gotransit.StopTime); ok {

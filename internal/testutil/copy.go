@@ -6,6 +6,10 @@ import (
 	"github.com/interline-io/gotransit"
 )
 
+type canCreateFV interface {
+	CreateFeedVersion(reader gotransit.Reader) (int, error)
+}
+
 // DirectCopy does a direct reader->writer copy, with minimal validation and changes.
 func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 	emap := gotransit.NewEntityMap()
@@ -19,6 +23,10 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 			return fmt.Errorf("entity: %#v error: %s", ent, err)
 		}
 		return emap.Set(ent, sid, eid)
+	}
+	// Create any FV
+	if w2, ok := writer.(canCreateFV); ok {
+		w2.CreateFeedVersion(reader)
 	}
 	for ent := range reader.Agencies() {
 		if err := cp(&ent); err != nil {
@@ -70,10 +78,14 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 	}
 	for ents := range reader.StopTimesByTripID() {
 		e2s := []gotransit.Entity{}
-		for _, ent := range ents {
-			e2s = append(e2s, &ent)
+		for i := 0; i < len(ents); i++ {
+			ents[i].UpdateKeys(emap)
+			e2s = append(e2s, &ents[i])
 		}
 		if err := writer.AddEntities(e2s); err != nil {
+			for _, ent := range e2s {
+				fmt.Printf("%#v\n", ent)
+			}
 			return err
 		}
 	}
@@ -88,6 +100,7 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 		}
 	}
 	for ent := range reader.FareAttributes() {
+		ent.Transfers = "0"
 		if err := cp(&ent); err != nil {
 			return err
 		}

@@ -2,6 +2,7 @@ package gtdb
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
@@ -123,13 +124,37 @@ func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
-	cols, _, err := getInsert(adapter.db.Mapper, ents[0])
-	table := "gtfs_stop_times"
-	q := sq.Insert(table).Columns(cols...)
-	for _, d := range ents {
-		_, vals, _ := getInsert(adapter.db.Mapper, d)
-		q = q.Values(vals...)
+	sts := []*gotransit.StopTime{}
+	for _, ent := range ents {
+		if st, ok := ent.(*gotransit.StopTime); ok {
+			sts = append(sts, st)
+		}
 	}
-	_, err = q.RunWith(adapter.db).Exec()
-	return err
+	if len(sts) == 0 {
+		return errors.New("presently only StopTimes are supported")
+	}
+	table := getTableName(sts[0])
+	cols, vals, err := getInsert(adapter.db.Mapper, sts[0])
+	if err != nil {
+		return err
+	}
+	tx, err := adapter.db.DB.Begin()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
+	for _, d := range sts {
+		_, vals, err := getInsert(adapter.db.Mapper, d)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(q, vals...); err != nil {
+			return err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
