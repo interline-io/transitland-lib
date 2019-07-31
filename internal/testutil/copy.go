@@ -30,11 +30,24 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 			return err
 		}
 	}
+	// Two passes required
 	for ent := range reader.Stops() {
+		if ent.LocationType != 1 {
+			continue
+		}
 		if err := cp(&ent); err != nil {
 			return err
 		}
 	}
+	for ent := range reader.Stops() {
+		if ent.LocationType == 1 {
+			continue
+		}
+		if err := cp(&ent); err != nil {
+			return err
+		}
+	}
+	// Done with stops
 	for ent := range reader.Calendars() {
 		if err := cp(&ent); err != nil {
 			return err
@@ -56,10 +69,12 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 		}
 	}
 	for ents := range reader.StopTimesByTripID() {
+		e2s := []gotransit.Entity{}
 		for _, ent := range ents {
-			if err := cp(&ent); err != nil {
-				return err
-			}
+			e2s = append(e2s, &ent)
+		}
+		if err := writer.AddEntities(e2s); err != nil {
+			return err
 		}
 	}
 	for ent := range reader.Frequencies() {

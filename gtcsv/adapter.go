@@ -28,7 +28,7 @@ type Adapter interface {
 
 // WriterAdapter provides a writing interface.
 type WriterAdapter interface {
-	WriteRow(string, []string) error
+	WriteRows(string, [][]string) error
 	Adapter
 }
 
@@ -221,8 +221,8 @@ func (adapter *DirAdapter) Exists() bool {
 	return fi.Mode().IsDir()
 }
 
-// WriteRow adds a single row to an output file.
-func (adapter *DirAdapter) WriteRow(filename string, row []string) error {
+// WriteRows writes with only Flush at the end.
+func (adapter *DirAdapter) WriteRows(filename string, rows [][]string) error {
 	// Is this file open
 	in, ok := adapter.files[filename]
 	if !ok {
@@ -234,9 +234,10 @@ func (adapter *DirAdapter) WriteRow(filename string, row []string) error {
 		adapter.files[filename] = in
 	}
 	w := csv.NewWriter(in)
-	w.Write(row)
-	if err := w.Error(); err != nil {
-		return err
+	for _, row := range rows {
+		if err := w.Write(row); err != nil {
+			return err
+		}
 	}
 	w.Flush()
 	if err := w.Error(); err != nil {

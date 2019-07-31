@@ -1,6 +1,7 @@
 package gtcsv
 
 import (
+	"errors"
 	"math"
 	"strings"
 
@@ -39,7 +40,7 @@ func (writer *Writer) Close() error {
 
 // Create the necessary files for the Writer.
 func (writer *Writer) Create() error {
-	// Todo: return error when output path exists
+	// TODO: return error when output path exists
 	return nil
 }
 
@@ -55,51 +56,47 @@ func (writer *Writer) NewReader() (gotransit.Reader, error) {
 
 // AddEntities provides a generic interface for adding Entities.
 func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
-	stoptimes := []*gotransit.StopTime{}
+	if len(ents) == 0 {
+		return nil
+	}
+	ent := ents[0]
+	efn := ents[0].Filename()
 	for _, ent := range ents {
-		if v, ok := ent.(*gotransit.StopTime); ok {
-			stoptimes = append(stoptimes, v)
+		if efn != ent.Filename() {
+			return errors.New("all entities must be same type")
 		}
 	}
-	for _, ent := range ents {
-		writer.AddEntity(ent)
-	}
-	return nil
-}
-
-// AddEntity provides a generic interface for adding an Entity.
-func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
-	switch v := ent.(type) {
-	case *gotransit.Shape:
-		var eid string
-		var err error
-		for _, s := range writer.flattenShape(*v) {
-			eid, err = writer.addEntity(&s)
-		}
-		return eid, err
-	default:
-		return writer.addEntity(ent)
-	}
-}
-
-func (writer *Writer) addEntity(ent gotransit.Entity) (string, error) {
-	efn := ent.Filename()
 	header, ok := writer.headers[efn]
 	if !ok {
 		h, err := dumpHeader(ent)
 		if err != nil {
-			return "", err
+			return err
 		}
 		header = h
 		writer.headers[efn] = header
-		writer.Adapter.WriteRow(efn, header)
+		writer.Adapter.WriteRows(efn, [][]string{header})
 	}
-	if row, err := dumpRow(ent, header); err != nil {
-		return "", err
-	} else if err := writer.Adapter.WriteRow(efn, row); err != nil {
-		return "", err
+	rows := [][]string{}
+	for _, ent := range ents {
+		row, err := dumpRow(ent, header)
+		if err != nil {
+			return err
+		}
+		rows = append(rows, row)
 	}
-	return ent.EntityID(), nil
+	return writer.Adapter.WriteRows(efn, rows)
+}
+
+// AddEntity provides a generic interface for adding an Entity.
+func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
+	if v, ok := ent.(*gotransit.Shape); ok {
+		e2s := []gotransit.Entity{}
+		for _, s := range writer.flattenShape(*v) {
+			e2s = append(e2s, &s)
+		}
+		return v.EntityID(), writer.AddEntities(e2s)
+	}
+	return ent.EntityID(), writer.AddEntities([]gotransit.Entity{ent})
 }
 
 func (writer *Writer) flattenShape(ent gotransit.Shape) []gotransit.Shape {

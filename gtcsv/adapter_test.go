@@ -155,11 +155,11 @@ func TestZipWriterAdapter(t *testing.T) {
 	}
 	adapter := NewZipWriterAdapter(outpath)
 	// Header
-	if err := adapter.WriteRow("hello.txt", []string{"one", "two", "three"}); err != nil {
+	if err := adapter.WriteRows("hello.txt", [][]string{{"one", "two", "three"}}); err != nil {
 		t.Error(err)
 	}
 	// Body
-	if err := adapter.WriteRow("hello.txt", []string{"1", "2", "3"}); err != nil {
+	if err := adapter.WriteRows("hello.txt", [][]string{{"1", "2", "3"}}); err != nil {
 		t.Error(err)
 	}
 	// Create Zip

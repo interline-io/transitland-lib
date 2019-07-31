@@ -9,38 +9,30 @@ import (
 )
 
 func BenchmarkWriter(b *testing.B) {
-	tests := []string{"bart.zip"}
 	b.SetParallelism(1)
-	for _, k := range tests {
-		fe, ok := testutil.ExternalTestFeeds[k]
-		if !ok {
-			b.Error("no such test feed:", k)
-			continue
-		}
+	for k, fe := range testutil.ExternalTestFeeds {
 		b.Run(k, func(b *testing.B) {
+			reader, err := NewReader(fe.URL)
+			if err != nil {
+				b.Error(err)
+			}
+			if err := reader.Open(); err != nil {
+				b.Error(err)
+			}
+			defer reader.Close()
 			for i := 0; i < b.N; i++ {
-				reader, err := NewReader(fe.URL)
-				if err != nil {
-					b.Error(err)
-				}
-				if err := reader.Open(); err != nil {
-					b.Error(err)
-				}
-				defer reader.Close()
-				//
 				tmpdir, err := ioutil.TempDir("", "gtfs")
 				if err != nil {
 					b.Error(err)
 					return
 				}
-				defer os.RemoveAll(tmpdir)
 				writer, err := NewWriter(tmpdir)
 				if err != nil {
 					b.Error(err)
-					return
 				}
-				writer.Open()
-				defer writer.Close()
+				if err := writer.Open(); err != nil {
+					b.Error(err)
+				}
 				if err := testutil.DirectCopy(reader, writer); err != nil {
 					b.Error(err)
 				}
@@ -49,6 +41,12 @@ func BenchmarkWriter(b *testing.B) {
 					b.Error(err)
 				}
 				fe.Benchmark(b, r2)
+				if err := writer.Close(); err != nil {
+					b.Error(err)
+				}
+				if err := os.RemoveAll(tmpdir); err != nil {
+					b.Error(err)
+				}
 			}
 		})
 	}
