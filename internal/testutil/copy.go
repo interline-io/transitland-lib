@@ -119,6 +119,7 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 			return err
 		}
 	}
+	// TODO: Just use plain StopTimes()
 	for ents := range reader.StopTimesByTripID() {
 		e2s := []gotransit.Entity{}
 		for i := 0; i < len(ents); i++ {
