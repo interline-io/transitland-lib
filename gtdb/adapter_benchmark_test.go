@@ -56,6 +56,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 }
 
 // Tests multiple insert performance
+// There is a lot of setup in this test because we need a FeedVersion, Trip, and Stop
 func Benchmark_Adapter_BatchInsert(b *testing.B) {
 	for k, v := range getTestAdapters() {
 		b.Run(k, func(b *testing.B) {
@@ -88,7 +89,7 @@ func Benchmark_Adapter_BatchInsert(b *testing.B) {
 			if err := adapter.DBX().QueryRow("SELECT id FROM gtfs_stops LIMIT 1").Scan(&stopid); err != nil {
 				b.Error(err)
 			}
-			if _, err := adapter.DBX().Exec("DELETE FROM gtfs_stop_times"); err != nil {
+			if _, err := adapter.DBX().Exec(adapter.DBX().Rebind("DELETE FROM gtfs_stop_times WHERE trip_id = ?"), tripid); err != nil {
 				b.Error(err)
 			}
 			// Reset the timer
@@ -119,35 +120,3 @@ func Benchmark_Adapter_BatchInsert(b *testing.B) {
 		})
 	}
 }
-
-// func BenchmarkWriter(b *testing.B) {
-// 	dburl := os.Getenv("GOTRANSIT_TEST_POSTGRES_URL")
-// 	wtests := map[string]func() gotransit.Writer{
-// 		"SpatiaLite-Memory": func() gotransit.Writer {
-// 			writer, _ := NewWriter("sqlite3://:memory:")
-// 			return writer
-// 		},
-// 		"SpatiaLite-Disk": func() gotransit.Writer {
-// 			writer, _ := NewWriter("sqlite3://test.db")
-// 			return writer
-// 		},
-// 		"Postgres": func() gotransit.Writer {
-// 			writer, _ := NewWriter(dburl)
-// 			return writer
-// 		},
-// 	}
-// 	for k, wfunc := range wtests {
-// 		for feedid, fe := range testutil.ExternalTestFeeds {
-// 			if feedid != "bart.zip" {
-// 				continue
-// 			}
-// 			rfunc := func() gotransit.Reader {
-// 				reader, _ := gtcsv.NewReader(fe.URL)
-// 				return reader
-// 			}
-// 			b.Run(fmt.Sprintf("%s/%s", k, feedid), func(b *testing.B) {
-// 				testutil.BenchmarkWriter(b, fe, rfunc, wfunc)
-// 			})
-// 		}
-// 	}
-// }
