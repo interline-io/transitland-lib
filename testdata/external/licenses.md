@@ -6,14 +6,6 @@ https://github.com/mbta/gtfs-documentation/blob/master/developers-license-agreem
 - bart.zip
 https://www.bart.gov/schedules/developers/developer-license-agreement
 
-- translink.zip
-https://developer.translink.ca/ServicesGtfs/GtfsData
-
-- santiago.zip
-https://www.dtpm.cl/index.php/noticias/gtfs-vigente
-
 - cdmx.zip
 http://www.metrobus.df.gob.mx/
 
-- yamanashi.zip
-http://opendata.busmaps.jp/ (public domain)
