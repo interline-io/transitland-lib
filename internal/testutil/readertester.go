@@ -108,6 +108,7 @@ func TestWriter(t testing.TB, fe ReaderTester, newReader func() gotransit.Reader
 	}
 }
 
+// CheckReader tests a reader against the ReaderTest description of the expected entities.
 func CheckReader(t testing.TB, fe ReaderTester, reader gotransit.Reader) {
 	ids := map[string]map[string]int{}
 	add := func(ent gotransit.Entity) {

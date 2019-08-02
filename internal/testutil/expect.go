@@ -97,6 +97,76 @@ func (e *ExpectError) Match(errs []error) bool {
 
 ////////////
 
+
+// TestEntityErrors checks that all expected Entity errors are present.
+func TestEntityErrors(t *testing.T, r gotransit.Reader) {
+	t.Run("Agencies", func(t *testing.T) {
+		for ent := range r.Agencies() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("Stops", func(t *testing.T) {
+		for ent := range r.Stops() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("Routes", func(t *testing.T) {
+		for ent := range r.Routes() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("Trips", func(t *testing.T) {
+		for ent := range r.Trips() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("StopTimes", func(t *testing.T) {
+		for ent := range r.StopTimes() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("Calendars", func(t *testing.T) {
+		for ent := range r.Calendars() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("CalendarDates", func(t *testing.T) {
+		for ent := range r.CalendarDates() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("FareAttributes", func(t *testing.T) {
+		for ent := range r.FareAttributes() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("FareRules", func(t *testing.T) {
+		for ent := range r.FareRules() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("FeedInfos", func(t *testing.T) {
+		for ent := range r.FeedInfos() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("Shapes", func(t *testing.T) {
+		for ent := range r.Shapes() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("Transfer", func(t *testing.T) {
+		for ent := range r.Transfers() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+	t.Run("Frequency", func(t *testing.T) {
+		for ent := range r.Frequencies() {
+			CheckEntityErrors(&ent, t)
+		}
+	})
+}
+
 // GetExpectError gets any ExpectError specified by an Entity.
 func GetExpectError(ent gotransit.Entity) *ExpectError {
 	ex := ent.Extra()
@@ -145,56 +215,3 @@ func CheckEntityErrors(ent gotransit.Entity, t *testing.T) {
 	})
 }
 
-////////////
-
-// TODO: Remove
-
-// CollectExpectErrors reads and collects all ExpectErrors in a Reader.
-func CollectExpectErrors(reader gotransit.Reader) []ExpectError {
-	ees := []ExpectError{}
-	gex := func(ent gotransit.Entity) {
-		if ex := GetExpectError(ent); ex != nil {
-			ees = append(ees, *ex)
-		}
-	}
-	for ent := range reader.Stops() {
-		gex(&ent)
-	}
-	for ent := range reader.StopTimes() {
-		gex(&ent)
-	}
-	for ent := range reader.Agencies() {
-		gex(&ent)
-	}
-	for ent := range reader.Calendars() {
-		gex(&ent)
-	}
-	for ent := range reader.CalendarDates() {
-		gex(&ent)
-	}
-	for ent := range reader.FareAttributes() {
-		gex(&ent)
-	}
-	for ent := range reader.FareRules() {
-		gex(&ent)
-	}
-	for ent := range reader.FeedInfos() {
-		gex(&ent)
-	}
-	for ent := range reader.Frequencies() {
-		gex(&ent)
-	}
-	for ent := range reader.Routes() {
-		gex(&ent)
-	}
-	for ent := range reader.Shapes() {
-		gex(&ent)
-	}
-	for ent := range reader.Transfers() {
-		gex(&ent)
-	}
-	for ent := range reader.Trips() {
-		gex(&ent)
-	}
-	return ees
-}
