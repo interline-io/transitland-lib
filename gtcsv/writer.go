@@ -131,10 +131,3 @@ func (writer *Writer) flattenShape(ent gotransit.Shape) []gotransit.Shape {
 	}
 	return shapes
 }
-
-func boolToInt(b bool) int {
-	if b == false {
-		return 0
-	}
-	return 1
-}

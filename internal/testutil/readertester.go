@@ -14,18 +14,55 @@ type ReaderTester struct {
 }
 
 // TestReader tests implementations of the Reader interface.
-func TestReader(t testing.TB, fe ReaderTester, newReader func() gotransit.Reader) {
+func TestReader(t *testing.T, fe ReaderTester, newReader func() gotransit.Reader) {
 	reader := newReader()
 	if reader == nil {
 		t.Error("no reader")
 	}
-	if err := reader.Open(); err != nil {
-		t.Error(err)
-	}
-	testReader(t, fe, reader)
-	if err := reader.Close(); err != nil {
-		t.Error(err)
-	}
+	openerr := reader.Open()
+	t.Run("Open", func(t *testing.T) {
+		if openerr != nil {
+			t.Error(openerr)
+		}
+	})
+	t.Run("ValidateStructure", func(t *testing.T) {
+		for _, err := range reader.ValidateStructure() {
+			t.Error(err)
+		}
+	})
+	t.Run("ReadEntities", func(t *testing.T) {
+		tripids := map[string]int{}
+		out := make(chan gotransit.StopTime, 1000)
+		reader.ReadEntities(out)
+		for ent := range out {
+			tripids[ent.TripID]++
+		}
+		expect, ok := fe.Counts["stop_times.txt"]
+		if c := msisum(tripids); ok && c != expect {
+			t.Errorf("got %d expected %d", c, expect)
+		}
+	})
+	t.Run("Entities", func(t *testing.T) {
+		CheckReader(t, fe, reader)
+	})
+	t.Run("StopTimesByTripID", func(t *testing.T) {
+		tripids := map[string]int{}
+		for ents := range reader.StopTimesByTripID() {
+			for _, ent := range ents {
+				tripids[ent.TripID]++
+			}
+		}
+		expect, ok := fe.Counts["stop_times.txt"]
+		if c := msisum(tripids); ok && c != expect {
+			t.Errorf("got %d expected %d", c, expect)
+		}
+	})
+	closeerr := reader.Open()
+	t.Run("Close", func(t *testing.T) {
+		if closeerr != nil {
+			t.Error(closeerr)
+		}
+	})
 }
 
 // TestWriter tests implementations of the Writer interface.
@@ -58,7 +95,7 @@ func TestWriter(t testing.TB, fe ReaderTester, newReader func() gotransit.Reader
 	if err != nil {
 		t.Error(err)
 	}
-	testReader(t, fe, reader2)
+	CheckReader(t, fe, reader2)
 	// Close
 	if err := reader.Close(); err != nil {
 		t.Error(err)
@@ -71,8 +108,7 @@ func TestWriter(t testing.TB, fe ReaderTester, newReader func() gotransit.Reader
 	}
 }
 
-// Test checks the Reader against the expected values and records errors.
-func testReader(t testing.TB, fe ReaderTester, reader gotransit.Reader) {
+func CheckReader(t testing.TB, fe ReaderTester, reader gotransit.Reader) {
 	ids := map[string]map[string]int{}
 	add := func(ent gotransit.Entity) {
 		ent.SetID(0) // TODO: This is a HORRIBLE UGLY HACK :( it sets db ID to zero value to get GTFS ID.
@@ -97,7 +133,6 @@ func testReader(t testing.TB, fe ReaderTester, reader gotransit.Reader) {
 	AllEntities(reader, add)
 	for k, v := range ids {
 		check(k, v)
-		// fmt.Println("checking:", k, "got", msisum(v))
 	}
 }
 

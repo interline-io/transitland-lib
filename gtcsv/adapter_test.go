@@ -1,6 +1,8 @@
 package gtcsv
 
 import (
+	"crypto/sha1"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -13,8 +15,9 @@ import (
 
 func getTestAdapters() map[string]func() Adapter {
 	adapters := map[string]func() Adapter{
-		"DirAdapter": func() Adapter { return NewDirAdapter("../testdata/example") },
-		"ZipAdapter": func() Adapter { return &ZipAdapter{path: "../testdata/example.zip"} },
+		"DirAdapter":     func() Adapter { return NewDirAdapter("../testdata/example") },
+		"ZipAdapter":     func() Adapter { return &ZipAdapter{path: "../testdata/example.zip"} },
+		"OverlayAdapter": func() Adapter { return NewOverlayAdapter("../testdata/example") },
 	}
 	return adapters
 }
@@ -27,12 +30,46 @@ func TestDirAdapter(t *testing.T) {
 	testAdapter(t, v())
 }
 
+func TestOverlayAdapter(t *testing.T) {
+	v, ok := getTestAdapters()["OverlayAdapter"]
+	if !ok {
+		t.Error("no OverlayAdapter")
+	}
+	testAdapter(t, v())
+}
+
 func TestZipAdapter(t *testing.T) {
 	v, ok := getTestAdapters()["ZipAdapter"]
 	if !ok {
 		t.Error("no ZipAdapter")
 	}
 	testAdapter(t, v())
+	t.Run("SHA1", func(t *testing.T) {
+		adapter, ok := v().(*ZipAdapter)
+		if !ok {
+			t.Error("not ZipAdapter!")
+			return
+		}
+		// Yes this is the same as the method implementation
+		// but the actual example.zip sha1 might change if hardcoded.
+		f, err := os.Open(adapter.path)
+		if err != nil {
+			t.Error(err)
+		}
+		h := sha1.New()
+		if _, err := io.Copy(h, f); err != nil {
+			t.Error(err)
+		}
+		expect := fmt.Sprintf("%x", h.Sum(nil))
+		// Test
+		s, err := adapter.SHA1()
+		if err != nil {
+			t.Error(err)
+		}
+		if s != expect {
+			t.Errorf("got %s expect %s", s, expect)
+		}
+	})
 }
 
 func TestURLAdapter(t *testing.T) {
