@@ -6,63 +6,6 @@ import (
 	"github.com/interline-io/gotransit"
 )
 
-func getfn(ent gotransit.Entity) string {
-	return ent.Filename()
-}
-
-func msisum(m map[string]int) int {
-	count := 0
-	keys := []string{}
-	for k, v := range m {
-		keys = append(keys, k)
-		count += v
-	}
-	return count
-}
-
-// AllEntities iterates through all Reader entities, calling the specified callback.
-func AllEntities(reader gotransit.Reader, cb func(gotransit.Entity)) {
-	for ent := range reader.Agencies() {
-		cb(&ent)
-	}
-	for ent := range reader.Routes() {
-		cb(&ent)
-	}
-	for ent := range reader.Trips() {
-		cb(&ent)
-	}
-	for ent := range reader.Stops() {
-		cb(&ent)
-	}
-	for ent := range reader.Shapes() {
-		cb(&ent)
-	}
-	for ent := range reader.Calendars() {
-		cb(&ent)
-	}
-	for ent := range reader.CalendarDates() {
-		cb(&ent)
-	}
-	for ent := range reader.StopTimes() {
-		cb(&ent)
-	}
-	for ent := range reader.FareAttributes() {
-		cb(&ent)
-	}
-	for ent := range reader.FareRules() {
-		cb(&ent)
-	}
-	for ent := range reader.Frequencies() {
-		cb(&ent)
-	}
-	for ent := range reader.Transfers() {
-		cb(&ent)
-	}
-	for ent := range reader.FeedInfos() {
-		cb(&ent)
-	}
-}
-
 // ReaderTester contains information about the number and types of identities expected in a Reader.
 type ReaderTester struct {
 	URL       string
@@ -70,8 +13,66 @@ type ReaderTester struct {
 	EntityIDs map[string][]string
 }
 
-// Benchmark checks the Reader against the expected values and records errors.
-func (fe ReaderTester) Benchmark(b *testing.B, reader gotransit.Reader) {
+// TestReader tests implementations of the Reader interface.
+func TestReader(t testing.TB, fe ReaderTester, newReader func() gotransit.Reader) {
+	reader := newReader()
+	if reader == nil {
+		t.Error("no reader")
+	}
+	if err := reader.Open(); err != nil {
+		t.Error(err)
+	}
+	testReader(t, fe, reader)
+	if err := reader.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+// TestWriter tests implementations of the Writer interface.
+func TestWriter(t testing.TB, fe ReaderTester, newReader func() gotransit.Reader, newWriter func() gotransit.Writer) {
+	// Open writer
+	writer := newWriter()
+	if writer == nil {
+		t.Error("no writer")
+	}
+	if err := writer.Open(); err != nil {
+		t.Error(err)
+	}
+	if err := writer.Create(); err != nil {
+		t.Error(err)
+	}
+	// Open reader
+	reader := newReader()
+	if reader == nil {
+		t.Error("no reader")
+	}
+	if err := reader.Open(); err != nil {
+		t.Error(err)
+	}
+	// Copy
+	if err := DirectCopy(reader, writer); err != nil {
+		t.Error(err)
+	}
+	// Validate
+	reader2, err := writer.NewReader()
+	if err != nil {
+		t.Error(err)
+	}
+	testReader(t, fe, reader2)
+	// Close
+	if err := reader.Close(); err != nil {
+		t.Error(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Error(err)
+	}
+	if err := reader2.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+// Test checks the Reader against the expected values and records errors.
+func testReader(t testing.TB, fe ReaderTester, reader gotransit.Reader) {
 	ids := map[string]map[string]int{}
 	add := func(ent gotransit.Entity) {
 		ent.SetID(0) // TODO: This is a HORRIBLE UGLY HACK :( it sets db ID to zero value to get GTFS ID.
@@ -85,122 +86,31 @@ func (fe ReaderTester) Benchmark(b *testing.B, reader gotransit.Reader) {
 	check := func(fn string, gotids map[string]int) {
 		s := msisum(gotids)
 		if exp, ok := fe.Counts[fn]; ok && s != exp {
-			b.Errorf("got %d expected %d", s, exp)
+			t.Errorf("got %d expected %d", s, exp)
 		}
 		for _, k := range fe.EntityIDs[fn] {
 			if _, ok := gotids[k]; !ok {
-				b.Errorf("did not find expected entity %s '%s'", fn, k)
+				t.Errorf("did not find expected entity %s '%s'", fn, k)
 			}
 		}
 	}
 	AllEntities(reader, add)
 	for k, v := range ids {
 		check(k, v)
+		// fmt.Println("checking:", k, "got", msisum(v))
 	}
 }
 
-// Test checks the Reader against the expected values and records errors.
-func (fe ReaderTester) Test(t *testing.T, reader gotransit.Reader) {
-	check := func(fn string, gotids map[string]int) {
-		s := msisum(gotids)
-		if exp, ok := fe.Counts[fn]; ok && s != exp {
-			t.Errorf("got %d expected %d", s, exp)
-		}
-		for _, k := range fe.EntityIDs[fn] {
-			if _, ok := gotids[k]; !ok {
-				t.Errorf("did not find expected entity '%s'", k)
-			}
-		}
+func getfn(ent gotransit.Entity) string {
+	return ent.Filename()
+}
+
+func msisum(m map[string]int) int {
+	count := 0
+	keys := []string{}
+	for k, v := range m {
+		keys = append(keys, k)
+		count += v
 	}
-	t.Run("Agencies", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.Agencies() {
-			ids[ent.AgencyID]++
-		}
-		check(getfn(&gotransit.Agency{}), ids)
-	})
-	t.Run("Routes", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.Routes() {
-			ids[ent.RouteID]++
-		}
-		check(getfn(&gotransit.Route{}), ids)
-	})
-	t.Run("Trips", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.Trips() {
-			ids[ent.TripID]++
-		}
-		check(getfn(&gotransit.Trip{}), ids)
-	})
-	t.Run("Stops", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.Stops() {
-			ids[ent.StopID]++
-		}
-		check(getfn(&gotransit.Stop{}), ids)
-	})
-	t.Run("Shapes", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.Shapes() {
-			ids[ent.ShapeID]++
-		}
-		check(getfn(&gotransit.Shape{}), ids)
-	})
-	t.Run("Calendars", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.Calendars() {
-			ids[ent.ServiceID]++
-		}
-		check(getfn(&gotransit.Calendar{}), ids)
-	})
-	t.Run("CalendarDates", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.CalendarDates() {
-			ids[ent.ServiceID]++
-		}
-		check(getfn(&gotransit.CalendarDate{}), ids)
-	})
-	t.Run("StopTimes", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.StopTimes() {
-			ids[ent.TripID]++
-		}
-		check(getfn(&gotransit.StopTime{}), ids)
-	})
-	t.Run("FareAttributes", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.FareAttributes() {
-			ids[ent.FareID]++
-		}
-		check(getfn(&gotransit.FareAttribute{}), ids)
-	})
-	t.Run("FareRules", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.FareRules() {
-			ids[ent.FareID]++
-		}
-		check(getfn(&gotransit.FareRule{}), ids)
-	})
-	t.Run("Frequencies", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.Frequencies() {
-			ids[ent.TripID]++
-		}
-		check(getfn(&gotransit.Frequency{}), ids)
-	})
-	t.Run("Transfers", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.Transfers() {
-			ids[ent.FromStopID]++
-		}
-		check(getfn(&gotransit.Transfer{}), ids)
-	})
-	t.Run("FeedInfos", func(t *testing.T) {
-		ids := map[string]int{}
-		for ent := range reader.FeedInfos() {
-			ids[ent.FeedVersion]++
-		}
-		check(getfn(&gotransit.FeedInfo{}), ids)
-	})
+	return count
 }

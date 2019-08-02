@@ -11,76 +11,31 @@ import (
 	"github.com/interline-io/gotransit"
 )
 
-func compareMap(t *testing.T, result map[string]int, expect map[string]int) {
-	for k, v := range expect {
-		if i := result[k]; v != i {
-			t.Error("expeced", k, "=", i)
-		}
+func getTestAdapters() map[string]func() Adapter {
+	adapters := map[string]func() Adapter{
+		"DirAdapter": func() Adapter { return NewDirAdapter("../testdata/example") },
+		"ZipAdapter": func() Adapter { return &ZipAdapter{path: "../testdata/example.zip"} },
 	}
+	return adapters
 }
 
-// Test adapters
-func Test_ZipAdapter_Exists(t *testing.T) {
-	expect := map[string]bool{
-		"../testdata/example.zip": true,
-		"../testdata/missing.zip": false,
-		"../test":                 false, // dir
-		"../testdata/missing":     false, // dir
+func TestDirAdapter(t *testing.T) {
+	v, ok := getTestAdapters()["DirAdapter"]
+	if !ok {
+		t.Error("no DirAdapter")
 	}
-	for k, v := range expect {
-		r := ZipAdapter{path: k}
-		if r.Exists() != v {
-			t.Error("expected", v, "for", k)
-		}
-	}
+	testAdapter(t, v())
 }
 
-func Test_ZipAdapter_OpenFile(t *testing.T) {
-	r := ZipAdapter{path: "../testdata/example.zip"}
-	expect := map[string]bool{
-		"stops.txt":   true,
-		"missing.txt": false,
+func TestZipAdapter(t *testing.T) {
+	v, ok := getTestAdapters()["ZipAdapter"]
+	if !ok {
+		t.Error("no ZipAdapter")
 	}
-	for k, v := range expect {
-		found := false
-		r.OpenFile(k, func(in io.Reader) { found = true })
-		if found != v {
-			t.Error("expected", v, "for", k)
-		}
-	}
+	testAdapter(t, v())
 }
 
-func Test_DirAdapter_Exists(t *testing.T) {
-	expect := map[string]bool{
-		"../testdata/example.zip": false,
-		"../testdata/missing.zip": false,
-		"../testdata/example":     true,  // dir
-		"../testdata/missing":     false, // dir
-	}
-	for k, v := range expect {
-		r := DirAdapter{path: k}
-		if r.Exists() != v {
-			t.Error("expected", v, "for", k)
-		}
-	}
-}
-
-func Test_DirAdapter_OpenFile(t *testing.T) {
-	r := DirAdapter{path: "../testdata/example"}
-	expect := map[string]bool{
-		"stops.txt":   true,
-		"missing.txt": false,
-	}
-	for k, v := range expect {
-		found := false
-		r.OpenFile(k, func(in io.Reader) { found = true })
-		if found != v {
-			t.Error("expected", v, "for", k)
-		}
-	}
-}
-
-func Test_URLAdapter_Download(t *testing.T) {
+func TestURLAdapter(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile("../testdata/example.zip")
 		if err != nil {
@@ -89,57 +44,25 @@ func Test_URLAdapter_Download(t *testing.T) {
 		w.Write(buf)
 	}))
 	defer ts.Close()
-	adapter := URLAdapter{url: ts.URL}
-	if err := adapter.Open(); err != nil {
-		t.Error(err)
-	}
-	p := adapter.Path()
-	if _, err := os.Stat(p); err != nil {
-		t.Error("did not download file")
-	}
-	if err := adapter.Close(); err != nil {
-		t.Error(err)
-	}
-	if _, err := os.Stat(p); err == nil {
-		t.Error("did not remove temp file")
-	}
-}
-
-func TestDirAdapter_ReadRows(t *testing.T) {
-	// TODO: more tests
-	adapter := DirAdapter{path: "../testdata/example"}
-	ent := gotransit.StopTime{}
-	m := map[string]int{}
-	total := 0
-	adapter.ReadRows(ent.Filename(), func(row Row) {
-		e := gotransit.StopTime{}
-		loadRow(&e, row)
-		m[e.StopID]++
-		total++
-	})
-	expect := map[string]int{"EMSI": 2, "BULLFROG": 4, "STAGECOACH": 3}
-	compareMap(t, m, expect)
-	if total != 28 {
-		t.Error("expected 28 rows, got ", total)
-	}
-}
-
-func TestDirAdapter_ReadRows_errors(t *testing.T) {
-	adapter := DirAdapter{path: "../testdata/example"}
-	count := 0
-	errcount := 0
-	adapter.ReadRows("malformed.txt", func(row Row) {
-		if row.Err != nil {
-			errcount++
+	// Main tests
+	testAdapter(t, &URLAdapter{url: ts.URL})
+	//
+	t.Run("Download", func(t *testing.T) {
+		a := URLAdapter{url: ts.URL}
+		if err := a.Open(); err != nil {
+			t.Error(err)
 		}
-		count++
+		p := a.Path()
+		if _, err := os.Stat(p); err != nil {
+			t.Error("did not download file")
+		}
+		if err := a.Close(); err != nil {
+			t.Error(err)
+		}
+		if _, err := os.Stat(p); err == nil {
+			t.Error("did not remove temp file")
+		}
 	})
-	if count < 4 {
-		t.Error("expected at least 4 rows in malformed csv test file")
-	}
-	if errcount != 3 {
-		t.Error("expected 3 parse errors from malformed csv test file")
-	}
 }
 
 func TestZipWriterAdapter(t *testing.T) {
@@ -189,4 +112,76 @@ func TestZipWriterAdapter(t *testing.T) {
 			t.Errorf("got %s expect %s", r[0], "1")
 		}
 	}
+}
+
+// Adapter interface tests
+func testAdapter(t *testing.T, adapter Adapter) {
+	openerr := adapter.Open()
+	t.Run("Open", func(t *testing.T) {
+		if openerr != nil {
+			t.Error(openerr)
+		}
+	})
+	t.Run("Exists", func(t *testing.T) {
+		// TODO: doesnt check false cases
+		if !adapter.Exists() {
+			t.Errorf("got %t expected %t", false, true)
+		}
+	})
+	t.Run("OpenFile", func(t *testing.T) {
+		expect := map[string]bool{
+			"stops.txt":   true,
+			"missing.txt": false,
+		}
+		for k, v := range expect {
+			found := false
+			adapter.OpenFile(k, func(in io.Reader) { found = true })
+			if found != v {
+				t.Errorf("expected %t for %s", v, k)
+			}
+		}
+	})
+	t.Run("ReadRows", func(t *testing.T) {
+		// TODO: more tests
+		ent := gotransit.StopTime{}
+		m := map[string]int{}
+		total := 0
+		adapter.ReadRows(ent.Filename(), func(row Row) {
+			e := gotransit.StopTime{}
+			loadRow(&e, row)
+			m[e.StopID]++
+			total++
+		})
+		expect := map[string]int{"EMSI": 2, "BULLFROG": 4, "STAGECOACH": 3}
+		for k, v := range expect {
+			if i := m[k]; v != i {
+				t.Errorf("got %d for %s, expected %d", v, k, i)
+			}
+		}
+		if total != 28 {
+			t.Error("expected 28 rows, got ", total)
+		}
+	})
+	t.Run("ReadRows-Malformed", func(t *testing.T) {
+		count := 0
+		errcount := 0
+		adapter.ReadRows("malformed.txt", func(row Row) {
+			if row.Err != nil {
+				errcount++
+			}
+			count++
+		})
+		if count < 4 {
+			t.Error("expected at least 4 rows in malformed test file")
+		}
+		if errcount != 3 {
+			t.Error("expected 3 parse errors from malformed test file")
+		}
+	})
+	closeerr := adapter.Close()
+	t.Run("Close", func(t *testing.T) {
+		if closeerr != nil {
+			t.Error(closeerr)
+		}
+	})
 }

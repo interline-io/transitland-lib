@@ -10,6 +10,49 @@ type canCreateFV interface {
 	CreateFeedVersion(reader gotransit.Reader) (int, error)
 }
 
+// AllEntities iterates through all Reader entities, calling the specified callback.
+func AllEntities(reader gotransit.Reader, cb func(gotransit.Entity)) {
+	for ent := range reader.Agencies() {
+		cb(&ent)
+	}
+	for ent := range reader.Routes() {
+		cb(&ent)
+	}
+	for ent := range reader.Trips() {
+		cb(&ent)
+	}
+	for ent := range reader.Stops() {
+		cb(&ent)
+	}
+	for ent := range reader.Shapes() {
+		cb(&ent)
+	}
+	for ent := range reader.Calendars() {
+		cb(&ent)
+	}
+	for ent := range reader.CalendarDates() {
+		cb(&ent)
+	}
+	for ent := range reader.StopTimes() {
+		cb(&ent)
+	}
+	for ent := range reader.FareAttributes() {
+		cb(&ent)
+	}
+	for ent := range reader.FareRules() {
+		cb(&ent)
+	}
+	for ent := range reader.Frequencies() {
+		cb(&ent)
+	}
+	for ent := range reader.Transfers() {
+		cb(&ent)
+	}
+	for ent := range reader.FeedInfos() {
+		cb(&ent)
+	}
+}
+
 // DirectCopy does a direct reader->writer copy, with minimal validation and changes.
 func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 	emap := gotransit.NewEntityMap()
@@ -83,9 +126,6 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 			e2s = append(e2s, &ents[i])
 		}
 		if err := writer.AddEntities(e2s); err != nil {
-			for _, ent := range e2s {
-				fmt.Printf("%#v\n", ent)
-			}
 			return err
 		}
 	}
@@ -100,7 +140,6 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 		}
 	}
 	for ent := range reader.FareAttributes() {
-		ent.Transfers = "0"
 		if err := cp(&ent); err != nil {
 			return err
 		}

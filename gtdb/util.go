@@ -83,22 +83,6 @@ func getInsert(m *reflectx.Mapper, ent interface{}) ([]string, []interface{}, er
 	return names, vals, nil
 }
 
-// // getSelectStar returns column names for a SELECT * query.
-// func getSelectStar(ent interface{}) []string {
-// 	fmap := tags.GetStructTagMap(ent)
-// 	cols := make([]string, len(fmap))
-// 	for _, v := range fmap {
-// 		a := v.DB
-// 		if v.SelectWrap != "" {
-// 			a = v.SelectWrap
-// 		}
-// 		if a != "-" {
-// 			cols = append(cols, a)
-// 		}
-// 	}
-// 	return cols
-// }
-
 type hasTableName interface {
 	TableName() string
 }

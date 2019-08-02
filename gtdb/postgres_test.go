@@ -1,16 +1,13 @@
 package gtdb
 
 import (
-	"os"
 	"testing"
 )
 
 func TestPostgresAdapter(t *testing.T) {
-	dburl := os.Getenv("GOTRANSIT_TEST_POSTGRES_URL")
-	if len(dburl) == 0 {
-		t.Skip()
-		return
+	if adapter, ok := getTestAdapters()["PostgresAdapter"]; ok {
+		testAdapter(t, adapter())
+	} else {
+		t.Skip("no test url for PostgresAdapter")
 	}
-	adapter := PostgresAdapter{DBURL: dburl}
-	testAdapter(t, &adapter)
 }

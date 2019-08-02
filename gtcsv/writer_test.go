@@ -5,30 +5,27 @@ import (
 	"os"
 	"testing"
 
+	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/internal/testutil"
 )
 
-// Round trip test.
-func TestWriter_NewReader(t *testing.T) {
+// Round trip Writer test.
+func TestWriter(t *testing.T) {
 	fe, reader := testutil.NewMinimalTestFeed()
-	reader.Open()
-	defer reader.Close()
 	tmpdir, err := ioutil.TempDir("", "gtfs")
 	if err != nil {
 		t.Error(err)
-		return
 	}
-	defer os.RemoveAll(tmpdir)
 	writer, err := NewWriter(tmpdir)
 	if err != nil {
 		t.Error(err)
-		return
 	}
-	writer.Open()
-	defer writer.Close()
-	if err := testutil.DirectCopy(reader, writer); err != nil {
+	testutil.TestWriter(t, *fe, func() gotransit.Reader { return reader }, func() gotransit.Writer { return writer })
+	// Clean up and double check
+	if err := os.RemoveAll(tmpdir); err != nil {
 		t.Error(err)
 	}
-	r2, _ := writer.NewReader()
-	fe.Test(t, r2)
+	if _, err := os.Stat(tmpdir); !os.IsNotExist(err) {
+		t.Error("did not remove temporary directory!", tmpdir)
+	}
 }

@@ -138,7 +138,7 @@ func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if err != nil {
 		return err
 	}
-	tx, err := adapter.db.DB.Begin()
+	tx, err := adapter.db.Begin()
 	if err != nil {
 		tx.Rollback()
 		return err
