@@ -147,6 +147,8 @@ func CheckEntityErrors(ent gotransit.Entity, t *testing.T) {
 
 ////////////
 
+// TODO: Remove
+
 // CollectExpectErrors reads and collects all ExpectErrors in a Reader.
 func CollectExpectErrors(reader gotransit.Reader) []ExpectError {
 	ees := []ExpectError{}

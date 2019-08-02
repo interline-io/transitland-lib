@@ -1,7 +1,7 @@
 package gtdb
 
 import (
-	"fmt"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -9,6 +9,19 @@ import (
 	"github.com/interline-io/gotransit"
 )
 
+func getTestAdapters() map[string]func() Adapter {
+	adapters := map[string]func() Adapter{
+		"SpatiaLiteAdapter-Memory": func() Adapter { return &SpatiaLiteAdapter{DBURL: "sqlite3://:memory:"} },
+		"SpatiaLiteAdapter-Disk":   func() Adapter { return &SpatiaLiteAdapter{DBURL: "sqlite3://test.db"} },
+	}
+	dburl := os.Getenv("GOTRANSIT_TEST_POSTGRES_URL")
+	if dburl != "" {
+		adapters["PostgresAdapter"] = func() Adapter { return &PostgresAdapter{DBURL: dburl} }
+	}
+	return adapters
+}
+
+// Interface tests for Adapter
 func testAdapter(t *testing.T, adapter Adapter) {
 	if err := adapter.Open(); err != nil {
 		t.Error(err)
@@ -24,14 +37,11 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		// minEntities uses Insert
 		m, err = minEntities(adapter)
 		if err != nil {
-			fmt.Println("ERR:", err)
 			t.Error(err)
 			t.FailNow()
 		}
 	})
-	// fmt.Printf("%#v\n", m)
 	if err != nil {
-		fmt.Println("ERR:", err)
 		t.Error(err)
 		t.FailNow()
 	}

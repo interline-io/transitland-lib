@@ -14,10 +14,14 @@ import (
 type PostgresAdapter struct {
 	DBURL string
 	db    *sqlx.DB
+	stmts map[string]*sqlx.Stmt
 }
 
 // Open the adapter.
 func (adapter *PostgresAdapter) Open() error {
+	if adapter.db != nil {
+		return nil
+	}
 	db, err := sqlx.Open("postgres", adapter.DBURL)
 	if err != nil {
 		return err
@@ -86,6 +90,9 @@ func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...in
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
+	if v, ok := ent.(*gotransit.FareAttribute); ok {
+		v.Transfers = "0"
+	}
 	table := getTableName(ent)
 	cols, vals, err := getInsert(adapter.db.Mapper, ent)
 	if err != nil {
@@ -110,6 +117,9 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 
 // BatchInsert builds and executes a multi-insert statement for the given entities.
 func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
+	if len(ents) == 0 {
+		return nil
+	}
 	sts := []*gotransit.StopTime{}
 	for _, ent := range ents {
 		if st, ok := ent.(*gotransit.StopTime); ok {

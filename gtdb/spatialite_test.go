@@ -5,11 +5,9 @@ import (
 )
 
 func TestSpatiaLiteAdapter(t *testing.T) {
-	dburl := "sqlite3://:memory:"
-	if len(dburl) == 0 {
-		t.Skip()
-		return
+	if adapter, ok := getTestAdapters()["SpatiaLiteAdapter-Memory"]; ok {
+		testAdapter(t, adapter())
+	} else {
+		t.Skip("skipping SpatiaLiteAdapter-Memory adapter tests")
 	}
-	adapter := SpatiaLiteAdapter{DBURL: dburl}
-	testAdapter(t, &adapter)
 }

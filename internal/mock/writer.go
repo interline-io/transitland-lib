@@ -11,6 +11,13 @@ type Writer struct {
 	Reader Reader
 }
 
+// NewWriter returns a new Writer.
+func NewWriter() *Writer {
+	return &Writer{
+		Reader: *NewReader(),
+	}
+}
+
 // Open .
 func (mw *Writer) Open() error {
 	return nil

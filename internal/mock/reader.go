@@ -23,6 +23,11 @@ type Reader struct {
 	TransferList      []gotransit.Transfer
 }
 
+// NewReader returns a new Reader.
+func NewReader() *Reader {
+	return &Reader{}
+}
+
 // Open .
 func (mr *Reader) Open() error {
 	return nil

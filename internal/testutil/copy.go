@@ -6,6 +6,53 @@ import (
 	"github.com/interline-io/gotransit"
 )
 
+type canCreateFV interface {
+	CreateFeedVersion(reader gotransit.Reader) (int, error)
+}
+
+// AllEntities iterates through all Reader entities, calling the specified callback.
+func AllEntities(reader gotransit.Reader, cb func(gotransit.Entity)) {
+	for ent := range reader.Agencies() {
+		cb(&ent)
+	}
+	for ent := range reader.Routes() {
+		cb(&ent)
+	}
+	for ent := range reader.Trips() {
+		cb(&ent)
+	}
+	for ent := range reader.Stops() {
+		cb(&ent)
+	}
+	for ent := range reader.Shapes() {
+		cb(&ent)
+	}
+	for ent := range reader.Calendars() {
+		cb(&ent)
+	}
+	for ent := range reader.CalendarDates() {
+		cb(&ent)
+	}
+	for ent := range reader.StopTimes() {
+		cb(&ent)
+	}
+	for ent := range reader.FareAttributes() {
+		cb(&ent)
+	}
+	for ent := range reader.FareRules() {
+		cb(&ent)
+	}
+	for ent := range reader.Frequencies() {
+		cb(&ent)
+	}
+	for ent := range reader.Transfers() {
+		cb(&ent)
+	}
+	for ent := range reader.FeedInfos() {
+		cb(&ent)
+	}
+}
+
 // DirectCopy does a direct reader->writer copy, with minimal validation and changes.
 func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 	emap := gotransit.NewEntityMap()
@@ -20,6 +67,10 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 		}
 		return emap.Set(ent, sid, eid)
 	}
+	// Create any FV
+	if w2, ok := writer.(canCreateFV); ok {
+		w2.CreateFeedVersion(reader)
+	}
 	for ent := range reader.Agencies() {
 		if err := cp(&ent); err != nil {
 			return err
@@ -30,11 +81,24 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 			return err
 		}
 	}
+	// Two passes required
 	for ent := range reader.Stops() {
+		if ent.LocationType != 1 {
+			continue
+		}
 		if err := cp(&ent); err != nil {
 			return err
 		}
 	}
+	for ent := range reader.Stops() {
+		if ent.LocationType == 1 {
+			continue
+		}
+		if err := cp(&ent); err != nil {
+			return err
+		}
+	}
+	// Done with stops
 	for ent := range reader.Calendars() {
 		if err := cp(&ent); err != nil {
 			return err
@@ -55,11 +119,15 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 			return err
 		}
 	}
+	// TODO: Just use plain StopTimes()
 	for ents := range reader.StopTimesByTripID() {
-		for _, ent := range ents {
-			if err := cp(&ent); err != nil {
-				return err
-			}
+		e2s := []gotransit.Entity{}
+		for i := 0; i < len(ents); i++ {
+			ents[i].UpdateKeys(emap)
+			e2s = append(e2s, &ents[i])
+		}
+		if err := writer.AddEntities(e2s); err != nil {
+			return err
 		}
 	}
 	for ent := range reader.Frequencies() {

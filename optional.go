@@ -46,7 +46,6 @@ func (r *OptionalRelationship) Scan(src interface{}) error {
 	case int64:
 		r.Key = strconv.Itoa(int(v))
 	default:
-		fmt.Printf("src: %T %#v\n", src, src)
 		return errors.New("cant convert")
 	}
 	r.Valid = true
