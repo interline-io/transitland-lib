@@ -241,39 +241,3 @@ var ExternalTestFeeds = map[string]ReaderTester{
 				"40667731",
 				"40667734"}}},
 }
-
-// Regenerate all external feeds feeds:
-// NewReaderTesterFromReader for debugging and creating new tests.
-// func NewReaderTesterFromReader(reader gotransit.Reader) ReaderTester {
-// 	fe := ReaderTester{}
-// 	fe.Counts = map[string]int{}
-// 	fe.EntityIDs = map[string][]string{}
-// 	add := func(ent gotransit.Entity) {
-// 		fn, eid := ent.Filename(), ent.EntityID()
-// 		fe.Counts[fn]++
-// 		if eid != "" && len(fe.EntityIDs[fn]) < 10 {
-// 			fe.EntityIDs[fn] = append(fe.EntityIDs[fn], eid)
-// 		}
-// 	}
-// 	AllEntities(reader, add)
-// 	return fe
-// }
-// func RegenerateExternalFeeds(t *testing.T) {
-// 	dir := "../testdata/external"
-// 	fis, err := ioutil.ReadDir(dir)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	fes := map[string]testutil.ReaderTester{}
-// 	for _, fi := range fis {
-// 		fn := path.Join(dir, fi.Name())
-// 		r, err := NewReader(fn)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-// 		fe := testutil.NewReaderTesterFromReader(r)
-// 		fe.URL = fn
-// 		fes[fi.Name()] = fe
-// 	}
-// 	fmt.Printf("%#v\n", fes)
-// }

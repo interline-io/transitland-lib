@@ -1,6 +1,8 @@
 package mock
 
 import (
+	"reflect"
+
 	"github.com/interline-io/gotransit"
 )
 
@@ -78,8 +80,13 @@ func (mr *Reader) ShapeLinesByShapeID(...string) chan gotransit.Shape {
 	return out
 }
 
-// ReadEntities .
+// ReadEntities - Only StopTimes are supported; just for passing tests!!
 func (mr *Reader) ReadEntities(c interface{}) error {
+	outValue := reflect.ValueOf(c)
+	for _, ent := range mr.StopTimeList {
+		outValue.Send(reflect.ValueOf(ent))
+	}
+	outValue.Close()
 	return nil
 }
 
