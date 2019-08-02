@@ -6,10 +6,13 @@ import (
 
 func Test_StringToSeconds(t *testing.T) {
 	expect := map[string]int{
-		"01:02:03": 3723,
-		"01:02":    3720,
-		"01":       3600,
-		"":         0,
+		"00:00:00":               0,
+		"01:02:03":               3723,
+		"01:02":                  3720,
+		"01":                     3600,
+		"":                       0,
+		"2562047788015215:30:07": 1<<63 - 1,
+		"2562047788015215:30:08": -(1 << 63),
 	}
 	for k, v := range expect {
 		s, err := StringToSeconds(k)
@@ -56,11 +59,7 @@ func TestWideTime_String(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		s, err := wt.String()
-		if err != nil {
-			t.Error(err)
-			continue
-		}
+		s := wt.String()
 		if s != k {
 			t.Errorf("expected %s, got %s", k, s)
 		}

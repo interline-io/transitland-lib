@@ -1,6 +1,7 @@
 package gotransit
 
 import (
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"strconv"
@@ -30,6 +31,12 @@ func slowStringToSeconds(value string) (int, error) {
 
 // SecondsToString takes seconds-since-midnight and returns a GTFS-style time.
 func SecondsToString(secs int) string {
+	if secs < 0 {
+		return ""
+	}
+	if secs > 1<<31 {
+		return ""
+	}
 	hours := secs / 3600
 	minutes := (secs % 3600) / 60
 	seconds := (secs % 3600) % 60
@@ -62,10 +69,40 @@ func StringToSeconds(value string) (int, error) {
 // WideTime handles seconds since midnight, allows >24 hours.
 type WideTime struct {
 	Seconds int
+	Valid   bool
 }
 
-func (wt WideTime) String() (string, error) {
-	return SecondsToString(wt.Seconds), nil
+func (wt *WideTime) String() string {
+	return SecondsToString(wt.Seconds)
+}
+
+// Value implements driver.Value
+func (wt WideTime) Value() (driver.Value, error) {
+	return int64(wt.Seconds), nil
+}
+
+// Scan implements sql.Scanner
+func (wt *WideTime) Scan(src interface{}) error {
+	wt.Valid = false
+	var p error
+	switch v := src.(type) {
+	case string:
+		if s, err := StringToSeconds(v); err == nil {
+			wt.Seconds = s
+		} else {
+			p = err
+		}
+	case int:
+		wt.Seconds = v
+	case int64:
+		wt.Seconds = int(v)
+	default:
+		p = errors.New("cant scan")
+	}
+	if p == nil {
+		wt.Valid = true
+	}
+	return p
 }
 
 // NewWideTime converts the csv string to a WideTime.

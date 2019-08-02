@@ -8,7 +8,10 @@ import (
 )
 
 func Test_geomCache(t *testing.T) {
-	r, _ := gtcsv.NewReader("../testdata/example")
+	r, err := gtcsv.NewReader("../testdata/example")
+	if err != nil {
+		t.Error(err)
+	}
 	r.Open()
 	defer r.Close()
 	trips := map[string]gotransit.Trip{}
@@ -19,7 +22,7 @@ func Test_geomCache(t *testing.T) {
 		count++
 	}
 	cache := newGeomCache()
-	for e := range r.ShapeLinesByShapeID() {
+	for e := range r.Shapes() {
 		cache.AddShape(e.ShapeID, e)
 	}
 	for e := range r.Stops() {

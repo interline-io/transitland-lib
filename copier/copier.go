@@ -2,10 +2,12 @@ package copier
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/interline-io/gotransit/causes"
 
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/internal/enums"
 	"github.com/interline-io/gotransit/internal/log"
 )
 
@@ -69,14 +71,17 @@ type Copier struct {
 	CreateMissingShapes bool
 	// Create missing Calendar entries
 	NormalizeServiceIDs bool
+	// Convert extended route types to primitives
+	UseBasicRouteTypes bool
 	// Default AgencyID
 	DefaultAgencyID string
+	// Entity selection strategy
+	Marker Marker
 	// book keeping
 	agencyCount  int
-	extensions   []copyableExtension   // interface
+	extensions   []copyableExtension      // interface
 	filters      []gotransit.EntityFilter // interface
 	geomCache    *geomCache
-	marker       marker
 	stopPatterns map[string]int
 	*CopyResult
 	*gotransit.EntityMap
@@ -97,7 +102,7 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	// Result
 	copier.CopyResult = NewCopyResult()
 	// Default Markers
-	copier.marker = newYesMarker()
+	copier.Marker = newYesMarker()
 	// Default EntityMap
 	copier.EntityMap = gotransit.NewEntityMap()
 	// Default filters
@@ -136,14 +141,7 @@ func (copier *Copier) AddEntityFilter(ef gotransit.EntityFilter) error {
 
 func (copier *Copier) isMarked(ent gotransit.Entity) bool {
 	// Check if the entity is marked for copying.
-	efn := ent.Filename()
-	eid := ent.EntityID()
-	if len(eid) == 0 {
-		// ok
-	} else if !copier.marker.IsMarked(efn, eid) {
-		return false
-	}
-	return true
+	return copier.Marker.IsMarked(ent.Filename(), ent.EntityID())
 }
 
 // CopyEntity performs validation and saves errors and warnings, returns new EntityID and true if written.
@@ -156,6 +154,13 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		return "", false
 	}
 	ret := true
+	// Check the entity against filters.
+	for _, ef := range copier.filters {
+		if err := ef.Filter(ent, copier.EntityMap); err != nil {
+			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
+			ret = false
+		}
+	}
 	// Check the entity for errors.
 	if errs := ent.Errors(); len(errs) > 0 {
 		for _, i := range errs {
@@ -185,13 +190,6 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 			ret = false
 		}
 	}
-	// Check the entity against filters.
-	for _, ef := range copier.filters {
-		if err := ef.Filter(ent, copier.EntityMap); err != nil {
-			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
-			ret = false
-		}
-	}
 	// Refresh EntityID after UpdateKeys/Filters
 	eid = ent.EntityID()
 	// Check for duplicate entities.
@@ -218,32 +216,8 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 ////////// Copy Methods //////////
 //////////////////////////////////
 
-// CopyVisited copies Entities that are referenced by at least one other Entity or are global.
-func (copier *Copier) CopyVisited() *CopyResult {
-	m := newVisitedMarker()
-	m.VisitAndMark(copier.Reader)
-	copier.marker = &m
-	copier.copyEntities()
-	return copier.CopyResult
-}
-
 // Copy copies Base GTFS Entities from the Reader to the Writer, returning the summary as a CopyResult.
 func (copier *Copier) Copy() *CopyResult {
-	copier.marker = newYesMarker()
-	copier.copyEntities()
-	return copier.CopyResult
-}
-
-// CopyExtensions copies Entities defined by each added Extension.
-func (copier *Copier) CopyExtensions() error {
-	for _, ext := range copier.extensions {
-		ext.Copy(copier)
-	}
-	return nil
-}
-
-// copyEntities copies all marked entities.
-func (copier *Copier) copyEntities() error {
 	for _, err := range copier.Reader.ValidateStructure() {
 		copier.AddError(err)
 	}
@@ -257,7 +231,10 @@ func (copier *Copier) copyEntities() error {
 	copier.copyFrequencies()
 	copier.copyTransfers()
 	copier.copyFeedInfos()
-	return nil
+	for _, ext := range copier.extensions {
+		ext.Copy(copier)
+	}
+	return copier.CopyResult
 }
 
 /////////////////////////////////////////
@@ -282,7 +259,7 @@ func (copier *Copier) copyAgencies() {
 	}
 }
 
-// copyStops writes stops
+// copyStopsAndFares writes stops and their associated fare rules
 func (copier *Copier) copyStopsAndFares() {
 	// Stop bookkeeping
 	parents := map[string]int{}
@@ -292,12 +269,13 @@ func (copier *Copier) copyStopsAndFares() {
 		if e.LocationType != 1 {
 			continue
 		}
+		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
-		farezones[e.ZoneID]++
-		copier.CopyEntity(&e)
-		copier.geomCache.AddStop(sid, e)
-		// Save parent LocationTypes
-		parents[sid] = e.LocationType
+		if _, ok := copier.CopyEntity(&e); ok {
+			farezones[e.ZoneID]++
+			copier.geomCache.AddStop(sid, e)
+			parents[sid] = e.LocationType
+		}
 	}
 	// Second pass for platforms, exits, and generic nodes
 	boards := []gotransit.Stop{}
@@ -311,33 +289,41 @@ func (copier *Copier) copyStopsAndFares() {
 			continue
 		}
 		// Confirm the parent station location_type != 0
-		sid := e.EntityID()
-		if len(e.ParentStation) == 0 {
+		if len(e.ParentStation.Key) == 0 {
 			// ok
-		} else if pstype := parents[e.ParentStation]; pstype != 1 {
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation))
+		} else if pstype, ok := parents[e.ParentStation.Key]; ok && pstype != 1 {
+			// ParentStation found, not correct LocationType
+			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
+		} else if !ok {
+			// ParentStation not found
+			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
 		}
-		farezones[e.ZoneID]++
-		copier.CopyEntity(&e)
-		copier.geomCache.AddStop(sid, e)
+		// Add stop, update farezones and geom cache
+		sid := e.EntityID()
+		if _, ok := copier.CopyEntity(&e); ok {
+			farezones[e.ZoneID]++
+			copier.geomCache.AddStop(sid, e)
+		}
 	}
 	// Finally, boarding areas
 	for _, e := range boards {
 		// Confirm the parent station location_type != 0
-		sid := e.EntityID()
-		if len(e.ParentStation) == 0 {
+		if len(e.ParentStation.Key) == 0 {
 			// ok
-		} else if pstype := parents[e.ParentStation]; pstype != 0 {
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation))
+		} else if pstype := parents[e.ParentStation.Key]; pstype != 0 {
+			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
 		}
-		farezones[e.ZoneID]++
-		copier.CopyEntity(&e)
-		copier.geomCache.AddStop(sid, e)
+		// Add stop, update farezones and geom cache
+		sid := e.EntityID()
+		if _, ok := copier.CopyEntity(&e); ok {
+			farezones[e.ZoneID]++
+			copier.geomCache.AddStop(sid, e)
+		}
 	}
 	// FareAttributes
 	for e := range copier.Reader.FareAttributes() {
-		if len(e.AgencyID) == 0 {
-			e.AgencyID = copier.DefaultAgencyID // todo: as else below?
+		if len(e.AgencyID.Key) == 0 {
+			e.AgencyID.Key = copier.DefaultAgencyID // todo: as else below?
 			if copier.agencyCount > 1 {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
@@ -346,6 +332,15 @@ func (copier *Copier) copyStopsAndFares() {
 	}
 	// FareRules
 	for e := range copier.Reader.FareRules() {
+		// Explicitly check if the FareID is Marked
+		// FareAttributes are named entities and it's up to the Marker
+		// TODO: Should I just check the EntityMap instead?
+		//     Do I care if it is marked, or it if was actually written OK?
+		//     Same pattern for CalendarDates?
+		if !copier.isMarked(&gotransit.FareAttribute{FareID: e.FareID}) {
+			continue
+		}
+		// Add reference errors if we didn't add this farezone to the output
 		if _, ok := farezones[e.OriginID]; len(e.OriginID) > 0 && !ok {
 			e.AddError(causes.NewInvalidFarezoneError("origin_id", e.OriginID))
 		}
@@ -369,17 +364,24 @@ func (copier *Copier) copyRoutes() {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
 		}
+		// Use basic route types
+		if copier.UseBasicRouteTypes {
+			if rt, ok := enums.GetBasicRouteType(e.RouteType); ok {
+				e.RouteType = rt.Code
+			} else {
+				e.AddError(causes.NewInvalidFieldError("route_type", strconv.Itoa(e.RouteType), fmt.Errorf("cannot convert route_type %d to basic route type", e.RouteType)))
+			}
+		}
 		copier.CopyEntity(&e)
 	}
 }
 
-// copyCalendarDates copies CalendarDates
+// copyCalendars copies Calendars and CalendarDates
 func (copier *Copier) copyCalendars() {
 	// Calendars
 	for e := range copier.Reader.Calendars() {
 		copier.CopyEntity(&e)
 	}
-
 	// Create additional Calendars
 	if copier.NormalizeServiceIDs {
 		copier.createMissingCalendars()
@@ -392,6 +394,9 @@ func (copier *Copier) copyCalendars() {
 	dups := map[calkey]int{}
 	// Add CalendarDates
 	for e := range copier.Reader.CalendarDates() {
+		if !copier.isMarked(&gotransit.Calendar{ServiceID: e.ServiceID}) {
+			continue
+		}
 		key := calkey{
 			ServiceID: e.ServiceID,
 			Date:      e.Date.Format("20060102"),
@@ -415,23 +420,30 @@ func (copier *Copier) copyFeedInfos() {
 // copyTransfers writes Transfers
 func (copier *Copier) copyTransfers() {
 	for e := range copier.Reader.Transfers() {
-		copier.CopyEntity(&e)
+		// Check if Transfer stops are marked
+		if copier.isMarked(&gotransit.Stop{StopID: e.FromStopID}) && copier.isMarked(&gotransit.Stop{StopID: e.ToStopID}) {
+			copier.CopyEntity(&e)
+		}
 	}
 }
 
 // copyShapes writes Shapes
 func (copier *Copier) copyShapes() {
-	for e := range copier.Reader.ShapeLinesByShapeID() {
+	for e := range copier.Reader.Shapes() {
 		sid := e.EntityID()
-		copier.CopyEntity(&e)
-		copier.geomCache.AddShape(sid, e)
+		if _, ok := copier.CopyEntity(&e); ok {
+			copier.geomCache.AddShape(sid, e)
+		}
 	}
 }
 
 // copyFrequencies writes Frequencies
 func (copier *Copier) copyFrequencies() {
 	for e := range copier.Reader.Frequencies() {
-		copier.CopyEntity(&e)
+		// Check if Trip is marked
+		if copier.isMarked(&gotransit.Trip{TripID: e.TripID}) {
+			copier.CopyEntity(&e)
+		}
 	}
 }
 
@@ -488,18 +500,19 @@ func (copier *Copier) copyTripsAndStopTimes() {
 			trip.StopPatternID = pat
 		}
 		// Do we need to create a shape for this trip
-		if len(trip.ShapeID) == 0 && copier.CreateMissingShapes {
+		if trip.ShapeID.IsZero() && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
 			shapeid, err := copier.createMissingShape(stoptimes)
 			if err != nil {
 				copier.AddError(NewCopyError("trips.txt", tripid, err))
 			} else {
-				trip.ShapeID = shapeid
+				trip.ShapeID.Key = shapeid
 			}
 		}
 		// Save trip
-		copier.CopyEntity(&trip)
-
+		if _, ok := copier.CopyEntity(&trip); !ok {
+			continue
+		}
 		// Validate StopTimes, as a group
 		sterrs := []error{}
 		stwarns := []error{}

@@ -5,6 +5,7 @@ no_agency_id,,No agency_id,,,3,,,,,ValidationWarning:agency_id
 no_route_name,ok,,,No short_name or route_long_name,3,,,,,RequiredFieldError:route_short_name
 parse_route_type,ok,parse route_type,,,xyz,,,,,FieldParseError:route_type
 invalid_route_type,ok,invalid route_type,,,-1,,,,,InvalidFieldError:route_type
+invalid_route_type,ok,invalid route_type,,,1234567,,,,,InvalidFieldError:route_type
 invalid_route_url,ok,invalid route_url,,,3,example.com,,,,InvalidFieldError:route_url
 invalid_route_color,ok,invalid route_color,,,3,,xyz,,,InvalidFieldError:route_color
 invalid_route_text_color,ok,invalid route_text_color,,,3,,,xyz,,InvalidFieldError:route_text_color

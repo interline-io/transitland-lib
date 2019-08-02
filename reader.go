@@ -6,8 +6,6 @@ type Reader interface {
 	Close() error
 	ValidateStructure() []error
 	StopTimesByTripID(...string) chan []StopTime
-	ShapesByShapeID(...string) chan []Shape
-	ShapeLinesByShapeID(...string) chan Shape
 	// Entities
 	ReadEntities(c interface{}) error
 	Stops() chan Stop

@@ -1,6 +1,10 @@
 package gtdb
 
-import "github.com/interline-io/gotransit"
+import (
+	"github.com/interline-io/gotransit"
+	// Driver
+	_ "github.com/lib/pq"
+)
 
 var bufferSize = 1000
 

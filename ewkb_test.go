@@ -54,5 +54,4 @@ func Test_slDecode_LineStringM(t *testing.T) {
 	if _, ok := ret.(*geom.LineString); !ok {
 		t.Error("failed")
 	}
-
 }
