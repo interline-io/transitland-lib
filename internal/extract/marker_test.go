@@ -16,7 +16,7 @@ func nn(filename, eid string) node {
 
 func TestExtract_Filter_BART(t *testing.T) {
 	em := NewMarker()
-	reader, err := gtcsv.NewReader("../../testdata/bart.zip")
+	reader, err := gtcsv.NewReader("../../testdata/external/bart.zip")
 	if err != nil {
 		t.Error(err)
 	}

@@ -10,13 +10,13 @@ import (
 
 // Shape shapes.txt
 type Shape struct {
-	ShapeID           string      `csv:"shape_id" required:"true" gorm:"index;not null"`
-	ShapePtLat        float64     `csv:"shape_pt_lat" required:"true" min:"-90" max:"90" gorm:"-"`
-	ShapePtLon        float64     `csv:"shape_pt_lon" required:"true" min:"-180" max:"180" gorm:"-"`
-	ShapePtSequence   int         `csv:"shape_pt_sequence" required:"true" min:"0" gorm:"-"`
-	ShapeDistTraveled float64     `csv:"shape_dist_traveled" min:"0" gorm:"-"`
-	Geometry          *LineString `gorm:"type:geography(LINESTRINGM, 4326);not null"`
-	Generated         bool
+	ShapeID           string      `csv:"shape_id" required:"true"`
+	ShapePtLat        float64     `csv:"shape_pt_lat" db:"-" required:"true" min:"-90" max:"90"`
+	ShapePtLon        float64     `csv:"shape_pt_lon" db:"-" required:"true" min:"-180" max:"180"`
+	ShapePtSequence   int         `csv:"shape_pt_sequence" db:"-" required:"true" min:"0"`
+	ShapeDistTraveled float64     `csv:"shape_dist_traveled" db:"-" min:"0"`
+	Geometry          *LineString `db:"geometry,insert=ST_GeomFromWKB(?@4326)"`
+	Generated         bool        `db:"generated"`
 	BaseEntity
 }
 

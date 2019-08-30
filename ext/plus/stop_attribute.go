@@ -7,7 +7,7 @@ import (
 
 // StopAttribute stop_attributes.txt
 type StopAttribute struct {
-	StopID            string `csv:"stop_id" gorm:"type:int"`
+	StopID            string `csv:"stop_id"`
 	AccessibilityID   int    `csv:"accessibility_id"`
 	CardinalDirection string `csv:"cardinal_direction"`
 	RelativePosition  string `csv:"relative_position"`

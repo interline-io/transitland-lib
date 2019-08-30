@@ -9,17 +9,17 @@ import (
 
 // Calendar calendars.txt
 type Calendar struct {
-	ServiceID string    `csv:"service_id" required:"true" gorm:"index;not null"`
-	Monday    int       `csv:"monday" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	Tuesday   int       `csv:"tuesday" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	Wednesday int       `csv:"wednesday" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	Thursday  int       `csv:"thursday" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	Friday    int       `csv:"friday" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	Saturday  int       `csv:"saturday" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	Sunday    int       `csv:"sunday" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	StartDate time.Time `csv:"start_date" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	EndDate   time.Time `csv:"end_date" required:"true" min:"0" max:"1" gorm:"index;not null"`
-	Generated bool
+	ServiceID string    `csv:"service_id" required:"true"`
+	Monday    int       `csv:"monday" required:"true" min:"0" max:"1"`
+	Tuesday   int       `csv:"tuesday" required:"true" min:"0" max:"1"`
+	Wednesday int       `csv:"wednesday" required:"true" min:"0" max:"1"`
+	Thursday  int       `csv:"thursday" required:"true" min:"0" max:"1"`
+	Friday    int       `csv:"friday" required:"true" min:"0" max:"1"`
+	Saturday  int       `csv:"saturday" required:"true" min:"0" max:"1"`
+	Sunday    int       `csv:"sunday" required:"true" min:"0" max:"1"`
+	StartDate time.Time `csv:"start_date" required:"true" min:"0" max:"1"`
+	EndDate   time.Time `csv:"end_date" required:"true" min:"0" max:"1"`
+	Generated bool      `db:"generated"`
 	BaseEntity
 }
 

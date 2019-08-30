@@ -12,6 +12,7 @@ import (
 	_ "github.com/interline-io/gotransit/ext/pathways"
 	_ "github.com/interline-io/gotransit/ext/plus"
 	_ "github.com/interline-io/gotransit/gtcsv"
+	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/extract"
 	"github.com/interline-io/gotransit/internal/log"
 	"github.com/interline-io/gotransit/validator"
@@ -79,6 +80,8 @@ func (i *arrayFlags) Set(value string) error {
 
 // basicCopyOptions
 type basicCopyOptions struct {
+	fvid                 int
+	newfv                bool
 	create               bool
 	allowEntityErrors    bool
 	allowReferenceErrors bool
@@ -95,14 +98,15 @@ type copyCommand struct {
 func (cmd *copyCommand) run(args []string) {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID")
+	fl.BoolVar(&cmd.newfv, "newfv", false, "Create a new FeedVersion from Reader")
 	fl.BoolVar(&cmd.create, "create", false, "Create")
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entity-level errors")
 	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "Allow reference errors")
-	// TODO: fvids
 	fl.Parse(args)
 	cmd.args = fl.Args()
 	if len(cmd.args) < 2 {
-		exit("requires input and output")
+		exit("Requires input and output")
 	}
 	// Reader / Writer
 	reader := getReader(cmd.args[0])
@@ -113,10 +117,20 @@ func (cmd *copyCommand) run(args []string) {
 	cp := copier.NewCopier(reader, writer)
 	cp.AllowEntityErrors = cmd.allowEntityErrors
 	cp.AllowReferenceErrors = cmd.allowReferenceErrors
+	if dbw, ok := writer.(*gtdb.Writer); ok {
+		if cmd.fvid != 0 {
+			dbw.FeedVersionID = cmd.fvid
+		} else if cmd.newfv {
+			if _, err := dbw.CreateFeedVersion(reader); err != nil {
+				exit("Error creating FeedVersion: %s", err)
+			}
+		}
+		cp.NormalizeServiceIDs = true
+	}
 	for _, ext := range cmd.extensions {
 		e, err := gotransit.GetExtension(ext)
 		if err != nil {
-			exit("no extension for: %s", ext)
+			exit("No extension for: %s", ext)
 		}
 		cp.AddExtension(e)
 		if cmd.create {
@@ -129,7 +143,7 @@ func (cmd *copyCommand) run(args []string) {
 	for _, ext := range cmd.filters {
 		ef, err := gotransit.GetEntityFilter(ext)
 		if err != nil {
-			exit("no filter for '%s': %s", ext, err)
+			exit("No filter for '%s': %s", ext, err)
 		}
 		cp.AddEntityFilter(ef)
 	}
@@ -158,6 +172,8 @@ type extractCommand struct {
 func (cmd *extractCommand) run(args []string) {
 	fl := flag.NewFlagSet("extract", flag.ExitOnError)
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID")
+	fl.BoolVar(&cmd.newfv, "newfv", false, "Create a new FeedVersion from Reader")
 	fl.BoolVar(&cmd.create, "create", false, "Create")
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entity-level errors")
 	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "Allow reference errors")
@@ -191,10 +207,20 @@ func (cmd *extractCommand) run(args []string) {
 	cp.InterpolateStopTimes = cmd.interpolateStopTimes
 	cp.CreateMissingShapes = cmd.createMissingShapes
 	cp.NormalizeServiceIDs = cmd.normalizeServiceIDs
+	if dbw, ok := writer.(*gtdb.Writer); ok {
+		if cmd.fvid != 0 {
+			dbw.FeedVersionID = cmd.fvid
+		} else if cmd.newfv {
+			if _, err := dbw.CreateFeedVersion(reader); err != nil {
+				exit("Error creating FeedVersion: %s", err)
+			}
+		}
+		cp.NormalizeServiceIDs = true
+	}
 	for _, ext := range cmd.extensions {
 		e, err := gotransit.GetExtension(ext)
 		if err != nil {
-			exit("no extension for: %s", ext)
+			exit("No extension for: %s", ext)
 		}
 		cp.AddExtension(e)
 		if cmd.create {
@@ -206,7 +232,7 @@ func (cmd *extractCommand) run(args []string) {
 	for _, ext := range cmd.filters {
 		ef, err := gotransit.GetEntityFilter(ext)
 		if err != nil {
-			exit("no filter for '%s': %s", ext, err)
+			exit("No filter for '%s': %s", ext, err)
 		}
 		cp.AddEntityFilter(ef)
 	}
@@ -219,8 +245,7 @@ func (cmd *extractCommand) run(args []string) {
 		tx := extract.NewSetterFilter()
 		for _, setv := range setvalues {
 			if len(setv) != 4 {
-				fmt.Println("invalid set argument")
-				continue
+				exit("Invalid set argument")
 			}
 			tx.AddValue(setv[0], setv[1], setv[2], setv[3])
 		}
@@ -233,7 +258,7 @@ func (cmd *extractCommand) run(args []string) {
 		if v, err := strconv.Atoi(i); err == nil {
 			rthits[v] = true
 		} else {
-			fmt.Println("invalid route_type:", i)
+			exit("Invalid route_type: %s", i)
 		}
 	}
 	for ent := range reader.Routes() {
@@ -321,33 +346,3 @@ func main() {
 		exit("%q is not valid command.", os.Args[1])
 	}
 }
-
-// if v, ok := writer.(*gtdb.Writer); ok {
-// 	// If writing to database, we must normalize calendars
-// 	nsids := true
-// 	copyNormalizeServiceIDs = &nsids
-// 	db := v.Adapter.DB()
-// 	if *copyCreate == true {
-// 		writer.Create()
-// 	}
-// 	if *copyNewfv == true {
-// 		fv, err := gotransit.NewFeedVersion(reader)
-// 		if err != nil {
-// 			exit("Could not create FeedVersion: %s", err)
-// 		}
-// 		dberr := db.
-// 			Where(gotransit.FeedVersion{URL: inurl, SHA1: fv.SHA1}).
-// 			FirstOrCreate(&fv).
-// 			Error
-// 		if dberr != nil {
-// 			exit("Could not create FeedVersion: %s", dberr)
-// 		}
-// 		copyFvid = &fv.ID
-// 	}
-// 	if *copyFvid > 0 {
-// 		v.FeedVersionID = *copyFvid
-// 	}
-// 	if *copyDelete == true {
-// 		v.Delete()
-// 	}
-// }

@@ -6,10 +6,10 @@ import (
 
 // Agency agency.txt
 type Agency struct {
-	AgencyID       string `csv:"agency_id" gorm:"index;not null"`
-	AgencyName     string `csv:"agency_name" required:"true" gorm:"not null"`
-	AgencyURL      string `csv:"agency_url" required:"true" validator:"url" gorm:"not null"`
-	AgencyTimezone string `csv:"agency_timezone" required:"true" validator:"timezone" gorm:"not null"`
+	AgencyID       string `csv:"agency_id"`
+	AgencyName     string `csv:"agency_name" required:"true"`
+	AgencyURL      string `csv:"agency_url" required:"true" validator:"url"`
+	AgencyTimezone string `csv:"agency_timezone" required:"true" validator:"timezone"`
 	AgencyLang     string `csv:"agency_lang" validator:"lang"`
 	AgencyPhone    string `csv:"agency_phone"`
 	AgencyFareURL  string `csv:"agency_fare_url" validator:"url"`

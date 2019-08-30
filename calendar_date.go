@@ -8,9 +8,9 @@ import (
 
 // CalendarDate calendar_dates.txt
 type CalendarDate struct {
-	ServiceID     string    `csv:"service_id" required:"true" gorm:"type:int;index;not null"`
-	Date          time.Time `csv:"date" required:"true" gorm:"index;not null"`
-	ExceptionType int       `csv:"exception_type" required:"true" min:"1" max:"2" gorm:"index;not null"`
+	ServiceID     string    `csv:"service_id" required:"true"`
+	Date          time.Time `csv:"date" required:"true"`
+	ExceptionType int       `csv:"exception_type" required:"true" min:"1" max:"2"`
 	BaseEntity
 }
 
