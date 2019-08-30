@@ -1,18 +1,27 @@
 package rt
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 )
 
+func Test_msgstats(t *testing.T) {
+	msg, err := readmsg("../testdata/rt/example.pb")
+	if err != nil {
+		t.Error(err)
+	}
+	msgstats(msg)
+}
+
 func Test_readmsg(t *testing.T) {
-	msg, err := readmsg("../testdata/rt/example.pbf")
+	msg, err := readmsg("../testdata/rt/example.pb")
 	if err != nil {
 		t.Error(err)
 	}
 	t.Run("Timestamp", func(t *testing.T) {
 		exp := uint64(1559008978)
-		if msg.Header.Timestamp != nil && uint64(*msg.Header.Timestamp) != exp {
-			got := uint64(*msg.Header.Timestamp)
+		if got := msg.GetHeader().GetTimestamp(); got != exp {
 			t.Errorf("got %d expect %d", got, exp)
 		}
 	})
@@ -30,12 +39,12 @@ func Test_readmsg(t *testing.T) {
 		}
 		ent := pbents[0]
 		exp := "2211905WKDY"
-		if ent.Id != nil && *ent.Id != exp {
-			t.Errorf("got '%s' expect '%s'", *ent.Id, exp)
+		if got := ent.GetId(); got != exp {
+			t.Errorf("got '%s' expect '%s'", got, exp)
 		}
 	})
-	// z, _ := json.Marshal(msg)
-	// fmt.Printf("%s\n", z)
+	z, _ := json.Marshal(msg)
+	fmt.Printf("%s\n", z)
 }
 
 func Test_readmsg_error(t *testing.T) {

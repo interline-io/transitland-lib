@@ -7,6 +7,10 @@ import (
 	pb "github.com/interline-io/gotransit/rt/transit_realtime"
 )
 
+func msgstats(msg pb.FeedMessage) {
+
+}
+
 func readmsg(filename string) (pb.FeedMessage, error) {
 	msg := pb.FeedMessage{}
 	data, err := ioutil.ReadFile(filename)
