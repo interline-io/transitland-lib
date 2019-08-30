@@ -7,8 +7,8 @@ import (
 
 // RealtimeStop realtime_stops.txt
 type RealtimeStop struct {
-	TripID         string `csv:"trip_id" gorm:"type:int"`
-	StopID         string `csv:"stop_id" gorm:"type:int"`
+	TripID         string `csv:"trip_id"`
+	StopID         string `csv:"stop_id"`
 	RealtimeStopID string `csv:"realtime_stop_id"`
 	gotransit.BaseEntity
 }

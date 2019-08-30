@@ -41,7 +41,13 @@ func TestValidator_Validate(t *testing.T) {
 }
 
 func testFeed(t *testing.T, reader gotransit.Reader) {
-	expecterrs := testutil.CollectExpectErrors(reader)
+	expecterrs := []testutil.ExpectError{}
+	gex := func(ent gotransit.Entity) {
+		if ex := testutil.GetExpectError(ent); ex != nil {
+			expecterrs = append(expecterrs, *ex)
+		}
+	}
+	testutil.AllEntities(reader, gex)
 	v, _ := NewValidator(reader)
 	errs, warns := v.Validate()
 	_ = warns

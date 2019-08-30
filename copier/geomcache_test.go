@@ -22,7 +22,7 @@ func Test_geomCache(t *testing.T) {
 		count++
 	}
 	cache := newGeomCache()
-	for e := range r.ShapeLinesByShapeID() {
+	for e := range r.Shapes() {
 		cache.AddShape(e.ShapeID, e)
 	}
 	for e := range r.Stops() {

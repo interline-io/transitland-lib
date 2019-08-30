@@ -6,11 +6,11 @@ import (
 
 // FareRule fare_rules.txt
 type FareRule struct {
-	FareID        string `csv:"fare_id" required:"true" gorm:"type:int;index;not null"`
-	RouteID       string `csv:"route_id" gorm:"type:int"`
-	OriginID      string `csv:"origin_id"`
-	DestinationID string `csv:"destination_id"`
-	ContainsID    string `csv:"contains_id"`
+	FareID        string               `csv:"fare_id" required:"true"`
+	RouteID       OptionalRelationship `csv:"route_id" `
+	OriginID      string               `csv:"origin_id"`
+	DestinationID string               `csv:"destination_id"`
+	ContainsID    string               `csv:"contains_id"`
 	BaseEntity
 }
 
@@ -48,11 +48,11 @@ func (ent *FareRule) UpdateKeys(emap *EntityMap) error {
 	} else {
 		return causes.NewInvalidReferenceError("fare_id", ent.FareID)
 	}
-	if len(ent.RouteID) > 0 {
-		if routeID, ok := emap.Get(&Route{RouteID: ent.RouteID}); ok {
-			ent.RouteID = routeID
+	if v := ent.RouteID.Key; v != "" {
+		if routeID, ok := emap.Get(&Route{RouteID: v}); ok {
+			ent.RouteID.Key = routeID
 		} else {
-			return causes.NewInvalidReferenceError("route_id", ent.RouteID)
+			return causes.NewInvalidReferenceError("route_id", v)
 		}
 	}
 	return nil

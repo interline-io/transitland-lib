@@ -8,10 +8,10 @@ import (
 
 // Frequency frequencies.txt
 type Frequency struct {
-	TripID      string   `csv:"trip_id" required:"true" gorm:"type:int;index;not null"`
-	StartTime   WideTime `csv:"start_time" required:"true" gorm:"type:int;not null"`
-	EndTime     WideTime `csv:"end_time" required:"true" gorm:"type:int;not null"`
-	HeadwaySecs int      `csv:"headway_secs" min:"1" required:"true" gorm:"not null"`
+	TripID      string   `csv:"trip_id" required:"true"`
+	StartTime   WideTime `csv:"start_time" required:"true"`
+	EndTime     WideTime `csv:"end_time" required:"true"`
+	HeadwaySecs int      `csv:"headway_secs" min:"1" required:"true"`
 	ExactTimes  int      `csv:"exact_times" min:"0" max:"1"`
 	BaseEntity
 }

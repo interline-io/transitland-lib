@@ -3,7 +3,6 @@ package pathways
 import (
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/gtdb"
 )
 
 func init() {
@@ -17,16 +16,7 @@ type Ext struct {
 
 // Create the tables.
 func (ext Ext) Create(writer gotransit.Writer) error {
-	w, ok := writer.(*gtdb.Writer)
-	if !ok {
-		return nil
-	}
-	db := w.Adapter.DB()
-	for _, e := range ext.Entities() {
-		db.AutoMigrate(e)
-	}
 	return nil
-
 }
 
 // Entities returns the Extension Entity types.
