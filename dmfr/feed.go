@@ -5,6 +5,8 @@ import "time"
 // Feed listed in a parsed DMFR file
 type Feed struct {
 	ID                    int
+	FeedID                string
+	OnestopID             string
 	FeedNamespaceID       string
 	Spec                  string
 	URL                   string

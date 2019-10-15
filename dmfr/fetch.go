@@ -46,26 +46,26 @@ func MainFetchFeed(tx gtdb.Adapter, feedid int) (int, error) {
 // Returns an error if the source cannot be loaded or is invalid GTFS.
 // Returns no error if the SHA1 is already present, or a FeedVersion is created.
 func FetchAndCreateFeedVersion(tx gtdb.Adapter, feedid int, url string, fetchtime time.Time) (int, error) {
-	fvid := 0
 	fv, err := NewFeedVersionFromURL(url)
 	if err != nil {
-		return fvid, err
+		return 0, err
 	}
 	fv.FeedID = feedid
 	fv.FetchedAt = fetchtime
 	// Is this SHA1 already present?
 	checkfvid := gotransit.FeedVersion{}
-	if err := tx.Where("sha1 = ?", fv.SHA1).FirstOrInit(&checkfvid).Error; err != nil {
-		return fvid, err
+	if err := tx.Get(&checkfvid, "sha1 = ?", fv.SHA1); err != nil {
+		return 0, err
 	} else if checkfvid.ID != 0 {
 		// fmt.Printf("feed_version with SHA1 '%s' already exists: %d", fv.SHA1, checkfvid.ID)
 		return checkfvid.ID, nil
 	}
 	// Create FeedVersion
-	if err := tx.Create(&fv).Error; err != nil {
+	fvid, err := tx.Insert(&fv)
+	if err != nil {
 		return fvid, err
 	}
-	return fv.ID, nil
+	return fvid, nil
 }
 
 // NewFeedVersionFromURL returns a new FeedVersion initialized from the given URL.
