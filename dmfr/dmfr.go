@@ -19,21 +19,6 @@ type Registry struct {
 	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
 }
 
-// Feed listed in a parsed DMFR file
-type Feed struct {
-	ID              string
-	FeedNamespaceID string
-	Spec            string
-	URL             string
-	URLs            map[string]string
-	AssociatedFeeds []string
-	Languages       []string
-	License         map[string]string
-	Authorization   map[string]string
-	OtherIDs        map[string]string `json:"other_ids"`
-	IDCrosswalk     map[string]string `json:"id_crosswalk"`
-}
-
 // NewRegistry TODO
 func NewRegistry(reader io.Reader) (*Registry, error) {
 	contents, err := ioutil.ReadAll(reader)
@@ -78,18 +63,17 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 			return nil, err
 		}
 		defer resp.Body.Close()
-		if body, err := ioutil.ReadAll(resp.Body); err != nil {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
 			return nil, err
-		} else {
-			return NewRegistry(bytes.NewReader(body))
 		}
-	} else {
-		if reader, err := os.Open(path); err != nil {
-			return nil, err
-		} else {
-			return NewRegistry(reader)
-		}
+		return NewRegistry(bytes.NewReader(body))
 	}
+	reader, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return NewRegistry(reader)
 }
 
 // ParseString TODO
