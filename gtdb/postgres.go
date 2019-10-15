@@ -47,7 +47,6 @@ func (adapter *PostgresAdapter) Create() error {
 	}
 	_, err = adapter.db.Exec(schema)
 	return err
-
 }
 
 // DB returns a plain *sql.DB.
@@ -113,6 +112,11 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 		v.SetID(eid)
 	}
 	return eid, err
+}
+
+// Update a single record
+func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
+	return nil
 }
 
 // BatchInsert builds and executes a multi-insert statement for the given entities.

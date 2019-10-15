@@ -113,3 +113,12 @@ func getID(ent interface{}) (int, error) {
 type feedVersionSetter interface {
 	SetFeedVersionID(int)
 }
+
+func contains(a string, b []string) bool {
+	for _, v := range b {
+		if a == v {
+			return true
+		}
+	}
+	return false
+}

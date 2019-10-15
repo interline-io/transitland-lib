@@ -119,6 +119,24 @@ func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid), nil
 }
 
+// Update a single record.
+func (adapter *SpatiaLiteAdapter) Update(ent interface{}, columns ...string) error {
+	table := getTableName(ent)
+	cols, vals, err := getInsert(adapter.db.Mapper, ent)
+	if err != nil {
+		return err
+	}
+	colmap := make(map[string]interface{})
+	for i, col := range cols {
+		if len(columns) > 0 && !contains(col, columns) {
+			continue
+		}
+		colmap[col] = vals[i]
+	}
+	q := sq.Update(table).SetMap(colmap)
+	return nil
+}
+
 // BatchInsert provides a fast path for creating StopTimes.
 func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {

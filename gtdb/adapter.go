@@ -28,6 +28,7 @@ type Adapter interface {
 	DBX() *sqlx.DB
 	Sqrl() sq.StatementBuilderType
 	Insert(interface{}) (int, error)
+	Update(interface{}, ...string) error
 	Find(interface{}) error
 	Get(interface{}, string, ...interface{}) error
 	Select(interface{}, string, ...interface{}) error
