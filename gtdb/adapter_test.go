@@ -45,6 +45,24 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		t.Error(err)
 		t.FailNow()
 	}
+	t.Run("Update", func(t *testing.T) {
+		v := "Test Update"
+		ent := gotransit.Trip{}
+		ent.ID = m.TripID
+		ent.TripHeadsign = v
+		err = adapter.Update(&ent, "trip_headsign")
+		if err != nil {
+			t.Error(err)
+		}
+		ent2 := gotransit.Trip{}
+		ent2.ID = m.TripID
+		if err := adapter.Find(&ent2); err != nil {
+			t.Error(err)
+		}
+		if ent2.TripHeadsign != v {
+			t.Errorf("got %s expected %s", ent2.TripHeadsign, v)
+		}
+	})
 	t.Run("Get", func(t *testing.T) {
 		ent := gotransit.Trip{}
 		ent.ID = m.TripID

@@ -133,8 +133,9 @@ func (adapter *SpatiaLiteAdapter) Update(ent interface{}, columns ...string) err
 		}
 		colmap[col] = vals[i]
 	}
-	q := sq.Update(table).SetMap(colmap)
-	return nil
+	q := sq.Update(table).SetMap(colmap).RunWith(adapter.db)
+	_, err = q.Exec()
+	return err
 }
 
 // BatchInsert provides a fast path for creating StopTimes.

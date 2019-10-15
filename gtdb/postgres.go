@@ -116,7 +116,25 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 
 // Update a single record
 func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
-	return nil
+	table := getTableName(ent)
+	cols, vals, err := getInsert(adapter.db.Mapper, ent)
+	if err != nil {
+		return err
+	}
+	colmap := make(map[string]interface{})
+	for i, col := range cols {
+		if len(columns) > 0 && !contains(col, columns) {
+			continue
+		}
+		colmap[col] = vals[i]
+	}
+	q := sq.
+		Update(table).
+		SetMap(colmap).
+		PlaceholderFormat(sq.Dollar).
+		RunWith(adapter.db)
+	_, err = q.Exec()
+	return err
 }
 
 // BatchInsert builds and executes a multi-insert statement for the given entities.
