@@ -1,7 +1,6 @@
 package gtdb
 
 import (
-	"database/sql"
 	"errors"
 
 	sq "github.com/Masterminds/squirrel"
@@ -12,9 +11,9 @@ import (
 
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
-	DBURL string
-	db    *sqlx.DB
-	stmts map[string]*sqlx.Stmt
+	DBURL  string
+	db     sqlx.Ext
+	mapper *reflectx.Mapper
 }
 
 // Open the adapter.
@@ -26,14 +25,18 @@ func (adapter *PostgresAdapter) Open() error {
 	if err != nil {
 		return err
 	}
-	adapter.db = db
 	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
+	adapter.db = db
+	adapter.mapper = db.Mapper
 	return nil
 }
 
 // Close the adapter.
 func (adapter *PostgresAdapter) Close() error {
-	return adapter.db.Close()
+	if a, ok := adapter.db.(canClose); ok {
+		return a.Close()
+	}
+	return nil
 }
 
 // Create an initial database schema.
@@ -49,14 +52,32 @@ func (adapter *PostgresAdapter) Create() error {
 	return err
 }
 
-// DB returns a plain *sql.DB.
-func (adapter *PostgresAdapter) DB() *sql.DB {
-	return adapter.db.DB
+// DBX returns *sqlx.DB
+func (adapter *PostgresAdapter) DBX() sqlx.Ext {
+	return adapter.db
 }
 
-// DBX returns *sqlx.DB
-func (adapter *PostgresAdapter) DBX() *sqlx.DB {
-	return adapter.db
+// Tx runs a callback inside a transaction.
+func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
+	sqlxdb, ok := adapter.db.(*sqlx.DB)
+	if !ok {
+		return errors.New("adapter is not *sqlx.DB")
+	}
+	tx, err := sqlxdb.Beginx()
+	if err != nil {
+		if errTx := tx.Rollback(); errTx != nil {
+			return errTx
+		}
+		return err
+	}
+	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: tx, mapper: adapter.mapper}
+	if err2 := cb(adapter2); err2 != nil {
+		if errTx := tx.Rollback(); errTx != nil {
+			return errTx
+		}
+		return err2
+	}
+	return tx.Commit()
 }
 
 // Sqrl returns a properly configured Squirrel StatementBuilder.
@@ -79,21 +100,21 @@ func (adapter *PostgresAdapter) Find(dest interface{}) error {
 
 // Get wraps sqlx.Get
 func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
-	return adapter.db.Get(dest, adapter.db.Rebind(qstr), args...)
+	return sqlx.Get(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Select wraps sqlx.Select
 func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
-	return adapter.db.Select(dest, adapter.db.Rebind(qstr), args...)
+	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if v, ok := ent.(*gotransit.FareAttribute); ok {
-		v.Transfers = "0"
+		v.Transfers = "0" // TODO: Keep?
 	}
 	table := getTableName(ent)
-	cols, vals, err := getInsert(adapter.db.Mapper, ent)
+	cols, vals, err := getInsert(adapter.mapper, ent)
 	if err != nil {
 		return 0, err
 	}
@@ -117,7 +138,7 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 // Update a single record
 func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
 	table := getTableName(ent)
-	cols, vals, err := getInsert(adapter.db.Mapper, ent)
+	cols, vals, err := getInsert(adapter.mapper, ent)
 	if err != nil {
 		return err
 	}
@@ -151,11 +172,11 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(sts) == 0 {
 		return errors.New("presently only StopTimes are supported")
 	}
-	cols, _, err := getInsert(adapter.db.Mapper, sts[0])
+	cols, _, err := getInsert(adapter.mapper, sts[0])
 	table := "gtfs_stop_times"
 	q := sq.Insert(table).Columns(cols...)
 	for _, d := range sts {
-		_, vals, _ := getInsert(adapter.db.Mapper, d)
+		_, vals, _ := getInsert(adapter.mapper, d)
 		q = q.Values(vals...)
 	}
 	_, err = q.PlaceholderFormat(sq.Dollar).RunWith(adapter.db).Exec()

@@ -80,13 +80,13 @@ func Benchmark_Adapter_BatchInsert(b *testing.B) {
 			fvid := 0
 			tripid := 0
 			stopid := 0
-			if err := adapter.DBX().QueryRow("SELECT id FROM feed_versions LIMIT 1").Scan(&fvid); err != nil {
+			if err := adapter.DBX().QueryRowx("SELECT id FROM feed_versions LIMIT 1").Scan(&fvid); err != nil {
 				b.Error(err)
 			}
-			if err := adapter.DBX().QueryRow("SELECT id FROM gtfs_trips LIMIT 1").Scan(&tripid); err != nil {
+			if err := adapter.DBX().QueryRowx("SELECT id FROM gtfs_trips LIMIT 1").Scan(&tripid); err != nil {
 				b.Error(err)
 			}
-			if err := adapter.DBX().QueryRow("SELECT id FROM gtfs_stops LIMIT 1").Scan(&stopid); err != nil {
+			if err := adapter.DBX().QueryRowx("SELECT id FROM gtfs_stops LIMIT 1").Scan(&stopid); err != nil {
 				b.Error(err)
 			}
 			if _, err := adapter.DBX().Exec(adapter.DBX().Rebind("DELETE FROM gtfs_stop_times WHERE trip_id = ?"), tripid); err != nil {
