@@ -37,10 +37,9 @@ type Entity interface {
 
 // BaseEntity provides default methods.
 type BaseEntity struct {
+	Timestamps
 	ID            int
 	FeedVersionID int
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
 	extra         []string
 	loadErrors    []error
 	// DeletedAt     OptionalTime
@@ -101,4 +100,19 @@ func entID(id int, gtfsid string) string {
 		return strconv.Itoa(id)
 	}
 	return gtfsid
+}
+
+// Timestamps .
+type Timestamps struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// UpdateTimestamps initializes or updates CreatedAt / UpdatedAt
+func (ent *Timestamps) UpdateTimestamps() {
+	t := time.Now()
+	if ent.CreatedAt.IsZero() {
+		ent.CreatedAt = t
+	}
+	ent.UpdatedAt = t
 }
