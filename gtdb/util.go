@@ -107,6 +107,10 @@ type canClose interface {
 	Close() error
 }
 
+type canUpdateTimestamps interface {
+	UpdateTimestamps()
+}
+
 func getID(ent interface{}) (int, error) {
 	if v, ok := ent.(canGetID); ok {
 		return strconv.Atoi(v.EntityID())
