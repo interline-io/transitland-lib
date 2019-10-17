@@ -33,8 +33,10 @@ func (adapter *PostgresAdapter) Open() error {
 
 // Close the adapter.
 func (adapter *PostgresAdapter) Close() error {
+	if a, ok := adapter.db.(canClose); ok {
+		return a.Close()
+	}
 	return nil
-	// return adapter.db.Close()
 }
 
 // Create an initial database schema.
@@ -64,16 +66,19 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	}
 	tx, err := sqlxdb.Beginx()
 	if err != nil {
-		tx.Rollback()
+		if errTx := tx.Rollback(); errTx != nil {
+			return errTx
+		}
 		return err
 	}
 	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: tx, mapper: adapter.mapper}
 	if err2 := cb(adapter2); err2 != nil {
-		tx.Rollback()
+		if errTx := tx.Rollback(); errTx != nil {
+			return errTx
+		}
 		return err2
 	}
-	tx.Commit()
-	return nil
+	return tx.Commit()
 }
 
 // Sqrl returns a properly configured Squirrel StatementBuilder.

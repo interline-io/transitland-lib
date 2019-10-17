@@ -43,8 +43,10 @@ func (adapter *SpatiaLiteAdapter) Open() error {
 
 // Close implements Adapter Close.
 func (adapter *SpatiaLiteAdapter) Close() error {
+	if a, ok := adapter.db.(canClose); ok {
+		return a.Close()
+	}
 	return nil
-	// return adapter.db.Close()
 }
 
 // Create implements Adapter Create.
@@ -78,16 +80,19 @@ func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
 	}
 	tx, err := sqlxdb.Beginx()
 	if err != nil {
-		tx.Rollback()
+		if errTx := tx.Rollback(); errTx != nil {
+			return errTx
+		}
 		return err
 	}
 	adapter2 := &SpatiaLiteAdapter{DBURL: adapter.DBURL, db: tx, mapper: adapter.mapper}
-	if err2 := cb(adapter2); err2 != nil {
-		tx.Rollback()
-		return err2
+	if errTx := cb(adapter2); errTx != nil {
+		if err3 := tx.Rollback(); err3 != nil {
+			return err3
+		}
+		return errTx
 	}
-	tx.Commit()
-	return nil
+	return tx.Commit()
 }
 
 // Find finds a single entity based on the EntityID()
