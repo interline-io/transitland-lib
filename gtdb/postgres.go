@@ -110,6 +110,9 @@ func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...in
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	if v, ok := ent.(*gotransit.FareAttribute); ok {
 		v.Transfers = "0" // TODO: Keep?
 	}
@@ -137,6 +140,9 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 
 // Update a single record
 func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	table := getTableName(ent)
 	cols, vals, err := getInsert(adapter.mapper, ent)
 	if err != nil {

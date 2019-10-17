@@ -16,8 +16,11 @@ type FeedVersion struct {
 	EarliestCalendarDate time.Time
 	LatestCalendarDate   time.Time
 	FetchedAt            time.Time
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	Timestamps
+}
+
+func (ent *FeedVersion) EntityID() string {
+	return entID(ent.ID, "")
 }
 
 // TableName sets the table name prefix.
