@@ -103,6 +103,10 @@ type canGetID interface {
 	EntityID() string
 }
 
+type canClose interface {
+	Close() error
+}
+
 func getID(ent interface{}) (int, error) {
 	if v, ok := ent.(canGetID); ok {
 		return strconv.Atoi(v.EntityID())
@@ -112,4 +116,13 @@ func getID(ent interface{}) (int, error) {
 
 type feedVersionSetter interface {
 	SetFeedVersionID(int)
+}
+
+func contains(a string, b []string) bool {
+	for _, v := range b {
+		if a == v {
+			return true
+		}
+	}
+	return false
 }

@@ -72,7 +72,7 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	if err != nil {
 		return err
 	}
-	if err := reader.Adapter.DBX().Select(x.Interface(), qstr, args...); err != nil {
+	if err := reader.Adapter.Select(x.Interface(), qstr, args...); err != nil {
 		check(err)
 		return err
 	}

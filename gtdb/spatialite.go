@@ -18,10 +18,11 @@ func init() {
 	sql.Register("spatialite", &sqlite3.SQLiteDriver{Extensions: []string{"mod_spatialite"}})
 }
 
-// SpatiaLiteAdapter provides implementation details for SpatiaLite.
+// SpatiaLiteAdapter provides support for SpatiaLite.
 type SpatiaLiteAdapter struct {
-	DBURL string
-	db    *sqlx.DB
+	DBURL  string
+	db     sqlx.Ext
+	mapper *reflectx.Mapper
 }
 
 // Open implements Adapter Open.
@@ -34,14 +35,18 @@ func (adapter *SpatiaLiteAdapter) Open() error {
 	if err != nil {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
-	adapter.db = db
 	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
+	adapter.db = db
+	adapter.mapper = db.Mapper
 	return nil
 }
 
 // Close implements Adapter Close.
 func (adapter *SpatiaLiteAdapter) Close() error {
-	return adapter.db.Close()
+	if a, ok := adapter.db.(canClose); ok {
+		return a.Close()
+	}
+	return nil
 }
 
 // Create implements Adapter Create.
@@ -57,19 +62,37 @@ func (adapter *SpatiaLiteAdapter) Create() error {
 	return err
 }
 
-// DB returns the underlying Sql DB.
-func (adapter *SpatiaLiteAdapter) DB() *sql.DB {
-	return adapter.db.DB
-}
-
-// DBX returns the underlying Sqlx DB.
-func (adapter *SpatiaLiteAdapter) DBX() *sqlx.DB {
+// DBX returns the underlying Sqlx DB or Tx.
+func (adapter *SpatiaLiteAdapter) DBX() sqlx.Ext {
 	return adapter.db
 }
 
 // Sqrl returns a properly configured Squirrel StatementBuilder.
 func (adapter *SpatiaLiteAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db)
+}
+
+// Tx runs a callback inside a transaction.
+func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
+	sqlxdb, ok := adapter.db.(*sqlx.DB)
+	if !ok {
+		return errors.New("adapter is not *sqlx.DB")
+	}
+	tx, err := sqlxdb.Beginx()
+	if err != nil {
+		if errTx := tx.Rollback(); errTx != nil {
+			return errTx
+		}
+		return err
+	}
+	adapter2 := &SpatiaLiteAdapter{DBURL: adapter.DBURL, db: tx, mapper: adapter.mapper}
+	if errTx := cb(adapter2); errTx != nil {
+		if err3 := tx.Rollback(); err3 != nil {
+			return err3
+		}
+		return errTx
+	}
+	return tx.Commit()
 }
 
 // Find finds a single entity based on the EntityID()
@@ -82,24 +105,24 @@ func (adapter *SpatiaLiteAdapter) Find(dest interface{}) error {
 	if err != nil {
 		return err
 	}
-	return adapter.db.Get(dest, qstr, args...)
+	return sqlx.Get(adapter.db, dest, qstr, args...)
 }
 
 // Get wraps sqlx.Get
 func (adapter *SpatiaLiteAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
-	return adapter.db.Get(dest, qstr, args...)
+	return sqlx.Get(adapter.db, dest, qstr, args...)
 }
 
 // Select wraps sqlx.Select
 func (adapter *SpatiaLiteAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
-	return adapter.db.Select(dest, qstr, args...)
+	return sqlx.Select(adapter.db, dest, qstr, args...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 	// Keep the mapper to use cache.
 	table := getTableName(ent)
-	cols, vals, err := getInsert(adapter.db.Mapper, ent)
+	cols, vals, err := getInsert(adapter.mapper, ent)
 	if err != nil {
 		return 0, err
 	}
@@ -119,6 +142,25 @@ func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid), nil
 }
 
+// Update a single record.
+func (adapter *SpatiaLiteAdapter) Update(ent interface{}, columns ...string) error {
+	table := getTableName(ent)
+	cols, vals, err := getInsert(adapter.mapper, ent)
+	if err != nil {
+		return err
+	}
+	colmap := make(map[string]interface{})
+	for i, col := range cols {
+		if len(columns) > 0 && !contains(col, columns) {
+			continue
+		}
+		colmap[col] = vals[i]
+	}
+	q := sq.Update(table).SetMap(colmap).RunWith(adapter.db)
+	_, err = q.Exec()
+	return err
+}
+
 // BatchInsert provides a fast path for creating StopTimes.
 func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
@@ -134,27 +176,25 @@ func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 		return errors.New("presently only StopTimes are supported")
 	}
 	table := getTableName(sts[0])
-	cols, vals, err := getInsert(adapter.db.Mapper, sts[0])
+	cols, vals, err := getInsert(adapter.mapper, sts[0])
 	if err != nil {
 		return err
 	}
-	tx, err := adapter.db.Begin()
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
-	for _, d := range sts {
-		_, vals, err := getInsert(adapter.db.Mapper, d)
+	mapper := adapter.mapper
+	return adapter.Tx(func(adapter Adapter) error {
+		q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(q, vals...); err != nil {
-			return err
+		for _, d := range sts {
+			_, vals, err := getInsert(mapper, d)
+			if err != nil {
+				return err
+			}
+			if _, err := adapter.DBX().Exec(q, vals...); err != nil {
+				return err
+			}
 		}
-	}
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	return nil
+		return nil
+	})
 }

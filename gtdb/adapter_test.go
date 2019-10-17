@@ -1,6 +1,7 @@
 package gtdb
 
 import (
+	"errors"
 	"os"
 	"strconv"
 	"testing"
@@ -45,6 +46,24 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		t.Error(err)
 		t.FailNow()
 	}
+	t.Run("Update", func(t *testing.T) {
+		v := "Test Update"
+		ent := gotransit.Trip{}
+		ent.ID = m.TripID
+		ent.TripHeadsign = v
+		err = adapter.Update(&ent, "trip_headsign")
+		if err != nil {
+			t.Error(err)
+		}
+		ent2 := gotransit.Trip{}
+		ent2.ID = m.TripID
+		if err := adapter.Find(&ent2); err != nil {
+			t.Error(err)
+		}
+		if ent2.TripHeadsign != v {
+			t.Errorf("got %s expected %s", ent2.TripHeadsign, v)
+		}
+	})
 	t.Run("Get", func(t *testing.T) {
 		ent := gotransit.Trip{}
 		ent.ID = m.TripID
@@ -114,6 +133,51 @@ func testAdapter(t *testing.T, adapter Adapter) {
 				t.Errorf("got '%d' expected '%d'", got1.StopSequence, st1.StopSequence)
 			}
 		}
+	})
+	t.Run("Tx Commit", func(t *testing.T) {
+		// Check commit
+		v := "Test Tx"
+		ent := gotransit.Trip{}
+		ent.ID = m.TripID
+		ent.TripHeadsign = v
+		adapter.Tx(func(atx Adapter) error {
+			err := atx.Update(&ent, "trip_headsign")
+			if err != nil {
+				t.Error(err)
+			}
+			return err
+		})
+		ent2 := gotransit.Trip{}
+		ent2.ID = m.TripID
+		if err := adapter.Find(&ent2); err != nil {
+			t.Error(err)
+		}
+		if ent2.TripHeadsign != v {
+			t.Errorf("got %s expected %s", ent2.TripHeadsign, v)
+		}
+	})
+	t.Run("Tx Rollback", func(t *testing.T) {
+		// Check rollback
+		v := "Test Rollback"
+		ent := gotransit.Trip{}
+		ent.ID = m.TripID
+		ent.TripHeadsign = v
+		adapter.Tx(func(atx Adapter) error {
+			err := atx.Update(&ent, "trip_headsign")
+			if err != nil {
+				t.Error(err)
+			}
+			return errors.New("rollback")
+		})
+		ent2 := gotransit.Trip{}
+		ent2.ID = m.TripID
+		if err := adapter.Find(&ent2); err != nil {
+			t.Error(err)
+		}
+		if ent2.TripHeadsign == v {
+			t.Errorf("got %s expected != %s", ent2.TripHeadsign, v)
+		}
+
 	})
 }
 
