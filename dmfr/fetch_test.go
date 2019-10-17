@@ -1,15 +1,30 @@
 package dmfr
 
 import (
+	"errors"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtdb"
-	"github.com/jmoiron/sqlx"
 )
 
-func withDB(cb func(db *sqlx.Tx)) {
+// WithAdapterRollback runs a callback inside a Tx and then aborts, returns any error from original callback.
+func WithAdapterRollback(cb func(gtdb.Adapter) error) error {
+	var err error
+	cb2 := func(atx gtdb.Adapter) error {
+		err = cb(atx)
+		return errors.New("rollback")
+	}
+	WithAdapterTx(cb2)
+	return err
+}
+
+// WithAdapterTx runs a callback inside a Tx, commits if callback returns nil.
+func WithAdapterTx(cb func(gtdb.Adapter) error) error {
 	writer, err := gtdb.NewWriter("postgres://localhost/tl?sslmode=disable")
 	if err != nil {
 		panic(err)
@@ -18,24 +33,23 @@ func withDB(cb func(db *sqlx.Tx)) {
 		panic(err)
 	}
 	defer writer.Close()
-	tx, err := writer.Adapter.DBX().Beginx()
+	return writer.Adapter.Tx(cb)
+}
+
+func caltrain(atx gtdb.Adapter, url string) int {
+	// Create dummy feed
+	tlfeed := Feed{}
+	tlfeed.FeedID = url
+	tlfeed.URL = url
+	var err error
+	// err := atx.Get(&tlfeed, "SELECT * FROM current_feeds WHERE onestop_id = ?", "caltrain")
+	// if err == sql.ErrNoRows {
+	tlfeed.ID, err = atx.Insert(&tlfeed)
+	// }
 	if err != nil {
 		panic(err)
 	}
-	cb(tx)
-	tx.Rollback()
-}
-
-func caltrain(tx *sqlx.DB) (int, string) {
-	// Create dummy feed
-	tlfeed := &Feed{}
-	tlfeed.OnestopID = "caltrain"
-	tlfeed.Spec = "gtfs"
-	tlfeed.URL = "http://localhost:8000/CT-GTFS.zip"
-	if err := tx.Where("onestop_id = ?", "caltrain").FirstOrCreate(&tlfeed).Error; err != nil {
-		panic(err)
-	}
-	return tlfeed.ID, tlfeed.URL
+	return tlfeed.ID
 }
 
 // func TestMainFetchFeed(t *testing.T) {
@@ -93,21 +107,35 @@ func caltrain(tx *sqlx.DB) (int, string) {
 // }
 
 func TestFetchAndCreateFeedVersion(t *testing.T) {
-	withDB(func(tx *sqlx.DB) {
-		feedid, url := caltrain(tx)
-		fvid, err := FetchAndCreateFeedVersion(tx, feedid, url, time.Now())
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := ioutil.ReadFile("../testdata/example.zip")
 		if err != nil {
 			t.Error(err)
-			return
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+
+	WithAdapterRollback(func(atx gtdb.Adapter) error {
+		url := ts.URL
+		feedid := caltrain(atx, url)
+		fvid, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now())
+		if err != nil {
+			t.Error(err)
+			return err
 		}
 		fv := gotransit.FeedVersion{}
-		tx.Find(&fv, fvid)
+		fv.ID = fvid
+		if err := atx.Find(&fv); err != nil {
+			panic(err)
+		}
 		if fv.URL != url {
 			t.Errorf("got %s expect %s", fv.URL, url)
 		}
 		if fv.FeedID != feedid {
 			t.Errorf("got %d expect %d", fv.FeedID, feedid)
 		}
+		return nil
 	})
 }
 

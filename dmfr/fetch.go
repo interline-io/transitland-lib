@@ -1,6 +1,7 @@
 package dmfr
 
 import (
+	"database/sql"
 	"errors"
 	"time"
 
@@ -12,23 +13,24 @@ import (
 // MainFetchFeed .
 // Fetch errors are logged to Feed LastFetchError and saved.
 // An error return from this function is a serious failure.
-func MainFetchFeed(tx gtdb.Adapter, feedid int) (int, error) {
+// This should run inside a transaction.
+func MainFetchFeed(atx gtdb.Adapter, feedid int) (int, error) {
 	// Get the parent feed
 	tlfeed := Feed{}
 	tlfeed.ID = feedid
 	fvid := 0
-	if err := tx.Find(&tlfeed); err != nil {
+	if err := atx.Find(&tlfeed); err != nil {
 		return fvid, err
 	}
 	fetchtime := time.Now().UTC()
 	tlfeed.LastFetchedAt = fetchtime
 	tlfeed.LastFetchError = ""
 	// Immediately save LastFetchedAt to prevent possible re-enqueing
-	if err := tx.Update(&tlfeed, "last_fetched_at", "last_fetch_error"); err != nil {
+	if err := atx.Update(&tlfeed, "last_fetched_at", "last_fetch_error"); err != nil {
 		return fvid, err
 	}
 	// Start fetching
-	if fvid2, err := FetchAndCreateFeedVersion(tx, feedid, tlfeed.URL, fetchtime); err != nil {
+	if fvid2, err := FetchAndCreateFeedVersion(atx, feedid, tlfeed.URL, fetchtime); err != nil {
 		tlfeed.LastFetchError = err.Error()
 	} else {
 		tlfeed.LastFetchError = ""
@@ -36,36 +38,37 @@ func MainFetchFeed(tx gtdb.Adapter, feedid int) (int, error) {
 		fvid = fvid2
 	}
 	// Save updated timestamps
-	if err := tx.Update(&tlfeed, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
+	if err := atx.Update(&tlfeed, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fvid, err
 	}
 	return fvid, nil
 }
 
 // FetchAndCreateFeedVersion from a URL.
-// Returns an error if the source cannot be loaded or is invalid GTFS.
+// Returns error if the source cannot be loaded or is invalid GTFS.
 // Returns no error if the SHA1 is already present, or a FeedVersion is created.
-func FetchAndCreateFeedVersion(tx gtdb.Adapter, feedid int, url string, fetchtime time.Time) (int, error) {
+func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, fetchtime time.Time) (int, error) {
+	fvid := 0
 	fv, err := NewFeedVersionFromURL(url)
 	if err != nil {
 		return 0, err
 	}
+	fv.URL = url
 	fv.FeedID = feedid
 	fv.FetchedAt = fetchtime
 	// Is this SHA1 already present?
 	checkfvid := gotransit.FeedVersion{}
-	if err := tx.Get(&checkfvid, "sha1 = ?", fv.SHA1); err != nil {
-		return 0, err
-	} else if checkfvid.ID != 0 {
-		// fmt.Printf("feed_version with SHA1 '%s' already exists: %d", fv.SHA1, checkfvid.ID)
+	err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ?", fv.SHA1)
+	if err == nil {
+		// Already present
 		return checkfvid.ID, nil
+	} else if err == sql.ErrNoRows {
+		// Not present, create
+		fvid, err = atx.Insert(&fv)
 	}
-	// Create FeedVersion
-	fvid, err := tx.Insert(&fv)
-	if err != nil {
-		return fvid, err
-	}
-	return fvid, nil
+	// Return any query error or insert error
+	// fmt.Println(fvid, err)
+	return fvid, err
 }
 
 // NewFeedVersionFromURL returns a new FeedVersion initialized from the given URL.
