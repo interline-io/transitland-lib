@@ -26,7 +26,7 @@ func (adapter *PostgresAdapter) Open() error {
 		return err
 	}
 	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
-	adapter.db = db
+	adapter.db = db.Unsafe()
 	adapter.mapper = db.Mapper
 	return nil
 }
@@ -86,7 +86,7 @@ func (adapter *PostgresAdapter) Sqrl() sq.StatementBuilderType {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *PostgresAdapter) Find(dest interface{}) error {
+func (adapter *PostgresAdapter) Find(dest interface{}, args ...interface{}) error {
 	eid, err := getID(dest)
 	if err != nil {
 		return err

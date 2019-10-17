@@ -96,7 +96,7 @@ func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *SpatiaLiteAdapter) Find(dest interface{}) error {
+func (adapter *SpatiaLiteAdapter) Find(dest interface{}, args ...interface{}) error {
 	eid, err := getID(dest)
 	if err != nil {
 		return err
