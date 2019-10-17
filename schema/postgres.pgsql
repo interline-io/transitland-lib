@@ -23,15 +23,15 @@ CREATE TABLE public.current_feeds (
     edited_attributes character varying[] DEFAULT '{}'::character varying[],
     name character varying,
     type character varying NOT NULL,
-    "authorization" public.hstore,
-    urls public.hstore,
+    "authorization" jsonb,
+    urls jsonb,
     last_successful_fetch_at timestamp without time zone,
     last_fetch_error character varying NOT NULL,
     deleted_at timestamp without time zone,
-    license public.hstore,
-    other_ids public.hstore,
-    associated_feeds character varying[],
-    languages character varying[],
+    license jsonb,
+    other_ids jsonb,
+    associated_feeds jsonb,
+    languages jsonb,
     feed_namespace_id character varying NOT NULL
 );
 CREATE SEQUENCE public.current_feeds_id_seq
