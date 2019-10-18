@@ -103,10 +103,6 @@ type canGetID interface {
 	EntityID() string
 }
 
-type canClose interface {
-	Close() error
-}
-
 type canUpdateTimestamps interface {
 	UpdateTimestamps()
 }

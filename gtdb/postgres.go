@@ -5,7 +5,6 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/log"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/reflectx"
 )
@@ -27,7 +26,7 @@ func (adapter *PostgresAdapter) Open() error {
 		return err
 	}
 	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
-	adapter.db = db.Unsafe()
+	adapter.db = &queryLogger{db.Unsafe()}
 	adapter.mapper = db.Mapper
 	return nil
 }
@@ -60,18 +59,15 @@ func (adapter *PostgresAdapter) DBX() sqlx.Ext {
 
 // Tx runs a callback inside a transaction.
 func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
-	sqlxdb, ok := adapter.db.(*sqlx.DB)
-	if !ok {
-		return errors.New("adapter is not *sqlx.DB")
+	var err error
+	var tx *sqlx.Tx
+	if a, ok := adapter.db.(canBeginx); ok {
+		tx, err = a.Beginx()
 	}
-	tx, err := sqlxdb.Beginx()
 	if err != nil {
-		if errTx := tx.Rollback(); errTx != nil {
-			return errTx
-		}
 		return err
 	}
-	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: tx, mapper: adapter.mapper}
+	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}, mapper: adapter.mapper}
 	if err2 := cb(adapter2); err2 != nil {
 		if errTx := tx.Rollback(); errTx != nil {
 			return errTx
@@ -96,19 +92,16 @@ func (adapter *PostgresAdapter) Find(dest interface{}, args ...interface{}) erro
 	if err != nil {
 		return err
 	}
-	log.Query(qstr, args...)
 	return adapter.Get(dest, qstr, args...)
 }
 
 // Get wraps sqlx.Get
 func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
-	log.Query(qstr, args...)
 	return sqlx.Get(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Select wraps sqlx.Select
 func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
-	log.Query(qstr, args...)
 	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
@@ -133,7 +126,6 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 		PlaceholderFormat(sq.Dollar).
 		RunWith(adapter.db)
 	eid := 0
-	log.Sq(q)
 	if err = q.QueryRow().Scan(&eid); err != nil {
 		return 0, err
 	}
@@ -160,14 +152,13 @@ func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error
 		}
 		colmap[col] = vals[i]
 	}
-	q := sq.
+	_, err2 := sq.
 		Update(table).
 		SetMap(colmap).
 		PlaceholderFormat(sq.Dollar).
-		RunWith(adapter.db)
-	log.Sq(q)
-	_, err = q.Exec()
-	return err
+		RunWith(adapter.db).
+		Exec()
+	return err2
 }
 
 // BatchInsert builds and executes a multi-insert statement for the given entities.
