@@ -36,7 +36,7 @@ func (adapter *SpatiaLiteAdapter) Open() error {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
 	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
-	adapter.db = db
+	adapter.db = &queryLogger{db.Unsafe()}
 	adapter.mapper = db.Mapper
 	return nil
 }
@@ -74,18 +74,15 @@ func (adapter *SpatiaLiteAdapter) Sqrl() sq.StatementBuilderType {
 
 // Tx runs a callback inside a transaction.
 func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
-	sqlxdb, ok := adapter.db.(*sqlx.DB)
-	if !ok {
-		return errors.New("adapter is not *sqlx.DB")
+	var err error
+	var tx *sqlx.Tx
+	if a, ok := adapter.db.(canBeginx); ok {
+		tx, err = a.Beginx()
 	}
-	tx, err := sqlxdb.Beginx()
 	if err != nil {
-		if errTx := tx.Rollback(); errTx != nil {
-			return errTx
-		}
 		return err
 	}
-	adapter2 := &SpatiaLiteAdapter{DBURL: adapter.DBURL, db: tx, mapper: adapter.mapper}
+	adapter2 := &SpatiaLiteAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}, mapper: adapter.mapper}
 	if errTx := cb(adapter2); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3

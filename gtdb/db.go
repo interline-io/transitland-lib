@@ -2,6 +2,7 @@ package gtdb
 
 import (
 	"github.com/interline-io/gotransit"
+
 	// Driver
 	_ "github.com/lib/pq"
 )
