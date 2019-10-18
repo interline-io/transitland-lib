@@ -5,6 +5,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/internal/log"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/reflectx"
 )
@@ -95,16 +96,19 @@ func (adapter *PostgresAdapter) Find(dest interface{}, args ...interface{}) erro
 	if err != nil {
 		return err
 	}
+	log.Query(qstr, args...)
 	return adapter.Get(dest, qstr, args...)
 }
 
 // Get wraps sqlx.Get
 func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
+	log.Query(qstr, args...)
 	return sqlx.Get(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Select wraps sqlx.Select
 func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
+	log.Query(qstr, args...)
 	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
@@ -129,6 +133,7 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 		PlaceholderFormat(sq.Dollar).
 		RunWith(adapter.db)
 	eid := 0
+	log.Sq(q)
 	if err = q.QueryRow().Scan(&eid); err != nil {
 		return 0, err
 	}
@@ -160,6 +165,7 @@ func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error
 		SetMap(colmap).
 		PlaceholderFormat(sq.Dollar).
 		RunWith(adapter.db)
+	log.Sq(q)
 	_, err = q.Exec()
 	return err
 }
