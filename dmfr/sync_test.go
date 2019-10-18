@@ -2,48 +2,52 @@ package dmfr
 
 import (
 	"testing"
+
+	"github.com/interline-io/gotransit/gtdb"
 )
 
 func fail(t *testing.T, err error) {
 	if err != nil {
+		panic(err)
 		t.Error(err)
-		// t.FailNow()
+		t.FailNow()
 	}
 }
 
-// func TestMainSync(t *testing.T) {
-// 	withDB(func(tx *gorm.DB) {
-// 		// Create a feed we will check is soft-deleted
-// 		caltrain(tx)
-// 		// Import
-// 		regs := []string{
-// 			"testdata/rtfeeds.dmfr.json",
-// 			"testdata/bayarea.dmfr.json",
-// 		}
-// 		found, err := MainSync(tx, regs)
-// 		fail(t, err)
-// 		// Check results
-// 		expect := map[string]bool{}
-// 		for _, i := range found {
-// 			expect[i] = true
-// 		}
-// 		tlfeeds := []dbFeed{}
-// 		fail(t, tx.Find(&tlfeeds).Error)
-// 		if len(tlfeeds) != len(expect) {
-// 			t.Errorf("got %d feeds, expect %d", len(tlfeeds), len(expect))
-// 		}
-// 		for _, tlfeed := range tlfeeds {
-// 			if _, ok := expect[tlfeed.OnestopID]; !ok {
-// 				t.Errorf("did not find feed %s", tlfeed.OnestopID)
-// 			}
-// 		}
-// 		hf := &dbFeed{}
-// 		fail(t, tx.Unscoped().Where("onestop_id = ?", "caltrain").Find(&hf).Error)
-// 		if hf.DeletedAt == nil {
-// 			t.Errorf("expected DeletedAt to be non-nil, got %s", hf.DeletedAt)
-// 		}
-// 	})
-// }
+func TestMainSync(t *testing.T) {
+	WithAdapterTx(func(atx gtdb.Adapter) error {
+		// Create a feed we will check is soft-deleted
+		caltrain(atx, "caltrain")
+		// Import
+		regs := []string{
+			"../testdata/dmfr/rtfeeds.dmfr.json",
+			"../testdata/dmfr/bayarea.dmfr.json",
+		}
+		found, err := MainSync(atx, regs)
+		fail(t, err)
+		// Check results
+		expect := map[string]bool{}
+		for _, i := range found {
+			expect[i] = true
+		}
+		tlfeeds := []Feed{}
+		fail(t, atx.Select(&tlfeeds, "SELECT * FROM current_feeds WHERE deleted_at IS NULL"))
+		if len(tlfeeds) != len(expect) {
+			t.Errorf("got %d feeds, expect %d", len(tlfeeds), len(expect))
+		}
+		for _, tlfeed := range tlfeeds {
+			if _, ok := expect[tlfeed.FeedID]; !ok {
+				t.Errorf("did not find feed %s", tlfeed.FeedID)
+			}
+		}
+		hf := Feed{}
+		fail(t, atx.Get(&hf, "SELECT * FROM current_feeds WHERE onestop_id = ?", "caltrain"))
+		if !hf.DeletedAt.Valid {
+			t.Errorf("expected DeletedAt to be non-nil")
+		}
+		return nil
+	})
+}
 
 // func TestMainSync_Update(t *testing.T) {
 // 	withDB(func(tx *gorm.DB) {

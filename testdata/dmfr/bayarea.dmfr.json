@@ -1,0 +1,182 @@
+{
+    "$schema": "https://dmfr.transit.land/json-schema/dmfr.schema.json",
+    "feeds": [{
+        "spec": "gtfs",
+        "id": "BA",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=BA",
+        "priority": 0
+      },
+      {
+        "spec": "gtfs",
+        "id": "SF",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=SF",
+        "priority": 1
+      },
+      {
+        "spec": "gtfs",
+        "id": "WC",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=WC",
+        "priority": 2
+      },
+      {
+        "spec": "gtfs",
+        "id": "SM",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=SM",
+        "priority": 3
+      },
+      {
+        "spec": "gtfs",
+        "id": "GG",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=GG",
+        "priority": 4
+      },
+      {
+        "spec": "gtfs",
+        "id": "AC",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=AC",
+        "priority": 5
+      },
+      {
+        "spec": "gtfs",
+        "id": "DE",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=DE",
+        "priority": 5
+      },
+      {
+        "spec": "gtfs",
+        "id": "SC",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=SC",
+        "priority": 6
+      },
+      {
+        "spec": "gtfs",
+        "id": "CT",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=CT",
+        "priority": 70
+      },
+      {
+        "spec": "gtfs",
+        "id": "SA",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=SA",
+        "priority": 71
+      },
+      {
+        "spec": "gtfs",
+        "id": "FS",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=FS",
+        "priority": 75
+      },
+      {
+        "spec": "gtfs",
+        "id": "SO",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=SO",
+        "priority": 77
+      },
+      {
+        "spec": "gtfs",
+        "id": "UC",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=UC",
+        "priority": 79
+      },
+      {
+        "spec": "gtfs",
+        "id": "SR",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=SR",
+        "priority": 80
+      },
+      {
+        "spec": "gtfs",
+        "id": "3D",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=3D",
+        "priority": 81
+      },
+      {
+        "spec": "gtfs",
+        "id": "ST",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=ST",
+        "priority": 82
+      },
+      {
+        "spec": "gtfs",
+        "id": "CC",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=CC",
+        "priority": 83
+      },
+      {
+        "spec": "gtfs",
+        "id": "MA",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=MA",
+        "priority": 84
+      },
+      {
+        "spec": "gtfs",
+        "id": "EM",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=EM",
+        "priority": 85
+      },
+      {
+        "spec": "gtfs",
+        "id": "PE",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=PE",
+        "priority": 87
+      },
+      {
+        "spec": "gtfs",
+        "id": "WH",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=WH",
+        "priority": 88
+      },
+      {
+        "spec": "gtfs",
+        "id": "VN",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=VN",
+        "priority": 89
+      },
+      {
+        "spec": "gtfs",
+        "id": "AM",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=AM"
+      },
+      {
+        "spec": "gtfs",
+        "id": "CE",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=CE"
+      },
+      {
+        "spec": "gtfs",
+        "id": "CM",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=CM"
+      },
+      {
+        "spec": "gtfs",
+        "id": "GF",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=GF"
+      },
+      {
+        "spec": "gtfs",
+        "id": "MS",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=MS"
+      },
+      {
+        "spec": "gtfs",
+        "id": "RV",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=RV"
+      },
+      {
+        "spec": "gtfs",
+        "id": "SB",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=SB"
+      },
+      {
+        "spec": "gtfs",
+        "id": "TD",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=TD"
+      },
+      {
+        "spec": "gtfs",
+        "id": "VC",
+        "url": "http://v.transitpublicservices.sfbay511.org/DataFeeds/DataExports.aspx?operator_id=VC"
+      }
+    ],
+    "license_spdx_identifier": "CC0-1.0"
+  }
