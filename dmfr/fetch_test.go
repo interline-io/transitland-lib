@@ -42,15 +42,11 @@ func caltrain(atx gtdb.Adapter, url string) int {
 	tlfeed := Feed{}
 	tlfeed.FeedID = url
 	tlfeed.URL = url
-	var err error
-	// err := atx.Get(&tlfeed, "SELECT * FROM current_feeds WHERE onestop_id = ?", "caltrain")
-	// if err == sql.ErrNoRows {
-	tlfeed.ID, err = atx.Insert(&tlfeed)
-	// }
+	feedid, err := atx.Insert(&tlfeed)
 	if err != nil {
 		panic(err)
 	}
-	return tlfeed.ID
+	return feedid
 }
 
 func TestMainFetchFeed(t *testing.T) {
@@ -148,7 +144,7 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 		fv := gotransit.FeedVersion{}
 		fv.ID = fvid
 		if err := atx.Find(&fv); err != nil {
-			panic(err)
+			t.Error(err)
 		}
 		if fv.URL != url {
 			t.Errorf("got %s expect %s", fv.URL, url)

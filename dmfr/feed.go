@@ -23,9 +23,11 @@ type Feed struct {
 	Authorization         FeedAuthorization `db:"auth"`
 	OtherIDs              map[string]string `db:"-" json:"other_ids"`
 	IDCrosswalk           map[string]string `db:"-" json:"id_crosswalk"`
+	LastFetchError        string
 	LastFetchedAt         gotransit.OptionalTime
 	LastSuccessfulFetchAt gotransit.OptionalTime
-	LastFetchError        string
+	LastImportedAt        gotransit.OptionalTime
+	DeletedAt             gotransit.OptionalTime
 	gotransit.Timestamps
 }
 
