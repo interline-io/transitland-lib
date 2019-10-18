@@ -29,9 +29,9 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 	if err := json.Unmarshal([]byte(contents), &registry); err != nil {
 		return nil, err
 	}
-	log.Info("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
+	log.Debug("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
 	if registry.LicenseSpdxIdentifier != "CC0-1.0" {
-		log.Info("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
+		log.Debug("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
 	}
 	// for _, feed := range registry.Feeds {
 	for i := 0; i < len(registry.Feeds); i++ {

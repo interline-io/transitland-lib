@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
-	"time"
+	"strconv"
 
 	"github.com/interline-io/gotransit"
 )
@@ -20,13 +20,18 @@ type Feed struct {
 	AssociatedFeeds       FeedAssociatedFeeds
 	Languages             FeedLanguages
 	License               FeedLicense
-	Authorization         FeedAuthorization `db:"-"`
+	Authorization         FeedAuthorization `db:"auth"`
 	OtherIDs              map[string]string `db:"-" json:"other_ids"`
 	IDCrosswalk           map[string]string `db:"-" json:"id_crosswalk"`
-	LastFetchedAt         time.Time
-	LastSuccessfulFetchAt time.Time
+	LastFetchedAt         gotransit.OptionalTime
+	LastSuccessfulFetchAt gotransit.OptionalTime
 	LastFetchError        string
 	gotransit.Timestamps
+}
+
+// EntityID .
+func (ent *Feed) EntityID() string {
+	return strconv.Itoa(ent.ID)
 }
 
 // TableName .

@@ -19,6 +19,7 @@ type FeedVersion struct {
 	Timestamps
 }
 
+// EntityID .
 func (ent *FeedVersion) EntityID() string {
 	return entID(ent.ID, "")
 }

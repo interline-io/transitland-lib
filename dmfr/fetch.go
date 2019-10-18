@@ -22,15 +22,15 @@ func MainFetchFeed(atx gtdb.Adapter, feedid int) (int, error) {
 	if err := atx.Find(&tlfeed); err != nil {
 		return fvid, err
 	}
-	fetchtime := time.Now().UTC()
+	fetchtime := gotransit.OptionalTime{Time: time.Now().UTC(), Valid: true}
 	tlfeed.LastFetchedAt = fetchtime
 	tlfeed.LastFetchError = ""
-	// Immediately save LastFetchedAt to prevent possible re-enqueing
+	// Immediately save LastFetchedAt to obtain lock
 	if err := atx.Update(&tlfeed, "last_fetched_at", "last_fetch_error"); err != nil {
 		return fvid, err
 	}
 	// Start fetching
-	if fvid2, err := FetchAndCreateFeedVersion(atx, feedid, tlfeed.URL, fetchtime); err != nil {
+	if fvid2, err := FetchAndCreateFeedVersion(atx, feedid, tlfeed.URL, fetchtime.Time); err != nil {
 		tlfeed.LastFetchError = err.Error()
 	} else {
 		tlfeed.LastFetchError = ""
@@ -67,7 +67,6 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, fetchti
 		fvid, err = atx.Insert(&fv)
 	}
 	// Return any query error or insert error
-	// fmt.Println(fvid, err)
 	return fvid, err
 }
 

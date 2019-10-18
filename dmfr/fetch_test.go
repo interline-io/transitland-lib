@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,59 +53,80 @@ func caltrain(atx gtdb.Adapter, url string) int {
 	return tlfeed.ID
 }
 
-// func TestMainFetchFeed(t *testing.T) {
-// 	withDB(func(tx *sqlx.DB) {
-// 		feedid, feedurl := caltrain(tx)
-// 		fvid, err := MainFetchFeed(tx, feedid)
-// 		if err != nil {
-// 			t.Error(err)
-// 			return
-// 		}
-// 		// Check FV
-// 		fv := gotransit.FeedVersion{}
-// 		if err := tx.Find(&fv, fvid).Error; err != nil {
-// 			t.Error(err)
-// 		}
-// 		if fv.URL != feedurl {
-// 			t.Errorf("got %s expect %s", fv.URL, feedurl)
-// 		}
-// 		if fv.FeedID != feedid {
-// 			t.Errorf("got %d expect %d", fv.FeedID, feedid)
-// 		}
-// 		expsha := "2e2142145d772ecbb523b2c9978641ccc4a59ea6"
-// 		if fv.SHA1 != expsha {
-// 			t.Errorf("got %s expect %s", fv.SHA1, expsha)
-// 		}
-// 		// Check Feed
-// 		tlf := dbFeed{}
-// 		tlf.ID = feedid
-// 		tx.Find(&tlf)
-// 		if tlf.LastSuccessfulFetchAt == nil {
-// 			t.Errorf("expected non-nil value")
-// 		}
-// 	})
-// }
+func TestMainFetchFeed(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := ioutil.ReadFile("../testdata/example.zip")
+		if err != nil {
+			t.Error(err)
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+	WithAdapterRollback(func(atx gtdb.Adapter) error {
+		url := ts.URL
+		feedid := caltrain(atx, ts.URL)
+		fvid, err := MainFetchFeed(atx, feedid)
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		// Check FV
+		fv := gotransit.FeedVersion{}
+		fv.ID = fvid
+		if err := atx.Find(&fv); err != nil {
+			t.Error(err)
+		}
+		if fv.URL != url {
+			t.Errorf("got %s expect %s", fv.URL, url)
+		}
+		if fv.FeedID != feedid {
+			t.Errorf("got %d expect %d", fv.FeedID, feedid)
+		}
+		expsha := "21e43625117b993c125f4a939973a862e2cbd136"
+		if fv.SHA1 != expsha {
+			t.Errorf("got %s expect %s", fv.SHA1, expsha)
+		}
+		// Check Feed
+		tlf := Feed{}
+		tlf.ID = feedid
+		atx.Find(&tlf)
+		if !tlf.LastSuccessfulFetchAt.Valid {
+			t.Errorf("expected non-nil value")
+		}
+		return nil
+	})
+}
 
-// func TestMainFetchFeed_LastFetchError(t *testing.T) {
-// 	withDB(func(tx *sqlx.DB) {
-// 		feedid, _ := caltrain(tx)
-// 		tlf := dbFeed{}
-// 		tlf.ID = feedid
-// 		tx.Model(&tlf).Update("url", "http://localhost:8000/invalid.zip")
-// 		if _, err := MainFetchFeed(tx, feedid); err != nil {
-// 			t.Error(err)
-// 			return
-// 		}
-// 		tx.Find(&tlf)
-// 		experr := "required file not present"
-// 		if !strings.HasPrefix(tlf.LastFetchError, experr) {
-// 			t.Errorf("got '%s' expected prefix '%s'", tlf.LastFetchError, experr)
-// 		}
-// 		if tlf.LastSuccessfulFetchAt != nil {
-// 			t.Errorf("got %s expected nil", tlf.LastSuccessfulFetchAt)
-// 		}
-// 	})
-// }
+func TestMainFetchFeed_LastFetchError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Status-Code", "404")
+		w.Write([]byte("not found"))
+	}))
+	defer ts.Close()
+	WithAdapterRollback(func(atx gtdb.Adapter) error {
+		feedid := caltrain(atx, ts.URL)
+		// Fetch
+		if _, err := MainFetchFeed(atx, feedid); err != nil {
+			t.Error(err)
+			return nil
+		}
+		// Check
+		tlf := Feed{}
+		tlf.ID = feedid
+		atx.Find(&tlf)
+		experr := "file does not exist"
+		if tlf.LastFetchError == "" {
+			t.Errorf("expected value for LastFetchError")
+		}
+		if !strings.HasPrefix(tlf.LastFetchError, experr) {
+			t.Errorf("got '%s' expected prefix '%s'", tlf.LastFetchError, experr)
+		}
+		if !tlf.LastSuccessfulFetchAt.Valid {
+			t.Errorf("got %t expected false", tlf.LastSuccessfulFetchAt.Valid)
+		}
+		return nil
+	})
+}
 
 func TestFetchAndCreateFeedVersion(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +137,6 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 		w.Write(buf)
 	}))
 	defer ts.Close()
-
 	WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
 		feedid := caltrain(atx, url)
@@ -139,49 +160,65 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 	})
 }
 
-// func TestFetchAndCreateFeedVersion_404(t *testing.T) {
-// 	withDB(func(tx *sqlx.DB) {
-// 		feedid, _ := caltrain(tx)
-// 		url := "http://localhost:8000/notfound.zip"
-// 		fvid, err := FetchAndCreateFeedVersion(tx, feedid, url, time.Now())
-// 		if err == nil {
-// 			t.Error("expected error")
-// 			return
-// 		}
-// 		if fvid != 0 {
-// 			t.Errorf("got %d expect %d", fvid, 0)
-// 		}
-// 		errmsg := err.Error()
-// 		experr := "file does not exist"
-// 		if !strings.HasPrefix(errmsg, experr) {
-// 			t.Errorf("got '%s' expected prefix '%s'", errmsg, experr)
-// 		}
-// 	})
-// }
+func TestFetchAndCreateFeedVersion_404(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Status-Code", "404")
+		w.Write([]byte("not found"))
+	}))
+	defer ts.Close()
+	WithAdapterRollback(func(atx gtdb.Adapter) error {
+		url := ts.URL
+		feedid := caltrain(atx, url)
+		fvid, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now())
+		if err == nil {
+			t.Error("expected error")
+			return nil
+		}
+		if fvid != 0 {
+			t.Errorf("got %d expect %d", fvid, 0)
+		}
+		errmsg := err.Error()
+		experr := "file does not exist"
+		if !strings.HasPrefix(errmsg, experr) {
+			t.Errorf("got '%s' expected prefix '%s'", errmsg, experr)
+		}
+		return nil
+	})
+}
 
-// func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
-// 	withDB(func(tx *sqlx.DB) {
-// 		feedid, url := caltrain(tx)
-// 		fvid, err := FetchAndCreateFeedVersion(tx, feedid, url, time.Now())
-// 		if err != nil {
-// 			t.Error(err)
-// 			return
-// 		}
-// 		fvid2, err2 := FetchAndCreateFeedVersion(tx, feedid, url, time.Now())
-// 		if err2 != nil {
-// 			t.Error(err)
-// 			return
-// 		}
-// 		if fvid == 0 {
-// 			t.Error("expected non-zero value")
-// 		}
-// 		if fvid != fvid2 {
-// 			t.Errorf("got %d expected %d", fvid, fvid2)
-// 		}
-// 		fv := gotransit.FeedVersion{}
-// 		tx.Find(&fv, fvid)
-// 		if fv.FeedID != feedid {
-// 			t.Errorf("got %d expected %d", fv.FeedID, feedid)
-// 		}
-// 	})
-// }
+func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := ioutil.ReadFile("../testdata/example.zip")
+		if err != nil {
+			t.Error(err)
+		}
+		w.Write(buf)
+	}))
+	WithAdapterRollback(func(atx gtdb.Adapter) error {
+		url := ts.URL
+		feedid := caltrain(atx, url)
+		fvid, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now())
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		fvid2, err2 := FetchAndCreateFeedVersion(atx, feedid, url, time.Now())
+		if err2 != nil {
+			t.Error(err2)
+			return err2
+		}
+		if fvid == 0 {
+			t.Error("expected non-zero value")
+		}
+		if fvid != fvid2 {
+			t.Errorf("got %d expected %d", fvid, fvid2)
+		}
+		fv := gotransit.FeedVersion{}
+		fv.ID = fvid
+		atx.Find(&fv)
+		if fv.FeedID != feedid {
+			t.Errorf("got %d expected %d", fv.FeedID, feedid)
+		}
+		return nil
+	})
+}
