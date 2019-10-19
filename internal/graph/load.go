@@ -55,8 +55,8 @@ func BuildGraph(reader gotransit.Reader) (*EntityGraph, error) {
 		if c, ok := eg.Node(NewNode("calendar.txt", ent.ServiceID)); ok {
 			eg.AddEdge(c, en)
 		}
-		if len(ent.ShapeID) > 0 {
-			if s, ok := eg.Node(NewNode("shapes.txt", ent.ShapeID)); ok {
+		if !ent.ShapeID.IsZero() {
+			if s, ok := eg.Node(NewNode("shapes.txt", ent.ShapeID.Key)); ok {
 				eg.AddEdge(s, en)
 			}
 		}
@@ -67,8 +67,8 @@ func BuildGraph(reader gotransit.Reader) (*EntityGraph, error) {
 	for ent := range reader.Stops() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
-		if len(ent.ParentStation) > 0 {
-			ps[ent.StopID] = ent.ParentStation
+		if ent.ParentStation.Key != "" {
+			ps[ent.StopID] = ent.ParentStation.Key
 		}
 		if len(ent.ZoneID) > 0 {
 			fz[ent.ZoneID] = append(fz[ent.ZoneID], ent.StopID)

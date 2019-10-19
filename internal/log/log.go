@@ -4,24 +4,47 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+)
+
+// Level values
+const (
+	FATAL    = 100
+	CRITICAL = 50
+	ERROR    = 40
+	WARNING  = 30
+	INFO     = 20
+	QUERY    = 11
+	DEBUG    = 10
+	TRACE    = 5
 )
 
 // LEVELSTRINGS provides log level aliases.
 var LEVELSTRINGS = map[string]int{
-	"critical": 50,
-	"error":    40,
-	"warning":  30,
-	"info":     20,
-	"debug":    10,
-	"trace":    5,
+	"CRITICAL": CRITICAL,
+	"ERROR":    ERROR,
+	"WARNING":  WARNING,
+	"INFO":     INFO,
+	"DEBUG":    DEBUG,
+	"TRACE":    TRACE,
+	"QUERY":    QUERY,
+}
+
+// STRINGLEVEL is the reverse mapping
+var STRINGLEVEL = map[int]string{}
+
+func init() {
+	for k, v := range LEVELSTRINGS {
+		STRINGLEVEL[v] = k
+	}
 }
 
 // Level is the log level.
-var Level = 10
+var Level = DEBUG
 
 // Printf is the same as Info.
 func Printf(fmt string, a ...interface{}) {
-	logLog(20, fmt, a...)
+	logLog(INFO, fmt, a...)
 }
 
 // Println is for compatibility.
@@ -31,28 +54,34 @@ func Println(a ...interface{}) {
 
 // Info for regular messages.
 func Info(fmt string, a ...interface{}) {
-	logLog(20, fmt, a...)
+	logLog(INFO, fmt, a...)
 }
 
 // Debug for debugging messages.
 func Debug(fmt string, a ...interface{}) {
-	logLog(10, fmt, a...)
+	logLog(DEBUG, fmt, a...)
 }
 
 // Trace for really deep debugging.
 func Trace(fmt string, a ...interface{}) {
-	logLog(5, fmt, a...)
+	logLog(TRACE, fmt, a...)
+}
+
+// Query for really deep debugging.
+func Query(fmt string, a ...interface{}) {
+	logLog(QUERY, fmt, a...)
 }
 
 // Fatal for fatal, unrecoverable errors.
 func Fatal(fmta string, a ...interface{}) {
-	logLog(100, fmta, a...)
+	logLog(FATAL, fmta, a...)
 	panic(fmt.Sprintf(fmta, a...))
 }
 
 func logLog(level int, fmt string, a ...interface{}) {
+	strlevel, _ := STRINGLEVEL[level]
 	if level >= Level {
-		log.Printf(fmt, a...)
+		log.Printf("["+strlevel+"] "+fmt, a...)
 	}
 }
 
@@ -63,7 +92,7 @@ func SetLevel(level int) {
 
 // SetLevelString uses a string alias to set the log level.
 func SetLevelString(lstr string) {
-	lvalue, ok := LEVELSTRINGS[lstr]
+	lvalue, ok := LEVELSTRINGS[strings.ToUpper(lstr)]
 	if !ok {
 		lvalue = 20
 	}

@@ -289,14 +289,14 @@ func (copier *Copier) copyStopsAndFares() {
 			continue
 		}
 		// Confirm the parent station location_type != 0
-		if len(e.ParentStation) == 0 {
+		if len(e.ParentStation.Key) == 0 {
 			// ok
-		} else if pstype, ok := parents[e.ParentStation]; ok && pstype != 1 {
+		} else if pstype, ok := parents[e.ParentStation.Key]; ok && pstype != 1 {
 			// ParentStation found, not correct LocationType
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation))
+			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
 		} else if !ok {
 			// ParentStation not found
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation))
+			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
@@ -308,10 +308,10 @@ func (copier *Copier) copyStopsAndFares() {
 	// Finally, boarding areas
 	for _, e := range boards {
 		// Confirm the parent station location_type != 0
-		if len(e.ParentStation) == 0 {
+		if len(e.ParentStation.Key) == 0 {
 			// ok
-		} else if pstype := parents[e.ParentStation]; pstype != 0 {
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation))
+		} else if pstype := parents[e.ParentStation.Key]; pstype != 0 {
+			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
@@ -322,8 +322,8 @@ func (copier *Copier) copyStopsAndFares() {
 	}
 	// FareAttributes
 	for e := range copier.Reader.FareAttributes() {
-		if len(e.AgencyID) == 0 {
-			e.AgencyID = copier.DefaultAgencyID // todo: as else below?
+		if len(e.AgencyID.Key) == 0 {
+			e.AgencyID.Key = copier.DefaultAgencyID // todo: as else below?
 			if copier.agencyCount > 1 {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
@@ -429,7 +429,7 @@ func (copier *Copier) copyTransfers() {
 
 // copyShapes writes Shapes
 func (copier *Copier) copyShapes() {
-	for e := range copier.Reader.ShapeLinesByShapeID() {
+	for e := range copier.Reader.Shapes() {
 		sid := e.EntityID()
 		if _, ok := copier.CopyEntity(&e); ok {
 			copier.geomCache.AddShape(sid, e)
@@ -500,13 +500,13 @@ func (copier *Copier) copyTripsAndStopTimes() {
 			trip.StopPatternID = pat
 		}
 		// Do we need to create a shape for this trip
-		if len(trip.ShapeID) == 0 && copier.CreateMissingShapes {
+		if trip.ShapeID.IsZero() && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
 			shapeid, err := copier.createMissingShape(stoptimes)
 			if err != nil {
 				copier.AddError(NewCopyError("trips.txt", tripid, err))
 			} else {
-				trip.ShapeID = shapeid
+				trip.ShapeID.Key = shapeid
 			}
 		}
 		// Save trip

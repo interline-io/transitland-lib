@@ -20,40 +20,6 @@ type Registry struct {
 	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
 }
 
-// Feed listed in a parsed DMFR file
-type Feed struct {
-	Spec            string
-	ID              string
-	URL             string
-	URLs            map[string]string
-	AssociatedFeeds []string
-	FeedNamespaceID string
-	OtherIDs        map[string]string
-	languages       []string
-	license         FeedLicense
-	authorization   FeedAuthorization
-}
-
-// FeedLicense describes what a user is allowed to do with a feed and what steps they are required to follow
-type FeedLicense struct {
-	SpdxIdentifier          string
-	url                     string
-	UseWithoutAttribution   string
-	CreateDerivedProduct    string
-	RedistributionAllowed   string
-	CommercialUseAllowed    string
-	ShareAlikeOptional      string
-	AttributionText         string
-	AttributionInstructions string
-}
-
-// FeedAuthorization describes how a user can access a feed
-type FeedAuthorization struct {
-	AuthType  string `json:type`
-	ParamName string
-	InfoURL   string
-}
-
 // NewRegistry TODO
 func NewRegistry(reader io.Reader) (*Registry, error) {
 	contents, err := ioutil.ReadAll(reader)
@@ -67,9 +33,9 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 		}
 		return nil, err
 	}
-	log.Info("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
+	log.Debug("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
 	if registry.LicenseSpdxIdentifier != "CC0-1.0" {
-		log.Info("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
+		log.Debug("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
 	}
 	for i := 0; i < len(registry.Feeds); i++ {
 		registry.Feeds[i].OtherIDs = map[string]string{}
@@ -115,7 +81,13 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 			log.Info("DETECT: %s", enc)
 			return NewRegistry(readerSkippingBOM)
 		}
+		return NewRegistry(bytes.NewReader(body))
 	}
+	reader, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return NewRegistry(reader)
 }
 
 // ParseString TODO

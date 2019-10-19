@@ -1,0 +1,182 @@
+{
+    "$schema": "https://dmfr.transit.land/json-schema/dmfr.schema.json",
+    "feeds": [{
+        "spec": "gtfs",
+        "id": "BA",
+        "url": "http://example.com/BA",
+        "priority": 0
+      },
+      {
+        "spec": "gtfs",
+        "id": "SF",
+        "url": "http://example.com/SF",
+        "priority": 1
+      },
+      {
+        "spec": "gtfs",
+        "id": "WC",
+        "url": "http://example.com/WC",
+        "priority": 2
+      },
+      {
+        "spec": "gtfs",
+        "id": "SM",
+        "url": "http://example.com/SM",
+        "priority": 3
+      },
+      {
+        "spec": "gtfs",
+        "id": "GG",
+        "url": "http://example.com/GG",
+        "priority": 4
+      },
+      {
+        "spec": "gtfs",
+        "id": "AC",
+        "url": "http://example.com/AC",
+        "priority": 5
+      },
+      {
+        "spec": "gtfs",
+        "id": "DE",
+        "url": "http://example.com/DE",
+        "priority": 5
+      },
+      {
+        "spec": "gtfs",
+        "id": "SC",
+        "url": "http://example.com/SC",
+        "priority": 6
+      },
+      {
+        "spec": "gtfs",
+        "id": "CT",
+        "url": "http://example.com/CT",
+        "priority": 70
+      },
+      {
+        "spec": "gtfs",
+        "id": "SA",
+        "url": "http://example.com/SA",
+        "priority": 71
+      },
+      {
+        "spec": "gtfs",
+        "id": "FS",
+        "url": "http://example.com/FS",
+        "priority": 75
+      },
+      {
+        "spec": "gtfs",
+        "id": "SO",
+        "url": "http://example.com/SO",
+        "priority": 77
+      },
+      {
+        "spec": "gtfs",
+        "id": "UC",
+        "url": "http://example.com/UC",
+        "priority": 79
+      },
+      {
+        "spec": "gtfs",
+        "id": "SR",
+        "url": "http://example.com/SR",
+        "priority": 80
+      },
+      {
+        "spec": "gtfs",
+        "id": "3D",
+        "url": "http://example.com/3D",
+        "priority": 81
+      },
+      {
+        "spec": "gtfs",
+        "id": "ST",
+        "url": "http://example.com/ST",
+        "priority": 82
+      },
+      {
+        "spec": "gtfs",
+        "id": "CC",
+        "url": "http://example.com/CC",
+        "priority": 83
+      },
+      {
+        "spec": "gtfs",
+        "id": "MA",
+        "url": "http://example.com/MA",
+        "priority": 84
+      },
+      {
+        "spec": "gtfs",
+        "id": "EM",
+        "url": "http://example.com/EM",
+        "priority": 85
+      },
+      {
+        "spec": "gtfs",
+        "id": "PE",
+        "url": "http://example.com/PE",
+        "priority": 87
+      },
+      {
+        "spec": "gtfs",
+        "id": "WH",
+        "url": "http://example.com/WH",
+        "priority": 88
+      },
+      {
+        "spec": "gtfs",
+        "id": "VN",
+        "url": "http://example.com/VN",
+        "priority": 89
+      },
+      {
+        "spec": "gtfs",
+        "id": "AM",
+        "url": "http://example.com/AM"
+      },
+      {
+        "spec": "gtfs",
+        "id": "CE",
+        "url": "http://example.com/CE"
+      },
+      {
+        "spec": "gtfs",
+        "id": "CM",
+        "url": "http://example.com/CM"
+      },
+      {
+        "spec": "gtfs",
+        "id": "GF",
+        "url": "http://example.com/GF"
+      },
+      {
+        "spec": "gtfs",
+        "id": "MS",
+        "url": "http://example.com/MS"
+      },
+      {
+        "spec": "gtfs",
+        "id": "RV",
+        "url": "http://example.com/RV"
+      },
+      {
+        "spec": "gtfs",
+        "id": "SB",
+        "url": "http://example.com/SB"
+      },
+      {
+        "spec": "gtfs",
+        "id": "TD",
+        "url": "http://example.com/TD"
+      },
+      {
+        "spec": "gtfs",
+        "id": "VC",
+        "url": "http://example.com/VC"
+      }
+    ],
+    "license_spdx_identifier": "CC0-1.0"
+  }
