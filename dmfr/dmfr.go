@@ -29,7 +29,7 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 	var registry Registry
 	if err := json.Unmarshal([]byte(contents), &registry); err != nil {
 		if e, ok := err.(*json.SyntaxError); ok {
-			log.Printf("syntax error at byte offset %d", e.Offset)
+			log.Debug("syntax error at byte offset %d", e.Offset)
 		}
 		return nil, err
 	}
@@ -78,16 +78,10 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 			return nil, err
 		} else {
 			readerSkippingBOM, enc := utfbom.Skip(reader)
-			log.Info("DETECT: %s", enc)
+			log.Debug("DETECT: %s", enc)
 			return NewRegistry(readerSkippingBOM)
 		}
-		return NewRegistry(bytes.NewReader(body))
 	}
-	reader, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	return NewRegistry(reader)
 }
 
 // ParseString TODO
