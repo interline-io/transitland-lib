@@ -2,7 +2,6 @@ package dmfr
 
 import (
 	"database/sql"
-	"fmt"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -30,7 +29,6 @@ func MainSync(atx gtdb.Adapter, filenames []string) ([]string, error) {
 		}
 		found = append(found, fids...)
 	}
-	fmt.Println("FOUND:", found)
 	// Hide
 	if err := HideUnusedFeeds(atx, found); err != nil {
 		return found, err
@@ -88,7 +86,6 @@ func HideUnusedFeeds(atx gtdb.Adapter, found []string) error {
 		Where(sq.NotEq{"onestop_id": found}).
 		Set("deleted_at", t).
 		RunWith(atx.DBX())
-	fmt.Println(sq.ToSql())
 	_, err := sq.Exec()
 	return err
 }
