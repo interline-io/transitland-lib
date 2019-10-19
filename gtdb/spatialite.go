@@ -2,14 +2,12 @@ package gtdb
 
 import (
 	"database/sql"
-	"errors"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/jmoiron/sqlx"
-	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/mattn/go-sqlite3"
 )
 
@@ -20,9 +18,8 @@ func init() {
 
 // SpatiaLiteAdapter provides support for SpatiaLite.
 type SpatiaLiteAdapter struct {
-	DBURL  string
-	db     sqlx.Ext
-	mapper *reflectx.Mapper
+	DBURL string
+	db    sqlx.Ext
 }
 
 // Open implements Adapter Open.
@@ -35,9 +32,8 @@ func (adapter *SpatiaLiteAdapter) Open() error {
 	if err != nil {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
-	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
-	adapter.db = db
-	adapter.mapper = db.Mapper
+	db.Mapper = mapper
+	adapter.db = &queryLogger{db.Unsafe()}
 	return nil
 }
 
@@ -74,18 +70,15 @@ func (adapter *SpatiaLiteAdapter) Sqrl() sq.StatementBuilderType {
 
 // Tx runs a callback inside a transaction.
 func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
-	sqlxdb, ok := adapter.db.(*sqlx.DB)
-	if !ok {
-		return errors.New("adapter is not *sqlx.DB")
+	var err error
+	var tx *sqlx.Tx
+	if a, ok := adapter.db.(canBeginx); ok {
+		tx, err = a.Beginx()
 	}
-	tx, err := sqlxdb.Beginx()
 	if err != nil {
-		if errTx := tx.Rollback(); errTx != nil {
-			return errTx
-		}
 		return err
 	}
-	adapter2 := &SpatiaLiteAdapter{DBURL: adapter.DBURL, db: tx, mapper: adapter.mapper}
+	adapter2 := &SpatiaLiteAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}}
 	if errTx := cb(adapter2); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3
@@ -96,16 +89,8 @@ func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *SpatiaLiteAdapter) Find(dest interface{}) error {
-	eid, err := getID(dest)
-	if err != nil {
-		return err
-	}
-	qstr, args, err := adapter.Sqrl().Select("*").From(getTableName(dest)).Where("id = ?", eid).ToSql()
-	if err != nil {
-		return err
-	}
-	return sqlx.Get(adapter.db, dest, qstr, args...)
+func (adapter *SpatiaLiteAdapter) Find(dest interface{}, args ...interface{}) error {
+	return find(adapter, dest, args...)
 }
 
 // Get wraps sqlx.Get
@@ -118,11 +103,16 @@ func (adapter *SpatiaLiteAdapter) Select(dest interface{}, qstr string, args ...
 	return sqlx.Select(adapter.db, dest, qstr, args...)
 }
 
+// Update a single record.
+func (adapter *SpatiaLiteAdapter) Update(ent interface{}, columns ...string) error {
+	return update(adapter, ent, columns...)
+}
+
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 	// Keep the mapper to use cache.
 	table := getTableName(ent)
-	cols, vals, err := getInsert(adapter.mapper, ent)
+	cols, vals, err := getInsert(ent)
 	if err != nil {
 		return 0, err
 	}
@@ -142,56 +132,28 @@ func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid), nil
 }
 
-// Update a single record.
-func (adapter *SpatiaLiteAdapter) Update(ent interface{}, columns ...string) error {
-	table := getTableName(ent)
-	cols, vals, err := getInsert(adapter.mapper, ent)
-	if err != nil {
-		return err
-	}
-	colmap := make(map[string]interface{})
-	for i, col := range cols {
-		if len(columns) > 0 && !contains(col, columns) {
-			continue
-		}
-		colmap[col] = vals[i]
-	}
-	q := sq.Update(table).SetMap(colmap).RunWith(adapter.db)
-	_, err = q.Exec()
-	return err
-}
-
 // BatchInsert provides a fast path for creating StopTimes.
 func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
-	sts := []*gotransit.StopTime{}
-	for _, ent := range ents {
-		if st, ok := ent.(*gotransit.StopTime); ok {
-			sts = append(sts, st)
-		}
-	}
-	if len(sts) == 0 {
-		return errors.New("presently only StopTimes are supported")
-	}
-	table := getTableName(sts[0])
-	cols, vals, err := getInsert(adapter.mapper, sts[0])
+	table := getTableName(ents[0])
+	cols, vals, err := getInsert(ents[0])
 	if err != nil {
 		return err
 	}
-	mapper := adapter.mapper
+	q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
+	if err != nil {
+		return err
+	}
 	return adapter.Tx(func(adapter Adapter) error {
-		q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
-		if err != nil {
-			return err
-		}
-		for _, d := range sts {
-			_, vals, err := getInsert(mapper, d)
+		db := adapter.DBX()
+		for _, d := range ents {
+			_, vals, err := getInsert(d)
 			if err != nil {
 				return err
 			}
-			if _, err := adapter.DBX().Exec(q, vals...); err != nil {
+			if _, err := db.Exec(q, vals...); err != nil {
 				return err
 			}
 		}

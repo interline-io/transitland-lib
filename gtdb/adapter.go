@@ -28,7 +28,7 @@ type Adapter interface {
 	Sqrl() sq.StatementBuilderType
 	Insert(interface{}) (int, error)
 	Update(interface{}, ...string) error
-	Find(interface{}) error
+	Find(interface{}, ...interface{}) error
 	Get(interface{}, string, ...interface{}) error
 	Select(interface{}, string, ...interface{}) error
 	BatchInsert([]gotransit.Entity) error

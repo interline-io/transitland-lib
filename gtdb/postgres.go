@@ -1,19 +1,15 @@
 package gtdb
 
 import (
-	"errors"
-
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/jmoiron/sqlx"
-	"github.com/jmoiron/sqlx/reflectx"
 )
 
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
-	DBURL  string
-	db     sqlx.Ext
-	mapper *reflectx.Mapper
+	DBURL string
+	db    sqlx.Ext
 }
 
 // Open the adapter.
@@ -25,9 +21,8 @@ func (adapter *PostgresAdapter) Open() error {
 	if err != nil {
 		return err
 	}
-	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
-	adapter.db = db
-	adapter.mapper = db.Mapper
+	db.Mapper = mapper
+	adapter.db = &queryLogger{db.Unsafe()}
 	return nil
 }
 
@@ -50,28 +45,24 @@ func (adapter *PostgresAdapter) Create() error {
 	}
 	_, err = adapter.db.Exec(schema)
 	return err
-
 }
 
-// DBX returns *sqlx.DB
+// DBX returns sqlx.Ext
 func (adapter *PostgresAdapter) DBX() sqlx.Ext {
 	return adapter.db
 }
 
 // Tx runs a callback inside a transaction.
 func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
-	sqlxdb, ok := adapter.db.(*sqlx.DB)
-	if !ok {
-		return errors.New("adapter is not *sqlx.DB")
+	var err error
+	var tx *sqlx.Tx
+	if a, ok := adapter.db.(canBeginx); ok {
+		tx, err = a.Beginx()
 	}
-	tx, err := sqlxdb.Beginx()
 	if err != nil {
-		if errTx := tx.Rollback(); errTx != nil {
-			return errTx
-		}
 		return err
 	}
-	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: tx, mapper: adapter.mapper}
+	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}}
 	if err2 := cb(adapter2); err2 != nil {
 		if errTx := tx.Rollback(); errTx != nil {
 			return errTx
@@ -87,16 +78,8 @@ func (adapter *PostgresAdapter) Sqrl() sq.StatementBuilderType {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *PostgresAdapter) Find(dest interface{}) error {
-	eid, err := getID(dest)
-	if err != nil {
-		return err
-	}
-	qstr, args, err := adapter.Sqrl().Select("*").From(getTableName(dest)).Where("id = ?", eid).ToSql()
-	if err != nil {
-		return err
-	}
-	return adapter.Get(dest, qstr, args...)
+func (adapter *PostgresAdapter) Find(dest interface{}, args ...interface{}) error {
+	return find(adapter, dest, args...)
 }
 
 // Get wraps sqlx.Get
@@ -109,25 +92,33 @@ func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...in
 	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
+// Update a single record
+func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
+	return update(adapter, ent, columns...)
+}
+
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	if v, ok := ent.(*gotransit.FareAttribute); ok {
 		v.Transfers = "0" // TODO: Keep?
 	}
 	table := getTableName(ent)
-	cols, vals, err := getInsert(adapter.mapper, ent)
+	cols, vals, err := getInsert(ent)
 	if err != nil {
 		return 0, err
 	}
-	q := sq.
+	eid := 0
+	err = adapter.Sqrl().
 		Insert(table).
 		Columns(cols...).
 		Values(vals...).
 		Suffix("RETURNING \"id\"").
-		PlaceholderFormat(sq.Dollar).
-		RunWith(adapter.db)
-	eid := 0
-	if err = q.QueryRow().Scan(&eid); err != nil {
+		QueryRow().
+		Scan(&eid)
+	if err != nil {
 		return 0, err
 	}
 	if v, ok := ent.(canSetID); ok {
@@ -136,50 +127,18 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	return eid, err
 }
 
-// Update a single record
-func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
-	table := getTableName(ent)
-	cols, vals, err := getInsert(adapter.mapper, ent)
-	if err != nil {
-		return err
-	}
-	colmap := make(map[string]interface{})
-	for i, col := range cols {
-		if len(columns) > 0 && !contains(col, columns) {
-			continue
-		}
-		colmap[col] = vals[i]
-	}
-	q := sq.
-		Update(table).
-		SetMap(colmap).
-		PlaceholderFormat(sq.Dollar).
-		RunWith(adapter.db)
-	_, err = q.Exec()
-	return err
-}
-
 // BatchInsert builds and executes a multi-insert statement for the given entities.
 func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
-	sts := []*gotransit.StopTime{}
-	for _, ent := range ents {
-		if st, ok := ent.(*gotransit.StopTime); ok {
-			sts = append(sts, st)
-		}
-	}
-	if len(sts) == 0 {
-		return errors.New("presently only StopTimes are supported")
-	}
-	cols, _, err := getInsert(adapter.mapper, sts[0])
-	table := "gtfs_stop_times"
-	q := sq.Insert(table).Columns(cols...)
-	for _, d := range sts {
-		_, vals, _ := getInsert(adapter.mapper, d)
+	cols, _, err := getInsert(ents[0])
+	table := getTableName(ents[0])
+	q := adapter.Sqrl().Insert(table).Columns(cols...)
+	for _, d := range ents {
+		_, vals, _ := getInsert(d)
 		q = q.Values(vals...)
 	}
-	_, err = q.PlaceholderFormat(sq.Dollar).RunWith(adapter.db).Exec()
+	_, err = q.Exec()
 	return err
 }

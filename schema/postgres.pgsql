@@ -4,7 +4,7 @@ CREATE TABLE public.current_feeds (
     id integer NOT NULL,
     onestop_id character varying NOT NULL,
     url character varying NOT NULL,
-    feed_format character varying NOT NULL,
+    spec character varying DEFAULT 'gtfs'::character varying NOT NULL,
     tags public.hstore,
     last_fetched_at timestamp without time zone,
     last_imported_at timestamp without time zone,
@@ -13,7 +13,7 @@ CREATE TABLE public.current_feeds (
     license_use_without_attribution character varying,
     license_create_derived_product character varying,
     license_redistribute character varying,
-    version integer NOT NULL,
+    version integer,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     created_or_updated_in_changeset_id integer,
@@ -22,17 +22,17 @@ CREATE TABLE public.current_feeds (
     active_feed_version_id integer,
     edited_attributes character varying[] DEFAULT '{}'::character varying[],
     name character varying,
-    type character varying NOT NULL,
-    "authorization" public.hstore,
-    urls public.hstore,
+    type character varying,
+    auth jsonb DEFAULT '{}'::jsonb NOT NULL,
+    urls jsonb DEFAULT '{}'::jsonb NOT NULL,
     last_successful_fetch_at timestamp without time zone,
-    last_fetch_error character varying NOT NULL,
     deleted_at timestamp without time zone,
-    license public.hstore,
-    other_ids public.hstore,
-    associated_feeds character varying[],
-    languages character varying[],
-    feed_namespace_id character varying NOT NULL
+    last_fetch_error character varying NOT NULL,
+    license jsonb DEFAULT '{}'::jsonb NOT NULL,
+    other_ids jsonb DEFAULT '{}'::jsonb NOT NULL,
+    associated_feeds jsonb DEFAULT '{}'::jsonb NOT NULL,
+    languages jsonb DEFAULT '{}'::jsonb NOT NULL,
+    feed_namespace_id character varying DEFAULT ''::character varying NOT NULL
 );
 CREATE SEQUENCE public.current_feeds_id_seq
     AS integer
@@ -414,7 +414,7 @@ ALTER TABLE ONLY public.gtfs_transfers
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT gtfs_trips_pkey PRIMARY KEY (id);
 CREATE INDEX index_current_feeds_on_active_feed_version_id ON public.current_feeds USING btree (active_feed_version_id);
-CREATE INDEX index_current_feeds_on_authorization ON public.current_feeds USING btree ("authorization");
+CREATE INDEX index_current_feeds_on_auth ON public.current_feeds USING btree (auth);
 CREATE INDEX index_current_feeds_on_created_or_updated_in_changeset_id ON public.current_feeds USING btree (created_or_updated_in_changeset_id);
 CREATE INDEX index_current_feeds_on_geometry ON public.current_feeds USING gist (geometry);
 CREATE UNIQUE INDEX index_current_feeds_on_onestop_id ON public.current_feeds USING btree (onestop_id);

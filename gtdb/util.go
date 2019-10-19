@@ -17,8 +17,26 @@ import (
 	_ "github.com/interline-io/gotransit/internal/schema"
 )
 
+var mapper = reflectx.NewMapperFunc("db", toSnakeCase)
+
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+type canSetID interface {
+	SetID(int)
+}
+
+type canGetID interface {
+	EntityID() string
+}
+
+type canUpdateTimestamps interface {
+	UpdateTimestamps()
+}
+
+type canSetFeedVersion interface {
+	SetFeedVersionID(int)
+}
 
 func getSchema(filename string) (string, error) {
 	statikFS, err := fs.New()
@@ -39,10 +57,10 @@ func toSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-func getFieldNameIndexes(m *reflectx.Mapper, ent interface{}) ([]string, []string) {
+func getFieldNameIndexes(ent interface{}) ([]string, []string) {
 	names := []string{}
 	wraps := []string{}
-	fields := m.TypeMap(reflect.TypeOf(ent))
+	fields := mapper.TypeMap(reflect.TypeOf(ent))
 	for _, fi := range fields.Index {
 		if fi.Embedded == true || fi.Name == "id" || strings.Contains(fi.Path, ".") {
 			continue
@@ -58,11 +76,11 @@ func getFieldNameIndexes(m *reflectx.Mapper, ent interface{}) ([]string, []strin
 }
 
 // getInsert returns column names and a slice of placeholders or squirrel expressions.
-func getInsert(m *reflectx.Mapper, ent interface{}) ([]string, []interface{}, error) {
+func getInsert(ent interface{}) ([]string, []interface{}, error) {
 	vals := make([]interface{}, 0)
 	val := reflect.ValueOf(ent).Elem()
-	fm := m.FieldMap(val)
-	names, wraps := getFieldNameIndexes(m, ent)
+	fm := mapper.FieldMap(val)
+	names, wraps := getFieldNameIndexes(ent)
 	for i, name := range names {
 		v, ok := fm[name]
 		if !ok {
@@ -95,27 +113,11 @@ func getTableName(ent interface{}) string {
 	return toSnakeCase(s[len(s)-1])
 }
 
-type canSetID interface {
-	SetID(int)
-}
-
-type canGetID interface {
-	EntityID() string
-}
-
-type canClose interface {
-	Close() error
-}
-
 func getID(ent interface{}) (int, error) {
 	if v, ok := ent.(canGetID); ok {
 		return strconv.Atoi(v.EntityID())
 	}
 	return 0, errors.New("no ID")
-}
-
-type feedVersionSetter interface {
-	SetFeedVersionID(int)
 }
 
 func contains(a string, b []string) bool {

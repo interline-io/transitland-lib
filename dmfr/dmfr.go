@@ -19,14 +19,6 @@ type Registry struct {
 	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
 }
 
-// Feed listed in a parsed DMFR file
-type Feed struct {
-	Spec        string
-	ID          string
-	URL         string
-	IDCrosswalk map[string]string `json:"id_crosswalk"`
-}
-
 // NewRegistry TODO
 func NewRegistry(reader io.Reader) (*Registry, error) {
 	contents, err := ioutil.ReadAll(reader)
@@ -37,9 +29,9 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 	if err := json.Unmarshal([]byte(contents), &registry); err != nil {
 		return nil, err
 	}
-	log.Info("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
+	log.Debug("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
 	if registry.LicenseSpdxIdentifier != "CC0-1.0" {
-		log.Info("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
+		log.Debug("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
 	}
 	// for _, feed := range registry.Feeds {
 	for i := 0; i < len(registry.Feeds); i++ {
@@ -71,18 +63,17 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 			return nil, err
 		}
 		defer resp.Body.Close()
-		if body, err := ioutil.ReadAll(resp.Body); err != nil {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
 			return nil, err
-		} else {
-			return NewRegistry(bytes.NewReader(body))
 		}
-	} else {
-		if reader, err := os.Open(path); err != nil {
-			return nil, err
-		} else {
-			return NewRegistry(reader)
-		}
+		return NewRegistry(bytes.NewReader(body))
 	}
+	reader, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return NewRegistry(reader)
 }
 
 // ParseString TODO
