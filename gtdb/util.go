@@ -10,14 +10,33 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/rakyll/statik/fs"
 
 	// Static assets
 	_ "github.com/interline-io/gotransit/internal/schema"
 )
 
+var mapper = reflectx.NewMapperFunc("db", toSnakeCase)
+
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+type canSetID interface {
+	SetID(int)
+}
+
+type canGetID interface {
+	EntityID() string
+}
+
+type canUpdateTimestamps interface {
+	UpdateTimestamps()
+}
+
+type canSetFeedVersion interface {
+	SetFeedVersionID(int)
+}
 
 func getSchema(filename string) (string, error) {
 	statikFS, err := fs.New()
@@ -94,27 +113,11 @@ func getTableName(ent interface{}) string {
 	return toSnakeCase(s[len(s)-1])
 }
 
-type canSetID interface {
-	SetID(int)
-}
-
-type canGetID interface {
-	EntityID() string
-}
-
-type canUpdateTimestamps interface {
-	UpdateTimestamps()
-}
-
 func getID(ent interface{}) (int, error) {
 	if v, ok := ent.(canGetID); ok {
 		return strconv.Atoi(v.EntityID())
 	}
 	return 0, errors.New("no ID")
-}
-
-type feedVersionSetter interface {
-	SetFeedVersionID(int)
 }
 
 func contains(a string, b []string) bool {

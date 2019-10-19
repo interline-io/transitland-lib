@@ -18,10 +18,8 @@ func find(adapter Adapter, dest interface{}, args ...interface{}) error {
 
 // update a single record.
 func update(adapter Adapter, ent interface{}, columns ...string) error {
-	entid := ""
-	if v, ok := ent.(canGetID); ok {
-		entid = v.EntityID()
-	} else {
+	entid, err := getID(ent)
+	if err != nil {
 		return errors.New("cant set ID")
 	}
 	if v, ok := ent.(canUpdateTimestamps); ok {
