@@ -40,6 +40,9 @@ func (q qval) String() string {
 	s := ""
 	if a, ok := q.Value.(canValue); ok {
 		z, _ := a.Value()
+		if x, ok := z.([]byte); ok {
+			z = string(x)
+		}
 		s = fmt.Sprintf("%v", z)
 	} else {
 		s = fmt.Sprintf("%v", q.Value)
@@ -83,6 +86,12 @@ func (p *queryLogger) Exec(query string, args ...interface{}) (sql.Result, error
 func (p *queryLogger) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	qlog(query, args...)
 	return p.ext.Query(query, args...)
+}
+
+// QueryRow .
+func (p *queryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
+	qlog(query, args...)
+	return p.ext.QueryRow(query, args...)
 }
 
 // Queryx .

@@ -118,15 +118,17 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	q := sq.
+	eid := 0
+	err = sq.
 		Insert(table).
 		Columns(cols...).
 		Values(vals...).
 		Suffix("RETURNING \"id\"").
 		PlaceholderFormat(sq.Dollar).
-		RunWith(adapter.db)
-	eid := 0
-	if err = q.QueryRow().Scan(&eid); err != nil {
+		RunWith(adapter.db).
+		QueryRow().
+		Scan(&eid)
+	if err != nil {
 		return 0, err
 	}
 	if v, ok := ent.(canSetID); ok {
@@ -137,6 +139,12 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 
 // Update a single record
 func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
+	entid := ""
+	if v, ok := ent.(canGetID); !ok {
+		return errors.New("cant set ID")
+	} else {
+		entid = v.EntityID()
+	}
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
@@ -154,6 +162,7 @@ func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error
 	}
 	_, err2 := sq.
 		Update(table).
+		Where("id = ?", entid).
 		SetMap(colmap).
 		PlaceholderFormat(sq.Dollar).
 		RunWith(adapter.db).
