@@ -8,13 +8,6 @@ import (
 	"github.com/interline-io/gotransit/gtdb"
 )
 
-func fail(t *testing.T, err error) {
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
-}
-
 func TestMainSync(t *testing.T) {
 	err := WithAdapterRollback(func(atx gtdb.Adapter) error {
 		// Create a feed we will check is soft-deleted
