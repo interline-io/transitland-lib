@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/rakyll/statik/fs"
 
 	// Static assets
@@ -39,10 +38,10 @@ func toSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-func getFieldNameIndexes(m *reflectx.Mapper, ent interface{}) ([]string, []string) {
+func getFieldNameIndexes(ent interface{}) ([]string, []string) {
 	names := []string{}
 	wraps := []string{}
-	fields := m.TypeMap(reflect.TypeOf(ent))
+	fields := mapper.TypeMap(reflect.TypeOf(ent))
 	for _, fi := range fields.Index {
 		if fi.Embedded == true || fi.Name == "id" || strings.Contains(fi.Path, ".") {
 			continue
@@ -58,11 +57,11 @@ func getFieldNameIndexes(m *reflectx.Mapper, ent interface{}) ([]string, []strin
 }
 
 // getInsert returns column names and a slice of placeholders or squirrel expressions.
-func getInsert(m *reflectx.Mapper, ent interface{}) ([]string, []interface{}, error) {
+func getInsert(ent interface{}) ([]string, []interface{}, error) {
 	vals := make([]interface{}, 0)
 	val := reflect.ValueOf(ent).Elem()
-	fm := m.FieldMap(val)
-	names, wraps := getFieldNameIndexes(m, ent)
+	fm := mapper.FieldMap(val)
+	names, wraps := getFieldNameIndexes(ent)
 	for i, name := range names {
 		v, ok := fm[name]
 		if !ok {
