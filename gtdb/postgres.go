@@ -1,15 +1,10 @@
 package gtdb
 
 import (
-	"errors"
-
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/jmoiron/sqlx"
-	"github.com/jmoiron/sqlx/reflectx"
 )
-
-var mapper = reflectx.NewMapperFunc("db", toSnakeCase)
 
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
@@ -52,7 +47,7 @@ func (adapter *PostgresAdapter) Create() error {
 	return err
 }
 
-// DBX returns *sqlx.DB
+// DBX returns sqlx.Ext
 func (adapter *PostgresAdapter) DBX() sqlx.Ext {
 	return adapter.db
 }
@@ -116,13 +111,11 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 		return 0, err
 	}
 	eid := 0
-	err = sq.
+	err = adapter.Sqrl().
 		Insert(table).
 		Columns(cols...).
 		Values(vals...).
 		Suffix("RETURNING \"id\"").
-		PlaceholderFormat(sq.Dollar).
-		RunWith(adapter.db).
 		QueryRow().
 		Scan(&eid)
 	if err != nil {
@@ -139,22 +132,13 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
-	sts := []*gotransit.StopTime{}
-	for _, ent := range ents {
-		if st, ok := ent.(*gotransit.StopTime); ok {
-			sts = append(sts, st)
-		}
-	}
-	if len(sts) == 0 {
-		return errors.New("presently only StopTimes are supported")
-	}
-	cols, _, err := getInsert(sts[0])
-	table := "gtfs_stop_times"
-	q := sq.Insert(table).Columns(cols...)
-	for _, d := range sts {
+	cols, _, err := getInsert(ents[0])
+	table := getTableName(ents[0])
+	q := adapter.Sqrl().Insert(table).Columns(cols...)
+	for _, d := range ents {
 		_, vals, _ := getInsert(d)
 		q = q.Values(vals...)
 	}
-	_, err = q.PlaceholderFormat(sq.Dollar).RunWith(adapter.db).Exec()
+	_, err = q.Exec()
 	return err
 }

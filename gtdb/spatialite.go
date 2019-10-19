@@ -2,14 +2,12 @@ package gtdb
 
 import (
 	"database/sql"
-	"errors"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/jmoiron/sqlx"
-	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/mattn/go-sqlite3"
 )
 
@@ -20,9 +18,8 @@ func init() {
 
 // SpatiaLiteAdapter provides support for SpatiaLite.
 type SpatiaLiteAdapter struct {
-	DBURL  string
-	db     sqlx.Ext
-	mapper *reflectx.Mapper
+	DBURL string
+	db    sqlx.Ext
 }
 
 // Open implements Adapter Open.
@@ -35,9 +32,8 @@ func (adapter *SpatiaLiteAdapter) Open() error {
 	if err != nil {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
-	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
+	db.Mapper = mapper
 	adapter.db = &queryLogger{db.Unsafe()}
-	adapter.mapper = db.Mapper
 	return nil
 }
 
@@ -82,7 +78,7 @@ func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &SpatiaLiteAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}, mapper: adapter.mapper}
+	adapter2 := &SpatiaLiteAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}}
 	if errTx := cb(adapter2); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3
@@ -141,31 +137,23 @@ func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
-	sts := []*gotransit.StopTime{}
-	for _, ent := range ents {
-		if st, ok := ent.(*gotransit.StopTime); ok {
-			sts = append(sts, st)
-		}
+	table := getTableName(ents[0])
+	cols, vals, err := getInsert(ents[0])
+	if err != nil {
+		return err
 	}
-	if len(sts) == 0 {
-		return errors.New("presently only StopTimes are supported")
-	}
-	table := getTableName(sts[0])
-	cols, vals, err := getInsert(sts[0])
+	q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
 	if err != nil {
 		return err
 	}
 	return adapter.Tx(func(adapter Adapter) error {
-		q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
-		if err != nil {
-			return err
-		}
-		for _, d := range sts {
+		db := adapter.DBX()
+		for _, d := range ents {
 			_, vals, err := getInsert(d)
 			if err != nil {
 				return err
 			}
-			if _, err := adapter.DBX().Exec(q, vals...); err != nil {
+			if _, err := db.Exec(q, vals...); err != nil {
 				return err
 			}
 		}

@@ -81,11 +81,10 @@ func ImportFeed(atx gtdb.Adapter, rfeed Feed) (string, error) {
 func HideUnusedFeeds(atx gtdb.Adapter, found []string) error {
 	// Delete unreferenced feeds
 	t := gotransit.OptionalTime{Time: time.Now(), Valid: true}
-	sq := atx.Sqrl().
+	_, err := atx.Sqrl().
 		Update("current_feeds").
 		Where(sq.NotEq{"onestop_id": found}).
 		Set("deleted_at", t).
-		RunWith(atx.DBX())
-	_, err := sq.Exec()
+		Exec()
 	return err
 }
