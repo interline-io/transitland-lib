@@ -110,7 +110,9 @@ func (adapter *SpatiaLiteAdapter) Update(ent interface{}, columns ...string) err
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
-	// Keep the mapper to use cache.
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	table := getTableName(ent)
 	cols, vals, err := getInsert(ent)
 	if err != nil {
