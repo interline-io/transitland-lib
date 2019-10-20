@@ -14,8 +14,8 @@ const (
 	ERROR    = 40
 	WARNING  = 30
 	INFO     = 20
-	QUERY    = 11
 	DEBUG    = 10
+	QUERY    = 9
 	TRACE    = 5
 )
 
@@ -40,7 +40,7 @@ func init() {
 }
 
 // Level is the log level.
-var Level = DEBUG
+var Level = ERROR
 
 // Printf is the same as Info.
 func Printf(fmt string, a ...interface{}) {
@@ -93,10 +93,9 @@ func SetLevel(level int) {
 // SetLevelString uses a string alias to set the log level.
 func SetLevelString(lstr string) {
 	lvalue, ok := LEVELSTRINGS[strings.ToUpper(lstr)]
-	if !ok {
-		lvalue = 20
+	if ok {
+		SetLevel(lvalue)
 	}
-	SetLevel(lvalue)
 }
 
 func init() {
