@@ -32,26 +32,24 @@ func MainFetchFeed(atx gtdb.Adapter, feedid int) (int, bool, string, error) {
 		return fvid, false, "", err
 	}
 	// Start fetching
-	fvid2, found, sha1, err := FetchAndCreateFeedVersion(atx, feedid, tlfeed.URL, fetchtime.Time)
+	fvid2, found, sha1, err := FetchAndCreateFeedVersion(atx, feedid, tlfeed.URLs.StaticCurrent, fetchtime.Time)
 	if err != nil {
 		log.Info("Fetched feed: %d (%s) url: %s error: %s", tlfeed.ID, tlfeed.FeedID, tlfeed.URLs.StaticCurrent, err.Error())
 		tlfeed.LastFetchError = err.Error()
 	} else if found {
-		log.Info("Fetched feed: %d (%s) url: %s exists: %d (%s)", tlfeed.ID, tlfeed.FeedID, tlfeed.URLs.StaticCurrent, fvid, sha1)
+		log.Info("Fetched feed: %d (%s) url: %s exists: %d (%s)", tlfeed.ID, tlfeed.FeedID, tlfeed.URLs.StaticCurrent, fvid2, sha1)
 		tlfeed.LastFetchError = ""
 		tlfeed.LastSuccessfulFetchAt = fetchtime
-		fvid = fvid2
 	} else {
-		log.Info("Fetched feed: %d (%s) url: %s new: %d (%s)", tlfeed.ID, tlfeed.FeedID, tlfeed.URLs.StaticCurrent, fvid, sha1)
+		log.Info("Fetched feed: %d (%s) url: %s new: %d (%s)", tlfeed.ID, tlfeed.FeedID, tlfeed.URLs.StaticCurrent, fvid2, sha1)
 		tlfeed.LastFetchError = ""
 		tlfeed.LastSuccessfulFetchAt = fetchtime
-		fvid = fvid2
 	}
 	// Save updated timestamps
 	if err := atx.Update(&tlfeed, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
-		return fvid, found, "", err
+		return fvid2, found, "", err
 	}
-	return fvid, found, sha1, nil
+	return fvid2, found, sha1, nil
 }
 
 // FetchAndCreateFeedVersion from a URL.

@@ -10,6 +10,7 @@ import (
 	_ "github.com/interline-io/gotransit/ext/plus"
 	_ "github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/log"
 )
 
 // Helpers
@@ -87,6 +88,7 @@ func (i *arrayFlags) Set(value string) error {
 ///////////////
 
 func main() {
+	log.SetLevel(log.INFO)
 	args := os.Args
 	if len(args) == 1 {
 		fmt.Println("usage: gotransit <command> [<args>]")
