@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/gotransit/internal/testutil"
 )
 
+
 // Full tests
 func TestMainSync(t *testing.T) {
 	err := WithAdapterRollback(func(atx gtdb.Adapter) error {

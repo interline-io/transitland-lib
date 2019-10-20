@@ -136,6 +136,9 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	table := getTableName(ents[0])
 	q := adapter.Sqrl().Insert(table).Columns(cols...)
 	for _, d := range ents {
+		if v, ok := d.(canUpdateTimestamps); ok {
+			v.UpdateTimestamps()
+		}
 		_, vals, _ := getInsert(d)
 		q = q.Values(vals...)
 	}

@@ -37,6 +37,15 @@ func WithAdapterTx(cb func(gtdb.Adapter) error) error {
 	return writer.Adapter.Tx(cb)
 }
 
+type AdapterIgnoreTx struct {
+	gtdb.Adapter
+}
+
+// Tx runs in same tx if tx already open, otherwise runs without tx
+func (atx *AdapterIgnoreTx) Tx(cb func(gtdb.Adapter) error) error {
+	return cb(atx)
+}
+
 func caltrain(atx gtdb.Adapter, url string) int {
 	// Create dummy feed
 	tlfeed := Feed{}
