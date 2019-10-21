@@ -41,12 +41,22 @@ func TestMainImportFeedVersion(t *testing.T) {
 			if fvi.InProgress != false {
 				t.Errorf("expected in_progress = false")
 			}
+			count := 0
+			err = atx.Get(&count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
+			if err != nil {
+				t.Error(err)
+			}
+			expstops := 9
+			if count != expstops {
+				t.Errorf("expect %d stops, got %d", count, expstops)
+			}
 			return nil
 		})
 	})
 	t.Run("Failed", func(t *testing.T) {
-		WithAdapterRollback(func(atx gtdb.Adapter) error {
-			fvid := setup(atx, "../testdata/does-not-exist")
+		fvid := 0
+		err := WithAdapterRollback(func(atx gtdb.Adapter) error {
+			fvid = setup(atx, "../testdata/does-not-exist")
 			atx2 := AdapterIgnoreTx{Adapter: atx}
 			err := MainImportFeedVersion(&atx2, fvid)
 			if err == nil {
@@ -69,6 +79,9 @@ func TestMainImportFeedVersion(t *testing.T) {
 			}
 			return nil
 		})
+		if err != nil {
+			t.Error(err)
+		}
 	})
 }
 
@@ -86,6 +99,15 @@ func TestImportFeedVersion(t *testing.T) {
 			t.Error(err)
 		}
 		// Check
+		count := 0
+		err = atx.Get(&count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
+		if err != nil {
+			t.Error(err)
+		}
+		expstops := 9
+		if count != expstops {
+			t.Errorf("expect %d stops, got %d", count, expstops)
+		}
 		return nil
 	})
 	if err != nil {

@@ -8,7 +8,14 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
-// MainImportFeedVersion create FVI and run Copier inside a Tx. May panic on errors creating/updating FVI.
+// FindImportableFeeds .
+func FindImportableFeeds(adapter gtdb.Adapter) {
+	fvids := []int{}
+
+}
+
+// MainImportFeedVersion create FVI and run Copier inside a Tx.
+// May panic on errors updating FVI.
 func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) error {
 	// Create FVI
 	var err error
@@ -20,7 +27,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) error {
 	}
 	fvi.ID, err = adapter.Insert(&fvi)
 	if err != nil {
-		panic(err) // Serious error
+		return err
 	}
 	// Import
 	err = adapter.Tx(func(atx gtdb.Adapter) error {
