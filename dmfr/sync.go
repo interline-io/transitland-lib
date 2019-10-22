@@ -85,6 +85,7 @@ func ImportFeed(atx gtdb.Adapter, rfeed Feed) (int, bool, error) {
 		rfeed.LastSuccessfulFetchAt = dbfeed.LastSuccessfulFetchAt
 		rfeed.LastFetchError = dbfeed.LastFetchError
 		rfeed.LastImportedAt = dbfeed.LastImportedAt
+		rfeed.ActiveFeedVersionID = dbfeed.ActiveFeedVersionID
 		rfeed.CreatedAt = dbfeed.CreatedAt
 		errTx = atx.Update(&rfeed)
 	} else if err == sql.ErrNoRows {

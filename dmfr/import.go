@@ -9,9 +9,21 @@ import (
 )
 
 // FindImportableFeeds .
-func FindImportableFeeds(adapter gtdb.Adapter) {
+func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
 	fvids := []int{}
-
+	qstr, qargs, err := adapter.Sqrl().
+		Select("feed_versions.id").
+		From("feed_versions").
+		LeftJoin("feed_version_imports ON feed_versions.id = feed_version_imports.feed_version_id").
+		Where("feed_version_imports.id IS NULL").
+		ToSql()
+	if err != nil {
+		return fvids, err
+	}
+	if err = adapter.Select(&fvids, qstr, qargs...); err != nil {
+		return fvids, err
+	}
+	return fvids, nil
 }
 
 // MainImportFeedVersion create FVI and run Copier inside a Tx.

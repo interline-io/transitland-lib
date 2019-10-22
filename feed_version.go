@@ -21,7 +21,7 @@ type FeedVersion struct {
 
 // EntityID .
 func (ent *FeedVersion) EntityID() string {
-	return entID(ent.ID, "")
+	return entID(ent.ID, "0")
 }
 
 // TableName sets the table name prefix.

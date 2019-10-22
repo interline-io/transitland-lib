@@ -17,7 +17,7 @@ func caltrain(atx gtdb.Adapter, url string) int {
 	// Create dummy feed
 	tlfeed := Feed{}
 	tlfeed.FeedID = url
-	tlfeed.URL = url
+	tlfeed.URLs.StaticCurrent = url
 	feedid := testdb.MustInsert(atx, &tlfeed)
 	return feedid
 }
@@ -32,12 +32,19 @@ func TestMainFetchFeed(t *testing.T) {
 	}))
 	defer ts.Close()
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		expsha := "21e43625117b993c125f4a939973a862e2cbd136"
 		url := ts.URL
 		feedid := caltrain(atx, ts.URL)
-		fvid, _, _, err := MainFetchFeed(atx, feedid)
+		fvid, found, sha1, err := MainFetchFeed(atx, feedid)
 		if err != nil {
 			t.Error(err)
 			return nil
+		}
+		if found {
+			t.Errorf("expected new fv")
+		}
+		if sha1 != expsha {
+			t.Errorf("got %s expect %s", sha1, expsha)
 		}
 		// Check FV
 		fv := gotransit.FeedVersion{ID: fvid}
@@ -48,13 +55,11 @@ func TestMainFetchFeed(t *testing.T) {
 		if fv.FeedID != feedid {
 			t.Errorf("got %d expect %d", fv.FeedID, feedid)
 		}
-		expsha := "21e43625117b993c125f4a939973a862e2cbd136"
 		if fv.SHA1 != expsha {
 			t.Errorf("got %s expect %s", fv.SHA1, expsha)
 		}
 		// Check Feed
-		tlf := Feed{}
-		tlf.ID = feedid
+		tlf := Feed{ID: feedid}
 		testdb.ShouldFind(t, atx, &tlf)
 		if !tlf.LastSuccessfulFetchAt.Valid {
 			t.Errorf("expected non-nil value")

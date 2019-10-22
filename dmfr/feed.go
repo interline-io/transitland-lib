@@ -12,7 +12,8 @@ import (
 // Feed listed in a parsed DMFR file
 type Feed struct {
 	ID                    int                    `json:"-"`
-	FeedID                string                 `json:"id" db:"onestop_id" `
+	FeedID                string                 `json:"id" db:"onestop_id"`
+	ActiveFeedVersionID   gotransit.OptionalKey  `json:"-"`
 	FeedNamespaceID       string                 `json:"feed_namespace_id"`
 	Spec                  string                 `json:"spec"`
 	URL                   string                 `json:"url"`

@@ -5,33 +5,54 @@ import (
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/testdb"
+	"github.com/interline-io/gotransit/internal/testutil"
 )
+
+func TestFindImportableFeeds(t *testing.T) {
+	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		f := caltrain(atx, "test")
+		allfvids := []int{}
+		for i := 0; i < 10; i++ {
+			fv1 := testdb.ShouldInsert(t, atx, &gotransit.FeedVersion{FeedID: f})
+			allfvids = append(allfvids, fv1)
+		}
+		expfvids := allfvids[:5]
+		for _, fvid := range allfvids[5:] {
+			testdb.ShouldInsert(t, atx, &FeedVersionImport{FeedVersionID: fvid})
+		}
+		foundfvids, err := FindImportableFeeds(atx)
+		if err != nil {
+			t.Error(err)
+		}
+		if !testutil.CompareSliceInt(foundfvids, expfvids) {
+			t.Errorf("%v != %v", foundfvids, expfvids)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Error(err)
+	}
+}
 
 func TestMainImportFeedVersion(t *testing.T) {
 	setup := func(atx gtdb.Adapter, filename string) int {
 		// Create FV
 		fv := gotransit.FeedVersion{}
 		fv.File = filename
-		fvid, err := atx.Insert(&fv)
-		if err != nil {
-			t.Error(err)
-		}
-		return fvid
+		return testdb.ShouldInsert(t, atx, &fv)
 	}
 	t.Run("Success", func(t *testing.T) {
-		WithAdapterRollback(func(atx gtdb.Adapter) error {
+		testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 			fvid := setup(atx, "../testdata/example")
-			atx2 := AdapterIgnoreTx{Adapter: atx}
+			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			err := MainImportFeedVersion(&atx2, fvid)
 			if err != nil {
 				t.Error(err)
 			}
 			// Check results
 			fvi := FeedVersionImport{}
-			err = atx.Get(&fvi, "SELECT * FROM feed_version_imports WHERE feed_version_id = ?", fvid)
-			if err != nil {
-				t.Error(err)
-			}
+			testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_imports WHERE feed_version_id = ?", fvid)
 			if fvi.Success != true {
 				t.Errorf("expected success = true")
 			}
@@ -42,11 +63,8 @@ func TestMainImportFeedVersion(t *testing.T) {
 				t.Errorf("expected in_progress = false")
 			}
 			count := 0
-			err = atx.Get(&count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
-			if err != nil {
-				t.Error(err)
-			}
 			expstops := 9
+			testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 			if count != expstops {
 				t.Errorf("expect %d stops, got %d", count, expstops)
 			}
@@ -55,18 +73,15 @@ func TestMainImportFeedVersion(t *testing.T) {
 	})
 	t.Run("Failed", func(t *testing.T) {
 		fvid := 0
-		err := WithAdapterRollback(func(atx gtdb.Adapter) error {
+		err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 			fvid = setup(atx, "../testdata/does-not-exist")
-			atx2 := AdapterIgnoreTx{Adapter: atx}
+			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			err := MainImportFeedVersion(&atx2, fvid)
 			if err == nil {
 				t.Errorf("expected an error, got none")
 			}
 			fvi := FeedVersionImport{}
-			err = atx.Get(&fvi, "SELECT * FROM feed_version_imports WHERE feed_version_id = ?", fvid)
-			if err != nil {
-				t.Error(err)
-			}
+			testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_imports WHERE feed_version_id = ?", fvid)
 			if fvi.Success != false {
 				t.Errorf("expected success = false")
 			}
@@ -86,25 +101,19 @@ func TestMainImportFeedVersion(t *testing.T) {
 }
 
 func TestImportFeedVersion(t *testing.T) {
-	err := WithAdapterRollback(func(atx gtdb.Adapter) error {
+	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		// Create FV
-		fv := gotransit.FeedVersion{}
-		fvid, err := atx.Insert(&fv)
-		if err != nil {
-			t.Error(err)
-		}
+		fv := gotransit.FeedVersion{File: "../testdata/example"}
+		fvid := testdb.ShouldInsert(t, atx, &fv)
 		// Import
-		err = ImportFeedVersion(atx, fvid)
+		err := ImportFeedVersion(atx, fvid)
 		if err != nil {
 			t.Error(err)
 		}
 		// Check
 		count := 0
-		err = atx.Get(&count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
-		if err != nil {
-			t.Error(err)
-		}
 		expstops := 9
+		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 		if count != expstops {
 			t.Errorf("expect %d stops, got %d", count, expstops)
 		}
