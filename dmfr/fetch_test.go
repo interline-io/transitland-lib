@@ -1,7 +1,6 @@
 package dmfr
 
 import (
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -11,50 +10,15 @@ import (
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/testdb"
 )
-
-// WithAdapterRollback runs a callback inside a Tx and then aborts, returns any error from original callback.
-func WithAdapterRollback(cb func(gtdb.Adapter) error) error {
-	var err error
-	cb2 := func(atx gtdb.Adapter) error {
-		err = cb(atx)
-		return errors.New("rollback")
-	}
-	WithAdapterTx(cb2)
-	return err
-}
-
-// WithAdapterTx runs a callback inside a Tx, commits if callback returns nil.
-func WithAdapterTx(cb func(gtdb.Adapter) error) error {
-	writer, err := gtdb.NewWriter("postgres://localhost/tl?sslmode=disable")
-	if err != nil {
-		panic(err)
-	}
-	if err := writer.Open(); err != nil {
-		panic(err)
-	}
-	defer writer.Close()
-	return writer.Adapter.Tx(cb)
-}
-
-type AdapterIgnoreTx struct {
-	gtdb.Adapter
-}
-
-// Tx runs in same tx if tx already open, otherwise runs without tx
-func (atx *AdapterIgnoreTx) Tx(cb func(gtdb.Adapter) error) error {
-	return cb(atx)
-}
 
 func caltrain(atx gtdb.Adapter, url string) int {
 	// Create dummy feed
 	tlfeed := Feed{}
 	tlfeed.FeedID = url
 	tlfeed.URL = url
-	feedid, err := atx.Insert(&tlfeed)
-	if err != nil {
-		panic(err)
-	}
+	feedid := testdb.MustInsert(atx, &tlfeed)
 	return feedid
 }
 
@@ -67,7 +31,7 @@ func TestMainFetchFeed(t *testing.T) {
 		w.Write(buf)
 	}))
 	defer ts.Close()
-	WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
 		feedid := caltrain(atx, ts.URL)
 		fvid, _, _, err := MainFetchFeed(atx, feedid)
@@ -76,11 +40,8 @@ func TestMainFetchFeed(t *testing.T) {
 			return nil
 		}
 		// Check FV
-		fv := gotransit.FeedVersion{}
-		fv.ID = fvid
-		if err := atx.Find(&fv); err != nil {
-			t.Error(err)
-		}
+		fv := gotransit.FeedVersion{ID: fvid}
+		testdb.ShouldFind(t, atx, &fv)
 		if fv.URL != url {
 			t.Errorf("got %s expect %s", fv.URL, url)
 		}
@@ -94,7 +55,7 @@ func TestMainFetchFeed(t *testing.T) {
 		// Check Feed
 		tlf := Feed{}
 		tlf.ID = feedid
-		atx.Find(&tlf)
+		testdb.ShouldFind(t, atx, &tlf)
 		if !tlf.LastSuccessfulFetchAt.Valid {
 			t.Errorf("expected non-nil value")
 		}
@@ -108,7 +69,7 @@ func TestMainFetchFeed_LastFetchError(t *testing.T) {
 		w.Write([]byte("not found"))
 	}))
 	defer ts.Close()
-	WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		feedid := caltrain(atx, ts.URL)
 		// Fetch
 		if _, _, _, err := MainFetchFeed(atx, feedid); err != nil {
@@ -118,7 +79,7 @@ func TestMainFetchFeed_LastFetchError(t *testing.T) {
 		// Check
 		tlf := Feed{}
 		tlf.ID = feedid
-		atx.Find(&tlf)
+		testdb.ShouldFind(t, atx, &tlf)
 		experr := "file does not exist"
 		if tlf.LastFetchError == "" {
 			t.Errorf("expected value for LastFetchError")
@@ -142,7 +103,7 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 		w.Write(buf)
 	}))
 	defer ts.Close()
-	WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		expsha1 := "21e43625117b993c125f4a939973a862e2cbd136"
 		url := ts.URL
 		feedid := caltrain(atx, url)
@@ -157,11 +118,8 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 		if sha1 != expsha1 {
 			t.Errorf("got %s expect %s", sha1, expsha1)
 		}
-		fv := gotransit.FeedVersion{}
-		fv.ID = fvid
-		if err := atx.Find(&fv); err != nil {
-			t.Error(err)
-		}
+		fv := gotransit.FeedVersion{ID: fvid}
+		testdb.ShouldFind(t, atx, &fv)
 		if fv.URL != url {
 			t.Errorf("got %s expect %s", fv.URL, url)
 		}
@@ -181,7 +139,7 @@ func TestFetchAndCreateFeedVersion_404(t *testing.T) {
 		w.Write([]byte("not found"))
 	}))
 	defer ts.Close()
-	WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
 		feedid := caltrain(atx, url)
 		fvid, found, _, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now())
@@ -212,7 +170,7 @@ func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
 		}
 		w.Write(buf)
 	}))
-	WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		expsha1 := "21e43625117b993c125f4a939973a862e2cbd136"
 		url := ts.URL
 		feedid := caltrain(atx, url)
@@ -244,9 +202,8 @@ func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
 		if fvid != fvid2 {
 			t.Errorf("got %d expected %d", fvid, fvid2)
 		}
-		fv := gotransit.FeedVersion{}
-		fv.ID = fvid
-		atx.Find(&fv)
+		fv := gotransit.FeedVersion{ID: fvid}
+		testdb.ShouldFind(t, atx, &fv)
 		if fv.FeedID != feedid {
 			t.Errorf("got %d expected %d", fv.FeedID, feedid)
 		}

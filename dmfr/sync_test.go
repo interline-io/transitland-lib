@@ -6,13 +6,13 @@ import (
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/testdb"
 	"github.com/interline-io/gotransit/internal/testutil"
 )
 
-
 // Full tests
 func TestMainSync(t *testing.T) {
-	err := WithAdapterRollback(func(atx gtdb.Adapter) error {
+	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		// Create a feed we will check is soft-deleted
 		caltrain(atx, "caltrain")
 		// Import
@@ -30,9 +30,7 @@ func TestMainSync(t *testing.T) {
 			expect[i] = true
 		}
 		tlfeeds := []Feed{}
-		if err := atx.Select(&tlfeeds, "SELECT * FROM current_feeds WHERE deleted_at IS NULL"); err != nil {
-			t.Error(err)
-		}
+		testdb.ShouldSelect(t, atx, &tlfeeds, "SELECT * FROM current_feeds WHERE deleted_at IS NULL")
 		if len(tlfeeds) != len(expect) {
 			t.Errorf("got %d feeds, expect %d", len(tlfeeds), len(expect))
 		}
@@ -42,9 +40,7 @@ func TestMainSync(t *testing.T) {
 			}
 		}
 		hf := Feed{}
-		if err := atx.Get(&hf, "SELECT * FROM current_feeds WHERE onestop_id = ?", "caltrain"); err != nil {
-			t.Error(err)
-		}
+		testdb.ShouldGet(t, atx, &hf, "SELECT * FROM current_feeds WHERE onestop_id = ?", "caltrain")
 		if !hf.DeletedAt.Valid {
 			t.Errorf("expected DeletedAt to be non-nil")
 		}
@@ -56,7 +52,7 @@ func TestMainSync(t *testing.T) {
 }
 
 func TestMainSync_Update(t *testing.T) {
-	err := WithAdapterRollback(func(atx gtdb.Adapter) error {
+	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		// Create existing feed
 		fetchtime := gotransit.OptionalTime{Time: time.Now().UTC(), Valid: true}
 		experr := "checking preserved values"
@@ -70,7 +66,7 @@ func TestMainSync_Update(t *testing.T) {
 		tlfeed.LastImportedAt = fetchtime
 		tlfeed.LastSuccessfulFetchAt = fetchtime
 		var err error
-		tlfeed.ID, err = atx.Insert(&tlfeed)
+		tlfeed.ID = testdb.ShouldInsert(t, atx, &tlfeed)
 		if err != nil {
 			t.Error(err)
 		}
@@ -79,11 +75,8 @@ func TestMainSync_Update(t *testing.T) {
 		if _, err = MainSync(atx, regs); err != nil {
 			t.Error(err)
 		}
-		// Check
-		if err := atx.Find(&tlfeed); err != nil {
-			t.Error(err)
-		}
 		// Check Updated values
+		testdb.ShouldFind(t, atx, &tlfeed)
 		expurl := "https://developer.trimet.org/schedule/gtfs.zip"
 		if tlfeed.URL != expurl {
 			t.Errorf("got '%s' expected '%s'", tlfeed.URL, expurl)
@@ -119,7 +112,7 @@ func TestMainSync_Update(t *testing.T) {
 
 func TestImportFeed(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
-		err := WithAdapterRollback(func(atx gtdb.Adapter) error {
+		err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 			rfeed := Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Spec = "gtfs"
@@ -136,9 +129,7 @@ func TestImportFeed(t *testing.T) {
 			}
 			//
 			dfeed := Feed{}
-			if err := atx.Get(&dfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid); err != nil {
-				t.Error(err)
-			}
+			testdb.ShouldGet(t, atx, &dfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid)
 			if a, b := dfeed.FeedID, rfeed.FeedID; a != b {
 				t.Errorf("got %s expect %s", a, b)
 			}
@@ -164,7 +155,7 @@ func TestImportFeed(t *testing.T) {
 		}
 	})
 	t.Run("Update", func(t *testing.T) {
-		err := WithAdapterRollback(func(atx gtdb.Adapter) error {
+		err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 			rfeed := Feed{}
 			rfeed.FeedID = "caltrain"
 			feedid, found, err := ImportFeed(atx, rfeed)
@@ -175,9 +166,7 @@ func TestImportFeed(t *testing.T) {
 				t.Errorf("expected new feed")
 			}
 			// Reload
-			if err := atx.Get(&rfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid); err != nil {
-				t.Error(err)
-			}
+			testdb.ShouldGet(t, atx, &rfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid)
 			//
 			dfeed := Feed{}
 			dfeed.FeedID = "caltrain"
@@ -192,9 +181,7 @@ func TestImportFeed(t *testing.T) {
 				t.Errorf("expected updated feed")
 			}
 			// Reload
-			if err := atx.Get(&dfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid2); err != nil {
-				t.Error(err)
-			}
+			testdb.ShouldGet(t, atx, &dfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid2)
 			// Test
 			if a, b := dfeed.FeedID, rfeed.FeedID; a != b {
 				t.Errorf("got %s expect %s", a, b)
@@ -218,7 +205,7 @@ func TestImportFeed(t *testing.T) {
 }
 
 func TestHideUnseedFeeds(t *testing.T) {
-	err := WithAdapterRollback(func(atx gtdb.Adapter) error {
+	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		feedids := []string{"caltrain", "seen"}
 		fids := []int{}
 		for _, feedid := range feedids {
@@ -236,16 +223,12 @@ func TestHideUnseedFeeds(t *testing.T) {
 		}
 		// check soft deleted
 		seen := []int{}
-		if err := atx.Select(&seen, "SELECT id FROM current_feeds WHERE deleted_at IS NULL"); err != nil {
-			t.Error(err)
-		}
+		testdb.ShouldSelect(t, atx, &seen, "SELECT id FROM current_feeds WHERE deleted_at IS NULL")
 		if !testutil.CompareSliceInt(seen, expseen) {
 			t.Errorf("%v != %v", seen, expseen)
 		}
 		unseen := []int{}
-		if err := atx.Select(&unseen, "SELECT id FROM current_feeds WHERE deleted_at IS NOT NULL"); err != nil {
-			t.Error(err)
-		}
+		testdb.ShouldSelect(t, atx, &unseen, "SELECT id FROM current_feeds WHERE deleted_at IS NOT NULL")
 		if !testutil.CompareSliceInt(unseen, expunseen) {
 			t.Errorf("%v != %v", unseen, expunseen)
 		}
