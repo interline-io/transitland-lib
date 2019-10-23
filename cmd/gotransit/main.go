@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -88,10 +89,9 @@ func (i *arrayFlags) Set(value string) error {
 ///////////////
 
 func main() {
-	log.SetLevel(log.INFO)
-	args := os.Args
-	if len(args) == 1 {
-		fmt.Println("usage: gotransit <command> [<args>]")
+	log.SetLevel(log.TRACE)
+	flag.Usage = func() {
+		fmt.Printf("Usage of %s:\n", os.Args[0])
 		fmt.Println("Commands:")
 		fmt.Println("  copy")
 		fmt.Println("  extract")
@@ -99,20 +99,28 @@ func main() {
 		fmt.Println("  dmfr")
 		return
 	}
-	switch args[1] {
+	flag.Parse()
+	args := flag.Args()
+	subc := flag.Arg(0)
+	if subc == "" {
+		flag.Usage()
+		exit("")
+	}
+	args = flag.Args()
+	switch subc {
 	case "copy":
 		cmd := copyCommand{}
-		cmd.run(args[2:])
+		cmd.run(args[1:])
 	case "validate":
 		cmd := validateCommand{}
-		cmd.run(args[2:])
+		cmd.run(args[1:])
 	case "extract":
 		cmd := extractCommand{}
-		cmd.run(args[2:])
+		cmd.run(args[1:])
 	case "dmfr":
 		cmd := dmfrCommand{}
-		cmd.run(args[2:])
+		cmd.run(args[1:])
 	default:
-		exit("%q is not valid command.", args[1])
+		exit("%q is not valid command.", subc)
 	}
 }
