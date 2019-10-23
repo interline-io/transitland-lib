@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit/dmfr"
@@ -11,25 +10,25 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
-type dmfrCommand struct {
-	args []string
-}
+type dmfrCommand struct{}
 
-func (cmd *dmfrCommand) run(args []string) {
+func (dmfrCommand) run(args []string) {
 	fl := flag.NewFlagSet("dmfr", flag.ExitOnError)
 	fl.Parse(args)
-	cmd.args = fl.Args()
+	if len(args) == 0 {
+		exit("subcommand needed")
+	}
 	subc := args[0]
 	var err error
 	switch subc {
 	case "validate":
-		err = cmd.cmdValidate(args[1:])
+		err = dmfrValidateCommand{}.run(args[1:])
 	case "merge":
-		err = cmd.cmdMerge(args[1:])
+		err = dmfrMergeCommand{}.run(args[1:])
 	case "sync":
-		err = cmd.cmdImport(args[1], args[2:])
+		err = dmfrSyncCommand{}.run(args[1:])
 	case "fetchfeedversions":
-		err = cmd.cmdFetchFeedVersions(args[1], args[2:])
+		err = dmfrFetchFeedVersionsCommand{}.run(args[1:])
 	default:
 		exit("Invalid subcommand: %q", subc)
 	}
@@ -38,51 +37,100 @@ func (cmd *dmfrCommand) run(args []string) {
 	}
 }
 
-func (cmd *dmfrCommand) cmdFetchFeedVersions(dburl string, feedids []string) error {
+/////
+
+type dmfrFetchFeedVersionsCommand struct{}
+
+func (dmfrFetchFeedVersionsCommand) run(args []string) error {
+	if len(args) < 2 {
+		exit("<dburl> <outpath> [feedids...]")
+	}
+	dburl := args[0]
+	outpath := args[1]
+	feedids := args[2:]
 	writer := MustGetDBWriter(dburl, true)
-	return writer.Adapter.Tx(func(atx gtdb.Adapter) error {
-		found := []int64{}
-		var err error
+	//
+	fetchNew := []string{}
+	fetchFound := []string{}
+	fetchErrs := []error{}
+	// Run inside txn, abort on serious errors
+	err := writer.Adapter.Tx(func(atx gtdb.Adapter) error {
 		var q sq.SelectBuilder
 		if len(feedids) == 0 {
 			q = atx.Sqrl().Select("id").From("current_feeds").Where("deleted_at IS NULL")
 		} else {
 			q = atx.Sqrl().Select("id").From("current_feeds").Where("deleted_at IS NULL").Where(sq.Eq{"onestop_id": feedids})
 		}
-		qstr, qargs := q.MustSql()
+		qstr, qargs, err := q.ToSql()
+		if err != nil {
+			return err
+		}
+		found := []int64{}
 		err = atx.Select(&found, qstr, qargs...)
 		if err != nil {
 			return err
 		}
 		log.Info("Fetching %d feeds", len(found))
 		for _, fid := range found {
-			dmfr.MainFetchFeed(atx, int(fid))
+			fv, found, err := dmfr.MainFetchFeed(atx, int(fid), outpath)
+			if err != nil {
+				fetchErrs = append(fetchErrs, err)
+			} else if found {
+				fetchFound = append(fetchFound, fv.SHA1)
+			} else {
+				fetchNew = append(fetchNew, fv.SHA1)
+			}
 		}
 		return nil
 	})
+	log.Info("Existing: %d New: %d Errors: %d", len(fetchFound), len(fetchNew), len(fetchErrs))
+	return err
 }
 
-func (cmd *dmfrCommand) cmdImport(dburl string, filenames []string) error {
+/////
+
+type dmfrSyncCommand struct{}
+
+func (dmfrSyncCommand) run(args []string) error {
+	if len(args) < 2 {
+		exit("<dburl> <filenames...>")
+	}
+	dburl := args[0]
+	filenames := args[1:]
 	writer := MustGetDBWriter(dburl, true)
-	log.Info("Syncing %d DMFRs to %s", len(filenames), dburl)
 	return writer.Adapter.Tx(func(atx gtdb.Adapter) error {
-		dmfr.MainSync(atx, filenames)
-		return nil
+		_, err := dmfr.MainSync(atx, filenames)
+		return err
 	})
 }
 
-func (cmd *dmfrCommand) cmdValidate(filenames []string) error {
-	for _, arg := range filenames {
-		log.Info("Loading DMFR: %s", arg)
-		registry, err := dmfr.LoadAndParseRegistry(arg)
+/////
+
+type dmfrValidateCommand struct{}
+
+func (dmfrValidateCommand) run(args []string) error {
+	filenames := args
+	errs := []error{}
+	for _, filename := range filenames {
+		log.Info("Loading DMFR: %s", filename)
+		registry, err := dmfr.LoadAndParseRegistry(filename)
 		if err != nil {
-			return fmt.Errorf("Error when loading DMFR: %s", err.Error())
+			errs = append(errs, err)
+			log.Info("%s: Error when loading DMFR: %s", filename, err.Error())
+		} else {
+			log.Info("%s: Success loading DMFR with %d feeds", filename, len(registry.Feeds))
 		}
-		log.Info("Success loading DMFR with %d feeds", len(registry.Feeds))
+	}
+	if len(errs) > 0 {
+		return errors.New("")
 	}
 	return nil
 }
 
-func (cmd *dmfrCommand) cmdMerge(filenames []string) error {
+/////
+
+type dmfrMergeCommand struct{}
+
+func (dmfrMergeCommand) run(args []string) error {
 	return errors.New("not implemented")
 }
