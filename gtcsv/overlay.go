@@ -19,7 +19,7 @@ func NewOverlayAdapter(paths ...string) OverlayAdapter {
 }
 
 // SHA1 .
-func (adapter *OverlayAdapter) SHA1() (string, error) {
+func (adapter OverlayAdapter) SHA1() (string, error) {
 	return "", errors.New("cannot take SHA1 of directory")
 }
 

@@ -47,14 +47,19 @@ func (adapter *SpatiaLiteAdapter) Close() error {
 
 // Create implements Adapter Create.
 func (adapter *SpatiaLiteAdapter) Create() error {
-	if _, err := adapter.db.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
+	// Dont log, used often in tests
+	adb := adapter.db
+	if a, ok := adapter.db.(*queryLogger); ok {
+		adb = a.ext
+	}
+	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
 	schema, err := getSchema("/spatialite.sql")
 	if err != nil {
 		return err
 	}
-	_, err = adapter.db.Exec(schema)
+	_, err = adb.Exec(schema)
 	return err
 }
 

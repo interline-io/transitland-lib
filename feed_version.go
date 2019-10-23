@@ -2,7 +2,6 @@ package gotransit
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -42,11 +41,6 @@ func (ent *FeedVersion) TableName() string {
 func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	fv := FeedVersion{}
 	fv.FeedType = "gtfs"
-	// Open
-	if err := reader.Open(); err != nil {
-		return fv, err
-	}
-	defer reader.Close()
 	// Perform basic GTFS validity checks
 	if errs := reader.ValidateStructure(); len(errs) > 0 {
 		return fv, errs[0]
@@ -63,9 +57,6 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 		if h, err := s.SHA1(); err == nil {
 			fv.SHA1 = h
 		}
-	} else {
-		fmt.Println("CANT SHA1")
-		fmt.Printf("%#v\n", reader)
 	}
 	if s, ok := reader.(canPath); ok {
 		fv.File = s.Path()

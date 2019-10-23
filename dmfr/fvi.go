@@ -8,14 +8,12 @@ import (
 
 // FeedVersionImport .
 type FeedVersionImport struct {
-	ID               int
-	FeedVersionID    int
-	ExceptionLog     string
-	ImportLog        string // deprecated
-	ValidationReport string // deprecated
-	ImportLevel      int    // deprecated
-	Success          bool   // Finished, Success Yes/No
-	InProgress       bool   // In Progress
+	ID            int
+	FeedVersionID int
+	ExceptionLog  string
+	ImportLevel   int  // deprecated
+	Success       bool // Finished, Success Yes/No
+	InProgress    bool // In Progress
 	gotransit.Timestamps
 }
 

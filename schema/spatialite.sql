@@ -27,8 +27,6 @@ CREATE TABLE IF NOT EXISTS "feed_version_imports" (
   "success" bool,
   "in_progress" bool,
   "exception_log" blob,
-  "import_log" blob,
-  "validation_report" blob,
   "import_level" integer not null
 );
 CREATE TABLE IF NOT EXISTS "gtfs_stops" (
