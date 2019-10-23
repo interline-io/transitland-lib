@@ -2,6 +2,7 @@ package dmfr
 
 import (
 	"database/sql"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -10,111 +11,107 @@ import (
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
 )
 
-// MainFetchFeed .
+// FetchResult contains results of a fetch operation.
+type FetchResult struct {
+	FeedVersion gotransit.FeedVersion
+	Path        string
+	Found       bool
+	FetchError  error
+}
+
+// MainFetchFeed fetches and creates a new FeedVersion for a given Feed.
 // Fetch errors are logged to Feed LastFetchError and saved.
-// An error return from this function is a serious failure, and should abort the txn.
-func MainFetchFeed(atx gtdb.Adapter, feedid int, outpath string) (gotransit.FeedVersion, bool, error) {
-	fv := gotransit.FeedVersion{}
-	tlfeed := Feed{}
-	tlfeed.ID = feedid
+// An error return from this function is a serious failure.
+func MainFetchFeed(atx gtdb.Adapter, feedid int, outpath string) (FetchResult, error) {
+	fr := FetchResult{}
+	tlfeed := Feed{ID: feedid}
 	if err := atx.Find(&tlfeed); err != nil {
-		log.Info("Fetching feed: %d not found")
-		return fv, false, err
+		return fr, err
 	}
-	url := tlfeed.URLs.StaticCurrent
 	fetchtime := gotransit.OptionalTime{Time: time.Now().UTC(), Valid: true}
 	tlfeed.LastFetchedAt = fetchtime
 	tlfeed.LastFetchError = ""
-	log.Debug("Fetching feed: %d (%s) url: %s", tlfeed.ID, tlfeed.FeedID, url)
 	// Immediately save LastFetchedAt to obtain lock
 	if err := atx.Update(&tlfeed, "last_fetched_at", "last_fetch_error"); err != nil {
-		return fv, false, err
+		return fr, err
 	}
-	// Start fetching; keep fetchErr
-	fv, fetchErr := FetchFeedVersion(feedid, url, fetchtime.Time)
-	// Serious errors:
-	var saveError error
-	var copyError error
-	var findError error
-	var updateError error
-	// Is this SHA1 already present?
-	checkfvid := gotransit.FeedVersion{}
-	found := false
-	findError = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ?", fv.SHA1)
-	if findError == nil {
-		// Already present
-		found = true
-	} else if findError == sql.ErrNoRows {
-		// Not present, create
-		findError = nil
-		fv.ID, saveError = atx.Insert(&fv)
-		if saveError != nil {
-			// Serious error
-			return fv, false, saveError
-		}
+	// Start fetching
+	url := tlfeed.URLs.StaticCurrent
+	fr, err := FetchAndCreateFeedVersion(atx, feedid, url, fetchtime.Time, outpath)
+	if err != nil {
+		return fr, nil
 	}
-	// Copy file to output directory
-	if outpath != "" && fv.File != "" {
-		outfn := filepath.Join(outpath, fv.SHA1+".zip")
-		// fmt.Printf("COPY %s -> %s\n", fv.File, outfn)
-		copyError = copyFileContents(fv.File, outfn)
-		if copyError != nil {
-			return fv, false, copyError
-		}
-		fv.File = outfn
-	}
-	// Serious errors
-	if findError != nil {
-		return fv, false, findError
-	}
-	if copyError != nil {
-		return fv, false, copyError
-	}
-	// Save Feed
-	if fetchErr != nil {
-		log.Info("Fetched feed: %d (%s) url: %s error: %s", tlfeed.ID, tlfeed.FeedID, url, fetchErr.Error())
-		tlfeed.LastFetchError = fetchErr.Error()
-	} else if found {
-		log.Info("Fetched feed: %d (%s) url: %s exists: %d (%s)", tlfeed.ID, tlfeed.FeedID, url, fv.ID, fv.SHA1)
-		tlfeed.LastFetchError = ""
-		tlfeed.LastSuccessfulFetchAt = fetchtime
-	} else {
-		log.Info("Fetched feed: %d (%s) url: %s new: %d (%s)", tlfeed.ID, tlfeed.FeedID, url, fv.ID, fv.SHA1)
+	if fr.FetchError != nil {
+		tlfeed.LastFetchError = fr.FetchError.Error()
+	} else if fr.Found {
 		tlfeed.LastFetchError = ""
 		tlfeed.LastSuccessfulFetchAt = fetchtime
 	}
-	updateError = atx.Update(&tlfeed, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at")
-	if updateError != nil {
-		return fv, false, updateError
+	// Save updated timestamps
+	if err := atx.Update(&tlfeed, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
+		return fr, err
 	}
-	// Done
-	return fv, found, nil
+	return fr, nil
 }
 
-func FetchFeedVersion(feedid int, url string, fetchtime time.Time) (gotransit.FeedVersion, error) {
-	fv := gotransit.FeedVersion{}
-	// Download feed
-	reader, fetchErr := gtcsv.NewReader(url)
-	if fetchErr != nil {
-		return fv, fetchErr
+// FetchAndCreateFeedVersion from a URL.
+// Returns error if the source cannot be loaded or is invalid GTFS.
+// Returns no error if the SHA1 is already present, or a FeedVersion is created.
+func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, fetchtime time.Time, outpath string) (FetchResult, error) {
+	fr := FetchResult{}
+	if url == "" {
+		fr.FetchError = errors.New("no url")
+		return fr, nil
 	}
-	fetchErr = reader.Open()
-	if fetchErr != nil {
-		return fv, fetchErr
+	// Download feed
+	reader, err := gtcsv.NewReader(url)
+	if err != nil {
+		fr.FetchError = err
+		return fr, nil
+	}
+	if err := reader.Open(); err != nil {
+		fr.FetchError = err
+		return fr, nil
 	}
 	defer reader.Close()
-	//
-	fv, fetchErr = gotransit.NewFeedVersionFromReader(reader)
-	if fetchErr != nil {
-		return fv, fetchErr
+	// Get initialized FeedVersion
+	fv, err := gotransit.NewFeedVersionFromReader(reader)
+	if err != nil {
+		fr.FetchError = err
+		return fr, nil
 	}
 	fv.URL = url
 	fv.FeedID = feedid
 	fv.FetchedAt = fetchtime
-	return fv, fetchErr
+	// Is this SHA1 already present?
+	checkfvid := gotransit.FeedVersion{}
+	err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ?", fv.SHA1)
+	if err == nil {
+		// Already present
+		fr.FeedVersion = checkfvid
+		fr.Found = true
+		return fr, nil
+	} else if err == sql.ErrNoRows {
+		// Not present, create
+		fv.ID, err = atx.Insert(&fv)
+	}
+	if err != nil {
+		return fr, err
+	}
+	// Copy file to output directory
+	if outpath != "" {
+		outfn := filepath.Join(outpath, fv.SHA1+".zip")
+		// fmt.Printf("COPY %s -> %s\n", fv.File, outfn)
+		if err := copyFileContents(reader.Path(), outfn); err != nil {
+			return fr, err
+		}
+		fr.Path = outfn
+	}
+	// Return fv
+	fr.FeedVersion = fv
+	return fr, nil
 }
 
 func copyFileContents(src, dst string) (err error) {

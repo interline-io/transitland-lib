@@ -72,13 +72,13 @@ func (dmfrFetchFeedVersionsCommand) run(args []string) error {
 		}
 		log.Info("Fetching %d feeds", len(found))
 		for _, fid := range found {
-			fv, found, err := dmfr.MainFetchFeed(atx, int(fid), outpath)
+			fr, err := dmfr.MainFetchFeed(atx, int(fid), outpath)
 			if err != nil {
 				fetchErrs = append(fetchErrs, err)
-			} else if found {
-				fetchFound = append(fetchFound, fv.SHA1)
+			} else if fr.Found {
+				fetchFound = append(fetchFound, fr.FeedVersion.SHA1)
 			} else {
-				fetchNew = append(fetchNew, fv.SHA1)
+				fetchNew = append(fetchNew, fr.FeedVersion.SHA1)
 			}
 		}
 		return nil
@@ -86,6 +86,8 @@ func (dmfrFetchFeedVersionsCommand) run(args []string) error {
 	log.Info("Existing: %d New: %d Errors: %d", len(fetchFound), len(fetchNew), len(fetchErrs))
 	return err
 }
+
+// log.Info("Fetched feed: %d (%s) url: %s error: %s", tlfeed.ID, tlfeed.FeedID, url, fr.FetchError.Error())
 
 /////
 
