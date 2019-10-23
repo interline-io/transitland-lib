@@ -9,6 +9,10 @@ type canSHA1 interface {
 	SHA1() (string, error)
 }
 
+type canPath interface {
+	Path() string
+}
+
 // FeedVersion represents a single GTFS data source.
 type FeedVersion struct {
 	ID                   int
@@ -58,6 +62,9 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 		if h, err := s.SHA1(); err == nil {
 			fv.SHA1 = h
 		}
+	}
+	if s, ok := reader.(canPath); ok {
+		fv.File = s.Path()
 	}
 	return fv, nil
 }

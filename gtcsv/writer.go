@@ -10,7 +10,7 @@ import (
 
 // Writer implements a GTFS CSV Writer.
 type Writer struct {
-	Adapter WriterAdapter
+	WriterAdapter
 	headers map[string][]string
 }
 
@@ -23,19 +23,9 @@ func NewWriter(path string) (*Writer, error) {
 		a = NewDirAdapter(path)
 	}
 	return &Writer{
-		Adapter: a,
-		headers: map[string][]string{},
+		WriterAdapter: a,
+		headers:       map[string][]string{},
 	}, nil
-}
-
-// Open the Writer.
-func (writer *Writer) Open() error {
-	return writer.Adapter.Open()
-}
-
-// Close the Writer.
-func (writer *Writer) Close() error {
-	return writer.Adapter.Close()
 }
 
 // Create the necessary files for the Writer.
@@ -51,7 +41,7 @@ func (writer *Writer) Delete() error {
 
 // NewReader returns a new Reader for the Writer destination.
 func (writer *Writer) NewReader() (gotransit.Reader, error) {
-	return NewReader(writer.Adapter.Path())
+	return NewReader(writer.WriterAdapter.Path())
 }
 
 // AddEntities provides a generic interface for adding Entities.
@@ -74,7 +64,7 @@ func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
 		}
 		header = h
 		writer.headers[efn] = header
-		writer.Adapter.WriteRows(efn, [][]string{header})
+		writer.WriterAdapter.WriteRows(efn, [][]string{header})
 	}
 	rows := [][]string{}
 	for _, ent := range ents {
@@ -84,7 +74,7 @@ func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
 		}
 		rows = append(rows, row)
 	}
-	return writer.Adapter.WriteRows(efn, rows)
+	return writer.WriterAdapter.WriteRows(efn, rows)
 }
 
 // AddEntity provides a generic interface for adding an Entity.

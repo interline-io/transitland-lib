@@ -20,7 +20,7 @@ type s2D = [][]string
 
 // Reader reads GTFS entities from CSV files.
 type Reader struct {
-	Adapter Adapter
+	Adapter
 }
 
 // NewReader returns an initialized CSV Reader.
@@ -34,16 +34,6 @@ func NewReader(path string) (*Reader, error) {
 		a = NewDirAdapter(path)
 	}
 	return &Reader{Adapter: a}, nil
-}
-
-// Open the source for reading.
-func (reader *Reader) Open() error {
-	return reader.Adapter.Open()
-}
-
-// Close the source.
-func (reader *Reader) Close() error {
-	return reader.Adapter.Close()
 }
 
 // ReadEntities provides a generic interface for reading Entities.
