@@ -1,9 +1,13 @@
 package gotransit
 
 import (
-	"sort"
+	"errors"
 	"time"
 )
+
+type canSHA1 interface {
+	SHA1() (string, error)
+}
 
 // FeedVersion represents a single GTFS data source.
 type FeedVersion struct {
@@ -30,35 +34,61 @@ func (ent *FeedVersion) TableName() string {
 }
 
 // NewFeedVersionFromReader returns a FeedVersion from a Reader.
-func NewFeedVersionFromReader(reader Reader) *FeedVersion {
+func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	fv := FeedVersion{}
-	// Get Calendar Dates
-	times := []time.Time{}
-	for c := range reader.Calendars() {
-		times = append(times, c.StartDate)
-		times = append(times, c.EndDate)
+	fv.FeedType = "gtfs"
+	// Open
+	if err := reader.Open(); err != nil {
+		return fv, err
 	}
-	for c := range reader.CalendarDates() {
-		if c.ExceptionType == 1 {
-			times = append(times, c.Date)
-		}
+	defer reader.Close()
+	// Perform basic GTFS validity checks
+	if errs := reader.ValidateStructure(); len(errs) > 0 {
+		return fv, errs[0]
 	}
-	sort.Slice(times, func(i, j int) bool {
-		return times[i].Before(times[j])
-	})
-	if len(times) > 0 {
-		if times[0].Before(times[len(times)-1]) {
-			fv.EarliestCalendarDate = times[0]
-			fv.LatestCalendarDate = times[len(times)-1]
-		}
+	// Get service dates
+	start, end, err := servicePeriod(reader)
+	if err != nil {
+		return fv, err
 	}
-	type canSHA1 interface {
-		SHA1() (string, error)
-	}
+	fv.EarliestCalendarDate = start
+	fv.LatestCalendarDate = end
+	// Get path and sha1
 	if s, ok := reader.(canSHA1); ok {
 		if h, err := s.SHA1(); err == nil {
 			fv.SHA1 = h
 		}
 	}
-	return &fv
+	return fv, nil
+}
+
+func servicePeriod(reader Reader) (time.Time, time.Time, error) {
+	var start time.Time
+	var end time.Time
+	for c := range reader.Calendars() {
+		if start.IsZero() || c.StartDate.Before(start) {
+			start = c.StartDate
+		}
+		if end.IsZero() || c.EndDate.After(end) {
+			end = c.EndDate
+		}
+	}
+	for cd := range reader.CalendarDates() {
+		if cd.ExceptionType != 1 {
+			continue
+		}
+		if start.IsZero() || cd.Date.Before(start) {
+			start = cd.Date
+		}
+		if end.IsZero() || cd.Date.After(end) {
+			end = cd.Date
+		}
+	}
+	if start.IsZero() || end.IsZero() {
+		return start, end, errors.New("start or end dates were empty")
+	}
+	if end.Before(start) {
+		return start, end, errors.New("end before start")
+	}
+	return start, end, nil
 }
