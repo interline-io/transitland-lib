@@ -19,6 +19,18 @@ CREATE TABLE IF NOT EXISTS "current_feeds" (
   "active_feed_version_id" integer,
   "url" varchar(255) not null
 );
+CREATE TABLE IF NOT EXISTS "feed_version_imports" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "success" bool,
+  "in_progress" bool,
+  "exception_log" blob,
+  "import_log" blob,
+  "validation_report" blob,
+  "import_level" integer not null
+);
 CREATE TABLE IF NOT EXISTS "gtfs_stops" (
   "id" integer primary key autoincrement, 
   "feed_version_id" integer NOT NULL, 
