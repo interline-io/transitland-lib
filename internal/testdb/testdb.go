@@ -106,14 +106,19 @@ func WithAdapterRollback(cb func(gtdb.Adapter) error) error {
 
 // WithAdapterTx runs a callback inside a Tx, commits if callback returns nil.
 func WithAdapterTx(cb func(gtdb.Adapter) error) error {
-	writer, err := gtdb.NewWriter("postgres://localhost/tl?sslmode=disable")
-	if err != nil {
-		panic(err)
-	}
+	adapter := gtdb.SpatiaLiteAdapter{DBURL: "sqlite3://:memory:"}
+	writer := gtdb.Writer{Adapter: &adapter}
+	// writer, err := gtdb.NewWriter("postgres://localhost/tl?sslmode=disable")
+	// if err != nil {
+	// 	panic(err)
+	// }
 	if err := writer.Open(); err != nil {
 		panic(err)
 	}
 	defer writer.Close()
+	if err := writer.Create(); err != nil {
+		panic(err)
+	}
 	return writer.Adapter.Tx(cb)
 }
 

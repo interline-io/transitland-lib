@@ -20,6 +20,7 @@ import (
 type Adapter interface {
 	OpenFile(string, func(io.Reader)) error
 	ReadRows(string, func(Row)) error
+	SHA1() (string, error)
 	Open() error
 	Close() error
 	Exists() bool
@@ -168,6 +169,11 @@ func NewDirAdapter(path string) *DirAdapter {
 		path:  path,
 		files: map[string]*os.File{},
 	}
+}
+
+// SHA1 returns an error.
+func (adapter *DirAdapter) SHA1() (string, error) {
+	return "", errors.New("cannot take SHA1 of directory")
 }
 
 // Open the adapter. Return an error if the directory does not exist.

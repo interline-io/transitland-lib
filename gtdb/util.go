@@ -22,6 +22,10 @@ var mapper = reflectx.NewMapperFunc("db", toSnakeCase)
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
 
+type hasTableName interface {
+	TableName() string
+}
+
 type canSetID interface {
 	SetID(int)
 }
@@ -99,10 +103,6 @@ func getInsert(ent interface{}) ([]string, []interface{}, error) {
 		return names[0:0], vals[0:0], errors.New("no columns or values")
 	}
 	return names, vals, nil
-}
-
-type hasTableName interface {
-	TableName() string
 }
 
 func getTableName(ent interface{}) string {

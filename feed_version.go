@@ -2,6 +2,7 @@ package gotransit
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -62,6 +63,9 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 		if h, err := s.SHA1(); err == nil {
 			fv.SHA1 = h
 		}
+	} else {
+		fmt.Println("CANT SHA1")
+		fmt.Printf("%#v\n", reader)
 	}
 	if s, ok := reader.(canPath); ok {
 		fv.File = s.Path()

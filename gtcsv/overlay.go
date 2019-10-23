@@ -18,6 +18,11 @@ func NewOverlayAdapter(paths ...string) OverlayAdapter {
 	return OverlayAdapter{paths: paths}
 }
 
+// SHA1 .
+func (adapter *OverlayAdapter) SHA1() (string, error) {
+	return "", errors.New("cannot take SHA1 of directory")
+}
+
 // OpenFile searches paths until it finds the specified file.
 func (adapter OverlayAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 	for _, fn := range adapter.paths {
