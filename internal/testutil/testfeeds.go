@@ -1,8 +1,39 @@
 package testutil
 
-// ExampleFeed .
-var ExampleFeed = ReaderTester{
+// ExampleDir .
+var ExampleDir = ReaderTester{
 	URL: "../testdata/example",
+	Counts: map[string]int{
+		"agency.txt":          1,
+		"routes.txt":          5,
+		"trips.txt":           11,
+		"stops.txt":           9,
+		"stop_times.txt":      28,
+		"shapes.txt":          3,
+		"calendar.txt":        2,
+		"calendar_dates.txt":  2,
+		"feed_info.txt":       1,
+		"fare_rules.txt":      4,
+		"fare_attributes.txt": 2,
+		"frequency.txt":       11,
+		"transfers.txt":       0,
+	},
+	EntityIDs: map[string][]string{
+		"agency.txt":          {"DTA"},
+		"routes.txt":          {"AB", "BFC", "STBA", "CITY", "AAMV"},
+		"trips.txt":           {"AB1", "AB2", "STBA", "CITY1", "CITY2", "BFC1", "BFC2", "AAMV1", "AAMV2", "AAMV3", "AAMV4"},
+		"stops.txt":           {"FUR_CREEK_RES", "BULLFROG"}, // partial
+		"shapes.txt":          {"ok", "a", "c"},
+		"calendar.txt":        {"FULLW", "WE"},
+		"fare_attributes.txt": {"p", "a"},
+	},
+}
+
+// ExampleZip .
+var ExampleZip = ReaderTester{
+	URL:  "../testdata/example.zip",
+	SHA1: "21e43625117b993c125f4a939973a862e2cbd136",
+	Size: 4120,
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"routes.txt":          5,

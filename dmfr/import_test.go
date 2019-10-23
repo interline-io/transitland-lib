@@ -44,7 +44,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 	}
 	t.Run("Success", func(t *testing.T) {
 		testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
-			fvid := setup(atx, "../testdata/example")
+			fvid := setup(atx, testutil.ExampleDir.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			err := MainImportFeedVersion(&atx2, fvid)
 			if err != nil {
@@ -63,7 +63,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 				t.Errorf("expected in_progress = false")
 			}
 			count := 0
-			expstops := 9
+			expstops := testutil.ExampleDir.Counts["stops.txt"]
 			testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 			if count != expstops {
 				t.Errorf("expect %d stops, got %d", count, expstops)
@@ -103,7 +103,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 func TestImportFeedVersion(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		// Create FV
-		fv := gotransit.FeedVersion{File: "../testdata/example"}
+		fv := gotransit.FeedVersion{File: testutil.ExampleDir.URL}
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		// Import
 		err := ImportFeedVersion(atx, fvid)
@@ -112,7 +112,7 @@ func TestImportFeedVersion(t *testing.T) {
 		}
 		// Check
 		count := 0
-		expstops := 9
+		expstops := testutil.ExampleDir.Counts["stops.txt"]
 		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 		if count != expstops {
 			t.Errorf("expect %d stops, got %d", count, expstops)
