@@ -58,7 +58,7 @@ func TestMainSync_Update(t *testing.T) {
 		experr := "checking preserved values"
 		exposid := "f-c20-trimet"
 		tlfeed := Feed{}
-		tlfeed.URL = "http://example.com"
+		tlfeed.URLs.StaticCurrent = "http://example.com"
 		tlfeed.FeedNamespaceID = "o-example-nsid"
 		tlfeed.FeedID = exposid
 		tlfeed.LastFetchError = experr
@@ -78,7 +78,7 @@ func TestMainSync_Update(t *testing.T) {
 		// Check Updated values
 		testdb.ShouldFind(t, atx, &tlfeed)
 		expurl := "https://developer.trimet.org/schedule/gtfs.zip"
-		if tlfeed.URL != expurl {
+		if tlfeed.URLs.StaticCurrent != expurl {
 			t.Errorf("got '%s' expected '%s'", tlfeed.URL, expurl)
 		}
 		expnsid := "o-c20-trimet"
