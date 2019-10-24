@@ -86,10 +86,19 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
+// Submodule
+type runner interface {
+	run([]string) error
+}
+
 ///////////////
 
 func main() {
-	log.SetLevel(log.TRACE)
+	log.SetLevel(log.INFO)
+	debugFlag := false
+	traceFlag := false
+	flag.BoolVar(&debugFlag, "v", false, "Enable verbose output")
+	flag.BoolVar(&traceFlag, "vv", false, "Enable trace output")
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
 		fmt.Println("Commands:")
@@ -100,6 +109,12 @@ func main() {
 		return
 	}
 	flag.Parse()
+	if debugFlag == true {
+		log.SetLevel(log.DEBUG)
+	}
+	if traceFlag == true {
+		log.SetLevel(log.TRACE)
+	}
 	args := flag.Args()
 	subc := flag.Arg(0)
 	if subc == "" {
