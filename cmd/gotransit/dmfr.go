@@ -14,7 +14,7 @@ import (
 
 type dmfrCommand struct{}
 
-func (dmfrCommand) run(args []string) {
+func (dmfrCommand) run(args []string) error {
 	fl := flag.NewFlagSet("dmfr", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: gotransit dmfr <command> [<args>]")
@@ -22,6 +22,7 @@ func (dmfrCommand) run(args []string) {
 		fmt.Println("  validate")
 		fmt.Println("  merge")
 		fmt.Println("  sync")
+		fmt.Println("  import")
 		fmt.Println("  fetchfeedversions")
 	}
 	fl.Parse(args)
@@ -31,44 +32,114 @@ func (dmfrCommand) run(args []string) {
 		exit("")
 	}
 	var err error
+	var r runner
 	switch subc {
 	case "validate":
-		err = dmfrValidateCommand{}.run(args[1:])
+		r = &dmfrValidateCommand{}
 	case "merge":
-		err = dmfrMergeCommand{}.run(args[1:])
+		r = &dmfrMergeCommand{}
 	case "sync":
-		err = dmfrSyncCommand{}.run(args[1:])
+		r = &dmfrSyncCommand{}
+	case "import":
+		r = &dmfrImportCommand{}
 	case "fetchfeedversions":
-		err = dmfrFetchFeedVersionsCommand{}.run(args[1:])
+		r = &dmfrFetchFeedVersionsCommand{}
 	default:
 		exit("Invalid command: %q", subc)
 	}
 	if err != nil {
 		exit(err.Error())
 	}
+	if r == nil {
+		exit("no runner!")
+	}
+	return r.run(fl.Args())
 }
 
 /////
 
-type dmfrFetchFeedVersionsCommand struct{}
+type dmfrImportCommand struct {
+	workers int
+	limit   int
+	dburl   string
+	gtfsdir string
+	feedids []string
+}
 
-func (dmfrFetchFeedVersionsCommand) run(args []string) error {
-	fl := flag.NewFlagSet("fetchfeedversions", flag.ExitOnError)
+func (cmd *dmfrImportCommand) run(args []string) error {
+	fl := flag.NewFlagSet("import", flag.ExitOnError)
+	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
+	fl.StringVar(&cmd.dburl, "dburl", "", "Database URL")
+	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
+	fl.IntVar(&cmd.limit, "limit", 0, "Import at most n feeds")
 	fl.Usage = func() {
-		fmt.Println("Usage: gotransit dmfr fetchfeedversions <dburl> <outpath> [feedids...]")
+		fmt.Println("Usage: gotransit dmfr import [feedids...]")
+	}
+	fl.Parse(args[1:])
+	cmd.feedids = fl.Args()
+	writer := MustGetDBWriter(cmd.dburl, true)
+	defer writer.Close()
+	// Get feeds
+	fvids, err := dmfr.FindImportableFeeds(writer.Adapter)
+	if err != nil {
+		return err
+	}
+	if cmd.limit > 0 && cmd.limit < len(fvids) {
+		fvids = fvids[:cmd.limit]
+	}
+	///////////////
+	// Here we go
+	log.Info("Importing %d feed versions", len(fvids))
+	worker := func(id int, dburl string, jobs <-chan int, results chan<- error, wg *sync.WaitGroup) {
+		w := MustGetDBWriter(dburl, true)
+		defer writer.Close()
+		for fvid := range jobs {
+			results <- dmfr.MainImportFeedVersion(w.Adapter, fvid)
+		}
+		wg.Done()
+	}
+	var wg sync.WaitGroup
+	jobs := make(chan int, len(fvids))
+	results := make(chan error, len(fvids))
+	for w := 0; w < cmd.workers; w++ {
+		wg.Add(1)
+		go worker(w, cmd.dburl, jobs, results, &wg)
+	}
+	for _, fvid := range fvids {
+		jobs <- fvid
+	}
+	close(jobs)
+	wg.Wait()
+	close(results)
+	// Read out results
+	for err := range results {
+		fmt.Println(err)
+	}
+	return nil
+}
+
+/////
+
+type dmfrFetchFeedVersionsCommand struct {
+	workers int
+	limit   int
+	dburl   string
+	gtfsdir string
+	feedids []string
+}
+
+func (cmd *dmfrFetchFeedVersionsCommand) run(args []string) error {
+	fl := flag.NewFlagSet("fetchfeedversions", flag.ExitOnError)
+	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
+	fl.IntVar(&cmd.limit, "limit", 0, "Fetch at most n feeds")
+	fl.StringVar(&cmd.dburl, "dburl", "", "Database URL")
+	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
+	fl.Usage = func() {
+		fmt.Println("Usage: gotransit dmfr fetchfeedversions [feedids...]")
 	}
 	fl.Parse(args)
-	if fl.NArg() < 2 {
-		fl.Usage()
-		return nil
-	}
-	dburl := fl.Arg(0)
-	outpath := fl.Arg(1)
-	feedids := []string{}
-	if fl.NArg() > 2 {
-		feedids = fl.Args()[2:]
-	}
-	writer := MustGetDBWriter(dburl, true)
+	feedids := fl.Args()
+	writer := MustGetDBWriter(cmd.dburl, true)
 	defer writer.Close()
 	// Get feeds
 	q := writer.Adapter.Sqrl().
@@ -88,7 +159,9 @@ func (dmfrFetchFeedVersionsCommand) run(args []string) error {
 	if err != nil {
 		return err
 	}
-
+	if cmd.limit > 0 && cmd.limit < len(feeds) {
+		feeds = feeds[:cmd.limit]
+	}
 	///////////////
 	// Here we go
 	log.Info("Fetching %d feeds", len(feeds))
@@ -99,7 +172,7 @@ func (dmfrFetchFeedVersionsCommand) run(args []string) error {
 			var fr dmfr.FetchResult
 			err := w.Adapter.Tx(func(atx gtdb.Adapter) error {
 				var fe error
-				fr, fe = dmfr.MainFetchFeed(atx, feed.ID, outpath)
+				fr, fe = dmfr.MainFetchFeed(atx, feed.ID, cmd.gtfsdir)
 				return fe
 			})
 			if err != nil {
@@ -111,12 +184,11 @@ func (dmfrFetchFeedVersionsCommand) run(args []string) error {
 	}
 
 	var wg sync.WaitGroup
-	workers := 4
 	jobs := make(chan dmfr.Feed, len(feeds))
 	results := make(chan dmfr.FetchResult, len(feeds))
-	for w := 0; w < workers; w++ {
+	for w := 0; w < cmd.workers; w++ {
 		wg.Add(1)
-		go worker(w, dburl, jobs, results, &wg)
+		go worker(w, cmd.dburl, jobs, results, &wg)
 	}
 	for _, feed := range feeds {
 		jobs <- feed
