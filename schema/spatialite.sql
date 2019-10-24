@@ -19,12 +19,13 @@ CREATE TABLE IF NOT EXISTS "current_feeds" (
   "active_feed_version_id" integer,
   "url" varchar(255) not null
 );
-CREATE TABLE IF NOT EXISTS "feed_version_imports" (
+CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
   "id" integer primary key autoincrement, 
   "feed_version_id" integer NOT NULL, 
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "success" bool,
+  "import_log" blob,
   "in_progress" bool,
   "exception_log" blob,
   "import_level" integer not null

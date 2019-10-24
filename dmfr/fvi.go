@@ -24,5 +24,5 @@ func (fvi *FeedVersionImport) EntityID() string {
 
 // TableName .
 func (FeedVersionImport) TableName() string {
-	return "feed_version_imports"
+	return "feed_version_gtfs_imports"
 }

@@ -52,7 +52,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 			}
 			// Check results
 			fvi := FeedVersionImport{}
-			testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_imports WHERE feed_version_id = ?", fvid)
+			testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fvid)
 			if fvi.Success != true {
 				t.Errorf("expected success = true")
 			}
@@ -81,7 +81,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 				t.Errorf("expected an error, got none")
 			}
 			fvi := FeedVersionImport{}
-			testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_imports WHERE feed_version_id = ?", fvid)
+			testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fvid)
 			if fvi.Success != false {
 				t.Errorf("expected success = false")
 			}
