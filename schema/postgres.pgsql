@@ -37,7 +37,7 @@ CREATE SEQUENCE public.current_feeds_id_seq
 ALTER SEQUENCE public.current_feeds_id_seq OWNED BY public.current_feeds.id;
 CREATE TABLE public.feed_version_gtfs_imports (
     id integer NOT NULL,
-    succeeded boolean NOT NULL,
+    success boolean NOT NULL,
     import_log text NOT NULL,
     exception_log text NOT NULL,
     import_level integer NOT NULL,
@@ -402,7 +402,7 @@ CREATE INDEX index_current_feeds_on_geometry ON public.current_feeds USING gist 
 CREATE UNIQUE INDEX index_current_feeds_on_onestop_id ON public.current_feeds USING btree (onestop_id);
 CREATE INDEX index_current_feeds_on_urls ON public.current_feeds USING btree (urls);
 CREATE UNIQUE INDEX index_feed_version_gtfs_imports_on_feed_version_id ON public.feed_version_gtfs_imports USING btree (feed_version_id);
-CREATE INDEX index_feed_version_gtfs_imports_on_succeeded ON public.feed_version_gtfs_imports USING btree (succeeded);
+CREATE INDEX index_feed_version_gtfs_imports_on_success ON public.feed_version_gtfs_imports USING btree (success);
 CREATE INDEX index_feed_versions_on_earliest_calendar_date ON public.feed_versions USING btree (earliest_calendar_date);
 CREATE INDEX index_feed_versions_on_feed_type_and_feed_id ON public.feed_versions USING btree (feed_type, feed_id);
 CREATE INDEX index_feed_versions_on_latest_calendar_date ON public.feed_versions USING btree (latest_calendar_date);
