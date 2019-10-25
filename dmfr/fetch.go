@@ -16,6 +16,7 @@ import (
 // FetchResult contains results of a fetch operation.
 type FetchResult struct {
 	FeedVersion gotransit.FeedVersion
+	OnestopID   string
 	Path        string
 	Found       bool
 	FetchError  error
@@ -41,7 +42,7 @@ func MainFetchFeed(atx gtdb.Adapter, feedid int, outpath string) (FetchResult, e
 	url := tlfeed.URLs.StaticCurrent
 	fr, err := FetchAndCreateFeedVersion(atx, feedid, url, fetchtime.Time, outpath)
 	if err != nil {
-		return fr, nil
+		return fr, err
 	}
 	if fr.FetchError != nil {
 		tlfeed.LastFetchError = fr.FetchError.Error()
@@ -94,10 +95,9 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, fetchti
 		fr.Found = true
 		return fr, nil
 	} else if err == sql.ErrNoRows {
-		// Not present, create
-		fv.ID, err = atx.Insert(&fv)
-	}
-	if err != nil {
+		// Not present, create below
+	} else if err != nil {
+		// Serious error
 		return fr, err
 	}
 	// Copy file to output directory
@@ -107,10 +107,15 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, fetchti
 		if err := copyFileContents(reader.Path(), outfn); err != nil {
 			return fr, err
 		}
-		fr.Path = outfn
+		fv.File = outfn
+		fr.Path = fv.File // TODO: remove
 	}
 	// Return fv
+	fv.ID, err = atx.Insert(&fv)
 	fr.FeedVersion = fv
+	if err == nil {
+		return fr, err
+	}
 	return fr, nil
 }
 

@@ -122,6 +122,7 @@ func main() {
 		exit("")
 	}
 	args = flag.Args()
+	var err error
 	switch subc {
 	case "copy":
 		cmd := copyCommand{}
@@ -134,8 +135,11 @@ func main() {
 		cmd.run(args[1:])
 	case "dmfr":
 		cmd := dmfrCommand{}
-		cmd.run(args[1:])
+		err = cmd.run(args[1:])
 	default:
 		exit("%q is not valid command.", subc)
+	}
+	if err != nil {
+		exit("Error: %s", err.Error())
 	}
 }

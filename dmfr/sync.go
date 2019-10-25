@@ -14,23 +14,28 @@ import (
 // MainSync .
 func MainSync(atx gtdb.Adapter, filenames []string) ([]int, error) {
 	// Load
-	regs := []*Registry{}
-	for _, fn := range filenames {
-		log.Info("Loading DMFR: %s", fn)
-		reg, err := LoadAndParseRegistry(fn)
-		if err != nil {
-			return []int{}, err
-		}
-		// TODO: Validate
-		regs = append(regs, reg)
-	}
-	// Import
 	feedids := []int{}
 	errs := []error{}
-	for _, registry := range regs {
-		fids, ferrs := MainImportRegistry(atx, registry)
-		feedids = append(feedids, fids...)
-		errs = append(errs, ferrs...)
+	for _, fn := range filenames {
+		reg, err := LoadAndParseRegistry(fn)
+		if err != nil {
+			log.Info("%s: Error parsing DMFR: %s", fn, err.Error())
+			errs = append(errs, err)
+			continue
+		}
+		for _, rfeed := range reg.Feeds {
+			feedid, found, err := ImportFeed(atx, rfeed)
+			if found {
+				log.Info("%s: updated feed %s (id:%d)", fn, rfeed.FeedID, feedid)
+			} else {
+				log.Info("%s: new feed %s (id:%d)", fn, rfeed.FeedID, feedid)
+			}
+			if err != nil {
+				log.Info("%s: error on feed %s: %s", fn, feedid, err)
+				errs = append(errs, err)
+			}
+			feedids = append(feedids, feedid)
+		}
 	}
 	if len(errs) > 0 {
 		log.Info("Rollback due to one or more failures")
@@ -39,33 +44,13 @@ func MainSync(atx gtdb.Adapter, filenames []string) ([]int, error) {
 	// Hide
 	count, err := HideUnseedFeeds(atx, feedids)
 	if err != nil {
+		log.Info("Error soft-deleting feeds: %s", err.Error())
 		return []int{}, err
 	}
 	if count > 0 {
 		log.Info("Soft-deleted %d feeds", count)
 	}
 	return feedids, nil
-}
-
-// MainImportRegistry .
-func MainImportRegistry(atx gtdb.Adapter, registry *Registry) ([]int, []error) {
-	errs := []error{}
-	feedids := []int{}
-	log.Info("Syncing %d feeds in registry", len(registry.Feeds))
-	for _, rfeed := range registry.Feeds {
-		feedid, found, err := ImportFeed(atx, rfeed)
-		if found {
-			log.Info("\t%s: updated id = %d", rfeed.FeedID, feedid)
-		} else {
-			log.Info("\t%s: new id = %d", rfeed.FeedID, feedid)
-		}
-		if err != nil {
-			log.Info("\t%s: error: %s", feedid, err)
-			errs = append(errs, err)
-		}
-		feedids = append(feedids, feedid)
-	}
-	return feedids, errs
 }
 
 // ImportFeed .

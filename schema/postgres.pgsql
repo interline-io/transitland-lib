@@ -29,6 +29,7 @@ CREATE TABLE public.current_feeds (
     feed_namespace_id character varying DEFAULT ''::character varying NOT NULL
 );
 CREATE SEQUENCE public.current_feeds_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -44,9 +45,13 @@ CREATE TABLE public.feed_version_gtfs_imports (
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     feed_version_id integer NOT NULL,
-    in_progress boolean DEFAULT false NOT NULL
+    in_progress boolean DEFAULT false NOT NULL,
+    error_count jsonb,
+    warning_count jsonb,
+    entity_count jsonb
 );
 CREATE SEQUENCE public.feed_version_gtfs_imports_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -76,6 +81,7 @@ CREATE TABLE public.feed_versions (
     deleted_at timestamp without time zone
 );
 CREATE SEQUENCE public.feed_versions_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -97,6 +103,7 @@ CREATE TABLE public.gtfs_agencies (
     feed_version_id integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_agencies_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -113,6 +120,7 @@ CREATE TABLE public.gtfs_calendar_dates (
     service_id integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_calendar_dates_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -137,6 +145,7 @@ CREATE TABLE public.gtfs_calendars (
     generated boolean NOT NULL
 );
 CREATE SEQUENCE public.gtfs_calendars_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -157,6 +166,7 @@ CREATE TABLE public.gtfs_fare_attributes (
     transfers integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_fare_attributes_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -175,6 +185,7 @@ CREATE TABLE public.gtfs_fare_rules (
     fare_id integer
 );
 CREATE SEQUENCE public.gtfs_fare_rules_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -194,6 +205,7 @@ CREATE TABLE public.gtfs_feed_infos (
     feed_version_id integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_feed_infos_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -212,6 +224,7 @@ CREATE TABLE public.gtfs_frequencies (
     trip_id integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_frequencies_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -235,6 +248,7 @@ CREATE TABLE public.gtfs_routes (
     agency_id integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_routes_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -251,6 +265,7 @@ CREATE TABLE public.gtfs_shapes (
     feed_version_id integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_shapes_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -300,6 +315,7 @@ CREATE TABLE public.gtfs_stops (
     level_id character varying NOT NULL
 );
 CREATE SEQUENCE public.gtfs_stops_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -317,6 +333,7 @@ CREATE TABLE public.gtfs_transfers (
     to_stop_id integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_transfers_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -341,6 +358,7 @@ CREATE TABLE public.gtfs_trips (
     service_id integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_trips_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE

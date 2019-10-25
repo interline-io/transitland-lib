@@ -208,7 +208,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		return "", false
 	}
 	copier.EntityMap.Set(ent, sid, eid)
-	copier.CopyResult.AddEntity(ent)
+	copier.CopyResult.AddCount(efn, 1)
 	return eid, true
 }
 
@@ -571,7 +571,9 @@ func (copier *Copier) copyTripsAndStopTimes() {
 				bst = append(bst, &batch[i])
 			}
 			if err := copier.Writer.AddEntities(bst); err != nil {
-				copier.AddError(NewCopyError("", "stop_times.txt", err))
+				copier.AddError(NewCopyError("stop_times.txt", tripid, err))
+			} else {
+				copier.CopyResult.AddCount("stop_times.txt", len(batch))
 			}
 			batch = nil
 		}
@@ -583,7 +585,9 @@ func (copier *Copier) copyTripsAndStopTimes() {
 			bst = append(bst, &batch[i])
 		}
 		if err := copier.Writer.AddEntities(bst); err != nil {
-			copier.AddError(NewCopyError("", "stop_times.txt", err))
+			copier.AddError(NewCopyError("stop_times.txt", "", err))
+		} else {
+			copier.CopyResult.AddCount("stop_times.txt", len(batch))
 		}
 	}
 	// Add any Trips that were not visited/did not have StopTimes

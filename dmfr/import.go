@@ -1,12 +1,43 @@
 package dmfr
 
 import (
+	"errors"
+
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/causes"
 	"github.com/interline-io/gotransit/copier"
 	"github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
 )
+
+type canContext interface {
+	Context() *causes.Context
+}
+
+func copyResultCounts(result copier.CopyResult) FeedVersionImport {
+	fvi := FeedVersionImport{}
+	fvi.EntityCount = EntityCounter{}
+	fvi.ErrorCount = EntityCounter{}
+	fvi.WarningCount = EntityCounter{}
+	for k, v := range result.Count {
+		fvi.EntityCount[k] = v
+	}
+	for _, e := range result.Errors {
+		fn := ""
+		if a, ok := e.(canContext); ok {
+			fn = a.Context().Filename
+		}
+		fvi.ErrorCount[fn]++
+	}
+	for _, e := range result.Warnings {
+		fn := ""
+		if a, ok := e.(canContext); ok {
+			fn = a.Context().Filename
+		}
+		fvi.WarningCount[fn]++
+	}
+	return fvi
+}
 
 // FindImportableFeeds .
 func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
@@ -27,79 +58,74 @@ func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
 }
 
 // MainImportFeedVersion create FVI and run Copier inside a Tx.
-// May panic on errors updating FVI.
-func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) error {
-	// Create FVI
-	var err error
-	fvi := FeedVersionImport{
-		FeedVersionID: fvid,
-		ImportLevel:   4, // back compat
-		InProgress:    true,
-		Success:       false,
+func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) (FeedVersionImport, error) {
+	// Get FV
+	fvi := FeedVersionImport{FeedVersionID: fvid, InProgress: true}
+	fv := gotransit.FeedVersion{ID: fvid}
+	if err := adapter.Find(&fv); err != nil {
+		return fvi, err
 	}
-	fvi.ID, err = adapter.Insert(&fvi)
+	// Create FVI
+	fviid, err := adapter.Insert(&fvi)
+	fvi.ID = fviid // ??
 	if err != nil {
-		return err
+		return fvi, err // Serious error
 	}
 	// Import
-	err = adapter.Tx(func(atx gtdb.Adapter) error {
-		return ImportFeedVersion(atx, fvid)
+	fviresult := FeedVersionImport{} // keep result from inside tx
+	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
+		var err2 error
+		fviresult, err2 = ImportFeedVersion(atx, fv)
+		return err2
 	})
-	if err != nil {
-		fvi.InProgress = false
+	if errImport != nil {
 		fvi.Success = false
-		fvi.ExceptionLog = err.Error()
-		errTx := adapter.Update(&fvi, "in_progress", "success", "exception_log")
-		if errTx != nil {
-			panic(err) // Serious error
+		fvi.InProgress = false
+		fvi.ExceptionLog = errImport.Error()
+		if errTx := adapter.Update(&fvi); errTx != nil {
+			return fvi, errTx // Serious error
 		}
-		return err
+		return fvi, errImport
 	}
-	// Update with success
-	fvi.Success = true
-	fvi.InProgress = false
-	fvi.ExceptionLog = ""
-	err = adapter.Update(&fvi, "in_progress", "success")
-	if err != nil {
-		panic(err) // Serious error
+	// Update FVI with results
+	fviresult.ID = fviid
+	fviresult.FeedVersionID = fvid
+	fviresult.ImportLevel = 4
+	fviresult.Success = true
+	fviresult.InProgress = false
+	fviresult.ExceptionLog = ""
+	if err := adapter.Update(&fviresult); err != nil {
+		return fvi, err
 	}
-	return nil
+	return fviresult, nil
 }
 
 // ImportFeedVersion .
-func ImportFeedVersion(atx gtdb.Adapter, fvid int) error {
-	// Get file
-	fv := gotransit.FeedVersion{}
-	fv.ID = fvid
-	err := atx.Find(&fv)
-	if err != nil {
-		return err
-	}
+func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion) (FeedVersionImport, error) {
+	fvi := FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
 	reader, err := gtcsv.NewReader(fv.File)
 	if err != nil {
-		return err
+		return fvi, err
 	}
 	if err := reader.Open(); err != nil {
-		return err
+		return fvi, err
 	}
 	defer reader.Close()
 	// Get writer with existing tx
-	writer := gtdb.Writer{Adapter: atx, FeedVersionID: fvid}
+	writer := gtdb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer)
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
 	cp.NormalizeServiceIDs = true
-	result := cp.Copy()
-	for _, cperr := range result.Errors {
-		log.Info("Error: %s", cperr.Error())
+	cpresult := cp.Copy()
+	if cpresult == nil {
+		return fvi, errors.New("copy result was nil")
 	}
-	for _, cperr := range result.Warnings {
-		log.Info("Warning: %s", cperr.Error())
-	}
-	for k, v := range result.Count {
-		log.Info("Imported %s: %d", k, v)
-	}
-	return nil
+	counts := copyResultCounts(*cpresult)
+	fvi.EntityCount = counts.EntityCount
+	fvi.ErrorCount = counts.ErrorCount
+	fvi.WarningCount = counts.WarningCount
+	return fvi, nil
 }

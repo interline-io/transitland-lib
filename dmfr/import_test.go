@@ -46,7 +46,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 			fvid := setup(atx, testutil.ExampleDir.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			err := MainImportFeedVersion(&atx2, fvid)
+			_, err := MainImportFeedVersion(&atx2, fvid)
 			if err != nil {
 				t.Error(err)
 			}
@@ -68,6 +68,14 @@ func TestMainImportFeedVersion(t *testing.T) {
 			if count != expstops {
 				t.Errorf("expect %d stops, got %d", count, expstops)
 			}
+			expfvistops := fvi.EntityCount["stops.txt"]
+			if count != expfvistops {
+				t.Errorf("expect %d stops in fvi result, got %d", count, expfvistops)
+			}
+			experrcount := fvi.ErrorCount["calendar_dates.txt"]
+			if 1 != experrcount {
+				t.Errorf("expect %d errors in calendar_dates.txt, got %d", 1, experrcount)
+			}
 			return nil
 		})
 	})
@@ -76,7 +84,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 			fvid = setup(atx, "../testdata/does-not-exist")
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			err := MainImportFeedVersion(&atx2, fvid)
+			_, err := MainImportFeedVersion(&atx2, fvid)
 			if err == nil {
 				t.Errorf("expected an error, got none")
 			}
@@ -103,19 +111,24 @@ func TestMainImportFeedVersion(t *testing.T) {
 func TestImportFeedVersion(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		// Create FV
-		fv := gotransit.FeedVersion{File: testutil.ExampleDir.URL}
+		fv := gotransit.FeedVersion{File: testutil.ExampleZip.URL}
 		fvid := testdb.ShouldInsert(t, atx, &fv)
+		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		err := ImportFeedVersion(atx, fvid)
+		fviresult, err := ImportFeedVersion(atx, fv)
 		if err != nil {
 			t.Error(err)
 		}
 		// Check
 		count := 0
-		expstops := testutil.ExampleDir.Counts["stops.txt"]
+		expstops := testutil.ExampleZip.Counts["stops.txt"]
 		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 		if count != expstops {
 			t.Errorf("expect %d stops, got %d", count, expstops)
+		}
+		expstopcount := fviresult.EntityCount["stops.txt"]
+		if count != expstopcount {
+			t.Errorf("expect %d stops in fvi result, got %d", count, expstops)
 		}
 		return nil
 	})

@@ -1,3 +1,4 @@
+set -e
 echo "CREATE EXTENSION postgis;" > postgres.pgsql
 echo "CREATE EXTENSION hstore;" >> postgres.pgsql
 pg_dump \

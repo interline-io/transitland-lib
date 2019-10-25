@@ -28,7 +28,10 @@ CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
   "import_log" blob,
   "in_progress" bool,
   "exception_log" blob,
-  "import_level" integer not null
+  "import_level" integer not null,
+  "error_count" blob,
+  "warning_count" blob,
+  "entity_count" blob
 );
 CREATE TABLE IF NOT EXISTS "gtfs_stops" (
   "id" integer primary key autoincrement, 

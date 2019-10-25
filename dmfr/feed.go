@@ -44,12 +44,12 @@ func (Feed) TableName() string {
 
 // FeedUrls contains URL values for a Feed.
 type FeedUrls struct {
-	StaticCurrent            string `json:"static_current,omitempty"`
-	StaticHistoric           string `json:"static_historic,omitempty"`
-	StaticPlanned            string `json:"static_planner,omitempty"`
-	RealtimeVehiclePositions string `json:"realtime_vehicle_positions,omitempty"`
-	RealtimeTripUpdates      string `json:"realtime_trip_updates,omitempty"`
-	RealtimeAlerts           string `json:"realtime_alerts,omitempty"`
+	StaticCurrent            string   `json:"static_current,omitempty"`
+	StaticHistoric           []string `json:"static_historic,omitempty"`
+	StaticPlanned            string   `json:"static_planner,omitempty"`
+	RealtimeVehiclePositions string   `json:"realtime_vehicle_positions,omitempty"`
+	RealtimeTripUpdates      string   `json:"realtime_trip_updates,omitempty"`
+	RealtimeAlerts           string   `json:"realtime_alerts,omitempty"`
 	// StaticHypothetical    string
 	// GbfsSystemInformation string
 	// GbfsStationInformation string

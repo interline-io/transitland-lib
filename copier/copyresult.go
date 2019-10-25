@@ -32,3 +32,8 @@ func (cr *CopyResult) AddWarning(err error) {
 func (cr *CopyResult) AddEntity(ent gotransit.Entity) {
 	cr.Count[ent.Filename()]++
 }
+
+// AddCount adds to the entity counter.
+func (cr *CopyResult) AddCount(filename string, count int) {
+	cr.Count[filename] += count
+}
