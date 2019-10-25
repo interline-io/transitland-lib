@@ -41,7 +41,8 @@ func (q qval) String() string {
 	if a, ok := q.Value.(canValue); ok {
 		z, _ := a.Value()
 		if x, ok := z.([]byte); ok {
-			z = string(x)
+			_ = x
+			z = "<binary>"
 		}
 		s = fmt.Sprintf("%v", z)
 	} else {

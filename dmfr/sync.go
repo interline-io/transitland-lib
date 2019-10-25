@@ -2,89 +2,101 @@ package dmfr
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/log"
 )
 
 // MainSync .
-func MainSync(atx gtdb.Adapter, filenames []string) ([]string, error) {
-	found := []string{}
+func MainSync(atx gtdb.Adapter, filenames []string) ([]int, error) {
 	// Load
-	regs := []*Registry{}
+	feedids := []int{}
+	errs := []error{}
 	for _, fn := range filenames {
 		reg, err := LoadAndParseRegistry(fn)
 		if err != nil {
-			return found, err
+			log.Info("%s: Error parsing DMFR: %s", fn, err.Error())
+			errs = append(errs, err)
+			continue
 		}
-		regs = append(regs, reg)
+		for _, rfeed := range reg.Feeds {
+			feedid, found, err := ImportFeed(atx, rfeed)
+			if found {
+				log.Info("%s: updated feed %s (id:%d)", fn, rfeed.FeedID, feedid)
+			} else {
+				log.Info("%s: new feed %s (id:%d)", fn, rfeed.FeedID, feedid)
+			}
+			if err != nil {
+				log.Info("%s: error on feed %s: %s", fn, feedid, err)
+				errs = append(errs, err)
+			}
+			feedids = append(feedids, feedid)
+		}
 	}
-	// Import
-	for _, registry := range regs {
-		fids, err := ImportRegistry(atx, registry)
-		if err != nil {
-			return found, err
-		}
-		found = append(found, fids...)
+	if len(errs) > 0 {
+		log.Info("Rollback due to one or more failures")
+		return []int{}, errors.New("failed")
 	}
 	// Hide
-	if err := HideUnusedFeeds(atx, found); err != nil {
-		return found, err
+	count, err := HideUnseedFeeds(atx, feedids)
+	if err != nil {
+		log.Info("Error soft-deleting feeds: %s", err.Error())
+		return []int{}, err
 	}
-	return found, nil
-}
-
-// ImportRegistry .
-func ImportRegistry(atx gtdb.Adapter, registry *Registry) ([]string, error) {
-	// Update feeds from DMFR
-	feedids := []string{}
-	for _, rfeed := range registry.Feeds {
-		feedid, err := ImportFeed(atx, rfeed)
-		if err != nil {
-			return []string{}, err
-		}
-		feedids = append(feedids, feedid)
+	if count > 0 {
+		log.Info("Soft-deleted %d feeds", count)
 	}
 	return feedids, nil
 }
 
 // ImportFeed .
-func ImportFeed(atx gtdb.Adapter, rfeed Feed) (string, error) {
+func ImportFeed(atx gtdb.Adapter, rfeed Feed) (int, bool, error) {
 	// Check if we have the existing Feed
+	feedid := 0
+	found := false
 	var errTx error
 	dbfeed := Feed{}
 	err := atx.Get(&dbfeed, "SELECT * FROM current_feeds WHERE onestop_id = ?", rfeed.FeedID)
 	if err == nil {
 		// Exists, update key values
+		feedid = dbfeed.ID
+		found = true
 		rfeed.ID = dbfeed.ID
 		rfeed.LastFetchedAt = dbfeed.LastFetchedAt
 		rfeed.LastSuccessfulFetchAt = dbfeed.LastSuccessfulFetchAt
 		rfeed.LastFetchError = dbfeed.LastFetchError
 		rfeed.LastImportedAt = dbfeed.LastImportedAt
+		rfeed.ActiveFeedVersionID = dbfeed.ActiveFeedVersionID
 		rfeed.CreatedAt = dbfeed.CreatedAt
 		errTx = atx.Update(&rfeed)
 	} else if err == sql.ErrNoRows {
-		_, errTx = atx.Insert(&rfeed)
+		feedid, errTx = atx.Insert(&rfeed)
 	} else {
 		// Error
 		errTx = err
 	}
 	if errTx != nil {
-		return "", errTx
+		return 0, found, errTx
 	}
-	return rfeed.FeedID, nil
+	return feedid, found, nil
 }
 
-// HideUnusedFeeds .
-func HideUnusedFeeds(atx gtdb.Adapter, found []string) error {
+// HideUnseedFeeds .
+func HideUnseedFeeds(atx gtdb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
 	t := gotransit.OptionalTime{Time: time.Now(), Valid: true}
-	_, err := atx.Sqrl().
+	r, err := atx.Sqrl().
 		Update("current_feeds").
-		Where(sq.NotEq{"onestop_id": found}).
+		Where(sq.NotEq{"id": found}).
 		Set("deleted_at", t).
 		Exec()
-	return err
+	if err != nil {
+		return 0, err
+	}
+	c, err := r.RowsAffected()
+	return int(c), err
 }

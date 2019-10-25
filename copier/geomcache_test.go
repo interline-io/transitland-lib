@@ -5,10 +5,11 @@ import (
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtcsv"
+	"github.com/interline-io/gotransit/internal/testutil"
 )
 
 func Test_geomCache(t *testing.T) {
-	r, err := gtcsv.NewReader("../testdata/example")
+	r, err := gtcsv.NewReader(testutil.ExampleDir.URL)
 	if err != nil {
 		t.Error(err)
 	}

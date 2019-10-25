@@ -1,6 +1,7 @@
 package gotransit
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"fmt"
@@ -52,7 +53,32 @@ func (r *OptionalRelationship) Scan(src interface{}) error {
 	return nil
 }
 
-// OptionalTime is a nullable time.
+// OptionalKey is the same as sql.NullInt
+type OptionalKey struct {
+	sql.NullInt64
+}
+
+// Scan implements Scanner
+// func (r *OptionalKey) Scan(src interface{}) error {
+// 	r.Valid = false
+// 	var p error
+// 	switch v := src.(type) {
+// 	case nil:
+// 		// pass
+// 	case int64:
+// 		r.Int64 = v
+// 	case int:
+// 		r.Int64 = int64(v)
+// 	default:
+// 		p = fmt.Errorf("cant convert %T", src)
+// 	}
+// 	if p == nil {
+// 		r.Valid = true
+// 	}
+// 	return p
+// }
+
+// OptionalTime is a nullable time, but can scan strings
 type OptionalTime struct {
 	Time  time.Time
 	Valid bool

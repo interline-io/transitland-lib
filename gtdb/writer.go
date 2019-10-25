@@ -76,8 +76,11 @@ func (writer *Writer) CreateFeedVersion(reader gotransit.Reader) (int, error) {
 		return 0, errors.New("reader required")
 	}
 	fvid := 0
-	fv := gotransit.NewFeedVersionFromReader(reader)
-	fvid, err := writer.Adapter.Insert(fv)
+	fv, err := gotransit.NewFeedVersionFromReader(reader)
+	if err != nil {
+		return 0, err
+	}
+	fvid, err = writer.Adapter.Insert(&fv)
 	writer.FeedVersionID = fvid
 	return fvid, err
 }

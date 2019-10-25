@@ -3,31 +3,25 @@ CREATE EXTENSION hstore;
 CREATE TABLE public.current_feeds (
     id integer NOT NULL,
     onestop_id character varying NOT NULL,
-    url character varying NOT NULL,
+    url character varying,
     spec character varying DEFAULT 'gtfs'::character varying NOT NULL,
     tags public.hstore,
     last_fetched_at timestamp without time zone,
     last_imported_at timestamp without time zone,
-    license_name character varying,
-    license_url character varying,
-    license_use_without_attribution character varying,
-    license_create_derived_product character varying,
-    license_redistribute character varying,
     version integer,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     created_or_updated_in_changeset_id integer,
     geometry public.geography(Geometry,4326),
-    license_attribution_text text,
     active_feed_version_id integer,
     edited_attributes character varying[] DEFAULT '{}'::character varying[],
     name character varying,
     type character varying,
     auth jsonb DEFAULT '{}'::jsonb NOT NULL,
     urls jsonb DEFAULT '{}'::jsonb NOT NULL,
-    last_successful_fetch_at timestamp without time zone,
     deleted_at timestamp without time zone,
-    last_fetch_error character varying NOT NULL,
+    last_successful_fetch_at timestamp without time zone,
+    last_fetch_error character varying DEFAULT ''::character varying NOT NULL,
     license jsonb DEFAULT '{}'::jsonb NOT NULL,
     other_ids jsonb DEFAULT '{}'::jsonb NOT NULL,
     associated_feeds jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -42,23 +36,47 @@ CREATE SEQUENCE public.current_feeds_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.current_feeds_id_seq OWNED BY public.current_feeds.id;
+CREATE TABLE public.feed_version_gtfs_imports (
+    id integer NOT NULL,
+    success boolean NOT NULL,
+    import_log text NOT NULL,
+    exception_log text NOT NULL,
+    import_level integer NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    in_progress boolean DEFAULT false NOT NULL,
+    error_count jsonb,
+    warning_count jsonb,
+    entity_count jsonb
+);
+CREATE SEQUENCE public.feed_version_gtfs_imports_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public.feed_version_gtfs_imports_id_seq OWNED BY public.feed_version_gtfs_imports.id;
 CREATE TABLE public.feed_versions (
     id integer NOT NULL,
     feed_id integer NOT NULL,
-    feed_type character varying NOT NULL,
-    file character varying NOT NULL,
+    feed_type character varying DEFAULT 'gtfs'::character varying NOT NULL,
+    file character varying DEFAULT ''::character varying NOT NULL,
     earliest_calendar_date date NOT NULL,
     latest_calendar_date date NOT NULL,
     sha1 character varying NOT NULL,
+    md5 character varying,
     tags public.hstore,
     fetched_at timestamp without time zone NOT NULL,
     imported_at timestamp without time zone,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     import_level integer DEFAULT 0 NOT NULL,
-    url character varying NOT NULL,
+    url character varying DEFAULT ''::character varying NOT NULL,
     file_raw character varying,
     sha1_raw character varying,
+    md5_raw character varying,
     file_feedvalidator character varying,
     deleted_at timestamp without time zone
 );
@@ -213,24 +231,6 @@ CREATE SEQUENCE public.gtfs_frequencies_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_frequencies_id_seq OWNED BY public.gtfs_frequencies.id;
-CREATE TABLE public.gtfs_imports (
-    id integer NOT NULL,
-    succeeded boolean NOT NULL,
-    import_log text NOT NULL,
-    exception_log text NOT NULL,
-    import_level integer NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL
-);
-CREATE SEQUENCE public.gtfs_imports_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-ALTER SEQUENCE public.gtfs_imports_id_seq OWNED BY public.gtfs_imports.id;
 CREATE TABLE public.gtfs_routes (
     id integer NOT NULL,
     route_id character varying NOT NULL,
@@ -366,6 +366,7 @@ CREATE SEQUENCE public.gtfs_trips_id_seq
     CACHE 1;
 ALTER SEQUENCE public.gtfs_trips_id_seq OWNED BY public.gtfs_trips.id;
 ALTER TABLE ONLY public.current_feeds ALTER COLUMN id SET DEFAULT nextval('public.current_feeds_id_seq'::regclass);
+ALTER TABLE ONLY public.feed_version_gtfs_imports ALTER COLUMN id SET DEFAULT nextval('public.feed_version_gtfs_imports_id_seq'::regclass);
 ALTER TABLE ONLY public.feed_versions ALTER COLUMN id SET DEFAULT nextval('public.feed_versions_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_agencies ALTER COLUMN id SET DEFAULT nextval('public.gtfs_agencies_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_calendar_dates ALTER COLUMN id SET DEFAULT nextval('public.gtfs_calendar_dates_id_seq'::regclass);
@@ -374,7 +375,6 @@ ALTER TABLE ONLY public.gtfs_fare_attributes ALTER COLUMN id SET DEFAULT nextval
 ALTER TABLE ONLY public.gtfs_fare_rules ALTER COLUMN id SET DEFAULT nextval('public.gtfs_fare_rules_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_feed_infos ALTER COLUMN id SET DEFAULT nextval('public.gtfs_feed_infos_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_frequencies ALTER COLUMN id SET DEFAULT nextval('public.gtfs_frequencies_id_seq'::regclass);
-ALTER TABLE ONLY public.gtfs_imports ALTER COLUMN id SET DEFAULT nextval('public.gtfs_imports_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_routes ALTER COLUMN id SET DEFAULT nextval('public.gtfs_routes_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_shapes ALTER COLUMN id SET DEFAULT nextval('public.gtfs_shapes_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_stop_times ALTER COLUMN id SET DEFAULT nextval('public.gtfs_stop_times_id_seq'::regclass);
@@ -383,6 +383,8 @@ ALTER TABLE ONLY public.gtfs_transfers ALTER COLUMN id SET DEFAULT nextval('publ
 ALTER TABLE ONLY public.gtfs_trips ALTER COLUMN id SET DEFAULT nextval('public.gtfs_trips_id_seq'::regclass);
 ALTER TABLE ONLY public.current_feeds
     ADD CONSTRAINT current_feeds_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.feed_version_gtfs_imports
+    ADD CONSTRAINT feed_version_gtfs_imports_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.feed_versions
     ADD CONSTRAINT feed_versions_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_agencies
@@ -399,8 +401,6 @@ ALTER TABLE ONLY public.gtfs_feed_infos
     ADD CONSTRAINT gtfs_feed_infos_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_frequencies
     ADD CONSTRAINT gtfs_frequencies_pkey PRIMARY KEY (id);
-ALTER TABLE ONLY public.gtfs_imports
-    ADD CONSTRAINT gtfs_imports_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_routes
     ADD CONSTRAINT gtfs_routes_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_shapes
@@ -419,6 +419,8 @@ CREATE INDEX index_current_feeds_on_created_or_updated_in_changeset_id ON public
 CREATE INDEX index_current_feeds_on_geometry ON public.current_feeds USING gist (geometry);
 CREATE UNIQUE INDEX index_current_feeds_on_onestop_id ON public.current_feeds USING btree (onestop_id);
 CREATE INDEX index_current_feeds_on_urls ON public.current_feeds USING btree (urls);
+CREATE UNIQUE INDEX index_feed_version_gtfs_imports_on_feed_version_id ON public.feed_version_gtfs_imports USING btree (feed_version_id);
+CREATE INDEX index_feed_version_gtfs_imports_on_success ON public.feed_version_gtfs_imports USING btree (success);
 CREATE INDEX index_feed_versions_on_earliest_calendar_date ON public.feed_versions USING btree (earliest_calendar_date);
 CREATE INDEX index_feed_versions_on_feed_type_and_feed_id ON public.feed_versions USING btree (feed_type, feed_id);
 CREATE INDEX index_feed_versions_on_latest_calendar_date ON public.feed_versions USING btree (latest_calendar_date);
@@ -453,8 +455,6 @@ CREATE UNIQUE INDEX index_gtfs_feed_info_unique ON public.gtfs_feed_infos USING 
 CREATE INDEX index_gtfs_feed_infos_on_feed_version_id ON public.gtfs_feed_infos USING btree (feed_version_id);
 CREATE INDEX index_gtfs_frequencies_on_feed_version_id ON public.gtfs_frequencies USING btree (feed_version_id);
 CREATE INDEX index_gtfs_frequencies_on_trip_id ON public.gtfs_frequencies USING btree (trip_id);
-CREATE INDEX index_gtfs_imports_on_feed_version_id ON public.gtfs_imports USING btree (feed_version_id);
-CREATE INDEX index_gtfs_imports_on_succeeded ON public.gtfs_imports USING btree (succeeded);
 CREATE INDEX index_gtfs_routes_on_agency_id ON public.gtfs_routes USING btree (agency_id);
 CREATE INDEX index_gtfs_routes_on_feed_version_id ON public.gtfs_routes USING btree (feed_version_id);
 CREATE INDEX index_gtfs_routes_on_route_desc ON public.gtfs_routes USING btree (route_desc);
@@ -498,6 +498,8 @@ ALTER TABLE ONLY public.gtfs_transfers
     ADD CONSTRAINT fk_rails_0cc6ff288a FOREIGN KEY (from_stop_id) REFERENCES public.gtfs_stops(id);
 ALTER TABLE ONLY public.gtfs_stop_times
     ADD CONSTRAINT fk_rails_22a671077b FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
+ALTER TABLE ONLY public.feed_version_gtfs_imports
+    ADD CONSTRAINT fk_rails_2d141782c9 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_stop_times
     ADD CONSTRAINT fk_rails_30ced0baa8 FOREIGN KEY (stop_id) REFERENCES public.gtfs_stops(id);
 ALTER TABLE ONLY public.gtfs_calendars

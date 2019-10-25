@@ -34,7 +34,7 @@ func Test_AddCrosswalkIDs(t *testing.T) {
 	if len(fakeTransitFeedsRegistry.Feeds) != 1 {
 		t.Error("oops, there should be 1 feed in fakeTransitlandRegistry after it has been crosswalked with  fakeTransitFeedsRegistry")
 	}
-	if fakeTransitlandRegistry.Feeds[0].IDCrosswalk["transitfeeds"] != "transportes-interurbanos-de-tenerife/1058" {
+	if fakeTransitlandRegistry.Feeds[0].OtherIDs["transitfeeds"] != "transportes-interurbanos-de-tenerife/1058" {
 		t.Error("didn't assign the crosswalk'ed ID to the feed")
 	}
 }

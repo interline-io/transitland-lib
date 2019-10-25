@@ -9,6 +9,8 @@ import (
 // ReaderTester contains information about the number and types of identities expected in a Reader.
 type ReaderTester struct {
 	URL       string
+	SHA1      string
+	Size      int
 	Counts    map[string]int
 	EntityIDs map[string][]string
 }
