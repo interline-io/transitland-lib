@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/dmfr"
 	_ "github.com/interline-io/gotransit/ext/pathways"
 	_ "github.com/interline-io/gotransit/ext/plus"
 	_ "github.com/interline-io/gotransit/gtcsv"
@@ -122,23 +123,24 @@ func main() {
 		exit("")
 	}
 	args = flag.Args()
+	type runnable interface {
+		Run([]string) error
+	}
+	var r runnable
 	var err error
 	switch subc {
 	case "copy":
-		cmd := copyCommand{}
-		cmd.run(args[1:])
+		r = &copyCommand{}
 	case "validate":
-		cmd := validateCommand{}
-		cmd.run(args[1:])
+		r = &validateCommand{}
 	case "extract":
-		cmd := extractCommand{}
-		cmd.run(args[1:])
+		r = &extractCommand{}
 	case "dmfr":
-		cmd := dmfrCommand{}
-		err = cmd.run(args[1:])
+		r = &dmfr.Command{}
 	default:
 		exit("%q is not valid command.", subc)
 	}
+	err = r.Run(args[1:])
 	if err != nil {
 		exit("Error: %s", err.Error())
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/gotransit/copier"
 	"github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/log"
 )
 
 type canContext interface {
@@ -66,36 +67,44 @@ func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) (FeedVersionImport, e
 		return fvi, err
 	}
 	// Create FVI
-	fviid, err := adapter.Insert(&fvi)
-	fvi.ID = fviid // ??
-	if err != nil {
-		return fvi, err // Serious error
+	if fviid, err := adapter.Insert(&fvi); err == nil {
+		// note: handle OK first
+		fvi.ID = fviid // TODO: why isn't this set in insert?
+	} else {
+		// Serious error
+		log.Info("Error creating FeedVersionImport: %s", err.Error())
+		return fvi, err
 	}
 	// Import
-	fviresult := FeedVersionImport{} // keep result from inside tx
+	fviresult := FeedVersionImport{} // keep result
 	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
-		var err2 error
-		fviresult, err2 = ImportFeedVersion(atx, fv)
-		return err2
+		var err error
+		fviresult, err = ImportFeedVersion(atx, fv)
+		// Update FVI with results, inside tx
+		fviresult.ID = fvi.ID
+		fviresult.FeedVersionID = fvid
+		fviresult.ImportLevel = 4
+		fviresult.Success = true
+		fviresult.InProgress = false
+		fviresult.ExceptionLog = ""
+		if err := adapter.Update(&fviresult); err != nil {
+			// Serious error
+			log.Info("Error saving FeedVersionImport: %s", err.Error())
+			return err
+		}
+		return err
 	})
+	// FVI error handling has to be outside of above tx, which will have aborted
 	if errImport != nil {
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
-		if errTx := adapter.Update(&fvi); errTx != nil {
-			return fvi, errTx // Serious error
+		if err := adapter.Update(&fvi); err != nil {
+			// Serious error
+			log.Info("Error saving FeedVersionImport: %s", err.Error())
+			return fvi, err
 		}
 		return fvi, errImport
-	}
-	// Update FVI with results
-	fviresult.ID = fviid
-	fviresult.FeedVersionID = fvid
-	fviresult.ImportLevel = 4
-	fviresult.Success = true
-	fviresult.InProgress = false
-	fviresult.ExceptionLog = ""
-	if err := adapter.Update(&fviresult); err != nil {
-		return fvi, err
 	}
 	return fviresult, nil
 }

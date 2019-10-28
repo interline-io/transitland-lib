@@ -2,7 +2,7 @@ package dmfr
 
 import (
 	"database/sql"
-	"errors"
+	"fmt"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -39,7 +39,7 @@ func MainSync(atx gtdb.Adapter, filenames []string) ([]int, error) {
 	}
 	if len(errs) > 0 {
 		log.Info("Rollback due to one or more failures")
-		return []int{}, errors.New("failed")
+		return []int{}, fmt.Errorf("Failed: %s", errs[0].Error())
 	}
 	// Hide
 	count, err := HideUnseedFeeds(atx, feedids)
