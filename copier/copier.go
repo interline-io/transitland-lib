@@ -153,12 +153,11 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 	if !copier.isMarked(ent) {
 		return "", false
 	}
-	ret := true
 	// Check the entity against filters.
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
 			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
-			ret = false
+			return "", false
 		}
 	}
 	// Check the entity for errors.
@@ -170,7 +169,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 			log.Debug("%s '%s' has errors, allowing: %s", efn, eid, errs)
 		} else {
 			log.Debug("%s '%s' has errors, skipping: %s", efn, eid, errs)
-			ret = false
+			return "", false
 		}
 	}
 	// Check the entity for warnings.
@@ -187,7 +186,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 			log.Debug("%s '%s' failed to update keys, allowing: %s", efn, eid, err)
 		} else {
 			log.Debug("%s '%s' failed to update keys, skipping: %s", efn, eid, err)
-			ret = false
+			return "", false
 		}
 	}
 	// Refresh EntityID after UpdateKeys/Filters
@@ -195,9 +194,6 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 	// Check for duplicate entities.
 	if _, ok := copier.EntityMap.Get(ent); ok && len(eid) > 0 {
 		copier.CopyResult.AddError(NewCopyError(ent.Filename(), eid, causes.NewDuplicateIDError(eid)))
-		ret = false
-	}
-	if ret == false {
 		return "", false
 	}
 	// OK, Save
@@ -274,8 +270,11 @@ func (copier *Copier) copyStopsAndFares() {
 		if _, ok := copier.CopyEntity(&e); ok {
 			farezones[e.ZoneID]++
 			copier.geomCache.AddStop(sid, e)
-			parents[sid] = e.LocationType
 		}
+		// Need to keep track of parent type even if not added,
+		// e.g. if a filter rejects or merges a stop.
+		// Actual relationship errors will be caught during UpdateKeys
+		parents[sid] = e.LocationType
 	}
 	// Second pass for platforms, exits, and generic nodes
 	boards := []gotransit.Stop{}

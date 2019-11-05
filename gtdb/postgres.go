@@ -1,6 +1,8 @@
 package gtdb
 
 import (
+	"database/sql"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/jmoiron/sqlx"
@@ -110,7 +112,7 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	eid := 0
+	var eid sql.NullInt64
 	err = adapter.Sqrl().
 		Insert(table).
 		Columns(cols...).
@@ -122,9 +124,9 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 		return 0, err
 	}
 	if v, ok := ent.(canSetID); ok {
-		v.SetID(eid)
+		v.SetID(int(eid.Int64))
 	}
-	return eid, err
+	return int(eid.Int64), err
 }
 
 // BatchInsert builds and executes a multi-insert statement for the given entities.

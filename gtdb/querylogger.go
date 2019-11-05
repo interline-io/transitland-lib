@@ -108,6 +108,9 @@ func (p *queryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
 }
 
 func (p *queryLogger) Beginx() (*sqlx.Tx, error) {
+	if a, ok := p.ext.(*sqlx.Tx); ok {
+		return a, nil
+	}
 	if a, ok := p.ext.(canBeginx); ok {
 		return a.Beginx()
 	}
