@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,24 +13,6 @@ import (
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
 )
-
-// mustGetWriter opens & creates a db writer, panic on failure
-func mustGetWriter(dburl string, create bool) *gtdb.Writer {
-	// Writer
-	writer, err := gtdb.NewWriter(dburl)
-	if err != nil {
-		panic(err)
-	}
-	if err := writer.Open(); err != nil {
-		panic(err)
-	}
-	if create {
-		if err := writer.Create(); err != nil {
-			panic(err)
-		}
-	}
-	return writer
-}
 
 // Command is the main entry point to the DMFR command
 type Command struct {
@@ -78,18 +61,20 @@ func (cmd *Command) Run(args []string) error {
 /////
 
 type dmfrImportCommand struct {
-	workers   int
-	limit     uint64
-	dburl     string
-	gtfsdir   string
-	coverdate string
-	dryrun    bool
-	feedids   []string
-	adapter   gtdb.Adapter // allow for mocks
+	workers    int
+	limit      uint64
+	dburl      string
+	gtfsdir    string
+	coverdate  string
+	dryrun     bool
+	feedids    []string
+	extensions arrayFlags
+	adapter    gtdb.Adapter // allow for mocks
 }
 
 func (cmd *dmfrImportCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
+	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
@@ -165,7 +150,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	results := make(chan FeedVersionImport, len(qlookup))
 	for w := 0; w < cmd.workers; w++ {
 		wg.Add(1)
-		go dmfrImportWorker(w, cmd.adapter, jobs, results, &wg)
+		go dmfrImportWorker(w, cmd.adapter, cmd.extensions, jobs, results, &wg)
 	}
 	for fvid := range qlookup {
 		jobs <- fvid
@@ -185,9 +170,9 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter gtdb.Adapter, jobs <-chan int, results chan<- FeedVersionImport, wg *sync.WaitGroup) {
+func dmfrImportWorker(id int, adapter gtdb.Adapter, exts []string, jobs <-chan int, results chan<- FeedVersionImport, wg *sync.WaitGroup) {
 	for fvid := range jobs {
-		fviresult, err := MainImportFeedVersion(adapter, fvid)
+		fviresult, err := MainImportFeedVersion(adapter, fvid, exts)
 		if err != nil {
 			log.Info("Error: %s", err.Error())
 		}
@@ -364,4 +349,36 @@ type dmfrMergeCommand struct{}
 
 func (dmfrMergeCommand) Run(args []string) error {
 	return errors.New("not implemented")
+}
+
+//// Util
+
+// https://stackoverflow.com/questions/28322997/how-to-get-a-list-of-values-into-a-flag-in-golang/28323276#28323276
+type arrayFlags []string
+
+func (i *arrayFlags) String() string {
+	return strings.Join(*i, ",")
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+// mustGetWriter opens & creates a db writer, panic on failure
+func mustGetWriter(dburl string, create bool) *gtdb.Writer {
+	// Writer
+	writer, err := gtdb.NewWriter(dburl)
+	if err != nil {
+		panic(err)
+	}
+	if err := writer.Open(); err != nil {
+		panic(err)
+	}
+	if create {
+		if err := writer.Create(); err != nil {
+			panic(err)
+		}
+	}
+	return writer
 }

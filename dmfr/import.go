@@ -59,7 +59,7 @@ func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
 }
 
 // MainImportFeedVersion create FVI and run Copier inside a Tx.
-func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) (FeedVersionImport, error) {
+func MainImportFeedVersion(adapter gtdb.Adapter, fvid int, exts []string) (FeedVersionImport, error) {
 	// Get FV
 	fvi := FeedVersionImport{FeedVersionID: fvid, InProgress: true}
 	fv := gotransit.FeedVersion{ID: fvid}
@@ -79,7 +79,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) (FeedVersionImport, e
 	fviresult := FeedVersionImport{} // keep result
 	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
 		var err error
-		fviresult, err = ImportFeedVersion(atx, fv)
+		fviresult, err = ImportFeedVersion(atx, fv, exts)
 		// Update FVI with results, inside tx
 		fviresult.ID = fvi.ID
 		fviresult.FeedVersionID = fvid
@@ -110,7 +110,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) (FeedVersionImport, e
 }
 
 // ImportFeedVersion .
-func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion) (FeedVersionImport, error) {
+func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, exts []string) (FeedVersionImport, error) {
 	fvi := FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
 	reader, err := gtcsv.NewReader(fv.File)
@@ -125,6 +125,13 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion) (FeedVersionI
 	writer := gtdb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer)
+	for _, e := range exts {
+		ext, err := gotransit.GetExtension(e)
+		if err != nil {
+			panic("ext not found")
+		}
+		cp.AddExtension(ext)
+	}
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
 	cp.NormalizeServiceIDs = true
