@@ -108,10 +108,6 @@ func WithAdapterRollback(cb func(gtdb.Adapter) error) error {
 func WithAdapterTx(cb func(gtdb.Adapter) error) error {
 	adapter := gtdb.SpatiaLiteAdapter{DBURL: "sqlite3://:memory:"}
 	writer := gtdb.Writer{Adapter: &adapter}
-	// writer, err := gtdb.NewWriter("postgres://localhost/tl?sslmode=disable")
-	// if err != nil {
-	// 	panic(err)
-	// }
 	if err := writer.Open(); err != nil {
 		panic(err)
 	}
