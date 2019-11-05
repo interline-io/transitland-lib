@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/dmfr"
 	_ "github.com/interline-io/gotransit/ext/pathways"
+	_ "github.com/interline-io/gotransit/ext/plus"
 	_ "github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
