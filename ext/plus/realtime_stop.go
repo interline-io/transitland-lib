@@ -25,12 +25,12 @@ func (ent *RealtimeStop) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *RealtimeStop) UpdateKeys(emap *gotransit.EntityMap) error {
-	if fkid, ok := emap.Get(&gotransit.Trip{TripID: ent.TripID}); ok {
+	if fkid, ok := emap.GetEntity(&gotransit.Trip{TripID: ent.TripID}); ok {
 		ent.TripID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("trip_id", ent.TripID)
 	}
-	if fkid, ok := emap.Get(&gotransit.Stop{StopID: ent.StopID}); ok {
+	if fkid, ok := emap.GetEntity(&gotransit.Stop{StopID: ent.StopID}); ok {
 		ent.StopID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("stop_id", ent.StopID)

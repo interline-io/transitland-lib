@@ -43,13 +43,13 @@ func (ent *FareRule) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *FareRule) UpdateKeys(emap *EntityMap) error {
-	if fareID, ok := emap.Get(&FareAttribute{FareID: ent.FareID}); ok {
+	if fareID, ok := emap.GetEntity(&FareAttribute{FareID: ent.FareID}); ok {
 		ent.FareID = fareID
 	} else {
 		return causes.NewInvalidReferenceError("fare_id", ent.FareID)
 	}
 	if v := ent.RouteID.Key; v != "" {
-		if routeID, ok := emap.Get(&Route{RouteID: v}); ok {
+		if routeID, ok := emap.GetEntity(&Route{RouteID: v}); ok {
 			ent.RouteID.Key = routeID
 		} else {
 			return causes.NewInvalidReferenceError("route_id", v)

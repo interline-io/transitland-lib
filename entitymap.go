@@ -12,9 +12,8 @@ func NewEntityMap() *EntityMap {
 	}
 }
 
-// Set sets the old and new ID for an Entity.
-func (emap *EntityMap) Set(ent Entity, oldid string, newid string) error {
-	efn := ent.Filename()
+// Set directly adds an entry to the set.
+func (emap *EntityMap) Set(efn string, oldid string, newid string) error {
 	if i, ok := emap.ids[efn]; ok {
 		i[oldid] = newid
 	} else {
@@ -23,10 +22,20 @@ func (emap *EntityMap) Set(ent Entity, oldid string, newid string) error {
 	return nil
 }
 
-// Get returns the new ID for an Entity.
-func (emap *EntityMap) Get(ent Entity) (string, bool) {
+// SetEntity sets the old and new ID for an Entity.
+func (emap *EntityMap) SetEntity(ent Entity, oldid string, newid string) error {
+	return emap.Set(ent.Filename(), oldid, newid)
+}
+
+// GetEntity returns the new ID for an Entity.
+func (emap *EntityMap) GetEntity(ent Entity) (string, bool) {
 	efn := ent.Filename()
 	eid := ent.EntityID()
+	return emap.Get(efn, eid)
+}
+
+// Get gets directly by filename, eid
+func (emap *EntityMap) Get(efn string, eid string) (string, bool) {
 	if i, ok := emap.ids[efn]; ok {
 		a, ok := i[eid]
 		return a, ok

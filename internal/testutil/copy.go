@@ -39,7 +39,7 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 		if err != nil {
 			errs = append(errs, fmt.Errorf("entity: %#v error: %s", ent, err))
 		}
-		emap.Set(ent, sid, eid)
+		emap.SetEntity(ent, sid, eid)
 	}
 	// Create any FV
 	if w2, ok := writer.(canCreateFV); ok {

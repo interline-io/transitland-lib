@@ -98,7 +98,7 @@ func (ent *Stop) TableName() string {
 func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Adjust ParentStation
 	if ent.ParentStation.Key != "" {
-		if parentID, ok := emap.Get(&Stop{StopID: ent.ParentStation.Key}); ok {
+		if parentID, ok := emap.GetEntity(&Stop{StopID: ent.ParentStation.Key}); ok {
 			ent.ParentStation = OptionalRelationship{parentID, false}
 		} else {
 			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Key)

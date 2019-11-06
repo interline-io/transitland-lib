@@ -190,10 +190,10 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		}
 	}
 	// Refresh EntityID after UpdateKeys/Filters
-	eid = ent.EntityID()
+	// eid = ent.EntityID()
 	// Check for duplicate entities.
-	if _, ok := copier.EntityMap.Get(ent); ok && len(eid) > 0 {
-		copier.CopyResult.AddError(NewCopyError(ent.Filename(), eid, causes.NewDuplicateIDError(eid)))
+	if _, ok := copier.EntityMap.Get(efn, sid); ok && len(sid) > 0 {
+		copier.CopyResult.AddError(NewCopyError(ent.Filename(), sid, causes.NewDuplicateIDError(sid)))
 		return "", false
 	}
 	// OK, Save
@@ -203,7 +203,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		copier.AddError(NewCopyError("", efn, err))
 		return "", false
 	}
-	copier.EntityMap.Set(ent, sid, eid)
+	copier.EntityMap.SetEntity(ent, sid, eid)
 	copier.CopyResult.AddCount(efn, 1)
 	return eid, true
 }
@@ -634,7 +634,7 @@ func (copier *Copier) createMissingCalendars() {
 			continue
 		}
 		// Do we already have this Calendar?
-		if _, ok := copier.Get(&cal); ok {
+		if _, ok := copier.GetEntity(&cal); ok {
 			continue
 		}
 		// Do we already know this ServiceID?
@@ -659,6 +659,6 @@ func (copier *Copier) createMissingCalendars() {
 		if err != nil {
 			copier.AddError(NewCopyError("", e.Filename(), err))
 		}
-		copier.Set(&e, e.EntityID(), eid)
+		copier.SetEntity(&e, e.EntityID(), eid)
 	}
 }

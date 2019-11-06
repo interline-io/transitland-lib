@@ -24,7 +24,7 @@ func (ent *RealtimeRoute) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *RealtimeRoute) UpdateKeys(emap *gotransit.EntityMap) error {
-	if fkid, ok := emap.Get(&gotransit.Route{RouteID: ent.RouteID}); ok {
+	if fkid, ok := emap.GetEntity(&gotransit.Route{RouteID: ent.RouteID}); ok {
 		ent.RouteID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("route_id", ent.RouteID)

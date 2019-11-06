@@ -49,20 +49,20 @@ func (ent *Trip) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *Trip) UpdateKeys(emap *EntityMap) error {
-	if serviceID, ok := emap.Get(&Calendar{ServiceID: ent.ServiceID}); ok {
+	if serviceID, ok := emap.GetEntity(&Calendar{ServiceID: ent.ServiceID}); ok {
 		ent.ServiceID = serviceID
 	} else {
 		return causes.NewInvalidReferenceError("service_id", ent.ServiceID)
 	}
 	// Adjust RouteID
-	if routeID, ok := emap.Get(&Route{RouteID: ent.RouteID}); ok {
+	if routeID, ok := emap.GetEntity(&Route{RouteID: ent.RouteID}); ok {
 		ent.RouteID = routeID
 	} else {
 		return causes.NewInvalidReferenceError("route_id", ent.RouteID)
 	}
 	// Adjust ShapeID
 	if len(ent.ShapeID.Key) > 0 {
-		if shapeID, ok := emap.Get(&Shape{ShapeID: ent.ShapeID.Key}); ok {
+		if shapeID, ok := emap.GetEntity(&Shape{ShapeID: ent.ShapeID.Key}); ok {
 			ent.ShapeID.Key = shapeID
 		} else {
 			return causes.NewInvalidReferenceError("shape_id", ent.ShapeID.Key)

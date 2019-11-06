@@ -80,12 +80,12 @@ func (ent *StopTime) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *StopTime) UpdateKeys(emap *EntityMap) error {
-	if tripID, ok := emap.Get(&Trip{TripID: ent.TripID}); ok {
+	if tripID, ok := emap.GetEntity(&Trip{TripID: ent.TripID}); ok {
 		ent.TripID = tripID
 	} else {
 		return causes.NewInvalidReferenceError("trip_id", ent.TripID)
 	}
-	if stopID, ok := emap.Get(&Stop{StopID: ent.StopID}); ok {
+	if stopID, ok := emap.GetEntity(&Stop{StopID: ent.StopID}); ok {
 		ent.StopID = stopID
 	} else {
 		return causes.NewInvalidReferenceError("stop_id", ent.StopID)
