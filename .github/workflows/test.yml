@@ -16,4 +16,8 @@ jobs:
       run: go test -coverprofile c.out
     - name: Produce coverage report
       run: go tool cover -html=c.out -o coverage.html
-    # TODO: add profiling
+    - name: Save coverage report as artifact
+      uses: actions/upload-artifact@master
+      with:
+        name: coverage
+        path: coverage.html
