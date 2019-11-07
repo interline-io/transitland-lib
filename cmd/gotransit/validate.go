@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/validator"
@@ -13,7 +14,7 @@ type validateCommand struct {
 	args               []string
 }
 
-func (cmd *validateCommand) run(args []string) {
+func (cmd *validateCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
 	fl.Var(&cmd.validateExtensions, "ext", "Include GTFS Extension")
 	fl.Parse(args)
@@ -23,14 +24,15 @@ func (cmd *validateCommand) run(args []string) {
 	defer reader.Close()
 	v, err := validator.NewValidator(reader)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for _, ext := range cmd.validateExtensions {
 		e, err := gotransit.GetExtension(ext)
 		if err != nil {
-			exit("No extension for: %s", ext)
+			return fmt.Errorf("No extension for: %s", ext)
 		}
 		v.Copier.AddExtension(e)
 	}
 	v.Validate()
+	return nil
 }

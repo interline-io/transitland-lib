@@ -130,6 +130,7 @@ func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 		RunWith(adapter.db)
 	result, err := q.Exec()
 	if err != nil {
+		panic(err)
 		return 0, err
 	}
 	eid, err := result.LastInsertId()
@@ -153,17 +154,17 @@ func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if err != nil {
 		return err
 	}
-	return adapter.Tx(func(adapter Adapter) error {
-		db := adapter.DBX()
-		for _, d := range ents {
-			_, vals, err := getInsert(d)
-			if err != nil {
-				return err
-			}
-			if _, err := db.Exec(q, vals...); err != nil {
-				return err
-			}
+	// return adapter.Tx(func(adapter Adapter) error {
+	db := adapter.DBX()
+	for _, d := range ents {
+		_, vals, err := getInsert(d)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
+		if _, err := db.Exec(q, vals...); err != nil {
+			return err
+		}
+	}
+	return nil
+	// })
 }

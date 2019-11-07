@@ -66,22 +66,20 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 			return nil, err
 		}
 		defer resp.Body.Close()
-		if body, err := ioutil.ReadAll(utfbom.SkipOnly(resp.Body)); err != nil {
+		body, err := ioutil.ReadAll(utfbom.SkipOnly(resp.Body))
+		if err != nil {
 			return nil, err
-		} else {
-			reader := bytes.NewReader(body)
-			readerSkippingBOM := utfbom.SkipOnly(reader)
-			return NewRegistry(readerSkippingBOM)
 		}
-	} else {
-		if reader, err := os.Open(path); err != nil {
-			return nil, err
-		} else {
-			readerSkippingBOM, enc := utfbom.Skip(reader)
-			log.Debug("DETECT: %s", enc)
-			return NewRegistry(readerSkippingBOM)
-		}
+		reader := bytes.NewReader(body)
+		readerSkippingBOM := utfbom.SkipOnly(reader)
+		return NewRegistry(readerSkippingBOM)
 	}
+	reader, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	readerSkippingBOM, _ := utfbom.Skip(reader)
+	return NewRegistry(readerSkippingBOM)
 }
 
 // ParseString TODO

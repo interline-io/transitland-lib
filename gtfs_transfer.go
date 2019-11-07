@@ -49,12 +49,12 @@ func (ent *Transfer) TableName() string {
 // UpdateKeys updates entity references.
 func (ent *Transfer) UpdateKeys(emap *EntityMap) error {
 	// Adjust StopIDs
-	if fromStopID, ok := emap.Get(&Stop{StopID: ent.FromStopID}); ok {
+	if fromStopID, ok := emap.GetEntity(&Stop{StopID: ent.FromStopID}); ok {
 		ent.FromStopID = fromStopID
 	} else {
 		return causes.NewInvalidReferenceError("from_stop_id", ent.FromStopID)
 	}
-	if toStopID, ok := emap.Get(&Stop{StopID: ent.ToStopID}); ok {
+	if toStopID, ok := emap.GetEntity(&Stop{StopID: ent.ToStopID}); ok {
 		ent.ToStopID = toStopID
 	} else {
 		return causes.NewInvalidReferenceError("to_stop_id", ent.ToStopID)

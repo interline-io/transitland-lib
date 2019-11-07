@@ -304,7 +304,7 @@ func NewInvalidParentStationError(value string) *InvalidParentStationError {
 }
 
 func (e *InvalidParentStationError) Error() string {
-	return fmt.Sprintf("parent_station is not location_type = 1: '%s'", e.Value)
+	return fmt.Sprintf("parent_station '%s' is missing or has invalid location_type", e.Value)
 }
 
 // InvalidFarezoneError reports when a farezone does not exist.

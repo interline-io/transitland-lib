@@ -31,7 +31,7 @@ type extractCommand struct {
 	extractSet           arrayFlags
 }
 
-func (cmd *extractCommand) run(args []string) {
+func (cmd *extractCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("extract", flag.ExitOnError)
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID")
@@ -155,4 +155,5 @@ func (cmd *extractCommand) run(args []string) {
 	}
 	// Copy
 	cp.Copy()
+	return nil
 }

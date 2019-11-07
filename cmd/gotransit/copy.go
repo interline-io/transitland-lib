@@ -25,7 +25,7 @@ type copyCommand struct {
 	basicCopyOptions
 }
 
-func (cmd *copyCommand) run(args []string) {
+func (cmd *copyCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID")
@@ -78,4 +78,5 @@ func (cmd *copyCommand) run(args []string) {
 		cp.AddEntityFilter(ef)
 	}
 	cp.Copy()
+	return nil
 }

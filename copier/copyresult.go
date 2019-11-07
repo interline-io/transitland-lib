@@ -1,6 +1,9 @@
 package copier
 
-import "github.com/interline-io/gotransit"
+import (
+	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/internal/log"
+)
 
 // CopyResult stores Copier results and statistics.
 type CopyResult struct {
@@ -20,11 +23,13 @@ func NewCopyResult() *CopyResult {
 
 // AddError adds an error to the result.
 func (cr *CopyResult) AddError(err error) {
+	log.Debug("error: %s", err)
 	cr.Errors = append(cr.Errors, err)
 }
 
 // AddWarning adds a warning to the result.
 func (cr *CopyResult) AddWarning(err error) {
+	log.Debug("warning: %s", err)
 	cr.Warnings = append(cr.Warnings, err)
 }
 

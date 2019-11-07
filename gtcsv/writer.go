@@ -81,8 +81,9 @@ func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
 func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 	if v, ok := ent.(*gotransit.Shape); ok {
 		e2s := []gotransit.Entity{}
-		for _, s := range writer.flattenShape(*v) {
-			e2s = append(e2s, &s)
+		es := writer.flattenShape(*v)
+		for i := 0; i < len(es); i++ {
+			e2s = append(e2s, &es[i])
 		}
 		return v.EntityID(), writer.AddEntities(e2s)
 	}
@@ -91,19 +92,17 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 
 func (writer *Writer) flattenShape(ent gotransit.Shape) []gotransit.Shape {
 	coords := ent.Geometry.FlatCoords()
-	seq := 1
 	shapes := []gotransit.Shape{}
 	totaldist := 0.0
 	for i := 0; i < len(coords); i += 3 {
 		s := gotransit.Shape{
 			ShapeID:           ent.ShapeID,
-			ShapePtSequence:   seq,
+			ShapePtSequence:   i,
 			ShapePtLon:        coords[i],
 			ShapePtLat:        coords[i+1],
 			ShapeDistTraveled: coords[i+2],
 		}
 		totaldist += coords[i+2]
-		seq++
 		shapes = append(shapes, s)
 	}
 	// Set any zeros to NaN

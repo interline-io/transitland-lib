@@ -26,7 +26,7 @@ func (ent *RiderCategory) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *RiderCategory) UpdateKeys(emap *gotransit.EntityMap) error {
 	if len(ent.AgencyID) > 0 {
-		if fkey, ok := emap.Get(&gotransit.Agency{AgencyID: ent.AgencyID}); ok {
+		if fkey, ok := emap.GetEntity(&gotransit.Agency{AgencyID: ent.AgencyID}); ok {
 			ent.AgencyID = fkey
 		} else {
 			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID)

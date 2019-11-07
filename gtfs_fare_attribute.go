@@ -57,7 +57,7 @@ func (ent *FareAttribute) TableName() string {
 func (ent *FareAttribute) UpdateKeys(emap *EntityMap) error {
 	// Adjust AgencyID - optional
 	if len(ent.AgencyID.Key) > 0 {
-		if agencyID, ok := emap.Get(&Agency{AgencyID: ent.AgencyID.Key}); ok {
+		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Key}); ok {
 			ent.AgencyID.Key = agencyID
 		} else {
 			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Key)

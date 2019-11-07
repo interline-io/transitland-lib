@@ -27,7 +27,7 @@ func (ent *StopAttribute) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *StopAttribute) UpdateKeys(emap *gotransit.EntityMap) error {
-	if fkid, ok := emap.Get(&gotransit.Stop{StopID: ent.StopID}); ok {
+	if fkid, ok := emap.GetEntity(&gotransit.Stop{StopID: ent.StopID}); ok {
 		ent.StopID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("stop_id", ent.StopID)

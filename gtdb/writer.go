@@ -25,6 +25,9 @@ func (writer *Writer) Open() error {
 
 // Close the database.
 func (writer *Writer) Close() error {
+	if writer.Adapter == nil {
+		return nil
+	}
 	return writer.Adapter.Close()
 }
 

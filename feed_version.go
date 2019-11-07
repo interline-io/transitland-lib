@@ -2,6 +2,7 @@ package gotransit
 
 import (
 	"errors"
+	"path/filepath"
 	"time"
 )
 
@@ -59,7 +60,7 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 		}
 	}
 	if s, ok := reader.(canPath); ok {
-		fv.File = s.Path()
+		fv.File = filepath.Base(s.Path())
 	}
 	return fv, nil
 }

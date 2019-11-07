@@ -2,12 +2,14 @@ package dmfr
 
 import (
 	"errors"
+	"path/filepath"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/interline-io/gotransit/copier"
 	"github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/log"
 )
 
 type canContext interface {
@@ -58,7 +60,7 @@ func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
 }
 
 // MainImportFeedVersion create FVI and run Copier inside a Tx.
-func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) (FeedVersionImport, error) {
+func MainImportFeedVersion(adapter gtdb.Adapter, fvid int, exts []string, gtfsdir string) (FeedVersionImport, error) {
 	// Get FV
 	fvi := FeedVersionImport{FeedVersionID: fvid, InProgress: true}
 	fv := gotransit.FeedVersion{ID: fvid}
@@ -66,45 +68,53 @@ func MainImportFeedVersion(adapter gtdb.Adapter, fvid int) (FeedVersionImport, e
 		return fvi, err
 	}
 	// Create FVI
-	fviid, err := adapter.Insert(&fvi)
-	fvi.ID = fviid // ??
-	if err != nil {
-		return fvi, err // Serious error
+	if fviid, err := adapter.Insert(&fvi); err == nil {
+		// note: handle OK first
+		fvi.ID = fviid // TODO: why isn't this set in insert?
+	} else {
+		// Serious error
+		log.Info("Error creating FeedVersionImport: %s", err.Error())
+		return fvi, err
 	}
 	// Import
-	fviresult := FeedVersionImport{} // keep result from inside tx
+	fviresult := FeedVersionImport{} // keep result
 	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
-		var err2 error
-		fviresult, err2 = ImportFeedVersion(atx, fv)
-		return err2
+		var err error
+		fviresult, err = ImportFeedVersion(atx, fv, exts, gtfsdir)
+		// Update FVI with results, inside tx
+		fviresult.ID = fvi.ID
+		fviresult.FeedVersionID = fvid
+		fviresult.ImportLevel = 4
+		fviresult.Success = true
+		fviresult.InProgress = false
+		fviresult.ExceptionLog = ""
+		if err := adapter.Update(&fviresult); err != nil {
+			// Serious error
+			log.Info("Error saving FeedVersionImport: %s", err.Error())
+			return err
+		}
+		return err
 	})
+	// FVI error handling has to be outside of above tx, which will have aborted
 	if errImport != nil {
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
-		if errTx := adapter.Update(&fvi); errTx != nil {
-			return fvi, errTx // Serious error
+		if err := adapter.Update(&fvi); err != nil {
+			// Serious error
+			log.Info("Error saving FeedVersionImport: %s", err.Error())
+			return fvi, err
 		}
 		return fvi, errImport
-	}
-	// Update FVI with results
-	fviresult.ID = fviid
-	fviresult.FeedVersionID = fvid
-	fviresult.ImportLevel = 4
-	fviresult.Success = true
-	fviresult.InProgress = false
-	fviresult.ExceptionLog = ""
-	if err := adapter.Update(&fviresult); err != nil {
-		return fvi, err
 	}
 	return fviresult, nil
 }
 
 // ImportFeedVersion .
-func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion) (FeedVersionImport, error) {
+func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, exts []string, gtfsdir string) (FeedVersionImport, error) {
 	fvi := FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	reader, err := gtcsv.NewReader(fv.File)
+	reader, err := gtcsv.NewReader(filepath.Join(gtfsdir, fv.File))
 	if err != nil {
 		return fvi, err
 	}
@@ -116,6 +126,13 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion) (FeedVersionI
 	writer := gtdb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer)
+	for _, e := range exts {
+		ext, err := gotransit.GetExtension(e)
+		if err != nil {
+			panic("ext not found")
+		}
+		cp.AddExtension(ext)
+	}
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
 	cp.NormalizeServiceIDs = true

@@ -230,7 +230,7 @@ func loadRowReflect(ent gotransit.Entity, row Row) {
 	}
 }
 
-// Dumpinng: fast and reflect paths //
+// Dumping: fast and reflect paths //
 
 // dumpHeader returns the header for an Entity.
 func dumpHeader(ent gotransit.Entity) ([]string, error) {

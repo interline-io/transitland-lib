@@ -153,12 +153,11 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 	if !copier.isMarked(ent) {
 		return "", false
 	}
-	ret := true
 	// Check the entity against filters.
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
 			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
-			ret = false
+			return "", false
 		}
 	}
 	// Check the entity for errors.
@@ -170,7 +169,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 			log.Debug("%s '%s' has errors, allowing: %s", efn, eid, errs)
 		} else {
 			log.Debug("%s '%s' has errors, skipping: %s", efn, eid, errs)
-			ret = false
+			return "", false
 		}
 	}
 	// Check the entity for warnings.
@@ -187,17 +186,12 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 			log.Debug("%s '%s' failed to update keys, allowing: %s", efn, eid, err)
 		} else {
 			log.Debug("%s '%s' failed to update keys, skipping: %s", efn, eid, err)
-			ret = false
+			return "", false
 		}
 	}
-	// Refresh EntityID after UpdateKeys/Filters
-	eid = ent.EntityID()
 	// Check for duplicate entities.
-	if _, ok := copier.EntityMap.Get(ent); ok && len(eid) > 0 {
-		copier.CopyResult.AddError(NewCopyError(ent.Filename(), eid, causes.NewDuplicateIDError(eid)))
-		ret = false
-	}
-	if ret == false {
+	if _, ok := copier.EntityMap.Get(efn, sid); ok && len(sid) > 0 {
+		copier.CopyResult.AddError(NewCopyError(ent.Filename(), sid, causes.NewDuplicateIDError(sid)))
 		return "", false
 	}
 	// OK, Save
@@ -207,7 +201,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		copier.AddError(NewCopyError("", efn, err))
 		return "", false
 	}
-	copier.EntityMap.Set(ent, sid, eid)
+	copier.EntityMap.SetEntity(ent, sid, eid)
 	copier.CopyResult.AddCount(efn, 1)
 	return eid, true
 }
@@ -263,7 +257,7 @@ func (copier *Copier) copyAgencies() {
 func (copier *Copier) copyStopsAndFares() {
 	// Stop bookkeeping
 	parents := map[string]int{}
-	farezones := map[string]int{}
+	farezones := map[string]string{}
 	// First pass for stations
 	for e := range copier.Reader.Stops() {
 		if e.LocationType != 1 {
@@ -271,11 +265,15 @@ func (copier *Copier) copyStopsAndFares() {
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
+		fzid := e.ZoneID
 		if _, ok := copier.CopyEntity(&e); ok {
-			farezones[e.ZoneID]++
+			farezones[fzid] = e.ZoneID
 			copier.geomCache.AddStop(sid, e)
-			parents[sid] = e.LocationType
 		}
+		// Need to keep track of parent type even if not added,
+		// e.g. if a filter rejects or merges a stop.
+		// Actual relationship errors will be caught during UpdateKeys
+		parents[sid] = e.LocationType
 	}
 	// Second pass for platforms, exits, and generic nodes
 	boards := []gotransit.Stop{}
@@ -300,8 +298,9 @@ func (copier *Copier) copyStopsAndFares() {
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
+		fzid := e.ZoneID
 		if _, ok := copier.CopyEntity(&e); ok {
-			farezones[e.ZoneID]++
+			farezones[fzid] = e.ZoneID
 			copier.geomCache.AddStop(sid, e)
 		}
 	}
@@ -315,15 +314,16 @@ func (copier *Copier) copyStopsAndFares() {
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
+		fzid := e.ZoneID
 		if _, ok := copier.CopyEntity(&e); ok {
-			farezones[e.ZoneID]++
+			farezones[fzid] = e.ZoneID
 			copier.geomCache.AddStop(sid, e)
 		}
 	}
 	// FareAttributes
 	for e := range copier.Reader.FareAttributes() {
 		if len(e.AgencyID.Key) == 0 {
-			e.AgencyID.Key = copier.DefaultAgencyID // todo: as else below?
+			e.AgencyID.Key = copier.DefaultAgencyID
 			if copier.agencyCount > 1 {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
@@ -333,21 +333,23 @@ func (copier *Copier) copyStopsAndFares() {
 	// FareRules
 	for e := range copier.Reader.FareRules() {
 		// Explicitly check if the FareID is Marked
-		// FareAttributes are named entities and it's up to the Marker
-		// TODO: Should I just check the EntityMap instead?
-		//     Do I care if it is marked, or it if was actually written OK?
-		//     Same pattern for CalendarDates?
 		if !copier.isMarked(&gotransit.FareAttribute{FareID: e.FareID}) {
 			continue
 		}
-		// Add reference errors if we didn't add this farezone to the output
-		if _, ok := farezones[e.OriginID]; len(e.OriginID) > 0 && !ok {
+		// Add reference errors if we didn't write a stop with this zone.
+		if v, ok := farezones[e.OriginID]; ok {
+			e.OriginID = v
+		} else if len(e.OriginID) > 0 {
 			e.AddError(causes.NewInvalidFarezoneError("origin_id", e.OriginID))
 		}
-		if _, ok := farezones[e.DestinationID]; len(e.DestinationID) > 0 && !ok {
+		if v, ok := farezones[e.DestinationID]; ok {
+			e.DestinationID = v
+		} else if len(e.DestinationID) > 0 {
 			e.AddError(causes.NewInvalidFarezoneError("destination_id", e.DestinationID))
 		}
-		if _, ok := farezones[e.ContainsID]; len(e.ContainsID) > 0 && !ok {
+		if v, ok := farezones[e.ContainsID]; ok {
+			e.ContainsID = v
+		} else if len(e.ContainsID) > 0 && !ok {
 			e.AddError(causes.NewInvalidFarezoneError("contains_id", e.ContainsID))
 		}
 		copier.CopyEntity(&e)
@@ -635,7 +637,7 @@ func (copier *Copier) createMissingCalendars() {
 			continue
 		}
 		// Do we already have this Calendar?
-		if _, ok := copier.Get(&cal); ok {
+		if _, ok := copier.GetEntity(&cal); ok {
 			continue
 		}
 		// Do we already know this ServiceID?
@@ -660,6 +662,6 @@ func (copier *Copier) createMissingCalendars() {
 		if err != nil {
 			copier.AddError(NewCopyError("", e.Filename(), err))
 		}
-		copier.Set(&e, e.EntityID(), eid)
+		copier.SetEntity(&e, e.EntityID(), eid)
 	}
 }

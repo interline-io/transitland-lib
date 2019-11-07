@@ -87,6 +87,7 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 }
 
 // StopTimesByTripID sends StopTimes grouped by TripID.
+// Each group is sorted by stop_sequence.
 func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gotransit.StopTime {
 	if len(tripIDs) == 0 {
 		q := reader.Adapter.Sqrl().Select("id").Distinct().From("gtfs_trips")
@@ -106,7 +107,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gotransit.Stop
 	go func() {
 		for _, tripID := range tripIDs {
 			ents := []gotransit.StopTime{}
-			qstr, args, err := reader.where().From("gtfs_stop_times").Where("trip_id = ?", tripID).ToSql()
+			qstr, args, err := reader.where().From("gtfs_stop_times").Where("trip_id = ?", tripID).OrderBy("stop_sequence").ToSql()
 			check(err)
 			check(reader.Adapter.Select(&ents, qstr, args...))
 			if len(ents) > 0 {

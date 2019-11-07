@@ -59,7 +59,7 @@ func (ent *Frequency) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *Frequency) UpdateKeys(emap *EntityMap) error {
 	// Adjust TripID
-	if tripID, ok := emap.Get(&Trip{TripID: ent.TripID}); ok {
+	if tripID, ok := emap.GetEntity(&Trip{TripID: ent.TripID}); ok {
 		ent.TripID = tripID
 	} else {
 		return causes.NewInvalidReferenceError("trip_id", ent.TripID)

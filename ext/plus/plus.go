@@ -3,7 +3,6 @@ package plus
 import (
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/internal/log"
 )
 
 func init() {
@@ -53,12 +52,7 @@ func copyCalendarAttributes(copier *copier.Copier) {
 	out := make(chan CalendarAttribute, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
-		if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-			continue
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			panic(err)
-		}
+		copier.CopyEntity(&ent)
 	}
 }
 
@@ -69,13 +63,7 @@ func copyRiderCategories(copier *copier.Copier) {
 		if len(ent.AgencyID) == 0 {
 			ent.AgencyID = copier.DefaultAgencyID
 		}
-		if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-			log.Debug("%s '%s' failed to update keys: %s", ent.Filename(), ent.EntityID(), err)
-			continue
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			panic(err)
-		}
+		copier.CopyEntity(&ent)
 	}
 }
 
@@ -83,13 +71,7 @@ func copyFareRiderCategories(copier *copier.Copier) {
 	out := make(chan FareRiderCategory, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
-		if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-			log.Debug("%s '%s' failed to update keys: %s", ent.Filename(), ent.EntityID(), err)
-			continue
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			panic(err)
-		}
+		copier.CopyEntity(&ent)
 	}
 }
 
@@ -97,13 +79,7 @@ func copyFarezoneAttributes(copier *copier.Copier) {
 	out := make(chan FarezoneAttribute, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
-		if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-			log.Debug("%s '%s' failed to update keys: %s", ent.Filename(), ent.EntityID(), err)
-			continue
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			panic(err)
-		}
+		copier.CopyEntity(&ent)
 	}
 }
 
@@ -111,13 +87,7 @@ func copyDirections(copier *copier.Copier) {
 	out := make(chan Direction, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
-		if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-			log.Debug("%s '%s' failed to update keys: %s", ent.Filename(), ent.EntityID(), err)
-			continue
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			panic(err)
-		}
+		copier.CopyEntity(&ent)
 	}
 }
 
@@ -125,13 +95,7 @@ func copyRealtimeRoutes(copier *copier.Copier) {
 	out := make(chan RealtimeRoute, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
-		if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-			log.Debug("%s '%s' failed to update keys: %s", ent.Filename(), ent.EntityID(), err)
-			continue
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			panic(err)
-		}
+		copier.CopyEntity(&ent)
 	}
 }
 
@@ -139,13 +103,7 @@ func copyRealtimeStops(copier *copier.Copier) {
 	out := make(chan RealtimeStop, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
-		if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-			log.Debug("%s '%s' failed to update keys: %s", ent.Filename(), ent.EntityID(), err)
-			continue
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			panic(err)
-		}
+		copier.CopyEntity(&ent)
 	}
 }
 
@@ -153,13 +111,7 @@ func copyStopAttributes(copier *copier.Copier) {
 	out := make(chan StopAttribute, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
-		if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-			continue
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			log.Debug("%s '%s' failed to update keys: %s", ent.Filename(), ent.EntityID(), err)
-			panic(err)
-		}
+		copier.CopyEntity(&ent)
 	}
 }
 
@@ -167,12 +119,6 @@ func copyTimepoint(copier *copier.Copier) {
 	out := make(chan Timepoint, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
-		if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-			log.Debug("%s '%s' failed to update keys: %s", ent.Filename(), ent.EntityID(), err)
-			continue
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			panic(err)
-		}
+		copier.CopyEntity(&ent)
 	}
 }
