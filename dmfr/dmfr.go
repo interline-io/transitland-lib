@@ -78,8 +78,7 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 	if err != nil {
 		return nil, err
 	}
-	readerSkippingBOM, enc := utfbom.Skip(reader)
-	log.Debug("DETECT: %s", enc)
+	readerSkippingBOM, _ := utfbom.Skip(reader)
 	return NewRegistry(readerSkippingBOM)
 }
 
