@@ -15,5 +15,5 @@ jobs:
     - name: Run tests
       run: go test -coverprofile c.out
     - name: Produce coverage report
-      runs: go tool cover -html=c.out -o coverage.html
+      run: go tool cover -html=c.out -o coverage.html
     # TODO: add profiling
