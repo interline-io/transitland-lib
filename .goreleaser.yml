@@ -9,10 +9,10 @@ builds:
 - main: ./cmd/gotransit/main.go
   # env:
   # - CGO_ENABLED=0
-  goos:
-  - linux
-  goarch:
-  - amd64
+  # goos:
+  # - linux
+  # goarch:
+  # - amd64
 # dockers:
 #   - image_templates:
 #     - interline-io/gotransit
