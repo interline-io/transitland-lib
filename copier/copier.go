@@ -189,8 +189,6 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 			return "", false
 		}
 	}
-	// Refresh EntityID after UpdateKeys/Filters
-	// eid = ent.EntityID()
 	// Check for duplicate entities.
 	if _, ok := copier.EntityMap.Get(efn, sid); ok && len(sid) > 0 {
 		copier.CopyResult.AddError(NewCopyError(ent.Filename(), sid, causes.NewDuplicateIDError(sid)))
@@ -259,7 +257,7 @@ func (copier *Copier) copyAgencies() {
 func (copier *Copier) copyStopsAndFares() {
 	// Stop bookkeeping
 	parents := map[string]int{}
-	farezones := map[string]int{}
+	farezones := map[string]string{}
 	// First pass for stations
 	for e := range copier.Reader.Stops() {
 		if e.LocationType != 1 {
@@ -267,8 +265,9 @@ func (copier *Copier) copyStopsAndFares() {
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
+		fzid := e.ZoneID
 		if _, ok := copier.CopyEntity(&e); ok {
-			farezones[e.ZoneID]++
+			farezones[fzid] = e.ZoneID
 			copier.geomCache.AddStop(sid, e)
 		}
 		// Need to keep track of parent type even if not added,
@@ -299,8 +298,9 @@ func (copier *Copier) copyStopsAndFares() {
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
+		fzid := e.ZoneID
 		if _, ok := copier.CopyEntity(&e); ok {
-			farezones[e.ZoneID]++
+			farezones[fzid] = e.ZoneID
 			copier.geomCache.AddStop(sid, e)
 		}
 	}
@@ -314,15 +314,16 @@ func (copier *Copier) copyStopsAndFares() {
 		}
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
+		fzid := e.ZoneID
 		if _, ok := copier.CopyEntity(&e); ok {
-			farezones[e.ZoneID]++
+			farezones[fzid] = e.ZoneID
 			copier.geomCache.AddStop(sid, e)
 		}
 	}
 	// FareAttributes
 	for e := range copier.Reader.FareAttributes() {
 		if len(e.AgencyID.Key) == 0 {
-			e.AgencyID.Key = copier.DefaultAgencyID // todo: as else below?
+			e.AgencyID.Key = copier.DefaultAgencyID
 			if copier.agencyCount > 1 {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
@@ -332,21 +333,23 @@ func (copier *Copier) copyStopsAndFares() {
 	// FareRules
 	for e := range copier.Reader.FareRules() {
 		// Explicitly check if the FareID is Marked
-		// FareAttributes are named entities and it's up to the Marker
-		// TODO: Should I just check the EntityMap instead?
-		//     Do I care if it is marked, or it if was actually written OK?
-		//     Same pattern for CalendarDates?
 		if !copier.isMarked(&gotransit.FareAttribute{FareID: e.FareID}) {
 			continue
 		}
-		// Add reference errors if we didn't add this farezone to the output
-		if _, ok := farezones[e.OriginID]; len(e.OriginID) > 0 && !ok {
+		// Add reference errors if we didn't write a stop with this zone.
+		if v, ok := farezones[e.OriginID]; ok {
+			e.OriginID = v
+		} else if len(e.OriginID) > 0 {
 			e.AddError(causes.NewInvalidFarezoneError("origin_id", e.OriginID))
 		}
-		if _, ok := farezones[e.DestinationID]; len(e.DestinationID) > 0 && !ok {
+		if v, ok := farezones[e.DestinationID]; ok {
+			e.DestinationID = v
+		} else if len(e.DestinationID) > 0 {
 			e.AddError(causes.NewInvalidFarezoneError("destination_id", e.DestinationID))
 		}
-		if _, ok := farezones[e.ContainsID]; len(e.ContainsID) > 0 && !ok {
+		if v, ok := farezones[e.ContainsID]; ok {
+			e.ContainsID = v
+		} else if len(e.ContainsID) > 0 && !ok {
 			e.AddError(causes.NewInvalidFarezoneError("contains_id", e.ContainsID))
 		}
 		copier.CopyEntity(&e)
