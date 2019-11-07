@@ -6,6 +6,7 @@ on:
     # ^ NOTE: just for testing
 jobs:
   goreleaser-ubuntu:
+    needs: test
     runs-on: [ubuntu-18.04]
     steps:
       - name: Install Ubuntu dependencies

@@ -1,8 +1,7 @@
 name: Test every commit
 on: [push]
 jobs:
-  build:
-    name: Test
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
