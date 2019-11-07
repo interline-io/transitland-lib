@@ -2,6 +2,8 @@ package dmfr
 
 import (
 	"errors"
+	"fmt"
+	"path/filepath"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
@@ -59,7 +61,7 @@ func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
 }
 
 // MainImportFeedVersion create FVI and run Copier inside a Tx.
-func MainImportFeedVersion(adapter gtdb.Adapter, fvid int, exts []string) (FeedVersionImport, error) {
+func MainImportFeedVersion(adapter gtdb.Adapter, fvid int, exts []string, gtfsdir string) (FeedVersionImport, error) {
 	// Get FV
 	fvi := FeedVersionImport{FeedVersionID: fvid, InProgress: true}
 	fv := gotransit.FeedVersion{ID: fvid}
@@ -79,7 +81,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, fvid int, exts []string) (FeedV
 	fviresult := FeedVersionImport{} // keep result
 	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
 		var err error
-		fviresult, err = ImportFeedVersion(atx, fv, exts)
+		fviresult, err = ImportFeedVersion(atx, fv, exts, gtfsdir)
 		// Update FVI with results, inside tx
 		fviresult.ID = fvi.ID
 		fviresult.FeedVersionID = fvid
@@ -110,10 +112,10 @@ func MainImportFeedVersion(adapter gtdb.Adapter, fvid int, exts []string) (FeedV
 }
 
 // ImportFeedVersion .
-func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, exts []string) (FeedVersionImport, error) {
+func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, exts []string, gtfsdir string) (FeedVersionImport, error) {
 	fvi := FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	reader, err := gtcsv.NewReader(fv.File)
+	reader, err := gtcsv.NewReader(filepath.Join(gtfsdir, fv.File))
 	if err != nil {
 		return fvi, err
 	}

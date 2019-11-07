@@ -150,7 +150,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	results := make(chan FeedVersionImport, len(qlookup))
 	for w := 0; w < cmd.workers; w++ {
 		wg.Add(1)
-		go dmfrImportWorker(w, cmd.adapter, cmd.extensions, jobs, results, &wg)
+		go dmfrImportWorker(w, cmd.adapter, cmd.extensions, cmd.gtfsdir, jobs, results, &wg)
 	}
 	for fvid := range qlookup {
 		jobs <- fvid
@@ -170,9 +170,9 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter gtdb.Adapter, exts []string, jobs <-chan int, results chan<- FeedVersionImport, wg *sync.WaitGroup) {
+func dmfrImportWorker(id int, adapter gtdb.Adapter, exts []string, gtfsdir string, jobs <-chan int, results chan<- FeedVersionImport, wg *sync.WaitGroup) {
 	for fvid := range jobs {
-		fviresult, err := MainImportFeedVersion(adapter, fvid, exts)
+		fviresult, err := MainImportFeedVersion(adapter, fvid, exts, gtfsdir)
 		if err != nil {
 			log.Info("Error: %s", err.Error())
 		}
