@@ -2,7 +2,6 @@ package dmfr
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 
 	"github.com/interline-io/gotransit"
