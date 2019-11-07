@@ -1,9 +1,7 @@
 name: Build releases
 on: 
-  release:
-    types: [create]
-  push:
-    # ^ NOTE: just for testing
+  create:
+    types: [tag]
 jobs:
   goreleaser-ubuntu:
     # TODO: figure out how to have this depend on tests passing
