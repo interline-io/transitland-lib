@@ -3,7 +3,6 @@ package plus
 import (
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
-	// "github.com/interline-io/gotransit/internal/log"
 )
 
 func init() {
