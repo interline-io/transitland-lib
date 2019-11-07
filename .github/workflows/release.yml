@@ -18,11 +18,9 @@ jobs:
         uses: goreleaser/goreleaser-action@v1
         with:
           version: latest
-          args: release
+          args: release --config=.gorelease-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOOS: linux
-          GOARCH: amd64
   goreleaser-macos:
     runs-on: [macOS-latest]
     steps:
@@ -38,7 +36,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v1
         with:
           version: latest
-          args: release
+          args: release --config=.gorelease-darwin.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOS: darwin
