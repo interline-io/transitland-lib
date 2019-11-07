@@ -1,4 +1,4 @@
-name: Test every commit
+name: Build releases
 on: [push]
 jobs:
   build:
