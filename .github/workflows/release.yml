@@ -2,20 +2,39 @@ name: Build releases
 on: 
   release:
     types: [create]
+  push:
+    # ^ NOTE: just for testing
 jobs:
-  goreleaser:
-    runs-on: [ubuntu-18.04, macOS-latest, windows-latest]
+  goreleaser-ubuntu:
+    runs-on: [ubuntu-18.04]
     steps:
-      -
-        name: Checkout
+      - name: Install Ubuntu dependencies
+        run: sudo apt-get install sqlite3 libsqlite3-dev libspatialite-dev
+      - name: Checkout
         uses: actions/checkout@v1
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v1
         with:
           go-version: 1.13
-      -
-        name: Run GoReleaser
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          version: latest
+          args: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  goreleaser-macos:
+    runs-on: [macOS-latest]
+    steps:
+      - name: Install macOS dependencies
+        run: brew install sqlite libspatialite
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Set up Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
           version: latest
