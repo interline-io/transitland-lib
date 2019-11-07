@@ -22,6 +22,8 @@ jobs:
           args: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOS: linux
+          GOARCH: amd64
   goreleaser-macos:
     runs-on: [macOS-latest]
     steps:
@@ -40,3 +42,5 @@ jobs:
           args: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOS: darwin
+          GOARCH: amd64
