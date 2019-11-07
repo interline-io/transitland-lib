@@ -102,12 +102,13 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, fetchti
 	}
 	// Copy file to output directory
 	if outpath != "" {
-		outfn := filepath.Join(outpath, fv.SHA1+".zip")
+		fn := fv.SHA1 + ".zip"
+		outfn := filepath.Join(outpath, fn)
 		// fmt.Printf("COPY %s -> %s\n", fv.File, outfn)
 		if err := copyFileContents(reader.Path(), outfn); err != nil {
 			return fr, err
 		}
-		fv.File = outfn
+		fv.File = fn
 		fr.Path = fv.File // TODO: remove
 	}
 	// Return fv
