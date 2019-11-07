@@ -1,10 +1,8 @@
 name: Build releases
-on: 
-  push:
-    tags:
-      - '*'
+on: [create]
 jobs:
   goreleaser-ubuntu:
+    - if: startsWith(github.ref, 'refs/tags/v')
     # TODO: figure out how to have this depend on tests passing
     runs-on: [ubuntu-18.04]
     steps:
