@@ -27,6 +27,20 @@ func TestDirAdapter(t *testing.T) {
 		t.Error("no DirAdapter")
 	}
 	testAdapter(t, v())
+	t.Run("DirSHA1", func(t *testing.T) {
+		adapter, ok := v().(*DirAdapter)
+		if !ok {
+			t.Error("not DirAdapter!")
+			return
+		}
+		s, err := adapter.DirSHA1()
+		if err != nil {
+			t.Error(err)
+		}
+		if s != testutil.ExampleDir.DirSHA1 {
+			t.Errorf("got %s expect %s", s, testutil.ExampleDir.DirSHA1)
+		}
+	})
 }
 
 func TestOverlayAdapter(t *testing.T) {
@@ -55,6 +69,20 @@ func TestZipAdapter(t *testing.T) {
 		}
 		if s != testutil.ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", s, testutil.ExampleZip.SHA1)
+		}
+	})
+	t.Run("DirSHA1", func(t *testing.T) {
+		adapter, ok := v().(*ZipAdapter)
+		if !ok {
+			t.Error("not ZipAdapter!")
+			return
+		}
+		s, err := adapter.DirSHA1()
+		if err != nil {
+			t.Error(err)
+		}
+		if s != testutil.ExampleZip.DirSHA1 {
+			t.Errorf("got %s expect %s", s, testutil.ExampleZip.DirSHA1)
 		}
 	})
 }
