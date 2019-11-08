@@ -169,8 +169,8 @@ func (adapter ZipAdapter) DirSHA1() (string, error) {
 	h := sha1.New()
 	for _, zf := range r.File {
 		fi := zf.FileInfo()
-		fn := fi.Name()
-		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.HasPrefix(fn, "/") {
+		fn := zf.Name
+		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
 		}
 		f, err := zf.Open()
@@ -221,7 +221,7 @@ func (adapter *DirAdapter) DirSHA1() (string, error) {
 	h := sha1.New()
 	for _, fi := range fis {
 		fn := fi.Name()
-		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.HasPrefix(fn, "/") {
+		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
 		}
 		f, err := os.Open(filepath.Join(adapter.path, fi.Name()))

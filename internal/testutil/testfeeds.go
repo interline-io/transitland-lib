@@ -33,7 +33,7 @@ var ExampleDir = ReaderTester{
 // ExampleZip .
 var ExampleZip = ReaderTester{
 	URL:     "../testdata/example.zip",
-	SHA1:    "21e43625117b993c125f4a939973a862e2cbd136",
+	SHA1:    "be204b3146210631b03547436390b6053413bc2e",
 	DirSHA1: "bf5b9f0ff2d73c9bcca69a791d6579e50b01e6c7",
 	Size:    4120,
 	Counts: map[string]int{
