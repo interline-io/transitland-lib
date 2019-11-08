@@ -46,7 +46,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 			fvid := setup(atx, testutil.ExampleDir.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := MainImportFeedVersion(&atx2, fvid, nil, "")
+			_, err := MainImportFeedVersion(&atx2, ImportOptions{FeedVersionID: fvid})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -84,7 +84,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 			fvid = setup(atx, "../testdata/does-not-exist")
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := MainImportFeedVersion(&atx2, fvid, nil, "")
+			_, err := MainImportFeedVersion(&atx2, ImportOptions{FeedVersionID: fvid})
 			if err == nil {
 				t.Errorf("expected an error, got none")
 			}

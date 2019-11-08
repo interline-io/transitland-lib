@@ -46,7 +46,7 @@ func TestMainFetchFeed(t *testing.T) {
 		//
 		url := ts.URL
 		feedid := caltrain(atx, ts.URL)
-		fr, err := MainFetchFeed(atx, feedid, tmpdir)
+		fr, err := MainFetchFeed(atx, FetchOptions{FeedID: feedid, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -98,9 +98,15 @@ func TestMainFetchFeed_LastFetchError(t *testing.T) {
 	}))
 	defer ts.Close()
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		tmpdir, err := ioutil.TempDir("", "gtfs")
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer os.RemoveAll(tmpdir) // clean up
 		feedid := caltrain(atx, ts.URL)
 		// Fetch
-		_, err := MainFetchFeed(atx, feedid, "")
+		_, err = MainFetchFeed(atx, FetchOptions{FeedID: feedid, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -135,7 +141,7 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
 		feedid := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now(), "")
+		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, false, time.Now(), "")
 		if err != nil {
 			t.Error(err)
 			return err
@@ -172,7 +178,7 @@ func TestFetchAndCreateFeedVersion_404(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
 		feedid := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now(), "")
+		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, false, time.Now(), "")
 		if err != nil {
 			t.Error(err)
 			return err
@@ -204,7 +210,7 @@ func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
 		feedid := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now(), "")
+		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, false, time.Now(), "")
 		if err != nil {
 			t.Error(err)
 		}
@@ -214,7 +220,7 @@ func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
 		if fr.FeedVersion.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fr.FeedVersion.SHA1, ExampleZip.SHA1)
 		}
-		fr2, err2 := FetchAndCreateFeedVersion(atx, feedid, url, time.Now(), "")
+		fr2, err2 := FetchAndCreateFeedVersion(atx, feedid, url, false, time.Now(), "")
 		if err2 != nil {
 			t.Error(err2)
 			return err2

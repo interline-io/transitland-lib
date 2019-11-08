@@ -13,10 +13,16 @@ import (
 	"github.com/interline-io/gotransit/gtdb"
 )
 
+// FetchOptions sets options for a fetch operation.
+type FetchOptions struct {
+	FeedID       int
+	CheckDirSHA1 bool
+	Directory    string
+}
+
 // FetchResult contains results of a fetch operation.
 type FetchResult struct {
 	FeedVersion gotransit.FeedVersion
-	OnestopID   string
 	Path        string
 	Found       bool
 	FetchError  error
@@ -25,9 +31,9 @@ type FetchResult struct {
 // MainFetchFeed fetches and creates a new FeedVersion for a given Feed.
 // Fetch errors are logged to Feed LastFetchError and saved.
 // An error return from this function is a serious failure.
-func MainFetchFeed(atx gtdb.Adapter, feedid int, outpath string) (FetchResult, error) {
+func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
-	tlfeed := Feed{ID: feedid}
+	tlfeed := Feed{ID: opts.FeedID}
 	if err := atx.Find(&tlfeed); err != nil {
 		return fr, err
 	}
@@ -40,7 +46,7 @@ func MainFetchFeed(atx gtdb.Adapter, feedid int, outpath string) (FetchResult, e
 	}
 	// Start fetching
 	url := tlfeed.URLs.StaticCurrent
-	fr, err := FetchAndCreateFeedVersion(atx, feedid, url, fetchtime.Time, outpath)
+	fr, err := FetchAndCreateFeedVersion(atx, opts.FeedID, url, opts.CheckDirSHA1, fetchtime.Time, opts.Directory)
 	if err != nil {
 		return fr, err
 	}
@@ -60,7 +66,7 @@ func MainFetchFeed(atx gtdb.Adapter, feedid int, outpath string) (FetchResult, e
 // FetchAndCreateFeedVersion from a URL.
 // Returns error if the source cannot be loaded or is invalid GTFS.
 // Returns no error if the SHA1 is already present, or a FeedVersion is created.
-func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, fetchtime time.Time, outpath string) (FetchResult, error) {
+func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, checkdir bool, fetchtime time.Time, outpath string) (FetchResult, error) {
 	fr := FetchResult{}
 	if url == "" {
 		fr.FetchError = errors.New("no url")
@@ -88,7 +94,11 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, fetchti
 	fv.FetchedAt = fetchtime
 	// Is this SHA1 already present?
 	checkfvid := gotransit.FeedVersion{}
-	err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ?", fv.SHA1)
+	if checkdir {
+		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
+	} else {
+		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ?", fv.SHA1)
+	}
 	if err == nil {
 		// Already present
 		fr.FeedVersion = checkfvid
@@ -100,6 +110,8 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, feedid int, url string, fetchti
 		// Serious error
 		return fr, err
 	}
+	// Is this dir SHA1 already present?
+
 	// Copy file to output directory
 	if outpath != "" {
 		fn := fv.SHA1 + ".zip"
