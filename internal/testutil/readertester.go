@@ -10,6 +10,7 @@ import (
 type ReaderTester struct {
 	URL       string
 	SHA1      string
+	DirSHA1   string
 	Size      int
 	Counts    map[string]int
 	EntityIDs map[string][]string

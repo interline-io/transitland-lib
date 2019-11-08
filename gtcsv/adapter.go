@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/interline-io/gotransit/causes"
 	"github.com/interline-io/gotransit/internal/log"
@@ -20,7 +22,6 @@ import (
 type Adapter interface {
 	OpenFile(string, func(io.Reader)) error
 	ReadRows(string, func(Row)) error
-	SHA1() (string, error)
 	Open() error
 	Close() error
 	Exists() bool
@@ -155,6 +156,33 @@ func (adapter ZipAdapter) SHA1() (string, error) {
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
+// DirSHA1 returns the SHA1 of all the .txt files in the main directory, sorted, and concatenated.
+func (adapter ZipAdapter) DirSHA1() (string, error) {
+	r, err := zip.OpenReader(adapter.path)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+	// Sort the files
+	sort.Slice(r.File, func(i, j int) bool { return r.File[i].Name < r.File[j].Name })
+	// Generate SHA1
+	h := sha1.New()
+	for _, zf := range r.File {
+		fi := zf.FileInfo()
+		fn := fi.Name()
+		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.HasPrefix(fn, "/") {
+			continue
+		}
+		f, err := zf.Open()
+		defer f.Close()
+		if err != nil {
+			return "", err
+		}
+		io.Copy(h, f)
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
 /////////////////////
 
 // DirAdapter supports plain directories of CSV files.
@@ -174,6 +202,35 @@ func NewDirAdapter(path string) *DirAdapter {
 // SHA1 returns an error.
 func (adapter *DirAdapter) SHA1() (string, error) {
 	return "", errors.New("cannot take SHA1 of directory")
+}
+
+// DirSHA1 returns the SHA1 of all the .txt files in the main directory, sorted, and concatenated.
+func (adapter *DirAdapter) DirSHA1() (string, error) {
+	f, err := os.Open(adapter.path)
+	if err != nil {
+		return "", err
+	}
+	fis, err := f.Readdir(-1)
+	f.Close()
+	if err != nil {
+		return "", err
+	}
+	// Sort the files
+	sort.Slice(fis, func(i, j int) bool { return fis[i].Name() < fis[j].Name() })
+	// Generate SHA1
+	h := sha1.New()
+	for _, fi := range fis {
+		fn := fi.Name()
+		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.HasPrefix(fn, "/") {
+			continue
+		}
+		f, err := os.Open(filepath.Join(adapter.path, fi.Name()))
+		if err != nil {
+			return "", err
+		}
+		io.Copy(h, f)
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 // Open the adapter. Return an error if the directory does not exist.
