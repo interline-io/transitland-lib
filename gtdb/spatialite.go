@@ -130,7 +130,6 @@ func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 		RunWith(adapter.db)
 	result, err := q.Exec()
 	if err != nil {
-		panic(err)
 		return 0, err
 	}
 	eid, err := result.LastInsertId()
