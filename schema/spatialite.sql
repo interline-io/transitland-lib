@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS "feed_versions" (
   "feed_id" integer, 
   "feed_type" varchar(255) NOT NULL, 
   "sha1" varchar(255) NOT NULL, 
+  "sha1_dir" varchar(255) NOT NULL, 
   "file" varchar(255) NOT NULL, 
   "url" varchar(255) NOT NULL, 
   "earliest_calendar_date" datetime NOT NULL, 
