@@ -26,6 +26,8 @@ type Adapter interface {
 	Close() error
 	Exists() bool
 	Path() string
+	SHA1() (string, error)
+	DirSHA1() (string, error)
 }
 
 // WriterAdapter provides a writing interface.
