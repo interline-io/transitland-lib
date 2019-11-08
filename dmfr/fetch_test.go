@@ -139,9 +139,15 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 	}))
 	defer ts.Close()
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		tmpdir, err := ioutil.TempDir("", "gtfs")
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer os.RemoveAll(tmpdir) // clean up
 		url := ts.URL
 		feedid := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, false, time.Now(), "")
+		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, false, time.Now(), tmpdir)
 		if err != nil {
 			t.Error(err)
 			return err

@@ -108,9 +108,6 @@ func Test_dmfrFetchCommand(t *testing.T) {
 			if len(feeds) != len(exp.feeds) {
 				t.Errorf("got %d feeds, expect %d", len(feeds), len(exp.feeds))
 			}
-			// for _, feed := range feeds {
-			// 	fmt.Printf("Feed: %#v\n", feed)
-			// }
 			fvs := []gotransit.FeedVersion{}
 			testdb.ShouldSelect(t, adapter, &fvs, "SELECT * FROM feed_versions")
 			if len(fvs) != exp.fvcount {
