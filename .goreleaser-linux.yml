@@ -7,8 +7,8 @@ before:
     - go generate ./...
 builds:
 - main: ./cmd/gotransit/main.go
-  # env:
-  # - CGO_ENABLED=0
+  env:
+  - CGO_ENABLED=1
   goos:
   - linux
   goarch:
