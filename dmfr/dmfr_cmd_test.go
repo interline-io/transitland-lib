@@ -26,9 +26,9 @@ func Test_dmfrSyncCommand(t *testing.T) {
 		errContains string
 		command     []string
 	}{
-		{2, "", []string{"sync", "../testdata/dmfr/example.json"}},
-		{4, "", []string{"sync", "../testdata/dmfr/example.json", "../testdata/dmfr/bayarea.dmfr.json"}},
-		{0, "no such file", []string{"sync", "../testdaata/dmfr/does-not-exist.json"}},
+		{2, "", []string{"../testdata/dmfr/example.json"}},
+		{4, "", []string{"../testdata/dmfr/example.json", "../testdata/dmfr/bayarea.dmfr.json"}},
+		{0, "no such file", []string{"../testdaata/dmfr/does-not-exist.json"}},
 	}
 	_ = cases
 	for _, exp := range cases {
@@ -83,10 +83,10 @@ func Test_dmfrFetchCommand(t *testing.T) {
 		gtfsdir     string
 		command     []string
 	}{
-		{1, "", []Feed{f200}, "", []string{"fetch"}},
-		{1, "", []Feed{f200, f404}, "", []string{"fetch", "f--200", "f--404"}},
-		{1, "", []Feed{f200, f404}, tmpdir, []string{"fetch", "-gtfsdir", tmpdir, "f--200"}},
-		{0, "", []Feed{f200, f404}, "", []string{"fetch", "f--404"}},
+		{1, "", []Feed{f200}, "", []string{}},
+		{1, "", []Feed{f200, f404}, "", []string{"f--200", "f--404"}},
+		{1, "", []Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--200"}},
+		{0, "", []Feed{f200, f404}, "", []string{"f--404"}},
 	}
 	_ = cases
 	for _, exp := range cases {
