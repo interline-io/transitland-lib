@@ -10,6 +10,10 @@ type canSHA1 interface {
 	SHA1() (string, error)
 }
 
+type canDirSHA1 interface {
+	DirSHA1() (string, error)
+}
+
 type canPath interface {
 	Path() string
 }
@@ -20,6 +24,7 @@ type FeedVersion struct {
 	FeedID               int
 	FeedType             string
 	SHA1                 string
+	SHA1Dir              string
 	File                 string
 	URL                  string
 	EarliestCalendarDate time.Time
@@ -57,6 +62,11 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	if s, ok := reader.(canSHA1); ok {
 		if h, err := s.SHA1(); err == nil {
 			fv.SHA1 = h
+		}
+	}
+	if s, ok := reader.(canDirSHA1); ok {
+		if h, err := s.DirSHA1(); err == nil {
+			fv.SHA1Dir = h
 		}
 	}
 	if s, ok := reader.(canPath); ok {

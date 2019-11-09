@@ -45,7 +45,6 @@ func (mw *Writer) NewReader() (gotransit.Reader, error) {
 
 // AddEntity .
 func (mw *Writer) AddEntity(ent gotransit.Entity) (string, error) {
-	// fmt.Printf("writing: %#v\n", ent)
 	switch v := ent.(type) {
 	case *gotransit.Stop:
 		mw.Reader.StopList = append(mw.Reader.StopList, *v)

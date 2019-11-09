@@ -11,16 +11,22 @@ import (
 // validateCommand
 type validateCommand struct {
 	validateExtensions arrayFlags
-	args               []string
 }
 
 func (cmd *validateCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
+	fl.Usage = func() {
+		fmt.Println("Usage: validate <input>")
+		fl.PrintDefaults()
+	}
 	fl.Var(&cmd.validateExtensions, "ext", "Include GTFS Extension")
 	fl.Parse(args)
-	cmd.args = fl.Args()
+	if fl.NArg() < 1 {
+		fl.Usage()
+		exit("requires input reader")
+	}
 	//
-	reader := MustGetReader(cmd.args[0])
+	reader := MustGetReader(fl.Arg(0))
 	defer reader.Close()
 	v, err := validator.NewValidator(reader)
 	if err != nil {
