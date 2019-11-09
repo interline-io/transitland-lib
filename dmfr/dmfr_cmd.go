@@ -30,6 +30,7 @@ func (cmd *Command) Run(args []string) error {
 		fmt.Println("  sync")
 		fmt.Println("  import")
 		fmt.Println("  fetch")
+		fl.PrintDefaults()
 	}
 	fl.Parse(args)
 	subc := fl.Arg(0)
@@ -55,7 +56,7 @@ func (cmd *Command) Run(args []string) error {
 	default:
 		return fmt.Errorf("Invalid command: %q", subc)
 	}
-	return r.Run(fl.Args())
+	return r.Run(fl.Args()[1:]) // consume first arg
 }
 
 /////
@@ -74,6 +75,10 @@ type dmfrImportCommand struct {
 
 func (cmd *dmfrImportCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
+	fl.Usage = func() {
+		fmt.Println("Usage: import [feedids...]")
+		fl.PrintDefaults()
+	}
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
@@ -81,10 +86,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	fl.StringVar(&cmd.coverdate, "date", "", "Service on date")
 	fl.Uint64Var(&cmd.limit, "limit", 0, "Import at most n feeds")
 	fl.BoolVar(&cmd.dryrun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
-	fl.Usage = func() {
-		fmt.Println("Usage: import [feedids...]")
-	}
-	fl.Parse(args[1:])
+	fl.Parse(args)
 	cmd.feedids = fl.Args()
 	if cmd.adapter == nil {
 		writer := mustGetWriter(cmd.dburl, true)
@@ -203,8 +205,9 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	fl.BoolVar(&cmd.allowdups, "allow-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.Usage = func() {
 		fmt.Println("Usage: fetch [feedids...]")
+		fl.PrintDefaults()
 	}
-	fl.Parse(args[1:])
+	fl.Parse(args)
 	feedids := fl.Args()
 	if cmd.adapter == nil {
 		writer := mustGetWriter(cmd.dburl, true)
@@ -309,11 +312,12 @@ type dmfrSyncCommand struct {
 
 func (cmd *dmfrSyncCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("sync", flag.ExitOnError)
-	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
 	fl.Usage = func() {
 		fmt.Println("Usage: sync <filenames...>")
+		fl.PrintDefaults()
 	}
-	fl.Parse(args[1:])
+	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.Parse(args)
 	cmd.filenames = fl.Args()
 	if cmd.adapter == nil {
 		writer := mustGetWriter(cmd.dburl, true)
@@ -334,6 +338,7 @@ func (dmfrValidateCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: validate <filenames...>")
+		fl.PrintDefaults()
 	}
 	fl.Parse(args)
 	if fl.NArg() == 0 {

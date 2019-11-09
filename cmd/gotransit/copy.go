@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
@@ -17,7 +18,6 @@ type basicCopyOptions struct {
 	allowReferenceErrors bool
 	extensions           arrayFlags
 	filters              arrayFlags
-	args                 []string
 }
 
 // copyCommand
@@ -27,6 +27,10 @@ type copyCommand struct {
 
 func (cmd *copyCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
+	fl.Usage = func() {
+		fmt.Println("Usage: copy <reader> <writer>")
+		fl.PrintDefaults()
+	}
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID")
 	fl.BoolVar(&cmd.newfv, "newfv", false, "Create a new FeedVersion from Reader")
@@ -34,14 +38,14 @@ func (cmd *copyCommand) Run(args []string) error {
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entity-level errors")
 	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "Allow reference errors")
 	fl.Parse(args)
-	cmd.args = fl.Args()
-	if len(cmd.args) < 2 {
-		exit("Requires input and output")
+	if fl.NArg() < 2 {
+		fl.Usage()
+		exit("requires input reader and output writer")
 	}
 	// Reader / Writer
-	reader := MustGetReader(cmd.args[0])
+	reader := MustGetReader(fl.Arg(0))
 	defer reader.Close()
-	writer := MustGetWriter(cmd.args[1], cmd.create)
+	writer := MustGetWriter(fl.Arg(1), cmd.create)
 	defer writer.Close()
 	// Setup copier
 	cp := copier.NewCopier(reader, writer)
