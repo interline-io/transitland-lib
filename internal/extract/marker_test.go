@@ -102,9 +102,6 @@ func TestExtract_Filter_ExampleFeed(t *testing.T) {
 		t.Run(testcase.name, func(t *testing.T) {
 			em := NewMarker()
 			em.Filter(reader, testcase.filter)
-			// for n := range em.found {
-			// 	fmt.Printf("%#v\n", n)
-			// }
 			if len(em.found) != len(testcase.nodes) {
 				t.Errorf("got %d nodes expect %d nodes", len(em.found), len(testcase.nodes))
 			}
