@@ -92,7 +92,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 	fviresult := FeedVersionImport{} // keep result
 	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
 		var err error
-		fviresult, err = ImportFeedVersion(atx, fv, opts.Extensions, opts.Directory)
+		fviresult, err = ImportFeedVersion(atx, fv, opts)
 		// Update FVI with results, inside tx
 		fviresult.ID = fvi.ID
 		fviresult.FeedVersionID = opts.FeedVersionID
@@ -123,10 +123,10 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 }
 
 // ImportFeedVersion .
-func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, exts []string, gtfsdir string) (FeedVersionImport, error) {
+func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOptions) (FeedVersionImport, error) {
 	fvi := FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	reader, err := gtcsv.NewReader(filepath.Join(gtfsdir, fv.File))
+	reader, err := gtcsv.NewReader(filepath.Join(opts.Directory, fv.File))
 	if err != nil {
 		return fvi, err
 	}
@@ -138,7 +138,7 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, exts []string
 	writer := gtdb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer)
-	for _, e := range exts {
+	for _, e := range opts.Extensions {
 		ext, err := gotransit.GetExtension(e)
 		if err != nil {
 			panic("ext not found")

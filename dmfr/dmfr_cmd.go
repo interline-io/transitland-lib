@@ -185,13 +185,13 @@ func dmfrImportWorker(id int, adapter gtdb.Adapter, jobs <-chan ImportOptions, r
 /////
 
 type dmfrFetchCommand struct {
-	workers  int
-	limit    int
-	dburl    string
-	gtfsdir  string
-	checkdir bool
-	feedids  []string
-	adapter  gtdb.Adapter
+	workers   int
+	limit     int
+	dburl     string
+	gtfsdir   string
+	allowdups bool
+	feedids   []string
+	adapter   gtdb.Adapter
 }
 
 func (cmd *dmfrFetchCommand) Run(args []string) error {
@@ -200,7 +200,7 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	fl.IntVar(&cmd.limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL")
 	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
-	fl.BoolVar(&cmd.checkdir, "checkdir", false, "Check for duplicate feed contents, not just the zip file SHA1")
+	fl.BoolVar(&cmd.allowdups, "allow-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.Usage = func() {
 		fmt.Println("Usage: fetch [feedids...]")
 	}
@@ -251,9 +251,9 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	}
 	for _, feed := range feeds {
 		opts := FetchOptions{
-			FeedID:       feed.ID,
-			Directory:    cmd.gtfsdir,
-			CheckDirSHA1: cmd.checkdir,
+			FeedID:                  feed.ID,
+			Directory:               cmd.gtfsdir,
+			IgnoreDuplicateContents: cmd.allowdups,
 		}
 		jobs <- opts
 	}
@@ -268,8 +268,11 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 		} else if fr.FetchError != nil {
 			log.Info("Feed %s (id:%d): url: %s fetch error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FetchError.Error())
 			fetchErrs++
-		} else if fr.Found {
-			log.Info("Feed %s (id:%d): url: %s found: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+		} else if fr.FoundSHA1 {
+			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+			fetchFound++
+		} else if fr.FoundDirSHA1 {
+			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID)
 			fetchFound++
 		} else {
 			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)

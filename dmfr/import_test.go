@@ -115,7 +115,7 @@ func TestImportFeedVersion(t *testing.T) {
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		fviresult, err := ImportFeedVersion(atx, fv, nil, "")
+		fviresult, err := ImportFeedVersion(atx, fv, ImportOptions{})
 		if err != nil {
 			t.Error(err)
 		}
