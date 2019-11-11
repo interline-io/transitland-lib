@@ -9,6 +9,8 @@ builds:
 - main: ./cmd/gotransit/main.go
   env:
   - CGO_ENABLED=0
+  - LDFLAGS="-L/usr/local/opt/sqlite/lib"
+  - CPPFLAGS="-I/usr/local/opt/sqlite/include"
   flags:
     - -tags
     - sqlite
