@@ -9,6 +9,9 @@ builds:
 - main: ./cmd/gotransit/main.go
   env:
   - CGO_ENABLED=0
+  flags:
+    - -tags
+    - sqlite
   goos:
   - darwin
   goarch:
