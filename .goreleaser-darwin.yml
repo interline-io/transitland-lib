@@ -1,9 +1,7 @@
 # Documentation at http://goreleaser.com
 before:
   hooks:
-    # you may remove this if you don't use vgo
-    - go get ./...
-    # you may remove this if you don't need go generate
+    - go mod download
     - go generate ./...
 builds:
 - main: ./cmd/gotransit/main.go
