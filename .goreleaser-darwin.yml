@@ -10,8 +10,7 @@ builds:
   - LDFLAGS="-L/usr/local/opt/sqlite/lib"
   - CPPFLAGS="-I/usr/local/opt/sqlite/include"
   flags:
-    - -tags
-    - sqlite
+    - -tags=sqlite
   goos:
   - darwin
   goarch:
