@@ -1,3 +1,4 @@
+// +build spatialite
 package gtdb
 
 import (
