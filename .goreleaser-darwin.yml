@@ -6,7 +6,9 @@ before:
 builds:
 - main: ./cmd/gotransit/main.go
   env:
-  - CGO_ENABLED=0
+  - CGO_ENABLED=1
+  - CC=o64-clang
+  - CXX=o64-clang++
   - LDFLAGS="-L/usr/local/opt/sqlite/lib"
   - CPPFLAGS="-I/usr/local/opt/sqlite/include"
   flags:
