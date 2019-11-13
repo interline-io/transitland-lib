@@ -8,6 +8,16 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+func init() {
+	// Register driver
+	adapters["postgres"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
+	// Register readers and writers
+	r := func(url string) (gotransit.Reader, error) { return NewReader(url) }
+	gotransit.RegisterReader("postgres", r)
+	w := func(url string) (gotransit.Writer, error) { return NewWriter(url) }
+	gotransit.RegisterWriter("postgres", w)
+}
+
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
 	DBURL string

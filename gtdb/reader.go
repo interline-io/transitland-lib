@@ -24,7 +24,7 @@ type Reader struct {
 
 // NewReader returns an initialized Reader.
 func NewReader(dburl string) (*Reader, error) {
-	return &Reader{Adapter: NewAdapter(dburl), PageSize: 1000}, nil
+	return &Reader{Adapter: newAdapter(dburl), PageSize: 1000}, nil
 }
 
 // ValidateStructure returns if all the necessary tables are present. Not implemented.
