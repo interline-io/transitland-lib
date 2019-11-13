@@ -5,7 +5,10 @@ before:
     - go generate ./...
 builds:
 - main: ./cmd/gotransit/main.go
+  env:
+  - CGO_ENABLED=0
   goos:
+  - linux
   - darwin
   goarch:
   - amd64
