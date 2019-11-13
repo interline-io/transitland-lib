@@ -4,7 +4,7 @@ before:
     - go mod download
     - go generate ./...
 builds:
-- main: ./cmd/gotransit/main.go
+- main: ./cmd/gotransit
   env:
   - CGO_ENABLED=0
   goos:
