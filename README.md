@@ -2,36 +2,30 @@
 
 gotransit is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to specify multiple input feeds.
 
-## Key components
-
-- Entity: An `Entity` is entity as specified by GTFS, such as an Agency, Route, Stop, etc.
-- Reader: A `Reader` provides streams of GTFS entities over channels. The `gtcsv` and `gtdb` modules provide CSV and Postgres/SQLite support, respectively.
-- Writer: A `Writer` accepts GTFS entities. As above, `gtcsv` and `gtdb` provide basic implementations. Custom writers can also be used to support non-GTFS outputs, such as building a routing graph.
-- Copier: A `Copier` reads a stream of GTFS entities from a `Reader`, checks each entity against a `Marker`, performs validation, applies any specified `Filters`, and sends to a `Writer`.
-- Marker: A `Marker` selects which GTFS entities will be processed by a `Copier`. For example, selecting only entities related to a single trip or route.
-- Filter: A `Filter` applies transformations to GTFS entities, such as converting extended route types to basic values, or modifying entity identifiers.
-- Extension: An `Extension` provides support for additional types of GTFS entities.
-
-
 ## Installation
 
 ```bash
 go get github.com/interline-io/gotransit
 ```
 
-Linux binaries are attached to each [release](https://github.com/interline-io/gotransit/releases).
+Linux and macOS binaries are attached to each [release](https://github.com/interline-io/gotransit/releases).
 
-Main dependencies (handled by `go.mod`):
-
+Main dependencies:
 - `twpayne/go-geom`
-- `lib/pq`
 - `jmoiron/sqlx`
 - `Masterminds/squirrel`
+- `lib/pq`
 - `mattn/go-sqlite3` (see below)
 
-SQLite / SpatiaLite requires CGO support and an available `gcc` compiler, as well as the [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index) shared library installed. You can generally install this using your system's package manager, e.g. `apt-get install libsqlite3-mod-spatialite` or `brew install libspatialite`. This will be an optional dependency with a build flag in future releases.
+SQLite / SpatialLite requires CGO support and the [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index) shared library installed. As such, this driver is not included in the static release builds. To enable support, install the library using your package manager (e.g. `apt-get install libsqlite3-mod-spatialite` or `brew install libspatialite`) and compile locally with `CGO_ENABLED=1`.
 
 ## Usage as a CLI tool
+
+The main subcommands are:
+- [validate](#validate-command)
+- [copy](#copy-command)
+- [extract](#extract-command)
+- [dmfr](#dmfr-command)
 
 ### validate command
 
@@ -39,12 +33,12 @@ The validate command performs a basic validation on a data source and writes the
 
 ```
 $ gotransit validate --help
-Usage of validate:
+Usage: validate <reader>
   -ext value
     	Include GTFS Extension
 ```
 
-TODO: AN EXAMPLE WITH A REAL VALIDATION ERROR AND FIX PRINTING
+Example: 
 
 ```sh
 $ gotransit validate "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip"
@@ -56,42 +50,42 @@ The copy command performs a basic copy from a reader to a writer. By default, an
 
 ```
 $ gotransit copy --help
-Usage of copy:
+Usage: copy <reader> <writer>
   -allow-entity-errors
-    	Allow entity-level errors
+    	Allow entities with errors to be copied
   -allow-reference-errors
-    	Allow reference errors
+    	Allow entities with reference errors to be copied
   -create
-    	Create
+    	Create a basic database schema if none exists
   -ext value
     	Include GTFS Extension
+  -fvid int
+    	Specify FeedVersionID when writing to a database
 ```
-
-TODO: SET FILE CREATION TIMES IN ZIP, USE EXAMPLE WITH AN ERROR
 
 Example:
 
 ```sh
 $ gotransit copy --allow-entity-errors "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip" output.zip
 
-$ unzip -p ../output.zip agency.txt
+$ unzip -p output.zip agency.txt
 agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
 1000,Caltrain,http://www.caltrain.com,America/Los_Angeles,en,800-660-4287,,
   ```
 
 ### extract command
 
-The extract command extends the basic copy command with a number of additional options and transformations.
+The extract command extends the basic copy command with a number of additional options and transformations. It can be used to pull out a single route or trip, interpolate stop times, override a single value on an entity, etc. This is a separate command to keep the basic copy command simple while allowing the extract command to grow and add more features over time.
 
 ```
 $ gotransit extract --help
-Usage of extract:
+Usage: extract <input> <output>
   -allow-entity-errors
-    	Allow entity-level errors
+    	Allow entities with errors to be copied
   -allow-reference-errors
-    	Allow reference errors
+    	Allow entities with reference errors to be copied
   -create
-    	Create
+    	Create a basic database schema if none exists
   -create-missing-shapes
     	Create missing Shapes from Trip stop-to-stop geometries
   -ext value
@@ -108,6 +102,8 @@ Usage of extract:
     	Extract Stop
   -extract-trip value
     	Extract Trip
+  -fvid int
+    	Specify FeedVersionID when writing to a database
   -interpolate-stop-times
     	Interpolate missing StopTime arrival/departure values
   -normalize-service-ids
@@ -147,6 +143,22 @@ trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_t
 305,06:28:00,06:28:00,70061,5,,0,0,53641.84115,1
 305,06:47:00,06:47:00,70011,6,,0,0,75372.02742,1
 ```
+
+## dmfr command
+
+The `dmfr` command is an implementation and datastore of the [Distributed Mobility Feed Registry](dmfr). It provides several additionnal subcommands for reading DMFR files, syncronizing these feeds to a database, downloading the latest versions of each feed, and automatically importing the feeds into a database. It provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html).
+
+This command is still under active development - please see [DMFR Command help](dmfr-command.md).
+
+## Key library components
+
+- Entity: An `Entity` is entity as specified by GTFS, such as an Agency, Route, Stop, etc.
+- Reader: A `Reader` provides streams of GTFS entities over channels. The `gtcsv` and `gtdb` modules provide CSV and Postgres/SQLite support, respectively.
+- Writer: A `Writer` accepts GTFS entities. As above, `gtcsv` and `gtdb` provide basic implementations. Custom writers can also be used to support non-GTFS outputs, such as building a routing graph.
+- Copier: A `Copier` reads a stream of GTFS entities from a `Reader`, checks each entity against a `Marker`, performs validation, applies any specified `Filters`, and sends to a `Writer`.
+- Marker: A `Marker` selects which GTFS entities will be processed by a `Copier`. For example, selecting only entities related to a single trip or route.
+- Filter: A `Filter` applies transformations to GTFS entities, such as converting extended route types to basic values, or modifying entity identifiers.
+- Extension: An `Extension` provides support for additional types of GTFS entities.
 
 ## Usage as a library
 
