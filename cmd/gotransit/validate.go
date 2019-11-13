@@ -16,7 +16,7 @@ type validateCommand struct {
 func (cmd *validateCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: validate <input>")
+		fmt.Println("Usage: validate <reader>")
 		fl.PrintDefaults()
 	}
 	fl.Var(&cmd.validateExtensions, "ext", "Include GTFS Extension")

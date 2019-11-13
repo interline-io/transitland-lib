@@ -38,12 +38,11 @@ func (cmd *extractCommand) Run(args []string) error {
 		fmt.Println("Usage: extract <input> <output>")
 		fl.PrintDefaults()
 	}
+	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
+	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
-	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID")
-	fl.BoolVar(&cmd.newfv, "newfv", false, "Create a new FeedVersion from Reader")
-	fl.BoolVar(&cmd.create, "create", false, "Create")
-	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entity-level errors")
-	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "Allow reference errors")
+	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
+	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
 	// Extract options
 	fl.BoolVar(&cmd.interpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
 	fl.BoolVar(&cmd.createMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
@@ -80,10 +79,12 @@ func (cmd *extractCommand) Run(args []string) error {
 	if dbw, ok := writer.(*gtdb.Writer); ok {
 		if cmd.fvid != 0 {
 			dbw.FeedVersionID = cmd.fvid
-		} else if cmd.newfv {
-			if _, err := dbw.CreateFeedVersion(reader); err != nil {
+		} else {
+			fvid, err := dbw.CreateFeedVersion(reader)
+			if err != nil {
 				exit("Error creating FeedVersion: %s", err)
 			}
+			dbw.FeedVersionID = fvid
 		}
 		cp.NormalizeServiceIDs = true
 	}

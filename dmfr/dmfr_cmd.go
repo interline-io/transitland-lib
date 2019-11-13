@@ -81,7 +81,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	}
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
-	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL ($DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
 	fl.StringVar(&cmd.coverdate, "date", "", "Service on date")
 	fl.Uint64Var(&cmd.limit, "limit", 0, "Import at most n feeds")
@@ -200,7 +200,7 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.limit, "limit", 0, "Maximum number of feeds to fetch")
-	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL")
+	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL ($DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
 	fl.BoolVar(&cmd.allowdups, "allow-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.Usage = func() {
