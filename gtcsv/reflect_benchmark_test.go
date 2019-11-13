@@ -50,7 +50,6 @@ func Benchmark_StopTime_Memory_Read1000(b *testing.B) {
 				break
 			}
 			stoptimes = append(stoptimes, st)
-			// fmt.Println(st.TripID, st.StopSequence, st.StopID)
 		}
 	}
 }

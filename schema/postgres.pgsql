@@ -66,6 +66,7 @@ CREATE TABLE public.feed_versions (
     earliest_calendar_date date NOT NULL,
     latest_calendar_date date NOT NULL,
     sha1 character varying NOT NULL,
+    sha1_dir character varying NOT NULL,
     md5 character varying,
     tags public.hstore,
     fetched_at timestamp without time zone NOT NULL,

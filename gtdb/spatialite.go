@@ -1,4 +1,5 @@
-// +build spatialite
+// +build cgo
+
 package gtdb
 
 import (
@@ -14,7 +15,14 @@ import (
 
 // Register.
 func init() {
+	// Register driver and extension
+	adapters["sqlite3"] = func(dburl string) Adapter { return &SpatiaLiteAdapter{DBURL: dburl} }
 	sql.Register("spatialite", &sqlite3.SQLiteDriver{Extensions: []string{"mod_spatialite"}})
+	// Register readers and writers
+	r := func(url string) (gotransit.Reader, error) { return NewReader(url) }
+	gotransit.RegisterReader("sqlite3", r)
+	w := func(url string) (gotransit.Writer, error) { return NewWriter(url) }
+	gotransit.RegisterWriter("sqlite3", w)
 }
 
 // SpatiaLiteAdapter provides support for SpatiaLite.
@@ -131,7 +139,6 @@ func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 		RunWith(adapter.db)
 	result, err := q.Exec()
 	if err != nil {
-		panic(err)
 		return 0, err
 	}
 	eid, err := result.LastInsertId()

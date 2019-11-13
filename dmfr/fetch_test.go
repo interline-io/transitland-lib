@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtdb"
@@ -46,12 +45,12 @@ func TestMainFetchFeed(t *testing.T) {
 		//
 		url := ts.URL
 		feedid := caltrain(atx, ts.URL)
-		fr, err := MainFetchFeed(atx, feedid, tmpdir)
+		fr, err := MainFetchFeed(atx, FetchOptions{FeedID: feedid, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
 		}
-		if fr.Found {
+		if fr.FoundSHA1 || fr.FoundDirSHA1 {
 			t.Errorf("expected new fv")
 			return nil
 		}
@@ -98,9 +97,15 @@ func TestMainFetchFeed_LastFetchError(t *testing.T) {
 	}))
 	defer ts.Close()
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		tmpdir, err := ioutil.TempDir("", "gtfs")
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer os.RemoveAll(tmpdir) // clean up
 		feedid := caltrain(atx, ts.URL)
 		// Fetch
-		_, err := MainFetchFeed(atx, feedid, "")
+		_, err = MainFetchFeed(atx, FetchOptions{FeedID: feedid, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -133,14 +138,20 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 	}))
 	defer ts.Close()
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		tmpdir, err := ioutil.TempDir("", "gtfs")
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer os.RemoveAll(tmpdir) // clean up
 		url := ts.URL
 		feedid := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now(), "")
+		fr, err := FetchAndCreateFeedVersion(atx, FetchOptions{FeedID: feedid, FeedURL: url, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return err
 		}
-		if fr.Found {
+		if fr.FoundSHA1 || fr.FoundDirSHA1 {
 			t.Error("expected new feed")
 			return nil
 		}
@@ -172,7 +183,7 @@ func TestFetchAndCreateFeedVersion_404(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
 		feedid := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now(), "")
+		fr, err := FetchAndCreateFeedVersion(atx, FetchOptions{FeedID: feedid, FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
 			return err
@@ -204,22 +215,22 @@ func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
 		feedid := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feedid, url, time.Now(), "")
+		fr, err := FetchAndCreateFeedVersion(atx, FetchOptions{FeedID: feedid, FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
 		}
-		if fr.Found {
+		if fr.FoundSHA1 || fr.FoundDirSHA1 {
 			t.Error("expected new feed")
 		}
 		if fr.FeedVersion.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fr.FeedVersion.SHA1, ExampleZip.SHA1)
 		}
-		fr2, err2 := FetchAndCreateFeedVersion(atx, feedid, url, time.Now(), "")
+		fr2, err2 := FetchAndCreateFeedVersion(atx, FetchOptions{FeedID: feedid, FeedURL: url, Directory: ""})
 		if err2 != nil {
 			t.Error(err2)
 			return err2
 		}
-		if !fr2.Found {
+		if !(fr2.FoundSHA1 || fr.FoundDirSHA1) {
 			t.Error("expected found feed")
 		}
 		if fr2.FeedVersion.SHA1 != ExampleZip.SHA1 {

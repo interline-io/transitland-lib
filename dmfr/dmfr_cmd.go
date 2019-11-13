@@ -30,6 +30,7 @@ func (cmd *Command) Run(args []string) error {
 		fmt.Println("  sync")
 		fmt.Println("  import")
 		fmt.Println("  fetch")
+		fl.PrintDefaults()
 	}
 	fl.Parse(args)
 	subc := fl.Arg(0)
@@ -55,7 +56,7 @@ func (cmd *Command) Run(args []string) error {
 	default:
 		return fmt.Errorf("Invalid command: %q", subc)
 	}
-	return r.Run(fl.Args())
+	return r.Run(fl.Args()[1:]) // consume first arg
 }
 
 /////
@@ -74,6 +75,10 @@ type dmfrImportCommand struct {
 
 func (cmd *dmfrImportCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
+	fl.Usage = func() {
+		fmt.Println("Usage: import [feedids...]")
+		fl.PrintDefaults()
+	}
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
@@ -81,10 +86,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	fl.StringVar(&cmd.coverdate, "date", "", "Service on date")
 	fl.Uint64Var(&cmd.limit, "limit", 0, "Import at most n feeds")
 	fl.BoolVar(&cmd.dryrun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
-	fl.Usage = func() {
-		fmt.Println("Usage: import [feedids...]")
-	}
-	fl.Parse(args[1:])
+	fl.Parse(args)
 	cmd.feedids = fl.Args()
 	if cmd.adapter == nil {
 		writer := mustGetWriter(cmd.dburl, true)
@@ -146,33 +148,34 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 		return nil
 	}
 	var wg sync.WaitGroup
-	jobs := make(chan int, len(qlookup))
-	results := make(chan FeedVersionImport, len(qlookup))
+	jobs := make(chan ImportOptions, len(qlookup))
+	results := make(chan ImportResult, len(qlookup))
 	for w := 0; w < cmd.workers; w++ {
 		wg.Add(1)
-		go dmfrImportWorker(w, cmd.adapter, cmd.extensions, cmd.gtfsdir, jobs, results, &wg)
+		go dmfrImportWorker(w, cmd.adapter, jobs, results, &wg)
 	}
 	for fvid := range qlookup {
-		jobs <- fvid
+		jobs <- ImportOptions{FeedVersionID: fvid, Directory: cmd.gtfsdir, Extensions: cmd.extensions}
 	}
 	close(jobs)
 	wg.Wait()
 	close(results)
 	// Read out results
-	for fviresult := range results {
-		i := qlookup[fviresult.FeedVersionID]
-		if fviresult.Success {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): success: count: %v errors: %v", i.OnestopID, i.FeedID, i.SHA1, fviresult.FeedVersionID, fviresult.EntityCount, fviresult.ErrorCount)
+	for result := range results {
+		fvid := result.FeedVersionImport.FeedVersionID
+		i := qlookup[fvid]
+		if result.FeedVersionImport.Success {
+			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): success: count: %v errors: %v", i.OnestopID, i.FeedID, i.SHA1, fvid, result.FeedVersionImport.EntityCount, result.FeedVersionImport.ErrorCount)
 		} else {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s", i.OnestopID, i.FeedID, i.SHA1, i.SHA1, fviresult.FeedVersionID, err.Error())
+			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s", i.OnestopID, i.FeedID, i.SHA1, i.SHA1, result.FeedVersionImport.FeedVersionID, err.Error())
 		}
 	}
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter gtdb.Adapter, exts []string, gtfsdir string, jobs <-chan int, results chan<- FeedVersionImport, wg *sync.WaitGroup) {
-	for fvid := range jobs {
-		fviresult, err := MainImportFeedVersion(adapter, fvid, exts, gtfsdir)
+func dmfrImportWorker(id int, adapter gtdb.Adapter, jobs <-chan ImportOptions, results chan<- ImportResult, wg *sync.WaitGroup) {
+	for opts := range jobs {
+		fviresult, err := MainImportFeedVersion(adapter, opts)
 		if err != nil {
 			log.Info("Error: %s", err.Error())
 		}
@@ -184,24 +187,27 @@ func dmfrImportWorker(id int, adapter gtdb.Adapter, exts []string, gtfsdir strin
 /////
 
 type dmfrFetchCommand struct {
-	workers int
-	limit   int
-	dburl   string
-	gtfsdir string
-	feedids []string
-	adapter gtdb.Adapter
+	workers   int
+	limit     int
+	dburl     string
+	gtfsdir   string
+	allowdups bool
+	feedids   []string
+	adapter   gtdb.Adapter
 }
 
 func (cmd *dmfrFetchCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
-	fl.IntVar(&cmd.limit, "limit", 0, "Fetch at most n feeds")
-	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.IntVar(&cmd.limit, "limit", 0, "Maximum number of feeds to fetch")
+	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL")
 	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
+	fl.BoolVar(&cmd.allowdups, "allow-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.Usage = func() {
 		fmt.Println("Usage: fetch [feedids...]")
+		fl.PrintDefaults()
 	}
-	fl.Parse(args[1:])
+	fl.Parse(args)
 	feedids := fl.Args()
 	if cmd.adapter == nil {
 		writer := mustGetWriter(cmd.dburl, true)
@@ -229,6 +235,10 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	if cmd.limit > 0 && cmd.limit < len(feeds) {
 		feeds = feeds[:cmd.limit]
 	}
+	osids := map[int]string{}
+	for _, feed := range feeds {
+		osids[feed.ID] = feed.FeedID
+	}
 	///////////////
 	// Here we go
 	log.Info("Fetching %d feeds", len(feeds))
@@ -236,30 +246,39 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	fetchFound := 0
 	fetchErrs := 0
 	var wg sync.WaitGroup
-	jobs := make(chan Feed, len(feeds))
+	jobs := make(chan FetchOptions, len(feeds))
 	results := make(chan FetchResult, len(feeds))
 	for w := 0; w < cmd.workers; w++ {
 		wg.Add(1)
-		go dmfrFetchWorker(w, cmd.adapter, cmd.gtfsdir, jobs, results, &wg)
+		go dmfrFetchWorker(w, cmd.adapter, jobs, results, &wg)
 	}
 	for _, feed := range feeds {
-		jobs <- feed
+		opts := FetchOptions{
+			FeedID:                  feed.ID,
+			Directory:               cmd.gtfsdir,
+			IgnoreDuplicateContents: cmd.allowdups,
+		}
+		jobs <- opts
 	}
 	close(jobs)
 	wg.Wait()
 	close(results)
 	for fr := range results {
+		osid := osids[fr.FeedVersion.FeedID]
 		if err != nil {
-			log.Info("Feed %s (id:%d): url: %s critical error: %s", fr.OnestopID, fr.FeedVersion.FeedID, fr.FeedVersion.URL, err.Error())
+			log.Info("Feed %s (id:%d): url: %s critical error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, err.Error())
 			fetchErrs++
 		} else if fr.FetchError != nil {
-			log.Info("Feed %s (id:%d): url: %s fetch error: %s", fr.OnestopID, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FetchError.Error())
+			log.Info("Feed %s (id:%d): url: %s fetch error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FetchError.Error())
 			fetchErrs++
-		} else if fr.Found {
-			log.Info("Feed %s (id:%d): url: %s found: %s (id:%d)", fr.OnestopID, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+		} else if fr.FoundSHA1 {
+			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+			fetchFound++
+		} else if fr.FoundDirSHA1 {
+			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID)
 			fetchFound++
 		} else {
-			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d)", fr.OnestopID, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
 			fetchNew++
 		}
 	}
@@ -267,18 +286,17 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	return nil
 }
 
-func dmfrFetchWorker(id int, adapter gtdb.Adapter, gtfsdir string, jobs <-chan Feed, results chan<- FetchResult, wg *sync.WaitGroup) {
-	for feed := range jobs {
+func dmfrFetchWorker(id int, adapter gtdb.Adapter, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
+	for opts := range jobs {
 		var fr FetchResult
 		err := adapter.Tx(func(atx gtdb.Adapter) error {
 			var fe error
-			fr, fe = MainFetchFeed(atx, feed.ID, gtfsdir)
+			fr, fe = MainFetchFeed(atx, opts)
 			return fe
 		})
 		if err != nil {
 			fmt.Println("Critical error:", err)
 		}
-		fr.OnestopID = feed.FeedID
 		results <- fr
 	}
 	wg.Done()
@@ -294,11 +312,12 @@ type dmfrSyncCommand struct {
 
 func (cmd *dmfrSyncCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("sync", flag.ExitOnError)
-	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
 	fl.Usage = func() {
 		fmt.Println("Usage: sync <filenames...>")
+		fl.PrintDefaults()
 	}
-	fl.Parse(args[1:])
+	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.Parse(args)
 	cmd.filenames = fl.Args()
 	if cmd.adapter == nil {
 		writer := mustGetWriter(cmd.dburl, true)
@@ -319,6 +338,7 @@ func (dmfrValidateCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: validate <filenames...>")
+		fl.PrintDefaults()
 	}
 	fl.Parse(args)
 	if fl.NArg() == 0 {

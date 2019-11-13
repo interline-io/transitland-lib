@@ -15,7 +15,7 @@ type Writer struct {
 
 // NewWriter returns a Writer appropriate for the given connection url.
 func NewWriter(dburl string) (*Writer, error) {
-	return &Writer{Adapter: NewAdapter(dburl)}, nil
+	return &Writer{Adapter: newAdapter(dburl)}, nil
 }
 
 // Open the database.

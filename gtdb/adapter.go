@@ -1,21 +1,26 @@
 package gtdb
 
 import (
-	"strings"
+	"net/url"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/jmoiron/sqlx"
 )
 
-// NewAdapter returns a Adapter for the given dburl.
-func NewAdapter(dburl string) Adapter {
-	if strings.HasPrefix(dburl, "postgres://") {
-		return &PostgresAdapter{DBURL: dburl}
-	} else if strings.HasPrefix(dburl, "sqlite3://") {
-		return &SpatiaLiteAdapter{DBURL: dburl}
+var adapters = map[string]func(string) Adapter{}
+
+// newAdapter returns a Adapter for the given dburl.
+func newAdapter(dburl string) Adapter {
+	u, err := url.Parse(dburl)
+	if err != nil {
+		return nil
 	}
-	return nil
+	fn, ok := adapters[u.Scheme]
+	if !ok {
+		return nil
+	}
+	return fn(dburl)
 }
 
 // Adapter implements details specific to each backend.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -33,6 +34,10 @@ type extractCommand struct {
 
 func (cmd *extractCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("extract", flag.ExitOnError)
+	fl.Usage = func() {
+		fmt.Println("Usage: extract <input> <output>")
+		fl.PrintDefaults()
+	}
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID")
 	fl.BoolVar(&cmd.newfv, "newfv", false, "Create a new FeedVersion from Reader")
@@ -55,11 +60,14 @@ func (cmd *extractCommand) Run(args []string) error {
 	fl.Var(&cmd.extractRouteTypes, "extract-route-type", "Extract Routes matching route_type")
 	fl.Var(&cmd.extractSet, "set", "Set values on output; format is filename,id,key,value")
 	fl.Parse(args)
-	cmd.args = fl.Args()
+	if fl.NArg() < 2 {
+		fl.Usage()
+		exit("requires input reader and output writer")
+	}
 	// Reader / Writer
-	reader := MustGetReader(cmd.args[0])
+	reader := MustGetReader(fl.Arg(0))
 	defer reader.Close()
-	writer := MustGetWriter(cmd.args[1], cmd.create)
+	writer := MustGetWriter(fl.Arg(1), cmd.create)
 	defer writer.Close()
 	// Setup copier
 	cp := copier.NewCopier(reader, writer)

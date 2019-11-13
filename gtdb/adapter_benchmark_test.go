@@ -10,7 +10,7 @@ import (
 
 // Tests adapter Insert performance.
 func Benchmark_Adapter_Insert(b *testing.B) {
-	for k, v := range getTestAdapters() {
+	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
 			if err := adapter.Open(); err != nil {
@@ -33,7 +33,7 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 
 // Tests raw database performance.
 func Benchmark_Adapter_InsertRaw(b *testing.B) {
-	for k, v := range getTestAdapters() {
+	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
 			if err := adapter.Open(); err != nil {
@@ -70,7 +70,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 // Tests multiple insert performance
 // There is a lot of setup in this test because we need a FeedVersion, Trip, and Stop
 func Benchmark_Adapter_BatchInsert(b *testing.B) {
-	for k, v := range getTestAdapters() {
+	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
 			if err := adapter.Open(); err != nil {

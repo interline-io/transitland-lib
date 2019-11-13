@@ -33,7 +33,6 @@ func Test_geomCache(t *testing.T) {
 		trip := trips[stoptimes[0].TripID]
 		stoptimes2, err := cache.InterpolateStopTimes(trip, stoptimes)
 		if err != nil {
-			// fmt.Printf("stoptimes: %#v\n", stoptimes)
 			t.Error(err)
 		}
 		if len(stoptimes) != len(stoptimes2) {

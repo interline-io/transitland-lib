@@ -140,8 +140,8 @@ func main() {
 	default:
 		exit("%q is not valid command.", subc)
 	}
-	err = r.Run(args[1:])
+	err = r.Run(args[1:]) // consume first arg
 	if err != nil {
-		exit("Error: %s", err.Error())
+		exit("error: %s", err.Error())
 	}
 }
