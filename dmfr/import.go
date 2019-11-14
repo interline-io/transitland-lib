@@ -17,6 +17,7 @@ type ImportOptions struct {
 	FeedVersionID int
 	Extensions    []string
 	Directory     string
+	Location      string
 }
 
 // ImportResult contains the results of a feed import.
@@ -126,7 +127,14 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOptions) (FeedVersionImport, error) {
 	fvi := FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	reader, err := gtcsv.NewReader(filepath.Join(opts.Directory, fv.File))
+	url := fv.File
+	if opts.Location != "" {
+		url = opts.Location + "/" + fv.File
+	} else if opts.Directory != "" {
+		url = filepath.Join(opts.Directory, fv.File)
+	}
+	log.Debug("importing:", url)
+	reader, err := gtcsv.NewReader(url)
 	if err != nil {
 		return fvi, err
 	}
