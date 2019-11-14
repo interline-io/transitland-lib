@@ -66,6 +66,7 @@ type dmfrImportCommand struct {
 	limit      uint64
 	dburl      string
 	gtfsdir    string
+	location   string
 	coverdate  string
 	dryrun     bool
 	feedids    []string
@@ -83,6 +84,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL ($DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
+	fl.StringVar(&cmd.location, "location", "", "Use this base url for files")
 	fl.StringVar(&cmd.coverdate, "date", "", "Service on date")
 	fl.Uint64Var(&cmd.limit, "limit", 0, "Import at most n feeds")
 	fl.BoolVar(&cmd.dryrun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
@@ -155,7 +157,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 		go dmfrImportWorker(w, cmd.adapter, jobs, results, &wg)
 	}
 	for fvid := range qlookup {
-		jobs <- ImportOptions{FeedVersionID: fvid, Directory: cmd.gtfsdir, Extensions: cmd.extensions}
+		jobs <- ImportOptions{FeedVersionID: fvid, Directory: cmd.gtfsdir, Location: cmd.location, Extensions: cmd.extensions}
 	}
 	close(jobs)
 	wg.Wait()
