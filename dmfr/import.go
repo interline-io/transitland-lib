@@ -56,6 +56,13 @@ func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 
 // FindImportableFeeds .
 func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
+	// WITH ordered_feed_versions AS (
+	// 	SELECT
+	// 		id, feed_id, created_at,
+	// 		ROW_NUMBER() OVER (PARTITION BY feed_id ORDER BY created_at DESC) AS rank
+	// 	FROM feed_versions
+	// )
+	// SELECT * FROM ordered_feed_versions WHERE rank = 1;
 	fvids := []int{}
 	qstr, qargs, err := adapter.Sqrl().
 		Select("feed_versions.id").

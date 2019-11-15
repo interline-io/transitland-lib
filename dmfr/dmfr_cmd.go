@@ -68,6 +68,7 @@ type dmfrImportCommand struct {
 	gtfsdir    string
 	location   string
 	coverdate  string
+	latest     bool
 	dryrun     bool
 	feedids    []string
 	extensions arrayFlags
@@ -87,6 +88,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	fl.StringVar(&cmd.location, "location", "", "Use this base url for files")
 	fl.StringVar(&cmd.coverdate, "date", "", "Service on date")
 	fl.Uint64Var(&cmd.limit, "limit", 0, "Import at most n feeds")
+	fl.BoolVar(&cmd.latest, "latest", false, "Only import latest feed version available for each feed")
 	fl.BoolVar(&cmd.dryrun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.Parse(args)
 	cmd.feedids = fl.Args()
@@ -103,6 +105,12 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
 		Where("feed_version_gtfs_imports.id IS NULL").
 		OrderBy("feed_versions.id")
+	if cmd.latest {
+		// Only fetch latest feed version for each feed
+		q = q.
+			Join("(SELECT id, created_at, ROW_NUMBER() OVER (PARTITION BY feed_id ORDER BY created_at DESC) AS rank FROM feed_versions) latest ON latest.id = feed_versions.id").
+			Where("latest.rank = 1")
+	}
 	if cmd.limit > 0 {
 		// Max feeds
 		q = q.Limit(cmd.limit)
