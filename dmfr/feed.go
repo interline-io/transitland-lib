@@ -16,7 +16,6 @@ type Feed struct {
 	ActiveFeedVersionID   gotransit.OptionalKey  `json:"-"`
 	FeedNamespaceID       string                 `json:"feed_namespace_id"`
 	Spec                  string                 `json:"spec"`
-	URL                   string                 `json:"url"`
 	URLs                  FeedUrls               `json:"urls" db:"urls"`
 	AssociatedFeeds       FeedAssociatedFeeds    `json:"-"` // `json:"associated_feeds"`
 	Languages             FeedLanguages          `json:"languages"`

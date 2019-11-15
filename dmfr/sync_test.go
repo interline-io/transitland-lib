@@ -79,7 +79,7 @@ func TestMainSync_Update(t *testing.T) {
 		testdb.ShouldFind(t, atx, &tlfeed)
 		expurl := "https://developer.trimet.org/schedule/gtfs.zip"
 		if tlfeed.URLs.StaticCurrent != expurl {
-			t.Errorf("got '%s' expected '%s'", tlfeed.URL, expurl)
+			t.Errorf("got '%s' expected '%s'", tlfeed.URLs.StaticCurrent, expurl)
 		}
 		expnsid := "o-c20-trimet"
 		if tlfeed.FeedNamespaceID != expnsid {

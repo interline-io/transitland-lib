@@ -10,7 +10,7 @@ func AddCrosswalkIDs(baseRegistry *Registry, comparisonRegistries map[string]*Re
 
 	// Pass 2: by URL + spec type
 	for _, baseFeed := range baseRegistry.Feeds {
-		if comparisonRegistryID, comparisonFeed := findMatchingFeed(baseFeed.Spec, baseFeed.URL, comparisonRegistries); comparisonFeed != nil {
+		if comparisonRegistryID, comparisonFeed := findMatchingFeed(baseFeed.Spec, baseFeed.URLs.StaticCurrent, comparisonRegistries); comparisonFeed != nil {
 			log.Trace("baseFeed: %#v", baseFeed)
 			baseFeed.OtherIDs[comparisonRegistryID] = comparisonFeed.FeedID
 		}
@@ -23,7 +23,7 @@ func findMatchingFeed(feedSpec string, feedURL string, comparisonRegistries map[
 	for comparisonRegistryID, comparisonRegistry := range comparisonRegistries {
 		log.Trace("test: %#v", comparisonRegistry)
 		for _, comparisonFeed := range comparisonRegistry.Feeds {
-			if feedURL == comparisonFeed.URL && feedSpec == comparisonFeed.Spec {
+			if feedURL == comparisonFeed.URLs.StaticCurrent && feedSpec == comparisonFeed.Spec {
 				return comparisonRegistryID, &comparisonFeed
 			}
 		}
