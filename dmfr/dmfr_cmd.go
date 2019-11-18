@@ -177,7 +177,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 		if result.FeedVersionImport.Success {
 			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): success: count: %v errors: %v", i.OnestopID, i.FeedID, i.SHA1, fvid, result.FeedVersionImport.EntityCount, result.FeedVersionImport.ErrorCount)
 		} else {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s", i.OnestopID, i.FeedID, i.SHA1, i.SHA1, result.FeedVersionImport.FeedVersionID, err.Error())
+			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s", i.OnestopID, i.FeedID, i.SHA1, result.FeedVersionImport.FeedVersionID, err.Error())
 		}
 	}
 	return nil
