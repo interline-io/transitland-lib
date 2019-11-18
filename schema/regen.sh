@@ -1,4 +1,4 @@
-set -e
+set -ex
 echo "CREATE EXTENSION postgis;" > postgres.pgsql
 echo "CREATE EXTENSION hstore;" >> postgres.pgsql
 pg_dump \
@@ -9,7 +9,9 @@ pg_dump \
     -t 'gtfs_*' \
     --no-owner \
     -s \
-    --no-comments \
-    $DB | egrep -v "^(SET|SELECT pg_catalog|--)" | sed -e '/^$/d'  >> postgres.pgsql
+    --no-comments $DB | egrep -v "^(SET|SELECT pg_catalog|--)" | sed -e '/^$/d'  >> postgres.pgsql
+
+# rails compat
+pg_dump -t 'schema_migrations' --no-owner --no-comments $DB >> postgres.pgsql
 
 (cd ../internal; statik -src=../schema -p schema)
