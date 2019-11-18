@@ -3,6 +3,7 @@ package dmfr
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -24,6 +25,7 @@ func MainSync(atx gtdb.Adapter, filenames []string) ([]int, error) {
 			continue
 		}
 		for _, rfeed := range reg.Feeds {
+			rfeed.File = filepath.Base(fn)
 			feedid, found, err := ImportFeed(atx, rfeed)
 			if found {
 				log.Info("%s: updated feed %s (id:%d)", fn, rfeed.FeedID, feedid)

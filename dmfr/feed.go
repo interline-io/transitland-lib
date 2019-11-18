@@ -22,8 +22,9 @@ type Feed struct {
 	Authorization        FeedAuthorization      `json:"authorization" db:"auth"`
 	OtherIDs             map[string]string      `json:"other_ids" db:"-"`
 	IDCrosswalk          map[string]string      `json:"id_crosswalk" db:"-"`
-	DeletedAt            gotransit.OptionalTime `json:"-"`
-	gotransit.Timestamps `json:"-"`
+	File                 string                 `json:"-"` // internal
+	DeletedAt            gotransit.OptionalTime `json:"-"` // internal
+	gotransit.Timestamps `json:"-"`             // internal
 }
 
 // EntityID .
