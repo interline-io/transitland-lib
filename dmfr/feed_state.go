@@ -2,6 +2,7 @@ package dmfr
 
 import (
 	"database/sql"
+	"strconv"
 
 	"github.com/interline-io/gotransit"
 )
@@ -10,10 +11,26 @@ import (
 type FeedState struct {
 	ID                    int
 	FeedID                int
-	ActiveFeedVersionID   gotransit.OptionalKey
+	FeedVersionID         gotransit.OptionalKey
 	LastFetchError        string
 	LastFetchedAt         gotransit.OptionalTime
 	LastSuccessfulFetchAt gotransit.OptionalTime
-	LastImportedAt        gotransit.OptionalTime
-	Priority              sql.NullInt64
+	FeedPriority          sql.NullInt64
+	FeedRealtimeEnabled   bool
+	// LastImportedAt        gotransit.OptionalTime
+}
+
+// EntityID .
+func (ent *FeedState) EntityID() string {
+	return strconv.Itoa(ent.ID)
+}
+
+// SetID .
+func (ent *FeedState) SetID(id int) {
+	ent.ID = id
+}
+
+// TableName .
+func (ent *FeedState) TableName() string {
+	return "feed_states"
 }

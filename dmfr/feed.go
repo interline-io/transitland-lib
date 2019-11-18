@@ -11,24 +11,19 @@ import (
 
 // Feed listed in a parsed DMFR file
 type Feed struct {
-	ID                    int                    `json:"-"`
-	FeedID                string                 `json:"id" db:"onestop_id"`
-	ActiveFeedVersionID   gotransit.OptionalKey  `json:"-"`
-	FeedNamespaceID       string                 `json:"feed_namespace_id"`
-	Spec                  string                 `json:"spec"`
-	URLs                  FeedUrls               `json:"urls" db:"urls"`
-	AssociatedFeeds       FeedAssociatedFeeds    `json:"-"` // `json:"associated_feeds"`
-	Languages             FeedLanguages          `json:"languages"`
-	License               FeedLicense            `json:"license"`
-	Authorization         FeedAuthorization      `json:"authorization" db:"auth"`
-	OtherIDs              map[string]string      `json:"other_ids" db:"-"`
-	IDCrosswalk           map[string]string      `json:"id_crosswalk" db:"-"`
-	LastFetchError        string                 `json:"-"`
-	LastFetchedAt         gotransit.OptionalTime `json:"-"`
-	LastSuccessfulFetchAt gotransit.OptionalTime `json:"-"`
-	LastImportedAt        gotransit.OptionalTime `json:"-"`
-	DeletedAt             gotransit.OptionalTime `json:"-"`
-	gotransit.Timestamps  `json:"-"`
+	ID                   int                    `json:"-"`
+	FeedID               string                 `json:"id" db:"onestop_id"`
+	FeedNamespaceID      string                 `json:"feed_namespace_id"`
+	Spec                 string                 `json:"spec"`
+	URLs                 FeedUrls               `json:"urls" db:"urls"`
+	AssociatedFeeds      FeedAssociatedFeeds    `json:"-"` // `json:"associated_feeds"`
+	Languages            FeedLanguages          `json:"languages"`
+	License              FeedLicense            `json:"license"`
+	Authorization        FeedAuthorization      `json:"authorization" db:"auth"`
+	OtherIDs             map[string]string      `json:"other_ids" db:"-"`
+	IDCrosswalk          map[string]string      `json:"id_crosswalk" db:"-"`
+	DeletedAt            gotransit.OptionalTime `json:"-"`
+	gotransit.Timestamps `json:"-"`
 }
 
 // EntityID .

@@ -5,18 +5,13 @@ CREATE TABLE IF NOT EXISTS "current_feeds" (
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "onestop_id" varchar(255) NOT NULL,
   "spec" varchar(255) NOT NULL,
-  "last_fetched_at" datetime,
-  "last_imported_at" datetime,
-  "last_successful_fetch_at" datetime,
   "deleted_at" datetime,
-  "last_fetch_error" varchar(255) not null,
   "license" BLOB,
   "auth" BLOB,
   "urls" BLOB,
   "languages" BLOB,
   "associated_feeds" BLOB,
-  "feed_namespace_id" varchar(255) NOT NULL,
-  "active_feed_version_id" integer
+  "feed_namespace_id" varchar(255) NOT NULL
 );
 CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
   "id" integer primary key autoincrement, 
@@ -71,6 +66,22 @@ CREATE TABLE IF NOT EXISTS "feed_versions" (
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS "feed_states" (
+    "id" integer primary key autoincrement, 
+    "feed_id" integer NOT NULL,
+    "feed_version_id" integer,
+    "feed_realtime_enabled" bool not null,
+    "feed_priority" integer,
+    "last_fetched_at" datetime,
+    "last_successful_fetch_at" datetime,
+    "last_imported_at" datetime,
+    "last_fetch_error" varchar(255) NOT NULL,
+    "tags" BLOB,
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
 CREATE INDEX idx_feed_versions_sha1 ON "feed_versions"("sha1");
 CREATE INDEX idx_feed_versions_earliest_calendar_date ON "feed_versions"(earliest_calendar_date);
 CREATE INDEX idx_feed_versions_latest_calendar_date ON "feed_versions"(latest_calendar_date);
@@ -282,4 +293,8 @@ SELECT
   AddGeometryColumn(
     'gtfs_shapes', 'geometry', 4326, 'LINESTRING', 
     'XYM', 1
+  );
+SELECT
+  AddGeometryColumn(
+    'feed_states', 'geometry', 4326, 'POLYGON', 'XY', 0
   );

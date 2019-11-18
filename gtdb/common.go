@@ -20,7 +20,7 @@ func find(adapter Adapter, dest interface{}, args ...interface{}) error {
 func update(adapter Adapter, ent interface{}, columns ...string) error {
 	entid, err := getID(ent)
 	if err != nil {
-		return errors.New("cant set ID")
+		return errors.New("cannot get ID")
 	}
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()

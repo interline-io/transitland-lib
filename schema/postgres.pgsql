@@ -8,8 +8,8 @@ CREATE TABLE public.feed_states (
     last_successful_fetch_at timestamp without time zone,
     last_imported_at timestamp without time zone,
     last_fetch_error character varying DEFAULT ''::character varying NOT NULL,
-    realtime_enabled boolean DEFAULT false NOT NULL,
-    priority integer,
+    feed_realtime_enabled boolean DEFAULT false NOT NULL,
+    feed_priority integer,
     geometry public.geography(Polygon,4326),
     tags json,
     created_at timestamp without time zone,
@@ -447,8 +447,8 @@ CREATE INDEX index_current_feeds_on_geometry ON public.current_feeds USING gist 
 CREATE UNIQUE INDEX index_current_feeds_on_onestop_id ON public.current_feeds USING btree (onestop_id);
 CREATE INDEX index_current_feeds_on_urls ON public.current_feeds USING btree (urls);
 CREATE UNIQUE INDEX index_feed_states_on_feed_id ON public.feed_states USING btree (feed_id);
+CREATE UNIQUE INDEX index_feed_states_on_feed_priority ON public.feed_states USING btree (feed_priority);
 CREATE UNIQUE INDEX index_feed_states_on_feed_version_id ON public.feed_states USING btree (feed_version_id);
-CREATE UNIQUE INDEX index_feed_states_on_priority ON public.feed_states USING btree (priority);
 CREATE UNIQUE INDEX index_feed_version_gtfs_imports_on_feed_version_id ON public.feed_version_gtfs_imports USING btree (feed_version_id);
 CREATE INDEX index_feed_version_gtfs_imports_on_success ON public.feed_version_gtfs_imports USING btree (success);
 CREATE INDEX index_feed_versions_on_earliest_calendar_date ON public.feed_versions USING btree (earliest_calendar_date);

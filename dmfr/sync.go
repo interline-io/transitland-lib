@@ -63,15 +63,11 @@ func ImportFeed(atx gtdb.Adapter, rfeed Feed) (int, bool, error) {
 	err := atx.Get(&dbfeed, "SELECT * FROM current_feeds WHERE onestop_id = ?", rfeed.FeedID)
 	if err == nil {
 		// Exists, update key values
-		feedid = dbfeed.ID
 		found = true
+		feedid = dbfeed.ID
 		rfeed.ID = dbfeed.ID
-		rfeed.LastFetchedAt = dbfeed.LastFetchedAt
-		rfeed.LastSuccessfulFetchAt = dbfeed.LastSuccessfulFetchAt
-		rfeed.LastFetchError = dbfeed.LastFetchError
-		rfeed.LastImportedAt = dbfeed.LastImportedAt
-		rfeed.ActiveFeedVersionID = dbfeed.ActiveFeedVersionID
 		rfeed.CreatedAt = dbfeed.CreatedAt
+		rfeed.DeletedAt = gotransit.OptionalTime{Valid: false}
 		errTx = atx.Update(&rfeed)
 	} else if err == sql.ErrNoRows {
 		feedid, errTx = atx.Insert(&rfeed)
