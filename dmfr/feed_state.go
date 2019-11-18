@@ -17,7 +17,7 @@ type FeedState struct {
 	LastSuccessfulFetchAt gotransit.OptionalTime
 	FeedPriority          sql.NullInt64
 	FeedRealtimeEnabled   bool
-	// LastImportedAt        gotransit.OptionalTime
+	gotransit.Timestamps
 }
 
 // EntityID .
