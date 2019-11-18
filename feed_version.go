@@ -46,7 +46,7 @@ func (ent *FeedVersion) TableName() string {
 // NewFeedVersionFromReader returns a FeedVersion from a Reader.
 func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	fv := FeedVersion{}
-	fv.FeedType = "gtfs"
+	fv.FeedType = "Feed" // tlv1 compat
 	// Perform basic GTFS validity checks
 	if errs := reader.ValidateStructure(); len(errs) > 0 {
 		return fv, errs[0]
