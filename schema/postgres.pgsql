@@ -1,194 +1,5 @@
 CREATE EXTENSION postgis;
 CREATE EXTENSION hstore;
-CREATE TABLE public.feed_states (
-    id integer NOT NULL,
-    feed_id integer NOT NULL,
-    feed_version_id integer,
-    last_fetched_at timestamp without time zone,
-    last_successful_fetch_at timestamp without time zone,
-    last_imported_at timestamp without time zone,
-    last_fetch_error character varying DEFAULT ''::character varying NOT NULL,
-    feed_realtime_enabled boolean DEFAULT false NOT NULL,
-    feed_priority integer,
-    geometry public.geography(Polygon,4326),
-    tags json,
-    created_at timestamp without time zone,
-    updated_at timestamp without time zone
-);
-CREATE TABLE public.gtfs_agencies (
-    id integer NOT NULL,
-    agency_id character varying NOT NULL,
-    agency_name character varying NOT NULL,
-    agency_url character varying NOT NULL,
-    agency_timezone character varying NOT NULL,
-    agency_lang character varying NOT NULL,
-    agency_phone character varying NOT NULL,
-    agency_fare_url character varying NOT NULL,
-    agency_email character varying NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL
-);
-CREATE TABLE public.gtfs_calendar_dates (
-    id integer NOT NULL,
-    date date NOT NULL,
-    exception_type integer NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    service_id integer NOT NULL
-);
-CREATE TABLE public.gtfs_calendars (
-    id integer NOT NULL,
-    service_id character varying NOT NULL,
-    monday integer NOT NULL,
-    tuesday integer NOT NULL,
-    wednesday integer NOT NULL,
-    thursday integer NOT NULL,
-    friday integer NOT NULL,
-    saturday integer NOT NULL,
-    sunday integer NOT NULL,
-    start_date date NOT NULL,
-    end_date date NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    generated boolean NOT NULL
-);
-CREATE TABLE public.gtfs_fare_attributes (
-    id integer NOT NULL,
-    fare_id character varying NOT NULL,
-    price double precision NOT NULL,
-    currency_type character varying NOT NULL,
-    payment_method integer NOT NULL,
-    transfer_duration integer NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    agency_id integer,
-    transfers integer NOT NULL
-);
-CREATE TABLE public.gtfs_fare_rules (
-    id integer NOT NULL,
-    origin_id character varying NOT NULL,
-    destination_id character varying NOT NULL,
-    contains_id character varying NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    route_id integer,
-    fare_id integer
-);
-CREATE TABLE public.gtfs_feed_infos (
-    id integer NOT NULL,
-    feed_publisher_name character varying NOT NULL,
-    feed_publisher_url character varying NOT NULL,
-    feed_lang character varying NOT NULL,
-    feed_start_date date,
-    feed_end_date date,
-    feed_version_name character varying NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL
-);
-CREATE TABLE public.gtfs_frequencies (
-    id integer NOT NULL,
-    start_time integer NOT NULL,
-    end_time integer NOT NULL,
-    headway_secs integer NOT NULL,
-    exact_times integer NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    trip_id integer NOT NULL
-);
-CREATE TABLE public.gtfs_routes (
-    id integer NOT NULL,
-    route_id character varying NOT NULL,
-    route_short_name character varying NOT NULL,
-    route_long_name character varying NOT NULL,
-    route_desc character varying NOT NULL,
-    route_type integer NOT NULL,
-    route_url character varying NOT NULL,
-    route_color character varying NOT NULL,
-    route_text_color character varying NOT NULL,
-    route_sort_order integer NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    agency_id integer NOT NULL
-);
-CREATE TABLE public.gtfs_shapes (
-    id integer NOT NULL,
-    shape_id character varying NOT NULL,
-    generated boolean DEFAULT false NOT NULL,
-    geometry public.geography(LineStringM,4326) NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL
-);
-CREATE TABLE public.gtfs_stop_times (
-    id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
-    stop_sequence integer NOT NULL,
-    stop_headsign character varying NOT NULL,
-    pickup_type integer NOT NULL,
-    drop_off_type integer NOT NULL,
-    shape_dist_traveled double precision NOT NULL,
-    timepoint integer NOT NULL,
-    interpolated integer DEFAULT 0 NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    trip_id integer NOT NULL,
-    stop_id integer NOT NULL
-);
-CREATE TABLE public.gtfs_stops (
-    id integer NOT NULL,
-    stop_id character varying NOT NULL,
-    stop_code character varying NOT NULL,
-    stop_name character varying NOT NULL,
-    stop_desc character varying NOT NULL,
-    zone_id character varying NOT NULL,
-    stop_url character varying NOT NULL,
-    location_type integer NOT NULL,
-    stop_timezone character varying NOT NULL,
-    wheelchair_boarding integer NOT NULL,
-    geometry public.geography(Point,4326) NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    parent_station integer,
-    level_id character varying NOT NULL
-);
-CREATE TABLE public.gtfs_transfers (
-    id integer NOT NULL,
-    transfer_type integer NOT NULL,
-    min_transfer_time integer NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    from_stop_id integer NOT NULL,
-    to_stop_id integer NOT NULL
-);
-CREATE TABLE public.gtfs_trips (
-    id integer NOT NULL,
-    trip_id character varying NOT NULL,
-    trip_headsign character varying NOT NULL,
-    trip_short_name character varying NOT NULL,
-    direction_id integer NOT NULL,
-    block_id character varying NOT NULL,
-    wheelchair_accessible integer NOT NULL,
-    bikes_allowed integer NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id integer NOT NULL,
-    route_id integer NOT NULL,
-    shape_id integer,
-    stop_pattern_id integer NOT NULL,
-    service_id integer NOT NULL
-);
 CREATE TABLE public.current_feeds (
     id integer NOT NULL,
     onestop_id character varying NOT NULL,
@@ -225,6 +36,20 @@ CREATE SEQUENCE public.current_feeds_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.current_feeds_id_seq OWNED BY public.current_feeds.id;
+CREATE TABLE public.feed_states (
+    id integer NOT NULL,
+    feed_id integer NOT NULL,
+    feed_version_id integer,
+    last_fetched_at timestamp without time zone,
+    last_successful_fetch_at timestamp without time zone,
+    last_fetch_error character varying DEFAULT ''::character varying NOT NULL,
+    feed_realtime_enabled boolean DEFAULT false NOT NULL,
+    feed_priority integer,
+    geometry public.geography(Polygon,4326),
+    tags json,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
 CREATE SEQUENCE public.feed_states_id_seq
     AS integer
     START WITH 1
@@ -286,6 +111,20 @@ CREATE SEQUENCE public.feed_versions_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.feed_versions_id_seq OWNED BY public.feed_versions.id;
+CREATE TABLE public.gtfs_agencies (
+    id integer NOT NULL,
+    agency_id character varying NOT NULL,
+    agency_name character varying NOT NULL,
+    agency_url character varying NOT NULL,
+    agency_timezone character varying NOT NULL,
+    agency_lang character varying NOT NULL,
+    agency_phone character varying NOT NULL,
+    agency_fare_url character varying NOT NULL,
+    agency_email character varying NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_agencies_id_seq
     AS integer
     START WITH 1
@@ -294,6 +133,15 @@ CREATE SEQUENCE public.gtfs_agencies_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_agencies_id_seq OWNED BY public.gtfs_agencies.id;
+CREATE TABLE public.gtfs_calendar_dates (
+    id integer NOT NULL,
+    date date NOT NULL,
+    exception_type integer NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    service_id integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_calendar_dates_id_seq
     AS integer
     START WITH 1
@@ -302,6 +150,23 @@ CREATE SEQUENCE public.gtfs_calendar_dates_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_calendar_dates_id_seq OWNED BY public.gtfs_calendar_dates.id;
+CREATE TABLE public.gtfs_calendars (
+    id integer NOT NULL,
+    service_id character varying NOT NULL,
+    monday integer NOT NULL,
+    tuesday integer NOT NULL,
+    wednesday integer NOT NULL,
+    thursday integer NOT NULL,
+    friday integer NOT NULL,
+    saturday integer NOT NULL,
+    sunday integer NOT NULL,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    generated boolean NOT NULL
+);
 CREATE SEQUENCE public.gtfs_calendars_id_seq
     AS integer
     START WITH 1
@@ -310,6 +175,19 @@ CREATE SEQUENCE public.gtfs_calendars_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_calendars_id_seq OWNED BY public.gtfs_calendars.id;
+CREATE TABLE public.gtfs_fare_attributes (
+    id integer NOT NULL,
+    fare_id character varying NOT NULL,
+    price double precision NOT NULL,
+    currency_type character varying NOT NULL,
+    payment_method integer NOT NULL,
+    transfer_duration integer NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    agency_id integer,
+    transfers integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_fare_attributes_id_seq
     AS integer
     START WITH 1
@@ -318,6 +196,17 @@ CREATE SEQUENCE public.gtfs_fare_attributes_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_fare_attributes_id_seq OWNED BY public.gtfs_fare_attributes.id;
+CREATE TABLE public.gtfs_fare_rules (
+    id integer NOT NULL,
+    origin_id character varying NOT NULL,
+    destination_id character varying NOT NULL,
+    contains_id character varying NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    route_id integer,
+    fare_id integer
+);
 CREATE SEQUENCE public.gtfs_fare_rules_id_seq
     AS integer
     START WITH 1
@@ -326,6 +215,18 @@ CREATE SEQUENCE public.gtfs_fare_rules_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_fare_rules_id_seq OWNED BY public.gtfs_fare_rules.id;
+CREATE TABLE public.gtfs_feed_infos (
+    id integer NOT NULL,
+    feed_publisher_name character varying NOT NULL,
+    feed_publisher_url character varying NOT NULL,
+    feed_lang character varying NOT NULL,
+    feed_start_date date,
+    feed_end_date date,
+    feed_version_name character varying NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_feed_infos_id_seq
     AS integer
     START WITH 1
@@ -334,6 +235,17 @@ CREATE SEQUENCE public.gtfs_feed_infos_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_feed_infos_id_seq OWNED BY public.gtfs_feed_infos.id;
+CREATE TABLE public.gtfs_frequencies (
+    id integer NOT NULL,
+    start_time integer NOT NULL,
+    end_time integer NOT NULL,
+    headway_secs integer NOT NULL,
+    exact_times integer NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    trip_id integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_frequencies_id_seq
     AS integer
     START WITH 1
@@ -342,6 +254,22 @@ CREATE SEQUENCE public.gtfs_frequencies_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_frequencies_id_seq OWNED BY public.gtfs_frequencies.id;
+CREATE TABLE public.gtfs_routes (
+    id integer NOT NULL,
+    route_id character varying NOT NULL,
+    route_short_name character varying NOT NULL,
+    route_long_name character varying NOT NULL,
+    route_desc character varying NOT NULL,
+    route_type integer NOT NULL,
+    route_url character varying NOT NULL,
+    route_color character varying NOT NULL,
+    route_text_color character varying NOT NULL,
+    route_sort_order integer NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    agency_id integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_routes_id_seq
     AS integer
     START WITH 1
@@ -350,6 +278,15 @@ CREATE SEQUENCE public.gtfs_routes_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_routes_id_seq OWNED BY public.gtfs_routes.id;
+CREATE TABLE public.gtfs_shapes (
+    id integer NOT NULL,
+    shape_id character varying NOT NULL,
+    generated boolean DEFAULT false NOT NULL,
+    geometry public.geography(LineStringM,4326) NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_shapes_id_seq
     AS integer
     START WITH 1
@@ -358,6 +295,23 @@ CREATE SEQUENCE public.gtfs_shapes_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_shapes_id_seq OWNED BY public.gtfs_shapes.id;
+CREATE TABLE public.gtfs_stop_times (
+    id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    stop_headsign character varying NOT NULL,
+    pickup_type integer NOT NULL,
+    drop_off_type integer NOT NULL,
+    shape_dist_traveled double precision NOT NULL,
+    timepoint integer NOT NULL,
+    interpolated integer DEFAULT 0 NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    trip_id integer NOT NULL,
+    stop_id integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_stop_times_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -365,6 +319,24 @@ CREATE SEQUENCE public.gtfs_stop_times_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_stop_times_id_seq OWNED BY public.gtfs_stop_times.id;
+CREATE TABLE public.gtfs_stops (
+    id integer NOT NULL,
+    stop_id character varying NOT NULL,
+    stop_code character varying NOT NULL,
+    stop_name character varying NOT NULL,
+    stop_desc character varying NOT NULL,
+    zone_id character varying NOT NULL,
+    stop_url character varying NOT NULL,
+    location_type integer NOT NULL,
+    stop_timezone character varying NOT NULL,
+    wheelchair_boarding integer NOT NULL,
+    geometry public.geography(Point,4326) NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    parent_station integer,
+    level_id character varying NOT NULL
+);
 CREATE SEQUENCE public.gtfs_stops_id_seq
     AS integer
     START WITH 1
@@ -373,6 +345,16 @@ CREATE SEQUENCE public.gtfs_stops_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_stops_id_seq OWNED BY public.gtfs_stops.id;
+CREATE TABLE public.gtfs_transfers (
+    id integer NOT NULL,
+    transfer_type integer NOT NULL,
+    min_transfer_time integer NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    from_stop_id integer NOT NULL,
+    to_stop_id integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_transfers_id_seq
     AS integer
     START WITH 1
@@ -381,6 +363,23 @@ CREATE SEQUENCE public.gtfs_transfers_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_transfers_id_seq OWNED BY public.gtfs_transfers.id;
+CREATE TABLE public.gtfs_trips (
+    id integer NOT NULL,
+    trip_id character varying NOT NULL,
+    trip_headsign character varying NOT NULL,
+    trip_short_name character varying NOT NULL,
+    direction_id integer NOT NULL,
+    block_id character varying NOT NULL,
+    wheelchair_accessible integer NOT NULL,
+    bikes_allowed integer NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    feed_version_id integer NOT NULL,
+    route_id integer NOT NULL,
+    shape_id integer,
+    stop_pattern_id integer NOT NULL,
+    service_id integer NOT NULL
+);
 CREATE SEQUENCE public.gtfs_trips_id_seq
     AS integer
     START WITH 1
