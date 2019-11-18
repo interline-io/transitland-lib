@@ -70,10 +70,10 @@ func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	}
 	if fr.FetchError != nil {
 		tlstate.LastFetchError = fr.FetchError.Error()
-	} else if fr.FoundSHA1 || fr.FoundDirSHA1 {
-		tlstate.LastFetchError = ""
+	} else {
 		tlstate.LastSuccessfulFetchAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
 	}
+	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fr, err
