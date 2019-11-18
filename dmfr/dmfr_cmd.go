@@ -70,6 +70,7 @@ type dmfrImportCommand struct {
 	coverdate  string
 	latest     bool
 	dryrun     bool
+	activate   bool
 	feedids    []string
 	extensions arrayFlags
 	adapter    gtdb.Adapter // allow for mocks
@@ -90,6 +91,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	fl.Uint64Var(&cmd.limit, "limit", 0, "Import at most n feeds")
 	fl.BoolVar(&cmd.latest, "latest", false, "Only import latest feed version available for each feed")
 	fl.BoolVar(&cmd.dryrun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
+	fl.BoolVar(&cmd.activate, "activate", false, "Set as active feed version after import")
 	fl.Parse(args)
 	cmd.feedids = fl.Args()
 	if cmd.adapter == nil {
@@ -165,7 +167,13 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 		go dmfrImportWorker(w, cmd.adapter, jobs, results, &wg)
 	}
 	for fvid := range qlookup {
-		jobs <- ImportOptions{FeedVersionID: fvid, Directory: cmd.gtfsdir, Location: cmd.location, Extensions: cmd.extensions}
+		jobs <- ImportOptions{
+			FeedVersionID: fvid,
+			Directory:     cmd.gtfsdir,
+			Location:      cmd.location,
+			Extensions:    cmd.extensions,
+			Activate:      cmd.activate,
+		}
 	}
 	close(jobs)
 	wg.Wait()
