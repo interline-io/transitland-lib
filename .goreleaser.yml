@@ -12,20 +12,16 @@ builds:
   - darwin
   goarch:
   - amd64
-# dockers:
-#   - image_templates:
-#     - interline-io/gotransit
 brews:
-  name: gotransit
-  github:
-    owner: interline-io
-    name: homebrew-gotransit
-  commit_author:
-    name: interline-io
-    email: info@interline.io
-  homepage: "https://github.com/interline-io/gotransit"
-  description: |
-    Library and tool for reading, writing, and processing transit data
+  - name: gotransit
+    github:
+      owner: "interline-io"
+      name: "homebrew-gotransit"
+    commit_author:
+      name: "interline-io"
+      email: "info@interline.io"
+    homepage: "https://github.com/interline-io/gotransit"
+    description: "Library and tool for reading, writing, and processing transit data"
 checksum:
   name_template: 'checksums.txt'
 changelog:
