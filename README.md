@@ -4,11 +4,23 @@ gotransit is a library and command-line tool for reading, writing, and processin
 
 ## Installation
 
+### Download prebuilt binrary
+
+Linux and macOS binaries are attached to each [release](https://github.com/interline-io/gotransit/releases).
+
+### Install on MacOS using Homebrew
+
+To install using the [Gotransit formula for Homebrew](https://github.com/interline-io/homebrew-gotransit):
+
+```sh
+brew install interline-io/gotransit/gotransit
+```
+
+### To build from source
+
 ```bash
 go get github.com/interline-io/gotransit
 ```
-
-Linux and macOS binaries are attached to each [release](https://github.com/interline-io/gotransit/releases).
 
 Main dependencies:
 - `twpayne/go-geom`
@@ -16,6 +28,8 @@ Main dependencies:
 - `Masterminds/squirrel`
 - `lib/pq`
 - `mattn/go-sqlite3` (see below)
+
+### Installing with SQLite Support
 
 SQLite / SpatialLite requires CGO support and the [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index) shared library installed. As such, this driver is not included in the static release builds. To enable support, install the library using your package manager (e.g. `apt-get install libsqlite3-mod-spatialite` or `brew install libspatialite`) and compile locally with `CGO_ENABLED=1`.
 
