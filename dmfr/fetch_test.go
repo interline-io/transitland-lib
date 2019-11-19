@@ -70,9 +70,9 @@ func TestMainFetchFeed(t *testing.T) {
 		if fv2.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
 		}
-		// Check Feed
-		tlf := Feed{ID: feedid}
-		testdb.ShouldFind(t, atx, &tlf)
+		// Check FeedState
+		tlf := FeedState{}
+		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feedid)
 		if !tlf.LastSuccessfulFetchAt.Valid {
 			t.Errorf("expected non-nil value")
 		}
@@ -110,10 +110,9 @@ func TestMainFetchFeed_LastFetchError(t *testing.T) {
 			t.Error(err)
 			return nil
 		}
-		// Check
-		tlf := Feed{}
-		tlf.ID = feedid
-		testdb.ShouldFind(t, atx, &tlf)
+		// Check FeedState
+		tlf := FeedState{}
+		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feedid)
 		experr := "file does not exist"
 		if tlf.LastFetchError == "" {
 			t.Errorf("expected value for LastFetchError")

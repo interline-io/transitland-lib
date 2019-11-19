@@ -2,9 +2,7 @@ package dmfr
 
 import (
 	"testing"
-	"time"
 
-	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/testdb"
 	"github.com/interline-io/gotransit/internal/testutil"
@@ -20,13 +18,17 @@ func TestMainSync(t *testing.T) {
 			"../testdata/dmfr/rtfeeds.dmfr.json",
 			"../testdata/dmfr/bayarea.dmfr.json",
 		}
-		found, err := MainSync(atx, regs)
+		opts := SyncOptions{
+			Filenames:  regs,
+			HideUnseen: true,
+		}
+		found, err := MainSync(atx, opts)
 		if err != nil {
 			t.Error(err)
 		}
 		// Check results
 		expect := map[int]bool{}
-		for _, i := range found {
+		for _, i := range found.FeedIDs {
 			expect[i] = true
 		}
 		tlfeeds := []Feed{}
@@ -54,17 +56,11 @@ func TestMainSync(t *testing.T) {
 func TestMainSync_Update(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		// Create existing feed
-		fetchtime := gotransit.OptionalTime{Time: time.Now().UTC(), Valid: true}
-		experr := "checking preserved values"
 		exposid := "f-c20-trimet"
 		tlfeed := Feed{}
 		tlfeed.URLs.StaticCurrent = "http://example.com"
 		tlfeed.FeedNamespaceID = "o-example-nsid"
 		tlfeed.FeedID = exposid
-		tlfeed.LastFetchError = experr
-		tlfeed.LastFetchedAt = fetchtime
-		tlfeed.LastImportedAt = fetchtime
-		tlfeed.LastSuccessfulFetchAt = fetchtime
 		var err error
 		tlfeed.ID = testdb.ShouldInsert(t, atx, &tlfeed)
 		if err != nil {
@@ -72,7 +68,10 @@ func TestMainSync_Update(t *testing.T) {
 		}
 		// Import
 		regs := []string{"../testdata/dmfr/rtfeeds.dmfr.json"}
-		if _, err = MainSync(atx, regs); err != nil {
+		opts := SyncOptions{
+			Filenames: regs,
+		}
+		if _, err = MainSync(atx, opts); err != nil {
 			t.Error(err)
 		}
 		// Check Updated values
@@ -88,18 +87,6 @@ func TestMainSync_Update(t *testing.T) {
 		// Check Preserved values
 		if tlfeed.FeedID != exposid {
 			t.Errorf("got %s expected %s", tlfeed.FeedID, exposid)
-		}
-		if tlfeed.LastFetchError != experr {
-			t.Errorf("got %s expected %s", tlfeed.LastFetchError, experr)
-		}
-		if !tlfeed.LastFetchedAt.Time.Equal(fetchtime.Time) {
-			t.Errorf("got %s expected %s", tlfeed.LastFetchedAt.Time, fetchtime.Time)
-		}
-		if !tlfeed.LastImportedAt.Time.Equal(fetchtime.Time) {
-			t.Errorf("got %s expected %s", tlfeed.LastImportedAt.Time, fetchtime.Time)
-		}
-		if !tlfeed.LastSuccessfulFetchAt.Time.Equal(fetchtime.Time) {
-			t.Errorf("got %s expected %s", tlfeed.LastSuccessfulFetchAt.Time, fetchtime.Time)
 		}
 		return nil
 	})

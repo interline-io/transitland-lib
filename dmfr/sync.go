@@ -3,6 +3,7 @@ package dmfr
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -11,12 +12,26 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
+// SyncOptions sets options for a sync operation.
+type SyncOptions struct {
+	Filenames  []string
+	HideUnseen bool
+}
+
+// SyncResult is the result of a sync operation.
+type SyncResult struct {
+	FeedIDs     []int
+	Errors      []error
+	HiddenCount int
+}
+
 // MainSync .
-func MainSync(atx gtdb.Adapter, filenames []string) ([]int, error) {
+func MainSync(atx gtdb.Adapter, opts SyncOptions) (SyncResult, error) {
 	// Load
+	sr := SyncResult{}
 	feedids := []int{}
 	errs := []error{}
-	for _, fn := range filenames {
+	for _, fn := range opts.Filenames {
 		reg, err := LoadAndParseRegistry(fn)
 		if err != nil {
 			log.Info("%s: Error parsing DMFR: %s", fn, err.Error())
@@ -24,6 +39,7 @@ func MainSync(atx gtdb.Adapter, filenames []string) ([]int, error) {
 			continue
 		}
 		for _, rfeed := range reg.Feeds {
+			rfeed.File = filepath.Base(fn)
 			feedid, found, err := ImportFeed(atx, rfeed)
 			if found {
 				log.Info("%s: updated feed %s (id:%d)", fn, rfeed.FeedID, feedid)
@@ -37,20 +53,25 @@ func MainSync(atx gtdb.Adapter, filenames []string) ([]int, error) {
 			feedids = append(feedids, feedid)
 		}
 	}
+	sr.FeedIDs = feedids
+	sr.Errors = errs
 	if len(errs) > 0 {
 		log.Info("Rollback due to one or more failures")
-		return []int{}, fmt.Errorf("Failed: %s", errs[0].Error())
+		return sr, fmt.Errorf("Failed: %s", errs[0].Error())
 	}
 	// Hide
-	count, err := HideUnseedFeeds(atx, feedids)
-	if err != nil {
-		log.Info("Error soft-deleting feeds: %s", err.Error())
-		return []int{}, err
+	if opts.HideUnseen {
+		count, err := HideUnseedFeeds(atx, sr.FeedIDs)
+		if err != nil {
+			log.Info("Error soft-deleting feeds: %s", err.Error())
+			return sr, err
+		}
+		sr.HiddenCount = count
+		if count > 0 {
+			log.Info("Soft-deleted %d feeds", count)
+		}
 	}
-	if count > 0 {
-		log.Info("Soft-deleted %d feeds", count)
-	}
-	return feedids, nil
+	return sr, nil
 }
 
 // ImportFeed .
@@ -63,15 +84,11 @@ func ImportFeed(atx gtdb.Adapter, rfeed Feed) (int, bool, error) {
 	err := atx.Get(&dbfeed, "SELECT * FROM current_feeds WHERE onestop_id = ?", rfeed.FeedID)
 	if err == nil {
 		// Exists, update key values
-		feedid = dbfeed.ID
 		found = true
+		feedid = dbfeed.ID
 		rfeed.ID = dbfeed.ID
-		rfeed.LastFetchedAt = dbfeed.LastFetchedAt
-		rfeed.LastSuccessfulFetchAt = dbfeed.LastSuccessfulFetchAt
-		rfeed.LastFetchError = dbfeed.LastFetchError
-		rfeed.LastImportedAt = dbfeed.LastImportedAt
-		rfeed.ActiveFeedVersionID = dbfeed.ActiveFeedVersionID
 		rfeed.CreatedAt = dbfeed.CreatedAt
+		rfeed.DeletedAt = gotransit.OptionalTime{Valid: false}
 		errTx = atx.Update(&rfeed)
 	} else if err == sql.ErrNoRows {
 		feedid, errTx = atx.Insert(&rfeed)

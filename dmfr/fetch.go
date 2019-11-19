@@ -36,21 +36,31 @@ type FetchResult struct {
 // An error return from this function is a serious failure.
 func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
+	// Get url
 	tlfeed := Feed{ID: opts.FeedID}
 	if err := atx.Find(&tlfeed); err != nil {
+		return fr, err
+	}
+	if opts.FeedURL == "" {
+		opts.FeedURL = tlfeed.URLs.StaticCurrent
+	}
+	// Get state
+	tlstate := FeedState{FeedID: opts.FeedID}
+	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, opts.FeedID); err == sql.ErrNoRows {
+		tlstate.ID, err = atx.Insert(&tlstate)
+		if err != nil {
+			return fr, err
+		}
+	} else if err != nil {
 		return fr, err
 	}
 	if opts.FetchTime.IsZero() {
 		opts.FetchTime = time.Now().UTC()
 	}
-	tlfeed.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
-	tlfeed.LastFetchError = ""
-	if opts.FeedURL == "" {
-		opts.FeedURL = tlfeed.URLs.StaticCurrent
-	}
-
+	tlstate.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
+	tlstate.LastFetchError = ""
 	// Immediately save LastFetchedAt to obtain lock
-	if err := atx.Update(&tlfeed, "last_fetched_at", "last_fetch_error"); err != nil {
+	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
 		return fr, err
 	}
 	// Start fetching
@@ -59,13 +69,13 @@ func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 		return fr, err
 	}
 	if fr.FetchError != nil {
-		tlfeed.LastFetchError = fr.FetchError.Error()
-	} else if fr.FoundSHA1 || fr.FoundDirSHA1 {
-		tlfeed.LastFetchError = ""
-		tlfeed.LastSuccessfulFetchAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
+		tlstate.LastFetchError = fr.FetchError.Error()
+	} else {
+		tlstate.LastSuccessfulFetchAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
 	}
+	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps
-	if err := atx.Update(&tlfeed, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
+	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fr, err
 	}
 	return fr, nil

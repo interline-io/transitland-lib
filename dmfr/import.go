@@ -1,6 +1,7 @@
 package dmfr
 
 import (
+	"database/sql"
 	"errors"
 	"path/filepath"
 
@@ -18,6 +19,7 @@ type ImportOptions struct {
 	Extensions    []string
 	Directory     string
 	Location      string
+	Activate      bool
 }
 
 // ImportResult contains the results of a feed import.
@@ -112,6 +114,24 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 			// Serious error
 			log.Info("Error saving FeedVersionImport: %s", err.Error())
 			return err
+		}
+		if opts.Activate {
+			tlstate := FeedState{FeedID: fv.FeedID}
+			if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, fv.FeedID); err == sql.ErrNoRows {
+				tlstate.ID, err = atx.Insert(&tlstate)
+				if err != nil {
+					return err
+				}
+			} else if err != nil {
+				return err
+			}
+			k := gotransit.OptionalKey{}
+			k.Valid = true
+			k.Int64 = int64(fv.ID)
+			tlstate.FeedVersionID = k
+			if err := atx.Update(&tlstate, "feed_version_id"); err != nil {
+				return err
+			}
 		}
 		return err
 	})

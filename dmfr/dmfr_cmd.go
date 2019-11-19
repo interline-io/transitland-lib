@@ -70,6 +70,7 @@ type dmfrImportCommand struct {
 	coverdate  string
 	latest     bool
 	dryrun     bool
+	activate   bool
 	feedids    []string
 	extensions arrayFlags
 	adapter    gtdb.Adapter // allow for mocks
@@ -90,6 +91,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	fl.Uint64Var(&cmd.limit, "limit", 0, "Import at most n feeds")
 	fl.BoolVar(&cmd.latest, "latest", false, "Only import latest feed version available for each feed")
 	fl.BoolVar(&cmd.dryrun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
+	fl.BoolVar(&cmd.activate, "activate", false, "Set as active feed version after import")
 	fl.Parse(args)
 	cmd.feedids = fl.Args()
 	if cmd.adapter == nil {
@@ -165,7 +167,13 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 		go dmfrImportWorker(w, cmd.adapter, jobs, results, &wg)
 	}
 	for fvid := range qlookup {
-		jobs <- ImportOptions{FeedVersionID: fvid, Directory: cmd.gtfsdir, Location: cmd.location, Extensions: cmd.extensions}
+		jobs <- ImportOptions{
+			FeedVersionID: fvid,
+			Directory:     cmd.gtfsdir,
+			Location:      cmd.location,
+			Extensions:    cmd.extensions,
+			Activate:      cmd.activate,
+		}
 	}
 	close(jobs)
 	wg.Wait()
@@ -315,9 +323,10 @@ func dmfrFetchWorker(id int, adapter gtdb.Adapter, jobs <-chan FetchOptions, res
 /////
 
 type dmfrSyncCommand struct {
-	dburl     string
-	filenames []string
-	adapter   gtdb.Adapter // allow for mocks
+	dburl      string
+	filenames  []string
+	hideunseen bool
+	adapter    gtdb.Adapter // allow for mocks
 }
 
 func (cmd *dmfrSyncCommand) Run(args []string) error {
@@ -326,7 +335,8 @@ func (cmd *dmfrSyncCommand) Run(args []string) error {
 		fmt.Println("Usage: sync <filenames...>")
 		fl.PrintDefaults()
 	}
-	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL")
+	fl.BoolVar(&cmd.hideunseen, "hideunseen", false, "Hide unseen feeds")
 	fl.Parse(args)
 	cmd.filenames = fl.Args()
 	if cmd.adapter == nil {
@@ -334,8 +344,12 @@ func (cmd *dmfrSyncCommand) Run(args []string) error {
 		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}
+	opts := SyncOptions{
+		Filenames:  cmd.filenames,
+		HideUnseen: cmd.hideunseen,
+	}
 	return cmd.adapter.Tx(func(atx gtdb.Adapter) error {
-		_, err := MainSync(atx, cmd.filenames)
+		_, err := MainSync(atx, opts)
 		return err
 	})
 }
