@@ -4,7 +4,7 @@ gotransit is a library and command-line tool for reading, writing, and processin
 
 ## Installation
 
-### Download prebuilt binrary
+### Download prebuilt binary
 
 Linux and macOS binaries are attached to each [release](https://github.com/interline-io/gotransit/releases).
 
@@ -160,9 +160,11 @@ trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_t
 
 ## dmfr command
 
-The `dmfr` command is an implementation and datastore of the [Distributed Mobility Feed Registry](dmfr). It provides several additionnal subcommands for reading DMFR files, syncronizing these feeds to a database, downloading the latest versions of each feed, and automatically importing the feeds into a database. It provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html).
+_under development_
 
-This command is still under active development - please see [DMFR Command help](dmfr-command.md).
+The `dmfr` command enables processing multiple feeds at once using a catalog in the [Distributed Mobility Feed Registry]([dmfr](https://github.com/transitland/distributed-mobility-feed-registry)) format. It provides several additional subcommands for reading DMFR files, synchronizing these feeds to a database, downloading the latest versions of each feed, and automatically importing the feeds into a database. It provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html).
+
+This command is still under active development and may change in future releases. Please see [DMFR Command help](dmfr-command.md).
 
 ## Key library components
 
