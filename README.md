@@ -2,7 +2,9 @@
 
 gotransit is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to specify multiple input feeds.
 
-<!-- table of contents created using https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
+## Table of Contents <!-- omit in toc -->
+
+<!-- to update use https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
 - [Interline gotransit](#interline-gotransit)
 	- [Installation](#installation)
 		- [Download prebuilt binary](#download-prebuilt-binary)
