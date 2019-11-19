@@ -18,13 +18,17 @@ func TestMainSync(t *testing.T) {
 			"../testdata/dmfr/rtfeeds.dmfr.json",
 			"../testdata/dmfr/bayarea.dmfr.json",
 		}
-		found, err := MainSync(atx, regs)
+		opts := SyncOptions{
+			Filenames:  regs,
+			HideUnseen: true,
+		}
+		found, err := MainSync(atx, opts)
 		if err != nil {
 			t.Error(err)
 		}
 		// Check results
 		expect := map[int]bool{}
-		for _, i := range found {
+		for _, i := range found.FeedIDs {
 			expect[i] = true
 		}
 		tlfeeds := []Feed{}
@@ -64,7 +68,10 @@ func TestMainSync_Update(t *testing.T) {
 		}
 		// Import
 		regs := []string{"../testdata/dmfr/rtfeeds.dmfr.json"}
-		if _, err = MainSync(atx, regs); err != nil {
+		opts := SyncOptions{
+			Filenames: regs,
+		}
+		if _, err = MainSync(atx, opts); err != nil {
 			t.Error(err)
 		}
 		// Check Updated values

@@ -323,9 +323,10 @@ func dmfrFetchWorker(id int, adapter gtdb.Adapter, jobs <-chan FetchOptions, res
 /////
 
 type dmfrSyncCommand struct {
-	dburl     string
-	filenames []string
-	adapter   gtdb.Adapter // allow for mocks
+	dburl      string
+	filenames  []string
+	hideunseen bool
+	adapter    gtdb.Adapter // allow for mocks
 }
 
 func (cmd *dmfrSyncCommand) Run(args []string) error {
@@ -334,7 +335,8 @@ func (cmd *dmfrSyncCommand) Run(args []string) error {
 		fmt.Println("Usage: sync <filenames...>")
 		fl.PrintDefaults()
 	}
-	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL")
+	fl.BoolVar(&cmd.hideunseen, "hideunseen", false, "Hide unseen feeds")
 	fl.Parse(args)
 	cmd.filenames = fl.Args()
 	if cmd.adapter == nil {
@@ -342,8 +344,12 @@ func (cmd *dmfrSyncCommand) Run(args []string) error {
 		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}
+	opts := SyncOptions{
+		Filenames:  cmd.filenames,
+		HideUnseen: cmd.hideunseen,
+	}
 	return cmd.adapter.Tx(func(atx gtdb.Adapter) error {
-		_, err := MainSync(atx, cmd.filenames)
+		_, err := MainSync(atx, opts)
 		return err
 	})
 }
