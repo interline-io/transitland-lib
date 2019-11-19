@@ -1,26 +1,24 @@
-# Interline gotransit
+# Interline gotransit <!-- omit in toc -->
 
 gotransit is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to specify multiple input feeds.
 
 ## Table of Contents <!-- omit in toc -->
-
 <!-- to update use https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
-- [Interline gotransit](#interline-gotransit)
-	- [Installation](#installation)
-		- [Download prebuilt binary](#download-prebuilt-binary)
-		- [Install on MacOS using Homebrew](#install-on-macos-using-homebrew)
-		- [To build from source](#to-build-from-source)
-		- [Installing with SQLite Support](#installing-with-sqlite-support)
-	- [Usage as a CLI tool](#usage-as-a-cli-tool)
-		- [validate command](#validate-command)
-		- [copy command](#copy-command)
-		- [extract command](#extract-command)
-	- [dmfr command](#dmfr-command)
-	- [Key library components](#key-library-components)
-	- [Usage as a library](#usage-as-a-library)
-	- [Development](#development)
-		- [Releases](#releases)
-	- [Licenses](#licenses)
+- [Installation](#installation)
+	- [Download prebuilt binary](#download-prebuilt-binary)
+	- [Install on MacOS using Homebrew](#install-on-macos-using-homebrew)
+	- [To build from source](#to-build-from-source)
+	- [Installing with SQLite Support](#installing-with-sqlite-support)
+- [Usage as a CLI tool](#usage-as-a-cli-tool)
+	- [validate command](#validate-command)
+	- [copy command](#copy-command)
+	- [extract command](#extract-command)
+- [dmfr command](#dmfr-command)
+- [Key library components](#key-library-components)
+- [Usage as a library](#usage-as-a-library)
+- [Development](#development)
+	- [Releases](#releases)
+- [Licenses](#licenses)
 
 ## Installation
 
