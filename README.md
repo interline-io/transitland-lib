@@ -2,6 +2,24 @@
 
 gotransit is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to specify multiple input feeds.
 
+<!-- table of contents created using https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
+- [Interline gotransit](#interline-gotransit)
+	- [Installation](#installation)
+		- [Download prebuilt binary](#download-prebuilt-binary)
+		- [Install on MacOS using Homebrew](#install-on-macos-using-homebrew)
+		- [To build from source](#to-build-from-source)
+		- [Installing with SQLite Support](#installing-with-sqlite-support)
+	- [Usage as a CLI tool](#usage-as-a-cli-tool)
+		- [validate command](#validate-command)
+		- [copy command](#copy-command)
+		- [extract command](#extract-command)
+	- [dmfr command](#dmfr-command)
+	- [Key library components](#key-library-components)
+	- [Usage as a library](#usage-as-a-library)
+	- [Development](#development)
+		- [Releases](#releases)
+	- [Licenses](#licenses)
+
 ## Installation
 
 ### Download prebuilt binary
@@ -271,9 +289,9 @@ See API docs at https://godoc.org/github.com/interline-io/gotransit
 
 ## Development
 
-gotransit follows Go coding conventions.
+Gotransit follows Go coding conventions.
 
-CircleCI runs all tests and stores code coverage reports as artifacts at https://circleci.com/gh/interline-io/gotransit
+GitHub Actions runs all tests, stores code coverage reports as artifacts, and cuts releases using [GoReleaser](https://github.com/goreleaser/goreleaser).
 
 ### Releases
 
@@ -282,7 +300,7 @@ Releases follow [Semantic Versioning](https://semver.org/) conventions.
 To cut a new release:
 
 1. Tag the `master` branch with the next SemVer version (for example: `v0.2.0`).
-2. CircleCI will run [GoReleaser](https://github.com/goreleaser/goreleaser) and create a GitHub release on this repository.
+2. GitHub Actions will run [GoReleaser](https://github.com/goreleaser/goreleaser) and create a GitHub release on this repository.
 
 ## Licenses
 
