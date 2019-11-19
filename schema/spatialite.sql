@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS "current_feeds" (
   "urls" BLOB,
   "languages" BLOB,
   "associated_feeds" BLOB,
-  "feed_namespace_id" varchar(255) NOT NULL
+  "feed_namespace_id" varchar(255) NOT NULL,
+  "file" varchar(255) NOT NULL
 );
 CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
   "id" integer primary key autoincrement, 
