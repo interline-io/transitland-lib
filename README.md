@@ -17,6 +17,7 @@ gotransit is a library and command-line tool for reading, writing, and processin
 - [Usage as a library](#usage-as-a-library)
 	- [Key library components](#key-library-components)
 	- [Example of how to use as a library](#example-of-how-to-use-as-a-library)
+- [Included Readers and Writers](#included-readers-and-writers)
 - [Development](#development)
 	- [Releases](#releases)
 - [Licenses](#licenses)
@@ -289,6 +290,16 @@ func exampleCopier(reader gotransit.Reader) {
 ```
 
 See API docs at https://godoc.org/github.com/interline-io/gotransit
+
+## Included Readers and Writers
+
+| Target                   | Module  | Supports Read | Supports Write |
+| ------------------------ | ------- | ------------- | -------------- |
+| CSV                      | `gtcsv` | ✅             | ✅              |
+| SQLite (with SpatiaLite) | `gtdb`  | ✅             | ✅              |
+| Postgres (with PostGIS)  | `gtdb`  | ✅             | ✅              |
+
+We welcome the addition of more readers and writers.
 
 ## Development
 
