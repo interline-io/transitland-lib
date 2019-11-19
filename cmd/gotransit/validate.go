@@ -20,8 +20,8 @@ func (cmd *validateCommand) Run(args []string) error {
 		fl.PrintDefaults()
 	}
 	fl.Var(&cmd.validateExtensions, "ext", "Include GTFS Extension")
-	fl.Parse(args)
-	if fl.NArg() < 1 {
+	err := fl.Parse(args)
+	if err != nil || fl.NArg() < 1 {
 		fl.Usage()
 		exit("requires input reader")
 	}
