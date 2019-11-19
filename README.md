@@ -1,10 +1,30 @@
-# Interline gotransit
+# Interline gotransit <!-- omit in toc -->
 
 gotransit is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to specify multiple input feeds.
 
+## Table of Contents <!-- omit in toc -->
+<!-- to update use https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
+- [Installation](#installation)
+	- [Download prebuilt binary](#download-prebuilt-binary)
+	- [Install on MacOS using Homebrew](#install-on-macos-using-homebrew)
+	- [To build from source](#to-build-from-source)
+	- [Installing with SQLite Support](#installing-with-sqlite-support)
+- [Usage as a CLI tool](#usage-as-a-cli-tool)
+	- [`validate` command](#validate-command)
+	- [`copy` command](#copy-command)
+	- [`extract` command](#extract-command)
+	- [`dmfr` command](#dmfr-command)
+- [Usage as a library](#usage-as-a-library)
+	- [Key library components](#key-library-components)
+	- [Example of how to use as a library](#example-of-how-to-use-as-a-library)
+- [Included Readers and Writers](#included-readers-and-writers)
+- [Development](#development)
+	- [Releases](#releases)
+- [Licenses](#licenses)
+
 ## Installation
 
-### Download prebuilt binrary
+### Download prebuilt binary
 
 Linux and macOS binaries are attached to each [release](https://github.com/interline-io/gotransit/releases).
 
@@ -41,7 +61,7 @@ The main subcommands are:
 - [extract](#extract-command)
 - [dmfr](#dmfr-command)
 
-### validate command
+### `validate` command
 
 The validate command performs a basic validation on a data source and writes the results to standard out.
 
@@ -58,7 +78,7 @@ Example:
 $ gotransit validate "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip"
 ```
 
-### copy command
+### `copy` command
 
 The copy command performs a basic copy from a reader to a writer. By default, any entity with errors will be skipped and not written to output. This can be ignored with `-allow-entity-errors` to ignore simple errors and `-allow-reference-errors` to ignore entity relationship errors, such as a reference to a non-existent stop.
 
@@ -87,7 +107,7 @@ agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency
 1000,Caltrain,http://www.caltrain.com,America/Los_Angeles,en,800-660-4287,,
   ```
 
-### extract command
+### `extract` command
 
 The extract command extends the basic copy command with a number of additional options and transformations. It can be used to pull out a single route or trip, interpolate stop times, override a single value on an entity, etc. This is a separate command to keep the basic copy command simple while allowing the extract command to grow and add more features over time.
 
@@ -158,13 +178,17 @@ trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_t
 305,06:47:00,06:47:00,70011,6,,0,0,75372.02742,1
 ```
 
-## dmfr command
+### `dmfr` command
 
-The `dmfr` command is an implementation and datastore of the [Distributed Mobility Feed Registry](dmfr). It provides several additionnal subcommands for reading DMFR files, syncronizing these feeds to a database, downloading the latest versions of each feed, and automatically importing the feeds into a database. It provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html).
+_under development_
 
-This command is still under active development - please see [DMFR Command help](dmfr-command.md).
+The `dmfr` command enables processing multiple feeds at once using a catalog in the [Distributed Mobility Feed Registry]([dmfr](https://github.com/transitland/distributed-mobility-feed-registry)) format. It provides several additional subcommands for reading DMFR files, synchronizing these feeds to a database, downloading the latest versions of each feed, and automatically importing the feeds into a database. It provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html).
 
-## Key library components
+This command is still under active development and may change in future releases. Please see [DMFR Command help](dmfr-command.md).
+
+## Usage as a library
+
+### Key library components
 
 - Entity: An `Entity` is entity as specified by GTFS, such as an Agency, Route, Stop, etc.
 - Reader: A `Reader` provides streams of GTFS entities over channels. The `gtcsv` and `gtdb` modules provide CSV and Postgres/SQLite support, respectively.
@@ -174,7 +198,7 @@ This command is still under active development - please see [DMFR Command help](
 - Filter: A `Filter` applies transformations to GTFS entities, such as converting extended route types to basic values, or modifying entity identifiers.
 - Extension: An `Extension` provides support for additional types of GTFS entities.
 
-## Usage as a library
+### Example of how to use as a library
 
 A simple example of reading and writing GTFS entities from CSV:
 
@@ -267,11 +291,21 @@ func exampleCopier(reader gotransit.Reader) {
 
 See API docs at https://godoc.org/github.com/interline-io/gotransit
 
+## Included Readers and Writers
+
+| Target                   | Module  | Supports Read | Supports Write |
+| ------------------------ | ------- | ------------- | -------------- |
+| CSV                      | `gtcsv` | ✅             | ✅              |
+| SQLite (with SpatiaLite) | `gtdb`  | ✅             | ✅              |
+| Postgres (with PostGIS)  | `gtdb`  | ✅             | ✅              |
+
+We welcome the addition of more readers and writers.
+
 ## Development
 
 gotransit follows Go coding conventions.
 
-CircleCI runs all tests and stores code coverage reports as artifacts at https://circleci.com/gh/interline-io/gotransit
+GitHub Actions runs all tests, stores code coverage reports as artifacts, and cuts releases using [GoReleaser](https://github.com/goreleaser/goreleaser).
 
 ### Releases
 
@@ -280,12 +314,12 @@ Releases follow [Semantic Versioning](https://semver.org/) conventions.
 To cut a new release:
 
 1. Tag the `master` branch with the next SemVer version (for example: `v0.2.0`).
-2. CircleCI will run [GoReleaser](https://github.com/goreleaser/goreleaser) and create a GitHub release on this repository.
+2. GitHub Actions will run [GoReleaser](https://github.com/goreleaser/goreleaser) and create a GitHub release on this repository.
 
 ## Licenses
 
-GoTransit is released under a "dual license" model:
+gotransit is released under a "dual license" model:
 
-- open-source for use by all under the GPLv3 license
-- also available under a flexible commercial license from Interline
+- open-source for use by all under the [GPLv3](LICENSE) license
+- also available under a flexible commercial license from [Interline](mailto:info@interline.io)
 
