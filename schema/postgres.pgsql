@@ -49,7 +49,8 @@ CREATE TABLE public.feed_states (
     geometry public.geography(Polygon,4326),
     tags json,
     created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
+    updated_at timestamp without time zone NOT NULL,
+    centroid public.geography(Point,4326)
 );
 CREATE SEQUENCE public.feed_states_id_seq
     AS integer
@@ -452,6 +453,7 @@ CREATE UNIQUE INDEX index_feed_states_on_feed_version_id ON public.feed_states U
 CREATE UNIQUE INDEX index_feed_version_gtfs_imports_on_feed_version_id ON public.feed_version_gtfs_imports USING btree (feed_version_id);
 CREATE INDEX index_feed_version_gtfs_imports_on_success ON public.feed_version_gtfs_imports USING btree (success);
 CREATE INDEX index_feed_versions_on_earliest_calendar_date ON public.feed_versions USING btree (earliest_calendar_date);
+CREATE INDEX index_feed_versions_on_feed_id ON public.feed_versions USING btree (feed_id);
 CREATE INDEX index_feed_versions_on_feed_type_and_feed_id ON public.feed_versions USING btree (feed_type, feed_id);
 CREATE INDEX index_feed_versions_on_latest_calendar_date ON public.feed_versions USING btree (latest_calendar_date);
 CREATE INDEX index_gtfs_agencies_on_agency_id ON public.gtfs_agencies USING btree (agency_id);
@@ -581,7 +583,7 @@ ALTER TABLE ONLY public.gtfs_feed_infos
 --
 
 -- Dumped from database version 11.1
--- Dumped by pg_dump version 11.1
+-- Dumped by pg_dump version 11.5
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -590,6 +592,7 @@ SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
 SET check_function_bodies = false;
+SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
@@ -610,105 +613,104 @@ CREATE TABLE public.schema_migrations (
 -- Data for Name: schema_migrations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public.schema_migrations (version) FROM stdin;
-20141021222007
-20141021223643
-20141021223644
-20141022180407
-20141029181701
-20141031233950
-20141202001240
-20141202003418
-20141202182820
-20141202190949
-20141208200454
-20150206225908
-20150225174635
-20150310002641
-20150501181034
-20150526200426
-20150529220919
-20150708221436
-20150711000609
-20150711003625
-20150715070212
-20150811234133
-20150812235057
-20150814191424
-20150817150332
-20150828192208
-20150828194958
-20150901194129
-20150915001511
-20150915001512
-20150923173046
-20150930002948
-20151007004337
-20151009190325
-20151014010123
-20151022233724
-20151022243038
-20151027003112
-20151029001514
-20151030234052
-20151106195645
-20151109203658
-20151110212014
-20151111010054
-20151222213427
-20151223172515
-20160121192921
-20160127004017
-20160127004047
-20160128235954
-20160128305523
-20160130014111
-20160204180147
-20160205000053
-20160205200954
-20160210223051
-20160211002327
-20160219230742
-20160301214615
-20160322005507
-20160328234600
-20160401084013
-20160419224025
-20160419224617
-20160419235457
-20160526224318
-20160601005325
-20160613224412
-20160614041303
-20160913205612
-20160914234206
-20160919225828
-20160920191755
-20160930225228
-20161017191437
-20161103231227
-20161114223944
-20161129205145
-20161207070207
-20161229175433
-20170207173441
-20170303213823
-20170307003733
-20170315205738
-20170419200247
-20170601181416
-20170719230128
-20170725005643
-20170725011839
-20170811211047
-20171109020012
-20180113021001
-20190411214421
-20190415014530
-20191024200203
-20191112235334
-20191114075430
-\.
+INSERT INTO public.schema_migrations VALUES ('20141021222007');
+INSERT INTO public.schema_migrations VALUES ('20141021223643');
+INSERT INTO public.schema_migrations VALUES ('20141021223644');
+INSERT INTO public.schema_migrations VALUES ('20141022180407');
+INSERT INTO public.schema_migrations VALUES ('20141029181701');
+INSERT INTO public.schema_migrations VALUES ('20141031233950');
+INSERT INTO public.schema_migrations VALUES ('20141202001240');
+INSERT INTO public.schema_migrations VALUES ('20141202003418');
+INSERT INTO public.schema_migrations VALUES ('20141202182820');
+INSERT INTO public.schema_migrations VALUES ('20141202190949');
+INSERT INTO public.schema_migrations VALUES ('20141208200454');
+INSERT INTO public.schema_migrations VALUES ('20150206225908');
+INSERT INTO public.schema_migrations VALUES ('20150225174635');
+INSERT INTO public.schema_migrations VALUES ('20150310002641');
+INSERT INTO public.schema_migrations VALUES ('20150501181034');
+INSERT INTO public.schema_migrations VALUES ('20150526200426');
+INSERT INTO public.schema_migrations VALUES ('20150529220919');
+INSERT INTO public.schema_migrations VALUES ('20150708221436');
+INSERT INTO public.schema_migrations VALUES ('20150711000609');
+INSERT INTO public.schema_migrations VALUES ('20150711003625');
+INSERT INTO public.schema_migrations VALUES ('20150715070212');
+INSERT INTO public.schema_migrations VALUES ('20150811234133');
+INSERT INTO public.schema_migrations VALUES ('20150812235057');
+INSERT INTO public.schema_migrations VALUES ('20150814191424');
+INSERT INTO public.schema_migrations VALUES ('20150817150332');
+INSERT INTO public.schema_migrations VALUES ('20150828192208');
+INSERT INTO public.schema_migrations VALUES ('20150828194958');
+INSERT INTO public.schema_migrations VALUES ('20150901194129');
+INSERT INTO public.schema_migrations VALUES ('20150915001511');
+INSERT INTO public.schema_migrations VALUES ('20150915001512');
+INSERT INTO public.schema_migrations VALUES ('20150923173046');
+INSERT INTO public.schema_migrations VALUES ('20150930002948');
+INSERT INTO public.schema_migrations VALUES ('20151007004337');
+INSERT INTO public.schema_migrations VALUES ('20151009190325');
+INSERT INTO public.schema_migrations VALUES ('20151014010123');
+INSERT INTO public.schema_migrations VALUES ('20151022233724');
+INSERT INTO public.schema_migrations VALUES ('20151022243038');
+INSERT INTO public.schema_migrations VALUES ('20151027003112');
+INSERT INTO public.schema_migrations VALUES ('20151029001514');
+INSERT INTO public.schema_migrations VALUES ('20151030234052');
+INSERT INTO public.schema_migrations VALUES ('20151106195645');
+INSERT INTO public.schema_migrations VALUES ('20151109203658');
+INSERT INTO public.schema_migrations VALUES ('20151110212014');
+INSERT INTO public.schema_migrations VALUES ('20151111010054');
+INSERT INTO public.schema_migrations VALUES ('20151222213427');
+INSERT INTO public.schema_migrations VALUES ('20151223172515');
+INSERT INTO public.schema_migrations VALUES ('20160121192921');
+INSERT INTO public.schema_migrations VALUES ('20160127004017');
+INSERT INTO public.schema_migrations VALUES ('20160127004047');
+INSERT INTO public.schema_migrations VALUES ('20160128235954');
+INSERT INTO public.schema_migrations VALUES ('20160128305523');
+INSERT INTO public.schema_migrations VALUES ('20160130014111');
+INSERT INTO public.schema_migrations VALUES ('20160204180147');
+INSERT INTO public.schema_migrations VALUES ('20160205000053');
+INSERT INTO public.schema_migrations VALUES ('20160205200954');
+INSERT INTO public.schema_migrations VALUES ('20160210223051');
+INSERT INTO public.schema_migrations VALUES ('20160211002327');
+INSERT INTO public.schema_migrations VALUES ('20160219230742');
+INSERT INTO public.schema_migrations VALUES ('20160301214615');
+INSERT INTO public.schema_migrations VALUES ('20160322005507');
+INSERT INTO public.schema_migrations VALUES ('20160328234600');
+INSERT INTO public.schema_migrations VALUES ('20160401084013');
+INSERT INTO public.schema_migrations VALUES ('20160419224025');
+INSERT INTO public.schema_migrations VALUES ('20160419224617');
+INSERT INTO public.schema_migrations VALUES ('20160419235457');
+INSERT INTO public.schema_migrations VALUES ('20160526224318');
+INSERT INTO public.schema_migrations VALUES ('20160601005325');
+INSERT INTO public.schema_migrations VALUES ('20160613224412');
+INSERT INTO public.schema_migrations VALUES ('20160614041303');
+INSERT INTO public.schema_migrations VALUES ('20160913205612');
+INSERT INTO public.schema_migrations VALUES ('20160914234206');
+INSERT INTO public.schema_migrations VALUES ('20160919225828');
+INSERT INTO public.schema_migrations VALUES ('20160920191755');
+INSERT INTO public.schema_migrations VALUES ('20160930225228');
+INSERT INTO public.schema_migrations VALUES ('20161017191437');
+INSERT INTO public.schema_migrations VALUES ('20161103231227');
+INSERT INTO public.schema_migrations VALUES ('20161114223944');
+INSERT INTO public.schema_migrations VALUES ('20161129205145');
+INSERT INTO public.schema_migrations VALUES ('20161207070207');
+INSERT INTO public.schema_migrations VALUES ('20161229175433');
+INSERT INTO public.schema_migrations VALUES ('20170207173441');
+INSERT INTO public.schema_migrations VALUES ('20170303213823');
+INSERT INTO public.schema_migrations VALUES ('20170307003733');
+INSERT INTO public.schema_migrations VALUES ('20170315205738');
+INSERT INTO public.schema_migrations VALUES ('20170419200247');
+INSERT INTO public.schema_migrations VALUES ('20170601181416');
+INSERT INTO public.schema_migrations VALUES ('20170719230128');
+INSERT INTO public.schema_migrations VALUES ('20170725005643');
+INSERT INTO public.schema_migrations VALUES ('20170725011839');
+INSERT INTO public.schema_migrations VALUES ('20170811211047');
+INSERT INTO public.schema_migrations VALUES ('20171109020012');
+INSERT INTO public.schema_migrations VALUES ('20180113021001');
+INSERT INTO public.schema_migrations VALUES ('20190411214421');
+INSERT INTO public.schema_migrations VALUES ('20190415014530');
+INSERT INTO public.schema_migrations VALUES ('20191024200203');
+INSERT INTO public.schema_migrations VALUES ('20191112235334');
+INSERT INTO public.schema_migrations VALUES ('20191114075430');
+INSERT INTO public.schema_migrations VALUES ('20191119102124');
 
 
 --
