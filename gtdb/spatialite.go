@@ -3,21 +3,21 @@
 package gtdb
 
 import (
-	"database/sql"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/jmoiron/sqlx"
-	"github.com/mattn/go-sqlite3"
+
+	// sqlite3
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // Register.
 func init() {
-	// Register driver and extension
+	// Register test adapter
 	adapters["sqlite3"] = func(dburl string) Adapter { return &SpatiaLiteAdapter{DBURL: dburl} }
-	sql.Register("spatialite", &sqlite3.SQLiteDriver{Extensions: []string{"mod_spatialite"}})
 	// Register readers and writers
 	r := func(url string) (gotransit.Reader, error) { return NewReader(url) }
 	gotransit.RegisterReader("sqlite3", r)
@@ -37,7 +37,7 @@ func (adapter *SpatiaLiteAdapter) Open() error {
 	if len(dbname) != 2 {
 		return causes.NewSourceUnreadableError("no database filename provided", nil)
 	}
-	db, err := sqlx.Open("spatialite", dbname[1])
+	db, err := sqlx.Open("sqlite3", dbname[1])
 	if err != nil {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
