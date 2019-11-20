@@ -51,7 +51,7 @@ Main dependencies:
 
 ### Installing with SQLite Support
 
-SQLite CGO support, and is not included in the static release builds. To enable support, compile locally with `CGO_ENABLED=1`.
+SQLite requires CGO support, and is not included in the static release builds. To enable support, compile locally with `CGO_ENABLED=1`.
 
 ## Usage as a CLI tool
 
@@ -296,7 +296,7 @@ See API docs at https://godoc.org/github.com/interline-io/gotransit
 | Target                   | Module  | Supports Read | Supports Write |
 | ------------------------ | ------- | ------------- | -------------- |
 | CSV                      | `gtcsv` | ✅             | ✅              |
-| SQLite (with SQLite) | `gtdb`  | ✅             | ✅              |
+| SQLite                   | `gtdb`  | ✅             | ✅              |
 | Postgres (with PostGIS)  | `gtdb`  | ✅             | ✅              |
 
 We welcome the addition of more readers and writers.
