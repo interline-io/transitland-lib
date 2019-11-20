@@ -47,7 +47,7 @@ func (g *geomCache) AddStop(eid string, stop gotransit.Stop) {
 
 // AddShape adds a Shape to the geometry cache.
 func (g *geomCache) AddShape(eid string, shape gotransit.Shape) {
-	if shape.Geometry == nil {
+	if !shape.Geometry.Valid {
 		return
 	}
 	sl := make([][2]float64, shape.Geometry.NumCoords())

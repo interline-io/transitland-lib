@@ -20,14 +20,17 @@ type Point struct {
 }
 
 // NewPoint returns a Point from lon, lat
-func NewPoint(lon, lat float64) *Point {
+func NewPoint(lon, lat float64) Point {
 	g := geom.NewPointFlat(geom.XY, geom.Coord{lon, lat})
+	if g == nil {
+		return Point{}
+	}
 	g.SetSRID(4326)
-	return &Point{Point: *g, Valid: true}
+	return Point{Point: *g, Valid: true}
 }
 
 // Value implements driver.Value
-func (g *Point) Value() (driver.Value, error) {
+func (g Point) Value() (driver.Value, error) {
 	if !g.Valid {
 		return nil, nil
 	}
@@ -68,14 +71,17 @@ type LineString struct {
 }
 
 // NewLineStringFromFlatCoords returns a new LineString from flat (3) coordinates
-func NewLineStringFromFlatCoords(coords []float64) *LineString {
-	geom := geom.NewLineStringFlat(geom.XYM, coords)
-	geom.SetSRID(4326)
-	return &LineString{LineString: *geom, Valid: true}
+func NewLineStringFromFlatCoords(coords []float64) LineString {
+	g := geom.NewLineStringFlat(geom.XYM, coords)
+	if g == nil {
+		return LineString{}
+	}
+	g.SetSRID(4326)
+	return LineString{LineString: *g, Valid: true}
 }
 
 // Value implements driver.Value
-func (g *LineString) Value() (driver.Value, error) {
+func (g LineString) Value() (driver.Value, error) {
 	if !g.Valid {
 		return nil, nil
 	}

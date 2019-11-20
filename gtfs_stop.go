@@ -21,7 +21,7 @@ type Stop struct {
 	StopTimezone       string               `csv:"stop_timezone" validator:"timezone"`
 	WheelchairBoarding int                  `csv:"wheelchair_boarding" min:"0" max:"2"`
 	LevelID            string               `csv:"level_id"`
-	Geometry           *Point               `db:"geometry"`
+	Geometry           Point                `db:"geometry"`
 	BaseEntity
 }
 
@@ -32,11 +32,14 @@ func (ent *Stop) SetCoordinates(p [2]float64) {
 
 // Coordinates returns the stop lon,lat as a [2]float64
 func (ent *Stop) Coordinates() [2]float64 {
-	if ent.Geometry == nil {
-		return [2]float64{0, 0}
-	}
+	ret := [2]float64{0, 0}
 	c := ent.Geometry.FlatCoords()
-	return [2]float64{c[0], c[1]}
+	if len(c) != 2 {
+		return ret
+	}
+	ret[0] = c[0]
+	ret[1] = c[1]
+	return ret
 }
 
 // EntityID returns the ID or StopID.
@@ -48,8 +51,8 @@ func (ent *Stop) EntityID() string {
 func (ent *Stop) Warnings() (errs []error) {
 	lat := ent.StopLat
 	lon := ent.StopLon
-	if ent.Geometry != nil {
-		c := ent.Geometry.FlatCoords()
+	if ent.Geometry.Valid {
+		c := ent.Coordinates()
 		lat = c[1]
 		lon = c[0]
 	}

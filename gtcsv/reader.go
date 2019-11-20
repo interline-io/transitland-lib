@@ -302,7 +302,7 @@ func (reader *Reader) Stops() (out chan gotransit.Stop) {
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := gotransit.Stop{}
 			loadRow(&e, row)
-			e.Geometry = gotransit.NewPoint(e.StopLon, e.StopLat)
+			e.SetCoordinates([2]float64{e.StopLon, e.StopLat})
 			out <- e
 		})
 		close(out)
