@@ -27,7 +27,7 @@ func Benchmark_StopTime_Memory(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		stoptimes := make([]gotransit.StopTime, count)
+		stoptimes := make([]gotransit.StopTime, 0, count)
 		_ = stoptimes
 	}
 }
@@ -43,8 +43,7 @@ func Benchmark_StopTime_Memory_Read1000(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		// Allocate the full array
-		stoptimes := make([]gotransit.StopTime, 0, count)
+		stoptimes := []gotransit.StopTime{}
 		for st := range reader.StopTimes() {
 			if len(stoptimes) >= count {
 				break
@@ -60,8 +59,8 @@ func Benchmark_loadRow_StopTime(b *testing.B) {
 		"trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled",
 		"AAMV4,16:00:00,16:00:00,BEATTY_AIRPORT,2",
 	)
+	e := gotransit.StopTime{}
 	for n := 0; n < b.N; n++ {
-		e := gotransit.StopTime{}
 		loadRow(&e, row)
 	}
 }
@@ -70,34 +69,23 @@ func Benchmark_loadRowFast_StopTime(b *testing.B) {
 		"trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled",
 		"AAMV4,16:00:00,16:00:00,BEATTY_AIRPORT,2",
 	)
+	e := gotransit.StopTime{}
 	for n := 0; n < b.N; n++ {
-		e := gotransit.StopTime{}
 		loadRowFast(&e, row)
-	}
-}
-
-func Benchmark_loadRowStopTime(b *testing.B) {
-	row := makeRow(
-		"trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled",
-		"AAMV4,16:00:00,16:00:00,BEATTY_AIRPORT,2",
-	)
-	for n := 0; n < b.N; n++ {
-		e := gotransit.StopTime{}
-		loadRowStopTime(&e, row)
 	}
 }
 
 func Benchmark_loadRow_Shape(b *testing.B) {
 	row := makeRow("shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled", "a,30.0,30.0,3")
+	e := gotransit.Shape{}
 	for n := 0; n < b.N; n++ {
-		e := gotransit.Shape{}
 		loadRow(&e, row)
 	}
 }
 func Benchmark_loadRowFast_Shape(b *testing.B) {
 	row := makeRow("shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled", "a,30.0,30.0,3")
+	e := gotransit.Shape{}
 	for n := 0; n < b.N; n++ {
-		e := gotransit.Shape{}
 		loadRowFast(&e, row)
 	}
 }
@@ -105,8 +93,8 @@ func Benchmark_loadRowFast_Shape(b *testing.B) {
 // Benchmark reflect path loading
 func Benchmark_loadRow_Stop(b *testing.B) {
 	row := makeRow("stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url", "FUR_CREEK_RES,Furnace Creek Resort (Demo),,36.425288,-117.133162,,")
+	e := gotransit.Stop{}
 	for n := 0; n < b.N; n++ {
-		e := gotransit.Stop{}
 		loadRow(&e, row)
 	}
 }

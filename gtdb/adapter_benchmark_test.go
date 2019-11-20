@@ -1,8 +1,10 @@
 package gtdb
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/internal/testutil"
@@ -19,8 +21,12 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
+			feedid, err := adapter.Insert(&gotransit.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			if err != nil {
+				b.Error(err)
+			}
 			b.ResetTimer()
-			ent := gotransit.FeedVersion{}
+			ent := gotransit.FeedVersion{FeedID: feedid}
 			for i := 0; i < b.N; i++ {
 				_, err := adapter.Insert(&ent)
 				if err != nil {
@@ -42,9 +48,13 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
+			feedid, err := adapter.Insert(&gotransit.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			if err != nil {
+				b.Error(err)
+			}
 			b.ResetTimer()
-			ent := gotransit.FeedVersion{}
-			q := adapter.DBX().Rebind(`INSERT INTO feed_versions(feed_id, feed_type, file, earliest_calendar_date, latest_calendar_date, sha1, fetched_at, created_at, updated_at, url) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+			ent := gotransit.FeedVersion{FeedID: feedid}
+			q := adapter.DBX().Rebind(`INSERT INTO feed_versions(feed_id, feed_type, file, earliest_calendar_date, latest_calendar_date, sha1, sha1_dir,fetched_at, created_at, updated_at, url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
 			for i := 0; i < b.N; i++ {
 				_, err := adapter.DBX().Exec(
 					q,
@@ -54,6 +64,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 					ent.EarliestCalendarDate,
 					ent.LatestCalendarDate,
 					ent.SHA1,
+					ent.SHA1Dir,
 					ent.FetchedAt,
 					ent.CreatedAt,
 					ent.UpdatedAt,
