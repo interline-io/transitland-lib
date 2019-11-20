@@ -15,7 +15,7 @@ type Shape struct {
 	ShapePtLon        float64     `csv:"shape_pt_lon" db:"-" required:"true" min:"-180" max:"180"`
 	ShapePtSequence   int         `csv:"shape_pt_sequence" db:"-" required:"true" min:"0"`
 	ShapeDistTraveled float64     `csv:"shape_dist_traveled" db:"-" min:"0"`
-	Geometry          *LineString `db:"geometry,insert=ST_GeomFromWKB(?@4326)"`
+	Geometry          *LineString `db:"geometry"`
 	Generated         bool        `db:"generated"`
 	BaseEntity
 }

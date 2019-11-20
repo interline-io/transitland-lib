@@ -21,7 +21,7 @@ type Stop struct {
 	StopTimezone       string               `csv:"stop_timezone" validator:"timezone"`
 	WheelchairBoarding int                  `csv:"wheelchair_boarding" min:"0" max:"2"`
 	LevelID            string               `csv:"level_id"`
-	Geometry           *Point               `db:"geometry,insert=ST_GeomFromWKB(?@4326)"`
+	Geometry           *Point               `db:"geometry"`
 	BaseEntity
 }
 
