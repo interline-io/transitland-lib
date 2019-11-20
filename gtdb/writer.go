@@ -2,7 +2,9 @@ package gtdb
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/interline-io/gotransit"
 )
@@ -78,11 +80,19 @@ func (writer *Writer) CreateFeedVersion(reader gotransit.Reader) (int, error) {
 	if reader == nil {
 		return 0, errors.New("reader required")
 	}
+	var err error
+	feed := gotransit.Feed{}
+	feed.FeedID = fmt.Sprintf("%d", time.Now().UnixNano())
+	feed.ID, err = writer.Adapter.Insert(&feed)
+	if err != nil {
+		return 0, err
+	}
 	fvid := 0
 	fv, err := gotransit.NewFeedVersionFromReader(reader)
 	if err != nil {
 		return 0, err
 	}
+	fv.FeedID = feed.ID
 	fvid, err = writer.Adapter.Insert(&fv)
 	writer.FeedVersionID = fvid
 	return fvid, err
