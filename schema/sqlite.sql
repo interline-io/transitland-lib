@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_stops" (
   "parent_station" integer, 
   "stop_timezone" varchar(255) NOT NULL, 
   "wheelchair_boarding" integer NOT NULL, 
-  "level_id" varchar(255) NOT NULL
+  "level_id" varchar(255) NOT NULL,
+  "geometry" BLOB NOT NULL
 );
 CREATE TABLE IF NOT EXISTS "gtfs_shapes" (
   "id" integer primary key autoincrement, 
@@ -51,7 +52,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_shapes" (
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "shape_id" varchar(255) NOT NULL, 
-  "generated" bool NOT NULL
+  "generated" bool NOT NULL,
+  "geometry" BLOB NOT NULL
 );
 CREATE TABLE IF NOT EXISTS "feed_versions" (
   "feed_id" integer, 
@@ -80,7 +82,8 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
     "last_fetch_error" varchar(255) NOT NULL,
     "tags" BLOB,
     "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "geometry" BLOB
 );
 
 CREATE INDEX idx_feed_versions_sha1 ON "feed_versions"("sha1");
@@ -281,21 +284,4 @@ CREATE TABLE IF NOT EXISTS "gtfs_fare_attributes" (
 );
 CREATE INDEX idx_gtfs_fare_attributes_fare_id ON "gtfs_fare_attributes"(fare_id);
 CREATE INDEX idx_gtfs_fare_attributes_feed_version_id ON "gtfs_fare_attributes"(feed_version_id);
--- SELECT 
---   load_extension("mod_spatialite");
-SELECT 
-  InitSpatialMetaData(1);
-SELECT 
-  AddGeometryColumn(
-    'gtfs_stops', 'geometry', 4326, 'POINT', 
-    'XY', 0
-  );
-SELECT 
-  AddGeometryColumn(
-    'gtfs_shapes', 'geometry', 4326, 'LINESTRING', 
-    'XYM', 1
-  );
-SELECT
-  AddGeometryColumn(
-    'feed_states', 'geometry', 4326, 'POLYGON', 'XY', 0
-  );
+

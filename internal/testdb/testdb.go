@@ -106,7 +106,7 @@ func WithAdapterRollback(cb func(gtdb.Adapter) error) error {
 
 // WithAdapterTx runs a callback inside a Tx, commits if callback returns nil.
 func WithAdapterTx(cb func(gtdb.Adapter) error) error {
-	adapter := gtdb.SpatiaLiteAdapter{DBURL: "sqlite3://:memory:"}
+	adapter := gtdb.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
 	writer := gtdb.Writer{Adapter: &adapter}
 	if err := writer.Open(); err != nil {
 		panic(err)
