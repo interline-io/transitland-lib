@@ -169,21 +169,6 @@ func loadRowFast(ent canSetString, row Row) {
 	}
 }
 
-// loadRowStopTime skips an interface check, since this is 90%+ of gtfs data
-func loadRowStopTime(ent *gotransit.StopTime, row Row) {
-	if row.Err != nil {
-		ent.AddError(causes.NewFileParseError(row.Line, row.Err))
-		return
-	}
-	header := row.Header
-	value := row.Row
-	for i := 0; i < len(value) && i < len(value); i++ {
-		if err := ent.SetString(header[i], value[i]); err != nil {
-			ent.AddError(err)
-		}
-	}
-}
-
 // loadRowReflect is the Reflect path
 func loadRowReflect(ent gotransit.Entity, row Row) {
 	// Return if there was a row parsing error
