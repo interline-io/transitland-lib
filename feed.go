@@ -1,30 +1,28 @@
-package dmfr
+package gotransit
 
 import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"strconv"
-
-	"github.com/interline-io/gotransit"
 )
 
 // Feed listed in a parsed DMFR file
 type Feed struct {
-	ID                   int                    `json:"-"`
-	FeedID               string                 `json:"id" db:"onestop_id"`
-	FeedNamespaceID      string                 `json:"feed_namespace_id"`
-	Spec                 string                 `json:"spec"`
-	URLs                 FeedUrls               `json:"urls" db:"urls"`
-	AssociatedFeeds      FeedAssociatedFeeds    `json:"-"` // `json:"associated_feeds"`
-	Languages            FeedLanguages          `json:"languages"`
-	License              FeedLicense            `json:"license"`
-	Authorization        FeedAuthorization      `json:"authorization" db:"auth"`
-	OtherIDs             map[string]string      `json:"other_ids" db:"-"`
-	IDCrosswalk          map[string]string      `json:"id_crosswalk" db:"-"`
-	File                 string                 `json:"-"` // internal
-	DeletedAt            gotransit.OptionalTime `json:"-"` // internal
-	gotransit.Timestamps `json:"-"`             // internal
+	ID              int                 `json:"-"`
+	FeedID          string              `json:"id" db:"onestop_id"`
+	FeedNamespaceID string              `json:"feed_namespace_id"`
+	Spec            string              `json:"spec"`
+	URLs            FeedUrls            `json:"urls" db:"urls"`
+	AssociatedFeeds FeedAssociatedFeeds `json:"-"` // `json:"associated_feeds"`
+	Languages       FeedLanguages       `json:"languages"`
+	License         FeedLicense         `json:"license"`
+	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
+	OtherIDs        map[string]string   `json:"other_ids" db:"-"`
+	IDCrosswalk     map[string]string   `json:"id_crosswalk" db:"-"`
+	File            string              `json:"-"` // internal
+	DeletedAt       OptionalTime        `json:"-"` // internal
+	Timestamps      `json:"-"`          // internal
 }
 
 // EntityID .

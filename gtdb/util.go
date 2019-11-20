@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/rakyll/statik/fs"
 
@@ -84,20 +83,14 @@ func getInsert(ent interface{}) ([]string, []interface{}, error) {
 	vals := make([]interface{}, 0)
 	val := reflect.ValueOf(ent).Elem()
 	fm := mapper.FieldMap(val)
-	names, wraps := getFieldNameIndexes(ent)
-	for i, name := range names {
+	names, _ := getFieldNameIndexes(ent)
+	for _, name := range names {
 		v, ok := fm[name]
 		if !ok {
 			// This should not happen.
 			return names[0:0], vals[0:0], fmt.Errorf("unknown field: %s", name)
 		}
-		v2 := v.Interface()
-		w := wraps[i]
-		if w != "" {
-			vals = append(vals, sq.Expr(w, v2))
-		} else {
-			vals = append(vals, v2)
-		}
+		vals = append(vals, v.Interface())
 	}
 	if len(names) == 0 || len(names) != len(vals) {
 		return names[0:0], vals[0:0], errors.New("no columns or values")

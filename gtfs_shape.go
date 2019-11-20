@@ -10,13 +10,13 @@ import (
 
 // Shape shapes.txt
 type Shape struct {
-	ShapeID           string      `csv:"shape_id" required:"true"`
-	ShapePtLat        float64     `csv:"shape_pt_lat" db:"-" required:"true" min:"-90" max:"90"`
-	ShapePtLon        float64     `csv:"shape_pt_lon" db:"-" required:"true" min:"-180" max:"180"`
-	ShapePtSequence   int         `csv:"shape_pt_sequence" db:"-" required:"true" min:"0"`
-	ShapeDistTraveled float64     `csv:"shape_dist_traveled" db:"-" min:"0"`
-	Geometry          *LineString `db:"geometry,insert=ST_GeomFromWKB(?@4326)"`
-	Generated         bool        `db:"generated"`
+	ShapeID           string     `csv:"shape_id" required:"true"`
+	ShapePtLat        float64    `csv:"shape_pt_lat" db:"-" required:"true" min:"-90" max:"90"`
+	ShapePtLon        float64    `csv:"shape_pt_lon" db:"-" required:"true" min:"-180" max:"180"`
+	ShapePtSequence   int        `csv:"shape_pt_sequence" db:"-" required:"true" min:"0"`
+	ShapeDistTraveled float64    `csv:"shape_dist_traveled" db:"-" min:"0"`
+	Geometry          LineString `db:"geometry"`
+	Generated         bool       `db:"generated"`
 	BaseEntity
 }
 
@@ -78,7 +78,7 @@ func (ent *Shape) EntityID() string {
 // Warnings for this Entity.
 func (ent *Shape) Warnings() (errs []error) {
 	coords := []float64{ent.ShapePtLon, ent.ShapePtLat}
-	if ent.Geometry != nil {
+	if ent.Geometry.Valid {
 		coords = ent.Geometry.FlatCoords()
 	}
 	if coords[0] == 0 {

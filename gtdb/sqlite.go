@@ -3,21 +3,21 @@
 package gtdb
 
 import (
-	"database/sql"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/jmoiron/sqlx"
-	"github.com/mattn/go-sqlite3"
+
+	// sqlite3
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // Register.
 func init() {
-	// Register driver and extension
-	adapters["sqlite3"] = func(dburl string) Adapter { return &SpatiaLiteAdapter{DBURL: dburl} }
-	sql.Register("spatialite", &sqlite3.SQLiteDriver{Extensions: []string{"mod_spatialite"}})
+	// Register test adapter
+	adapters["sqlite3"] = func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} }
 	// Register readers and writers
 	r := func(url string) (gotransit.Reader, error) { return NewReader(url) }
 	gotransit.RegisterReader("sqlite3", r)
@@ -25,19 +25,19 @@ func init() {
 	gotransit.RegisterWriter("sqlite3", w)
 }
 
-// SpatiaLiteAdapter provides support for SpatiaLite.
-type SpatiaLiteAdapter struct {
+// SQLiteAdapter provides support for SQLite.
+type SQLiteAdapter struct {
 	DBURL string
 	db    sqlx.Ext
 }
 
 // Open implements Adapter Open.
-func (adapter *SpatiaLiteAdapter) Open() error {
+func (adapter *SQLiteAdapter) Open() error {
 	dbname := strings.Split(adapter.DBURL, "://")
 	if len(dbname) != 2 {
 		return causes.NewSourceUnreadableError("no database filename provided", nil)
 	}
-	db, err := sqlx.Open("spatialite", dbname[1])
+	db, err := sqlx.Open("sqlite3", dbname[1])
 	if err != nil {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
@@ -47,7 +47,7 @@ func (adapter *SpatiaLiteAdapter) Open() error {
 }
 
 // Close implements Adapter Close.
-func (adapter *SpatiaLiteAdapter) Close() error {
+func (adapter *SQLiteAdapter) Close() error {
 	if a, ok := adapter.db.(canClose); ok {
 		return a.Close()
 	}
@@ -55,7 +55,7 @@ func (adapter *SpatiaLiteAdapter) Close() error {
 }
 
 // Create implements Adapter Create.
-func (adapter *SpatiaLiteAdapter) Create() error {
+func (adapter *SQLiteAdapter) Create() error {
 	// Dont log, used often in tests
 	adb := adapter.db
 	if a, ok := adapter.db.(*queryLogger); ok {
@@ -64,7 +64,7 @@ func (adapter *SpatiaLiteAdapter) Create() error {
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
-	schema, err := getSchema("/spatialite.sql")
+	schema, err := getSchema("/sqlite.sql")
 	if err != nil {
 		return err
 	}
@@ -73,17 +73,17 @@ func (adapter *SpatiaLiteAdapter) Create() error {
 }
 
 // DBX returns the underlying Sqlx DB or Tx.
-func (adapter *SpatiaLiteAdapter) DBX() sqlx.Ext {
+func (adapter *SQLiteAdapter) DBX() sqlx.Ext {
 	return adapter.db
 }
 
 // Sqrl returns a properly configured Squirrel StatementBuilder.
-func (adapter *SpatiaLiteAdapter) Sqrl() sq.StatementBuilderType {
+func (adapter *SQLiteAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db)
 }
 
 // Tx runs a callback inside a transaction.
-func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
+func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	var err error
 	var tx *sqlx.Tx
 	if a, ok := adapter.db.(canBeginx); ok {
@@ -92,7 +92,7 @@ func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &SpatiaLiteAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}}
+	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}}
 	if errTx := cb(adapter2); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3
@@ -103,27 +103,27 @@ func (adapter *SpatiaLiteAdapter) Tx(cb func(Adapter) error) error {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *SpatiaLiteAdapter) Find(dest interface{}, args ...interface{}) error {
+func (adapter *SQLiteAdapter) Find(dest interface{}, args ...interface{}) error {
 	return find(adapter, dest, args...)
 }
 
 // Get wraps sqlx.Get
-func (adapter *SpatiaLiteAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
+func (adapter *SQLiteAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
 	return sqlx.Get(adapter.db, dest, qstr, args...)
 }
 
 // Select wraps sqlx.Select
-func (adapter *SpatiaLiteAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
+func (adapter *SQLiteAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
 	return sqlx.Select(adapter.db, dest, qstr, args...)
 }
 
 // Update a single record.
-func (adapter *SpatiaLiteAdapter) Update(ent interface{}, columns ...string) error {
+func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
 	return update(adapter, ent, columns...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
-func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
+func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
@@ -149,7 +149,7 @@ func (adapter *SpatiaLiteAdapter) Insert(ent interface{}) (int, error) {
 }
 
 // BatchInsert provides a fast path for creating StopTimes.
-func (adapter *SpatiaLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
+func (adapter *SQLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}

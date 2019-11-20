@@ -12,6 +12,6 @@ pg_dump \
     --no-comments $DB | egrep -v "^(SET|SELECT pg_catalog|--)" | sed -e '/^$/d'  >> postgres.pgsql
 
 # rails compat
-pg_dump -t 'schema_migrations' --no-owner --no-comments $DB >> postgres.pgsql
+pg_dump -t 'schema_migrations' --inserts --no-owner --no-comments $DB >> postgres.pgsql
 
 (cd ../internal; statik -src=../schema -p schema)

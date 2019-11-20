@@ -2,6 +2,7 @@ package gtdb
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -19,13 +20,14 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	if err := adapter.Create(); err != nil {
 		t.Error(err)
 	}
-	// need a feedversion...
+	//
 	var err error
 	var m minEnts
+	//
 	t.Run("Insert", func(t *testing.T) {
 		var err error
-		// minEntities uses Insert
-		m, err = minEntities(adapter)
+		// createMinEntities uses Insert
+		m, err = createMinEntities(adapter)
 		if err != nil {
 			t.Error(err)
 			t.FailNow()
@@ -166,8 +168,25 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		if ent2.TripHeadsign == v {
 			t.Errorf("got %s expected != %s", ent2.TripHeadsign, v)
 		}
-
 	})
+}
+
+func createTestFeedVersion(adapter Adapter) (int, error) {
+	// Create Feed, FeedVersion
+	m := 0
+	t := fmt.Sprintf("%d", time.Now().UnixNano())
+	feed := gotransit.Feed{}
+	feed.FeedID = t
+	feedid, err := adapter.Insert(&feed)
+	if err != nil {
+		return m, err
+	}
+	feed.ID = feedid
+	fv := gotransit.FeedVersion{}
+	fv.SHA1 = t
+	fv.FeedID = feed.ID
+	m, err = adapter.Insert(&fv)
+	return m, err
 }
 
 type minEnts struct {
@@ -183,14 +202,14 @@ type minEnts struct {
 // minEntities creates a minimal number of basic entities,
 // with only enough detail to satisfy database constraints.
 // This function uses adapter.Insert.
-func minEntities(adapter Adapter) (minEnts, error) {
-	var err error
+func createMinEntities(adapter Adapter) (minEnts, error) {
 	m := minEnts{}
-	fv := gotransit.FeedVersion{}
-	m.FeedVersionID, err = adapter.Insert(&fv)
+	var err error
+	m.FeedVersionID, err = createTestFeedVersion(adapter)
 	if err != nil {
 		return m, err
 	}
+	//
 	ent0 := gotransit.Agency{}
 	ent0.AgencyID = "ok"
 	ent0.FeedVersionID = m.FeedVersionID
