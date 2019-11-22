@@ -101,9 +101,8 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	}
 	// Query to get FVs to import
 	q := cmd.adapter.Sqrl().
-		Select("feed_versions.id as feed_version_id", "feed_versions.sha1", "current_feeds.id as feed_id", "current_feeds.onestop_id").
+		Select("feed_versions.id").
 		From("feed_versions").
-		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
 		Where("feed_version_gtfs_imports.id IS NULL").
 		OrderBy("feed_versions.id")
@@ -135,38 +134,17 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	if err != nil {
 		return err
 	}
-	type qr struct { // hold results
-		FeedVersionID int
-		FeedID        int
-		SHA1          string
-		OnestopID     string
-	}
-	qrs := []qr{}
+	qrs := []int{}
 	err = cmd.adapter.Select(&qrs, qstr, qargs...)
 	if err != nil {
 		return err
 	}
-	qlookup := map[int]qr{}
-	for _, i := range qrs {
-		qlookup[i.FeedVersionID] = i
-	}
 	///////////////
 	// Here we go
-	log.Info("Importing %d feed versions", len(qlookup))
-	if cmd.dryrun {
-		for fvid, i := range qlookup {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", i.OnestopID, i.FeedID, i.SHA1, fvid)
-		}
-		return nil
-	}
-	var wg sync.WaitGroup
-	jobs := make(chan ImportOptions, len(qlookup))
-	results := make(chan ImportResult, len(qlookup))
-	for w := 0; w < cmd.workers; w++ {
-		wg.Add(1)
-		go dmfrImportWorker(w, cmd.adapter, jobs, results, &wg)
-	}
-	for fvid := range qlookup {
+	log.Info("Importing %d feed versions: %v", len(qrs), qrs)
+	jobs := make(chan ImportOptions, len(qrs))
+	results := make(chan ImportResult, len(qrs))
+	for _, fvid := range qrs {
 		jobs <- ImportOptions{
 			FeedVersionID: fvid,
 			Directory:     cmd.gtfsdir,
@@ -176,28 +154,42 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 		}
 	}
 	close(jobs)
-	wg.Wait()
-	close(results)
-	// Read out results
-	for result := range results {
-		fvid := result.FeedVersionImport.FeedVersionID
-		i := qlookup[fvid]
-		if result.FeedVersionImport.Success {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): success: count: %v errors: %v", i.OnestopID, i.FeedID, i.SHA1, fvid, result.FeedVersionImport.EntityCount, result.FeedVersionImport.ErrorCount)
-		} else {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s", i.OnestopID, i.FeedID, i.SHA1, result.FeedVersionImport.FeedVersionID, err.Error())
-		}
+	// Start workers
+	var wg sync.WaitGroup
+	for w := 0; w < cmd.workers; w++ {
+		wg.Add(1)
+		go dmfrImportWorker(w, cmd.adapter, cmd.dryrun, jobs, results, &wg)
 	}
+	wg.Wait()
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter gtdb.Adapter, jobs <-chan ImportOptions, results chan<- ImportResult, wg *sync.WaitGroup) {
+func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan ImportOptions, results chan<- ImportResult, wg *sync.WaitGroup) {
+	type qr struct {
+		FeedVersionID   int
+		FeedID          int
+		FeedOnestopID   string
+		FeedVersionSHA1 string
+	}
 	for opts := range jobs {
-		fviresult, err := MainImportFeedVersion(adapter, opts)
-		if err != nil {
-			log.Info("Error: %s", err.Error())
+		q := qr{}
+		if err := adapter.Get(&q, "SELECT feed_versions.id as feed_version_id, feed_Versions.feed_id as feed_id, feed_versions.sha1 as sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
+			log.Info("Serious error: could not get details for FeedVersion %d", opts.FeedVersionID)
+			continue
 		}
-		results <- fviresult
+		if dryrun {
+			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			continue
+		}
+		result, err := MainImportFeedVersion(adapter, opts)
+		if err != nil {
+			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): critical failure, rolled back: %s", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog)
+		} else if result.FeedVersionImport.Success {
+			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): success: count %v errors %v", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.EntityCount, result.FeedVersionImport.ErrorCount)
+		} else {
+			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): error: %s", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog)
+		}
+		results <- result
 	}
 	wg.Done()
 }
@@ -210,6 +202,7 @@ type dmfrFetchCommand struct {
 	dburl     string
 	gtfsdir   string
 	allowdups bool
+	dryrun    bool
 	feedids   []string
 	adapter   gtdb.Adapter
 }
@@ -220,6 +213,8 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	fl.IntVar(&cmd.limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.dburl, "dburl", os.Getenv("DMFR_DATABASE_URL"), "Database URL ($DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
+	fl.BoolVar(&cmd.dryrun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
+
 	fl.BoolVar(&cmd.allowdups, "allow-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.Usage = func() {
 		fmt.Println("Usage: fetch [feedids...]")
@@ -241,6 +236,9 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	if len(feedids) > 0 {
 		q = q.Where(sq.Eq{"onestop_id": feedids})
 	}
+	if cmd.limit > 0 {
+		q = q.Limit(uint64(cmd.limit))
+	}
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
 		return err
@@ -249,13 +247,6 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	err = cmd.adapter.Select(&feeds, qstr, qargs...)
 	if err != nil {
 		return err
-	}
-	if cmd.limit > 0 && cmd.limit < len(feeds) {
-		feeds = feeds[:cmd.limit]
-	}
-	osids := map[int]string{}
-	for _, feed := range feeds {
-		osids[feed.ID] = feed.FeedID
 	}
 	///////////////
 	// Here we go
@@ -268,7 +259,7 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	results := make(chan FetchResult, len(feeds))
 	for w := 0; w < cmd.workers; w++ {
 		wg.Add(1)
-		go dmfrFetchWorker(w, cmd.adapter, jobs, results, &wg)
+		go dmfrFetchWorker(w, cmd.adapter, cmd.dryrun, jobs, results, &wg)
 	}
 	for _, feed := range feeds {
 		opts := FetchOptions{
@@ -282,21 +273,13 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	wg.Wait()
 	close(results)
 	for fr := range results {
-		osid := osids[fr.FeedVersion.FeedID]
-		if err != nil {
-			log.Info("Feed %s (id:%d): url: %s critical error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, err.Error())
-			fetchErrs++
-		} else if fr.FetchError != nil {
-			log.Info("Feed %s (id:%d): url: %s fetch error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FetchError.Error())
+		if fr.FetchError != nil {
 			fetchErrs++
 		} else if fr.FoundSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
 			fetchFound++
 		} else if fr.FoundDirSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID)
 			fetchFound++
 		} else {
-			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
 			fetchNew++
 		}
 	}
@@ -304,8 +287,17 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	return nil
 }
 
-func dmfrFetchWorker(id int, adapter gtdb.Adapter, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
+func dmfrFetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
 	for opts := range jobs {
+		osid := ""
+		if err := adapter.Get(&osid, "SELECT current_feeds.onestop_id FROM current_feeds WHERE id = ?", opts.FeedID); err != nil {
+			log.Info("Serious error: could not get details for Feed %d", opts.FeedID)
+			continue
+		}
+		if dryrun {
+			log.Info("Feed %s (id:%d): dry-run", osid, opts.FeedID)
+			continue
+		}
 		var fr FetchResult
 		err := adapter.Tx(func(atx gtdb.Adapter) error {
 			var fe error
@@ -313,7 +305,15 @@ func dmfrFetchWorker(id int, adapter gtdb.Adapter, jobs <-chan FetchOptions, res
 			return fe
 		})
 		if err != nil {
-			fmt.Println("Critical error:", err)
+			log.Info("Feed %s (id:%d): url: %s critical error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, err.Error())
+		} else if fr.FetchError != nil {
+			log.Info("Feed %s (id:%d): url: %s fetch error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FetchError.Error())
+		} else if fr.FoundSHA1 {
+			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+		} else if fr.FoundDirSHA1 {
+			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID)
+		} else {
+			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
 		}
 		results <- fr
 	}
