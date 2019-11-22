@@ -3,8 +3,10 @@ package dmfr
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -19,6 +21,7 @@ type FetchOptions struct {
 	FeedURL                 string
 	IgnoreDuplicateContents bool
 	Directory               string
+	S3                      string
 	FetchTime               time.Time
 }
 
@@ -78,6 +81,7 @@ func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fr, err
 	}
+
 	return fr, nil
 }
 
@@ -125,7 +129,19 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		// Serious error
 		return fr, err
 	}
-	// Copy file to output directory
+	// Upload file or copy to output directory
+	if opts.S3 != "" {
+		awscmd := exec.Command(
+			"aws",
+			"s3",
+			"cp",
+			reader.Path(),
+			fmt.Sprintf("%s/%s.zip", opts.S3, fv.SHA1),
+		)
+		if output, err := awscmd.Output(); err != nil {
+			return fr, fmt.Errorf("upload error: %s: %s", err, output)
+		}
+	}
 	if opts.Directory != "" {
 		fn := fv.SHA1 + ".zip"
 		outfn := filepath.Join(opts.Directory, fn)
