@@ -18,7 +18,7 @@ type ImportOptions struct {
 	FeedVersionID int
 	Extensions    []string
 	Directory     string
-	Location      string
+	S3            string
 	Activate      bool
 }
 
@@ -125,11 +125,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 			} else if err != nil {
 				return err
 			}
-			k := gotransit.OptionalKey{}
-			k.Valid = true
-			k.Int64 = int64(fv.ID)
-			tlstate.FeedVersionID = k
-			if err := atx.Update(&tlstate, "feed_version_id"); err != nil {
+			if _, err := atx.DBX().Exec("CALL activate_feed_version($1)", fv.ID); err != nil {
 				return err
 			}
 		}
@@ -155,12 +151,11 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	fvi := FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
 	url := fv.File
-	if opts.Location != "" {
-		url = opts.Location + "/" + fv.File
+	if opts.S3 != "" {
+		url = opts.S3 + "/" + fv.File
 	} else if opts.Directory != "" {
 		url = filepath.Join(opts.Directory, fv.File)
 	}
-	log.Debug("importing:", url)
 	reader, err := gtcsv.NewReader(url)
 	if err != nil {
 		return fvi, err
