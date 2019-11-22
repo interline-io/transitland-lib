@@ -57,6 +57,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	q := cmd.adapter.Sqrl().
 		Select("feed_versions.id").
 		From("feed_versions").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
 		Where("feed_version_gtfs_imports.id IS NULL").
 		OrderBy("feed_versions.id")
@@ -131,6 +132,7 @@ func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan Imp
 			log.Info("Serious error: could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}
+		log.Debug("Feed %s (id:%d): FeedVersion %s (id: %d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		if dryrun {
 			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue

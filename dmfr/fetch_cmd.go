@@ -109,16 +109,17 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 
 func dmfrFetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
 	for opts := range jobs {
+		var fr FetchResult
 		osid := ""
 		if err := adapter.Get(&osid, "SELECT current_feeds.onestop_id FROM current_feeds WHERE id = ?", opts.FeedID); err != nil {
 			log.Info("Serious error: could not get details for Feed %d", opts.FeedID)
 			continue
 		}
+		log.Debug("Feed %s (id:%d): url: %s begin", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL)
 		if dryrun {
 			log.Info("Feed %s (id:%d): dry-run", osid, opts.FeedID)
 			continue
 		}
-		var fr FetchResult
 		err := adapter.Tx(func(atx gtdb.Adapter) error {
 			var fe error
 			fr, fe = MainFetchFeed(atx, opts)
