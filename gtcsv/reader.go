@@ -28,6 +28,8 @@ func NewReader(path string) (*Reader, error) {
 	var a Adapter
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 		a = &URLAdapter{url: path}
+	} else if strings.HasPrefix(path, "s3://") {
+		a = &S3Adapter{url: path}
 	} else if strings.HasSuffix(path, ".zip") {
 		a = &ZipAdapter{path: path}
 	} else {

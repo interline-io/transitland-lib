@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -69,6 +70,42 @@ func (adapter *URLAdapter) Open() error {
 
 // Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
 func (adapter *URLAdapter) Close() error {
+	if err := os.Remove(adapter.ZipAdapter.path); err != nil {
+		return err
+	}
+	return adapter.ZipAdapter.Close()
+}
+
+/////////////////////
+
+// S3Adapter downloads a GTFS file from an S3 bucket to a temporary file, and removes the file when it is closed.
+type S3Adapter struct {
+	url string
+	ZipAdapter
+}
+
+// Open the adapter, and download the provided URL to a temporary file.
+func (adapter *S3Adapter) Open() error {
+	// Create the file
+	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
+	if err != nil {
+		return err
+	}
+	defer tmpfile.Close()
+	// Get the full path
+	tmpfilepath := tmpfile.Name()
+	// Download from S3 using the CLI
+	awscmd := exec.Command("aws", "s3", "cp", adapter.url, tmpfilepath)
+	if output, err := awscmd.Output(); err != nil {
+		return fmt.Errorf("error downloading %s: %s %s", adapter.url, output, err.Error())
+	}
+	log.Debug("Downloaded %s to %s", adapter.url, tmpfilepath)
+	adapter.ZipAdapter = ZipAdapter{path: tmpfilepath}
+	return adapter.ZipAdapter.Open()
+}
+
+// Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
+func (adapter *S3Adapter) Close() error {
 	if err := os.Remove(adapter.ZipAdapter.path); err != nil {
 		return err
 	}
