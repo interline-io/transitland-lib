@@ -6,6 +6,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 func init() {
@@ -139,8 +140,61 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid.Int64), err
 }
 
-// BatchInsert builds and executes a multi-insert statement for the given entities.
+// BatchInsert inserts data using COPY.
 func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
+	if len(ents) == 0 {
+		return nil
+	}
+	// Must be in a txn
+	var err error
+	var tx *sqlx.Tx
+	commit := true
+	if a, ok := adapter.db.(*queryLogger); ok {
+		if b, ok2 := a.ext.(*sqlx.Tx); ok2 {
+			tx = b
+			commit = false
+		}
+	}
+	if a, ok := adapter.db.(canBeginx); tx == nil && ok {
+		tx, err = a.Beginx()
+	}
+	if err != nil {
+		panic(err)
+	}
+	cols, _, err := getInsert(ents[0])
+	table := getTableName(ents[0])
+	stmt, err := tx.Prepare(pq.CopyIn(table, cols...))
+	if err != nil {
+		panic(err)
+	}
+	for _, d := range ents {
+		if v, ok := d.(canUpdateTimestamps); ok {
+			v.UpdateTimestamps()
+		}
+		_, vals, err := getInsert(d)
+		if err != nil {
+			panic(err)
+		}
+		_, err = stmt.Exec(vals...)
+		if err != nil {
+			panic(err)
+		}
+	}
+	_, err = stmt.Exec()
+	if err != nil {
+		panic(err)
+	}
+	if err := stmt.Close(); err != nil {
+		panic(err)
+	}
+	if commit {
+		return tx.Commit()
+	}
+	return nil
+}
+
+// BatchInsert2 builds and executes a multi-insert statement for the given entities.
+func (adapter *PostgresAdapter) BatchInsert2(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
