@@ -20,7 +20,7 @@ type Stop struct {
 	ParentStation      OptionalRelationship `csv:"parent_station"`
 	StopTimezone       string               `csv:"stop_timezone" validator:"timezone"`
 	WheelchairBoarding int                  `csv:"wheelchair_boarding" min:"0" max:"2"`
-	LevelID            string               `csv:"level_id"`
+	LevelID            OptionalRelationship `csv:"level_id"`
 	Geometry           Point                `db:"geometry"`
 	BaseEntity
 }
@@ -99,10 +99,18 @@ func (ent *Stop) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *Stop) UpdateKeys(emap *EntityMap) error {
+	// Pathway Level
+	if ent.LevelID.Key != "" {
+		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Key}); ok {
+			ent.LevelID = OptionalRelationship{v, true}
+		} else {
+			return causes.NewInvalidReferenceError("level_id", ent.LevelID.Key)
+		}
+	}
 	// Adjust ParentStation
 	if ent.ParentStation.Key != "" {
 		if parentID, ok := emap.GetEntity(&Stop{StopID: ent.ParentStation.Key}); ok {
-			ent.ParentStation = OptionalRelationship{parentID, false}
+			ent.ParentStation = OptionalRelationship{parentID, true}
 		} else {
 			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Key)
 		}
