@@ -43,8 +43,35 @@ CREATE TABLE IF NOT EXISTS "gtfs_stops" (
   "parent_station" integer, 
   "stop_timezone" varchar(255) NOT NULL, 
   "wheelchair_boarding" integer NOT NULL, 
-  "level_id" varchar(255) NOT NULL,
+  "level_id" integer,
   "geometry" BLOB NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "gtfs_pathways" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "pathway_id" varchar(255) NOT NULL,
+  "from_stop_id" integer NOT NULL,
+  "to_stop_id" integer NOT NULL,
+  "pathway_mode" integer NOT NULL,
+  "is_bidirectional" integer NOT NULL,
+  "length" real NOT NULL,
+  "traversal_time" integer NOT NULL,
+  "stair_count" integer NOT NULL,
+  "max_slope" real NOT NULL,
+  "min_width" real NOT NULL,
+  "signposted_as" varchar(255) NOT NULL,
+  "reverse_signposted_as" varchar(255) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "gtfs_levels" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "level_id" varchar(255) NOT NULL,
+  "level_index" real NOT NULL,
+  "level_name" varchar(255) NOT NULL
 );
 CREATE TABLE IF NOT EXISTS "gtfs_shapes" (
   "id" integer primary key autoincrement, 

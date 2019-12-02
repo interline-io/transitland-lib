@@ -63,7 +63,7 @@ func exampleDB(reader gotransit.Reader) {
 }
 
 func exampleCopier(reader gotransit.Reader) {
-	writer, err := gtcsv.NewWriter("filtered.zip")
+	writer, err := gtcsv.NewWriter("/tmp/filtered.zip")
 	check(err)
 	check(writer.Open())
 	defer writer.Close()

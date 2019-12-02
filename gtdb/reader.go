@@ -396,6 +396,52 @@ func (reader *Reader) Transfers() chan gotransit.Transfer {
 	return out
 }
 
+// Pathways sends Pathways.
+func (reader *Reader) Pathways() chan gotransit.Pathway {
+	out := make(chan gotransit.Pathway, bufferSize)
+	go func() {
+		offset := 0
+		for {
+			ents := []gotransit.Pathway{}
+			qstr, args, err := reader.where().From("gtfs_pathways").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
+			check(err)
+			check(reader.Adapter.Select(&ents, qstr, args...))
+			for _, ent := range ents {
+				out <- ent
+			}
+			if len(ents) < reader.PageSize {
+				break
+			}
+			offset = offset + reader.PageSize
+		}
+		close(out)
+	}()
+	return out
+}
+
+// Levels sends Levels.
+func (reader *Reader) Levels() chan gotransit.Level {
+	out := make(chan gotransit.Level, bufferSize)
+	go func() {
+		offset := 0
+		for {
+			ents := []gotransit.Level{}
+			qstr, args, err := reader.where().From("gtfs_levels").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
+			check(err)
+			check(reader.Adapter.Select(&ents, qstr, args...))
+			for _, ent := range ents {
+				out <- ent
+			}
+			if len(ents) < reader.PageSize {
+				break
+			}
+			offset = offset + reader.PageSize
+		}
+		close(out)
+	}()
+	return out
+}
+
 // Trips sends Trips.
 func (reader *Reader) Trips() chan gotransit.Trip {
 	out := make(chan gotransit.Trip, bufferSize)

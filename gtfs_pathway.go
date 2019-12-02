@@ -1,7 +1,7 @@
-package pathways
+package gotransit
 
 import (
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/causes"
 )
 
 // Pathway pathways.txt
@@ -18,7 +18,12 @@ type Pathway struct {
 	MinWidth            float64 `csv:"min_width"`
 	SignpostedAs        string  `csv:"signposted_as"`
 	ReverseSignpostedAs string  `csv:"reversed_signposted_as"`
-	gotransit.BaseEntity
+	BaseEntity
+}
+
+// EntityID returns the ID or StopID.
+func (ent *Pathway) EntityID() string {
+	return entID(ent.ID, ent.PathwayID)
 }
 
 // Filename pathways.txt
@@ -28,5 +33,20 @@ func (ent *Pathway) Filename() string {
 
 // TableName ext_pathway_pathways
 func (ent *Pathway) TableName() string {
-	return "ext_pathway_pathways"
+	return "gtfs_pathways"
+}
+
+// UpdateKeys updates Entity references.
+func (ent *Pathway) UpdateKeys(emap *EntityMap) error {
+	if fkid, ok := emap.GetEntity(&Stop{StopID: ent.FromStopID}); ok {
+		ent.FromStopID = fkid
+	} else {
+		return causes.NewInvalidReferenceError("from_stop_id", ent.FromStopID)
+	}
+	if fkid, ok := emap.GetEntity(&Stop{StopID: ent.ToStopID}); ok {
+		ent.ToStopID = fkid
+	} else {
+		return causes.NewInvalidReferenceError("to_stop_id", ent.ToStopID)
+	}
+	return nil
 }

@@ -218,7 +218,7 @@ func (copier *Copier) Copy() *CopyResult {
 	// Note that order is important!!
 	copier.copyAgencies()
 	copier.copyRoutes()
-	copier.copyStopsAndFares()
+	copier.copyPathwaysStopsAndFares()
 	copier.copyCalendars()
 	copier.copyShapes()
 	copier.copyTripsAndStopTimes()
@@ -254,7 +254,12 @@ func (copier *Copier) copyAgencies() {
 }
 
 // copyStopsAndFares writes stops and their associated fare rules
-func (copier *Copier) copyStopsAndFares() {
+func (copier *Copier) copyPathwaysStopsAndFares() {
+	// Levels
+	for ent := range copier.Reader.Levels() {
+		copier.CopyEntity(&ent)
+	}
+
 	// Stop bookkeeping
 	parents := map[string]int{}
 	farezones := map[string]string{}
@@ -320,6 +325,12 @@ func (copier *Copier) copyStopsAndFares() {
 			copier.geomCache.AddStop(sid, e)
 		}
 	}
+
+	// Pathways
+	for ent := range copier.Reader.Pathways() {
+		copier.CopyEntity(&ent)
+	}
+
 	// FareAttributes
 	for e := range copier.Reader.FareAttributes() {
 		if len(e.AgencyID.Key) == 0 {
