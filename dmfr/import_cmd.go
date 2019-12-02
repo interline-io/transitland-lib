@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit/gtdb"
@@ -75,10 +74,10 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 		// Limit to specified feeds
 		q = q.Where(sq.Eq{"onestop_id": cmd.feedids})
 	}
-	if cmd.coverdate == "" {
-		// Set default date
-		cmd.coverdate = time.Now().Format("2006-01-02")
-	}
+	// if cmd.coverdate == "" {
+	// 	// Set default date
+	// 	cmd.coverdate = time.Now().Format("2006-01-02")
+	// }
 	if cmd.coverdate != "" {
 		// Limit to service date
 		q = q.
