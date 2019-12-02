@@ -23,6 +23,8 @@ type Reader struct {
 	FareAttributeList []gotransit.FareAttribute
 	FrequencyList     []gotransit.Frequency
 	TransferList      []gotransit.Transfer
+	LevelList         []gotransit.Level
+	PathwayList       []gotransit.Pathway
 }
 
 // NewReader returns a new Reader.
@@ -227,6 +229,30 @@ func (mr *Reader) Transfers() chan gotransit.Transfer {
 	out := make(chan gotransit.Transfer, bufferSize)
 	go func() {
 		for _, ent := range mr.TransferList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+// Pathways .
+func (mr *Reader) Pathways() chan gotransit.Pathway {
+	out := make(chan gotransit.Pathway, bufferSize)
+	go func() {
+		for _, ent := range mr.PathwayList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+// Levels .
+func (mr *Reader) Levels() chan gotransit.Level {
+	out := make(chan gotransit.Level, bufferSize)
+	go func() {
+		for _, ent := range mr.LevelList {
 			out <- ent
 		}
 		close(out)

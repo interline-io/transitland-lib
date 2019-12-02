@@ -477,6 +477,36 @@ func (reader *Reader) Trips() (out chan gotransit.Trip) {
 	return out
 }
 
+// Levels sends Levels.
+func (reader *Reader) Levels() (out chan gotransit.Level) {
+	out = make(chan gotransit.Level, bufferSize)
+	go func() {
+		ent := gotransit.Level{}
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			e := gotransit.Level{}
+			loadRow(&e, row)
+			out <- e
+		})
+		close(out)
+	}()
+	return out
+}
+
+// Pathways sends Pathways.
+func (reader *Reader) Pathways() (out chan gotransit.Pathway) {
+	out = make(chan gotransit.Pathway, bufferSize)
+	go func() {
+		ent := gotransit.Pathway{}
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			e := gotransit.Pathway{}
+			loadRow(&e, row)
+			out <- e
+		})
+		close(out)
+	}()
+	return out
+}
+
 // chunkMSI takes a string counter and chunks it into groups of size <= chunkSize
 func chunkMSI(count map[string]int, chunkSize int) s2D {
 	result := s2D{}

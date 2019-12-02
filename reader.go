@@ -20,5 +20,7 @@ type Reader interface {
 	Routes() chan Route
 	Shapes() chan Shape
 	Transfers() chan Transfer
+	Pathways() chan Pathway
+	Levels() chan Level
 	Trips() chan Trip
 }
