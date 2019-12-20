@@ -3,17 +3,9 @@
   "feeds": [
     {
       "spec": "gtfs",
-      "id": "BA",
-      "urls": {
-        "static_current": "https://www.bart.gov/dev/schedules/google_transit.zip"
-      },
-      "priority": 0
-    },
-    {
-      "spec": "gtfs",
       "id": "CT",
       "urls": {
-        "static_current": "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip"
+        "static_current": "http://localhost:8080/caltrain.zip"
       },
       "priority": 70
     }
