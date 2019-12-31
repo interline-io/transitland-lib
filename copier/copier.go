@@ -156,7 +156,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 	// Check the entity against filters.
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
-			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
+			log.Trace("%s '%s' skipped by filter: %s", efn, eid, err)
 			return "", false
 		}
 	}
@@ -201,6 +201,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		copier.AddError(NewCopyError("", efn, err))
 		return "", false
 	}
+	log.Trace("%s '%s': saved -> %s", efn, sid, eid)
 	copier.EntityMap.SetEntity(ent, sid, eid)
 	copier.CopyResult.AddCount(efn, 1)
 	return eid, true
@@ -586,6 +587,7 @@ func (copier *Copier) copyTripsAndStopTimes() {
 			if err := copier.Writer.AddEntities(bst); err != nil {
 				copier.AddError(NewCopyError("stop_times.txt", tripid, err))
 			} else {
+				log.Trace("saved %d stop_times", len(batch))
 				copier.CopyResult.AddCount("stop_times.txt", len(batch))
 			}
 			batch = nil
@@ -600,6 +602,7 @@ func (copier *Copier) copyTripsAndStopTimes() {
 		if err := copier.Writer.AddEntities(bst); err != nil {
 			copier.AddError(NewCopyError("stop_times.txt", "", err))
 		} else {
+			log.Trace("saved %d stop_times", len(batch))
 			copier.CopyResult.AddCount("stop_times.txt", len(batch))
 		}
 	}
@@ -652,7 +655,7 @@ func (copier *Copier) createMissingCalendars() {
 			continue
 		}
 		// Do we already know this ServiceID?
-		if c, ok := missing[e.ServiceID]; ok {
+		if c, ok := missing[cal.ServiceID]; ok {
 			cal = c
 		}
 		// Update the date range
@@ -668,11 +671,7 @@ func (copier *Copier) createMissingCalendars() {
 	}
 	// Create the missing Calendars
 	for _, e := range missing {
-		// log.Debug("create missing cal: %#v\n", e)
-		eid, err := copier.Writer.AddEntity(&e)
-		if err != nil {
-			copier.AddError(NewCopyError("", e.Filename(), err))
-		}
-		copier.SetEntity(&e, e.EntityID(), eid)
+		log.Trace("create missing cal: %#v\n", e)
+		copier.CopyEntity(&e)
 	}
 }

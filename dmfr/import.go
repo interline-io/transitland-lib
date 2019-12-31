@@ -1,8 +1,8 @@
 package dmfr
 
 import (
-	"database/sql"
 	"errors"
+	"fmt"
 	"path/filepath"
 
 	"github.com/interline-io/gotransit"
@@ -56,6 +56,20 @@ func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 	return fvi
 }
 
+// ActivateFeedVersion .
+func ActivateFeedVersion(atx gtdb.Adapter, fvid int) error {
+	// Ensure runs in a txn
+	_, err := atx.DBX().Exec("SELECT activate_feed_version($1)", fvid)
+	return err
+}
+
+// AfterFeedVersionImport .
+func AfterFeedVersionImport(atx gtdb.Adapter, fvid int) error {
+	// Ensure runs in a txn
+	_, err := atx.DBX().Exec("SELECT after_feed_version_import($1)", fvid)
+	return err
+}
+
 // FindImportableFeeds .
 func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
 	// WITH ordered_feed_versions AS (
@@ -103,6 +117,15 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
 		var err error
 		fviresult, err = ImportFeedVersion(atx, fv, opts)
+		// Update route_stops, agency_geometries, etc...
+		if err := AfterFeedVersionImport(atx, fv.ID); err != nil {
+			return fmt.Errorf("error after feed version import: %s", err.Error())
+		}
+		if opts.Activate {
+			if err := ActivateFeedVersion(adapter, opts.FeedVersionID); err != nil {
+				return fmt.Errorf("error activating feed version: %s", err.Error())
+			}
+		}
 		// Update FVI with results, inside tx
 		fviresult.ID = fvi.ID
 		fviresult.FeedVersionID = opts.FeedVersionID
@@ -114,20 +137,6 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 			// Serious error
 			log.Info("Error saving FeedVersionImport: %s", err.Error())
 			return err
-		}
-		if opts.Activate {
-			tlstate := FeedState{FeedID: fv.FeedID}
-			if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, fv.FeedID); err == sql.ErrNoRows {
-				tlstate.ID, err = atx.Insert(&tlstate)
-				if err != nil {
-					return err
-				}
-			} else if err != nil {
-				return err
-			}
-			if _, err := atx.DBX().Exec("CALL activate_feed_version($1)", fv.ID); err != nil {
-				return err
-			}
 		}
 		return err
 	})
