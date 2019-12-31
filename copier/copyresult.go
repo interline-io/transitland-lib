@@ -29,7 +29,7 @@ func (cr *CopyResult) AddError(err error) {
 
 // AddWarning adds a warning to the result.
 func (cr *CopyResult) AddWarning(err error) {
-	log.Debug("warning: %s", err)
+	log.Trace("warning: %s", err)
 	cr.Warnings = append(cr.Warnings, err)
 }
 
