@@ -118,10 +118,12 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 		var err error
 		fviresult, err = ImportFeedVersion(atx, fv, opts)
 		// Update route_stops, agency_geometries, etc...
+		log.Info("Finalizing import")
 		if err := AfterFeedVersionImport(atx, fv.ID); err != nil {
-			return fmt.Errorf("error after feed version import: %s", err.Error())
+			return fmt.Errorf("error finalizing import: %s", err.Error())
 		}
 		if opts.Activate {
+			log.Info("Activating feed version")
 			if err := ActivateFeedVersion(adapter, opts.FeedVersionID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}

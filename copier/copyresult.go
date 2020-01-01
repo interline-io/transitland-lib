@@ -7,17 +7,23 @@ import (
 
 // CopyResult stores Copier results and statistics.
 type CopyResult struct {
-	Errors   []error
-	Warnings []error
-	Count    map[string]int
+	Errors     []error
+	Warnings   []error
+	Count      map[string]int
+	SkipError  map[string]int
+	SkipFilter map[string]int
+	SkipMarked map[string]int
 }
 
 // NewCopyResult returns a new CopyResult.
 func NewCopyResult() *CopyResult {
 	return &CopyResult{
-		Errors:   []error{},
-		Warnings: []error{},
-		Count:    map[string]int{},
+		Errors:     []error{},
+		Warnings:   []error{},
+		Count:      map[string]int{},
+		SkipError:  map[string]int{},
+		SkipFilter: map[string]int{},
+		SkipMarked: map[string]int{},
 	}
 }
 

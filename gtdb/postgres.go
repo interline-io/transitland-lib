@@ -193,8 +193,8 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	return nil
 }
 
-// BatchInsert2 builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) BatchInsert2(ents []gotransit.Entity) error {
+// MultiInsert builds and executes a multi-insert statement for the given entities.
+func (adapter *PostgresAdapter) MultiInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
