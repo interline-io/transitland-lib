@@ -7,6 +7,7 @@ import (
 
 // CopyResult stores Copier results and statistics.
 type CopyResult struct {
+	WriteError error
 	Errors     []error
 	Warnings   []error
 	Count      map[string]int
