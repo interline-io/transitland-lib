@@ -1,9 +1,11 @@
 package copier
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/interline-io/gotransit/causes"
 
@@ -145,22 +147,22 @@ func (copier *Copier) isMarked(ent gotransit.Entity) bool {
 	return copier.Marker.IsMarked(ent.Filename(), ent.EntityID())
 }
 
-// CopyEntity performs validation and saves errors and warnings, returns new EntityID and true if written.
+// CopyEntity performs validation and saves errors and warnings, returns new EntityID if written, otherwise an entity error or write error.
 // Any errors and warnings are added to the CopyResult.
-func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
+func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	efn := ent.Filename()
 	eid := ent.EntityID()
 	sid := ent.EntityID()
 	if !copier.isMarked(ent) {
 		copier.CopyResult.SkipMarked[efn]++
-		return "", false
+		return "", errors.New("skipped by marker"), nil
 	}
 	// Check the entity against filters.
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
 			log.Trace("%s '%s' skipped by filter: %s", efn, eid, err)
 			copier.CopyResult.SkipFilter[efn]++
-			return "", false
+			return "", errors.New("skipped by filter"), nil
 		}
 	}
 	// Check the entity for errors.
@@ -173,7 +175,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		} else {
 			log.Debug("%s '%s' has errors, skipping: %s", efn, eid, errs)
 			copier.CopyResult.SkipError[efn]++
-			return "", false
+			return "", errs[0], nil
 		}
 	}
 	// Check the entity for warnings.
@@ -191,14 +193,15 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		} else {
 			log.Debug("%s '%s' failed to update keys, skipping: %s", efn, eid, err)
 			copier.CopyResult.SkipError[efn]++
-			return "", false
+			return "", err, nil
 		}
 	}
 	// Check for duplicate entities.
 	if _, ok := copier.EntityMap.Get(efn, sid); ok && len(sid) > 0 {
-		copier.CopyResult.AddError(NewCopyError(ent.Filename(), sid, causes.NewDuplicateIDError(sid)))
+		err := NewCopyError(ent.Filename(), sid, causes.NewDuplicateIDError(sid))
+		copier.CopyResult.AddError(err)
 		copier.CopyResult.SkipError[efn]++
-		return "", false
+		return "", err, nil
 	}
 	// OK, Save
 	eid, err := copier.Writer.AddEntity(ent)
@@ -206,12 +209,13 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, bool) {
 		log.Info("Error: failed to write %s '%s': %s", efn, eid, err)
 		copier.AddError(NewCopyError("", efn, err))
 		copier.CopyResult.SkipError[efn]++
-		return "", false
+		copier.CopyResult.WriteError = err
+		return "", err, err
 	}
 	log.Trace("%s '%s': saved -> %s", efn, sid, eid)
 	copier.EntityMap.SetEntity(ent, sid, eid)
 	copier.CopyResult.AddCount(efn, 1)
-	return eid, true
+	return eid, nil, nil
 }
 
 //////////////////////////////////
@@ -224,17 +228,28 @@ func (copier *Copier) Copy() *CopyResult {
 		copier.AddError(err)
 	}
 	// Note that order is important!!
-	copier.copyAgencies()
-	copier.copyRoutes()
-	copier.copyPathwaysStopsAndFares()
-	copier.copyCalendars()
-	copier.copyShapes()
-	copier.copyTripsAndStopTimes()
-	copier.copyFrequencies()
-	copier.copyTransfers()
-	copier.copyFeedInfos()
+	fns := []func() error{
+		copier.copyAgencies,
+		copier.copyRoutes,
+		copier.copyPathwaysStopsAndFares,
+		copier.copyCalendars,
+		copier.copyShapes,
+		copier.copyTripsAndStopTimes,
+		copier.copyFrequencies,
+		copier.copyTransfers,
+		copier.copyFeedInfos,
+	}
+	for i := range fns {
+		if err := fns[i](); err != nil {
+			copier.CopyResult.WriteError = err
+			return copier.CopyResult
+		}
+	}
 	for _, ext := range copier.extensions {
-		ext.Copy(copier)
+		if err := ext.Copy(copier); err != nil {
+			copier.CopyResult.WriteError = err
+			return copier.CopyResult
+		}
 	}
 	return copier.CopyResult
 }
@@ -244,7 +259,7 @@ func (copier *Copier) Copy() *CopyResult {
 /////////////////////////////////////////
 
 // copyAgencies writes agencies
-func (copier *Copier) copyAgencies() {
+func (copier *Copier) copyAgencies() error {
 	firstTimezone := ""
 	for e := range copier.Reader.Agencies() {
 		// Check for Timezone consistency - add to feed errors
@@ -257,16 +272,21 @@ func (copier *Copier) copyAgencies() {
 		if len(e.AgencyID) == 0 && copier.agencyCount > 1 {
 			copier.AddWarning(NewCopyError("", "agency.txt", causes.NewConditionallyRequiredFieldError("agency_id")))
 		}
-		copier.CopyEntity(&e)
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gotransit.Agency{})
+	return nil
 }
 
 // copyStopsAndFares writes stops and their associated fare rules
-func (copier *Copier) copyPathwaysStopsAndFares() {
+func (copier *Copier) copyPathwaysStopsAndFares() error {
 	// Levels
-	for ent := range copier.Reader.Levels() {
-		copier.CopyEntity(&ent)
+	for e := range copier.Reader.Levels() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 
 	// Stop bookkeeping
@@ -280,7 +300,9 @@ func (copier *Copier) copyPathwaysStopsAndFares() {
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
 		fzid := e.ZoneID
-		if _, ok := copier.CopyEntity(&e); ok {
+		if _, ok, err := copier.CopyEntity(&e); err != nil {
+			return err
+		} else if ok == nil {
 			farezones[fzid] = e.ZoneID
 			copier.geomCache.AddStop(sid, e)
 		}
@@ -313,7 +335,9 @@ func (copier *Copier) copyPathwaysStopsAndFares() {
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
 		fzid := e.ZoneID
-		if _, ok := copier.CopyEntity(&e); ok {
+		if _, ok, err := copier.CopyEntity(&e); err != nil {
+			return err
+		} else if ok == nil {
 			farezones[fzid] = e.ZoneID
 			copier.geomCache.AddStop(sid, e)
 		}
@@ -329,7 +353,9 @@ func (copier *Copier) copyPathwaysStopsAndFares() {
 		// Add stop, update farezones and geom cache
 		sid := e.EntityID()
 		fzid := e.ZoneID
-		if _, ok := copier.CopyEntity(&e); ok {
+		if _, ok, err := copier.CopyEntity(&e); err != nil {
+			return err
+		} else if ok == nil {
 			farezones[fzid] = e.ZoneID
 			copier.geomCache.AddStop(sid, e)
 		}
@@ -337,8 +363,10 @@ func (copier *Copier) copyPathwaysStopsAndFares() {
 	copier.logCount(&gotransit.Stop{})
 
 	// Pathways
-	for ent := range copier.Reader.Pathways() {
-		copier.CopyEntity(&ent)
+	for e := range copier.Reader.Pathways() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gotransit.Pathway{})
 
@@ -350,7 +378,9 @@ func (copier *Copier) copyPathwaysStopsAndFares() {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
 		}
-		copier.CopyEntity(&e)
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gotransit.FareAttribute{})
 
@@ -376,13 +406,16 @@ func (copier *Copier) copyPathwaysStopsAndFares() {
 		} else if len(e.ContainsID) > 0 && !ok {
 			e.AddError(causes.NewInvalidFarezoneError("contains_id", e.ContainsID))
 		}
-		copier.CopyEntity(&e)
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gotransit.FareRule{})
+	return nil
 }
 
 // copyRoutes writes routes
-func (copier *Copier) copyRoutes() {
+func (copier *Copier) copyRoutes() error {
 	for e := range copier.Reader.Routes() {
 		// Set default agencyID
 		if len(e.AgencyID) == 0 {
@@ -399,16 +432,21 @@ func (copier *Copier) copyRoutes() {
 				e.AddError(causes.NewInvalidFieldError("route_type", strconv.Itoa(e.RouteType), fmt.Errorf("cannot convert route_type %d to basic route type", e.RouteType)))
 			}
 		}
-		copier.CopyEntity(&e)
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gotransit.Route{})
+	return nil
 }
 
 // copyCalendars copies Calendars and CalendarDates
-func (copier *Copier) copyCalendars() {
+func (copier *Copier) copyCalendars() error {
 	// Calendars
 	for e := range copier.Reader.Calendars() {
-		copier.CopyEntity(&e)
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	// Create additional Calendars
 	if copier.NormalizeServiceIDs {
@@ -434,55 +472,70 @@ func (copier *Copier) copyCalendars() {
 			continue
 		}
 		dups[key]++
-		copier.CopyEntity(&e)
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gotransit.Calendar{})
 	copier.logCount(&gotransit.CalendarDate{})
+	return nil
 }
 
 // copyFeedInfos writes FeedInfos
-func (copier *Copier) copyFeedInfos() {
+func (copier *Copier) copyFeedInfos() error {
 	for e := range copier.Reader.FeedInfos() {
-		copier.CopyEntity(&e)
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gotransit.FeedInfo{})
+	return nil
 }
 
 // copyTransfers writes Transfers
-func (copier *Copier) copyTransfers() {
+func (copier *Copier) copyTransfers() error {
 	for e := range copier.Reader.Transfers() {
 		// Check if Transfer stops are marked
 		if copier.isMarked(&gotransit.Stop{StopID: e.FromStopID}) && copier.isMarked(&gotransit.Stop{StopID: e.ToStopID}) {
-			copier.CopyEntity(&e)
+			if _, _, err := copier.CopyEntity(&e); err != nil {
+				return err
+			}
 		}
 	}
 	copier.logCount(&gotransit.Transfer{})
+	return nil
 }
 
 // copyShapes writes Shapes
-func (copier *Copier) copyShapes() {
+func (copier *Copier) copyShapes() error {
 	for e := range copier.Reader.Shapes() {
 		sid := e.EntityID()
-		if _, ok := copier.CopyEntity(&e); ok {
+		if _, ok, err := copier.CopyEntity(&e); err != nil {
+			return err
+		} else if ok == nil {
 			copier.geomCache.AddShape(sid, e)
 		}
 	}
 	copier.logCount(&gotransit.Shape{})
+	return nil
 }
 
 // copyFrequencies writes Frequencies
-func (copier *Copier) copyFrequencies() {
+func (copier *Copier) copyFrequencies() error {
 	for e := range copier.Reader.Frequencies() {
 		// Check if Trip is marked
 		if copier.isMarked(&gotransit.Trip{TripID: e.TripID}) {
-			copier.CopyEntity(&e)
+			if _, _, err := copier.CopyEntity(&e); err != nil {
+				return err
+			}
 		}
 	}
 	copier.logCount(&gotransit.Frequency{})
+	return nil
 }
 
 // copyTripsAndStopTimes writes Trips and StopTimes
-func (copier *Copier) copyTripsAndStopTimes() {
+func (copier *Copier) copyTripsAndStopTimes() error {
 	// Check trips for visited, and check for errors
 	// They will be updated before write.
 	alltripids := map[string]int{}
@@ -539,12 +592,15 @@ func (copier *Copier) copyTripsAndStopTimes() {
 			shapeid, err := copier.createMissingShape(stoptimes)
 			if err != nil {
 				copier.AddError(NewCopyError("trips.txt", tripid, err))
+				return err
 			} else {
 				trip.ShapeID.Key = shapeid
 			}
 		}
 		// Save trip
-		if _, ok := copier.CopyEntity(&trip); !ok {
+		if _, ok, err := copier.CopyEntity(&trip); err != nil {
+			return err
+		} else if ok != nil {
 			continue
 		}
 		// Validate StopTimes, as a group
@@ -632,9 +688,12 @@ func (copier *Copier) copyTripsAndStopTimes() {
 		for _, err := range errs {
 			copier.AddError(NewCopyError("trips.txt", trip.TripID, err))
 		}
-		copier.CopyEntity(&trip)
+		if _, _, err := copier.CopyEntity(&trip); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gotransit.Trip{})
+	return nil
 }
 
 ////////////////////////////////////////////
@@ -676,11 +735,11 @@ func (copier *Copier) createMissingShape(stoptimes []gotransit.StopTime) (string
 	if err != nil {
 		copier.AddError(NewCopyError("", shape.Filename(), err))
 	}
-	return eid, nil
+	return eid, err
 }
 
 // createMissingCalendars to fully normalize ServiceIDs
-func (copier *Copier) createMissingCalendars() {
+func (copier *Copier) createMissingCalendars() error {
 	// Prepare to create missing Calendars
 	missing := map[string]gotransit.Calendar{}
 	for e := range copier.Reader.CalendarDates() {
@@ -715,6 +774,9 @@ func (copier *Copier) createMissingCalendars() {
 	// Create the missing Calendars
 	for _, e := range missing {
 		log.Trace("create missing cal: %#v\n", e)
-		copier.CopyEntity(&e)
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
+	return nil
 }
