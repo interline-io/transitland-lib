@@ -374,6 +374,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 	for e := range copier.Reader.FareAttributes() {
 		if len(e.AgencyID.Key) == 0 {
 			e.AgencyID.Key = copier.DefaultAgencyID
+			e.AgencyID.Valid = true
 			if copier.agencyCount > 1 {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}

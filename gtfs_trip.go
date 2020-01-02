@@ -64,6 +64,7 @@ func (ent *Trip) UpdateKeys(emap *EntityMap) error {
 	if len(ent.ShapeID.Key) > 0 {
 		if shapeID, ok := emap.GetEntity(&Shape{ShapeID: ent.ShapeID.Key}); ok {
 			ent.ShapeID.Key = shapeID
+			ent.ShapeID.Valid = true
 		} else {
 			return causes.NewInvalidReferenceError("shape_id", ent.ShapeID.Key)
 		}
