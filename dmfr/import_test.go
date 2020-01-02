@@ -72,10 +72,6 @@ func TestMainImportFeedVersion(t *testing.T) {
 			if count != expfvistops {
 				t.Errorf("expect %d stops in fvi result, got %d", count, expfvistops)
 			}
-			experrcount := fvi.ErrorCount["calendar_dates.txt"]
-			if 1 != experrcount {
-				t.Errorf("expect %d errors in calendar_dates.txt, got %d", 1, experrcount)
-			}
 			return nil
 		})
 	})

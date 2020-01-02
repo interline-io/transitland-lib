@@ -6,8 +6,14 @@
       "id": "CT",
       "urls": {
         "static_current": "http://localhost:8080/caltrain.zip"
-      },
-      "priority": 70
+      }
+    },
+    {
+      "spec": "gtfs",
+      "id": "BA",
+      "urls": {
+        "static_current": "http://localhost:8080/bart.zip"
+      }
     }
   ],
   "license_spdx_identifier": "CC0-1.0"
