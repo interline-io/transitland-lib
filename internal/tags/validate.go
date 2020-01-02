@@ -43,27 +43,27 @@ func ValidateTags(ent interface{}) (errs []error) {
 		// named validators
 		switch k.Validator {
 		case "timezone":
-			if !isValidTimezone(strv) {
+			if !IsValidTimezone(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid timezone")))
 			}
 		case "color":
-			if !isValidColor(strv) {
+			if !IsValidColor(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid color")))
 			}
 		case "email":
-			if !isValidEmail(strv) {
+			if !IsValidEmail(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid email")))
 			}
 		case "url":
-			if !isValidURL(strv) {
+			if !IsValidURL(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid url")))
 			}
 		case "lang":
-			if !isValidLang(strv) {
+			if !IsValidLang(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid language")))
 			}
 		case "currency":
-			if !isValidCurrency(strv) {
+			if !IsValidCurrency(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid currency")))
 			}
 		}
@@ -74,7 +74,7 @@ func ValidateTags(ent interface{}) (errs []error) {
 /* Validation Helpers */
 
 // check is valid language
-func isValidLang(value string) bool {
+func IsValidLang(value string) bool {
 	if len(value) == 0 {
 		return true
 	}
@@ -85,7 +85,7 @@ func isValidLang(value string) bool {
 }
 
 // check is valid currency
-func isValidCurrency(value string) bool {
+func IsValidCurrency(value string) bool {
 	if len(value) == 0 {
 		return true
 	}
@@ -94,7 +94,7 @@ func isValidCurrency(value string) bool {
 }
 
 // check is valid timezone
-func isValidTimezone(value string) bool {
+func IsValidTimezone(value string) bool {
 	if len(value) == 0 {
 		return true
 	}
@@ -102,7 +102,7 @@ func isValidTimezone(value string) bool {
 	return ok
 }
 
-func isValidEmail(email string) bool {
+func IsValidEmail(email string) bool {
 	if strings.Contains(email, "@") {
 		return true
 	} else if len(email) == 0 {
@@ -112,7 +112,7 @@ func isValidEmail(email string) bool {
 }
 
 // check is valid color
-func isValidColor(color string) bool {
+func IsValidColor(color string) bool {
 	// todo: hex validation?
 	if len(color) == 0 {
 		return true
@@ -125,7 +125,7 @@ func isValidColor(color string) bool {
 }
 
 // check is valid url
-func isValidURL(url string) bool {
+func IsValidURL(url string) bool {
 	// todo: full validation?
 	if strings.HasPrefix(url, "http://") {
 		return true
