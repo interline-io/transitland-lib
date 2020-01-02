@@ -5,6 +5,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/internal/log"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -159,13 +160,16 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 		tx, err = a.Beginx()
 	}
 	if err != nil {
-		panic(err)
+		log.Info("Failed to begin transaction: %s", err.Error())
+		return err
 	}
 	cols, _, err := getInsert(ents[0])
 	table := getTableName(ents[0])
 	stmt, err := tx.Prepare(pq.CopyIn(table, cols...))
+	defer stmt.Close()
 	if err != nil {
-		panic(err)
+		log.Info("Failed to prepare copy statement: %s", err.Error())
+		return err
 	}
 	for _, d := range ents {
 		if v, ok := d.(canUpdateTimestamps); ok {
@@ -173,19 +177,19 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 		}
 		_, vals, err := getInsert(d)
 		if err != nil {
-			panic(err)
+			log.Info("Failed to get insert values: %s", err.Error())
+			return err
 		}
 		_, err = stmt.Exec(vals...)
 		if err != nil {
-			panic(err)
+			log.Info("Failed to get add row to copy statement: %s", err.Error())
+			return err
 		}
 	}
 	_, err = stmt.Exec()
 	if err != nil {
-		panic(err)
-	}
-	if err := stmt.Close(); err != nil {
-		panic(err)
+		log.Info("Failed to get exec copy statement: %s", err.Error())
+		return err
 	}
 	if commit {
 		return tx.Commit()
