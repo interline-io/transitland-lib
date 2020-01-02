@@ -2,6 +2,7 @@ package gotransit
 
 import (
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/internal/tags"
 )
 
 // Agency agency.txt
@@ -9,7 +10,7 @@ type Agency struct {
 	AgencyID       string `csv:"agency_id"`
 	AgencyName     string `csv:"agency_name" required:"true"`
 	AgencyURL      string `csv:"agency_url" required:"true" validator:"url"`
-	AgencyTimezone string `csv:"agency_timezone" required:"true" validator:"timezone"`
+	AgencyTimezone string `csv:"agency_timezone" required:"true"`
 	AgencyLang     string `csv:"agency_lang" validator:"lang"`
 	AgencyPhone    string `csv:"agency_phone"`
 	AgencyFareURL  string `csv:"agency_fare_url" validator:"url"`
@@ -26,6 +27,9 @@ func (ent *Agency) EntityID() string {
 func (ent *Agency) Warnings() (errs []error) {
 	if len(ent.AgencyID) == 0 {
 		errs = append(errs, causes.NewValidationWarning("agency_id", "agency_id should be set"))
+	}
+	if !tags.IsValidTimezone(ent.AgencyTimezone) {
+		errs = append(errs, causes.NewValidationWarning("agency_timezone", "agency_timezone is not a valid timezone"))
 	}
 	return errs
 }
