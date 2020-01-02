@@ -3,6 +3,7 @@
 package gtdb
 
 import (
+	"database/sql"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
@@ -11,6 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	// sqlite3
+	"github.com/mattn/go-sqlite3"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -23,6 +25,17 @@ func init() {
 	gotransit.RegisterReader("sqlite3", r)
 	w := func(url string) (gotransit.Writer, error) { return NewWriter(url) }
 	gotransit.RegisterWriter("sqlite3", w)
+	// Handle SQL function after_feed_version_import.  -- TODO: this is temporary.
+	dummy := func(fvid int) int {
+		return 0
+	}
+	sql.Register("sqlite3_w_funcs",
+		&sqlite3.SQLiteDriver{
+			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
+				return conn.RegisterFunc("after_feed_version_import", dummy, true)
+			},
+		})
+
 }
 
 // SQLiteAdapter provides support for SQLite.
@@ -37,7 +50,7 @@ func (adapter *SQLiteAdapter) Open() error {
 	if len(dbname) != 2 {
 		return causes.NewSourceUnreadableError("no database filename provided", nil)
 	}
-	db, err := sqlx.Open("sqlite3", dbname[1])
+	db, err := sqlx.Open("sqlite3_w_funcs", dbname[1])
 	if err != nil {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
