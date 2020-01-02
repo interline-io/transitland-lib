@@ -189,6 +189,7 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
 	cp.NormalizeServiceIDs = true
+	cp.CreateMissingShapes = true
 	cpresult := cp.Copy()
 	if cpresult == nil {
 		return fvi, errors.New("copy result was nil")
