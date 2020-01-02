@@ -731,6 +731,7 @@ func (copier *Copier) createMissingShape(stoptimes []gotransit.StopTime) (string
 	if err != nil {
 		return "", err
 	}
+	shape.ShapeID = fmt.Sprintf("generated-%s-%d", stoptimes[0].TripID, time.Now().Unix())
 	eid, err := copier.Writer.AddEntity(&shape)
 	if err != nil {
 		copier.AddError(NewCopyError("", shape.Filename(), err))
