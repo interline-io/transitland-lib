@@ -18,6 +18,6 @@ invalid_location_type,location_type > 2,,36.641496,-116.40094,,,6,,,,,InvalidFie
 parse_location_type,location_type parse error,,36.641496,-116.40094,,,xyz,,,,,FieldParseError:location_type
 parse_wheelchair_boarding,wheelchair_boarding parse error,,36.641496,-116.40094,,,,xyz,,,,FieldParseError:wheelchair_boarding
 invalid_wheelchair_boarding,wheelchair_boarding > 2,,36.641496,-116.40094,,,,3,,,,InvalidFieldError:wheelchair_boarding
-invalid_stop_timezone,invalid stop_timezone,,36.641496,-116.40094,,,,,,xyz,,InvalidFieldError:stop_timezone
+invalid_stop_timezone,invalid stop_timezone,,36.641496,-116.40094,,,,,,xyz,,ValidationWarning:stop_timezone
 error_location_type_without_parent_station,location_type = 2 without parent_station,,36.641496,-116.40094,,,2,,,,,InvalidFieldError:parent_station
 error_station_with_parent_station,location_type = 1 with parent_station,,36.641496,-116.40094,,,1,,,,station,InvalidFieldError:parent_station
