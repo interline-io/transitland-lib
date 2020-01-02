@@ -186,6 +186,7 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 		}
 		cp.AddExtension(ext)
 	}
+	cp.BatchSize = 1000000
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
 	cp.NormalizeServiceIDs = true
@@ -193,6 +194,9 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	cpresult := cp.Copy()
 	if cpresult == nil {
 		return fvi, errors.New("copy result was nil")
+	}
+	if cpresult.WriteError != nil {
+		return fvi, cpresult.WriteError
 	}
 	counts := copyResultCounts(*cpresult)
 	fvi.EntityCount = counts.EntityCount
