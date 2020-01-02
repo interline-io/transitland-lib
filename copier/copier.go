@@ -595,6 +595,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				return err
 			} else {
 				trip.ShapeID.Key = shapeid
+				trip.ShapeID.Valid = true
 			}
 		}
 		// Save trip
@@ -678,7 +679,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if err := copier.Writer.AddEntities(bst); err != nil {
 			copier.AddError(NewCopyError("stop_times.txt", "", err))
 		} else {
-			log.Debug("Saved %d stop_times", len(batch))
+			log.Info("Saved %d stop_times", len(batch))
 			copier.CopyResult.AddCount("stop_times.txt", len(batch))
 		}
 	}
@@ -732,11 +733,8 @@ func (copier *Copier) createMissingShape(stoptimes []gotransit.StopTime) (string
 		return "", err
 	}
 	shape.ShapeID = fmt.Sprintf("generated-%s-%d", stoptimes[0].TripID, time.Now().Unix())
-	eid, err := copier.Writer.AddEntity(&shape)
-	if err != nil {
-		copier.AddError(NewCopyError("", shape.Filename(), err))
-	}
-	return eid, err
+	_, _, err = copier.CopyEntity(&shape)
+	return shape.ShapeID, err
 }
 
 // createMissingCalendars to fully normalize ServiceIDs

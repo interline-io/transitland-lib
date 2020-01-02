@@ -117,6 +117,9 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
 		var err error
 		fviresult, err = ImportFeedVersion(atx, fv, opts)
+		if err != nil {
+			return err
+		}
 		// Update route_stops, agency_geometries, etc...
 		log.Info("Finalizing import")
 		if err := AfterFeedVersionImport(atx, fv.ID); err != nil {
