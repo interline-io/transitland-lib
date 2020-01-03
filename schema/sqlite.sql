@@ -24,7 +24,11 @@ CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
   "in_progress" bool,
   "exception_log" blob,
   "import_level" integer not null,
-  "error_count" blob,
+  "skip_entity_error_count" blob,
+  "skip_entity_reference_count" blob,
+  "skip_entity_marked_count" blob,
+  "skip_entity_filter_count" blob,
+  "generated_count" blob,
   "warning_count" blob,
   "entity_count" blob
 );
