@@ -34,17 +34,29 @@ type canContext interface {
 func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 	fvi := FeedVersionImport{}
 	fvi.EntityCount = EntityCounter{}
-	fvi.ErrorCount = EntityCounter{}
 	fvi.WarningCount = EntityCounter{}
-	for k, v := range result.Count {
+	fvi.GeneratedCount = EntityCounter{}
+	fvi.SkipEntityErrorCount = EntityCounter{}
+	fvi.SkipEntityReferenceCount = EntityCounter{}
+	fvi.SkipEntityFilterCount = EntityCounter{}
+	fvi.SkipEntityMarkedCount = EntityCounter{}
+	for k, v := range result.EntityCount {
 		fvi.EntityCount[k] = v
 	}
-	for _, e := range result.Errors {
-		fn := ""
-		if a, ok := e.(canContext); ok {
-			fn = a.Context().Filename
-		}
-		fvi.ErrorCount[fn]++
+	for k, v := range result.GeneratedCount {
+		fvi.GeneratedCount[k] = v
+	}
+	for k, v := range result.SkipEntityErrorCount {
+		fvi.SkipEntityErrorCount[k] = v
+	}
+	for k, v := range result.SkipEntityReferenceCount {
+		fvi.SkipEntityReferenceCount[k] = v
+	}
+	for k, v := range result.SkipEntityFilterCount {
+		fvi.SkipEntityFilterCount[k] = v
+	}
+	for k, v := range result.SkipEntityMarkedCount {
+		fvi.SkipEntityMarkedCount[k] = v
 	}
 	for _, e := range result.Warnings {
 		fn := ""
@@ -119,6 +131,12 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 		fviresult, err = ImportFeedVersion(atx, fv, opts)
 		if err != nil {
 			return err
+		}
+		required := []string{"agency.txt", "routes.txt", "stops.txt", "trips.txt", "stop_times.txt"}
+		for _, fn := range required {
+			if c := fviresult.EntityCount[fn]; c == 0 {
+				return fmt.Errorf("failed to import any entities from required file '%s'", fn)
+			}
 		}
 		// Update route_stops, agency_geometries, etc...
 		log.Info("Finalizing import")
@@ -203,7 +221,11 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	}
 	counts := copyResultCounts(*cpresult)
 	fvi.EntityCount = counts.EntityCount
-	fvi.ErrorCount = counts.ErrorCount
 	fvi.WarningCount = counts.WarningCount
+	fvi.GeneratedCount = counts.GeneratedCount
+	fvi.SkipEntityErrorCount = counts.SkipEntityErrorCount
+	fvi.SkipEntityReferenceCount = counts.SkipEntityReferenceCount
+	fvi.SkipEntityFilterCount = counts.SkipEntityFilterCount
+	fvi.SkipEntityMarkedCount = counts.SkipEntityMarkedCount
 	return fvi, nil
 }

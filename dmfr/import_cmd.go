@@ -140,7 +140,7 @@ func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan Imp
 		if err != nil {
 			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): critical failure, rolled back: %s", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog)
 		} else if result.FeedVersionImport.Success {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): success: count %v errors %v", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.EntityCount, result.FeedVersionImport.ErrorCount)
+			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): success: count %v errors: %v referrors: %v", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.EntityCount, result.FeedVersionImport.SkipEntityErrorCount, result.FeedVersionImport.SkipEntityReferenceCount)
 		} else {
 			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): error: %s", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog)
 		}
