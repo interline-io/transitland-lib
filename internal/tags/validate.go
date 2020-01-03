@@ -73,7 +73,7 @@ func ValidateTags(ent interface{}) (errs []error) {
 
 /* Validation Helpers */
 
-// check is valid language
+// IsValidLang check is valid language
 func IsValidLang(value string) bool {
 	if len(value) == 0 {
 		return true
@@ -84,7 +84,7 @@ func IsValidLang(value string) bool {
 	return ok
 }
 
-// check is valid currency
+// IsValidCurrency check is valid currency
 func IsValidCurrency(value string) bool {
 	if len(value) == 0 {
 		return true
@@ -93,7 +93,7 @@ func IsValidCurrency(value string) bool {
 	return ok
 }
 
-// check is valid timezone
+// IsValidTimezone check is valid timezone
 func IsValidTimezone(value string) bool {
 	if len(value) == 0 {
 		return true
@@ -102,6 +102,7 @@ func IsValidTimezone(value string) bool {
 	return ok
 }
 
+// IsValidEmail check if valid email
 func IsValidEmail(email string) bool {
 	if strings.Contains(email, "@") {
 		return true
@@ -111,7 +112,7 @@ func IsValidEmail(email string) bool {
 	return false
 }
 
-// check is valid color
+// IsValidColor check is valid color
 func IsValidColor(color string) bool {
 	// todo: hex validation?
 	if len(color) == 0 {
@@ -124,7 +125,7 @@ func IsValidColor(color string) bool {
 	return false
 }
 
-// check is valid url
+// IsValidURL check is valid url
 func IsValidURL(url string) bool {
 	// todo: full validation?
 	if strings.HasPrefix(url, "http://") {
@@ -132,6 +133,8 @@ func IsValidURL(url string) bool {
 	} else if strings.HasPrefix(url, "https://") {
 		return true
 	} else if len(url) == 0 {
+		return true
+	} else if strings.Contains(url, ".") {
 		return true
 	}
 	return false
