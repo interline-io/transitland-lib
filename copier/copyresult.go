@@ -7,24 +7,28 @@ import (
 
 // CopyResult stores Copier results and statistics.
 type CopyResult struct {
-	WriteError error
-	Errors     []error
-	Warnings   []error
-	Count      map[string]int
-	SkipError  map[string]int
-	SkipFilter map[string]int
-	SkipMarked map[string]int
+	WriteError               error
+	Errors                   []error
+	Warnings                 []error
+	EntityCount              map[string]int
+	GeneratedCount           map[string]int
+	SkipEntityErrorCount     map[string]int
+	SkipEntityReferenceCount map[string]int
+	SkipEntityFilterCount    map[string]int
+	SkipEntityMarkedCount    map[string]int
 }
 
 // NewCopyResult returns a new CopyResult.
 func NewCopyResult() *CopyResult {
 	return &CopyResult{
-		Errors:     []error{},
-		Warnings:   []error{},
-		Count:      map[string]int{},
-		SkipError:  map[string]int{},
-		SkipFilter: map[string]int{},
-		SkipMarked: map[string]int{},
+		Errors:                   []error{},
+		Warnings:                 []error{},
+		EntityCount:              map[string]int{},
+		GeneratedCount:           map[string]int{},
+		SkipEntityErrorCount:     map[string]int{},
+		SkipEntityReferenceCount: map[string]int{},
+		SkipEntityFilterCount:    map[string]int{},
+		SkipEntityMarkedCount:    map[string]int{},
 	}
 }
 
@@ -42,10 +46,10 @@ func (cr *CopyResult) AddWarning(err error) {
 
 // AddEntity updates the statistics to note an Entity was successfully copied.
 func (cr *CopyResult) AddEntity(ent gotransit.Entity) {
-	cr.Count[ent.Filename()]++
+	cr.EntityCount[ent.Filename()]++
 }
 
 // AddCount adds to the entity counter.
 func (cr *CopyResult) AddCount(filename string, count int) {
-	cr.Count[filename] += count
+	cr.EntityCount[filename] += count
 }
