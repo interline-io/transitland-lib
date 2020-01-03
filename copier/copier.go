@@ -81,11 +81,12 @@ type Copier struct {
 	// Entity selection strategy
 	Marker Marker
 	// book keeping
-	agencyCount  int
-	extensions   []copyableExtension      // interface
-	filters      []gotransit.EntityFilter // interface
-	geomCache    *geomCache
-	stopPatterns map[string]int
+	agencyCount         int
+	extensions          []copyableExtension      // interface
+	filters             []gotransit.EntityFilter // interface
+	geomCache           *geomCache
+	stopPatterns        map[string]int
+	stopPatternShapeIDs map[int]string
 	*CopyResult
 	*gotransit.EntityMap
 }
@@ -113,6 +114,7 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	// Geom Cache
 	copier.geomCache = newGeomCache()
 	copier.stopPatterns = map[string]int{}
+	copier.stopPatternShapeIDs = map[int]string{}
 	// Set the DefaultAgencyID from the Reader
 	copier.DefaultAgencyID = ""
 	for e := range copier.Reader.Agencies() {
@@ -154,14 +156,14 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	eid := ent.EntityID()
 	sid := ent.EntityID()
 	if !copier.isMarked(ent) {
-		copier.CopyResult.SkipMarked[efn]++
+		copier.CopyResult.SkipEntityMarkedCount[efn]++
 		return "", errors.New("skipped by marker"), nil
 	}
 	// Check the entity against filters.
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
 			log.Trace("%s '%s' skipped by filter: %s", efn, eid, err)
-			copier.CopyResult.SkipFilter[efn]++
+			copier.CopyResult.SkipEntityFilterCount[efn]++
 			return "", errors.New("skipped by filter"), nil
 		}
 	}
@@ -174,7 +176,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 			log.Debug("%s '%s' has errors, allowing: %s", efn, eid, errs)
 		} else {
 			log.Debug("%s '%s' has errors, skipping: %s", efn, eid, errs)
-			copier.CopyResult.SkipError[efn]++
+			copier.CopyResult.SkipEntityErrorCount[efn]++
 			return "", errs[0], nil
 		}
 	}
@@ -192,7 +194,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 			log.Debug("%s '%s' failed to update keys, allowing: %s", efn, eid, err)
 		} else {
 			log.Debug("%s '%s' failed to update keys, skipping: %s", efn, eid, err)
-			copier.CopyResult.SkipError[efn]++
+			copier.CopyResult.SkipEntityReferenceCount[efn]++
 			return "", err, nil
 		}
 	}
@@ -200,21 +202,20 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	if _, ok := copier.EntityMap.Get(efn, sid); ok && len(sid) > 0 {
 		err := NewCopyError(ent.Filename(), sid, causes.NewDuplicateIDError(sid))
 		copier.CopyResult.AddError(err)
-		copier.CopyResult.SkipError[efn]++
+		copier.CopyResult.SkipEntityErrorCount[efn]++
 		return "", err, nil
 	}
 	// OK, Save
 	eid, err := copier.Writer.AddEntity(ent)
 	if err != nil {
 		log.Info("Error: failed to write %s '%s': %s", efn, eid, err)
-		copier.AddError(NewCopyError("", efn, err))
-		copier.CopyResult.SkipError[efn]++
-		copier.CopyResult.WriteError = err
+		copier.AddError(NewCopyError(efn, eid, err))
+		copier.CopyResult.SkipEntityErrorCount[efn]++
 		return "", err, err
 	}
 	log.Trace("%s '%s': saved -> %s", efn, sid, eid)
 	copier.EntityMap.SetEntity(ent, sid, eid)
-	copier.CopyResult.AddCount(efn, 1)
+	copier.CopyResult.EntityCount[efn]++
 	return eid, nil, nil
 }
 
@@ -451,7 +452,9 @@ func (copier *Copier) copyCalendars() error {
 	}
 	// Create additional Calendars
 	if copier.NormalizeServiceIDs {
-		copier.createMissingCalendars()
+		if err := copier.createMissingCalendars(); err != nil {
+			return err
+		}
 	}
 	// TODO: Make Entity method
 	type calkey struct {
@@ -501,6 +504,8 @@ func (copier *Copier) copyTransfers() error {
 			if _, _, err := copier.CopyEntity(&e); err != nil {
 				return err
 			}
+		} else {
+			copier.CopyResult.SkipEntityMarkedCount["transfers.txt"]++
 		}
 	}
 	copier.logCount(&gotransit.Transfer{})
@@ -529,6 +534,8 @@ func (copier *Copier) copyFrequencies() error {
 			if _, _, err := copier.CopyEntity(&e); err != nil {
 				return err
 			}
+		} else {
+			copier.CopyResult.SkipEntityMarkedCount["frequencies.txt"]++
 		}
 	}
 	copier.logCount(&gotransit.Frequency{})
@@ -545,16 +552,19 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		eid := trip.EntityID()
 		alltripids[eid]++
 		if !copier.isMarked(&trip) {
+			copier.CopyResult.SkipEntityMarkedCount["trips.txt"]++
 			continue
 		}
 		if _, ok := trips[eid]; ok {
 			copier.AddError(NewCopyError("trips.txt", eid, causes.NewDuplicateIDError(eid)))
+			copier.CopyResult.SkipEntityErrorCount["trips.txt"]++
 			continue
 		}
 		trips[eid] = trip
 	}
 	batch := []gotransit.StopTime{}
 	for stoptimes := range copier.Reader.StopTimesByTripID() {
+		// Error handling for trips without stop_times is after this block
 		if len(stoptimes) == 0 {
 			log.Debug("Warning: StopTimesByTripID produced zero StopTimes")
 			continue
@@ -562,12 +572,14 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Does this trip exist?
 		tripid := stoptimes[0].TripID
 		if _, ok := alltripids[tripid]; !ok {
-			copier.AddError(NewCopyError("stop_times.txt", tripid, causes.NewInvalidReferenceError("trip_id", tripid)))
+			copier.AddError(NewCopyError("stop_times.txt", "", causes.NewInvalidReferenceError("trip_id", tripid)))
+			copier.CopyResult.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			continue
 		}
 		// Is this trip marked?
 		trip, ok := trips[tripid]
 		if !ok {
+			copier.CopyResult.SkipEntityMarkedCount["stop_times.txt"] += len(stoptimes)
 			continue // trip_id exists but is not marked
 		} else {
 			delete(trips, tripid) // check trips without StopTimes later
@@ -590,19 +602,27 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Do we need to create a shape for this trip
 		if trip.ShapeID.IsZero() && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
-			shapeid, err := copier.createMissingShape(stoptimes)
-			if err != nil {
-				copier.AddError(NewCopyError("trips.txt", tripid, err))
-				return err
-			} else {
-				trip.ShapeID.Key = shapeid
-				trip.ShapeID.Valid = true
+			shapeid, ok := copier.stopPatternShapeIDs[trip.StopPatternID]
+			if !ok {
+				var err error
+				shapeid, err = copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), stoptimes)
+				if err != nil {
+					copier.AddError(NewCopyError("trips.txt", tripid, err))
+					copier.CopyResult.SkipEntityErrorCount["trips.txt"]++
+					copier.CopyResult.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
+					return err
+				}
+				copier.stopPatternShapeIDs[trip.StopPatternID] = shapeid
 			}
+			trip.ShapeID.Key = shapeid
+			trip.ShapeID.Valid = true
 		}
 		// Save trip
 		if _, ok, err := copier.CopyEntity(&trip); err != nil {
+			copier.CopyResult.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			return err
 		} else if ok != nil {
+			copier.CopyResult.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			continue
 		}
 		// Validate StopTimes, as a group
@@ -631,28 +651,24 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		// Add errors
 		for _, err := range sterrs {
-			copier.AddError(NewCopyError("stop_times.txt", tripid, err))
+			copier.AddError(NewCopyError("stop_times.txt", "", err))
 		}
 		for _, err := range stwarns {
-			copier.AddWarning(NewCopyError("stop_times.txt", tripid, err))
+			copier.AddWarning(NewCopyError("stop_times.txt", "", err))
 		}
 		for _, err := range streferrs {
-			copier.AddError(NewCopyError("stop_times.txt", tripid, err))
+			copier.AddError(NewCopyError("stop_times.txt", "", err))
 		}
 		// Should we continue?
 		if len(sterrs) > 0 && !copier.AllowEntityErrors {
+			copier.CopyResult.SkipEntityErrorCount["stop_times.txt"] += len(stoptimes)
 			continue
 		}
 		if len(streferrs) > 0 && !copier.AllowReferenceErrors {
+			copier.CopyResult.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			continue
 		}
-		// After updateKeys
-		// for _, st := range stoptimes {
-		// 	if err := copier.filterEntity(&st); err != nil {
-		// 		// log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
-		// 		// return false
-		// 	}
-		// }
+		// Note: StopTimes are not checked by Filters.
 		// OK, Everything is OK to go.
 		batch = append(batch, stoptimes...)
 		// Write in batches
@@ -664,10 +680,11 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 			if err := copier.Writer.AddEntities(bst); err != nil {
 				copier.AddError(NewCopyError("stop_times.txt", tripid, err))
-			} else {
-				log.Info("Saved %d stop_times", len(batch))
-				copier.CopyResult.AddCount("stop_times.txt", len(batch))
+				copier.CopyResult.SkipEntityErrorCount["stop_times.txt"] += len(bst)
+				return err
 			}
+			log.Info("Saved %d stop_times", len(batch))
+			copier.CopyResult.EntityCount["stop_times.txt"] += len(batch)
 			batch = nil
 		}
 	}
@@ -679,16 +696,17 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		if err := copier.Writer.AddEntities(bst); err != nil {
 			copier.AddError(NewCopyError("stop_times.txt", "", err))
-		} else {
-			log.Info("Saved %d stop_times", len(batch))
-			copier.CopyResult.AddCount("stop_times.txt", len(batch))
+			copier.CopyResult.SkipEntityErrorCount["stop_times.txt"] += len(bst)
+			return err
 		}
+		log.Info("Saved %d stop_times", len(batch))
+		copier.CopyResult.EntityCount["stop_times.txt"] += len(batch)
 	}
 	// Add any Trips that were not visited/did not have StopTimes
 	for _, trip := range trips {
 		errs := gotransit.ValidateStopTimes([]gotransit.StopTime{})
 		for _, err := range errs {
-			copier.AddError(NewCopyError("trips.txt", trip.TripID, err))
+			trip.AddError(err)
 		}
 		if _, _, err := copier.CopyEntity(&trip); err != nil {
 			return err
@@ -706,16 +724,19 @@ func (copier *Copier) logCount(ent gotransit.Entity) {
 	out := []string{}
 	fn := ent.Filename()
 	fnr := strings.ReplaceAll(fn, ".txt", "")
-	saved := copier.CopyResult.Count[fn]
+	saved := copier.CopyResult.EntityCount[fn]
 	out = append(out, fmt.Sprintf("Saved %d %s", saved, fnr))
-	if a, ok := copier.CopyResult.SkipMarked[fn]; ok {
+	if a, ok := copier.CopyResult.SkipEntityMarkedCount[fn]; ok {
 		out = append(out, fmt.Sprintf("skipped %d as unmarked", a))
 	}
-	if a, ok := copier.CopyResult.SkipFilter[fn]; ok {
+	if a, ok := copier.CopyResult.SkipEntityFilterCount[fn]; ok {
 		out = append(out, fmt.Sprintf("skipped %d by filter", a))
 	}
-	if a, ok := copier.CopyResult.SkipError[fn]; ok {
-		out = append(out, fmt.Sprintf("skipped %d with error", a))
+	if a, ok := copier.CopyResult.SkipEntityErrorCount[fn]; ok {
+		out = append(out, fmt.Sprintf("skipped %d with entity errors", a))
+	}
+	if a, ok := copier.CopyResult.SkipEntityErrorCount[fn]; ok {
+		out = append(out, fmt.Sprintf("skipped %d with reference errors", a))
 	}
 	if saved == 0 && len(out) == 1 {
 		return
@@ -724,7 +745,7 @@ func (copier *Copier) logCount(ent gotransit.Entity) {
 	log.Info(outs)
 }
 
-func (copier *Copier) createMissingShape(stoptimes []gotransit.StopTime) (string, error) {
+func (copier *Copier) createMissingShape(shapeID string, stoptimes []gotransit.StopTime) (string, error) {
 	stopids := []string{}
 	for _, st := range stoptimes {
 		stopids = append(stopids, st.StopID)
@@ -733,9 +754,13 @@ func (copier *Copier) createMissingShape(stoptimes []gotransit.StopTime) (string
 	if err != nil {
 		return "", err
 	}
-	shape.ShapeID = fmt.Sprintf("generated-%s-%d", stoptimes[0].TripID, time.Now().Unix())
-	_, _, err = copier.CopyEntity(&shape)
-	return shape.ShapeID, err
+	shape.ShapeID = shapeID
+	if _, ok, err := copier.CopyEntity(&shape); err != nil {
+		return "", err
+	} else if ok == nil {
+		copier.GeneratedCount["shapes.txt"]++
+	}
+	return shape.ShapeID, nil
 }
 
 // createMissingCalendars to fully normalize ServiceIDs
@@ -774,8 +799,10 @@ func (copier *Copier) createMissingCalendars() error {
 	// Create the missing Calendars
 	for _, e := range missing {
 		log.Trace("create missing cal: %#v\n", e)
-		if _, _, err := copier.CopyEntity(&e); err != nil {
+		if _, ok, err := copier.CopyEntity(&e); err != nil {
 			return err
+		} else if ok == nil {
+			copier.CopyResult.GeneratedCount["calendar.txt"]++
 		}
 	}
 	return nil
