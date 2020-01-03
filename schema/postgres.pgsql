@@ -132,9 +132,13 @@ CREATE TABLE public.feed_version_gtfs_imports (
     updated_at timestamp without time zone NOT NULL,
     feed_version_id bigint NOT NULL,
     in_progress boolean DEFAULT false NOT NULL,
-    error_count jsonb,
+    skip_entity_error_count jsonb,
     warning_count jsonb,
-    entity_count jsonb
+    entity_count jsonb,
+    generated_count jsonb,
+    skip_entity_reference_count jsonb,
+    skip_entity_filter_count jsonb,
+    skip_entity_marked_count jsonb
 );
 CREATE SEQUENCE public.feed_version_gtfs_imports_id_seq
     START WITH 1
@@ -916,6 +920,7 @@ INSERT INTO public.schema_migrations VALUES ('20191114075430');
 INSERT INTO public.schema_migrations VALUES ('20191202015906');
 INSERT INTO public.schema_migrations VALUES ('20191202033016');
 INSERT INTO public.schema_migrations VALUES ('20191202060535');
+INSERT INTO public.schema_migrations VALUES ('20200103093414');
 
 
 --
