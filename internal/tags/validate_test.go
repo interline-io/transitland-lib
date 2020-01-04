@@ -39,7 +39,8 @@ func TestValidateTags_validators(t *testing.T) {
 		exp{"bounds3", tVE1{TestMax: -10000.0}, 0},
 		exp{"url0", tVE1{TestURL: "http://example.com"}, 0},
 		exp{"url1", tVE1{TestURL: "https://example.com"}, 0},
-		exp{"url2", tVE1{TestURL: "example.com"}, 1},
+		exp{"url2", tVE1{TestURL: "example.com"}, 0},
+		exp{"url3", tVE1{TestURL: "asdxyz"}, 1},
 		exp{"tz0", tVE1{TestTimezone: "America/Los_Angeles"}, 0},
 		exp{"lang0", tVE1{TestLang: "en"}, 0},
 		exp{"lang1", tVE1{TestLang: "en-US"}, 0},
@@ -97,7 +98,8 @@ func Test_IsValidURL(t *testing.T) {
 		{"empty", args{""}, true},
 		{"http", args{"http://example.com"}, true},
 		{"https", args{"https://example.com"}, true},
-		{"fail1", args{"fail://example.com"}, false},
+		{"fail1", args{"fail://example.com"}, true},
+		{"fail1", args{"example.com"}, true},
 		{"fail2", args{"asdf"}, false},
 	}
 	for _, tt := range tests {

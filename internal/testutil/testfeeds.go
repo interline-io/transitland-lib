@@ -35,7 +35,7 @@ var ExampleZip = ReaderTester{
 	URL:     "../testdata/example.zip",
 	SHA1:    "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
 	DirSHA1: "1aa738a7f692c0a32acdd3cf4242c3d9d554e0f9",
-	Size:    4443,
+	Size:    4197,
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"routes.txt":          5,
