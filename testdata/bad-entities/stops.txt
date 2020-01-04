@@ -3,7 +3,7 @@ ok1,Stop 1,A good stop,36.641496,-116.40094,,,,,,,,
 ok2,Stop 2,A good stop,36.641496,-116.40094,,,,,,,,
 station,Station,A good station,36.641496,-116.40094,,,1,,,,,
 ,no stop_id,,36.425288,-117.133162,,,,,,,,RequiredFieldError:stop_id
-invalid_stop_url,invalid stop_url,,36.425288,-117.133162,,example.com,,,,,,InvalidFieldError:stop_url
+invalid_stop_url,invalid stop_url,,36.425288,-117.133162,,abcxyz,,,,,,InvalidFieldError:stop_url
 no_stop_name,,no stop_name,36.641496,-116.40094,,,,,,,,ConditionallyRequiredFieldError:stop_name
 warning_same_desc,test,test,36.641496,-116.40094,,,,,,,,ValidationWarning:stop_desc
 invalid_stop_lat1,stop_lat < -90,,-91.0,-116.40094,,,,,,,,InvalidFieldError:stop_lat

@@ -132,9 +132,10 @@ func IsValidURL(url string) bool {
 		return true
 	} else if strings.HasPrefix(url, "https://") {
 		return true
-	} else if len(url) == 0 {
-		return true
 	} else if strings.Contains(url, ".") {
+		// allow bare hosts, e.g. "example.com"
+		return true
+	} else if len(url) == 0 {
 		return true
 	}
 	return false
