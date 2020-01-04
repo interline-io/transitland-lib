@@ -219,6 +219,7 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	if cpresult.WriteError != nil {
 		return fvi, cpresult.WriteError
 	}
+	cpresult.DisplaySummary()
 	counts := copyResultCounts(*cpresult)
 	fvi.EntityCount = counts.EntityCount
 	fvi.WarningCount = counts.WarningCount

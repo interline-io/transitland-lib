@@ -163,6 +163,7 @@ func (cmd *extractCommand) Run(args []string) error {
 		log.Debug("Graph loading complete")
 	}
 	// Copy
-	cp.Copy()
+	result := cp.Copy()
+	result.DisplaySummary()
 	return nil
 }
