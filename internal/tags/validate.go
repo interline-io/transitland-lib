@@ -43,27 +43,27 @@ func ValidateTags(ent interface{}) (errs []error) {
 		// named validators
 		switch k.Validator {
 		case "timezone":
-			if !isValidTimezone(strv) {
+			if !IsValidTimezone(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid timezone")))
 			}
 		case "color":
-			if !isValidColor(strv) {
+			if !IsValidColor(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid color")))
 			}
 		case "email":
-			if !isValidEmail(strv) {
+			if !IsValidEmail(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid email")))
 			}
 		case "url":
-			if !isValidURL(strv) {
+			if !IsValidURL(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid url")))
 			}
 		case "lang":
-			if !isValidLang(strv) {
+			if !IsValidLang(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid language")))
 			}
 		case "currency":
-			if !isValidCurrency(strv) {
+			if !IsValidCurrency(strv) {
 				errs = append(errs, causes.NewInvalidFieldError(k.Csv, strv, fmt.Errorf("invalid currency")))
 			}
 		}
@@ -73,8 +73,8 @@ func ValidateTags(ent interface{}) (errs []error) {
 
 /* Validation Helpers */
 
-// check is valid language
-func isValidLang(value string) bool {
+// IsValidLang check is valid language
+func IsValidLang(value string) bool {
 	if len(value) == 0 {
 		return true
 	}
@@ -84,8 +84,8 @@ func isValidLang(value string) bool {
 	return ok
 }
 
-// check is valid currency
-func isValidCurrency(value string) bool {
+// IsValidCurrency check is valid currency
+func IsValidCurrency(value string) bool {
 	if len(value) == 0 {
 		return true
 	}
@@ -93,8 +93,8 @@ func isValidCurrency(value string) bool {
 	return ok
 }
 
-// check is valid timezone
-func isValidTimezone(value string) bool {
+// IsValidTimezone check is valid timezone
+func IsValidTimezone(value string) bool {
 	if len(value) == 0 {
 		return true
 	}
@@ -102,7 +102,8 @@ func isValidTimezone(value string) bool {
 	return ok
 }
 
-func isValidEmail(email string) bool {
+// IsValidEmail check if valid email
+func IsValidEmail(email string) bool {
 	if strings.Contains(email, "@") {
 		return true
 	} else if len(email) == 0 {
@@ -111,8 +112,8 @@ func isValidEmail(email string) bool {
 	return false
 }
 
-// check is valid color
-func isValidColor(color string) bool {
+// IsValidColor check is valid color
+func IsValidColor(color string) bool {
 	// todo: hex validation?
 	if len(color) == 0 {
 		return true
@@ -124,12 +125,15 @@ func isValidColor(color string) bool {
 	return false
 }
 
-// check is valid url
-func isValidURL(url string) bool {
+// IsValidURL check is valid url
+func IsValidURL(url string) bool {
 	// todo: full validation?
 	if strings.HasPrefix(url, "http://") {
 		return true
 	} else if strings.HasPrefix(url, "https://") {
+		return true
+	} else if strings.Contains(url, ".") {
+		// allow bare hosts, e.g. "example.com"
 		return true
 	} else if len(url) == 0 {
 		return true

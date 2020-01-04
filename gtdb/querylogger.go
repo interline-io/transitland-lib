@@ -53,6 +53,9 @@ func (q qval) String() string {
 
 // Query for logging database queries.
 func qlog(qstr string, a ...interface{}) {
+	if !log.LogQuery {
+		return
+	}
 	sts := []string{}
 	for i, val := range a {
 		q := qval{strconv.Itoa(i + 1), val}

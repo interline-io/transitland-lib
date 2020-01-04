@@ -34,17 +34,30 @@ type canContext interface {
 func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 	fvi := FeedVersionImport{}
 	fvi.EntityCount = EntityCounter{}
-	fvi.ErrorCount = EntityCounter{}
 	fvi.WarningCount = EntityCounter{}
-	for k, v := range result.Count {
+	fvi.GeneratedCount = EntityCounter{}
+	fvi.SkipEntityErrorCount = EntityCounter{}
+	fvi.SkipEntityReferenceCount = EntityCounter{}
+	fvi.SkipEntityFilterCount = EntityCounter{}
+	fvi.SkipEntityMarkedCount = EntityCounter{}
+	fvi.InterpolatedStopTimeCount = result.InterpolatedStopTimeCount
+	for k, v := range result.EntityCount {
 		fvi.EntityCount[k] = v
 	}
-	for _, e := range result.Errors {
-		fn := ""
-		if a, ok := e.(canContext); ok {
-			fn = a.Context().Filename
-		}
-		fvi.ErrorCount[fn]++
+	for k, v := range result.GeneratedCount {
+		fvi.GeneratedCount[k] = v
+	}
+	for k, v := range result.SkipEntityErrorCount {
+		fvi.SkipEntityErrorCount[k] = v
+	}
+	for k, v := range result.SkipEntityReferenceCount {
+		fvi.SkipEntityReferenceCount[k] = v
+	}
+	for k, v := range result.SkipEntityFilterCount {
+		fvi.SkipEntityFilterCount[k] = v
+	}
+	for k, v := range result.SkipEntityMarkedCount {
+		fvi.SkipEntityMarkedCount[k] = v
 	}
 	for _, e := range result.Warnings {
 		fn := ""
@@ -117,11 +130,22 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
 		var err error
 		fviresult, err = ImportFeedVersion(atx, fv, opts)
+		if err != nil {
+			return err
+		}
+		required := []string{"agency.txt", "routes.txt", "stops.txt", "trips.txt", "stop_times.txt"}
+		for _, fn := range required {
+			if c := fviresult.EntityCount[fn]; c == 0 {
+				return fmt.Errorf("failed to import any entities from required file '%s'", fn)
+			}
+		}
 		// Update route_stops, agency_geometries, etc...
+		log.Info("Finalizing import")
 		if err := AfterFeedVersionImport(atx, fv.ID); err != nil {
-			return fmt.Errorf("error after feed version import: %s", err.Error())
+			return fmt.Errorf("error finalizing import: %s", err.Error())
 		}
 		if opts.Activate {
+			log.Info("Activating feed version")
 			if err := ActivateFeedVersion(adapter, opts.FeedVersionID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
@@ -184,16 +208,28 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 		}
 		cp.AddExtension(ext)
 	}
+	cp.BatchSize = 1000000
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
 	cp.NormalizeServiceIDs = true
+	cp.CreateMissingShapes = true
+	cp.InterpolateStopTimes = true
 	cpresult := cp.Copy()
 	if cpresult == nil {
 		return fvi, errors.New("copy result was nil")
 	}
+	if cpresult.WriteError != nil {
+		return fvi, cpresult.WriteError
+	}
+	cpresult.DisplaySummary()
 	counts := copyResultCounts(*cpresult)
+	fvi.InterpolatedStopTimeCount = counts.InterpolatedStopTimeCount
 	fvi.EntityCount = counts.EntityCount
-	fvi.ErrorCount = counts.ErrorCount
 	fvi.WarningCount = counts.WarningCount
+	fvi.GeneratedCount = counts.GeneratedCount
+	fvi.SkipEntityErrorCount = counts.SkipEntityErrorCount
+	fvi.SkipEntityReferenceCount = counts.SkipEntityReferenceCount
+	fvi.SkipEntityFilterCount = counts.SkipEntityFilterCount
+	fvi.SkipEntityMarkedCount = counts.SkipEntityMarkedCount
 	return fvi, nil
 }

@@ -81,6 +81,7 @@ func (cmd *copyCommand) Run(args []string) error {
 		}
 		cp.AddEntityFilter(ef)
 	}
-	cp.Copy()
+	result := cp.Copy()
+	result.DisplaySummary()
 	return nil
 }

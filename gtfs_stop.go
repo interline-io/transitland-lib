@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/internal/tags"
 )
 
 // Stop stops.txt
@@ -18,7 +19,7 @@ type Stop struct {
 	StopURL            string               `csv:"stop_url" validator:"url"`
 	LocationType       int                  `csv:"location_type" min:"0" max:"4"`
 	ParentStation      OptionalRelationship `csv:"parent_station"`
-	StopTimezone       string               `csv:"stop_timezone" validator:"timezone"`
+	StopTimezone       string               `csv:"stop_timezone"`
 	WheelchairBoarding int                  `csv:"wheelchair_boarding" min:"0" max:"2"`
 	LevelID            OptionalRelationship `csv:"level_id"`
 	Geometry           Point                `db:"geometry"`
@@ -66,6 +67,9 @@ func (ent *Stop) Warnings() (errs []error) {
 	}
 	if len(ent.StopDesc) > 0 && ent.StopName == ent.StopDesc {
 		errs = append(errs, causes.NewValidationWarning("stop_desc", "stop_desc is the same as stop_name"))
+	}
+	if !tags.IsValidTimezone(ent.StopTimezone) {
+		errs = append(errs, causes.NewValidationWarning("stop_timezone", "stop_timezone is not a valid timezone"))
 	}
 	return errs
 }

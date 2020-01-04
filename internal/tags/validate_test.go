@@ -39,7 +39,8 @@ func TestValidateTags_validators(t *testing.T) {
 		exp{"bounds3", tVE1{TestMax: -10000.0}, 0},
 		exp{"url0", tVE1{TestURL: "http://example.com"}, 0},
 		exp{"url1", tVE1{TestURL: "https://example.com"}, 0},
-		exp{"url2", tVE1{TestURL: "example.com"}, 1},
+		exp{"url2", tVE1{TestURL: "example.com"}, 0},
+		exp{"url3", tVE1{TestURL: "asdxyz"}, 1},
 		exp{"tz0", tVE1{TestTimezone: "America/Los_Angeles"}, 0},
 		exp{"lang0", tVE1{TestLang: "en"}, 0},
 		exp{"lang1", tVE1{TestLang: "en-US"}, 0},
@@ -85,7 +86,7 @@ func TestValidateTags_required(t *testing.T) {
 	}
 }
 
-func Test_isValidURL(t *testing.T) {
+func Test_IsValidURL(t *testing.T) {
 	type args struct {
 		url string
 	}
@@ -97,19 +98,20 @@ func Test_isValidURL(t *testing.T) {
 		{"empty", args{""}, true},
 		{"http", args{"http://example.com"}, true},
 		{"https", args{"https://example.com"}, true},
-		{"fail1", args{"fail://example.com"}, false},
+		{"fail1", args{"fail://example.com"}, true},
+		{"fail1", args{"example.com"}, true},
 		{"fail2", args{"asdf"}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isValidURL(tt.args.url); got != tt.want {
-				t.Errorf("isValidURL() = %v, want %v", got, tt.want)
+			if got := IsValidURL(tt.args.url); got != tt.want {
+				t.Errorf("IsValidURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_isValidColor(t *testing.T) {
+func Test_IsValidColor(t *testing.T) {
 	type args struct {
 		color string
 	}
@@ -127,14 +129,14 @@ func Test_isValidColor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isValidColor(tt.args.color); got != tt.want {
-				t.Errorf("isValidColor() = %v, want %v", got, tt.want)
+			if got := IsValidColor(tt.args.color); got != tt.want {
+				t.Errorf("IsValidColor() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_isValidEmail(t *testing.T) {
+func Test_IsValidEmail(t *testing.T) {
 	type args struct {
 		email string
 	}
@@ -149,14 +151,14 @@ func Test_isValidEmail(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isValidEmail(tt.args.email); got != tt.want {
-				t.Errorf("isValidEmail() = %v, want %v", got, tt.want)
+			if got := IsValidEmail(tt.args.email); got != tt.want {
+				t.Errorf("IsValidEmail() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_isValidTimezone(t *testing.T) {
+func Test_IsValidTimezone(t *testing.T) {
 	type args struct {
 		tz string
 	}
@@ -171,14 +173,14 @@ func Test_isValidTimezone(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isValidTimezone(tt.args.tz); got != tt.want {
-				t.Errorf("isValidTimezone() = %v, want %v", got, tt.want)
+			if got := IsValidTimezone(tt.args.tz); got != tt.want {
+				t.Errorf("IsValidTimezone() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_isValidLang(t *testing.T) {
+func Test_IsValidLang(t *testing.T) {
 	type args struct {
 		lang string
 	}
@@ -193,8 +195,8 @@ func Test_isValidLang(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isValidLang(tt.args.lang); got != tt.want {
-				t.Errorf("isValidLang() = %v, want %v", got, tt.want)
+			if got := IsValidLang(tt.args.lang); got != tt.want {
+				t.Errorf("IsValidLang() = %v, want %v", got, tt.want)
 			}
 		})
 	}

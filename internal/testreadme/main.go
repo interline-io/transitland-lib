@@ -72,7 +72,7 @@ func exampleCopier(reader gotransit.Reader) {
 	for _, err := range result.Errors {
 		fmt.Println("Error:", err)
 	}
-	for fn, count := range result.Count {
+	for fn, count := range result.EntityCount {
 		fmt.Printf("Copied %d entities from %s\n", count, fn)
 	}
 }

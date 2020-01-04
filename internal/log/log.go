@@ -42,6 +42,9 @@ func init() {
 // Level is the log level.
 var Level = ERROR
 
+// LogQuery is a flag for logging database queries.
+var LogQuery = false
+
 // Printf is the same as Info.
 func Printf(fmt string, a ...interface{}) {
 	logLog(INFO, fmt, a...)
@@ -101,4 +104,7 @@ func SetLevelString(lstr string) {
 func init() {
 	log.SetOutput(os.Stdout)
 	SetLevelString(os.Getenv("GTFS_LOGLEVEL"))
+	if v := os.Getenv("GTFS_LOGLEVEL_SQL"); v == "true" {
+		LogQuery = true
+	}
 }

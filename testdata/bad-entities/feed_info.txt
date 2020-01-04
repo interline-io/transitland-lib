@@ -3,7 +3,7 @@ ok,http://example.com,en,20100101,21001231,1.0,
 ,http://example.com,en,,,,RequiredFieldError:feed_publisher_name
 no_url,,en,,,,RequiredFieldError:feed_publisher_url
 no_lang,http://example.com,,,,,RequiredFieldError:feed_lang
-invalid_url,example.com,en,,,,InvalidFieldError:feed_publisher_url
+invalid_url,abcxyz,en,,,,InvalidFieldError:feed_publisher_url
 invalid_lang,http://example.com,xyz,,,,InvalidFieldError:feed_lang
 parse_start_date,http://example.com,en,xyz,,,FieldParseError:feed_start_date
 parse_end_date,http://example.com,en,,xyz,,FieldParseError:feed_end_date
