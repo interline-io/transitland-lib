@@ -1,6 +1,7 @@
 package gtcsv
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -215,19 +216,35 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		}
 	})
 	t.Run("ReadRows-Malformed", func(t *testing.T) {
-		count := 0
 		errcount := 0
+		expectrows := map[string]int{
+			"valid":         6,
+			"singlequoted":  2,
+			"barequoted":    2,
+			"bareendquote":  3,
+			"openmultirow":  2,
+			"morebadquotes": 3,
+			"validend":      4,
+		}
+		foundrows := map[string]int{}
 		adapter.ReadRows("malformed.txt", func(row Row) {
+			fmt.Printf("%d %#v\n", len(row.Row), row.Row)
 			if row.Err != nil {
 				errcount++
 			}
-			count++
+			foundrows[row.Row[0]] = len(row.Row)
 		})
-		if count < 4 {
-			t.Error("expected at least 4 rows in malformed test file")
+		for k, v := range expectrows {
+			s, ok := foundrows[k]
+			if !ok {
+				t.Errorf("did not find expected row '%s'", k)
+			}
+			if s != v {
+				t.Errorf("row '%s' got %d columns, expected %d", k, s, v)
+			}
 		}
-		if errcount != 3 {
-			t.Error("expected 3 parse errors from malformed test file")
+		if errcount != 0 {
+			t.Errorf("got %d errors, expected 3 parse errors from malformed test file", errcount)
 		}
 	})
 	closeerr := adapter.Close()

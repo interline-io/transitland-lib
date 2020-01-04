@@ -38,7 +38,7 @@ func ReadRows(in io.Reader, cb func(Row)) {
 	// Reuse record
 	r.ReuseRecord = true
 	// Allow unescaped quotes
-	// r.LazyQuotes = true // disable for now - allows newlines
+	r.LazyQuotes = true
 	// Go for it.
 	firstRow, err := r.Read()
 	if err != nil {

@@ -1,5 +1,10 @@
-this,file,checks,for,parse,errors
-a,b,c,d,e,valid
-"this"test"",,,,,,,,,,,,
-xyz.0000",""fai"led""
-'""',",","
+rowname,this,file,checks,for,parse,errors
+valid,a,b,c,d,e
+singlequoted,"a"b"c"
+barequoted,a"b"c
+bareendquote,xyz.0000","avenue "failed" bridge"
+openmultirow,"begin,open,quote,
+missing,row
+end,open,quote"
+morebadquotes,'"x"',"y,"z,"q"
+validend,a,b,c
