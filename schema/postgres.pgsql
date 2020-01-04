@@ -138,7 +138,8 @@ CREATE TABLE public.feed_version_gtfs_imports (
     generated_count jsonb,
     skip_entity_reference_count jsonb,
     skip_entity_filter_count jsonb,
-    skip_entity_marked_count jsonb
+    skip_entity_marked_count jsonb,
+    interpolated_stop_time_count integer
 );
 CREATE SEQUENCE public.feed_version_gtfs_imports_id_seq
     START WITH 1

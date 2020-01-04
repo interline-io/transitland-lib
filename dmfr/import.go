@@ -40,6 +40,7 @@ func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 	fvi.SkipEntityReferenceCount = EntityCounter{}
 	fvi.SkipEntityFilterCount = EntityCounter{}
 	fvi.SkipEntityMarkedCount = EntityCounter{}
+	fvi.InterpolatedStopTimeCount = result.InterpolatedStopTimeCount
 	for k, v := range result.EntityCount {
 		fvi.EntityCount[k] = v
 	}
@@ -222,6 +223,7 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	}
 	cpresult.DisplaySummary()
 	counts := copyResultCounts(*cpresult)
+	fvi.InterpolatedStopTimeCount = counts.InterpolatedStopTimeCount
 	fvi.EntityCount = counts.EntityCount
 	fvi.WarningCount = counts.WarningCount
 	fvi.GeneratedCount = counts.GeneratedCount

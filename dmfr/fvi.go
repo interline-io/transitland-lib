@@ -11,20 +11,21 @@ import (
 
 // FeedVersionImport .
 type FeedVersionImport struct {
-	ID                       int
-	FeedVersionID            int
-	ImportLog                string
-	ExceptionLog             string
-	ImportLevel              int  // deprecated
-	Success                  bool // Finished, Success Yes/No
-	InProgress               bool // In Progress
-	EntityCount              EntityCounter
-	WarningCount             EntityCounter
-	GeneratedCount           EntityCounter
-	SkipEntityErrorCount     EntityCounter
-	SkipEntityReferenceCount EntityCounter
-	SkipEntityFilterCount    EntityCounter
-	SkipEntityMarkedCount    EntityCounter
+	ID                        int
+	FeedVersionID             int
+	ImportLog                 string
+	ExceptionLog              string
+	ImportLevel               int  // deprecated
+	Success                   bool // Finished, Success Yes/No
+	InProgress                bool // In Progress
+	InterpolatedStopTimeCount int
+	EntityCount               EntityCounter
+	WarningCount              EntityCounter
+	GeneratedCount            EntityCounter
+	SkipEntityErrorCount      EntityCounter
+	SkipEntityReferenceCount  EntityCounter
+	SkipEntityFilterCount     EntityCounter
+	SkipEntityMarkedCount     EntityCounter
 	gotransit.Timestamps
 }
 
