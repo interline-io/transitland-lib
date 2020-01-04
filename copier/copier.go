@@ -644,7 +644,11 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				stoptimes = stoptimes2
 			}
 		}
+		istc := 0
 		for i := 0; i < len(stoptimes); i++ {
+			if stoptimes[i].Interpolated > 0 {
+				istc++
+			}
 			if err := stoptimes[i].UpdateKeys(copier.EntityMap); err != nil {
 				streferrs = append(streferrs, err)
 			}
@@ -668,6 +672,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			copier.CopyResult.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			continue
 		}
+		copier.CopyResult.InterpolatedStopTimeCount += istc
 		// Note: StopTimes are not checked by Filters.
 		// OK, Everything is OK to go.
 		batch = append(batch, stoptimes...)
@@ -726,6 +731,9 @@ func (copier *Copier) logCount(ent gotransit.Entity) {
 	fnr := strings.ReplaceAll(fn, ".txt", "")
 	saved := copier.CopyResult.EntityCount[fn]
 	out = append(out, fmt.Sprintf("Saved %d %s", saved, fnr))
+	if a, ok := copier.CopyResult.GeneratedCount[fn]; ok {
+		out = append(out, fmt.Sprintf("generated %d", a))
+	}
 	if a, ok := copier.CopyResult.SkipEntityMarkedCount[fn]; ok {
 		out = append(out, fmt.Sprintf("skipped %d as unmarked", a))
 	}
@@ -735,7 +743,7 @@ func (copier *Copier) logCount(ent gotransit.Entity) {
 	if a, ok := copier.CopyResult.SkipEntityErrorCount[fn]; ok {
 		out = append(out, fmt.Sprintf("skipped %d with entity errors", a))
 	}
-	if a, ok := copier.CopyResult.SkipEntityErrorCount[fn]; ok {
+	if a, ok := copier.CopyResult.SkipEntityReferenceCount[fn]; ok {
 		out = append(out, fmt.Sprintf("skipped %d with reference errors", a))
 	}
 	if saved == 0 && len(out) == 1 {
