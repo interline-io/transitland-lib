@@ -68,7 +68,7 @@ func ReadRows(in io.Reader, cb func(Row)) {
 		for i := 0; i < len(row); i++ {
 			v := row[i]
 			// This is dumb but saves substantial time.
-			if len(v) > 0 && (v[0] == ' ' || v[len(v)-1] == ' ') {
+			if len(v) > 0 && (v[0] == ' ' || v[len(v)-1] == ' ' || v[0] == '\t' || v[len(v)-1] == '\t') {
 				row[i] = strings.TrimSpace(v)
 			}
 		}
