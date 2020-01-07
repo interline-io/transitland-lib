@@ -63,6 +63,8 @@ GROUP BY (route_stops.feed_version_id, route_stops.agency_id);
 
 -- route geometries
 RAISE NOTICE '... route_geometries insert';
+
+
 INSERT INTO route_geometries(
     feed_version_id,
     route_id,
@@ -75,33 +77,49 @@ INSERT INTO route_geometries(
     geometry_z6,
     centroid
     )
-WITH
-best_shapes AS (
-    SELECT
-        gtfs_routes.id as route_id,
+with
+shape_counts as (
+    select 
+        distinct on (gtfs_routes.id,gtfs_trips.direction_id,gtfs_shapes.generated)
+        gtfs_routes.id,
         gtfs_trips.direction_id,
         gtfs_trips.shape_id,
-        count(*) as count
-    FROM gtfs_routes 
-    INNER JOIN gtfs_trips on gtfs_trips.route_id = gtfs_routes.id 
-    WHERE gtfs_routes.feed_version_id = fvid
-    GROUP BY (gtfs_routes.id, gtfs_trips.shape_id, gtfs_trips.direction_id) 
+        gtfs_shapes.generated,
+        count(*) 
+    from gtfs_routes 
+    left outer join gtfs_trips on gtfs_trips.route_id = gtfs_routes.id 
+    left outer join gtfs_shapes on gtfs_shapes.id = gtfs_trips.shape_id 
+    where gtfs_routes.feed_version_id = fvid
+    group by gtfs_routes.id,gtfs_trips.direction_id,gtfs_trips.shape_id,gtfs_shapes.generated
+    order by gtfs_routes.id,gtfs_trips.direction_id,gtfs_shapes.generated,count desc
+),
+pivot as (
+    select
+        gtfs_routes.id as route_id,
+        gtfs_routes.feed_version_id,
+        COALESCE(s0f.shape_id,s1f.shape_id,s0t.shape_id,s1t.shape_id) as shape_id
+    from
+        gtfs_routes
+    left outer join shape_counts s0f on s0f.id = gtfs_routes.id and s0f.direction_id = 0 and s0f.generated = false
+    left outer join shape_counts s1f on s1f.id = gtfs_routes.id and s1f.direction_id = 1 and s1f.generated = false
+    left outer join shape_counts s0t on s0t.id = gtfs_routes.id and s0t.direction_id = 0 and s0t.generated = true
+    left outer join shape_counts s1t on s1t.id = gtfs_routes.id and s1t.direction_id = 1 and s1t.generated = true
 )
 SELECT 
-    DISTINCT ON (best_shapes.route_id, best_shapes.direction_id)
-    gtfs_shapes.feed_version_id as feed_version_id,
-    best_shapes.route_id,
-    best_shapes.direction_id,
-    best_shapes.shape_id,
+    pivot.feed_version_id, 
+    pivot.route_id,
+    0 as direction_id,
+    pivot.shape_id,
     gtfs_shapes.generated,
     ST_Simplify(ST_Force2D(gtfs_shapes.geometry::geometry), 0.00001, true),
     ST_Simplify(ST_Force2D(gtfs_shapes.geometry::geometry), 0.0001, true),
     ST_Simplify(ST_Force2D(gtfs_shapes.geometry::geometry), 0.001, true),
     ST_Simplify(ST_Force2D(gtfs_shapes.geometry::geometry), 0.01, false),
     ST_Centroid(ST_Force2D(gtfs_shapes.geometry::geometry))
-FROM best_shapes 
-INNER JOIN gtfs_shapes ON gtfs_shapes.id = best_shapes.shape_id
-ORDER BY best_shapes.route_id, best_shapes.direction_id, count DESC;
+FROM 
+    pivot 
+LEFT OUTER JOIN gtfs_shapes ON gtfs_shapes.id = pivot.shape_id
+WHERE pivot.shape_id IS NOT NULL;
 
 RETURN 0;
 END;
