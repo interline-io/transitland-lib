@@ -47,7 +47,7 @@ func ReadRows(in io.Reader, cb func(Row)) {
 	// Copy header, since we will reuse the backing array
 	header := []string{}
 	for _, v := range firstRow {
-		header = append(header, v)
+		header = append(header, strings.TrimSpace(v))
 	}
 	// Map the header to row index
 	hindex := map[string]int{}
