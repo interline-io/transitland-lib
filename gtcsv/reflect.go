@@ -153,7 +153,7 @@ func loadRow(ent gotransit.Entity, row Row) {
 	}
 }
 
-// LoadRowFast uses a non-reflect fast path for entities that support SetString and AddError.
+// LoadRowFast uses a fast path for entities that support SetString and AddError.
 func loadRowFast(ent canSetString, row Row) {
 	// Return if there was a row parsing error
 	if row.Err != nil {
@@ -162,7 +162,7 @@ func loadRowFast(ent canSetString, row Row) {
 	}
 	header := row.Header
 	value := row.Row
-	for i := 0; i < len(value) && i < len(value); i++ {
+	for i := 0; i < len(value) && i < len(header); i++ {
 		if err := ent.SetString(header[i], value[i]); err != nil {
 			ent.AddError(err)
 		}

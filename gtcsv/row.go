@@ -47,7 +47,7 @@ func ReadRows(in io.Reader, cb func(Row)) {
 	// Copy header, since we will reuse the backing array
 	header := []string{}
 	for _, v := range firstRow {
-		header = append(header, v)
+		header = append(header, strings.TrimSpace(v))
 	}
 	// Map the header to row index
 	hindex := map[string]int{}
@@ -68,7 +68,7 @@ func ReadRows(in io.Reader, cb func(Row)) {
 		for i := 0; i < len(row); i++ {
 			v := row[i]
 			// This is dumb but saves substantial time.
-			if len(v) > 0 && (v[0] == ' ' || v[len(v)-1] == ' ') {
+			if len(v) > 0 && (v[0] == ' ' || v[len(v)-1] == ' ' || v[0] == '\t' || v[len(v)-1] == '\t') {
 				row[i] = strings.TrimSpace(v)
 			}
 		}
