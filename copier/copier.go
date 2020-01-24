@@ -208,7 +208,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	// OK, Save
 	eid, err := copier.Writer.AddEntity(ent)
 	if err != nil {
-		log.Info("Error: failed to write %s '%s': %s", efn, eid, err)
+		log.Info("Error: failed to write %s '%s': %s entity dump: %#v", efn, eid, err, ent)
 		copier.AddError(NewCopyError(efn, eid, err))
 		copier.CopyResult.SkipEntityErrorCount[efn]++
 		return "", err, err
