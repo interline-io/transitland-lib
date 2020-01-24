@@ -9,7 +9,7 @@ type Pathway struct {
 	PathwayID           string  `csv:"pathway_id" required:"true"`
 	FromStopID          string  `csv:"from_stop_id" required:"true"`
 	ToStopID            string  `csv:"to_stop_id" required:"true"`
-	PathwayMode         string  `csv:"pathway_mode" required:"true" min:"1" max:"7"`
+	PathwayMode         int     `csv:"pathway_mode" required:"true" min:"1" max:"7"`
 	IsBidirectional     int     `csv:"is_bidirectional" required:"true" min:"0" max:"1"`
 	Length              float64 `csv:"length" min:"0"`
 	TraversalTime       int     `csv:"traversal_time" min:"0"`
