@@ -48,13 +48,15 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	if !ok {
 		return causes.NewSourceUnreadableError("not a valid entity", nil)
 	}
-	reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-		a := reflect.New(outInnerType)
-		e := a.Interface().(gotransit.Entity)
-		loadRow(e, row)
-		outValue.Send(a.Elem())
-	})
-	outValue.Close()
+	go func() {
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			a := reflect.New(outInnerType)
+			e := a.Interface().(gotransit.Entity)
+			loadRow(e, row)
+			outValue.Send(a.Elem())
+		})
+		outValue.Close()
+	}()
 	return nil
 }
 
