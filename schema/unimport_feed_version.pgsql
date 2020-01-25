@@ -12,6 +12,7 @@ DELETE FROM "active_stops" WHERE feed_version_id = fvid;
 DELETE FROM "agency_geometries" WHERE feed_version_id = fvid;
 DELETE FROM "route_geometries" WHERE feed_version_id = fvid;
 DELETE FROM "route_stops" WHERE feed_version_id = fvid;
+-- DELETE FROM "route_headways" WHERE feed_version_id = fvid;
 DELETE FROM "feed_version_geometries" WHERE feed_version_id = fvid;
 
 RAISE NOTICE '... deleting anonymous gtfs entities';

@@ -27,10 +27,10 @@ SELECT gtfs_stops.* FROM gtfs_stops INNER JOIN feed_states USING(feed_version_id
 DROP VIEW IF EXISTS tile_active_stops;
 CREATE VIEW tile_active_stops AS
 SELECT 
-    id,
-    stop_id,
-    stop_name,
-    geometry
+    gtfs_stops.id,
+    gtfs_stops.stop_id,
+    gtfs_stops.stop_name,
+    gtfs_stops.geometry
 FROM gtfs_stops 
 INNER JOIN feed_states USING(feed_version_id);
 

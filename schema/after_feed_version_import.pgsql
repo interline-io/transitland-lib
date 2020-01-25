@@ -64,7 +64,6 @@ GROUP BY (route_stops.feed_version_id, route_stops.agency_id);
 -- route geometries
 RAISE NOTICE '... route_geometries insert';
 
-
 INSERT INTO route_geometries(
     feed_version_id,
     route_id,
@@ -120,6 +119,8 @@ FROM
     pivot 
 LEFT OUTER JOIN gtfs_shapes ON gtfs_shapes.id = pivot.shape_id
 WHERE pivot.shape_id IS NOT NULL;
+
+-- SELECT calculate_route_headways(fvid);
 
 RETURN 0;
 END;
