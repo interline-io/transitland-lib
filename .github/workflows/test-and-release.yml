@@ -62,6 +62,7 @@ jobs:
           name: gotransit-macos
           path: ${{ github.workspace }}/cmd/gotransit/gotransit
   release:
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: [build-linux, build-macos]
     runs-on: ubuntu-18.04
     steps:
