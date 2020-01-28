@@ -109,5 +109,3 @@ jobs:
           asset_name: gotransit-macos
           asset_label: macOS AMD-64 binary
           asset_content_type: application/binary
-      # - name: Prepare changelog
-      #   run: npx gren release --token=${{ secrets.GITHUB_TOKEN }}
