@@ -23,7 +23,7 @@ jobs:
       with:
         name: coverage
         path: coverage.html
-  release-linux:
+  build-linux:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: test
     runs-on: ubuntu-18.04
@@ -37,29 +37,14 @@ jobs:
       - name: Build on Linux
         working-directory: ${{ github.workspace }}/cmd/gotransit
         run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build
-      - name: Create GitHub release
-        id: create_release
-        uses: actions/create-release@v1.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+     - name: Store Linux binary
+        uses: actions/upload-artifact@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-      - name: Upload Linux binary artifact to GitHub release
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ${{ github.workspace }}/cmd/gotransit/gotransit
-          asset_name: gotransit-linux
-          asset_label: Linux AMD-64 binary
-          asset_content_type: application/binary
-  release-macos:
+          name: gotransit-linux
+          path: ${{ github.workspace }}/cmd/gotransit/gotransit
+  build-macos:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: release-linux # to create the GH release before this runs
+    needs: test
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -71,13 +56,52 @@ jobs:
       - name: Build on macOS
         working-directory: ${{ github.workspace }}/cmd/gotransit
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build
-      - name: Upload macOS binary artifact to GitHub release
+     - name: Store macOS binary
+        uses: actions/upload-artifact@v1
+        with:
+          name: gotransit-macos
+          path: ${{ github.workspace }}/cmd/gotransit/gotransit
+  release:
+    needs: [build-linux, build-macos]
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Download Linux binary
+        uses: actions/download-artifact@v1
+        with:
+          name: gotransit-linux
+      - name: Attach Linux binary to GitHub release
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/cmd/gotransit/gotransit
+          asset_path: gotransit-linux
+          asset_name: gotransit-linux
+          asset_label: Linux AMD-64 binary
+          asset_content_type: application/binary
+      - name: Download macOS binary
+        uses: actions/download-artifact@v1
+        with:
+          name: gotransit-macos
+      - name: Attach macOS binary to GitHub release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: gotransit-macos
           asset_name: gotransit-macos
           asset_label: macOS AMD-64 binary
           asset_content_type: application/binary
+      # - name: Prepare changelog
+      #   run: npx gren release --token=${{ secrets.GITHUB_TOKEN }}
