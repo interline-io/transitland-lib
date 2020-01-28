@@ -37,7 +37,7 @@ jobs:
       - name: Build on Linux
         working-directory: ${{ github.workspace }}/cmd/gotransit
         run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build
-     - name: Store Linux binary
+      - name: Store Linux binary
         uses: actions/upload-artifact@v1
         with:
           name: gotransit-linux
@@ -56,7 +56,7 @@ jobs:
       - name: Build on macOS
         working-directory: ${{ github.workspace }}/cmd/gotransit
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build
-     - name: Store macOS binary
+      - name: Store macOS binary
         uses: actions/upload-artifact@v1
         with:
           name: gotransit-macos
