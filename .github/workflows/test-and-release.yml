@@ -1,5 +1,10 @@
 name: "Test & Release"
-on: [push, create]
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+       - 'v*'
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -86,7 +91,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/gotransit-linux
+          asset_path: ${{ github.workspace }}/gotransit-linux/gotransit
           asset_name: gotransit-linux
           asset_label: Linux AMD-64 binary
           asset_content_type: application/binary
@@ -100,7 +105,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/gotransit-macos
+          asset_path: ${{ github.workspace }}/gotransit-macos/gotransit
           asset_name: gotransit-macos
           asset_label: macOS AMD-64 binary
           asset_content_type: application/binary
