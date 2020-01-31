@@ -5,14 +5,14 @@
       "spec": "gtfs",
       "id": "CT",
       "urls": {
-        "static_current": "http://localhost:8080/caltrain.zip"
+        "static_current": "../external/caltrain.zip"
       }
     },
     {
       "spec": "gtfs",
       "id": "BA",
       "urls": {
-        "static_current": "http://localhost:8080/bart.zip"
+        "static_current": "../external/bart.zip"
       }
     }
   ],
