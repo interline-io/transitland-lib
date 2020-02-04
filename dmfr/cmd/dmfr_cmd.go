@@ -1,4 +1,4 @@
-package dmfr
+package cmd
 
 import (
 	"errors"
@@ -7,9 +7,20 @@ import (
 	"os"
 	"strings"
 
+	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/dmfr"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
 )
+
+// Feed .
+type Feed = gotransit.Feed
+
+// FeedUrls .
+type FeedUrls = gotransit.FeedUrls
+
+// FeedLanguages .
+type FeedLanguages = gotransit.FeedLanguages
 
 // Command is the main entry point to the DMFR command
 type Command struct {
@@ -83,12 +94,12 @@ func (cmd *dmfrSyncCommand) Run(args []string) error {
 		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}
-	opts := SyncOptions{
+	opts := dmfr.SyncOptions{
 		Filenames:  cmd.filenames,
 		HideUnseen: cmd.hideunseen,
 	}
 	return cmd.adapter.Tx(func(atx gtdb.Adapter) error {
-		_, err := MainSync(atx, opts)
+		_, err := dmfr.MainSync(atx, opts)
 		return err
 	})
 }
@@ -112,7 +123,7 @@ func (dmfrValidateCommand) Run(args []string) error {
 	errs := []error{}
 	for _, filename := range filenames {
 		log.Info("Loading DMFR: %s", filename)
-		registry, err := LoadAndParseRegistry(filename)
+		registry, err := dmfr.LoadAndParseRegistry(filename)
 		if err != nil {
 			errs = append(errs, err)
 			log.Info("%s: Error when loading DMFR: %s", filename, err.Error())

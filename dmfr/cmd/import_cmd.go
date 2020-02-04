@@ -1,4 +1,4 @@
-package dmfr
+package cmd
 
 import (
 	"flag"
@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/gotransit/dmfr"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
 )
@@ -96,10 +97,10 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	///////////////
 	// Here we go
 	log.Info("Importing %d feed versions", len(qrs))
-	jobs := make(chan ImportOptions, len(qrs))
-	results := make(chan ImportResult, len(qrs))
+	jobs := make(chan dmfr.ImportOptions, len(qrs))
+	results := make(chan dmfr.ImportResult, len(qrs))
 	for _, fvid := range qrs {
-		jobs <- ImportOptions{
+		jobs <- dmfr.ImportOptions{
 			FeedVersionID: fvid,
 			Directory:     cmd.gtfsdir,
 			S3:            cmd.s3,
@@ -118,7 +119,7 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan ImportOptions, results chan<- ImportResult, wg *sync.WaitGroup) {
+func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan dmfr.ImportOptions, results chan<- dmfr.ImportResult, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -136,7 +137,7 @@ func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan Imp
 			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue
 		}
-		result, err := MainImportFeedVersion(adapter, opts)
+		result, err := dmfr.MainImportFeedVersion(adapter, opts)
 		if err != nil {
 			log.Info("Feed %s (id:%d): FeedVersion %s (id: %d): critical failure, rolled back: %s", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog)
 		} else if result.FeedVersionImport.Success {

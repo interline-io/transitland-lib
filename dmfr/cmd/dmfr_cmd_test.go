@@ -1,4 +1,4 @@
-package dmfr
+package cmd
 
 import (
 	"io/ioutil"
@@ -10,14 +10,16 @@ import (
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/internal/testdb"
+	"github.com/interline-io/gotransit/internal/testutil"
 )
 
 // Test some commands.
 // This should only test high level command functionality.
 // Use a disk-backed sqlite for simplicity.
 
-func Test_dmfrImportCommand(t *testing.T) {
+var ExampleZip = testutil.ExampleZip
 
+func Test_dmfrImportCommand(t *testing.T) {
 }
 
 func Test_dmfrSyncCommand(t *testing.T) {

@@ -1,4 +1,4 @@
-package dmfr
+package cmd
 
 import (
 	"flag"
@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/gotransit/dmfr"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
 )
@@ -74,14 +75,14 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	fetchFound := 0
 	fetchErrs := 0
 	var wg sync.WaitGroup
-	jobs := make(chan FetchOptions, len(feeds))
-	results := make(chan FetchResult, len(feeds))
+	jobs := make(chan dmfr.FetchOptions, len(feeds))
+	results := make(chan dmfr.FetchResult, len(feeds))
 	for w := 0; w < cmd.workers; w++ {
 		wg.Add(1)
 		go dmfrFetchWorker(w, cmd.adapter, cmd.dryrun, jobs, results, &wg)
 	}
 	for _, feed := range feeds {
-		opts := FetchOptions{
+		opts := dmfr.FetchOptions{
 			FeedID:                  feed.ID,
 			Directory:               cmd.gtfsdir,
 			S3:                      cmd.s3,
@@ -107,9 +108,9 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	return nil
 }
 
-func dmfrFetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
+func dmfrFetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan dmfr.FetchOptions, results chan<- dmfr.FetchResult, wg *sync.WaitGroup) {
 	for opts := range jobs {
-		var fr FetchResult
+		var fr dmfr.FetchResult
 		osid := ""
 		if err := adapter.Get(&osid, "SELECT current_feeds.onestop_id FROM current_feeds WHERE id = ?", opts.FeedID); err != nil {
 			log.Info("Serious error: could not get details for Feed %d", opts.FeedID)
@@ -122,7 +123,7 @@ func dmfrFetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan Fetc
 		}
 		err := adapter.Tx(func(atx gtdb.Adapter) error {
 			var fe error
-			fr, fe = MainFetchFeed(atx, opts)
+			fr, fe = dmfr.MainFetchFeed(atx, opts)
 			return fe
 		})
 		if err != nil {
