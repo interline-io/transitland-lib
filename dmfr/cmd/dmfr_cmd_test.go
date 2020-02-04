@@ -19,10 +19,10 @@ import (
 
 var ExampleZip = testutil.ExampleZip
 
-func Test_dmfrImportCommand(t *testing.T) {
+func Test_ImportCommand(t *testing.T) {
 }
 
-func Test_dmfrSyncCommand(t *testing.T) {
+func Test_SyncCommand(t *testing.T) {
 	cases := []struct {
 		count       int
 		errContains string
@@ -36,7 +36,7 @@ func Test_dmfrSyncCommand(t *testing.T) {
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
 			w := mustGetWriter("sqlite3://:memory:", true)
-			c := dmfrSyncCommand{adapter: w.Adapter}
+			c := SyncCommand{adapter: w.Adapter}
 			err := c.Run(exp.command)
 			if err != nil {
 				if !strings.Contains(err.Error(), exp.errContains) {
@@ -54,7 +54,7 @@ func Test_dmfrSyncCommand(t *testing.T) {
 	}
 }
 
-func Test_dmfrFetchCommand(t *testing.T) {
+func Test_FetchCommand(t *testing.T) {
 	ts200 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(ExampleZip.URL)
 		if err != nil {
@@ -97,7 +97,7 @@ func Test_dmfrFetchCommand(t *testing.T) {
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
-			c := dmfrFetchCommand{adapter: adapter}
+			c := FetchCommand{adapter: adapter}
 			err := c.Run(exp.command)
 			if err != nil {
 				if !strings.Contains(err.Error(), exp.errContains) {

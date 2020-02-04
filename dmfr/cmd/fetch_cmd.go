@@ -12,7 +12,7 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
-type dmfrFetchCommand struct {
+type FetchCommand struct {
 	workers   int
 	limit     int
 	dburl     string
@@ -24,7 +24,7 @@ type dmfrFetchCommand struct {
 	adapter   gtdb.Adapter
 }
 
-func (cmd *dmfrFetchCommand) Run(args []string) error {
+func (cmd *FetchCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: fetch [feedids...]")
@@ -79,7 +79,7 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	results := make(chan dmfr.FetchResult, len(feeds))
 	for w := 0; w < cmd.workers; w++ {
 		wg.Add(1)
-		go dmfrFetchWorker(w, cmd.adapter, cmd.dryrun, jobs, results, &wg)
+		go fetchWorker(w, cmd.adapter, cmd.dryrun, jobs, results, &wg)
 	}
 	for _, feed := range feeds {
 		opts := dmfr.FetchOptions{
@@ -108,7 +108,7 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	return nil
 }
 
-func dmfrFetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan dmfr.FetchOptions, results chan<- dmfr.FetchResult, wg *sync.WaitGroup) {
+func fetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan dmfr.FetchOptions, results chan<- dmfr.FetchResult, wg *sync.WaitGroup) {
 	for opts := range jobs {
 		var fr dmfr.FetchResult
 		osid := ""

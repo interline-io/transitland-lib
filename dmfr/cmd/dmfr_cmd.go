@@ -52,15 +52,15 @@ func (cmd *Command) Run(args []string) error {
 	var r runner
 	switch subc {
 	case "validate":
-		r = &dmfrValidateCommand{}
+		r = &ValidateCommand{}
 	case "merge":
-		r = &dmfrMergeCommand{}
+		r = &MergeCommand{}
 	case "sync":
-		r = &dmfrSyncCommand{}
+		r = &SyncCommand{}
 	case "import":
-		r = &dmfrImportCommand{}
+		r = &ImportCommand{}
 	case "fetch":
-		r = &dmfrFetchCommand{}
+		r = &FetchCommand{}
 	default:
 		return fmt.Errorf("Invalid command: %q", subc)
 	}
@@ -69,14 +69,14 @@ func (cmd *Command) Run(args []string) error {
 
 /////
 
-type dmfrSyncCommand struct {
+type SyncCommand struct {
 	dburl      string
 	filenames  []string
 	hideunseen bool
 	adapter    gtdb.Adapter // allow for mocks
 }
 
-func (cmd *dmfrSyncCommand) Run(args []string) error {
+func (cmd *SyncCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("sync", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: sync <filenames...>")
@@ -106,9 +106,9 @@ func (cmd *dmfrSyncCommand) Run(args []string) error {
 
 /////
 
-type dmfrValidateCommand struct{}
+type ValidateCommand struct{}
 
-func (dmfrValidateCommand) Run(args []string) error {
+func (ValidateCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: validate <filenames...>")
@@ -139,9 +139,9 @@ func (dmfrValidateCommand) Run(args []string) error {
 
 /////
 
-type dmfrMergeCommand struct{}
+type MergeCommand struct{}
 
-func (dmfrMergeCommand) Run(args []string) error {
+func (MergeCommand) Run(args []string) error {
 	return errors.New("not implemented")
 }
 

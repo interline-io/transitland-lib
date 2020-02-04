@@ -12,7 +12,7 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
-type dmfrImportCommand struct {
+type ImportCommand struct {
 	workers    int
 	limit      uint64
 	dburl      string
@@ -27,7 +27,7 @@ type dmfrImportCommand struct {
 	adapter    gtdb.Adapter // allow for mocks
 }
 
-func (cmd *dmfrImportCommand) Run(args []string) error {
+func (cmd *ImportCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: import [feedids...]")
@@ -113,13 +113,13 @@ func (cmd *dmfrImportCommand) Run(args []string) error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.workers; w++ {
 		wg.Add(1)
-		go dmfrImportWorker(w, cmd.adapter, cmd.dryrun, jobs, results, &wg)
+		go importWorker(w, cmd.adapter, cmd.dryrun, jobs, results, &wg)
 	}
 	wg.Wait()
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan dmfr.ImportOptions, results chan<- dmfr.ImportResult, wg *sync.WaitGroup) {
+func importWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan dmfr.ImportOptions, results chan<- dmfr.ImportResult, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
