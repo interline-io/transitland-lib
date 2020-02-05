@@ -12,10 +12,7 @@ import (
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/testdb"
-	"github.com/interline-io/gotransit/internal/testutil"
 )
-
-var ExampleZip = testutil.ExampleZip
 
 func caltrain(atx gtdb.Adapter, url string) int {
 	// Create dummy feed

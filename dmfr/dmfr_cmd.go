@@ -1,26 +1,14 @@
-package cmd
+package dmfr
 
 import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/dmfr"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
 )
-
-// Feed .
-type Feed = gotransit.Feed
-
-// FeedUrls .
-type FeedUrls = gotransit.FeedUrls
-
-// FeedLanguages .
-type FeedLanguages = gotransit.FeedLanguages
 
 // Command is the main entry point to the DMFR command
 type Command struct {
@@ -69,43 +57,6 @@ func (cmd *Command) Run(args []string) error {
 
 /////
 
-type SyncCommand struct {
-	dburl      string
-	filenames  []string
-	hideunseen bool
-	adapter    gtdb.Adapter // allow for mocks
-}
-
-func (cmd *SyncCommand) Run(args []string) error {
-	fl := flag.NewFlagSet("sync", flag.ExitOnError)
-	fl.Usage = func() {
-		fmt.Println("Usage: sync <filenames...>")
-		fl.PrintDefaults()
-	}
-	fl.StringVar(&cmd.dburl, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
-	fl.BoolVar(&cmd.hideunseen, "hideunseen", false, "Hide unseen feeds")
-	fl.Parse(args)
-	cmd.filenames = fl.Args()
-	if cmd.dburl == "" {
-		cmd.dburl = os.Getenv("DMFR_DATABASE_URL")
-	}
-	if cmd.adapter == nil {
-		writer := mustGetWriter(cmd.dburl, true)
-		cmd.adapter = writer.Adapter
-		defer writer.Close()
-	}
-	opts := dmfr.SyncOptions{
-		Filenames:  cmd.filenames,
-		HideUnseen: cmd.hideunseen,
-	}
-	return cmd.adapter.Tx(func(atx gtdb.Adapter) error {
-		_, err := dmfr.MainSync(atx, opts)
-		return err
-	})
-}
-
-/////
-
 type ValidateCommand struct{}
 
 func (ValidateCommand) Run(args []string) error {
@@ -123,7 +74,7 @@ func (ValidateCommand) Run(args []string) error {
 	errs := []error{}
 	for _, filename := range filenames {
 		log.Info("Loading DMFR: %s", filename)
-		registry, err := dmfr.LoadAndParseRegistry(filename)
+		registry, err := LoadAndParseRegistry(filename)
 		if err != nil {
 			errs = append(errs, err)
 			log.Info("%s: Error when loading DMFR: %s", filename, err.Error())

@@ -1,4 +1,4 @@
-package cmd
+package dmfr
 
 import (
 	"io/ioutil"
@@ -50,7 +50,6 @@ func Test_SyncCommand(t *testing.T) {
 				t.Errorf("got %d feeds, expect %d", len(feeds), exp.count)
 			}
 		})
-
 	}
 }
 
