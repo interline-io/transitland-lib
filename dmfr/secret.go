@@ -64,6 +64,6 @@ type Secret struct {
 	Key      string `json:"key"`
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Feed     string `json:"feed"`
+	Feed     string `json:"feed_id"`
 	Filename string `json:"filename"`
 }
