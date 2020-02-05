@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/dimchansky/utfbom"
@@ -89,7 +90,14 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 		return nil, err
 	}
 	readerSkippingBOM, _ := utfbom.Skip(reader)
-	return NewRegistry(readerSkippingBOM)
+	reg, err := NewRegistry(readerSkippingBOM)
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < len(reg.Feeds); i++ {
+		reg.Feeds[i].File = filepath.Base(path)
+	}
+	return reg, nil
 }
 
 // ParseString TODO
