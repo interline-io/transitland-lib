@@ -46,7 +46,7 @@ func (s Secrets) MatchFeed(feedid string) (Secret, error) {
 	found := Secret{}
 	count := 0
 	for _, secret := range s {
-		if secret.Feed == feedid {
+		if secret.FeedID == feedid {
 			count++
 			found = secret
 		}
@@ -64,6 +64,6 @@ type Secret struct {
 	Key      string `json:"key"`
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Feed     string `json:"feed_id"`
+	FeedID   string `json:"feed_id"`
 	Filename string `json:"filename"`
 }

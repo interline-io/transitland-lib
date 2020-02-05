@@ -62,8 +62,8 @@ func TestSecrets_MatchFeed(t *testing.T) {
 				t.Errorf("got unexpected error: %s", err)
 			} else if err == nil && tc.expecterr == true {
 				t.Errorf("expected error")
-			} else if tc.expecterr == false && tc.match != found.Feed {
-				t.Errorf("got %s, expected %s", found.Feed, tc.match)
+			} else if tc.expecterr == false && tc.match != found.FeedID {
+				t.Errorf("got %s, expected %s", found.FeedID, tc.match)
 			}
 		})
 	}
