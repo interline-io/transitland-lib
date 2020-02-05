@@ -23,6 +23,9 @@ type FetchOptions struct {
 	Directory               string
 	S3                      string
 	FetchTime               time.Time
+	// trying something out...
+	feed    Feed
+	secrets Secrets
 }
 
 // FetchResult contains results of a fetch operation.
@@ -34,10 +37,29 @@ type FetchResult struct {
 	FetchError   error
 }
 
-// MainFetchFeed fetches and creates a new FeedVersion for a given Feed.
+// FetchFeed .
+func FetchFeed(opts FetchOptions) (FetchResult, error) {
+	fr := FetchResult{}
+	secret := Secret{}
+	if a, err := opts.secrets.MatchFeed(opts.feed.FeedID); err == nil {
+		secret = a
+	} else if a, err := opts.secrets.MatchFilename(opts.feed.File); err == nil {
+		secret = a
+	} else if opts.feed.Authorization.Type != "" {
+		fmt.Println("no matching secrets")
+	}
+	tmpfile, err := AuthenticatedRequest(opts.feed.URLs.StaticCurrent, secret, opts.feed.Authorization)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("tmpfile:", tmpfile)
+	return fr, nil
+}
+
+// DatabaseFetchFeed fetches and creates a new FeedVersion for a given Feed.
 // Fetch errors are logged to Feed LastFetchError and saved.
 // An error return from this function is a serious failure.
-func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
+func DatabaseFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	// Get url
 	tlfeed := Feed{ID: opts.FeedID}
@@ -81,7 +103,6 @@ func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fr, err
 	}
-
 	return fr, nil
 }
 
