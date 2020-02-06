@@ -43,7 +43,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.DmfrFile, "dmfr", "", "DMFR File")
-	fl.StringVar(&cmd.Directory, "gtfsdir", ".", "GTFS Directory")
+	fl.StringVar(&cmd.Directory, "gtfsdir", "", "GTFS Directory")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.IgnoreDuplicateContents, "allow-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.StringVar(&cmd.SecretsFile, "secrets", "", "Authorizaton secrets file")
@@ -155,7 +155,7 @@ func fetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan FetchOpt
 		}
 		var err error
 		if adapter == nil {
-			fr, err = FetchFeed(opts)
+			fr, err = Fetch(opts)
 		} else {
 			err = adapter.Tx(func(atx gtdb.Adapter) error {
 				var fe error
