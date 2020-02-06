@@ -18,14 +18,13 @@ import (
 
 // FetchOptions sets options for a fetch operation.
 type FetchOptions struct {
-	FeedID                  int
+	Feed                    Feed
 	FeedURL                 string
 	IgnoreDuplicateContents bool
 	Directory               string
 	S3                      string
 	FetchTime               time.Time
 	// trying something out...
-	feed    Feed
 	secrets Secrets
 }
 
@@ -43,17 +42,9 @@ type FetchResult struct {
 // An error return from this function is a serious failure.
 func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
-	// Get url
-	tlfeed := Feed{ID: opts.FeedID}
-	if err := atx.Find(&tlfeed); err != nil {
-		return fr, err
-	}
-	if opts.FeedURL == "" {
-		opts.FeedURL = tlfeed.URLs.StaticCurrent
-	}
 	// Get state
-	tlstate := FeedState{FeedID: opts.FeedID}
-	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, opts.FeedID); err == sql.ErrNoRows {
+	tlstate := FeedState{FeedID: opts.Feed.ID}
+	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, opts.Feed.ID); err == sql.ErrNoRows {
 		tlstate.ID, err = atx.Insert(&tlstate)
 		if err != nil {
 			return fr, err
@@ -136,7 +127,7 @@ func Fetch(opts FetchOptions) (FetchResult, error) {
 
 func fetchDownload(opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
-	if a := opts.feed.URLs.StaticCurrent; a != "" {
+	if a := opts.Feed.URLs.StaticCurrent; a != "" {
 		opts.FeedURL = a
 	}
 	if opts.FeedURL == "" {
@@ -145,16 +136,16 @@ func fetchDownload(opts FetchOptions) (FetchResult, error) {
 	}
 	// Get secret
 	secret := Secret{}
-	if a, err := opts.secrets.MatchFeed(opts.feed.FeedID); err == nil {
+	if a, err := opts.secrets.MatchFeed(opts.Feed.FeedID); err == nil {
 		secret = a
-	} else if a, err := opts.secrets.MatchFilename(opts.feed.File); err == nil {
+	} else if a, err := opts.secrets.MatchFilename(opts.Feed.File); err == nil {
 		secret = a
-	} else if opts.feed.Authorization.Type != "" {
+	} else if opts.Feed.Authorization.Type != "" {
 		fr.FetchError = errors.New("no secret found")
 		return fr, nil
 	}
 	// Download feed
-	tmpfile, err := AuthenticatedRequest(opts.feed.URLs.StaticCurrent, secret, opts.feed.Authorization)
+	tmpfile, err := AuthenticatedRequest(opts.FeedURL, secret, opts.Feed.Authorization)
 	if err != nil {
 		return fr, err
 	}
@@ -176,7 +167,7 @@ func fetchDownload(opts FetchOptions) (FetchResult, error) {
 		return fr, nil
 	}
 	fv.URL = opts.FeedURL
-	fv.FeedID = opts.FeedID
+	fv.FeedID = opts.Feed.ID
 	fv.FetchedAt = opts.FetchTime
 	fr.FeedVersion = fv
 	return fr, nil

@@ -111,12 +111,11 @@ func (cmd *FetchCommand) Fetch() error {
 	}
 	for _, feed := range feeds {
 		opts := FetchOptions{
-			FeedID:                  feed.ID,
+			Feed:                    feed,
 			Directory:               cmd.Directory,
 			S3:                      cmd.S3,
 			IgnoreDuplicateContents: cmd.IgnoreDuplicateContents,
 			secrets:                 cmd.secrets,
-			feed:                    feed,
 		}
 		jobs <- opts
 	}
@@ -144,13 +143,13 @@ func fetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan FetchOpt
 		osid := ""
 		if adapter == nil {
 			// pass
-		} else if err := adapter.Get(&osid, "SELECT current_feeds.onestop_id FROM current_feeds WHERE id = ?", opts.FeedID); err != nil {
-			log.Info("Serious error: could not get details for Feed %d", opts.FeedID)
+		} else if err := adapter.Get(&osid, "SELECT current_feeds.onestop_id FROM current_feeds WHERE id = ?", opts.Feed.ID); err != nil {
+			log.Info("Serious error: could not get details for Feed %d", opts.Feed.ID)
 			continue
 		}
 		log.Debug("Feed %s (id:%d): url: %s begin", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL)
 		if dryrun {
-			log.Info("Feed %s (id:%d): dry-run", osid, opts.FeedID)
+			log.Info("Feed %s (id:%d): dry-run", osid, opts.Feed.ID)
 			continue
 		}
 		var err error

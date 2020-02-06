@@ -41,8 +41,9 @@ func TestDatabaseFetch(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		//
 		url := ts.URL
-		feedid := caltrain(atx, ts.URL)
-		fr, err := DatabaseFetch(atx, FetchOptions{FeedID: feedid, Directory: tmpdir})
+		feed := Feed{}
+		feed.ID = caltrain(atx, ts.URL)
+		fr, err := DatabaseFetch(atx, FetchOptions{Feed: feed, FeedURL: ts.URL, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -61,15 +62,15 @@ func TestDatabaseFetch(t *testing.T) {
 		if fv2.URL != url {
 			t.Errorf("got %s expect %s", fv2.URL, url)
 		}
-		if fv2.FeedID != feedid {
-			t.Errorf("got %d expect %d", fv2.FeedID, feedid)
+		if fv2.FeedID != feed.ID {
+			t.Errorf("got %d expect %d", fv2.FeedID, feed.ID)
 		}
 		if fv2.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
 		}
 		// Check FeedState
 		tlf := FeedState{}
-		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feedid)
+		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feed.ID)
 		if !tlf.LastSuccessfulFetchAt.Valid {
 			t.Errorf("expected non-nil value")
 		}
@@ -100,16 +101,17 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 			return nil
 		}
 		defer os.RemoveAll(tmpdir) // clean up
-		feedid := caltrain(atx, ts.URL)
+		feed := Feed{}
+		feed.ID = caltrain(atx, ts.URL)
 		// Fetch
-		_, err = DatabaseFetch(atx, FetchOptions{FeedID: feedid, Directory: tmpdir})
+		_, err = DatabaseFetch(atx, FetchOptions{Feed: feed, FeedURL: ts.URL, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
 		}
 		// Check FeedState
 		tlf := FeedState{}
-		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feedid)
+		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feed.ID)
 		experr := "file does not exist"
 		if tlf.LastFetchError == "" {
 			t.Errorf("expected value for LastFetchError")
@@ -132,8 +134,9 @@ func TestDatabaseFetch_404(t *testing.T) {
 	defer ts.Close()
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
-		feedid := caltrain(atx, url)
-		fr, err := DatabaseFetch(atx, FetchOptions{FeedID: feedid, FeedURL: url, Directory: ""})
+		feed := Feed{}
+		feed.ID = caltrain(atx, url)
+		fr, err := DatabaseFetch(atx, FetchOptions{Feed: feed, FeedURL: ts.URL, Directory: ""})
 		if err != nil {
 			t.Error(err)
 			return err
@@ -164,8 +167,9 @@ func TestDatabaseFetch_Exists(t *testing.T) {
 	}))
 	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		url := ts.URL
-		feedid := caltrain(atx, url)
-		fr, err := DatabaseFetch(atx, FetchOptions{FeedID: feedid, FeedURL: url, Directory: ""})
+		feed := Feed{}
+		feed.ID = caltrain(atx, url)
+		fr, err := DatabaseFetch(atx, FetchOptions{Feed: feed, FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
 		}
@@ -175,7 +179,7 @@ func TestDatabaseFetch_Exists(t *testing.T) {
 		if fr.FeedVersion.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fr.FeedVersion.SHA1, ExampleZip.SHA1)
 		}
-		fr2, err2 := DatabaseFetch(atx, FetchOptions{FeedID: feedid, FeedURL: url, Directory: ""})
+		fr2, err2 := DatabaseFetch(atx, FetchOptions{Feed: feed, FeedURL: url, Directory: ""})
 		if err2 != nil {
 			t.Error(err2)
 			return err2
