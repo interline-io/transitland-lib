@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -30,10 +31,10 @@ func NewReader(path string) (*Reader, error) {
 		a = &URLAdapter{url: path}
 	} else if strings.HasPrefix(path, "s3://") {
 		a = &S3Adapter{url: path}
-	} else if strings.HasSuffix(path, ".zip") {
-		a = &ZipAdapter{path: path}
-	} else {
+	} else if fi, err := os.Stat(path); err == nil && fi.IsDir() {
 		a = NewDirAdapter(path)
+	} else {
+		a = &ZipAdapter{path: path}
 	}
 	return &Reader{Adapter: a}, nil
 }
@@ -64,9 +65,8 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 func (reader *Reader) ValidateStructure() []error {
 	// Check if the archive can be opened
 	allerrs := []error{}
-	exists := reader.Adapter.Exists()
-	if !exists {
-		allerrs = append(allerrs, causes.NewSourceUnreadableError("file does not exist", nil))
+	if err := reader.Adapter.Open(); err != nil {
+		allerrs = append(allerrs, causes.NewSourceUnreadableError("could not open reader", nil))
 		return allerrs
 	}
 	// Check if these files contain valid headers
