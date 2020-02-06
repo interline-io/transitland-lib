@@ -13,6 +13,7 @@ import (
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/log"
 )
 
 // FetchOptions sets options for a fetch operation.
@@ -24,8 +25,9 @@ type FetchOptions struct {
 	S3                      string
 	FetchTime               time.Time
 	// trying something out...
-	feed    Feed
-	secrets Secrets
+	existCheck func(gotransit.FeedVersion) (gotransit.FeedVersion, error)
+	feed       Feed
+	secrets    Secrets
 }
 
 // FetchResult contains results of a fetch operation.
@@ -35,25 +37,6 @@ type FetchResult struct {
 	FoundSHA1    bool
 	FoundDirSHA1 bool
 	FetchError   error
-}
-
-// FetchFeed .
-func FetchFeed(opts FetchOptions) (FetchResult, error) {
-	fr := FetchResult{}
-	secret := Secret{}
-	if a, err := opts.secrets.MatchFeed(opts.feed.FeedID); err == nil {
-		secret = a
-	} else if a, err := opts.secrets.MatchFilename(opts.feed.File); err == nil {
-		secret = a
-	} else if opts.feed.Authorization.Type != "" {
-		fmt.Println("no matching secrets")
-	}
-	tmpfile, err := AuthenticatedRequest(opts.feed.URLs.StaticCurrent, secret, opts.feed.Authorization)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("tmpfile:", tmpfile)
-	return fr, nil
 }
 
 // DatabaseFetchFeed fetches and creates a new FeedVersion for a given Feed.
@@ -77,28 +60,60 @@ func DatabaseFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error)
 			return fr, err
 		}
 	} else if err != nil {
-		return fr, err
+		return fr, err // rollback
 	}
 	if opts.FetchTime.IsZero() {
 		opts.FetchTime = time.Now().UTC()
 	}
 	tlstate.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
 	tlstate.LastFetchError = ""
-	// Immediately save LastFetchedAt to obtain lock
+	// Immediately save LastFetchedAt
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
-		return fr, err
+		return fr, err // rollback
 	}
 	// Start fetching
-	fr, err := FetchAndCreateFeedVersion(atx, opts)
+	fr, err := fetchDownload(opts)
 	if err != nil {
-		return fr, err
+		return fr, err // rollback
 	}
+	// Check if this version already exists
+	check := gotransit.FeedVersion{}
+	if err := atx.Get(&check, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fr.FeedVersion.SHA1, fr.FeedVersion.SHA1Dir); err == nil {
+		// Already present
+		fr.FeedVersion = check
+		fr.FoundSHA1 = (check.SHA1 == fr.FeedVersion.SHA1)
+		fr.FoundDirSHA1 = (check.SHA1Dir == fr.FeedVersion.SHA1Dir)
+	} else if err == sql.ErrNoRows {
+		// Not present
+		fr.FoundSHA1 = false
+		fr.FoundDirSHA1 = false
+	} else if err != nil {
+		return fr, err // rollback
+	}
+	// Upload
+	if fr.FetchError == nil && fr.FoundSHA1 == false && fr.FoundDirSHA1 == false {
+		path, err := fetchUpload(opts, fr.FeedVersion)
+		if err != nil {
+			return fr, err // rollback
+		}
+		fr.FeedVersion.File = path
+	}
+	// Create FeedVersion record
+	if fr.FetchError == nil && fr.FoundSHA1 == false && fr.FoundDirSHA1 == false {
+		fvid := 0
+		fvid, err = atx.Insert(&fr.FeedVersion)
+		if err != nil {
+			return fr, err // rollback
+		}
+		fr.FeedVersion.ID = fvid
+	}
+	// Update FeedState
 	if fr.FetchError != nil {
 		tlstate.LastFetchError = fr.FetchError.Error()
 	} else {
+		tlstate.LastFetchError = ""
 		tlstate.LastSuccessfulFetchAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
 	}
-	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fr, err
@@ -106,17 +121,45 @@ func DatabaseFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error)
 	return fr, nil
 }
 
-// FetchAndCreateFeedVersion from a URL.
-// Returns error if the source cannot be loaded or is invalid GTFS.
-// Returns no error if the SHA1 is already present, or a FeedVersion is created.
-func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
+func Fetch(opts FetchOptions) (FetchResult, error) {
+	fr, err := fetchDownload(opts)
+	if err != nil {
+		return fr, err
+	}
+	path, err := fetchUpload(opts, fr.FeedVersion)
+	if err != nil {
+		return fr, err
+	}
+	fr.FeedVersion.File = path
+	return fr, nil
+}
+
+func fetchDownload(opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
+	if a := opts.feed.URLs.StaticCurrent; a != "" {
+		opts.FeedURL = a
+	}
 	if opts.FeedURL == "" {
 		fr.FetchError = errors.New("no url")
 		return fr, nil
 	}
+	// Get secret
+	secret := Secret{}
+	if a, err := opts.secrets.MatchFeed(opts.feed.FeedID); err == nil {
+		secret = a
+	} else if a, err := opts.secrets.MatchFilename(opts.feed.File); err == nil {
+		secret = a
+	} else if opts.feed.Authorization.Type != "" {
+		fr.FetchError = errors.New("no secret found")
+		return fr, nil
+	}
 	// Download feed
-	reader, err := gtcsv.NewReader(opts.FeedURL)
+	tmpfile, err := AuthenticatedRequest(opts.feed.URLs.StaticCurrent, secret, opts.feed.Authorization)
+	if err != nil {
+		panic(err)
+	}
+	// Check feed
+	reader, err := gtcsv.NewReader(tmpfile)
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil
@@ -135,50 +178,37 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 	fv.URL = opts.FeedURL
 	fv.FeedID = opts.FeedID
 	fv.FetchedAt = opts.FetchTime
-	// Is this SHA1 already present?
-	checkfvid := gotransit.FeedVersion{}
-	err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
-	if err == nil {
-		// Already present
-		fr.FeedVersion = checkfvid
-		fr.FoundSHA1 = (checkfvid.SHA1 == fv.SHA1)
-		fr.FoundDirSHA1 = (checkfvid.SHA1Dir == fv.SHA1Dir)
-		return fr, nil
-	} else if err == sql.ErrNoRows {
-		// Not present, create below
-	} else if err != nil {
-		// Serious error
-		return fr, err
-	}
+	fr.FeedVersion = fv
+	return fr, nil
+}
+
+func fetchUpload(opts FetchOptions, fv gotransit.FeedVersion) (string, error) {
 	// Upload file or copy to output directory
+	path := fv.File
+	outpath := fv.File
 	if opts.S3 != "" {
+		outpath = fv.SHA1 + ".zip"
+		log.Debug("Uploading %s -> %s/%s", path, opts.S3, outpath)
 		awscmd := exec.Command(
 			"aws",
 			"s3",
 			"cp",
-			reader.Path(),
-			fmt.Sprintf("%s/%s.zip", opts.S3, fv.SHA1),
+			path,
+			fmt.Sprintf("%s/%s", opts.S3, outpath),
 		)
 		if output, err := awscmd.Output(); err != nil {
-			return fr, fmt.Errorf("upload error: %s: %s", err, output)
+			return "", fmt.Errorf("upload error: %s: %s", err, output)
 		}
 	}
 	if opts.Directory != "" {
-		fn := fv.SHA1 + ".zip"
-		outfn := filepath.Join(opts.Directory, fn)
-		if err := copyFileContents(reader.Path(), outfn); err != nil {
-			return fr, err
+		outpath := fv.SHA1 + ".zip"
+		log.Debug("Copying %s -> %s", path, outpath)
+		outfn := filepath.Join(opts.Directory, outpath)
+		if err := copyFileContents(path, outfn); err != nil {
+			return "", err
 		}
-		fv.File = fn
-		fr.Path = fv.File // TODO: remove
 	}
-	// Return fv
-	fv.ID, err = atx.Insert(&fv)
-	fr.FeedVersion = fv
-	if err == nil {
-		return fr, err
-	}
-	return fr, nil
+	return outpath, nil
 }
 
 func copyFileContents(src, dst string) (err error) {
@@ -202,4 +232,11 @@ func copyFileContents(src, dst string) (err error) {
 	}
 	err = out.Sync()
 	return
+}
+
+// FetchAndCreateFeedVersion from a URL.
+// Returns error if the source cannot be loaded or is invalid GTFS.
+// Returns no error if the SHA1 is already present, or a FeedVersion is created.
+func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
+	return DatabaseFetchFeed(atx, opts)
 }
