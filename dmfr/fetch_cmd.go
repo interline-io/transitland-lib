@@ -159,7 +159,7 @@ func fetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan FetchOpt
 		} else {
 			err = adapter.Tx(func(atx gtdb.Adapter) error {
 				var fe error
-				fr, fe = DatabaseFetchFeed(atx, opts)
+				fr, fe = DatabaseFetch(atx, opts)
 				return fe
 			})
 		}

@@ -25,9 +25,8 @@ type FetchOptions struct {
 	S3                      string
 	FetchTime               time.Time
 	// trying something out...
-	existCheck func(gotransit.FeedVersion) (gotransit.FeedVersion, error)
-	feed       Feed
-	secrets    Secrets
+	feed    Feed
+	secrets Secrets
 }
 
 // FetchResult contains results of a fetch operation.
@@ -39,10 +38,10 @@ type FetchResult struct {
 	FetchError   error
 }
 
-// DatabaseFetchFeed fetches and creates a new FeedVersion for a given Feed.
+// DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
 // Fetch errors are logged to Feed LastFetchError and saved.
 // An error return from this function is a serious failure.
-func DatabaseFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
+func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	// Get url
 	tlfeed := Feed{ID: opts.FeedID}
@@ -121,6 +120,7 @@ func DatabaseFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error)
 	return fr, nil
 }
 
+// Fetch a feed.
 func Fetch(opts FetchOptions) (FetchResult, error) {
 	fr, err := fetchDownload(opts)
 	if err != nil {
@@ -156,7 +156,7 @@ func fetchDownload(opts FetchOptions) (FetchResult, error) {
 	// Download feed
 	tmpfile, err := AuthenticatedRequest(opts.feed.URLs.StaticCurrent, secret, opts.feed.Authorization)
 	if err != nil {
-		panic(err)
+		return fr, err
 	}
 	// Check feed
 	reader, err := gtcsv.NewReader(tmpfile)
@@ -232,11 +232,4 @@ func copyFileContents(src, dst string) (err error) {
 	}
 	err = out.Sync()
 	return
-}
-
-// FetchAndCreateFeedVersion from a URL.
-// Returns error if the source cannot be loaded or is invalid GTFS.
-// Returns no error if the SHA1 is already present, or a FeedVersion is created.
-func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
-	return DatabaseFetchFeed(atx, opts)
 }
