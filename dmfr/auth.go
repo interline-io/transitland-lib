@@ -29,7 +29,6 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 		u.RawQuery = v.Encode()
 		// log.Debug("Using query_param authentication: %s = %s", auth.ParamName, secret.Key)
 	} else if auth.Type == "path_segment" {
-		p := u.Path
 		u.Path = strings.ReplaceAll(u.Path, "{}", secret.Key)
 		// log.Debug("Using path_segment authentication: %s -> %s", p, u.Path)
 	}
