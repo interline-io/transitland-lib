@@ -44,7 +44,6 @@ func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	if err := atx.Find(&tlfeed); err != nil {
 		return fr, err
 	}
-	fmt.Println("FeedURL:", opts.FeedURL)
 	if opts.FeedURL == "" {
 		opts.FeedURL = tlfeed.URLs.StaticCurrent
 	}
