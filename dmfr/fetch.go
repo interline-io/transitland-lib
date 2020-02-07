@@ -95,7 +95,15 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		return fr, nil
 	}
 	// Download feed
-	reader, err := gtcsv.NewReader(opts.FeedURL)
+	secret := Secret{}                    // TODO
+	auth := gotransit.FeedAuthorization{} // TODO
+	tmpfile, err := AuthenticatedRequest(opts.FeedURL, secret, auth)
+	if err != nil {
+		fr.FetchError = err
+		return fr, nil
+	}
+	// Open
+	reader, err := gtcsv.NewReader(tmpfile)
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil

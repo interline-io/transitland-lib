@@ -47,6 +47,9 @@ type URLAdapter struct {
 
 // Open the adapter, and download the provided URL to a temporary file.
 func (adapter *URLAdapter) Open() error {
+	if adapter.ZipAdapter.path != "" {
+		return nil // already open
+	}
 	// Get the data
 	resp, err := http.Get(adapter.url)
 	if err != nil {
@@ -86,6 +89,9 @@ type S3Adapter struct {
 
 // Open the adapter, and download the provided URL to a temporary file.
 func (adapter *S3Adapter) Open() error {
+	if adapter.ZipAdapter.path != "" {
+		return nil // already open
+	}
 	// Create the file
 	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
 	if err != nil {
