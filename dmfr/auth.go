@@ -41,7 +41,7 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 	defer tmpfile.Close()
 	tmpfilepath := tmpfile.Name()
 	log.Debug("AuthorizedRequest downloading %s -> %s", address, tmpfilepath)
-	if u.Scheme == "http" {
+	if u.Scheme == "http" || u.Scheme == "https" {
 		// Download HTTP
 		client := &http.Client{}
 		req, err := http.NewRequest("GET", ustr, nil)
