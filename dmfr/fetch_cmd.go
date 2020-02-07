@@ -1,10 +1,12 @@
 package dmfr
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit/gtdb"
@@ -12,6 +14,8 @@ import (
 )
 
 type dmfrFetchCommand struct {
+	fetchURL  string
+	fetchedAt string
 	workers   int
 	limit     int
 	dburl     string
@@ -26,9 +30,11 @@ type dmfrFetchCommand struct {
 func (cmd *dmfrFetchCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: fetch [feedids...]")
+		fmt.Println("Usage: fetch [feed_id...]")
 		fl.PrintDefaults()
 	}
+	fl.StringVar(&cmd.fetchURL, "fetch-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
+	fl.StringVar(&cmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
 	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.dburl, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
@@ -46,6 +52,18 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}
+	FetchedAt := time.Time{}
+	if cmd.fetchedAt != "" {
+		t, err := time.Parse(time.RFC3339Nano, cmd.fetchedAt)
+		if err != nil {
+			return err
+		}
+		FetchedAt = t
+	}
+	if cmd.fetchURL != "" && len(feedids) != 1 {
+		return errors.New("you must specify exactly one feed_id when using -fetch-url")
+	}
+
 	// Get feeds
 	q := cmd.adapter.Sqrl().
 		Select("*").
@@ -83,9 +101,11 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	for _, feed := range feeds {
 		opts := FetchOptions{
 			FeedID:                  feed.ID,
+			FeedURL:                 cmd.fetchURL,
 			Directory:               cmd.gtfsdir,
 			S3:                      cmd.s3,
 			IgnoreDuplicateContents: cmd.allowdups,
+			FetchedAt:               FetchedAt,
 		}
 		jobs <- opts
 	}

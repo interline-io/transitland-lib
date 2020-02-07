@@ -22,7 +22,7 @@ type FetchOptions struct {
 	IgnoreDuplicateContents bool
 	Directory               string
 	S3                      string
-	FetchTime               time.Time
+	FetchedAt               time.Time
 }
 
 // FetchResult contains results of a fetch operation.
@@ -44,6 +44,7 @@ func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	if err := atx.Find(&tlfeed); err != nil {
 		return fr, err
 	}
+	fmt.Println("FeedURL:", opts.FeedURL)
 	if opts.FeedURL == "" {
 		opts.FeedURL = tlfeed.URLs.StaticCurrent
 	}
@@ -57,10 +58,10 @@ func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	} else if err != nil {
 		return fr, err
 	}
-	if opts.FetchTime.IsZero() {
-		opts.FetchTime = time.Now().UTC()
+	if opts.FetchedAt.IsZero() {
+		opts.FetchedAt = time.Now().UTC()
 	}
-	tlstate.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
+	tlstate.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	tlstate.LastFetchError = ""
 	// Immediately save LastFetchedAt to obtain lock
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
@@ -74,7 +75,7 @@ func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	if fr.FetchError != nil {
 		tlstate.LastFetchError = fr.FetchError.Error()
 	} else {
-		tlstate.LastSuccessfulFetchAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
+		tlstate.LastSuccessfulFetchAt = gotransit.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	}
 	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps
@@ -121,7 +122,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 	}
 	fv.URL = opts.FeedURL
 	fv.FeedID = opts.FeedID
-	fv.FetchedAt = opts.FetchTime
+	fv.FetchedAt = opts.FetchedAt
 	// Is this SHA1 already present?
 	checkfvid := gotransit.FeedVersion{}
 	err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
