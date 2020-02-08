@@ -113,7 +113,7 @@ func TestMainFetchFeed_LastFetchError(t *testing.T) {
 		// Check FeedState
 		tlf := FeedState{}
 		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feedid)
-		experr := "file does not exist"
+		experr := "zip: not a valid zip file"
 		if tlf.LastFetchError == "" {
 			t.Errorf("expected value for LastFetchError")
 		}
@@ -195,7 +195,7 @@ func TestFetchAndCreateFeedVersion_404(t *testing.T) {
 			t.Errorf("got %d expect %d", fr.FeedVersion.ID, 0)
 		}
 		errmsg := fr.FetchError.Error()
-		experr := "file does not exist"
+		experr := "zip: not a valid zip file"
 		if !strings.HasPrefix(errmsg, experr) {
 			t.Errorf("got '%s' expected prefix '%s'", errmsg, experr)
 		}

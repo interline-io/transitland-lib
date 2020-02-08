@@ -148,10 +148,10 @@ func TestZipWriterAdapter(t *testing.T) {
 	}
 	// Read zip
 	reader := ZipAdapter{path: outpath}
-	if !reader.Exists() {
-		t.Error("outpath does not exist")
+	if err := reader.Open(); err != nil {
+		t.Error(err)
+		t.FailNow()
 	}
-	reader.Open()
 	defer reader.Close()
 	rows := [][]string{}
 	reader.ReadRows("hello.txt", func(row Row) {
@@ -173,12 +173,6 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	t.Run("Open", func(t *testing.T) {
 		if openerr != nil {
 			t.Error(openerr)
-		}
-	})
-	t.Run("Exists", func(t *testing.T) {
-		// TODO: doesnt check false cases
-		if !adapter.Exists() {
-			t.Errorf("got %t expected %t", false, true)
 		}
 	})
 	t.Run("OpenFile", func(t *testing.T) {

@@ -25,7 +25,6 @@ type Adapter interface {
 	ReadRows(string, func(Row)) error
 	Open() error
 	Close() error
-	Exists() bool
 	Path() string
 	SHA1() (string, error)
 	DirSHA1() (string, error)
@@ -127,8 +126,10 @@ type ZipAdapter struct {
 
 // Open the adapter. Return an error if the file does not exist.
 func (adapter ZipAdapter) Open() error {
-	if !adapter.Exists() {
-		return errors.New("file does not exist")
+	// Is the file readable
+	_, err := zip.OpenReader(adapter.path)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -141,17 +142,6 @@ func (adapter ZipAdapter) Close() error {
 // Path returns the path to the zip file.
 func (adapter ZipAdapter) Path() string {
 	return adapter.path
-}
-
-// Exists returns if the zip file exists.
-func (adapter ZipAdapter) Exists() bool {
-	// Is the file readable
-	r, err := zip.OpenReader(adapter.path)
-	if err != nil {
-		return false
-	}
-	r.Close()
-	return true
 }
 
 // OpenFile opens the file inside the archive.
@@ -280,8 +270,13 @@ func (adapter *DirAdapter) DirSHA1() (string, error) {
 
 // Open the adapter. Return an error if the directory does not exist.
 func (adapter *DirAdapter) Open() error {
-	if !adapter.Exists() {
-		return errors.New("file does not exist")
+	// Is the path a directory
+	fi, err := os.Stat(adapter.path)
+	if err != nil {
+		return err
+	}
+	if !fi.Mode().IsDir() {
+		return errors.New("path is not a directory")
 	}
 	return nil
 }
@@ -317,16 +312,6 @@ func (adapter *DirAdapter) ReadRows(filename string, cb func(Row)) error {
 	return adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
-}
-
-// Exists checks if the specified directory exists.
-func (adapter *DirAdapter) Exists() bool {
-	// Is the path a directory
-	fi, err := os.Stat(adapter.path)
-	if err != nil {
-		return false
-	}
-	return fi.Mode().IsDir()
 }
 
 // WriteRows writes with only Flush at the end.

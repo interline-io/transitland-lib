@@ -51,6 +51,11 @@ func (adapter OverlayAdapter) ReadRows(filename string, cb func(Row)) error {
 
 // Open implements CSV Adapter Open.
 func (adapter OverlayAdapter) Open() error {
+	for _, path := range adapter.paths {
+		if fi, err := os.Stat(path); err != nil || !fi.Mode().IsDir() {
+			return errors.New("overlay path does not exist")
+		}
+	}
 	return nil
 }
 
@@ -62,14 +67,4 @@ func (adapter OverlayAdapter) Close() error {
 // Path implements CSV Adapter.Path.
 func (adapter OverlayAdapter) Path() string {
 	return adapter.paths[0]
-}
-
-// Exists implements CSV Adapter.Exists.
-func (adapter OverlayAdapter) Exists() bool {
-	for _, path := range adapter.paths {
-		if fi, err := os.Stat(path); err != nil || !fi.Mode().IsDir() {
-			return false
-		}
-	}
-	return true
 }

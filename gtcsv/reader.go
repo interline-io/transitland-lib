@@ -65,9 +65,8 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 func (reader *Reader) ValidateStructure() []error {
 	// Check if the archive can be opened
 	allerrs := []error{}
-	exists := reader.Adapter.Exists()
-	if !exists {
-		allerrs = append(allerrs, causes.NewSourceUnreadableError("file does not exist", nil))
+	if err := reader.Adapter.Open(); err != nil {
+		allerrs = append(allerrs, causes.NewSourceUnreadableError("could not open", err))
 		return allerrs
 	}
 	// Check if these files contain valid headers
