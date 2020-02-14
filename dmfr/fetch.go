@@ -23,9 +23,7 @@ type FetchOptions struct {
 	IgnoreDuplicateContents bool
 	Directory               string
 	S3                      string
-	FetchTime               time.Time
-	// trying something out...
-	secrets Secrets
+	FetchedAt               time.Time
 }
 
 // FetchResult contains results of a fetch operation.
@@ -52,10 +50,10 @@ func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	} else if err != nil {
 		return fr, err // rollback
 	}
-	if opts.FetchTime.IsZero() {
-		opts.FetchTime = time.Now().UTC()
+	if opts.FetchedAt.IsZero() {
+		opts.FetchedAt = time.Now().UTC()
 	}
-	tlstate.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
+	tlstate.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	tlstate.LastFetchError = ""
 	// Immediately save LastFetchedAt
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
@@ -101,8 +99,7 @@ func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	if fr.FetchError != nil {
 		tlstate.LastFetchError = fr.FetchError.Error()
 	} else {
-		tlstate.LastFetchError = ""
-		tlstate.LastSuccessfulFetchAt = gotransit.OptionalTime{Time: opts.FetchTime, Valid: true}
+		tlstate.LastSuccessfulFetchAt = gotransit.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	}
 	// Save updated timestamps
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {

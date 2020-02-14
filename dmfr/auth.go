@@ -27,11 +27,10 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 		}
 		v.Set(auth.ParamName, secret.Key)
 		u.RawQuery = v.Encode()
-		log.Debug("Using query_param authentication: %s = %s", auth.ParamName, secret.Key)
+		// log.Debug("Using query_param authentication: %s = %s", auth.ParamName, secret.Key)
 	} else if auth.Type == "path_segment" {
-		p := u.Path
 		u.Path = strings.ReplaceAll(u.Path, "{}", secret.Key)
-		log.Debug("Using path_segment authentication: %s -> %s", p, u.Path)
+		// log.Debug("Using path_segment authentication: %s -> %s", p, u.Path)
 	}
 	ustr := u.String()
 	// Get the temporary file and full path
@@ -42,7 +41,7 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 	defer tmpfile.Close()
 	tmpfilepath := tmpfile.Name()
 	log.Debug("AuthorizedRequest downloading %s -> %s", address, tmpfilepath)
-	if u.Scheme == "http" {
+	if u.Scheme == "http" || u.Scheme == "https" {
 		// Download HTTP
 		client := &http.Client{}
 		req, err := http.NewRequest("GET", ustr, nil)
@@ -51,9 +50,9 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 		}
 		if auth.Type == "basic_auth" {
 			req.SetBasicAuth(secret.Username, secret.Password)
-			log.Debug("Using basic_auth authentication: %s:%s", secret.Username, secret.Password)
+			// log.Debug("Using basic_auth authentication: %s:%s", secret.Username, secret.Password)
 		} else if auth.Type == "header" {
-			log.Debug("Using header authentication: %s = %s", auth.ParamName, secret.Key)
+			// log.Debug("Using header authentication: %s = %s", auth.ParamName, secret.Key)
 			req.Header.Add(auth.ParamName, secret.Key)
 		}
 		resp, err := client.Do(req)

@@ -1,10 +1,12 @@
 package dmfr
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit/gtdb"
@@ -36,7 +38,7 @@ func (cmd *FetchCommand) Run(args []string) error {
 func (cmd *FetchCommand) Parse(args []string) error {
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: fetch [feedids...]")
+		fmt.Println("Usage: fetch [feed_id...]")
 		fl.PrintDefaults()
 	}
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
@@ -62,6 +64,18 @@ func (cmd *FetchCommand) Fetch() error {
 	if cmd.SecretsFile != "" {
 		cmd.secrets.Load(cmd.SecretsFile)
 	}
+	FetchedAt := time.Time{}
+	if cmd.fetchedAt != "" {
+		t, err := time.Parse(time.RFC3339Nano, cmd.fetchedAt)
+		if err != nil {
+			return err
+		}
+		FetchedAt = t
+	}
+	if cmd.fetchURL != "" && len(feedids) != 1 {
+		return errors.New("you must specify exactly one feed_id when using -fetch-url")
+	}
+
 	// Get feeds
 	feeds := []Feed{}
 	if cmd.DmfrFile != "" {
