@@ -23,7 +23,10 @@ type FetchCommand struct {
 	DryRun      bool
 	DBURL       string
 	feedids     []string
+	fetchedAt   string
 	adapter     gtdb.Adapter
+	secrets     Secrets
+	fetchURL    string
 }
 
 // Run .
@@ -64,15 +67,14 @@ func (cmd *FetchCommand) Fetch() error {
 	if cmd.SecretsFile != "" {
 		cmd.secrets.Load(cmd.SecretsFile)
 	}
-	FetchedAt := time.Time{}
 	if cmd.fetchedAt != "" {
 		t, err := time.Parse(time.RFC3339Nano, cmd.fetchedAt)
 		if err != nil {
 			return err
 		}
-		FetchedAt = t
+		cmd.FetchOptions.FetchedAt = t
 	}
-	if cmd.fetchURL != "" && len(feedids) != 1 {
+	if cmd.fetchURL != "" && len(cmd.feedids) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
 	}
 
@@ -129,7 +131,7 @@ func (cmd *FetchCommand) Fetch() error {
 			Directory:               cmd.Directory,
 			S3:                      cmd.S3,
 			IgnoreDuplicateContents: cmd.IgnoreDuplicateContents,
-			secrets:                 cmd.secrets,
+			Secrets:                 cmd.secrets,
 		}
 		jobs <- opts
 	}

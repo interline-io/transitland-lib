@@ -24,6 +24,7 @@ type FetchOptions struct {
 	Directory               string
 	S3                      string
 	FetchedAt               time.Time
+	Secrets                 Secrets
 }
 
 // FetchResult contains results of a fetch operation.
@@ -133,9 +134,9 @@ func fetchDownload(opts FetchOptions) (FetchResult, error) {
 	}
 	// Get secret
 	secret := Secret{}
-	if a, err := opts.secrets.MatchFeed(opts.Feed.FeedID); err == nil {
+	if a, err := opts.Secrets.MatchFeed(opts.Feed.FeedID); err == nil {
 		secret = a
-	} else if a, err := opts.secrets.MatchFilename(opts.Feed.File); err == nil {
+	} else if a, err := opts.Secrets.MatchFilename(opts.Feed.File); err == nil {
 		secret = a
 	} else if opts.Feed.Authorization.Type != "" {
 		fr.FetchError = errors.New("no secret found")
@@ -165,7 +166,7 @@ func fetchDownload(opts FetchOptions) (FetchResult, error) {
 	}
 	fv.URL = opts.FeedURL
 	fv.FeedID = opts.Feed.ID
-	fv.FetchedAt = opts.FetchTime
+	fv.FetchedAt = opts.FetchedAt
 	fr.FeedVersion = fv
 	return fr, nil
 }
