@@ -35,7 +35,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 		fmt.Println("Usage: fetch [feed_id...]")
 		fl.PrintDefaults()
 	}
-	fl.StringVar(&cmd.FetchOptions.FeedURL, "fetch-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
+	fl.StringVar(&cmd.FetchOptions.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
 	fl.StringVar(&fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
 	fl.StringVar(&secretsFile, "secrets", "", "Path to DMFR Secrets file")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
@@ -44,7 +44,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 	fl.StringVar(&cmd.FetchOptions.Directory, "gtfsdir", ".", "GTFS Directory")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.FetchOptions.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
-	fl.StringVar(&cmd.FetchOptions.S3, "S3", "", "Upload GTFS files to S3 bucket/prefix")
+	fl.StringVar(&cmd.FetchOptions.S3, "s3", "", "Upload GTFS files to S3 bucket/prefix")
 	fl.Parse(args)
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
