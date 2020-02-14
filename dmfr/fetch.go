@@ -34,10 +34,10 @@ type FetchResult struct {
 	FetchError   error
 }
 
-// MainFetchFeed fetches and creates a new FeedVersion for a given Feed.
+// DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
 // Fetch errors are logged to Feed LastFetchError and saved.
 // An error return from this function is a serious failure.
-func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
+func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	// Get url
 	tlfeed := Feed{ID: opts.FeedID}
