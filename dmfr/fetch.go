@@ -17,6 +17,7 @@ import (
 
 // FetchOptions sets options for a fetch operation.
 type FetchOptions struct {
+	Feed                    Feed
 	FeedID                  int
 	FeedURL                 string
 	IgnoreDuplicateContents bool
@@ -40,7 +41,7 @@ type FetchResult struct {
 func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	// Get url
-	tlfeed := Feed{ID: opts.FeedID}
+	tlfeed := Feed{ID: opts.Feed.ID}
 	if err := atx.Find(&tlfeed); err != nil {
 		return fr, err
 	}
@@ -48,8 +49,8 @@ func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 		opts.FeedURL = tlfeed.URLs.StaticCurrent
 	}
 	// Get state
-	tlstate := FeedState{FeedID: opts.FeedID}
-	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, opts.FeedID); err == sql.ErrNoRows {
+	tlstate := FeedState{FeedID: opts.Feed.ID}
+	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, opts.Feed.ID); err == sql.ErrNoRows {
 		tlstate.ID, err = atx.Insert(&tlstate)
 		if err != nil {
 			return fr, err
@@ -120,7 +121,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		return fr, nil
 	}
 	fv.URL = opts.FeedURL
-	fv.FeedID = opts.FeedID
+	fv.FeedID = opts.Feed.ID
 	fv.FetchedAt = opts.FetchedAt
 	// Is this SHA1 already present?
 	checkfvid := gotransit.FeedVersion{}
