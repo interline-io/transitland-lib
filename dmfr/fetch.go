@@ -17,12 +17,13 @@ import (
 
 // FetchOptions sets options for a fetch operation.
 type FetchOptions struct {
-	FeedID                  int
+	Feed                    Feed
 	FeedURL                 string
 	IgnoreDuplicateContents bool
 	Directory               string
 	S3                      string
 	FetchedAt               time.Time
+	Secrets                 Secrets
 }
 
 // FetchResult contains results of a fetch operation.
@@ -34,31 +35,31 @@ type FetchResult struct {
 	FetchError   error
 }
 
-// MainFetchFeed fetches and creates a new FeedVersion for a given Feed.
+// DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
 // Fetch errors are logged to Feed LastFetchError and saved.
 // An error return from this function is a serious failure.
-func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
+func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	// Get url
-	tlfeed := Feed{ID: opts.FeedID}
+	tlfeed := Feed{ID: opts.Feed.ID}
 	if err := atx.Find(&tlfeed); err != nil {
 		return fr, err
 	}
 	if opts.FeedURL == "" {
 		opts.FeedURL = tlfeed.URLs.StaticCurrent
 	}
+	if opts.FetchedAt.IsZero() {
+		opts.FetchedAt = time.Now().UTC()
+	}
 	// Get state
-	tlstate := FeedState{FeedID: opts.FeedID}
-	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, opts.FeedID); err == sql.ErrNoRows {
+	tlstate := FeedState{FeedID: opts.Feed.ID}
+	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, opts.Feed.ID); err == sql.ErrNoRows {
 		tlstate.ID, err = atx.Insert(&tlstate)
 		if err != nil {
 			return fr, err
 		}
 	} else if err != nil {
 		return fr, err
-	}
-	if opts.FetchedAt.IsZero() {
-		opts.FetchedAt = time.Now().UTC()
 	}
 	tlstate.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	tlstate.LastFetchError = ""
@@ -81,7 +82,6 @@ func MainFetchFeed(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fr, err
 	}
-
 	return fr, nil
 }
 
@@ -94,9 +94,18 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		fr.FetchError = errors.New("no url")
 		return fr, nil
 	}
+	// Get secret
+	secret := Secret{}
+	if a, err := opts.Secrets.MatchFeed(opts.Feed.FeedID); err == nil {
+		secret = a
+	} else if a, err := opts.Secrets.MatchFilename(opts.Feed.File); err == nil {
+		secret = a
+	} else if opts.Feed.Authorization.Type != "" {
+		fr.FetchError = errors.New("no secret found")
+		return fr, nil
+	}
+	auth := opts.Feed.Authorization
 	// Download feed
-	secret := Secret{}                    // TODO
-	auth := gotransit.FeedAuthorization{} // TODO
 	tmpfile, err := AuthenticatedRequest(opts.FeedURL, secret, auth)
 	if err != nil {
 		fr.FetchError = err
@@ -120,7 +129,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		return fr, nil
 	}
 	fv.URL = opts.FeedURL
-	fv.FeedID = opts.FeedID
+	fv.FeedID = opts.Feed.ID
 	fv.FetchedAt = opts.FetchedAt
 	// Is this SHA1 already present?
 	checkfvid := gotransit.FeedVersion{}

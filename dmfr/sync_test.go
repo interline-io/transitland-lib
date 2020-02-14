@@ -197,7 +197,7 @@ func TestHideUnseedFeeds(t *testing.T) {
 		fids := []int{}
 		for _, feedid := range feedids {
 			f := caltrain(atx, feedid)
-			fids = append(fids, f)
+			fids = append(fids, f.ID)
 		}
 		expseen := fids[0:1]
 		expunseen := fids[1:]
