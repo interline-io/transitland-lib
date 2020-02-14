@@ -13,7 +13,8 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
-type dmfrFetchCommand struct {
+// FetchCommand fetches feeds defined a DMFR database.
+type FetchCommand struct {
 	fetchURL  string
 	fetchedAt string
 	workers   int
@@ -27,7 +28,8 @@ type dmfrFetchCommand struct {
 	adapter   gtdb.Adapter
 }
 
-func (cmd *dmfrFetchCommand) Run(args []string) error {
+// Run executes this command.
+func (cmd *FetchCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: fetch [feed_id...]")

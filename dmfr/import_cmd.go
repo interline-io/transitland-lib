@@ -11,7 +11,8 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
-type dmfrImportCommand struct {
+// ImportCommand imports FeedVersions into a database.
+type ImportCommand struct {
 	workers    int
 	limit      uint64
 	dburl      string
@@ -26,7 +27,8 @@ type dmfrImportCommand struct {
 	adapter    gtdb.Adapter // allow for mocks
 }
 
-func (cmd *dmfrImportCommand) Run(args []string) error {
+// Run executes this command.
+func (cmd *ImportCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: import [feedids...]")
