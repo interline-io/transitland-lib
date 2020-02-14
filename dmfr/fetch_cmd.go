@@ -21,19 +21,23 @@ type FetchCommand struct {
 	DBURL        string
 	DryRun       bool
 	FeedIDs      []string
+	secretsFile  string
 	fetchedAt    string
 	adapter      gtdb.Adapter
 }
 
 // Parse sets options from command line flags.
 func (cmd *FetchCommand) Parse(args []string) error {
+	secretsFile := ""
+	fetchedAt := ""
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: fetch [feed_id...]")
 		fl.PrintDefaults()
 	}
 	fl.StringVar(&cmd.FetchOptions.FeedURL, "fetch-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
-	fl.StringVar(&cmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
+	fl.StringVar(&fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
+	fl.StringVar(&secretsFile, "secrets", "", "Path to DMFR Secrets file")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
@@ -46,12 +50,17 @@ func (cmd *FetchCommand) Parse(args []string) error {
 		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
 	}
 	cmd.FeedIDs = fl.Args()
-	if cmd.fetchedAt != "" {
-		t, err := time.Parse(time.RFC3339Nano, cmd.fetchedAt)
+	if fetchedAt != "" {
+		t, err := time.Parse(time.RFC3339Nano, fetchedAt)
 		if err != nil {
 			return err
 		}
 		cmd.FetchOptions.FetchedAt = t
+	}
+	if secretsFile != "" {
+		if err := cmd.FetchOptions.Secrets.Load(secretsFile); err != nil {
+			return err
+		}
 	}
 	if cmd.FetchOptions.FeedURL != "" && len(cmd.FeedIDs) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
@@ -111,6 +120,7 @@ func (cmd *FetchCommand) Run(args []string) error {
 			S3:                      cmd.FetchOptions.S3,
 			IgnoreDuplicateContents: cmd.FetchOptions.IgnoreDuplicateContents,
 			FetchedAt:               cmd.FetchOptions.FetchedAt,
+			Secrets:                 cmd.FetchOptions.Secrets,
 		}
 		jobs <- opts
 	}
