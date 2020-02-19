@@ -162,7 +162,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	// Check the entity against filters.
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
-			log.Trace("%s '%s' skipped by filter: %s", efn, eid, err)
+			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
 			copier.CopyResult.SkipEntityFilterCount[efn]++
 			return "", errors.New("skipped by filter"), nil
 		}
