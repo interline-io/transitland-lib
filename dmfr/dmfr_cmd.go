@@ -4,11 +4,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
 )
 
 // Command is the main entry point to the DMFR command
@@ -41,15 +39,15 @@ func (cmd *Command) Run(args []string) error {
 	var r runner
 	switch subc {
 	case "validate":
-		r = &dmfrValidateCommand{}
+		r = &ValidateCommand{}
 	case "merge":
-		r = &dmfrMergeCommand{}
+		r = &MergeCommand{}
 	case "sync":
-		r = &dmfrSyncCommand{}
+		r = &SyncCommand{}
 	case "import":
-		r = &dmfrImportCommand{}
+		r = &ImportCommand{}
 	case "fetch":
-		r = &dmfrFetchCommand{}
+		r = &FetchCommand{}
 	default:
 		return fmt.Errorf("Invalid command: %q", subc)
 	}
@@ -58,79 +56,11 @@ func (cmd *Command) Run(args []string) error {
 
 /////
 
-type dmfrSyncCommand struct {
-	dburl      string
-	filenames  []string
-	hideunseen bool
-	adapter    gtdb.Adapter // allow for mocks
-}
+// MergeCommand merges together multiple DMFR files. Not implemented.
+type MergeCommand struct{}
 
-func (cmd *dmfrSyncCommand) Run(args []string) error {
-	fl := flag.NewFlagSet("sync", flag.ExitOnError)
-	fl.Usage = func() {
-		fmt.Println("Usage: sync <filenames...>")
-		fl.PrintDefaults()
-	}
-	fl.StringVar(&cmd.dburl, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
-	fl.BoolVar(&cmd.hideunseen, "hideunseen", false, "Hide unseen feeds")
-	fl.Parse(args)
-	cmd.filenames = fl.Args()
-	if cmd.dburl == "" {
-		cmd.dburl = os.Getenv("DMFR_DATABASE_URL")
-	}
-	if cmd.adapter == nil {
-		writer := mustGetWriter(cmd.dburl, true)
-		cmd.adapter = writer.Adapter
-		defer writer.Close()
-	}
-	opts := SyncOptions{
-		Filenames:  cmd.filenames,
-		HideUnseen: cmd.hideunseen,
-	}
-	return cmd.adapter.Tx(func(atx gtdb.Adapter) error {
-		_, err := MainSync(atx, opts)
-		return err
-	})
-}
-
-/////
-
-type dmfrValidateCommand struct{}
-
-func (dmfrValidateCommand) Run(args []string) error {
-	fl := flag.NewFlagSet("validate", flag.ExitOnError)
-	fl.Usage = func() {
-		fmt.Println("Usage: validate <filenames...>")
-		fl.PrintDefaults()
-	}
-	fl.Parse(args)
-	if fl.NArg() == 0 {
-		fl.Usage()
-		return nil
-	}
-	filenames := fl.Args()
-	errs := []error{}
-	for _, filename := range filenames {
-		log.Info("Loading DMFR: %s", filename)
-		registry, err := LoadAndParseRegistry(filename)
-		if err != nil {
-			errs = append(errs, err)
-			log.Info("%s: Error when loading DMFR: %s", filename, err.Error())
-		} else {
-			log.Info("%s: Success loading DMFR with %d feeds", filename, len(registry.Feeds))
-		}
-	}
-	if len(errs) > 0 {
-		return errors.New("")
-	}
-	return nil
-}
-
-/////
-
-type dmfrMergeCommand struct{}
-
-func (dmfrMergeCommand) Run(args []string) error {
+// Run executes this command.
+func (MergeCommand) Run(args []string) error {
 	return errors.New("not implemented")
 }
 

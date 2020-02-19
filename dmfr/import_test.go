@@ -14,7 +14,7 @@ func TestFindImportableFeeds(t *testing.T) {
 		f := caltrain(atx, "test")
 		allfvids := []int{}
 		for i := 0; i < 10; i++ {
-			fv1 := testdb.ShouldInsert(t, atx, &gotransit.FeedVersion{FeedID: f})
+			fv1 := testdb.ShouldInsert(t, atx, &gotransit.FeedVersion{FeedID: f.ID})
 			allfvids = append(allfvids, fv1)
 		}
 		expfvids := allfvids[:5]

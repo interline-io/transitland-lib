@@ -1,8 +1,43 @@
 CREATE EXTENSION postgis;
 CREATE EXTENSION hstore;
-CREATE TABLE public.active_agencies (
+CREATE TABLE public.gtfs_calendars (
     id bigint NOT NULL,
+    service_id character varying NOT NULL,
+    monday integer NOT NULL,
+    tuesday integer NOT NULL,
+    wednesday integer NOT NULL,
+    thursday integer NOT NULL,
+    friday integer NOT NULL,
+    saturday integer NOT NULL,
+    sunday integer NOT NULL,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
     feed_version_id bigint NOT NULL,
+    generated boolean NOT NULL
+);
+CREATE TABLE public.agency_geometries (
+    agency_id bigint NOT NULL,
+    feed_version_id bigint NOT NULL,
+    geometry public.geography(Polygon,4326),
+    centroid public.geography(Point,4326)
+);
+CREATE TABLE public.feed_states (
+    id bigint NOT NULL,
+    feed_id bigint NOT NULL,
+    feed_version_id bigint,
+    last_fetched_at timestamp without time zone,
+    last_successful_fetch_at timestamp without time zone,
+    last_fetch_error character varying DEFAULT ''::character varying NOT NULL,
+    feed_realtime_enabled boolean DEFAULT false NOT NULL,
+    feed_priority integer,
+    tags json,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+CREATE TABLE public.gtfs_agencies (
+    id bigint NOT NULL,
     agency_id character varying NOT NULL,
     agency_name character varying NOT NULL,
     agency_url character varying NOT NULL,
@@ -13,13 +48,28 @@ CREATE TABLE public.active_agencies (
     agency_email character varying NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    geometry public.geography(Polygon,4326),
-    centroid public.geography(Point,4326)
+    feed_version_id bigint NOT NULL
 );
-CREATE TABLE public.active_routes (
+CREATE VIEW public.active_agencies AS
+ SELECT gtfs_agencies.id,
+    gtfs_agencies.agency_id,
+    gtfs_agencies.agency_name,
+    gtfs_agencies.agency_url,
+    gtfs_agencies.agency_timezone,
+    gtfs_agencies.agency_lang,
+    gtfs_agencies.agency_phone,
+    gtfs_agencies.agency_fare_url,
+    gtfs_agencies.agency_email,
+    gtfs_agencies.created_at,
+    gtfs_agencies.updated_at,
+    gtfs_agencies.feed_version_id,
+    agency_geometries.geometry,
+    agency_geometries.centroid
+   FROM ((public.gtfs_agencies
+     JOIN public.feed_states USING (feed_version_id))
+     LEFT JOIN public.agency_geometries ON ((agency_geometries.agency_id = gtfs_agencies.id)));
+CREATE TABLE public.gtfs_routes (
     id bigint NOT NULL,
-    feed_version_id bigint NOT NULL,
-    agency_id bigint NOT NULL,
     route_id character varying NOT NULL,
     route_short_name character varying NOT NULL,
     route_long_name character varying NOT NULL,
@@ -31,16 +81,44 @@ CREATE TABLE public.active_routes (
     route_sort_order integer NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    geometry public.geography(LineString,4326),
-    geometry_z14 public.geography(LineString,4326),
-    geometry_z10 public.geography(LineString,4326),
-    geometry_z6 public.geography(LineString,4326),
-    centroid public.geography(Point,4326)
-);
-CREATE TABLE public.active_stops (
-    id bigint NOT NULL,
     feed_version_id bigint NOT NULL,
-    parent_station bigint,
+    agency_id bigint NOT NULL
+);
+CREATE TABLE public.route_geometries (
+    route_id bigint NOT NULL,
+    feed_version_id bigint NOT NULL,
+    shape_id bigint NOT NULL,
+    direction_id integer NOT NULL,
+    generated boolean NOT NULL,
+    geometry public.geography(LineString,4326) NOT NULL,
+    geometry_z14 public.geography(LineString,4326) NOT NULL,
+    geometry_z10 public.geography(LineString,4326) NOT NULL,
+    geometry_z6 public.geography(LineString,4326) NOT NULL,
+    centroid public.geography(Point,4326) NOT NULL
+);
+CREATE VIEW public.active_routes AS
+ SELECT gtfs_routes.id,
+    gtfs_routes.route_id,
+    gtfs_routes.route_short_name,
+    gtfs_routes.route_long_name,
+    gtfs_routes.route_desc,
+    gtfs_routes.route_type,
+    gtfs_routes.route_url,
+    gtfs_routes.route_color,
+    gtfs_routes.route_text_color,
+    gtfs_routes.route_sort_order,
+    gtfs_routes.created_at,
+    gtfs_routes.updated_at,
+    gtfs_routes.feed_version_id,
+    gtfs_routes.agency_id,
+    route_geometries.geometry,
+    route_geometries.centroid,
+    route_geometries.generated
+   FROM ((public.gtfs_routes
+     JOIN public.feed_states USING (feed_version_id))
+     LEFT JOIN public.route_geometries ON ((route_geometries.route_id = gtfs_routes.id)));
+CREATE TABLE public.gtfs_stops (
+    id bigint NOT NULL,
     stop_id character varying NOT NULL,
     stop_code character varying NOT NULL,
     stop_name character varying NOT NULL,
@@ -53,14 +131,29 @@ CREATE TABLE public.active_stops (
     geometry public.geography(Point,4326) NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
+    feed_version_id bigint NOT NULL,
+    parent_station bigint,
     level_id bigint
 );
-CREATE TABLE public.agency_geometries (
-    agency_id bigint NOT NULL,
-    feed_version_id bigint NOT NULL,
-    geometry public.geography(Polygon,4326),
-    centroid public.geography(Point,4326)
-);
+CREATE VIEW public.active_stops AS
+ SELECT gtfs_stops.id,
+    gtfs_stops.stop_id,
+    gtfs_stops.stop_code,
+    gtfs_stops.stop_name,
+    gtfs_stops.stop_desc,
+    gtfs_stops.zone_id,
+    gtfs_stops.stop_url,
+    gtfs_stops.location_type,
+    gtfs_stops.stop_timezone,
+    gtfs_stops.wheelchair_boarding,
+    gtfs_stops.geometry,
+    gtfs_stops.created_at,
+    gtfs_stops.updated_at,
+    gtfs_stops.feed_version_id,
+    gtfs_stops.parent_station,
+    gtfs_stops.level_id
+   FROM (public.gtfs_stops
+     JOIN public.feed_states USING (feed_version_id));
 CREATE TABLE public.current_feeds (
     id bigint NOT NULL,
     onestop_id character varying NOT NULL,
@@ -97,19 +190,6 @@ CREATE SEQUENCE public.current_feeds_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.current_feeds_id_seq OWNED BY public.current_feeds.id;
-CREATE TABLE public.feed_states (
-    id bigint NOT NULL,
-    feed_id bigint NOT NULL,
-    feed_version_id bigint,
-    last_fetched_at timestamp without time zone,
-    last_successful_fetch_at timestamp without time zone,
-    last_fetch_error character varying DEFAULT ''::character varying NOT NULL,
-    feed_realtime_enabled boolean DEFAULT false NOT NULL,
-    feed_priority integer,
-    tags json,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
-);
 CREATE SEQUENCE public.feed_states_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -178,20 +258,6 @@ CREATE SEQUENCE public.feed_versions_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.feed_versions_id_seq OWNED BY public.feed_versions.id;
-CREATE TABLE public.gtfs_agencies (
-    id bigint NOT NULL,
-    agency_id character varying NOT NULL,
-    agency_name character varying NOT NULL,
-    agency_url character varying NOT NULL,
-    agency_timezone character varying NOT NULL,
-    agency_lang character varying NOT NULL,
-    agency_phone character varying NOT NULL,
-    agency_fare_url character varying NOT NULL,
-    agency_email character varying NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id bigint NOT NULL
-);
 CREATE SEQUENCE public.gtfs_agencies_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -215,23 +281,6 @@ CREATE SEQUENCE public.gtfs_calendar_dates_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_calendar_dates_id_seq OWNED BY public.gtfs_calendar_dates.id;
-CREATE TABLE public.gtfs_calendars (
-    id bigint NOT NULL,
-    service_id character varying NOT NULL,
-    monday integer NOT NULL,
-    tuesday integer NOT NULL,
-    wednesday integer NOT NULL,
-    thursday integer NOT NULL,
-    friday integer NOT NULL,
-    saturday integer NOT NULL,
-    sunday integer NOT NULL,
-    start_date date NOT NULL,
-    end_date date NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id bigint NOT NULL,
-    generated boolean NOT NULL
-);
 CREATE SEQUENCE public.gtfs_calendars_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -355,22 +404,6 @@ CREATE SEQUENCE public.gtfs_pathways_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_pathways_id_seq OWNED BY public.gtfs_pathways.id;
-CREATE TABLE public.gtfs_routes (
-    id bigint NOT NULL,
-    route_id character varying NOT NULL,
-    route_short_name character varying NOT NULL,
-    route_long_name character varying NOT NULL,
-    route_desc character varying NOT NULL,
-    route_type integer NOT NULL,
-    route_url character varying NOT NULL,
-    route_color character varying NOT NULL,
-    route_text_color character varying NOT NULL,
-    route_sort_order integer NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id bigint NOT NULL,
-    agency_id bigint NOT NULL
-);
 CREATE SEQUENCE public.gtfs_routes_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -418,24 +451,6 @@ CREATE SEQUENCE public.gtfs_stop_times_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_stop_times_id_seq OWNED BY public.gtfs_stop_times.id;
-CREATE TABLE public.gtfs_stops (
-    id bigint NOT NULL,
-    stop_id character varying NOT NULL,
-    stop_code character varying NOT NULL,
-    stop_name character varying NOT NULL,
-    stop_desc character varying NOT NULL,
-    zone_id character varying NOT NULL,
-    stop_url character varying NOT NULL,
-    location_type integer NOT NULL,
-    stop_timezone character varying NOT NULL,
-    wheelchair_boarding integer NOT NULL,
-    geometry public.geography(Point,4326) NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    feed_version_id bigint NOT NULL,
-    parent_station bigint,
-    level_id bigint
-);
 CREATE SEQUENCE public.gtfs_stops_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -484,18 +499,6 @@ CREATE SEQUENCE public.gtfs_trips_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_trips_id_seq OWNED BY public.gtfs_trips.id;
-CREATE TABLE public.route_geometries (
-    route_id bigint NOT NULL,
-    feed_version_id bigint NOT NULL,
-    shape_id bigint NOT NULL,
-    direction_id integer NOT NULL,
-    generated boolean NOT NULL,
-    geometry public.geography(LineString,4326) NOT NULL,
-    geometry_z14 public.geography(LineString,4326) NOT NULL,
-    geometry_z10 public.geography(LineString,4326) NOT NULL,
-    geometry_z6 public.geography(LineString,4326) NOT NULL,
-    centroid public.geography(Point,4326) NOT NULL
-);
 CREATE TABLE public.route_stops (
     feed_version_id bigint NOT NULL,
     agency_id bigint NOT NULL,
@@ -559,28 +562,6 @@ ALTER TABLE ONLY public.gtfs_transfers
     ADD CONSTRAINT gtfs_transfers_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT gtfs_trips_pkey PRIMARY KEY (id);
-CREATE INDEX index_active_agencies_on_agency_id ON public.active_agencies USING btree (agency_id);
-CREATE INDEX index_active_agencies_on_agency_name ON public.active_agencies USING btree (agency_name);
-CREATE INDEX index_active_agencies_on_centroid ON public.active_agencies USING gist (centroid);
-CREATE INDEX index_active_agencies_on_feed_version_id ON public.active_agencies USING btree (feed_version_id);
-CREATE INDEX index_active_agencies_on_geometry ON public.active_agencies USING gist (geometry);
-CREATE UNIQUE INDEX index_active_agencies_unique ON public.active_agencies USING btree (id);
-CREATE INDEX index_active_routes_on_agency_id ON public.active_routes USING btree (agency_id);
-CREATE INDEX index_active_routes_on_centroid ON public.active_routes USING gist (centroid);
-CREATE INDEX index_active_routes_on_feed_version_id ON public.active_routes USING btree (feed_version_id);
-CREATE INDEX index_active_routes_on_geometry ON public.active_routes USING gist (geometry);
-CREATE INDEX index_active_routes_on_route_id ON public.active_routes USING btree (route_id);
-CREATE INDEX index_active_routes_on_route_long_name ON public.active_routes USING btree (route_long_name);
-CREATE INDEX index_active_routes_on_route_short_name ON public.active_routes USING btree (route_short_name);
-CREATE INDEX index_active_routes_on_route_type ON public.active_routes USING btree (route_type);
-CREATE UNIQUE INDEX index_active_routes_unique ON public.active_routes USING btree (id);
-CREATE INDEX index_active_stops_on_feed_version_id ON public.active_stops USING btree (feed_version_id);
-CREATE INDEX index_active_stops_on_geometry ON public.active_stops USING gist (geometry);
-CREATE INDEX index_active_stops_on_location_type ON public.active_stops USING btree (location_type);
-CREATE INDEX index_active_stops_on_parent_station ON public.active_stops USING btree (parent_station);
-CREATE INDEX index_active_stops_on_stop_id ON public.active_stops USING btree (stop_id);
-CREATE INDEX index_active_stops_on_stop_name ON public.active_stops USING btree (stop_name);
-CREATE UNIQUE INDEX index_active_stops_unique ON public.active_stops USING btree (id);
 CREATE INDEX index_agency_geometries_on_centroid ON public.agency_geometries USING gist (centroid);
 CREATE INDEX index_agency_geometries_on_feed_version_id ON public.agency_geometries USING btree (feed_version_id);
 CREATE INDEX index_agency_geometries_on_geometry ON public.agency_geometries USING gist (geometry);
@@ -678,8 +659,6 @@ CREATE INDEX index_route_stops_on_agency_id ON public.route_stops USING btree (a
 CREATE INDEX index_route_stops_on_feed_version_id ON public.route_stops USING btree (feed_version_id);
 CREATE INDEX index_route_stops_on_route_id ON public.route_stops USING btree (route_id);
 CREATE INDEX index_route_stops_on_stop_id ON public.route_stops USING btree (stop_id);
-ALTER TABLE ONLY public.active_stops
-    ADD CONSTRAINT fk_rails_053f708060 FOREIGN KEY (id) REFERENCES public.gtfs_stops(id);
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT fk_rails_05ead08753 FOREIGN KEY (shape_id) REFERENCES public.gtfs_shapes(id);
 ALTER TABLE ONLY public.gtfs_transfers
@@ -706,18 +685,16 @@ ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT fk_rails_5093550f50 FOREIGN KEY (route_id) REFERENCES public.gtfs_routes(id);
 ALTER TABLE ONLY public.feed_states
     ADD CONSTRAINT fk_rails_5189447149 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
-ALTER TABLE ONLY public.active_stops
-    ADD CONSTRAINT fk_rails_697d462fc5 FOREIGN KEY (level_id) REFERENCES public.gtfs_levels(id);
 ALTER TABLE ONLY public.gtfs_frequencies
     ADD CONSTRAINT fk_rails_6e6295037f FOREIGN KEY (trip_id) REFERENCES public.gtfs_trips(id);
 ALTER TABLE ONLY public.route_geometries
     ADD CONSTRAINT fk_rails_71ddc895e1 FOREIGN KEY (route_id) REFERENCES public.gtfs_routes(id);
-ALTER TABLE ONLY public.active_routes
-    ADD CONSTRAINT fk_rails_7814cb55f6 FOREIGN KEY (agency_id) REFERENCES public.gtfs_agencies(id);
 ALTER TABLE ONLY public.gtfs_calendar_dates
     ADD CONSTRAINT fk_rails_7a365f570b FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.feed_version_geometries
     ADD CONSTRAINT fk_rails_8398615a04 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
+ALTER TABLE ONLY public.gtfs_shapes
+    ADD CONSTRAINT fk_rails_84a74e83d8 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_stops
     ADD CONSTRAINT fk_rails_860ffa5a40 FOREIGN KEY (level_id) REFERENCES public.gtfs_levels(id);
 ALTER TABLE ONLY public.route_stops
@@ -728,8 +705,6 @@ ALTER TABLE ONLY public.gtfs_fare_attributes
     ADD CONSTRAINT fk_rails_8a3ca847de FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_pathways
     ADD CONSTRAINT fk_rails_8d7bf46256 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
-ALTER TABLE ONLY public.active_agencies
-    ADD CONSTRAINT fk_rails_9505558984 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.feed_states
     ADD CONSTRAINT fk_rails_99eaedcf98 FOREIGN KEY (feed_id) REFERENCES public.current_feeds(id);
 ALTER TABLE ONLY public.gtfs_transfers
@@ -748,8 +723,6 @@ ALTER TABLE ONLY public.feed_versions
     ADD CONSTRAINT fk_rails_b5365c3cf3 FOREIGN KEY (feed_id) REFERENCES public.current_feeds(id);
 ALTER TABLE ONLY public.gtfs_stop_times
     ADD CONSTRAINT fk_rails_b5a47190ac FOREIGN KEY (trip_id) REFERENCES public.gtfs_trips(id);
-ALTER TABLE ONLY public.active_routes
-    ADD CONSTRAINT fk_rails_b894accf14 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.route_geometries
     ADD CONSTRAINT fk_rails_b9fc0ae4ad FOREIGN KEY (shape_id) REFERENCES public.gtfs_shapes(id);
 ALTER TABLE ONLY public.gtfs_fare_rules
@@ -758,8 +731,6 @@ ALTER TABLE ONLY public.gtfs_fare_rules
     ADD CONSTRAINT fk_rails_c336ea9f1a FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_levels
     ADD CONSTRAINT fk_rails_c5fba46e47 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
-ALTER TABLE ONLY public.active_routes
-    ADD CONSTRAINT fk_rails_c6426f88ff FOREIGN KEY (id) REFERENCES public.gtfs_routes(id);
 ALTER TABLE ONLY public.route_geometries
     ADD CONSTRAINT fk_rails_c858a218e2 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_calendar_dates
@@ -772,12 +743,6 @@ ALTER TABLE ONLY public.gtfs_frequencies
     ADD CONSTRAINT fk_rails_d1b468024b FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT fk_rails_d2c6f99d5e FOREIGN KEY (service_id) REFERENCES public.gtfs_calendars(id);
-ALTER TABLE ONLY public.active_stops
-    ADD CONSTRAINT fk_rails_d336f357e0 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
-ALTER TABLE ONLY public.active_agencies
-    ADD CONSTRAINT fk_rails_d34a5967ab FOREIGN KEY (id) REFERENCES public.gtfs_agencies(id);
-ALTER TABLE ONLY public.active_stops
-    ADD CONSTRAINT fk_rails_d6886f5824 FOREIGN KEY (parent_station) REFERENCES public.gtfs_stops(id);
 ALTER TABLE ONLY public.gtfs_pathways
     ADD CONSTRAINT fk_rails_df846a6b54 FOREIGN KEY (from_stop_id) REFERENCES public.gtfs_stops(id);
 ALTER TABLE ONLY public.gtfs_transfers
@@ -813,7 +778,8 @@ SET default_with_oids = false;
 --
 
 CREATE TABLE public.schema_migrations (
-    version character varying NOT NULL
+    version bigint NOT NULL,
+    dirty boolean NOT NULL
 );
 
 
@@ -821,114 +787,15 @@ CREATE TABLE public.schema_migrations (
 -- Data for Name: schema_migrations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.schema_migrations VALUES ('20141021222007');
-INSERT INTO public.schema_migrations VALUES ('20141021223643');
-INSERT INTO public.schema_migrations VALUES ('20141021223644');
-INSERT INTO public.schema_migrations VALUES ('20141022180407');
-INSERT INTO public.schema_migrations VALUES ('20141029181701');
-INSERT INTO public.schema_migrations VALUES ('20141031233950');
-INSERT INTO public.schema_migrations VALUES ('20141202001240');
-INSERT INTO public.schema_migrations VALUES ('20141202003418');
-INSERT INTO public.schema_migrations VALUES ('20141202182820');
-INSERT INTO public.schema_migrations VALUES ('20141202190949');
-INSERT INTO public.schema_migrations VALUES ('20141208200454');
-INSERT INTO public.schema_migrations VALUES ('20150206225908');
-INSERT INTO public.schema_migrations VALUES ('20150225174635');
-INSERT INTO public.schema_migrations VALUES ('20150310002641');
-INSERT INTO public.schema_migrations VALUES ('20150501181034');
-INSERT INTO public.schema_migrations VALUES ('20150526200426');
-INSERT INTO public.schema_migrations VALUES ('20150529220919');
-INSERT INTO public.schema_migrations VALUES ('20150708221436');
-INSERT INTO public.schema_migrations VALUES ('20150711000609');
-INSERT INTO public.schema_migrations VALUES ('20150711003625');
-INSERT INTO public.schema_migrations VALUES ('20150715070212');
-INSERT INTO public.schema_migrations VALUES ('20150811234133');
-INSERT INTO public.schema_migrations VALUES ('20150812235057');
-INSERT INTO public.schema_migrations VALUES ('20150814191424');
-INSERT INTO public.schema_migrations VALUES ('20150817150332');
-INSERT INTO public.schema_migrations VALUES ('20150828192208');
-INSERT INTO public.schema_migrations VALUES ('20150828194958');
-INSERT INTO public.schema_migrations VALUES ('20150901194129');
-INSERT INTO public.schema_migrations VALUES ('20150915001511');
-INSERT INTO public.schema_migrations VALUES ('20150915001512');
-INSERT INTO public.schema_migrations VALUES ('20150923173046');
-INSERT INTO public.schema_migrations VALUES ('20150930002948');
-INSERT INTO public.schema_migrations VALUES ('20151007004337');
-INSERT INTO public.schema_migrations VALUES ('20151009190325');
-INSERT INTO public.schema_migrations VALUES ('20151014010123');
-INSERT INTO public.schema_migrations VALUES ('20151022233724');
-INSERT INTO public.schema_migrations VALUES ('20151022243038');
-INSERT INTO public.schema_migrations VALUES ('20151027003112');
-INSERT INTO public.schema_migrations VALUES ('20151029001514');
-INSERT INTO public.schema_migrations VALUES ('20151030234052');
-INSERT INTO public.schema_migrations VALUES ('20151106195645');
-INSERT INTO public.schema_migrations VALUES ('20151109203658');
-INSERT INTO public.schema_migrations VALUES ('20151110212014');
-INSERT INTO public.schema_migrations VALUES ('20151111010054');
-INSERT INTO public.schema_migrations VALUES ('20151222213427');
-INSERT INTO public.schema_migrations VALUES ('20151223172515');
-INSERT INTO public.schema_migrations VALUES ('20160121192921');
-INSERT INTO public.schema_migrations VALUES ('20160127004017');
-INSERT INTO public.schema_migrations VALUES ('20160127004047');
-INSERT INTO public.schema_migrations VALUES ('20160128235954');
-INSERT INTO public.schema_migrations VALUES ('20160128305523');
-INSERT INTO public.schema_migrations VALUES ('20160130014111');
-INSERT INTO public.schema_migrations VALUES ('20160204180147');
-INSERT INTO public.schema_migrations VALUES ('20160205000053');
-INSERT INTO public.schema_migrations VALUES ('20160205200954');
-INSERT INTO public.schema_migrations VALUES ('20160210223051');
-INSERT INTO public.schema_migrations VALUES ('20160211002327');
-INSERT INTO public.schema_migrations VALUES ('20160219230742');
-INSERT INTO public.schema_migrations VALUES ('20160301214615');
-INSERT INTO public.schema_migrations VALUES ('20160322005507');
-INSERT INTO public.schema_migrations VALUES ('20160328234600');
-INSERT INTO public.schema_migrations VALUES ('20160401084013');
-INSERT INTO public.schema_migrations VALUES ('20160419224025');
-INSERT INTO public.schema_migrations VALUES ('20160419224617');
-INSERT INTO public.schema_migrations VALUES ('20160419235457');
-INSERT INTO public.schema_migrations VALUES ('20160526224318');
-INSERT INTO public.schema_migrations VALUES ('20160601005325');
-INSERT INTO public.schema_migrations VALUES ('20160613224412');
-INSERT INTO public.schema_migrations VALUES ('20160614041303');
-INSERT INTO public.schema_migrations VALUES ('20160913205612');
-INSERT INTO public.schema_migrations VALUES ('20160914234206');
-INSERT INTO public.schema_migrations VALUES ('20160919225828');
-INSERT INTO public.schema_migrations VALUES ('20160920191755');
-INSERT INTO public.schema_migrations VALUES ('20160930225228');
-INSERT INTO public.schema_migrations VALUES ('20161017191437');
-INSERT INTO public.schema_migrations VALUES ('20161103231227');
-INSERT INTO public.schema_migrations VALUES ('20161114223944');
-INSERT INTO public.schema_migrations VALUES ('20161129205145');
-INSERT INTO public.schema_migrations VALUES ('20161207070207');
-INSERT INTO public.schema_migrations VALUES ('20161229175433');
-INSERT INTO public.schema_migrations VALUES ('20170207173441');
-INSERT INTO public.schema_migrations VALUES ('20170303213823');
-INSERT INTO public.schema_migrations VALUES ('20170307003733');
-INSERT INTO public.schema_migrations VALUES ('20170315205738');
-INSERT INTO public.schema_migrations VALUES ('20170419200247');
-INSERT INTO public.schema_migrations VALUES ('20170601181416');
-INSERT INTO public.schema_migrations VALUES ('20170719230128');
-INSERT INTO public.schema_migrations VALUES ('20170725005643');
-INSERT INTO public.schema_migrations VALUES ('20170725011839');
-INSERT INTO public.schema_migrations VALUES ('20170811211047');
-INSERT INTO public.schema_migrations VALUES ('20171109020012');
-INSERT INTO public.schema_migrations VALUES ('20180113021001');
-INSERT INTO public.schema_migrations VALUES ('20190411214421');
-INSERT INTO public.schema_migrations VALUES ('20190415014530');
-INSERT INTO public.schema_migrations VALUES ('20191024200203');
-INSERT INTO public.schema_migrations VALUES ('20191112235334');
-INSERT INTO public.schema_migrations VALUES ('20191114075430');
-INSERT INTO public.schema_migrations VALUES ('20191202015906');
-INSERT INTO public.schema_migrations VALUES ('20191202033016');
-INSERT INTO public.schema_migrations VALUES ('20191202060535');
-INSERT INTO public.schema_migrations VALUES ('20200103093414');
+INSERT INTO public.schema_migrations VALUES (20200203182730, false);
 
 
 --
--- Name: unique_schema_migrations; Type: INDEX; Schema: public; Owner: -
+-- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX unique_schema_migrations ON public.schema_migrations USING btree (version);
+ALTER TABLE ONLY public.schema_migrations
+    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
 
 
 --

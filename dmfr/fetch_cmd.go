@@ -1,62 +1,94 @@
 package dmfr
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
 )
 
-type dmfrFetchCommand struct {
-	workers   int
-	limit     int
-	dburl     string
-	gtfsdir   string
-	allowdups bool
-	s3        string
-	dryrun    bool
-	feedids   []string
-	adapter   gtdb.Adapter
+// FetchCommand fetches feeds defined a DMFR database.
+type FetchCommand struct {
+	FetchOptions FetchOptions
+	Workers      int
+	Limit        int
+	DBURL        string
+	DryRun       bool
+	FeedIDs      []string
+	secretsFile  string
+	fetchedAt    string
+	adapter      gtdb.Adapter
 }
 
-func (cmd *dmfrFetchCommand) Run(args []string) error {
+// Parse sets options from command line flags.
+func (cmd *FetchCommand) Parse(args []string) error {
+	secretsFile := ""
+	fetchedAt := ""
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: fetch [feedids...]")
+		fmt.Println("Usage: fetch [feed_id...]")
 		fl.PrintDefaults()
 	}
-	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
-	fl.IntVar(&cmd.limit, "limit", 0, "Maximum number of feeds to fetch")
-	fl.StringVar(&cmd.dburl, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
-	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
-	fl.BoolVar(&cmd.dryrun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
-	fl.BoolVar(&cmd.allowdups, "allow-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
-	fl.StringVar(&cmd.s3, "s3", "", "Upload GTFS files to S3 bucket/prefix")
+	fl.StringVar(&cmd.FetchOptions.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
+	fl.StringVar(&fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
+	fl.StringVar(&secretsFile, "secrets", "", "Path to DMFR Secrets file")
+	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
+	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.StringVar(&cmd.FetchOptions.Directory, "gtfsdir", ".", "GTFS Directory")
+	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
+	fl.BoolVar(&cmd.FetchOptions.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
+	fl.StringVar(&cmd.FetchOptions.S3, "s3", "", "Upload GTFS files to S3 bucket/prefix")
 	fl.Parse(args)
-	if cmd.dburl == "" {
-		cmd.dburl = os.Getenv("DMFR_DATABASE_URL")
+	if cmd.DBURL == "" {
+		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
 	}
-	feedids := fl.Args()
+	cmd.FeedIDs = fl.Args()
+	if fetchedAt != "" {
+		t, err := time.Parse(time.RFC3339Nano, fetchedAt)
+		if err != nil {
+			return err
+		}
+		cmd.FetchOptions.FetchedAt = t
+	}
+	if secretsFile != "" {
+		if err := cmd.FetchOptions.Secrets.Load(secretsFile); err != nil {
+			return err
+		}
+	}
+	if cmd.FetchOptions.FeedURL != "" && len(cmd.FeedIDs) != 1 {
+		return errors.New("you must specify exactly one feed_id when using -fetch-url")
+	}
+	return nil
+}
+
+// Run executes this command.
+func (cmd *FetchCommand) Run(args []string) error {
+	if err := cmd.Parse(args); err != nil {
+		return err
+	}
+	// Get feeds
 	if cmd.adapter == nil {
-		writer := mustGetWriter(cmd.dburl, true)
+		writer := mustGetWriter(cmd.DBURL, true)
 		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}
-	// Get feeds
 	q := cmd.adapter.Sqrl().
 		Select("*").
 		From("current_feeds").
 		Where("deleted_at IS NULL").
 		Where("spec = ?", "gtfs")
-	if len(feedids) > 0 {
-		q = q.Where(sq.Eq{"onestop_id": feedids})
+	if len(cmd.FeedIDs) > 0 {
+		q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})
 	}
-	if cmd.limit > 0 {
-		q = q.Limit(uint64(cmd.limit))
+	if cmd.Limit > 0 {
+		q = q.Limit(uint64(cmd.Limit))
 	}
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
@@ -76,16 +108,19 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	var wg sync.WaitGroup
 	jobs := make(chan FetchOptions, len(feeds))
 	results := make(chan FetchResult, len(feeds))
-	for w := 0; w < cmd.workers; w++ {
+	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go dmfrFetchWorker(w, cmd.adapter, cmd.dryrun, jobs, results, &wg)
+		go fetchWorker(w, cmd.adapter, cmd.DryRun, jobs, results, &wg)
 	}
 	for _, feed := range feeds {
 		opts := FetchOptions{
-			FeedID:                  feed.ID,
-			Directory:               cmd.gtfsdir,
-			S3:                      cmd.s3,
-			IgnoreDuplicateContents: cmd.allowdups,
+			Feed:                    feed,
+			FeedURL:                 cmd.FetchOptions.FeedURL,
+			Directory:               cmd.FetchOptions.Directory,
+			S3:                      cmd.FetchOptions.S3,
+			IgnoreDuplicateContents: cmd.FetchOptions.IgnoreDuplicateContents,
+			FetchedAt:               cmd.FetchOptions.FetchedAt,
+			Secrets:                 cmd.FetchOptions.Secrets,
 		}
 		jobs <- opts
 	}
@@ -107,22 +142,22 @@ func (cmd *dmfrFetchCommand) Run(args []string) error {
 	return nil
 }
 
-func dmfrFetchWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
+func fetchWorker(id int, adapter gtdb.Adapter, DryRun bool, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
 	for opts := range jobs {
 		var fr FetchResult
 		osid := ""
-		if err := adapter.Get(&osid, "SELECT current_feeds.onestop_id FROM current_feeds WHERE id = ?", opts.FeedID); err != nil {
-			log.Info("Serious error: could not get details for Feed %d", opts.FeedID)
+		if err := adapter.Get(&osid, "SELECT current_feeds.onestop_id FROM current_feeds WHERE id = ?", opts.Feed.ID); err != nil {
+			log.Info("Serious error: could not get details for Feed %d", opts.Feed.ID)
 			continue
 		}
 		log.Debug("Feed %s (id:%d): url: %s begin", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL)
-		if dryrun {
-			log.Info("Feed %s (id:%d): dry-run", osid, opts.FeedID)
+		if DryRun {
+			log.Info("Feed %s (id:%d): dry-run", osid, opts.Feed.ID)
 			continue
 		}
 		err := adapter.Tx(func(atx gtdb.Adapter) error {
 			var fe error
-			fr, fe = MainFetchFeed(atx, opts)
+			fr, fe = DatabaseFetch(atx, opts)
 			return fe
 		})
 		if err != nil {
