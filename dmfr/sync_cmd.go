@@ -23,8 +23,8 @@ func (cmd *SyncCommand) Parse(args []string) error {
 		fmt.Println("Usage: sync <Filenames...>")
 		fl.PrintDefaults()
 	}
-	fl.StringVar(&cmd.DBURL, "DBURL", "", "Database URL (default: $DMFR_DATABASE_URL)")
-	fl.BoolVar(&cmd.HideUnseen, "HideUnseen", false, "Hide unseen feeds")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.BoolVar(&cmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")
 	fl.Parse(args)
 	cmd.Filenames = fl.Args()
 	if cmd.DBURL == "" {
