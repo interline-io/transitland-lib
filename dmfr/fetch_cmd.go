@@ -69,10 +69,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 }
 
 // Run executes this command.
-func (cmd *FetchCommand) Run(args []string) error {
-	if err := cmd.Parse(args); err != nil {
-		return err
-	}
+func (cmd *FetchCommand) Run() error {
 	// Get feeds
 	if cmd.adapter == nil {
 		writer := mustGetWriter(cmd.DBURL, true)

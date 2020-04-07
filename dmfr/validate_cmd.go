@@ -9,10 +9,12 @@ import (
 )
 
 // ValidateCommand validates a DMFR file.
-type ValidateCommand struct{}
+type ValidateCommand struct {
+	Filenames []string
+}
 
-// Run executes this command.
-func (ValidateCommand) Run(args []string) error {
+// Parse command line options.
+func (cmd *ValidateCommand) Parse(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Println("Usage: validate <filenames...>")
@@ -23,9 +25,14 @@ func (ValidateCommand) Run(args []string) error {
 		fl.Usage()
 		return nil
 	}
-	filenames := fl.Args()
+	cmd.Filenames = fl.Args()
+	return nil
+}
+
+// Run this command.
+func (cmd *ValidateCommand) Run() error {
 	errs := []error{}
-	for _, filename := range filenames {
+	for _, filename := range cmd.Filenames {
 		log.Info("Loading DMFR: %s", filename)
 		registry, err := LoadAndParseRegistry(filename)
 		if err != nil {

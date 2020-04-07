@@ -34,9 +34,12 @@ func Test_SyncCommand(t *testing.T) {
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
 			w := mustGetWriter("sqlite3://:memory:", true)
-			c := SyncCommand{adapter: w.Adapter}
-			err := c.Run(exp.command)
+			c := SyncCommand{Adapter: w.Adapter}
+			err := c.Parse(exp.command)
 			if err != nil {
+				t.Error(err)
+			}
+			if err := c.Run(); err != nil {
 				if !strings.Contains(err.Error(), exp.errContains) {
 					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.errContains)
 				}
@@ -96,7 +99,10 @@ func Test_FetchCommand(t *testing.T) {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
 			c := FetchCommand{adapter: adapter}
-			err := c.Run(exp.command)
+			if err := c.Parse(exp.command); err != nil {
+				t.Error(err)
+			}
+			err := c.Run()
 			if err != nil {
 				if !strings.Contains(err.Error(), exp.errContains) {
 					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.errContains)
