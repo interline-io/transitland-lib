@@ -43,6 +43,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	fl.StringVar(&cmd.Directory, "gtfsdir", ".", "GTFS Directory")
 	fl.StringVar(&cmd.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
 	fl.StringVar(&cmd.CoverDate, "date", "", "Service on date")
+	fl.StringVar(&cmd.FetchedSince, "fetched-since", "", "Fetched since")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Import at most n feeds")
 	fl.BoolVar(&cmd.Latest, "latest", false, "Only import latest feed version available for each feed")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
@@ -76,13 +77,13 @@ func (cmd *ImportCommand) Run() error {
 			Join("(SELECT id, created_at, ROW_NUMBER() OVER (PARTITION BY feed_id ORDER BY created_at DESC) AS rank FROM feed_versions) latest ON latest.id = feed_versions.id").
 			Where("latest.rank = 1")
 	}
-	if cmd.Limit > 0 {
-		// Max feeds
-		q = q.Limit(uint64(cmd.Limit))
-	}
 	if len(cmd.FeedIDs) > 0 {
 		// Limit to specified feeds
 		q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})
+	}
+	if cmd.FetchedSince != "" {
+		// Limit to feeds fetched since a given date
+		q = q.Where(sq.GtOrEq{"feed_versions.fetched_at": cmd.FetchedSince})
 	}
 	if cmd.CoverDate != "" {
 		// Limit to service date
@@ -93,6 +94,10 @@ func (cmd *ImportCommand) Run() error {
 	if len(cmd.FVIDs) > 0 {
 		// Explicitly specify fvids
 		q = q.Where(sq.Eq{"feed_versions.id": cmd.FVIDs})
+	}
+	if cmd.Limit > 0 {
+		// Max feeds
+		q = q.Limit(uint64(cmd.Limit))
 	}
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
