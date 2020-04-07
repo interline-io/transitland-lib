@@ -49,14 +49,14 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	fl.BoolVar(&cmd.Activate, "activate", false, "Set as active feed version after import")
 	fl.Parse(args)
 	cmd.FeedIDs = fl.Args()
+	if cmd.DBURL == "" {
+		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
+	}
 	return nil
 }
 
 // Run this command
 func (cmd *ImportCommand) Run() error {
-	if cmd.DBURL == "" {
-		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
-	}
 	if cmd.Adapter == nil {
 		writer := mustGetWriter(cmd.DBURL, true)
 		cmd.Adapter = writer.Adapter

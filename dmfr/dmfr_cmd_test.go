@@ -35,7 +35,7 @@ func Test_SyncCommand(t *testing.T) {
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
 			w := mustGetWriter("sqlite3://:memory:", true)
-			c := SyncCommand{Adapter: w.Adapter}
+			c := SyncCommand{adapter: w.Adapter}
 			err := c.Parse(exp.command)
 			if err != nil {
 				t.Error(err)

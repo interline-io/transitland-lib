@@ -13,7 +13,7 @@ type SyncCommand struct {
 	DBURL      string
 	Filenames  []string
 	HideUnseen bool
-	Adapter    gtdb.Adapter
+	adapter    gtdb.Adapter
 }
 
 // Parse command line options.
@@ -35,16 +35,16 @@ func (cmd *SyncCommand) Parse(args []string) error {
 
 // Run this command.
 func (cmd *SyncCommand) Run() error {
-	if cmd.Adapter == nil {
+	if cmd.adapter == nil {
 		writer := mustGetWriter(cmd.DBURL, true)
-		cmd.Adapter = writer.Adapter
-		defer cmd.Adapter.Close()
+		cmd.adapter = writer.Adapter
+		defer cmd.adapter.Close()
 	}
 	opts := SyncOptions{
 		Filenames:  cmd.Filenames,
 		HideUnseen: cmd.HideUnseen,
 	}
-	return cmd.Adapter.Tx(func(atx gtdb.Adapter) error {
+	return cmd.adapter.Tx(func(atx gtdb.Adapter) error {
 		_, err := MainSync(atx, opts)
 		return err
 	})

@@ -21,8 +21,6 @@ type FetchCommand struct {
 	DBURL        string
 	DryRun       bool
 	FeedIDs      []string
-	secretsFile  string
-	fetchedAt    string
 	adapter      gtdb.Adapter
 }
 
