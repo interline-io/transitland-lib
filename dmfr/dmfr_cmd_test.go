@@ -27,7 +27,7 @@ func Test_SyncCommand(t *testing.T) {
 		command     []string
 	}{
 		{2, "", []string{"../testdata/dmfr/example.json"}},
-		{4, "", []string{"../testdata/dmfr/example.json", "../testdata/dmfr/bayarea.dmfr.json"}},
+		{4, "", []string{"../testdata/dmfr/example.json", "../testdata/dmfr/bayarea-local.dmfr.json"}},
 		{0, "no such file", []string{"../testdaata/dmfr/does-not-exist.json"}},
 	}
 	_ = cases
