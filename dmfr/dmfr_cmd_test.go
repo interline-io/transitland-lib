@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -86,10 +87,10 @@ func Test_FetchCommand(t *testing.T) {
 		gtfsdir     string
 		command     []string
 	}{
-		{1, "", []Feed{f200}, "", []string{}},
-		{1, "", []Feed{f200, f404}, "", []string{"f--200", "f--404"}},
+		{1, "", []Feed{f200}, tmpdir, []string{"-gtfsdir", tmpdir}},
+		{1, "", []Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--200", "f--404"}},
 		{1, "", []Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--200"}},
-		{0, "", []Feed{f200, f404}, "", []string{"f--404"}},
+		{0, "", []Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--404"}},
 	}
 	_ = cases
 	for _, exp := range cases {
@@ -121,8 +122,8 @@ func Test_FetchCommand(t *testing.T) {
 			}
 			if exp.gtfsdir != "" {
 				for _, fv := range fvs {
-					// fn := filepath.Join(exp.gtfsdir, fv.File)
-					fn := fv.File
+					fn := filepath.Join(exp.gtfsdir, fv.File)
+					// fn := fv.File
 					st, err := os.Stat(fn)
 					if err != nil {
 						t.Errorf("got '%s', expected file '%s' to exist", err.Error(), fn)
