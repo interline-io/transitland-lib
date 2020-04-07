@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/interline-io/gotransit/gtdb"
@@ -94,4 +95,10 @@ func mustGetWriter(dburl string, create bool) *gtdb.Writer {
 		}
 	}
 	return writer
+}
+
+// exit on error
+func exit(fmts string, args ...interface{}) {
+	fmt.Printf(fmts+"\n", args...)
+	os.Exit(1)
 }

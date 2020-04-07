@@ -23,6 +23,7 @@ type ImportCommand struct {
 	dryrun     bool
 	activate   bool
 	feedids    []string
+	fvids      arrayFlags
 	extensions arrayFlags
 	adapter    gtdb.Adapter // allow for mocks
 }
@@ -35,6 +36,7 @@ func (cmd *ImportCommand) Run(args []string) error {
 		fl.PrintDefaults()
 	}
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+	fl.Var(&cmd.fvids, "fvid", "Import specific feed version ID")
 	fl.IntVar(&cmd.workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.dburl, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.gtfsdir, "gtfsdir", ".", "GTFS Directory")
@@ -76,15 +78,15 @@ func (cmd *ImportCommand) Run(args []string) error {
 		// Limit to specified feeds
 		q = q.Where(sq.Eq{"onestop_id": cmd.feedids})
 	}
-	// if cmd.coverdate == "" {
-	// 	// Set default date
-	// 	cmd.coverdate = time.Now().Format("2006-01-02")
-	// }
 	if cmd.coverdate != "" {
 		// Limit to service date
 		q = q.
 			Where(sq.LtOrEq{"feed_versions.earliest_calendar_date": cmd.coverdate}).
 			Where(sq.GtOrEq{"feed_versions.latest_calendar_date": cmd.coverdate})
+	}
+	if len(cmd.fvids) > 0 {
+		// Explicitly specify fvids
+		q = q.Where(sq.Eq{"feed_version.id": cmd.fvids})
 	}
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
