@@ -10,34 +10,39 @@ import (
 
 // SyncCommand syncs a DMFR to a database.
 type SyncCommand struct {
-	dburl      string
-	filenames  []string
-	hideunseen bool
-	adapter    gtdb.Adapter // allow for mocks
+	DBURL      string
+	Filenames  []string
+	HideUnseen bool
+	adapter    gtdb.Adapter
 }
 
-// Run executes this command.
-func (cmd *SyncCommand) Run(args []string) error {
+// Parse command line options.
+func (cmd *SyncCommand) Parse(args []string) error {
 	fl := flag.NewFlagSet("sync", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: sync <filenames...>")
+		fmt.Println("Usage: sync <Filenames...>")
 		fl.PrintDefaults()
 	}
-	fl.StringVar(&cmd.dburl, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
-	fl.BoolVar(&cmd.hideunseen, "hideunseen", false, "Hide unseen feeds")
+	fl.StringVar(&cmd.DBURL, "DBURL", "", "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.BoolVar(&cmd.HideUnseen, "HideUnseen", false, "Hide unseen feeds")
 	fl.Parse(args)
-	cmd.filenames = fl.Args()
-	if cmd.dburl == "" {
-		cmd.dburl = os.Getenv("DMFR_DATABASE_URL")
+	cmd.Filenames = fl.Args()
+	if cmd.DBURL == "" {
+		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
 	}
+	return nil
+}
+
+// Run this command.
+func (cmd *SyncCommand) Run() error {
 	if cmd.adapter == nil {
-		writer := mustGetWriter(cmd.dburl, true)
+		writer := mustGetWriter(cmd.DBURL, true)
 		cmd.adapter = writer.Adapter
-		defer writer.Close()
+		defer cmd.adapter.Close()
 	}
 	opts := SyncOptions{
-		Filenames:  cmd.filenames,
-		HideUnseen: cmd.hideunseen,
+		Filenames:  cmd.Filenames,
+		HideUnseen: cmd.HideUnseen,
 	}
 	return cmd.adapter.Tx(func(atx gtdb.Adapter) error {
 		_, err := MainSync(atx, opts)

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/interline-io/gotransit/gtdb"
@@ -34,7 +35,8 @@ func (cmd *Command) Run(args []string) error {
 		return nil
 	}
 	type runner interface {
-		Run([]string) error
+		Parse([]string) error
+		Run() error
 	}
 	var r runner
 	switch subc {
@@ -51,7 +53,11 @@ func (cmd *Command) Run(args []string) error {
 	default:
 		return fmt.Errorf("Invalid command: %q", subc)
 	}
-	return r.Run(fl.Args()[1:]) // consume first arg
+	// Parse; consume first arg
+	if err := r.Parse(fl.Args()[1:]); err != nil {
+		return err
+	}
+	return r.Run()
 }
 
 /////
@@ -59,9 +65,14 @@ func (cmd *Command) Run(args []string) error {
 // MergeCommand merges together multiple DMFR files. Not implemented.
 type MergeCommand struct{}
 
-// Run executes this command.
-func (MergeCommand) Run(args []string) error {
+// Parse command line options
+func (MergeCommand) Parse(args []string) error {
 	return errors.New("not implemented")
+}
+
+// Run executes this command.
+func (MergeCommand) Run() error {
+	return nil
 }
 
 //// Util
@@ -94,4 +105,10 @@ func mustGetWriter(dburl string, create bool) *gtdb.Writer {
 		}
 	}
 	return writer
+}
+
+// exit on error
+func exit(fmts string, args ...interface{}) {
+	fmt.Printf(fmts+"\n", args...)
+	os.Exit(1)
 }

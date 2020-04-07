@@ -16,7 +16,7 @@ func TestMainSync(t *testing.T) {
 		// Import
 		regs := []string{
 			"../testdata/dmfr/rtfeeds.dmfr.json",
-			"../testdata/dmfr/bayarea.dmfr.json",
+			"../testdata/dmfr/bayarea-local.dmfr.json",
 		}
 		opts := SyncOptions{
 			Filenames:  regs,
