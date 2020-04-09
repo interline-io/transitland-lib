@@ -28,7 +28,7 @@ func (row *Row) Get(k string) (string, bool) {
 }
 
 // ReadRows iterates through csv rows with callback.
-func ReadRows(in io.Reader, cb func(Row)) {
+func ReadRows(in io.Reader, cb func(Row)) error {
 	// Handle byte-order-marks.
 	r := csv.NewReader(utfbom.SkipOnly(in))
 	// Allow variable columns - very common in GTFS
@@ -42,7 +42,7 @@ func ReadRows(in io.Reader, cb func(Row)) {
 	// Go for it.
 	firstRow, err := r.Read()
 	if err != nil {
-		return
+		return err
 	}
 	// Copy header, since we will reuse the backing array
 	header := []string{}
@@ -57,12 +57,16 @@ func ReadRows(in io.Reader, cb func(Row)) {
 	line := 2 // lines are 1-indexed, plus header
 	for {
 		row, err := r.Read()
-		if err == io.EOF {
+		if err == nil {
+			// ok
+		} else if err == io.EOF {
 			break
-		}
-		// Clear the line if there was a parse error
-		if err != nil {
+		} else if _, ok := err.(*csv.ParseError); ok {
+			// Parse error: clear row, add error to row
 			row = []string{}
+		} else {
+			// Serious error: break and return with error
+			return err
 		}
 		// Remove whitespace
 		for i := 0; i < len(row); i++ {
@@ -76,4 +80,5 @@ func ReadRows(in io.Reader, cb func(Row)) {
 		cb(Row{Row: row, Line: line, Header: header, Hindex: hindex, Err: err})
 		line++
 	}
+	return nil
 }
