@@ -1,6 +1,7 @@
 package dmfr
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -114,6 +115,17 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 	fvi := FeedVersionImport{FeedVersionID: opts.FeedVersionID, InProgress: true}
 	fv := gotransit.FeedVersion{ID: opts.FeedVersionID}
 	if err := adapter.Find(&fv); err != nil {
+		return ImportResult{FeedVersionImport: fvi}, err
+	}
+	// Check FVI
+	checkfviid := 0
+	if err := adapter.Get(&checkfviid, `SELECT id FROM feed_version_gtfs_imports WHERE feed_version_id = ?`, fv.ID); err == sql.ErrNoRows {
+		// ok
+	} else if err == nil {
+		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
+		return ImportResult{FeedVersionImport: fvi}, nil
+	} else {
+		// Serious error
 		return ImportResult{FeedVersionImport: fvi}, err
 	}
 	// Create FVI
