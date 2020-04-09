@@ -140,12 +140,9 @@ func (cmd *FetchCommand) Run() error {
 func fetchWorker(id int, adapter gtdb.Adapter, DryRun bool, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
 	for opts := range jobs {
 		var fr FetchResult
-		osid := ""
-		if err := adapter.Get(&osid, "SELECT current_feeds.onestop_id FROM current_feeds WHERE id = ?", opts.Feed.ID); err != nil {
-			log.Info("Serious error: could not get details for Feed %d", opts.Feed.ID)
-			continue
-		}
-		log.Debug("Feed %s (id:%d): url: %s begin", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL)
+		// Get FeedID for pretty printing.
+		osid := opts.Feed.FeedID
+		// log.Info("Feed %s (id:%d): url: %s begin/start", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL)
 		if DryRun {
 			log.Info("Feed %s (id:%d): dry-run", osid, opts.Feed.ID)
 			continue
