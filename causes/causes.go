@@ -166,7 +166,7 @@ func NewFileRequiredFieldError(filename string, field string) *FileRequiredField
 }
 
 func (e *FileRequiredFieldError) Error() string {
-	return fmt.Sprintf("file '%s' field '%s' is present more than once", e.Filename, e.Field)
+	return fmt.Sprintf("file '%s' required field '%s' not in header", e.Filename, e.Field)
 }
 
 ////////////////////////////
