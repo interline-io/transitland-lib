@@ -103,6 +103,21 @@ func (reader *Reader) ValidateStructure() []error {
 					fileerrs = append(fileerrs, causes.NewFileRequiredFieldError(efn, field.Csv))
 				}
 			}
+			// Check for other errors
+			for {
+				_, err := r.Read()
+				if err == nil {
+					// ok
+				} else if err == io.EOF {
+					break
+				} else if pe, ok := err.(*csv.ParseError); ok {
+					fileerrs = append(fileerrs, causes.NewFileParseError(pe.Line, pe))
+					break
+				} else {
+					fileerrs = append(fileerrs, causes.NewFileUnreadableError(efn, err))
+					break
+				}
+			}
 		})
 		if err != nil {
 			fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
