@@ -36,8 +36,8 @@ type FetchResult struct {
 }
 
 // DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
-// Fetch errors are logged to Feed LastFetchError and saved.
 // An error return from this function is a serious failure.
+// Saves FeedState.LastFetchError for regular failures.
 func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	// Get url
@@ -63,7 +63,7 @@ func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	}
 	tlstate.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	tlstate.LastFetchError = ""
-	// Immediately save LastFetchedAt to obtain lock
+	// Immediately save LastFetchedAt
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
 		return fr, err
 	}
@@ -86,8 +86,8 @@ func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 }
 
 // FetchAndCreateFeedVersion from a URL.
-// Returns error if the source cannot be loaded or is invalid GTFS.
-// Returns no error if the SHA1 is already present, or a FeedVersion is created.
+// Returns an error if a serious failure occurs, such as database or filesystem access.
+// Sets FetchResult.FetchError if a regular failure occurs, such as a 404.
 func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	if opts.FeedURL == "" {
@@ -107,6 +107,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 	auth := opts.Feed.Authorization
 	// Download feed
 	tmpfile, err := AuthenticatedRequest(opts.FeedURL, secret, auth)
+	defer os.Remove(tmpfile)
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil

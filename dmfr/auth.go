@@ -14,7 +14,7 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-// AuthenticatedRequest fetches a url using a secret and auth description.
+// AuthenticatedRequest fetches a url using a secret and auth description. Returns temp file path or error.
 func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuthorization) (string, error) {
 	u, err := url.Parse(address)
 	if err != nil {
@@ -43,7 +43,9 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 	log.Debug("AuthorizedRequest downloading %s -> %s", address, tmpfilepath)
 	if u.Scheme == "http" || u.Scheme == "https" {
 		// Download HTTP
-		client := &http.Client{}
+		client := &http.Client{
+			Timeout: 600 * time.Second,
+		}
 		req, err := http.NewRequest("GET", ustr, nil)
 		if err != nil {
 			return "", err
@@ -68,7 +70,7 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 		if p == "" {
 			p = "21"
 		}
-		c, err := ftp.Dial(fmt.Sprintf("%s:%s", u.Hostname(), p), ftp.DialWithTimeout(10*time.Second))
+		c, err := ftp.Dial(fmt.Sprintf("%s:%s", u.Hostname(), p), ftp.DialWithTimeout(600*time.Second))
 		if err != nil {
 			return "", err
 		}
