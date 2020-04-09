@@ -1,8 +1,6 @@
 package gtcsv
 
 import (
-	"encoding/csv"
-	"errors"
 	"io"
 	"os"
 	"reflect"
@@ -12,8 +10,6 @@ import (
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/interline-io/gotransit/internal/tags"
-
-	"github.com/dimchansky/utfbom"
 )
 
 // s2D is two dimensional string slice
@@ -75,18 +71,23 @@ func (reader *Reader) ValidateStructure() []error {
 		fileerrs := []error{}
 		efn := ent.Filename()
 		err := reader.Adapter.OpenFile(efn, func(in io.Reader) {
-			r := csv.NewReader(utfbom.SkipOnly(in))
-			row, err := r.Read()
-			if err != nil {
-				fileerrs = append(fileerrs, err)
-				return
+			rowcount := 0
+			rowheader := []string{}
+			readerr := ReadRows(in, func(row Row) {
+				if len(rowheader) == 0 {
+					rowheader = row.Header
+				}
+				rowcount++
+			})
+			if readerr != nil {
+				fileerrs = append(fileerrs, causes.NewFileUnreadableError(efn, readerr))
 			}
-			if len(row) == 0 {
-				fileerrs = append(fileerrs, errors.New("no data"))
+			if rowcount == 0 {
+				fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
 			}
 			// Check for column duplicates
 			columns := map[string]int{}
-			for _, h := range row {
+			for _, h := range rowheader {
 				columns[strings.TrimSpace(h)]++
 			}
 			for k, v := range columns {
@@ -101,21 +102,6 @@ func (reader *Reader) ValidateStructure() []error {
 			for _, field := range ftm {
 				if _, ok := columns[field.Csv]; field.Required && !ok {
 					fileerrs = append(fileerrs, causes.NewFileRequiredFieldError(efn, field.Csv))
-				}
-			}
-			// Check for other errors
-			for {
-				_, err := r.Read()
-				if err == nil {
-					// ok
-				} else if err == io.EOF {
-					break
-				} else if pe, ok := err.(*csv.ParseError); ok {
-					fileerrs = append(fileerrs, causes.NewFileParseError(pe.Line, pe))
-					break
-				} else {
-					fileerrs = append(fileerrs, causes.NewFileUnreadableError(efn, err))
-					break
 				}
 			}
 		})
