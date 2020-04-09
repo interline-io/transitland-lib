@@ -117,16 +117,20 @@ func (reader *Reader) ValidateStructure() []error {
 	allerrs = append(allerrs, check(&gotransit.StopTime{})...)
 	cal := gotransit.Calendar{}
 	cd := gotransit.CalendarDate{}
+	calerrs := check(&cal)
+	cderrs := check(&cd)
 	if reader.ContainsFile(cal.Filename()) && reader.ContainsFile(cd.Filename()) {
-		allerrs = append(allerrs, check(&cal)...)
-		allerrs = append(allerrs, check(&cd)...)
+		if len(calerrs) > 0 && len(cderrs) > 0 {
+			allerrs = append(allerrs, calerrs...)
+			allerrs = append(allerrs, cderrs...)
+		}
 	} else if reader.ContainsFile(cal.Filename()) {
-		allerrs = append(allerrs, check(&cal)...)
+		allerrs = append(allerrs, calerrs...)
 	} else if reader.ContainsFile(cd.Filename()) {
-		allerrs = append(allerrs, check(&cd)...)
+		allerrs = append(allerrs, cderrs...)
 	} else {
-		allerrs = append(allerrs, causes.NewFileRequiredError(cal.Filename()))
-		allerrs = append(allerrs, causes.NewFileRequiredError(cd.Filename()))
+		allerrs = append(allerrs, calerrs...)
+		allerrs = append(allerrs, cderrs...)
 	}
 	return allerrs
 }
