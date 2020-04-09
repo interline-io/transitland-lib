@@ -122,6 +122,23 @@ func (e *FileParseError) Error() string {
 
 ////////////////////////////
 
+// FileUnreadableError reports an error parsing a row
+type FileUnreadableError struct {
+	cause error
+	bc
+}
+
+// NewFileUnreadableError returns a new FileUnreadableError
+func NewFileUnreadableError(filename string, err error) *FileUnreadableError {
+	return &FileUnreadableError{bc: bc{Filename: filename}, cause: err}
+}
+
+func (e *FileUnreadableError) Error() string {
+	return fmt.Sprintf("could not read file '%s': %s", e.Filename, e.cause)
+}
+
+////////////////////////////
+
 // FileDuplicateFieldError reports when a file contains multiple columns with the same name
 type FileDuplicateFieldError struct {
 	bc
