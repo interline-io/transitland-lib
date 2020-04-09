@@ -142,7 +142,7 @@ func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan Imp
 	}
 	for opts := range jobs {
 		q := qr{}
-		if err := adapter.Get(&q, "SELECT feed_versions.id as feed_version_id, feed_Versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
+		if err := adapter.Get(&q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
 			log.Info("Serious error: could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}
