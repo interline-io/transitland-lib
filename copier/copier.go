@@ -150,6 +150,8 @@ func (copier *Copier) isMarked(ent gotransit.Entity) bool {
 }
 
 // CopyEntity performs validation and saves errors and warnings, returns new EntityID if written, otherwise an entity error or write error.
+// An entity error means the entity was not not written because it had an error or was filtered out; not fatal.
+// A write error should be considered fatal and should stop any further write attempts.
 // Any errors and warnings are added to the CopyResult.
 func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	efn := ent.Filename()
@@ -182,7 +184,6 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	}
 	// Check the entity for warnings.
 	if warns := ent.Warnings(); len(warns) > 0 {
-		// warnings
 		for _, i := range warns {
 			copier.AddWarning(NewCopyError(efn, eid, i))
 		}
@@ -293,72 +294,63 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 	// Stop bookkeeping
 	parents := map[string]int{}
 	farezones := map[string]string{}
-	// First pass for stations
-	for e := range copier.Reader.Stops() {
-		if e.LocationType != 1 {
-			continue
-		}
-		// Add stop, update farezones and geom cache
+	// Copy fn
+	copyStop := func(e gotransit.Stop) error {
 		sid := e.EntityID()
+		// FareID
 		fzid := e.ZoneID
-		if _, ok, err := copier.CopyEntity(&e); err != nil {
-			return err
-		} else if ok == nil {
-			farezones[fzid] = e.ZoneID
-			copier.geomCache.AddStop(sid, e)
-		}
-		// Need to keep track of parent type even if not added,
-		// e.g. if a filter rejects or merges a stop.
+		// Add stop, update farezones and geom cache
+		// Need to keep track of parent type even if filtered out or merged
 		// Actual relationship errors will be caught during UpdateKeys
 		parents[sid] = e.LocationType
-	}
-	// Second pass for platforms, exits, and generic nodes
-	boards := []gotransit.Stop{}
-	for e := range copier.Reader.Stops() {
-		if e.LocationType == 1 {
-			continue
-		}
-		// Save boarding areas for last
-		if e.LocationType == 4 {
-			boards = append(boards, e)
-			continue
-		}
 		// Confirm the parent station location_type != 0
 		if len(e.ParentStation.Key) == 0 {
 			// ok
-		} else if pstype, ok := parents[e.ParentStation.Key]; ok && pstype != 1 {
-			// ParentStation found, not correct LocationType
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
-		} else if !ok {
+		} else if pstype, ok := parents[e.ParentStation.Key]; !ok {
 			// ParentStation not found
 			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
-		}
-		// Add stop, update farezones and geom cache
-		sid := e.EntityID()
-		fzid := e.ZoneID
-		if _, ok, err := copier.CopyEntity(&e); err != nil {
-			return err
-		} else if ok == nil {
-			farezones[fzid] = e.ZoneID
-			copier.geomCache.AddStop(sid, e)
-		}
-	}
-	// Finally, boarding areas
-	for _, e := range boards {
-		// Confirm the parent station location_type != 0
-		if len(e.ParentStation.Key) == 0 {
-			// ok
-		} else if pstype := parents[e.ParentStation.Key]; pstype != 0 {
+		} else if e.LocationType == 4 {
+			// Boarding areas may only link to type = 0
+			if pstype != 0 {
+				e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
+			}
+		} else if pstype != 1 {
+			// ParentStation wrong type
 			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
 		}
-		// Add stop, update farezones and geom cache
-		sid := e.EntityID()
-		fzid := e.ZoneID
+		// Actually copy
 		if _, ok, err := copier.CopyEntity(&e); err != nil {
 			return err
 		} else if ok == nil {
-			farezones[fzid] = e.ZoneID
+			// Success writing entity
+			farezones[fzid] = fzid
 			copier.geomCache.AddStop(sid, e)
+		}
+		return nil
+	}
+	// Stop copying
+	// First pass for stations
+	for e := range copier.Reader.Stops() {
+		if e.LocationType == 1 {
+			if err := copyStop(e); err != nil {
+				return err
+			}
+		}
+	}
+	// Second pass for platforms, exits, and generic nodes
+	for e := range copier.Reader.Stops() {
+		if e.LocationType == 0 || e.LocationType == 2 || e.LocationType == 3 {
+			if err := copyStop(e); err != nil {
+				return err
+			}
+		}
+	}
+	// Third pass for boarding areas
+	for e := range copier.Reader.Stops() {
+		if e.LocationType == 4 {
+			if err := copyStop(e); err != nil {
+				return err
+			}
 		}
 	}
 	copier.logCount(&gotransit.Stop{})
@@ -373,6 +365,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 
 	// FareAttributes
 	for e := range copier.Reader.FareAttributes() {
+		// Set default agency
 		if len(e.AgencyID.Key) == 0 {
 			e.AgencyID.Key = copier.DefaultAgencyID
 			e.AgencyID.Valid = true
@@ -421,8 +414,10 @@ func (copier *Copier) copyRoutes() error {
 	for e := range copier.Reader.Routes() {
 		// Set default agencyID
 		if len(e.AgencyID) == 0 {
-			e.AgencyID = copier.DefaultAgencyID // todo - as else below?
-			if copier.agencyCount > 1 {
+			e.AgencyID = copier.DefaultAgencyID
+			if copier.agencyCount == 1 {
+				copier.AddWarning(NewCopyError(e.Filename(), e.EntityID(), causes.NewConditionallyRequiredFieldError("agency_id")))
+			} else {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
 		}
@@ -456,7 +451,7 @@ func (copier *Copier) copyCalendars() error {
 			return err
 		}
 	}
-	// TODO: Make Entity method
+	// Keep track of duplicate CalendarDates
 	type calkey struct {
 		ServiceID string
 		Date      string
