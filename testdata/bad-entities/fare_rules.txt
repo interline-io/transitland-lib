@@ -1,3 +1,3 @@
 fare_id,route_id,origin_id,destination_id,contains_id,expect_error
-ok,ok,zone1,zone2,ok,
-,,,,,RequiredFieldError:fare_id
+ok_fare,ok_route,ok_zone,ok_zone2,,
+,ok_route,ok_zone,ok_zone2,,RequiredFieldError:fare_id

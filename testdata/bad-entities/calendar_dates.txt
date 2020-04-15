@@ -3,4 +3,4 @@ ok,20180101,2,
 ok,20180102,1,
 parse_date,xyz,1,FieldParseError:date
 invalid_exception_type,20180101,3,InvalidFieldError:exception_type
-parse_exception_type,20180101,xyz,FieldParseError:exception_type
+parse_exception_type,20180101,xyz,FieldParseError:exception_type|InvalidFieldError:exception_type

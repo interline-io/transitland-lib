@@ -86,7 +86,7 @@ func (ent *Stop) Errors() (errs []error) {
 		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("station cannot have parent_station")))
 	}
 	if ent.LocationType > 1 && ent.ParentStation.Key == "" {
-		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("must have parent_station"))) // ConditionallyRequiredFieldError
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("parent_station"))
 	}
 	return errs
 }

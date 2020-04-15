@@ -3,7 +3,6 @@ package testutil
 import (
 	"fmt"
 	"strings"
-	"testing"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
@@ -39,7 +38,7 @@ func (e *ExpectError) Error() string {
 }
 
 func (e *ExpectError) String() string {
-	return fmt.Sprintf("%s:%s:%s", e.Filename, e.ErrorType, e.Field)
+	return fmt.Sprintf("%s:%s:%s:%s", e.Filename, e.EntityID, e.ErrorType, e.Field)
 }
 
 // Equals checks if two expect errors are equivalent.
@@ -95,86 +94,19 @@ func (e *ExpectError) Match(errs []error) bool {
 	return false
 }
 
-////////////
-
-
-// TestEntityErrors checks that all expected Entity errors are present.
-func TestEntityErrors(t *testing.T, r gotransit.Reader) {
-	t.Run("Agencies", func(t *testing.T) {
-		for ent := range r.Agencies() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("Stops", func(t *testing.T) {
-		for ent := range r.Stops() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("Routes", func(t *testing.T) {
-		for ent := range r.Routes() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("Trips", func(t *testing.T) {
-		for ent := range r.Trips() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("StopTimes", func(t *testing.T) {
-		for ent := range r.StopTimes() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("Calendars", func(t *testing.T) {
-		for ent := range r.Calendars() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("CalendarDates", func(t *testing.T) {
-		for ent := range r.CalendarDates() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("FareAttributes", func(t *testing.T) {
-		for ent := range r.FareAttributes() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("FareRules", func(t *testing.T) {
-		for ent := range r.FareRules() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("FeedInfos", func(t *testing.T) {
-		for ent := range r.FeedInfos() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("Shapes", func(t *testing.T) {
-		for ent := range r.Shapes() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("Transfer", func(t *testing.T) {
-		for ent := range r.Transfers() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-	t.Run("Frequency", func(t *testing.T) {
-		for ent := range r.Frequencies() {
-			CheckEntityErrors(&ent, t)
-		}
-	})
-}
-
-// GetExpectError gets any ExpectError specified by an Entity.
-func GetExpectError(ent gotransit.Entity) *ExpectError {
+// GetExpectErrors gets any ExpectErrors specified by an Entity.
+func GetExpectErrors(ent gotransit.Entity) []ExpectError {
+	ret := []ExpectError{}
 	ex := ent.Extra()
-	if value, ok := ex["expect_error"]; len(value) > 0 && ok {
+	value, ok := ex["expect_error"]
+	if !ok || len(value) == 0 {
+		return ret
+	}
+	for _, esplit := range strings.Split(value, "|") {
 		ee := ExpectError{}
 		ee.EntityID = ent.EntityID()
 		ee.Filename = ent.Filename()
-		v := strings.Split(value, ":")
+		v := strings.Split(esplit, ":")
 		if len(v) >= 4 {
 			ee.EntityID = v[3]
 		}
@@ -187,31 +119,7 @@ func GetExpectError(ent gotransit.Entity) *ExpectError {
 		if len(v) >= 1 {
 			ee.ErrorType = v[0]
 		}
-		return &ee
+		ret = append(ret, ee)
 	}
-	return nil
+	return ret
 }
-
-// CheckEntityErrors checks if an Entity produced the specified ExpectError.
-func CheckEntityErrors(ent gotransit.Entity, t *testing.T) {
-	errs := ent.Errors()
-	errs = append(errs, ent.Warnings()...)
-	expect := GetExpectError(ent)
-	if expect == nil {
-		return
-	}
-	expect.Filename = ""
-	expect.EntityID = ""
-	if expect.ErrorType == "" {
-		if len(errs) > 0 {
-			t.Error("expected no errors, got:", len(errs), errs)
-		}
-		return
-	}
-	t.Run(fmt.Sprintf("%s:%s", expect.ErrorType, expect.Field), func(t *testing.T) {
-		if !expect.Match(errs) {
-			t.Error("did not find:", expect, "got:", errs)
-		}
-	})
-}
-

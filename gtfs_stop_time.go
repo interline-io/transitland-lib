@@ -93,7 +93,7 @@ func (ent *StopTime) UpdateKeys(emap *EntityMap) error {
 	return nil
 }
 
-// GetString returns the string representation of an attribute.
+// GetString returns the string representation of a field.
 func (ent *StopTime) GetString(key string) (string, error) {
 	v := ""
 	switch key {

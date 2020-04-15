@@ -1,1 +1,2 @@
-03,WKDY,2230435WKDY,Fremont,0,,04_shp,1,1
+service_id,trip_id,trip_headsign,direction_id,block_id,shape_id,wheelchair_accessible,bikes_allowed,expect_error
+WKDY,2230435WKDY,Fremont,0,,04_shp,1,1,FileRequiredFieldError:route_id:trips.txt:|RequiredFieldError:route_id|InvalidReferenceError:route_id

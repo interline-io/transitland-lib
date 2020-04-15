@@ -25,11 +25,11 @@ func NewValidator(reader gotransit.Reader) (*Validator, error) {
 }
 
 // Validate checks the feed and returns any errors and warnings that are found.
-func (v *Validator) Validate() ([]error, []error) {
+func (v *Validator) Validate() *copier.CopyResult {
 	result := v.Copier.Copy()
 	result.DisplayErrors()
 	result.DisplaySummary()
-	return result.Errors, result.Warnings
+	return result
 }
 
 type errorWithContext interface {
