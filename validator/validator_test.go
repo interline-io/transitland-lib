@@ -66,3 +66,21 @@ func testFeed(t *testing.T, reader gotransit.Reader) {
 		})
 	}
 }
+
+//////////////
+
+func TestEntityErrors(t *testing.T) {
+	reader, err := gtcsv.NewReader("../testdata/bad-entities")
+	if err != nil {
+		t.Error(err)
+	}
+	if err := reader.Open(); err != nil {
+		t.Error(err)
+	}
+	testutil.AllEntities(reader, func(ent gotransit.Entity) {
+		testutil.CheckEntityErrors(ent, t)
+	})
+	if err := reader.Close(); err != nil {
+		t.Error(err)
+	}
+}

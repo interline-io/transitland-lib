@@ -15,7 +15,7 @@ type Route struct {
 	RouteShortName string `csv:"route_short_name"`
 	RouteLongName  string `csv:"route_long_name"`
 	RouteDesc      string `csv:"route_desc"`
-	RouteType      int    `csv:"route_type" min:"0" required:"true"`
+	RouteType      int    `csv:"route_type" required:"true"`
 	RouteURL       string `csv:"route_url" validator:"url"`
 	RouteColor     string `csv:"route_color" validator:"color"`
 	RouteTextColor string `csv:"route_text_color" validator:"color"`
@@ -36,9 +36,8 @@ func (ent *Route) Warnings() (errs []error) {
 	if len(ent.RouteDesc) > 0 && (ent.RouteDesc == ent.RouteLongName || ent.RouteDesc == ent.RouteShortName) {
 		errs = append(errs, causes.NewValidationWarning("route_desc", "route_desc should not duplicate route_short_name or route_long_name"))
 	}
-	if ent.RouteType > 7 {
+	if _, ok := enums.GetRouteType(ent.RouteType); ok && ent.RouteType > 7 {
 		errs = append(errs, causes.NewValidationWarning("route_type", "extended route_types not universally supported"))
-
 	}
 	if len(ent.RouteColor) > 0 && ent.RouteColor == ent.RouteTextColor {
 		errs = append(errs, causes.NewValidationWarning("route_text_color", "route_text_color should provide contrast with route_color"))
@@ -51,7 +50,7 @@ func (ent *Route) Errors() (errs []error) {
 	errs = ValidateTags(ent)
 	errs = append(errs, ent.BaseEntity.loadErrors...)
 	if len(ent.RouteShortName) == 0 && len(ent.RouteLongName) == 0 {
-		errs = append(errs, causes.NewRequiredFieldError("route_short_name"))
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("route_short_name"))
 	}
 	if _, ok := enums.GetRouteType(ent.RouteType); !ok {
 		errs = append(errs, causes.NewInvalidFieldError("route_type", strconv.Itoa(ent.RouteType), fmt.Errorf("invalid route_type %d", ent.RouteType)))

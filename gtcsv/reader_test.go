@@ -31,17 +31,3 @@ func TestReader(t *testing.T) {
 		})
 	}
 }
-
-func TestEntityErrors(t *testing.T) {
-	reader, err := NewReader("../testdata/bad-entities")
-	if err != nil {
-		t.Error(err)
-	}
-	if err := reader.Open(); err != nil {
-		t.Error(err)
-	}
-	testutil.TestEntityErrors(t, reader)
-	if err := reader.Close(); err != nil {
-		t.Error(err)
-	}
-}

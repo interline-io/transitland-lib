@@ -11,8 +11,8 @@ type Frequency struct {
 	TripID      string   `csv:"trip_id" required:"true"`
 	StartTime   WideTime `csv:"start_time" required:"true"`
 	EndTime     WideTime `csv:"end_time" required:"true"`
-	HeadwaySecs int      `csv:"headway_secs" min:"1" required:"true"`
-	ExactTimes  int      `csv:"exact_times" min:"0" max:"1"`
+	HeadwaySecs int      `csv:"headway_secs" required:"true"`
+	ExactTimes  int      `csv:"exact_times"`
 	BaseEntity
 }
 
@@ -27,8 +27,7 @@ func (ent *Frequency) Warnings() (errs []error) {
 	if st != 0 && et != 0 {
 		if st == et {
 			errs = append(errs, causes.NewValidationWarning("end_time", "end_time is equal to start_time"))
-		}
-		if (et - st) < ent.HeadwaySecs {
+		} else if (et - st) < ent.HeadwaySecs {
 			errs = append(errs, causes.NewValidationWarning("end_time", "end_time is less than start_time + headway_secs"))
 		}
 	}
@@ -37,11 +36,16 @@ func (ent *Frequency) Warnings() (errs []error) {
 
 // Errors for this Entity.
 func (ent *Frequency) Errors() (errs []error) {
-	errs = ValidateTags(ent)
 	errs = append(errs, ent.BaseEntity.loadErrors...)
 	st, et := ent.StartTime.Seconds, ent.EndTime.Seconds
+	if ent.HeadwaySecs < 1 {
+		errs = append(errs, causes.NewInvalidFieldError("headway_secs", "", fmt.Errorf("headway_secs must be a positive integer")))
+	}
 	if st != 0 && et != 0 && st > et {
 		errs = append(errs, causes.NewInvalidFieldError("end_time", "", fmt.Errorf("end_time '%d' must come after start_time '%d'", et, st)))
+	}
+	if !(ent.ExactTimes == 0 || ent.ExactTimes == 1) {
+		errs = append(errs, causes.NewInvalidFieldError("exact_times", "", fmt.Errorf("exact_times must be 0 or 1")))
 	}
 	return errs
 }
