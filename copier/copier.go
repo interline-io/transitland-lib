@@ -323,7 +323,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			return err
 		} else if ok == nil {
 			// Success writing entity
-			farezones[fzid] = fzid
+			farezones[fzid] = e.ZoneID // ZoneID may be modified by CopyEntity
 			copier.geomCache.AddStop(sid, e)
 		}
 		return nil
