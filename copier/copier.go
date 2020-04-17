@@ -471,6 +471,10 @@ func (copier *Copier) copyCalendars() error {
 			continue
 		}
 		dups[key]++
+		// Allow unchecked/invalid ServiceID references.
+		if !copier.NormalizeServiceIDs {
+			copier.EntityMap.Set("calendar.txt", e.ServiceID, e.ServiceID)
+		}
 		if _, _, err := copier.CopyEntity(&e); err != nil {
 			return err
 		}
