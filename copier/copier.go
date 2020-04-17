@@ -144,8 +144,8 @@ func (copier *Copier) AddEntityFilter(ef gotransit.EntityFilter) error {
 ////////// Helper methods //////////
 ////////////////////////////////////
 
+// Check if the entity is marked for copying.
 func (copier *Copier) isMarked(ent gotransit.Entity) bool {
-	// Check if the entity is marked for copying.
 	return copier.Marker.IsMarked(ent.Filename(), ent.EntityID())
 }
 
@@ -170,41 +170,48 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 		}
 	}
 	// Check the entity for errors.
-	if errs := ent.Errors(); len(errs) > 0 {
-		for _, i := range errs {
-			copier.AddError(NewCopyError(efn, eid, i))
-		}
+	valid := true
+	// Basic errors
+	errs := ent.Errors()
+	if len(errs) > 0 {
 		if copier.AllowEntityErrors {
 			log.Debug("%s '%s' has errors, allowing: %s", efn, eid, errs)
 		} else {
 			log.Debug("%s '%s' has errors, skipping: %s", efn, eid, errs)
 			copier.CopyResult.SkipEntityErrorCount[efn]++
-			return "", errs[0], nil
-		}
-	}
-	// Check the entity for warnings.
-	if warns := ent.Warnings(); len(warns) > 0 {
-		for _, i := range warns {
-			copier.AddWarning(NewCopyError(efn, eid, i))
+			valid = false
 		}
 	}
 	// Check the entity for reference errors.
 	if err := ent.UpdateKeys(copier.EntityMap); err != nil {
-		copier.AddError(NewCopyError(efn, eid, err))
+		errs = append(errs, err) // add to entity errors
 		if copier.AllowReferenceErrors {
 			log.Debug("%s '%s' failed to update keys, allowing: %s", efn, eid, err)
 		} else {
 			log.Debug("%s '%s' failed to update keys, skipping: %s", efn, eid, err)
 			copier.CopyResult.SkipEntityReferenceCount[efn]++
-			return "", err, nil
+			valid = false
 		}
 	}
 	// Check for duplicate entities.
 	if _, ok := copier.EntityMap.Get(efn, sid); ok && len(sid) > 0 {
-		err := NewCopyError(ent.Filename(), sid, causes.NewDuplicateIDError(sid))
-		copier.CopyResult.AddError(err)
+		errs = append(errs, NewCopyError(ent.Filename(), sid, causes.NewDuplicateIDError(sid)))
 		copier.CopyResult.SkipEntityErrorCount[efn]++
-		return "", err, nil
+		valid = false
+	}
+	// Add errors to CopyResult
+	for _, err := range errs {
+		copier.CopyResult.AddError(err)
+	}
+	// Check warnings
+	for _, err := range ent.Warnings() {
+		// Set with AddWarning but also add to total errors
+		copier.CopyResult.AddWarning(err)
+		errs = append(errs, err)
+	}
+	// Continue?
+	if !valid && len(errs) > 0 {
+		return "", errs[0], nil
 	}
 	// OK, Save
 	eid, err := copier.Writer.AddEntity(ent)
