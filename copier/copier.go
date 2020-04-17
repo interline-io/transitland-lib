@@ -80,6 +80,8 @@ type Copier struct {
 	DefaultAgencyID string
 	// Entity selection strategy
 	Marker Marker
+	// Error handlers
+	EntityErrorHandler func(gotransit.Entity, []error)
 	// book keeping
 	agencyCount         int
 	extensions          []copyableExtension      // interface
@@ -208,6 +210,10 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 		// Set with AddWarning but also add to total errors
 		copier.CopyResult.AddWarning(err)
 		errs = append(errs, err)
+	}
+	// Error handler
+	if copier.EntityErrorHandler != nil {
+		copier.EntityErrorHandler(ent, errs)
 	}
 	// Continue?
 	if !valid && len(errs) > 0 {
