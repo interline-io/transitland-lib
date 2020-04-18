@@ -187,7 +187,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	}
 	// Check for duplicate entities.
 	if _, ok := copier.EntityMap.Get(efn, sid); ok && len(sid) > 0 {
-		errs = append(errs, NewCopyError(ent.Filename(), sid, causes.NewDuplicateIDError(sid)))
+		errs = append(errs, causes.NewDuplicateIDError(sid))
 	}
 	// Check error tolerance flags
 	if len(errs) > 0 {
@@ -560,6 +560,11 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if !copier.isMarked(&trip) {
 			copier.result.SkipEntityMarkedCount["trips.txt"]++
 			continue
+		}
+		// We need to check for duplicate ID errors here because they're put into a map
+		if _, ok := trips[eid]; ok {
+			trip.AddError(causes.NewDuplicateIDError(eid))
+			copier.errorHandler.HandleEntityErrors(&trip, nil, nil)
 		}
 		trips[eid] = trip
 	}
