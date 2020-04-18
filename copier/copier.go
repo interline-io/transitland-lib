@@ -16,6 +16,7 @@ import (
 
 type errorHandler interface {
 	HandleEntityErrors(gotransit.Entity, []error, []error)
+	HandleSourceErrors(string, []error, []error)
 }
 
 type copyableExtension interface {
@@ -231,9 +232,16 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 
 // Copy copies Base GTFS Entities from the Reader to the Writer, returning the summary as a CopyResult.
 func (copier *Copier) Copy() *CopyResult {
+	// Handle source errors and warnings
+	sourceErrors := map[string][]error{}
 	for _, err := range copier.Reader.ValidateStructure() {
-		fmt.Println("VALIDATE STRUCTURE ERROR:", err)
-		// copier.result.AddError(err)
+		if v, ok := err.(errorWithContext); ok {
+			fn := v.Context().Filename
+			sourceErrors[fn] = append(sourceErrors[fn], err)
+		}
+	}
+	for fn, errs := range sourceErrors {
+		copier.errorHandler.HandleSourceErrors(fn, errs, nil)
 	}
 	// Note that order is important!!
 	fns := []func() error{

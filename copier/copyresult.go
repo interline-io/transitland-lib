@@ -35,6 +35,16 @@ func NewCopyResult() *CopyResult {
 	}
 }
 
+// HandleSourceErrors .
+func (cr *CopyResult) HandleSourceErrors(fn string, errs []error, warns []error) {
+	for _, err := range errs {
+		cr.Errors = append(cr.Errors, NewCopyError(fn, "", err))
+	}
+	for _, err := range warns {
+		cr.Warnings = append(cr.Warnings, NewCopyError(fn, "", err))
+	}
+}
+
 // HandleEntityErrors .
 func (cr *CopyResult) HandleEntityErrors(ent gotransit.Entity, errs []error, warns []error) {
 	for _, err := range errs {
