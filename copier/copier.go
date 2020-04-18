@@ -620,13 +620,16 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				}
 			}
 		}
-		// Check StopTime GROUP errors; logged with trip, can block trip
+		// Check StopTime GROUP errors; log errors with trip; can block trip
 		sterrs := gotransit.ValidateStopTimes(stoptimes)
-		stwarns := []error{}
-		// Interpolate StopTimes if necessary - only if no other errors
+		for _, err := range sterrs {
+			trip.AddError(err)
+		}
+		// Interpolate StopTimes if necessary - only if no other errors; log errors with trip
 		if len(sterrs) == 0 && copier.InterpolateStopTimes {
 			if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip, stoptimes); err != nil {
-				stwarns = append(stwarns, err)
+				// stwarns = append(stwarns, err)
+				trip.AddWarning(err)
 			} else {
 				stoptimes = stoptimes2
 			}
