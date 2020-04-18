@@ -3,9 +3,7 @@ package testutil
 import (
 	"fmt"
 	"strings"
-	"testing"
 
-	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/pkg/errors"
 )
@@ -25,8 +23,8 @@ type ExpectError struct {
 }
 
 // NewExpectError returns a new ExpectError.
-func NewExpectError(filename, entityid, field, err string) *ExpectError {
-	return &ExpectError{
+func NewExpectError(filename, entityid, field, err string) ExpectError {
+	return ExpectError{
 		Filename:  filename,
 		Field:     field,
 		EntityID:  entityid,
@@ -39,7 +37,7 @@ func (e *ExpectError) Error() string {
 }
 
 func (e *ExpectError) String() string {
-	return fmt.Sprintf("%s:%s:%s", e.Filename, e.ErrorType, e.Field)
+	return fmt.Sprintf("%s:%s:%s:%s", e.Filename, e.Field, e.EntityID, e.ErrorType)
 }
 
 // Equals checks if two expect errors are equivalent.
@@ -95,50 +93,14 @@ func (e *ExpectError) Match(errs []error) bool {
 	return false
 }
 
-// GetExpectError gets any ExpectError specified by an Entity.
-func GetExpectError(ent gotransit.Entity) *ExpectError {
-	ex := ent.Extra()
-	if value, ok := ex["expect_error"]; len(value) > 0 && ok {
-		ee := ExpectError{}
-		ee.EntityID = ent.EntityID()
-		ee.Filename = ent.Filename()
-		v := strings.Split(value, ":")
-		if len(v) >= 4 {
-			ee.EntityID = v[3]
-		}
-		if len(v) >= 3 {
-			ee.Filename = v[2]
-		}
-		if len(v) >= 2 {
-			ee.Field = v[1]
-		}
-		if len(v) >= 1 {
-			ee.ErrorType = v[0]
-		}
-		return &ee
+// ParseExpectError .
+// e.g.:
+//     InvalidFieldError:agency_name:agency.txt:bad_agency
+func ParseExpectError(value string) ExpectError {
+	v := strings.Split(value, ":")
+	// pad out
+	for i := 0; i < 4; i++ {
+		v = append(v, "")
 	}
-	return nil
-}
-
-// CheckEntityErrors checks if an Entity produced the specified ExpectError.
-func CheckEntityErrors(ent gotransit.Entity, t *testing.T) {
-	errs := ent.Errors()
-	errs = append(errs, ent.Warnings()...)
-	expect := GetExpectError(ent)
-	if expect == nil {
-		return
-	}
-	expect.Filename = ""
-	expect.EntityID = ""
-	if expect.ErrorType == "" {
-		if len(errs) > 0 {
-			t.Error("expected no errors, got:", len(errs), errs)
-		}
-		return
-	}
-	t.Run(fmt.Sprintf("%s:%s:%s:%s", ent.Filename(), ent.EntityID(), expect.ErrorType, expect.Field), func(t *testing.T) {
-		if !expect.Match(errs) {
-			t.Error("did not find:", expect, "got:", errs)
-		}
-	})
+	return NewExpectError(v[2], v[3], v[1], v[0])
 }

@@ -67,6 +67,7 @@ func (reader *Reader) ValidateStructure() []error {
 		return allerrs
 	}
 	// Check if these files contain valid headers
+	// TODO: An error in the header should also stop a file from being opened for further CSV reading.
 	check := func(ent gotransit.Entity) []error {
 		fileerrs := []error{}
 		efn := ent.Filename()

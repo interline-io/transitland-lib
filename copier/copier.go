@@ -14,7 +14,7 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
-type errorHandler interface {
+type ErrorHandler interface {
 	HandleEntityErrors(gotransit.Entity, []error, []error)
 	HandleSourceErrors(string, []error, []error)
 }
@@ -86,7 +86,7 @@ type Copier struct {
 	// Entity selection strategy
 	Marker Marker
 	// Error handlers
-	errorHandler errorHandler
+	ErrorHandler ErrorHandler
 	// book keeping
 	agencyCount         int
 	extensions          []copyableExtension      // interface
@@ -113,7 +113,7 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	// Result
 	result := NewCopyResult()
 	copier.result = result
-	copier.errorHandler = result
+	copier.ErrorHandler = result
 	// Default Markers
 	copier.Marker = newYesMarker()
 	// Default EntityMap
@@ -209,10 +209,12 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 		}
 	}
 	// Error handler
-	copier.errorHandler.HandleEntityErrors(ent, errs, ent.Warnings())
+	copier.ErrorHandler.HandleEntityErrors(ent, errs, ent.Warnings())
 	// Continue?
 	if !valid && len(errs) > 0 {
 		return "", errs[0], nil
+	} else if !valid {
+		return "", errors.New("???"), nil
 	}
 	// OK, Save
 	eid, err := copier.Writer.AddEntity(ent)
@@ -241,7 +243,7 @@ func (copier *Copier) Copy() *CopyResult {
 		}
 	}
 	for fn, errs := range sourceErrors {
-		copier.errorHandler.HandleSourceErrors(fn, errs, nil)
+		copier.ErrorHandler.HandleSourceErrors(fn, errs, nil)
 	}
 	// Note that order is important!!
 	fns := []func() error{
@@ -321,8 +323,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 		if len(e.ParentStation.Key) == 0 {
 			// ok
 		} else if pstype, ok := parents[e.ParentStation.Key]; !ok {
-			// ParentStation not found
-			e.AddError(causes.NewInvalidParentStationError(e.ParentStation.Key))
+			// ParentStation not found - check during UpdateKeys
 		} else if e.LocationType == 4 {
 			// Boarding areas may only link to type = 0
 			if pstype != 0 {
@@ -571,7 +572,8 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		// We need to check for duplicate ID errors here because they're put into a map
 		if _, ok := trips[eid]; ok {
-			copier.errorHandler.HandleEntityErrors(&trip, []error{causes.NewDuplicateIDError(eid)}, nil)
+			copier.ErrorHandler.HandleEntityErrors(&trip, []error{causes.NewDuplicateIDError(eid)}, nil)
+			continue
 		}
 		trips[eid] = trip
 	}
@@ -586,7 +588,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		tripid := stoptimes[0].TripID
 		if _, ok := alltripids[tripid]; !ok {
 			log.Info("stop_times referred to unknown trip: %s", tripid)
-			copier.errorHandler.HandleEntityErrors(&stoptimes[0], []error{causes.NewInvalidReferenceError("trip_id", tripid)}, nil)
+			copier.ErrorHandler.HandleEntityErrors(&stoptimes[0], []error{causes.NewInvalidReferenceError("trip_id", tripid)}, nil)
 			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			continue
 		}
@@ -598,10 +600,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		// Marks trip as associated with at least 1 stop_time
 		delete(trips, tripid)
-		// Check for errors
-		if len(stoptimes) < 2 {
-			trip.AddError(causes.NewEmptyTripError(len(stoptimes)))
-		}
 		// Set StopPattern
 		patkey := stopPatternKey(stoptimes)
 		if pat, ok := copier.stopPatterns[patkey]; ok {
@@ -633,6 +631,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 		}
 		// Check StopTime GROUP errors; log errors with trip; can block trip
+		// Example errors: less than 2 stop_times, non-increasing sequences and times, etc.
 		sterrs := gotransit.ValidateStopTimes(stoptimes)
 		for _, err := range sterrs {
 			trip.AddError(err)
@@ -687,7 +686,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				}
 			}
 			// Error handler
-			copier.errorHandler.HandleEntityErrors(&stoptimes[i], errs, stoptimes[i].Warnings())
+			copier.ErrorHandler.HandleEntityErrors(&stoptimes[i], errs, stoptimes[i].Warnings())
 			// Count interpolated STs for debugging/reporting
 			if stoptimes[i].Interpolated > 0 {
 				istc++
@@ -730,10 +729,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	}
 	// Add any Trips that were not visited/did not have StopTimes
 	for _, trip := range trips {
-		errs := gotransit.ValidateStopTimes([]gotransit.StopTime{})
-		for _, err := range errs {
-			trip.AddError(err)
-		}
+		trip.AddError(causes.NewEmptyTripError(0))
 		if _, _, err := copier.CopyEntity(&trip); err != nil {
 			return err
 		}
