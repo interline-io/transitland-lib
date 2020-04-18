@@ -20,6 +20,7 @@ func (ent *Transfer) EntityID() string {
 
 // Warnings for this Entity.
 func (ent *Transfer) Warnings() (errs []error) {
+	errs = append(errs, ent.loadWarnings...)
 	if ent.TransferType != 2 && ent.MinTransferTime != 0 {
 		errs = append(errs, causes.NewValidationWarning("min_transfer_time", "should not set min_transfer_time unless transfer_type = 2"))
 	}

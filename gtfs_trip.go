@@ -25,11 +25,6 @@ func (ent *Trip) EntityID() string {
 	return entID(ent.ID, ent.TripID)
 }
 
-// Warnings for this Entity.
-func (ent *Trip) Warnings() (errs []error) {
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *Trip) Errors() (errs []error) {
 	errs = ValidateTags(ent)

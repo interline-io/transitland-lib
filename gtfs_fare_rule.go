@@ -19,11 +19,6 @@ func (ent *FareRule) EntityID() string {
 	return ""
 }
 
-// Warnings for this Entity.
-func (ent *FareRule) Warnings() (errs []error) {
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *FareRule) Errors() (errs []error) {
 	errs = ValidateTags(ent)

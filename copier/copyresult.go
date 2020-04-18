@@ -35,26 +35,24 @@ func NewCopyResult() *CopyResult {
 	}
 }
 
-// AddError adds an error to the cr.
-func (cr *CopyResult) AddError(err error) {
-	log.Debug("error: %s", err)
-	cr.Errors = append(cr.Errors, err)
+// HandleSourceErrors .
+func (cr *CopyResult) HandleSourceErrors(fn string, errs []error, warns []error) {
+	for _, err := range errs {
+		cr.Errors = append(cr.Errors, NewCopyError(fn, "", err))
+	}
+	for _, err := range warns {
+		cr.Warnings = append(cr.Warnings, NewCopyError(fn, "", err))
+	}
 }
 
-// AddWarning adds a warning to the cr.
-func (cr *CopyResult) AddWarning(err error) {
-	log.Trace("warning: %s", err)
-	cr.Warnings = append(cr.Warnings, err)
-}
-
-// AddEntity updates the statistics to note an Entity was successfully copied.
-func (cr *CopyResult) AddEntity(ent gotransit.Entity) {
-	cr.EntityCount[ent.Filename()]++
-}
-
-// AddCount adds to the entity counter.
-func (cr *CopyResult) AddCount(filename string, count int) {
-	cr.EntityCount[filename] += count
+// HandleEntityErrors .
+func (cr *CopyResult) HandleEntityErrors(ent gotransit.Entity, errs []error, warns []error) {
+	for _, err := range errs {
+		cr.Errors = append(cr.Errors, NewCopyError(ent.Filename(), ent.EntityID(), err))
+	}
+	for _, err := range warns {
+		cr.Warnings = append(cr.Warnings, NewCopyError(ent.Filename(), ent.EntityID(), err))
+	}
 }
 
 // DisplayErrors shows individual errors in log.Info

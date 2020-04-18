@@ -30,6 +30,7 @@ func (ent *Route) EntityID() string {
 
 // Warnings for this Entity.
 func (ent *Route) Warnings() (errs []error) {
+	errs = append(errs, ent.loadWarnings...)
 	if len(ent.AgencyID) == 0 {
 		errs = append(errs, causes.NewValidationWarning("agency_id", "optional agency_id value recommended"))
 	}

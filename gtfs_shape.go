@@ -77,6 +77,7 @@ func (ent *Shape) EntityID() string {
 
 // Warnings for this Entity.
 func (ent *Shape) Warnings() (errs []error) {
+	errs = append(errs, ent.loadWarnings...)
 	coords := []float64{ent.ShapePtLon, ent.ShapePtLat}
 	if ent.Geometry.Valid {
 		coords = ent.Geometry.FlatCoords()

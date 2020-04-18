@@ -29,6 +29,7 @@ type Entity interface {
 	Errors() []error
 	Warnings() []error
 	AddError(error)
+	AddWarning(error)
 	SetID(int)
 	SetExtra(string, string)
 	Extra() map[string]string
@@ -42,6 +43,7 @@ type BaseEntity struct {
 	FeedVersionID int
 	extra         []string
 	loadErrors    []error
+	loadWarnings  []error
 	// DeletedAt     OptionalTime
 }
 
@@ -80,8 +82,16 @@ func (ent *BaseEntity) AddError(err error) {
 	ent.loadErrors = append(ent.loadErrors, err)
 }
 
+// AddWarning .
+func (ent *BaseEntity) AddWarning(err error) {
+	if ent.loadWarnings == nil {
+		ent.loadWarnings = []error{}
+	}
+	ent.loadWarnings = append(ent.loadErrors, err)
+}
+
 // Warnings returns validation warnings.
-func (ent *BaseEntity) Warnings() []error { return []error{} }
+func (ent *BaseEntity) Warnings() []error { return ent.loadWarnings }
 
 // Errors returns validation errors.
 func (ent *BaseEntity) Errors() []error { return ent.loadErrors }

@@ -13,6 +13,52 @@ import (
 	"github.com/interline-io/gotransit/internal/testutil"
 )
 
+//////////// helpers /////////////
+
+// getExpectErrors gets any ExpectError specified by an Entity.
+func getExpectErrors(ent gotransit.Entity) []testutil.ExpectError {
+	ret := []testutil.ExpectError{}
+	ex := ent.Extra()
+	value, ok := ex["expect_error"]
+	if len(value) == 0 || !ok {
+		return ret
+	}
+	for _, v := range strings.Split(value, "|") {
+		ee := testutil.ParseExpectError(v)
+		if ee.Filename == "" {
+			ee.Filename = ent.Filename()
+		}
+		if ee.EntityID == "" {
+			ee.EntityID = ent.EntityID()
+		}
+		ret = append(ret, ee)
+	}
+	return ret
+}
+
+func checkErrors(expecterrs []testutil.ExpectError, errs []error, t *testing.T) {
+	s1 := []string{}
+	for _, err := range errs {
+		s1 = append(s1, fmt.Sprintf("%#v", err))
+	}
+	if len(errs) > len(expecterrs) {
+		s2 := []string{}
+		for _, err := range expecterrs {
+			s2 = append(s2, fmt.Sprintf("%#v", err))
+		}
+
+		t.Errorf("got %d errors/warnings, more than the expected expected %d, got: %s expect: %s", len(errs), len(expecterrs), strings.Join(s1, " "), strings.Join(s2, " "))
+		return
+	}
+	for _, expect := range expecterrs {
+		expect.Filename = ""
+		expect.EntityID = ""
+		if !expect.Match(errs) {
+			t.Errorf("did not find match for expected error %#v, got: %s", expect, strings.Join(s1, " "))
+		}
+	}
+}
+
 func exampleReader(basepath string, overlaypath string) *gtcsv.Reader {
 	reader, err := gtcsv.NewReader(".")
 	if err != nil {
@@ -20,6 +66,49 @@ func exampleReader(basepath string, overlaypath string) *gtcsv.Reader {
 	}
 	reader.Adapter = gtcsv.NewOverlayAdapter(overlaypath, basepath)
 	return reader
+}
+
+type testErrorHandler struct {
+	t                  *testing.T
+	expectSourceErrors map[string][]testutil.ExpectError
+	expectErrorCount   int
+}
+
+func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []error) {
+	errs = append(errs, warns...)
+	expecterrs := cr.expectSourceErrors[fn]
+	cr.expectErrorCount += len(expecterrs)
+	checkErrors(expecterrs, errs, cr.t)
+}
+
+func (cr *testErrorHandler) HandleEntityErrors(ent gotransit.Entity, errs []error, warns []error) {
+	errs = append(errs, warns...)
+	expecterrs := getExpectErrors(ent)
+	cr.expectErrorCount += len(expecterrs)
+	checkErrors(expecterrs, errs, cr.t)
+}
+
+//////////////
+
+func TestEntityErrors(t *testing.T) {
+	reader, err := gtcsv.NewReader("../testdata/bad-entities")
+	if err != nil {
+		t.Error(err)
+	}
+	if err := reader.Open(); err != nil {
+		t.Error(err)
+	}
+	testutil.AllEntities(reader, func(ent gotransit.Entity) {
+		t.Run(fmt.Sprintf("%s:%s", ent.Filename(), ent.EntityID()), func(t *testing.T) {
+			errs := ent.Errors()
+			errs = append(errs, ent.Warnings()...)
+			expecterrs := getExpectErrors(ent)
+			checkErrors(expecterrs, errs, t)
+		})
+	})
+	if err := reader.Close(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestValidator_Validate(t *testing.T) {
@@ -35,52 +124,30 @@ func TestValidator_Validate(t *testing.T) {
 		}
 		t.Run(file.Name(), func(t *testing.T) {
 			reader := exampleReader(basepath, filepath.Join(searchpath, file.Name()))
-			testFeed(t, reader)
-		})
-	}
-}
-
-func testFeed(t *testing.T, reader gotransit.Reader) {
-	expecterrs := []testutil.ExpectError{}
-	gex := func(ent gotransit.Entity) {
-		if ex := testutil.GetExpectError(ent); ex != nil {
-			expecterrs = append(expecterrs, *ex)
-		}
-	}
-	testutil.AllEntities(reader, gex)
-	v, _ := NewValidator(reader)
-	errs, warns := v.Validate()
-	_ = warns
-	if len(expecterrs) == 0 {
-		t.Errorf("test case does not contain any test cases or warnings")
-	}
-	for _, expect := range expecterrs {
-		t.Run(fmt.Sprintf("%s:%s", expect.ErrorType, expect.Field), func(t *testing.T) {
-			if !expect.Match(errs) {
-				got := []string{}
-				for _, i := range errs {
-					got = append(got, i.Error())
-				}
-				t.Errorf("expected error %s not found, got: %s", expect.String(), strings.Join(got, ", "))
+			handler := testErrorHandler{
+				t:                  t,
+				expectSourceErrors: map[string][]testutil.ExpectError{},
+			}
+			// Directly read the expect_errors.txt
+			reader.Adapter.ReadRows("expect_errors.txt", func(row gtcsv.Row) {
+				fn := func(a string, b bool) string { return a }
+				ee := testutil.NewExpectError(
+					fn(row.Get("filename")),
+					fn(row.Get("entity_id")),
+					fn(row.Get("field")),
+					fn(row.Get("error")),
+				)
+				handler.expectSourceErrors[ee.Filename] = append(handler.expectSourceErrors[ee.Filename], ee)
+			})
+			////////
+			v, _ := NewValidator(reader)
+			v.Copier.ErrorHandler = &handler
+			errs, warns := v.Validate()
+			_ = errs
+			_ = warns
+			if handler.expectErrorCount == 0 {
+				t.Errorf("feed did not contain any test cases")
 			}
 		})
-	}
-}
-
-//////////////
-
-func TestEntityErrors(t *testing.T) {
-	reader, err := gtcsv.NewReader("../testdata/bad-entities")
-	if err != nil {
-		t.Error(err)
-	}
-	if err := reader.Open(); err != nil {
-		t.Error(err)
-	}
-	testutil.AllEntities(reader, func(ent gotransit.Entity) {
-		testutil.CheckEntityErrors(ent, t)
-	})
-	if err := reader.Close(); err != nil {
-		t.Error(err)
 	}
 }

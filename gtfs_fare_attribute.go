@@ -23,11 +23,6 @@ func (ent *FareAttribute) EntityID() string {
 	return entID(ent.ID, ent.FareID)
 }
 
-// Warnings for this Entity.
-func (ent *FareAttribute) Warnings() (errs []error) {
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *FareAttribute) Errors() (errs []error) {
 	errs = ValidateTags(ent)

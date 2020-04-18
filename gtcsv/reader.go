@@ -67,6 +67,7 @@ func (reader *Reader) ValidateStructure() []error {
 		return allerrs
 	}
 	// Check if these files contain valid headers
+	// TODO: An error in the header should also stop a file from being opened for further CSV reading.
 	check := func(ent gotransit.Entity) []error {
 		fileerrs := []error{}
 		efn := ent.Filename()
@@ -79,29 +80,43 @@ func (reader *Reader) ValidateStructure() []error {
 				}
 				rowcount++
 			})
+			// If the file is unreadable or has no rows then return
 			if readerr != nil {
 				fileerrs = append(fileerrs, causes.NewFileUnreadableError(efn, readerr))
+				return
 			}
 			if rowcount == 0 {
 				fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
+				return
 			}
-			// Check for column duplicates
+			// Check columns
 			columns := map[string]int{}
 			for _, h := range rowheader {
 				columns[strings.TrimSpace(h)]++
 			}
+			// Ensure we have at least one matching column ID.
+			found := []string{}
+			missing := []string{}
+			for _, field := range tags.GetStructTagMap(ent) {
+				if _, ok := columns[field.Csv]; ok {
+					found = append(found, field.Csv)
+				} else if field.Required {
+					missing = append(missing, field.Csv)
+				}
+			}
+			if len(found) == 0 {
+				fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
+				return
+			}
+			if len(missing) > 0 {
+				for _, field := range missing {
+					fileerrs = append(fileerrs, causes.NewFileRequiredFieldError(efn, field))
+				}
+			}
+			// Check for column duplicates
 			for k, v := range columns {
 				if v > 1 {
 					fileerrs = append(fileerrs, causes.NewFileDuplicateFieldError(efn, k))
-				}
-			}
-			// Ensure we have at least one matching column ID.
-			// TODO: Use this to bypass individual entity RequiredFieldErrors?
-			// -- maybe have a hierarchy of errors that suppress similar errors?
-			ftm := tags.GetStructTagMap(ent)
-			for _, field := range ftm {
-				if _, ok := columns[field.Csv]; field.Required && !ok {
-					fileerrs = append(fileerrs, causes.NewFileRequiredFieldError(efn, field.Csv))
 				}
 			}
 		})

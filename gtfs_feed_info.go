@@ -22,11 +22,6 @@ func (ent *FeedInfo) EntityID() string {
 	return ""
 }
 
-// Warnings for this Entity.
-func (ent *FeedInfo) Warnings() (errs []error) {
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *FeedInfo) Errors() (errs []error) {
 	errs = ValidateTags(ent)

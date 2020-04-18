@@ -1,2 +1,2 @@
-agency_id,agency_name,agency_name,agency_url,agency_timezone,agency_lang,expect_error
-BART,,Bay Area Rapid Transit,http://www.bart.gov,America/Los_Angeles,en,FileDuplicateFieldError:agency_name:agency.txt:
+agency_id,agency_name,agency_name,agency_url,agency_timezone,agency_lang,
+BART,,Bay Area Rapid Transit,http://www.bart.gov,America/Los_Angeles,en,
