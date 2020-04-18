@@ -18,8 +18,8 @@ ok_no_stop_lat_for_nodes,node stop_lat = 0,,0.0,-116.40094,,,3,,,,ok_station,
 ok_no_stop_lon_for_nodes,node stop_lon = 0,,36.641496,0.0,,,3,,,,ok_station,
 ok_no_stop_lat_for_boarding_areas,area stop_lat = 0,,,-116.40094,,,4,,,,ok_stop,
 ok_no_stop_lon_for_boarding_areas,area stop_lon = 0,,36.641496,,,,4,,,,ok_stop,
-parse_stop_lon,stop_lat parse error,,36.641496,xyz,,,,,,,,FieldParseError:stop_lon
-parse_stop_lat,stop_lon parse error,,xyz,-116.40094,,,,,,,,FieldParseError:stop_lat
+parse_stop_lon,stop_lat parse error,,36.641496,xyz,,,,,,,,FieldParseError:stop_lon|ValidationWarning:stop_lon
+parse_stop_lat,stop_lon parse error,,xyz,-116.40094,,,,,,,,FieldParseError:stop_lat|ValidationWarning:stop_lat
 invalid_location_type,location_type = 6,,36.641496,-116.40094,,,6,,,,,InvalidFieldError:location_type
 parse_location_type,location_type parse error,,36.641496,-116.40094,,,xyz,,,,,FieldParseError:location_type
 parse_wheelchair_boarding,wheelchair_boarding parse error,,36.641496,-116.40094,,,,xyz,,,,FieldParseError:wheelchair_boarding
