@@ -563,8 +563,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		// We need to check for duplicate ID errors here because they're put into a map
 		if _, ok := trips[eid]; ok {
-			trip.AddError(causes.NewDuplicateIDError(eid))
-			copier.errorHandler.HandleEntityErrors(&trip, nil, nil)
+			copier.errorHandler.HandleEntityErrors(&trip, []error{causes.NewDuplicateIDError(eid)}, nil)
 		}
 		trips[eid] = trip
 	}
@@ -579,7 +578,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		tripid := stoptimes[0].TripID
 		if _, ok := alltripids[tripid]; !ok {
 			log.Info("stop_times referred to unknown trip: %s", tripid)
-			// copier.result.AddError(NewCopyError("stop_times.txt", "", causes.NewInvalidReferenceError("trip_id", tripid)))
+			copier.errorHandler.HandleEntityErrors(&stoptimes[0], []error{causes.NewInvalidReferenceError("trip_id", tripid)}, nil)
 			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			continue
 		}
