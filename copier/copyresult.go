@@ -1,7 +1,6 @@
 package copier
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/interline-io/gotransit"
@@ -38,19 +37,12 @@ func NewCopyResult() *CopyResult {
 
 // HandleEntityErrors .
 func (cr *CopyResult) HandleEntityErrors(ent gotransit.Entity, errs []error, warns []error) {
-	fmt.Println(ent.Filename(), ent.EntityID())
 	for _, err := range errs {
 		cr.Errors = append(cr.Errors, NewCopyError(ent.Filename(), ent.EntityID(), err))
 	}
 	for _, err := range warns {
 		cr.Warnings = append(cr.Warnings, NewCopyError(ent.Filename(), ent.EntityID(), err))
 	}
-	// if len(errs) > 0 {
-	// 	cr.Errors = append(cr.Errors, errs...)
-	// }
-	// if len(warns) > 0 {
-	// 	cr.Warnings = append(cr.Warnings, warns...)
-	// }
 }
 
 // DisplayErrors shows individual errors in log.Info

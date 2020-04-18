@@ -1,8 +1,6 @@
 package validator
 
 import (
-	"fmt"
-
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
 	"github.com/interline-io/gotransit/copier"
@@ -23,12 +21,6 @@ func NewValidator(reader gotransit.Reader) (*Validator, error) {
 	cp := copier.NewCopier(reader, &w)
 	cp.AllowEntityErrors = true
 	cp.AllowReferenceErrors = true
-	cp.EntityErrorHandler = func(ent gotransit.Entity, errs []error) {
-		if len(errs) == 0 {
-			return
-		}
-		fmt.Printf("entity error handler: %#v --- %s\n", ent, errs)
-	}
 	return &Validator{Reader: reader, Copier: &cp}, nil
 }
 
