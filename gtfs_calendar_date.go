@@ -1,6 +1,7 @@
 package gotransit
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/interline-io/gotransit/causes"
@@ -28,6 +29,9 @@ func (ent *CalendarDate) Warnings() (errs []error) {
 func (ent *CalendarDate) Errors() (errs []error) {
 	errs = ValidateTags(ent)
 	errs = append(errs, ent.BaseEntity.loadErrors...)
+	if ent.Date.IsZero() {
+		errs = append(errs, causes.NewInvalidFieldError("date", "", fmt.Errorf("date is zero")))
+	}
 	return errs
 }
 
