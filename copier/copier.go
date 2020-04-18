@@ -14,6 +14,7 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
+// ErrorHandler is called on each source file and entity; errors can be nil
 type ErrorHandler interface {
 	HandleEntityErrors(gotransit.Entity, []error, []error)
 	HandleSourceErrors(string, []error, []error)
