@@ -57,7 +57,8 @@ func (ent *Stop) Warnings() (errs []error) {
 		lat = c[1]
 		lon = c[0]
 	}
-	if ent.LocationType < 3 {
+	lt := ent.LocationType
+	if lt == 0 || lt == 1 || lt == 2 {
 		if lat == 0 {
 			errs = append(errs, causes.NewValidationWarning("stop_lat", "required field stop_lat is 0.0"))
 		}
@@ -78,14 +79,16 @@ func (ent *Stop) Warnings() (errs []error) {
 func (ent *Stop) Errors() (errs []error) {
 	errs = ValidateTags(ent)
 	errs = append(errs, ent.BaseEntity.loadErrors...)
-	if ent.LocationType < 3 && len(ent.StopName) == 0 {
+	// TODO: This should be an enum for exhaustive search
+	lt := ent.LocationType
+	if (lt == 0 || lt == 1 || lt == 2) && len(ent.StopName) == 0 {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_name"))
 	}
 	// Check for "0" value...
-	if ent.LocationType == 1 && ent.ParentStation.Key != "" {
+	if lt == 1 && ent.ParentStation.Key != "" {
 		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("station cannot have parent_station")))
 	}
-	if ent.LocationType > 1 && ent.ParentStation.Key == "" {
+	if (lt == 2 || lt == 3 || lt == 4) && ent.ParentStation.Key == "" {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("parent_station"))
 	}
 	return errs
