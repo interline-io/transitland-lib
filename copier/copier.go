@@ -85,7 +85,7 @@ type Copier struct {
 	DefaultAgencyID string
 	// Entity selection strategy
 	Marker Marker
-	// Error handlers
+	// Error handler, called for each entity
 	ErrorHandler ErrorHandler
 	// book keeping
 	agencyCount         int
