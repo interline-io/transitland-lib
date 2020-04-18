@@ -50,6 +50,7 @@ func (ent *Stop) EntityID() string {
 
 // Warnings for this Entity.
 func (ent *Stop) Warnings() (errs []error) {
+	errs = append(errs, ent.loadWarnings...)
 	lat := ent.StopLat
 	lon := ent.StopLon
 	if ent.Geometry.Valid {

@@ -23,6 +23,7 @@ func (ent *Frequency) EntityID() string {
 
 // Warnings for this Entity.
 func (ent *Frequency) Warnings() (errs []error) {
+	errs = append(errs, ent.loadWarnings...)
 	st, et := ent.StartTime.Seconds, ent.EndTime.Seconds
 	if st != 0 && et != 0 {
 		if st == et {

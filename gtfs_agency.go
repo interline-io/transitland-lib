@@ -25,6 +25,7 @@ func (ent *Agency) EntityID() string {
 
 // Warnings for this Entity.
 func (ent *Agency) Warnings() (errs []error) {
+	errs = append(errs, ent.loadWarnings...)
 	if len(ent.AgencyID) == 0 {
 		errs = append(errs, causes.NewValidationWarning("agency_id", "agency_id should be set"))
 	}

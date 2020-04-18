@@ -30,6 +30,7 @@ func (ent *Calendar) EntityID() string {
 
 // Warnings for this Entity.
 func (ent *Calendar) Warnings() (errs []error) {
+	errs = append(errs, ent.loadWarnings...)
 	// Are all days empty?
 	if ent.Monday == 0 && ent.Tuesday == 0 && ent.Wednesday == 0 && ent.Thursday == 0 && ent.Friday == 0 && ent.Saturday == 0 && ent.Sunday == 0 {
 		errs = append(errs, causes.NewValidationWarning("", "all days are empty"))

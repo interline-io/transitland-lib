@@ -20,11 +20,6 @@ func (ent *CalendarDate) EntityID() string {
 	return ""
 }
 
-// Warnings for this Entity.
-func (ent *CalendarDate) Warnings() (errs []error) {
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *CalendarDate) Errors() (errs []error) {
 	errs = ValidateTags(ent)
