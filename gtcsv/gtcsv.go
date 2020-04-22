@@ -17,6 +17,7 @@ func init() {
 	gotransit.RegisterReader("http", r)
 	gotransit.RegisterReader("https", r)
 	gotransit.RegisterReader("s3", r)
+	gotransit.RegisterReader("overlay", r)
 	w := func(url string) (gotransit.Writer, error) { return NewWriter(url) }
 	gotransit.RegisterWriter("csv", w)
 	// Set chunkSize from config.

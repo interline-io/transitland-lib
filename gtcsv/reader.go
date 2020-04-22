@@ -27,6 +27,8 @@ func NewReader(path string) (*Reader, error) {
 		a = &URLAdapter{url: path}
 	} else if strings.HasPrefix(path, "s3://") {
 		a = &S3Adapter{url: path}
+	} else if strings.HasPrefix(path, "overlay://") {
+		a = NewOverlayAdapter(path)
 	} else if fi, err := os.Stat(path); err == nil && fi.IsDir() {
 		a = NewDirAdapter(path)
 	} else {
