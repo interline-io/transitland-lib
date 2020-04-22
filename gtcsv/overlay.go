@@ -1,10 +1,14 @@
 package gtcsv
 
 import (
+	"crypto/sha1"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 // OverlayAdapter searches a specified list of directories for the specified file.
@@ -15,17 +19,61 @@ type OverlayAdapter struct {
 
 // NewOverlayAdapter returns a new OverlayAdapter.
 func NewOverlayAdapter(paths ...string) OverlayAdapter {
+	if len(paths) == 1 {
+		firstPath := paths[0]
+		if strings.HasPrefix(firstPath, "overlay://") {
+			firstPath = strings.Replace(firstPath, "overlay://", "", 1)
+		}
+		paths = strings.Split(firstPath, ",")
+	}
 	return OverlayAdapter{paths: paths}
 }
 
-// SHA1 .
+// SHA1 is an alias for DirSHA1
 func (adapter OverlayAdapter) SHA1() (string, error) {
-	return "", errors.New("cannot take SHA1 of directory")
+	return adapter.DirSHA1()
 }
 
-// DirSHA1 .
+// DirSHA1 returns the SHA1 of all the .txt files in the main directory, sorted, and concatenated.
 func (adapter OverlayAdapter) DirSHA1() (string, error) {
-	return "", errors.New("not supported")
+	alltxts := map[string]string{}
+	for _, path := range adapter.paths {
+		f, err := os.Open(path)
+		if err != nil {
+			return "", err
+		}
+		fis, err := f.Readdir(-1)
+		f.Close()
+		if err != nil {
+			return "", err
+		}
+		for _, fi := range fis {
+			fn := fi.Name()
+			if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+				continue
+			}
+			if _, ok := alltxts[fn]; ok {
+				continue
+			}
+			alltxts[fn] = filepath.Join(path, fn)
+		}
+	}
+	keys := []string{}
+	for k := range alltxts {
+		keys = append(keys, k)
+	}
+	// Sort the files
+	sort.Strings(keys)
+	// Hash
+	h := sha1.New()
+	for _, k := range keys {
+		f, err := os.Open(filepath.Join(alltxts[k]))
+		if err != nil {
+			return "", err
+		}
+		io.Copy(h, f)
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 // OpenFile searches paths until it finds the specified file.
@@ -61,7 +109,7 @@ func (adapter OverlayAdapter) Close() error {
 
 // Path implements CSV Adapter.Path.
 func (adapter OverlayAdapter) Path() string {
-	return adapter.paths[0]
+	return fmt.Sprintf("overlay://%s", strings.Join(adapter.paths, ","))
 }
 
 // Exists implements CSV Adapter.Exists.
