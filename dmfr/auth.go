@@ -90,9 +90,5 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 			return "", err
 		}
 	}
-	// Handle fragments
-	if u.Fragment != "" {
-		return tmpfilepath + "#" + u.Fragment, nil
-	}
 	return tmpfilepath, nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -94,6 +95,12 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		fr.FetchError = errors.New("no url")
 		return fr, nil
 	}
+	// Handle fragments
+	u, err := url.Parse(opts.FeedURL)
+	if err != nil {
+		fr.FetchError = errors.New("cannot parse url")
+		return fr, nil
+	}
 	// Get secret
 	secret := Secret{}
 	if a, err := opts.Secrets.MatchFeed(opts.Feed.FeedID); err == nil {
@@ -114,11 +121,14 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 	if _, ok := reader.Adapter.(*gtcsv.URLAdapter); ok {
 		// Download feed
 		auth := opts.Feed.Authorization
-		tmpfile, err := AuthenticatedRequest(opts.FeedURL, secret, auth)
+		tmpfile, err := AuthenticatedRequest(u.String(), secret, auth)
 		defer os.Remove(tmpfile)
 		if err != nil {
 			fr.FetchError = err
 			return fr, nil
+		}
+		if u.Fragment != "" {
+			tmpfile = tmpfile + "#" + u.Fragment
 		}
 		reader.Adapter = gtcsv.NewZipAdapter(tmpfile)
 	}
@@ -134,7 +144,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		fr.FetchError = err
 		return fr, nil
 	}
-	fv.URL = opts.FeedURL
+	fv.URL = u.String()
 	fv.FeedID = opts.Feed.ID
 	fv.FetchedAt = opts.FetchedAt
 	// Is this SHA1 already present?
