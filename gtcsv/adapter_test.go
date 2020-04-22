@@ -15,9 +15,11 @@ import (
 
 func getTestAdapters() map[string]func() Adapter {
 	adapters := map[string]func() Adapter{
-		"DirAdapter":     func() Adapter { return NewDirAdapter(testutil.ExampleDir.URL) },
-		"ZipAdapter":     func() Adapter { return &ZipAdapter{path: testutil.ExampleZip.URL} },
-		"OverlayAdapter": func() Adapter { return NewOverlayAdapter(testutil.ExampleDir.URL) },
+		"DirAdapter":          func() Adapter { return NewDirAdapter(testutil.ExampleDir.URL) },
+		"ZipAdapter":          func() Adapter { return NewZipAdapter(testutil.ExampleZip.URL) },
+		"ZipAdapterNestedDir": func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedDir.URL) },
+		"ZipAdapterNestedZip": func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedZip.URL) },
+		"OverlayAdapter":      func() Adapter { return NewOverlayAdapter(testutil.ExampleDir.URL) },
 	}
 	return adapters
 }
@@ -86,6 +88,24 @@ func TestZipAdapter(t *testing.T) {
 			t.Errorf("got %s expect %s", s, testutil.ExampleZip.DirSHA1)
 		}
 	})
+}
+
+func TestZipAdapterNestedDir(t *testing.T) {
+	v, ok := getTestAdapters()["ZipAdapterNestedDir"]
+	if !ok {
+		t.Error("no ZipAdapter with nested file")
+		t.FailNow()
+	}
+	testAdapter(t, v())
+}
+
+func TestZipAdapterNestedZip(t *testing.T) {
+	v, ok := getTestAdapters()["ZipAdapterNestedZip"]
+	if !ok {
+		t.Error("no ZipAdapter with nested zip")
+		t.FailNow()
+	}
+	testAdapter(t, v())
 }
 
 func TestURLAdapter(t *testing.T) {
