@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/causes"
@@ -201,6 +202,11 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	} else if opts.Directory != "" {
 		url = filepath.Join(opts.Directory, fv.File)
 	}
+	urlsplit := strings.SplitN(fv.URL, "#", 2)
+	if len(urlsplit) > 1 {
+		url = url + "#" + urlsplit[1]
+	}
+	fmt.Println("url:", url)
 	reader, err := gtcsv.NewReader(url)
 	if err != nil {
 		return fvi, err

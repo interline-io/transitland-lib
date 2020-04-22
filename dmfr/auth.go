@@ -17,6 +17,7 @@ import (
 // AuthenticatedRequest fetches a url using a secret and auth description. Returns temp file path or error.
 func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuthorization) (string, error) {
 	u, err := url.Parse(address)
+	fmt.Printf("u: %#v\n", u)
 	if err != nil {
 		return "", err
 	}
@@ -89,6 +90,10 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 		if _, err := io.Copy(tmpfile, r); err != nil {
 			return "", err
 		}
+	}
+	// Handle fragments
+	if u.Fragment != "" {
+		return tmpfilepath + "#" + u.Fragment, nil
 	}
 	return tmpfilepath, nil
 }

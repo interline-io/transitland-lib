@@ -142,7 +142,7 @@ func fetchWorker(id int, adapter gtdb.Adapter, DryRun bool, jobs <-chan FetchOpt
 		var fr FetchResult
 		// Get FeedID for pretty printing.
 		osid := opts.Feed.FeedID
-		// log.Info("Feed %s (id:%d): url: %s begin/start", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL)
+		log.Info("Feed %s (id:%d): url: %s begin/start", osid, fr.FeedVersion.FeedID, opts.Feed.URLs.StaticCurrent)
 		if DryRun {
 			log.Info("Feed %s (id:%d): dry-run", osid, opts.Feed.ID)
 			continue

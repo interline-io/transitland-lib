@@ -32,7 +32,7 @@ func NewReader(path string) (*Reader, error) {
 	} else if fi, err := os.Stat(path); err == nil && fi.IsDir() {
 		a = NewDirAdapter(path)
 	} else {
-		a = &ZipAdapter{path: path}
+		a = NewZipAdapter(path)
 	}
 	return &Reader{Adapter: a}, nil
 }

@@ -120,7 +120,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 			fr.FetchError = err
 			return fr, nil
 		}
-		reader.Adapter = gtcsv.NewDirAdapter(tmpfile)
+		reader.Adapter = gtcsv.NewZipAdapter(tmpfile)
 	}
 	// Open
 	if err := reader.Open(); err != nil {

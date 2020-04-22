@@ -267,6 +267,9 @@ func (adapter ZipAdapter) DirSHA1() (string, error) {
 	for _, zf := range r.File {
 		fi := zf.FileInfo()
 		fn := zf.Name
+		if adapter.internalPrefix != "" {
+			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
+		}
 		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
 		}
