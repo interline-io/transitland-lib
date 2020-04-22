@@ -206,7 +206,6 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	if len(urlsplit) > 1 {
 		url = url + "#" + urlsplit[1]
 	}
-	fmt.Println("url:", url)
 	reader, err := gtcsv.NewReader(url)
 	if err != nil {
 		return fvi, err

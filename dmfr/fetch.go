@@ -117,20 +117,14 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		fr.FetchError = err
 		return fr, nil
 	}
-	// This isn't great, but... we only want download/tmpfile/cleanup for URLAdapter
-	if _, ok := reader.Adapter.(*gtcsv.URLAdapter); ok {
-		// Download feed
-		auth := opts.Feed.Authorization
-		tmpfile, err := AuthenticatedRequest(u.String(), secret, auth)
-		defer os.Remove(tmpfile)
-		if err != nil {
+	// Override the default URLAdapter
+	if u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "ftp" {
+		aa := AuthenticatedURLAdapter{}
+		if err := aa.Download(opts.FeedURL, opts.Feed.Authorization, secret); err != nil {
 			fr.FetchError = err
 			return fr, nil
 		}
-		if u.Fragment != "" {
-			tmpfile = tmpfile + "#" + u.Fragment
-		}
-		reader.Adapter = gtcsv.NewZipAdapter(tmpfile)
+		reader.Adapter = &aa
 	}
 	// Open
 	if err := reader.Open(); err != nil {
@@ -144,7 +138,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		fr.FetchError = err
 		return fr, nil
 	}
-	fv.URL = u.String()
+	fv.URL = opts.FeedURL
 	fv.FeedID = opts.Feed.ID
 	fv.FetchedAt = opts.FetchedAt
 	// Is this SHA1 already present?
