@@ -104,20 +104,25 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		fr.FetchError = errors.New("no secret found")
 		return fr, nil
 	}
-	auth := opts.Feed.Authorization
-	// Download feed
-	tmpfile, err := AuthenticatedRequest(opts.FeedURL, secret, auth)
-	defer os.Remove(tmpfile)
+	// Check reader type
+	reader, err := gtcsv.NewReader(opts.FeedURL)
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil
+	}
+	// This isn't great, but... we only want download/tmpfile/cleanup for URLAdapter
+	if _, ok := reader.Adapter.(*gtcsv.URLAdapter); ok {
+		// Download feed
+		auth := opts.Feed.Authorization
+		tmpfile, err := AuthenticatedRequest(opts.FeedURL, secret, auth)
+		defer os.Remove(tmpfile)
+		if err != nil {
+			fr.FetchError = err
+			return fr, nil
+		}
+		reader.Adapter = gtcsv.NewDirAdapter(tmpfile)
 	}
 	// Open
-	reader, err := gtcsv.NewReader(tmpfile)
-	if err != nil {
-		fr.FetchError = err
-		return fr, nil
-	}
 	if err := reader.Open(); err != nil {
 		fr.FetchError = err
 		return fr, nil
