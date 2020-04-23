@@ -161,8 +161,7 @@ func NewZipAdapter(path string) *ZipAdapter {
 			log.Debug("Extracted %s internal prefix %s to %s", adapter.path, adapter.internalPrefix, tmpfilepath)
 		})
 		if err != nil {
-			fmt.Println("could not open")
-			return nil
+			return &adapter
 		}
 		adapter.path = tmpfilepath
 		adapter.tmpfilepath = tmpfilepath
