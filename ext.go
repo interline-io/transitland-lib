@@ -2,6 +2,7 @@ package gotransit
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/interline-io/gotransit/internal/log"
@@ -73,6 +74,32 @@ func NewReader(url string) (Reader, error) {
 	return GetReader("csv", url)
 }
 
+// MustOpenReaderOrPanic is a helper that returns an opened reader or panics.
+func MustOpenReaderOrPanic(path string) Reader {
+	r, err := NewReader(path)
+	if err != nil {
+		panic(fmt.Sprintf("No handler for reader '%s': %s", path, err.Error()))
+	}
+	if err := r.Open(); err != nil {
+		panic(fmt.Sprintf("Could not open reader '%s': %s", path, err.Error()))
+	}
+	return r
+}
+
+// MustOpenReaderOrExit is a helper that returns an opened a reader or exits.
+func MustOpenReaderOrExit(path string) Reader {
+	r, err := NewReader(path)
+	if err != nil {
+		fmt.Printf("No handler for reader '%s': %s", path, err.Error())
+		os.Exit(1)
+	}
+	if err := r.Open(); err != nil {
+		fmt.Printf("Could not open reader '%s': %s", path, err.Error())
+		os.Exit(1)
+	}
+	return r
+}
+
 // NewWriter uses the scheme prefix as the driver name, defaulting to csv.
 func NewWriter(dburl string) (Writer, error) {
 	url := strings.Split(dburl, "://")
@@ -80,6 +107,32 @@ func NewWriter(dburl string) (Writer, error) {
 		return GetWriter(url[0], dburl)
 	}
 	return GetWriter("csv", dburl)
+}
+
+// MustOpenWriterOrPanic is a helper that returns an opened writer or panics.
+func MustOpenWriterOrPanic(path string) Writer {
+	r, err := NewWriter(path)
+	if err != nil {
+		panic(fmt.Sprintf("No handler for reader '%s': %s", path, err.Error()))
+	}
+	if err := r.Open(); err != nil {
+		panic(fmt.Sprintf("Could not open reader '%s': %s", path, err.Error()))
+	}
+	return r
+}
+
+// MustOpenWriterOrExit is a helper that returns an opened a writer or exits.
+func MustOpenWriterOrExit(path string) Writer {
+	r, err := NewWriter(path)
+	if err != nil {
+		fmt.Printf("No handler for writer '%s': %s", path, err.Error())
+		os.Exit(1)
+	}
+	if err := r.Open(); err != nil {
+		fmt.Printf("Could not open writer '%s': %s", path, err.Error())
+		os.Exit(1)
+	}
+	return r
 }
 
 // GetReader returns a Reader for the URL.
