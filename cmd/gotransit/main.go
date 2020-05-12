@@ -106,7 +106,6 @@ func main() {
 		fmt.Println("  extract")
 		fmt.Println("  validate")
 		fmt.Println("  dmfr")
-		fmt.Println("  merge")
 		return
 	}
 	flag.Parse()
