@@ -8,8 +8,8 @@ import (
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
+	"github.com/interline-io/gotransit/extract"
 	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/extract"
 	"github.com/interline-io/gotransit/internal/log"
 )
 

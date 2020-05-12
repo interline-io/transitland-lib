@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/internal/graph"
+	"github.com/interline-io/gotransit/internal/log"
 )
 
 /*
@@ -13,9 +14,10 @@ agency
 	route
 		trip / stop_time
 
-station
-	stop
-		trip / stop_time
+non-platform stops (inverted)
+	station
+		platform
+			trip / stop_time
 
 calendar / calendar_dates
 	trip
@@ -25,7 +27,7 @@ shape
 
 fare_attribute / fare_rule (inverted)
 	farezone (virtual)
-		stop
+		platform
 
 -------
 
@@ -88,7 +90,7 @@ func (em *Marker) Filter(reader gotransit.Reader, fm map[string][]string) error 
 	// Find all children
 	result := map[*graph.Node]bool{}
 	em.graph.Search(foundNodes[:], false, func(n *graph.Node) {
-		// log.Trace("child: %s", n)
+		log.Trace("child: %s", n)
 		result[n] = true
 	})
 	// Now find parents of all found children
@@ -97,8 +99,10 @@ func (em *Marker) Filter(reader gotransit.Reader, fm map[string][]string) error 
 		check2 = append(check2, k)
 	}
 	em.graph.Search(check2[:], true, func(n *graph.Node) {
+		log.Trace("parent: %s", n)
 		result[n] = true
 	})
 	em.found = result
+	// fmt.Printf("result: %#v\n", result)
 	return nil
 }

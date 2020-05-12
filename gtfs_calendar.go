@@ -47,12 +47,12 @@ func (ent *Calendar) Errors() (errs []error) {
 	errs = ValidateTags(ent)
 	errs = append(errs, ent.BaseEntity.loadErrors...)
 	if ent.StartDate.IsZero() {
-		errs = append(errs, causes.NewInvalidFieldError("start_date", "", fmt.Errorf("start_date is empty")))
+		errs = append(errs, causes.NewInvalidFieldError("start_date", ent.StartDate.String(), fmt.Errorf("start_date is empty")))
 	}
 	if ent.EndDate.IsZero() {
-		errs = append(errs, causes.NewInvalidFieldError("end_date", "", fmt.Errorf("end_date is empty")))
+		errs = append(errs, causes.NewInvalidFieldError("end_date", ent.EndDate.String(), fmt.Errorf("end_date is empty")))
 	} else if ent.EndDate.Before(ent.StartDate) {
-		errs = append(errs, causes.NewInvalidFieldError("end_date", "", fmt.Errorf("end_date '%s' must come after start_date '%s'", ent.EndDate, ent.StartDate)))
+		errs = append(errs, causes.NewInvalidFieldError("end_date", ent.EndDate.String(), fmt.Errorf("end_date '%s' must come after start_date '%s'", ent.EndDate, ent.StartDate)))
 	}
 	return errs
 }
