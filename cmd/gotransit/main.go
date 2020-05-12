@@ -12,7 +12,6 @@ import (
 	_ "github.com/interline-io/gotransit/gtcsv"
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
-	"github.com/interline-io/gotransit/merge"
 )
 
 // Helpers
@@ -138,14 +137,6 @@ func main() {
 		r = &extractCommand{}
 	case "dmfr":
 		r = &dmfr.Command{}
-	case "merge":
-		r2 := merge.Command{}
-		r2.Parse(args[1:])
-		err := r2.Run()
-		if err != nil {
-			exit("error: %s", err.Error())
-		}
-		return
 	default:
 		exit("%q is not valid command.", subc)
 	}
