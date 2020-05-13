@@ -16,11 +16,13 @@ import (
 
 // ImportOptions sets various options for importing a feed.
 type ImportOptions struct {
-	FeedVersionID int
-	Extensions    []string
-	Directory     string
-	S3            string
-	Activate      bool
+	FeedVersionID        int
+	Extensions           []string
+	Directory            string
+	S3                   string
+	Activate             bool
+	CreateMissingShapes  bool
+	InterpolateStopTimes bool
 }
 
 // ImportResult contains the results of a feed import.
@@ -220,12 +222,14 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 		}
 		cp.AddExtension(ext)
 	}
-	cp.BatchSize = 1000000
+	// Settable options
+	cp.CreateMissingShapes = opts.CreateMissingShapes
+	cp.InterpolateStopTimes = opts.InterpolateStopTimes
+	// Non-settable options
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
 	cp.NormalizeServiceIDs = true
-	cp.CreateMissingShapes = true
-	cp.InterpolateStopTimes = true
+	// Go
 	cpresult := cp.Copy()
 	if cpresult == nil {
 		return fvi, errors.New("copy result was nil")

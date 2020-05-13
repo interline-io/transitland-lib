@@ -104,7 +104,7 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	copier := Copier{
 		Reader:               reader,
 		Writer:               writer,
-		BatchSize:            100000,
+		BatchSize:            1000000,
 		AllowEntityErrors:    false,
 		AllowReferenceErrors: false,
 		InterpolateStopTimes: false,
