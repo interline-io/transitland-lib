@@ -30,7 +30,7 @@ jobs:
         name: coverage
         path: coverage.html
   build-linux:
-    if: $GITHUB_EVENT_NAME == 'release'
+    if: ${{ $GITHUB_EVENT_NAME == 'release' }}
     needs: test
     runs-on: ubuntu-18.04
     steps:
@@ -49,7 +49,7 @@ jobs:
           name: gotransit-linux
           path: ${{ github.workspace }}/cmd/gotransit/gotransit
   build-macos:
-    if: $GITHUB_EVENT_NAME == 'release'
+    if: ${{ $GITHUB_EVENT_NAME == 'release' }}
     needs: test
     runs-on: macos-latest
     steps:
@@ -68,7 +68,7 @@ jobs:
           name: gotransit-macos
           path: ${{ github.workspace }}/cmd/gotransit/gotransit
   release:
-    if: $GITHUB_EVENT_NAME == 'release'
+    if: ${{ $GITHUB_EVENT_NAME == 'release' }}
     needs: [build-linux, build-macos]
     runs-on: ubuntu-18.04
     steps:
