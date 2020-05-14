@@ -142,7 +142,6 @@ func fetchWorker(id int, adapter gtdb.Adapter, DryRun bool, jobs <-chan FetchOpt
 		var fr FetchResult
 		// Get FeedID for pretty printing.
 		osid := opts.Feed.FeedID
-		// log.Info("Feed %s (id:%d): url: %s begin/start", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL)
 		if DryRun {
 			log.Info("Feed %s (id:%d): dry-run", osid, opts.Feed.ID)
 			continue
@@ -153,9 +152,9 @@ func fetchWorker(id int, adapter gtdb.Adapter, DryRun bool, jobs <-chan FetchOpt
 			return fe
 		})
 		if err != nil {
-			log.Info("Feed %s (id:%d): url: %s critical error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, err.Error())
+			log.Error("Feed %s (id:%d): url: %s critical error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, err.Error())
 		} else if fr.FetchError != nil {
-			log.Info("Feed %s (id:%d): url: %s fetch error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FetchError.Error())
+			log.Error("Feed %s (id:%d): url: %s fetch error: %s", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FetchError.Error())
 		} else if fr.FoundSHA1 {
 			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, fr.FeedVersion.FeedID, fr.FeedVersion.URL, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
 		} else if fr.FoundDirSHA1 {

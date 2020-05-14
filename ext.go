@@ -27,13 +27,13 @@ var entityFilterFactories = map[string]entityFilterFactory{}
 // RegisterReader registers a Reader.
 func RegisterReader(name string, factory readerFactory) {
 	if factory == nil {
-		log.Fatal("factory %s does not exist", name)
+		log.Fatal("Factory %s does not exist", name)
 	}
 	_, registered := readerFactories[name]
 	if registered {
 		log.Fatal("factory %s already registered", name)
 	}
-	log.Debug("registering Reader factory: %s", name)
+	log.Debug("Registering Reader factory: %s", name)
 	readerFactories[name] = factory
 }
 
@@ -44,9 +44,9 @@ func RegisterWriter(name string, factory writerFactory) {
 	}
 	_, registered := writerFactories[name]
 	if registered {
-		log.Fatal("factory %s already registered", name)
+		log.Fatal("Factory %s already registered", name)
 	}
-	log.Debug("registering Writer factory: %s", name)
+	log.Debug("Registering Writer factory: %s", name)
 	writerFactories[name] = factory
 }
 
@@ -56,13 +56,13 @@ func RegisterExtension(name string, factory extensionFactory) {
 	if registered {
 		panic("failed")
 	}
-	log.Debug("registering Extension factory: %s", name)
+	log.Debug("Registering Extension factory: %s", name)
 	extensionFactories[name] = factory
 }
 
 // RegisterEntityFilter registers a EntityFilter.
 func RegisterEntityFilter(name string) {
-	log.Debug("registering EntityFilter factory: %s", name)
+	log.Debug("Registering EntityFilter factory: %s", name)
 }
 
 // NewReader uses the scheme prefix as the driver name, defaulting to csv.

@@ -37,7 +37,7 @@ func (cmd *ValidateCommand) Run() error {
 		registry, err := LoadAndParseRegistry(filename)
 		if err != nil {
 			errs = append(errs, err)
-			log.Info("%s: Error when loading DMFR: %s", filename, err.Error())
+			log.Error("%s: Error when loading DMFR: %s", filename, err.Error())
 		} else {
 			log.Info("%s: Success loading DMFR with %d feeds", filename, len(registry.Feeds))
 		}

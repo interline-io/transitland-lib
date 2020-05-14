@@ -52,9 +52,7 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 		}
 		if auth.Type == "basic_auth" {
 			req.SetBasicAuth(secret.Username, secret.Password)
-			// log.Debug("Using basic_auth authentication: %s:%s", secret.Username, secret.Password)
 		} else if auth.Type == "header" {
-			// log.Debug("Using header authentication: %s = %s", auth.ParamName, secret.Key)
 			req.Header.Add(auth.ParamName, secret.Key)
 		}
 		resp, err := client.Do(req)

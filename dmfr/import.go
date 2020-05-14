@@ -136,7 +136,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 		fvi.ID = fviid // TODO: why isn't this set in insert?
 	} else {
 		// Serious error
-		log.Info("Error creating FeedVersionImport: %s", err.Error())
+		log.Error("Error creating FeedVersionImport: %s", err.Error())
 		return ImportResult{FeedVersionImport: fvi}, err
 	}
 	// Import
@@ -173,7 +173,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 		fviresult.ExceptionLog = ""
 		if err := adapter.Update(&fviresult); err != nil {
 			// Serious error
-			log.Info("Error saving FeedVersionImport: %s", err.Error())
+			log.Error("Error saving FeedVersionImport: %s", err.Error())
 			return err
 		}
 		return err
@@ -185,7 +185,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 		fvi.ExceptionLog = errImport.Error()
 		if err := adapter.Update(&fvi); err != nil {
 			// Serious error
-			log.Info("Error saving FeedVersionImport: %s", err.Error())
+			log.Error("Error saving FeedVersionImport: %s", err.Error())
 			return ImportResult{FeedVersionImport: fvi}, err
 		}
 		return ImportResult{FeedVersionImport: fvi}, errImport

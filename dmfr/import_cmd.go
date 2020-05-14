@@ -146,7 +146,7 @@ func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan Imp
 	for opts := range jobs {
 		q := qr{}
 		if err := adapter.Get(&q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
-			log.Info("Serious error: could not get details for FeedVersion %d", opts.FeedVersionID)
+			log.Error("Could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}
 		if dryrun {
@@ -156,7 +156,7 @@ func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan Imp
 		log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		result, err := MainImportFeedVersion(adapter, opts)
 		if err != nil {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog)
+			log.Error("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog)
 		} else if result.FeedVersionImport.Success {
 			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): success: count %v errors: %v referrors: %v", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.EntityCount, result.FeedVersionImport.SkipEntityErrorCount, result.FeedVersionImport.SkipEntityReferenceCount)
 		} else {

@@ -44,7 +44,7 @@ func TestLogLevels(t *testing.T) {
 	}{
 		{"Info", 20, Info},
 		{"Debug", 10, Debug},
-		{"Trace", 5, Trace},
+		{"Query", 5, Query},
 		{"Printf", 0, Printf},
 	}
 	for _, f := range funcs {

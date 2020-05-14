@@ -95,10 +95,12 @@ type runner interface {
 
 func main() {
 	log.SetLevel(log.INFO)
+	quietFlag := false
 	debugFlag := false
 	traceFlag := false
+	flag.BoolVar(&quietFlag, "q", false, "Only send critical errors to stderr")
 	flag.BoolVar(&debugFlag, "v", false, "Enable verbose output")
-	flag.BoolVar(&traceFlag, "vv", false, "Enable trace output")
+	flag.BoolVar(&traceFlag, "vv", false, "Enable more verbose/query output")
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
 		fmt.Println("Commands:")
@@ -109,11 +111,14 @@ func main() {
 		return
 	}
 	flag.Parse()
+	if quietFlag == true {
+		log.SetLevel(log.ERROR)
+	}
 	if debugFlag == true {
 		log.SetLevel(log.DEBUG)
 	}
 	if traceFlag == true {
-		log.SetLevel(log.TRACE)
+		log.SetLevel(log.QUERY)
 	}
 	args := flag.Args()
 	subc := flag.Arg(0)
