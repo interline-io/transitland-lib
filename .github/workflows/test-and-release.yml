@@ -72,9 +72,6 @@ jobs:
     needs: [build-linux, build-macos]
     runs-on: ubuntu-18.04
     steps:
-      - name: "Get release upload_url"
-        run: echo "::set-output name=upload_url::https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$(jq --raw-output '.release.id' $GITHUB_EVENT_PATH)/assets{?name,label}"  
-        id: release
       - name: Download Linux binary
         uses: actions/download-artifact@v1
         with:
@@ -84,7 +81,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
+          upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ github.workspace }}/gotransit-linux/gotransit
           asset_name: gotransit-linux
           asset_label: Linux AMD-64 binary
@@ -98,7 +95,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
+          upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ github.workspace }}/gotransit-macos/gotransit
           asset_name: gotransit-macos
           asset_label: macOS AMD-64 binary
