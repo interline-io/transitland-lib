@@ -7,15 +7,17 @@ on:
     types:
       - created
 jobs:
+  debug:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Debug Action
+      uses: hmarr/debug-action@v1.0.0
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-18.04, macos-latest]
     steps:
-    # TODO: remove this!
-    - name: Debug Action
-      uses: hmarr/debug-action@v1.0.0
     - name: Set up Go 1.13
       uses: actions/setup-go@v1
       with:
