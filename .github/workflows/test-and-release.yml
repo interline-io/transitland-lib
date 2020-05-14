@@ -13,6 +13,9 @@ jobs:
       matrix:
         os: [ubuntu-18.04, macos-latest]
     steps:
+    # TODO: remove this!
+    - name: Debug Action
+      uses: hmarr/debug-action@v1.0.0
     - name: Set up Go 1.13
       uses: actions/setup-go@v1
       with:
