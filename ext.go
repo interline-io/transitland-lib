@@ -2,7 +2,6 @@ package gotransit
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/interline-io/gotransit/internal/log"
@@ -31,7 +30,7 @@ func RegisterReader(name string, factory readerFactory) {
 	}
 	_, registered := readerFactories[name]
 	if registered {
-		log.Fatal("factory %s already registered", name)
+		log.Fatal("Factory %s already registered", name)
 	}
 	log.Debug("Registering Reader factory: %s", name)
 	readerFactories[name] = factory
@@ -40,7 +39,7 @@ func RegisterReader(name string, factory readerFactory) {
 // RegisterWriter registers a Writer.
 func RegisterWriter(name string, factory writerFactory) {
 	if factory == nil {
-		log.Fatal("factory %s does not exist", name)
+		log.Fatal("Factory %s does not exist", name)
 	}
 	_, registered := writerFactories[name]
 	if registered {
@@ -90,12 +89,10 @@ func MustOpenReaderOrPanic(path string) Reader {
 func MustOpenReaderOrExit(path string) Reader {
 	r, err := NewReader(path)
 	if err != nil {
-		fmt.Printf("No handler for reader '%s': %s", path, err.Error())
-		os.Exit(1)
+		log.Exit("No handler for reader '%s': %s", path, err.Error())
 	}
 	if err := r.Open(); err != nil {
-		fmt.Printf("Could not open reader '%s': %s", path, err.Error())
-		os.Exit(1)
+		log.Exit("Could not open reader '%s': %s", path, err.Error())
 	}
 	return r
 }
@@ -125,12 +122,10 @@ func MustOpenWriterOrPanic(path string) Writer {
 func MustOpenWriterOrExit(path string) Writer {
 	r, err := NewWriter(path)
 	if err != nil {
-		fmt.Printf("No handler for writer '%s': %s", path, err.Error())
-		os.Exit(1)
+		log.Exit("No handler for writer '%s': %s", path, err.Error())
 	}
 	if err := r.Open(); err != nil {
-		fmt.Printf("Could not open writer '%s': %s", path, err.Error())
-		os.Exit(1)
+		log.Exit("Could not open writer '%s': %s", path, err.Error())
 	}
 	return r
 }

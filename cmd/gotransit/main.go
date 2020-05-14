@@ -14,24 +14,18 @@ import (
 	"github.com/interline-io/gotransit/internal/log"
 )
 
-// Helpers
-func exit(fmts string, args ...interface{}) {
-	fmt.Printf(fmts+"\n", args...)
-	os.Exit(1)
-}
-
 // MustGetReader or exits.
 func MustGetReader(inurl string) gotransit.Reader {
 	if len(inurl) == 0 {
-		exit("No reader specified")
+		log.Exit("No reader specified")
 	}
 	// Reader
 	reader, err := gotransit.NewReader(inurl)
 	if err != nil {
-		exit("No known reader for '%s': %s", inurl, err)
+		log.Exit("No known reader for '%s': %s", inurl, err)
 	}
 	if err := reader.Open(); err != nil {
-		exit("Could not open '%s': %s", inurl, err)
+		log.Exit("Could not open '%s': %s", inurl, err)
 	}
 	return reader
 }
@@ -39,19 +33,19 @@ func MustGetReader(inurl string) gotransit.Reader {
 // MustGetWriter or exits.
 func MustGetWriter(outurl string, create bool) gotransit.Writer {
 	if len(outurl) == 0 {
-		exit("No writer specified")
+		log.Exit("No writer specified")
 	}
 	// Writer
 	writer, err := gotransit.NewWriter(outurl)
 	if err != nil {
-		exit("No known writer for '%s': %s", outurl, err)
+		log.Exit("No known writer for '%s': %s", outurl, err)
 	}
 	if err := writer.Open(); err != nil {
-		exit("Could not open '%s': %s", outurl, err)
+		log.Exit("Could not open '%s': %s", outurl, err)
 	}
 	if create {
 		if err := writer.Create(); err != nil {
-			exit("%s", err)
+			log.Exit("Could not create writer: %s", err)
 		}
 	}
 	return writer
@@ -62,7 +56,7 @@ func MustGetDBWriter(dburl string, create bool) *gtdb.Writer {
 	writer := MustGetWriter(dburl, true)
 	w, ok := writer.(*gtdb.Writer)
 	if !ok {
-		exit("Writer is not a database")
+		log.Exit("Writer is not a database")
 	}
 	return w
 }
@@ -124,7 +118,7 @@ func main() {
 	subc := flag.Arg(0)
 	if subc == "" {
 		flag.Usage()
-		exit("")
+		log.Exit("")
 	}
 	args = flag.Args()
 	type runnable interface {
@@ -142,10 +136,10 @@ func main() {
 	case "dmfr":
 		r = &dmfr.Command{}
 	default:
-		exit("%q is not valid command.", subc)
+		log.Exit("%q is not valid command.", subc)
 	}
 	err = r.Run(args[1:]) // consume first arg
 	if err != nil {
-		exit("error: %s", err.Error())
+		log.Exit("Error: %s", err.Error())
 	}
 }

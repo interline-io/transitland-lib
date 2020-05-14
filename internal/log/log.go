@@ -40,16 +40,6 @@ var Level = ERROR
 // LogQuery is a flag for logging database queries.
 var LogQuery = false
 
-// Printf is the same as Info.
-func Printf(fmt string, a ...interface{}) {
-	logLog(INFO, fmt, a...)
-}
-
-// Println is for compatibility.
-func Println(a ...interface{}) {
-	log.Println(a...)
-}
-
 // Error for notable errors.
 func Error(fmt string, a ...interface{}) {
 	logLog(ERROR, fmt, a...)
@@ -76,7 +66,16 @@ func Fatal(fmta string, a ...interface{}) {
 	panic(fmt.Sprintf(fmta, a...))
 }
 
+// Exit on error - print directly to console
+func Exit(fmts string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, fmts+"\n", args...)
+	os.Exit(1)
+}
+
 func logLog(level int, fmt string, a ...interface{}) {
+	if fmt == "" {
+		return
+	}
 	strlevel, _ := STRINGLEVEL[level]
 	if level >= Level {
 		log.Printf("["+strlevel+"] "+fmt, a...)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/internal/log"
 	"github.com/interline-io/gotransit/validator"
 )
 
@@ -23,7 +24,7 @@ func (cmd *validateCommand) Run(args []string) error {
 	err := fl.Parse(args)
 	if err != nil || fl.NArg() < 1 {
 		fl.Usage()
-		exit("requires input reader")
+		log.Exit("Requires input reader")
 	}
 	//
 	reader := MustGetReader(fl.Arg(0))
