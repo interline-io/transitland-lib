@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -35,7 +34,7 @@ type extractCommand struct {
 func (cmd *extractCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("extract", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: extract <input> <output>")
+		log.Print("Usage: extract <input> <output>")
 		fl.PrintDefaults()
 	}
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")

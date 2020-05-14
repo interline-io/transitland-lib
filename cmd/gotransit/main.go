@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"strings"
 
@@ -96,12 +95,12 @@ func main() {
 	flag.BoolVar(&debugFlag, "v", false, "Enable verbose output")
 	flag.BoolVar(&traceFlag, "vv", false, "Enable more verbose/query output")
 	flag.Usage = func() {
-		fmt.Printf("Usage of %s:\n", os.Args[0])
-		fmt.Println("Commands:")
-		fmt.Println("  copy")
-		fmt.Println("  extract")
-		fmt.Println("  validate")
-		fmt.Println("  dmfr")
+		log.Print("Usage of %s:", os.Args[0])
+		log.Print("Commands:")
+		log.Print("  copy")
+		log.Print("  extract")
+		log.Print("  validate")
+		log.Print("  dmfr")
 		return
 	}
 	flag.Parse()

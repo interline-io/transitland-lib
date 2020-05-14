@@ -55,7 +55,7 @@ func Debug(fmt string, a ...interface{}) {
 	logLog(DEBUG, fmt, a...)
 }
 
-// Query for really deep debugging.
+// Query for printing database queries and statistics.
 func Query(fmt string, a ...interface{}) {
 	logLog(QUERY, fmt, a...)
 }
@@ -66,10 +66,15 @@ func Fatal(fmta string, a ...interface{}) {
 	panic(fmt.Sprintf(fmta, a...))
 }
 
-// Exit on error - print directly to console
+// Exit with an error message.
 func Exit(fmts string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, fmts+"\n", args...)
+	Print(fmts, args...)
 	os.Exit(1)
+}
+
+// Print - simple print, without timestamp, without regard to log level.
+func Print(fmts string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, fmts+"\n", args...)
 }
 
 func logLog(level int, fmt string, a ...interface{}) {

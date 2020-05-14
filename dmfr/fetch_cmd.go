@@ -3,7 +3,6 @@ package dmfr
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -30,7 +29,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 	fetchedAt := ""
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: fetch [feed_id...]")
+		log.Print("Usage: fetch [feed_id...]")
 		fl.PrintDefaults()
 	}
 	fl.StringVar(&cmd.FetchOptions.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")

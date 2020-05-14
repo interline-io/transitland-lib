@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
@@ -28,7 +27,7 @@ type copyCommand struct {
 func (cmd *copyCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: copy <reader> <writer>")
+		log.Print("Usage: copy <reader> <writer>")
 		fl.PrintDefaults()
 	}
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")

@@ -2,7 +2,6 @@ package dmfr
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"sync"
 
@@ -31,7 +30,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	extflags := arrayFlags{}
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: import [feedids...]")
+		log.Print("Usage: import [feedids...]")
 		fl.PrintDefaults()
 	}
 	fl.Var(&extflags, "ext", "Include GTFS Extension")
