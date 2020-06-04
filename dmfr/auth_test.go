@@ -66,7 +66,6 @@ func TestAuthorizedRequest(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			// fmt.Printf("%#v\n", result)
 			if tc.checkkey != "" {
 				a, ok := result[tc.checkkey].(string)
 				if !ok {

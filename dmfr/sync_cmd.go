@@ -2,10 +2,10 @@ package dmfr
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/log"
 )
 
 // SyncCommand syncs a DMFR to a database.
@@ -20,7 +20,7 @@ type SyncCommand struct {
 func (cmd *SyncCommand) Parse(args []string) error {
 	fl := flag.NewFlagSet("sync", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: sync <Filenames...>")
+		log.Print("Usage: sync <Filenames...>")
 		fl.PrintDefaults()
 	}
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")

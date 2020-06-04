@@ -11,7 +11,7 @@ import (
 
 func check(err error) {
 	if err != nil {
-		log.Debug("error: %s", err)
+		log.Debug("Error: %s", err)
 	}
 }
 

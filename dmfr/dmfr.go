@@ -39,7 +39,7 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 	var registry Registry
 	if err := json.Unmarshal([]byte(contents), &registry); err != nil {
 		if e, ok := err.(*json.SyntaxError); ok {
-			log.Debug("syntax error at byte offset %d", e.Offset)
+			log.Debug("Syntax error at byte offset %d", e.Offset)
 		}
 		return nil, err
 	}

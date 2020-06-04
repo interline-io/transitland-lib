@@ -9,25 +9,20 @@ import (
 
 // Level values
 const (
-	FATAL    = 100
-	CRITICAL = 50
-	ERROR    = 40
-	WARNING  = 30
-	INFO     = 20
-	DEBUG    = 10
-	QUERY    = 9
-	TRACE    = 5
+	FATAL = 100
+	ERROR = 40
+	INFO  = 20
+	DEBUG = 10
+	QUERY = 5
 )
 
 // LEVELSTRINGS provides log level aliases.
 var LEVELSTRINGS = map[string]int{
-	"CRITICAL": CRITICAL,
-	"ERROR":    ERROR,
-	"WARNING":  WARNING,
-	"INFO":     INFO,
-	"DEBUG":    DEBUG,
-	"TRACE":    TRACE,
-	"QUERY":    QUERY,
+	"FATAL": FATAL,
+	"ERROR": ERROR,
+	"INFO":  INFO,
+	"DEBUG": DEBUG,
+	"QUERY": QUERY,
 }
 
 // STRINGLEVEL is the reverse mapping
@@ -45,14 +40,9 @@ var Level = ERROR
 // LogQuery is a flag for logging database queries.
 var LogQuery = false
 
-// Printf is the same as Info.
-func Printf(fmt string, a ...interface{}) {
-	logLog(INFO, fmt, a...)
-}
-
-// Println is for compatibility.
-func Println(a ...interface{}) {
-	log.Println(a...)
+// Error for notable errors.
+func Error(fmt string, a ...interface{}) {
+	logLog(ERROR, fmt, a...)
 }
 
 // Info for regular messages.
@@ -65,12 +55,7 @@ func Debug(fmt string, a ...interface{}) {
 	logLog(DEBUG, fmt, a...)
 }
 
-// Trace for really deep debugging.
-func Trace(fmt string, a ...interface{}) {
-	logLog(TRACE, fmt, a...)
-}
-
-// Query for really deep debugging.
+// Query for printing database queries and statistics.
 func Query(fmt string, a ...interface{}) {
 	logLog(QUERY, fmt, a...)
 }
@@ -81,7 +66,21 @@ func Fatal(fmta string, a ...interface{}) {
 	panic(fmt.Sprintf(fmta, a...))
 }
 
+// Exit with an error message.
+func Exit(fmts string, args ...interface{}) {
+	Print(fmts, args...)
+	os.Exit(1)
+}
+
+// Print - simple print, without timestamp, without regard to log level.
+func Print(fmts string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, fmts+"\n", args...)
+}
+
 func logLog(level int, fmt string, a ...interface{}) {
+	if fmt == "" {
+		return
+	}
 	strlevel, _ := STRINGLEVEL[level]
 	if level >= Level {
 		log.Printf("["+strlevel+"] "+fmt, a...)
@@ -93,17 +92,12 @@ func SetLevel(level int) {
 	Level = level
 }
 
-// SetLevelString uses a string alias to set the log level.
-func SetLevelString(lstr string) {
+func init() {
+	lstr := os.Getenv("GTFS_LOGLEVEL")
 	lvalue, ok := LEVELSTRINGS[strings.ToUpper(lstr)]
 	if ok {
 		SetLevel(lvalue)
 	}
-}
-
-func init() {
-	log.SetOutput(os.Stdout)
-	SetLevelString(os.Getenv("GTFS_LOGLEVEL"))
 	if v := os.Getenv("GTFS_LOGLEVEL_SQL"); v == "true" {
 		LogQuery = true
 	}

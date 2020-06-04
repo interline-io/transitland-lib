@@ -5,7 +5,6 @@ import (
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/internal/graph"
-	"github.com/interline-io/gotransit/internal/log"
 )
 
 /*
@@ -90,7 +89,6 @@ func (em *Marker) Filter(reader gotransit.Reader, fm map[string][]string) error 
 	// Find all children
 	result := map[*graph.Node]bool{}
 	em.graph.Search(foundNodes[:], false, func(n *graph.Node) {
-		log.Trace("child: %s", n)
 		result[n] = true
 	})
 	// Now find parents of all found children
@@ -99,10 +97,9 @@ func (em *Marker) Filter(reader gotransit.Reader, fm map[string][]string) error 
 		check2 = append(check2, k)
 	}
 	em.graph.Search(check2[:], true, func(n *graph.Node) {
-		log.Trace("parent: %s", n)
 		result[n] = true
 	})
 	em.found = result
-	// fmt.Printf("result: %#v\n", result)
+	// log.Debug("result: %#v\n", result)
 	return nil
 }

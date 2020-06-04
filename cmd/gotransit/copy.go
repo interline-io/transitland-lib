@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
 	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/gotransit/internal/log"
 )
 
 // basicCopyOptions
@@ -27,7 +27,7 @@ type copyCommand struct {
 func (cmd *copyCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: copy <reader> <writer>")
+		log.Print("Usage: copy <reader> <writer>")
 		fl.PrintDefaults()
 	}
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
@@ -38,7 +38,7 @@ func (cmd *copyCommand) Run(args []string) error {
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
-		exit("requires input reader and output writer")
+		log.Exit("Requires input reader and output writer")
 	}
 	// Reader / Writer
 	reader := MustGetReader(fl.Arg(0))
@@ -55,7 +55,7 @@ func (cmd *copyCommand) Run(args []string) error {
 		} else {
 			fvid, err := dbw.CreateFeedVersion(reader)
 			if err != nil {
-				exit("Error creating FeedVersion: %s", err)
+				log.Exit("Error creating FeedVersion: %s", err)
 			}
 			dbw.FeedVersionID = fvid
 		}
@@ -64,12 +64,12 @@ func (cmd *copyCommand) Run(args []string) error {
 	for _, ext := range cmd.extensions {
 		e, err := gotransit.GetExtension(ext)
 		if err != nil {
-			exit("No extension for: %s", ext)
+			log.Exit("No extension for: %s", ext)
 		}
 		cp.AddExtension(e)
 		if cmd.create {
 			if err := e.Create(writer); err != nil {
-				exit("%s", err)
+				log.Exit("Could not load extension: %s", err)
 			}
 		}
 	}
@@ -77,7 +77,7 @@ func (cmd *copyCommand) Run(args []string) error {
 	for _, ext := range cmd.filters {
 		ef, err := gotransit.GetEntityFilter(ext)
 		if err != nil {
-			exit("No filter for '%s': %s", ext, err)
+			log.Exit("No filter for '%s': %s", ext, err)
 		}
 		cp.AddEntityFilter(ef)
 	}

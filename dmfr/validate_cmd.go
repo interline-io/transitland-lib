@@ -3,7 +3,6 @@ package dmfr
 import (
 	"errors"
 	"flag"
-	"fmt"
 
 	"github.com/interline-io/gotransit/internal/log"
 )
@@ -17,7 +16,7 @@ type ValidateCommand struct {
 func (cmd *ValidateCommand) Parse(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: validate <filenames...>")
+		log.Print("Usage: validate <filenames...>")
 		fl.PrintDefaults()
 	}
 	fl.Parse(args)
@@ -37,7 +36,7 @@ func (cmd *ValidateCommand) Run() error {
 		registry, err := LoadAndParseRegistry(filename)
 		if err != nil {
 			errs = append(errs, err)
-			log.Info("%s: Error when loading DMFR: %s", filename, err.Error())
+			log.Error("%s: Error when loading DMFR: %s", filename, err.Error())
 		} else {
 			log.Info("%s: Success loading DMFR with %d feeds", filename, len(registry.Feeds))
 		}
