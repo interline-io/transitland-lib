@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/internal/enums"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // Route routes.txt

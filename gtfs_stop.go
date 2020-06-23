@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/internal/tags"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // Stop stops.txt
@@ -70,7 +70,7 @@ func (ent *Stop) Warnings() (errs []error) {
 	if len(ent.StopDesc) > 0 && ent.StopName == ent.StopDesc {
 		errs = append(errs, causes.NewValidationWarning("stop_desc", "stop_desc is the same as stop_name"))
 	}
-	if !tags.IsValidTimezone(ent.StopTimezone) {
+	if !enums.IsValidTimezone(ent.StopTimezone) {
 		errs = append(errs, causes.NewValidationWarning("stop_timezone", "stop_timezone is not a valid timezone"))
 	}
 	return errs

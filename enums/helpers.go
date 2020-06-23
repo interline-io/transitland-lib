@@ -1,4 +1,4 @@
-package validator
+package enums
 
 import (
 	"strings"

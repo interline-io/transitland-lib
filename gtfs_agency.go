@@ -2,7 +2,7 @@ package gotransit
 
 import (
 	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/internal/tags"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // Agency agency.txt
@@ -29,7 +29,7 @@ func (ent *Agency) Warnings() (errs []error) {
 	if len(ent.AgencyID) == 0 {
 		errs = append(errs, causes.NewValidationWarning("agency_id", "agency_id should be set"))
 	}
-	if !tags.IsValidTimezone(ent.AgencyTimezone) {
+	if !enums.IsValidTimezone(ent.AgencyTimezone) {
 		errs = append(errs, causes.NewValidationWarning("agency_timezone", "agency_timezone is not a valid timezone"))
 	}
 	return errs
