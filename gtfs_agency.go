@@ -2,19 +2,19 @@ package gotransit
 
 import (
 	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/internal/tags"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // Agency agency.txt
 type Agency struct {
 	AgencyID       string `csv:"agency_id"`
 	AgencyName     string `csv:"agency_name" required:"true"`
-	AgencyURL      string `csv:"agency_url" required:"true" validator:"url"`
+	AgencyURL      string `csv:"agency_url" required:"true"`
 	AgencyTimezone string `csv:"agency_timezone" required:"true"`
-	AgencyLang     string `csv:"agency_lang" validator:"lang"`
+	AgencyLang     string `csv:"agency_lang"`
 	AgencyPhone    string `csv:"agency_phone"`
-	AgencyFareURL  string `csv:"agency_fare_url" validator:"url"`
-	AgencyEmail    string `csv:"agency_email" validator:"email"`
+	AgencyFareURL  string `csv:"agency_fare_url"`
+	AgencyEmail    string `csv:"agency_email"`
 	BaseEntity
 }
 
@@ -29,7 +29,7 @@ func (ent *Agency) Warnings() (errs []error) {
 	if len(ent.AgencyID) == 0 {
 		errs = append(errs, causes.NewValidationWarning("agency_id", "agency_id should be set"))
 	}
-	if !tags.IsValidTimezone(ent.AgencyTimezone) {
+	if !enums.IsValidTimezone(ent.AgencyTimezone) {
 		errs = append(errs, causes.NewValidationWarning("agency_timezone", "agency_timezone is not a valid timezone"))
 	}
 	return errs
@@ -37,8 +37,14 @@ func (ent *Agency) Warnings() (errs []error) {
 
 // Errors for this Entity.
 func (ent *Agency) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("agency_name", ent.AgencyName)...)
+	errs = append(errs, enums.CheckPresent("agency_url", ent.AgencyURL)...)
+	errs = append(errs, enums.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
+	errs = append(errs, enums.CheckURL("agency_url", ent.AgencyURL)...)
+	errs = append(errs, enums.CheckURL("agency_fare_url", ent.AgencyFareURL)...)
+	errs = append(errs, enums.CheckLanguage("agency_lang", ent.AgencyLang)...)
+	errs = append(errs, enums.CheckEmail("agency_email", ent.AgencyEmail)...)
 	return errs
 }
 

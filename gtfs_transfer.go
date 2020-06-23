@@ -2,14 +2,15 @@ package gotransit
 
 import (
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // Transfer transfers.txt
 type Transfer struct {
 	FromStopID      string `csv:"from_stop_id" required:"true"`
 	ToStopID        string `csv:"to_stop_id" required:"true"`
-	TransferType    int    `csv:"transfer_type" required:"true" min:"0" max:"3"`
-	MinTransferTime int    `csv:"min_transfer_time" min:"0"`
+	TransferType    int    `csv:"transfer_type" required:"true"`
+	MinTransferTime int    `csv:"min_transfer_time"`
 	BaseEntity
 }
 
@@ -32,8 +33,11 @@ func (ent *Transfer) Warnings() (errs []error) {
 
 // Errors for this Entity.
 func (ent *Transfer) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("from_stop_id", ent.FromStopID)...)
+	errs = append(errs, enums.CheckPresent("to_stop_id", ent.ToStopID)...)
+	errs = append(errs, enums.CheckInsideRangeInt("transfer_type", ent.TransferType, 0, 3)...)
+	errs = append(errs, enums.CheckPositiveInt("min_transfer_time", ent.MinTransferTime)...)
 	return errs
 }
 

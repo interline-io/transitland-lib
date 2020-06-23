@@ -5,20 +5,21 @@ import (
 	"time"
 
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // Calendar calendars.txt
 type Calendar struct {
 	ServiceID string    `csv:"service_id" required:"true"`
-	Monday    int       `csv:"monday" required:"true" min:"0" max:"1"`
-	Tuesday   int       `csv:"tuesday" required:"true" min:"0" max:"1"`
-	Wednesday int       `csv:"wednesday" required:"true" min:"0" max:"1"`
-	Thursday  int       `csv:"thursday" required:"true" min:"0" max:"1"`
-	Friday    int       `csv:"friday" required:"true" min:"0" max:"1"`
-	Saturday  int       `csv:"saturday" required:"true" min:"0" max:"1"`
-	Sunday    int       `csv:"sunday" required:"true" min:"0" max:"1"`
-	StartDate time.Time `csv:"start_date" required:"true" min:"0" max:"1"`
-	EndDate   time.Time `csv:"end_date" required:"true" min:"0" max:"1"`
+	Monday    int       `csv:"monday" required:"true"`
+	Tuesday   int       `csv:"tuesday" required:"true"`
+	Wednesday int       `csv:"wednesday" required:"true"`
+	Thursday  int       `csv:"thursday" required:"true"`
+	Friday    int       `csv:"friday" required:"true"`
+	Saturday  int       `csv:"saturday" required:"true"`
+	Sunday    int       `csv:"sunday" required:"true"`
+	StartDate time.Time `csv:"start_date" required:"true"`
+	EndDate   time.Time `csv:"end_date" required:"true"`
 	Generated bool      `db:"generated"`
 	BaseEntity
 }
@@ -44,8 +45,15 @@ func (ent *Calendar) Warnings() (errs []error) {
 
 // Errors for this Entity.
 func (ent *Calendar) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("service_id", ent.ServiceID)...)
+	errs = append(errs, enums.CheckInsideRangeInt("monday", ent.Monday, 0, 1)...)
+	errs = append(errs, enums.CheckInsideRangeInt("tuesday", ent.Tuesday, 0, 1)...)
+	errs = append(errs, enums.CheckInsideRangeInt("wednesday", ent.Wednesday, 0, 1)...)
+	errs = append(errs, enums.CheckInsideRangeInt("thursday", ent.Thursday, 0, 1)...)
+	errs = append(errs, enums.CheckInsideRangeInt("friday", ent.Friday, 0, 1)...)
+	errs = append(errs, enums.CheckInsideRangeInt("saturday", ent.Saturday, 0, 1)...)
+	errs = append(errs, enums.CheckInsideRangeInt("sunday", ent.Sunday, 0, 1)...)
 	if ent.StartDate.IsZero() {
 		errs = append(errs, causes.NewInvalidFieldError("start_date", ent.StartDate.String(), fmt.Errorf("start_date is empty")))
 	}

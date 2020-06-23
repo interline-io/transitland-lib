@@ -2,6 +2,7 @@ package gotransit
 
 import (
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // Trip trips.txt
@@ -11,11 +12,11 @@ type Trip struct {
 	TripID               string               `csv:"trip_id" required:"true"`
 	TripHeadsign         string               `csv:"trip_headsign"`
 	TripShortName        string               `csv:"trip_short_name"`
-	DirectionID          int                  `csv:"direction_id" min:"0" max:"1"`
+	DirectionID          int                  `csv:"direction_id"`
 	BlockID              string               `csv:"block_id"`
 	ShapeID              OptionalRelationship `csv:"shape_id"`
-	WheelchairAccessible int                  `csv:"wheelchair_accessible" min:"0" max:"2"`
-	BikesAllowed         int                  `csv:"bikes_allowed" min:"0" max:"2"`
+	WheelchairAccessible int                  `csv:"wheelchair_accessible"`
+	BikesAllowed         int                  `csv:"bikes_allowed"`
 	StopPatternID        int
 	BaseEntity
 }
@@ -27,8 +28,13 @@ func (ent *Trip) EntityID() string {
 
 // Errors for this Entity.
 func (ent *Trip) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("route_id", ent.RouteID)...)
+	errs = append(errs, enums.CheckPresent("service_id", ent.ServiceID)...)
+	errs = append(errs, enums.CheckPresent("trip_id", ent.TripID)...)
+	errs = append(errs, enums.CheckInsideRangeInt("direction_id", ent.DirectionID, 0, 1)...)
+	errs = append(errs, enums.CheckInsideRangeInt("wheelchair_accessible", ent.WheelchairAccessible, 0, 2)...)
+	errs = append(errs, enums.CheckInsideRangeInt("bikes_allowed", ent.BikesAllowed, 0, 2)...)
 	return errs
 }
 

@@ -1,5 +1,6 @@
 package enums
 
+// RouteType contains details on each possible route_type
 type RouteType struct {
 	Code     int
 	Name     string
@@ -7,10 +8,11 @@ type RouteType struct {
 	Parent   int
 }
 
+// routeTypes is the list of all known extended route_types.
 // See https://developers.google.com/transit/gtfs/reference/extended-route-types
 // All types are mapped back to a basic GTFS primitive.
 // Those that don't fit well are mapped to bus for compatibility.
-var RouteTypes = []RouteType{
+var routeTypes = []RouteType{
 	{Code: 0, Name: "Tram"},
 	{Code: 1, Name: "Metro"},
 	{Code: 2, Name: "Rail"},
@@ -163,23 +165,25 @@ var RouteTypes = []RouteType{
 	{Code: 1702, Name: "Horse-drawn Carriage", Parent: 1700},
 }
 
-var RouteTypesMap map[int]RouteType
+var routeTypesMap map[int]RouteType
 
 func init() {
-	RouteTypesMap = map[int]RouteType{}
-	for _, rt := range RouteTypes {
-		RouteTypesMap[rt.Code] = rt
+	routeTypesMap = map[int]RouteType{}
+	for _, rt := range routeTypes {
+		routeTypesMap[rt.Code] = rt
 	}
 }
 
+// GetRouteType returns the details for a given route_type value.
 func GetRouteType(code int) (RouteType, bool) {
-	rt, ok := RouteTypesMap[code]
+	rt, ok := routeTypesMap[code]
 	return rt, ok
 }
 
+// GetBasicRouteType returns the closest approximate basic route_type for an extended route_type.
 func GetBasicRouteType(code int) (RouteType, bool) {
 	parents := map[int]int{}
-	for _, i := range RouteTypes {
+	for _, i := range routeTypes {
 		if i.Code > 7 {
 			parents[i.Code] = i.Parent
 		}
@@ -194,9 +198,9 @@ func GetBasicRouteType(code int) (RouteType, bool) {
 	return GetRouteType(code)
 }
 
-func GetRouteChildren(code int) []RouteType {
+func getRouteChildren(code int) []RouteType {
 	children := map[int][]int{}
-	for _, i := range RouteTypes {
+	for _, i := range routeTypes {
 		if i.Code > 7 {
 			children[i.Parent] = append(children[i.Parent], i.Code)
 		}
@@ -208,7 +212,7 @@ func GetRouteChildren(code int) []RouteType {
 	}
 	for len(queue) > 0 {
 		item := queue[0]
-		queue = queue[1:len(queue)]
+		queue = queue[1:]
 		visited[item] = true
 		for _, child := range children[item] {
 			if !visited[child] {
@@ -217,7 +221,7 @@ func GetRouteChildren(code int) []RouteType {
 		}
 	}
 	ret := []RouteType{}
-	for _, rt := range RouteTypes {
+	for _, rt := range routeTypes {
 		if _, ok := visited[rt.Code]; ok {
 			ret = append(ret, rt)
 		}
