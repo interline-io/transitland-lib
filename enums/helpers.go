@@ -1,10 +1,103 @@
 package enums
 
 import (
+	"fmt"
 	"strings"
+
+	"github.com/interline-io/gotransit/causes"
 )
 
-/* Validation Helpers */
+// Error wrapping helpers
+
+// CheckPositive returns an error if the value is non-negative
+func CheckPositive(field string, value float64) (errs []error) {
+	if value < 0 {
+		errs = append(errs, causes.NewInvalidFieldError(field, fmt.Sprintf("%f", value), fmt.Errorf("must be non-negative")))
+	}
+	return errs
+}
+
+// CheckPositiveInt returns an error if the value is non-negative
+func CheckPositiveInt(field string, value int) (errs []error) {
+	if value < 0 {
+		errs = append(errs, causes.NewInvalidFieldError(field, fmt.Sprintf("%d", value), fmt.Errorf("must be non-negative")))
+	}
+	return errs
+}
+
+// CheckInsideRange returns an error if the value is outside of the specified range
+func CheckInsideRange(field string, value float64, min float64, max float64) (errs []error) {
+	if value < min || value > max {
+		errs = append(errs, causes.NewInvalidFieldError(field, fmt.Sprintf("%f", value), fmt.Errorf("out of bounds, min %f max %f", min, max)))
+	}
+	return errs
+}
+
+// CheckInsideRangeInt returns an error if the value is outside of the specified range
+func CheckInsideRangeInt(field string, value int, min int, max int) (errs []error) {
+	if value < min || value > max {
+		errs = append(errs, causes.NewInvalidFieldError(field, fmt.Sprintf("%d", value), fmt.Errorf("out of bounds, min %d max %d", min, max)))
+	}
+	return errs
+}
+
+// CheckPresent returns an error if a string is empty
+func CheckPresent(field string, value string) (errs []error) {
+	if value == "" {
+		errs = append(errs, causes.NewRequiredFieldError(field))
+	}
+	return errs
+}
+
+// CheckLanguage returns an error if the value is not a known language
+func CheckLanguage(field string, value string) (errs []error) {
+	if !IsValidLang(value) {
+		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid language")))
+	}
+	return errs
+}
+
+// CheckCurrency returns an error if the value is not a known currency
+func CheckCurrency(field string, value string) (errs []error) {
+	if !IsValidCurrency(value) {
+		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid currency")))
+	}
+	return errs
+}
+
+// CheckTimezone returns an error if the value is not a known timezone
+func CheckTimezone(field string, value string) (errs []error) {
+	if !IsValidTimezone(value) {
+		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid timezone")))
+	}
+	return errs
+}
+
+// CheckEmail returns an error if the value is not a reasonably valid email address
+func CheckEmail(field string, value string) (errs []error) {
+	if !IsValidEmail(value) {
+		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid email")))
+	}
+	return errs
+}
+
+// CheckColor returns an error if the value is not a valid hex color
+func CheckColor(field string, value string) (errs []error) {
+	if !IsValidEmail(value) {
+		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid color")))
+	}
+	return errs
+}
+
+// CheckURL returns an error if the value is not a reasonably valid url
+func CheckURL(field string, value string) (errs []error) {
+	if !IsValidEmail(value) {
+		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid url")))
+	}
+	return errs
+}
+
+// Basic methods
 
 // IsValidLang check is valid language
 func IsValidLang(value string) bool {
