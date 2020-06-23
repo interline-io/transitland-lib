@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // CalendarDate calendar_dates.txt
 type CalendarDate struct {
 	ServiceID     string    `csv:"service_id" required:"true"`
 	Date          time.Time `csv:"date" required:"true"`
-	ExceptionType int       `csv:"exception_type" required:"true" min:"1" max:"2"`
+	ExceptionType int       `csv:"exception_type" required:"true"`
 	BaseEntity
 }
 
@@ -22,8 +23,9 @@ func (ent *CalendarDate) EntityID() string {
 
 // Errors for this Entity.
 func (ent *CalendarDate) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("service_id", ent.ServiceID)...)
+	errs = append(errs, enums.CheckInsideRangeInt("exception_type", ent.ExceptionType, 1, 2)...)
 	if ent.Date.IsZero() {
 		errs = append(errs, causes.NewInvalidFieldError("date", "", fmt.Errorf("date is zero")))
 	}

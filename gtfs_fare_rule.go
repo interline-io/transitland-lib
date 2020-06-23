@@ -2,6 +2,7 @@ package gotransit
 
 import (
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // FareRule fare_rules.txt
@@ -21,8 +22,8 @@ func (ent *FareRule) EntityID() string {
 
 // Errors for this Entity.
 func (ent *FareRule) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("fare_id", ent.FareID)...)
 	return errs
 }
 

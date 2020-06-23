@@ -83,7 +83,7 @@ func CheckEmail(field string, value string) (errs []error) {
 
 // CheckColor returns an error if the value is not a valid hex color
 func CheckColor(field string, value string) (errs []error) {
-	if !IsValidEmail(value) {
+	if !IsValidColor(value) {
 		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid color")))
 	}
 	return errs
@@ -91,7 +91,7 @@ func CheckColor(field string, value string) (errs []error) {
 
 // CheckURL returns an error if the value is not a reasonably valid url
 func CheckURL(field string, value string) (errs []error) {
-	if !IsValidEmail(value) {
+	if !IsValidURL(value) {
 		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid url")))
 	}
 	return errs

@@ -9,12 +9,12 @@ import (
 type Agency struct {
 	AgencyID       string `csv:"agency_id"`
 	AgencyName     string `csv:"agency_name" required:"true"`
-	AgencyURL      string `csv:"agency_url" required:"true" validator:"url"`
+	AgencyURL      string `csv:"agency_url" required:"true"`
 	AgencyTimezone string `csv:"agency_timezone" required:"true"`
-	AgencyLang     string `csv:"agency_lang" validator:"lang"`
+	AgencyLang     string `csv:"agency_lang"`
 	AgencyPhone    string `csv:"agency_phone"`
-	AgencyFareURL  string `csv:"agency_fare_url" validator:"url"`
-	AgencyEmail    string `csv:"agency_email" validator:"email"`
+	AgencyFareURL  string `csv:"agency_fare_url"`
+	AgencyEmail    string `csv:"agency_email"`
 	BaseEntity
 }
 
@@ -37,8 +37,14 @@ func (ent *Agency) Warnings() (errs []error) {
 
 // Errors for this Entity.
 func (ent *Agency) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("agency_name", ent.AgencyName)...)
+	errs = append(errs, enums.CheckPresent("agency_url", ent.AgencyURL)...)
+	errs = append(errs, enums.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
+	errs = append(errs, enums.CheckURL("agency_url", ent.AgencyURL)...)
+	errs = append(errs, enums.CheckURL("agency_fare_url", ent.AgencyFareURL)...)
+	errs = append(errs, enums.CheckLanguage("agency_lang", ent.AgencyLang)...)
+	errs = append(errs, enums.CheckEmail("agency_email", ent.AgencyEmail)...)
 	return errs
 }
 

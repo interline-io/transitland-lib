@@ -4,17 +4,18 @@ import (
 	"fmt"
 
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
 	FareID           string               `csv:"fare_id" required:"true"`
-	Price            float64              `csv:"price" required:"true" min:"0"`
-	CurrencyType     string               `csv:"currency_type" required:"true" validator:"currency"`
-	PaymentMethod    int                  `csv:"payment_method" required:"true" min:"0" max:"1"`
+	Price            float64              `csv:"price" required:"true"`
+	CurrencyType     string               `csv:"currency_type" required:"true"`
+	PaymentMethod    int                  `csv:"payment_method" required:"true"`
 	Transfers        string               `csv:"transfers"` // string, empty is meaningful
 	AgencyID         OptionalRelationship `csv:"agency_id" `
-	TransferDuration int                  `csv:"transfer_duration" min:"0"`
+	TransferDuration int                  `csv:"transfer_duration"`
 	BaseEntity
 }
 
@@ -25,8 +26,13 @@ func (ent *FareAttribute) EntityID() string {
 
 // Errors for this Entity.
 func (ent *FareAttribute) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("fare_id", ent.FareID)...)
+	errs = append(errs, enums.CheckPresent("currency_type", ent.CurrencyType)...)
+	errs = append(errs, enums.CheckPositive("price", ent.Price)...)
+	errs = append(errs, enums.CheckCurrency("currency_type", ent.CurrencyType)...)
+	errs = append(errs, enums.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
+	errs = append(errs, enums.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
 	switch ent.Transfers {
 	case "":
 	case "0":
