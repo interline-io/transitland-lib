@@ -77,18 +77,19 @@ func Print(fmts string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, fmts+"\n", args...)
 }
 
-func logLog(level int, fmt string, a ...interface{}) {
+func logLog(msglevel int, fmt string, a ...interface{}) {
 	if fmt == "" {
 		return
 	}
-	strlevel, _ := STRINGLEVEL[level]
-	if level >= Level {
+	strlevel, _ := STRINGLEVEL[msglevel]
+	if msglevel >= Level {
 		log.Printf("["+strlevel+"] "+fmt, a...)
 	}
 }
 
 // SetLevel sets the log level.
 func SetLevel(level int) {
+	fmt.Println("loglevel to lstr:", level)
 	Level = level
 }
 
