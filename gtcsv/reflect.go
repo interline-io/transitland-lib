@@ -1,6 +1,7 @@
 package gtcsv
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"math"
@@ -57,6 +58,10 @@ func SetString(ent gotransit.Entity, key string, value string) error {
 func valSetString(valueField reflect.Value, strv string) error {
 	var p error
 	switch valueField.Interface().(type) {
+	case sql.NullFloat64:
+		a := sql.NullFloat64{}
+		a.Scan(strv)
+		valueField.Set(reflect.ValueOf(a))
 	case string:
 		valueField.SetString(strv)
 	case int:
