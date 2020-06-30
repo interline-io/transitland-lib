@@ -23,6 +23,7 @@ var LEVELSTRINGS = map[string]int{
 	"INFO":  INFO,
 	"DEBUG": DEBUG,
 	"QUERY": QUERY,
+	"TRACE": QUERY, // alias
 }
 
 // STRINGLEVEL is the reverse mapping
@@ -77,19 +78,19 @@ func Print(fmts string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, fmts+"\n", args...)
 }
 
-func logLog(level int, fmt string, a ...interface{}) {
-	if fmt == "" {
+func logLog(level int, msg string, a ...interface{}) {
+	if msg == "" {
 		return
 	}
 	strlevel, _ := STRINGLEVEL[level]
 	if level >= Level {
-		log.Printf("["+strlevel+"] "+fmt, a...)
+		log.Printf("["+strlevel+"] "+msg, a...)
 	}
 }
 
 // SetLevel sets the log level.
-func SetLevel(level int) {
-	Level = level
+func SetLevel(lvalue int) {
+	Level = lvalue
 }
 
 func init() {
@@ -97,6 +98,8 @@ func init() {
 	lvalue, ok := LEVELSTRINGS[strings.ToUpper(lstr)]
 	if ok {
 		SetLevel(lvalue)
+	} else {
+		log.Printf("[WARNING] Unknown log level '%s'", lstr)
 	}
 	if v := os.Getenv("GTFS_LOGLEVEL_SQL"); v == "true" {
 		LogQuery = true
