@@ -1,6 +1,7 @@
 package gtcsv
 
 import (
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"math"
@@ -18,6 +19,11 @@ import (
 type canSetString interface {
 	SetString(string, string) error
 	AddError(error)
+}
+
+// check for Value
+type canValue interface {
+	Value() (driver.Value, error)
 }
 
 type canString interface {
@@ -59,7 +65,7 @@ func valSetString(valueField reflect.Value, strv string) error {
 	switch valueField.Interface().(type) {
 	case string:
 		valueField.SetString(strv)
-	case int:
+	case int, int64:
 		v, e := strconv.ParseInt(strv, 0, 0)
 		p = e
 		valueField.SetInt(v)
@@ -67,6 +73,12 @@ func valSetString(valueField reflect.Value, strv string) error {
 		v, e := strconv.ParseFloat(strv, 64)
 		p = e
 		valueField.SetFloat(v)
+	case bool:
+		if strv == "true" {
+			valueField.SetBool(true)
+		} else {
+			valueField.SetBool(false)
+		}
 	case time.Time:
 		v, e := time.Parse("20060102", strv)
 		p = e
@@ -88,7 +100,7 @@ type canGetString interface {
 	GetString(string) (string, error)
 }
 
-// GetString convenience method; gets a String representation of a field.
+// GetString convenience method; gets a string representation of a field.
 func GetString(ent gotransit.Entity, key string) (string, error) {
 	if fastent, ok := ent.(canGetString); ok {
 		return fastent.GetString(key)
@@ -110,14 +122,30 @@ func GetString(ent gotransit.Entity, key string) (string, error) {
 	return v, nil
 }
 
-// valGetString returns a CSV representation of the field.
+// valGetString returns a string representation of the field.
 func valGetString(valueField reflect.Value, k string) (string, error) {
 	value := ""
-	switch v := valueField.Interface().(type) {
+	rfi := valueField.Interface()
+	if v, ok := rfi.(canValue); ok {
+		var err error
+		rfi, err = v.Value()
+		if err != nil {
+			return "", err
+		}
+	}
+	switch v := rfi.(type) {
 	case string:
 		value = v
 	case int:
 		value = strconv.Itoa(v)
+	case int64:
+		value = strconv.Itoa(int(v))
+	case bool:
+		if v {
+			value = "true"
+		} else {
+			value = "false"
+		}
 	case float64:
 		if math.IsNaN(v) {
 			value = ""
@@ -130,13 +158,10 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 		} else {
 			value = v.Format("20060102")
 		}
+	case nil:
+		value = ""
 	default:
-		z := valueField.Addr().Interface()
-		if cs, ok := z.(canString); ok {
-			value = cs.String()
-		} else {
-			return "", errors.New("field not stringable")
-		}
+		return "", fmt.Errorf("dont know how to convert field %s to string", k)
 	}
 	return value, nil
 }
