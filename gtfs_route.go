@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/internal/enums"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // Route routes.txt
@@ -16,10 +16,10 @@ type Route struct {
 	RouteLongName  string `csv:"route_long_name"`
 	RouteDesc      string `csv:"route_desc"`
 	RouteType      int    `csv:"route_type" required:"true"`
-	RouteURL       string `csv:"route_url" validator:"url"`
-	RouteColor     string `csv:"route_color" validator:"color"`
-	RouteTextColor string `csv:"route_text_color" validator:"color"`
-	RouteSortOrder int    `csv:"route_sort_order" min:"0"`
+	RouteURL       string `csv:"route_url"`
+	RouteColor     string `csv:"route_color"`
+	RouteTextColor string `csv:"route_text_color"`
+	RouteSortOrder int    `csv:"route_sort_order"`
 	BaseEntity
 }
 
@@ -48,8 +48,12 @@ func (ent *Route) Warnings() (errs []error) {
 
 // Errors for this Entity.
 func (ent *Route) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("route_id", ent.RouteID)...)
+	errs = append(errs, enums.CheckURL("route_url", ent.RouteURL)...)
+	errs = append(errs, enums.CheckColor("route_color", ent.RouteColor)...)
+	errs = append(errs, enums.CheckColor("route_text_color", ent.RouteTextColor)...)
+	errs = append(errs, enums.CheckPositiveInt("route_sort_order", ent.RouteSortOrder)...)
 	if len(ent.RouteShortName) == 0 && len(ent.RouteLongName) == 0 {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("route_short_name"))
 	}

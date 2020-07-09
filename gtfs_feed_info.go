@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // FeedInfo feed_info.txt
 type FeedInfo struct {
 	FeedPublisherName string       `csv:"feed_publisher_name" required:"true"`
-	FeedPublisherURL  string       `csv:"feed_publisher_url" required:"true" validator:"url"`
-	FeedLang          string       `csv:"feed_lang" validator:"lang" required:"true"`
+	FeedPublisherURL  string       `csv:"feed_publisher_url" required:"true"`
+	FeedLang          string       `csv:"feed_lang" required:"true"`
 	FeedStartDate     OptionalTime `csv:"feed_start_date"`
 	FeedEndDate       OptionalTime `csv:"feed_end_date"`
 	FeedVersion       string       `csv:"feed_version" db:"feed_version_name"`
@@ -24,8 +25,12 @@ func (ent *FeedInfo) EntityID() string {
 
 // Errors for this Entity.
 func (ent *FeedInfo) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("feed_publisher_name", ent.FeedPublisherName)...)
+	errs = append(errs, enums.CheckPresent("feed_publisher_url", ent.FeedPublisherURL)...)
+	errs = append(errs, enums.CheckPresent("feed_lang", ent.FeedLang)...)
+	errs = append(errs, enums.CheckURL("feed_publisher_url", ent.FeedPublisherURL)...)
+	errs = append(errs, enums.CheckLanguage("feed_lang", ent.FeedLang)...)
 	if ent.FeedStartDate.IsZero() && ent.FeedEndDate.IsZero() {
 		// skip
 	} else {

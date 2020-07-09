@@ -44,6 +44,15 @@ func (emap *EntityMap) Get(efn string, eid string) (string, bool) {
 	return "", false
 }
 
+// KeysFor returns the keys for a filename.
+func (emap *EntityMap) KeysFor(efn string) []string {
+	ret := []string{}
+	for k := range emap.ids[efn] {
+		ret = append(ret, k)
+	}
+	return ret
+}
+
 // Update copies values from another EntityMap.
 func (emap *EntityMap) Update(other EntityMap) {
 	for efn, m := range other.ids {

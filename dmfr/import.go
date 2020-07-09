@@ -17,11 +17,13 @@ import (
 
 // ImportOptions sets various options for importing a feed.
 type ImportOptions struct {
-	FeedVersionID int
-	Extensions    []string
-	Directory     string
-	S3            string
-	Activate      bool
+	FeedVersionID        int
+	Extensions           []string
+	Directory            string
+	S3                   string
+	Activate             bool
+	CreateMissingShapes  bool
+	InterpolateStopTimes bool
 }
 
 // ImportResult contains the results of a feed import.
@@ -135,7 +137,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 		fvi.ID = fviid // TODO: why isn't this set in insert?
 	} else {
 		// Serious error
-		log.Info("Error creating FeedVersionImport: %s", err.Error())
+		log.Error("Error creating FeedVersionImport: %s", err.Error())
 		return ImportResult{FeedVersionImport: fvi}, err
 	}
 	// Import
@@ -172,7 +174,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 		fviresult.ExceptionLog = ""
 		if err := adapter.Update(&fviresult); err != nil {
 			// Serious error
-			log.Info("Error saving FeedVersionImport: %s", err.Error())
+			log.Error("Error saving FeedVersionImport: %s", err.Error())
 			return err
 		}
 		return err
@@ -184,7 +186,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 		fvi.ExceptionLog = errImport.Error()
 		if err := adapter.Update(&fvi); err != nil {
 			// Serious error
-			log.Info("Error saving FeedVersionImport: %s", err.Error())
+			log.Error("Error saving FeedVersionImport: %s", err.Error())
 			return ImportResult{FeedVersionImport: fvi}, err
 		}
 		return ImportResult{FeedVersionImport: fvi}, errImport
@@ -225,12 +227,14 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 		}
 		cp.AddExtension(ext)
 	}
-	cp.BatchSize = 1000000
+	// Settable options
+	cp.CreateMissingShapes = opts.CreateMissingShapes
+	cp.InterpolateStopTimes = opts.InterpolateStopTimes
+	// Non-settable options
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
 	cp.NormalizeServiceIDs = true
-	cp.CreateMissingShapes = true
-	cp.InterpolateStopTimes = true
+	// Go
 	cpresult := cp.Copy()
 	if cpresult == nil {
 		return fvi, errors.New("copy result was nil")

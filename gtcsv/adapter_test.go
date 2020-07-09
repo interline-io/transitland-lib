@@ -1,7 +1,6 @@
 package gtcsv
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -248,7 +247,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		}
 		foundrows := map[string]int{}
 		adapter.ReadRows("malformed.txt", func(row Row) {
-			fmt.Printf("%d %#v\n", len(row.Row), row.Row)
+			// log.Debug("%d %#v\n", len(row.Row), row.Row)
 			if row.Err != nil {
 				errcount++
 			}

@@ -1,6 +1,10 @@
 package gotransit
 
 import (
+	"errors"
+	"fmt"
+	"strconv"
+
 	"github.com/interline-io/gotransit/causes"
 )
 
@@ -49,4 +53,48 @@ func (ent *Pathway) UpdateKeys(emap *EntityMap) error {
 		return causes.NewInvalidReferenceError("to_stop_id", ent.ToStopID)
 	}
 	return nil
+}
+
+// GetString returns the string representation of an field.
+func (ent *Pathway) GetString(key string) (string, error) {
+	v := ""
+	switch key {
+	case "pathway_id":
+		v = ent.PathwayID
+	case "from_stop_id":
+		v = ent.FromStopID
+	case "to_stop_id":
+		v = ent.ToStopID
+	case "pathway_mode":
+		v = strconv.Itoa(ent.PathwayMode)
+	case "is_bidirectional":
+		v = strconv.Itoa(ent.IsBidirectional)
+	case "length":
+		if ent.Length > 0 {
+			v = fmt.Sprintf("%0.5f", ent.Length)
+		}
+	case "traversal_time":
+		if ent.TraversalTime > 0 {
+			v = strconv.Itoa(ent.TraversalTime)
+		}
+	case "stair_count":
+		if ent.StairCount != 0 && ent.StairCount != -1 {
+			v = strconv.Itoa(ent.StairCount)
+		}
+	case "max_slope":
+		if ent.MaxSlope != 0 {
+			v = fmt.Sprintf("%0.2f", ent.MaxSlope)
+		}
+	case "min_width":
+		if ent.MinWidth != 0 {
+			v = fmt.Sprintf("%0.2f", ent.MinWidth)
+		}
+	case "signposted_as":
+		v = ent.SignpostedAs
+	case "reversed_signposted_as":
+		v = ent.ReverseSignpostedAs
+	default:
+		return v, errors.New("unknown key")
+	}
+	return v, nil
 }

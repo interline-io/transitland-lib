@@ -26,26 +26,26 @@ var entityFilterFactories = map[string]entityFilterFactory{}
 // RegisterReader registers a Reader.
 func RegisterReader(name string, factory readerFactory) {
 	if factory == nil {
-		log.Fatal("factory %s does not exist", name)
+		log.Fatal("Factory %s does not exist", name)
 	}
 	_, registered := readerFactories[name]
 	if registered {
-		log.Fatal("factory %s already registered", name)
+		log.Fatal("Factory %s already registered", name)
 	}
-	log.Debug("registering Reader factory: %s", name)
+	log.Debug("Registering Reader factory: %s", name)
 	readerFactories[name] = factory
 }
 
 // RegisterWriter registers a Writer.
 func RegisterWriter(name string, factory writerFactory) {
 	if factory == nil {
-		log.Fatal("factory %s does not exist", name)
+		log.Fatal("Factory %s does not exist", name)
 	}
 	_, registered := writerFactories[name]
 	if registered {
-		log.Fatal("factory %s already registered", name)
+		log.Fatal("Factory %s already registered", name)
 	}
-	log.Debug("registering Writer factory: %s", name)
+	log.Debug("Registering Writer factory: %s", name)
 	writerFactories[name] = factory
 }
 
@@ -55,13 +55,13 @@ func RegisterExtension(name string, factory extensionFactory) {
 	if registered {
 		panic("failed")
 	}
-	log.Debug("registering Extension factory: %s", name)
+	log.Debug("Registering Extension factory: %s", name)
 	extensionFactories[name] = factory
 }
 
 // RegisterEntityFilter registers a EntityFilter.
 func RegisterEntityFilter(name string) {
-	log.Debug("registering EntityFilter factory: %s", name)
+	log.Debug("Registering EntityFilter factory: %s", name)
 }
 
 // NewReader uses the scheme prefix as the driver name, defaulting to csv.
@@ -73,6 +73,30 @@ func NewReader(url string) (Reader, error) {
 	return GetReader("csv", url)
 }
 
+// MustOpenReaderOrPanic is a helper that returns an opened reader or panics.
+func MustOpenReaderOrPanic(path string) Reader {
+	r, err := NewReader(path)
+	if err != nil {
+		panic(fmt.Sprintf("No handler for reader '%s': %s", path, err.Error()))
+	}
+	if err := r.Open(); err != nil {
+		panic(fmt.Sprintf("Could not open reader '%s': %s", path, err.Error()))
+	}
+	return r
+}
+
+// MustOpenReaderOrExit is a helper that returns an opened a reader or exits.
+func MustOpenReaderOrExit(path string) Reader {
+	r, err := NewReader(path)
+	if err != nil {
+		log.Exit("No handler for reader '%s': %s", path, err.Error())
+	}
+	if err := r.Open(); err != nil {
+		log.Exit("Could not open reader '%s': %s", path, err.Error())
+	}
+	return r
+}
+
 // NewWriter uses the scheme prefix as the driver name, defaulting to csv.
 func NewWriter(dburl string) (Writer, error) {
 	url := strings.Split(dburl, "://")
@@ -80,6 +104,30 @@ func NewWriter(dburl string) (Writer, error) {
 		return GetWriter(url[0], dburl)
 	}
 	return GetWriter("csv", dburl)
+}
+
+// MustOpenWriterOrPanic is a helper that returns an opened writer or panics.
+func MustOpenWriterOrPanic(path string) Writer {
+	r, err := NewWriter(path)
+	if err != nil {
+		panic(fmt.Sprintf("No handler for reader '%s': %s", path, err.Error()))
+	}
+	if err := r.Open(); err != nil {
+		panic(fmt.Sprintf("Could not open reader '%s': %s", path, err.Error()))
+	}
+	return r
+}
+
+// MustOpenWriterOrExit is a helper that returns an opened a writer or exits.
+func MustOpenWriterOrExit(path string) Writer {
+	r, err := NewWriter(path)
+	if err != nil {
+		log.Exit("No handler for writer '%s': %s", path, err.Error())
+	}
+	if err := r.Open(); err != nil {
+		log.Exit("Could not open writer '%s': %s", path, err.Error())
+	}
+	return r
 }
 
 // GetReader returns a Reader for the URL.

@@ -42,7 +42,6 @@ func (e *ExpectError) String() string {
 
 // Equals checks if two expect errors are equivalent.
 func (e *ExpectError) Equals(other ExpectError) bool {
-	// log.Trace("e: %#v other: %#v", e, other)
 	if len(e.ErrorType) > 0 && e.ErrorType != other.ErrorType {
 		return false
 	} else if len(e.Field) > 0 && e.Field != other.Field {

@@ -3,7 +3,6 @@ package dmfr
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -30,7 +29,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 	fetchedAt := ""
 	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: fetch [feed_id...]")
+		log.Print("Usage: fetch [feed_id...]")
 		fl.PrintDefaults()
 	}
 	fl.StringVar(&cmd.FetchOptions.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
@@ -157,9 +156,9 @@ func fetchWorker(id int, adapter gtdb.Adapter, DryRun bool, jobs <-chan FetchOpt
 			return fe
 		})
 		if err != nil {
-			log.Info("Feed %s (id:%d): url: %s critical error: %s", osid, opts.Feed.ID, furl, err.Error())
+			log.Error("Feed %s (id:%d): url: %s critical error: %s", osid, fr.FeedVersion.FeedID, furl, err.Error())
 		} else if fr.FetchError != nil {
-			log.Info("Feed %s (id:%d): url: %s fetch error: %s", osid, opts.Feed.ID, furl, fr.FetchError.Error())
+			log.Error("Feed %s (id:%d): url: %s fetch error: %s", osid, fr.FeedVersion.FeedID, furl, fr.FetchError.Error())
 		} else if fr.FoundSHA1 {
 			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, opts.Feed.ID, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
 		} else if fr.FoundDirSHA1 {

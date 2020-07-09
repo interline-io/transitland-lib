@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path"
 )
 
 // Secrets loads a JSON file of secrets
@@ -28,7 +29,7 @@ func (s Secrets) MatchFilename(filename string) (Secret, error) {
 	found := Secret{}
 	count := 0
 	for _, secret := range s {
-		if secret.Filename == filename {
+		if path.Base(secret.Filename) == filename {
 			count++
 			found = secret
 		}
@@ -64,9 +65,11 @@ func (s Secrets) MatchFeed(feedid string) (Secret, error) {
 
 // Secret .
 type Secret struct {
-	Key      string `json:"key"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	FeedID   string `json:"feed_id"`
-	Filename string `json:"filename"`
+	Key                string `json:"key"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	AWSAccessKeyID     string `json:"aws_access_key_id"`
+	AWSSecretAccessKey string `json:"aws_secret_access_key"`
+	FeedID             string `json:"feed_id"`
+	Filename           string `json:"filename"`
 }

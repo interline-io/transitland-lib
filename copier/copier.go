@@ -10,7 +10,7 @@ import (
 	"github.com/interline-io/gotransit/causes"
 
 	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/enums"
+	"github.com/interline-io/gotransit/enums"
 	"github.com/interline-io/gotransit/internal/log"
 )
 
@@ -104,7 +104,7 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	copier := Copier{
 		Reader:               reader,
 		Writer:               writer,
-		BatchSize:            100000,
+		BatchSize:            1000000,
 		AllowEntityErrors:    false,
 		AllowReferenceErrors: false,
 		InterpolateStopTimes: false,
@@ -174,7 +174,7 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	// Check the entity against filters.
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
-			log.Trace("%s '%s' skipped by filter: %s", efn, eid, err)
+			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
 			copier.result.SkipEntityFilterCount[efn]++
 			return "", errors.New("skipped by filter"), nil
 		}
@@ -220,10 +220,10 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	// OK, Save
 	eid, err := copier.Writer.AddEntity(ent)
 	if err != nil {
-		log.Info("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, eid, err, ent)
+		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, eid, err, ent)
 		return "", err, err
 	}
-	log.Trace("%s '%s': saved -> %s", efn, sid, eid)
+	log.Debug("%s '%s': saved -> %s", efn, sid, eid)
 	copier.EntityMap.SetEntity(ent, sid, eid)
 	copier.result.EntityCount[efn]++
 	return eid, nil, nil
@@ -489,7 +489,9 @@ func (copier *Copier) copyCalendars() error {
 		dups[key]++
 		// Allow unchecked/invalid ServiceID references.
 		if !copier.NormalizeServiceIDs {
-			copier.EntityMap.Set("calendar.txt", e.ServiceID, e.ServiceID)
+			if _, ok := copier.EntityMap.Get("calendar.txt", e.ServiceID); !ok {
+				copier.EntityMap.Set("calendar.txt", e.ServiceID, e.ServiceID)
+			}
 		}
 		if _, _, err := copier.CopyEntity(&e); err != nil {
 			return err
@@ -588,7 +590,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Does this trip exist?
 		tripid := stoptimes[0].TripID
 		if _, ok := alltripids[tripid]; !ok {
-			log.Info("stop_times referred to unknown trip: %s", tripid)
+			log.Debug("stop_times referred to unknown trip: %s", tripid)
 			copier.ErrorHandler.HandleEntityErrors(&stoptimes[0], []error{causes.NewInvalidReferenceError("trip_id", tripid)}, nil)
 			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			continue
@@ -620,7 +622,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				trip.ShapeID.Valid = true
 			} else {
 				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), stoptimes); err != nil {
-					log.Info("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
+					log.Error("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
 					// TODO: Is this an error or just a general info for the output? Causing SNCF to fail.
 					trip.AddError(err)
 				} else {
@@ -824,7 +826,7 @@ func (copier *Copier) createMissingCalendars() error {
 	}
 	// Create the missing Calendars
 	for _, e := range missing {
-		log.Trace("create missing cal: %#v\n", e)
+		log.Debug("Create missing cal: %#v\n", e)
 		if _, ok, err := copier.CopyEntity(&e); err != nil {
 			return err
 		} else if ok == nil {

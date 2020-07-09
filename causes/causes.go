@@ -271,7 +271,7 @@ func NewInvalidFieldError(field string, value string, err error) *InvalidFieldEr
 }
 
 func (e *InvalidFieldError) Error() string {
-	return fmt.Sprintf("invalid value for field %s: '%s'", e.Field, e.Value)
+	return fmt.Sprintf("invalid value for field %s: '%s', reason: %s", e.Field, e.Value, e.cause.Error())
 }
 
 ////////////////////////////

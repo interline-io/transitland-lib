@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -52,9 +54,7 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 		}
 		if auth.Type == "basic_auth" {
 			req.SetBasicAuth(secret.Username, secret.Password)
-			// log.Debug("Using basic_auth authentication: %s:%s", secret.Username, secret.Password)
 		} else if auth.Type == "header" {
-			// log.Debug("Using header authentication: %s = %s", auth.ParamName, secret.Key)
 			req.Header.Add(auth.ParamName, secret.Key)
 		}
 		resp, err := client.Do(req)
@@ -88,6 +88,19 @@ func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuth
 		}
 		if _, err := io.Copy(tmpfile, r); err != nil {
 			return "", err
+		}
+	} else if u.Scheme == "s3" {
+		awscmd := exec.Command("aws", "s3", "cp", address, tmpfilepath)
+		if secret.AWSAccessKeyID != "" || secret.AWSSecretAccessKey != "" {
+			env := []string{
+				fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", secret.AWSAccessKeyID),
+				fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", secret.AWSSecretAccessKey),
+			}
+			env = append(env, os.Environ()...)
+			awscmd.Env = env
+		}
+		if output, err := awscmd.Output(); err != nil {
+			return "", fmt.Errorf("error downloading %s: %s %s", address, output, err.Error())
 		}
 	}
 	return tmpfilepath, nil

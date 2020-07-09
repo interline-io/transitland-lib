@@ -34,7 +34,7 @@ func MainSync(atx gtdb.Adapter, opts SyncOptions) (SyncResult, error) {
 	for _, fn := range opts.Filenames {
 		reg, err := LoadAndParseRegistry(fn)
 		if err != nil {
-			log.Info("%s: Error parsing DMFR: %s", fn, err.Error())
+			log.Error("%s: Error parsing DMFR: %s", fn, err.Error())
 			errs = append(errs, err)
 			continue
 		}
@@ -47,7 +47,7 @@ func MainSync(atx gtdb.Adapter, opts SyncOptions) (SyncResult, error) {
 				log.Info("%s: new feed %s (id:%d)", fn, rfeed.FeedID, feedid)
 			}
 			if err != nil {
-				log.Info("%s: error on feed %s: %s", fn, feedid, err)
+				log.Error("%s: error on feed %s: %s", fn, feedid, err)
 				errs = append(errs, err)
 			}
 			feedids = append(feedids, feedid)
@@ -56,14 +56,14 @@ func MainSync(atx gtdb.Adapter, opts SyncOptions) (SyncResult, error) {
 	sr.FeedIDs = feedids
 	sr.Errors = errs
 	if len(errs) > 0 {
-		log.Info("Rollback due to one or more failures")
+		log.Error("Rollback due to one or more failures")
 		return sr, fmt.Errorf("Failed: %s", errs[0].Error())
 	}
 	// Hide
 	if opts.HideUnseen {
 		count, err := HideUnseedFeeds(atx, sr.FeedIDs)
 		if err != nil {
-			log.Info("Error soft-deleting feeds: %s", err.Error())
+			log.Error("Error soft-deleting feeds: %s", err.Error())
 			return sr, err
 		}
 		sr.HiddenCount = count

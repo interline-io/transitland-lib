@@ -2,14 +2,13 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/interline-io/gotransit"
 	"github.com/interline-io/gotransit/copier"
+	"github.com/interline-io/gotransit/extract"
 	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/extract"
 	"github.com/interline-io/gotransit/internal/log"
 )
 
@@ -35,7 +34,7 @@ type extractCommand struct {
 func (cmd *extractCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("extract", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: extract <input> <output>")
+		log.Print("Usage: extract <input> <output>")
 		fl.PrintDefaults()
 	}
 	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
@@ -61,7 +60,7 @@ func (cmd *extractCommand) Run(args []string) error {
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
-		exit("requires input reader and output writer")
+		log.Exit("Requires input reader and output writer")
 	}
 	// Reader / Writer
 	reader := MustGetReader(fl.Arg(0))
@@ -82,7 +81,7 @@ func (cmd *extractCommand) Run(args []string) error {
 		} else {
 			fvid, err := dbw.CreateFeedVersion(reader)
 			if err != nil {
-				exit("Error creating FeedVersion: %s", err)
+				log.Exit("Error creating FeedVersion: %s", err)
 			}
 			dbw.FeedVersionID = fvid
 		}
@@ -91,19 +90,19 @@ func (cmd *extractCommand) Run(args []string) error {
 	for _, ext := range cmd.extensions {
 		e, err := gotransit.GetExtension(ext)
 		if err != nil {
-			exit("No extension for: %s", ext)
+			log.Exit("No extension for: %s", ext)
 		}
 		cp.AddExtension(e)
 		if cmd.create {
 			if err := e.Create(writer); err != nil {
-				exit("%s", err)
+				log.Exit("Could not create writer: %s", err)
 			}
 		}
 	}
 	for _, ext := range cmd.filters {
 		ef, err := gotransit.GetEntityFilter(ext)
 		if err != nil {
-			exit("No filter for '%s': %s", ext, err)
+			log.Exit("No filter for '%s': %s", ext, err)
 		}
 		cp.AddEntityFilter(ef)
 	}
@@ -116,7 +115,7 @@ func (cmd *extractCommand) Run(args []string) error {
 		tx := extract.NewSetterFilter()
 		for _, setv := range setvalues {
 			if len(setv) != 4 {
-				exit("Invalid set argument")
+				log.Exit("Invalid set argument")
 			}
 			tx.AddValue(setv[0], setv[1], setv[2], setv[3])
 		}
@@ -129,7 +128,7 @@ func (cmd *extractCommand) Run(args []string) error {
 		if v, err := strconv.Atoi(i); err == nil {
 			rthits[v] = true
 		} else {
-			exit("Invalid route_type: %s", i)
+			log.Exit("Invalid route_type: %s", i)
 		}
 	}
 	for ent := range reader.Routes() {

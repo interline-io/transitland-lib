@@ -36,9 +36,9 @@ func (writer *Writer) Close() error {
 // NewReader returns a new Reader with the same adapter.
 func (writer *Writer) NewReader() (gotransit.Reader, error) {
 	reader := Reader{
-		FeedVersionID: writer.FeedVersionID,
-		Adapter:       writer.Adapter,
-		PageSize:      1000,
+		FeedVersionIDs: []int{writer.FeedVersionID},
+		Adapter:        writer.Adapter,
+		PageSize:       1000,
 	}
 	return &reader, nil
 }

@@ -13,9 +13,10 @@ agency
 	route
 		trip / stop_time
 
-station
-	stop
-		trip / stop_time
+non-platform stops (inverted)
+	station
+		platform
+			trip / stop_time
 
 calendar / calendar_dates
 	trip
@@ -25,7 +26,7 @@ shape
 
 fare_attribute / fare_rule (inverted)
 	farezone (virtual)
-		stop
+		platform
 
 -------
 
@@ -88,7 +89,6 @@ func (em *Marker) Filter(reader gotransit.Reader, fm map[string][]string) error 
 	// Find all children
 	result := map[*graph.Node]bool{}
 	em.graph.Search(foundNodes[:], false, func(n *graph.Node) {
-		// log.Trace("child: %s", n)
 		result[n] = true
 	})
 	// Now find parents of all found children
@@ -100,5 +100,6 @@ func (em *Marker) Filter(reader gotransit.Reader, fm map[string][]string) error 
 		result[n] = true
 	})
 	em.found = result
+	// log.Debug("result: %#v\n", result)
 	return nil
 }

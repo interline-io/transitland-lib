@@ -4,7 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
+	"log"
 	"strings"
 
 	"github.com/interline-io/gotransit/gtdb"
@@ -19,13 +19,13 @@ type Command struct {
 func (cmd *Command) Run(args []string) error {
 	fl := flag.NewFlagSet("dmfr", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: dmfr <command> [<args>]")
-		fmt.Println("dmfr commands:")
-		fmt.Println("  validate")
-		fmt.Println("  merge")
-		fmt.Println("  sync")
-		fmt.Println("  import")
-		fmt.Println("  fetch")
+		log.Print("Usage: dmfr <command> [<args>]")
+		log.Print("dmfr commands:")
+		log.Print("  validate")
+		log.Print("  merge")
+		log.Print("  sync")
+		log.Print("  import")
+		log.Print("  fetch")
 		fl.PrintDefaults()
 	}
 	fl.Parse(args)
@@ -105,10 +105,4 @@ func mustGetWriter(dburl string, create bool) *gtdb.Writer {
 		}
 	}
 	return writer
-}
-
-// exit on error
-func exit(fmts string, args ...interface{}) {
-	fmt.Printf(fmts+"\n", args...)
-	os.Exit(1)
 }

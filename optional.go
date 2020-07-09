@@ -26,6 +26,17 @@ func (r *OptionalRelationship) String() string {
 	return r.Key
 }
 
+// Int try to convert key to int
+func (r *OptionalRelationship) Int() int {
+	if !r.Valid {
+		return 0
+	}
+	if v, err := strconv.Atoi(r.Key); err == nil {
+		return v
+	}
+	return 0
+}
+
 // Value returns nil if empty
 func (r OptionalRelationship) Value() (driver.Value, error) {
 	if r.IsZero() {

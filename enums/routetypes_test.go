@@ -67,7 +67,7 @@ func TestGetRouteType(t *testing.T) {
 	}
 }
 
-func TestGetRouteChildren(t *testing.T) {
+func Test_getRouteChildren(t *testing.T) {
 	tests := []struct {
 		code int
 		rets []int
@@ -79,7 +79,7 @@ func TestGetRouteChildren(t *testing.T) {
 	}
 	for _, testcase := range tests {
 		rets := []int{}
-		for _, i := range GetRouteChildren(testcase.code) {
+		for _, i := range getRouteChildren(testcase.code) {
 			rets = append(rets, i.Code)
 		}
 		sort.Ints(rets)

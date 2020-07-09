@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/gotransit"
+	"github.com/interline-io/gotransit/internal/log"
 	"github.com/interline-io/gotransit/validator"
 )
 
@@ -16,14 +17,14 @@ type validateCommand struct {
 func (cmd *validateCommand) Run(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
 	fl.Usage = func() {
-		fmt.Println("Usage: validate <reader>")
+		log.Print("Usage: validate <reader>")
 		fl.PrintDefaults()
 	}
 	fl.Var(&cmd.validateExtensions, "ext", "Include GTFS Extension")
 	err := fl.Parse(args)
 	if err != nil || fl.NArg() < 1 {
 		fl.Usage()
-		exit("requires input reader")
+		log.Exit("Requires input reader")
 	}
 	//
 	reader := MustGetReader(fl.Arg(0))

@@ -6,15 +6,16 @@ import (
 	"strconv"
 
 	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/gotransit/enums"
 )
 
 // Shape shapes.txt
 type Shape struct {
 	ShapeID           string     `csv:"shape_id" required:"true"`
-	ShapePtLat        float64    `csv:"shape_pt_lat" db:"-" required:"true" min:"-90" max:"90"`
-	ShapePtLon        float64    `csv:"shape_pt_lon" db:"-" required:"true" min:"-180" max:"180"`
-	ShapePtSequence   int        `csv:"shape_pt_sequence" db:"-" required:"true" min:"0"`
-	ShapeDistTraveled float64    `csv:"shape_dist_traveled" db:"-" min:"0"`
+	ShapePtLat        float64    `csv:"shape_pt_lat" db:"-" required:"true"`
+	ShapePtLon        float64    `csv:"shape_pt_lon" db:"-" required:"true"`
+	ShapePtSequence   int        `csv:"shape_pt_sequence" db:"-" required:"true"`
+	ShapeDistTraveled float64    `csv:"shape_dist_traveled" db:"-"`
 	Geometry          LineString `db:"geometry"`
 	Generated         bool       `db:"generated"`
 	BaseEntity
@@ -93,8 +94,12 @@ func (ent *Shape) Warnings() (errs []error) {
 
 // Errors for this Entity.
 func (ent *Shape) Errors() (errs []error) {
-	errs = ValidateTags(ent)
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, enums.CheckPresent("shape_id", ent.ShapeID)...)
+	errs = append(errs, enums.CheckInsideRange("shape_pt_lat", ent.ShapePtLat, -90.0, 90.0)...)
+	errs = append(errs, enums.CheckInsideRange("shape_pt_lon", ent.ShapePtLon, -180.0, 180.0)...)
+	errs = append(errs, enums.CheckPositiveInt("shape_pt_sequence", ent.ShapePtSequence)...)
+	errs = append(errs, enums.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled)...)
 	return errs
 }
 

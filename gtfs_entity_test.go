@@ -36,12 +36,12 @@ func expectTripToStopTime(e expectTrip) []StopTime {
 func TestValidateStopTimes(t *testing.T) {
 	// base cases
 	trips := []expectTrip{
-		expectTrip{"1", []int{10, 20, 30}, []int{10, 20, 30}, []float64{0, 1, 2}}, // all specified
-		expectTrip{"2", []int{10, 0, 30}, []int{10, 0, 30}, []float64{0, 1, 2}},   // ends specified
-		expectTrip{"3", []int{10, 20, 30}, []int{10, 20, 30}, []float64{0, 0, 0}}, // no dist
-		expectTrip{"4", []int{0, 20, 30}, []int{10, 20, 30}, []float64{0, 1, 2}},  // missing first arrival_time
-		expectTrip{"5", []int{10, 20, 30}, []int{10, 20, 0}, []float64{0, 1, 2}},  // missing last departure_time
-		expectTrip{"6", []int{10, 20, 30}, []int{10, 20, 30}, []float64{0, 1, 2}}, // two is OK
+		{"1", []int{10, 20, 30}, []int{10, 20, 30}, []float64{0, 1, 2}}, // all specified
+		{"2", []int{10, 0, 30}, []int{10, 0, 30}, []float64{0, 1, 2}},   // ends specified
+		{"3", []int{10, 20, 30}, []int{10, 20, 30}, []float64{0, 0, 0}}, // no dist
+		{"4", []int{0, 20, 30}, []int{10, 20, 30}, []float64{0, 1, 2}},  // missing first arrival_time
+		{"5", []int{10, 20, 30}, []int{10, 20, 0}, []float64{0, 1, 2}},  // missing last departure_time
+		{"6", []int{10, 20, 30}, []int{10, 20, 30}, []float64{0, 1, 2}}, // two is OK
 	}
 	for _, et := range trips {
 		t.Run(et.ExpectError, func(t *testing.T) {
@@ -53,10 +53,10 @@ func TestValidateStopTimes(t *testing.T) {
 	}
 	// error cases
 	errortrips := []expectTrip{
-		expectTrip{"Error:OneStopTime", []int{10}, []int{10}, []float64{0}},
-		expectTrip{"Error:NoFinalArrivalTime", []int{10, 0}, []int{10, 0}, []float64{0, 0}},
-		expectTrip{"SequenceError:departure_time", []int{10, 20, 5}, []int{10, 20, 5}, []float64{0, 1, 2}},
-		expectTrip{"SequenceError:shape_pt_traveled", []int{10, 20, 30}, []int{10, 20, 30}, []float64{1, 2, 1}},
+		{"Error:OneStopTime", []int{10}, []int{10}, []float64{0}},
+		{"Error:NoFinalArrivalTime", []int{10, 0}, []int{10, 0}, []float64{0, 0}},
+		{"SequenceError:departure_time", []int{10, 20, 5}, []int{10, 20, 5}, []float64{0, 1, 2}},
+		{"SequenceError:shape_pt_traveled", []int{10, 20, 30}, []int{10, 20, 30}, []float64{1, 2, 1}},
 	}
 	for _, et := range errortrips {
 		t.Run(et.ExpectError, func(t *testing.T) {
