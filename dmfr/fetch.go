@@ -118,7 +118,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		return fr, nil
 	}
 	// Override the default URLAdapter
-	if u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "ftp" {
+	if u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "ftp" || u.Scheme == "s3" {
 		aa := AuthenticatedURLAdapter{}
 		if err := aa.Download(opts.FeedURL, opts.Feed.Authorization, secret); err != nil {
 			fr.FetchError = err
