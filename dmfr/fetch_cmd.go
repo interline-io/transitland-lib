@@ -156,9 +156,9 @@ func fetchWorker(id int, adapter gtdb.Adapter, DryRun bool, jobs <-chan FetchOpt
 			return fe
 		})
 		if err != nil {
-			log.Error("Feed %s (id:%d): url: %s critical error: %s", osid, fr.FeedVersion.FeedID, furl, err.Error())
+			log.Error("Feed %s (id:%d): url: %s critical error: %s", osid, opts.Feed.ID, furl, err.Error())
 		} else if fr.FetchError != nil {
-			log.Error("Feed %s (id:%d): url: %s fetch error: %s", osid, fr.FeedVersion.FeedID, furl, fr.FetchError.Error())
+			log.Error("Feed %s (id:%d): url: %s fetch error: %s", osid, opts.Feed.ID, furl, fr.FetchError.Error())
 		} else if fr.FoundSHA1 {
 			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, opts.Feed.ID, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
 		} else if fr.FoundDirSHA1 {
