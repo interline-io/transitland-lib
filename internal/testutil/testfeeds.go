@@ -62,6 +62,16 @@ var ExampleZip = ReaderTester{
 	},
 }
 
+// ExampleZipNestedDir .
+var ExampleZipNestedDir = ReaderTester{
+	URL: "../testdata/example-nested-dir.zip#example-nested-dir/example",
+}
+
+// ExampleZipNestedZip .
+var ExampleZipNestedZip = ReaderTester{
+	URL: "../testdata/example-nested-zip.zip#example-nested-zip/example.zip",
+}
+
 // ExternalTestFeed .
 func ExternalTestFeed(key string) (ReaderTester, bool) {
 	a, ok := ExternalTestFeeds[key]

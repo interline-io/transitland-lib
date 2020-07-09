@@ -51,6 +51,12 @@ func (adapter *URLAdapter) Open() error {
 		return nil // already open
 	}
 	// Get the data
+	split := strings.SplitN(adapter.url, "#", 2)
+	fragment := ""
+	if len(split) > 1 {
+		adapter.url = split[0]
+		fragment = split[1]
+	}
 	resp, err := http.Get(adapter.url)
 	if err != nil {
 		return err
@@ -67,15 +73,21 @@ func (adapter *URLAdapter) Open() error {
 	// Write the body to file
 	_, err = io.Copy(tmpfile, resp.Body)
 	log.Debug("Downloaded %s to %s", adapter.url, tmpfilepath)
-	adapter.ZipAdapter = ZipAdapter{path: tmpfilepath}
+	checkzip := tmpfilepath
+	if fragment != "" {
+		checkzip = tmpfilepath + "#" + fragment
+	}
+	za := NewZipAdapter(checkzip)
+	if za == nil {
+		return errors.New("could not open")
+	}
+	adapter.ZipAdapter = *za
+	adapter.ZipAdapter.tmpfilepath = tmpfilepath
 	return adapter.ZipAdapter.Open()
 }
 
 // Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
 func (adapter *URLAdapter) Close() error {
-	if err := os.Remove(adapter.ZipAdapter.path); err != nil {
-		return err
-	}
 	return adapter.ZipAdapter.Close()
 }
 
@@ -106,15 +118,12 @@ func (adapter *S3Adapter) Open() error {
 		return fmt.Errorf("error downloading %s: %s %s", adapter.url, output, err.Error())
 	}
 	log.Debug("Downloaded %s to %s", adapter.url, tmpfilepath)
-	adapter.ZipAdapter = ZipAdapter{path: tmpfilepath}
+	adapter.ZipAdapter = ZipAdapter{path: tmpfilepath, tmpfilepath: tmpfilepath}
 	return adapter.ZipAdapter.Open()
 }
 
 // Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
 func (adapter *S3Adapter) Close() error {
-	if err := os.Remove(adapter.ZipAdapter.path); err != nil {
-		return err
-	}
 	return adapter.ZipAdapter.Close()
 }
 
@@ -122,7 +131,43 @@ func (adapter *S3Adapter) Close() error {
 
 // ZipAdapter supports zip archives.
 type ZipAdapter struct {
-	path string
+	path           string
+	internalPrefix string
+	tmpfilepath    string
+}
+
+// NewZipAdapter returns an initialized zip adapter.
+func NewZipAdapter(path string) *ZipAdapter {
+	// Does this zip have a nested path?
+	adapter := ZipAdapter{path: path}
+	spliturl := strings.SplitN(adapter.path, "#", 2)
+	if len(spliturl) > 1 {
+		adapter.path = spliturl[0]
+		adapter.internalPrefix = spliturl[1]
+	}
+	// Do we need to extract a nested zip.
+	if strings.HasSuffix(adapter.internalPrefix, ".zip") {
+		pf := adapter.internalPrefix
+		adapter.internalPrefix = ""
+		tmpfilepath := ""
+		err := adapter.OpenFile(pf, func(r io.Reader) {
+			// Create the file
+			tmpfile, _ := ioutil.TempFile("", "gtfs.zip")
+			defer tmpfile.Close()
+			// Get the full path
+			tmpfilepath = tmpfile.Name()
+			// Write the body to file
+			io.Copy(tmpfile, r)
+			log.Debug("Extracted %s internal prefix %s to %s", adapter.path, adapter.internalPrefix, tmpfilepath)
+		})
+		if err != nil {
+			return &adapter
+		}
+		adapter.path = tmpfilepath
+		adapter.tmpfilepath = tmpfilepath
+		adapter.internalPrefix = ""
+	}
+	return &adapter
 }
 
 // Open the adapter. Return an error if the file does not exist.
@@ -135,6 +180,12 @@ func (adapter ZipAdapter) Open() error {
 
 // Close the adapter.
 func (adapter ZipAdapter) Close() error {
+	if adapter.tmpfilepath != "" {
+		log.Debug("removing temp file: %s", adapter.tmpfilepath)
+		if err := os.Remove(adapter.tmpfilepath); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -163,7 +214,7 @@ func (adapter ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 	defer r.Close()
 	var inFile *zip.File
 	for _, f := range r.File {
-		if f.Name != filename {
+		if f.Name != filepath.Join(adapter.internalPrefix, filename) {
 			continue
 		}
 		inFile = f
@@ -215,6 +266,9 @@ func (adapter ZipAdapter) DirSHA1() (string, error) {
 	for _, zf := range r.File {
 		fi := zf.FileInfo()
 		fn := zf.Name
+		if adapter.internalPrefix != "" {
+			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
+		}
 		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
 		}
