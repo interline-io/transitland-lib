@@ -1,8 +1,10 @@
 package dmfr
 
 import (
+	"bufio"
 	"flag"
 	"os"
+	"strings"
 	"sync"
 
 	sq "github.com/Masterminds/squirrel"
@@ -28,6 +30,7 @@ type ImportCommand struct {
 // Parse command line flags
 func (cmd *ImportCommand) Parse(args []string) error {
 	extflags := arrayFlags{}
+	fvidfile := ""
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
 	fl.Usage = func() {
 		log.Print("Usage: import [feedids...]")
@@ -35,6 +38,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	}
 	fl.Var(&extflags, "ext", "Include GTFS Extension")
 	fl.Var(&cmd.FVIDs, "fvid", "Import specific feed version ID")
+	fl.StringVar(&fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.ImportOptions.Directory, "gtfsdir", ".", "GTFS Directory")
@@ -53,6 +57,17 @@ func (cmd *ImportCommand) Parse(args []string) error {
 		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
 	}
 	cmd.ImportOptions.Extensions = extflags
+	if fvidfile != "" {
+		lines, err := getFileLines(fvidfile)
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			if line != "" {
+				cmd.FVIDs = append(cmd.FVIDs, line)
+			}
+		}
+	}
 	return nil
 }
 
@@ -164,4 +179,24 @@ func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan Imp
 		results <- result
 	}
 	wg.Done()
+}
+
+func getFileLines(fn string) ([]string, error) {
+	ret := []string{}
+	file, err := os.Open(fn)
+	if err != nil {
+		return ret, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if t := scanner.Text(); t != "" {
+			ret = append(ret, strings.TrimSpace(t))
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return ret, err
+	}
+	return ret, nil
 }
