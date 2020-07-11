@@ -1,7 +1,9 @@
 package dmfr
 
 import (
+	"bufio"
 	"flag"
+	"fmt"
 	"os"
 	"sync"
 
@@ -9,6 +11,24 @@ import (
 	"github.com/interline-io/gotransit/gtdb"
 	"github.com/interline-io/gotransit/internal/log"
 )
+
+func getFileLines(fn string) ([]string, error) {
+	ret := []string{}
+	file, err := os.Open(fn)
+	if err != nil {
+		return ret, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return ret, err
+	}
+	return ret, nil
+}
 
 // ImportCommand imports FeedVersions into a database.
 type ImportCommand struct {
@@ -21,6 +41,7 @@ type ImportCommand struct {
 	DryRun        bool
 	FeedIDs       []string
 	FVIDs         arrayFlags
+	FVIDFile      string
 	Adapter       gtdb.Adapter // allow for mocks
 	ImportOptions ImportOptions
 }
@@ -35,6 +56,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	}
 	fl.Var(&extflags, "ext", "Include GTFS Extension")
 	fl.Var(&cmd.FVIDs, "fvid", "Import specific feed version ID")
+	fl.StringVar(&cmd.FVIDFile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.ImportOptions.Directory, "gtfsdir", ".", "GTFS Directory")
@@ -62,6 +84,17 @@ func (cmd *ImportCommand) Run() error {
 		writer := mustGetWriter(cmd.DBURL, true)
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
+	}
+	if cmd.FVIDFile != "" {
+		lines, err := getFileLines(cmd.FVIDFile)
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			if line != "" {
+				cmd.FVIDs = append(cmd.FVIDs, line)
+			}
+		}
 	}
 	// Query to get FVs to import
 	q := cmd.Adapter.Sqrl().
