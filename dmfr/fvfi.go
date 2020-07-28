@@ -37,7 +37,7 @@ func (fvi *FeedVersionFileInfo) EntityID() string {
 
 // TableName .
 func (FeedVersionFileInfo) TableName() string {
-	return "tl_feed_version_file_infos"
+	return "feed_version_file_infos"
 }
 
 type canFileInfo interface {

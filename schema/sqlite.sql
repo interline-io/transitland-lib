@@ -317,3 +317,23 @@ CREATE TABLE IF NOT EXISTS "gtfs_fare_attributes" (
 CREATE INDEX idx_gtfs_fare_attributes_fare_id ON "gtfs_fare_attributes"(fare_id);
 CREATE INDEX idx_gtfs_fare_attributes_feed_version_id ON "gtfs_fare_attributes"(feed_version_id);
 
+
+-------------------
+
+
+CREATE TABLE IF NOT EXISTS "feed_version_file_infos" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "name" varchar(255) not null,
+  "size" integer not null,
+  "rows" integer not null,
+  "columns" int not null,
+  "sha1" varchar(255) not null,
+  "header" varchar(255) not null,
+  "csv_like" bool not null
+);
+
+CREATE INDEX idx_feed_version_file_infos_feed_version_id ON "feed_version_file_infos"(feed_version_id);
+

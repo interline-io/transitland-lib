@@ -192,7 +192,6 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 	for _, fvfi := range fvfis {
 		fvfi.FeedVersionID = fv.ID
 		if _, err := atx.Insert(&fvfi); err != nil {
-			panic(err)
 			return fr, err
 		}
 	}
