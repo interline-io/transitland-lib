@@ -165,18 +165,71 @@ func (copier *Copier) isMarked(ent gotransit.Entity) bool {
 // Any errors and warnings are added to the CopyResult.
 func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	efn := ent.Filename()
-	eid := ent.EntityID()
 	sid := ent.EntityID()
+	if err := copier.checkCopyEntity(ent); err != nil {
+		return "", err, nil
+	}
+	// OK, Save
+	eid, err := copier.Writer.AddEntity(ent)
+	if err != nil {
+		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, sid, err, ent)
+		return "", err, err
+	}
+	log.Debug("%s '%s': saved -> %s", efn, sid, eid)
+	copier.EntityMap.Set(efn, sid, eid)
+	copier.result.EntityCount[efn]++
+	return eid, nil, nil
+}
+
+// CopyEntities is the same as CopyEntity but uses Adapter batch inserts.
+func (copier *Copier) CopyEntities(ents []gotransit.Entity) ([]string, error) {
+	ret := []string{}
+	sids := []string{}
+	okents := []gotransit.Entity{}
+	for _, ent := range ents {
+		sid := ent.EntityID()
+		fmt.Println("\n\n", sid, "\n\n")
+		if err := copier.checkCopyEntity(ent); err == nil {
+			// We need to set a temporary value in EntityMap to detect duplicates.
+			// This may be updated later. A failure during write should cause
+			// a complete abort so this should not cause any problems.
+			copier.EntityMap.Set(ent.Filename(), sid, sid)
+			sids = append(sids, sid)
+			okents = append(okents, ent)
+		}
+	}
+	if len(okents) == 0 {
+		return ret, nil
+	}
+	// IDs are updated in place instead of returned, which is not ideal.
+	if err := copier.Writer.AddEntities(okents); err != nil {
+		log.Error("Critical error: failed to write %s '%s'", okents[0].Filename(), err)
+		return ret, err
+	}
+	for i, ent := range okents {
+		efn := ent.Filename()
+		eid := ent.EntityID()
+		ret = append(ret, ent.EntityID())
+		log.Debug("%s '%s': saved -> %s", efn, sids[i], eid)
+		copier.EntityMap.Set(ent.Filename(), sids[i], eid)
+		copier.result.EntityCount[ent.Filename()]++
+	}
+	return ret, nil
+}
+
+func (copier *Copier) checkCopyEntity(ent gotransit.Entity) error {
+	efn := ent.Filename()
 	if !copier.isMarked(ent) {
 		copier.result.SkipEntityMarkedCount[efn]++
-		return "", errors.New("skipped by marker"), nil
+		return errors.New("skipped by marker")
 	}
 	// Check the entity against filters.
+	sid := ent.EntityID() // source ID
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
-			log.Debug("%s '%s' skipped by filter: %s", efn, eid, err)
+			log.Debug("%s '%s' skipped by filter: %s", efn, sid, err)
 			copier.result.SkipEntityFilterCount[efn]++
-			return "", errors.New("skipped by filter"), nil
+			return errors.New("skipped by filter")
 		}
 	}
 	// Check the entity for errors.
@@ -188,23 +241,24 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 		errs = append(errs, referr)
 	}
 	// Check for duplicate entities.
-	if _, ok := copier.EntityMap.Get(efn, sid); ok && len(sid) > 0 {
-		errs = append(errs, causes.NewDuplicateIDError(sid))
+	eid := ent.EntityID() // after filter ID
+	if _, ok := copier.EntityMap.Get(efn, eid); ok && len(eid) > 0 {
+		errs = append(errs, causes.NewDuplicateIDError(eid))
 	}
 	// Check error tolerance flags
 	if len(errs) > 0 {
 		if copier.AllowEntityErrors {
-			log.Debug("%s '%s' has errors, allowing: %s", efn, eid, errs)
+			log.Debug("%s '%s' has errors, allowing: %s", efn, sid, errs)
 		} else {
-			log.Debug("%s '%s' has errors, skipping: %s", efn, eid, errs)
+			log.Debug("%s '%s' has errors, skipping: %s", efn, sid, errs)
 			copier.result.SkipEntityErrorCount[efn]++
 			valid = false
 		}
 	} else if referr != nil {
 		if copier.AllowReferenceErrors {
-			log.Debug("%s '%s' failed to update keys, allowing: %s", efn, eid, referr)
+			log.Debug("%s '%s' failed to update keys, allowing: %s", efn, sid, referr)
 		} else {
-			log.Debug("%s '%s' failed to update keys, skipping: %s", efn, eid, referr)
+			log.Debug("%s '%s' failed to update keys, skipping: %s", efn, sid, referr)
 			copier.result.SkipEntityReferenceCount[efn]++
 			valid = false
 		}
@@ -213,20 +267,11 @@ func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	copier.ErrorHandler.HandleEntityErrors(ent, errs, ent.Warnings())
 	// Continue?
 	if !valid && len(errs) > 0 {
-		return "", errs[0], nil
+		return errs[0]
 	} else if !valid {
-		return "", errors.New("???"), nil
+		return errors.New("???")
 	}
-	// OK, Save
-	eid, err := copier.Writer.AddEntity(ent)
-	if err != nil {
-		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, eid, err, ent)
-		return "", err, err
-	}
-	log.Debug("%s '%s': saved -> %s", efn, sid, eid)
-	copier.EntityMap.SetEntity(ent, sid, eid)
-	copier.result.EntityCount[efn]++
-	return eid, nil, nil
+	return nil
 }
 
 //////////////////////////////////
@@ -280,6 +325,7 @@ func (copier *Copier) Copy() *CopyResult {
 // copyAgencies writes agencies
 func (copier *Copier) copyAgencies() error {
 	firstTimezone := ""
+	ents := []gotransit.Entity{}
 	for e := range copier.Reader.Agencies() {
 		// Check for Timezone consistency - add to feed errors
 		if len(firstTimezone) == 0 {
@@ -291,9 +337,14 @@ func (copier *Copier) copyAgencies() error {
 		if len(e.AgencyID) == 0 && copier.agencyCount > 1 {
 			e.AddWarning(causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
-		if _, _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
+		// if _, _, err := copier.CopyEntity(&e); err != nil {
+		// 	return err
+		// }
+		z := e
+		ents = append(ents, &z)
+	}
+	if _, err := copier.CopyEntities(ents); err != nil {
+		return err
 	}
 	copier.logCount(&gotransit.Agency{})
 	return nil
