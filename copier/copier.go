@@ -188,7 +188,6 @@ func (copier *Copier) CopyEntities(ents []gotransit.Entity) ([]string, error) {
 	okents := []gotransit.Entity{}
 	for _, ent := range ents {
 		sid := ent.EntityID()
-		fmt.Println("\n\n", sid, "\n\n")
 		if err := copier.checkCopyEntity(ent); err == nil {
 			// We need to set a temporary value in EntityMap to detect duplicates.
 			// This may be updated later. A failure during write should cause
@@ -325,7 +324,6 @@ func (copier *Copier) Copy() *CopyResult {
 // copyAgencies writes agencies
 func (copier *Copier) copyAgencies() error {
 	firstTimezone := ""
-	ents := []gotransit.Entity{}
 	for e := range copier.Reader.Agencies() {
 		// Check for Timezone consistency - add to feed errors
 		if len(firstTimezone) == 0 {
@@ -337,14 +335,9 @@ func (copier *Copier) copyAgencies() error {
 		if len(e.AgencyID) == 0 && copier.agencyCount > 1 {
 			e.AddWarning(causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
-		// if _, _, err := copier.CopyEntity(&e); err != nil {
-		// 	return err
-		// }
-		z := e
-		ents = append(ents, &z)
-	}
-	if _, err := copier.CopyEntities(ents); err != nil {
-		return err
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gotransit.Agency{})
 	return nil
@@ -632,7 +625,32 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		trips[eid] = trip
 	}
 	batch := []gotransit.StopTime{}
+	batchTrips := []gotransit.Trip{}
+	writeBatch := func() {
+		bst := []gotransit.Entity{}
+		for i := 0; i < len(batchTrips); i++ {
+			bst = append(bst, &batchTrips[i])
+		}
+		if _, err := copier.CopyEntities(bst); err != nil {
+			panic(err)
+		}
+		log.Info("Saved %d trips", len(batchTrips))
+		// Write stoptimes
+		bst = nil
+		for i := 0; i < len(batch); i++ {
+			bst = append(bst, &batch[i])
+		}
+		if _, err := copier.CopyEntities(bst); err != nil {
+			panic(err)
+		}
+		log.Info("Saved %d stop_times", len(batch))
+	}
 	for stoptimes := range copier.Reader.StopTimesByTripID() {
+		if len(batch) >= copier.BatchSize {
+			writeBatch()
+			batch = nil
+			batchTrips = nil
+		}
 		// Error handling for trips without stop_times is after this block
 		if len(stoptimes) == 0 {
 			log.Debug("Warning: StopTimesByTripID produced zero StopTimes")
@@ -674,7 +692,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			} else {
 				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), stoptimes); err != nil {
 					log.Error("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
-					// TODO: Is this an error or just a general info for the output? Causing SNCF to fail.
 					trip.AddError(err)
 				} else {
 					// Set ShapeID
@@ -693,101 +710,26 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Interpolate StopTimes if necessary - only if no other errors; log errors with trip
 		if len(sterrs) == 0 && copier.InterpolateStopTimes {
 			if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip, stoptimes); err != nil {
-				// stwarns = append(stwarns, err)
 				trip.AddWarning(err)
 			} else {
 				stoptimes = stoptimes2
 			}
 		}
-		// Save trip
-		if _, ok, err := copier.CopyEntity(&trip); err != nil {
-			// Serious failure; return
-			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
-			return err
-		} else if ok != nil {
-			// Entity error; skip
-			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
-			continue
-		}
-		// Check individual StopTime errors
-		// Similar to CopyEntity except that writing will be done in batch
-		// Note: StopTimes are not currently checked by EntityFilters.
-		valid := true
-		efn := "stop_times.txt"
-		istc := 0
-		for i := 0; i < len(stoptimes); i++ {
-			errs := stoptimes[i].Errors()
-			referr := stoptimes[i].UpdateKeys(copier.EntityMap)
-			if referr != nil {
-				errs = append(errs, referr)
-			}
-			// Check error tolerance flags
-			if len(errs) > 0 {
-				if copier.AllowEntityErrors {
-					log.Debug("%s '%s' has errors, allowing: %s", efn, tripid, errs)
-				} else {
-					log.Debug("%s '%s' has errors, skipping: %s", efn, tripid, errs)
-					copier.result.SkipEntityErrorCount[efn]++
-					valid = false
-				}
-			} else if referr != nil {
-				if copier.AllowReferenceErrors {
-					log.Debug("%s '%s' failed to update keys, allowing: %s", efn, tripid, referr)
-				} else {
-					log.Debug("%s '%s' failed to update keys, skipping: %s", efn, tripid, referr)
-					copier.result.SkipEntityReferenceCount[efn]++
-					valid = false
-				}
-			}
-			// Error handler
-			copier.ErrorHandler.HandleEntityErrors(&stoptimes[i], errs, stoptimes[i].Warnings())
-			// Count interpolated STs for debugging/reporting
-			if stoptimes[i].Interpolated > 0 {
-				istc++
-			}
-		}
-		if !valid {
-			continue
-		}
-		copier.result.InterpolatedStopTimeCount += istc
-		// OK, Everything is good to go.
+		batchTrips = append(batchTrips, trip)
 		batch = append(batch, stoptimes...)
-		// Write in batches
-		if len(batch) >= copier.BatchSize {
-			bst := []gotransit.Entity{}
-			// note: "range" re-uses the same pointer.
-			for i := 0; i < len(batch); i++ {
-				bst = append(bst, &batch[i])
-			}
-			if err := copier.Writer.AddEntities(bst); err != nil {
-				// Serious error, fail
-				return err
-			}
-			log.Info("Saved %d stop_times", len(batch))
-			copier.result.EntityCount["stop_times.txt"] += len(batch)
-			batch = nil
-		}
-	}
-	// Write final batch
-	if len(batch) > 0 {
-		bst := []gotransit.Entity{}
-		for i := 0; i < len(batch); i++ {
-			bst = append(bst, &batch[i])
-		}
-		if err := copier.Writer.AddEntities(bst); err != nil {
-			// Serious error, fail
-			return err
-		}
-		log.Info("Saved %d stop_times", len(batch))
-		copier.result.EntityCount["stop_times.txt"] += len(batch)
+		// 	if stoptimes[i].Interpolated > 0 {
+		// 		istc++
+		// 	}
+		// copier.result.InterpolatedStopTimeCount += istc
 	}
 	// Add any Trips that were not visited/did not have StopTimes
 	for _, trip := range trips {
+		trip := trip
 		trip.AddError(causes.NewEmptyTripError(0))
-		if _, _, err := copier.CopyEntity(&trip); err != nil {
-			return err
-		}
+		batchTrips = append(batchTrips, trip)
 	}
+	writeBatch()
+	//
 	copier.logCount(&gotransit.Trip{})
 	return nil
 }
