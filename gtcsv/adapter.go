@@ -282,6 +282,29 @@ func (adapter ZipAdapter) DirSHA1() (string, error) {
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
+// FileInfos returns a list of os.FileInfo for all top-level .txt files.
+func (adapter ZipAdapter) FileInfos() ([]os.FileInfo, error) {
+	ret := []os.FileInfo{}
+	r, err := zip.OpenReader(adapter.path)
+	if err != nil {
+		return ret, err
+	}
+	defer r.Close()
+	sort.Slice(r.File, func(i, j int) bool { return r.File[i].Name < r.File[j].Name })
+	for _, zf := range r.File {
+		fi := zf.FileInfo()
+		fn := zf.Name
+		if adapter.internalPrefix != "" {
+			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
+		}
+		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+			continue
+		}
+		ret = append(ret, fi)
+	}
+	return ret, nil
+}
+
 /////////////////////
 
 // DirAdapter supports plain directories of CSV files.
@@ -305,24 +328,12 @@ func (adapter *DirAdapter) SHA1() (string, error) {
 
 // DirSHA1 returns the SHA1 of all the .txt files in the main directory, sorted, and concatenated.
 func (adapter *DirAdapter) DirSHA1() (string, error) {
-	f, err := os.Open(adapter.path)
-	if err != nil {
-		return "", err
-	}
-	fis, err := f.Readdir(-1)
-	f.Close()
-	if err != nil {
-		return "", err
-	}
-	// Sort the files
-	sort.Slice(fis, func(i, j int) bool { return fis[i].Name() < fis[j].Name() })
-	// Generate SHA1
 	h := sha1.New()
+	fis, err := adapter.FileInfos()
+	if err != nil {
+		return "", err
+	}
 	for _, fi := range fis {
-		fn := fi.Name()
-		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
-			continue
-		}
 		f, err := os.Open(filepath.Join(adapter.path, fi.Name()))
 		if err != nil {
 			return "", err
@@ -330,6 +341,34 @@ func (adapter *DirAdapter) DirSHA1() (string, error) {
 		io.Copy(h, f)
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+// FileInfos returns a list of os.FileInfo for all top-level .txt files.
+func (adapter *DirAdapter) FileInfos() ([]os.FileInfo, error) {
+	ret := []os.FileInfo{}
+	f, err := os.Open(adapter.path)
+	if err != nil {
+		return ret, err
+	}
+	fis, err := f.Readdir(-1)
+	f.Close()
+	if err != nil {
+		return ret, err
+	}
+	// Sort the files
+	sort.Slice(fis, func(i, j int) bool { return fis[i].Name() < fis[j].Name() })
+	// Generate SHA1
+	for _, fi := range fis {
+		fn := fi.Name()
+		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+			continue
+		}
+		if err != nil {
+			return ret, err
+		}
+		ret = append(ret, fi)
+	}
+	return ret, nil
 }
 
 // Open the adapter. Return an error if the directory does not exist.
