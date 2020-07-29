@@ -102,7 +102,6 @@ type Copier struct {
 	stopPatterns        map[string]int
 	stopPatternShapeIDs map[int]string
 	result              *CopyResult
-	bw                  *BufferedWriter
 	lastfn              string
 	*gotransit.EntityMap
 }
@@ -110,9 +109,7 @@ type Copier struct {
 // NewCopier creates and initializes a new Copier.
 func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	copier := Copier{
-		Reader:               reader,
-		Writer:               writer,
-		BatchSize:            1000000,
+		BatchSize:            1000,
 		AllowEntityErrors:    false,
 		AllowReferenceErrors: false,
 		InterpolateStopTimes: false,
@@ -127,6 +124,9 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	copier.Marker = newYesMarker()
 	// Default EntityMap
 	copier.EntityMap = gotransit.NewEntityMap()
+	// Buffered writer, reader
+	copier.Writer = &BufferedWriter{bufferSize: copier.BatchSize, Writer: writer, emap: copier.EntityMap}
+	copier.Reader = reader
 	// Default filters
 	copier.filters = []gotransit.EntityFilter{}
 	// Geom Cache
@@ -139,9 +139,6 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 		copier.DefaultAgencyID = e.AgencyID
 		copier.agencyCount++
 	}
-	// Buffered
-	copier.bw = &BufferedWriter{bufferSize: 1000000, Writer: writer, emap: copier.EntityMap}
-	copier.Writer = copier.bw
 	return copier
 }
 

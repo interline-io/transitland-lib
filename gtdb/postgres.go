@@ -141,8 +141,46 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid.Int64), err
 }
 
-// BatchInsert inserts data using COPY.
+// MultiInsert builds and executes a multi-insert statement for the given entities.
 func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
+	if len(ents) == 0 {
+		return nil
+	}
+	cols, _, err := getInsert(ents[0])
+	table := getTableName(ents[0])
+	q := adapter.Sqrl().Insert(table).Columns(cols...)
+	for _, d := range ents {
+		if v, ok := d.(canUpdateTimestamps); ok {
+			v.UpdateTimestamps()
+		}
+		_, vals, _ := getInsert(d)
+		q = q.Values(vals...)
+	}
+	q = q.Suffix("RETURNING \"id\"")
+	result, err := q.Query()
+	if err != nil {
+		return err
+	}
+	defer result.Close()
+	rowids := []int{}
+	for result.Next() {
+		var rowid int
+		err := result.Scan(&rowid)
+		if err != nil {
+			panic(err)
+		}
+		rowids = append(rowids, rowid)
+	}
+	for i := range ents {
+		if v, ok := ents[i].(canSetID); ok {
+			v.SetID(rowids[i])
+		}
+	}
+	return err
+}
+
+// BatchInsert inserts data using COPY.
+func (adapter *PostgresAdapter) BatchInsert2(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
@@ -195,23 +233,4 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 		return tx.Commit()
 	}
 	return nil
-}
-
-// MultiInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) MultiInsert(ents []gotransit.Entity) error {
-	if len(ents) == 0 {
-		return nil
-	}
-	cols, _, err := getInsert(ents[0])
-	table := getTableName(ents[0])
-	q := adapter.Sqrl().Insert(table).Columns(cols...)
-	for _, d := range ents {
-		if v, ok := d.(canUpdateTimestamps); ok {
-			v.UpdateTimestamps()
-		}
-		_, vals, _ := getInsert(d)
-		q = q.Values(vals...)
-	}
-	_, err = q.Exec()
-	return err
 }
