@@ -192,7 +192,9 @@ func (copier *Copier) CopyEntities(ents []gotransit.Entity) ([]string, error) {
 			// We need to set a temporary value in EntityMap to detect duplicates.
 			// This may be updated later. A failure during write should cause
 			// a complete abort so this should not cause any problems.
-			copier.EntityMap.Set(ent.Filename(), sid, sid)
+			if sid != "" {
+				copier.EntityMap.Set(ent.Filename(), sid, sid)
+			}
 			sids = append(sids, sid)
 			okents = append(okents, ent)
 		}
@@ -208,10 +210,10 @@ func (copier *Copier) CopyEntities(ents []gotransit.Entity) ([]string, error) {
 	for i, ent := range okents {
 		efn := ent.Filename()
 		eid := ent.EntityID()
-		ret = append(ret, ent.EntityID())
+		ret = append(ret, eid)
+		copier.result.EntityCount[ent.Filename()]++
 		log.Debug("%s '%s': saved -> %s", efn, sids[i], eid)
 		copier.EntityMap.Set(ent.Filename(), sids[i], eid)
-		copier.result.EntityCount[ent.Filename()]++
 	}
 	return ret, nil
 }
@@ -638,11 +640,15 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Write stoptimes
 		bst = nil
 		for i := 0; i < len(batch); i++ {
+			batch[i].UpdateKeys(copier.EntityMap)
 			bst = append(bst, &batch[i])
 		}
-		if _, err := copier.CopyEntities(bst); err != nil {
-			panic(err)
-		}
+		// if err := copier.Writer.AddEntities(bst); err != nil {
+		// 	panic(err)
+		// }
+		// if _, err := copier.CopyEntities(bst); err != nil {
+		// 	panic(err)
+		// }
 		log.Info("Saved %d stop_times", len(batch))
 	}
 	for stoptimes := range copier.Reader.StopTimesByTripID() {
