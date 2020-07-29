@@ -650,16 +650,20 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 			if valid {
 				for j := 0; j < len(batchStopTimes[i]); j++ {
-					if _, _, err := copier.CopyEntity(&batchStopTimes[i][j]); err != nil {
-						panic(err)
-					}
+					bst = append(bst, &batchStopTimes[i][j])
+					// if _, err := copier.Writer.AddEntity(&batchStopTimes[i][j]); err != nil {
+					// 	panic(err)
+					// }
 				}
 			}
+		}
+		if err := copier.Writer.AddEntities(bst); err != nil {
+			panic(err)
 		}
 		log.Info("Saved %d stop_times", len(bst))
 	}
 	for stoptimes := range copier.Reader.StopTimesByTripID() {
-		if batchCount >= copier.BatchSize {
+		if batchCount >= 1000000 { // copier.BatchSize {
 			writeBatch()
 			batchCount = 0
 			batchStopTimes = nil
@@ -835,12 +839,12 @@ func (copier *Copier) createMissingCalendars() error {
 	// Create the missing Calendars
 	for _, e := range missing {
 		log.Debug("Create missing cal: %#v\n", e)
-		e := e
-		if _, ok, err := copier.CopyEntity(&e); err != nil {
-			return err
-		} else if ok == nil {
-			copier.result.GeneratedCount["calendar.txt"]++
-		}
+		// e := e
+		// if _, ok, err := copier.CopyEntity(&e); err != nil {
+		// 	return err
+		// } else if ok == nil {
+		// 	copier.result.GeneratedCount["calendar.txt"]++
+		// }
 	}
 	return nil
 }

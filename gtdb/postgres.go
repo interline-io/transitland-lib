@@ -146,6 +146,9 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
+	if ents[0].Filename() == "stop_times.txt" {
+		return adapter.BatchInsert2(ents)
+	}
 	cols, _, err := getInsert(ents[0])
 	table := getTableName(ents[0])
 	q := adapter.Sqrl().Insert(table).Columns(cols...)
@@ -173,6 +176,7 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	}
 	for i := range ents {
 		if v, ok := ents[i].(canSetID); ok {
+			// fmt.Println(ents[i].Filename(), ents[i].EntityID(), rowids[i])
 			v.SetID(rowids[i])
 		}
 	}
