@@ -102,13 +102,14 @@ type Copier struct {
 	stopPatterns        map[string]int
 	stopPatternShapeIDs map[int]string
 	result              *CopyResult
-	lastfn              string
 	*gotransit.EntityMap
 }
 
 // NewCopier creates and initializes a new Copier.
 func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	copier := Copier{
+		Reader:               reader,
+		Writer:               writer,
 		BatchSize:            1000000,
 		AllowEntityErrors:    false,
 		AllowReferenceErrors: false,
@@ -124,9 +125,6 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	copier.Marker = newYesMarker()
 	// Default EntityMap
 	copier.EntityMap = gotransit.NewEntityMap()
-	// Buffered writer, reader
-	copier.Writer = writer
-	copier.Reader = reader
 	// Default filters
 	copier.filters = []gotransit.EntityFilter{}
 	// Geom Cache
@@ -201,12 +199,6 @@ func (copier *Copier) isMarked(ent gotransit.Entity) bool {
 // Any errors and warnings are added to the CopyResult.
 func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
 	efn := ent.Filename()
-	// Auto flush
-	if efn != copier.lastfn {
-		copier.flush()
-	}
-	copier.lastfn = efn
-	//
 	sid := ent.EntityID()
 	if err := copier.checkCopyEntity(ent); err != nil {
 		return "", err, nil
@@ -316,9 +308,17 @@ func (copier *Copier) Copy() *CopyResult {
 			copier.result.WriteError = err
 			return copier.result
 		}
+		if err := copier.flush(); err != nil {
+			copier.result.WriteError = err
+			return copier.result
+		}
 	}
 	for _, ext := range copier.extensions {
 		if err := ext.Copy(copier); err != nil {
+			copier.result.WriteError = err
+			return copier.result
+		}
+		if err := copier.flush(); err != nil {
 			copier.result.WriteError = err
 			return copier.result
 		}
@@ -362,6 +362,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			return err
 		}
 	}
+	copier.flush()
 
 	// Stop bookkeeping
 	parents := map[string]int{}
@@ -399,6 +400,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 		}
 		return nil
 	}
+
 	// Stop copying
 	// First pass for stations
 	for e := range copier.Reader.Stops() {
@@ -408,7 +410,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			}
 		}
 	}
-
+	copier.flush()
 	// Second pass for platforms, exits, and generic nodes
 	for e := range copier.Reader.Stops() {
 		if e.LocationType == 0 || e.LocationType == 2 || e.LocationType == 3 {
@@ -417,7 +419,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			}
 		}
 	}
-
+	copier.flush()
 	// Third pass for boarding areas
 	for e := range copier.Reader.Stops() {
 		if e.LocationType == 4 {
@@ -426,6 +428,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			}
 		}
 	}
+	copier.flush()
 	copier.logCount(&gotransit.Stop{})
 
 	// Pathways
@@ -435,6 +438,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			return err
 		}
 	}
+	copier.flush()
 	copier.logCount(&gotransit.Pathway{})
 
 	// FareAttributes
@@ -447,11 +451,12 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
 		}
-		e := e
-		if _, _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
+		// e := e
+		// if _, _, err := copier.CopyEntity(&e); err != nil {
+		// 	return err
+		// }
 	}
+	copier.flush()
 	copier.logCount(&gotransit.FareAttribute{})
 
 	// FareRules
@@ -481,6 +486,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			return err
 		}
 	}
+	copier.flush()
 	copier.logCount(&gotransit.FareRule{})
 	return nil
 }
@@ -531,6 +537,7 @@ func (copier *Copier) copyCalendars() error {
 			return err
 		}
 	}
+	copier.flush()
 	// Keep track of duplicate CalendarDates
 	type calkey struct {
 		ServiceID string
@@ -684,6 +691,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			panic(err)
 		}
 		copier.flush()
+		copier.result.EntityCount["stop_times.txt"] += len(bst)
 		log.Info("Saved %d stop_times", len(bst))
 	}
 	for stoptimes := range copier.Reader.StopTimesByTripID() {

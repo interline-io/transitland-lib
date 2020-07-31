@@ -17,12 +17,20 @@ type bufferedWriter struct {
 	gotransit.Writer
 }
 
+func (w *bufferedWriter) Close() error {
+	if err := w.Flush(); err != nil {
+		return err
+	}
+	return w.Writer.Close()
+}
+
 // AddEntity .
 func (w *bufferedWriter) AddEntity(ent gotransit.Entity) (string, error) {
 	if err := w.AddEntities([]gotransit.Entity{ent}); err != nil {
 		return "", err
 	}
-	return "", nil
+	// Return a temporary ID
+	return ent.EntityID(), nil
 }
 
 // AddEntities .
