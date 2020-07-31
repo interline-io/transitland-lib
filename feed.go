@@ -15,7 +15,7 @@ type Feed struct {
 	Spec            string              `json:"spec"`
 	URLs            FeedUrls            `json:"urls" db:"urls"`
 	AssociatedFeeds FeedAssociatedFeeds `json:"-"` // `json:"associated_feeds"`
-	Languages       FeedLanguages       `json:"languages"`
+	Languages       FeedLanguages       `json:"languages,omitempty"`
 	License         FeedLicense         `json:"license"`
 	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
 	OtherIDs        map[string]string   `json:"other_ids" db:"-"`
@@ -136,7 +136,7 @@ func (a *FeedAssociatedFeeds) Scan(value interface{}) error {
 }
 
 // FeedLanguages .
-type FeedLanguages map[string]string
+type FeedLanguages []string
 
 // Value .
 func (a FeedLanguages) Value() (driver.Value, error) {
