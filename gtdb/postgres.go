@@ -2,6 +2,7 @@ package gtdb
 
 import (
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
@@ -9,6 +10,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
+
+const batchInsertChunkSize = 1000
 
 func init() {
 	// Register driver
@@ -141,50 +144,58 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid.Int64), err
 }
 
-// MultiInsert builds and executes a multi-insert statement for the given entities.
+// BatchInsert builds and executes a multi-insert statement for the given entities.
 func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
 	if ents[0].Filename() == "stop_times.txt" {
-		return adapter.BatchInsert2(ents)
+		return adapter.CopyInsert(ents)
 	}
+	// In batches to prevent maximum argument limit
 	cols, _, err := getInsert(ents[0])
 	table := getTableName(ents[0])
-	q := adapter.Sqrl().Insert(table).Columns(cols...)
-	for _, d := range ents {
-		if v, ok := d.(canUpdateTimestamps); ok {
-			v.UpdateTimestamps()
+	for i := 0; i < len(ents); i += batchInsertChunkSize {
+		end := i + batchInsertChunkSize
+		if end > len(ents) {
+			end = len(ents)
 		}
-		_, vals, _ := getInsert(d)
-		q = q.Values(vals...)
-	}
-	q = q.Suffix("RETURNING \"id\"")
-	result, err := q.Query()
-	if err != nil {
-		return err
-	}
-	defer result.Close()
-	rowids := []int{}
-	for result.Next() {
-		var rowid int
-		err := result.Scan(&rowid)
+		entChunk := ents[i:end]
+		fmt.Println("i:", i, "end:", end, "len entChunk:", len(entChunk), "len ents:", len(ents))
+		q := adapter.Sqrl().Insert(table).Columns(cols...)
+		for _, d := range entChunk {
+			if v, ok := d.(canUpdateTimestamps); ok {
+				v.UpdateTimestamps()
+			}
+			_, vals, _ := getInsert(d)
+			q = q.Values(vals...)
+		}
+		q = q.Suffix("RETURNING \"id\"")
+		result, err := q.Query()
 		if err != nil {
-			panic(err)
+			return err
 		}
-		rowids = append(rowids, rowid)
-	}
-	for i := range ents {
-		if v, ok := ents[i].(canSetID); ok {
-			// fmt.Println(ents[i].Filename(), ents[i].EntityID(), rowids[i])
-			v.SetID(rowids[i])
+		defer result.Close()
+		rowids := []int{}
+		for result.Next() {
+			var rowid int
+			err := result.Scan(&rowid)
+			if err != nil {
+				panic(err)
+			}
+			rowids = append(rowids, rowid)
+		}
+		for i := range entChunk {
+			if v, ok := entChunk[i].(canSetID); ok {
+				v.SetID(rowids[i])
+			}
 		}
 	}
 	return err
 }
 
-// BatchInsert inserts data using COPY.
-func (adapter *PostgresAdapter) BatchInsert2(ents []gotransit.Entity) error {
+// CopyInsert inserts data using COPY.
+func (adapter *PostgresAdapter) CopyInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}

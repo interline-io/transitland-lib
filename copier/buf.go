@@ -41,12 +41,8 @@ func (w *BufferedWriter) AddEntity(ent gotransit.Entity) (string, error) {
 
 // AddEntities .
 func (w *BufferedWriter) AddEntities(ents []gotransit.Entity) error {
-	if w.writeError != nil {
-		return w.writeError
-	}
-	w.buffer = append(w.buffer, ents...)
-	if w.bufferSize > 0 && len(w.buffer) >= w.bufferSize {
-		if err := w.Flush(); err != nil {
+	for _, ent := range ents {
+		if _, err := w.AddEntity(ent); err != nil {
 			return err
 		}
 	}
@@ -55,10 +51,10 @@ func (w *BufferedWriter) AddEntities(ents []gotransit.Entity) error {
 
 // Flush .
 func (w *BufferedWriter) Flush() error {
-	fmt.Println("FLUSH", len(w.buffer))
 	if len(w.buffer) == 0 {
 		return nil
 	}
+	fmt.Println("FLUSH", len(w.buffer))
 	efn := w.buffer[0].Filename()
 	sids := []string{}
 	for _, ent := range w.buffer {

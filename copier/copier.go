@@ -109,7 +109,7 @@ type Copier struct {
 // NewCopier creates and initializes a new Copier.
 func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	copier := Copier{
-		BatchSize:            1000,
+		BatchSize:            1000000,
 		AllowEntityErrors:    false,
 		AllowReferenceErrors: false,
 		InterpolateStopTimes: false,
@@ -651,19 +651,19 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			if valid {
 				for j := 0; j < len(batchStopTimes[i]); j++ {
 					bst = append(bst, &batchStopTimes[i][j])
-					// if _, err := copier.Writer.AddEntity(&batchStopTimes[i][j]); err != nil {
-					// 	panic(err)
-					// }
+					if _, err := copier.Writer.AddEntity(&batchStopTimes[i][j]); err != nil {
+						panic(err)
+					}
 				}
 			}
 		}
-		if err := copier.Writer.AddEntities(bst); err != nil {
-			panic(err)
-		}
+		// if err := copier.Writer.AddEntities(bst); err != nil {
+		// 	panic(err)
+		// }
 		log.Info("Saved %d stop_times", len(bst))
 	}
 	for stoptimes := range copier.Reader.StopTimesByTripID() {
-		if batchCount >= 1000000 { // copier.BatchSize {
+		if batchCount+len(stoptimes) >= copier.BatchSize {
 			writeBatch()
 			batchCount = 0
 			batchStopTimes = nil
