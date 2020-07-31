@@ -1,7 +1,6 @@
 package copier
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/interline-io/gotransit"
@@ -9,8 +8,8 @@ import (
 
 ////////////////////////
 
-// BufferedWriter .
-type BufferedWriter struct {
+// bufferedWriter .
+type bufferedWriter struct {
 	bufferSize int
 	emap       *gotransit.EntityMap // shared
 	buffer     []gotransit.Entity
@@ -19,30 +18,33 @@ type BufferedWriter struct {
 }
 
 // AddEntity .
-func (w *BufferedWriter) AddEntity(ent gotransit.Entity) (string, error) {
-	if w.writeError != nil {
-		return "", w.writeError
-	}
-	if len(w.buffer) > 0 {
-		if ent.Filename() != w.buffer[len(w.buffer)-1].Filename() {
-			if err := w.Flush(); err != nil {
-				return "", err
-			}
-		}
-	}
-	w.buffer = append(w.buffer, ent)
-	if w.bufferSize > 0 && len(w.buffer) >= w.bufferSize {
-		if err := w.Flush(); err != nil {
-			return "", err
-		}
+func (w *bufferedWriter) AddEntity(ent gotransit.Entity) (string, error) {
+	if err := w.AddEntities([]gotransit.Entity{ent}); err != nil {
+		return "", err
 	}
 	return "", nil
 }
 
 // AddEntities .
-func (w *BufferedWriter) AddEntities(ents []gotransit.Entity) error {
+func (w *bufferedWriter) AddEntities(ents []gotransit.Entity) error {
+	if w.writeError != nil {
+		return w.writeError
+	}
+	if len(ents) == 0 {
+		return nil
+	}
+	efn := ents[0].Filename()
+	if len(w.buffer) > 0 {
+		efn = w.buffer[len(w.buffer)-1].Filename()
+	}
 	for _, ent := range ents {
-		if _, err := w.AddEntity(ent); err != nil {
+		if ent.Filename() != efn {
+			return fmt.Errorf("buffer must contain only one type of entity, last was %s", efn)
+		}
+	}
+	w.buffer = append(w.buffer, ents...)
+	if w.bufferSize > 0 && len(w.buffer) >= w.bufferSize {
+		if err := w.Flush(); err != nil {
 			return err
 		}
 	}
@@ -50,18 +52,13 @@ func (w *BufferedWriter) AddEntities(ents []gotransit.Entity) error {
 }
 
 // Flush .
-func (w *BufferedWriter) Flush() error {
+func (w *bufferedWriter) Flush() error {
 	if len(w.buffer) == 0 {
 		return nil
 	}
 	fmt.Println("FLUSH", len(w.buffer))
-	efn := w.buffer[0].Filename()
 	sids := []string{}
 	for _, ent := range w.buffer {
-		if ent.Filename() != efn {
-			w.writeError = errors.New("buffer must contain only one type of entity")
-			return w.writeError
-		}
 		sids = append(sids, ent.EntityID())
 	}
 	if err := w.Writer.AddEntities(w.buffer); err != nil {

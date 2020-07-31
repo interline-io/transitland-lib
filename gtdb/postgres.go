@@ -2,7 +2,6 @@ package gtdb
 
 import (
 	"database/sql"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
@@ -149,7 +148,8 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
-	if ents[0].Filename() == "stop_times.txt" {
+	efn := ents[0].Filename()
+	if efn == "stop_times.txt" {
 		return adapter.CopyInsert(ents)
 	}
 	// In batches to prevent maximum argument limit
@@ -161,7 +161,6 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 			end = len(ents)
 		}
 		entChunk := ents[i:end]
-		fmt.Println("i:", i, "end:", end, "len entChunk:", len(entChunk), "len ents:", len(ents))
 		q := adapter.Sqrl().Insert(table).Columns(cols...)
 		for _, d := range entChunk {
 			if v, ok := d.(canUpdateTimestamps); ok {

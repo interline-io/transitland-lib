@@ -125,7 +125,7 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	// Default EntityMap
 	copier.EntityMap = gotransit.NewEntityMap()
 	// Buffered writer, reader
-	copier.Writer = &BufferedWriter{bufferSize: copier.BatchSize, Writer: writer, emap: copier.EntityMap}
+	copier.Writer = writer
 	copier.Reader = reader
 	// Default filters
 	copier.filters = []gotransit.EntityFilter{}
@@ -139,6 +139,8 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 		copier.DefaultAgencyID = e.AgencyID
 		copier.agencyCount++
 	}
+	//
+	copier.SetBuffer(copier.BatchSize)
 	return copier
 }
 
@@ -156,6 +158,25 @@ func (copier *Copier) AddExtension(ext gotransit.Extension) error {
 func (copier *Copier) AddEntityFilter(ef gotransit.EntityFilter) error {
 	copier.filters = append(copier.filters, ef)
 	return nil
+}
+
+// SetBuffer enables or disables (=0) buffered writing.
+func (copier *Copier) SetBuffer(bufferSize int) {
+	// Unwrap
+	w := copier.Writer
+	cbuf, ok := w.(*bufferedWriter)
+	if ok {
+		w = cbuf.Writer
+	} else {
+		cbuf = &bufferedWriter{bufferSize: bufferSize, Writer: w, emap: copier.EntityMap}
+	}
+	cbuf.bufferSize = bufferSize
+	// Enable or disable bufferedWriter
+	if bufferSize > 0 {
+		copier.Writer = cbuf
+	} else {
+		copier.Writer = w
+	}
 }
 
 ////////////////////////////////////
@@ -502,6 +523,8 @@ func (copier *Copier) copyCalendars() error {
 			return err
 		}
 	}
+	// Flush before calculating missing calendar dates
+	copier.flush()
 	// Create additional Calendars
 	if copier.NormalizeServiceIDs {
 		if err := copier.createMissingCalendars(); err != nil {
@@ -651,15 +674,16 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			if valid {
 				for j := 0; j < len(batchStopTimes[i]); j++ {
 					bst = append(bst, &batchStopTimes[i][j])
-					if _, err := copier.Writer.AddEntity(&batchStopTimes[i][j]); err != nil {
-						panic(err)
+					if batchStopTimes[i][j].Interpolated > 0 {
+						copier.result.InterpolatedStopTimeCount++
 					}
 				}
 			}
 		}
-		// if err := copier.Writer.AddEntities(bst); err != nil {
-		// 	panic(err)
-		// }
+		if err := copier.Writer.AddEntities(bst); err != nil {
+			panic(err)
+		}
+		copier.flush()
 		log.Info("Saved %d stop_times", len(bst))
 	}
 	for stoptimes := range copier.Reader.StopTimesByTripID() {
@@ -736,10 +760,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		batchTrips = append(batchTrips, trip)
 		batchStopTimes = append(batchStopTimes, stoptimes)
 		batchCount += len(stoptimes)
-		// 	if stoptimes[i].Interpolated > 0 {
-		// 		istc++
-		// 	}
-		// copier.result.InterpolatedStopTimeCount += istc
 	}
 	// Add any Trips that were not visited/did not have StopTimes
 	for _, trip := range trips {
@@ -838,13 +858,13 @@ func (copier *Copier) createMissingCalendars() error {
 	}
 	// Create the missing Calendars
 	for _, e := range missing {
+		e := e
 		log.Debug("Create missing cal: %#v\n", e)
-		// e := e
-		// if _, ok, err := copier.CopyEntity(&e); err != nil {
-		// 	return err
-		// } else if ok == nil {
-		// 	copier.result.GeneratedCount["calendar.txt"]++
-		// }
+		if _, ok, err := copier.CopyEntity(&e); err != nil {
+			return err
+		} else if ok == nil {
+			copier.result.GeneratedCount["calendar.txt"]++
+		}
 	}
 	return nil
 }
