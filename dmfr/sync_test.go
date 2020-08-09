@@ -106,7 +106,7 @@ func TestImportFeed(t *testing.T) {
 			rfeed.URLs.StaticCurrent = "http://example.com/caltrain.zip"
 			rfeed.License.UseWithoutAttribution = "yes"
 			rfeed.Authorization.ParamName = "test"
-			rfeed.Languages = FeedLanguages{"en": "ok"}
+			rfeed.Languages = FeedLanguages{"en"}
 			feedid, found, err := ImportFeed(atx, rfeed)
 			if err != nil {
 				t.Error(err)
@@ -132,7 +132,9 @@ func TestImportFeed(t *testing.T) {
 			if a, b := dfeed.Authorization.ParamName, rfeed.Authorization.ParamName; a != b {
 				t.Errorf("got %s expect %s", a, b)
 			}
-			if a, b := dfeed.Languages["en"], rfeed.Languages["en"]; a != b || a != "ok" {
+			if a, b := dfeed.Languages, rfeed.Languages; len(a) != len(b) || len(b) == 0 {
+				t.Errorf("got %d expect %d", len(a), len(b))
+			} else if a, b := dfeed.Languages[0], rfeed.Languages[0]; a != b {
 				t.Errorf("got %s expect %s", a, b)
 			}
 			return nil
