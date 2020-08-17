@@ -13,7 +13,6 @@ import (
 
 	// sqlite3
 	"github.com/mattn/go-sqlite3"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // Register.
@@ -162,7 +161,7 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 }
 
 // BatchInsert provides a fast path for creating StopTimes.
-func (adapter *SQLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
+func (adapter *SQLiteAdapter) BatchInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
 	}

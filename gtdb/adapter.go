@@ -4,7 +4,6 @@ import (
 	"net/url"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/gotransit"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -36,5 +35,5 @@ type Adapter interface {
 	Find(interface{}, ...interface{}) error
 	Get(interface{}, string, ...interface{}) error
 	Select(interface{}, string, ...interface{}) error
-	BatchInsert([]gotransit.Entity) error
+	BatchInsert([]interface{}) error
 }

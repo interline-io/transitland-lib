@@ -143,13 +143,18 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid.Int64), err
 }
 
+type canEntityID interface{ EntityID() string }
+
 // BatchInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
+func (adapter *PostgresAdapter) BatchInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
 	}
-	efn := ents[0].Filename()
-	if efn == "stop_times.txt" {
+	if v, ok := ents[0].(canEntityID); ok {
+		if v.EntityID() == "" {
+			return adapter.CopyInsert(ents)
+		}
+	} else {
 		return adapter.CopyInsert(ents)
 	}
 	// In batches to prevent maximum argument limit
@@ -194,7 +199,7 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 }
 
 // CopyInsert inserts data using COPY.
-func (adapter *PostgresAdapter) CopyInsert(ents []gotransit.Entity) error {
+func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
 	}

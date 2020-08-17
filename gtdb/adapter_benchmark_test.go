@@ -120,7 +120,7 @@ func Benchmark_Adapter_BatchInsert(b *testing.B) {
 			count := 1000
 			for i := 0; i < b.N; i++ {
 				// Make the StopTimes
-				ents := []gotransit.Entity{}
+				ents := make([]interface{}, 0)
 				for i := 0; i < 1000; i++ {
 					count++
 					ent := gotransit.StopTime{}
