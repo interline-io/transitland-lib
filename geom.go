@@ -112,6 +112,56 @@ func (g *LineString) Scan(src interface{}) error {
 	return nil
 }
 
+/////////////////////
+
+// Polygon is an EWKB/SL encoded LineString
+type Polygon struct {
+	Valid bool
+	geom.Polygon
+}
+
+// NewPolygonFromFlatCoords returns a new Polygon from flat (2) coordinates
+func NewPolygonFromFlatCoords(coords []float64, ends []int) Polygon {
+	g := geom.NewPolygonFlat(geom.XY, coords, ends)
+	if g == nil {
+		return Polygon{}
+	}
+	g.SetSRID(4326)
+	return Polygon{Polygon: *g, Valid: true}
+}
+
+// Value implements driver.Value
+func (g Polygon) Value() (driver.Value, error) {
+	if !g.Valid {
+		return nil, nil
+	}
+	return wkbEncode(&g.Polygon)
+}
+
+// Scan implements Scanner
+func (g *Polygon) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+	b, ok := src.([]byte)
+	if !ok {
+		return wkb.ErrExpectedByteSlice{Value: src}
+	}
+	var p geom.T
+	var err error
+	p, err = wkbDecode(b)
+	if err != nil {
+		return err
+	}
+	p1, ok := p.(*geom.Polygon)
+	if !ok {
+		return wkbcommon.ErrUnexpectedType{Got: p1, Want: p1}
+	}
+	g.Valid = true
+	g.Polygon = *p1
+	return nil
+}
+
 /////////// helpers
 
 // wkbEncode encodes a geometry into EWKB.

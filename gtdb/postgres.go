@@ -126,21 +126,31 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	var eid sql.NullInt64
-	err = adapter.Sqrl().
+	_, getID := ent.(canSetID)
+	q := adapter.Sqrl().
 		Insert(table).
 		Columns(cols...).
-		Values(vals...).
-		Suffix("RETURNING \"id\"").
-		QueryRow().
-		Scan(&eid)
+		Values(vals...)
+	if getID {
+		q = q.Suffix("RETURNING \"id\"")
+	}
+	sqlq, args, err := q.ToSql()
 	if err != nil {
 		return 0, err
 	}
 	if v, ok := ent.(canSetID); ok {
+		var eid sql.NullInt64
+		if err := adapter.db.QueryRowx(sqlq, args...).Scan(&eid); err != nil {
+			return 0, err
+		}
 		v.SetID(int(eid.Int64))
+		return int(eid.Int64), nil
+	} else {
+		if _, err := adapter.db.Exec(sqlq, args...); err != nil {
+			return 0, err
+		}
 	}
-	return int(eid.Int64), err
+	return 0, nil
 }
 
 type canEntityID interface{ EntityID() string }

@@ -67,7 +67,7 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 
 // AddEntities provides a generic interface for adding Entities to the database.
 func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
-	ients := make([]interface{}, len(ents))
+	ients := make([]interface{}, 0)
 	for _, ent := range ents {
 		if z, ok := ent.(canSetFeedVersion); ok {
 			z.SetFeedVersionID(writer.FeedVersionID)
