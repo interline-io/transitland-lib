@@ -114,7 +114,7 @@ func (g *LineString) Scan(src interface{}) error {
 
 /////////////////////
 
-// Polygon is an EWKB/SL encoded LineString
+// Polygon is an EWKB/SL encoded Polygon
 type Polygon struct {
 	Valid bool
 	geom.Polygon
