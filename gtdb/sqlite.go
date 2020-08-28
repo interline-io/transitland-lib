@@ -154,37 +154,47 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 		return 0, err
 	}
 	eid, err := result.LastInsertId()
-	if v, ok := ent.(canSetID); ok {
-		v.SetID(int(eid))
-	}
-	return int(eid), nil
+	return int(eid), err
 }
 
 // BatchInsert provides a fast path for creating StopTimes.
-func (adapter *SQLiteAdapter) BatchInsert(ents []interface{}) error {
+func (adapter *SQLiteAdapter) BatchInsert(ents []interface{}) ([]int, error) {
+	rowids := []int{}
 	if len(ents) == 0 {
-		return nil
+		return rowids, nil
 	}
 	table := getTableName(ents[0])
 	cols, vals, err := getInsert(ents[0])
 	if err != nil {
-		return err
+		return rowids, err
 	}
 	q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
 	if err != nil {
-		return err
+		return rowids, err
 	}
 	// return adapter.Tx(func(adapter Adapter) error {
 	db := adapter.DBX()
 	for _, d := range ents {
 		_, vals, err := getInsert(d)
 		if err != nil {
-			return err
+			return rowids, err
 		}
-		if _, err := db.Exec(q, vals...); err != nil {
-			return err
+		result, err := db.Exec(q, vals...)
+		if err != nil {
+			return rowids, err
 		}
+		eid, err := result.LastInsertId()
+		if err != nil {
+			return rowids, err
+		}
+		rowids = append(rowids, int(eid))
 	}
-	return nil
+	return rowids, nil
 	// })
+}
+
+// CopyInsert provides a batch insert without returning IDs.
+func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
+	_, err := adapter.BatchInsert(ents)
+	return err
 }

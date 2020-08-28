@@ -118,54 +118,39 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	if v, ok := ent.(*gotransit.FareAttribute); ok {
-		v.Transfers = "0" // TODO: Keep?
-	}
 	table := getTableName(ent)
 	cols, vals, err := getInsert(ent)
 	if err != nil {
 		return 0, err
 	}
-	_, getID := ent.(canSetID)
-	q := adapter.Sqrl().
+	var eid sql.NullInt64
+	err = adapter.Sqrl().
 		Insert(table).
 		Columns(cols...).
-		Values(vals...)
-	if getID {
-		q = q.Suffix("RETURNING \"id\"")
-	}
-	sqlq, args, err := q.ToSql()
+		Values(vals...).
+		Suffix("RETURNING \"id\"").
+		QueryRow().
+		Scan(&eid)
 	if err != nil {
 		return 0, err
 	}
-	if v, ok := ent.(canSetID); ok {
-		var eid sql.NullInt64
-		if err := adapter.db.QueryRowx(sqlq, args...).Scan(&eid); err != nil {
-			return 0, err
-		}
-		v.SetID(int(eid.Int64))
-		return int(eid.Int64), nil
-	} else {
-		if _, err := adapter.db.Exec(sqlq, args...); err != nil {
-			return 0, err
-		}
-	}
-	return 0, nil
+	return int(eid.Int64), nil
 }
 
 type canEntityID interface{ EntityID() string }
 
 // BatchInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) BatchInsert(ents []interface{}) error {
+func (adapter *PostgresAdapter) BatchInsert(ents []interface{}) ([]int, error) {
+	rowids := []int{}
 	if len(ents) == 0 {
-		return nil
+		return rowids, nil
 	}
 	if v, ok := ents[0].(canEntityID); ok {
 		if v.EntityID() == "" {
-			return adapter.CopyInsert(ents)
+			return rowids, adapter.CopyInsert(ents)
 		}
 	} else {
-		return adapter.CopyInsert(ents)
+		return rowids, adapter.CopyInsert(ents)
 	}
 	// In batches to prevent maximum argument limit
 	cols, _, err := getInsert(ents[0])
@@ -187,10 +172,9 @@ func (adapter *PostgresAdapter) BatchInsert(ents []interface{}) error {
 		q = q.Suffix("RETURNING \"id\"")
 		result, err := q.Query()
 		if err != nil {
-			return err
+			return rowids, err
 		}
 		defer result.Close()
-		rowids := []int{}
 		for result.Next() {
 			var rowid int
 			err := result.Scan(&rowid)
@@ -199,13 +183,8 @@ func (adapter *PostgresAdapter) BatchInsert(ents []interface{}) error {
 			}
 			rowids = append(rowids, rowid)
 		}
-		for i := range entChunk {
-			if v, ok := entChunk[i].(canSetID); ok {
-				v.SetID(rowids[i])
-			}
-		}
 	}
-	return err
+	return rowids, err
 }
 
 // CopyInsert inserts data using COPY.

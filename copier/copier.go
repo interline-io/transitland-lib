@@ -138,7 +138,7 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 		copier.agencyCount++
 	}
 	//
-	copier.SetBuffer(copier.BatchSize)
+	// copier.SetBuffer(copier.BatchSize)
 	return copier
 }
 
@@ -451,10 +451,10 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 				e.AddError(causes.NewConditionallyRequiredFieldError("agency_id"))
 			}
 		}
-		// e := e
-		// if _, _, err := copier.CopyEntity(&e); err != nil {
-		// 	return err
-		// }
+		e := e
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
 	}
 	copier.flush()
 	copier.logCount(&gotransit.FareAttribute{})

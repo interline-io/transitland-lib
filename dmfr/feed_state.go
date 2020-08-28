@@ -25,11 +25,6 @@ func (ent *FeedState) EntityID() string {
 	return strconv.Itoa(ent.ID)
 }
 
-// SetID .
-func (ent *FeedState) SetID(id int) {
-	ent.ID = id
-}
-
 // TableName .
 func (ent *FeedState) TableName() string {
 	return "feed_states"

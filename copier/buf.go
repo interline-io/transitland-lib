@@ -64,7 +64,6 @@ func (w *bufferedWriter) Flush() error {
 	if len(w.buffer) == 0 {
 		return nil
 	}
-	fmt.Println("FLUSH", len(w.buffer))
 	sids := []string{}
 	for _, ent := range w.buffer {
 		sids = append(sids, ent.EntityID())

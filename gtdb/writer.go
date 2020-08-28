@@ -74,7 +74,19 @@ func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
 		}
 		ients = append(ients, ent)
 	}
-	return writer.Adapter.BatchInsert(ients)
+	rowids, err := writer.Adapter.BatchInsert(ients)
+	if err != nil {
+		return err
+	}
+	if len(rowids) != len(ents) {
+		return errors.New("did not get expected number of returned IDs")
+	}
+	for i := 0; i < len(ents); i++ {
+		if v, ok := ents[i].(canSetID); ok {
+			v.SetID(rowids[i])
+		}
+	}
+	return nil
 }
 
 // CreateFeedVersion creates a new Feed Version and inserts into the database.

@@ -23,7 +23,6 @@ type Entity interface {
 	Warnings() []error
 	AddError(error)
 	AddWarning(error)
-	SetID(int)
 	SetExtra(string, string)
 	Extra() map[string]string
 	UpdateKeys(*EntityMap) error
@@ -38,11 +37,6 @@ type BaseEntity struct {
 	loadErrors    []error
 	loadWarnings  []error
 	// DeletedAt     OptionalTime
-}
-
-// SetID sets the integer ID.
-func (ent *BaseEntity) SetID(id int) {
-	ent.ID = id
 }
 
 // SetFeedVersionID sets the Entity's FeedVersionID.

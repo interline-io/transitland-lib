@@ -102,7 +102,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		st2.DepartureTime = 3
 		sts := make([]interface{}, 0)
 		sts = append(sts, &st1, &st2)
-		if err := adapter.BatchInsert(sts); err != nil {
+		if _, err := adapter.BatchInsert(sts); err != nil {
 			t.Error(err)
 		}
 		sts2 := []gotransit.StopTime{}
@@ -178,10 +178,12 @@ func createTestFeedVersion(adapter Adapter) (int, error) {
 	t := fmt.Sprintf("%d", time.Now().UnixNano())
 	feed := gotransit.Feed{}
 	feed.FeedID = t
+	fmt.Println("1")
 	feedid, err := adapter.Insert(&feed)
 	if err != nil {
 		return m, err
 	}
+	fmt.Println("2", feedid, err)
 	feed.ID = feedid
 	fv := gotransit.FeedVersion{}
 	fv.SHA1 = t
