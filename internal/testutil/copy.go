@@ -14,22 +14,7 @@ type canCreateFV interface {
 func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 	emap := gotransit.NewEntityMap()
 	errs := []error{}
-	sts := []gotransit.Entity{}
 	cp := func(ent gotransit.Entity) {
-		if e1, ok := ent.(*gotransit.StopTime); ok {
-			e2 := *e1 // dereference
-			if err := e2.UpdateKeys(emap); err != nil {
-				errs = append(errs, err)
-			}
-			sts = append(sts, &e2)
-			if len(sts) > 1000 {
-				if err := writer.AddEntities(sts); err != nil {
-					errs = append(errs)
-				}
-				sts = nil
-			}
-			return
-		}
 		// All other entities
 		sid := ent.EntityID()
 		if err := ent.UpdateKeys(emap); err != nil {
@@ -47,10 +32,6 @@ func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
 	}
 	// Run callback on each entity
 	AllEntities(reader, cp)
-	// Write trailing StopTimes
-	if err := writer.AddEntities(sts); err != nil {
-		errs = append(errs, err)
-	}
 	if len(errs) > 0 {
 		return errs[0]
 	}

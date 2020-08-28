@@ -65,14 +65,18 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 	return strconv.Itoa(eid), err
 }
 
-// AddEntities provides a generic interface for adding Entities to the database.
-func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
+// CopyEntities writes entities to the database without returning an ID.
+func (writer *Writer) CopyEntities(ents []gotransit.Entity) error {
 	for _, ent := range ents {
 		if z, ok := ent.(canSetFeedVersion); ok {
 			z.SetFeedVersionID(writer.FeedVersionID)
 		}
 	}
-	return writer.Adapter.BatchInsert(ents)
+	ients := make([]interface{}, len(ents))
+	for i := 0; i < len(ents); i++ {
+		ients[i] = ents[i]
+	}
+	return writer.Adapter.CopyInsert(ients)
 }
 
 // CreateFeedVersion creates a new Feed Version and inserts into the database.

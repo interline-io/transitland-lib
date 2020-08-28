@@ -708,7 +708,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			for i := 0; i < len(batch); i++ {
 				bst = append(bst, &batch[i])
 			}
-			if err := copier.Writer.AddEntities(bst); err != nil {
+			if err := copier.Writer.CopyEntities(bst); err != nil {
 				// Serious error, fail
 				return err
 			}
@@ -723,7 +723,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		for i := 0; i < len(batch); i++ {
 			bst = append(bst, &batch[i])
 		}
-		if err := copier.Writer.AddEntities(bst); err != nil {
+		if err := copier.Writer.CopyEntities(bst); err != nil {
 			// Serious error, fail
 			return err
 		}

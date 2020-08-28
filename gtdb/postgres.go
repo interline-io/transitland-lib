@@ -116,9 +116,6 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	if v, ok := ent.(*gotransit.FareAttribute); ok {
-		v.Transfers = "0" // TODO: Keep?
-	}
 	table := getTableName(ent)
 	cols, vals, err := getInsert(ent)
 	if err != nil {
@@ -141,8 +138,8 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid.Int64), err
 }
 
-// BatchInsert inserts data using COPY.
-func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
+// CopyInsert inserts data using COPY.
+func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
 	}
@@ -198,7 +195,7 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 }
 
 // MultiInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) MultiInsert(ents []gotransit.Entity) error {
+func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
 	}

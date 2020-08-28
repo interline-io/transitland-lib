@@ -85,7 +85,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 			}
 		}
 	})
-	t.Run("BatchInsert", func(t *testing.T) {
+	t.Run("CopyInsert", func(t *testing.T) {
 		st1 := gotransit.StopTime{}
 		st1.FeedVersionID = m.FeedVersionID
 		st1.StopID = strconv.Itoa(m.StopID1)
@@ -100,8 +100,9 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		st2.StopSequence = 2
 		st2.ArrivalTime = 2
 		st2.DepartureTime = 3
-		sts := []gotransit.Entity{&st1, &st2}
-		if err := adapter.BatchInsert(sts); err != nil {
+		sts := make([]interface{}, 0)
+		sts = append(sts, &st1, &st2)
+		if err := adapter.CopyInsert(sts); err != nil {
 			t.Error(err)
 		}
 		sts2 := []gotransit.StopTime{}

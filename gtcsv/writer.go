@@ -44,8 +44,8 @@ func (writer *Writer) NewReader() (gotransit.Reader, error) {
 	return NewReader(writer.WriterAdapter.Path())
 }
 
-// AddEntities provides a generic interface for adding Entities.
-func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
+// CopyEntities provides a generic interface for adding Entities.
+func (writer *Writer) CopyEntities(ents []gotransit.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
@@ -85,9 +85,9 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 		for i := 0; i < len(es); i++ {
 			e2s = append(e2s, &es[i])
 		}
-		return v.EntityID(), writer.AddEntities(e2s)
+		return v.EntityID(), writer.CopyEntities(e2s)
 	}
-	return ent.EntityID(), writer.AddEntities([]gotransit.Entity{ent})
+	return ent.EntityID(), writer.CopyEntities([]gotransit.Entity{ent})
 }
 
 func (writer *Writer) flattenShape(ent gotransit.Shape) []gotransit.Shape {

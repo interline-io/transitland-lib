@@ -78,8 +78,8 @@ func (mw *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 	return ent.EntityID(), nil
 }
 
-// AddEntities .
-func (mw *Writer) AddEntities(ents []gotransit.Entity) error {
+// CopyEntities .
+func (mw *Writer) CopyEntities(ents []gotransit.Entity) error {
 	for _, ent := range ents {
 		if _, err := mw.AddEntity(ent); err != nil {
 			return err
