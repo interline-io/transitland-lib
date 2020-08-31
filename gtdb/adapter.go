@@ -35,5 +35,6 @@ type Adapter interface {
 	Find(interface{}, ...interface{}) error
 	Get(interface{}, string, ...interface{}) error
 	Select(interface{}, string, ...interface{}) error
+	MultiInsert([]interface{}) error
 	CopyInsert([]interface{}) error
 }

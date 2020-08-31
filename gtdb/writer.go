@@ -62,6 +62,9 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 	}
 	// Save
 	eid, err := writer.Adapter.Insert(ent)
+	if v, ok := ent.(canSetID); ok {
+		v.SetID(eid)
+	}
 	return strconv.Itoa(eid), err
 }
 

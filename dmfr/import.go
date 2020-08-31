@@ -127,7 +127,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 	// Create FVI
 	if fviid, err := adapter.Insert(&fvi); err == nil {
 		// note: handle OK first
-		fvi.ID = fviid // TODO: why isn't this set in insert?
+		fvi.ID = fviid
 	} else {
 		// Serious error
 		log.Error("Error creating FeedVersionImport: %s", err.Error())

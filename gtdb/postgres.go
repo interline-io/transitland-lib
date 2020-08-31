@@ -5,7 +5,6 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/log"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -132,9 +131,6 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if v, ok := ent.(canSetID); ok {
-		v.SetID(int(eid.Int64))
-	}
 	return int(eid.Int64), err
 }
 
@@ -157,7 +153,7 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 		tx, err = a.Beginx()
 	}
 	if err != nil {
-		log.Error("Failed to begin transaction: %s", err.Error())
+		// log.Error("Failed to begin transaction: %s", err.Error())
 		return err
 	}
 	cols, _, err := getInsert(ents[0])
@@ -165,7 +161,7 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	stmt, err := tx.Prepare(pq.CopyIn(table, cols...))
 	defer stmt.Close()
 	if err != nil {
-		log.Error("Failed to prepare copy statement: %s", err.Error())
+		// log.Error("Failed to prepare copy statement: %s", err.Error())
 		return err
 	}
 	for _, d := range ents {
@@ -174,18 +170,18 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 		}
 		_, vals, err := getInsert(d)
 		if err != nil {
-			log.Error("Failed to get insert values: %s", err.Error())
+			// log.Error("Failed to get insert values: %s", err.Error())
 			return err
 		}
 		_, err = stmt.Exec(vals...)
 		if err != nil {
-			log.Error("Failed to get add row to copy statement: %s", err.Error())
+			// log.Error("Failed to get add row to copy statement: %s", err.Error())
 			return err
 		}
 	}
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Error("Failed to get exec copy statement: %s", err.Error())
+		// log.Error("Failed to get exec copy statement: %s", err.Error())
 		return err
 	}
 	if commit {
