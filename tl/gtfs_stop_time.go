@@ -20,7 +20,7 @@ type StopTime struct {
 	DropOffType       int     `csv:"drop_off_type" min:"0" max:"3"`
 	ShapeDistTraveled float64 `csv:"shape_dist_traveled" min:"0"`
 	Timepoint         int     `csv:"timepoint" min:"-1" max:"1"` // -1 for empty
-	Interpolated      int     // gotransit interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
+	Interpolated      int     // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
 	BaseEntity
 }
 
