@@ -16,4 +16,4 @@ ADD go.mod .
 RUN go mod download
 ADD . .
 RUN go version
-RUN go build . && go test -v ./... && (cd cmd/gotransit && go build .) 
+RUN go build . && go test -v ./... && (cd cmd/transitland && go build .) 

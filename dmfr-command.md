@@ -12,7 +12,7 @@ DMFR Subcommands:
 ## sync command
 
 ```bash
-  $ ./gotransit dmfr sync -h
+  $ ./transitland dmfr sync -h
 Usage: sync <filenames...>
   -dburl string
     	Database URL (default: $DMFR_DATABASE_URL)
@@ -21,7 +21,7 @@ Usage: sync <filenames...>
 ## fetch command
 
 ```bash
-$ ./gotransit dmfr fetch -h
+$ ./transitland dmfr fetch -h
 Usage: fetch [feedids...]
   -allow-duplicate-contents
     	Allow duplicate internal SHA1 contents
@@ -38,7 +38,7 @@ Usage: fetch [feedids...]
 ## import command
 
 ```bash
-$ ./gotransit dmfr import -h
+$ ./transitland dmfr import -h
 Usage: import [feedids...]
   -date string
     	Service on date
