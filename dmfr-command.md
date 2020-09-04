@@ -1,6 +1,6 @@
 # DMFR Command Help
 
-Gotransit DMFR provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html). Gotransit provides both a cli interface for managing a DMFR instance, as well as a library.
+Transitland DMFR provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html). Transitland provides both a cli interface for managing a DMFR instance, as well as a library.
 
 Coming soon!
 

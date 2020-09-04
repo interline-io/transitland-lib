@@ -1,6 +1,6 @@
-# Interline transitland-lib <!-- omit in toc -->
+# Interline Transitland <!-- omit in toc -->
 
-`transitland-lib` is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to specify multiple input feeds.
+`transitland-lib` is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to specify describe feed resources.
 
 ![Test & Release](https://github.com/interline-io/transitland-lib/workflows/Test%20&%20Release/badge.svg)
 
@@ -8,7 +8,6 @@
 <!-- to update use https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
 - [Installation](#installation)
 	- [Download prebuilt binary](#download-prebuilt-binary)
-	- [Install on MacOS using Homebrew](#install-on-macos-using-homebrew)
 	- [To build from source](#to-build-from-source)
 	- [Installing with SQLite Support](#installing-with-sqlite-support)
 - [Usage as a CLI tool](#usage-as-a-cli-tool)
