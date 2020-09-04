@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/testdb"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/testdb"
 )
 
 // Test some commands.
@@ -115,7 +115,7 @@ func Test_FetchCommand(t *testing.T) {
 			if len(feeds) != len(exp.feeds) {
 				t.Errorf("got %d feeds, expect %d", len(feeds), len(exp.feeds))
 			}
-			fvs := []gotransit.FeedVersion{}
+			fvs := []tl.FeedVersion{}
 			testdb.ShouldSelect(t, adapter, &fvs, "SELECT * FROM feed_versions")
 			if len(fvs) != exp.fvcount {
 				t.Errorf("got %d feed versions, expect %d", len(fvs), exp.fvcount)

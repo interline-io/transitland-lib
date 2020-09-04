@@ -10,18 +10,18 @@ import (
 	"strings"
 
 	"github.com/dimchansky/utfbom"
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/log"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // Feed .
-type Feed = gotransit.Feed
+type Feed = tl.Feed
 
 // FeedUrls .
-type FeedUrls = gotransit.FeedUrls
+type FeedUrls = tl.FeedUrls
 
 // FeedLanguages .
-type FeedLanguages = gotransit.FeedLanguages
+type FeedLanguages = tl.FeedLanguages
 
 // Registry represents a parsed Distributed Mobility Feed Registry (DMFR) file
 type Registry struct {

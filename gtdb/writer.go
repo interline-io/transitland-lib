@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/interline-io/gotransit"
+	tl "github.com/interline-io/transitland-lib"
 )
 
 // Writer takes a Reader and saves it to a database.
@@ -34,7 +34,7 @@ func (writer *Writer) Close() error {
 }
 
 // NewReader returns a new Reader with the same adapter.
-func (writer *Writer) NewReader() (gotransit.Reader, error) {
+func (writer *Writer) NewReader() (tl.Reader, error) {
 	reader := Reader{
 		FeedVersionIDs: []int{writer.FeedVersionID},
 		Adapter:        writer.Adapter,
@@ -55,7 +55,7 @@ func (writer *Writer) Delete() error {
 }
 
 // AddEntity writes an entity to the database.
-func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
+func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	// Set the FeedVersionID
 	if z, ok := ent.(canSetFeedVersion); ok {
 		z.SetFeedVersionID(writer.FeedVersionID)
@@ -66,7 +66,7 @@ func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 }
 
 // AddEntities provides a generic interface for adding Entities to the database.
-func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
+func (writer *Writer) AddEntities(ents []tl.Entity) error {
 	for _, ent := range ents {
 		if z, ok := ent.(canSetFeedVersion); ok {
 			z.SetFeedVersionID(writer.FeedVersionID)
@@ -76,19 +76,19 @@ func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
 }
 
 // CreateFeedVersion creates a new Feed Version and inserts into the database.
-func (writer *Writer) CreateFeedVersion(reader gotransit.Reader) (int, error) {
+func (writer *Writer) CreateFeedVersion(reader tl.Reader) (int, error) {
 	if reader == nil {
 		return 0, errors.New("reader required")
 	}
 	var err error
-	feed := gotransit.Feed{}
+	feed := tl.Feed{}
 	feed.FeedID = fmt.Sprintf("%d", time.Now().UnixNano())
 	feed.ID, err = writer.Adapter.Insert(&feed)
 	if err != nil {
 		return 0, err
 	}
 	fvid := 0
-	fv, err := gotransit.NewFeedVersionFromReader(reader)
+	fv, err := tl.NewFeedVersionFromReader(reader)
 	if err != nil {
 		return 0, err
 	}

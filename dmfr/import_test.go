@@ -3,10 +3,10 @@ package dmfr
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/testdb"
-	"github.com/interline-io/gotransit/internal/testutil"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 func TestFindImportableFeeds(t *testing.T) {
@@ -14,7 +14,7 @@ func TestFindImportableFeeds(t *testing.T) {
 		f := caltrain(atx, "test")
 		allfvids := []int{}
 		for i := 0; i < 10; i++ {
-			fv1 := testdb.ShouldInsert(t, atx, &gotransit.FeedVersion{FeedID: f.ID})
+			fv1 := testdb.ShouldInsert(t, atx, &tl.FeedVersion{FeedID: f.ID})
 			allfvids = append(allfvids, fv1)
 		}
 		expfvids := allfvids[:5]
@@ -38,7 +38,7 @@ func TestFindImportableFeeds(t *testing.T) {
 func TestMainImportFeedVersion(t *testing.T) {
 	setup := func(atx gtdb.Adapter, filename string) int {
 		// Create FV
-		fv := gotransit.FeedVersion{}
+		fv := tl.FeedVersion{}
 		fv.File = filename
 		return testdb.ShouldInsert(t, atx, &fv)
 	}
@@ -107,7 +107,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 func TestImportFeedVersion(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
 		// Create FV
-		fv := gotransit.FeedVersion{File: testutil.ExampleZip.URL}
+		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import

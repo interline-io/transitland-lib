@@ -1,9 +1,9 @@
-package gotransit
+package tl
 
 import (
 	"fmt"
 
-	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/transitland-lib/causes"
 )
 
 // Frequency frequencies.txt

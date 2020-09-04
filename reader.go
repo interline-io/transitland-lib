@@ -1,4 +1,4 @@
-package gotransit
+package tl
 
 // Reader defines an interface for reading entities from a GTFS feed.
 type Reader interface {

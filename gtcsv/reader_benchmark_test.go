@@ -3,7 +3,7 @@ package gtcsv
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 func BenchmarkReader(b *testing.B) {

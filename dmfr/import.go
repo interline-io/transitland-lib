@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // ImportOptions sets various options for importing a feed.
@@ -109,7 +109,7 @@ func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
 func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResult, error) {
 	// Get FV
 	fvi := FeedVersionImport{FeedVersionID: opts.FeedVersionID, InProgress: true}
-	fv := gotransit.FeedVersion{ID: opts.FeedVersionID}
+	fv := tl.FeedVersion{ID: opts.FeedVersionID}
 	if err := adapter.Find(&fv); err != nil {
 		return ImportResult{FeedVersionImport: fvi}, err
 	}
@@ -189,7 +189,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 }
 
 // ImportFeedVersion .
-func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOptions) (FeedVersionImport, error) {
+func ImportFeedVersion(atx gtdb.Adapter, fv tl.FeedVersion, opts ImportOptions) (FeedVersionImport, error) {
 	fvi := FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
 	url := fv.File
@@ -215,7 +215,7 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer)
 	for _, e := range opts.Extensions {
-		ext, err := gotransit.GetExtension(e)
+		ext, err := tl.GetExtension(e)
 		if err != nil {
 			panic("ext not found")
 		}

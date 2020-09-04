@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/gtdb"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/gtdb"
 )
 
 // FetchOptions sets options for a fetch operation.
@@ -29,7 +29,7 @@ type FetchOptions struct {
 
 // FetchResult contains results of a fetch operation.
 type FetchResult struct {
-	FeedVersion  gotransit.FeedVersion
+	FeedVersion  tl.FeedVersion
 	Path         string
 	FoundSHA1    bool
 	FoundDirSHA1 bool
@@ -62,7 +62,7 @@ func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	} else if err != nil {
 		return fr, err
 	}
-	tlstate.LastFetchedAt = gotransit.OptionalTime{Time: opts.FetchedAt, Valid: true}
+	tlstate.LastFetchedAt = tl.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	tlstate.LastFetchError = ""
 	// Immediately save LastFetchedAt
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
@@ -76,7 +76,7 @@ func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 	if fr.FetchError != nil {
 		tlstate.LastFetchError = fr.FetchError.Error()
 	} else {
-		tlstate.LastSuccessfulFetchAt = gotransit.OptionalTime{Time: opts.FetchedAt, Valid: true}
+		tlstate.LastSuccessfulFetchAt = tl.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	}
 	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps
@@ -133,7 +133,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 	}
 	defer reader.Close()
 	// Get initialized FeedVersion
-	fv, err := gotransit.NewFeedVersionFromReader(reader)
+	fv, err := tl.NewFeedVersionFromReader(reader)
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil
@@ -142,7 +142,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 	fv.FeedID = opts.Feed.ID
 	fv.FetchedAt = opts.FetchedAt
 	// Is this SHA1 already present?
-	checkfvid := gotransit.FeedVersion{}
+	checkfvid := tl.FeedVersion{}
 	err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
 	if err == nil {
 		// Already present

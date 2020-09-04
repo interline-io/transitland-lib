@@ -1,4 +1,4 @@
-package gotransit
+package tl
 
 // EntityMap stores correspondances between Entity IDs, e.g. StopID -> Stop's integer ID in a database.
 type EntityMap struct {

@@ -3,8 +3,8 @@ package copier
 import (
 	"sort"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/log"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // CopyResult stores Copier results and statistics.
@@ -46,7 +46,7 @@ func (cr *CopyResult) HandleSourceErrors(fn string, errs []error, warns []error)
 }
 
 // HandleEntityErrors .
-func (cr *CopyResult) HandleEntityErrors(ent gotransit.Entity, errs []error, warns []error) {
+func (cr *CopyResult) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
 	for _, err := range errs {
 		cr.Errors = append(cr.Errors, NewCopyError(ent.Filename(), ent.EntityID(), err))
 	}

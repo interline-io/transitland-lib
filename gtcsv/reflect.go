@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/internal/tags"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/internal/tags"
 )
 
 // check for SetString interface
@@ -39,7 +39,7 @@ type canScan interface {
 // SetString //
 
 // SetString convenience method; checks for SetString method.
-func SetString(ent gotransit.Entity, key string, value string) error {
+func SetString(ent tl.Entity, key string, value string) error {
 	if fastent, ok := ent.(canSetString); ok {
 		return fastent.SetString(key, value)
 	}
@@ -101,7 +101,7 @@ type canGetString interface {
 }
 
 // GetString convenience method; gets a string representation of a field.
-func GetString(ent gotransit.Entity, key string) (string, error) {
+func GetString(ent tl.Entity, key string) (string, error) {
 	if fastent, ok := ent.(canGetString); ok {
 		return fastent.GetString(key)
 	}
@@ -169,7 +169,7 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 // Loading: fast and reflect paths //
 
 // loadRow selects the fastest method for loading an entity.
-func loadRow(ent gotransit.Entity, row Row) {
+func loadRow(ent tl.Entity, row Row) {
 	// Check for fast path
 	if entfast, ok := ent.(canSetString); ok {
 		loadRowFast(entfast, row)
@@ -195,7 +195,7 @@ func loadRowFast(ent canSetString, row Row) {
 }
 
 // loadRowReflect is the Reflect path
-func loadRowReflect(ent gotransit.Entity, row Row) {
+func loadRowReflect(ent tl.Entity, row Row) {
 	// Return if there was a row parsing error
 	if row.Err != nil {
 		ent.AddError(causes.NewFileParseError(row.Line, row.Err))
@@ -243,7 +243,7 @@ func loadRowReflect(ent gotransit.Entity, row Row) {
 // Dumping: fast and reflect paths //
 
 // dumpHeader returns the header for an Entity.
-func dumpHeader(ent gotransit.Entity) ([]string, error) {
+func dumpHeader(ent tl.Entity) ([]string, error) {
 	row := []string{}
 	fmap := tags.GetStructTagMap(ent)
 	// Order fields
@@ -262,7 +262,7 @@ func dumpHeader(ent gotransit.Entity) ([]string, error) {
 }
 
 // dumpRow returns a []string for the Entity.
-func dumpRow(ent gotransit.Entity, header []string) ([]string, error) {
+func dumpRow(ent tl.Entity, header []string) ([]string, error) {
 	row := []string{}
 	// Fast path
 	if a, ok := ent.(canGetString); ok {

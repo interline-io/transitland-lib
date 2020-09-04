@@ -3,8 +3,8 @@ package extract
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/internal/graph"
+	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/internal/graph"
 )
 
 type mss = map[string][]string

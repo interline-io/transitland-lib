@@ -1,11 +1,11 @@
-package gotransit
+package tl
 
 import (
 	"errors"
 	"fmt"
 	"strconv"
 
-	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/transitland-lib/causes"
 )
 
 // StopTime stop_times.txt

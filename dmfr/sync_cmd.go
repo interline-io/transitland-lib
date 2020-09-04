@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
+	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // SyncCommand syncs a DMFR to a database.

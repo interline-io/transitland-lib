@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/interline-io/gotransit"
+	tl "github.com/interline-io/transitland-lib"
 )
 
 var testAdapters = map[string]func() Adapter{}
@@ -39,14 +39,14 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	}
 	t.Run("Update", func(t *testing.T) {
 		v := "Test Update"
-		ent := gotransit.Trip{}
+		ent := tl.Trip{}
 		ent.ID = m.TripID
 		ent.TripHeadsign = v
 		err = adapter.Update(&ent, "trip_headsign")
 		if err != nil {
 			t.Error(err)
 		}
-		ent2 := gotransit.Trip{}
+		ent2 := tl.Trip{}
 		ent2.ID = m.TripID
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
@@ -56,7 +56,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		}
 	})
 	t.Run("Get", func(t *testing.T) {
-		ent := gotransit.Trip{}
+		ent := tl.Trip{}
 		ent.ID = m.TripID
 		if err := adapter.Find(&ent); err != nil {
 			t.Error(err)
@@ -66,7 +66,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		}
 	})
 	t.Run("Select", func(t *testing.T) {
-		ents := []gotransit.Stop{}
+		ents := []tl.Stop{}
 		if err := adapter.Select(&ents, "SELECT * FROM gtfs_stops WHERE id IN (?,?) AND feed_version_id = ? ORDER BY id ASC", m.StopID1, m.StopID2, m.FeedVersionID); err != nil {
 			t.Error(err)
 		}
@@ -86,25 +86,25 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		}
 	})
 	t.Run("BatchInsert", func(t *testing.T) {
-		st1 := gotransit.StopTime{}
+		st1 := tl.StopTime{}
 		st1.FeedVersionID = m.FeedVersionID
 		st1.StopID = strconv.Itoa(m.StopID1)
 		st1.TripID = strconv.Itoa(m.TripID)
 		st1.StopSequence = 1
 		st1.ArrivalTime = 0
 		st1.DepartureTime = 1
-		st2 := gotransit.StopTime{}
+		st2 := tl.StopTime{}
 		st2.FeedVersionID = m.FeedVersionID
 		st2.StopID = strconv.Itoa(m.StopID2)
 		st2.TripID = strconv.Itoa(m.TripID)
 		st2.StopSequence = 2
 		st2.ArrivalTime = 2
 		st2.DepartureTime = 3
-		sts := []gotransit.Entity{&st1, &st2}
+		sts := []tl.Entity{&st1, &st2}
 		if err := adapter.BatchInsert(sts); err != nil {
 			t.Error(err)
 		}
-		sts2 := []gotransit.StopTime{}
+		sts2 := []tl.StopTime{}
 		if err := adapter.Select(&sts2, "SELECT * FROM gtfs_stop_times WHERE feed_version_id = ? ORDER BY id ASC", m.FeedVersionID); err != nil {
 			t.Error(err)
 		}
@@ -128,7 +128,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	t.Run("Tx Commit", func(t *testing.T) {
 		// Check commit
 		v := "Test Tx"
-		ent := gotransit.Trip{}
+		ent := tl.Trip{}
 		ent.ID = m.TripID
 		ent.TripHeadsign = v
 		adapter.Tx(func(atx Adapter) error {
@@ -138,7 +138,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 			}
 			return err
 		})
-		ent2 := gotransit.Trip{}
+		ent2 := tl.Trip{}
 		ent2.ID = m.TripID
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
@@ -150,7 +150,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	t.Run("Tx Rollback", func(t *testing.T) {
 		// Check rollback
 		v := "Test Rollback"
-		ent := gotransit.Trip{}
+		ent := tl.Trip{}
 		ent.ID = m.TripID
 		ent.TripHeadsign = v
 		adapter.Tx(func(atx Adapter) error {
@@ -160,7 +160,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 			}
 			return errors.New("rollback")
 		})
-		ent2 := gotransit.Trip{}
+		ent2 := tl.Trip{}
 		ent2.ID = m.TripID
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
@@ -175,14 +175,14 @@ func createTestFeedVersion(adapter Adapter) (int, error) {
 	// Create Feed, FeedVersion
 	m := 0
 	t := fmt.Sprintf("%d", time.Now().UnixNano())
-	feed := gotransit.Feed{}
+	feed := tl.Feed{}
 	feed.FeedID = t
 	feedid, err := adapter.Insert(&feed)
 	if err != nil {
 		return m, err
 	}
 	feed.ID = feedid
-	fv := gotransit.FeedVersion{}
+	fv := tl.FeedVersion{}
 	fv.SHA1 = t
 	fv.FeedID = feed.ID
 	m, err = adapter.Insert(&fv)
@@ -210,14 +210,14 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 		return m, err
 	}
 	//
-	ent0 := gotransit.Agency{}
+	ent0 := tl.Agency{}
 	ent0.AgencyID = "ok"
 	ent0.FeedVersionID = m.FeedVersionID
 	m.AgencyID, err = adapter.Insert(&ent0)
 	if err != nil {
 		return m, err
 	}
-	ent4 := gotransit.Route{}
+	ent4 := tl.Route{}
 	ent4.RouteID = "ok"
 	ent4.AgencyID = strconv.Itoa(m.AgencyID)
 	ent4.FeedVersionID = m.FeedVersionID
@@ -225,7 +225,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	if err != nil {
 		return m, err
 	}
-	cal := gotransit.Calendar{}
+	cal := tl.Calendar{}
 	cal.StartDate = time.Now()
 	cal.EndDate = time.Now()
 	cal.ServiceID = "ok"
@@ -234,7 +234,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	if err != nil {
 		return m, err
 	}
-	ent1 := gotransit.Trip{}
+	ent1 := tl.Trip{}
 	ent1.TripID = "ok"
 	ent1.RouteID = strconv.Itoa(m.RouteID)
 	ent1.ServiceID = strconv.Itoa(m.ServiceID)
@@ -243,7 +243,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	if err != nil {
 		return m, err
 	}
-	ent2 := gotransit.Stop{}
+	ent2 := tl.Stop{}
 	ent2.StopID = "bar"
 	ent2.SetCoordinates([2]float64{-123.0, 42.0})
 	ent2.FeedVersionID = m.FeedVersionID
@@ -251,7 +251,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	if err != nil {
 		return m, err
 	}
-	ent3 := gotransit.Stop{}
+	ent3 := tl.Stop{}
 	ent3.StopID = "foo"
 	ent3.SetCoordinates([2]float64{-122.0, 43.0})
 	ent3.FeedVersionID = m.FeedVersionID

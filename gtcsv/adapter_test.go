@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/testutil"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 func getTestAdapters() map[string]func() Adapter {
@@ -215,11 +215,11 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	})
 	t.Run("ReadRows", func(t *testing.T) {
 		// TODO: more tests
-		ent := gotransit.StopTime{}
+		ent := tl.StopTime{}
 		m := map[string]int{}
 		total := 0
 		adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.StopTime{}
+			e := tl.StopTime{}
 			loadRow(&e, row)
 			m[e.StopID]++
 			total++

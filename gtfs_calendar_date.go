@@ -1,11 +1,11 @@
-package gotransit
+package tl
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/enums"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/enums"
 )
 
 // CalendarDate calendar_dates.txt

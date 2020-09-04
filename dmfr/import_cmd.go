@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
+	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // ImportCommand imports FeedVersions into a database.

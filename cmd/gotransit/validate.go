@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/log"
-	"github.com/interline-io/gotransit/validator"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/validator"
 )
 
 // validateCommand
@@ -34,7 +34,7 @@ func (cmd *validateCommand) Run(args []string) error {
 		return err
 	}
 	for _, ext := range cmd.validateExtensions {
-		e, err := gotransit.GetExtension(ext)
+		e, err := tl.GetExtension(ext)
 		if err != nil {
 			return fmt.Errorf("No extension for: %s", ext)
 		}

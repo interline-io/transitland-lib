@@ -1,4 +1,4 @@
-package gotransit
+package tl
 
 // Level levels.txt
 type Level struct {

@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/interline-io/gotransit"
+	tl "github.com/interline-io/transitland-lib"
 )
 
-type FeedAuthorization = gotransit.FeedAuthorization
+type FeedAuthorization = tl.FeedAuthorization
 
 func TestAuthorizedRequest(t *testing.T) {
 	secret := Secret{Key: "abcd", Username: "efgh", Password: "ijkl"}

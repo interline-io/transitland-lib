@@ -3,7 +3,7 @@ package copier
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit"
+	tl "github.com/interline-io/transitland-lib"
 )
 
 func testExpectInt(t *testing.T, result, expect int) {
@@ -20,10 +20,10 @@ type expectStopTime struct {
 	ExpectDepartureTime int
 }
 
-func expectTripToStopTime(e []expectStopTime) []gotransit.StopTime {
-	ret := []gotransit.StopTime{}
+func expectTripToStopTime(e []expectStopTime) []tl.StopTime {
+	ret := []tl.StopTime{}
 	for _, i := range e {
-		ret = append(ret, gotransit.StopTime{
+		ret = append(ret, tl.StopTime{
 			ArrivalTime:       i.ArrivalTime,
 			DepartureTime:     i.DepartureTime,
 			ShapeDistTraveled: i.ShapeDistTraveled,

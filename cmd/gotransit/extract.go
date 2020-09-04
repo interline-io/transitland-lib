@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/extract"
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/extract"
+	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // extractCommand
@@ -88,7 +88,7 @@ func (cmd *extractCommand) Run(args []string) error {
 		cp.NormalizeServiceIDs = true
 	}
 	for _, ext := range cmd.extensions {
-		e, err := gotransit.GetExtension(ext)
+		e, err := tl.GetExtension(ext)
 		if err != nil {
 			log.Exit("No extension for: %s", ext)
 		}
@@ -100,7 +100,7 @@ func (cmd *extractCommand) Run(args []string) error {
 		}
 	}
 	for _, ext := range cmd.filters {
-		ef, err := gotransit.GetEntityFilter(ext)
+		ef, err := tl.GetEntityFilter(ext)
 		if err != nil {
 			log.Exit("No filter for '%s': %s", ext, err)
 		}

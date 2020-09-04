@@ -1,4 +1,4 @@
-package gotransit
+package tl
 
 import (
 	"strconv"

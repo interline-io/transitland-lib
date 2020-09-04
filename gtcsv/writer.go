@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/interline-io/gotransit"
+	tl "github.com/interline-io/transitland-lib"
 )
 
 // Writer implements a GTFS CSV Writer.
@@ -40,12 +40,12 @@ func (writer *Writer) Delete() error {
 }
 
 // NewReader returns a new Reader for the Writer destination.
-func (writer *Writer) NewReader() (gotransit.Reader, error) {
+func (writer *Writer) NewReader() (tl.Reader, error) {
 	return NewReader(writer.WriterAdapter.Path())
 }
 
 // AddEntities provides a generic interface for adding Entities.
-func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
+func (writer *Writer) AddEntities(ents []tl.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
@@ -78,24 +78,24 @@ func (writer *Writer) AddEntities(ents []gotransit.Entity) error {
 }
 
 // AddEntity provides a generic interface for adding an Entity.
-func (writer *Writer) AddEntity(ent gotransit.Entity) (string, error) {
-	if v, ok := ent.(*gotransit.Shape); ok {
-		e2s := []gotransit.Entity{}
+func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
+	if v, ok := ent.(*tl.Shape); ok {
+		e2s := []tl.Entity{}
 		es := writer.flattenShape(*v)
 		for i := 0; i < len(es); i++ {
 			e2s = append(e2s, &es[i])
 		}
 		return v.EntityID(), writer.AddEntities(e2s)
 	}
-	return ent.EntityID(), writer.AddEntities([]gotransit.Entity{ent})
+	return ent.EntityID(), writer.AddEntities([]tl.Entity{ent})
 }
 
-func (writer *Writer) flattenShape(ent gotransit.Shape) []gotransit.Shape {
+func (writer *Writer) flattenShape(ent tl.Shape) []tl.Shape {
 	coords := ent.Geometry.FlatCoords()
-	shapes := []gotransit.Shape{}
+	shapes := []tl.Shape{}
 	totaldist := 0.0
 	for i := 0; i < len(coords); i += 3 {
-		s := gotransit.Shape{
+		s := tl.Shape{
 			ShapeID:           ent.ShapeID,
 			ShapePtSequence:   i,
 			ShapePtLon:        coords[i],

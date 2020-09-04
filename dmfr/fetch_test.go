@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/testdb"
-	"github.com/interline-io/gotransit/internal/testutil"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 var ExampleZip = testutil.ExampleZip
@@ -59,7 +59,7 @@ func TestDatabaseFetch(t *testing.T) {
 			return nil
 		}
 		// Check FV
-		fv2 := gotransit.FeedVersion{ID: fr.FeedVersion.ID}
+		fv2 := tl.FeedVersion{ID: fr.FeedVersion.ID}
 		testdb.ShouldFind(t, atx, &fv2)
 		if fv2.URL != url {
 			t.Errorf("got %s expect %s", fv2.URL, url)
@@ -158,7 +158,7 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 			t.Errorf("got %s expect %s", fr.FeedVersion.SHA1, ExampleZip.SHA1)
 			return nil
 		}
-		fv2 := gotransit.FeedVersion{ID: fr.FeedVersion.ID}
+		fv2 := tl.FeedVersion{ID: fr.FeedVersion.ID}
 		testdb.ShouldFind(t, atx, &fv2)
 		if fv2.URL != url {
 			t.Errorf("got %s expect %s", fv2.URL, url)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/transitland-lib/causes"
 )
 
 // Error wrapping helpers

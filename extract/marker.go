@@ -3,8 +3,8 @@ package extract
 import (
 	"fmt"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/graph"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/graph"
 )
 
 /*
@@ -70,7 +70,7 @@ func (em *Marker) IsVisited(filename string, eid string) bool {
 }
 
 // Filter takes a Reader and selects any entities that are children of the specified file/id map.
-func (em *Marker) Filter(reader gotransit.Reader, fm map[string][]string) error {
+func (em *Marker) Filter(reader tl.Reader, fm map[string][]string) error {
 	eg, err := graph.BuildGraph(reader)
 	if err != nil {
 		return err

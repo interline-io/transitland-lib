@@ -1,8 +1,6 @@
 package graph
 
-import (
-	"github.com/interline-io/gotransit"
-)
+import tl "github.com/interline-io/transitland-lib"
 
 // we just need EntityID / Filename
 type entity interface {
@@ -19,7 +17,7 @@ func entityNode(ent entity) *Node {
 }
 
 // BuildGraph .
-func BuildGraph(reader gotransit.Reader) (*EntityGraph, error) {
+func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	eg := NewEntityGraph()
 	// Add Agencies and select default Agency
 	var dan *Node

@@ -1,9 +1,9 @@
 package extract
 
 import (
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/internal/graph"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/internal/graph"
 )
 
 type setterFilter struct {
@@ -26,7 +26,7 @@ func (tx *setterFilter) AddValue(filename string, eid string, key string, value 
 	tx.nodes[*n] = entv
 }
 
-func (tx *setterFilter) Filter(ent gotransit.Entity, emap *gotransit.EntityMap) error {
+func (tx *setterFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	if entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), ent.EntityID())]; ok {
 		for k, v := range entv {
 			if err := gtcsv.SetString(ent, k, v); err != nil {

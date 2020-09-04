@@ -15,8 +15,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/internal/log"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.

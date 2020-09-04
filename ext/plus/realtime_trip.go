@@ -1,15 +1,15 @@
 package plus
 
 import (
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/causes"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/causes"
 )
 
 // RealtimeTrip realtime_trips.txt
 type RealtimeTrip struct {
 	TripID         string `csv:"trip_id"`
 	RealtimeTripID string `csv:"realtime_trip_id"`
-	gotransit.BaseEntity
+	tl.BaseEntity
 }
 
 // Filename realtime_trips.txt
@@ -23,8 +23,8 @@ func (ent *RealtimeTrip) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *RealtimeTrip) UpdateKeys(emap *gotransit.EntityMap) error {
-	if fkid, ok := emap.GetEntity(&gotransit.Trip{TripID: ent.TripID}); ok {
+func (ent *RealtimeTrip) UpdateKeys(emap *tl.EntityMap) error {
+	if fkid, ok := emap.GetEntity(&tl.Trip{TripID: ent.TripID}); ok {
 		ent.TripID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("trip_id", ent.TripID)

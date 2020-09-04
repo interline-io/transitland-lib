@@ -7,9 +7,9 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // SyncOptions sets options for a sync operation.
@@ -88,7 +88,7 @@ func ImportFeed(atx gtdb.Adapter, rfeed Feed) (int, bool, error) {
 		feedid = dbfeed.ID
 		rfeed.ID = dbfeed.ID
 		rfeed.CreatedAt = dbfeed.CreatedAt
-		rfeed.DeletedAt = gotransit.OptionalTime{Valid: false}
+		rfeed.DeletedAt = tl.OptionalTime{Valid: false}
 		errTx = atx.Update(&rfeed)
 	} else if err == sql.ErrNoRows {
 		feedid, errTx = atx.Insert(&rfeed)
@@ -105,7 +105,7 @@ func ImportFeed(atx gtdb.Adapter, rfeed Feed) (int, bool, error) {
 // HideUnseedFeeds .
 func HideUnseedFeeds(atx gtdb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
-	t := gotransit.OptionalTime{Time: time.Now(), Valid: true}
+	t := tl.OptionalTime{Time: time.Now(), Valid: true}
 	r, err := atx.Sqrl().
 		Update("current_feeds").
 		Where(sq.NotEq{"id": found}).

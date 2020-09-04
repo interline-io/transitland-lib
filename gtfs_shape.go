@@ -1,12 +1,12 @@
-package gotransit
+package tl
 
 import (
 	"fmt"
 	"sort"
 	"strconv"
 
-	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/enums"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/enums"
 )
 
 // Shape shapes.txt

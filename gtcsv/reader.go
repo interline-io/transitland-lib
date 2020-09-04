@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/internal/tags"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/internal/tags"
 )
 
 // s2D is two dimensional string slice
@@ -43,14 +43,14 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	outValue := reflect.ValueOf(c)
 	outInnerType := outValue.Type().Elem()
 	outInner := reflect.New(outInnerType)
-	ent, ok := outInner.Interface().(gotransit.Entity)
+	ent, ok := outInner.Interface().(tl.Entity)
 	if !ok {
 		return causes.NewSourceUnreadableError("not a valid entity", nil)
 	}
 	go func() {
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			a := reflect.New(outInnerType)
-			e := a.Interface().(gotransit.Entity)
+			e := a.Interface().(tl.Entity)
 			loadRow(e, row)
 			outValue.Send(a.Elem())
 		})
@@ -70,7 +70,7 @@ func (reader *Reader) ValidateStructure() []error {
 	}
 	// Check if these files contain valid headers
 	// TODO: An error in the header should also stop a file from being opened for further CSV reading.
-	check := func(ent gotransit.Entity) []error {
+	check := func(ent tl.Entity) []error {
 		fileerrs := []error{}
 		efn := ent.Filename()
 		err := reader.Adapter.OpenFile(efn, func(in io.Reader) {
@@ -127,13 +127,13 @@ func (reader *Reader) ValidateStructure() []error {
 		}
 		return fileerrs
 	}
-	allerrs = append(allerrs, check(&gotransit.Stop{})...)
-	allerrs = append(allerrs, check(&gotransit.Route{})...)
-	allerrs = append(allerrs, check(&gotransit.Agency{})...)
-	allerrs = append(allerrs, check(&gotransit.Trip{})...)
-	allerrs = append(allerrs, check(&gotransit.StopTime{})...)
-	cal := gotransit.Calendar{}
-	cd := gotransit.CalendarDate{}
+	allerrs = append(allerrs, check(&tl.Stop{})...)
+	allerrs = append(allerrs, check(&tl.Route{})...)
+	allerrs = append(allerrs, check(&tl.Agency{})...)
+	allerrs = append(allerrs, check(&tl.Trip{})...)
+	allerrs = append(allerrs, check(&tl.StopTime{})...)
+	cal := tl.Calendar{}
+	cd := tl.CalendarDate{}
 	calerrs := check(&cal)
 	cderrs := check(&cd)
 	if reader.ContainsFile(cal.Filename()) && reader.ContainsFile(cd.Filename()) {
@@ -163,7 +163,7 @@ func (reader *Reader) ContainsFile(filename string) bool {
 }
 
 // StopTimesByTripID sends StopTimes for selected trips.
-func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gotransit.StopTime {
+func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 	chunks := s2D{}
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
@@ -197,16 +197,16 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gotransit.Stop
 		chunks = s2D{tripIDs}
 	}
 	//
-	out := make(chan []gotransit.StopTime, bufferSize)
+	out := make(chan []tl.StopTime, bufferSize)
 	go func(chunks s2D, grouped bool) {
 		for _, chunk := range chunks {
 			set := stringsToSet(chunk)
-			m := map[string][]gotransit.StopTime{}
+			m := map[string][]tl.StopTime{}
 			last := ""
 			reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
 				sid, _ := row.Get("trip_id")
 				if _, ok := set[sid]; ok {
-					ent := gotransit.StopTime{}
+					ent := tl.StopTime{}
 					loadRowFast(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
@@ -234,11 +234,11 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gotransit.Stop
 }
 
 // Shapes sends single-geometry LineString Shapes
-func (reader *Reader) Shapes() chan gotransit.Shape {
-	out := make(chan gotransit.Shape, bufferSize)
+func (reader *Reader) Shapes() chan tl.Shape {
+	out := make(chan tl.Shape, bufferSize)
 	go func() {
 		for shapes := range reader.shapesByShapeID() {
-			shape := gotransit.NewShapeFromShapes(shapes)
+			shape := tl.NewShapeFromShapes(shapes)
 			shape.ShapeID = shapes[0].ShapeID
 			out <- shape
 		}
@@ -248,7 +248,7 @@ func (reader *Reader) Shapes() chan gotransit.Shape {
 }
 
 // shapesByShapeID returns a map with grouped Shapes.
-func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []gotransit.Shape {
+func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
 	chunks := s2D{}
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
@@ -281,16 +281,16 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []gotransit.Shape
 		chunks = s2D{shapeIDs}
 	}
 	//
-	out := make(chan []gotransit.Shape, bufferSize)
+	out := make(chan []tl.Shape, bufferSize)
 	go func(chunks s2D, grouped bool) {
 		for _, chunk := range chunks {
 			set := stringsToSet(chunk)
-			m := map[string][]gotransit.Shape{}
+			m := map[string][]tl.Shape{}
 			last := ""
 			reader.Adapter.ReadRows("shapes.txt", func(row Row) {
 				sid, _ := row.Get("shape_id")
 				if _, ok := set[sid]; ok {
-					ent := gotransit.Shape{}
+					ent := tl.Shape{}
 					loadRow(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
@@ -322,12 +322,12 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []gotransit.Shape
 //////////////////////////////
 
 // Stops sends Stops.
-func (reader *Reader) Stops() (out chan gotransit.Stop) {
-	out = make(chan gotransit.Stop, bufferSize)
+func (reader *Reader) Stops() (out chan tl.Stop) {
+	out = make(chan tl.Stop, bufferSize)
 	go func() {
-		ent := gotransit.Stop{}
+		ent := tl.Stop{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Stop{}
+			e := tl.Stop{}
 			loadRow(&e, row)
 			e.SetCoordinates([2]float64{e.StopLon, e.StopLat})
 			out <- e
@@ -338,12 +338,12 @@ func (reader *Reader) Stops() (out chan gotransit.Stop) {
 }
 
 // StopTimes sends StopTimes.
-func (reader *Reader) StopTimes() (out chan gotransit.StopTime) {
-	out = make(chan gotransit.StopTime, bufferSize)
+func (reader *Reader) StopTimes() (out chan tl.StopTime) {
+	out = make(chan tl.StopTime, bufferSize)
 	go func() {
-		ent := gotransit.StopTime{}
+		ent := tl.StopTime{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.StopTime{}
+			e := tl.StopTime{}
 			loadRowFast(&e, row) // e.LoadRow(row.Header, row.Row)
 			out <- e
 		})
@@ -353,12 +353,12 @@ func (reader *Reader) StopTimes() (out chan gotransit.StopTime) {
 }
 
 // Agencies sends Agencies.
-func (reader *Reader) Agencies() (out chan gotransit.Agency) {
-	out = make(chan gotransit.Agency, bufferSize)
+func (reader *Reader) Agencies() (out chan tl.Agency) {
+	out = make(chan tl.Agency, bufferSize)
 	go func() {
-		ent := gotransit.Agency{}
+		ent := tl.Agency{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Agency{}
+			e := tl.Agency{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -368,12 +368,12 @@ func (reader *Reader) Agencies() (out chan gotransit.Agency) {
 }
 
 // Calendars sends Calendars.
-func (reader *Reader) Calendars() (out chan gotransit.Calendar) {
-	out = make(chan gotransit.Calendar, bufferSize)
+func (reader *Reader) Calendars() (out chan tl.Calendar) {
+	out = make(chan tl.Calendar, bufferSize)
 	go func() {
-		ent := gotransit.Calendar{}
+		ent := tl.Calendar{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Calendar{}
+			e := tl.Calendar{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -383,12 +383,12 @@ func (reader *Reader) Calendars() (out chan gotransit.Calendar) {
 }
 
 // CalendarDates sends CalendarDates.
-func (reader *Reader) CalendarDates() (out chan gotransit.CalendarDate) {
-	out = make(chan gotransit.CalendarDate, bufferSize)
+func (reader *Reader) CalendarDates() (out chan tl.CalendarDate) {
+	out = make(chan tl.CalendarDate, bufferSize)
 	go func() {
-		ent := gotransit.CalendarDate{}
+		ent := tl.CalendarDate{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.CalendarDate{}
+			e := tl.CalendarDate{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -398,12 +398,12 @@ func (reader *Reader) CalendarDates() (out chan gotransit.CalendarDate) {
 }
 
 // FareAttributes sends FareAttributes.
-func (reader *Reader) FareAttributes() (out chan gotransit.FareAttribute) {
-	out = make(chan gotransit.FareAttribute, bufferSize)
+func (reader *Reader) FareAttributes() (out chan tl.FareAttribute) {
+	out = make(chan tl.FareAttribute, bufferSize)
 	go func() {
-		ent := gotransit.FareAttribute{}
+		ent := tl.FareAttribute{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.FareAttribute{}
+			e := tl.FareAttribute{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -413,12 +413,12 @@ func (reader *Reader) FareAttributes() (out chan gotransit.FareAttribute) {
 }
 
 // FareRules sends FareRules.
-func (reader *Reader) FareRules() (out chan gotransit.FareRule) {
-	out = make(chan gotransit.FareRule, bufferSize)
+func (reader *Reader) FareRules() (out chan tl.FareRule) {
+	out = make(chan tl.FareRule, bufferSize)
 	go func() {
-		ent := gotransit.FareRule{}
+		ent := tl.FareRule{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.FareRule{}
+			e := tl.FareRule{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -428,12 +428,12 @@ func (reader *Reader) FareRules() (out chan gotransit.FareRule) {
 }
 
 // FeedInfos sends FeedInfos.
-func (reader *Reader) FeedInfos() (out chan gotransit.FeedInfo) {
-	out = make(chan gotransit.FeedInfo, bufferSize)
+func (reader *Reader) FeedInfos() (out chan tl.FeedInfo) {
+	out = make(chan tl.FeedInfo, bufferSize)
 	go func() {
-		ent := gotransit.FeedInfo{}
+		ent := tl.FeedInfo{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.FeedInfo{}
+			e := tl.FeedInfo{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -443,12 +443,12 @@ func (reader *Reader) FeedInfos() (out chan gotransit.FeedInfo) {
 }
 
 // Frequencies sends Frequencies.
-func (reader *Reader) Frequencies() (out chan gotransit.Frequency) {
-	out = make(chan gotransit.Frequency, bufferSize)
+func (reader *Reader) Frequencies() (out chan tl.Frequency) {
+	out = make(chan tl.Frequency, bufferSize)
 	go func() {
-		ent := gotransit.Frequency{}
+		ent := tl.Frequency{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Frequency{}
+			e := tl.Frequency{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -458,12 +458,12 @@ func (reader *Reader) Frequencies() (out chan gotransit.Frequency) {
 }
 
 // Routes sends Routes.
-func (reader *Reader) Routes() (out chan gotransit.Route) {
-	out = make(chan gotransit.Route, bufferSize)
+func (reader *Reader) Routes() (out chan tl.Route) {
+	out = make(chan tl.Route, bufferSize)
 	go func() {
-		ent := gotransit.Route{}
+		ent := tl.Route{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Route{}
+			e := tl.Route{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -473,12 +473,12 @@ func (reader *Reader) Routes() (out chan gotransit.Route) {
 }
 
 // Transfers sends Tranfers.
-func (reader *Reader) Transfers() (out chan gotransit.Transfer) {
-	out = make(chan gotransit.Transfer, bufferSize)
+func (reader *Reader) Transfers() (out chan tl.Transfer) {
+	out = make(chan tl.Transfer, bufferSize)
 	go func() {
-		ent := gotransit.Transfer{}
+		ent := tl.Transfer{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Transfer{}
+			e := tl.Transfer{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -488,12 +488,12 @@ func (reader *Reader) Transfers() (out chan gotransit.Transfer) {
 }
 
 // Trips sends Trips.
-func (reader *Reader) Trips() (out chan gotransit.Trip) {
-	out = make(chan gotransit.Trip, bufferSize)
+func (reader *Reader) Trips() (out chan tl.Trip) {
+	out = make(chan tl.Trip, bufferSize)
 	go func() {
-		ent := gotransit.Trip{}
+		ent := tl.Trip{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Trip{}
+			e := tl.Trip{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -503,12 +503,12 @@ func (reader *Reader) Trips() (out chan gotransit.Trip) {
 }
 
 // Levels sends Levels.
-func (reader *Reader) Levels() (out chan gotransit.Level) {
-	out = make(chan gotransit.Level, bufferSize)
+func (reader *Reader) Levels() (out chan tl.Level) {
+	out = make(chan tl.Level, bufferSize)
 	go func() {
-		ent := gotransit.Level{}
+		ent := tl.Level{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Level{}
+			e := tl.Level{}
 			loadRow(&e, row)
 			out <- e
 		})
@@ -518,12 +518,12 @@ func (reader *Reader) Levels() (out chan gotransit.Level) {
 }
 
 // Pathways sends Pathways.
-func (reader *Reader) Pathways() (out chan gotransit.Pathway) {
-	out = make(chan gotransit.Pathway, bufferSize)
+func (reader *Reader) Pathways() (out chan tl.Pathway) {
+	out = make(chan tl.Pathway, bufferSize)
 	go func() {
-		ent := gotransit.Pathway{}
+		ent := tl.Pathway{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := gotransit.Pathway{}
+			e := tl.Pathway{}
 			loadRow(&e, row)
 			out <- e
 		})

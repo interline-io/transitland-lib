@@ -3,8 +3,8 @@ package plus
 import (
 	"time"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/causes"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/causes"
 )
 
 // FareRiderCategory fare_rider_categories.txt
@@ -14,7 +14,7 @@ type FareRiderCategory struct {
 	Price            float64   `csv:"price"`
 	ExpirationDate   time.Time `csv:"expiration_date"`
 	CommencementDate time.Time `csv:"commencement_date"`
-	gotransit.BaseEntity
+	tl.BaseEntity
 }
 
 // Filename fare_rider_categories.txt
@@ -28,8 +28,8 @@ func (ent *FareRiderCategory) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *FareRiderCategory) UpdateKeys(emap *gotransit.EntityMap) error {
-	if fkid, ok := emap.GetEntity(&gotransit.FareAttribute{FareID: ent.FareID}); ok {
+func (ent *FareRiderCategory) UpdateKeys(emap *tl.EntityMap) error {
+	if fkid, ok := emap.GetEntity(&tl.FareAttribute{FareID: ent.FareID}); ok {
 		ent.FareID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("fare_id", ent.FareID)

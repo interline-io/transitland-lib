@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/testutil"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 func TestReader(t *testing.T) {
@@ -25,7 +25,7 @@ func TestReader(t *testing.T) {
 	tsa["URL"] = func() Adapter { return &URLAdapter{url: ts.URL} }
 	for k, v := range tsa {
 		t.Run(k, func(t *testing.T) {
-			testutil.TestReader(t, testutil.ExampleDir, func() gotransit.Reader {
+			testutil.TestReader(t, testutil.ExampleDir, func() tl.Reader {
 				return &Reader{Adapter: v()}
 			})
 		})

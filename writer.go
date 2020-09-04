@@ -1,4 +1,4 @@
-package gotransit
+package tl
 
 // Writer writes a GTFS feed.
 type Writer interface {

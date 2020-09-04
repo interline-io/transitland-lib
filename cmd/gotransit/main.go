@@ -5,21 +5,21 @@ import (
 	"os"
 	"strings"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/dmfr"
-	_ "github.com/interline-io/gotransit/ext/plus"
-	_ "github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/dmfr"
+	_ "github.com/interline-io/transitland-lib/ext/plus"
+	_ "github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // MustGetReader or exits.
-func MustGetReader(inurl string) gotransit.Reader {
+func MustGetReader(inurl string) tl.Reader {
 	if len(inurl) == 0 {
 		log.Exit("No reader specified")
 	}
 	// Reader
-	reader, err := gotransit.NewReader(inurl)
+	reader, err := tl.NewReader(inurl)
 	if err != nil {
 		log.Exit("No known reader for '%s': %s", inurl, err)
 	}
@@ -30,12 +30,12 @@ func MustGetReader(inurl string) gotransit.Reader {
 }
 
 // MustGetWriter or exits.
-func MustGetWriter(outurl string, create bool) gotransit.Writer {
+func MustGetWriter(outurl string, create bool) tl.Writer {
 	if len(outurl) == 0 {
 		log.Exit("No writer specified")
 	}
 	// Writer
-	writer, err := gotransit.NewWriter(outurl)
+	writer, err := tl.NewWriter(outurl)
 	if err != nil {
 		log.Exit("No known writer for '%s': %s", outurl, err)
 	}

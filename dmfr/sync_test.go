@@ -3,9 +3,9 @@ package dmfr
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/testdb"
-	"github.com/interline-io/gotransit/internal/testutil"
+	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 // Full tests

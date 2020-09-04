@@ -1,4 +1,4 @@
-module github.com/interline-io/gotransit
+module github.com/interline-io/transitland-lib
 
 go 1.12
 
@@ -16,3 +16,4 @@ require (
 	github.com/twpayne/go-geom v1.0.5-0.20190312115814-8dbb5b419be8
 	google.golang.org/appengine v1.4.0 // indirect
 )
+

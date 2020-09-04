@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/internal/log"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // AuthenticatedURLAdapter is similar to URLAdapter but takes auth and secrets.
@@ -17,7 +17,7 @@ type AuthenticatedURLAdapter struct {
 }
 
 // Download the URL to a temporary file and set the correct adapter
-func (adapter *AuthenticatedURLAdapter) Download(address string, auth gotransit.FeedAuthorization, secret Secret) error {
+func (adapter *AuthenticatedURLAdapter) Download(address string, auth tl.FeedAuthorization, secret Secret) error {
 	// Handle fragments
 	u, err := url.Parse(address)
 	if err != nil {

@@ -4,8 +4,8 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/log"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -14,10 +14,10 @@ func init() {
 	// Register driver
 	adapters["postgres"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
 	// Register readers and writers
-	r := func(url string) (gotransit.Reader, error) { return NewReader(url) }
-	gotransit.RegisterReader("postgres", r)
-	w := func(url string) (gotransit.Writer, error) { return NewWriter(url) }
-	gotransit.RegisterWriter("postgres", w)
+	r := func(url string) (tl.Reader, error) { return NewReader(url) }
+	tl.RegisterReader("postgres", r)
+	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
+	tl.RegisterWriter("postgres", w)
 }
 
 // PostgresAdapter connects to a Postgres/PostGIS database.
@@ -116,7 +116,7 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	if v, ok := ent.(*gotransit.FareAttribute); ok {
+	if v, ok := ent.(*tl.FareAttribute); ok {
 		v.Transfers = "0" // TODO: Keep?
 	}
 	table := getTableName(ent)
@@ -142,7 +142,7 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 }
 
 // BatchInsert inserts data using COPY.
-func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
+func (adapter *PostgresAdapter) BatchInsert(ents []tl.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
@@ -198,7 +198,7 @@ func (adapter *PostgresAdapter) BatchInsert(ents []gotransit.Entity) error {
 }
 
 // MultiInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) MultiInsert(ents []gotransit.Entity) error {
+func (adapter *PostgresAdapter) MultiInsert(ents []tl.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}

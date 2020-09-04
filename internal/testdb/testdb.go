@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/transitland-lib/gtdb"
 )
 
 // MustInsert panics on failure

@@ -13,7 +13,7 @@ import (
 	"github.com/rakyll/statik/fs"
 
 	// Static assets
-	_ "github.com/interline-io/gotransit/internal/schema"
+	_ "github.com/interline-io/transitland-lib/internal/schema"
 )
 
 var mapper = reflectx.NewMapperFunc("db", toSnakeCase)

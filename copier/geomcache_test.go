@@ -3,9 +3,9 @@ package copier
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/internal/testutil"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 func Test_geomCache(t *testing.T) {
@@ -15,7 +15,7 @@ func Test_geomCache(t *testing.T) {
 	}
 	r.Open()
 	defer r.Close()
-	trips := map[string]gotransit.Trip{}
+	trips := map[string]tl.Trip{}
 	count := 1
 	for trip := range r.Trips() {
 		trip.StopPatternID = count

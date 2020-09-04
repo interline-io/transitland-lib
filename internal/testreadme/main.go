@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/gtdb"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/gtdb"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func check(err error) {
 	}
 }
 
-func exampleDB(reader gotransit.Reader) {
+func exampleDB(reader tl.Reader) {
 	// Create a SQLite writer, in memory
 	dburl := "sqlite3://:memory:"
 	dbwriter, err := gtdb.NewWriter(dburl)
@@ -62,7 +62,7 @@ func exampleDB(reader gotransit.Reader) {
 	// Query database
 }
 
-func exampleCopier(reader gotransit.Reader) {
+func exampleCopier(reader tl.Reader) {
 	writer, err := gtcsv.NewWriter("/tmp/filtered.zip")
 	check(err)
 	check(writer.Open())

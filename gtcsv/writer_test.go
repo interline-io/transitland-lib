@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/testutil"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 // Round trip Writer test.
@@ -20,7 +20,7 @@ func TestWriter(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	testutil.TestWriter(t, *fe, func() gotransit.Reader { return reader }, func() gotransit.Writer { return writer })
+	testutil.TestWriter(t, *fe, func() tl.Reader { return reader }, func() tl.Writer { return writer })
 	// Clean up and double check
 	if err := os.RemoveAll(tmpdir); err != nil {
 		t.Error(err)

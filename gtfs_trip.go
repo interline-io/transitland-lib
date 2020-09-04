@@ -1,8 +1,8 @@
-package gotransit
+package tl
 
 import (
-	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/enums"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/enums"
 )
 
 // Trip trips.txt

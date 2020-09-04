@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/testutil"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 func BenchmarkWriter(b *testing.B) {
@@ -23,13 +23,13 @@ func BenchmarkWriter(b *testing.B) {
 				if err != nil {
 					b.Error(err)
 				}
-				testutil.TestWriter(b, fe, func() gotransit.Reader {
+				testutil.TestWriter(b, fe, func() tl.Reader {
 					a, err := NewReader(fe.URL)
 					if err != nil {
 						b.Error(err)
 					}
 					return a
-				}, func() gotransit.Writer {
+				}, func() tl.Writer {
 					return writer
 				})
 				// Clean up and double check

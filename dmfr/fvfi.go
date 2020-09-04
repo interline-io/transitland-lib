@@ -12,8 +12,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/dimchansky/utfbom"
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtcsv"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/gtcsv"
 )
 
 // FeedVersionFileInfo .
@@ -27,7 +27,7 @@ type FeedVersionFileInfo struct {
 	Header        string
 	CSVLike       bool
 	SHA1          string
-	gotransit.Timestamps
+	tl.Timestamps
 }
 
 // EntityID .

@@ -7,16 +7,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/interline-io/gotransit/causes"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/causes"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/enums"
-	"github.com/interline-io/gotransit/internal/log"
+	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // ErrorHandler is called on each source file and entity; errors can be nil
 type ErrorHandler interface {
-	HandleEntityErrors(gotransit.Entity, []error, []error)
+	HandleEntityErrors(tl.Entity, []error, []error)
 	HandleSourceErrors(string, []error, []error)
 }
 
@@ -68,8 +68,8 @@ func (ce *CopyError) Context() *causes.Context {
 
 // Copier copies from Reader to Writer
 type Copier struct {
-	Reader    gotransit.Reader
-	Writer    gotransit.Writer
+	Reader    tl.Reader
+	Writer    tl.Writer
 	BatchSize int
 	// Attempt to save an entity that returns validation errors
 	AllowEntityErrors    bool
@@ -90,17 +90,17 @@ type Copier struct {
 	ErrorHandler ErrorHandler
 	// book keeping
 	agencyCount         int
-	extensions          []copyableExtension      // interface
-	filters             []gotransit.EntityFilter // interface
+	extensions          []copyableExtension // interface
+	filters             []tl.EntityFilter   // interface
 	geomCache           *geomCache
 	stopPatterns        map[string]int
 	stopPatternShapeIDs map[int]string
 	result              *CopyResult
-	*gotransit.EntityMap
+	*tl.EntityMap
 }
 
 // NewCopier creates and initializes a new Copier.
-func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
+func NewCopier(reader tl.Reader, writer tl.Writer) Copier {
 	copier := Copier{
 		Reader:               reader,
 		Writer:               writer,
@@ -118,9 +118,9 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 	// Default Markers
 	copier.Marker = newYesMarker()
 	// Default EntityMap
-	copier.EntityMap = gotransit.NewEntityMap()
+	copier.EntityMap = tl.NewEntityMap()
 	// Default filters
-	copier.filters = []gotransit.EntityFilter{}
+	copier.filters = []tl.EntityFilter{}
 	// Geom Cache
 	copier.geomCache = newGeomCache()
 	copier.stopPatterns = map[string]int{}
@@ -135,7 +135,7 @@ func NewCopier(reader gotransit.Reader, writer gotransit.Writer) Copier {
 }
 
 // AddExtension adds an Extension to the copy process.
-func (copier *Copier) AddExtension(ext gotransit.Extension) error {
+func (copier *Copier) AddExtension(ext tl.Extension) error {
 	extc, ok := ext.(copyableExtension)
 	if !ok {
 		return fmt.Errorf("ext does not provide Copy method")
@@ -145,7 +145,7 @@ func (copier *Copier) AddExtension(ext gotransit.Extension) error {
 }
 
 // AddEntityFilter adds an EntityFilter to the copy process.
-func (copier *Copier) AddEntityFilter(ef gotransit.EntityFilter) error {
+func (copier *Copier) AddEntityFilter(ef tl.EntityFilter) error {
 	copier.filters = append(copier.filters, ef)
 	return nil
 }
@@ -155,7 +155,7 @@ func (copier *Copier) AddEntityFilter(ef gotransit.EntityFilter) error {
 ////////////////////////////////////
 
 // Check if the entity is marked for copying.
-func (copier *Copier) isMarked(ent gotransit.Entity) bool {
+func (copier *Copier) isMarked(ent tl.Entity) bool {
 	return copier.Marker.IsMarked(ent.Filename(), ent.EntityID())
 }
 
@@ -163,7 +163,7 @@ func (copier *Copier) isMarked(ent gotransit.Entity) bool {
 // An entity error means the entity was not not written because it had an error or was filtered out; not fatal.
 // A write error should be considered fatal and should stop any further write attempts.
 // Any errors and warnings are added to the CopyResult.
-func (copier *Copier) CopyEntity(ent gotransit.Entity) (string, error, error) {
+func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 	efn := ent.Filename()
 	eid := ent.EntityID()
 	sid := ent.EntityID()
@@ -295,7 +295,7 @@ func (copier *Copier) copyAgencies() error {
 			return err
 		}
 	}
-	copier.logCount(&gotransit.Agency{})
+	copier.logCount(&tl.Agency{})
 	return nil
 }
 
@@ -312,7 +312,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 	parents := map[string]int{}
 	farezones := map[string]string{}
 	// Copy fn
-	copyStop := func(e gotransit.Stop) error {
+	copyStop := func(e tl.Stop) error {
 		sid := e.EntityID()
 		// FareID
 		fzid := e.ZoneID
@@ -369,7 +369,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			}
 		}
 	}
-	copier.logCount(&gotransit.Stop{})
+	copier.logCount(&tl.Stop{})
 
 	// Pathways
 	for e := range copier.Reader.Pathways() {
@@ -377,7 +377,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			return err
 		}
 	}
-	copier.logCount(&gotransit.Pathway{})
+	copier.logCount(&tl.Pathway{})
 
 	// FareAttributes
 	for e := range copier.Reader.FareAttributes() {
@@ -393,12 +393,12 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			return err
 		}
 	}
-	copier.logCount(&gotransit.FareAttribute{})
+	copier.logCount(&tl.FareAttribute{})
 
 	// FareRules
 	for e := range copier.Reader.FareRules() {
 		// Explicitly check if the FareID is Marked
-		if !copier.isMarked(&gotransit.FareAttribute{FareID: e.FareID}) {
+		if !copier.isMarked(&tl.FareAttribute{FareID: e.FareID}) {
 			continue
 		}
 		// Add reference errors if we didn't write a stop with this zone.
@@ -421,7 +421,7 @@ func (copier *Copier) copyPathwaysStopsAndFares() error {
 			return err
 		}
 	}
-	copier.logCount(&gotransit.FareRule{})
+	copier.logCount(&tl.FareRule{})
 	return nil
 }
 
@@ -449,7 +449,7 @@ func (copier *Copier) copyRoutes() error {
 			return err
 		}
 	}
-	copier.logCount(&gotransit.Route{})
+	copier.logCount(&tl.Route{})
 	return nil
 }
 
@@ -475,7 +475,7 @@ func (copier *Copier) copyCalendars() error {
 	dups := map[calkey]int{}
 	// Add CalendarDates
 	for e := range copier.Reader.CalendarDates() {
-		if !copier.isMarked(&gotransit.Calendar{ServiceID: e.ServiceID}) {
+		if !copier.isMarked(&tl.Calendar{ServiceID: e.ServiceID}) {
 			continue
 		}
 		// Check for duplicates (service_id,date)
@@ -497,8 +497,8 @@ func (copier *Copier) copyCalendars() error {
 			return err
 		}
 	}
-	copier.logCount(&gotransit.Calendar{})
-	copier.logCount(&gotransit.CalendarDate{})
+	copier.logCount(&tl.Calendar{})
+	copier.logCount(&tl.CalendarDate{})
 	return nil
 }
 
@@ -509,7 +509,7 @@ func (copier *Copier) copyFeedInfos() error {
 			return err
 		}
 	}
-	copier.logCount(&gotransit.FeedInfo{})
+	copier.logCount(&tl.FeedInfo{})
 	return nil
 }
 
@@ -517,7 +517,7 @@ func (copier *Copier) copyFeedInfos() error {
 func (copier *Copier) copyTransfers() error {
 	for e := range copier.Reader.Transfers() {
 		// Check if Transfer stops are marked
-		if copier.isMarked(&gotransit.Stop{StopID: e.FromStopID}) && copier.isMarked(&gotransit.Stop{StopID: e.ToStopID}) {
+		if copier.isMarked(&tl.Stop{StopID: e.FromStopID}) && copier.isMarked(&tl.Stop{StopID: e.ToStopID}) {
 			if _, _, err := copier.CopyEntity(&e); err != nil {
 				return err
 			}
@@ -525,7 +525,7 @@ func (copier *Copier) copyTransfers() error {
 			copier.result.SkipEntityMarkedCount["transfers.txt"]++
 		}
 	}
-	copier.logCount(&gotransit.Transfer{})
+	copier.logCount(&tl.Transfer{})
 	return nil
 }
 
@@ -539,7 +539,7 @@ func (copier *Copier) copyShapes() error {
 			copier.geomCache.AddShape(sid, e)
 		}
 	}
-	copier.logCount(&gotransit.Shape{})
+	copier.logCount(&tl.Shape{})
 	return nil
 }
 
@@ -547,7 +547,7 @@ func (copier *Copier) copyShapes() error {
 func (copier *Copier) copyFrequencies() error {
 	for e := range copier.Reader.Frequencies() {
 		// Check if Trip is marked
-		if copier.isMarked(&gotransit.Trip{TripID: e.TripID}) {
+		if copier.isMarked(&tl.Trip{TripID: e.TripID}) {
 			if _, _, err := copier.CopyEntity(&e); err != nil {
 				return err
 			}
@@ -555,7 +555,7 @@ func (copier *Copier) copyFrequencies() error {
 			copier.result.SkipEntityMarkedCount["frequencies.txt"]++
 		}
 	}
-	copier.logCount(&gotransit.Frequency{})
+	copier.logCount(&tl.Frequency{})
 	return nil
 }
 
@@ -564,7 +564,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	// Cache all trips in memory
 	// If this becomes an issue, we could do a pass through trips.txt for each stop_times chunk
 	alltripids := map[string]int{}
-	trips := map[string]gotransit.Trip{}
+	trips := map[string]tl.Trip{}
 	for trip := range copier.Reader.Trips() {
 		eid := trip.EntityID()
 		alltripids[eid]++
@@ -580,7 +580,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		trips[eid] = trip
 	}
-	batch := []gotransit.StopTime{}
+	batch := []tl.StopTime{}
 	for stoptimes := range copier.Reader.StopTimesByTripID() {
 		// Error handling for trips without stop_times is after this block
 		if len(stoptimes) == 0 {
@@ -635,7 +635,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		// Check StopTime GROUP errors; log errors with trip; can block trip
 		// Example errors: less than 2 stop_times, non-increasing sequences and times, etc.
-		sterrs := gotransit.ValidateStopTimes(stoptimes)
+		sterrs := tl.ValidateStopTimes(stoptimes)
 		for _, err := range sterrs {
 			trip.AddError(err)
 		}
@@ -703,7 +703,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		batch = append(batch, stoptimes...)
 		// Write in batches
 		if len(batch) >= copier.BatchSize {
-			bst := []gotransit.Entity{}
+			bst := []tl.Entity{}
 			// note: "range" re-uses the same pointer.
 			for i := 0; i < len(batch); i++ {
 				bst = append(bst, &batch[i])
@@ -719,7 +719,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	}
 	// Write final batch
 	if len(batch) > 0 {
-		bst := []gotransit.Entity{}
+		bst := []tl.Entity{}
 		for i := 0; i < len(batch); i++ {
 			bst = append(bst, &batch[i])
 		}
@@ -737,7 +737,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			return err
 		}
 	}
-	copier.logCount(&gotransit.Trip{})
+	copier.logCount(&tl.Trip{})
 	return nil
 }
 
@@ -745,7 +745,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 ////////// Entity Support Methods //////////
 ////////////////////////////////////////////
 
-func (copier *Copier) logCount(ent gotransit.Entity) {
+func (copier *Copier) logCount(ent tl.Entity) {
 	out := []string{}
 	fn := ent.Filename()
 	fnr := strings.ReplaceAll(fn, ".txt", "")
@@ -773,7 +773,7 @@ func (copier *Copier) logCount(ent gotransit.Entity) {
 	log.Info(outs)
 }
 
-func (copier *Copier) createMissingShape(shapeID string, stoptimes []gotransit.StopTime) (string, error) {
+func (copier *Copier) createMissingShape(shapeID string, stoptimes []tl.StopTime) (string, error) {
 	stopids := []string{}
 	for _, st := range stoptimes {
 		stopids = append(stopids, st.StopID)
@@ -794,9 +794,9 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gotransit.S
 // createMissingCalendars to fully normalize ServiceIDs
 func (copier *Copier) createMissingCalendars() error {
 	// Prepare to create missing Calendars
-	missing := map[string]gotransit.Calendar{}
+	missing := map[string]tl.Calendar{}
 	for e := range copier.Reader.CalendarDates() {
-		cal := gotransit.Calendar{
+		cal := tl.Calendar{
 			ServiceID: e.ServiceID,
 			Generated: true,
 			StartDate: e.Date,

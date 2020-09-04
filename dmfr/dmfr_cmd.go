@@ -7,7 +7,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/transitland-lib/gtdb"
 )
 
 // Command is the main entry point to the DMFR command

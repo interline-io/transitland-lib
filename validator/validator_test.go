@@ -7,16 +7,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtcsv"
-	_ "github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/internal/testutil"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/gtcsv"
+	_ "github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 //////////// helpers /////////////
 
 // getExpectErrors gets any ExpectError specified by an Entity.
-func getExpectErrors(ent gotransit.Entity) []testutil.ExpectError {
+func getExpectErrors(ent tl.Entity) []testutil.ExpectError {
 	ret := []testutil.ExpectError{}
 	ex := ent.Extra()
 	value, ok := ex["expect_error"]
@@ -81,7 +81,7 @@ func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []
 	checkErrors(expecterrs, errs, cr.t)
 }
 
-func (cr *testErrorHandler) HandleEntityErrors(ent gotransit.Entity, errs []error, warns []error) {
+func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
 	errs = append(errs, warns...)
 	expecterrs := getExpectErrors(ent)
 	cr.expectErrorCount += len(expecterrs)
@@ -98,7 +98,7 @@ func TestEntityErrors(t *testing.T) {
 	if err := reader.Open(); err != nil {
 		t.Error(err)
 	}
-	testutil.AllEntities(reader, func(ent gotransit.Entity) {
+	testutil.AllEntities(reader, func(ent tl.Entity) {
 		t.Run(fmt.Sprintf("%s:%s", ent.Filename(), ent.EntityID()), func(t *testing.T) {
 			errs := ent.Errors()
 			errs = append(errs, ent.Warnings()...)

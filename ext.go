@@ -1,10 +1,10 @@
-package gotransit
+package tl
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/interline-io/gotransit/internal/log"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // Extension defines two methods that specify the Entities in an Extension and how to Create the necessary output structures, e.g. in a database.

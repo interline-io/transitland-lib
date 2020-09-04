@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/causes"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/jmoiron/sqlx"
 
 	// sqlite3
@@ -21,10 +21,10 @@ func init() {
 	// Register test adapter
 	adapters["sqlite3"] = func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} }
 	// Register readers and writers
-	r := func(url string) (gotransit.Reader, error) { return NewReader(url) }
-	gotransit.RegisterReader("sqlite3", r)
-	w := func(url string) (gotransit.Writer, error) { return NewWriter(url) }
-	gotransit.RegisterWriter("sqlite3", w)
+	r := func(url string) (tl.Reader, error) { return NewReader(url) }
+	tl.RegisterReader("sqlite3", r)
+	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
+	tl.RegisterWriter("sqlite3", w)
 	// Handle SQL function after_feed_version_import.  -- TODO: this is temporary.
 	dummy := func(fvid int) int {
 		return 0
@@ -162,7 +162,7 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 }
 
 // BatchInsert provides a fast path for creating StopTimes.
-func (adapter *SQLiteAdapter) BatchInsert(ents []gotransit.Entity) error {
+func (adapter *SQLiteAdapter) BatchInsert(ents []tl.Entity) error {
 	if len(ents) == 0 {
 		return nil
 	}
