@@ -12,8 +12,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/dimchansky/utfbom"
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // FeedVersionFileInfo .

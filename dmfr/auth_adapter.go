@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"os"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/gtcsv"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // AuthenticatedURLAdapter is similar to URLAdapter but takes auth and secrets.

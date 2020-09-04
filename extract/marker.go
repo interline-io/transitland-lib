@@ -3,8 +3,8 @@ package extract
 import (
 	"fmt"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/graph"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 /*

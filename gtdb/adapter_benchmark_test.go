@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Tests adapter Insert performance.

@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/dimchansky/utfbom"
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Feed .

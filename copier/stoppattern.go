@@ -3,7 +3,7 @@ package copier
 import (
 	"strings"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func stopPatternKey(stoptimes []tl.StopTime) string {

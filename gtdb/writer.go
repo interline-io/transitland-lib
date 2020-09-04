@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Writer takes a Reader and saves it to a database.

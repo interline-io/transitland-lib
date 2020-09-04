@@ -1,6 +1,6 @@
 package validator
 
-import tl "github.com/interline-io/transitland-lib"
+import "github.com/interline-io/transitland-lib/tl"
 
 type emptyWriter struct {
 }

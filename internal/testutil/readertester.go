@@ -3,7 +3,7 @@ package testutil
 import (
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // ReaderTester contains information about the number and types of identities expected in a Reader.

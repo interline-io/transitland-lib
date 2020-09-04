@@ -3,7 +3,7 @@ package extract
 import (
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func TestSetterFilter_Filter(t *testing.T) {

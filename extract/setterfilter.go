@@ -1,9 +1,9 @@
 package extract
 
 import (
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/gtcsv"
 	"github.com/interline-io/transitland-lib/internal/graph"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 type setterFilter struct {

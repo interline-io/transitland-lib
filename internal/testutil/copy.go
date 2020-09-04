@@ -3,7 +3,7 @@ package testutil
 import (
 	"fmt"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 type canCreateFV interface {

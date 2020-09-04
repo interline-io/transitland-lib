@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func Benchmark_stopPatternKey(b *testing.B) {

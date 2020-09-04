@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jlaffaye/ftp"
 )
 

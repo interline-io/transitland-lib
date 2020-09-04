@@ -4,7 +4,7 @@ import (
 	"os"
 	"strconv"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 var bufferSize = 1000

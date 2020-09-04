@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Test some commands.

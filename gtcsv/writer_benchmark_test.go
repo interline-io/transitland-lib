@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func BenchmarkWriter(b *testing.B) {

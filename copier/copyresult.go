@@ -3,8 +3,8 @@ package copier
 import (
 	"sort"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // CopyResult stores Copier results and statistics.

@@ -3,8 +3,8 @@ package testutil
 import (
 	"time"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/mock"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // NewMinimalTestFeed returns a minimal mock Reader & ReaderTester values.

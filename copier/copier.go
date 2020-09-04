@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/tl"
 
 	"github.com/interline-io/transitland-lib/enums"
 	"github.com/interline-io/transitland-lib/internal/log"

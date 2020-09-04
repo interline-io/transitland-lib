@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func TestGetString(t *testing.T) {

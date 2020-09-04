@@ -3,7 +3,7 @@ package copier
 import (
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func testExpectInt(t *testing.T, result, expect int) {

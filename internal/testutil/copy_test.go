@@ -3,8 +3,8 @@ package testutil
 import (
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/mock"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func TestDirectCopy(t *testing.T) {

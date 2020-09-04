@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Writer implements a GTFS CSV Writer.

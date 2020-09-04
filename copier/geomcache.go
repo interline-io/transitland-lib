@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func arePositionsSorted(a []float64) bool {

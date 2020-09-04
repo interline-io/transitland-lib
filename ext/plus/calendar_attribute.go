@@ -1,8 +1,8 @@
 package plus
 
 import (
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // CalendarAttribute calendar_attributes.txt

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func Test_exampleDB(t *testing.T) {

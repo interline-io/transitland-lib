@@ -1,6 +1,6 @@
 package copier
 
-import tl "github.com/interline-io/transitland-lib"
+import "github.com/interline-io/transitland-lib/tl"
 
 // yesMarker will always return that an entity is visited and marked.
 type yesMarker struct {

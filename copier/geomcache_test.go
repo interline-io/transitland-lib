@@ -3,9 +3,9 @@ package copier
 import (
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/gtcsv"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func Test_geomCache(t *testing.T) {

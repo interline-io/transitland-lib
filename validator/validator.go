@@ -1,9 +1,9 @@
 package validator
 
 import (
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Validator checks a GTFS source for errors and warnings.

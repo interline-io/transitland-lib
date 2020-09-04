@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/gtcsv"
 	_ "github.com/interline-io/transitland-lib/gtcsv"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 //////////// helpers /////////////

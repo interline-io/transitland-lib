@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/validator"
 )
 

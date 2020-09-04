@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 type FeedAuthorization = tl.FeedAuthorization

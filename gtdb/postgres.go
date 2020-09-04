@@ -4,8 +4,8 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )

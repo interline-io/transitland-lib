@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func makeRow(header, value string) Row {

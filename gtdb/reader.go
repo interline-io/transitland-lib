@@ -4,9 +4,9 @@ import (
 	"reflect"
 
 	sq "github.com/Masterminds/squirrel"
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func check(err error) {

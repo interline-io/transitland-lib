@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func TestReader(t *testing.T) {

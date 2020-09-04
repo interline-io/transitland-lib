@@ -1,6 +1,6 @@
 package copier
 
-import tl "github.com/interline-io/transitland-lib"
+import "github.com/interline-io/transitland-lib/tl"
 
 // InterpolateStopTimes sets missing ArrivalTime, DestinationTime values.
 // StopTimes must be sorted and valid.

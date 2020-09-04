@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/gtcsv"
 	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // ImportOptions sets various options for importing a feed.

@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"time"
 
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/gtcsv"
 	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // FetchOptions sets options for a fetch operation.

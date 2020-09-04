@@ -4,7 +4,7 @@ import (
 	"net/url"
 
 	sq "github.com/Masterminds/squirrel"
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 )
 

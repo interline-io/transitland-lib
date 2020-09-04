@@ -3,7 +3,7 @@ package mock
 import (
 	"fmt"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Writer is a mocked up Writer used in tests.

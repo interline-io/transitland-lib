@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strconv"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // FeedVersionImport .

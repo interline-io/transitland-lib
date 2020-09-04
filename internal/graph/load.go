@@ -1,6 +1,6 @@
 package graph
 
-import tl "github.com/interline-io/transitland-lib"
+import "github.com/interline-io/transitland-lib/tl"
 
 // we just need EntityID / Filename
 type entity interface {

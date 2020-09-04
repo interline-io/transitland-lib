@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"strconv"
 
-	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // FeedState .
