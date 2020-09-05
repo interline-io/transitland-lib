@@ -4,6 +4,7 @@ import (
 	"errors"
 )
 
+// find a single record.
 func find(adapter Adapter, dest interface{}, args ...interface{}) error {
 	eid, err := getID(dest)
 	if err != nil {

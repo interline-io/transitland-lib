@@ -11,7 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/interline-io/transitland-lib/tldb"
+	_ "github.com/interline-io/transitland-lib/tldb"
 )
 
 // MustGetReader or exits.
@@ -49,16 +49,6 @@ func MustGetWriter(outurl string, create bool) tl.Writer {
 		}
 	}
 	return writer
-}
-
-// MustGetDBWriter opens a database or exits.
-func MustGetDBWriter(dburl string, create bool) *tldb.Writer {
-	writer := MustGetWriter(dburl, true)
-	w, ok := writer.(*tldb.Writer)
-	if !ok {
-		log.Exit("Writer is not a database")
-	}
-	return w
 }
 
 func btos(b bool) string {

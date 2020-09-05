@@ -14,7 +14,6 @@ import (
 
 	// sqlite3
 	"github.com/mattn/go-sqlite3"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // Register.
@@ -45,7 +44,7 @@ type SQLiteAdapter struct {
 	db    sqlx.Ext
 }
 
-// Open implements Adapter Open.
+// Open the database.
 func (adapter *SQLiteAdapter) Open() error {
 	dbname := strings.Split(adapter.DBURL, "://")
 	if len(dbname) != 2 {
@@ -60,7 +59,7 @@ func (adapter *SQLiteAdapter) Open() error {
 	return nil
 }
 
-// Close implements Adapter Close.
+// Close the database.
 func (adapter *SQLiteAdapter) Close() error {
 	if a, ok := adapter.db.(canClose); ok {
 		return a.Close()
@@ -68,7 +67,7 @@ func (adapter *SQLiteAdapter) Close() error {
 	return nil
 }
 
-// Create implements Adapter Create.
+// Create the database if necessary.
 func (adapter *SQLiteAdapter) Create() error {
 	// Dont log, used often in tests
 	adb := adapter.db
@@ -162,7 +161,7 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid), nil
 }
 
-// BatchInsert provides a fast path for creating StopTimes.
+// BatchInsert provides a fast path for inserting multiple entities.
 func (adapter *SQLiteAdapter) BatchInsert(ents []tl.Entity) error {
 	if len(ents) == 0 {
 		return nil

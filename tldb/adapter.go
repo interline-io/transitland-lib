@@ -23,7 +23,7 @@ func newAdapter(dburl string) Adapter {
 	return fn(dburl)
 }
 
-// Adapter implements details specific to each backend.
+// Adapter provides an interface for connecting to various kinds of database backends.
 type Adapter interface {
 	Open() error
 	Close() error

@@ -65,7 +65,7 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	return strconv.Itoa(eid), err
 }
 
-// AddEntities provides a generic interface for adding Entities to the database.
+// AddEntities provides a generic interface for adding entities to the database.
 func (writer *Writer) AddEntities(ents []tl.Entity) error {
 	for _, ent := range ents {
 		if z, ok := ent.(canSetFeedVersion); ok {
@@ -75,7 +75,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) error {
 	return writer.Adapter.BatchInsert(ents)
 }
 
-// CreateFeedVersion creates a new Feed Version and inserts into the database.
+// CreateFeedVersion creates a new FeedVersion and inserts into the database.
 func (writer *Writer) CreateFeedVersion(reader tl.Reader) (int, error) {
 	if reader == nil {
 		return 0, errors.New("reader required")

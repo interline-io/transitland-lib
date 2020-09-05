@@ -10,7 +10,6 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
-	_ "github.com/interline-io/transitland-lib/tlcsv"
 )
 
 //////////// helpers /////////////

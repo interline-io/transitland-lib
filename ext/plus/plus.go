@@ -20,7 +20,7 @@ func (ext Ext) Create(writer tl.Writer) error {
 	return nil
 }
 
-// Entities returns the Entities defined by GTFS Plus.
+// Entities returns the entities defined by GTFS Plus.
 func (ext Ext) Entities() []tl.Entity {
 	return []tl.Entity{
 		&CalendarAttribute{},

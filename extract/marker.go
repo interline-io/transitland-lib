@@ -36,7 +36,7 @@ fare_rule: route present and marked, or at least 1 hit in origin/destination/con
 
 // TODO: Use found map[graph.Node] bool values, not pointers
 
-// Marker selects Entities specified during the Filter method.
+// Marker selects entities specified during the Filter method.
 type Marker struct {
 	graph *graph.EntityGraph
 	found map[*graph.Node]bool

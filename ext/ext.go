@@ -8,7 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-// Extension defines two methods that specify the Entities in an Extension and how to Create the necessary output structures, e.g. in a database.
+// Extension defines two methods that specify the entities in an Extension and how to Create the necessary output structures, e.g. in a database.
 type Extension interface {
 	Create(tl.Writer) error
 	Entities() []tl.Entity

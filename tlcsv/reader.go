@@ -37,7 +37,7 @@ func NewReader(path string) (*Reader, error) {
 	return &Reader{Adapter: a}, nil
 }
 
-// ReadEntities provides a generic interface for reading Entities.
+// ReadEntities provides a generic interface for reading entities.
 func (reader *Reader) ReadEntities(c interface{}) error {
 	// Magic
 	outValue := reflect.ValueOf(c)

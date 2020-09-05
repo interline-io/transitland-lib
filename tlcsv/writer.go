@@ -44,7 +44,7 @@ func (writer *Writer) NewReader() (tl.Reader, error) {
 	return NewReader(writer.WriterAdapter.Path())
 }
 
-// AddEntities provides a generic interface for adding Entities.
+// AddEntities provides a generic interface for adding entities.
 func (writer *Writer) AddEntities(ents []tl.Entity) error {
 	if len(ents) == 0 {
 		return nil

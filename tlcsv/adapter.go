@@ -129,7 +129,7 @@ func (adapter *S3Adapter) Close() error {
 
 /////////////////////
 
-// ZipAdapter supports zip archives.
+// ZipAdapter supports reading from zip archives.
 type ZipAdapter struct {
 	path           string
 	internalPrefix string
@@ -205,7 +205,7 @@ func (adapter ZipAdapter) Exists() bool {
 	return true
 }
 
-// OpenFile opens the file inside the archive.
+// OpenFile opens the file inside the archive and passes it to the provided callback.
 func (adapter ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 	r, err := zip.OpenReader(adapter.path)
 	if err != nil {
@@ -313,7 +313,7 @@ type DirAdapter struct {
 	files map[string]*os.File
 }
 
-// NewDirAdapter returns an initialized DirAdapter
+// NewDirAdapter returns an initialized DirAdapter.
 func NewDirAdapter(path string) *DirAdapter {
 	return &DirAdapter{
 		path:  path,

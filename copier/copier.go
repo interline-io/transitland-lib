@@ -233,7 +233,7 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 ////////// Copy Methods //////////
 //////////////////////////////////
 
-// Copy copies Base GTFS Entities from the Reader to the Writer, returning the summary as a CopyResult.
+// Copy copies Base GTFS entities from the Reader to the Writer, returning the summary as a CopyResult.
 func (copier *Copier) Copy() *CopyResult {
 	// Handle source errors and warnings
 	sourceErrors := map[string][]error{}

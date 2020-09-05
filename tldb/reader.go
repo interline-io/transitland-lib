@@ -22,7 +22,7 @@ type Reader struct {
 	FeedVersionIDs []int
 }
 
-// NewReader returns an initialized Reader.
+// NewReader returns an initialized Reader based on the provided url string.
 func NewReader(dburl string) (*Reader, error) {
 	return &Reader{Adapter: newAdapter(dburl), PageSize: 1000}, nil
 }
@@ -54,7 +54,7 @@ func (reader *Reader) Where() sq.SelectBuilder {
 	return q
 }
 
-// ReadEntities provides a generic interface for reading Entities.
+// ReadEntities provides a generic interface for reading entities.
 func (reader *Reader) ReadEntities(c interface{}) error {
 	// Seems to work.
 	outValue := reflect.ValueOf(c)

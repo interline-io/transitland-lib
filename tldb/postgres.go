@@ -107,7 +107,7 @@ func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...in
 	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
-// Update a single record
+// Update a single entity.
 func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
 	return update(adapter, ent, columns...)
 }
