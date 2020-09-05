@@ -29,10 +29,10 @@
 
 Linux and macOS binaries are attached to each [release](https://github.com/interline-io/transitland-lib/releases).
 
-### To build from source
+### To install binary from source
 
 ```bash
-go get github.com/interline-io/transitland-lib
+go get github.com/interline-io/transitland-lib/cmd/transitland
 ```
 
 Main dependencies:
@@ -59,7 +59,7 @@ The main subcommands are:
 The validate command performs a basic validation on a data source and writes the results to standard out.
 
 ```
-$ transitland validate --help
+% transitland validate --help
 Usage: validate <reader>
   -ext value
     	Include GTFS Extension
@@ -68,7 +68,7 @@ Usage: validate <reader>
 Example: 
 
 ```sh
-$ transitland validate "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip"
+% transitland validate "https://www.bart.gov/dev/schedules/google_transit.zip"
 ```
 
 ### `copy` command
@@ -76,7 +76,7 @@ $ transitland validate "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip
 The copy command performs a basic copy from a reader to a writer. By default, any entity with errors will be skipped and not written to output. This can be ignored with `-allow-entity-errors` to ignore simple errors and `-allow-reference-errors` to ignore entity relationship errors, such as a reference to a non-existent stop.
 
 ```
-$ transitland copy --help
+% transitland copy --help
 Usage: copy <reader> <writer>
   -allow-entity-errors
     	Allow entities with errors to be copied
@@ -93,11 +93,11 @@ Usage: copy <reader> <writer>
 Example:
 
 ```sh
-$ transitland copy --allow-entity-errors "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip" output.zip
+% transitland copy --allow-entity-errors "https://www.bart.gov/dev/schedules/google_transit.zip" output.zip
 
-$ unzip -p output.zip agency.txt
+% unzip -p output.zip agency.txt
 agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
-1000,Caltrain,http://www.caltrain.com,America/Los_Angeles,en,800-660-4287,,
+BART,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6000,,
   ```
 
 ### `extract` command
@@ -105,7 +105,7 @@ agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency
 The extract command extends the basic copy command with a number of additional options and transformations. It can be used to pull out a single route or trip, interpolate stop times, override a single value on an entity, etc. This is a separate command to keep the basic copy command simple while allowing the extract command to grow and add more features over time.
 
 ```
-$ transitland extract --help
+% transitland extract --help
 Usage: extract <input> <output>
   -allow-entity-errors
     	Allow entities with errors to be copied
@@ -144,31 +144,32 @@ Usage: extract <input> <output>
 Example:
 
 ```sh
-# Extract a single trip from the Caltrain GTFS, and rename the agency to "caltrain".
-$ transitland extract -extract-trip 305 -set agency.txt,1000,agency_id,caltrain "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip" output2.zip
+# Extract a single trip from the BART GTFS, and rename the agency to "test".
+% transitland extract -extract-trip "3050453" -set "agency.txt,BART,agency_id,test" "https://www.bart.gov/dev/schedules/google_transit.zip" output2.zip
 
 # Note renamed agency
-$ unzip -p output2.zip agency.txt
+% unzip -p output2.zip agency.txt
 agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
-caltrain,Caltrain,http://www.caltrain.com,America/Los_Angeles,en,800-660-4287,,
+test,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6000,,
 
 # Only entities related to the specified trip are included in the output.
-$ unzip -p output2.zip trips.txt
+% unzip -p output2.zip trips.txt
 route_id,service_id,trip_id,trip_headsign,trip_short_name,direction_id,block_id,shape_id,wheelchair_accessible,bikes_allowed
-12867,c_16869_b_19500_d_31,305,San Francisco Caltrain Station,305,0,,p_692594,0,0
+1,2020_09_14-DX-MVS-Weekday-15,3050453,San Francisco International Airport,,1,,01_shp,0,0
 
 $ unzip -p output2.zip routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color,route_sort_order
-12867,caltrain,Bullet,Baby Bullet,,2,,E31837,ffffff,2
+1,test,YL-S,Antioch to SFIA/Millbrae,,1,http://www.bart.gov/schedules/bylineresults?route=1,FFFF33,,0
 
-$ unzip -p output2.zip stop_times.txt
+% transitland % unzip -p output2.zip stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,timepoint
-305,05:45:00,05:45:00,70261,1,,0,0,0.00000,1
-305,06:01:00,06:01:00,70211,2,,0,0,17498.98397,1
-305,06:09:00,06:09:00,70171,3,,0,0,27096.41601,1
-305,06:19:00,06:19:00,70111,4,,0,0,42877.37732,1
-305,06:28:00,06:28:00,70061,5,,0,0,53641.84115,1
-305,06:47:00,06:47:00,70011,6,,0,0,75372.02742,1
+3050453,04:53:00,04:53:00,CONC,0,,0,0,0.00000,0
+3050453,04:58:00,04:58:00,PHIL,2,,0,0,4.06000,0
+3050453,05:01:00,05:02:00,WCRK,3,,0,0,5.77000,0
+3050453,05:06:00,05:07:00,LAFY,4,,0,0,9.23000,0
+3050453,05:11:00,05:12:00,ORIN,5,,0,0,12.99000,0
+3050453,05:17:00,05:18:00,ROCK,6,,0,0,17.38000,0
+...
 ```
 
 ### `dmfr` command
