@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -215,9 +216,9 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts ImportOptions) 
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer)
 	for _, e := range opts.Extensions {
-		ext, err := tl.GetExtension(e)
+		ext, err := ext.GetExtension(e)
 		if err != nil {
-			panic("ext not found")
+			panic("Extension not found")
 		}
 		cp.AddExtension(ext)
 	}

@@ -4,8 +4,8 @@ import (
 	"flag"
 
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -61,10 +61,10 @@ func (cmd *copyCommand) Run(args []string) error {
 		}
 		cp.NormalizeServiceIDs = true
 	}
-	for _, ext := range cmd.extensions {
-		e, err := tl.GetExtension(ext)
+	for _, extName := range cmd.extensions {
+		e, err := ext.GetExtension(extName)
 		if err != nil {
-			log.Exit("No extension for: %s", ext)
+			log.Exit("No extension for: %s", extName)
 		}
 		cp.AddExtension(e)
 		if cmd.create {
@@ -74,10 +74,10 @@ func (cmd *copyCommand) Run(args []string) error {
 		}
 	}
 	// Add filters
-	for _, ext := range cmd.filters {
-		ef, err := tl.GetEntityFilter(ext)
+	for _, extName := range cmd.filters {
+		ef, err := ext.GetEntityFilter(extName)
 		if err != nil {
-			log.Exit("No filter for '%s': %s", ext, err)
+			log.Exit("No filter for '%s': %s", extName, err)
 		}
 		cp.AddEntityFilter(ef)
 	}

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -134,10 +135,10 @@ func NewCopier(reader tl.Reader, writer tl.Writer) Copier {
 }
 
 // AddExtension adds an Extension to the copy process.
-func (copier *Copier) AddExtension(ext tl.Extension) error {
-	extc, ok := ext.(copyableExtension)
+func (copier *Copier) AddExtension(e ext.Extension) error {
+	extc, ok := e.(copyableExtension)
 	if !ok {
-		return fmt.Errorf("ext does not provide Copy method")
+		return fmt.Errorf("Extension does not provide Copy method")
 	}
 	copier.extensions = append(copier.extensions, extc)
 	return nil
@@ -263,8 +264,8 @@ func (copier *Copier) Copy() *CopyResult {
 			return copier.result
 		}
 	}
-	for _, ext := range copier.extensions {
-		if err := ext.Copy(copier); err != nil {
+	for _, e := range copier.extensions {
+		if err := e.Copy(copier); err != nil {
 			copier.result.WriteError = err
 			return copier.result
 		}

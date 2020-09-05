@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
@@ -15,9 +16,9 @@ func init() {
 	adapters["postgres"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
 	// Register readers and writers
 	r := func(url string) (tl.Reader, error) { return NewReader(url) }
-	tl.RegisterReader("postgres", r)
+	ext.RegisterReader("postgres", r)
 	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
-	tl.RegisterWriter("postgres", w)
+	ext.RegisterWriter("postgres", w)
 }
 
 // PostgresAdapter connects to a Postgres/PostGIS database.
@@ -151,7 +152,7 @@ func (adapter *PostgresAdapter) BatchInsert(ents []tl.Entity) error {
 	var tx *sqlx.Tx
 	commit := true
 	if a, ok := adapter.db.(*queryLogger); ok {
-		if b, ok2 := a.ext.(*sqlx.Tx); ok2 {
+		if b, ok2 := a.sqext.(*sqlx.Tx); ok2 {
 			tx = b
 			commit = false
 		}

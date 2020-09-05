@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/validator"
 )
 
@@ -33,10 +33,10 @@ func (cmd *validateCommand) Run(args []string) error {
 	if err != nil {
 		return err
 	}
-	for _, ext := range cmd.validateExtensions {
-		e, err := tl.GetExtension(ext)
+	for _, extName := range cmd.validateExtensions {
+		e, err := ext.GetExtension(extName)
 		if err != nil {
-			return fmt.Errorf("No extension for: %s", ext)
+			return fmt.Errorf("No extension for: %s", extName)
 		}
 		v.Copier.AddExtension(e)
 	}

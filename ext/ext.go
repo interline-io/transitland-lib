@@ -1,22 +1,23 @@
-package tl
+package ext
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Extension defines two methods that specify the Entities in an Extension and how to Create the necessary output structures, e.g. in a database.
 type Extension interface {
-	Create(Writer) error
-	Entities() []Entity
+	Create(tl.Writer) error
+	Entities() []tl.Entity
 }
 
-type readerFactory func(dburl string) (Reader, error)
-type writerFactory func(dburl string) (Writer, error)
+type readerFactory func(dburl string) (tl.Reader, error)
+type writerFactory func(dburl string) (tl.Writer, error)
 type extensionFactory func() Extension
-type entityFilterFactory func() EntityFilter
+type entityFilterFactory func() tl.EntityFilter
 
 var readerFactories = map[string]readerFactory{}
 var writerFactories = map[string]writerFactory{}
@@ -65,7 +66,7 @@ func RegisterEntityFilter(name string) {
 }
 
 // NewReader uses the scheme prefix as the driver name, defaulting to csv.
-func NewReader(url string) (Reader, error) {
+func NewReader(url string) (tl.Reader, error) {
 	scheme := strings.Split(url, "://")
 	if len(scheme) > 1 {
 		return GetReader(scheme[0], url)
@@ -74,7 +75,7 @@ func NewReader(url string) (Reader, error) {
 }
 
 // MustOpenReaderOrPanic is a helper that returns an opened reader or panics.
-func MustOpenReaderOrPanic(path string) Reader {
+func MustOpenReaderOrPanic(path string) tl.Reader {
 	r, err := NewReader(path)
 	if err != nil {
 		panic(fmt.Sprintf("No handler for reader '%s': %s", path, err.Error()))
@@ -86,7 +87,7 @@ func MustOpenReaderOrPanic(path string) Reader {
 }
 
 // MustOpenReaderOrExit is a helper that returns an opened a reader or exits.
-func MustOpenReaderOrExit(path string) Reader {
+func MustOpenReaderOrExit(path string) tl.Reader {
 	r, err := NewReader(path)
 	if err != nil {
 		log.Exit("No handler for reader '%s': %s", path, err.Error())
@@ -98,7 +99,7 @@ func MustOpenReaderOrExit(path string) Reader {
 }
 
 // NewWriter uses the scheme prefix as the driver name, defaulting to csv.
-func NewWriter(dburl string) (Writer, error) {
+func NewWriter(dburl string) (tl.Writer, error) {
 	url := strings.Split(dburl, "://")
 	if len(url) > 1 {
 		return GetWriter(url[0], dburl)
@@ -107,7 +108,7 @@ func NewWriter(dburl string) (Writer, error) {
 }
 
 // MustOpenWriterOrPanic is a helper that returns an opened writer or panics.
-func MustOpenWriterOrPanic(path string) Writer {
+func MustOpenWriterOrPanic(path string) tl.Writer {
 	r, err := NewWriter(path)
 	if err != nil {
 		panic(fmt.Sprintf("No handler for reader '%s': %s", path, err.Error()))
@@ -119,7 +120,7 @@ func MustOpenWriterOrPanic(path string) Writer {
 }
 
 // MustOpenWriterOrExit is a helper that returns an opened a writer or exits.
-func MustOpenWriterOrExit(path string) Writer {
+func MustOpenWriterOrExit(path string) tl.Writer {
 	r, err := NewWriter(path)
 	if err != nil {
 		log.Exit("No handler for writer '%s': %s", path, err.Error())
@@ -131,7 +132,7 @@ func MustOpenWriterOrExit(path string) Writer {
 }
 
 // GetReader returns a Reader for the URL.
-func GetReader(driver string, dburl string) (Reader, error) {
+func GetReader(driver string, dburl string) (tl.Reader, error) {
 	if f, ok := readerFactories[driver]; ok {
 		return f(dburl)
 	}
@@ -139,7 +140,7 @@ func GetReader(driver string, dburl string) (Reader, error) {
 }
 
 // GetWriter returns a Writer for the URL.
-func GetWriter(driver string, dburl string) (Writer, error) {
+func GetWriter(driver string, dburl string) (tl.Writer, error) {
 	if f, ok := writerFactories[driver]; ok {
 		return f(dburl)
 	}
@@ -155,7 +156,7 @@ func GetExtension(name string) (Extension, error) {
 }
 
 // GetEntityFilter returns a Transform.
-func GetEntityFilter(name string) (EntityFilter, error) {
+func GetEntityFilter(name string) (tl.EntityFilter, error) {
 	if f, ok := entityFilterFactories[name]; ok {
 		return f(), nil
 	}

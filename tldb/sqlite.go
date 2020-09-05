@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/jmoiron/sqlx"
@@ -22,9 +23,9 @@ func init() {
 	adapters["sqlite3"] = func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} }
 	// Register readers and writers
 	r := func(url string) (tl.Reader, error) { return NewReader(url) }
-	tl.RegisterReader("sqlite3", r)
+	ext.RegisterReader("sqlite3", r)
 	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
-	tl.RegisterWriter("sqlite3", w)
+	ext.RegisterWriter("sqlite3", w)
 	// Handle SQL function after_feed_version_import.  -- TODO: this is temporary.
 	dummy := func(fvid int) int {
 		return 0
@@ -72,7 +73,7 @@ func (adapter *SQLiteAdapter) Create() error {
 	// Dont log, used often in tests
 	adb := adapter.db
 	if a, ok := adapter.db.(*queryLogger); ok {
-		adb = a.ext
+		adb = a.sqext
 	}
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil

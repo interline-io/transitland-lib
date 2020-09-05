@@ -2,12 +2,13 @@ package plus
 
 import (
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
 func init() {
-	ext := func() tl.Extension { return Ext{} }
-	tl.RegisterExtension("plus", ext)
+	e := func() ext.Extension { return Ext{} }
+	ext.RegisterExtension("plus", e)
 }
 
 // Ext is the GTFS Plus Extension.

@@ -6,10 +6,11 @@ import (
 	"strings"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/ext"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
-	_ "github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
+	_ "github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -19,7 +20,7 @@ func MustGetReader(inurl string) tl.Reader {
 		log.Exit("No reader specified")
 	}
 	// Reader
-	reader, err := tl.NewReader(inurl)
+	reader, err := ext.NewReader(inurl)
 	if err != nil {
 		log.Exit("No known reader for '%s': %s", inurl, err)
 	}
@@ -35,7 +36,7 @@ func MustGetWriter(outurl string, create bool) tl.Writer {
 		log.Exit("No writer specified")
 	}
 	// Writer
-	writer, err := tl.NewWriter(outurl)
+	writer, err := ext.NewWriter(outurl)
 	if err != nil {
 		log.Exit("No known writer for '%s': %s", outurl, err)
 	}

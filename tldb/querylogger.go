@@ -66,7 +66,7 @@ func qlog(qstr string, a ...interface{}) {
 }
 
 // ext is for wrapped sqlx to be used in squirrel.
-type ext interface {
+type sqext interface {
 	sqlx.Ext
 	// These are required for squirrel.. :(
 	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
@@ -77,44 +77,44 @@ type ext interface {
 
 // queryLogger wraps sql/sqlx methods with loggers.
 type queryLogger struct {
-	ext
+	sqext
 }
 
 // Exec .
 func (p *queryLogger) Exec(query string, args ...interface{}) (sql.Result, error) {
 	qlog(query, args...)
-	return p.ext.Exec(query, args...)
+	return p.sqext.Exec(query, args...)
 }
 
 // Query .
 func (p *queryLogger) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	qlog(query, args...)
-	return p.ext.Query(query, args...)
+	return p.sqext.Query(query, args...)
 }
 
 // QueryRow .
 func (p *queryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
 	qlog(query, args...)
-	return p.ext.QueryRow(query, args...)
+	return p.sqext.QueryRow(query, args...)
 }
 
 // Queryx .
 func (p *queryLogger) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
 	qlog(query, args...)
-	return p.ext.Queryx(query, args...)
+	return p.sqext.Queryx(query, args...)
 }
 
 // QueryRowx .
 func (p *queryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
 	qlog(query, args...)
-	return p.ext.QueryRowx(query, args...)
+	return p.sqext.QueryRowx(query, args...)
 }
 
 func (p *queryLogger) Beginx() (*sqlx.Tx, error) {
-	if a, ok := p.ext.(*sqlx.Tx); ok {
+	if a, ok := p.sqext.(*sqlx.Tx); ok {
 		return a, nil
 	}
-	if a, ok := p.ext.(canBeginx); ok {
+	if a, ok := p.sqext.(canBeginx); ok {
 		return a.Beginx()
 	}
 	return nil, errors.New("cannot start tx")
