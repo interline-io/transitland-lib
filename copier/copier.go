@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enum"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
 // ErrorHandler is called on each source file and entity; errors can be nil

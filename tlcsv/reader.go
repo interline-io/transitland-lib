@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // s2D is two dimensional string slice

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enum"
+	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
 // Route routes.txt

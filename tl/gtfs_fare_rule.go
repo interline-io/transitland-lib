@@ -1,8 +1,8 @@
 package tl
 
 import (
-	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enum"
+	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
 // FareRule fare_rules.txt

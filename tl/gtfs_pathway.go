@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // Pathway pathways.txt

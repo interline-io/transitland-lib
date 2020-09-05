@@ -3,7 +3,7 @@ package tl
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // Frequency frequencies.txt

@@ -3,8 +3,8 @@ package plus
 import (
 	"time"
 
-	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // FareRiderCategory fare_rider_categories.txt

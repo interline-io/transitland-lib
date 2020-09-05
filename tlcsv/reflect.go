@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // check for SetString interface
