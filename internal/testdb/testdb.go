@@ -4,11 +4,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // MustInsert panics on failure
-func MustInsert(atx gtdb.Adapter, ent interface{}) int {
+func MustInsert(atx tldb.Adapter, ent interface{}) int {
 	id, err := atx.Insert(ent)
 	if err != nil {
 		panic(err)
@@ -17,7 +17,7 @@ func MustInsert(atx gtdb.Adapter, ent interface{}) int {
 }
 
 // MustUpdate panics on failure
-func MustUpdate(atx gtdb.Adapter, ent interface{}, columns ...string) {
+func MustUpdate(atx tldb.Adapter, ent interface{}, columns ...string) {
 	err := atx.Update(ent, columns...)
 	if err != nil {
 		panic(err)
@@ -25,7 +25,7 @@ func MustUpdate(atx gtdb.Adapter, ent interface{}, columns ...string) {
 }
 
 // MustFind panics on failure
-func MustFind(atx gtdb.Adapter, ent interface{}, qargs ...interface{}) {
+func MustFind(atx tldb.Adapter, ent interface{}, qargs ...interface{}) {
 	err := atx.Find(ent, qargs...)
 	if err != nil {
 		panic(err)
@@ -33,7 +33,7 @@ func MustFind(atx gtdb.Adapter, ent interface{}, qargs ...interface{}) {
 }
 
 // MustGet panics on failure
-func MustGet(atx gtdb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
+func MustGet(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
 	err := atx.Get(ent, qstr, qargs...)
 	if err != nil {
 		panic(err)
@@ -41,7 +41,7 @@ func MustGet(atx gtdb.Adapter, ent interface{}, qstr string, qargs ...interface{
 }
 
 // MustSelect panics on failure
-func MustSelect(atx gtdb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
+func MustSelect(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
 	err := atx.Select(ent, qstr, qargs...)
 	if err != nil {
 		panic(err)
@@ -51,7 +51,7 @@ func MustSelect(atx gtdb.Adapter, ent interface{}, qstr string, qargs ...interfa
 ////////////
 
 // ShouldInsert sends a test error on failure
-func ShouldInsert(t *testing.T, atx gtdb.Adapter, ent interface{}) int {
+func ShouldInsert(t *testing.T, atx tldb.Adapter, ent interface{}) int {
 	id, err := atx.Insert(ent)
 	if err != nil {
 		t.Errorf("failed insert: %s", err.Error())
@@ -60,7 +60,7 @@ func ShouldInsert(t *testing.T, atx gtdb.Adapter, ent interface{}) int {
 }
 
 // ShouldUpdate sends a test error on failure
-func ShouldUpdate(t *testing.T, atx gtdb.Adapter, ent interface{}, columns ...string) {
+func ShouldUpdate(t *testing.T, atx tldb.Adapter, ent interface{}, columns ...string) {
 	err := atx.Update(ent, columns...)
 	if err != nil {
 		t.Errorf("failed update: %s", err.Error())
@@ -68,7 +68,7 @@ func ShouldUpdate(t *testing.T, atx gtdb.Adapter, ent interface{}, columns ...st
 }
 
 // ShouldFind pasends a test error on failure
-func ShouldFind(t *testing.T, atx gtdb.Adapter, ent interface{}, qargs ...interface{}) {
+func ShouldFind(t *testing.T, atx tldb.Adapter, ent interface{}, qargs ...interface{}) {
 	err := atx.Find(ent, qargs...)
 	if err != nil {
 		t.Errorf("failed find: %s", err.Error())
@@ -76,7 +76,7 @@ func ShouldFind(t *testing.T, atx gtdb.Adapter, ent interface{}, qargs ...interf
 }
 
 // ShouldGet pansends a test error on failure
-func ShouldGet(t *testing.T, atx gtdb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
+func ShouldGet(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
 	err := atx.Get(ent, qstr, qargs...)
 	if err != nil {
 		t.Errorf("failed get: %s", err.Error())
@@ -84,7 +84,7 @@ func ShouldGet(t *testing.T, atx gtdb.Adapter, ent interface{}, qstr string, qar
 }
 
 // ShouldSelect sends a test error on failure
-func ShouldSelect(t *testing.T, atx gtdb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
+func ShouldSelect(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
 	err := atx.Select(ent, qstr, qargs...)
 	if err != nil {
 		t.Errorf("failed select: %s", err.Error())
@@ -94,9 +94,9 @@ func ShouldSelect(t *testing.T, atx gtdb.Adapter, ent interface{}, qstr string, 
 ////////////
 
 // WithAdapterRollback runs a callback inside a Tx and then aborts, returns any error from original callback.
-func WithAdapterRollback(cb func(gtdb.Adapter) error) error {
+func WithAdapterRollback(cb func(tldb.Adapter) error) error {
 	var err error
-	cb2 := func(atx gtdb.Adapter) error {
+	cb2 := func(atx tldb.Adapter) error {
 		err = cb(atx)
 		return errors.New("rollback")
 	}
@@ -105,9 +105,9 @@ func WithAdapterRollback(cb func(gtdb.Adapter) error) error {
 }
 
 // WithAdapterTx runs a callback inside a Tx, commits if callback returns nil.
-func WithAdapterTx(cb func(gtdb.Adapter) error) error {
-	adapter := gtdb.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
-	writer := gtdb.Writer{Adapter: &adapter}
+func WithAdapterTx(cb func(tldb.Adapter) error) error {
+	adapter := tldb.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
+	writer := tldb.Writer{Adapter: &adapter}
 	if err := writer.Open(); err != nil {
 		panic(err)
 	}
@@ -120,10 +120,10 @@ func WithAdapterTx(cb func(gtdb.Adapter) error) error {
 
 // AdapterIgnoreTx .
 type AdapterIgnoreTx struct {
-	gtdb.Adapter
+	tldb.Adapter
 }
 
 // Tx runs in same tx if tx already open, otherwise runs without tx
-func (atx *AdapterIgnoreTx) Tx(cb func(gtdb.Adapter) error) error {
+func (atx *AdapterIgnoreTx) Tx(cb func(tldb.Adapter) error) error {
 	return cb(atx)
 }

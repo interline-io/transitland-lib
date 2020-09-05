@@ -7,9 +7,9 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // SyncOptions sets options for a sync operation.
@@ -26,7 +26,7 @@ type SyncResult struct {
 }
 
 // MainSync .
-func MainSync(atx gtdb.Adapter, opts SyncOptions) (SyncResult, error) {
+func MainSync(atx tldb.Adapter, opts SyncOptions) (SyncResult, error) {
 	// Load
 	sr := SyncResult{}
 	feedids := []int{}
@@ -75,7 +75,7 @@ func MainSync(atx gtdb.Adapter, opts SyncOptions) (SyncResult, error) {
 }
 
 // ImportFeed .
-func ImportFeed(atx gtdb.Adapter, rfeed Feed) (int, bool, error) {
+func ImportFeed(atx tldb.Adapter, rfeed Feed) (int, bool, error) {
 	// Check if we have the existing Feed
 	feedid := 0
 	found := false
@@ -103,7 +103,7 @@ func ImportFeed(atx gtdb.Adapter, rfeed Feed) (int, bool, error) {
 }
 
 // HideUnseedFeeds .
-func HideUnseedFeeds(atx gtdb.Adapter, found []int) (int, error) {
+func HideUnseedFeeds(atx tldb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
 	t := tl.OptionalTime{Time: time.Now(), Valid: true}
 	r, err := atx.Sqrl().

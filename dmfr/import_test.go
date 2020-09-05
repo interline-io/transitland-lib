@@ -3,14 +3,14 @@ package dmfr
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 func TestFindImportableFeeds(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		f := caltrain(atx, "test")
 		allfvids := []int{}
 		for i := 0; i < 10; i++ {
@@ -36,14 +36,14 @@ func TestFindImportableFeeds(t *testing.T) {
 }
 
 func TestMainImportFeedVersion(t *testing.T) {
-	setup := func(atx gtdb.Adapter, filename string) int {
+	setup := func(atx tldb.Adapter, filename string) int {
 		// Create FV
 		fv := tl.FeedVersion{}
 		fv.File = filename
 		return testdb.ShouldInsert(t, atx, &fv)
 	}
 	t.Run("Success", func(t *testing.T) {
-		testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 			fvid := setup(atx, testutil.ExampleDir.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := MainImportFeedVersion(&atx2, ImportOptions{FeedVersionID: fvid})
@@ -77,7 +77,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 	})
 	t.Run("Failed", func(t *testing.T) {
 		fvid := 0
-		err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 			fvid = setup(atx, "../testdata/does-not-exist")
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := MainImportFeedVersion(&atx2, ImportOptions{FeedVersionID: fvid})
@@ -105,7 +105,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 }
 
 func TestImportFeedVersion(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create FV
 		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
 		fvid := testdb.ShouldInsert(t, atx, &fv)

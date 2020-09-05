@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // SyncCommand syncs a DMFR to a database.
@@ -13,7 +13,7 @@ type SyncCommand struct {
 	DBURL      string
 	Filenames  []string
 	HideUnseen bool
-	adapter    gtdb.Adapter
+	adapter    tldb.Adapter
 }
 
 // Parse command line options.
@@ -44,7 +44,7 @@ func (cmd *SyncCommand) Run() error {
 		Filenames:  cmd.Filenames,
 		HideUnseen: cmd.HideUnseen,
 	}
-	return cmd.adapter.Tx(func(atx gtdb.Adapter) error {
+	return cmd.adapter.Tx(func(atx tldb.Adapter) error {
 		_, err := MainSync(atx, opts)
 		return err
 	})

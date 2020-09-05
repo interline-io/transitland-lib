@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 )
 
 // Shape shapes.txt
@@ -95,11 +95,11 @@ func (ent *Shape) Warnings() (errs []error) {
 // Errors for this Entity.
 func (ent *Shape) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enums.CheckPresent("shape_id", ent.ShapeID)...)
-	errs = append(errs, enums.CheckInsideRange("shape_pt_lat", ent.ShapePtLat, -90.0, 90.0)...)
-	errs = append(errs, enums.CheckInsideRange("shape_pt_lon", ent.ShapePtLon, -180.0, 180.0)...)
-	errs = append(errs, enums.CheckPositiveInt("shape_pt_sequence", ent.ShapePtSequence)...)
-	errs = append(errs, enums.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled)...)
+	errs = append(errs, enum.CheckPresent("shape_id", ent.ShapeID)...)
+	errs = append(errs, enum.CheckInsideRange("shape_pt_lat", ent.ShapePtLat, -90.0, 90.0)...)
+	errs = append(errs, enum.CheckInsideRange("shape_pt_lon", ent.ShapePtLon, -180.0, 180.0)...)
+	errs = append(errs, enum.CheckPositiveInt("shape_pt_sequence", ent.ShapePtSequence)...)
+	errs = append(errs, enum.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled)...)
 	return errs
 }
 

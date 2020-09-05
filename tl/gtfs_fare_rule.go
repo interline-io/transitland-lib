@@ -2,7 +2,7 @@ package tl
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 )
 
 // FareRule fare_rules.txt
@@ -23,7 +23,7 @@ func (ent *FareRule) EntityID() string {
 // Errors for this Entity.
 func (ent *FareRule) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enums.CheckPresent("fare_id", ent.FareID)...)
+	errs = append(errs, enum.CheckPresent("fare_id", ent.FareID)...)
 	return errs
 }
 

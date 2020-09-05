@@ -2,7 +2,7 @@ package tl
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 )
 
 // Transfer transfers.txt
@@ -34,10 +34,10 @@ func (ent *Transfer) Warnings() (errs []error) {
 // Errors for this Entity.
 func (ent *Transfer) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enums.CheckPresent("from_stop_id", ent.FromStopID)...)
-	errs = append(errs, enums.CheckPresent("to_stop_id", ent.ToStopID)...)
-	errs = append(errs, enums.CheckInsideRangeInt("transfer_type", ent.TransferType, 0, 3)...)
-	errs = append(errs, enums.CheckPositiveInt("min_transfer_time", ent.MinTransferTime)...)
+	errs = append(errs, enum.CheckPresent("from_stop_id", ent.FromStopID)...)
+	errs = append(errs, enum.CheckPresent("to_stop_id", ent.ToStopID)...)
+	errs = append(errs, enum.CheckInsideRangeInt("transfer_type", ent.TransferType, 0, 3)...)
+	errs = append(errs, enum.CheckPositiveInt("min_transfer_time", ent.MinTransferTime)...)
 	return errs
 }
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 )
 
 // FareAttribute fare_attributes.txt
@@ -27,12 +27,12 @@ func (ent *FareAttribute) EntityID() string {
 // Errors for this Entity.
 func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enums.CheckPresent("fare_id", ent.FareID)...)
-	errs = append(errs, enums.CheckPresent("currency_type", ent.CurrencyType)...)
-	errs = append(errs, enums.CheckPositive("price", ent.Price)...)
-	errs = append(errs, enums.CheckCurrency("currency_type", ent.CurrencyType)...)
-	errs = append(errs, enums.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
-	errs = append(errs, enums.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
+	errs = append(errs, enum.CheckPresent("fare_id", ent.FareID)...)
+	errs = append(errs, enum.CheckPresent("currency_type", ent.CurrencyType)...)
+	errs = append(errs, enum.CheckPositive("price", ent.Price)...)
+	errs = append(errs, enum.CheckCurrency("currency_type", ent.CurrencyType)...)
+	errs = append(errs, enum.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
+	errs = append(errs, enum.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
 	switch ent.Transfers {
 	case "":
 	case "0":

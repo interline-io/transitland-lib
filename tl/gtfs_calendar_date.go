@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 )
 
 // CalendarDate calendar_dates.txt
@@ -24,8 +24,8 @@ func (ent *CalendarDate) EntityID() string {
 // Errors for this Entity.
 func (ent *CalendarDate) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enums.CheckPresent("service_id", ent.ServiceID)...)
-	errs = append(errs, enums.CheckInsideRangeInt("exception_type", ent.ExceptionType, 1, 2)...)
+	errs = append(errs, enum.CheckPresent("service_id", ent.ServiceID)...)
+	errs = append(errs, enum.CheckInsideRangeInt("exception_type", ent.ExceptionType, 1, 2)...)
 	if ent.Date.IsZero() {
 		errs = append(errs, causes.NewInvalidFieldError("date", "", fmt.Errorf("date is zero")))
 	}

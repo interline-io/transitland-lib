@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/interline-io/transitland-lib/gtcsv"
-	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // FetchOptions sets options for a fetch operation.
@@ -39,7 +39,7 @@ type FetchResult struct {
 // DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
 // An error return from this function is a serious failure.
 // Saves FeedState.LastFetchError for regular failures.
-func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
+func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	// Get url
 	tlfeed := Feed{ID: opts.Feed.ID}
@@ -89,7 +89,7 @@ func DatabaseFetch(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
 // FetchAndCreateFeedVersion from a URL.
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets FetchResult.FetchError if a regular failure occurs, such as a 404.
-func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult, error) {
+func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	if opts.FeedURL == "" {
 		fr.FetchError = errors.New("no url")
@@ -112,7 +112,7 @@ func FetchAndCreateFeedVersion(atx gtdb.Adapter, opts FetchOptions) (FetchResult
 		return fr, nil
 	}
 	// Check reader type
-	reader, err := gtcsv.NewReader(opts.FeedURL)
+	reader, err := tlcsv.NewReader(opts.FeedURL)
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil

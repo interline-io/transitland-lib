@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 )
 
 // FeedInfo feed_info.txt
@@ -26,11 +26,11 @@ func (ent *FeedInfo) EntityID() string {
 // Errors for this Entity.
 func (ent *FeedInfo) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enums.CheckPresent("feed_publisher_name", ent.FeedPublisherName)...)
-	errs = append(errs, enums.CheckPresent("feed_publisher_url", ent.FeedPublisherURL)...)
-	errs = append(errs, enums.CheckPresent("feed_lang", ent.FeedLang)...)
-	errs = append(errs, enums.CheckURL("feed_publisher_url", ent.FeedPublisherURL)...)
-	errs = append(errs, enums.CheckLanguage("feed_lang", ent.FeedLang)...)
+	errs = append(errs, enum.CheckPresent("feed_publisher_name", ent.FeedPublisherName)...)
+	errs = append(errs, enum.CheckPresent("feed_publisher_url", ent.FeedPublisherURL)...)
+	errs = append(errs, enum.CheckPresent("feed_lang", ent.FeedLang)...)
+	errs = append(errs, enum.CheckURL("feed_publisher_url", ent.FeedPublisherURL)...)
+	errs = append(errs, enum.CheckLanguage("feed_lang", ent.FeedLang)...)
 	if ent.FeedStartDate.IsZero() && ent.FeedEndDate.IsZero() {
 		// skip
 	} else {

@@ -3,13 +3,13 @@ package copier
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
 func Test_geomCache(t *testing.T) {
-	r, err := gtcsv.NewReader(testutil.ExampleDir.URL)
+	r, err := tlcsv.NewReader(testutil.ExampleDir.URL)
 	if err != nil {
 		t.Error(err)
 	}

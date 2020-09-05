@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // ImportCommand imports FeedVersions into a database.
@@ -23,7 +23,7 @@ type ImportCommand struct {
 	DryRun        bool
 	FeedIDs       []string
 	FVIDs         arrayFlags
-	Adapter       gtdb.Adapter // allow for mocks
+	Adapter       tldb.Adapter // allow for mocks
 	ImportOptions ImportOptions
 }
 
@@ -150,7 +150,7 @@ func (cmd *ImportCommand) Run() error {
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter gtdb.Adapter, dryrun bool, jobs <-chan ImportOptions, results chan<- ImportResult, wg *sync.WaitGroup) {
+func dmfrImportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan ImportOptions, results chan<- ImportResult, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int

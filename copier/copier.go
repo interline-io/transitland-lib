@@ -8,10 +8,9 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/tl"
-
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // ErrorHandler is called on each source file and entity; errors can be nil
@@ -439,7 +438,7 @@ func (copier *Copier) copyRoutes() error {
 		}
 		// Use basic route types
 		if copier.UseBasicRouteTypes {
-			if rt, ok := enums.GetBasicRouteType(e.RouteType); ok {
+			if rt, ok := enum.GetBasicRouteType(e.RouteType); ok {
 				e.RouteType = rt.Code
 			} else {
 				e.AddError(causes.NewInvalidFieldError("route_type", strconv.Itoa(e.RouteType), fmt.Errorf("cannot convert route_type %d to basic route type", e.RouteType)))

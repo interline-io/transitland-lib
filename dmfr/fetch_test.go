@@ -9,15 +9,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 var ExampleZip = testutil.ExampleZip
 
-func caltrain(atx gtdb.Adapter, url string) Feed {
+func caltrain(atx tldb.Adapter, url string) Feed {
 	// Create dummy feed
 	tlfeed := Feed{}
 	tlfeed.FeedID = url
@@ -35,7 +35,7 @@ func TestDatabaseFetch(t *testing.T) {
 		w.Write(buf)
 	}))
 	defer ts.Close()
-	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		tmpdir, err := ioutil.TempDir("", "gtfs")
 		if err != nil {
 			t.Error(err)
@@ -96,7 +96,7 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 		w.Write([]byte("not found"))
 	}))
 	defer ts.Close()
-	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		tmpdir, err := ioutil.TempDir("", "gtfs")
 		if err != nil {
 			t.Error(err)
@@ -136,7 +136,7 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 		w.Write(buf)
 	}))
 	defer ts.Close()
-	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		tmpdir, err := ioutil.TempDir("", "gtfs")
 		if err != nil {
 			t.Error(err)
@@ -179,7 +179,7 @@ func TestFetchAndCreateFeedVersion_404(t *testing.T) {
 		w.Write([]byte("not found"))
 	}))
 	defer ts.Close()
-	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
 		feed := caltrain(atx, url)
 		fr, err := FetchAndCreateFeedVersion(atx, FetchOptions{Feed: feed, FeedURL: url, Directory: ""})
@@ -211,7 +211,7 @@ func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
 		}
 		w.Write(buf)
 	}))
-	testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
 		feed := caltrain(atx, url)
 		fr, err := FetchAndCreateFeedVersion(atx, FetchOptions{Feed: feed, FeedURL: url, Directory: ""})

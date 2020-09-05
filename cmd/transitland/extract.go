@@ -7,9 +7,9 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/extract"
-	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // extractCommand
@@ -75,7 +75,7 @@ func (cmd *extractCommand) Run(args []string) error {
 	cp.InterpolateStopTimes = cmd.interpolateStopTimes
 	cp.CreateMissingShapes = cmd.createMissingShapes
 	cp.NormalizeServiceIDs = cmd.normalizeServiceIDs
-	if dbw, ok := writer.(*gtdb.Writer); ok {
+	if dbw, ok := writer.(*tldb.Writer); ok {
 		if cmd.fvid != 0 {
 			dbw.FeedVersionID = cmd.fvid
 		} else {
@@ -124,7 +124,7 @@ func (cmd *extractCommand) Run(args []string) error {
 	// Create Marker
 	rthits := map[int]bool{}
 	for _, i := range cmd.extractRouteTypes {
-		// TODO: Use enums.GetRouteType
+		// TODO: Use enum.GetRouteType
 		if v, err := strconv.Atoi(i); err == nil {
 			rthits[v] = true
 		} else {

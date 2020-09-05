@@ -2,7 +2,7 @@ package tl
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 )
 
 // Agency agency.txt
@@ -29,7 +29,7 @@ func (ent *Agency) Warnings() (errs []error) {
 	if len(ent.AgencyID) == 0 {
 		errs = append(errs, causes.NewValidationWarning("agency_id", "agency_id should be set"))
 	}
-	if !enums.IsValidTimezone(ent.AgencyTimezone) {
+	if !enum.IsValidTimezone(ent.AgencyTimezone) {
 		errs = append(errs, causes.NewValidationWarning("agency_timezone", "agency_timezone is not a valid timezone"))
 	}
 	return errs
@@ -38,13 +38,13 @@ func (ent *Agency) Warnings() (errs []error) {
 // Errors for this Entity.
 func (ent *Agency) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enums.CheckPresent("agency_name", ent.AgencyName)...)
-	errs = append(errs, enums.CheckPresent("agency_url", ent.AgencyURL)...)
-	errs = append(errs, enums.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
-	errs = append(errs, enums.CheckURL("agency_url", ent.AgencyURL)...)
-	errs = append(errs, enums.CheckURL("agency_fare_url", ent.AgencyFareURL)...)
-	errs = append(errs, enums.CheckLanguage("agency_lang", ent.AgencyLang)...)
-	errs = append(errs, enums.CheckEmail("agency_email", ent.AgencyEmail)...)
+	errs = append(errs, enum.CheckPresent("agency_name", ent.AgencyName)...)
+	errs = append(errs, enum.CheckPresent("agency_url", ent.AgencyURL)...)
+	errs = append(errs, enum.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
+	errs = append(errs, enum.CheckURL("agency_url", ent.AgencyURL)...)
+	errs = append(errs, enum.CheckURL("agency_fare_url", ent.AgencyFareURL)...)
+	errs = append(errs, enum.CheckLanguage("agency_lang", ent.AgencyLang)...)
+	errs = append(errs, enum.CheckEmail("agency_email", ent.AgencyEmail)...)
 	return errs
 }
 

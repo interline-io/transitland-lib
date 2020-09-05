@@ -9,7 +9,7 @@
 *.test
 
 cmd/transitland/transitland
-gtdb/test.db
+tldb/test.db
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out

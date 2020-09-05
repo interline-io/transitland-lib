@@ -2,7 +2,7 @@ package tl
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 )
 
 // Trip trips.txt
@@ -29,12 +29,12 @@ func (ent *Trip) EntityID() string {
 // Errors for this Entity.
 func (ent *Trip) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enums.CheckPresent("route_id", ent.RouteID)...)
-	errs = append(errs, enums.CheckPresent("service_id", ent.ServiceID)...)
-	errs = append(errs, enums.CheckPresent("trip_id", ent.TripID)...)
-	errs = append(errs, enums.CheckInsideRangeInt("direction_id", ent.DirectionID, 0, 1)...)
-	errs = append(errs, enums.CheckInsideRangeInt("wheelchair_accessible", ent.WheelchairAccessible, 0, 2)...)
-	errs = append(errs, enums.CheckInsideRangeInt("bikes_allowed", ent.BikesAllowed, 0, 2)...)
+	errs = append(errs, enum.CheckPresent("route_id", ent.RouteID)...)
+	errs = append(errs, enum.CheckPresent("service_id", ent.ServiceID)...)
+	errs = append(errs, enum.CheckPresent("trip_id", ent.TripID)...)
+	errs = append(errs, enum.CheckInsideRangeInt("direction_id", ent.DirectionID, 0, 1)...)
+	errs = append(errs, enum.CheckInsideRangeInt("wheelchair_accessible", ent.WheelchairAccessible, 0, 2)...)
+	errs = append(errs, enum.CheckInsideRangeInt("bikes_allowed", ent.BikesAllowed, 0, 2)...)
 	return errs
 }
 

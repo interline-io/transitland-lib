@@ -12,7 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/dimchansky/utfbom"
-	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -43,11 +43,11 @@ func (FeedVersionFileInfo) TableName() string {
 type canFileInfo interface {
 	FileInfos() ([]os.FileInfo, error)
 	OpenFile(string, func(io.Reader)) error
-	ReadRows(string, func(gtcsv.Row)) error
+	ReadRows(string, func(tlcsv.Row)) error
 }
 
 // NewFeedVersionFileInfosFromReader calculates statistics about the contents of a feed version
-func NewFeedVersionFileInfosFromReader(reader *gtcsv.Reader) ([]FeedVersionFileInfo, error) {
+func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileInfo, error) {
 	ret := []FeedVersionFileInfo{}
 	adapter, ok := reader.Adapter.(canFileInfo)
 	if !ok {
@@ -94,7 +94,7 @@ func NewFeedVersionFileInfosFromReader(reader *gtcsv.Reader) ([]FeedVersionFileI
 			}
 		})
 		rows := int64(0)
-		adapter.ReadRows(fi.Name(), func(row gtcsv.Row) {
+		adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
 			rows++
 		})
 		// Check the header is sane

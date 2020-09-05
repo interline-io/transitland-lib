@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/enums"
+	"github.com/interline-io/transitland-lib/enum"
 )
 
 // Stop stops.txt
@@ -70,7 +70,7 @@ func (ent *Stop) Warnings() (errs []error) {
 	if len(ent.StopDesc) > 0 && ent.StopName == ent.StopDesc {
 		errs = append(errs, causes.NewValidationWarning("stop_desc", "stop_desc is the same as stop_name"))
 	}
-	if !enums.IsValidTimezone(ent.StopTimezone) {
+	if !enum.IsValidTimezone(ent.StopTimezone) {
 		errs = append(errs, causes.NewValidationWarning("stop_timezone", "stop_timezone is not a valid timezone"))
 	}
 	return errs
@@ -79,12 +79,12 @@ func (ent *Stop) Warnings() (errs []error) {
 // Errors for this Entity.
 func (ent *Stop) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enums.CheckPresent("stop_id", ent.StopID)...)
-	errs = append(errs, enums.CheckInsideRange("stop_lat", ent.StopLat, -90.0, 90.0)...)
-	errs = append(errs, enums.CheckInsideRange("stop_lon", ent.StopLon, -180.0, 180.0)...)
-	errs = append(errs, enums.CheckURL("stop_url", ent.StopURL)...)
-	errs = append(errs, enums.CheckInsideRangeInt("location_type", ent.LocationType, 0, 4)...)
-	errs = append(errs, enums.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding, 0, 2)...)
+	errs = append(errs, enum.CheckPresent("stop_id", ent.StopID)...)
+	errs = append(errs, enum.CheckInsideRange("stop_lat", ent.StopLat, -90.0, 90.0)...)
+	errs = append(errs, enum.CheckInsideRange("stop_lon", ent.StopLon, -180.0, 180.0)...)
+	errs = append(errs, enum.CheckURL("stop_url", ent.StopURL)...)
+	errs = append(errs, enum.CheckInsideRangeInt("location_type", ent.LocationType, 0, 4)...)
+	errs = append(errs, enum.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding, 0, 2)...)
 	// TODO: This should be an enum for exhaustive search
 	lt := ent.LocationType
 	if (lt == 0 || lt == 1 || lt == 2) && len(ent.StopName) == 0 {

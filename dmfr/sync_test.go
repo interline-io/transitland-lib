@@ -3,14 +3,14 @@ package dmfr
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // Full tests
 func TestMainSync(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create a feed we will check is soft-deleted
 		caltrain(atx, "caltrain")
 		// Import
@@ -54,7 +54,7 @@ func TestMainSync(t *testing.T) {
 }
 
 func TestMainSync_Update(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create existing feed
 		exposid := "f-c20-trimet"
 		tlfeed := Feed{}
@@ -99,7 +99,7 @@ func TestMainSync_Update(t *testing.T) {
 
 func TestImportFeed(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
-		err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 			rfeed := Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Spec = "gtfs"
@@ -144,7 +144,7 @@ func TestImportFeed(t *testing.T) {
 		}
 	})
 	t.Run("Update", func(t *testing.T) {
-		err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 			rfeed := Feed{}
 			rfeed.FeedID = "caltrain"
 			feedid, found, err := ImportFeed(atx, rfeed)
@@ -194,7 +194,7 @@ func TestImportFeed(t *testing.T) {
 }
 
 func TestHideUnseedFeeds(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx gtdb.Adapter) error {
+	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		feedids := []string{"caltrain", "seen"}
 		fids := []int{}
 		for _, feedid := range feedids {

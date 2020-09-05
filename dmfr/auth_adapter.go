@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/interline-io/transitland-lib/gtcsv"
+	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -13,7 +13,7 @@ import (
 // AuthenticatedURLAdapter is similar to URLAdapter but takes auth and secrets.
 type AuthenticatedURLAdapter struct {
 	downloadtmp string
-	gtcsv.ZipAdapter
+	tlcsv.ZipAdapter
 }
 
 // Download the URL to a temporary file and set the correct adapter
@@ -32,7 +32,7 @@ func (adapter *AuthenticatedURLAdapter) Download(address string, auth tl.FeedAut
 	if u.Fragment != "" {
 		tmpfile = tmpfile + "#" + u.Fragment
 	}
-	za := gtcsv.NewZipAdapter(tmpfile)
+	za := tlcsv.NewZipAdapter(tmpfile)
 	if za == nil {
 		return errors.New("could not open")
 	}

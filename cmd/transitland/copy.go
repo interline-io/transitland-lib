@@ -4,9 +4,9 @@ import (
 	"flag"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/gtdb"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // basicCopyOptions
@@ -49,7 +49,7 @@ func (cmd *copyCommand) Run(args []string) error {
 	cp := copier.NewCopier(reader, writer)
 	cp.AllowEntityErrors = cmd.allowEntityErrors
 	cp.AllowReferenceErrors = cmd.allowReferenceErrors
-	if dbw, ok := writer.(*gtdb.Writer); ok {
+	if dbw, ok := writer.(*tldb.Writer); ok {
 		if cmd.fvid != 0 {
 			dbw.FeedVersionID = cmd.fvid
 		} else {

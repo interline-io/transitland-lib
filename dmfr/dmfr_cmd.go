@@ -7,7 +7,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/gtdb"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // Command is the main entry point to the DMFR command
@@ -90,9 +90,9 @@ func (i *arrayFlags) Set(value string) error {
 }
 
 // mustGetWriter opens & creates a db writer, panic on failure
-func mustGetWriter(dburl string, create bool) *gtdb.Writer {
+func mustGetWriter(dburl string, create bool) *tldb.Writer {
 	// Writer
-	writer, err := gtdb.NewWriter(dburl)
+	writer, err := tldb.NewWriter(dburl)
 	if err != nil {
 		panic(err)
 	}
