@@ -35,7 +35,7 @@ func Benchmark_StopTime_Memory(b *testing.B) {
 // Benchmark StopTime memory usage
 func Benchmark_StopTime_Memory_Read1000(b *testing.B) {
 	count := 1000
-	reader, err := NewReader("../testdata/bart.zip")
+	reader, err := NewReader("../test/data/bart.zip")
 	if err != nil {
 		b.Error(err)
 		return

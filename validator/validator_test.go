@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tlcsv"
-	_ "github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcsv"
+	_ "github.com/interline-io/transitland-lib/tlcsv"
 )
 
 //////////// helpers /////////////
@@ -91,7 +91,7 @@ func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warn
 //////////////
 
 func TestEntityErrors(t *testing.T) {
-	reader, err := tlcsv.NewReader("../testdata/bad-entities")
+	reader, err := tlcsv.NewReader("../test/data/bad-entities")
 	if err != nil {
 		t.Error(err)
 	}
@@ -112,8 +112,8 @@ func TestEntityErrors(t *testing.T) {
 }
 
 func TestValidator_Validate(t *testing.T) {
-	basepath := "../testdata/validator-examples"
-	searchpath := "../testdata/validator-examples/errors"
+	basepath := "../test/data/validator-examples"
+	searchpath := "../test/data/validator-examples/errors"
 	files, err := ioutil.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)

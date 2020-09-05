@@ -78,7 +78,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 	t.Run("Failed", func(t *testing.T) {
 		fvid := 0
 		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-			fvid = setup(atx, "../testdata/does-not-exist")
+			fvid = setup(atx, "../test/data/does-not-exist")
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := MainImportFeedVersion(&atx2, ImportOptions{FeedVersionID: fvid})
 			if err == nil {

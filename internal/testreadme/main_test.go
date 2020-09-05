@@ -8,7 +8,7 @@ import (
 
 func Test_exampleDB(t *testing.T) {
 	// Just ensure this runs without panicing
-	reader, err := ext.NewReader("../../testdata/external/bart.zip")
+	reader, err := ext.NewReader("../../test/data/external/bart.zip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func Test_exampleDB(t *testing.T) {
 
 func Test_exampleCopier(t *testing.T) {
 	// Just ensure this runs without panicing
-	reader, err := ext.NewReader("../../testdata/external/bart.zip")
+	reader, err := ext.NewReader("../../test/data/external/bart.zip")
 	if err != nil {
 		t.Fatal(err)
 	}

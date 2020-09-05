@@ -15,8 +15,8 @@ func TestMainSync(t *testing.T) {
 		caltrain(atx, "caltrain")
 		// Import
 		regs := []string{
-			"../testdata/dmfr/rtfeeds.dmfr.json",
-			"../testdata/dmfr/bayarea-local.dmfr.json",
+			"../test/data/dmfr/rtfeeds.dmfr.json",
+			"../test/data/dmfr/bayarea-local.dmfr.json",
 		}
 		opts := SyncOptions{
 			Filenames:  regs,
@@ -67,7 +67,7 @@ func TestMainSync_Update(t *testing.T) {
 			t.Error(err)
 		}
 		// Import
-		regs := []string{"../testdata/dmfr/rtfeeds.dmfr.json"}
+		regs := []string{"../test/data/dmfr/rtfeeds.dmfr.json"}
 		opts := SyncOptions{
 			Filenames: regs,
 		}
