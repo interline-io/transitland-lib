@@ -193,45 +193,36 @@ This command is still under active development and may change in future releases
 
 ### Example of how to use as a library
 
-A simple example of reading and writing GTFS entities from CSV:
+A simple example of reading and writing GTFS entities from CSV ([full example](https://github.com/interline-io/transitland-lib/raw/master/internal/testreadme/main_test.go)):
 
 ```go
+package main
+
 import (
 	"fmt"
+	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-func main() {
-	// Saves to a temporary file, removed upon Close().
-	// Local paths to zip files and plain directories are also supported.
-	url := "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip"
-	reader, err := tlcsv.NewReader(url)
-	check(err)
-	check(reader.Open())
+var URL = "https://github.com/interline-io/transitland-lib/raw/master/test/data/external/bart.zip"
+
+func TestExample1(t *testing.T) {
+	// Read stops from a GTFS url
+	reader, _ := tlcsv.NewReader(URL)
+	reader.Open()
 	defer reader.Close()
-	// Create a CSV writer
-	// Writes to temporary directory, creates zip upon Close().
-	writer, err := tlcsv.NewWriter("output.zip")
-	check(err)
-	check(writer.Open())
-	// Copy from Reader to Writer.
+	// Write to to the current directory
+	writer, _ := tlcsv.NewWriter(".")
+	writer.Open()
+	// Copy stops
 	for stop := range reader.Stops() {
 		fmt.Println("Read Stop:", stop.StopID)
-		eid, err := writer.AddEntity(&stop)
-		check(err)
-		fmt.Println("Wrote Stop:", eid)
-	}
-	// Go ahead and close, check for errors
-	check(writer.Close())
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
+		eid, _ := writer.AddEntity(&stop)
+		fmt.Println("Wrote stop:", eid)
 	}
 }
 ```
@@ -239,45 +230,71 @@ func check(err error) {
 Database support is handled similary:
 
 ```go
-func exampleDB(reader tl.Reader) {
+func getReader() tl.Reader {
+	reader, _ := tlcsv.NewReader(URL)
+	return reader
+}
+
+func TestExample2(t *testing.T) {
+	reader := getReader()
 	// Create a SQLite writer, in memory
 	dburl := "sqlite3://:memory:"
 	dbwriter, err := tldb.NewWriter(dburl)
-	check(err)
-	check(dbwriter.Open())
-	check(dbwriter.Create()) // Install schema.
+	if err != nil {
+		t.Fatalf("no reader available")
+	}
+	if err := dbwriter.Open(); err != nil {
+		t.Fatalf("could not open database for writing")
+	}
+	if err := dbwriter.Create(); err != nil {
+		t.Fatalf("could not find or create database schema")
+	}
 	for stop := range reader.Stops() {
-		// Preserves StopID but also assigns an integer ID (returned as string).
+		// A database writer AddEntity returns the primary key as a string.
 		fmt.Println("Read Stop:", stop.StopID)
 		eid, err := dbwriter.AddEntity(&stop)
-		check(err)
-		fmt.Println("Wrote Stop:", eid)
+		if err != nil {
+			t.Fatalf("could not write entity to database")
+		}
+		fmt.Println("wrote stop to database:", eid)
 	}
 	// Read back from this source.
 	dbreader, err := dbwriter.NewReader()
-	check(err)
-	for stop := range dbreader.Stops() {
-		fmt.Println("Read Stop:", stop.StopID)
+	if err != nil {
+		t.Fatalf("could not get a new reader")
 	}
-	// Query database
+	count := 0
+	for stop := range dbreader.Stops() {
+		fmt.Println("read stop from database:", stop.StopID)
+		count++
+	}
+	if count != 50 {
+		t.Errorf("got %d stops, expected 50", count)
+	}
 }
 ```
 
-More advanced operations can be performed using a `Copier`, which provides additional hooks for filtering, transformation, and validation:
+More advanced filtering operations can be performed using a `Copier`, which provides additional hooks for filtering, transformation, and validation:
 
 ```go
-func exampleCopier(reader tl.Reader) {
+func TestExample3(t *testing.T) {
+	reader := getReader()
+	// Create a zip writer
 	writer, err := tlcsv.NewWriter("filtered.zip")
-	check(err)
-	check(writer.Open())
-	defer writer.Close()
+	if err != nil {
+		t.Fatalf("no writer available")
+	}
+	// Create a copier to stream, filter, and validate entities
 	cp := copier.NewCopier(reader, writer)
 	result := cp.Copy()
+	if result.WriteError != nil {
+		t.Fatalf("fatal copy error")
+	}
 	for _, err := range result.Errors {
-		fmt.Println("Error:", err)
+		fmt.Println("error:", err)
 	}
 	for fn, count := range result.EntityCount {
-		fmt.Printf("Copied %d entities from %s\n", count, fn)
+		fmt.Printf("copied %d entities from %s\n", count, fn)
 	}
 }
 ```
