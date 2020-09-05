@@ -1,8 +1,8 @@
 package plus
 
 import (
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/causes"
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // Direction directions.txt
@@ -10,7 +10,7 @@ type Direction struct {
 	RouteID     string `csv:"route_id"`
 	DirectionID string `csv:"direction_id"`
 	Direction   string `csv:"direction"`
-	gotransit.BaseEntity
+	tl.BaseEntity
 }
 
 // Filename directions.txt
@@ -24,8 +24,8 @@ func (ent *Direction) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *Direction) UpdateKeys(emap *gotransit.EntityMap) error {
-	if routeID, ok := emap.GetEntity(&gotransit.Route{RouteID: ent.RouteID}); ok {
+func (ent *Direction) UpdateKeys(emap *tl.EntityMap) error {
+	if routeID, ok := emap.GetEntity(&tl.Route{RouteID: ent.RouteID}); ok {
 		ent.RouteID = routeID
 	} else {
 		return causes.NewInvalidReferenceError("route_id", ent.RouteID)

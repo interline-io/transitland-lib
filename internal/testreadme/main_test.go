@@ -3,12 +3,12 @@ package main
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/ext"
 )
 
 func Test_exampleDB(t *testing.T) {
 	// Just ensure this runs without panicing
-	reader, err := gotransit.NewReader("../../testdata/external/bart.zip")
+	reader, err := ext.NewReader("../../test/data/external/bart.zip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func Test_exampleDB(t *testing.T) {
 
 func Test_exampleCopier(t *testing.T) {
 	// Just ensure this runs without panicing
-	reader, err := gotransit.NewReader("../../testdata/external/bart.zip")
+	reader, err := ext.NewReader("../../test/data/external/bart.zip")
 	if err != nil {
 		t.Fatal(err)
 	}

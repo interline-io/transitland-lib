@@ -8,8 +8,8 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
+	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // FetchCommand fetches feeds defined a DMFR database.
@@ -20,7 +20,7 @@ type FetchCommand struct {
 	DBURL        string
 	DryRun       bool
 	FeedIDs      []string
-	adapter      gtdb.Adapter
+	adapter      tldb.Adapter
 }
 
 // Parse sets options from command line flags.
@@ -136,7 +136,7 @@ func (cmd *FetchCommand) Run() error {
 	return nil
 }
 
-func fetchWorker(id int, adapter gtdb.Adapter, DryRun bool, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
+func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
 	for opts := range jobs {
 		var fr FetchResult
 		// Get FeedID for pretty printing.
@@ -150,7 +150,7 @@ func fetchWorker(id int, adapter gtdb.Adapter, DryRun bool, jobs <-chan FetchOpt
 			log.Info("Feed %s (id:%d): dry-run", osid, opts.Feed.ID)
 			continue
 		}
-		err := adapter.Tx(func(atx gtdb.Adapter) error {
+		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
 			fr, fe = DatabaseFetch(atx, opts)
 			return fe

@@ -3,23 +3,23 @@ package main
 import (
 	"fmt"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 func main() {
 	// Saves to a temporary file, removed upon Close().
 	// Local paths to zip files and plain directories are also supported.
 	url := "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip"
-	reader, err := gtcsv.NewReader(url)
+	reader, err := tlcsv.NewReader(url)
 	check(err)
 	check(reader.Open())
 	defer reader.Close()
 	// Create a CSV writer
 	// Writes to temporary directory, creates zip upon Close().
-	writer, err := gtcsv.NewWriter("output.zip")
+	writer, err := tlcsv.NewWriter("output.zip")
 	check(err)
 	check(writer.Open())
 	// Copy from Reader to Writer.
@@ -39,10 +39,10 @@ func check(err error) {
 	}
 }
 
-func exampleDB(reader gotransit.Reader) {
+func exampleDB(reader tl.Reader) {
 	// Create a SQLite writer, in memory
 	dburl := "sqlite3://:memory:"
-	dbwriter, err := gtdb.NewWriter(dburl)
+	dbwriter, err := tldb.NewWriter(dburl)
 	check(err)
 	check(dbwriter.Open())
 	check(dbwriter.Create()) // Install schema.
@@ -62,8 +62,8 @@ func exampleDB(reader gotransit.Reader) {
 	// Query database
 }
 
-func exampleCopier(reader gotransit.Reader) {
-	writer, err := gtcsv.NewWriter("/tmp/filtered.zip")
+func exampleCopier(reader tl.Reader) {
+	writer, err := tlcsv.NewWriter("/tmp/filtered.zip")
 	check(err)
 	check(writer.Open())
 	defer writer.Close()

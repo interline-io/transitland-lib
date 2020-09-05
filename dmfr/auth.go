@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jlaffaye/ftp"
 )
 
-func downloadHTTP(ustr string, fn string, secret Secret, auth gotransit.FeedAuthorization) error {
+func downloadHTTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorization) error {
 	w, err := os.Create(fn)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func downloadHTTP(ustr string, fn string, secret Secret, auth gotransit.FeedAuth
 	return nil
 }
 
-func downloadFTP(ustr string, fn string, secret Secret, auth gotransit.FeedAuthorization) error {
+func downloadFTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorization) error {
 	w, err := os.Create(fn)
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func downloadFTP(ustr string, fn string, secret Secret, auth gotransit.FeedAutho
 	return nil
 }
 
-func downloadS3(ustr string, fn string, secret Secret, auth gotransit.FeedAuthorization) error {
+func downloadS3(ustr string, fn string, secret Secret, auth tl.FeedAuthorization) error {
 	awscmd := exec.Command("aws", "s3", "cp", ustr, fn)
 	if secret.AWSAccessKeyID != "" || secret.AWSSecretAccessKey != "" {
 		env := []string{
@@ -99,7 +99,7 @@ func downloadS3(ustr string, fn string, secret Secret, auth gotransit.FeedAuthor
 }
 
 // AuthenticatedRequest fetches a url using a secret and auth description. Returns temp file path or error.
-func AuthenticatedRequest(address string, secret Secret, auth gotransit.FeedAuthorization) (string, error) {
+func AuthenticatedRequest(address string, secret Secret, auth tl.FeedAuthorization) (string, error) {
 	u, err := url.Parse(address)
 	if err != nil {
 		return "", err

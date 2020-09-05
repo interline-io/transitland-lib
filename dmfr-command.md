@@ -1,6 +1,6 @@
 # DMFR Command Help
 
-Gotransit DMFR provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html). Gotransit provides both a cli interface for managing a DMFR instance, as well as a library.
+Transitland DMFR provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html). Transitland provides both a cli interface for managing a DMFR instance, as well as a library.
 
 Coming soon!
 
@@ -12,7 +12,7 @@ DMFR Subcommands:
 ## sync command
 
 ```bash
-  $ ./gotransit dmfr sync -h
+  $ ./transitland dmfr sync -h
 Usage: sync <filenames...>
   -dburl string
     	Database URL (default: $DMFR_DATABASE_URL)
@@ -21,7 +21,7 @@ Usage: sync <filenames...>
 ## fetch command
 
 ```bash
-$ ./gotransit dmfr fetch -h
+$ ./transitland dmfr fetch -h
 Usage: fetch [feedids...]
   -allow-duplicate-contents
     	Allow duplicate internal SHA1 contents
@@ -38,7 +38,7 @@ Usage: fetch [feedids...]
 ## import command
 
 ```bash
-$ ./gotransit dmfr import -h
+$ ./transitland dmfr import -h
 Usage: import [feedids...]
   -date string
     	Service on date

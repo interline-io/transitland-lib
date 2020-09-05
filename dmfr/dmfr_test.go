@@ -9,7 +9,7 @@ import (
 )
 
 func Test_LoadAndParseRegistry_from_file(t *testing.T) {
-	parsedContents, err := LoadAndParseRegistry("../testdata/dmfr/example.json")
+	parsedContents, err := LoadAndParseRegistry("../test/data/dmfr/example.json")
 	if err != nil {
 		log.Fatal(err)
 		t.Error(err)
@@ -24,7 +24,7 @@ func Test_LoadAndParseRegistry_from_file(t *testing.T) {
 
 func Test_LoadAndParseRegistry_from_URL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile("../testdata/dmfr/example.json")
+		buf, err := ioutil.ReadFile("../test/data/dmfr/example.json")
 		if err != nil {
 			t.Error(err)
 		}
@@ -45,7 +45,7 @@ func Test_LoadAndParseRegistry_from_URL(t *testing.T) {
 }
 
 func Test_ParseString(t *testing.T) {
-	dmfrString, err := ioutil.ReadFile("../testdata/dmfr/example.json")
+	dmfrString, err := ioutil.ReadFile("../test/data/dmfr/example.json")
 	if err != nil {
 		t.Error("failed to read sample dmfr")
 	}

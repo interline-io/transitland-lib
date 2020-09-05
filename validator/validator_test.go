@@ -7,16 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtcsv"
-	_ "github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 //////////// helpers /////////////
 
 // getExpectErrors gets any ExpectError specified by an Entity.
-func getExpectErrors(ent gotransit.Entity) []testutil.ExpectError {
+func getExpectErrors(ent tl.Entity) []testutil.ExpectError {
 	ret := []testutil.ExpectError{}
 	ex := ent.Extra()
 	value, ok := ex["expect_error"]
@@ -59,12 +58,12 @@ func checkErrors(expecterrs []testutil.ExpectError, errs []error, t *testing.T) 
 	}
 }
 
-func exampleReader(basepath string, overlaypath string) *gtcsv.Reader {
-	reader, err := gtcsv.NewReader(".")
+func exampleReader(basepath string, overlaypath string) *tlcsv.Reader {
+	reader, err := tlcsv.NewReader(".")
 	if err != nil {
 		return nil
 	}
-	reader.Adapter = gtcsv.NewOverlayAdapter(overlaypath, basepath)
+	reader.Adapter = tlcsv.NewOverlayAdapter(overlaypath, basepath)
 	return reader
 }
 
@@ -81,7 +80,7 @@ func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []
 	checkErrors(expecterrs, errs, cr.t)
 }
 
-func (cr *testErrorHandler) HandleEntityErrors(ent gotransit.Entity, errs []error, warns []error) {
+func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
 	errs = append(errs, warns...)
 	expecterrs := getExpectErrors(ent)
 	cr.expectErrorCount += len(expecterrs)
@@ -91,14 +90,14 @@ func (cr *testErrorHandler) HandleEntityErrors(ent gotransit.Entity, errs []erro
 //////////////
 
 func TestEntityErrors(t *testing.T) {
-	reader, err := gtcsv.NewReader("../testdata/bad-entities")
+	reader, err := tlcsv.NewReader("../test/data/bad-entities")
 	if err != nil {
 		t.Error(err)
 	}
 	if err := reader.Open(); err != nil {
 		t.Error(err)
 	}
-	testutil.AllEntities(reader, func(ent gotransit.Entity) {
+	testutil.AllEntities(reader, func(ent tl.Entity) {
 		t.Run(fmt.Sprintf("%s:%s", ent.Filename(), ent.EntityID()), func(t *testing.T) {
 			errs := ent.Errors()
 			errs = append(errs, ent.Warnings()...)
@@ -112,8 +111,8 @@ func TestEntityErrors(t *testing.T) {
 }
 
 func TestValidator_Validate(t *testing.T) {
-	basepath := "../testdata/validator-examples"
-	searchpath := "../testdata/validator-examples/errors"
+	basepath := "../test/data/validator-examples"
+	searchpath := "../test/data/validator-examples/errors"
 	files, err := ioutil.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)
@@ -129,7 +128,7 @@ func TestValidator_Validate(t *testing.T) {
 				expectSourceErrors: map[string][]testutil.ExpectError{},
 			}
 			// Directly read the expect_errors.txt
-			reader.Adapter.ReadRows("expect_errors.txt", func(row gtcsv.Row) {
+			reader.Adapter.ReadRows("expect_errors.txt", func(row tlcsv.Row) {
 				fn := func(a string, b bool) string { return a }
 				ee := testutil.NewExpectError(
 					fn(row.Get("filename")),

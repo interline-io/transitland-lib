@@ -1,13 +1,14 @@
 package plus
 
 import (
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/copier"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func init() {
-	ext := func() gotransit.Extension { return Ext{} }
-	gotransit.RegisterExtension("plus", ext)
+	e := func() ext.Extension { return Ext{} }
+	ext.RegisterExtension("plus", e)
 }
 
 // Ext is the GTFS Plus Extension.
@@ -15,13 +16,13 @@ type Ext struct {
 }
 
 // Create the necessary database tables.
-func (ext Ext) Create(writer gotransit.Writer) error {
+func (ext Ext) Create(writer tl.Writer) error {
 	return nil
 }
 
-// Entities returns the Entities defined by GTFS Plus.
-func (ext Ext) Entities() []gotransit.Entity {
-	return []gotransit.Entity{
+// Entities returns the entities defined by GTFS Plus.
+func (ext Ext) Entities() []tl.Entity {
+	return []tl.Entity{
 		&CalendarAttribute{},
 		&RiderCategory{},
 		&FareRiderCategory{},

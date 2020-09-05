@@ -4,20 +4,20 @@ import (
 	"database/sql"
 	"strconv"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // FeedState .
 type FeedState struct {
 	ID                    int
 	FeedID                int
-	FeedVersionID         gotransit.OptionalKey
+	FeedVersionID         tl.OptionalKey
 	LastFetchError        string
-	LastFetchedAt         gotransit.OptionalTime
-	LastSuccessfulFetchAt gotransit.OptionalTime
+	LastFetchedAt         tl.OptionalTime
+	LastSuccessfulFetchAt tl.OptionalTime
 	FeedPriority          sql.NullInt64
 	FeedRealtimeEnabled   bool
-	gotransit.Timestamps
+	tl.Timestamps
 }
 
 // EntityID .

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func arePositionsSorted(a []float64) bool {
@@ -40,13 +40,13 @@ func newGeomCache() *geomCache {
 }
 
 // AddStop adds a Stop to the geometry cache.
-func (g *geomCache) AddStop(eid string, stop gotransit.Stop) {
+func (g *geomCache) AddStop(eid string, stop tl.Stop) {
 	c := stop.Geometry.FlatCoords()
 	g.stops[eid] = [2]float64{c[0], c[1]}
 }
 
 // AddShape adds a Shape to the geometry cache.
-func (g *geomCache) AddShape(eid string, shape gotransit.Shape) {
+func (g *geomCache) AddShape(eid string, shape tl.Shape) {
 	if !shape.Geometry.Valid {
 		return
 	}
@@ -58,8 +58,8 @@ func (g *geomCache) AddShape(eid string, shape gotransit.Shape) {
 }
 
 // MakeShape returns geometry for the given stops.
-func (g *geomCache) MakeShape(stopids ...string) (gotransit.Shape, error) {
-	shape := gotransit.Shape{}
+func (g *geomCache) MakeShape(stopids ...string) (tl.Shape, error) {
+	shape := tl.Shape{}
 	stopline := []float64{} // flatcoords
 	for _, stopid := range stopids {
 		if geom, ok := g.stops[stopid]; ok {
@@ -68,13 +68,13 @@ func (g *geomCache) MakeShape(stopids ...string) (gotransit.Shape, error) {
 			return shape, fmt.Errorf("stop '%s' not in cache", stopid)
 		}
 	}
-	shape.Geometry = gotransit.NewLineStringFromFlatCoords(stopline)
+	shape.Geometry = tl.NewLineStringFromFlatCoords(stopline)
 	shape.Generated = true
 	return shape, nil
 }
 
 // InterpolateStopTimes uses the cached geometries to interpolate StopTimes.
-func (g *geomCache) InterpolateStopTimes(trip gotransit.Trip, stoptimes []gotransit.StopTime) ([]gotransit.StopTime, error) {
+func (g *geomCache) InterpolateStopTimes(trip tl.Trip, stoptimes []tl.StopTime) ([]tl.StopTime, error) {
 	// Check cache; make stopline
 	stopline := make([][2]float64, len(stoptimes))
 	shapeid := trip.ShapeID.Key
