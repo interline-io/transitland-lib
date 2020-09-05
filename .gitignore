@@ -8,8 +8,10 @@
 # Test binary, build with `go test -c`
 *.test
 
-cmd/transitland/transitland
-tldb/test.db
-
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Misc
+cmd/transitland/transitland
+tldb/test.db
+**/.DS_Store
