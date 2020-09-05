@@ -12,8 +12,7 @@ require (
 	github.com/lib/pq v1.0.0
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/pkg/errors v0.8.1
-	github.com/rakyll/statik v0.1.6
+	github.com/rakyll/statik v0.1.7
 	github.com/twpayne/go-geom v1.0.5-0.20190312115814-8dbb5b419be8
 	google.golang.org/appengine v1.4.0 // indirect
 )
-
