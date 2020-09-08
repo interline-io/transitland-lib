@@ -2,7 +2,7 @@
 
 `transitland-lib` is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to describe feed resources.
 
-![Test & Release](https://github.com/interline-io/transitland-lib/workflows/Test%20&%20Release/badge.svg)
+![Test & Release](https://github.com/interline-io/transitland-lib/workflows/Test%20&%20Release/badge.svg) [![GoDoc](https://godoc.org/github.com/interline-io/transitland-lib/tl?status.svg)](https://godoc.org/github.com/interline-io/transitland-lib/tl)
 
 ## Table of Contents <!-- omit in toc -->
 <!-- to update use https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
@@ -191,6 +191,9 @@ This command is still under active development and may change in future releases
 - Marker: A `Marker` selects which GTFS entities will be processed by a `Copier`. For example, selecting only entities related to a single trip or route.
 - Filter: A `Filter` applies transformations to GTFS entities, such as converting extended route types to basic values, or modifying entity identifiers.
 - Extension: An `Extension` provides support for additional types of GTFS entities.
+
+See [godoc.org](https://godoc.org/github.com/interline-io/transitland-lib/tl) for package documentation.
+
 
 ### Example of how to use as a library
 
