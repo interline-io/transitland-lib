@@ -82,9 +82,11 @@ func main() {
 	quietFlag := false
 	debugFlag := false
 	traceFlag := false
+	versionFlag := false
 	flag.BoolVar(&quietFlag, "q", false, "Only send critical errors to stderr")
 	flag.BoolVar(&debugFlag, "v", false, "Enable verbose output")
 	flag.BoolVar(&traceFlag, "vv", false, "Enable more verbose/query output")
+	flag.BoolVar(&versionFlag, "version", false, "Show version and GTFS spec information")
 	flag.Usage = func() {
 		log.Print("Usage of %s:", os.Args[0])
 		log.Print("Commands:")
@@ -95,6 +97,11 @@ func main() {
 		return
 	}
 	flag.Parse()
+	if versionFlag == true {
+		log.Print("transitland-lib version: %s", tl.VERSION)
+		log.Print("gtfs spec version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
+		return
+	}
 	if quietFlag == true {
 		log.SetLevel(log.ERROR)
 	}
