@@ -1,0 +1,17 @@
+{
+    "source" : ["./cmd/transitland/transitland"],
+    "bundle_id" : "io.interline.transitland-lib",
+    "apple_id": {
+        "password":  "@env:AC_PASSWORD"
+    },
+    "sign" :{
+        "application_identity" : "FD3469A002C0912BAF03B33248112670708E56AA"
+    },
+    "dmg" :{
+        "output_path":  "transitland-lib.dmg",
+        "volume_name":  "transitland-lib"
+    },
+    "zip" :{
+        "output_path" : "transitland-lib.zip"
+    }
+}
