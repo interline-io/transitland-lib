@@ -50,7 +50,7 @@ jobs:
   #         path: ${{ github.workspace }}/cmd/transitland/transitland
   build-macos:
     # if: ${{ github.event_name == 'release' }}
-    needs: test
+    # needs: test
     runs-on: macos-latest
     steps:
       - name: Import Code-Signing Certificates
@@ -87,36 +87,36 @@ jobs:
         with:
           name: transitland-macos-signed-zip
           path: ${{ github.workspace }}/transitland.zip          
-  release:
-    if: ${{ github.event_name == 'release' }}
-    needs: [build-linux, build-macos]
-    runs-on: ubuntu-18.04
-    steps:
-      - name: Download Linux binary
-        uses: actions/download-artifact@v1
-        with:
-          name: transitland-linux
-      - name: Attach Linux binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.workspace }}/transitland-linux/transitland
-          asset_name: transitland-linux
-          asset_label: Linux AMD-64 binary
-          asset_content_type: application/binary
-      - name: Download macOS binary
-        uses: actions/download-artifact@v1
-        with:
-          name: transitland-macos
-      - name: Attach macOS binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.workspace }}/transitland-macos.zip
-          asset_name: transitland-macos
-          asset_label: macOS AMD-64 binary
-          asset_content_type: application/binary
+  # release:
+  #   if: ${{ github.event_name == 'release' }}
+  #   needs: [build-linux, build-macos]
+  #   runs-on: ubuntu-18.04
+  #   steps:
+  #     - name: Download Linux binary
+  #       uses: actions/download-artifact@v1
+  #       with:
+  #         name: transitland-linux
+  #     - name: Attach Linux binary to GitHub release
+  #       uses: actions/upload-release-asset@v1.0.1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         upload_url: ${{ github.event.release.upload_url }}
+  #         asset_path: ${{ github.workspace }}/transitland-linux/transitland
+  #         asset_name: transitland-linux
+  #         asset_label: Linux AMD-64 binary
+  #         asset_content_type: application/binary
+  #     - name: Download macOS binary
+  #       uses: actions/download-artifact@v1
+  #       with:
+  #         name: transitland-macos
+  #     - name: Attach macOS binary to GitHub release
+  #       uses: actions/upload-release-asset@v1.0.1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         upload_url: ${{ github.event.release.upload_url }}
+  #         asset_path: ${{ github.workspace }}/transitland-macos.zip
+  #         asset_name: transitland-macos
+  #         asset_label: macOS AMD-64 binary
+  #         asset_content_type: application/binary
