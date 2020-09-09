@@ -7,47 +7,47 @@ on:
     types:
       - created
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-18.04, macos-latest]
-    steps:
-    - name: Set up Go 1.13
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.13
-      id: go
-    - name: Checkout
-      uses: actions/checkout@v1
-    - name: Run tests
-      run: go test -coverprofile c.out ./...
-    - name: Produce coverage report
-      run: go tool cover -html=c.out -o coverage.html
-    - name: Save coverage report as artifact
-      uses: actions/upload-artifact@master
-      with:
-        name: coverage
-        path: coverage.html
-  build-linux:
-    # if: ${{ github.event_name == 'release' }}
-    needs: test
-    runs-on: ubuntu-18.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-      - name: Set up Go 1.13
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.13
-      - name: Build on Linux
-        working-directory: ${{ github.workspace }}/cmd/transitland
-        run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build
-      - name: Store Linux binary
-        uses: actions/upload-artifact@v1
-        with:
-          name: transitland-linux
-          path: ${{ github.workspace }}/cmd/transitland/transitland
+  # test:
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-18.04, macos-latest]
+  #   steps:
+  #   - name: Set up Go 1.13
+  #     uses: actions/setup-go@v1
+  #     with:
+  #       go-version: 1.13
+  #     id: go
+  #   - name: Checkout
+  #     uses: actions/checkout@v1
+  #   - name: Run tests
+  #     run: go test -coverprofile c.out ./...
+  #   - name: Produce coverage report
+  #     run: go tool cover -html=c.out -o coverage.html
+  #   - name: Save coverage report as artifact
+  #     uses: actions/upload-artifact@master
+  #     with:
+  #       name: coverage
+  #       path: coverage.html
+  # build-linux:
+  #   # if: ${{ github.event_name == 'release' }}
+  #   needs: test
+  #   runs-on: ubuntu-18.04
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v1
+  #     - name: Set up Go 1.13
+  #       uses: actions/setup-go@v1
+  #       with:
+  #         go-version: 1.13
+  #     - name: Build on Linux
+  #       working-directory: ${{ github.workspace }}/cmd/transitland
+  #       run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build
+  #     - name: Store Linux binary
+  #       uses: actions/upload-artifact@v1
+  #       with:
+  #         name: transitland-linux
+  #         path: ${{ github.workspace }}/cmd/transitland/transitland
   build-macos:
     # if: ${{ github.event_name == 'release' }}
     needs: test
@@ -76,7 +76,7 @@ jobs:
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
         run: |
-          gon -log-level=debug -log-json ./github/gonconfig.json
+          gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
         uses: actions/upload-artifact@v1
         with:
