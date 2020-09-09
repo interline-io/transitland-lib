@@ -120,3 +120,5 @@ jobs:
   #         asset_name: transitland-macos
   #         asset_label: macOS AMD-64 binary
   #         asset_content_type: application/binary
+
+  
