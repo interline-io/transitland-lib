@@ -112,7 +112,7 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ github.workspace }}/transitland-macos/transitland.zip
-          asset_name: transitland-macos
+          asset_name: transitland-macos.zip
           asset_label: macOS AMD-64 binary
           asset_content_type: application/binary
 
