@@ -80,7 +80,7 @@ jobs:
       - name: Store macOS binary
         uses: actions/upload-artifact@v1
         with:
-          name: transitland-macos-signed-zip
+          name: transitland-macos
           path: ${{ github.workspace }}/transitland.zip          
   release:
     if: ${{ github.event_name == 'release' }}
