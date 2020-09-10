@@ -27,7 +27,15 @@
 
 ### Download prebuilt binary
 
-Linux and macOS binaries are attached to each [release](https://github.com/interline-io/transitland-lib/releases).
+The `transitland` binaries for Linux and macOS are attached to each [release](https://github.com/interline-io/transitland-lib/releases).
+
+### Install using homebrew
+
+The `transitland` binary can be installed using homebrew. The executable is code-signed and notarized.
+
+```bash
+brew install interline-io/transitland-lib/transitland-lib
+```
 
 ### To install binary from source
 
