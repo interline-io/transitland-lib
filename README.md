@@ -327,7 +327,7 @@ We welcome the addition of more readers and writers.
 
 `transitland-lib` follows Go coding conventions.
 
-GitHub Actions runs all tests, stores code coverage reports as artifacts, and cuts releases using [GoReleaser](https://github.com/goreleaser/goreleaser).
+GitHub Actions runs all tests, stores code coverage reports as artifacts, and prepares releases.
 
 ### Releases
 
@@ -335,8 +335,9 @@ Releases follow [Semantic Versioning](https://semver.org/) conventions.
 
 To cut a new release:
 
-1. Tag the `master` branch with the next SemVer version (for example: `v0.2.0`).
-2. GitHub Actions will run [GoReleaser](https://github.com/goreleaser/goreleaser) and create a GitHub release on this repository.
+1. Update `transitland-lib/tl/tl.go` with the new version.
+2. Create a GitHub release. This will create a tag and GitHub Actions will create &amp; attach code-signed binaries.
+3. Download the files from the release, and update the [homebrew formula](https://github.com/interline-io/homebrew-transitland-lib/blob/master/transitland-lib.rb) with the updated sha256 hashes and version tag.
 
 ## Licenses
 
