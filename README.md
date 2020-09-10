@@ -8,8 +8,8 @@
 <!-- to update use https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
 - [Installation](#installation)
 	- [Download prebuilt binary](#download-prebuilt-binary)
-	- [To build from source](#to-build-from-source)
-	- [Installing with SQLite Support](#installing-with-sqlite-support)
+	- [Install using homebrew](#install-using-homebrew)
+	- [Install binary from source](#install-binary-from-source)
 - [Usage as a CLI tool](#usage-as-a-cli-tool)
 	- [`validate` command](#validate-command)
 	- [`copy` command](#copy-command)
@@ -17,6 +17,7 @@
 	- [`dmfr` command](#dmfr-command)
 - [Usage as a library](#usage-as-a-library)
 	- [Key library components](#key-library-components)
+	- [Install as a library](#install-as-a-library)
 	- [Example of how to use as a library](#example-of-how-to-use-as-a-library)
 - [Included Readers and Writers](#included-readers-and-writers)
 - [Development](#development)
@@ -37,22 +38,20 @@ The `transitland` binary can be installed using homebrew. The executable is code
 brew install interline-io/transitland-lib/transitland-lib
 ```
 
-### To install binary from source
+### Install binary from source
 
 ```bash
 go get github.com/interline-io/transitland-lib/cmd/transitland
 ```
+
+This package uses Go Modules and will also install required dependencies.
 
 Main dependencies:
 - `twpayne/go-geom`
 - `jmoiron/sqlx`
 - `Masterminds/squirrel`
 - `lib/pq`
-- `mattn/go-sqlite3` (see below)
-
-### Installing with SQLite Support
-
-SQLite requires CGO support, and is not included in the static release builds. To enable support, compile locally with `CGO_ENABLED=1`.
+- `mattn/go-sqlite3` (requires CGO)
 
 ## Usage as a CLI tool
 
@@ -202,6 +201,11 @@ This command is still under active development and may change in future releases
 
 See [godoc.org](https://godoc.org/github.com/interline-io/transitland-lib/tl) for package documentation.
 
+### Install as a library
+
+```bash
+go get github.com/interline-io/transitland-lib
+```
 
 ### Example of how to use as a library
 
