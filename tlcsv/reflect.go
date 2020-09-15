@@ -126,6 +126,11 @@ func GetString(ent tl.Entity, key string) (string, error) {
 func valGetString(valueField reflect.Value, k string) (string, error) {
 	value := ""
 	rfi := valueField.Interface()
+	// Try string first, since this is a CSV dump.
+	if v, ok := rfi.(canString); ok {
+		return v.String(), nil
+	}
+	// Otherwise get driver.Value
 	if v, ok := rfi.(canValue); ok {
 		var err error
 		rfi, err = v.Value()

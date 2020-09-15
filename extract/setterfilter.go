@@ -1,22 +1,45 @@
 package extract
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/interline-io/transitland-lib/internal/graph"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
-type setterFilter struct {
+// SetterFilter overrides entity values using a copier filter.
+type SetterFilter struct {
 	nodes map[graph.Node]map[string]string
 }
 
-func NewSetterFilter() *setterFilter {
-	return &setterFilter{
+// NewSetterFilter returns an initialized SetterFilter.
+func NewSetterFilter() *SetterFilter {
+	return &SetterFilter{
 		nodes: map[graph.Node]map[string]string{},
 	}
 }
 
-func (tx *setterFilter) AddValue(filename string, eid string, key string, value string) {
+// AddValuesFromFile reads a CSV file and calls AddValue on each row.
+func (tx *SetterFilter) AddValuesFromFile(filename string) error {
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	tlcsv.ReadRows(f, func(row tlcsv.Row) {
+		efn, _ := row.Get("filename")
+		eid, _ := row.Get("entity_id")
+		key, _ := row.Get("key")
+		val, _ := row.Get("value")
+		tx.AddValue(efn, eid, key, val)
+	})
+	return nil
+
+}
+
+// AddValue sets a new value to override.
+func (tx *SetterFilter) AddValue(filename string, eid string, key string, value string) {
 	n := graph.NewNode(filename, eid)
 	entv, ok := tx.nodes[*n]
 	if !ok {
@@ -26,10 +49,13 @@ func (tx *setterFilter) AddValue(filename string, eid string, key string, value 
 	tx.nodes[*n] = entv
 }
 
-func (tx *setterFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+// Filter overrides values on entities.
+func (tx *SetterFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	if entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), ent.EntityID())]; ok {
 		for k, v := range entv {
+			fmt.Println(ent.Filename(), ent.EntityID(), k, v)
 			if err := tlcsv.SetString(ent, k, v); err != nil {
+				panic(err)
 				return err
 			}
 		}
