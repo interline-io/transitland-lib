@@ -1,7 +1,6 @@
 package extract
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/interline-io/transitland-lib/internal/graph"
@@ -53,9 +52,7 @@ func (tx *SetterFilter) AddValue(filename string, eid string, key string, value 
 func (tx *SetterFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	if entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), ent.EntityID())]; ok {
 		for k, v := range entv {
-			fmt.Println(ent.Filename(), ent.EntityID(), k, v)
 			if err := tlcsv.SetString(ent, k, v); err != nil {
-				panic(err)
 				return err
 			}
 		}
