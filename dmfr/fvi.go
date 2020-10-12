@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // FeedVersionImport .
@@ -26,7 +26,7 @@ type FeedVersionImport struct {
 	SkipEntityReferenceCount  EntityCounter
 	SkipEntityFilterCount     EntityCounter
 	SkipEntityMarkedCount     EntityCounter
-	gotransit.Timestamps
+	tl.Timestamps
 }
 
 // EntityID .

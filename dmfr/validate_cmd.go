@@ -4,7 +4,7 @@ import (
 	"errors"
 	"flag"
 
-	"github.com/interline-io/gotransit/internal/log"
+	"github.com/interline-io/transitland-lib/internal/log"
 )
 
 // ValidateCommand validates a DMFR file.

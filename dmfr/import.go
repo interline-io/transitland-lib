@@ -7,12 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/gtdb"
-	"github.com/interline-io/gotransit/internal/log"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // ImportOptions sets various options for importing a feed.
@@ -74,21 +75,21 @@ func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 }
 
 // ActivateFeedVersion .
-func ActivateFeedVersion(atx gtdb.Adapter, fvid int) error {
+func ActivateFeedVersion(atx tldb.Adapter, fvid int) error {
 	// Ensure runs in a txn
 	_, err := atx.DBX().Exec("SELECT activate_feed_version($1)", fvid)
 	return err
 }
 
 // AfterFeedVersionImport .
-func AfterFeedVersionImport(atx gtdb.Adapter, fvid int) error {
+func AfterFeedVersionImport(atx tldb.Adapter, fvid int) error {
 	// Ensure runs in a txn
 	_, err := atx.DBX().Exec("SELECT after_feed_version_import($1)", fvid)
 	return err
 }
 
 // FindImportableFeeds .
-func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
+func FindImportableFeeds(adapter tldb.Adapter) ([]int, error) {
 	fvids := []int{}
 	qstr, qargs, err := adapter.Sqrl().
 		Select("feed_versions.id").
@@ -106,10 +107,10 @@ func FindImportableFeeds(adapter gtdb.Adapter) ([]int, error) {
 }
 
 // MainImportFeedVersion create FVI and run Copier inside a Tx.
-func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResult, error) {
+func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResult, error) {
 	// Get FV
 	fvi := FeedVersionImport{FeedVersionID: opts.FeedVersionID, InProgress: true}
-	fv := gotransit.FeedVersion{ID: opts.FeedVersionID}
+	fv := tl.FeedVersion{ID: opts.FeedVersionID}
 	if err := adapter.Find(&fv); err != nil {
 		return ImportResult{FeedVersionImport: fvi}, err
 	}
@@ -135,7 +136,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 	}
 	// Import
 	fviresult := FeedVersionImport{} // keep result
-	errImport := adapter.Tx(func(atx gtdb.Adapter) error {
+	errImport := adapter.Tx(func(atx tldb.Adapter) error {
 		var err error
 		fviresult, err = ImportFeedVersion(atx, fv, opts)
 		if err != nil {
@@ -189,7 +190,7 @@ func MainImportFeedVersion(adapter gtdb.Adapter, opts ImportOptions) (ImportResu
 }
 
 // ImportFeedVersion .
-func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOptions) (FeedVersionImport, error) {
+func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts ImportOptions) (FeedVersionImport, error) {
 	fvi := FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
 	url := fv.File
@@ -202,7 +203,7 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	if len(urlsplit) > 1 {
 		url = url + "#" + urlsplit[1]
 	}
-	reader, err := gtcsv.NewReader(url)
+	reader, err := tlcsv.NewReader(url)
 	if err != nil {
 		return fvi, err
 	}
@@ -211,13 +212,13 @@ func ImportFeedVersion(atx gtdb.Adapter, fv gotransit.FeedVersion, opts ImportOp
 	}
 	defer reader.Close()
 	// Get writer with existing tx
-	writer := gtdb.Writer{Adapter: atx, FeedVersionID: fv.ID}
+	writer := tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer)
 	for _, e := range opts.Extensions {
-		ext, err := gotransit.GetExtension(e)
+		ext, err := ext.GetExtension(e)
 		if err != nil {
-			panic("ext not found")
+			panic("Extension not found")
 		}
 		cp.AddExtension(ext)
 	}

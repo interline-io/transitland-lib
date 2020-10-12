@@ -3,18 +3,33 @@ package testutil
 import (
 	"fmt"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 type canCreateFV interface {
-	CreateFeedVersion(reader gotransit.Reader) (int, error)
+	CreateFeedVersion(reader tl.Reader) (int, error)
 }
 
 // DirectCopy does a direct reader->writer copy, with minimal validation and changes.
-func DirectCopy(reader gotransit.Reader, writer gotransit.Writer) error {
-	emap := gotransit.NewEntityMap()
+func DirectCopy(reader tl.Reader, writer tl.Writer) error {
+	emap := tl.NewEntityMap()
 	errs := []error{}
-	cp := func(ent gotransit.Entity) {
+	sts := []tl.Entity{}
+	cp := func(ent tl.Entity) {
+		if e1, ok := ent.(*tl.StopTime); ok {
+			e2 := *e1 // dereference
+			if err := e2.UpdateKeys(emap); err != nil {
+				errs = append(errs, err)
+			}
+			sts = append(sts, &e2)
+			if len(sts) > 1000 {
+				if err := writer.AddEntities(sts); err != nil {
+					errs = append(errs)
+				}
+				sts = nil
+			}
+			return
+		}
 		// All other entities
 		sid := ent.EntityID()
 		if err := ent.UpdateKeys(emap); err != nil {

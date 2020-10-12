@@ -3,13 +3,13 @@ package extract
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func TestSetterFilter_Filter(t *testing.T) {
-	stop := &gotransit.Stop{StopID: "abc"}
-	route := &gotransit.Route{RouteID: "foo"}
-	emap := gotransit.NewEntityMap()
+	stop := &tl.Stop{StopID: "abc"}
+	route := &tl.Route{RouteID: "foo"}
+	emap := tl.NewEntityMap()
 	tx := NewSetterFilter()
 	tx.AddValue(stop.Filename(), stop.EntityID(), "stop_name", "test")
 	tx.AddValue(route.Filename(), route.EntityID(), "route_type", "1000")

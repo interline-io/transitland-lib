@@ -1,19 +1,19 @@
 package validator
 
 import (
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/causes"
-	"github.com/interline-io/gotransit/copier"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // Validator checks a GTFS source for errors and warnings.
 type Validator struct {
-	Reader gotransit.Reader
+	Reader tl.Reader
 	Copier *copier.Copier
 }
 
 // NewValidator returns a new Validator.
-func NewValidator(reader gotransit.Reader) (*Validator, error) {
+func NewValidator(reader tl.Reader) (*Validator, error) {
 	// Create empty writer
 	w := emptyWriter{}
 	w.Open()

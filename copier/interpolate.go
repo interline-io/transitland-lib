@@ -1,12 +1,10 @@
 package copier
 
-import (
-	"github.com/interline-io/gotransit"
-)
+import "github.com/interline-io/transitland-lib/tl"
 
 // InterpolateStopTimes sets missing ArrivalTime, DestinationTime values.
 // StopTimes must be sorted and valid.
-func InterpolateStopTimes(stoptimes []gotransit.StopTime) ([]gotransit.StopTime, error) {
+func InterpolateStopTimes(stoptimes []tl.StopTime) ([]tl.StopTime, error) {
 	// Look for gaps
 	for start := 0; start < len(stoptimes)-1; {
 		// find the next stoptime with arrivaltime
@@ -24,7 +22,7 @@ func InterpolateStopTimes(stoptimes []gotransit.StopTime) ([]gotransit.StopTime,
 	return stoptimes, nil
 }
 
-func interpolateGap(stoptimes *[]gotransit.StopTime, start int, end int) {
+func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 	if start == end {
 		return
 	}

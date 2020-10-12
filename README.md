@@ -1,16 +1,15 @@
-# Interline gotransit <!-- omit in toc -->
+# Interline Transitland <!-- omit in toc -->
 
-gotransit is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to specify multiple input feeds.
+`transitland-lib` is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to describe feed resources.
 
-![Test & Release](https://github.com/interline-io/gotransit/workflows/Test%20&%20Release/badge.svg)
+![Test & Release](https://github.com/interline-io/transitland-lib/workflows/Test%20&%20Release/badge.svg) [![GoDoc](https://godoc.org/github.com/interline-io/transitland-lib/tl?status.svg)](https://godoc.org/github.com/interline-io/transitland-lib/tl) ![Go Report Card](https://goreportcard.com/badge/github.com/interline-io/transitland-lib)
 
 ## Table of Contents <!-- omit in toc -->
 <!-- to update use https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
 - [Installation](#installation)
 	- [Download prebuilt binary](#download-prebuilt-binary)
-	- [Install on MacOS using Homebrew](#install-on-macos-using-homebrew)
-	- [To build from source](#to-build-from-source)
-	- [Installing with SQLite Support](#installing-with-sqlite-support)
+	- [Install using homebrew](#install-using-homebrew)
+	- [Install binary from source](#install-binary-from-source)
 - [Usage as a CLI tool](#usage-as-a-cli-tool)
 	- [`validate` command](#validate-command)
 	- [`copy` command](#copy-command)
@@ -18,6 +17,7 @@ gotransit is a library and command-line tool for reading, writing, and processin
 	- [`dmfr` command](#dmfr-command)
 - [Usage as a library](#usage-as-a-library)
 	- [Key library components](#key-library-components)
+	- [Install as a library](#install-as-a-library)
 	- [Example of how to use as a library](#example-of-how-to-use-as-a-library)
 - [Included Readers and Writers](#included-readers-and-writers)
 - [Development](#development)
@@ -28,32 +28,30 @@ gotransit is a library and command-line tool for reading, writing, and processin
 
 ### Download prebuilt binary
 
-Linux and macOS binaries are attached to each [release](https://github.com/interline-io/gotransit/releases).
+The `transitland` binaries for Linux and macOS are attached to each [release](https://github.com/interline-io/transitland-lib/releases).
 
-### Install on MacOS using Homebrew
+### Install using homebrew
 
-To install using the [Gotransit formula for Homebrew](https://github.com/interline-io/homebrew-gotransit):
-
-```sh
-brew install interline-io/gotransit/gotransit
-```
-
-### To build from source
+The `transitland` binary can be installed using homebrew. The executable is code-signed and notarized.
 
 ```bash
-go get github.com/interline-io/gotransit
+brew install interline-io/transitland-lib/transitland-lib
 ```
+
+### Install binary from source
+
+```bash
+go get github.com/interline-io/transitland-lib/cmd/transitland
+```
+
+This package uses Go Modules and will also install required dependencies.
 
 Main dependencies:
 - `twpayne/go-geom`
 - `jmoiron/sqlx`
 - `Masterminds/squirrel`
 - `lib/pq`
-- `mattn/go-sqlite3` (see below)
-
-### Installing with SQLite Support
-
-SQLite requires CGO support, and is not included in the static release builds. To enable support, compile locally with `CGO_ENABLED=1`.
+- `mattn/go-sqlite3` (requires CGO)
 
 ## Usage as a CLI tool
 
@@ -68,7 +66,7 @@ The main subcommands are:
 The validate command performs a basic validation on a data source and writes the results to standard out.
 
 ```
-$ gotransit validate --help
+% transitland validate --help
 Usage: validate <reader>
   -ext value
     	Include GTFS Extension
@@ -77,7 +75,7 @@ Usage: validate <reader>
 Example: 
 
 ```sh
-$ gotransit validate "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip"
+% transitland validate "https://www.bart.gov/dev/schedules/google_transit.zip"
 ```
 
 ### `copy` command
@@ -85,7 +83,7 @@ $ gotransit validate "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip"
 The copy command performs a basic copy from a reader to a writer. By default, any entity with errors will be skipped and not written to output. This can be ignored with `-allow-entity-errors` to ignore simple errors and `-allow-reference-errors` to ignore entity relationship errors, such as a reference to a non-existent stop.
 
 ```
-$ gotransit copy --help
+% transitland copy --help
 Usage: copy <reader> <writer>
   -allow-entity-errors
     	Allow entities with errors to be copied
@@ -102,11 +100,11 @@ Usage: copy <reader> <writer>
 Example:
 
 ```sh
-$ gotransit copy --allow-entity-errors "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip" output.zip
+% transitland copy --allow-entity-errors "https://www.bart.gov/dev/schedules/google_transit.zip" output.zip
 
-$ unzip -p output.zip agency.txt
+% unzip -p output.zip agency.txt
 agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
-1000,Caltrain,http://www.caltrain.com,America/Los_Angeles,en,800-660-4287,,
+BART,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6000,,
   ```
 
 ### `extract` command
@@ -114,7 +112,7 @@ agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency
 The extract command extends the basic copy command with a number of additional options and transformations. It can be used to pull out a single route or trip, interpolate stop times, override a single value on an entity, etc. This is a separate command to keep the basic copy command simple while allowing the extract command to grow and add more features over time.
 
 ```
-$ gotransit extract --help
+% transitland extract --help
 Usage: extract <input> <output>
   -allow-entity-errors
     	Allow entities with errors to be copied
@@ -153,31 +151,32 @@ Usage: extract <input> <output>
 Example:
 
 ```sh
-# Extract a single trip from the Caltrain GTFS, and rename the agency to "caltrain".
-$ gotransit extract -extract-trip 305 -set agency.txt,1000,agency_id,caltrain "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip" output2.zip
+# Extract a single trip from the BART GTFS, and rename the agency to "test".
+% transitland extract -extract-trip "3050453" -set "agency.txt,BART,agency_id,test" "https://www.bart.gov/dev/schedules/google_transit.zip" output2.zip
 
 # Note renamed agency
-$ unzip -p output2.zip agency.txt
+% unzip -p output2.zip agency.txt
 agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
-caltrain,Caltrain,http://www.caltrain.com,America/Los_Angeles,en,800-660-4287,,
+test,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6000,,
 
 # Only entities related to the specified trip are included in the output.
-$ unzip -p output2.zip trips.txt
+% unzip -p output2.zip trips.txt
 route_id,service_id,trip_id,trip_headsign,trip_short_name,direction_id,block_id,shape_id,wheelchair_accessible,bikes_allowed
-12867,c_16869_b_19500_d_31,305,San Francisco Caltrain Station,305,0,,p_692594,0,0
+1,2020_09_14-DX-MVS-Weekday-15,3050453,San Francisco International Airport,,1,,01_shp,0,0
 
 $ unzip -p output2.zip routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color,route_sort_order
-12867,caltrain,Bullet,Baby Bullet,,2,,E31837,ffffff,2
+1,test,YL-S,Antioch to SFIA/Millbrae,,1,http://www.bart.gov/schedules/bylineresults?route=1,FFFF33,,0
 
-$ unzip -p output2.zip stop_times.txt
+% transitland % unzip -p output2.zip stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,timepoint
-305,05:45:00,05:45:00,70261,1,,0,0,0.00000,1
-305,06:01:00,06:01:00,70211,2,,0,0,17498.98397,1
-305,06:09:00,06:09:00,70171,3,,0,0,27096.41601,1
-305,06:19:00,06:19:00,70111,4,,0,0,42877.37732,1
-305,06:28:00,06:28:00,70061,5,,0,0,53641.84115,1
-305,06:47:00,06:47:00,70011,6,,0,0,75372.02742,1
+3050453,04:53:00,04:53:00,CONC,0,,0,0,0.00000,0
+3050453,04:58:00,04:58:00,PHIL,2,,0,0,4.06000,0
+3050453,05:01:00,05:02:00,WCRK,3,,0,0,5.77000,0
+3050453,05:06:00,05:07:00,LAFY,4,,0,0,9.23000,0
+3050453,05:11:00,05:12:00,ORIN,5,,0,0,12.99000,0
+3050453,05:17:00,05:18:00,ROCK,6,,0,0,17.38000,0
+...
 ```
 
 ### `dmfr` command
@@ -193,54 +192,53 @@ This command is still under active development and may change in future releases
 ### Key library components
 
 - Entity: An `Entity` is entity as specified by GTFS, such as an Agency, Route, Stop, etc.
-- Reader: A `Reader` provides streams of GTFS entities over channels. The `gtcsv` and `gtdb` modules provide CSV and Postgres/SQLite support, respectively.
-- Writer: A `Writer` accepts GTFS entities. As above, `gtcsv` and `gtdb` provide basic implementations. Custom writers can also be used to support non-GTFS outputs, such as building a routing graph.
+- Reader: A `Reader` provides streams of GTFS entities over channels. The `tlcsv` and `tldb` modules provide CSV and Postgres/SQLite support, respectively.
+- Writer: A `Writer` accepts GTFS entities. As above, `tlcsv` and `tldb` provide basic implementations. Custom writers can also be used to support non-GTFS outputs, such as building a routing graph.
 - Copier: A `Copier` reads a stream of GTFS entities from a `Reader`, checks each entity against a `Marker`, performs validation, applies any specified `Filters`, and sends to a `Writer`.
 - Marker: A `Marker` selects which GTFS entities will be processed by a `Copier`. For example, selecting only entities related to a single trip or route.
 - Filter: A `Filter` applies transformations to GTFS entities, such as converting extended route types to basic values, or modifying entity identifiers.
 - Extension: An `Extension` provides support for additional types of GTFS entities.
 
+See [godoc.org](https://godoc.org/github.com/interline-io/transitland-lib/tl) for package documentation.
+
+### Install as a library
+
+```bash
+go get github.com/interline-io/transitland-lib
+```
+
 ### Example of how to use as a library
 
-A simple example of reading and writing GTFS entities from CSV:
+A simple example of reading and writing GTFS entities from CSV ([full example](https://github.com/interline-io/transitland-lib/raw/master/internal/testreadme/main_test.go)):
 
 ```go
+package main
+
 import (
 	"fmt"
+	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/copier"
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/gtdb"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
-func main() {
-	// Saves to a temporary file, removed upon Close().
-	// Local paths to zip files and plain directories are also supported.
-	url := "http://www.caltrain.com/Assets/GTFS/caltrain/CT-GTFS.zip"
-	reader, err := gtcsv.NewReader(url)
-	check(err)
-	check(reader.Open())
+var URL = "https://github.com/interline-io/transitland-lib/raw/master/test/data/external/bart.zip"
+
+func TestExample1(t *testing.T) {
+	// Read stops from a GTFS url
+	reader, _ := tlcsv.NewReader(URL)
+	reader.Open()
 	defer reader.Close()
-	// Create a CSV writer
-	// Writes to temporary directory, creates zip upon Close().
-	writer, err := gtcsv.NewWriter("output.zip")
-	check(err)
-	check(writer.Open())
-	// Copy from Reader to Writer.
+	// Write to to the current directory
+	writer, _ := tlcsv.NewWriter(".")
+	writer.Open()
+	// Copy stops
 	for stop := range reader.Stops() {
 		fmt.Println("Read Stop:", stop.StopID)
-		eid, err := writer.AddEntity(&stop)
-		check(err)
-		fmt.Println("Wrote Stop:", eid)
-	}
-	// Go ahead and close, check for errors
-	check(writer.Close())
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
+		eid, _ := writer.AddEntity(&stop)
+		fmt.Println("Wrote stop:", eid)
 	}
 }
 ```
@@ -248,66 +246,92 @@ func check(err error) {
 Database support is handled similary:
 
 ```go
-func exampleDB(reader gotransit.Reader) {
+func getReader() tl.Reader {
+	reader, _ := tlcsv.NewReader(URL)
+	return reader
+}
+
+func TestExample2(t *testing.T) {
+	reader := getReader()
 	// Create a SQLite writer, in memory
 	dburl := "sqlite3://:memory:"
-	dbwriter, err := gtdb.NewWriter(dburl)
-	check(err)
-	check(dbwriter.Open())
-	check(dbwriter.Create()) // Install schema.
+	dbwriter, err := tldb.NewWriter(dburl)
+	if err != nil {
+		t.Fatalf("no reader available")
+	}
+	if err := dbwriter.Open(); err != nil {
+		t.Fatalf("could not open database for writing")
+	}
+	if err := dbwriter.Create(); err != nil {
+		t.Fatalf("could not find or create database schema")
+	}
 	for stop := range reader.Stops() {
-		// Preserves StopID but also assigns an integer ID (returned as string).
+		// A database writer AddEntity returns the primary key as a string.
 		fmt.Println("Read Stop:", stop.StopID)
 		eid, err := dbwriter.AddEntity(&stop)
-		check(err)
-		fmt.Println("Wrote Stop:", eid)
+		if err != nil {
+			t.Fatalf("could not write entity to database")
+		}
+		fmt.Println("wrote stop to database:", eid)
 	}
 	// Read back from this source.
 	dbreader, err := dbwriter.NewReader()
-	check(err)
-	for stop := range dbreader.Stops() {
-		fmt.Println("Read Stop:", stop.StopID)
+	if err != nil {
+		t.Fatalf("could not get a new reader")
 	}
-	// Query database
+	count := 0
+	for stop := range dbreader.Stops() {
+		fmt.Println("read stop from database:", stop.StopID)
+		count++
+	}
+	if count != 50 {
+		t.Errorf("got %d stops, expected 50", count)
+	}
 }
 ```
 
-More advanced operations can be performed using a `Copier`, which provides additional hooks for filtering, transformation, and validation:
+More advanced filtering operations can be performed using a `Copier`, which provides additional hooks for filtering, transformation, and validation:
 
 ```go
-func exampleCopier(reader gotransit.Reader) {
-	writer, err := gtcsv.NewWriter("filtered.zip")
-	check(err)
-	check(writer.Open())
-	defer writer.Close()
+func TestExample3(t *testing.T) {
+	reader := getReader()
+	// Create a zip writer
+	writer, err := tlcsv.NewWriter("filtered.zip")
+	if err != nil {
+		t.Fatalf("no writer available")
+	}
+	// Create a copier to stream, filter, and validate entities
 	cp := copier.NewCopier(reader, writer)
 	result := cp.Copy()
+	if result.WriteError != nil {
+		t.Fatalf("fatal copy error")
+	}
 	for _, err := range result.Errors {
-		fmt.Println("Error:", err)
+		fmt.Println("error:", err)
 	}
 	for fn, count := range result.EntityCount {
-		fmt.Printf("Copied %d entities from %s\n", count, fn)
+		fmt.Printf("copied %d entities from %s\n", count, fn)
 	}
 }
 ```
 
-See API docs at https://godoc.org/github.com/interline-io/gotransit
+See API docs at https://godoc.org/github.com/interline-io/transitland-lib
 
 ## Included Readers and Writers
 
 | Target                   | Module  | Supports Read | Supports Write |
 | ------------------------ | ------- | ------------- | -------------- |
-| CSV                      | `gtcsv` | ✅             | ✅              |
-| SQLite                   | `gtdb`  | ✅             | ✅              |
-| Postgres (with PostGIS)  | `gtdb`  | ✅             | ✅              |
+| CSV                      | `tlcsv` | ✅             | ✅              |
+| SQLite                   | `tldb`  | ✅             | ✅              |
+| Postgres (with PostGIS)  | `tldb`  | ✅             | ✅              |
 
 We welcome the addition of more readers and writers.
 
 ## Development
 
-gotransit follows Go coding conventions.
+`transitland-lib` follows Go coding conventions.
 
-GitHub Actions runs all tests, stores code coverage reports as artifacts, and cuts releases using [GoReleaser](https://github.com/goreleaser/goreleaser).
+GitHub Actions runs all tests, stores code coverage reports as artifacts, and prepares releases.
 
 ### Releases
 
@@ -315,12 +339,13 @@ Releases follow [Semantic Versioning](https://semver.org/) conventions.
 
 To cut a new release:
 
-1. Tag the `master` branch with the next SemVer version (for example: `v0.2.0`).
-2. GitHub Actions will run [GoReleaser](https://github.com/goreleaser/goreleaser) and create a GitHub release on this repository.
+1. Update `transitland-lib/tl/tl.go` with the new version.
+2. Create a GitHub release. This will create a tag and GitHub Actions will create &amp; attach code-signed binaries.
+3. Download the files from the release, and update the [homebrew formula](https://github.com/interline-io/homebrew-transitland-lib/blob/master/transitland-lib.rb) with the updated sha256 hashes and version tag.
 
 ## Licenses
 
-gotransit is released under a "dual license" model:
+`transitland-lib` is released under a "dual license" model:
 
 - open-source for use by all under the [GPLv3](LICENSE) license
 - also available under a flexible commercial license from [Interline](mailto:info@interline.io)

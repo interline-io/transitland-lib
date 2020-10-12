@@ -6,7 +6,7 @@ import (
 
 func TestSecrets(t *testing.T) {
 	s := Secrets{}
-	if err := s.Load("../testdata/dmfr/secrets.json"); err != nil {
+	if err := s.Load("../test/data/dmfr/secrets.json"); err != nil {
 		t.Error(err)
 	}
 	if len(s) != 4 {
@@ -16,7 +16,7 @@ func TestSecrets(t *testing.T) {
 
 func TestSecrets_MatchFilename(t *testing.T) {
 	s := Secrets{}
-	if err := s.Load("../testdata/dmfr/secrets.json"); err != nil {
+	if err := s.Load("../test/data/dmfr/secrets.json"); err != nil {
 		t.Error(err)
 	}
 	testcases := []struct {
@@ -43,7 +43,7 @@ func TestSecrets_MatchFilename(t *testing.T) {
 
 func TestSecrets_MatchFeed(t *testing.T) {
 	s := Secrets{}
-	if err := s.Load("../testdata/dmfr/secrets.json"); err != nil {
+	if err := s.Load("../test/data/dmfr/secrets.json"); err != nil {
 		t.Error(err)
 	}
 	testcases := []struct {

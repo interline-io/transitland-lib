@@ -3,8 +3,8 @@ package extract
 import (
 	"fmt"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/graph"
+	"github.com/interline-io/transitland-lib/internal/graph"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 /*
@@ -36,7 +36,7 @@ fare_rule: route present and marked, or at least 1 hit in origin/destination/con
 
 // TODO: Use found map[graph.Node] bool values, not pointers
 
-// Marker selects Entities specified during the Filter method.
+// Marker selects entities specified during the Filter method.
 type Marker struct {
 	graph *graph.EntityGraph
 	found map[*graph.Node]bool
@@ -70,7 +70,7 @@ func (em *Marker) IsVisited(filename string, eid string) bool {
 }
 
 // Filter takes a Reader and selects any entities that are children of the specified file/id map.
-func (em *Marker) Filter(reader gotransit.Reader, fm map[string][]string) error {
+func (em *Marker) Filter(reader tl.Reader, fm map[string][]string) error {
 	eg, err := graph.BuildGraph(reader)
 	if err != nil {
 		return err

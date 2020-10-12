@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func Benchmark_stopPatternKey(b *testing.B) {
-	stoptimes := []gotransit.StopTime{}
+	stoptimes := []tl.StopTime{}
 	for i := 0; i < 50; i++ {
-		stoptimes = append(stoptimes, gotransit.StopTime{StopID: fmt.Sprintf("%d", i*100)})
+		stoptimes = append(stoptimes, tl.StopTime{StopID: fmt.Sprintf("%d", i*100)})
 	}
 	m := map[string]int{}
 	b.ResetTimer()

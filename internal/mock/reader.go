@@ -3,28 +3,28 @@ package mock
 import (
 	"reflect"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 var bufferSize = 1000
 
 // Reader is a mocked up Reader used for testing.
 type Reader struct {
-	AgencyList        []gotransit.Agency
-	RouteList         []gotransit.Route
-	TripList          []gotransit.Trip
-	StopList          []gotransit.Stop
-	StopTimeList      []gotransit.StopTime
-	ShapeList         []gotransit.Shape
-	CalendarList      []gotransit.Calendar
-	CalendarDateList  []gotransit.CalendarDate
-	FeedInfoList      []gotransit.FeedInfo
-	FareRuleList      []gotransit.FareRule
-	FareAttributeList []gotransit.FareAttribute
-	FrequencyList     []gotransit.Frequency
-	TransferList      []gotransit.Transfer
-	LevelList         []gotransit.Level
-	PathwayList       []gotransit.Pathway
+	AgencyList        []tl.Agency
+	RouteList         []tl.Route
+	TripList          []tl.Trip
+	StopList          []tl.Stop
+	StopTimeList      []tl.StopTime
+	ShapeList         []tl.Shape
+	CalendarList      []tl.Calendar
+	CalendarDateList  []tl.CalendarDate
+	FeedInfoList      []tl.FeedInfo
+	FareRuleList      []tl.FareRule
+	FareAttributeList []tl.FareAttribute
+	FrequencyList     []tl.Frequency
+	TransferList      []tl.Transfer
+	LevelList         []tl.Level
+	PathwayList       []tl.Pathway
 }
 
 // NewReader returns a new Reader.
@@ -48,10 +48,10 @@ func (mr *Reader) ValidateStructure() []error {
 }
 
 // StopTimesByTripID .
-func (mr *Reader) StopTimesByTripID(...string) chan []gotransit.StopTime {
-	out := make(chan []gotransit.StopTime, 1000)
+func (mr *Reader) StopTimesByTripID(...string) chan []tl.StopTime {
+	out := make(chan []tl.StopTime, 1000)
 	go func() {
-		sts := map[string][]gotransit.StopTime{}
+		sts := map[string][]tl.StopTime{}
 		for _, ent := range mr.StopTimeList {
 			sts[ent.TripID] = append(sts[ent.TripID], ent)
 		}
@@ -64,15 +64,15 @@ func (mr *Reader) StopTimesByTripID(...string) chan []gotransit.StopTime {
 }
 
 // ShapesByShapeID .
-func (mr *Reader) ShapesByShapeID(...string) chan []gotransit.Shape {
-	c := make(chan []gotransit.Shape, 1000)
+func (mr *Reader) ShapesByShapeID(...string) chan []tl.Shape {
+	c := make(chan []tl.Shape, 1000)
 	close(c)
 	return c
 }
 
 // ShapeLinesByShapeID .
-func (mr *Reader) ShapeLinesByShapeID(...string) chan gotransit.Shape {
-	out := make(chan gotransit.Shape, 1000)
+func (mr *Reader) ShapeLinesByShapeID(...string) chan tl.Shape {
+	out := make(chan tl.Shape, 1000)
 	go func() {
 		for _, ent := range mr.ShapeList {
 			out <- ent
@@ -93,8 +93,8 @@ func (mr *Reader) ReadEntities(c interface{}) error {
 }
 
 // Stops .
-func (mr *Reader) Stops() chan gotransit.Stop {
-	out := make(chan gotransit.Stop, bufferSize)
+func (mr *Reader) Stops() chan tl.Stop {
+	out := make(chan tl.Stop, bufferSize)
 	go func() {
 		for _, ent := range mr.StopList {
 			out <- ent
@@ -105,8 +105,8 @@ func (mr *Reader) Stops() chan gotransit.Stop {
 }
 
 // StopTimes .
-func (mr *Reader) StopTimes() chan gotransit.StopTime {
-	out := make(chan gotransit.StopTime, bufferSize)
+func (mr *Reader) StopTimes() chan tl.StopTime {
+	out := make(chan tl.StopTime, bufferSize)
 	go func() {
 		for _, ent := range mr.StopTimeList {
 			out <- ent
@@ -117,8 +117,8 @@ func (mr *Reader) StopTimes() chan gotransit.StopTime {
 }
 
 // Agencies .
-func (mr *Reader) Agencies() chan gotransit.Agency {
-	out := make(chan gotransit.Agency, bufferSize)
+func (mr *Reader) Agencies() chan tl.Agency {
+	out := make(chan tl.Agency, bufferSize)
 	go func() {
 		for _, ent := range mr.AgencyList {
 			out <- ent
@@ -129,8 +129,8 @@ func (mr *Reader) Agencies() chan gotransit.Agency {
 }
 
 // Calendars .
-func (mr *Reader) Calendars() chan gotransit.Calendar {
-	out := make(chan gotransit.Calendar, bufferSize)
+func (mr *Reader) Calendars() chan tl.Calendar {
+	out := make(chan tl.Calendar, bufferSize)
 	go func() {
 		for _, ent := range mr.CalendarList {
 			out <- ent
@@ -141,8 +141,8 @@ func (mr *Reader) Calendars() chan gotransit.Calendar {
 }
 
 // CalendarDates .
-func (mr *Reader) CalendarDates() chan gotransit.CalendarDate {
-	out := make(chan gotransit.CalendarDate, bufferSize)
+func (mr *Reader) CalendarDates() chan tl.CalendarDate {
+	out := make(chan tl.CalendarDate, bufferSize)
 	go func() {
 		for _, ent := range mr.CalendarDateList {
 			out <- ent
@@ -153,8 +153,8 @@ func (mr *Reader) CalendarDates() chan gotransit.CalendarDate {
 }
 
 // FareAttributes .
-func (mr *Reader) FareAttributes() chan gotransit.FareAttribute {
-	out := make(chan gotransit.FareAttribute, bufferSize)
+func (mr *Reader) FareAttributes() chan tl.FareAttribute {
+	out := make(chan tl.FareAttribute, bufferSize)
 	go func() {
 		for _, ent := range mr.FareAttributeList {
 			out <- ent
@@ -165,8 +165,8 @@ func (mr *Reader) FareAttributes() chan gotransit.FareAttribute {
 }
 
 // FareRules .
-func (mr *Reader) FareRules() chan gotransit.FareRule {
-	out := make(chan gotransit.FareRule, bufferSize)
+func (mr *Reader) FareRules() chan tl.FareRule {
+	out := make(chan tl.FareRule, bufferSize)
 	go func() {
 		for _, ent := range mr.FareRuleList {
 			out <- ent
@@ -177,8 +177,8 @@ func (mr *Reader) FareRules() chan gotransit.FareRule {
 }
 
 // FeedInfos .
-func (mr *Reader) FeedInfos() chan gotransit.FeedInfo {
-	out := make(chan gotransit.FeedInfo, bufferSize)
+func (mr *Reader) FeedInfos() chan tl.FeedInfo {
+	out := make(chan tl.FeedInfo, bufferSize)
 	go func() {
 		for _, ent := range mr.FeedInfoList {
 			out <- ent
@@ -189,8 +189,8 @@ func (mr *Reader) FeedInfos() chan gotransit.FeedInfo {
 }
 
 // Frequencies .
-func (mr *Reader) Frequencies() chan gotransit.Frequency {
-	out := make(chan gotransit.Frequency, bufferSize)
+func (mr *Reader) Frequencies() chan tl.Frequency {
+	out := make(chan tl.Frequency, bufferSize)
 	go func() {
 		for _, ent := range mr.FrequencyList {
 			out <- ent
@@ -201,8 +201,8 @@ func (mr *Reader) Frequencies() chan gotransit.Frequency {
 }
 
 // Routes .
-func (mr *Reader) Routes() chan gotransit.Route {
-	out := make(chan gotransit.Route, bufferSize)
+func (mr *Reader) Routes() chan tl.Route {
+	out := make(chan tl.Route, bufferSize)
 	go func() {
 		for _, ent := range mr.RouteList {
 			out <- ent
@@ -213,8 +213,8 @@ func (mr *Reader) Routes() chan gotransit.Route {
 }
 
 // Shapes .
-func (mr *Reader) Shapes() chan gotransit.Shape {
-	out := make(chan gotransit.Shape, bufferSize)
+func (mr *Reader) Shapes() chan tl.Shape {
+	out := make(chan tl.Shape, bufferSize)
 	go func() {
 		for _, ent := range mr.ShapeList {
 			out <- ent
@@ -225,8 +225,8 @@ func (mr *Reader) Shapes() chan gotransit.Shape {
 }
 
 // Transfers .
-func (mr *Reader) Transfers() chan gotransit.Transfer {
-	out := make(chan gotransit.Transfer, bufferSize)
+func (mr *Reader) Transfers() chan tl.Transfer {
+	out := make(chan tl.Transfer, bufferSize)
 	go func() {
 		for _, ent := range mr.TransferList {
 			out <- ent
@@ -237,8 +237,8 @@ func (mr *Reader) Transfers() chan gotransit.Transfer {
 }
 
 // Pathways .
-func (mr *Reader) Pathways() chan gotransit.Pathway {
-	out := make(chan gotransit.Pathway, bufferSize)
+func (mr *Reader) Pathways() chan tl.Pathway {
+	out := make(chan tl.Pathway, bufferSize)
 	go func() {
 		for _, ent := range mr.PathwayList {
 			out <- ent
@@ -249,8 +249,8 @@ func (mr *Reader) Pathways() chan gotransit.Pathway {
 }
 
 // Levels .
-func (mr *Reader) Levels() chan gotransit.Level {
-	out := make(chan gotransit.Level, bufferSize)
+func (mr *Reader) Levels() chan tl.Level {
+	out := make(chan tl.Level, bufferSize)
 	go func() {
 		for _, ent := range mr.LevelList {
 			out <- ent
@@ -261,8 +261,8 @@ func (mr *Reader) Levels() chan gotransit.Level {
 }
 
 // Trips .
-func (mr *Reader) Trips() chan gotransit.Trip {
-	out := make(chan gotransit.Trip, bufferSize)
+func (mr *Reader) Trips() chan tl.Trip {
+	out := make(chan tl.Trip, bufferSize)
 	go func() {
 		for _, ent := range mr.TripList {
 			out <- ent

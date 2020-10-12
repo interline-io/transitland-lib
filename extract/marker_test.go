@@ -3,8 +3,8 @@ package extract
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit/gtcsv"
-	"github.com/interline-io/gotransit/internal/graph"
+	"github.com/interline-io/transitland-lib/internal/graph"
+	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 type mss = map[string][]string
@@ -16,7 +16,7 @@ func nn(filename, eid string) node {
 
 func TestExtract_Filter_BART(t *testing.T) {
 	em := NewMarker()
-	reader, err := gtcsv.NewReader("../testdata/external/bart.zip")
+	reader, err := tlcsv.NewReader("../test/data/external/bart.zip")
 	if err != nil {
 		t.Error(err)
 	}
@@ -38,7 +38,7 @@ func TestExtract_Filter_BART(t *testing.T) {
 }
 
 func TestExtract_Filter_ExampleFeed(t *testing.T) {
-	reader, err := gtcsv.NewReader("../testdata/extract-examples")
+	reader, err := tlcsv.NewReader("../test/data/extract-examples")
 	if err != nil {
 		t.Error(err)
 	}
