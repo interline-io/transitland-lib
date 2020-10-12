@@ -570,6 +570,11 @@ func (copier *Copier) copyFrequencies() error {
 	return nil
 }
 
+type tripStopTimes struct {
+	Trip      tl.Trip
+	StopTimes []tl.StopTime
+}
+
 // copyTripsAndStopTimes writes Trips and StopTimes
 func (copier *Copier) copyTripsAndStopTimes() error {
 	// Cache all trips in memory
@@ -591,52 +596,66 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		trips[eid] = trip
 	}
+
 	// Prepare to copy stop_times
 	batchCount := 0
-	batchTrips := []tl.Trip{}
-	batchStopTimes := [][]tl.StopTime{}
-	writeBatch := func() {
+	batch := []tripStopTimes{}
+	writeBatch := func() error {
+		sids := []string{}
+		bt := []tl.Entity{}
 		bst := []tl.Entity{}
-		for i := 0; i < len(batchTrips); i++ {
-			if _, _, err := copier.CopyEntity(&batchTrips[i]); err != nil {
-				panic(err)
+		for i := 0; i < len(batch); i++ {
+			if err := copier.checkCopyEntity(&batch[i].Trip); err != nil {
+				continue
 			}
+			bt = append(bt, &batch[i].Trip)
+			sids = append(sids, batch[i].Trip.EntityID())
 		}
-		log.Info("Saved %d trips", len(batchTrips))
-		// Write stoptimes
-		bst = nil
-		for i := 0; i < len(batchStopTimes); i++ {
+		eids, err := copier.Writer.AddEntities(bt)
+		if err != nil || len(eids) != len(sids) {
+			panic(err)
+		}
+		for i := 0; i < len(sids); i++ {
+			fmt.Println(sids[i], "->", eids[i])
+			copier.EntityMap.Set("trips.txt", sids[i], eids[i])
+			copier.result.EntityCount["trips.txt"]++
+		}
+		for i := 0; i < len(batch); i++ {
 			valid := true
-			for j := 0; j < len(batchStopTimes[i]); j++ {
-				if copier.checkCopyEntity(&batchStopTimes[i][j]) != nil {
+			for j := 0; j < len(batch[i].StopTimes); j++ {
+				if copier.checkCopyEntity(&batch[i].StopTimes[j]) != nil {
 					valid = false
 				}
 			}
 			if valid {
-				for j := 0; j < len(batchStopTimes[i]); j++ {
-					bst = append(bst, &batchStopTimes[i][j])
-					if batchStopTimes[i][j].Interpolated > 0 {
+				for j := 0; j < len(batch[i].StopTimes); j++ {
+					bst = append(bst, &batch[i].StopTimes[j])
+					if batch[i].StopTimes[j].Interpolated > 0 {
 						copier.result.InterpolatedStopTimeCount++
 					}
 				}
 			}
 		}
-		if err := copier.Writer.AddEntities(bst); err != nil {
+		if _, err := copier.Writer.AddEntities(bst); err != nil {
 			panic(err)
 		}
 		copier.result.EntityCount["stop_times.txt"] += len(bst)
+		log.Info("Saved %d trips", len(bt))
 		log.Info("Saved %d stop_times", len(bst))
+		return nil
 	}
+
+	// Process each set of Trip/StopTimes
 	for stoptimes := range copier.Reader.StopTimesByTripID() {
 		if batchCount+len(stoptimes) >= copier.BatchSize {
-			writeBatch()
+			if err := writeBatch(); err != nil {
+				return err
+			}
 			batchCount = 0
-			batchStopTimes = nil
-			batchTrips = nil
+			batch = nil
 		}
 		// Error handling for trips without stop_times is after this block
 		if len(stoptimes) == 0 {
-			log.Debug("Warning: StopTimesByTripID produced zero StopTimes")
 			continue
 		}
 		// Does this trip exist?
@@ -653,7 +672,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			copier.result.SkipEntityMarkedCount["stop_times.txt"] += len(stoptimes)
 			continue
 		}
-		// Marks trip as associated with at least 1 stop_time
+		// Mark trip as associated with at least 1 stop_time
 		delete(trips, tripid)
 		// Set StopPattern
 		patkey := stopPatternKey(stoptimes)
@@ -699,17 +718,23 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				stoptimes = stoptimes2
 			}
 		}
-		batchTrips = append(batchTrips, trip)
-		batchStopTimes = append(batchStopTimes, stoptimes)
+		// Add to save batch
+		t := tripStopTimes{
+			Trip:      trip,
+			StopTimes: stoptimes,
+		}
+		batch = append(batch, t)
 		batchCount += len(stoptimes)
 	}
 	// Add any Trips that were not visited/did not have StopTimes
 	for _, trip := range trips {
 		trip := trip
 		trip.AddError(causes.NewEmptyTripError(0))
-		batchTrips = append(batchTrips, trip)
+		batch = append(batch, tripStopTimes{Trip: trip})
 	}
-	writeBatch()
+	if err := writeBatch(); err != nil {
+		return err
+	}
 	copier.logCount(&tl.Trip{})
 	return nil
 }

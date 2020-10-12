@@ -2,6 +2,7 @@ package tldb
 
 import (
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
@@ -193,9 +194,10 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 }
 
 // MultiInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) error {
+func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
+	retids := []int{}
 	if len(ents) == 0 {
-		return nil
+		return retids, nil
 	}
 	cols, _, err := getInsert(ents[0])
 	table := getTableName(ents[0])
@@ -207,6 +209,20 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) error {
 		_, vals, _ := getInsert(d)
 		q = q.Values(vals...)
 	}
-	_, err = q.Exec()
-	return err
+	q = q.Suffix("RETURNING \"id\"")
+	rows, err := q.Query()
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		eid := 0
+		err := rows.Scan(&eid)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("got trip id:", &eid)
+		retids = append(retids, int(eid))
+	}
+	return retids, err
 }

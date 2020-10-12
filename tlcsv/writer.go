@@ -45,22 +45,23 @@ func (writer *Writer) NewReader() (tl.Reader, error) {
 }
 
 // AddEntities provides a generic interface for adding entities.
-func (writer *Writer) AddEntities(ents []tl.Entity) error {
+func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+	retids := []string{}
 	if len(ents) == 0 {
-		return nil
+		return retids, nil
 	}
 	ent := ents[0]
 	efn := ents[0].Filename()
 	for _, ent := range ents {
 		if efn != ent.Filename() {
-			return errors.New("all entities must be same type")
+			return retids, errors.New("all entities must be same type")
 		}
 	}
 	header, ok := writer.headers[efn]
 	if !ok {
 		h, err := dumpHeader(ent)
 		if err != nil {
-			return err
+			return retids, err
 		}
 		header = h
 		writer.headers[efn] = header
@@ -70,24 +71,33 @@ func (writer *Writer) AddEntities(ents []tl.Entity) error {
 	for _, ent := range ents {
 		row, err := dumpRow(ent, header)
 		if err != nil {
-			return err
+			return retids, err
 		}
 		rows = append(rows, row)
+		retids = append(retids, ent.EntityID())
 	}
-	return writer.WriterAdapter.WriteRows(efn, rows)
+	err := writer.WriterAdapter.WriteRows(efn, rows)
+	return retids, err
 }
 
 // AddEntity provides a generic interface for adding an Entity.
 func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
+	eids := []string{}
+	var err error
 	if v, ok := ent.(*tl.Shape); ok {
 		e2s := []tl.Entity{}
 		es := writer.flattenShape(*v)
 		for i := 0; i < len(es); i++ {
 			e2s = append(e2s, &es[i])
 		}
-		return v.EntityID(), writer.AddEntities(e2s)
+		eids, err = writer.AddEntities(e2s)
+	} else {
+		eids, err = writer.AddEntities([]tl.Entity{ent})
 	}
-	return ent.EntityID(), writer.AddEntities([]tl.Entity{ent})
+	if err != nil || len(eids) == 0 {
+		return "", err
+	}
+	return eids[0], nil
 }
 
 func (writer *Writer) flattenShape(ent tl.Shape) []tl.Shape {

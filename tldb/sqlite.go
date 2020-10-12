@@ -163,34 +163,46 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 
 // CopyInsert is an alias to MultiInsert.
 func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
-	return adapter.MultiInsert(ents)
+	// TODO: batch these up, sqlite has a row limit
+	_, err := adapter.MultiInsert(ents)
+	return err
 }
 
 // MultiInsert inserts multiple entities.
-func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) error {
+func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
+	retids := []int{}
 	if len(ents) == 0 {
-		return nil
+		return retids, nil
 	}
 	table := getTableName(ents[0])
 	cols, vals, err := getInsert(ents[0])
 	if err != nil {
-		return err
+		return retids, err
 	}
 	q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
 	if err != nil {
-		return err
+		return retids, err
 	}
 	// return adapter.Tx(func(adapter Adapter) error {
 	db := adapter.DBX()
 	for _, d := range ents {
 		_, vals, err := getInsert(d)
 		if err != nil {
-			return err
+			return retids, err
 		}
-		if _, err := db.Exec(q, vals...); err != nil {
-			return err
+		result, err := db.Exec(q, vals...)
+		if err != nil {
+			return retids, err
 		}
+		eid, err := result.LastInsertId()
+		if err != nil {
+			return retids, err
+		}
+		if v, ok := d.(canSetID); ok {
+			v.SetID(int(eid))
+		}
+		retids = append(retids, int(eid))
 	}
-	return nil
+	return retids, nil
 	// })
 }
