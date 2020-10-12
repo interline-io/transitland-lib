@@ -161,8 +161,13 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid), nil
 }
 
-// BatchInsert provides a fast path for inserting multiple entities.
-func (adapter *SQLiteAdapter) BatchInsert(ents []tl.Entity) error {
+// CopyInsert is an alias to MultiInsert.
+func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
+	return adapter.MultiInsert(ents)
+}
+
+// MultiInsert inserts multiple entities.
+func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
 	}

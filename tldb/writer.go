@@ -72,7 +72,11 @@ func (writer *Writer) AddEntities(ents []tl.Entity) error {
 			z.SetFeedVersionID(writer.FeedVersionID)
 		}
 	}
-	return writer.Adapter.BatchInsert(ents)
+	ients := make([]interface{}, len(ents))
+	for i := 0; i < len(ents); i++ {
+		ients[i] = ents[i]
+	}
+	return writer.Adapter.CopyInsert(ients)
 }
 
 // CreateFeedVersion creates a new FeedVersion and inserts into the database.

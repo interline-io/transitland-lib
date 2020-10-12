@@ -5,7 +5,6 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -142,8 +141,8 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid.Int64), err
 }
 
-// BatchInsert inserts data using COPY.
-func (adapter *PostgresAdapter) BatchInsert(ents []tl.Entity) error {
+// CopyInsert inserts data using COPY.
+func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
 	}
@@ -161,7 +160,6 @@ func (adapter *PostgresAdapter) BatchInsert(ents []tl.Entity) error {
 		tx, err = a.Beginx()
 	}
 	if err != nil {
-		log.Error("Failed to begin transaction: %s", err.Error())
 		return err
 	}
 	cols, _, err := getInsert(ents[0])
@@ -169,7 +167,6 @@ func (adapter *PostgresAdapter) BatchInsert(ents []tl.Entity) error {
 	stmt, err := tx.Prepare(pq.CopyIn(table, cols...))
 	defer stmt.Close()
 	if err != nil {
-		log.Error("Failed to prepare copy statement: %s", err.Error())
 		return err
 	}
 	for _, d := range ents {
@@ -178,18 +175,15 @@ func (adapter *PostgresAdapter) BatchInsert(ents []tl.Entity) error {
 		}
 		_, vals, err := getInsert(d)
 		if err != nil {
-			log.Error("Failed to get insert values: %s", err.Error())
 			return err
 		}
 		_, err = stmt.Exec(vals...)
 		if err != nil {
-			log.Error("Failed to get add row to copy statement: %s", err.Error())
 			return err
 		}
 	}
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Error("Failed to get exec copy statement: %s", err.Error())
 		return err
 	}
 	if commit {
@@ -199,7 +193,7 @@ func (adapter *PostgresAdapter) BatchInsert(ents []tl.Entity) error {
 }
 
 // MultiInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) MultiInsert(ents []tl.Entity) error {
+func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
 	}

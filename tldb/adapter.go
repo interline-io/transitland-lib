@@ -4,7 +4,6 @@ import (
 	"net/url"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -36,5 +35,6 @@ type Adapter interface {
 	Find(interface{}, ...interface{}) error
 	Get(interface{}, string, ...interface{}) error
 	Select(interface{}, string, ...interface{}) error
-	BatchInsert([]tl.Entity) error
+	MultiInsert([]interface{}) error
+	CopyInsert([]interface{}) error
 }
