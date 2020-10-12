@@ -60,31 +60,47 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	if z, ok := ent.(canSetFeedVersion); ok {
 		z.SetFeedVersionID(writer.FeedVersionID)
 	}
+	// Update Timestamps
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	// Save
 	eid, err := writer.Adapter.Insert(ent)
+	// Update ID
+	if v, ok := ent.(canSetID); ok {
+		v.SetID(int(eid))
+	}
 	return strconv.Itoa(eid), err
 }
 
 // AddEntities writes entities to the database.
 func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
-	for _, ent := range ents {
-		if z, ok := ent.(canSetFeedVersion); ok {
-			z.SetFeedVersionID(writer.FeedVersionID)
+	eids := []string{}
+	ients := make([]interface{}, len(ents))
+	for i, ent := range ents {
+		if v, ok := ent.(canSetFeedVersion); ok {
+			v.SetFeedVersionID(writer.FeedVersionID)
+		}
+		if v, ok := ent.(canUpdateTimestamps); ok {
+			v.UpdateTimestamps()
+		}
+		ients[i] = ent
+	}
+	retids, err := writer.Adapter.MultiInsert(ients)
+	if err != nil {
+		return eids, err
+	}
+	if len(retids) != len(ients) {
+		panic("failed to write expected entities")
+	}
+	for i := 0; i < len(ents); i++ {
+		eids = append(eids, strconv.Itoa(retids[i]))
+		// Update ID
+		if v, ok := ents[i].(canSetID); ok {
+			v.SetID(int(retids[i]))
 		}
 	}
-	ients := make([]interface{}, len(ents))
-	for i := 0; i < len(ents); i++ {
-		ients[i] = ents[i]
-	}
-	eids, err := writer.Adapter.MultiInsert(ients)
-	retids := []string{}
-	if err != nil {
-		return retids, err
-	}
-	for _, eid := range eids {
-		retids = append(retids, strconv.Itoa(eid))
-	}
-	return retids, nil
+	return eids, nil
 }
 
 // CreateFeedVersion creates a new FeedVersion and inserts into the database.

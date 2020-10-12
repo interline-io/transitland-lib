@@ -612,11 +612,13 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			sids = append(sids, batch[i].Trip.EntityID())
 		}
 		eids, err := copier.Writer.AddEntities(bt)
-		if err != nil || len(eids) != len(sids) {
-			panic(err)
+		if err != nil {
+			return err
+		}
+		if len(eids) != len(sids) {
+			return errors.New("Did not write expected number of trips")
 		}
 		for i := 0; i < len(sids); i++ {
-			fmt.Println(sids[i], "->", eids[i])
 			copier.EntityMap.Set("trips.txt", sids[i], eids[i])
 			copier.result.EntityCount["trips.txt"]++
 		}

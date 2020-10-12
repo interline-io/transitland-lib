@@ -161,13 +161,6 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid), nil
 }
 
-// CopyInsert is an alias to MultiInsert.
-func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
-	// TODO: batch these up, sqlite has a row limit
-	_, err := adapter.MultiInsert(ents)
-	return err
-}
-
 // MultiInsert inserts multiple entities.
 func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	retids := []int{}
@@ -205,4 +198,11 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	}
 	return retids, nil
 	// })
+}
+
+// CopyInsert uses MultiInsert.
+func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
+	// TODO: batch these up, sqlite has a row limit
+	_, err := adapter.MultiInsert(ents)
+	return err
 }

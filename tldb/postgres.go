@@ -2,7 +2,6 @@ package tldb
 
 import (
 	"database/sql"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
@@ -114,12 +113,6 @@ func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
-	if v, ok := ent.(canUpdateTimestamps); ok {
-		v.UpdateTimestamps()
-	}
-	if v, ok := ent.(*tl.FareAttribute); ok {
-		v.Transfers = "0" // TODO: Keep?
-	}
 	table := getTableName(ent)
 	cols, vals, err := getInsert(ent)
 	if err != nil {
@@ -136,10 +129,37 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if v, ok := ent.(canSetID); ok {
-		v.SetID(int(eid.Int64))
-	}
 	return int(eid.Int64), err
+}
+
+// MultiInsert builds and executes a multi-insert statement for the given entities.
+func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
+	retids := []int{}
+	if len(ents) == 0 {
+		return retids, nil
+	}
+	cols, _, err := getInsert(ents[0])
+	table := getTableName(ents[0])
+	q := adapter.Sqrl().Insert(table).Columns(cols...)
+	for _, d := range ents {
+		_, vals, _ := getInsert(d)
+		q = q.Values(vals...)
+	}
+	q = q.Suffix("RETURNING \"id\"")
+	rows, err := q.Query()
+	if err != nil {
+		return retids, err
+	}
+	defer rows.Close()
+	var eid sql.NullInt64
+	for rows.Next() {
+		err := rows.Scan(&eid)
+		if err != nil {
+			return retids, err
+		}
+		retids = append(retids, int(eid.Int64))
+	}
+	return retids, err
 }
 
 // CopyInsert inserts data using COPY.
@@ -191,38 +211,4 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 		return tx.Commit()
 	}
 	return nil
-}
-
-// MultiInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
-	retids := []int{}
-	if len(ents) == 0 {
-		return retids, nil
-	}
-	cols, _, err := getInsert(ents[0])
-	table := getTableName(ents[0])
-	q := adapter.Sqrl().Insert(table).Columns(cols...)
-	for _, d := range ents {
-		if v, ok := d.(canUpdateTimestamps); ok {
-			v.UpdateTimestamps()
-		}
-		_, vals, _ := getInsert(d)
-		q = q.Values(vals...)
-	}
-	q = q.Suffix("RETURNING \"id\"")
-	rows, err := q.Query()
-	if err != nil {
-		panic(err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		eid := 0
-		err := rows.Scan(&eid)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("got trip id:", &eid)
-		retids = append(retids, int(eid))
-	}
-	return retids, err
 }

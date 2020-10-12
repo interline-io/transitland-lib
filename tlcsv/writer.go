@@ -44,24 +44,24 @@ func (writer *Writer) NewReader() (tl.Reader, error) {
 	return NewReader(writer.WriterAdapter.Path())
 }
 
-// AddEntities provides a generic interface for adding entities.
+// AddEntities writes entities to the output.
 func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
-	retids := []string{}
+	eids := []string{}
 	if len(ents) == 0 {
-		return retids, nil
+		return eids, nil
 	}
 	ent := ents[0]
 	efn := ents[0].Filename()
 	for _, ent := range ents {
 		if efn != ent.Filename() {
-			return retids, errors.New("all entities must be same type")
+			return eids, errors.New("all entities must be same type")
 		}
 	}
 	header, ok := writer.headers[efn]
 	if !ok {
 		h, err := dumpHeader(ent)
 		if err != nil {
-			return retids, err
+			return eids, err
 		}
 		header = h
 		writer.headers[efn] = header
@@ -71,16 +71,16 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	for _, ent := range ents {
 		row, err := dumpRow(ent, header)
 		if err != nil {
-			return retids, err
+			return eids, err
 		}
 		rows = append(rows, row)
-		retids = append(retids, ent.EntityID())
+		eids = append(eids, ent.EntityID())
 	}
 	err := writer.WriterAdapter.WriteRows(efn, rows)
-	return retids, err
+	return eids, err
 }
 
-// AddEntity provides a generic interface for adding an Entity.
+// AddEntity writes an entity to the output.
 func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	eids := []string{}
 	var err error
