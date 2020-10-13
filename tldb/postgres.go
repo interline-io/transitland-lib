@@ -191,9 +191,6 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 		return err
 	}
 	for _, d := range ents {
-		if v, ok := d.(canUpdateTimestamps); ok {
-			v.UpdateTimestamps()
-		}
 		_, vals, err := getInsert(d)
 		if err != nil {
 			return err

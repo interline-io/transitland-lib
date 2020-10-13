@@ -137,9 +137,6 @@ func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
-	if v, ok := ent.(canUpdateTimestamps); ok {
-		v.UpdateTimestamps()
-	}
 	table := getTableName(ent)
 	cols, vals, err := getInsert(ent)
 	if err != nil {
@@ -155,9 +152,6 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 		return 0, err
 	}
 	eid, err := result.LastInsertId()
-	if v, ok := ent.(canSetID); ok {
-		v.SetID(int(eid))
-	}
 	return int(eid), nil
 }
 
@@ -176,33 +170,33 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	if err != nil {
 		return retids, err
 	}
-	// return adapter.Tx(func(adapter Adapter) error {
-	db := adapter.DBX()
-	for _, d := range ents {
-		_, vals, err := getInsert(d)
-		if err != nil {
-			return retids, err
+	if err := adapter.Tx(func(adapter Adapter) error {
+		db := adapter.DBX()
+		for _, d := range ents {
+			_, vals, err := getInsert(d)
+			if err != nil {
+				return err
+			}
+			result, err := db.Exec(q, vals...)
+			if err != nil {
+				return err
+			}
+			eid, err := result.LastInsertId()
+			if err != nil {
+				return err
+			}
+			retids = append(retids, int(eid))
 		}
-		result, err := db.Exec(q, vals...)
-		if err != nil {
-			return retids, err
-		}
-		eid, err := result.LastInsertId()
-		if err != nil {
-			return retids, err
-		}
-		if v, ok := d.(canSetID); ok {
-			v.SetID(int(eid))
-		}
-		retids = append(retids, int(eid))
+		return nil
+	}); err != nil {
+		return retids, err
 	}
 	return retids, nil
-	// })
 }
 
 // CopyInsert uses MultiInsert.
 func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
-	// TODO: batch these up, sqlite has a row limit
+	// TODO: batch these up, sqlite has a parameter limit
 	_, err := adapter.MultiInsert(ents)
 	return err
 }
