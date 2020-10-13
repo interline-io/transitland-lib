@@ -65,7 +65,7 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	return strconv.Itoa(eid), err
 }
 
-// AddEntities provides a generic interface for adding entities to the database.
+// AddEntities writes entities to the database.
 func (writer *Writer) AddEntities(ents []tl.Entity) error {
 	for _, ent := range ents {
 		if z, ok := ent.(canSetFeedVersion); ok {
