@@ -14,6 +14,12 @@ import (
 	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
+// Helper to group Trips and StopTimes
+type tripStopTimes struct {
+	Trip      tl.Trip
+	StopTimes []tl.StopTime
+}
+
 // ErrorHandler is called on each source file and entity; errors can be nil
 type ErrorHandler interface {
 	HandleEntityErrors(tl.Entity, []error, []error)
@@ -467,8 +473,8 @@ func (copier *Copier) copyRoutes() error {
 // copyCalendars copies Calendars and CalendarDates
 func (copier *Copier) copyCalendars() error {
 	// Calendars
-	for e := range copier.Reader.Calendars() {
-		if _, _, err := copier.CopyEntity(&e); err != nil {
+	for ent := range copier.Reader.Calendars() {
+		if _, _, err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
@@ -485,28 +491,41 @@ func (copier *Copier) copyCalendars() error {
 	}
 	dups := map[calkey]int{}
 	// Add CalendarDates
-	for e := range copier.Reader.CalendarDates() {
-		if !copier.isMarked(&tl.Calendar{ServiceID: e.ServiceID}) {
+	batch := []tl.Entity{}
+	for ent := range copier.Reader.CalendarDates() {
+		if len(batch) >= copier.BatchSize {
+			if _, err := copier.Writer.AddEntities(batch); err != nil {
+				return err
+			}
+			batch = nil
+		}
+		if !copier.isMarked(&tl.Calendar{ServiceID: ent.ServiceID}) {
 			continue
 		}
 		// Check for duplicates (service_id,date)
 		key := calkey{
-			ServiceID: e.ServiceID,
-			Date:      e.Date.Format("20060102"),
+			ServiceID: ent.ServiceID,
+			Date:      ent.Date.Format("20060102"),
 		}
 		if _, ok := dups[key]; ok {
-			e.AddError(causes.NewDuplicateIDError(e.EntityID()))
+			ent.AddError(causes.NewDuplicateIDError(ent.EntityID()))
 		}
 		dups[key]++
 		// Allow unchecked/invalid ServiceID references.
 		if !copier.NormalizeServiceIDs {
-			if _, ok := copier.EntityMap.Get("calendar.txt", e.ServiceID); !ok {
-				copier.EntityMap.Set("calendar.txt", e.ServiceID, e.ServiceID)
+			if _, ok := copier.EntityMap.Get("calendar.txt", ent.ServiceID); !ok {
+				copier.EntityMap.Set("calendar.txt", ent.ServiceID, ent.ServiceID)
 			}
 		}
-		if _, _, err := copier.CopyEntity(&e); err != nil {
-			return err
+		if err := copier.checkCopyEntity(&ent); err != nil {
+			continue
 		}
+		ent := ent
+		batch = append(batch, &ent)
+		copier.result.EntityCount["calendar_dates.txt"]++
+	}
+	if _, err := copier.Writer.AddEntities(batch); err != nil {
+		return err
 	}
 	copier.logCount(&tl.Calendar{})
 	copier.logCount(&tl.CalendarDate{})
@@ -570,11 +589,6 @@ func (copier *Copier) copyFrequencies() error {
 	return nil
 }
 
-type tripStopTimes struct {
-	Trip      tl.Trip
-	StopTimes []tl.StopTime
-}
-
 // copyTripsAndStopTimes writes Trips and StopTimes
 func (copier *Copier) copyTripsAndStopTimes() error {
 	// Cache all trips in memory
@@ -620,8 +634,8 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		for i := 0; i < len(sids); i++ {
 			copier.EntityMap.Set("trips.txt", sids[i], eids[i])
-			copier.result.EntityCount["trips.txt"]++
 		}
+		copier.result.EntityCount["trips.txt"] += len(eids)
 		for i := 0; i < len(batch); i++ {
 			valid := true
 			for j := 0; j < len(batch[i].StopTimes); j++ {
