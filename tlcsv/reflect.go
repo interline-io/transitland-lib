@@ -126,6 +126,11 @@ func GetString(ent tl.Entity, key string) (string, error) {
 func valGetString(valueField reflect.Value, k string) (string, error) {
 	value := ""
 	rfi := valueField.Interface()
+	// Special case WideTime for now...
+	if v, ok := rfi.(tl.WideTime); ok {
+		return v.String(), nil
+	}
+	// Otherwise get driver.Value
 	if v, ok := rfi.(canValue); ok {
 		var err error
 		rfi, err = v.Value()
