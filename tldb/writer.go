@@ -79,6 +79,9 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 
 // AddEntities writes entities to the database.
 func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+	if len(ents) == 0 {
+		return []string{}, nil
+	}
 	eids := []string{}
 	ients := make([]interface{}, len(ents))
 	useCopy := true
@@ -108,7 +111,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		return eids, err
 	}
 	if len(retids) != len(ients) {
-		panic("failed to write expected entities")
+		return []string{}, errors.New("failed to write expected entities")
 	}
 	for i := 0; i < len(ents); i++ {
 		eids = append(eids, strconv.Itoa(retids[i]))
