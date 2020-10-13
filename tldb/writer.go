@@ -58,7 +58,7 @@ func (writer *Writer) Delete() error {
 func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	// TODO: Special case. Remove and use NullInt.
 	if v, ok := ent.(*tl.FareAttribute); ok && v.Transfers == "" {
-		v.Transfers = "0"
+		v.Transfers = "-1"
 	}
 	// Set the FeedVersionID
 	if z, ok := ent.(canSetFeedVersion); ok {
