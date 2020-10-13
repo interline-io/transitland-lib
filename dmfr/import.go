@@ -126,6 +126,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 		return ImportResult{FeedVersionImport: fvi}, err
 	}
 	// Create FVI
+	fvi.UpdateTimestamps()
 	if fviid, err := adapter.Insert(&fvi); err == nil {
 		// note: handle OK first
 		fvi.ID = fviid
@@ -167,6 +168,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 		fviresult.Success = true
 		fviresult.InProgress = false
 		fviresult.ExceptionLog = ""
+		fviresult.UpdateTimestamps()
 		if err := adapter.Update(&fviresult); err != nil {
 			// Serious error
 			log.Error("Error saving FeedVersionImport: %s", err.Error())
@@ -179,6 +181,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
+		fvi.UpdateTimestamps()
 		if err := adapter.Update(&fvi); err != nil {
 			// Serious error
 			log.Error("Error saving FeedVersionImport: %s", err.Error())

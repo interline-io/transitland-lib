@@ -23,9 +23,6 @@ func update(adapter Adapter, ent interface{}, columns ...string) error {
 	if err != nil {
 		return errors.New("cannot get ID")
 	}
-	if v, ok := ent.(canUpdateTimestamps); ok {
-		v.UpdateTimestamps()
-	}
 	table := getTableName(ent)
 	cols, vals, err := getInsert(ent)
 	if err != nil {

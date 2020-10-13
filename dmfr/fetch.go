@@ -62,9 +62,10 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	} else if err != nil {
 		return fr, err
 	}
+	// Immediately save LastFetchedAt
 	tlstate.LastFetchedAt = tl.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	tlstate.LastFetchError = ""
-	// Immediately save LastFetchedAt
+	tlstate.UpdateTimestamps()
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
 		return fr, err
 	}
@@ -80,6 +81,7 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	}
 	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps
+	tlstate.UpdateTimestamps()
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fr, err
 	}
@@ -179,6 +181,7 @@ func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult
 		fr.Path = fv.File // TODO: remove
 	}
 	// Return fv
+	fv.UpdateTimestamps()
 	fv.ID, err = atx.Insert(&fv)
 	fr.FeedVersion = fv
 	if err != nil {
@@ -191,6 +194,7 @@ func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult
 	}
 	for _, fvfi := range fvfis {
 		fvfi.FeedVersionID = fv.ID
+		fvfi.UpdateTimestamps()
 		if _, err := atx.Insert(&fvfi); err != nil {
 			return fr, err
 		}
