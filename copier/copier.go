@@ -102,6 +102,7 @@ type Copier struct {
 	stopPatterns        map[string]int
 	stopPatternShapeIDs map[int]string
 	result              *CopyResult
+	duplicateMap        *tl.EntityMap
 	*tl.EntityMap
 }
 
@@ -125,6 +126,8 @@ func NewCopier(reader tl.Reader, writer tl.Writer) Copier {
 	copier.Marker = newYesMarker()
 	// Default EntityMap
 	copier.EntityMap = tl.NewEntityMap()
+	// Check for duplicate IDs
+	copier.duplicateMap = tl.NewEntityMap()
 	// Default filters
 	copier.filters = []tl.EntityFilter{}
 	// Geom Cache
@@ -157,7 +160,7 @@ func (copier *Copier) AddEntityFilter(ef tl.EntityFilter) error {
 }
 
 ////////////////////////////////////
-////////// Helper methods //////////
+////////// Helper Methods //////////
 ////////////////////////////////////
 
 // Check if the entity is marked for copying.
@@ -212,15 +215,17 @@ func (copier *Copier) copyEntities(ents []tl.Entity) ([]string, []string, error)
 		log.Error("Critical error: failed to write %d entities for %s", len(bt), efn)
 		return []string{}, []string{}, err
 	}
-	if len(sids) == len(eids) {
-		for i, eid := range eids {
-			sid := sids[i]
-			if eid != "" {
-				log.Debug("%s '%s': saved -> %s", efn, sid, eid)
-				copier.EntityMap.Set(efn, sid, eid)
-			}
-		}
+	// if len(sids) == len(eids) {
+	for i, eid := range eids {
+		sid := sids[i]
+		// if eid != "" {
+		log.Info("%s '%s': saved -> %s", efn, sid, eid)
+		copier.EntityMap.Set(efn, sid, eid)
+		// }
 	}
+	// } else {
+	// 	panic("range mismatch")
+	// }
 	copier.result.EntityCount[efn] += len(bt)
 	return sids, eids, nil
 }
@@ -262,8 +267,10 @@ func (copier *Copier) checkCopyEntity(ent tl.Entity) error {
 	}
 	// Check for duplicate entities.
 	eid := ent.EntityID()
-	if _, ok := copier.EntityMap.Get(efn, eid); ok && len(eid) > 0 {
+	if _, ok := copier.duplicateMap.Get(efn, eid); ok && len(eid) > 0 {
 		errs = append(errs, causes.NewDuplicateIDError(eid))
+	} else {
+		copier.duplicateMap.Set(efn, eid, eid)
 	}
 	// Check error tolerance flags
 	if len(errs) > 0 {
@@ -318,6 +325,7 @@ func (copier *Copier) Copy() *CopyResult {
 		copier.copyLevels,
 		copier.copyStops,
 		copier.copyPathways,
+		copier.copyFares,
 		copier.copyCalendars,
 		copier.copyShapes,
 		copier.copyTripsAndStopTimes,
@@ -479,6 +487,7 @@ func (copier *Copier) copyFares() error {
 	var err error
 	bt := []tl.Entity{}
 	for e := range copier.Reader.FareAttributes() {
+		fmt.Println("e:", e)
 		// Set default agency
 		if len(e.AgencyID.Key) == 0 {
 			e.AgencyID.Key = copier.DefaultAgencyID
