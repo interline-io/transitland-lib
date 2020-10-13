@@ -81,7 +81,11 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	eids := []string{}
 	ients := make([]interface{}, len(ents))
+	useCopy := true
 	for i, ent := range ents {
+		if ent.EntityID() != "" {
+			useCopy = false
+		}
 		if v, ok := ent.(canSetFeedVersion); ok {
 			v.SetFeedVersionID(writer.FeedVersionID)
 		}
@@ -89,6 +93,12 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 			v.UpdateTimestamps()
 		}
 		ients[i] = ent
+	}
+	if useCopy {
+		if err := writer.Adapter.CopyInsert(ients); err != nil {
+			return eids, err
+		}
+		return eids, nil
 	}
 	retids, err := writer.Adapter.MultiInsert(ients)
 	if err != nil {

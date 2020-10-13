@@ -196,7 +196,20 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 
 // CopyInsert uses MultiInsert.
 func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
-	// TODO: batch these up, sqlite has a parameter limit
-	_, err := adapter.MultiInsert(ents)
-	return err
+	limit := 1000
+	for i := 0; i < len(ents); i += limit {
+		batch := ents[i:min(i+limit, len(ents))]
+		_, err := adapter.MultiInsert(batch)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func min(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
 }
