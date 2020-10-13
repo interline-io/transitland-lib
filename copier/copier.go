@@ -616,7 +616,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			return err
 		}
 		if len(eids) != len(sids) {
-			return errors.New("Did not write expected number of trips")
+			return errors.New("did not write expected number of trips")
 		}
 		for i := 0; i < len(sids); i++ {
 			copier.EntityMap.Set("trips.txt", sids[i], eids[i])
