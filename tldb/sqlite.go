@@ -196,13 +196,6 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 
 // CopyInsert uses MultiInsert.
 func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
-	batchSize := 1000
-	for i := 0; i < len(ents); i += batchSize {
-		batch := ents[i:min(i+batchSize, len(ents))]
-		_, err := adapter.MultiInsert(batch)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	_, err := adapter.MultiInsert(ents)
+	return err
 }

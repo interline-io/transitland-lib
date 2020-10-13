@@ -98,6 +98,9 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		if err := writer.Adapter.CopyInsert(ients); err != nil {
 			return eids, err
 		}
+		for range ents {
+			eids = append(eids, "")
+		}
 		return eids, nil
 	}
 	retids, err := writer.Adapter.MultiInsert(ients)

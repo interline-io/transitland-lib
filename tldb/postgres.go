@@ -134,13 +134,13 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 
 // MultiInsert builds and executes a multi-insert statement for the given entities.
 func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
-	batchSize := 1000
 	retids := []int{}
 	if len(ents) == 0 {
 		return retids, nil
 	}
 	cols, _, err := getInsert(ents[0])
 	table := getTableName(ents[0])
+	batchSize := 65536 / (len(cols) + 1)
 	for i := 0; i < len(ents); i += batchSize {
 		batch := ents[i:min(i+batchSize, len(ents))]
 		q := adapter.Sqrl().Insert(table).Columns(cols...)
