@@ -123,7 +123,7 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 		Insert(table).
 		Columns(cols...).
 		Values(vals...).
-		Suffix("RETURNING \"id\"").
+		Suffix(`RETURNING "id"`).
 		QueryRow().
 		Scan(&eid)
 	if err != nil {
@@ -145,7 +145,7 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 		_, vals, _ := getInsert(d)
 		q = q.Values(vals...)
 	}
-	q = q.Suffix("RETURNING \"id\"")
+	q = q.Suffix(`RETURNING "id"`)
 	rows, err := q.Query()
 	if err != nil {
 		return retids, err

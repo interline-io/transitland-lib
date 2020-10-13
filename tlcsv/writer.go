@@ -94,8 +94,11 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	} else {
 		eids, err = writer.AddEntities([]tl.Entity{ent})
 	}
-	if err != nil || len(eids) == 0 {
+	if err != nil {
 		return "", err
+	}
+	if len(eids) == 0 {
+		return "", errors.New("did not write expected number of entities")
 	}
 	return eids[0], nil
 }
