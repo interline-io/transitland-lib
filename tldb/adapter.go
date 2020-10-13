@@ -9,6 +9,13 @@ import (
 
 var adapters = map[string]func(string) Adapter{}
 
+func min(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
+}
+
 // newAdapter returns a Adapter for the given dburl.
 func newAdapter(dburl string) Adapter {
 	u, err := url.Parse(dburl)

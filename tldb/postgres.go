@@ -134,30 +134,34 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 
 // MultiInsert builds and executes a multi-insert statement for the given entities.
 func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
+	batchSize := 1000
 	retids := []int{}
 	if len(ents) == 0 {
 		return retids, nil
 	}
 	cols, _, err := getInsert(ents[0])
 	table := getTableName(ents[0])
-	q := adapter.Sqrl().Insert(table).Columns(cols...)
-	for _, d := range ents {
-		_, vals, _ := getInsert(d)
-		q = q.Values(vals...)
-	}
-	q = q.Suffix(`RETURNING "id"`)
-	rows, err := q.Query()
-	if err != nil {
-		return retids, err
-	}
-	defer rows.Close()
-	var eid sql.NullInt64
-	for rows.Next() {
-		err := rows.Scan(&eid)
+	for i := 0; i < len(ents); i += batchSize {
+		batch := ents[i:min(i+batchSize, len(ents))]
+		q := adapter.Sqrl().Insert(table).Columns(cols...)
+		for _, d := range batch {
+			_, vals, _ := getInsert(d)
+			q = q.Values(vals...)
+		}
+		q = q.Suffix(`RETURNING "id"`)
+		rows, err := q.Query()
 		if err != nil {
 			return retids, err
 		}
-		retids = append(retids, int(eid.Int64))
+		defer rows.Close()
+		var eid sql.NullInt64
+		for rows.Next() {
+			err := rows.Scan(&eid)
+			if err != nil {
+				return retids, err
+			}
+			retids = append(retids, int(eid.Int64))
+		}
 	}
 	return retids, err
 }
