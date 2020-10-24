@@ -109,7 +109,7 @@ func (ent *StopTime) GetString(key string) (string, error) {
 	case "drop_off_type":
 		v = strconv.Itoa(ent.DropOffType)
 	case "shape_dist_traveled":
-		if ent.ShapeDistTraveled >= 0 {
+		if ent.ShapeDistTraveled > 0 {
 			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled)
 		}
 	case "timepoint":
