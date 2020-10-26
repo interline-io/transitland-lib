@@ -23,6 +23,7 @@ type ImportCommand struct {
 	DryRun        bool
 	FeedIDs       []string
 	FVIDs         arrayFlags
+	FVSHA1        arrayFlags
 	Adapter       tldb.Adapter // allow for mocks
 	ImportOptions ImportOptions
 }
@@ -31,6 +32,7 @@ type ImportCommand struct {
 func (cmd *ImportCommand) Parse(args []string) error {
 	extflags := arrayFlags{}
 	fvidfile := ""
+	fvsha1file := ""
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
 	fl.Usage = func() {
 		log.Print("Usage: import [feedids...]")
@@ -39,6 +41,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	fl.Var(&extflags, "ext", "Include GTFS Extension")
 	fl.Var(&cmd.FVIDs, "fvid", "Import specific feed version ID")
 	fl.StringVar(&fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
+	fl.StringVar(&fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
 	fl.StringVar(&cmd.ImportOptions.Directory, "gtfsdir", ".", "GTFS Directory")
@@ -65,6 +68,17 @@ func (cmd *ImportCommand) Parse(args []string) error {
 		for _, line := range lines {
 			if line != "" {
 				cmd.FVIDs = append(cmd.FVIDs, line)
+			}
+		}
+	}
+	if fvsha1file != "" {
+		lines, err := getFileLines(fvsha1file)
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			if line != "" {
+				cmd.FVSHA1 = append(cmd.FVSHA1, line)
 			}
 		}
 	}
@@ -109,6 +123,10 @@ func (cmd *ImportCommand) Run() error {
 	if len(cmd.FVIDs) > 0 {
 		// Explicitly specify fvids
 		q = q.Where(sq.Eq{"feed_versions.id": cmd.FVIDs})
+	}
+	if len(cmd.FVSHA1) > 0 {
+		// Explicitly specify fv sha1
+		q = q.Where(sq.Eq{"feed_versions.sha1": cmd.FVSHA1})
 	}
 	if cmd.Limit > 0 {
 		// Max feeds
