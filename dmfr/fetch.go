@@ -195,6 +195,8 @@ func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult
 			return fr, err
 		}
 	}
+	// Get service statistics
+	NewFeedVersionServiceInfosFromReader(reader)
 	return fr, nil
 }
 
