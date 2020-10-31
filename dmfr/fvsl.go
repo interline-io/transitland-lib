@@ -1,7 +1,7 @@
 package dmfr
 
 import (
-	"fmt"
+	"database/sql"
 	"sort"
 	"time"
 
@@ -9,10 +9,10 @@ import (
 	"github.com/snabb/isoweek"
 )
 
-// RouteService .
-type RouteService struct {
+// FeedVersionServiceLevel .
+type FeedVersionServiceLevel struct {
 	ID        int
-	RouteID   string
+	RouteID   sql.NullString
 	StartDate time.Time
 	EndDate   time.Time
 	Monday    int
@@ -22,37 +22,54 @@ type RouteService struct {
 	Friday    int
 	Saturday  int
 	Sunday    int
+	// Cached data
+	AgencyName     string
+	RouteShortName string
+	RouteLongName  string
+	RouteType      int
 }
 
 // NewFeedVersionServiceInfosFromReader .
-func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]RouteService, error) {
-	results := []RouteService{}
+func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServiceLevel, error) {
+	results := []FeedVersionServiceLevel{}
 	// Cache services
 	services := map[string]*tl.Service{}
 	for _, service := range tl.NewServicesFromReader(reader) {
 		services[service.ServiceID] = service
+	}
+	// Cache frequencies; trip repeats
+	freqs := map[string]int{}
+	for freq := range reader.Frequencies() {
+		freqs[freq.TripID] += freq.RepeatCount()
 	}
 	// Calculate trip durations
 	tripdurations := map[string]int{}
 	for stoptimes := range reader.StopTimesByTripID() {
 		start := stoptimes[0].DepartureTime
 		end := stoptimes[len(stoptimes)-1].ArrivalTime
-		// todo: frequencies
 		tripdurations[stoptimes[0].TripID] = end - start
 	}
 	// Group durations by route,service
 	routeservices := map[string]map[string]int{}
+	routeservices[""] = map[string]int{} // feed total
 	for trip := range reader.Trips() {
 		if _, ok := routeservices[trip.RouteID]; !ok {
 			routeservices[trip.RouteID] = map[string]int{}
 		}
+		// Multiply out frequency based trips; they are scheduled or not scheduled together
 		td := tripdurations[trip.TripID]
+		if freq, ok := freqs[trip.TripID]; ok {
+			td = td * freq
+		}
+		// Add to pattern
 		if td > 0 {
 			routeservices[trip.RouteID][trip.ServiceID] += td
+			routeservices[""][trip.ServiceID] += td // Add to total
 		}
 	}
-	// Assign durations to week
+	// Assign durations to week for each route
 	for route, v := range routeservices {
+		// Calculate the total duration for each day of the service period
 		smap := map[int][7]int{}
 		for k, seconds := range v {
 			service, ok := services[k]
@@ -60,7 +77,7 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]RouteService, err
 				continue
 			}
 			start, end := service.ServicePeriod()
-			for start.Before(end) {
+			for start.Before(end) || start.Equal(end) {
 				if service.IsActive(start) {
 					jd := toJulian(start)
 					a := smap[jd]
@@ -70,12 +87,12 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]RouteService, err
 				start = start.AddDate(0, 0, 1)
 			}
 		}
-		// Group days by pattern
+		// Group weeks by pattern
 		imap := map[[7]int][]int{}
 		for k, v := range smap {
 			imap[v] = append(imap[v], k)
 		}
-		fmt.Println("route:", route)
+		// Find repeating weeks
 		for k, v := range imap {
 			if len(v) == 0 {
 				continue
@@ -97,10 +114,10 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]RouteService, err
 					start = i + 1
 				}
 			}
+			// Add patterns to result
 			ranges = append(ranges, [2]int{v[start], v[len(v)-1] + 6})
 			for _, r := range ranges {
-				a := RouteService{
-					RouteID:   route,
+				a := FeedVersionServiceLevel{
 					StartDate: fromJulian(r[0]),
 					EndDate:   fromJulian(r[1]),
 					Monday:    k[0],
@@ -111,11 +128,41 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]RouteService, err
 					Saturday:  k[5],
 					Sunday:    k[6],
 				}
+				if route != "" {
+					a.RouteID.String = route
+					a.RouteID.Valid = true
+				}
 				results = append(results, a)
-				// fmt.Println(a.StartDate.Format("2006-01-02"), a.EndDate.Format("2006-01-02"))
 			}
 		}
 	}
+	// Cache some helpful additional metadata
+	// This will be useful for feeds that aren't imported.
+	agencyNames := map[string]string{}
+	for agency := range reader.Agencies() {
+		agencyNames[agency.AgencyID] = agency.AgencyName
+	}
+	rmds := map[string]FeedVersionServiceLevel{}
+	for route := range reader.Routes() {
+		rmds[route.RouteID] = FeedVersionServiceLevel{
+			AgencyName:     agencyNames[route.AgencyID],
+			RouteShortName: route.RouteShortName,
+			RouteLongName:  route.RouteLongName,
+			RouteType:      route.RouteType,
+		}
+	}
+	for i, result := range results {
+		r, ok := rmds[result.RouteID.String]
+		if !ok {
+			continue
+		}
+		result.AgencyName = r.AgencyName
+		result.RouteLongName = r.RouteLongName
+		result.RouteShortName = r.RouteShortName
+		result.RouteType = r.RouteType
+		results[i] = result
+	}
+	// Done
 	return results, nil
 }
 
