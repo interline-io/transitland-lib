@@ -2,7 +2,9 @@ package dmfr
 
 import (
 	"database/sql"
+	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl"
@@ -11,17 +13,18 @@ import (
 
 // FeedVersionServiceLevel .
 type FeedVersionServiceLevel struct {
-	ID        int
-	RouteID   sql.NullString
-	StartDate time.Time
-	EndDate   time.Time
-	Monday    int
-	Tuesday   int
-	Wednesday int
-	Thursday  int
-	Friday    int
-	Saturday  int
-	Sunday    int
+	ID            int
+	FeedVersionID int
+	RouteID       sql.NullString
+	StartDate     time.Time
+	EndDate       time.Time
+	Monday        int
+	Tuesday       int
+	Wednesday     int
+	Thursday      int
+	Friday        int
+	Saturday      int
+	Sunday        int
 	// Cached data
 	AgencyName     string
 	RouteShortName string
@@ -29,9 +32,20 @@ type FeedVersionServiceLevel struct {
 	RouteType      int
 }
 
+// EntityID .
+func (fvi *FeedVersionServiceLevel) EntityID() string {
+	return strconv.Itoa(fvi.ID)
+}
+
+// TableName .
+func (FeedVersionServiceLevel) TableName() string {
+	return "feed_version_service_levels"
+}
+
 // NewFeedVersionServiceInfosFromReader .
 func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServiceLevel, error) {
 	results := []FeedVersionServiceLevel{}
+	fmt.Println("caching")
 	// Cache services
 	services := map[string]*tl.Service{}
 	for _, service := range tl.NewServicesFromReader(reader) {
@@ -42,6 +56,7 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 	for freq := range reader.Frequencies() {
 		freqs[freq.TripID] += freq.RepeatCount()
 	}
+	fmt.Println("calculating trip durations")
 	// Calculate trip durations
 	tripdurations := map[string]int{}
 	for stoptimes := range reader.StopTimesByTripID() {
@@ -49,6 +64,7 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 		end := stoptimes[len(stoptimes)-1].ArrivalTime
 		tripdurations[stoptimes[0].TripID] = end - start
 	}
+	fmt.Println("grouping durations")
 	// Group durations by route,service
 	routeservices := map[string]map[string]int{}
 	routeservices[""] = map[string]int{} // feed total
@@ -67,9 +83,12 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 			routeservices[""][trip.ServiceID] += td // Add to total
 		}
 	}
+	fmt.Println("assigning durations to week for each route")
 	// Assign durations to week for each route
 	for route, v := range routeservices {
+		fmt.Println("\t", route)
 		// Calculate the total duration for each day of the service period
+		fmt.Println("\t\tchecking service periods")
 		smap := map[int][7]int{}
 		for k, seconds := range v {
 			service, ok := services[k]
@@ -77,7 +96,12 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 				continue
 			}
 			start, end := service.ServicePeriod()
+			if start.IsZero() {
+				fmt.Println("\t\t\tstart is zero! skipping")
+				continue
+			}
 			for start.Before(end) || start.Equal(end) {
+				fmt.Println("\t\t\tstart, end", start, end)
 				if service.IsActive(start) {
 					jd := toJulian(start)
 					a := smap[jd]
@@ -88,10 +112,12 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 			}
 		}
 		// Group weeks by pattern
+		fmt.Println("\t\tgrouping weeks")
 		imap := map[[7]int][]int{}
 		for k, v := range smap {
 			imap[v] = append(imap[v], k)
 		}
+		fmt.Println("\t\tfinding week repeats")
 		// Find repeating weeks
 		for k, v := range imap {
 			if len(v) == 0 {
@@ -101,14 +127,6 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 			ranges := [][2]int{}
 			start := 0
 			for i := 0; i < len(v)-1; i++ {
-				// fmt.Println(
-				// 	"i:", i,
-				// 	"start:", start,
-				// 	"v[start]:", v[start],
-				// 	"v[i]:", v[i],
-				// 	"v[i]+7:", v[i]+7,
-				// 	"v[i+1]:", v[i+1],
-				// )
 				if v[i]+7 != v[i+1] {
 					ranges = append(ranges, [2]int{v[start], v[i] + 6})
 					start = i + 1
@@ -138,6 +156,7 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 	}
 	// Cache some helpful additional metadata
 	// This will be useful for feeds that aren't imported.
+	fmt.Println("adding metadata")
 	agencyNames := map[string]string{}
 	for agency := range reader.Agencies() {
 		agencyNames[agency.AgencyID] = agency.AgencyName

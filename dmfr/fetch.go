@@ -196,7 +196,17 @@ func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult
 		}
 	}
 	// Get service statistics
-	NewFeedVersionServiceInfosFromReader(reader)
+	fvsls, err := NewFeedVersionServiceInfosFromReader(reader)
+	if err != nil {
+		return fr, err
+	}
+	// Use batch insert?
+	for _, fvsl := range fvsls {
+		fvsl.FeedVersionID = fv.ID
+		if _, err := atx.Insert(&fvsl); err != nil {
+			return fr, err
+		}
+	}
 	return fr, nil
 }
 
