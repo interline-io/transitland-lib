@@ -16,16 +16,20 @@ func newYMD(t time.Time) ymd {
 	return ymd{y, int(m), d}
 }
 
-func (d ymd) Before(other ymd) bool {
+func (d *ymd) Before(other ymd) bool {
 	return (d.year*10000)+(d.month*100)+d.day < (other.year*10000)+(other.month*100)+(other.day)
 }
 
-func (d ymd) After(other ymd) bool {
+func (d *ymd) After(other ymd) bool {
 	return (d.year*10000)+(d.month*100)+d.day > (other.year*10000)+(other.month*100)+(other.day)
 }
 
-func (d ymd) Time() time.Time {
+func (d *ymd) Time() time.Time {
 	return time.Date(d.year, time.Month(d.month), d.day, 0, 0, 0, 0, time.UTC)
+}
+
+func (d *ymd) IsZero() bool {
+	return d.year <= 1 && d.month <= 1 && d.day <= 1
 }
 
 // Service is a Calendar / CalendarDate union.
@@ -74,10 +78,10 @@ func (s *Service) AddCalendarDate(cd CalendarDate) {
 func (s *Service) ServicePeriod() (time.Time, time.Time) {
 	start, end := newYMD(s.StartDate), newYMD(s.EndDate)
 	for d := range s.exceptions {
-		if d.Before(start) {
+		if start.IsZero() || d.Before(start) {
 			start = d
 		}
-		if d.After(end) {
+		if end.IsZero() || d.After(end) {
 			end = d
 		}
 	}
