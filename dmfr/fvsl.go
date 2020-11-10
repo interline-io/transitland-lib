@@ -45,27 +45,33 @@ func (FeedVersionServiceLevel) TableName() string {
 // NewFeedVersionServiceInfosFromReader .
 func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServiceLevel, error) {
 	results := []FeedVersionServiceLevel{}
-	fmt.Println("caching")
 	// Cache services
+	fmt.Println("caching services")
 	services := map[string]*tl.Service{}
 	for _, service := range tl.NewServicesFromReader(reader) {
 		services[service.ServiceID] = service
 	}
 	// Cache frequencies; trip repeats
+	fmt.Println("caching frequencies")
 	freqs := map[string]int{}
 	for freq := range reader.Frequencies() {
 		freqs[freq.TripID] += freq.RepeatCount()
 	}
-	fmt.Println("calculating trip durations")
 	// Calculate trip durations
+	fmt.Println("calculating trip durations")
 	tripdurations := map[string]int{}
 	for stoptimes := range reader.StopTimesByTripID() {
-		start := stoptimes[0].DepartureTime
-		end := stoptimes[len(stoptimes)-1].ArrivalTime
-		tripdurations[stoptimes[0].TripID] = end - start
+		if len(stoptimes) < 2 {
+			continue
+		}
+		d := stoptimes[len(stoptimes)-1].ArrivalTime - stoptimes[0].DepartureTime
+		if d > (60 * 60 * 24) {
+			fmt.Println("\twarning, trip over 24 hours:", stoptimes[0].TripID, "seconds:", d)
+		}
+		tripdurations[stoptimes[0].TripID] = d
 	}
-	fmt.Println("grouping durations")
 	// Group durations by route,service
+	fmt.Println("grouping durations")
 	routeservices := map[string]map[string]int{}
 	routeservices[""] = map[string]int{} // feed total
 	for trip := range reader.Trips() {
@@ -75,6 +81,7 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 		// Multiply out frequency based trips; they are scheduled or not scheduled together
 		td := tripdurations[trip.TripID]
 		if freq, ok := freqs[trip.TripID]; ok {
+			// fmt.Println("\ttrip:", trip.TripID, "frequency repeat count:", freq)
 			td = td * freq
 		}
 		// Add to pattern
@@ -83,12 +90,12 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 			routeservices[""][trip.ServiceID] += td // Add to total
 		}
 	}
-	fmt.Println("assigning durations to week for each route")
 	// Assign durations to week for each route
+	fmt.Println("assigning durations to week for each route")
 	for route, v := range routeservices {
-		fmt.Println("\t", route)
+		fmt.Println("\troute_id:", route)
 		// Calculate the total duration for each day of the service period
-		fmt.Println("\t\tchecking service periods")
+		fmt.Printf("\t\tchecking service periods (%d)\n", len(v))
 		smap := map[int][7]int{}
 		for k, seconds := range v {
 			service, ok := services[k]
@@ -100,8 +107,10 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 				fmt.Println("\t\t\tstart is zero! skipping")
 				continue
 			}
+			// Iterate from the first day to the last day,
+			// saving the result to the Julian date index for that week
+			// fmt.Println("\t\t\tservice_id:", k, "start, end", start, end)
 			for start.Before(end) || start.Equal(end) {
-				fmt.Println("\t\t\tstart, end", start, end)
 				if service.IsActive(start) {
 					jd := toJulian(start)
 					a := smap[jd]
@@ -117,13 +126,15 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 		for k, v := range smap {
 			imap[v] = append(imap[v], k)
 		}
-		fmt.Println("\t\tfinding week repeats")
 		// Find repeating weeks
+		fmt.Println("\t\tfinding week repeats")
 		for k, v := range imap {
 			if len(v) == 0 {
 				continue
 			}
 			sort.Ints(v) // sort
+			// Extend the range if the next week (v[i]+7 days) is present
+			// otherwise, create a new range.
 			ranges := [][2]int{}
 			start := 0
 			for i := 0; i < len(v)-1; i++ {
@@ -146,6 +157,8 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 					Saturday:  k[5],
 					Sunday:    k[6],
 				}
+				// fmt.Println(a)
+				// Set route_id as not null.
 				if route != "" {
 					a.RouteID.String = route
 					a.RouteID.Valid = true
