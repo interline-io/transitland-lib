@@ -49,6 +49,7 @@ func (cmd *RefreshCommand) Parse(args []string) error {
 	fl.StringVar(&cmd.RefreshOptions.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Refresh at most n feed versions")
 	fl.Parse(args)
+	cmd.FVIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
 	}
@@ -115,10 +116,12 @@ func (cmd *RefreshCommand) Run() error {
 	log.Info("Refreshing %d feed versions", len(qrs))
 	for _, fvid := range qrs {
 		log.Info("Feed Version: %d", fvid)
-		err := dmfrRefresh(cmd.Adapter, RefreshOptions{
-			FeedVersionID: fvid,
-			Directory:     cmd.RefreshOptions.Directory,
-			S3:            cmd.RefreshOptions.S3,
+		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
+			return dmfrRefresh(atx, RefreshOptions{
+				FeedVersionID: fvid,
+				Directory:     cmd.RefreshOptions.Directory,
+				S3:            cmd.RefreshOptions.S3,
+			})
 		})
 		if err != nil {
 			return err
