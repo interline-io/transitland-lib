@@ -11,41 +11,41 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// RefreshOptions .
-type RefreshOptions struct {
+// RecalculateOptions .
+type RecalculateOptions struct {
 	FeedVersionID int
 	Directory     string
 	S3            string
 }
 
-// RefreshCommand updates statistics for a Feed Version
-type RefreshCommand struct {
-	Workers        int
-	DBURL          string
-	FVIDs          arrayFlags
-	FVSHA1         arrayFlags
-	Adapter        tldb.Adapter // allow for mocks
-	Limit          int
-	DryRun         bool
-	RefreshOptions RefreshOptions
+// RecalculateCommand updates statistics for a Feed Version
+type RecalculateCommand struct {
+	Workers            int
+	DBURL              string
+	FVIDs              arrayFlags
+	FVSHA1             arrayFlags
+	Adapter            tldb.Adapter // allow for mocks
+	Limit              int
+	DryRun             bool
+	RecalculateOptions RecalculateOptions
 }
 
 // Parse command line flags
-func (cmd *RefreshCommand) Parse(args []string) error {
+func (cmd *RecalculateCommand) Parse(args []string) error {
 	fvidfile := ""
 	fvsha1file := ""
-	fl := flag.NewFlagSet("refresh", flag.ExitOnError)
+	fl := flag.NewFlagSet("recalculate", flag.ExitOnError)
 	fl.Usage = func() {
-		log.Print("Usage: refresh [feedids...]")
+		log.Print("Usage: recalculate [feedids...]")
 		fl.PrintDefaults()
 	}
 	fl.Var(&cmd.FVIDs, "fvid", "Import specific feed version ID")
 	fl.StringVar(&fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
 	fl.StringVar(&fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
-	fl.StringVar(&cmd.RefreshOptions.Directory, "gtfsdir", ".", "GTFS Directory")
-	fl.StringVar(&cmd.RefreshOptions.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
-	fl.IntVar(&cmd.Limit, "limit", 0, "Refresh at most n feed versions")
+	fl.StringVar(&cmd.RecalculateOptions.Directory, "gtfsdir", ".", "GTFS Directory")
+	fl.StringVar(&cmd.RecalculateOptions.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
+	fl.IntVar(&cmd.Limit, "limit", 0, "Recalculate at most n feed versions")
 	fl.Parse(args)
 	cmd.FVIDs = fl.Args()
 	if cmd.DBURL == "" {
@@ -77,7 +77,7 @@ func (cmd *RefreshCommand) Parse(args []string) error {
 }
 
 // Run this command
-func (cmd *RefreshCommand) Run() error {
+func (cmd *RecalculateCommand) Run() error {
 	if cmd.Adapter == nil {
 		writer := mustGetWriter(cmd.DBURL, true)
 		cmd.Adapter = writer.Adapter
@@ -111,24 +111,24 @@ func (cmd *RefreshCommand) Run() error {
 	}
 	///////////////
 	// Here we go
-	log.Info("Refreshing %d feed versions", len(qrs))
+	log.Info("Recalculateing %d feed versions", len(qrs))
 	for _, fvid := range qrs {
 		log.Info("Feed Version: %d", fvid)
 		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-			return dmfrRefresh(atx, RefreshOptions{
+			return dmfrRecalculate(atx, RecalculateOptions{
 				FeedVersionID: fvid,
-				Directory:     cmd.RefreshOptions.Directory,
-				S3:            cmd.RefreshOptions.S3,
+				Directory:     cmd.RecalculateOptions.Directory,
+				S3:            cmd.RecalculateOptions.S3,
 			})
 		})
 		if err != nil {
-			log.Error("Could not refresh, skipping: %s", err.Error())
+			log.Error("Could not recalculate, skipping: %s", err.Error())
 		}
 	}
 	return nil
 }
 
-func dmfrRefresh(adapter tldb.Adapter, opts RefreshOptions) error {
+func dmfrRecalculate(adapter tldb.Adapter, opts RecalculateOptions) error {
 	// Get FV
 	fv := tl.FeedVersion{ID: opts.FeedVersionID}
 	if err := adapter.Find(&fv); err != nil {
