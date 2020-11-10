@@ -8,8 +8,8 @@ import (
 func newTestService() *Service {
 	start, _ := time.Parse("20060102", "20190101")
 	end, _ := time.Parse("20060102", "20190131")
-	except, _ := time.Parse("20060102", "20190102")
-	added, _ := time.Parse("20060102", "20190105")
+	// except, _ := time.Parse("20060102", "20190102")
+	// added, _ := time.Parse("20060102", "20190105")
 	s := Service{
 		Calendar: Calendar{
 			StartDate: start,
@@ -22,8 +22,8 @@ func newTestService() *Service {
 			Saturday:  0,
 			Sunday:    0,
 		},
-		AddedDates:  []time.Time{added},
-		ExceptDates: []time.Time{except},
+		// AddedDates:  []time.Time{added},
+		// ExceptDates: []time.Time{except},
 	}
 	return &s
 }
