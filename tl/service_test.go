@@ -8,10 +8,10 @@ import (
 func newTestService() *Service {
 	start, _ := time.Parse("20060102", "20190101")
 	end, _ := time.Parse("20060102", "20190131")
-	// except, _ := time.Parse("20060102", "20190102")
-	// added, _ := time.Parse("20060102", "20190105")
-	s := Service{
-		Calendar: Calendar{
+	except, _ := time.Parse("20060102", "20190102")
+	added, _ := time.Parse("20060102", "20190105")
+	s := NewService(
+		Calendar{
 			StartDate: start,
 			EndDate:   end,
 			Monday:    1,
@@ -22,10 +22,10 @@ func newTestService() *Service {
 			Saturday:  0,
 			Sunday:    0,
 		},
-		// AddedDates:  []time.Time{added},
-		// ExceptDates: []time.Time{except},
-	}
-	return &s
+		CalendarDate{Date: added, ExceptionType: 1},
+		CalendarDate{Date: except, ExceptionType: 2},
+	)
+	return s
 }
 
 func TestService_IsActive(t *testing.T) {
@@ -52,5 +52,4 @@ func TestService_IsActive(t *testing.T) {
 			t.Errorf("day %s got %t expect %t", exp.day, result, exp.value)
 		}
 	}
-
 }
