@@ -23,6 +23,9 @@ func (ent *Frequency) EntityID() string {
 
 // RepeatCount returns the number of times this trip will be repeated.
 func (ent *Frequency) RepeatCount() int {
+	if ent.HeadwaySecs <= 0 {
+		return 0
+	}
 	count := 0
 	for t := ent.StartTime.Seconds; t <= ent.EndTime.Seconds; t += ent.HeadwaySecs {
 		count++
