@@ -6,6 +6,7 @@ pg_dump \
     -t 'feed_versions' \
     -t 'feed_version_gtfs_imports' \
     -t 'feed_version_file_infos' \
+    -t 'feed_version_service_levels' \
     -t 'feed_states' \
     -t 'gtfs_*' \
     --no-owner \
