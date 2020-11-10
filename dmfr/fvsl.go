@@ -2,7 +2,6 @@ package dmfr
 
 import (
 	"database/sql"
-	"fmt"
 	"sort"
 	"strconv"
 	"time"
@@ -46,32 +45,29 @@ func (FeedVersionServiceLevel) TableName() string {
 func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServiceLevel, error) {
 	results := []FeedVersionServiceLevel{}
 	// Cache services
-	fmt.Println("caching services")
+	// fmt.Println("caching services")
 	services := map[string]*tl.Service{}
 	for _, service := range tl.NewServicesFromReader(reader) {
 		services[service.ServiceID] = service
 	}
 	// Cache frequencies; trip repeats
-	fmt.Println("caching frequencies")
+	// fmt.Println("caching frequencies")
 	freqs := map[string]int{}
 	for freq := range reader.Frequencies() {
 		freqs[freq.TripID] += freq.RepeatCount()
 	}
 	// Calculate trip durations
-	fmt.Println("calculating trip durations")
+	// fmt.Println("calculating trip durations")
 	tripdurations := map[string]int{}
 	for stoptimes := range reader.StopTimesByTripID() {
 		if len(stoptimes) < 2 {
 			continue
 		}
 		d := stoptimes[len(stoptimes)-1].ArrivalTime - stoptimes[0].DepartureTime
-		if d > (60 * 60 * 24) {
-			fmt.Println("\twarning, trip over 24 hours:", stoptimes[0].TripID, "seconds:", d)
-		}
 		tripdurations[stoptimes[0].TripID] = d
 	}
 	// Group durations by route,service
-	fmt.Println("grouping durations")
+	// fmt.Println("grouping durations")
 	routeservices := map[string]map[string]int{}
 	routeservices[""] = map[string]int{} // feed total
 	for trip := range reader.Trips() {
@@ -91,11 +87,11 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 		}
 	}
 	// Assign durations to week for each route
-	fmt.Println("assigning durations to week for each route")
+	// fmt.Println("assigning durations to week for each route")
 	for route, v := range routeservices {
-		fmt.Println("\troute_id:", route)
+		// fmt.Println("\troute_id:", route)
 		// Calculate the total duration for each day of the service period
-		fmt.Printf("\t\tchecking service periods (%d)\n", len(v))
+		// fmt.Printf("\t\tchecking service periods (%d)\n", len(v))
 		smap := map[int][7]int{}
 		for k, seconds := range v {
 			service, ok := services[k]
@@ -104,7 +100,7 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 			}
 			start, end := service.ServicePeriod()
 			if start.IsZero() {
-				fmt.Println("\t\t\tstart is zero! skipping")
+				// fmt.Println("\t\t\tstart is zero! skipping", k)
 				continue
 			}
 			// Iterate from the first day to the last day,
@@ -121,13 +117,13 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 			}
 		}
 		// Group weeks by pattern
-		fmt.Println("\t\tgrouping weeks")
+		// fmt.Println("\t\tgrouping weeks")
 		imap := map[[7]int][]int{}
 		for k, v := range smap {
 			imap[v] = append(imap[v], k)
 		}
 		// Find repeating weeks
-		fmt.Println("\t\tfinding week repeats")
+		// fmt.Println("\t\tfinding week repeats")
 		for k, v := range imap {
 			if len(v) == 0 {
 				continue
@@ -169,7 +165,7 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 	}
 	// Cache some helpful additional metadata
 	// This will be useful for feeds that aren't imported.
-	fmt.Println("adding metadata")
+	// fmt.Println("adding metadata")
 	agencyNames := map[string]string{}
 	for agency := range reader.Agencies() {
 		agencyNames[agency.AgencyID] = agency.AgencyName
