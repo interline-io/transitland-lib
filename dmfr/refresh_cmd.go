@@ -1,9 +1,7 @@
 package dmfr
 
 import (
-	"errors"
 	"flag"
-	"fmt"
 	"os"
 
 	sq "github.com/Masterminds/squirrel"
@@ -124,7 +122,7 @@ func (cmd *RefreshCommand) Run() error {
 			})
 		})
 		if err != nil {
-			return err
+			log.Error("Could not refresh, skipping: %s", err.Error())
 		}
 	}
 	return nil
@@ -137,10 +135,6 @@ func dmfrRefresh(adapter tldb.Adapter, opts RefreshOptions) error {
 		return err
 	}
 	// Get reader
-	if fv.File == "" {
-		return errors.New("no file")
-	}
-	fmt.Println("file:", dmfrGetReaderURL(opts.S3, opts.Directory, fv.File))
 	reader, err := tlcsv.NewReader(dmfrGetReaderURL(opts.S3, opts.Directory, fv.File))
 	if err != nil {
 		return err
