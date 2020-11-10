@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl"
@@ -184,30 +185,38 @@ func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult
 	if err != nil {
 		return fr, err
 	}
+	// Update stats records
+	if err := createFeedStats(atx, reader, fv.ID); err != nil {
+		return fr, err
+	}
+	return fr, nil
+}
+
+func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	// Get FeedVersionFileInfos
 	fvfis, err := NewFeedVersionFileInfosFromReader(reader)
 	if err != nil {
-		return fr, err
+		return err
 	}
 	for _, fvfi := range fvfis {
-		fvfi.FeedVersionID = fv.ID
+		fvfi.FeedVersionID = fvid
 		if _, err := atx.Insert(&fvfi); err != nil {
-			return fr, err
+			return err
 		}
 	}
 	// Get service statistics
 	fvsls, err := NewFeedVersionServiceInfosFromReader(reader)
 	if err != nil {
-		return fr, err
+		return err
 	}
 	// Use batch insert?
 	for _, fvsl := range fvsls {
-		fvsl.FeedVersionID = fv.ID
+		fvsl.FeedVersionID = fvid
 		if _, err := atx.Insert(&fvsl); err != nil {
-			return fr, err
+			return err
 		}
 	}
-	return fr, nil
+	return nil
 }
 
 func copyFileContents(src, dst string) (err error) {
@@ -231,4 +240,18 @@ func copyFileContents(src, dst string) (err error) {
 	}
 	err = out.Sync()
 	return
+}
+
+// dmfrGetReaderURL helps load a file from an S3 or Directory location
+func dmfrGetReaderURL(s3 string, directory string, url string) string {
+	if s3 != "" {
+		url = s3 + "/" + url
+	} else if directory != "" {
+		url = filepath.Join(directory, url)
+	}
+	urlsplit := strings.SplitN(url, "#", 2)
+	if len(urlsplit) > 1 {
+		url = url + "#" + urlsplit[1]
+	}
+	return url
 }
