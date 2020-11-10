@@ -4,18 +4,40 @@ import (
 	"time"
 )
 
+// ymd for use as a map key
+type ymd struct {
+	year  int
+	month int
+	day   int
+}
+
+func newYMD(t time.Time) ymd {
+	y, m, d := t.Date()
+	return ymd{y, int(m), d}
+}
+
+func (d ymd) Before(other ymd) bool {
+	return (d.year*10000)+(d.month*100)+d.day < (other.year*10000)+(other.month*100)+(other.day)
+}
+
+func (d ymd) After(other ymd) bool {
+	return (d.year*10000)+(d.month*100)+d.day > (other.year*10000)+(other.month*100)+(other.day)
+}
+
+func (d ymd) Time() time.Time {
+	return time.Date(d.year, time.Month(d.month), d.day, 0, 0, 0, 0, time.UTC)
+}
+
 // Service is a Calendar / CalendarDate union.
 type Service struct {
-	AddedDates  []time.Time
-	ExceptDates []time.Time
+	exceptions map[ymd]int
 	Calendar
 }
 
 // NewService returns a new Service.
 func NewService(c Calendar, cds ...CalendarDate) *Service {
 	s := Service{Calendar: c}
-	s.AddedDates = []time.Time{}
-	s.ExceptDates = []time.Time{}
+	s.exceptions = map[ymd]int{}
 	for _, cd := range cds {
 		s.AddCalendarDate(cd)
 	}
@@ -45,17 +67,13 @@ func NewServicesFromReader(reader Reader) []*Service {
 
 // AddCalendarDate adds a service exception.
 func (s *Service) AddCalendarDate(cd CalendarDate) {
-	if cd.ExceptionType == 1 {
-		s.AddedDates = append(s.AddedDates, cd.Date)
-	} else if cd.ExceptionType == 2 {
-		s.ExceptDates = append(s.ExceptDates, cd.Date)
-	}
+	s.exceptions[newYMD(cd.Date)] = cd.ExceptionType
 }
 
 // ServicePeriod returns the widest possible range of days with transit service, including service exceptions.
 func (s *Service) ServicePeriod() (time.Time, time.Time) {
-	start, end := s.StartDate, s.EndDate
-	for _, d := range s.AddedDates {
+	start, end := newYMD(s.StartDate), newYMD(s.EndDate)
+	for d := range s.exceptions {
 		if d.Before(start) {
 			start = d
 		}
@@ -63,23 +81,16 @@ func (s *Service) ServicePeriod() (time.Time, time.Time) {
 			end = d
 		}
 	}
-	return start, end
+	return start.Time(), end.Time()
 }
 
 // IsActive returns if this Service period is active on a specified date.
 func (s *Service) IsActive(t time.Time) bool {
-	y1, m1, d1 := t.Date()
-	for _, cd := range s.AddedDates {
-		y2, m2, d2 := cd.Date()
-		if y1 == y2 && m1 == m2 && d1 == d2 {
+	if etype, ok := s.exceptions[newYMD(t)]; ok {
+		if etype == 1 {
 			return true
 		}
-	}
-	for _, cd := range s.ExceptDates {
-		y2, m2, d2 := cd.Date()
-		if y1 == y2 && m1 == m2 && d1 == d2 {
-			return false
-		}
+		return false
 	}
 	if t.Before(s.StartDate) {
 		return false
