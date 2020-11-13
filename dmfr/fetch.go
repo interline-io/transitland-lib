@@ -38,10 +38,10 @@ type FetchResult struct {
 	FetchError   error
 }
 
-// DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
+// databaseFetch fetches and creates a new FeedVersion for a given Feed.
 // An error return from this function is a serious failure.
 // Saves FeedState.LastFetchError for regular failures.
-func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
+func databaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	// Get feed, create if not present and FeedCreate is specified
 	tlfeed := Feed{}
@@ -52,7 +52,7 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 			return fr, err
 		}
 	} else if err != nil {
-		return fr, err
+		return fr, errors.New("feed does not exist")
 	}
 	if opts.FeedURL == "" {
 		opts.FeedURL = tlfeed.URLs.StaticCurrent
@@ -77,7 +77,7 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 		return fr, err
 	}
 	// Start fetching
-	fr, err := FetchAndCreateFeedVersion(atx, tlfeed, opts)
+	fr, err := fetchAndCreateFeedVersion(atx, tlfeed, opts)
 	if err != nil {
 		return fr, err
 	}
@@ -94,11 +94,11 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	return fr, nil
 }
 
-// FetchAndCreateFeedVersion from a URL.
+// fetchAndCreateFeedVersion from a URL.
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets FetchResult.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
-func FetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts FetchOptions) (FetchResult, error) {
+func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	if opts.FeedURL == "" {
 		fr.FetchError = errors.New("no url")

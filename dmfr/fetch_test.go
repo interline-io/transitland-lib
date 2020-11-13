@@ -26,7 +26,7 @@ func caltrain(atx tldb.Adapter, url string) Feed {
 	return tlfeed
 }
 
-func TestDatabaseFetch(t *testing.T) {
+func Test_databaseFetch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(ExampleZip.URL)
 		if err != nil {
@@ -45,7 +45,7 @@ func TestDatabaseFetch(t *testing.T) {
 		//
 		url := ts.URL
 		feed := caltrain(atx, ts.URL)
-		fr, err := DatabaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
+		fr, err := databaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -90,7 +90,7 @@ func TestDatabaseFetch(t *testing.T) {
 	})
 }
 
-func TestDatabaseFetch_LastFetchError(t *testing.T) {
+func TestdatabaseFetch_LastFetchError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Status-Code", "404")
 		w.Write([]byte("not found"))
@@ -105,7 +105,7 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := caltrain(atx, ts.URL)
 		// Fetch
-		_, err = DatabaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
+		_, err = databaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -127,7 +127,7 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 	})
 }
 
-func TestFetchAndCreateFeedVersion(t *testing.T) {
+func Test_fetchAndCreateFeedVersion(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(ExampleZip.URL)
 		if err != nil {
@@ -145,7 +145,7 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		url := ts.URL
 		feed := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: tmpdir})
+		fr, err := fetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return err
@@ -173,7 +173,7 @@ func TestFetchAndCreateFeedVersion(t *testing.T) {
 	})
 }
 
-func TestFetchAndCreateFeedVersion_404(t *testing.T) {
+func TestfetchAndCreateFeedVersion_404(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Status-Code", "404")
 		w.Write([]byte("not found"))
@@ -182,7 +182,7 @@ func TestFetchAndCreateFeedVersion_404(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
 		feed := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: ""})
+		fr, err := fetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
 			return err
@@ -203,7 +203,7 @@ func TestFetchAndCreateFeedVersion_404(t *testing.T) {
 	})
 }
 
-func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
+func TestfetchAndCreateFeedVersion_Exists(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(ExampleZip.URL)
 		if err != nil {
@@ -214,7 +214,7 @@ func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
 		feed := caltrain(atx, url)
-		fr, err := FetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: ""})
+		fr, err := fetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
 		}
@@ -224,7 +224,7 @@ func TestFetchAndCreateFeedVersion_Exists(t *testing.T) {
 		if fr.FeedVersion.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fr.FeedVersion.SHA1, ExampleZip.SHA1)
 		}
-		fr2, err2 := FetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: ""})
+		fr2, err2 := fetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: ""})
 		if err2 != nil {
 			t.Error(err2)
 			return err2
