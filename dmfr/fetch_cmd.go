@@ -151,7 +151,7 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan FetchOpt
 		var fr FetchResult
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
-			fr, fe = databaseFetch(atx, opts)
+			fr, fe = DatabaseFetch(atx, opts)
 			return fe
 		})
 		fid := fr.FeedVersion.FeedID

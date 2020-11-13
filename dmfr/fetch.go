@@ -38,10 +38,10 @@ type FetchResult struct {
 	FetchError   error
 }
 
-// databaseFetch fetches and creates a new FeedVersion for a given Feed.
+// DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
 // An error return from this function is a serious failure.
 // Saves FeedState.LastFetchError for regular failures.
-func databaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
+func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	// Get feed, create if not present and FeedCreate is specified
 	tlfeed := Feed{}

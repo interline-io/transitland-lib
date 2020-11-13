@@ -26,7 +26,7 @@ func caltrain(atx tldb.Adapter, url string) Feed {
 	return tlfeed
 }
 
-func Test_databaseFetch(t *testing.T) {
+func TestDatabaseFetch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(ExampleZip.URL)
 		if err != nil {
@@ -45,7 +45,7 @@ func Test_databaseFetch(t *testing.T) {
 		//
 		url := ts.URL
 		feed := caltrain(atx, ts.URL)
-		fr, err := databaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
+		fr, err := DatabaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -90,7 +90,7 @@ func Test_databaseFetch(t *testing.T) {
 	})
 }
 
-func TestdatabaseFetch_LastFetchError(t *testing.T) {
+func TestDatabaseFetch_LastFetchError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Status-Code", "404")
 		w.Write([]byte("not found"))
@@ -105,7 +105,7 @@ func TestdatabaseFetch_LastFetchError(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := caltrain(atx, ts.URL)
 		// Fetch
-		_, err = databaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
+		_, err = DatabaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
