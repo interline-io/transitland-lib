@@ -32,7 +32,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 		fl.PrintDefaults()
 	}
 	fl.StringVar(&cmd.FetchOptions.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
-	fl.BoolVar(&cmd.FetchOptions.FeedCreate, "feed-create", false, "Create feed records if not found")
+	fl.BoolVar(&cmd.FetchOptions.FeedCreate, "create-feed", false, "Create feed records if not found")
 	fl.StringVar(&fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
 	fl.StringVar(&secretsFile, "secrets", "", "Path to DMFR Secrets file")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
