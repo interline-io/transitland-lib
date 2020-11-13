@@ -90,6 +90,51 @@ func TestDatabaseFetch(t *testing.T) {
 	})
 }
 
+func TestDatabaseFetchCreateFeed(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := ioutil.ReadFile(ExampleZip.URL)
+		if err != nil {
+			t.Error(err)
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+		tmpdir, err := ioutil.TempDir("", "gtfs")
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer os.RemoveAll(tmpdir) // clean up
+		//
+		url := ts.URL
+		fr, err := DatabaseFetch(atx, FetchOptions{FeedID: "caltrain", FeedURL: ts.URL, FeedCreate: true, Directory: tmpdir})
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		// Check Feed
+		tf2 := Feed{}
+		testdb.ShouldGet(t, atx, &tf2, `SELECT * FROM current_feeds WHERE onestop_id = ?`, "caltrain")
+		// Check FV
+		fv2 := tl.FeedVersion{ID: fr.FeedVersion.ID}
+		testdb.ShouldFind(t, atx, &fv2)
+		if fv2.URL != url {
+			t.Errorf("got %s expect %s", fv2.URL, url)
+		}
+		if fv2.SHA1 != ExampleZip.SHA1 {
+			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
+		}
+		// Check FeedState
+		tlf := FeedState{}
+		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, fv2.FeedID)
+		if !tlf.LastSuccessfulFetchAt.Valid {
+			t.Errorf("expected non-nil value")
+		}
+		return nil
+	})
+}
+
 func TestDatabaseFetch_LastFetchError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Status-Code", "404")
