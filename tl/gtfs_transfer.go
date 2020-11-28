@@ -2,7 +2,6 @@ package tl
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/enum"
@@ -28,7 +27,6 @@ func (ent *Transfer) Warnings() (errs []error) {
 	if ent.TransferType != 2 && ent.MinTransferTime.Valid {
 		errs = append(errs, causes.NewValidationWarning("min_transfer_time", "should not set min_transfer_time unless transfer_type = 2"))
 	}
-	fmt.Printf("ent.MinTransferTime: %#v\n", ent.MinTransferTime)
 	if ent.TransferType == 2 && !ent.MinTransferTime.Valid {
 		errs = append(errs, causes.NewValidationWarning("min_transfer_time", "transfer_type = 2 requires min_transfer_time to be set"))
 	}
