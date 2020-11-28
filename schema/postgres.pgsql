@@ -426,7 +426,7 @@ ALTER SEQUENCE public.gtfs_stops_id_seq OWNED BY public.gtfs_stops.id;
 CREATE TABLE public.gtfs_transfers (
     id bigint NOT NULL,
     transfer_type integer NOT NULL,
-    min_transfer_time integer NOT NULL,
+    min_transfer_time integer,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     feed_version_id bigint NOT NULL,
