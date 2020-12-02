@@ -1,6 +1,7 @@
 package tl
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"strconv"
@@ -10,18 +11,64 @@ import (
 
 // StopTime stop_times.txt
 type StopTime struct {
-	TripID            string  `csv:"trip_id"`
-	ArrivalTime       int     `csv:"arrival_time" `
-	DepartureTime     int     `csv:"departure_time" `
-	StopID            string  `csv:"stop_id" required:"true"`
-	StopSequence      int     `csv:"stop_sequence" required:"true" min:"0"`
-	StopHeadsign      string  `csv:"stop_headsign"`
-	PickupType        int     `csv:"pickup_type" min:"0" max:"3"`
-	DropOffType       int     `csv:"drop_off_type" min:"0" max:"3"`
-	ShapeDistTraveled float64 `csv:"shape_dist_traveled" min:"0"`
-	Timepoint         int     `csv:"timepoint" min:"-1" max:"1"` // -1 for empty
-	Interpolated      int     // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
-	BaseEntity
+	TripID            string          `csv:"trip_id"`
+	ArrivalTime       int             `csv:"arrival_time" `
+	DepartureTime     int             `csv:"departure_time" `
+	StopID            string          `csv:"stop_id" required:"true"`
+	StopSequence      int             `csv:"stop_sequence" required:"true" min:"0"`
+	StopHeadsign      sql.NullString  `csv:"stop_headsign"`
+	PickupType        sql.NullInt32   `csv:"pickup_type" min:"0" max:"3"`
+	DropOffType       sql.NullInt32   `csv:"drop_off_type" min:"0" max:"3"`
+	ShapeDistTraveled sql.NullFloat64 `csv:"shape_dist_traveled" min:"0"`
+	Timepoint         sql.NullInt32   `csv:"timepoint" min:"0" max:"1"`
+	Interpolated      sql.NullInt32   // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
+	FeedVersionID     int
+	extra             []string
+	loadErrors        []error
+	loadWarnings      []error
+}
+
+// SetID sets the integer ID.
+func (ent *StopTime) SetID(id int) {
+
+}
+
+// SetFeedVersionID sets the Entity's FeedVersionID.
+func (ent *StopTime) SetFeedVersionID(fvid int) {
+	ent.FeedVersionID = fvid
+}
+
+// AddError adds a loading error to the entity, e.g. from a CSV parse failure
+func (ent *StopTime) AddError(err error) {
+	if ent.loadErrors == nil {
+		ent.loadErrors = []error{}
+	}
+	ent.loadErrors = append(ent.loadErrors, err)
+}
+
+// AddWarning .
+func (ent *StopTime) AddWarning(err error) {
+	if ent.loadWarnings == nil {
+		ent.loadWarnings = []error{}
+	}
+	ent.loadWarnings = append(ent.loadErrors, err)
+}
+
+// Extra provides any additional fields that were present.
+func (ent *StopTime) Extra() map[string]string {
+	ret := map[string]string{}
+	for i := 0; i < len(ent.extra); i += 2 {
+		ret[ent.extra[i]] = ent.extra[i+1]
+	}
+	return ret
+}
+
+// SetExtra adds a string key, value pair to the entity's extra fields.
+func (ent *StopTime) SetExtra(key string, value string) {
+	if ent.extra == nil {
+		ent.extra = []string{}
+	}
+	ent.extra = append(ent.extra, key, value)
 }
 
 // EntityID returns nothing.
@@ -29,11 +76,14 @@ func (ent *StopTime) EntityID() string {
 	return ""
 }
 
+// Warnings returns validation warnings.
+func (ent *StopTime) Warnings() []error { return ent.loadWarnings }
+
 // Errors for this Entity.
 func (ent *StopTime) Errors() []error {
 	// No reflection
 	errs := []error{}
-	errs = append(errs, ent.BaseEntity.loadErrors...)
+	errs = append(errs, ent.loadErrors...)
 	if len(ent.TripID) == 0 {
 		errs = append(errs, causes.NewRequiredFieldError("trip_id"))
 	}
@@ -43,17 +93,17 @@ func (ent *StopTime) Errors() []error {
 	if ent.StopSequence < 0 {
 		errs = append(errs, causes.NewInvalidFieldError("stop_sequence", "", fmt.Errorf("negative stop_sequence: %d", ent.StopSequence)))
 	}
-	if ent.PickupType < 0 || ent.PickupType > 3 {
-		errs = append(errs, causes.NewInvalidFieldError("pickup_type", "", fmt.Errorf("pickup_type out of bounds: %d", ent.PickupType)))
+	if ent.PickupType.Int32 < 0 || ent.PickupType.Int32 > 3 {
+		errs = append(errs, causes.NewInvalidFieldError("pickup_type", "", fmt.Errorf("pickup_type out of bounds: %d", ent.PickupType.Int32)))
 	}
-	if ent.DropOffType < 0 || ent.DropOffType > 3 {
-		errs = append(errs, causes.NewInvalidFieldError("drop_off_type", "", fmt.Errorf("drop_off_type out of bounds: %d", ent.DropOffType)))
+	if ent.DropOffType.Int32 < 0 || ent.DropOffType.Int32 > 3 {
+		errs = append(errs, causes.NewInvalidFieldError("drop_off_type", "", fmt.Errorf("drop_off_type out of bounds: %d", ent.DropOffType.Int32)))
 	}
-	if ent.ShapeDistTraveled < 0 && ent.ShapeDistTraveled != -1.0 {
-		errs = append(errs, causes.NewInvalidFieldError("shape_dist_traveled", "", fmt.Errorf("negative shape_dist_traveled: %f", ent.ShapeDistTraveled)))
+	if ent.ShapeDistTraveled.Float64 < 0 && ent.ShapeDistTraveled.Float64 != -1.0 {
+		errs = append(errs, causes.NewInvalidFieldError("shape_dist_traveled", "", fmt.Errorf("negative shape_dist_traveled: %f", ent.ShapeDistTraveled.Float64)))
 	}
-	if ent.Timepoint < -1 || ent.Timepoint > 1 {
-		errs = append(errs, causes.NewInvalidFieldError("timepoint", "", fmt.Errorf("timepoint out of bounds: %d", ent.Timepoint)))
+	if ent.Timepoint.Int32 < -1 || ent.Timepoint.Int32 > 1 {
+		errs = append(errs, causes.NewInvalidFieldError("timepoint", "", fmt.Errorf("timepoint out of bounds: %d", ent.Timepoint.Int32)))
 	}
 	// Other errors
 	at, dt := ent.ArrivalTime, ent.DepartureTime
@@ -95,7 +145,7 @@ func (ent *StopTime) GetString(key string) (string, error) {
 	case "trip_id":
 		v = ent.TripID
 	case "stop_headsign":
-		v = ent.StopHeadsign
+		v = ent.StopHeadsign.String
 	case "stop_id":
 		v = ent.StopID
 	case "arrival_time":
@@ -105,16 +155,16 @@ func (ent *StopTime) GetString(key string) (string, error) {
 	case "stop_sequence":
 		v = strconv.Itoa(ent.StopSequence)
 	case "pickup_type":
-		v = strconv.Itoa(ent.PickupType)
+		v = strconv.Itoa(int(ent.PickupType.Int32))
 	case "drop_off_type":
-		v = strconv.Itoa(ent.DropOffType)
+		v = strconv.Itoa(int(ent.DropOffType.Int32))
 	case "shape_dist_traveled":
-		if ent.ShapeDistTraveled >= 0 {
-			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled)
+		if ent.ShapeDistTraveled.Valid {
+			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled.Float64)
 		}
 	case "timepoint":
-		if ent.Timepoint > -1 {
-			v = strconv.Itoa(ent.Timepoint)
+		if ent.Timepoint.Valid {
+			v = strconv.Itoa(int(ent.Timepoint.Int32))
 		}
 	default:
 		return v, errors.New("unknown key")
@@ -130,7 +180,7 @@ func (ent *StopTime) SetString(key, value string) error {
 	case "trip_id":
 		ent.TripID = hi
 	case "stop_headsign":
-		ent.StopHeadsign = hi
+		ent.StopHeadsign = sql.NullString{Valid: true, String: hi}
 	case "stop_id":
 		ent.StopID = hi
 	case "arrival_time":
@@ -157,36 +207,36 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "pickup_type":
 		if len(hi) == 0 {
-			ent.PickupType = 0
+			ent.PickupType = sql.NullInt32{Valid: false}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
 		} else {
-			ent.PickupType = a
+			ent.PickupType = sql.NullInt32{Valid: true, Int32: int32(a)}
 		}
 	case "drop_off_type":
 		if len(hi) == 0 {
-			ent.DropOffType = 0
+			ent.DropOffType = sql.NullInt32{Valid: false}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
 		} else {
-			ent.DropOffType = a
+			ent.DropOffType = sql.NullInt32{Valid: true, Int32: int32(a)}
 		}
 	case "shape_dist_traveled":
 		if len(hi) == 0 {
-			ent.ShapeDistTraveled = -1.0
+			ent.ShapeDistTraveled = sql.NullFloat64{0, false}
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
 		} else {
-			ent.ShapeDistTraveled = a
+			ent.ShapeDistTraveled = sql.NullFloat64{a, true}
 		}
 	case "timepoint":
 		// special use -1 for empty timepoint value
 		if len(hi) == 0 {
-			ent.Timepoint = -1
+			ent.Timepoint = sql.NullInt32{Valid: false}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
 		} else {
-			ent.Timepoint = a
+			ent.Timepoint = sql.NullInt32{Valid: true, Int32: int32(a)}
 		}
 	default:
 		ent.SetExtra(key, hi)
@@ -225,9 +275,9 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 		} else if st.DepartureTime > 0 {
 			lastTime = st.DepartureTime
 		}
-		if st.ShapeDistTraveled > 0 && st.ShapeDistTraveled < lastDist {
-			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", fmt.Sprintf("%f", st.ShapeDistTraveled)))
-		} else if st.ShapeDistTraveled > 0 {
+		if st.ShapeDistTraveled.Float64 > 0 && st.ShapeDistTraveled.Float64 < lastDist.Float64 {
+			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", fmt.Sprintf("%f", st.ShapeDistTraveled.Float64)))
+		} else if st.ShapeDistTraveled.Float64 > 0 {
 			lastDist = st.ShapeDistTraveled
 		}
 	}

@@ -691,7 +691,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			// Error handler
 			copier.ErrorHandler.HandleEntityErrors(&stoptimes[i], errs, stoptimes[i].Warnings())
 			// Count interpolated STs for debugging/reporting
-			if stoptimes[i].Interpolated > 0 {
+			if stoptimes[i].Interpolated.Int32 > 0 {
 				istc++
 			}
 		}

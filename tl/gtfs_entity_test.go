@@ -1,6 +1,7 @@
 package tl
 
 import (
+	"database/sql"
 	"fmt"
 	"strconv"
 	"testing"
@@ -28,7 +29,7 @@ func expectTripToStopTime(e expectTrip) []StopTime {
 			StopSequence:      i,
 			ArrivalTime:       e.ArrivalTime[i],
 			DepartureTime:     e.DepartureTime[i],
-			ShapeDistTraveled: e.ShapeDistTraveled[i],
+			ShapeDistTraveled: sql.NullFloat64{e.ShapeDistTraveled[i], true},
 		})
 	}
 	return ret
