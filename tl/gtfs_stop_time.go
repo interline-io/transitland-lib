@@ -30,7 +30,6 @@ type StopTime struct {
 
 // SetID sets the integer ID.
 func (ent *StopTime) SetID(id int) {
-
 }
 
 // SetFeedVersionID sets the Entity's FeedVersionID.
@@ -40,17 +39,11 @@ func (ent *StopTime) SetFeedVersionID(fvid int) {
 
 // AddError adds a loading error to the entity, e.g. from a CSV parse failure
 func (ent *StopTime) AddError(err error) {
-	if ent.loadErrors == nil {
-		ent.loadErrors = []error{}
-	}
 	ent.loadErrors = append(ent.loadErrors, err)
 }
 
 // AddWarning .
 func (ent *StopTime) AddWarning(err error) {
-	if ent.loadWarnings == nil {
-		ent.loadWarnings = []error{}
-	}
 	ent.loadWarnings = append(ent.loadErrors, err)
 }
 
@@ -65,9 +58,6 @@ func (ent *StopTime) Extra() map[string]string {
 
 // SetExtra adds a string key, value pair to the entity's extra fields.
 func (ent *StopTime) SetExtra(key string, value string) {
-	if ent.extra == nil {
-		ent.extra = []string{}
-	}
 	ent.extra = append(ent.extra, key, value)
 }
 
@@ -223,11 +213,11 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "shape_dist_traveled":
 		if len(hi) == 0 {
-			ent.ShapeDistTraveled = sql.NullFloat64{0, false}
+			ent.ShapeDistTraveled = sql.NullFloat64{Float64: 0, Valid: false}
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
 		} else {
-			ent.ShapeDistTraveled = sql.NullFloat64{a, true}
+			ent.ShapeDistTraveled = sql.NullFloat64{Float64: a, Valid: true}
 		}
 	case "timepoint":
 		// special use -1 for empty timepoint value

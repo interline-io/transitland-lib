@@ -74,6 +74,18 @@ func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 	return fvi
 }
 
+// PrepareStopTimesPartition .
+func PrepareStopTimesPartition(atx tldb.Adapter, fvid int) error {
+	// Only applies to postgres
+	if _, ok := atx.(*tldb.PostgresAdapter); !ok {
+		return nil
+	}
+	// Manually prepare query
+	q := fmt.Sprintf("CREATE TABLE gtfs_stop_times_%d PARTITION OF gtfs_stop_times FOR VALUES IN (%d)", fvid, fvid)
+	_, err := atx.DBX().Exec(q)
+	return err
+}
+
 // ActivateFeedVersion .
 func ActivateFeedVersion(atx tldb.Adapter, fvid int) error {
 	// Ensure runs in a txn
@@ -125,10 +137,15 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 		// Serious error
 		return ImportResult{FeedVersionImport: fvi}, err
 	}
+	// Prepare partition
+	if err := PrepareStopTimesPartition(adapter, fv.ID); err != nil {
+		// Serious error
+		return ImportResult{FeedVersionImport: fvi}, err
+	}
 	// Create FVI
 	if fviid, err := adapter.Insert(&fvi); err == nil {
 		// note: handle OK first
-		fvi.ID = fviid // TODO: why isn't this set in insert?
+		fvi.ID = fviid
 	} else {
 		// Serious error
 		log.Error("Error creating FeedVersionImport: %s", err.Error())

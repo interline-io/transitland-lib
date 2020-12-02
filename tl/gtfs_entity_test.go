@@ -29,7 +29,7 @@ func expectTripToStopTime(e expectTrip) []StopTime {
 			StopSequence:      i,
 			ArrivalTime:       e.ArrivalTime[i],
 			DepartureTime:     e.DepartureTime[i],
-			ShapeDistTraveled: sql.NullFloat64{e.ShapeDistTraveled[i], true},
+			ShapeDistTraveled: sql.NullFloat64{Float64: e.ShapeDistTraveled[i], Valid: true},
 		})
 	}
 	return ret
