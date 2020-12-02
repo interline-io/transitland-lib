@@ -204,7 +204,7 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 	}
 	for i, eid := range eids {
 		sid := sids[i]
-		log.Info("%s '%s': saved -> %s", efn, sid, eid)
+		log.Debug("%s '%s': saved -> %s", efn, sid, eid)
 		copier.EntityMap.Set(efn, sid, eid)
 	}
 	copier.result.EntityCount[efn] += len(ents)
@@ -214,7 +214,7 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 
 func (copier *Copier) checkBatch(ents []tl.Entity, ent tl.Entity) ([]tl.Entity, error) {
 	if err := copier.checkEntity(ent); err != nil {
-		return ents, err
+		return ents, nil
 	}
 	ents = append(ents, ent)
 	if len(ents) < copier.BatchSize {
