@@ -175,7 +175,7 @@ func (copier *Copier) isMarked(ent tl.Entity) bool {
 func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 	efn := ent.Filename()
 	sid := ent.EntityID()
-	if err := copier.checkCopyEntity(ent); err != nil {
+	if err := copier.checkEntity(ent); err != nil {
 		return "", err, nil
 	}
 	// OK, Save
@@ -192,57 +192,44 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 	return eid, nil, nil
 }
 
-// copyEntities is a helper that copies multiple entities and returns the source IDs, write IDs, and write error.
-func (copier *Copier) copyEntities(ents []tl.Entity) ([]string, []string, error) {
-	// OK, Save
+// writeBatch does housekeeping for writing multiple entities.
+func (copier *Copier) writeBatch(ents []tl.Entity) error {
 	if len(ents) == 0 {
-		return []string{}, []string{}, nil
+		return nil
 	}
-	// Filter ents
 	efn := ents[0].Filename()
-	bt := []tl.Entity{}
 	sids := []string{}
 	for _, ent := range ents {
-		if err := copier.checkCopyEntity(ent); err != nil {
-			continue
-		}
 		sids = append(sids, ent.EntityID())
-		bt = append(bt, ent)
 	}
 	// OK, Save
-	eids, err := copier.Writer.AddEntities(bt)
+	eids, err := copier.Writer.AddEntities(ents)
 	if err != nil {
-		log.Error("Critical error: failed to write %d entities for %s", len(bt), efn)
-		return []string{}, []string{}, err
+		log.Error("Critical error: failed to write %d entities for %s", len(ents), efn)
+		return err
 	}
-	// if len(sids) == len(eids) {
 	for i, eid := range eids {
 		sid := sids[i]
-		// if eid != "" {
 		log.Info("%s '%s': saved -> %s", efn, sid, eid)
 		copier.EntityMap.Set(efn, sid, eid)
-		// }
 	}
-	// } else {
-	// 	panic("range mismatch")
-	// }
-	copier.result.EntityCount[efn] += len(bt)
-	return sids, eids, nil
+	copier.result.EntityCount[efn] += len(ents)
+	// Return an emtpy slice and no error
+	return nil
 }
 
 func (copier *Copier) checkBatch(ents []tl.Entity, ent tl.Entity) ([]tl.Entity, error) {
-	var err error
-	if ent != nil {
-		ents = append(ents, ent)
+	if err := copier.checkEntity(ent); err != nil {
+		return ents, err
 	}
-	if ent == nil || len(ents) >= copier.BatchSize {
-		_, _, err = copier.copyEntities(ents)
-		ents = nil
+	ents = append(ents, ent)
+	if len(ents) < copier.BatchSize {
+		return ents, nil
 	}
-	return ents, err
+	return nil, copier.writeBatch(ents)
 }
 
-func (copier *Copier) checkCopyEntity(ent tl.Entity) error {
+func (copier *Copier) checkEntity(ent tl.Entity) error {
 	efn := ent.Filename()
 	if !copier.isMarked(ent) {
 		copier.result.SkipEntityMarkedCount[efn]++
@@ -354,7 +341,6 @@ func (copier *Copier) Copy() *CopyResult {
 
 // copyAgencies writes agencies
 func (copier *Copier) copyAgencies() error {
-	var err error
 	bt := []tl.Entity{}
 	firstTimezone := ""
 	for e := range copier.Reader.Agencies() {
@@ -369,13 +355,12 @@ func (copier *Copier) copyAgencies() error {
 			e.AddWarning(causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
 		e := e
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.logCount(&tl.Agency{})
@@ -385,17 +370,15 @@ func (copier *Copier) copyAgencies() error {
 // copyLevels writes levels.
 func (copier *Copier) copyLevels() error {
 	// Levels
-	var err error
 	bt := []tl.Entity{}
 	for e := range copier.Reader.Levels() {
 		e := e
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	return nil
@@ -429,13 +412,13 @@ func (copier *Copier) copyStops() error {
 			// ParentStation wrong type
 			ent.AddError(causes.NewInvalidParentStationError(ent.ParentStation.Key))
 		}
-		ent2 := ent
-		bt, err = copier.checkBatch(bt, &ent2)
-		if err != nil {
+		e := ent
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
 		return nil
 	}
+
 	// First pass for stations
 	for e := range copier.Reader.Stops() {
 		if e.LocationType == 1 {
@@ -444,11 +427,12 @@ func (copier *Copier) copyStops() error {
 			}
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err = copier.writeBatch(bt); err != nil {
 		return err
 	}
+
 	// Second pass for platforms, exits, and generic nodes
+	bt = nil
 	for e := range copier.Reader.Stops() {
 		if e.LocationType == 0 || e.LocationType == 2 || e.LocationType == 3 {
 			if err := copyStop(e); err != nil {
@@ -456,11 +440,12 @@ func (copier *Copier) copyStops() error {
 			}
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err = copier.writeBatch(bt); err != nil {
 		return err
 	}
-	// // Third pass for boarding areas
+
+	// Third pass for boarding areas
+	bt = nil
 	for e := range copier.Reader.Stops() {
 		if e.LocationType == 4 {
 			if err := copyStop(e); err != nil {
@@ -468,10 +453,10 @@ func (copier *Copier) copyStops() error {
 			}
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err = copier.writeBatch(bt); err != nil {
 		return err
 	}
+
 	// Check farezones
 	for sid, zone := range farezones {
 		if _, ok := copier.EntityMap.Get("stops.txt", sid); ok {
@@ -484,10 +469,8 @@ func (copier *Copier) copyStops() error {
 
 func (copier *Copier) copyFares() error {
 	// FareAttributes
-	var err error
 	bt := []tl.Entity{}
 	for e := range copier.Reader.FareAttributes() {
-		fmt.Println("e:", e)
 		// Set default agency
 		if len(e.AgencyID.Key) == 0 {
 			e.AgencyID.Key = copier.DefaultAgencyID
@@ -497,13 +480,12 @@ func (copier *Copier) copyFares() error {
 			}
 		}
 		e := e
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.logCount(&tl.FareAttribute{})
@@ -533,13 +515,12 @@ func (copier *Copier) copyFares() error {
 			e.AddError(causes.NewInvalidFarezoneError("contains_id", e.ContainsID))
 		}
 		e := e
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.logCount(&tl.FareRule{})
@@ -549,16 +530,14 @@ func (copier *Copier) copyFares() error {
 func (copier *Copier) copyPathways() error {
 	// Pathways
 	bt := []tl.Entity{}
-	var err error
 	for e := range copier.Reader.Pathways() {
 		e := e
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.logCount(&tl.Pathway{})
@@ -567,9 +546,9 @@ func (copier *Copier) copyPathways() error {
 
 // copyRoutes writes routes
 func (copier *Copier) copyRoutes() error {
-	var err error
 	bt := []tl.Entity{}
 	for e := range copier.Reader.Routes() {
+		var err error
 		// Set default agencyID
 		if len(e.AgencyID) == 0 {
 			e.AgencyID = copier.DefaultAgencyID
@@ -588,13 +567,11 @@ func (copier *Copier) copyRoutes() error {
 			}
 		}
 		e := e
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.logCount(&tl.Route{})
@@ -604,17 +581,15 @@ func (copier *Copier) copyRoutes() error {
 // copyCalendars copies Calendars and CalendarDates
 func (copier *Copier) copyCalendars() error {
 	// Calendars
-	var err error
 	bt := []tl.Entity{}
 	for ent := range copier.Reader.Calendars() {
 		ent := ent
-		bt, err = copier.checkBatch(bt, &ent)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &ent); err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 
@@ -654,14 +629,13 @@ func (copier *Copier) copyCalendars() error {
 			}
 		}
 		ent := ent
-		bt, err = copier.checkBatch(bt, &ent)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &ent); err != nil {
 			return err
 		}
 
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.logCount(&tl.CalendarDate{})
@@ -670,18 +644,15 @@ func (copier *Copier) copyCalendars() error {
 
 // copyFeedInfos writes FeedInfos
 func (copier *Copier) copyFeedInfos() error {
-	var err error
 	bt := []tl.Entity{}
 	for e := range copier.Reader.FeedInfos() {
 		e := e
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
-
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.logCount(&tl.FeedInfo{})
@@ -690,7 +661,6 @@ func (copier *Copier) copyFeedInfos() error {
 
 // copyTransfers writes Transfers
 func (copier *Copier) copyTransfers() error {
-	var err error
 	bt := []tl.Entity{}
 	for e := range copier.Reader.Transfers() {
 		// Check if Transfer stops are marked
@@ -699,13 +669,12 @@ func (copier *Copier) copyTransfers() error {
 			continue
 		}
 		e := e
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.logCount(&tl.Transfer{})
@@ -714,6 +683,7 @@ func (copier *Copier) copyTransfers() error {
 
 // copyShapes writes Shapes
 func (copier *Copier) copyShapes() error {
+	// Not safe for batch copy (currently)
 	for e := range copier.Reader.Shapes() {
 		sid := e.EntityID()
 		if _, ok, err := copier.CopyEntity(&e); err != nil {
@@ -728,7 +698,6 @@ func (copier *Copier) copyShapes() error {
 
 // copyFrequencies writes Frequencies
 func (copier *Copier) copyFrequencies() error {
-	var err error
 	bt := []tl.Entity{}
 	for e := range copier.Reader.Frequencies() {
 		// Check if Trip is marked
@@ -736,13 +705,12 @@ func (copier *Copier) copyFrequencies() error {
 			copier.result.SkipEntityMarkedCount["frequencies.txt"]++
 			continue
 		}
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
+		var err error
+		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.logCount(&tl.Frequency{})
@@ -771,48 +739,40 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		trips[eid] = trip
 	}
 
-	// Prepare to copy stop_times
+	// Process each set of Trip/StopTimes
 	batchCount := 0
-	batch := []tripStopTimes{}
+	tripbt := []tl.Entity{}
+	stbt := []tl.StopTime{}
 	writeBatch := func() error {
 		// Write Trips
-		bt := []tl.Entity{}
-		for i := range batch {
-			bt = append(bt, &batch[i].Trip)
+		if err := copier.writeBatch(tripbt); err != nil {
+			return err
 		}
-		if _, _, err := copier.copyEntities(bt); err != nil {
-			panic(err)
-		}
-		log.Info("Saved %d trips", len(bt))
-		// Write StopTimes
-		bt = nil
-		for i := 0; i < len(batch); i++ {
-			valid := true
-			if valid {
-				for j := 0; j < len(batch[i].StopTimes); j++ {
-					bt = append(bt, &batch[i].StopTimes[j])
-					if batch[i].StopTimes[j].Interpolated > 0 {
-						copier.result.InterpolatedStopTimeCount++
-					}
-				}
+		// Perform StopTime validation
+		stbt2 := []tl.Entity{}
+		for i := range stbt {
+			if err := copier.checkEntity(&stbt[i]); err == nil {
+				stbt2 = append(stbt2, &stbt[i])
 			}
 		}
-		if _, _, err := copier.copyEntities(bt); err != nil {
-			panic(err)
+		fmt.Printf("stbt: %d stbt2: %d\n", len(stbt), len(stbt2))
+		if err := copier.writeBatch(stbt2); err != nil {
+			return err
 		}
-		log.Info("Saved %d stop_times", len(bt))
+		tripbt = nil
+		stbt = nil
+		batchCount = 0
 		return nil
 	}
 
-	// Process each set of Trip/StopTimes
 	for stoptimes := range copier.Reader.StopTimesByTripID() {
+		// Write batch
 		if batchCount+len(stoptimes) >= copier.BatchSize {
 			if err := writeBatch(); err != nil {
 				return err
 			}
-			batchCount = 0
-			batch = nil
 		}
+
 		// Error handling for trips without stop_times is after this block
 		if len(stoptimes) == 0 {
 			continue
@@ -820,7 +780,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Does this trip exist?
 		tripid := stoptimes[0].TripID
 		if _, ok := alltripids[tripid]; !ok {
-			log.Debug("stop_times referred to unknown trip: %s", tripid)
 			copier.ErrorHandler.HandleEntityErrors(&stoptimes[0], []error{causes.NewInvalidReferenceError("trip_id", tripid)}, nil)
 			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			continue
@@ -833,6 +792,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		// Mark trip as associated with at least 1 stop_time
 		delete(trips, tripid)
+
 		// Set StopPattern
 		patkey := stopPatternKey(stoptimes)
 		if pat, ok := copier.stopPatterns[patkey]; ok {
@@ -862,6 +822,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				}
 			}
 		}
+
 		// Check StopTime GROUP errors; log errors with trip; can block trip
 		// Example errors: less than 2 stop_times, non-increasing sequences and times, etc.
 		sterrs := tl.ValidateStopTimes(stoptimes)
@@ -877,20 +838,28 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				stoptimes = stoptimes2
 			}
 		}
-		// Add to save batch
-		t := tripStopTimes{
-			Trip:      trip,
-			StopTimes: stoptimes,
+
+		// Validate trip & add to batch
+		if err := copier.checkEntity(&trip); err == nil {
+			tripbt = append(tripbt, &trip)
+		} else {
+			continue
 		}
-		batch = append(batch, t)
+		// Add StopTimes to batch -- final validation after writing trips
+		for i := range stoptimes {
+			stbt = append(stbt, stoptimes[i])
+		}
 		batchCount += len(stoptimes)
 	}
 	// Add any Trips that were not visited/did not have StopTimes
 	for _, trip := range trips {
 		trip := trip
 		trip.AddError(causes.NewEmptyTripError(0))
-		batch = append(batch, tripStopTimes{Trip: trip})
+		if err := copier.checkEntity(&trip); err == nil {
+			tripbt = append(tripbt, &trip)
+		}
 	}
+	// Write last entities
 	if err := writeBatch(); err != nil {
 		return err
 	}
@@ -982,18 +951,17 @@ func (copier *Copier) createMissingCalendars() error {
 		missing[e.ServiceID] = cal
 	}
 	// Create the missing Calendars
-	var err error
 	bt := []tl.Entity{}
 	for _, e := range missing {
 		log.Debug("Create missing cal: %#v\n", e)
 		e := e
+		var err error
 		bt, err = copier.checkBatch(bt, &e)
 		if err != nil {
 			return err
 		}
 	}
-	bt, err = copier.checkBatch(bt, nil)
-	if err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 	copier.result.GeneratedCount["calendar.txt"] += len(bt)

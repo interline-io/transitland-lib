@@ -4,4 +4,4 @@ stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,par
 LAKE,Lake Merritt,,37.797027,-122.265180,LAKE,http://www.bart.gov/stations/LAKE/,0,,,1
 LAKE_station,station,,37.797027,-122.265180,,,1,,,1
 LAKE_platform,platform,,37.797027,-122.265180,,,0,LAKE_station,,1
-LAKE_platform_platform,platform,,37.797027,-122.265180,,,0,LAKE_platform,,1,InvalidParentStationError
+LAKE_platform_platform,platform,,37.797027,-122.265180,,,0,LAKE_platform,,1,InvalidParentStationError|InvalidReferenceError
