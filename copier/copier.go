@@ -747,9 +747,11 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		for i := range stbt {
 			if err := copier.checkEntity(&stbt[i]); err == nil {
 				stbt2 = append(stbt2, &stbt[i])
+				if stbt[i].Interpolated > 0 {
+					copier.result.InterpolatedStopTimeCount++
+				}
 			}
 		}
-		fmt.Printf("stbt: %d stbt2: %d\n", len(stbt), len(stbt2))
 		if err := copier.writeBatch(stbt2); err != nil {
 			return err
 		}
@@ -837,6 +839,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if err := copier.checkEntity(&trip); err == nil {
 			tripbt = append(tripbt, &trip)
 		} else {
+			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
 			continue
 		}
 		// Add StopTimes to batch -- final validation after writing trips
