@@ -14,12 +14,6 @@ import (
 	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
-// Helper to group Trips and StopTimes
-type tripStopTimes struct {
-	Trip      tl.Trip
-	StopTimes []tl.StopTime
-}
-
 // ErrorHandler is called on each source file and entity; errors can be nil
 type ErrorHandler interface {
 	HandleEntityErrors(tl.Entity, []error, []error)
