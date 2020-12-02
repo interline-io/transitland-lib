@@ -87,6 +87,9 @@ func valSetString(valueField reflect.Value, strv string) error {
 		z := valueField.Addr().Interface()
 		if cs, ok := z.(canScan); ok {
 			p = cs.Scan(strv)
+			if p != nil {
+				cs.Scan(nil) // Reset valid to false
+			}
 		} else {
 			p = errors.New("field not scannable")
 		}

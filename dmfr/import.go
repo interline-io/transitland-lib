@@ -156,7 +156,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 		}
 		if opts.Activate {
 			log.Info("Activating feed version")
-			if err := ActivateFeedVersion(adapter, opts.FeedVersionID); err != nil {
+			if err := ActivateFeedVersion(atx, opts.FeedVersionID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
 		}
@@ -169,7 +169,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 		fviresult.InProgress = false
 		fviresult.ExceptionLog = ""
 		fviresult.UpdateTimestamps()
-		if err := adapter.Update(&fviresult); err != nil {
+		if err := atx.Update(&fviresult); err != nil {
 			// Serious error
 			log.Error("Error saving FeedVersionImport: %s", err.Error())
 			return err

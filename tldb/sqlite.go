@@ -32,7 +32,13 @@ func init() {
 	sql.Register("sqlite3_w_funcs",
 		&sqlite3.SQLiteDriver{
 			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-				return conn.RegisterFunc("after_feed_version_import", dummy, true)
+				if err := conn.RegisterFunc("after_feed_version_import", dummy, true); err != nil {
+					return err
+				}
+				if err := conn.RegisterFunc("activate_feed_version", dummy, true); err != nil {
+					return err
+				}
+				return nil
 			},
 		})
 

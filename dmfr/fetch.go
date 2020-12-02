@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl"
@@ -18,8 +19,9 @@ import (
 
 // FetchOptions sets options for a fetch operation.
 type FetchOptions struct {
-	Feed                    Feed
 	FeedURL                 string
+	FeedID                  string
+	FeedCreate              bool
 	IgnoreDuplicateContents bool
 	Directory               string
 	S3                      string
@@ -41,10 +43,16 @@ type FetchResult struct {
 // Saves FeedState.LastFetchError for regular failures.
 func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
-	// Get url
-	tlfeed := Feed{ID: opts.Feed.ID}
-	if err := atx.Find(&tlfeed); err != nil {
-		return fr, err
+	// Get feed, create if not present and FeedCreate is specified
+	tlfeed := Feed{}
+	if err := atx.Get(&tlfeed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, opts.FeedID); err == sql.ErrNoRows && opts.FeedCreate {
+		tlfeed.FeedID = opts.FeedID
+		tlfeed.Spec = "gtfs"
+		if tlfeed.ID, err = atx.Insert(&tlfeed); err != nil {
+			return fr, err
+		}
+	} else if err != nil {
+		return fr, errors.New("feed does not exist")
 	}
 	if opts.FeedURL == "" {
 		opts.FeedURL = tlfeed.URLs.StaticCurrent
@@ -52,9 +60,9 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	if opts.FetchedAt.IsZero() {
 		opts.FetchedAt = time.Now().UTC()
 	}
-	// Get state
-	tlstate := FeedState{FeedID: opts.Feed.ID}
-	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, opts.Feed.ID); err == sql.ErrNoRows {
+	// Get state, create if necessary
+	tlstate := FeedState{FeedID: tlfeed.ID}
+	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, tlfeed.ID); err == sql.ErrNoRows {
 		tlstate.ID, err = atx.Insert(&tlstate)
 		if err != nil {
 			return fr, err
@@ -70,7 +78,7 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 		return fr, err
 	}
 	// Start fetching
-	fr, err := FetchAndCreateFeedVersion(atx, opts)
+	fr, err := fetchAndCreateFeedVersion(atx, tlfeed, opts)
 	if err != nil {
 		return fr, err
 	}
@@ -88,10 +96,11 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	return fr, nil
 }
 
-// FetchAndCreateFeedVersion from a URL.
+// fetchAndCreateFeedVersion from a URL.
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets FetchResult.FetchError if a regular failure occurs, such as a 404.
-func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
+// feed is an argument to provide the ID, File, and Authorization.
+func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts FetchOptions) (FetchResult, error) {
 	fr := FetchResult{}
 	if opts.FeedURL == "" {
 		fr.FetchError = errors.New("no url")
@@ -105,11 +114,11 @@ func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult
 	}
 	// Get secret
 	secret := Secret{}
-	if a, err := opts.Secrets.MatchFeed(opts.Feed.FeedID); err == nil {
+	if a, err := opts.Secrets.MatchFeed(opts.FeedID); err == nil {
 		secret = a
-	} else if a, err := opts.Secrets.MatchFilename(opts.Feed.File); err == nil {
+	} else if a, err := opts.Secrets.MatchFilename(feed.File); err == nil {
 		secret = a
-	} else if opts.Feed.Authorization.Type != "" {
+	} else if feed.Authorization.Type != "" {
 		fr.FetchError = errors.New("no secret found")
 		return fr, nil
 	}
@@ -122,7 +131,7 @@ func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult
 	// Override the default URLAdapter
 	if u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "ftp" || u.Scheme == "s3" {
 		aa := AuthenticatedURLAdapter{}
-		if err := aa.Download(opts.FeedURL, opts.Feed.Authorization, secret); err != nil {
+		if err := aa.Download(opts.FeedURL, feed.Authorization, secret); err != nil {
 			fr.FetchError = err
 			return fr, nil
 		}
@@ -141,7 +150,7 @@ func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult
 		return fr, nil
 	}
 	fv.URL = opts.FeedURL
-	fv.FeedID = opts.Feed.ID
+	fv.FeedID = feed.ID
 	fv.FetchedAt = opts.FetchedAt
 	// Is this SHA1 already present?
 	checkfvid := tl.FeedVersion{}
@@ -187,19 +196,39 @@ func FetchAndCreateFeedVersion(atx tldb.Adapter, opts FetchOptions) (FetchResult
 	if err != nil {
 		return fr, err
 	}
+	// Update stats records
+	if err := createFeedStats(atx, reader, fv.ID); err != nil {
+		return fr, err
+	}
+	return fr, nil
+}
+
+func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	// Get FeedVersionFileInfos
 	fvfis, err := NewFeedVersionFileInfosFromReader(reader)
 	if err != nil {
-		return fr, err
+		return err
 	}
 	for _, fvfi := range fvfis {
-		fvfi.FeedVersionID = fv.ID
 		fvfi.UpdateTimestamps()
+		fvfi.FeedVersionID = fvid
 		if _, err := atx.Insert(&fvfi); err != nil {
-			return fr, err
+			return err
 		}
 	}
-	return fr, nil
+	// Get service statistics
+	fvsls, err := NewFeedVersionServiceInfosFromReader(reader)
+	if err != nil {
+		return err
+	}
+	// Use batch insert?
+	for _, fvsl := range fvsls {
+		fvsl.FeedVersionID = fvid
+		if _, err := atx.Insert(&fvsl); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func copyFileContents(src, dst string) (err error) {
@@ -223,4 +252,18 @@ func copyFileContents(src, dst string) (err error) {
 	}
 	err = out.Sync()
 	return
+}
+
+// dmfrGetReaderURL helps load a file from an S3 or Directory location
+func dmfrGetReaderURL(s3 string, directory string, url string) string {
+	if s3 != "" {
+		url = s3 + "/" + url
+	} else if directory != "" {
+		url = filepath.Join(directory, url)
+	}
+	urlsplit := strings.SplitN(url, "#", 2)
+	if len(urlsplit) > 1 {
+		url = url + "#" + urlsplit[1]
+	}
+	return url
 }

@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -33,6 +32,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 		fl.PrintDefaults()
 	}
 	fl.StringVar(&cmd.FetchOptions.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
+	fl.BoolVar(&cmd.FetchOptions.FeedCreate, "create-feed", false, "Create feed records if not found")
 	fl.StringVar(&fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
 	fl.StringVar(&secretsFile, "secrets", "", "Path to DMFR Secrets file")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
@@ -73,42 +73,45 @@ func (cmd *FetchCommand) Run() error {
 		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}
-	q := cmd.adapter.Sqrl().
-		Select("*").
-		From("current_feeds").
-		Where("deleted_at IS NULL").
-		Where("spec = ?", "gtfs")
-	if len(cmd.FeedIDs) > 0 {
-		q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})
-	}
-	if cmd.Limit > 0 {
-		q = q.Limit(uint64(cmd.Limit))
-	}
-	qstr, qargs, err := q.ToSql()
-	if err != nil {
-		return err
-	}
-	feeds := []Feed{}
-	err = cmd.adapter.Select(&feeds, qstr, qargs...)
-	if err != nil {
-		return err
+	if len(cmd.FeedIDs) == 0 {
+		q := cmd.adapter.Sqrl().
+			Select("*").
+			From("current_feeds").
+			Where("deleted_at IS NULL").
+			Where("spec = ?", "gtfs")
+		if cmd.Limit > 0 {
+			q = q.Limit(uint64(cmd.Limit))
+		}
+		qstr, qargs, err := q.ToSql()
+		if err != nil {
+			return err
+		}
+		feeds := []Feed{}
+		err = cmd.adapter.Select(&feeds, qstr, qargs...)
+		if err != nil {
+			return err
+		}
+		for _, feed := range feeds {
+			cmd.FeedIDs = append(cmd.FeedIDs, feed.FeedID)
+		}
 	}
 	///////////////
 	// Here we go
-	log.Info("Fetching %d feeds", len(feeds))
+	log.Info("Fetching %d feeds", len(cmd.FeedIDs))
 	fetchNew := 0
 	fetchFound := 0
 	fetchErrs := 0
 	var wg sync.WaitGroup
-	jobs := make(chan FetchOptions, len(feeds))
-	results := make(chan FetchResult, len(feeds))
+	jobs := make(chan FetchOptions, len(cmd.FeedIDs))
+	results := make(chan FetchResult, len(cmd.FeedIDs))
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
 		go fetchWorker(w, cmd.adapter, cmd.DryRun, jobs, results, &wg)
 	}
-	for _, feed := range feeds {
+	for _, feedid := range cmd.FeedIDs {
 		opts := FetchOptions{
-			Feed:                    feed,
+			FeedID:                  feedid,
+			FeedCreate:              cmd.FetchOptions.FeedCreate,
 			FeedURL:                 cmd.FetchOptions.FeedURL,
 			Directory:               cmd.FetchOptions.Directory,
 			S3:                      cmd.FetchOptions.S3,
@@ -138,33 +141,31 @@ func (cmd *FetchCommand) Run() error {
 
 func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan FetchOptions, results chan<- FetchResult, wg *sync.WaitGroup) {
 	for opts := range jobs {
-		var fr FetchResult
 		// Get FeedID for pretty printing.
-		osid := opts.Feed.FeedID
-		furl := opts.FeedURL
-		if furl == "" {
-			furl = opts.Feed.URLs.StaticCurrent
-		}
-		log.Info("Feed %s (id:%d): url: %s begin/start", osid, opts.Feed.ID, furl)
+		osid := opts.FeedID
+		log.Info("Feed %s: start", osid)
 		if DryRun {
-			log.Info("Feed %s (id:%d): dry-run", osid, opts.Feed.ID)
+			log.Info("Feed %s: dry-run", osid)
 			continue
 		}
+		var fr FetchResult
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
 			fr, fe = DatabaseFetch(atx, opts)
 			return fe
 		})
+		fid := fr.FeedVersion.FeedID
+		furl := fr.FeedVersion.URL
 		if err != nil {
-			log.Error("Feed %s (id:%d): url: %s critical error: %s", osid, opts.Feed.ID, furl, err.Error())
+			log.Error("Feed %s (id:%d): url: %s critical error: %s", osid, fid, furl, err.Error())
 		} else if fr.FetchError != nil {
-			log.Error("Feed %s (id:%d): url: %s fetch error: %s", osid, opts.Feed.ID, furl, fr.FetchError.Error())
+			log.Error("Feed %s (id:%d): url: %s fetch error: %s", osid, fid, furl, fr.FetchError.Error())
 		} else if fr.FoundSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, opts.Feed.ID, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
 		} else if fr.FoundDirSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d)", osid, opts.Feed.ID, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID)
+			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d)", osid, fid, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID)
 		} else {
-			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d)", osid, opts.Feed.ID, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
 		}
 		results <- fr
 	}

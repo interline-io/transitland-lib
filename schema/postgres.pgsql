@@ -1,5 +1,45 @@
 CREATE EXTENSION postgis;
 CREATE EXTENSION hstore;
+CREATE TABLE public.feed_versions (
+    id bigint NOT NULL,
+    feed_id bigint NOT NULL,
+    feed_type character varying DEFAULT 'gtfs'::character varying NOT NULL,
+    file character varying DEFAULT ''::character varying NOT NULL,
+    earliest_calendar_date date NOT NULL,
+    latest_calendar_date date NOT NULL,
+    sha1 character varying NOT NULL,
+    md5 character varying,
+    tags public.hstore,
+    fetched_at timestamp without time zone NOT NULL,
+    imported_at timestamp without time zone,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    import_level integer DEFAULT 0 NOT NULL,
+    url character varying DEFAULT ''::character varying NOT NULL,
+    file_raw character varying,
+    sha1_raw character varying,
+    md5_raw character varying,
+    file_feedvalidator character varying,
+    deleted_at timestamp without time zone,
+    sha1_dir character varying
+);
+CREATE TABLE public.gtfs_calendars (
+    id bigint NOT NULL,
+    service_id character varying NOT NULL,
+    monday integer NOT NULL,
+    tuesday integer NOT NULL,
+    wednesday integer NOT NULL,
+    thursday integer NOT NULL,
+    friday integer NOT NULL,
+    saturday integer NOT NULL,
+    sunday integer NOT NULL,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    feed_version_id bigint NOT NULL,
+    generated boolean NOT NULL
+);
 CREATE TABLE public.current_feeds (
     id bigint NOT NULL,
     onestop_id character varying NOT NULL,
@@ -29,13 +69,6 @@ CREATE TABLE public.current_feeds (
     feed_namespace_id character varying DEFAULT ''::character varying NOT NULL,
     file character varying DEFAULT ''::character varying NOT NULL
 );
-CREATE SEQUENCE public.current_feeds_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-ALTER SEQUENCE public.current_feeds_id_seq OWNED BY public.current_feeds.id;
 CREATE TABLE public.feed_states (
     id bigint NOT NULL,
     feed_id bigint NOT NULL,
@@ -50,6 +83,61 @@ CREATE TABLE public.feed_states (
     updated_at timestamp without time zone NOT NULL,
     feed_version_import_retention_period integer DEFAULT 90 NOT NULL
 );
+CREATE TABLE public.gtfs_agencies (
+    id bigint NOT NULL,
+    agency_id character varying NOT NULL,
+    agency_name character varying NOT NULL,
+    agency_url character varying NOT NULL,
+    agency_timezone character varying NOT NULL,
+    agency_lang character varying NOT NULL,
+    agency_phone character varying NOT NULL,
+    agency_fare_url character varying NOT NULL,
+    agency_email character varying NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    feed_version_id bigint NOT NULL
+);
+CREATE TABLE public.gtfs_routes (
+    id bigint NOT NULL,
+    route_id character varying NOT NULL,
+    route_short_name character varying NOT NULL,
+    route_long_name character varying NOT NULL,
+    route_desc character varying NOT NULL,
+    route_type integer NOT NULL,
+    route_url character varying NOT NULL,
+    route_color character varying NOT NULL,
+    route_text_color character varying NOT NULL,
+    route_sort_order integer NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    feed_version_id bigint NOT NULL,
+    agency_id bigint NOT NULL
+);
+CREATE TABLE public.gtfs_stops (
+    id bigint NOT NULL,
+    stop_id character varying NOT NULL,
+    stop_code character varying NOT NULL,
+    stop_name character varying NOT NULL,
+    stop_desc character varying NOT NULL,
+    zone_id character varying NOT NULL,
+    stop_url character varying NOT NULL,
+    location_type integer NOT NULL,
+    stop_timezone character varying NOT NULL,
+    wheelchair_boarding integer NOT NULL,
+    geometry public.geography(Point,4326) NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    feed_version_id bigint NOT NULL,
+    parent_station bigint,
+    level_id bigint
+);
+CREATE SEQUENCE public.current_feeds_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public.current_feeds_id_seq OWNED BY public.current_feeds.id;
 CREATE SEQUENCE public.feed_states_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -57,6 +145,26 @@ CREATE SEQUENCE public.feed_states_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.feed_states_id_seq OWNED BY public.feed_states.id;
+CREATE TABLE public.feed_version_file_infos (
+    id bigint NOT NULL,
+    feed_version_id bigint NOT NULL,
+    name text NOT NULL,
+    size bigint NOT NULL,
+    rows bigint NOT NULL,
+    columns integer NOT NULL,
+    sha1 text NOT NULL,
+    header text NOT NULL,
+    csv_like boolean NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+CREATE SEQUENCE public.feed_version_file_infos_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public.feed_version_file_infos_id_seq OWNED BY public.feed_version_file_infos.id;
 CREATE TABLE public.feed_version_gtfs_imports (
     id bigint NOT NULL,
     success boolean NOT NULL,
@@ -83,29 +191,31 @@ CREATE SEQUENCE public.feed_version_gtfs_imports_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.feed_version_gtfs_imports_id_seq OWNED BY public.feed_version_gtfs_imports.id;
-CREATE TABLE public.feed_versions (
+CREATE TABLE public.feed_version_service_levels (
     id bigint NOT NULL,
-    feed_id bigint NOT NULL,
-    feed_type character varying DEFAULT 'gtfs'::character varying NOT NULL,
-    file character varying DEFAULT ''::character varying NOT NULL,
-    earliest_calendar_date date NOT NULL,
-    latest_calendar_date date NOT NULL,
-    sha1 character varying NOT NULL,
-    md5 character varying,
-    tags public.hstore,
-    fetched_at timestamp without time zone NOT NULL,
-    imported_at timestamp without time zone,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    import_level integer DEFAULT 0 NOT NULL,
-    url character varying DEFAULT ''::character varying NOT NULL,
-    file_raw character varying,
-    sha1_raw character varying,
-    md5_raw character varying,
-    file_feedvalidator character varying,
-    deleted_at timestamp without time zone,
-    sha1_dir character varying
+    feed_version_id bigint NOT NULL,
+    route_id text,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    agency_name text NOT NULL,
+    route_short_name text NOT NULL,
+    route_long_name text NOT NULL,
+    route_type integer NOT NULL,
+    monday bigint NOT NULL,
+    tuesday bigint NOT NULL,
+    wednesday bigint NOT NULL,
+    thursday bigint NOT NULL,
+    friday bigint NOT NULL,
+    saturday bigint NOT NULL,
+    sunday bigint NOT NULL
 );
+CREATE SEQUENCE public.feed_version_service_levels_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public.feed_version_service_levels_id_seq OWNED BY public.feed_version_service_levels.id;
 CREATE SEQUENCE public.feed_versions_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -113,20 +223,6 @@ CREATE SEQUENCE public.feed_versions_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.feed_versions_id_seq OWNED BY public.feed_versions.id;
-CREATE TABLE public.gtfs_agencies (
-    id bigint NOT NULL,
-    agency_id character varying NOT NULL,
-    agency_name character varying NOT NULL,
-    agency_url character varying NOT NULL,
-    agency_timezone character varying NOT NULL,
-    agency_lang character varying NOT NULL,
-    agency_phone character varying NOT NULL,
-    agency_fare_url character varying NOT NULL,
-    agency_email character varying NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    feed_version_id bigint NOT NULL
-);
 CREATE SEQUENCE public.gtfs_agencies_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -150,23 +246,6 @@ CREATE SEQUENCE public.gtfs_calendar_dates_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_calendar_dates_id_seq OWNED BY public.gtfs_calendar_dates.id;
-CREATE TABLE public.gtfs_calendars (
-    id bigint NOT NULL,
-    service_id character varying NOT NULL,
-    monday integer NOT NULL,
-    tuesday integer NOT NULL,
-    wednesday integer NOT NULL,
-    thursday integer NOT NULL,
-    friday integer NOT NULL,
-    saturday integer NOT NULL,
-    sunday integer NOT NULL,
-    start_date date NOT NULL,
-    end_date date NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    feed_version_id bigint NOT NULL,
-    generated boolean NOT NULL
-);
 CREATE SEQUENCE public.gtfs_calendars_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -290,22 +369,6 @@ CREATE SEQUENCE public.gtfs_pathways_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_pathways_id_seq OWNED BY public.gtfs_pathways.id;
-CREATE TABLE public.gtfs_routes (
-    id bigint NOT NULL,
-    route_id character varying NOT NULL,
-    route_short_name character varying NOT NULL,
-    route_long_name character varying NOT NULL,
-    route_desc character varying NOT NULL,
-    route_type integer NOT NULL,
-    route_url character varying NOT NULL,
-    route_color character varying NOT NULL,
-    route_text_color character varying NOT NULL,
-    route_sort_order integer NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    feed_version_id bigint NOT NULL,
-    agency_id bigint NOT NULL
-);
 CREATE SEQUENCE public.gtfs_routes_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -353,24 +416,6 @@ CREATE SEQUENCE public.gtfs_stop_times_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_stop_times_id_seq OWNED BY public.gtfs_stop_times.id;
-CREATE TABLE public.gtfs_stops (
-    id bigint NOT NULL,
-    stop_id character varying NOT NULL,
-    stop_code character varying NOT NULL,
-    stop_name character varying NOT NULL,
-    stop_desc character varying NOT NULL,
-    zone_id character varying NOT NULL,
-    stop_url character varying NOT NULL,
-    location_type integer NOT NULL,
-    stop_timezone character varying NOT NULL,
-    wheelchair_boarding integer NOT NULL,
-    geometry public.geography(Point,4326) NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    feed_version_id bigint NOT NULL,
-    parent_station bigint,
-    level_id bigint
-);
 CREATE SEQUENCE public.gtfs_stops_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -381,7 +426,7 @@ ALTER SEQUENCE public.gtfs_stops_id_seq OWNED BY public.gtfs_stops.id;
 CREATE TABLE public.gtfs_transfers (
     id bigint NOT NULL,
     transfer_type integer NOT NULL,
-    min_transfer_time integer NOT NULL,
+    min_transfer_time integer,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     feed_version_id bigint NOT NULL,
@@ -421,7 +466,9 @@ CREATE SEQUENCE public.gtfs_trips_id_seq
 ALTER SEQUENCE public.gtfs_trips_id_seq OWNED BY public.gtfs_trips.id;
 ALTER TABLE ONLY public.current_feeds ALTER COLUMN id SET DEFAULT nextval('public.current_feeds_id_seq'::regclass);
 ALTER TABLE ONLY public.feed_states ALTER COLUMN id SET DEFAULT nextval('public.feed_states_id_seq'::regclass);
+ALTER TABLE ONLY public.feed_version_file_infos ALTER COLUMN id SET DEFAULT nextval('public.feed_version_file_infos_id_seq'::regclass);
 ALTER TABLE ONLY public.feed_version_gtfs_imports ALTER COLUMN id SET DEFAULT nextval('public.feed_version_gtfs_imports_id_seq'::regclass);
+ALTER TABLE ONLY public.feed_version_service_levels ALTER COLUMN id SET DEFAULT nextval('public.feed_version_service_levels_id_seq'::regclass);
 ALTER TABLE ONLY public.feed_versions ALTER COLUMN id SET DEFAULT nextval('public.feed_versions_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_agencies ALTER COLUMN id SET DEFAULT nextval('public.gtfs_agencies_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_calendar_dates ALTER COLUMN id SET DEFAULT nextval('public.gtfs_calendar_dates_id_seq'::regclass);
@@ -442,8 +489,12 @@ ALTER TABLE ONLY public.current_feeds
     ADD CONSTRAINT current_feeds_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.feed_states
     ADD CONSTRAINT feed_states_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.feed_version_file_infos
+    ADD CONSTRAINT feed_version_file_infos_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.feed_version_gtfs_imports
     ADD CONSTRAINT feed_version_gtfs_imports_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.feed_version_service_levels
+    ADD CONSTRAINT feed_version_service_levels_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.feed_versions
     ADD CONSTRAINT feed_versions_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_agencies
@@ -476,6 +527,14 @@ ALTER TABLE ONLY public.gtfs_transfers
     ADD CONSTRAINT gtfs_transfers_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT gtfs_trips_pkey PRIMARY KEY (id);
+CREATE INDEX feed_version_file_infos_feed_version_id_idx ON public.feed_version_file_infos USING btree (feed_version_id);
+CREATE INDEX feed_version_file_infos_name_idx ON public.feed_version_file_infos USING btree (name);
+CREATE INDEX feed_version_file_infos_sha1_idx ON public.feed_version_file_infos USING btree (sha1);
+CREATE INDEX feed_version_service_levels_end_date_idx ON public.feed_version_service_levels USING btree (end_date);
+CREATE INDEX feed_version_service_levels_feed_version_id_idx ON public.feed_version_service_levels USING btree (feed_version_id);
+CREATE UNIQUE INDEX feed_version_service_levels_feed_version_id_route_id_start__idx ON public.feed_version_service_levels USING btree (feed_version_id, route_id, start_date, end_date);
+CREATE INDEX feed_version_service_levels_route_id_idx ON public.feed_version_service_levels USING btree (route_id);
+CREATE INDEX feed_version_service_levels_start_date_idx ON public.feed_version_service_levels USING btree (start_date);
 CREATE INDEX gtfs_calendar_dates_service_id_exception_type_date_idx ON public.gtfs_calendar_dates USING btree (service_id, exception_type, date);
 CREATE INDEX gtfs_feed_infos_feed_version_id_idx ON public.gtfs_feed_infos USING btree (feed_version_id);
 CREATE INDEX index_current_feeds_on_active_feed_version_id ON public.current_feeds USING btree (active_feed_version_id);
@@ -558,6 +617,10 @@ CREATE INDEX index_gtfs_trips_on_trip_headsign ON public.gtfs_trips USING btree 
 CREATE INDEX index_gtfs_trips_on_trip_id ON public.gtfs_trips USING btree (trip_id);
 CREATE INDEX index_gtfs_trips_on_trip_short_name ON public.gtfs_trips USING btree (trip_short_name);
 CREATE UNIQUE INDEX index_gtfs_trips_unique ON public.gtfs_trips USING btree (feed_version_id, trip_id);
+ALTER TABLE ONLY public.feed_version_file_infos
+    ADD CONSTRAINT feed_version_file_infos_feed_version_id_fkey FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
+ALTER TABLE ONLY public.feed_version_service_levels
+    ADD CONSTRAINT feed_version_service_levels_feed_version_id_fkey FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT fk_rails_05ead08753 FOREIGN KEY (shape_id) REFERENCES public.gtfs_shapes(id);
 ALTER TABLE ONLY public.gtfs_transfers
