@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
 // StopTime stop_times.txt
@@ -74,27 +75,15 @@ func (ent *StopTime) Errors() []error {
 	// No reflection
 	errs := []error{}
 	errs = append(errs, ent.loadErrors...)
-	if len(ent.TripID) == 0 {
-		errs = append(errs, causes.NewRequiredFieldError("trip_id"))
-	}
-	if len(ent.StopID) == 0 {
-		errs = append(errs, causes.NewRequiredFieldError("stop_id"))
-	}
-	if ent.StopSequence < 0 {
-		errs = append(errs, causes.NewInvalidFieldError("stop_sequence", "", fmt.Errorf("negative stop_sequence: %d", ent.StopSequence)))
-	}
-	if ent.PickupType.Int32 < 0 || ent.PickupType.Int32 > 3 {
-		errs = append(errs, causes.NewInvalidFieldError("pickup_type", "", fmt.Errorf("pickup_type out of bounds: %d", ent.PickupType.Int32)))
-	}
-	if ent.DropOffType.Int32 < 0 || ent.DropOffType.Int32 > 3 {
-		errs = append(errs, causes.NewInvalidFieldError("drop_off_type", "", fmt.Errorf("drop_off_type out of bounds: %d", ent.DropOffType.Int32)))
-	}
-	if ent.ShapeDistTraveled.Float64 < 0 && ent.ShapeDistTraveled.Float64 != -1.0 {
-		errs = append(errs, causes.NewInvalidFieldError("shape_dist_traveled", "", fmt.Errorf("negative shape_dist_traveled: %f", ent.ShapeDistTraveled.Float64)))
-	}
-	if ent.Timepoint.Int32 < -1 || ent.Timepoint.Int32 > 1 {
-		errs = append(errs, causes.NewInvalidFieldError("timepoint", "", fmt.Errorf("timepoint out of bounds: %d", ent.Timepoint.Int32)))
-	}
+	errs = append(errs, enum.CheckPresent("trip_id", ent.TripID)...)
+	errs = append(errs, enum.CheckPresent("stop_id", ent.StopID)...)
+	errs = append(errs, enum.CheckPositiveInt("stop_sequence", ent.StopSequence)...)
+	errs = append(errs, enum.CheckInsideRangeInt("pickup_type", int(ent.PickupType.Int32), 0, 3)...)
+	errs = append(errs, enum.CheckInsideRangeInt("drop_off_type", int(ent.DropOffType.Int32), 0, 3)...)
+	errs = append(errs, enum.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Float64)...)
+	errs = append(errs, enum.CheckInsideRangeInt("timepoint", int(ent.Timepoint.Int32), -1, 1)...)
+	errs = append(errs, enum.CheckInsideRangeInt("arrival_time", ent.ArrivalTime, -1, 1<<31)...)
+	errs = append(errs, enum.CheckInsideRangeInt("departure", ent.DepartureTime, -1, 1<<31)...)
 	// Other errors
 	at, dt := ent.ArrivalTime, ent.DepartureTime
 	if at != 0 && dt != 0 && at > dt {

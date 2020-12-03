@@ -97,7 +97,7 @@ func (wt *WideTime) Scan(src interface{}) error {
 	case int64:
 		wt.Seconds = int(v)
 	default:
-		p = errors.New("cant scan")
+		p = errors.New("could not parse time")
 	}
 	if p == nil {
 		wt.Valid = true
