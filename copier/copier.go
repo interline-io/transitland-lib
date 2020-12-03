@@ -735,6 +735,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if err := copier.writeBatch(tripbt); err != nil {
 			return err
 		}
+		log.Info("Saved %d trips", len(tripbt))
 		// Perform StopTime validation
 		stbt2 := []tl.Entity{}
 		for i := range stbt {
@@ -748,6 +749,8 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if err := copier.writeBatch(stbt2); err != nil {
 			return err
 		}
+		log.Info("Saved %d stop_times", len(stbt2))
+		//
 		tripbt = nil
 		stbt = nil
 		batchCount = 0
@@ -853,7 +856,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	if err := writeBatch(); err != nil {
 		return err
 	}
-	copier.logCount(&tl.Trip{})
 	return nil
 }
 
@@ -867,19 +869,19 @@ func (copier *Copier) logCount(ent tl.Entity) {
 	fnr := strings.ReplaceAll(fn, ".txt", "")
 	saved := copier.result.EntityCount[fn]
 	out = append(out, fmt.Sprintf("Saved %d %s", saved, fnr))
-	if a, ok := copier.result.GeneratedCount[fn]; ok {
+	if a, ok := copier.result.GeneratedCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("generated %d", a))
 	}
-	if a, ok := copier.result.SkipEntityMarkedCount[fn]; ok {
+	if a, ok := copier.result.SkipEntityMarkedCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("skipped %d as unmarked", a))
 	}
-	if a, ok := copier.result.SkipEntityFilterCount[fn]; ok {
+	if a, ok := copier.result.SkipEntityFilterCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("skipped %d by filter", a))
 	}
-	if a, ok := copier.result.SkipEntityErrorCount[fn]; ok {
+	if a, ok := copier.result.SkipEntityErrorCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("skipped %d with entity errors", a))
 	}
-	if a, ok := copier.result.SkipEntityReferenceCount[fn]; ok {
+	if a, ok := copier.result.SkipEntityReferenceCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("skipped %d with reference errors", a))
 	}
 	if saved == 0 && len(out) == 1 {
