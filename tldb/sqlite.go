@@ -143,9 +143,6 @@ func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
-	if v, ok := ent.(canUpdateTimestamps); ok {
-		v.UpdateTimestamps()
-	}
 	table := getTableName(ent)
 	cols, vals, err := getInsert(ent)
 	if err != nil {
@@ -161,37 +158,50 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 		return 0, err
 	}
 	eid, err := result.LastInsertId()
-	if v, ok := ent.(canSetID); ok {
-		v.SetID(int(eid))
-	}
 	return int(eid), nil
 }
 
-// BatchInsert provides a fast path for inserting multiple entities.
-func (adapter *SQLiteAdapter) BatchInsert(ents []tl.Entity) error {
+// MultiInsert inserts multiple entities.
+func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
+	retids := []int{}
 	if len(ents) == 0 {
-		return nil
+		return retids, nil
 	}
 	table := getTableName(ents[0])
 	cols, vals, err := getInsert(ents[0])
 	if err != nil {
-		return err
+		return retids, err
 	}
 	q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
 	if err != nil {
-		return err
+		return retids, err
 	}
-	// return adapter.Tx(func(adapter Adapter) error {
+	// Does not work well in tests
+	// if err := adapter.Tx(func(adapter Adapter) error {
 	db := adapter.DBX()
 	for _, d := range ents {
 		_, vals, err := getInsert(d)
 		if err != nil {
-			return err
+			return retids, err
 		}
-		if _, err := db.Exec(q, vals...); err != nil {
-			return err
+		result, err := db.Exec(q, vals...)
+		if err != nil {
+			return retids, err
 		}
+		eid, err := result.LastInsertId()
+		if err != nil {
+			return retids, err
+		}
+		retids = append(retids, int(eid))
 	}
-	return nil
-	// })
+	// }); err != nil {
+	// 	return retids, err
+	// }
+	return retids, nil
+}
+
+// CopyInsert uses MultiInsert.
+func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
+	_, err := adapter.MultiInsert(ents)
+	return err
 }

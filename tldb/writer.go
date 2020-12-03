@@ -60,19 +60,63 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	if z, ok := ent.(canSetFeedVersion); ok {
 		z.SetFeedVersionID(writer.FeedVersionID)
 	}
+	// Update Timestamps
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	// Save
 	eid, err := writer.Adapter.Insert(ent)
+	// Update ID
+	if v, ok := ent.(canSetID); ok {
+		v.SetID(int(eid))
+	}
 	return strconv.Itoa(eid), err
 }
 
 // AddEntities writes entities to the database.
-func (writer *Writer) AddEntities(ents []tl.Entity) error {
-	for _, ent := range ents {
-		if z, ok := ent.(canSetFeedVersion); ok {
-			z.SetFeedVersionID(writer.FeedVersionID)
+func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+	if len(ents) == 0 {
+		return []string{}, nil
+	}
+	eids := []string{}
+	ients := make([]interface{}, len(ents))
+	useCopy := true
+	for i, ent := range ents {
+		if ent.EntityID() != "" {
+			useCopy = false
+		}
+		if v, ok := ent.(canSetFeedVersion); ok {
+			v.SetFeedVersionID(writer.FeedVersionID)
+		}
+		if v, ok := ent.(canUpdateTimestamps); ok {
+			v.UpdateTimestamps()
+		}
+		ients[i] = ent
+	}
+	if useCopy {
+		if err := writer.Adapter.CopyInsert(ients); err != nil {
+			return eids, err
+		}
+		for range ents {
+			eids = append(eids, "")
+		}
+		return eids, nil
+	}
+	retids, err := writer.Adapter.MultiInsert(ients)
+	if err != nil {
+		return eids, err
+	}
+	if len(retids) != len(ients) {
+		return []string{}, errors.New("failed to write expected entities")
+	}
+	for i := 0; i < len(ents); i++ {
+		eids = append(eids, strconv.Itoa(retids[i]))
+		// Update ID
+		if v, ok := ents[i].(canSetID); ok {
+			v.SetID(int(retids[i]))
 		}
 	}
-	return writer.Adapter.BatchInsert(ents)
+	return eids, nil
 }
 
 // CreateFeedVersion creates a new FeedVersion and inserts into the database.

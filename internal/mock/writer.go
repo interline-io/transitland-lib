@@ -79,11 +79,14 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 }
 
 // AddEntities .
-func (mw *Writer) AddEntities(ents []tl.Entity) error {
+func (mw *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+	retids := []string{}
 	for _, ent := range ents {
-		if _, err := mw.AddEntity(ent); err != nil {
-			return err
+		eid, err := mw.AddEntity(ent)
+		if err != nil {
+			return retids, err
 		}
+		retids = append(retids, eid)
 	}
-	return nil
+	return retids, nil
 }

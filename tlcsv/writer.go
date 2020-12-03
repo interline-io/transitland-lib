@@ -44,23 +44,24 @@ func (writer *Writer) NewReader() (tl.Reader, error) {
 	return NewReader(writer.WriterAdapter.Path())
 }
 
-// AddEntities provides a generic interface for adding entities.
-func (writer *Writer) AddEntities(ents []tl.Entity) error {
+// AddEntities writes entities to the output.
+func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+	eids := []string{}
 	if len(ents) == 0 {
-		return nil
+		return eids, nil
 	}
 	ent := ents[0]
 	efn := ents[0].Filename()
 	for _, ent := range ents {
 		if efn != ent.Filename() {
-			return errors.New("all entities must be same type")
+			return eids, errors.New("all entities must be same type")
 		}
 	}
 	header, ok := writer.headers[efn]
 	if !ok {
 		h, err := dumpHeader(ent)
 		if err != nil {
-			return err
+			return eids, err
 		}
 		header = h
 		writer.headers[efn] = header
@@ -70,24 +71,36 @@ func (writer *Writer) AddEntities(ents []tl.Entity) error {
 	for _, ent := range ents {
 		row, err := dumpRow(ent, header)
 		if err != nil {
-			return err
+			return eids, err
 		}
 		rows = append(rows, row)
+		eids = append(eids, ent.EntityID())
 	}
-	return writer.WriterAdapter.WriteRows(efn, rows)
+	err := writer.WriterAdapter.WriteRows(efn, rows)
+	return eids, err
 }
 
-// AddEntity provides a generic interface for adding an Entity.
+// AddEntity writes an entity to the output.
 func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
+	eids := []string{}
+	var err error
 	if v, ok := ent.(*tl.Shape); ok {
 		e2s := []tl.Entity{}
 		es := writer.flattenShape(*v)
 		for i := 0; i < len(es); i++ {
 			e2s = append(e2s, &es[i])
 		}
-		return v.EntityID(), writer.AddEntities(e2s)
+		eids, err = writer.AddEntities(e2s)
+	} else {
+		eids, err = writer.AddEntities([]tl.Entity{ent})
 	}
-	return ent.EntityID(), writer.AddEntities([]tl.Entity{ent})
+	if err != nil {
+		return "", err
+	}
+	if len(eids) == 0 {
+		return "", errors.New("did not write expected number of entities")
+	}
+	return eids[0], nil
 }
 
 func (writer *Writer) flattenShape(ent tl.Shape) []tl.Shape {

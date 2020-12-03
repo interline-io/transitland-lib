@@ -89,8 +89,10 @@ func ImportFeed(atx tldb.Adapter, rfeed Feed) (int, bool, error) {
 		rfeed.ID = dbfeed.ID
 		rfeed.CreatedAt = dbfeed.CreatedAt
 		rfeed.DeletedAt = tl.OptionalTime{Valid: false}
+		rfeed.UpdateTimestamps()
 		errTx = atx.Update(&rfeed)
 	} else if err == sql.ErrNoRows {
+		rfeed.UpdateTimestamps()
 		feedid, errTx = atx.Insert(&rfeed)
 	} else {
 		// Error
