@@ -178,10 +178,8 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, sid, err, ent)
 		return "", err, err
 	}
-	if eid != "" {
-		log.Debug("%s '%s': saved -> %s", efn, sid, eid)
-		copier.EntityMap.Set(efn, sid, eid)
-	}
+	log.Debug("%s '%s': saved -> %s", efn, sid, eid)
+	copier.EntityMap.Set(efn, sid, eid)
 	copier.result.EntityCount[efn]++
 	return eid, nil, nil
 }
@@ -335,7 +333,6 @@ func (copier *Copier) Copy() *CopyResult {
 
 // copyAgencies writes agencies
 func (copier *Copier) copyAgencies() error {
-	bt := []tl.Entity{}
 	firstTimezone := ""
 	for e := range copier.Reader.Agencies() {
 		// Check for Timezone consistency - add to feed errors
@@ -348,14 +345,10 @@ func (copier *Copier) copyAgencies() error {
 		if len(e.AgencyID) == 0 && copier.agencyCount > 1 {
 			e.AddWarning(causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
-		e := e
-		var err error
-		if bt, err = copier.checkBatch(bt, &e); err != nil {
+		// Agencies are not currently safe for batch writing because agency_id is conditionally required.
+		if _, _, err := copier.CopyEntity(&e); err != nil {
 			return err
 		}
-	}
-	if err := copier.writeBatch(bt); err != nil {
-		return err
 	}
 	copier.logCount(&tl.Agency{})
 	return nil
