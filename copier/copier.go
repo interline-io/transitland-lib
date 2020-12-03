@@ -372,8 +372,7 @@ func (copier *Copier) copyLevels() error {
 }
 
 func (copier *Copier) copyStops() error {
-	// // Copy fn
-	var err error
+	// Copy fn
 	bt := []tl.Entity{}
 	parents := map[string]int{}
 	farezones := map[string]string{}
@@ -400,6 +399,7 @@ func (copier *Copier) copyStops() error {
 			ent.AddError(causes.NewInvalidParentStationError(ent.ParentStation.Key))
 		}
 		e := ent
+		var err error
 		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
 		}
@@ -414,7 +414,7 @@ func (copier *Copier) copyStops() error {
 			}
 		}
 	}
-	if err = copier.writeBatch(bt); err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 
@@ -427,7 +427,7 @@ func (copier *Copier) copyStops() error {
 			}
 		}
 	}
-	if err = copier.writeBatch(bt); err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 
@@ -440,7 +440,7 @@ func (copier *Copier) copyStops() error {
 			}
 		}
 	}
-	if err = copier.writeBatch(bt); err != nil {
+	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
 
@@ -692,6 +692,7 @@ func (copier *Copier) copyFrequencies() error {
 			copier.result.SkipEntityMarkedCount["frequencies.txt"]++
 			continue
 		}
+		e := e
 		var err error
 		if bt, err = copier.checkBatch(bt, &e); err != nil {
 			return err
