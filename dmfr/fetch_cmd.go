@@ -149,23 +149,25 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan FetchOpt
 			continue
 		}
 		var fr FetchResult
+		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
 			fr, fe = DatabaseFetch(atx, opts)
 			return fe
 		})
+		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		fid := fr.FeedVersion.FeedID
 		furl := fr.FeedVersion.URL
 		if err != nil {
-			log.Error("Feed %s (id:%d): url: %s critical error: %s", osid, fid, furl, err.Error())
+			log.Error("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
 		} else if fr.FetchError != nil {
-			log.Error("Feed %s (id:%d): url: %s fetch error: %s", osid, fid, furl, fr.FetchError.Error())
+			log.Error("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", osid, fid, furl, fr.FetchError.Error(), t2)
 		} else if fr.FoundSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
 		} else if fr.FoundDirSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d)", osid, fid, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID)
+			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID, t2)
 		} else {
-			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID)
+			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
 		}
 		results <- fr
 	}

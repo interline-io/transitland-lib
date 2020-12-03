@@ -8,5 +8,5 @@ type Writer interface {
 	Delete() error
 	NewReader() (Reader, error)
 	AddEntity(Entity) (string, error)
-	AddEntities([]Entity) error
+	AddEntities([]Entity) ([]string, error)
 }

@@ -1,7 +1,7 @@
 package tl
 
 import (
-	"fmt"
+	"database/sql"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/enum"
@@ -13,7 +13,7 @@ type FareAttribute struct {
 	Price            float64              `csv:"price" required:"true"`
 	CurrencyType     string               `csv:"currency_type" required:"true"`
 	PaymentMethod    int                  `csv:"payment_method" required:"true"`
-	Transfers        string               `csv:"transfers"` // string, empty is meaningful
+	Transfers        sql.NullInt32        `csv:"transfers"` // string, empty is meaningful
 	AgencyID         OptionalRelationship `csv:"agency_id" `
 	TransferDuration int                  `csv:"transfer_duration"`
 	BaseEntity
@@ -33,14 +33,7 @@ func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, enum.CheckCurrency("currency_type", ent.CurrencyType)...)
 	errs = append(errs, enum.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
 	errs = append(errs, enum.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
-	switch ent.Transfers {
-	case "":
-	case "0":
-	case "1":
-	case "2":
-	default:
-		errs = append(errs, causes.NewInvalidFieldError("transfers", ent.Transfers, fmt.Errorf("invalid transfers, must be empty, 0, 1, or 2")))
-	}
+	errs = append(errs, enum.CheckInsideRangeInt("transfers", int(ent.Transfers.Int32), 0, 2)...)
 	return errs
 }
 

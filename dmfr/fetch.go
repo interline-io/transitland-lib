@@ -70,9 +70,10 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	} else if err != nil {
 		return fr, err
 	}
+	// Immediately save LastFetchedAt
 	tlstate.LastFetchedAt = tl.OptionalTime{Time: opts.FetchedAt, Valid: true}
 	tlstate.LastFetchError = ""
-	// Immediately save LastFetchedAt
+	tlstate.UpdateTimestamps()
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
 		return fr, err
 	}
@@ -88,6 +89,7 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 	}
 	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps
+	tlstate.UpdateTimestamps()
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fr, err
 	}
@@ -188,6 +190,7 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts FetchOptions
 		fr.Path = fv.File // TODO: remove
 	}
 	// Return fv
+	fv.UpdateTimestamps()
 	fv.ID, err = atx.Insert(&fv)
 	fr.FeedVersion = fv
 	if err != nil {
@@ -207,6 +210,7 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 		return err
 	}
 	for _, fvfi := range fvfis {
+		fvfi.UpdateTimestamps()
 		fvfi.FeedVersionID = fvid
 		if _, err := atx.Insert(&fvfi); err != nil {
 			return err
@@ -217,13 +221,16 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	if err != nil {
 		return err
 	}
-	// Use batch insert?
-	for _, fvsl := range fvsls {
-		fvsl.FeedVersionID = fvid
-		if _, err := atx.Insert(&fvsl); err != nil {
-			return err
-		}
+	// Batch insert
+	bt := make([]interface{}, len(fvsls))
+	for i := range fvsls {
+		fvsls[i].FeedVersionID = fvid
+		bt[i] = &fvsls[i]
 	}
+	if err := atx.CopyInsert(bt); err != nil {
+		return err
+	}
+
 	return nil
 }
 

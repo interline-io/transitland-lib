@@ -4,11 +4,17 @@ import (
 	"net/url"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 )
 
 var adapters = map[string]func(string) Adapter{}
+
+func min(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
+}
 
 // newAdapter returns a Adapter for the given dburl.
 func newAdapter(dburl string) Adapter {
@@ -36,5 +42,6 @@ type Adapter interface {
 	Find(interface{}, ...interface{}) error
 	Get(interface{}, string, ...interface{}) error
 	Select(interface{}, string, ...interface{}) error
-	BatchInsert([]tl.Entity) error
+	MultiInsert([]interface{}) ([]int, error)
+	CopyInsert([]interface{}) error
 }
