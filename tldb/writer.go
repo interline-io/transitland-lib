@@ -56,10 +56,6 @@ func (writer *Writer) Delete() error {
 
 // AddEntity writes an entity to the database.
 func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
-	// TODO: Special case. Remove and use NullInt.
-	if v, ok := ent.(*tl.FareAttribute); ok && v.Transfers == "" {
-		v.Transfers = "-1"
-	}
 	// Set the FeedVersionID
 	if z, ok := ent.(canSetFeedVersion); ok {
 		z.SetFeedVersionID(writer.FeedVersionID)
