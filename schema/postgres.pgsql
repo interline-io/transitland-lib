@@ -264,7 +264,7 @@ CREATE TABLE public.gtfs_fare_attributes (
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     feed_version_id bigint NOT NULL,
     agency_id bigint,
-    transfers integer NOT NULL
+    transfers integer
 );
 CREATE SEQUENCE public.gtfs_fare_attributes_id_seq
     START WITH 1

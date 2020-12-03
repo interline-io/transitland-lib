@@ -306,7 +306,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_fare_attributes" (
   "price" real NOT NULL, 
   "currency_type" varchar(255) NOT NULL, 
   "payment_method" integer NOT NULL, 
-  "transfers" varchar(255) NOT NULL, 
+  "transfers" varchar(255), 
   "agency_id" int, 
   "transfer_duration" integer NOT NULL, 
   "id" integer primary key autoincrement, 
