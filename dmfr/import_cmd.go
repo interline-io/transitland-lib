@@ -148,6 +148,12 @@ func (cmd *ImportCommand) Run() error {
 	jobs := make(chan ImportOptions, len(qrs))
 	results := make(chan ImportResult, len(qrs))
 	for _, fvid := range qrs {
+		// Prepare partition - must happen in main thread before work done
+		// if err := PrepareStopTimesPartition(cmd.Adapter, fvid); err != nil {
+		// 	// Serious error
+		// 	panic(err)
+		// 	// return ImportResult{FeedVersionImport: fvi}, err
+		// }
 		jobs <- ImportOptions{
 			FeedVersionID:        fvid,
 			Directory:            cmd.ImportOptions.Directory,

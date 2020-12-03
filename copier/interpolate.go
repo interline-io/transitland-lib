@@ -53,6 +53,6 @@ func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 		// )
 		sts[i].ArrivalTime = dt
 		sts[i].DepartureTime = dt
-		sts[i].Interpolated = sql.NullInt32{1, true}
+		sts[i].Interpolated = sql.NullInt32{Int32: 1, Valid: true}
 	}
 }

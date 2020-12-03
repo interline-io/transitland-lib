@@ -81,7 +81,7 @@ func PrepareStopTimesPartition(atx tldb.Adapter, fvid int) error {
 		return nil
 	}
 	// Manually prepare query
-	q := fmt.Sprintf("CREATE TABLE gtfs_stop_times_%d PARTITION OF gtfs_stop_times FOR VALUES IN (%d)", fvid, fvid)
+	q := fmt.Sprintf("CREATE TABLE IF NOT EXISTS gtfs_stop_times_%d PARTITION OF gtfs_stop_times FOR VALUES IN (%d)", fvid, fvid)
 	_, err := atx.DBX().Exec(q)
 	return err
 }
@@ -134,11 +134,6 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
 		return ImportResult{FeedVersionImport: fvi}, nil
 	} else {
-		// Serious error
-		return ImportResult{FeedVersionImport: fvi}, err
-	}
-	// Prepare partition
-	if err := PrepareStopTimesPartition(adapter, fv.ID); err != nil {
 		// Serious error
 		return ImportResult{FeedVersionImport: fvi}, err
 	}
