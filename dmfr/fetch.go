@@ -221,13 +221,16 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	if err != nil {
 		return err
 	}
-	// Use batch insert?
-	for _, fvsl := range fvsls {
-		fvsl.FeedVersionID = fvid
-		if _, err := atx.Insert(&fvsl); err != nil {
-			return err
-		}
+	// Batch insert
+	bt := make([]interface{}, len(fvsls))
+	for i := range fvsls {
+		fvsls[i].FeedVersionID = fvid
+		bt[i] = &fvsls[i]
 	}
+	if err := atx.CopyInsert(bt); err != nil {
+		return err
+	}
+
 	return nil
 }
 
