@@ -24,11 +24,6 @@ type StopTime struct {
 	BaseEntity
 }
 
-// EntityID returns nothing.
-func (ent *StopTime) EntityID() string {
-	return ""
-}
-
 // Errors for this Entity.
 func (ent *StopTime) Errors() []error {
 	// No reflection
