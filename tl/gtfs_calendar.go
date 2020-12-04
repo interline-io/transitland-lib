@@ -29,6 +29,11 @@ func (ent *Calendar) EntityID() string {
 	return entID(ent.ID, ent.ServiceID)
 }
 
+// EntityKey returns the GTFS identifier.
+func (ent *Calendar) EntityKey() string {
+	return ent.ServiceID
+}
+
 // Warnings for this Entity.
 func (ent *Calendar) Warnings() (errs []error) {
 	errs = append(errs, ent.loadWarnings...)

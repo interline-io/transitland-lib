@@ -24,6 +24,11 @@ func (ent *FareAttribute) EntityID() string {
 	return entID(ent.ID, ent.FareID)
 }
 
+// EntityKey returns the GTFS identifier.
+func (ent *FareAttribute) EntityKey() string {
+	return ent.FareID
+}
+
 // Errors for this Entity.
 func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)

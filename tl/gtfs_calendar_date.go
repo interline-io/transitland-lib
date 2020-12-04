@@ -16,11 +16,6 @@ type CalendarDate struct {
 	BaseEntity
 }
 
-// EntityID returns nothing, CalendarDates are not unique.
-func (ent *CalendarDate) EntityID() string {
-	return ""
-}
-
 // Errors for this Entity.
 func (ent *CalendarDate) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)

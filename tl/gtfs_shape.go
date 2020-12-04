@@ -76,6 +76,11 @@ func (ent *Shape) EntityID() string {
 	return entID(ent.ID, ent.ShapeID)
 }
 
+// EntityKey returns the GTFS identifier.
+func (ent *Shape) EntityKey() string {
+	return ent.ShapeID
+}
+
 // Warnings for this Entity.
 func (ent *Shape) Warnings() (errs []error) {
 	errs = append(errs, ent.loadWarnings...)

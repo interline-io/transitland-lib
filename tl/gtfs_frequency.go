@@ -16,11 +16,6 @@ type Frequency struct {
 	BaseEntity
 }
 
-// EntityID returns nothing.
-func (ent *Frequency) EntityID() string {
-	return ""
-}
-
 // RepeatCount returns the number of times this trip will be repeated.
 func (ent *Frequency) RepeatCount() int {
 	if ent.HeadwaySecs <= 0 {

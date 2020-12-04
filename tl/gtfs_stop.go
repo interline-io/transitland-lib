@@ -48,6 +48,11 @@ func (ent *Stop) EntityID() string {
 	return entID(ent.ID, ent.StopID)
 }
 
+// EntityKey returns the GTFS identifier.
+func (ent *Stop) EntityKey() string {
+	return ent.StopID
+}
+
 // Warnings for this Entity.
 func (ent *Stop) Warnings() (errs []error) {
 	errs = append(errs, ent.loadWarnings...)

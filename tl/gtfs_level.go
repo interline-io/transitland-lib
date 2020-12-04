@@ -13,6 +13,11 @@ func (ent *Level) EntityID() string {
 	return entID(ent.ID, ent.LevelID)
 }
 
+// EntityKey returns the GTFS identifier.
+func (ent *Level) EntityKey() string {
+	return ent.LevelID
+}
+
 // Filename levels.txt
 func (ent *Level) Filename() string {
 	return "levels.txt"

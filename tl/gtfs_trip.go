@@ -26,6 +26,11 @@ func (ent *Trip) EntityID() string {
 	return entID(ent.ID, ent.TripID)
 }
 
+// EntityKey returns the GTFS identifier.
+func (ent *Trip) EntityKey() string {
+	return ent.TripID
+}
+
 // Errors for this Entity.
 func (ent *Trip) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)

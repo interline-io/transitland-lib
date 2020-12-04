@@ -18,11 +18,6 @@ type FeedInfo struct {
 	BaseEntity
 }
 
-// EntityID returns nothing.
-func (ent *FeedInfo) EntityID() string {
-	return ""
-}
-
 // Errors for this Entity.
 func (ent *FeedInfo) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
