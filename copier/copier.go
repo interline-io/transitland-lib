@@ -95,6 +95,7 @@ type Copier struct {
 	geomCache           *geomCache
 	stopPatterns        map[string]int
 	stopPatternShapeIDs map[int]string
+	journeyPatternKeys  map[string]int
 	result              *CopyResult
 	duplicateMap        *tl.EntityMap
 	*tl.EntityMap
@@ -324,6 +325,11 @@ func (copier *Copier) Copy() *CopyResult {
 			return copier.result
 		}
 	}
+
+	fmt.Printf(
+		"journeyPattern ratio: %0.2f\n",
+		float64(copier.result.EntityCount["trips.txt"]+1)/float64(len(copier.journeyPatternKeys)),
+	)
 	return copier.result
 }
 
@@ -705,6 +711,17 @@ func (copier *Copier) copyFrequencies() error {
 	return nil
 }
 
+type patInfo struct {
+	key          int
+	firstArrival int
+}
+
+type tripInfo struct {
+	firstArrival   int
+	stopPattern    int
+	journeyPattern int
+}
+
 // copyTripsAndStopTimes writes Trips and StopTimes
 func (copier *Copier) copyTripsAndStopTimes() error {
 	// Cache all trips in memory
@@ -726,6 +743,57 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		trips[eid] = trip
 	}
+
+	stopPatterns := map[string]int{}
+	journeyPatterns := map[string]patInfo{}
+	tripPatterns := map[string]tripInfo{}
+
+	// Process StopTimes to find journey patterns
+	log.Info("start jpats")
+	for stoptimes := range copier.Reader.StopTimesByTripID() {
+		if len(stoptimes) == 0 {
+			continue
+		}
+		tripid := stoptimes[0].TripID
+		trip, ok := trips[tripid]
+		if !ok {
+			continue
+		}
+		// Uses raw, unprocessed, unvalidated StopTimes...
+		// Set StopPattern
+		ti := tripInfo{firstArrival: stoptimes[0].ArrivalTime}
+		patkey := stopPatternKey(stoptimes)
+		if pat, ok := stopPatterns[patkey]; ok {
+			ti.stopPattern = pat
+		} else {
+			p := len(stopPatterns)
+			ti.stopPattern = p
+			stopPatterns[patkey] = p
+		}
+
+		// Set JourneyPattern
+		jkey := journeyPatternKey(trip, stoptimes)
+		// fmt.Println("-----")
+		// fmt.Println("trip_id:", trip.TripID)
+		// fmt.Println("jkey:", jkey[0:80])
+		if jpat, ok := journeyPatterns[jkey]; ok {
+			ti.journeyPattern = jpat.key
+			if ti.firstArrival < jpat.firstArrival {
+				// fmt.Println("found pat:", jpat, "current arrival:", jpat.firstArrival, "new arrival:", ti.firstArrival)
+				jpat.firstArrival = ti.firstArrival
+				journeyPatterns[jkey] = jpat
+			} else {
+				// fmt.Println("found pat:", jpat, "current arrival:", jpat.firstArrival)
+			}
+		} else {
+			p := len(journeyPatterns)
+			ti.journeyPattern = p
+			journeyPatterns[jkey] = patInfo{firstArrival: ti.firstArrival, key: p}
+			// fmt.Println("new pat:", p, "first arrival:", ti.firstArrival)
+		}
+		tripPatterns[trip.TripID] = ti
+	}
+	log.Info("end jpats")
 
 	// Process each set of Trip/StopTimes
 	batchCount := 0
@@ -752,6 +820,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		log.Info("Saved %d stop_times", len(stbt2))
 		//
+		fmt.Println("jpats:", len(copier.journeyPatternKeys), "trips:", copier.result.EntityCount["trips.txt"])
 		tripbt = nil
 		stbt = nil
 		batchCount = 0
@@ -787,16 +856,8 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		delete(trips, tripid)
 
 		// Set StopPattern
-		patkey := stopPatternKey(stoptimes)
-		if pat, ok := copier.stopPatterns[patkey]; ok {
-			// log.Debug("trip %s stop_pattern %d", tripid, pat)
-			trip.StopPatternID = pat
-		} else {
-			pat := len(copier.stopPatterns)
-			copier.stopPatterns[patkey] = pat
-			// log.Debug("trip %s stop_pattern new %d", tripid, pat)
-			trip.StopPatternID = pat
-		}
+		// trip.StopPatternID = tripStopPatterns[trip.TripID]
+
 		// Do we need to create a shape for this trip
 		if trip.ShapeID.IsZero() && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
