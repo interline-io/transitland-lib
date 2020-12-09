@@ -168,6 +168,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_trips" (
   "stop_pattern_id" integer NOT NULL, 
   "id" integer primary key autoincrement, 
   "feed_version_id" integer NOT NULL, 
+  "journey_pattern_id" integer NOT NULL,
+  "journey_pattern_offset" integer NOT NULL,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

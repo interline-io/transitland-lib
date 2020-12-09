@@ -455,7 +455,9 @@ CREATE TABLE public.gtfs_trips (
     route_id bigint NOT NULL,
     shape_id bigint,
     stop_pattern_id integer NOT NULL,
-    service_id bigint NOT NULL
+    service_id bigint NOT NULL,
+    journey_pattern_id text NOT NULL,
+    journey_pattern_offset integer NOT NULL
 );
 CREATE SEQUENCE public.gtfs_trips_id_seq
     START WITH 1
@@ -537,6 +539,7 @@ CREATE INDEX feed_version_service_levels_route_id_idx ON public.feed_version_ser
 CREATE INDEX feed_version_service_levels_start_date_idx ON public.feed_version_service_levels USING btree (start_date);
 CREATE INDEX gtfs_calendar_dates_service_id_exception_type_date_idx ON public.gtfs_calendar_dates USING btree (service_id, exception_type, date);
 CREATE INDEX gtfs_feed_infos_feed_version_id_idx ON public.gtfs_feed_infos USING btree (feed_version_id);
+CREATE INDEX gtfs_trips_journey_pattern_id_idx ON public.gtfs_trips USING btree (journey_pattern_id);
 CREATE INDEX index_current_feeds_on_active_feed_version_id ON public.current_feeds USING btree (active_feed_version_id);
 CREATE INDEX index_current_feeds_on_auth ON public.current_feeds USING btree (auth);
 CREATE INDEX index_current_feeds_on_created_or_updated_in_changeset_id ON public.current_feeds USING btree (created_or_updated_in_changeset_id);
