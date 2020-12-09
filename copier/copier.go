@@ -91,15 +91,12 @@ type Copier struct {
 	// Error handler, called for each entity
 	ErrorHandler ErrorHandler
 	// book keeping
-	agencyCount         int
-	extensions          []copyableExtension // interface
-	filters             []tl.EntityFilter   // interface
-	geomCache           *geomCache
-	stopPatterns        map[string]int
-	stopPatternShapeIDs map[int]string
-	journeyPatternKeys  map[string]int
-	result              *CopyResult
-	duplicateMap        *tl.EntityMap
+	agencyCount  int
+	extensions   []copyableExtension // interface
+	filters      []tl.EntityFilter   // interface
+	geomCache    *geomCache
+	result       *CopyResult
+	duplicateMap *tl.EntityMap
 	*tl.EntityMap
 }
 
@@ -129,8 +126,6 @@ func NewCopier(reader tl.Reader, writer tl.Writer) Copier {
 	copier.filters = []tl.EntityFilter{}
 	// Geom Cache
 	copier.geomCache = newGeomCache()
-	copier.stopPatterns = map[string]int{}
-	copier.stopPatternShapeIDs = map[int]string{}
 	// Set the DefaultAgencyID from the Reader
 	copier.DefaultAgencyID = ""
 	for e := range copier.Reader.Agencies() {
@@ -737,6 +732,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 
 	// Process each set of Trip/StopTimes
 	stopPatterns := map[string]int{}
+	stopPatternShapeIDs := map[int]string{}
 	journeyPatterns := map[string]patInfo{}
 	batchCount := 0
 	tripbt := []tl.Entity{}
@@ -807,7 +803,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Do we need to create a shape for this trip
 		if trip.ShapeID.IsZero() && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
-			if shapeid, ok := copier.stopPatternShapeIDs[trip.StopPatternID]; ok {
+			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID]; ok {
 				trip.ShapeID.Key = shapeid
 				trip.ShapeID.Valid = true
 			} else {
@@ -816,7 +812,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 					trip.AddError(err)
 				} else {
 					// Set ShapeID
-					copier.stopPatternShapeIDs[trip.StopPatternID] = shapeid
+					stopPatternShapeIDs[trip.StopPatternID] = shapeid
 					trip.ShapeID.Key = shapeid
 					trip.ShapeID.Valid = true
 				}
