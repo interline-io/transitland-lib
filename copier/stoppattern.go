@@ -16,21 +16,6 @@ func stopPatternKey(stoptimes []tl.StopTime) string {
 }
 
 func journeyPatternKey(trip tl.Trip, stoptimes []tl.StopTime) string {
-	tripkey := fmt.Sprintf(
-		"%s-%s-%s-%s-%d-%s-%s-%d-%d",
-		trip.RouteID,
-		trip.ServiceID,
-		trip.TripHeadsign,
-		trip.TripShortName,
-		trip.DirectionID,
-		trip.BlockID,
-		trip.ShapeID.Key,
-		trip.WheelchairAccessible,
-		trip.BikesAllowed,
-	)
-	if len(stoptimes) == 0 {
-		return tripkey
-	}
 	stkey := make([]string, len(stoptimes))
 	a := stoptimes[0].ArrivalTime
 	b := stoptimes[0].DepartureTime
