@@ -150,13 +150,14 @@ func (cmd *ImportCommand) Run() error {
 	results := make(chan ImportResult, len(qrs))
 	for _, fvid := range qrs {
 		jobs <- ImportOptions{
-			FeedVersionID:        fvid,
-			Directory:            cmd.ImportOptions.Directory,
-			S3:                   cmd.ImportOptions.S3,
-			Extensions:           cmd.ImportOptions.Extensions,
-			Activate:             cmd.ImportOptions.Activate,
-			InterpolateStopTimes: cmd.ImportOptions.InterpolateStopTimes,
-			CreateMissingShapes:  cmd.ImportOptions.CreateMissingShapes,
+			FeedVersionID:              fvid,
+			Directory:                  cmd.ImportOptions.Directory,
+			S3:                         cmd.ImportOptions.S3,
+			Extensions:                 cmd.ImportOptions.Extensions,
+			Activate:                   cmd.ImportOptions.Activate,
+			InterpolateStopTimes:       cmd.ImportOptions.InterpolateStopTimes,
+			CreateMissingShapes:        cmd.ImportOptions.CreateMissingShapes,
+			DeduplicateJourneyPatterns: cmd.ImportOptions.DeduplicateJourneyPatterns,
 		}
 	}
 	close(jobs)
