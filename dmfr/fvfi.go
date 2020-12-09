@@ -3,7 +3,6 @@ package dmfr
 import (
 	"crypto/sha1"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -51,7 +50,7 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 	ret := []FeedVersionFileInfo{}
 	adapter, ok := reader.Adapter.(canFileInfo)
 	if !ok {
-		return ret, errors.New("adapter does not support FileInfo")
+		return ret, nil // errors.New("adapter does not support FileInfo")
 	}
 	fis, err := adapter.FileInfos()
 	if err != nil {
