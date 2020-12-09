@@ -18,12 +18,19 @@ type Trip struct {
 	WheelchairAccessible int                  `csv:"wheelchair_accessible"`
 	BikesAllowed         int                  `csv:"bikes_allowed"`
 	StopPatternID        int
+	JourneyPatternID     string
+	JourneyPatternOffset int
 	BaseEntity
 }
 
 // EntityID returns the ID or TripID.
 func (ent *Trip) EntityID() string {
 	return entID(ent.ID, ent.TripID)
+}
+
+// EntityKey returns the GTFS identifier.
+func (ent *Trip) EntityKey() string {
+	return ent.TripID
 }
 
 // Errors for this Entity.

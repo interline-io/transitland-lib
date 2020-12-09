@@ -8,6 +8,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
+type hasEntityKey interface {
+	EntityKey() string
+}
+
 // Writer implements a GTFS CSV Writer.
 type Writer struct {
 	WriterAdapter
@@ -69,12 +73,16 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	}
 	rows := [][]string{}
 	for _, ent := range ents {
+		sid := ""
+		if v, ok := ent.(hasEntityKey); ok {
+			sid = v.EntityKey()
+		}
 		row, err := dumpRow(ent, header)
 		if err != nil {
 			return eids, err
 		}
 		rows = append(rows, row)
-		eids = append(eids, ent.EntityID())
+		eids = append(eids, sid)
 	}
 	err := writer.WriterAdapter.WriteRows(efn, rows)
 	return eids, err

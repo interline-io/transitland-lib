@@ -28,6 +28,11 @@ func (ent *Route) EntityID() string {
 	return entID(ent.ID, ent.RouteID)
 }
 
+// EntityKey returns the GTFS identifier.
+func (ent *Route) EntityKey() string {
+	return ent.RouteID
+}
+
 // Warnings for this Entity.
 func (ent *Route) Warnings() (errs []error) {
 	errs = append(errs, ent.loadWarnings...)

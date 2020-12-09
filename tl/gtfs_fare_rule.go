@@ -15,11 +15,6 @@ type FareRule struct {
 	BaseEntity
 }
 
-// EntityID returns nothing.
-func (ent *FareRule) EntityID() string {
-	return ""
-}
-
 // Errors for this Entity.
 func (ent *FareRule) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)

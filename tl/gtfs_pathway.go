@@ -30,6 +30,11 @@ func (ent *Pathway) EntityID() string {
 	return entID(ent.ID, ent.PathwayID)
 }
 
+// EntityKey returns the GTFS identifier.
+func (ent *Pathway) EntityKey() string {
+	return ent.PathwayID
+}
+
 // Filename pathways.txt
 func (ent *Pathway) Filename() string {
 	return "pathways.txt"

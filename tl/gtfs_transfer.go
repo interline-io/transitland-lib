@@ -16,11 +16,6 @@ type Transfer struct {
 	BaseEntity
 }
 
-// EntityID returns nothing, Transfers are not unique.
-func (ent *Transfer) EntityID() string {
-	return ""
-}
-
 // Warnings for this Entity.
 func (ent *Transfer) Warnings() (errs []error) {
 	errs = append(errs, ent.loadWarnings...)

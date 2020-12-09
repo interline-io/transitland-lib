@@ -23,6 +23,11 @@ func (ent *Agency) EntityID() string {
 	return entID(ent.ID, ent.AgencyID)
 }
 
+// EntityKey returns the GTFS identifier.
+func (ent *Agency) EntityKey() string {
+	return ent.AgencyID
+}
+
 // Warnings for this Entity.
 func (ent *Agency) Warnings() (errs []error) {
 	errs = append(errs, ent.loadWarnings...)

@@ -48,12 +48,18 @@ func (tx *SetterFilter) AddValue(filename string, eid string, key string, value 
 	tx.nodes[*n] = entv
 }
 
+type hasEntityKey interface {
+	EntityKey() string
+}
+
 // Filter overrides values on entities.
 func (tx *SetterFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
-	if entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), ent.EntityID())]; ok {
-		for k, v := range entv {
-			if err := tlcsv.SetString(ent, k, v); err != nil {
-				return err
+	if v, ok := ent.(hasEntityKey); ok {
+		if entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), v.EntityKey())]; ok {
+			for k, v := range entv {
+				if err := tlcsv.SetString(ent, k, v); err != nil {
+					return err
+				}
 			}
 		}
 	}
