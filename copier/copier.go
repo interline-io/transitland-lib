@@ -84,6 +84,8 @@ type Copier struct {
 	UseBasicRouteTypes bool
 	// Default AgencyID
 	DefaultAgencyID string
+	// DeduplicateStopTimes
+	DeduplicateJourneyPatterns bool
 	// Entity selection strategy
 	Marker Marker
 	// Error handler, called for each entity
@@ -712,7 +714,7 @@ func (copier *Copier) copyFrequencies() error {
 }
 
 type patInfo struct {
-	key          int
+	key          string
 	firstArrival int
 }
 
@@ -829,21 +831,22 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 
 		// Set JourneyPattern
-		_ = journeyPatterns
-		// jkey := journeyPatternKey(trip, stoptimes)
-		// if jpat, ok := journeyPatterns[jkey]; ok {
-		// 	trip.JourneyPatternID = jpat.key
-		// 	trip.JourneyPatternOffset = stoptimes[0].ArrivalTime - jpat.firstArrival
-		// 	fmt.Println("found:", trip.JourneyPatternID, trip.JourneyPatternOffset)
-		// 	// if err := copier.checkEntity(&trip); err == nil {
-		// 	// 	tripbt = append(tripbt, &trip)
-		// 	// }
-		// 	// continue
-		// } else {
-		// 	trip.JourneyPatternID = len(journeyPatterns)
-		// 	trip.JourneyPatternOffset = 0
-		// 	journeyPatterns[jkey] = patInfo{firstArrival: stoptimes[0].ArrivalTime, key: trip.JourneyPatternID}
-		// }
+		jkey := journeyPatternKey(trip, stoptimes)
+		if jpat, ok := journeyPatterns[jkey]; ok {
+			trip.JourneyPatternID = jpat.key
+			trip.JourneyPatternOffset = stoptimes[0].ArrivalTime - jpat.firstArrival
+			if copier.DeduplicateJourneyPatterns {
+				// fmt.Println("found:", trip.JourneyPatternID, trip.JourneyPatternOffset)
+				if err := copier.checkEntity(&trip); err == nil {
+					tripbt = append(tripbt, &trip)
+				}
+				continue
+			}
+		} else {
+			trip.JourneyPatternID = trip.TripID
+			trip.JourneyPatternOffset = 0
+			journeyPatterns[jkey] = patInfo{firstArrival: stoptimes[0].ArrivalTime, key: trip.JourneyPatternID}
+		}
 
 		// Check StopTime GROUP errors; log errors with trip; can block trip
 		// Example errors: less than 2 stop_times, non-increasing sequences and times, etc.

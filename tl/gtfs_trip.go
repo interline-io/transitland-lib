@@ -18,7 +18,7 @@ type Trip struct {
 	WheelchairAccessible int                  `csv:"wheelchair_accessible"`
 	BikesAllowed         int                  `csv:"bikes_allowed"`
 	StopPatternID        int
-	JourneyPatternID     int
+	JourneyPatternID     string
 	JourneyPatternOffset int
 	BaseEntity
 }
