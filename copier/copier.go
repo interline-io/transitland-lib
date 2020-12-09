@@ -830,24 +830,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 		}
 
-		// Set JourneyPattern
-		jkey := journeyPatternKey(trip, stoptimes)
-		if jpat, ok := journeyPatterns[jkey]; ok {
-			trip.JourneyPatternID = jpat.key
-			trip.JourneyPatternOffset = stoptimes[0].ArrivalTime - jpat.firstArrival
-			if copier.DeduplicateJourneyPatterns {
-				// fmt.Println("found:", trip.JourneyPatternID, trip.JourneyPatternOffset)
-				if err := copier.checkEntity(&trip); err == nil {
-					tripbt = append(tripbt, &trip)
-				}
-				continue
-			}
-		} else {
-			trip.JourneyPatternID = trip.TripID
-			trip.JourneyPatternOffset = 0
-			journeyPatterns[jkey] = patInfo{firstArrival: stoptimes[0].ArrivalTime, key: trip.JourneyPatternID}
-		}
-
 		// Check StopTime GROUP errors; log errors with trip; can block trip
 		// Example errors: less than 2 stop_times, non-increasing sequences and times, etc.
 		sterrs := tl.ValidateStopTimes(stoptimes)
@@ -864,18 +846,33 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 		}
 
+		// Set JourneyPattern
+		jkey := journeyPatternKey(trip, stoptimes)
+		stlen := len(stoptimes)
+		if jpat, ok := journeyPatterns[jkey]; ok {
+			trip.JourneyPatternID = jpat.key
+			trip.JourneyPatternOffset = stoptimes[0].ArrivalTime - jpat.firstArrival
+			if copier.DeduplicateJourneyPatterns {
+				stoptimes = nil
+			}
+		} else {
+			trip.JourneyPatternID = trip.TripID
+			trip.JourneyPatternOffset = 0
+			journeyPatterns[jkey] = patInfo{firstArrival: stoptimes[0].ArrivalTime, key: trip.JourneyPatternID}
+		}
+
 		// Validate trip & add to batch
 		if err := copier.checkEntity(&trip); err == nil {
 			tripbt = append(tripbt, &trip)
 		} else {
-			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
+			copier.result.SkipEntityReferenceCount["stop_times.txt"] += stlen
 			continue
 		}
 		// Add StopTimes to batch -- final validation after writing trips
 		for i := range stoptimes {
 			stbt = append(stbt, stoptimes[i])
 		}
-		batchCount += len(stoptimes)
+		batchCount += stlen
 	}
 	// Add any Trips that were not visited/did not have StopTimes
 	for _, trip := range trips {

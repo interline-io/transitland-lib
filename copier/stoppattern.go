@@ -37,7 +37,7 @@ func journeyPatternKey(trip tl.Trip, stoptimes []tl.StopTime) string {
 	for i := range stoptimes {
 		st := stoptimes[i]
 		stkey[i] = fmt.Sprintf(
-			"%d-%d-%s-%s-%d-%d-%d",
+			"%d-%d-%s-%s-%d-%d-%d-%0.2f",
 			st.ArrivalTime-a,
 			st.DepartureTime-b,
 			st.StopID,
@@ -45,7 +45,8 @@ func journeyPatternKey(trip tl.Trip, stoptimes []tl.StopTime) string {
 			st.PickupType,
 			st.DropOffType,
 			st.Timepoint,
+			st.ShapeDistTraveled,
 		)
 	}
-	return tripkey + strings.Join(stkey, "-")
+	return strings.Join(stkey, "-")
 }
