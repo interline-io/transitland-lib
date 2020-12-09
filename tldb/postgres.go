@@ -190,10 +190,10 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	cols, _, err := getInsert(ents[0])
 	table := getTableName(ents[0])
 	stmt, err := tx.Prepare(pq.CopyIn(table, cols...))
-	defer stmt.Close()
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 	for _, d := range ents {
 		_, vals, err := getInsert(d)
 		if err != nil {

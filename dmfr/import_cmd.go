@@ -54,6 +54,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.ImportOptions.Activate, "activate", false, "Set as active feed version after import")
 	fl.BoolVar(&cmd.ImportOptions.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
+	fl.BoolVar(&cmd.ImportOptions.DeduplicateJourneyPatterns, "deduplicate-stop-times", false, "Deduplicate StopTimes using Journey Patterns")
 	fl.BoolVar(&cmd.ImportOptions.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
 	fl.Parse(args)
 	cmd.FeedIDs = fl.Args()
@@ -149,13 +150,14 @@ func (cmd *ImportCommand) Run() error {
 	results := make(chan ImportResult, len(qrs))
 	for _, fvid := range qrs {
 		jobs <- ImportOptions{
-			FeedVersionID:        fvid,
-			Directory:            cmd.ImportOptions.Directory,
-			S3:                   cmd.ImportOptions.S3,
-			Extensions:           cmd.ImportOptions.Extensions,
-			Activate:             cmd.ImportOptions.Activate,
-			InterpolateStopTimes: cmd.ImportOptions.InterpolateStopTimes,
-			CreateMissingShapes:  cmd.ImportOptions.CreateMissingShapes,
+			FeedVersionID:              fvid,
+			Directory:                  cmd.ImportOptions.Directory,
+			S3:                         cmd.ImportOptions.S3,
+			Extensions:                 cmd.ImportOptions.Extensions,
+			Activate:                   cmd.ImportOptions.Activate,
+			InterpolateStopTimes:       cmd.ImportOptions.InterpolateStopTimes,
+			CreateMissingShapes:        cmd.ImportOptions.CreateMissingShapes,
+			DeduplicateJourneyPatterns: cmd.ImportOptions.DeduplicateJourneyPatterns,
 		}
 	}
 	close(jobs)
