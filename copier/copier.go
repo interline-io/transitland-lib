@@ -327,11 +327,6 @@ func (copier *Copier) Copy() *CopyResult {
 			return copier.result
 		}
 	}
-
-	fmt.Printf(
-		"journeyPattern ratio: %0.2f\n",
-		float64(copier.result.EntityCount["trips.txt"]+1)/float64(len(copier.journeyPatternKeys)),
-	)
 	return copier.result
 }
 
@@ -766,8 +761,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			return err
 		}
 		log.Info("Saved %d stop_times", len(stbt2))
-		//
-		fmt.Println("jpats:", len(copier.journeyPatternKeys), "trips:", copier.result.EntityCount["trips.txt"])
 		tripbt = nil
 		stbt = nil
 		batchCount = 0
