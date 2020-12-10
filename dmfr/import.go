@@ -75,18 +75,6 @@ func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 	return fvi
 }
 
-// PrepareStopTimesPartition .
-func PrepareStopTimesPartition(atx tldb.Adapter, fvid int) error {
-	// Only applies to postgres
-	if _, ok := atx.(*tldb.PostgresAdapter); !ok {
-		return nil
-	}
-	// Manually prepare query
-	q := fmt.Sprintf("CREATE TABLE IF NOT EXISTS gtfs_stop_times_%d PARTITION OF gtfs_stop_times FOR VALUES IN (%d)", fvid, fvid)
-	_, err := atx.DBX().Exec(q)
-	return err
-}
-
 // ActivateFeedVersion .
 func ActivateFeedVersion(atx tldb.Adapter, fvid int) error {
 	// Ensure runs in a txn
