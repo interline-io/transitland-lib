@@ -25,23 +25,31 @@ func init() {
 	ext.RegisterReader("sqlite3", r)
 	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
 	ext.RegisterWriter("sqlite3", w)
-	// Handle SQL function after_feed_version_import.  -- TODO: this is temporary.
+	// Dummy handlers for SQL functions.
 	dummy := func(fvid int) int {
 		return 0
+	}
+	sqlfuncs := []string{
+		"tl_generate_agency_geometries",
+		"tl_generate_agency_places",
+		"tl_generate_feed_version_geometries",
+		"tl_generate_onestop_ids",
+		"tl_generate_route_geometries",
+		"tl_generate_route_headways",
+		"tl_generate_route_stops",
 	}
 	sql.Register("sqlite3_w_funcs",
 		&sqlite3.SQLiteDriver{
 			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-				if err := conn.RegisterFunc("after_feed_version_import", dummy, true); err != nil {
-					return err
-				}
-				if err := conn.RegisterFunc("activate_feed_version", dummy, true); err != nil {
-					return err
+				for _, f := range sqlfuncs {
+					if err := conn.RegisterFunc(f, dummy, true); err != nil {
+						return err
+					}
 				}
 				return nil
 			},
-		})
-
+		},
+	)
 }
 
 // SQLiteAdapter provides support for SQLite.
