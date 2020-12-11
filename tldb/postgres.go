@@ -2,7 +2,6 @@ package tldb
 
 import (
 	"database/sql"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
@@ -127,7 +126,6 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if _, ok := ent.(canSetID); ok {
 		err = q.Suffix(`RETURNING "id"`).QueryRow().Scan(&eid)
 	} else {
-		fmt.Printf("cant setid: %#v\n", ent)
 		_, err = q.Exec()
 	}
 	if err != nil {
