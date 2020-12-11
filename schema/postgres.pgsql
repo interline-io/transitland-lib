@@ -1,5 +1,22 @@
 CREATE EXTENSION postgis;
 CREATE EXTENSION hstore;
+CREATE TABLE public.gtfs_calendars (
+    id bigint NOT NULL,
+    service_id character varying NOT NULL,
+    monday integer NOT NULL,
+    tuesday integer NOT NULL,
+    wednesday integer NOT NULL,
+    thursday integer NOT NULL,
+    friday integer NOT NULL,
+    saturday integer NOT NULL,
+    sunday integer NOT NULL,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    feed_version_id bigint NOT NULL,
+    generated boolean NOT NULL
+);
 CREATE TABLE public.feed_versions (
     id bigint NOT NULL,
     feed_id bigint NOT NULL,
@@ -22,23 +39,6 @@ CREATE TABLE public.feed_versions (
     file_feedvalidator character varying,
     deleted_at timestamp without time zone,
     sha1_dir character varying
-);
-CREATE TABLE public.gtfs_calendars (
-    id bigint NOT NULL,
-    service_id character varying NOT NULL,
-    monday integer NOT NULL,
-    tuesday integer NOT NULL,
-    wednesday integer NOT NULL,
-    thursday integer NOT NULL,
-    friday integer NOT NULL,
-    saturday integer NOT NULL,
-    sunday integer NOT NULL,
-    start_date date NOT NULL,
-    end_date date NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    feed_version_id bigint NOT NULL,
-    generated boolean NOT NULL
 );
 CREATE TABLE public.current_feeds (
     id bigint NOT NULL,
@@ -393,6 +393,171 @@ CREATE SEQUENCE public.gtfs_shapes_id_seq
     CACHE 1;
 ALTER SEQUENCE public.gtfs_shapes_id_seq OWNED BY public.gtfs_shapes.id;
 CREATE TABLE public.gtfs_stop_times (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+)
+PARTITION BY HASH (feed_version_id);
+CREATE TABLE public.gtfs_stop_times_0 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_0 FOR VALUES WITH (modulus 10, remainder 0);
+CREATE TABLE public.gtfs_stop_times_1 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_1 FOR VALUES WITH (modulus 10, remainder 1);
+CREATE TABLE public.gtfs_stop_times_2 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_2 FOR VALUES WITH (modulus 10, remainder 2);
+CREATE TABLE public.gtfs_stop_times_3 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_3 FOR VALUES WITH (modulus 10, remainder 3);
+CREATE TABLE public.gtfs_stop_times_4 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_4 FOR VALUES WITH (modulus 10, remainder 4);
+CREATE TABLE public.gtfs_stop_times_5 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_5 FOR VALUES WITH (modulus 10, remainder 5);
+CREATE TABLE public.gtfs_stop_times_6 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_6 FOR VALUES WITH (modulus 10, remainder 6);
+CREATE TABLE public.gtfs_stop_times_7 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_7 FOR VALUES WITH (modulus 10, remainder 7);
+CREATE TABLE public.gtfs_stop_times_8 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_8 FOR VALUES WITH (modulus 10, remainder 8);
+CREATE TABLE public.gtfs_stop_times_9 (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled real,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_9 FOR VALUES WITH (modulus 10, remainder 9);
+CREATE TABLE public.gtfs_stop_times_unpartitioned (
     id bigint NOT NULL,
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
@@ -415,7 +580,7 @@ CREATE SEQUENCE public.gtfs_stop_times_id_seq
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
-ALTER SEQUENCE public.gtfs_stop_times_id_seq OWNED BY public.gtfs_stop_times.id;
+ALTER SEQUENCE public.gtfs_stop_times_id_seq OWNED BY public.gtfs_stop_times_unpartitioned.id;
 CREATE SEQUENCE public.gtfs_stops_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -483,7 +648,7 @@ ALTER TABLE ONLY public.gtfs_levels ALTER COLUMN id SET DEFAULT nextval('public.
 ALTER TABLE ONLY public.gtfs_pathways ALTER COLUMN id SET DEFAULT nextval('public.gtfs_pathways_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_routes ALTER COLUMN id SET DEFAULT nextval('public.gtfs_routes_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_shapes ALTER COLUMN id SET DEFAULT nextval('public.gtfs_shapes_id_seq'::regclass);
-ALTER TABLE ONLY public.gtfs_stop_times ALTER COLUMN id SET DEFAULT nextval('public.gtfs_stop_times_id_seq'::regclass);
+ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned ALTER COLUMN id SET DEFAULT nextval('public.gtfs_stop_times_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_stops ALTER COLUMN id SET DEFAULT nextval('public.gtfs_stops_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_transfers ALTER COLUMN id SET DEFAULT nextval('public.gtfs_transfers_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_trips ALTER COLUMN id SET DEFAULT nextval('public.gtfs_trips_id_seq'::regclass);
@@ -522,6 +687,28 @@ ALTER TABLE ONLY public.gtfs_routes
 ALTER TABLE ONLY public.gtfs_shapes
     ADD CONSTRAINT gtfs_shapes_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_stop_times
+    ADD CONSTRAINT gtfs_stop_times_pkey1 PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_0
+    ADD CONSTRAINT gtfs_stop_times_0_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_1
+    ADD CONSTRAINT gtfs_stop_times_1_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_2
+    ADD CONSTRAINT gtfs_stop_times_2_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_3
+    ADD CONSTRAINT gtfs_stop_times_3_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_4
+    ADD CONSTRAINT gtfs_stop_times_4_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_5
+    ADD CONSTRAINT gtfs_stop_times_5_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_6
+    ADD CONSTRAINT gtfs_stop_times_6_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_7
+    ADD CONSTRAINT gtfs_stop_times_7_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_8
+    ADD CONSTRAINT gtfs_stop_times_8_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_9
+    ADD CONSTRAINT gtfs_stop_times_9_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
+ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned
     ADD CONSTRAINT gtfs_stop_times_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_stops
     ADD CONSTRAINT gtfs_stops_pkey PRIMARY KEY (id);
@@ -539,6 +726,39 @@ CREATE INDEX feed_version_service_levels_route_id_idx ON public.feed_version_ser
 CREATE INDEX feed_version_service_levels_start_date_idx ON public.feed_version_service_levels USING btree (start_date);
 CREATE INDEX gtfs_calendar_dates_service_id_exception_type_date_idx ON public.gtfs_calendar_dates USING btree (service_id, exception_type, date);
 CREATE INDEX gtfs_feed_infos_feed_version_id_idx ON public.gtfs_feed_infos USING btree (feed_version_id);
+CREATE INDEX gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ON ONLY public.gtfs_stop_times USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_0_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_0 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_stop_id_idx ON ONLY public.gtfs_stop_times USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_0_stop_id_idx ON public.gtfs_stop_times_0 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_trip_id_idx ON ONLY public.gtfs_stop_times USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_0_trip_id_idx ON public.gtfs_stop_times_0 USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_1_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_1 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_1_stop_id_idx ON public.gtfs_stop_times_1 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_1_trip_id_idx ON public.gtfs_stop_times_1 USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_2_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_2 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_2_stop_id_idx ON public.gtfs_stop_times_2 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_2_trip_id_idx ON public.gtfs_stop_times_2 USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_3_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_3 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_3_stop_id_idx ON public.gtfs_stop_times_3 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_3_trip_id_idx ON public.gtfs_stop_times_3 USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_4_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_4 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_4_stop_id_idx ON public.gtfs_stop_times_4 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_4_trip_id_idx ON public.gtfs_stop_times_4 USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_5_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_5 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_5_stop_id_idx ON public.gtfs_stop_times_5 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_5_trip_id_idx ON public.gtfs_stop_times_5 USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_6_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_6 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_6_stop_id_idx ON public.gtfs_stop_times_6 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_6_trip_id_idx ON public.gtfs_stop_times_6 USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_7_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_7 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_7_stop_id_idx ON public.gtfs_stop_times_7 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_7_trip_id_idx ON public.gtfs_stop_times_7 USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_8_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_8 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_8_stop_id_idx ON public.gtfs_stop_times_8 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_8_trip_id_idx ON public.gtfs_stop_times_8 USING btree (trip_id);
+CREATE INDEX gtfs_stop_times_9_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_9 USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX gtfs_stop_times_9_stop_id_idx ON public.gtfs_stop_times_9 USING btree (stop_id);
+CREATE INDEX gtfs_stop_times_9_trip_id_idx ON public.gtfs_stop_times_9 USING btree (trip_id);
 CREATE INDEX gtfs_trips_journey_pattern_id_idx ON public.gtfs_trips USING btree (journey_pattern_id);
 CREATE INDEX index_current_feeds_on_active_feed_version_id ON public.current_feeds USING btree (active_feed_version_id);
 CREATE INDEX index_current_feeds_on_auth ON public.current_feeds USING btree (auth);
@@ -598,10 +818,10 @@ CREATE INDEX index_gtfs_shapes_on_generated ON public.gtfs_shapes USING btree (g
 CREATE INDEX index_gtfs_shapes_on_geometry ON public.gtfs_shapes USING gist (geometry);
 CREATE INDEX index_gtfs_shapes_on_shape_id ON public.gtfs_shapes USING btree (shape_id);
 CREATE UNIQUE INDEX index_gtfs_shapes_unique ON public.gtfs_shapes USING btree (feed_version_id, shape_id);
-CREATE INDEX index_gtfs_stop_times_on_feed_version_id_trip_id_stop_id ON public.gtfs_stop_times USING btree (feed_version_id, trip_id, stop_id);
-CREATE INDEX index_gtfs_stop_times_on_stop_id ON public.gtfs_stop_times USING btree (stop_id);
-CREATE INDEX index_gtfs_stop_times_on_trip_id ON public.gtfs_stop_times USING btree (trip_id);
-CREATE UNIQUE INDEX index_gtfs_stop_times_unique ON public.gtfs_stop_times USING btree (feed_version_id, trip_id, stop_sequence);
+CREATE INDEX index_gtfs_stop_times_on_feed_version_id_trip_id_stop_id ON public.gtfs_stop_times_unpartitioned USING btree (feed_version_id, trip_id, stop_id);
+CREATE INDEX index_gtfs_stop_times_on_stop_id ON public.gtfs_stop_times_unpartitioned USING btree (stop_id);
+CREATE INDEX index_gtfs_stop_times_on_trip_id ON public.gtfs_stop_times_unpartitioned USING btree (trip_id);
+CREATE UNIQUE INDEX index_gtfs_stop_times_unique ON public.gtfs_stop_times_unpartitioned USING btree (feed_version_id, trip_id, stop_sequence);
 CREATE INDEX index_gtfs_stops_on_geometry ON public.gtfs_stops USING gist (geometry);
 CREATE INDEX index_gtfs_stops_on_location_type ON public.gtfs_stops USING btree (location_type);
 CREATE INDEX index_gtfs_stops_on_parent_station ON public.gtfs_stops USING btree (parent_station);
@@ -620,6 +840,46 @@ CREATE INDEX index_gtfs_trips_on_trip_headsign ON public.gtfs_trips USING btree 
 CREATE INDEX index_gtfs_trips_on_trip_id ON public.gtfs_trips USING btree (trip_id);
 CREATE INDEX index_gtfs_trips_on_trip_short_name ON public.gtfs_trips USING btree (trip_short_name);
 CREATE UNIQUE INDEX index_gtfs_trips_unique ON public.gtfs_trips USING btree (feed_version_id, trip_id);
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_0_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_0_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_0_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_0_trip_id_idx;
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_1_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_1_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_1_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_1_trip_id_idx;
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_2_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_2_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_2_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_2_trip_id_idx;
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_3_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_3_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_3_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_3_trip_id_idx;
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_4_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_4_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_4_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_4_trip_id_idx;
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_5_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_5_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_5_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_5_trip_id_idx;
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_6_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_6_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_6_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_6_trip_id_idx;
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_7_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_7_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_7_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_7_trip_id_idx;
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_8_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_8_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_8_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_8_trip_id_idx;
+ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_9_feed_version_id_trip_id_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_9_pkey;
+ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_9_stop_id_idx;
+ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_9_trip_id_idx;
 ALTER TABLE ONLY public.feed_version_file_infos
     ADD CONSTRAINT feed_version_file_infos_feed_version_id_fkey FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.feed_version_service_levels
@@ -628,11 +888,11 @@ ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT fk_rails_05ead08753 FOREIGN KEY (shape_id) REFERENCES public.gtfs_shapes(id);
 ALTER TABLE ONLY public.gtfs_transfers
     ADD CONSTRAINT fk_rails_0cc6ff288a FOREIGN KEY (from_stop_id) REFERENCES public.gtfs_stops(id);
-ALTER TABLE ONLY public.gtfs_stop_times
+ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned
     ADD CONSTRAINT fk_rails_22a671077b FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.feed_version_gtfs_imports
     ADD CONSTRAINT fk_rails_2d141782c9 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
-ALTER TABLE ONLY public.gtfs_stop_times
+ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned
     ADD CONSTRAINT fk_rails_30ced0baa8 FOREIGN KEY (stop_id) REFERENCES public.gtfs_stops(id);
 ALTER TABLE ONLY public.gtfs_fare_rules
     ADD CONSTRAINT fk_rails_33e9869c97 FOREIGN KEY (route_id) REFERENCES public.gtfs_routes(id);
@@ -670,7 +930,7 @@ ALTER TABLE ONLY public.gtfs_fare_attributes
     ADD CONSTRAINT fk_rails_b096f74e03 FOREIGN KEY (agency_id) REFERENCES public.gtfs_agencies(id);
 ALTER TABLE ONLY public.feed_versions
     ADD CONSTRAINT fk_rails_b5365c3cf3 FOREIGN KEY (feed_id) REFERENCES public.current_feeds(id);
-ALTER TABLE ONLY public.gtfs_stop_times
+ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned
     ADD CONSTRAINT fk_rails_b5a47190ac FOREIGN KEY (trip_id) REFERENCES public.gtfs_trips(id);
 ALTER TABLE ONLY public.gtfs_fare_rules
     ADD CONSTRAINT fk_rails_bd7d178423 FOREIGN KEY (fare_id) REFERENCES public.gtfs_fare_attributes(id);
@@ -696,3 +956,9 @@ ALTER TABLE ONLY public.gtfs_feed_infos
     ADD CONSTRAINT fk_rails_eb863abbac FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT fk_rails_mid93550f50 FOREIGN KEY (route_id) REFERENCES public.gtfs_routes(id);
+ALTER TABLE public.gtfs_stop_times
+    ADD CONSTRAINT gtfs_stop_times_feed_version_id_fkey FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
+ALTER TABLE public.gtfs_stop_times
+    ADD CONSTRAINT gtfs_stop_times_stop_id_fkey FOREIGN KEY (stop_id) REFERENCES public.gtfs_stops(id);
+ALTER TABLE public.gtfs_stop_times
+    ADD CONSTRAINT gtfs_stop_times_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.gtfs_trips(id);
