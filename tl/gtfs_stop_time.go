@@ -29,10 +29,6 @@ type StopTime struct {
 	loadWarnings      []error
 }
 
-// SetID sets the integer ID.
-func (ent *StopTime) SetID(id int) {
-}
-
 // SetFeedVersionID sets the Entity's FeedVersionID.
 func (ent *StopTime) SetFeedVersionID(fvid int) {
 	ent.FeedVersionID = fvid
