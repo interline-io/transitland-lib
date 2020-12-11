@@ -106,7 +106,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 			t.Error(err)
 		}
 		sts2 := []tl.StopTime{}
-		if err := adapter.Select(&sts2, "SELECT * FROM gtfs_stop_times WHERE feed_version_id = ? ORDER BY id ASC", m.FeedVersionID); err != nil {
+		if err := adapter.Select(&sts2, "SELECT * FROM gtfs_stop_times WHERE feed_version_id = ? ORDER BY stop_sequence ASC", m.FeedVersionID); err != nil {
 			t.Error(err)
 		}
 		if len(sts2) == 0 {
