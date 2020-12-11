@@ -282,10 +282,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_stop_times" (
   "shape_dist_traveled" real, 
   "timepoint" integer, 
   "interpolated" integer, 
-  "id" integer primary key autoincrement, 
-  "feed_version_id" integer NOT NULL,
-  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "feed_version_id" integer NOT NULL
 );
 CREATE INDEX idx_stop_times_trip_id ON "gtfs_stop_times"(trip_id);
 CREATE INDEX idx_gtfs_stop_times_stop_id ON "gtfs_stop_times"(stop_id);
