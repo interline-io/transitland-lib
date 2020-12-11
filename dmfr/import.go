@@ -92,7 +92,6 @@ func AfterFeedVersionImport(atx tldb.Adapter, fvid int) error {
 		"SELECT tl_generate_route_geometries($1)",
 		"SELECT tl_generate_route_stops($1)",
 		"SELECT tl_generate_agency_geometries($1)",
-		"SELECT tl_generate_trip_durations($1)",
 		"SELECT tl_generate_route_headways($1)",
 		"SELECT tl_generate_agency_places($1)",
 		"SELECT tl_generate_onestop_ids($1)",
