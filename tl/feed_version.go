@@ -32,6 +32,11 @@ type FeedVersion struct {
 	Timestamps
 }
 
+// SetID .
+func (ent *FeedVersion) SetID(id int) {
+	ent.ID = id
+}
+
 // EntityID .
 func (ent *FeedVersion) EntityID() string {
 	return entID(ent.ID, "0")
