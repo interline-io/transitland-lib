@@ -23,7 +23,6 @@ type Entity interface {
 	Warnings() []error
 	AddError(error)
 	AddWarning(error)
-	SetID(int)
 	SetExtra(string, string)
 	Extra() map[string]string
 	UpdateKeys(*EntityMap) error
