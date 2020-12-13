@@ -224,10 +224,10 @@ func (adapter ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 	}
 	//
 	in, err := inFile.Open()
-	defer in.Close()
 	if err != nil {
 		return err
 	}
+	defer in.Close()
 	cb(in)
 	return nil
 }
