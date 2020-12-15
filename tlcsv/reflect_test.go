@@ -14,7 +14,7 @@ func TestGetString(t *testing.T) {
 		StopID:            "456",
 		ArrivalTime:       3600,
 		DepartureTime:     7200,
-		ShapeDistTraveled: sql.NullFloat64{123.456, true},
+		ShapeDistTraveled: sql.NullFloat64{Float64: 123.456, Valid: true},
 	}
 	expect := map[string]string{
 		"trip_id":             "123",
