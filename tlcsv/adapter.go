@@ -273,10 +273,10 @@ func (adapter ZipAdapter) DirSHA1() (string, error) {
 			continue
 		}
 		f, err := zf.Open()
-		defer f.Close()
 		if err != nil {
 			return "", err
 		}
+		defer f.Close()
 		io.Copy(h, f)
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
