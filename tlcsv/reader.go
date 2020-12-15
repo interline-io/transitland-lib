@@ -206,7 +206,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 			reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
 				sid, _ := row.Get("trip_id")
 				if _, ok := set[sid]; ok {
-					ent := tl.StopTime{Timepoint: -1, ShapeDistTraveled: -1} // Set shape_dist_traveled and timepoint to -1, assuming column is missing
+					ent := tl.StopTime{}
 					loadRowFast(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
@@ -343,7 +343,7 @@ func (reader *Reader) StopTimes() (out chan tl.StopTime) {
 	go func() {
 		ent := tl.StopTime{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.StopTime{Timepoint: -1, ShapeDistTraveled: -1}
+			e := tl.StopTime{}
 			loadRowFast(&e, row)
 			out <- e
 		})

@@ -23,7 +23,6 @@ type Entity interface {
 	Warnings() []error
 	AddError(error)
 	AddWarning(error)
-	SetID(int)
 	SetExtra(string, string)
 	Extra() map[string]string
 	UpdateKeys(*EntityMap) error
@@ -61,25 +60,16 @@ func (ent *BaseEntity) Extra() map[string]string {
 
 // SetExtra adds a string key, value pair to the entity's extra fields.
 func (ent *BaseEntity) SetExtra(key string, value string) {
-	if ent.extra == nil {
-		ent.extra = []string{}
-	}
 	ent.extra = append(ent.extra, key, value)
 }
 
 // AddError adds a loading error to the entity, e.g. from a CSV parse failure
 func (ent *BaseEntity) AddError(err error) {
-	if ent.loadErrors == nil {
-		ent.loadErrors = []error{}
-	}
 	ent.loadErrors = append(ent.loadErrors, err)
 }
 
 // AddWarning .
 func (ent *BaseEntity) AddWarning(err error) {
-	if ent.loadWarnings == nil {
-		ent.loadWarnings = []error{}
-	}
 	ent.loadWarnings = append(ent.loadErrors, err)
 }
 

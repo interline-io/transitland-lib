@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
@@ -85,8 +86,27 @@ func ActivateFeedVersion(atx tldb.Adapter, fvid int) error {
 // AfterFeedVersionImport .
 func AfterFeedVersionImport(atx tldb.Adapter, fvid int) error {
 	// Ensure runs in a txn
-	_, err := atx.DBX().Exec("SELECT after_feed_version_import($1)", fvid)
-	return err
+	t := time.Now()
+	fns := []string{
+		"SELECT tl_generate_feed_version_geometries($1)",
+		"SELECT tl_generate_route_geometries($1)",
+		"SELECT tl_generate_route_stops($1)",
+		"SELECT tl_generate_agency_geometries($1)",
+		"SELECT tl_generate_route_headways($1)",
+		"SELECT tl_generate_agency_places($1)",
+		"SELECT tl_generate_onestop_ids($1)",
+	}
+	for _, q := range fns {
+		tt := time.Now()
+		if _, err := atx.DBX().Exec(q, fvid); err != nil {
+			return err
+		}
+		tt2 := float64(time.Now().UnixNano()-tt.UnixNano()) / 1e9 // 1000000000.0
+		log.Debug("fvid: %d t: %0.2f s q: %s", fvid, tt2, q)
+	}
+	t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
+	log.Debug("Done finalizing import: fvid: %d t: %0.2fs", fvid, t2)
+	return nil
 }
 
 // FindImportableFeeds .

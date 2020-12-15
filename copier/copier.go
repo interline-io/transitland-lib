@@ -748,7 +748,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		for i := range stbt {
 			if err := copier.checkEntity(&stbt[i]); err == nil {
 				stbt2 = append(stbt2, &stbt[i])
-				if stbt[i].Interpolated > 0 {
+				if stbt[i].Interpolated.Int32 > 0 {
 					copier.result.InterpolatedStopTimeCount++
 				}
 			}

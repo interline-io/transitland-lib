@@ -111,16 +111,23 @@ func TestWriter(t testing.TB, fe ReaderTester, newReader func() tl.Reader, newWr
 	}
 }
 
+type hasEntityKey interface {
+	EntityKey() string
+}
+
 // CheckReader tests a reader against the ReaderTest description of the expected entities.
 func CheckReader(t testing.TB, fe ReaderTester, reader tl.Reader) {
 	ids := map[string]map[string]int{}
 	add := func(ent tl.Entity) {
-		ent.SetID(0) // TODO: This is a HORRIBLE UGLY HACK :( it sets db ID to zero value to get GTFS ID.
 		m, ok := ids[ent.Filename()]
 		if !ok {
 			m = map[string]int{}
 		}
-		m[ent.EntityID()]++
+		eid := ""
+		if v, ok := ent.(hasEntityKey); ok {
+			eid = v.EntityKey()
+		}
+		m[eid]++
 		ids[ent.Filename()] = m
 	}
 	check := func(fn string, gotids map[string]int) {

@@ -94,6 +94,7 @@ func SetLevel(lvalue int) {
 }
 
 func init() {
+	log.SetOutput(os.Stdout)
 	lstr := strings.ToUpper(os.Getenv("GTFS_LOGLEVEL"))
 	if lstr == "" {
 		lstr = "INFO"

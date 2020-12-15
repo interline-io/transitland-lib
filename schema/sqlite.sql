@@ -276,16 +276,13 @@ CREATE TABLE IF NOT EXISTS "gtfs_stop_times" (
   "departure_time" int NOT NULL, 
   "stop_id" int NOT NULL, 
   "stop_sequence" integer NOT NULL, 
-  "stop_headsign" varchar(255) NOT NULL, 
-  "pickup_type" integer NOT NULL, 
-  "drop_off_type" integer NOT NULL, 
-  "shape_dist_traveled" real NOT NULL, 
-  "timepoint" integer NOT NULL, 
-  "interpolated" integer NOT NULL, 
-  "id" integer primary key autoincrement, 
-  "feed_version_id" integer NOT NULL, 
-  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "stop_headsign" varchar(255), 
+  "pickup_type" integer, 
+  "drop_off_type" integer, 
+  "shape_dist_traveled" real, 
+  "timepoint" integer, 
+  "interpolated" integer, 
+  "feed_version_id" integer NOT NULL
 );
 CREATE INDEX idx_stop_times_trip_id ON "gtfs_stop_times"(trip_id);
 CREATE INDEX idx_gtfs_stop_times_stop_id ON "gtfs_stop_times"(stop_id);

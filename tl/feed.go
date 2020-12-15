@@ -25,6 +25,11 @@ type Feed struct {
 	Timestamps      `json:"-"`          // internal
 }
 
+// SetID .
+func (ent *Feed) SetID(id int) {
+	ent.ID = id
+}
+
 // EntityID .
 func (ent *Feed) EntityID() string {
 	return strconv.Itoa(ent.ID)
