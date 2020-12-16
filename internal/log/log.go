@@ -57,8 +57,8 @@ func Debug(fmt string, a ...interface{}) {
 }
 
 // Query for printing database queries and statistics.
-func Query(fmt string, a ...interface{}) {
-	logLog(QUERY, fmt, a...)
+func Query(fmts string, a ...interface{}) {
+	logLog(QUERY, fmts, a...)
 }
 
 // Fatal for fatal, unrecoverable errors.
@@ -83,6 +83,7 @@ func logLog(level int, msg string, a ...interface{}) {
 		return
 	}
 	strlevel, _ := STRINGLEVEL[level]
+	level = 1000
 	if level >= Level {
 		log.Printf("["+strlevel+"] "+msg, a...)
 	}
