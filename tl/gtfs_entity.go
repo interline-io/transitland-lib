@@ -44,6 +44,11 @@ func (ent *BaseEntity) SetID(id int) {
 	ent.ID = id
 }
 
+// GetID returns the integer ID.
+func (ent *BaseEntity) GetID() int {
+	return ent.ID
+}
+
 // SetFeedVersionID sets the Entity's FeedVersionID.
 func (ent *BaseEntity) SetFeedVersionID(fvid int) {
 	ent.FeedVersionID = fvid

@@ -30,6 +30,11 @@ func (ent *Feed) SetID(id int) {
 	ent.ID = id
 }
 
+// GetID .
+func (ent *Feed) GetID() int {
+	return ent.ID
+}
+
 // EntityID .
 func (ent *Feed) EntityID() string {
 	return strconv.Itoa(ent.ID)

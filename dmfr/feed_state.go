@@ -30,6 +30,11 @@ func (ent *FeedState) SetID(id int) {
 	ent.ID = id
 }
 
+// GetID .
+func (ent *FeedState) GetID() int {
+	return ent.ID
+}
+
 // TableName .
 func (ent *FeedState) TableName() string {
 	return "feed_states"

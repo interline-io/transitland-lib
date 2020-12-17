@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/jmoiron/sqlx/reflectx"
@@ -30,7 +29,7 @@ type canSetID interface {
 }
 
 type canGetID interface {
-	EntityID() string
+	GetID() int
 }
 
 type canUpdateTimestamps interface {
@@ -104,13 +103,6 @@ func getTableName(ent interface{}) string {
 	}
 	s := strings.Split(fmt.Sprintf("%T", ent), ".")
 	return toSnakeCase(s[len(s)-1])
-}
-
-func getID(ent interface{}) (int, error) {
-	if v, ok := ent.(canGetID); ok {
-		return strconv.Atoi(v.EntityID())
-	}
-	return 0, errors.New("no ID")
 }
 
 func contains(a string, b []string) bool {
