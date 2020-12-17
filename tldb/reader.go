@@ -153,7 +153,7 @@ func (reader *Reader) StopTimes() chan tl.StopTime {
 		offset := 0
 		for {
 			ents := []tl.StopTime{}
-			qstr, args, err := reader.Where().From("gtfs_stop_times").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
+			qstr, args, err := reader.Where().From("gtfs_stop_times").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
 			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {

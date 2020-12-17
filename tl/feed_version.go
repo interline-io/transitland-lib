@@ -37,6 +37,11 @@ func (ent *FeedVersion) SetID(id int) {
 	ent.ID = id
 }
 
+// GetID .
+func (ent *FeedVersion) GetID() int {
+	return ent.ID
+}
+
 // EntityID .
 func (ent *FeedVersion) EntityID() string {
 	return entID(ent.ID, "0")

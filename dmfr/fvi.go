@@ -29,6 +29,16 @@ type FeedVersionImport struct {
 	tl.Timestamps
 }
 
+// GetID returns the ID
+func (fvi *FeedVersionImport) GetID() int {
+	return fvi.ID
+}
+
+// SetID sets the ID.
+func (fvi *FeedVersionImport) SetID(v int) {
+	fvi.ID = v
+}
+
 // EntityID .
 func (fvi *FeedVersionImport) EntityID() string {
 	return strconv.Itoa(fvi.ID)
