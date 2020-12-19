@@ -11,7 +11,7 @@ import (
 type Transfer struct {
 	FromStopID      string        `csv:"from_stop_id" required:"true"`
 	ToStopID        string        `csv:"to_stop_id" required:"true"`
-	TransferType    int           `csv:"transfer_type" required:"true"`
+	TransferType    int           `csv:"transfer_type"`
 	MinTransferTime sql.NullInt64 `csv:"min_transfer_time"`
 	BaseEntity
 }
@@ -30,6 +30,7 @@ func (ent *Transfer) Warnings() (errs []error) {
 
 // Errors for this Entity.
 func (ent *Transfer) Errors() (errs []error) {
+	// transfer_type is required but can also be empty, so hard to distinguish
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, enum.CheckPresent("from_stop_id", ent.FromStopID)...)
 	errs = append(errs, enum.CheckPresent("to_stop_id", ent.ToStopID)...)
