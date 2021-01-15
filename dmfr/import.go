@@ -78,8 +78,8 @@ func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 
 // ActivateFeedVersion .
 func ActivateFeedVersion(atx tldb.Adapter, fvid int) error {
-	// Ensure runs in a txn
-	_, err := atx.DBX().Exec("SELECT activate_feed_version($1)", fvid)
+	// sqlite3 only supports "UPDATE ... FROM" in versions 3.33 and higher
+	_, err := atx.DBX().Exec("UPDATE feed_states SET feed_version_id = $1 WHERE feed_id = (SELECT feed_id FROM feed_versions WHERE id = $2)", fvid, fvid)
 	return err
 }
 
