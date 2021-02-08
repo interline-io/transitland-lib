@@ -46,7 +46,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 			fvid := setup(atx, testutil.ExampleDir.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := MainImportFeedVersion(&atx2, ImportOptions{FeedVersionID: fvid})
+			_, err := MainImportFeedVersion(&atx2, ImportOptions{Activate: true, FeedVersionID: fvid})
 			if err != nil {
 				t.Fatal(err)
 			}

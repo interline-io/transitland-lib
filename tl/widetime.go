@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -103,6 +104,20 @@ func (wt *WideTime) Scan(src interface{}) error {
 		wt.Valid = true
 	}
 	return p
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (wt *WideTime) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (wt WideTime) MarshalGQL(w io.Writer) {
+	if !wt.Valid {
+		w.Write([]byte("null"))
+		return
+	}
+	w.Write([]byte(wt.String()))
 }
 
 // NewWideTime converts the csv string to a WideTime.

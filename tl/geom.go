@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
+	"io"
 
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/ewkb"
+	"github.com/twpayne/go-geom/encoding/geojson"
 	"github.com/twpayne/go-geom/encoding/wkb"
 	"github.com/twpayne/go-geom/encoding/wkbcommon"
 )
@@ -62,6 +64,24 @@ func (g *Point) Scan(src interface{}) error {
 	return nil
 }
 
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (g *Point) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (g Point) MarshalGQL(w io.Writer) {
+	if !g.Valid {
+		w.Write([]byte("null"))
+		return
+	}
+	x, err := geojson.Marshal(&g.Point)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(x)
+}
+
 /////////////////////
 
 // LineString is an EWKB/SL encoded LineString
@@ -110,6 +130,82 @@ func (g *LineString) Scan(src interface{}) error {
 	g.Valid = true
 	g.LineString = *p1
 	return nil
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (g *LineString) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (g LineString) MarshalGQL(w io.Writer) {
+	if !g.Valid {
+		w.Write([]byte("null"))
+		return
+	}
+	x, err := geojson.Marshal(&g.LineString)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(x)
+}
+
+///////////////////////
+
+// Polygon is an EWKB/SL encoded Polygon
+type Polygon struct {
+	Valid bool
+	geom.Polygon
+}
+
+// Value implements driver.Value
+func (g Polygon) Value() (driver.Value, error) {
+	if !g.Valid {
+		return nil, nil
+	}
+	return wkbEncode(&g.Polygon)
+}
+
+// Scan implements Scanner
+func (g *Polygon) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+	b, ok := src.([]byte)
+	if !ok {
+		return wkb.ErrExpectedByteSlice{Value: src}
+	}
+	var p geom.T
+	var err error
+	p, err = wkbDecode(b)
+	if err != nil {
+		return err
+	}
+	p1, ok := p.(*geom.Polygon)
+	if !ok {
+		return wkbcommon.ErrUnexpectedType{Got: p1, Want: p1}
+	}
+	g.Valid = true
+	g.Polygon = *p1
+	return nil
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (g *Polygon) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (g Polygon) MarshalGQL(w io.Writer) {
+	if !g.Valid {
+		w.Write([]byte("null"))
+		return
+	}
+	x, err := geojson.Marshal(&g.Polygon)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(x)
 }
 
 /////////// helpers
