@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gookit/color"
 )
@@ -35,9 +36,9 @@ var Level = ERROR
 // LogQuery enables query logging regardless of level.
 var LogQuery = false
 
-// Query logs database queries.
-func Query(qstr string, a ...interface{}) {
-	if !(LogQuery || Level <= TRACE) {
+// QueryStart logs database query beginnings; requires TRACE.
+func QueryStart(qstr string, a ...interface{}) {
+	if Level > TRACE {
 		return
 	}
 	sts := []string{}
@@ -45,8 +46,21 @@ func Query(qstr string, a ...interface{}) {
 		q := qval{strconv.Itoa(i + 1), val}
 		sts = append(sts, q.String())
 	}
-	fmta := qstr
-	log.Printf("[QUERY] " + color.Blue.Render(fmta) + " -- " + color.Gray.Render(strings.Join(sts, " ")))
+	log.Printf("[QUERY] %s -- %s [start]", color.Blue.Render(qstr), color.Gray.Render(strings.Join(sts, " ")))
+}
+
+// QueryTime logs database queries and time relative to start; requires LogQuery or TRACE.
+func QueryTime(t time.Time, qstr string, a ...interface{}) {
+	if !(LogQuery || Level <= TRACE) {
+		return
+	}
+	t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e6
+	sts := []string{}
+	for i, val := range a {
+		q := qval{strconv.Itoa(i + 1), val}
+		sts = append(sts, q.String())
+	}
+	log.Printf("[QUERY] %s -- %s [time: %0.2f ms] ", color.Blue.Render(qstr), color.Gray.Render(strings.Join(sts, " ")), t2)
 }
 
 // Error for notable errors.

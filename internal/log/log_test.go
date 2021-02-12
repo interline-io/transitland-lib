@@ -30,7 +30,7 @@ func TestLogLevels(t *testing.T) {
 		{"Error", 40, Error},
 		{"Info", 20, Info},
 		{"Debug", 10, Debug},
-		{"Query", 5, Query},
+		{"Query", 5, QueryStart},
 	}
 	for _, f := range funcs {
 		t.Run(f.name, func(t *testing.T) {

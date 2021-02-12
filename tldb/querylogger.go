@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/jmoiron/sqlx"
@@ -37,33 +38,44 @@ type queryLogger struct {
 	sqext
 }
 
+func logt1(qstr string, a ...interface{}) time.Time {
+	t := time.Now()
+	log.QueryStart(qstr, a...)
+	return t
+}
+
 // Exec .
 func (p *queryLogger) Exec(query string, args ...interface{}) (sql.Result, error) {
-	log.Query(query, args...)
+	t := logt1(query, args...)
+	defer log.QueryTime(t, query, args...)
 	return p.sqext.Exec(query, args...)
 }
 
 // Query .
 func (p *queryLogger) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	log.Query(query, args...)
+	t := logt1(query, args...)
+	defer log.QueryTime(t, query, args...)
 	return p.sqext.Query(query, args...)
 }
 
 // QueryRow .
 func (p *queryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
-	log.Query(query, args...)
+	t := logt1(query, args...)
+	defer log.QueryTime(t, query, args...)
 	return p.sqext.QueryRow(query, args...)
 }
 
 // Queryx .
 func (p *queryLogger) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
-	log.Query(query, args...)
+	t := logt1(query, args...)
+	defer log.QueryTime(t, query, args...)
 	return p.sqext.Queryx(query, args...)
 }
 
 // QueryRowx .
 func (p *queryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
-	log.Query(query, args...)
+	t := logt1(query, args...)
+	defer log.QueryTime(t, query, args...)
 	return p.sqext.QueryRowx(query, args...)
 }
 
