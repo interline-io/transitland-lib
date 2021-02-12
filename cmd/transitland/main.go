@@ -109,7 +109,8 @@ func main() {
 		log.SetLevel(log.DEBUG)
 	}
 	if traceFlag == true {
-		log.SetLevel(log.QUERY)
+		log.SetLevel(log.TRACE)
+		log.SetQueryLog(true)
 	}
 	args := flag.Args()
 	subc := flag.Arg(0)

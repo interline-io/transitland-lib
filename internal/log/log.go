@@ -1,10 +1,14 @@
 package log
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
+
+	"github.com/gookit/color"
 )
 
 // Level values
@@ -13,58 +17,57 @@ const (
 	ERROR = 40
 	INFO  = 20
 	DEBUG = 10
-	QUERY = 5
+	TRACE = 5
 )
 
-// LEVELSTRINGS provides log level aliases.
-var LEVELSTRINGS = map[string]int{
-	"FATAL": FATAL,
-	"ERROR": ERROR,
-	"INFO":  INFO,
-	"DEBUG": DEBUG,
-	"QUERY": QUERY,
-	"TRACE": QUERY, // alias
-}
-
 // STRINGLEVEL is the reverse mapping
-var STRINGLEVEL = map[int]string{}
-
-func init() {
-	for k, v := range LEVELSTRINGS {
-		STRINGLEVEL[v] = k
-	}
+var STRINGLEVEL = map[int]string{
+	FATAL: "FATAL",
+	ERROR: "ERROR",
+	INFO:  "INFO",
+	DEBUG: "DEBUG",
+	TRACE: "TRACE",
 }
 
 // Level is the log level.
 var Level = ERROR
 
-// LogQuery is a flag for logging database queries.
+// LogQuery enables query logging regardless of level.
 var LogQuery = false
 
+// Query logs database queries.
+func Query(qstr string, a ...interface{}) {
+	if !(LogQuery || Level <= TRACE) {
+		return
+	}
+	sts := []string{}
+	for i, val := range a {
+		q := qval{strconv.Itoa(i + 1), val}
+		sts = append(sts, q.String())
+	}
+	fmta := qstr
+	log.Printf("[QUERY] " + color.Blue.Render(fmta) + " -- " + color.Gray.Render(strings.Join(sts, " ")))
+}
+
 // Error for notable errors.
-func Error(fmt string, a ...interface{}) {
-	logLog(ERROR, fmt, a...)
+func Error(fmts string, a ...interface{}) {
+	logLog(ERROR, fmts, a...)
 }
 
 // Info for regular messages.
-func Info(fmt string, a ...interface{}) {
-	logLog(INFO, fmt, a...)
+func Info(fmts string, a ...interface{}) {
+	logLog(INFO, fmts, a...)
 }
 
 // Debug for debugging messages.
-func Debug(fmt string, a ...interface{}) {
-	logLog(DEBUG, fmt, a...)
-}
-
-// Query for printing database queries and statistics.
-func Query(fmt string, a ...interface{}) {
-	logLog(QUERY, fmt, a...)
+func Debug(fmts string, a ...interface{}) {
+	logLog(DEBUG, fmts, a...)
 }
 
 // Fatal for fatal, unrecoverable errors.
-func Fatal(fmta string, a ...interface{}) {
-	logLog(FATAL, fmta, a...)
-	panic(fmt.Sprintf(fmta, a...))
+func Fatal(fmts string, a ...interface{}) {
+	logLog(FATAL, fmts, a...)
+	panic(fmt.Sprintf(fmts, a...))
 }
 
 // Exit with an error message.
@@ -93,19 +96,65 @@ func SetLevel(lvalue int) {
 	Level = lvalue
 }
 
-func init() {
-	log.SetOutput(os.Stdout)
-	lstr := strings.ToUpper(os.Getenv("GTFS_LOGLEVEL"))
+// SetLevelByName sets the log level by string name.
+func SetLevelByName(lstr string) {
 	if lstr == "" {
 		lstr = "INFO"
 	}
-	lvalue, ok := LEVELSTRINGS[strings.ToUpper(lstr)]
+	var levelstrings = map[string]int{}
+	for k, v := range STRINGLEVEL {
+		levelstrings[strings.ToLower(v)] = k
+	}
+	lvalue, ok := levelstrings[strings.ToLower(lstr)]
 	if ok {
 		SetLevel(lvalue)
 	} else {
 		log.Printf("[WARNING] Unknown log level '%s'", lstr)
 	}
-	if v := os.Getenv("GTFS_LOGLEVEL_SQL"); v == "true" {
+}
+
+// SetQueryLog enables or disables query logging.
+func SetQueryLog(v bool) {
+	if v {
+		log.Printf("[INFO] Enabling SQL logging")
 		LogQuery = true
+	} else {
+		LogQuery = false
 	}
+}
+
+func init() {
+	log.SetOutput(os.Stdout)
+	if v := os.Getenv("TRANSITLAND_LOGLEVEL"); v != "" {
+		SetLevelByName(v)
+	}
+	if v := os.Getenv("TRANSITLAND_LOG_SQL"); v == "true" {
+		SetQueryLog(true)
+	}
+}
+
+// Some helpers
+
+type canValue interface {
+	Value() (driver.Value, error)
+}
+
+type qval struct {
+	Name  string
+	Value interface{}
+}
+
+func (q qval) String() string {
+	s := ""
+	if a, ok := q.Value.(canValue); ok {
+		z, _ := a.Value()
+		if x, ok := z.([]byte); ok {
+			_ = x
+			z = "<binary>"
+		}
+		s = fmt.Sprintf("%v", z)
+	} else {
+		s = fmt.Sprintf("%v", q.Value)
+	}
+	return fmt.Sprintf("{%s:%s}", q.Name, s)
 }
