@@ -69,7 +69,7 @@ func (adapter *SQLiteAdapter) Open() error {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
 	db.Mapper = mapper
-	adapter.db = &queryLogger{db.Unsafe()}
+	adapter.db = &QueryLogger{db.Unsafe()}
 	return nil
 }
 
@@ -85,7 +85,7 @@ func (adapter *SQLiteAdapter) Close() error {
 func (adapter *SQLiteAdapter) Create() error {
 	// Dont log, used often in tests
 	adb := adapter.db
-	if a, ok := adapter.db.(*queryLogger); ok {
+	if a, ok := adapter.db.(*QueryLogger); ok {
 		adb = a.sqext
 	}
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
@@ -119,7 +119,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}}
+	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{tx}}
 	if errTx := cb(adapter2); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3

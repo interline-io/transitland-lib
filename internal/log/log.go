@@ -60,7 +60,7 @@ func QueryTime(t time.Time, qstr string, a ...interface{}) {
 		q := qval{strconv.Itoa(i + 1), val}
 		sts = append(sts, q.String())
 	}
-	log.Printf("[QUERY] %s -- %s [time: %0.2f ms] ", color.Blue.Render(qstr), color.Gray.Render(strings.Join(sts, " ")), t2)
+	log.Printf("[QUERY] %s -- %s [time: %0.2f ms]", color.Blue.Render(qstr), color.Gray.Render(strings.Join(sts, " ")), t2)
 }
 
 // Error for notable errors.
@@ -107,23 +107,24 @@ func logLog(level int, msg string, a ...interface{}) {
 
 // SetLevel sets the log level.
 func SetLevel(lvalue int) {
-	Level = lvalue
+	if lstr, ok := STRINGLEVEL[lvalue]; ok {
+		Level = lvalue
+		logLog(DEBUG, "Setting log level to '%s'", strings.ToUpper(lstr))
+	} else {
+		logLog(ERROR, "Unknown log level '%d'", lvalue)
+	}
 }
 
 // SetLevelByName sets the log level by string name.
 func SetLevelByName(lstr string) {
-	if lstr == "" {
-		lstr = "INFO"
-	}
 	var levelstrings = map[string]int{}
 	for k, v := range STRINGLEVEL {
-		levelstrings[strings.ToLower(v)] = k
+		levelstrings[strings.ToUpper(v)] = k
 	}
-	lvalue, ok := levelstrings[strings.ToLower(lstr)]
-	if ok {
+	if lvalue, ok := levelstrings[strings.ToUpper(lstr)]; ok {
 		SetLevel(lvalue)
 	} else {
-		log.Printf("[WARNING] Unknown log level '%s'", lstr)
+		logLog(ERROR, "Unknown log level string '%s'", lstr)
 	}
 }
 
@@ -139,6 +140,9 @@ func SetQueryLog(v bool) {
 
 func init() {
 	log.SetOutput(os.Stdout)
+	if v := os.Getenv("TRANSITLAND_LOG_MICROSECONDS"); v == "true" {
+		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	}
 	if v := os.Getenv("TRANSITLAND_LOGLEVEL"); v != "" {
 		SetLevelByName(v)
 	}

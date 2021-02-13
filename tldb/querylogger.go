@@ -33,9 +33,14 @@ type sqext interface {
 	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 }
 
-// queryLogger wraps sql/sqlx methods with loggers.
-type queryLogger struct {
+// QueryLogger wraps sql/sqlx methods with loggers.
+type QueryLogger struct {
 	sqext
+}
+
+// NewQueryLogger returns the db wrapped into a QueryLogger.
+func NewQueryLogger(db *sqlx.DB) *QueryLogger {
+	return &QueryLogger{sqext: db.Unsafe()}
 }
 
 func logt1(qstr string, a ...interface{}) time.Time {
@@ -45,41 +50,41 @@ func logt1(qstr string, a ...interface{}) time.Time {
 }
 
 // Exec .
-func (p *queryLogger) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (p *QueryLogger) Exec(query string, args ...interface{}) (sql.Result, error) {
 	t := logt1(query, args...)
 	defer log.QueryTime(t, query, args...)
 	return p.sqext.Exec(query, args...)
 }
 
 // Query .
-func (p *queryLogger) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (p *QueryLogger) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	t := logt1(query, args...)
 	defer log.QueryTime(t, query, args...)
 	return p.sqext.Query(query, args...)
 }
 
 // QueryRow .
-func (p *queryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
+func (p *QueryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
 	t := logt1(query, args...)
 	defer log.QueryTime(t, query, args...)
 	return p.sqext.QueryRow(query, args...)
 }
 
 // Queryx .
-func (p *queryLogger) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
+func (p *QueryLogger) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
 	t := logt1(query, args...)
 	defer log.QueryTime(t, query, args...)
 	return p.sqext.Queryx(query, args...)
 }
 
 // QueryRowx .
-func (p *queryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
+func (p *QueryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
 	t := logt1(query, args...)
 	defer log.QueryTime(t, query, args...)
 	return p.sqext.QueryRowx(query, args...)
 }
 
-func (p *queryLogger) Beginx() (*sqlx.Tx, error) {
+func (p *QueryLogger) Beginx() (*sqlx.Tx, error) {
 	if a, ok := p.sqext.(*sqlx.Tx); ok {
 		return a, nil
 	}

@@ -36,7 +36,7 @@ func (adapter *PostgresAdapter) Open() error {
 		return err
 	}
 	db.Mapper = mapper
-	adapter.db = &queryLogger{db.Unsafe()}
+	adapter.db = &QueryLogger{db.Unsafe()}
 	return nil
 }
 
@@ -76,7 +76,7 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: &queryLogger{tx}}
+	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{tx}}
 	if err2 := cb(adapter2); err2 != nil {
 		if errTx := tx.Rollback(); errTx != nil {
 			return errTx
@@ -182,7 +182,7 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	var err error
 	var tx *sqlx.Tx
 	commit := true
-	if a, ok := adapter.db.(*queryLogger); ok {
+	if a, ok := adapter.db.(*QueryLogger); ok {
 		if b, ok2 := a.sqext.(*sqlx.Tx); ok2 {
 			tx = b
 			commit = false
