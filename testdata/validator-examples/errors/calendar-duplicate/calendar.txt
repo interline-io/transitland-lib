@@ -1,3 +1,0 @@
-service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date,expect_error
-WKDY,1,1,1,1,1,0,0,20180526,20190701,DuplicateIDError
-WKDY,1,1,1,1,1,0,0,20180526,20190701

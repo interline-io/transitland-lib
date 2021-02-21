@@ -3,18 +3,21 @@ package testutil
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // ReaderTester contains information about the number and types of identities expected in a Reader.
 type ReaderTester struct {
 	URL       string
+	SHA1      string
+	DirSHA1   string
+	Size      int
 	Counts    map[string]int
 	EntityIDs map[string][]string
 }
 
 // TestReader tests implementations of the Reader interface.
-func TestReader(t *testing.T, fe ReaderTester, newReader func() gotransit.Reader) {
+func TestReader(t *testing.T, fe ReaderTester, newReader func() tl.Reader) {
 	reader := newReader()
 	if reader == nil {
 		t.Error("no reader")
@@ -32,7 +35,7 @@ func TestReader(t *testing.T, fe ReaderTester, newReader func() gotransit.Reader
 	})
 	t.Run("ReadEntities", func(t *testing.T) {
 		tripids := map[string]int{}
-		out := make(chan gotransit.StopTime, 1000)
+		out := make(chan tl.StopTime, 1000)
 		reader.ReadEntities(out)
 		for ent := range out {
 			tripids[ent.TripID]++
@@ -66,7 +69,7 @@ func TestReader(t *testing.T, fe ReaderTester, newReader func() gotransit.Reader
 }
 
 // TestWriter tests implementations of the Writer interface.
-func TestWriter(t testing.TB, fe ReaderTester, newReader func() gotransit.Reader, newWriter func() gotransit.Writer) {
+func TestWriter(t testing.TB, fe ReaderTester, newReader func() tl.Reader, newWriter func() tl.Writer) {
 	// Open writer
 	writer := newWriter()
 	if writer == nil {
@@ -108,16 +111,23 @@ func TestWriter(t testing.TB, fe ReaderTester, newReader func() gotransit.Reader
 	}
 }
 
+type hasEntityKey interface {
+	EntityKey() string
+}
+
 // CheckReader tests a reader against the ReaderTest description of the expected entities.
-func CheckReader(t testing.TB, fe ReaderTester, reader gotransit.Reader) {
+func CheckReader(t testing.TB, fe ReaderTester, reader tl.Reader) {
 	ids := map[string]map[string]int{}
-	add := func(ent gotransit.Entity) {
-		ent.SetID(0) // TODO: This is a HORRIBLE UGLY HACK :( it sets db ID to zero value to get GTFS ID.
+	add := func(ent tl.Entity) {
 		m, ok := ids[ent.Filename()]
 		if !ok {
 			m = map[string]int{}
 		}
-		m[ent.EntityID()]++
+		eid := ""
+		if v, ok := ent.(hasEntityKey); ok {
+			eid = v.EntityKey()
+		}
+		m[eid]++
 		ids[ent.Filename()] = m
 	}
 	check := func(fn string, gotids map[string]int) {
@@ -137,7 +147,7 @@ func CheckReader(t testing.TB, fe ReaderTester, reader gotransit.Reader) {
 	}
 }
 
-func getfn(ent gotransit.Entity) string {
+func getfn(ent tl.Entity) string {
 	return ent.Filename()
 }
 

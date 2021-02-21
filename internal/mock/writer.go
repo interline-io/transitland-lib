@@ -3,7 +3,7 @@ package mock
 import (
 	"fmt"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Writer is a mocked up Writer used in tests.
@@ -39,39 +39,38 @@ func (mw *Writer) Delete() error {
 }
 
 // NewReader .
-func (mw *Writer) NewReader() (gotransit.Reader, error) {
+func (mw *Writer) NewReader() (tl.Reader, error) {
 	return &mw.Reader, nil
 }
 
 // AddEntity .
-func (mw *Writer) AddEntity(ent gotransit.Entity) (string, error) {
-	// fmt.Printf("writing: %#v\n", ent)
+func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 	switch v := ent.(type) {
-	case *gotransit.Stop:
+	case *tl.Stop:
 		mw.Reader.StopList = append(mw.Reader.StopList, *v)
-	case *gotransit.StopTime:
+	case *tl.StopTime:
 		mw.Reader.StopTimeList = append(mw.Reader.StopTimeList, *v)
-	case *gotransit.Agency:
+	case *tl.Agency:
 		mw.Reader.AgencyList = append(mw.Reader.AgencyList, *v)
-	case *gotransit.Calendar:
+	case *tl.Calendar:
 		mw.Reader.CalendarList = append(mw.Reader.CalendarList, *v)
-	case *gotransit.CalendarDate:
+	case *tl.CalendarDate:
 		mw.Reader.CalendarDateList = append(mw.Reader.CalendarDateList, *v)
-	case *gotransit.FareAttribute:
+	case *tl.FareAttribute:
 		mw.Reader.FareAttributeList = append(mw.Reader.FareAttributeList, *v)
-	case *gotransit.FareRule:
+	case *tl.FareRule:
 		mw.Reader.FareRuleList = append(mw.Reader.FareRuleList, *v)
-	case *gotransit.FeedInfo:
+	case *tl.FeedInfo:
 		mw.Reader.FeedInfoList = append(mw.Reader.FeedInfoList, *v)
-	case *gotransit.Frequency:
+	case *tl.Frequency:
 		mw.Reader.FrequencyList = append(mw.Reader.FrequencyList, *v)
-	case *gotransit.Route:
+	case *tl.Route:
 		mw.Reader.RouteList = append(mw.Reader.RouteList, *v)
-	case *gotransit.Shape:
+	case *tl.Shape:
 		mw.Reader.ShapeList = append(mw.Reader.ShapeList, *v)
-	case *gotransit.Transfer:
+	case *tl.Transfer:
 		mw.Reader.TransferList = append(mw.Reader.TransferList, *v)
-	case *gotransit.Trip:
+	case *tl.Trip:
 		mw.Reader.TripList = append(mw.Reader.TripList, *v)
 	default:
 		return "", fmt.Errorf("mockreader cannot handle type: %T", v)
@@ -80,11 +79,14 @@ func (mw *Writer) AddEntity(ent gotransit.Entity) (string, error) {
 }
 
 // AddEntities .
-func (mw *Writer) AddEntities(ents []gotransit.Entity) error {
+func (mw *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+	retids := []string{}
 	for _, ent := range ents {
-		if _, err := mw.AddEntity(ent); err != nil {
-			return err
+		eid, err := mw.AddEntity(ent)
+		if err != nil {
+			return retids, err
 		}
+		retids = append(retids, eid)
 	}
-	return nil
+	return retids, nil
 }

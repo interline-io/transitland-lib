@@ -1,5 +1,0 @@
-this,file,checks,for,parse,errors
-a,b,c,d,e,valid
-"this"test"",,,,,,,,,,,,
-xyz.0000",""fai"led""
-'""',",","

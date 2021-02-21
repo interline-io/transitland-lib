@@ -3,18 +3,19 @@ package copier
 import (
 	"testing"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/gtcsv"
+	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func Test_geomCache(t *testing.T) {
-	r, err := gtcsv.NewReader("../testdata/example")
+	r, err := tlcsv.NewReader(testutil.ExampleDir.URL)
 	if err != nil {
 		t.Error(err)
 	}
 	r.Open()
 	defer r.Close()
-	trips := map[string]gotransit.Trip{}
+	trips := map[string]tl.Trip{}
 	count := 1
 	for trip := range r.Trips() {
 		trip.StopPatternID = count
@@ -32,7 +33,6 @@ func Test_geomCache(t *testing.T) {
 		trip := trips[stoptimes[0].TripID]
 		stoptimes2, err := cache.InterpolateStopTimes(trip, stoptimes)
 		if err != nil {
-			// fmt.Printf("stoptimes: %#v\n", stoptimes)
 			t.Error(err)
 		}
 		if len(stoptimes) != len(stoptimes2) {

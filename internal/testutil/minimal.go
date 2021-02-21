@@ -1,54 +1,55 @@
 package testutil
 
 import (
+	"database/sql"
 	"time"
 
-	"github.com/interline-io/gotransit"
-	"github.com/interline-io/gotransit/internal/mock"
+	"github.com/interline-io/transitland-lib/internal/mock"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // NewMinimalTestFeed returns a minimal mock Reader & ReaderTester values.
 func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 	r := &mock.Reader{
-		AgencyList: []gotransit.Agency{
+		AgencyList: []tl.Agency{
 			{AgencyID: "agency1", AgencyName: "Agency 1", AgencyTimezone: "America/Los_Angeles", AgencyURL: "http://example.com"},
 		},
-		RouteList: []gotransit.Route{
+		RouteList: []tl.Route{
 			{RouteID: "route1", RouteShortName: "Route 1", RouteType: 1, AgencyID: "agency1"},
 		},
-		TripList: []gotransit.Trip{
+		TripList: []tl.Trip{
 			{TripID: "trip1", RouteID: "route1", ServiceID: "service1"},
 		},
-		StopList: []gotransit.Stop{
-			{StopID: "stop1", StopName: "Stop 1", Geometry: gotransit.NewPoint(1, 2)},
-			{StopID: "stop2", StopName: "Stop 2", Geometry: gotransit.NewPoint(3, 4)},
+		StopList: []tl.Stop{
+			{StopID: "stop1", StopName: "Stop 1", Geometry: tl.NewPoint(1, 2)},
+			{StopID: "stop2", StopName: "Stop 2", Geometry: tl.NewPoint(3, 4)},
 		},
-		StopTimeList: []gotransit.StopTime{
+		StopTimeList: []tl.StopTime{
 			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: 0, DepartureTime: 5},
 			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: 10, DepartureTime: 15},
 		},
-		ShapeList: []gotransit.Shape{
-			{ShapeID: "shape1", Geometry: gotransit.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
+		ShapeList: []tl.Shape{
+			{ShapeID: "shape1", Geometry: tl.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
 		},
-		CalendarList: []gotransit.Calendar{
+		CalendarList: []tl.Calendar{
 			{ServiceID: "service1", StartDate: time.Now(), EndDate: time.Now()},
 		},
-		CalendarDateList: []gotransit.CalendarDate{
+		CalendarDateList: []tl.CalendarDate{
 			{ServiceID: "service1", ExceptionType: 1, Date: time.Now()},
 		},
-		FeedInfoList: []gotransit.FeedInfo{
+		FeedInfoList: []tl.FeedInfo{
 			{FeedVersion: "123", FeedPublisherURL: "http://example.com", FeedLang: "en-US", FeedPublisherName: "Example"},
 		},
-		FareRuleList: []gotransit.FareRule{
+		FareRuleList: []tl.FareRule{
 			{FareID: "fare1"},
 		},
-		FareAttributeList: []gotransit.FareAttribute{
-			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: "1"},
+		FareAttributeList: []tl.FareAttribute{
+			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: sql.NullInt32{Valid: true, Int32: 1}},
 		},
-		FrequencyList: []gotransit.Frequency{
-			{TripID: "trip1", HeadwaySecs: 600, StartTime: gotransit.WideTime{Seconds: 3600}, EndTime: gotransit.WideTime{Seconds: 7200}},
+		FrequencyList: []tl.Frequency{
+			{TripID: "trip1", HeadwaySecs: 600, StartTime: tl.WideTime{Seconds: 3600}, EndTime: tl.WideTime{Seconds: 7200}},
 		},
-		TransferList: []gotransit.Transfer{
+		TransferList: []tl.Transfer{
 			{FromStopID: "stop1", ToStopID: "stop2", TransferType: 1},
 		},
 	}

@@ -1,0 +1,20 @@
+{
+    "$schema": "https://dmfr.transit.land/json-schema/dmfr.schema.json",
+    "feeds": [
+      {
+        "spec": "gtfs",
+        "id": "CT",
+        "urls": {
+          "static_current": "https://transitland-gtfs.s3.amazonaws.com/datastore-uploads/feed_version/d2813c293bcfd7a97dde599527ae6c62c98e66c6.zip"
+        }
+      },
+      {
+        "spec": "gtfs",
+        "id": "BA",
+        "urls": {
+          "static_current": "https://transitland-gtfs.s3.amazonaws.com/datastore-uploads/feed_version/e535eb2b3b9ac3ef15d82c56575e914575e732e0.zip"
+        }
+      }
+    ],
+    "license_spdx_identifier": "CC0-1.0"
+  }

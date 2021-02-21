@@ -1,0 +1,90 @@
+{
+  "$schema": "https://dmfr.transit.land/json-schema/dmfr.schema.json",
+  "feeds": [
+    {
+      "id": "f-drt-mbta~rt",
+      "spec": "gtfs-rt",
+      "feed_namespace_id": "o-drt-mbta",
+      "other_ids": {
+        "ranek-label-prefix": "MBTA"
+      },
+      "associated_feeds": [
+        "f-drt-mbta"
+      ],
+      "urls": {
+        "realtime_alerts": "https://cdn.mbta.com/realtime/Alerts.pb",
+        "realtime_trip_updates": "https://cdn.mbta.com/realtime/TripUpdates.pb",
+        "realtime_vehicle_positions": "https://cdn.mbta.com/realtime/VehiclePositions.pb"
+      }
+    },
+    {
+      "id": "f-drt-mbta",
+      "spec": "gtfs",
+      "feed_namespace_id": "o-drt-mbta",
+      "associated_feeds": [
+        "f-drt-mbta~rt"
+      ],
+      "urls": {
+        "static_current": "https://cdn.mbta.com/MBTA_GTFS.zip"
+      }
+    },
+    {
+      "id": "f-hart~rt",
+      "spec": "gtfs-rt",
+      "feed_namespace_id": "o-dhv-hillsborougharearegionaltransit",
+      "other_ids": {
+        "ranek-label-prefix": "HART"
+      },
+      "associated_feeds": [
+        "f-dhv-hillsborougharearegionaltransit"
+      ],
+      "urls": {
+        "realtime_trip_updates": "http://api.tampa.onebusaway.org:8088/trip-updates",
+        "realtime_vehicle_positions": "http://api.tampa.onebusaway.org:8088/vehicle-positions"
+      }
+    },
+    {
+      "id": "f-dhv-hillsborougharearegionaltransit",
+      "spec": "gtfs",
+      "feed_namespace_id": "o-dhv-hillsborougharearegionaltransit",
+      "associated_feeds": [
+        "f-hart~rt"
+      ],
+      "urls": {
+        "static_current": "http://www.gohart.org/google/google_transit.zip"
+      }
+    },
+    {
+      "id": "f-trimet~rt",
+      "spec": "gtfs-rt",
+      "feed_namespace_id": "o-c20-trimet",
+      "other_ids": {
+        "ranek-label-prefix": "TriMet"
+      },
+      "associated_feeds": [
+        "f-c20-trimet"
+      ],
+      "urls": {
+        "realtime_alerts": "http://developer.trimet.org/ws/V1/FeedSpecAlerts&appID={TRIMET_API_KEY}",
+        "realtime_trip_updates": "http://developer.trimet.org/ws/V1/TripUpdate&appID={TRIMET_API_KEY}",
+        "realtime_vehicle_positions": "http://developer.trimet.org/ws/gtfs/VehiclePositions&appID={TRIMET_API_KEY}"
+      },
+      "authorization": {
+        "type": "path_segment",
+        "info_url": "https://developer.trimet.org/"
+      }
+    },
+    {
+      "id": "f-c20-trimet",
+      "spec": "gtfs",
+      "feed_namespace_id": "o-c20-trimet",
+      "associated_feeds": [
+        "f-trimet~rt"
+      ],
+      "urls": {
+        "static_current": "https://developer.trimet.org/schedule/gtfs.zip"
+      }
+    }
+  ],
+  "license_spdx_identifier": "CC0-1.0"
+}

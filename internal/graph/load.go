@@ -1,6 +1,6 @@
 package graph
 
-import "github.com/interline-io/gotransit"
+import "github.com/interline-io/transitland-lib/tl"
 
 // we just need EntityID / Filename
 type entity interface {
@@ -17,7 +17,7 @@ func entityNode(ent entity) *Node {
 }
 
 // BuildGraph .
-func BuildGraph(reader gotransit.Reader) (*EntityGraph, error) {
+func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	eg := NewEntityGraph()
 	// Add Agencies and select default Agency
 	var dan *Node
@@ -63,25 +63,35 @@ func BuildGraph(reader gotransit.Reader) (*EntityGraph, error) {
 	}
 	// Add Stops and link to parent stations
 	ps := map[string]string{}   // parent stations
+	cs := map[string][]string{} // non-platform stops in stations
 	fz := map[string][]string{} // farezones	1
 	for ent := range reader.Stops() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
 		if ent.ParentStation.Key != "" {
 			ps[ent.StopID] = ent.ParentStation.Key
+			cs[ent.ParentStation.Key] = append(cs[ent.ParentStation.Key], ent.StopID)
 		}
-		if len(ent.ZoneID) > 0 {
+		if ent.ZoneID != "" {
 			fz[ent.ZoneID] = append(fz[ent.ZoneID], ent.StopID)
 		}
 	}
 	// Add stops to parent stops
-	for k, sid := range ps {
-		a, ok1 := eg.Node(NewNode("stops.txt", sid))
-		b, ok2 := eg.Node(NewNode("stops.txt", k))
+	for sid, parentid := range ps {
+		a, ok1 := eg.Node(NewNode("stops.txt", parentid))
+		b, ok2 := eg.Node(NewNode("stops.txt", sid))
 		if ok1 && ok2 {
 			eg.AddEdge(a, b)
 		}
+		// Add non-platform stops, inverted as parents of station
+		for _, npsid := range cs[parentid] {
+			c, ok3 := eg.Node(NewNode("stops.txt", npsid))
+			if ok1 && ok3 {
+				eg.AddEdge(c, a)
+			}
+		}
 	}
+
 	// Add stops to farezones
 	for k, sids := range fz {
 		fn, _ := eg.AddNode(NewNode("farezone", k))

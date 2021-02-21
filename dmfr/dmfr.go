@@ -9,22 +9,25 @@ import (
 	"os"
 	"strings"
 
-	"github.com/interline-io/gotransit/internal/log"
+	"github.com/dimchansky/utfbom"
+	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 )
+
+// Feed .
+type Feed = tl.Feed
+
+// FeedUrls .
+type FeedUrls = tl.FeedUrls
+
+// FeedLanguages .
+type FeedLanguages = tl.FeedLanguages
 
 // Registry represents a parsed Distributed Mobility Feed Registry (DMFR) file
 type Registry struct {
 	Schema                string `json:"$schema"`
 	Feeds                 []Feed
 	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
-}
-
-// Feed listed in a parsed DMFR file
-type Feed struct {
-	Spec        string
-	ID          string
-	URL         string
-	IDCrosswalk map[string]string `json:"id_crosswalk"`
 }
 
 // NewRegistry TODO
@@ -35,15 +38,17 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 	}
 	var registry Registry
 	if err := json.Unmarshal([]byte(contents), &registry); err != nil {
+		if e, ok := err.(*json.SyntaxError); ok {
+			log.Debug("Syntax error at byte offset %d", e.Offset)
+		}
 		return nil, err
 	}
-	log.Info("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
+	log.Debug("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
 	if registry.LicenseSpdxIdentifier != "CC0-1.0" {
-		log.Info("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
+		log.Debug("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
 	}
-	// for _, feed := range registry.Feeds {
 	for i := 0; i < len(registry.Feeds); i++ {
-		registry.Feeds[i].IDCrosswalk = map[string]string{}
+		registry.Feeds[i].OtherIDs = map[string]string{}
 		feedSpec := strings.ToLower(registry.Feeds[i].Spec)
 		if feedSpec == "gtfs" || feedSpec == "gtfs-rt" || feedSpec == "gbfs" || feedSpec == "mds" {
 			continue
@@ -71,18 +76,20 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 			return nil, err
 		}
 		defer resp.Body.Close()
-		if body, err := ioutil.ReadAll(resp.Body); err != nil {
+		body, err := ioutil.ReadAll(utfbom.SkipOnly(resp.Body))
+		if err != nil {
 			return nil, err
-		} else {
-			return NewRegistry(bytes.NewReader(body))
 		}
-	} else {
-		if reader, err := os.Open(path); err != nil {
-			return nil, err
-		} else {
-			return NewRegistry(reader)
-		}
+		reader := bytes.NewReader(body)
+		readerSkippingBOM := utfbom.SkipOnly(reader)
+		return NewRegistry(readerSkippingBOM)
 	}
+	reader, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	readerSkippingBOM, _ := utfbom.Skip(reader)
+	return NewRegistry(readerSkippingBOM)
 }
 
 // ParseString TODO

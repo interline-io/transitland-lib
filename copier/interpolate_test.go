@@ -1,9 +1,10 @@
 package copier
 
 import (
+	"database/sql"
 	"testing"
 
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func testExpectInt(t *testing.T, result, expect int) {
@@ -20,13 +21,13 @@ type expectStopTime struct {
 	ExpectDepartureTime int
 }
 
-func expectTripToStopTime(e []expectStopTime) []gotransit.StopTime {
-	ret := []gotransit.StopTime{}
+func expectTripToStopTime(e []expectStopTime) []tl.StopTime {
+	ret := []tl.StopTime{}
 	for _, i := range e {
-		ret = append(ret, gotransit.StopTime{
+		ret = append(ret, tl.StopTime{
 			ArrivalTime:       i.ArrivalTime,
 			DepartureTime:     i.DepartureTime,
-			ShapeDistTraveled: i.ShapeDistTraveled,
+			ShapeDistTraveled: sql.NullFloat64{Valid: true, Float64: i.ShapeDistTraveled},
 		})
 	}
 	return ret
@@ -35,13 +36,13 @@ func expectTripToStopTime(e []expectStopTime) []gotransit.StopTime {
 func TestInterpolateStopTimes(t *testing.T) {
 	expectTrips := [][]expectStopTime{
 		// one gap
-		[]expectStopTime{
+		{
 			{0, 20, 0.0, 0, 0},
 			{0, 0, 10.0, 60, 60},
 			{100, 120, 20.0, 0, 0},
 		},
 		// two gaps
-		[]expectStopTime{
+		{
 			{0, 10, 0.0, 0, 0},
 			{0, 0, 10.0, 12, 12},
 			{20, 40, 50.0, 0, 0},
@@ -49,7 +50,7 @@ func TestInterpolateStopTimes(t *testing.T) {
 			{64, 64, 70.0, 0, 0},
 		},
 		// one gap, three stops
-		[]expectStopTime{
+		{
 			{10, 10, 10.0, 0, 0},
 			{0, 0, 20.0, 20, 20},
 			{0, 0, 30.0, 30, 30},

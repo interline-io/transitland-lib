@@ -1,0 +1,2 @@
+error,field,filename,entity_id
+FileDuplicateFieldError,agency_name,agency.txt,

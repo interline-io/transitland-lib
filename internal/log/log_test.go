@@ -10,21 +10,6 @@ import (
 var prefix = "2019/03/19 17:08:58  "
 var msg = "test %d"
 
-func TestPrintln(t *testing.T) {
-	lv := Level
-	buf := bytes.NewBufferString("")
-	Level = 20
-	log.SetOutput(buf)
-	Println("test", "ok")
-	a := 7
-	b := len(buf.String())
-	if a >= b {
-		t.Errorf("expected at least %d characters, got %d", a, b)
-	}
-	log.SetOutput(os.Stdout)
-	Level = lv
-}
-
 func TestFatal(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -42,10 +27,10 @@ func TestLogLevels(t *testing.T) {
 		level int
 		f     func(string, ...interface{})
 	}{
+		{"Error", 40, Error},
 		{"Info", 20, Info},
 		{"Debug", 10, Debug},
-		{"Trace", 5, Trace},
-		{"Printf", 0, Printf},
+		{"Query", 5, QueryStart},
 	}
 	for _, f := range funcs {
 		t.Run(f.name, func(t *testing.T) {

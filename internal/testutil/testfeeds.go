@@ -1,8 +1,41 @@
 package testutil
 
-// ExampleFeed .
-var ExampleFeed = ReaderTester{
-	URL: "../testdata/example",
+// ExampleDir .
+var ExampleDir = ReaderTester{
+	URL: "../test/data/example",
+	Counts: map[string]int{
+		"agency.txt":          1,
+		"routes.txt":          5,
+		"trips.txt":           11,
+		"stops.txt":           9,
+		"stop_times.txt":      28,
+		"shapes.txt":          3,
+		"calendar.txt":        2,
+		"calendar_dates.txt":  2,
+		"feed_info.txt":       1,
+		"fare_rules.txt":      4,
+		"fare_attributes.txt": 2,
+		"frequency.txt":       11,
+		"transfers.txt":       0,
+	},
+	EntityIDs: map[string][]string{
+		"agency.txt":          {"DTA"},
+		"routes.txt":          {"AB", "BFC", "STBA", "CITY", "AAMV"},
+		"trips.txt":           {"AB1", "AB2", "STBA", "CITY1", "CITY2", "BFC1", "BFC2", "AAMV1", "AAMV2", "AAMV3", "AAMV4"},
+		"stops.txt":           {"FUR_CREEK_RES", "BULLFROG"}, // partial
+		"shapes.txt":          {"ok", "a", "c"},
+		"calendar.txt":        {"FULLW", "WE"},
+		"fare_attributes.txt": {"p", "a"},
+	},
+	DirSHA1: "1aa738a7f692c0a32acdd3cf4242c3d9d554e0f9",
+}
+
+// ExampleZip .
+var ExampleZip = ReaderTester{
+	URL:     "../test/data/example.zip",
+	SHA1:    "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
+	DirSHA1: "1aa738a7f692c0a32acdd3cf4242c3d9d554e0f9",
+	Size:    4197,
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"routes.txt":          5,
@@ -29,6 +62,16 @@ var ExampleFeed = ReaderTester{
 	},
 }
 
+// ExampleZipNestedDir .
+var ExampleZipNestedDir = ReaderTester{
+	URL: "../test/data/example-nested-dir.zip#example-nested-dir/example",
+}
+
+// ExampleZipNestedZip .
+var ExampleZipNestedZip = ReaderTester{
+	URL: "../test/data/example-nested-zip.zip#example-nested-zip/example.zip",
+}
+
 // ExternalTestFeed .
 func ExternalTestFeed(key string) (ReaderTester, bool) {
 	a, ok := ExternalTestFeeds[key]
@@ -38,7 +81,7 @@ func ExternalTestFeed(key string) (ReaderTester, bool) {
 // ExternalTestFeeds -- Generated from above commented out code
 var ExternalTestFeeds = map[string]ReaderTester{
 	"bart.zip": ReaderTester{
-		URL: "../testdata/external/bart.zip",
+		URL: "../test/data/external/bart.zip",
 		Counts: map[string]int{"agency.txt": 1,
 			"calendar.txt":        3,
 			"calendar_dates.txt":  12,
@@ -93,7 +136,7 @@ var ExternalTestFeeds = map[string]ReaderTester{
 				"3670448WKDY"}}},
 
 	"cdmx.zip": ReaderTester{
-		URL: "../testdata/external/cdmx.zip",
+		URL: "../test/data/external/cdmx.zip",
 		Counts: map[string]int{
 			"agency.txt":      8,
 			"calendar.txt":    99,
@@ -169,7 +212,7 @@ var ExternalTestFeeds = map[string]ReaderTester{
 				"14848",
 				"15171"}}},
 	"mbta.zip": ReaderTester{
-		URL: "../testdata/external/mbta.zip",
+		URL: "../test/data/external/mbta.zip",
 		Counts: map[string]int{
 			"agency.txt":         2,
 			"calendar.txt":       122,

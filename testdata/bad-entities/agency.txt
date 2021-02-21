@@ -1,7 +1,0 @@
-agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email,expect_error
-ok,valid agency,http://google.com,America/Los_Angeles,en,515 555-5555,http://example.com,info@example.com,
-,warning no agency_id,http://google.com,America/Los_Angeles,,,,,ValidationWarning:agency_id
-invalid_agency_url,invalid agency_url,example.com,America/Los_Angeles,,,,,InvalidFieldError:agency_url
-invalid_agency_timezone,invalid agency_timezone,http://example.com,bad,,,,,InvalidFieldError:agency_timezone
-no_agency_timezone,no agency_timezone,http://example.com,,,,,,RequiredFieldError:agency_timezone
-invalid_agency_lang,invalid agency_lang,http://example.com,America/Los_Angeles,xyz,,,,InvalidFieldError:agency_lang
