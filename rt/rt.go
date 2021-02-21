@@ -4,8 +4,8 @@ package rt
 import (
 	"io/ioutil"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"google.golang.org/protobuf/proto"
 )
 
 func readmsg(filename string) (*pb.FeedMessage, error) {
