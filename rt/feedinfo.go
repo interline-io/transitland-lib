@@ -1,7 +1,7 @@
 package rt
 
 import (
-	"github.com/interline-io/gotransit"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 // FeedInfo .
@@ -23,7 +23,7 @@ func NewFeedInfo() *FeedInfo {
 }
 
 // NewFeedInfoFromReader .
-func NewFeedInfoFromReader(reader gotransit.Reader) (*FeedInfo, error) {
+func NewFeedInfoFromReader(reader tl.Reader) (*FeedInfo, error) {
 	fi := NewFeedInfo()
 	add := func(efn string, eid string) {
 		m, ok := fi.ids[efn]

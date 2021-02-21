@@ -1,21 +1,11 @@
 package rt
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
 )
 
-func Test_msgstats(t *testing.T) {
-	msg, err := readmsg("../testdata/rt/example.pb")
-	if err != nil {
-		t.Error(err)
-	}
-	msgstats(msg)
-}
-
 func Test_readmsg(t *testing.T) {
-	msg, err := readmsg("../testdata/rt/example.pb")
+	msg, err := readmsg("../test/data/rt/example.pb")
 	if err != nil {
 		t.Error(err)
 	}
@@ -43,12 +33,12 @@ func Test_readmsg(t *testing.T) {
 			t.Errorf("got '%s' expect '%s'", got, exp)
 		}
 	})
-	z, _ := json.Marshal(msg)
-	fmt.Printf("%s\n", z)
+	// z, _ := json.Marshal(msg)
+	// fmt.Printf("%s\n", z)
 }
 
 func Test_readmsg_error(t *testing.T) {
-	_, err := readmsg("../testdata/example.zip")
+	_, err := readmsg("../test/data/example.zip")
 	if err == nil {
 		t.Errorf("got no error, expected illegal tag")
 	}

@@ -16,12 +16,12 @@ func newfi() *FeedInfo {
 
 func TestValidateHeader(t *testing.T) {
 	fi := newfi()
-	msg, err := readmsg("../testdata/rt/example.pb")
+	msg, err := readmsg("../test/data/rt/example.pb")
 	if err != nil {
 		t.Error(err)
 	}
 	header := msg.GetHeader()
-	errs := ValidateHeader(fi, header, &msg)
+	errs := ValidateHeader(fi, header, msg)
 	for _, err := range errs {
 		fmt.Println(err)
 	}
@@ -29,7 +29,7 @@ func TestValidateHeader(t *testing.T) {
 
 func TestValidateTripUpdate(t *testing.T) {
 	fi := newfi()
-	msg, err := readmsg("../testdata/rt/example.pb")
+	msg, err := readmsg("../test/data/rt/example.pb")
 	if err != nil {
 		t.Error(err)
 	}
@@ -41,7 +41,7 @@ func TestValidateTripUpdate(t *testing.T) {
 	if trip == nil {
 		t.Error("expected TripUpdate")
 	}
-	errs := ValidateTripUpdate(fi, trip, &msg)
+	errs := ValidateTripUpdate(fi, trip, msg)
 	for _, err := range errs {
 		fmt.Println(err)
 	}

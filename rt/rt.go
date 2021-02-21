@@ -1,24 +1,21 @@
+// Package rt provides support for GTFS-RealTime. This API is under development and will change.
 package rt
 
 import (
 	"io/ioutil"
 
 	"github.com/golang/protobuf/proto"
-	pb "github.com/interline-io/gotransit/rt/transit_realtime"
+	"github.com/interline-io/transitland-lib/rt/pb"
 )
 
-func msgstats(msg pb.FeedMessage) {
-
-}
-
-func readmsg(filename string) (pb.FeedMessage, error) {
+func readmsg(filename string) (*pb.FeedMessage, error) {
 	msg := pb.FeedMessage{}
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return msg, err
+		return &msg, err
 	}
 	if err := proto.Unmarshal(data, &msg); err != nil {
-		return msg, err
+		return &msg, err
 	}
-	return msg, nil
+	return &msg, nil
 }

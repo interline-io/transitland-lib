@@ -3,8 +3,8 @@ package rt
 import (
 	"time"
 
-	"github.com/interline-io/gotransit"
-	pb "github.com/interline-io/gotransit/rt/transit_realtime"
+	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 func ne(msg string, code int) *RealtimeError {
@@ -52,6 +52,8 @@ func ValidateFeedMessage(fi *FeedInfo, current *pb.FeedMessage, previous *pb.Fee
 func ValidateHeader(fi *FeedInfo, header *pb.FeedHeader, current *pb.FeedMessage) (errs []error) {
 	if v := header.GetGtfsRealtimeVersion(); v == "3.0" || v == "2.0" {
 		// TODO: additional version specific checks
+	} else if v == "1.0" {
+		//ok
 	} else {
 		errs = append(errs, E038)
 	}
@@ -231,7 +233,7 @@ func ValidateTripDescriptor(fi *FeedInfo, td *pb.TripDescriptor, current *pb.Fee
 		}
 	}
 	if td.StartTime != nil {
-		if _, err := gotransit.NewWideTime(*td.StartTime); err != nil {
+		if _, err := tl.NewWideTime(*td.StartTime); err != nil {
 			errs = append(errs, ne("TripDescriptor could not parse StartTime", 20))
 		}
 	}
