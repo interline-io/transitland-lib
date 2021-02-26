@@ -208,6 +208,56 @@ func (g Polygon) MarshalGQL(w io.Writer) {
 	w.Write(x)
 }
 
+//////////////////
+
+// Geometry is an EWKB/GeoJSON wrapper for arbitary geometry.
+type Geometry struct {
+	Geometry geom.T
+}
+
+// Scan implements the Scanner interface
+func (g *Geometry) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+	b, ok := src.([]byte)
+	if !ok {
+		return nil
+	}
+	got, err := wkbDecode(b)
+	if err != nil {
+		return err
+	}
+	g.Geometry = got
+	return nil
+}
+
+// Value implements driver.Value
+func (g *Geometry) Value() (driver.Value, error) {
+	if g.Geometry == nil {
+		return nil, nil
+	}
+	return ewkb.Marshal(g.Geometry, ewkb.NDR)
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (g *Geometry) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (g Geometry) MarshalGQL(w io.Writer) {
+	if g.Geometry == nil {
+		w.Write([]byte("null"))
+		return
+	}
+	x, err := geojson.Marshal(g.Geometry)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(x)
+}
+
 /////////// helpers
 
 // wkbEncode encodes a geometry into EWKB.
@@ -234,3 +284,5 @@ func wkbDecode(b []byte) (geom.T, error) {
 	}
 	return got, nil
 }
+
+/////////////////
