@@ -1,10 +1,12 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 func newTestService() *tl.Service {
@@ -53,5 +55,58 @@ func TestService_IsActive(t *testing.T) {
 		if result != exp.value {
 			t.Errorf("day %s got %t expect %t", exp.day, result, exp.value)
 		}
+	}
+}
+
+func TestService_Simplify(t *testing.T) {
+	type testcase struct {
+		name    string
+		service *tl.Service
+	}
+	testcases := []testcase{
+		{"TestService", newTestService()},
+	}
+	// get more examples from feeds
+	feedchecks := []string{
+		"../../test/data/example",
+		"../../test/data/external/bart.zip",
+		"../../test/data/external/mbta.zip",
+		"../../test/data/external/cdmx.zip",
+	}
+	for _, path := range feedchecks {
+		reader, err := tlcsv.NewReader(path)
+		if err != nil {
+			panic(err)
+		}
+		if err := reader.Open(); err != nil {
+			panic(err)
+		}
+		for _, svc := range tl.NewServicesFromReader(reader) {
+			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", path, svc.ServiceID), svc})
+		}
+	}
+	for _, tc := range testcases {
+		if len(tc.service.CalendarDates()) == 0 {
+			// No need to test services without exceptions...
+			continue
+		}
+		t.Run(tc.name, func(t *testing.T) {
+			s := tc.service
+			ret, err := s.Simplify()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			// Verify all IsActive values match
+			start, end := s.ServicePeriod()
+			for start.Before(end) || start.Equal(end) {
+				a := s.IsActive(start)
+				b := ret.IsActive(start)
+				if a != b {
+					t.Errorf("got %t on day %s, expected %t", b, start.Format("2006-01-02"), a)
+				}
+				start = start.AddDate(0, 0, 1)
+			}
+		})
 	}
 }
