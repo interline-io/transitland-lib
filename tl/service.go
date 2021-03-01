@@ -2,6 +2,7 @@ package tl
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -173,15 +174,23 @@ func (s *Service) IsActive(t time.Time) bool {
 	return v == 1
 }
 
+func (s *Service) Exception(t time.Time) (int, bool) {
+	a, ok := s.exceptions[newYMD(t)]
+	return a, ok
+}
+
 // Simplify tries to simplify exceptions down to a basic calendar with fewer exceptions.
 func (s *Service) Simplify() (*Service, error) {
-	inputStart, inputEnd := s.ServicePeriod()
+	inputServiceStart, inputServiceEnd := s.StartDate, s.EndDate
+	if s.Generated || s.StartDate.IsZero() || s.EndDate.IsZero() {
+		inputServiceStart, inputServiceEnd = s.ServicePeriod()
+	}
 	// Count the total days and active days, by day of week
 	totalCount := map[int]int{}
 	activeCount := map[int]int{}
 	addedCount := map[int]int{}
 	removedCount := map[int]int{}
-	start, end := inputStart, inputEnd
+	start, end := inputServiceStart, inputServiceEnd
 	for start.Before(end) || start.Equal(end) {
 		dow := int(start.Weekday())
 		totalCount[dow]++
@@ -198,7 +207,7 @@ func (s *Service) Simplify() (*Service, error) {
 	}
 
 	// Set weekdays based on dow counts
-	ret := NewService(Calendar{ServiceID: s.ServiceID, Generated: s.Generated, StartDate: inputStart, EndDate: inputEnd})
+	ret := NewService(Calendar{ServiceID: s.ServiceID, Generated: s.Generated, StartDate: inputServiceStart, EndDate: inputServiceEnd})
 	for dow, total := range totalCount {
 		if total == 0 {
 			continue
@@ -218,7 +227,7 @@ func (s *Service) Simplify() (*Service, error) {
 	}
 
 	// Add exceptions
-	start, end = inputStart, inputEnd
+	start, end = s.ServicePeriod() // check over the entire service range
 	for start.Before(end) || start.Equal(end) {
 		a := s.IsActive(start)
 		b := ret.IsActive(start)
@@ -235,7 +244,13 @@ func (s *Service) Simplify() (*Service, error) {
 		}
 		start = start.AddDate(0, 0, 1)
 	}
-	// fmt.Println("input:", s.StartDate.String()[0:10], "end:", s.EndDate.String()[0:10], "Days:", s.Sunday, s.Monday, s.Tuesday, s.Wednesday, s.Thursday, s.Friday, s.Saturday, "calendar_date count:", len(s.CalendarDates()))
-	// fmt.Println("ret  :", ret.StartDate.String()[0:10], "end:", ret.EndDate.String()[0:10], "Days:", ret.Sunday, ret.Monday, ret.Tuesday, ret.Wednesday, ret.Thursday, ret.Friday, ret.Saturday, "calendar_Date count:", len(ret.CalendarDates()))
+	fmt.Println("input:", s.StartDate.String()[0:10], "end:", s.EndDate.String()[0:10], "Days:", s.Sunday, s.Monday, s.Tuesday, s.Wednesday, s.Thursday, s.Friday, s.Saturday, "calendar_date count:", len(s.CalendarDates()))
+	fmt.Println("ret  :", ret.StartDate.String()[0:10], "end:", ret.EndDate.String()[0:10], "Days:", ret.Sunday, ret.Monday, ret.Tuesday, ret.Wednesday, ret.Thursday, ret.Friday, ret.Saturday, "calendar_date count:", len(ret.CalendarDates()))
+	if a, b := len(s.CalendarDates()), len(ret.CalendarDates()); b > a {
+		fmt.Printf("calendar_dates increased: %d -> %d\n", a, b)
+	} else if b < a {
+		fmt.Printf("ok; calendar_dates decreased: %d -> %d\n", a, b)
+	}
+
 	return ret, nil
 }
