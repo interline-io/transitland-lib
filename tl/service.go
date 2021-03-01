@@ -2,7 +2,6 @@ package tl
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -81,6 +80,7 @@ func (s *Service) CalendarDates() []CalendarDate {
 	ret := []CalendarDate{}
 	for ymd, v := range s.exceptions {
 		ret = append(ret, CalendarDate{
+			ServiceID:     s.ServiceID,
 			Date:          ymd.Time(),
 			ExceptionType: v,
 		})
@@ -177,27 +177,42 @@ func (s *Service) IsActive(t time.Time) bool {
 func (s *Service) Simplify() (*Service, error) {
 	inputStart, inputEnd := s.ServicePeriod()
 	// Count the total days and active days, by day of week
-	totCount := map[int]int{}
-	dowCount := map[int]int{}
+	totalCount := map[int]int{}
+	activeCount := map[int]int{}
+	addedCount := map[int]int{}
+	removedCount := map[int]int{}
 	start, end := inputStart, inputEnd
 	for start.Before(end) || start.Equal(end) {
 		dow := int(start.Weekday())
-		totCount[dow]++
+		totalCount[dow]++
 		if s.IsActive(start) {
-			dowCount[dow]++
+			activeCount[dow]++
+		}
+		etype := s.exceptions[newYMD(start)]
+		if etype == 1 {
+			addedCount[dow]++
+		} else if etype == 2 {
+			removedCount[dow]++
 		}
 		start = start.AddDate(0, 0, 1)
 	}
-	//	Set weekday when >= 80% of days
 
-	ret := NewService(Calendar{StartDate: inputStart, EndDate: inputEnd})
-	for dow, total := range totCount {
+	// Set weekdays based on dow counts
+	ret := NewService(Calendar{ServiceID: s.ServiceID, Generated: s.Generated, StartDate: inputStart, EndDate: inputEnd})
+	for dow, total := range totalCount {
 		if total == 0 {
 			continue
 		}
-		active := dowCount[dow]
-		r := float64(active) / float64(total)
-		if r > 0.8 {
+		active := activeCount[dow]
+		willBeAdded := active           // if 0, then add
+		willBeRemoved := total - active // if 1, then remove
+		// r := float64(active) / float64(total)
+		// _ = r
+		// added := addedCount[dow]
+		// removed := removedCount[dow]
+		// fmt.Println("dow:", dow, "total:", total, "active:", active, "added:", added, "removed:", removed, "willBeAdded:", willBeAdded, "willBeRemoved:", willBeRemoved)
+		if total == active || willBeAdded >= willBeRemoved {
+			// fmt.Println("setting active:", dow)
 			ret.SetWeekday(dow, 1)
 		}
 	}
@@ -211,17 +226,16 @@ func (s *Service) Simplify() (*Service, error) {
 			// both are active
 		} else if a && !b {
 			// existing is active, new is not active
-			fmt.Println("adding:", start, "dow:", start.Weekday())
+			// fmt.Println("adding:", start, "dow:", start.Weekday())
 			ret.AddCalendarDate(CalendarDate{Date: start, ExceptionType: 1})
 		} else if !a && b {
 			// existing is inactive, new is active
-			fmt.Println("removing:", start, "dow:", start.Weekday())
+			// fmt.Println("removing:", start, "dow:", start.Weekday())
 			ret.AddCalendarDate(CalendarDate{Date: start, ExceptionType: 2})
 		}
 		start = start.AddDate(0, 0, 1)
 	}
-	fmt.Println("input:", s.StartDate.String()[0:10], "end:", s.EndDate.String()[0:10], "Days:", s.Monday, s.Tuesday, s.Wednesday, s.Thursday, s.Friday, s.Saturday, s.Sunday, "calendar_date count:", len(s.CalendarDates()))
-	fmt.Println("ret  :", ret.StartDate.String()[0:10], "end:", ret.EndDate.String()[0:10], "Days:", ret.Monday, ret.Tuesday, ret.Wednesday, ret.Thursday, ret.Friday, ret.Saturday, ret.Sunday, "calendar_Date count:", len(ret.CalendarDates()))
-
+	// fmt.Println("input:", s.StartDate.String()[0:10], "end:", s.EndDate.String()[0:10], "Days:", s.Sunday, s.Monday, s.Tuesday, s.Wednesday, s.Thursday, s.Friday, s.Saturday, "calendar_date count:", len(s.CalendarDates()))
+	// fmt.Println("ret  :", ret.StartDate.String()[0:10], "end:", ret.EndDate.String()[0:10], "Days:", ret.Sunday, ret.Monday, ret.Tuesday, ret.Wednesday, ret.Thursday, ret.Friday, ret.Saturday, "calendar_Date count:", len(ret.CalendarDates()))
 	return ret, nil
 }

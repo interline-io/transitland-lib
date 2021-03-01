@@ -69,6 +69,7 @@ func TestService_Simplify(t *testing.T) {
 	// get more examples from feeds
 	feedchecks := []string{
 		"../../test/data/example",
+		"../../test/data/external/caltrain.zip",
 		"../../test/data/external/bart.zip",
 		"../../test/data/external/mbta.zip",
 		"../../test/data/external/cdmx.zip",

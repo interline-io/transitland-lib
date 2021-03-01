@@ -80,6 +80,8 @@ type Copier struct {
 	CreateMissingShapes bool
 	// Create missing Calendar entries
 	NormalizeServiceIDs bool
+	// Simplify Calendars that use mostly CalendarDates
+	SimplifyCalendars bool
 	// Convert extended route types to primitives
 	UseBasicRouteTypes bool
 	// Default AgencyID
@@ -111,6 +113,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer) Copier {
 		InterpolateStopTimes: false,
 		CreateMissingShapes:  false,
 		NormalizeServiceIDs:  false,
+		SimplifyCalendars:    false,
 	}
 	// Result
 	result := NewCopyResult()
@@ -564,7 +567,7 @@ func (copier *Copier) copyRoutes() error {
 }
 
 // copyCalendars copies Calendars and CalendarDates
-func (copier *Copier) copyCalendars() error {
+func (copier *Copier) copyCalendarsOld() error {
 	// Calendars
 	bt := []tl.Entity{}
 	for ent := range copier.Reader.Calendars() {
@@ -618,7 +621,6 @@ func (copier *Copier) copyCalendars() error {
 		if bt, err = copier.checkBatch(bt, &ent); err != nil {
 			return err
 		}
-
 	}
 	if err := copier.writeBatch(bt); err != nil {
 		return err
@@ -975,6 +977,129 @@ func (copier *Copier) createMissingCalendars() error {
 	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
+	copier.result.GeneratedCount["calendar.txt"] += len(bt)
+	return nil
+}
+
+// copyCalendars
+func (copier *Copier) copyCalendars() error {
+	// Get the basic calendars
+	bt := []tl.Entity{}
+	svcs := map[string]*tl.Service{}
+	for cal := range copier.Reader.Calendars() {
+		if _, ok := copier.GetEntity(&cal); ok {
+			continue
+		}
+		if !copier.isMarked(&tl.Calendar{}) {
+			continue
+		}
+		_, ok := svcs[cal.ServiceID]
+		if !ok {
+			svcs[cal.ServiceID] = tl.NewService(cal)
+		}
+		// Write now; so we can catch duplicate IDs
+		ent := cal
+		var err error
+		if bt, err = copier.checkBatch(bt, &ent); err != nil {
+			return err
+		}
+	}
+	if err := copier.writeBatch(bt); err != nil {
+		return err
+	}
+
+	// Keep track of duplicate CalendarDates
+	type calkey struct {
+		ServiceID string
+		Date      string
+	}
+	dups := map[calkey]int{}
+	duperrors := []error{}
+
+	// Calendar Dates
+	for ent := range copier.Reader.CalendarDates() {
+		// Check if we're marked
+		cal := tl.Calendar{
+			ServiceID: ent.ServiceID,
+			Generated: true,
+		}
+		if !copier.isMarked(&cal) {
+			continue
+		}
+		// Check for duplicates (service_id,date)
+		// Add to duperrors because after simplification
+		// some details like csv line no. are lost
+		key := calkey{
+			ServiceID: ent.ServiceID,
+			Date:      ent.Date.Format("20060102"),
+		}
+		if _, ok := dups[key]; ok {
+			duperrors = append(duperrors, causes.NewDuplicateIDError(ent.ServiceID))
+		}
+		dups[key]++
+		// Add to service
+		svc, ok := svcs[ent.ServiceID]
+		if !ok {
+			svc = tl.NewService(cal)
+			svcs[ent.ServiceID] = svc
+		}
+		svc.AddCalendarDate(ent)
+	}
+
+	// Write generated services
+	bt = nil
+	copier.SimplifyCalendars = true
+	if copier.NormalizeServiceIDs {
+		for _, svc := range svcs {
+			if !svc.Generated {
+				continue
+			}
+			if copier.SimplifyCalendars {
+				svc, _ = svc.Simplify()
+			}
+			svcs[svc.ServiceID] = svc
+			var err error
+			if bt, err = copier.checkBatch(bt, &svc.Calendar); err != nil {
+				return err
+			}
+		}
+	}
+	fmt.Println("bt?", bt)
+	if err := copier.writeBatch(bt); err != nil {
+		return err
+	}
+
+	fmt.Println("ok")
+	// Write Calendar Dates
+	bt = nil
+	for _, svc := range svcs {
+		for _, ent := range svc.CalendarDates() {
+			var err error
+			if bt, err = copier.checkBatch(bt, &ent); err != nil {
+				return err
+			}
+		}
+	}
+	if err := copier.writeBatch(bt); err != nil {
+		return err
+	}
+	copier.logCount(&tl.CalendarDate{})
+	return nil
+
+	// TODO: ALLOWED INVALID SERVICEIDS WHEN NOT NORMALIZED
+	// Create the missing Calendars
+	// for _, e := range missing {
+	// 	log.Debug("Create missing cal: %#v\n", e)
+	// 	e := e
+	// 	var err error
+	// 	bt, err = copier.checkBatch(bt, &e)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	// if err := copier.writeBatch(bt); err != nil {
+	// 	return err
+	// }
 	copier.result.GeneratedCount["calendar.txt"] += len(bt)
 	return nil
 }
