@@ -98,16 +98,35 @@ func TestService_Simplify(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			// Verify all IsActive values match
+			if a, b := len(s.CalendarDates()), len(ret.CalendarDates()); b > a {
+				t.Errorf("got %d calendar dates for simplified service, which is more than the input of %d calendar dates", b, a)
+			}
+			// Verify all IsActive values match through entire service period, not just StartDate, EndDate
+			// debugging....
+			// fmt.Println("input:", s.StartDate.String()[0:10], "end:", s.EndDate.String()[0:10], "Days:", s.Sunday, s.Monday, s.Tuesday, s.Wednesday, s.Thursday, s.Friday, s.Saturday, "calendar_date count:", len(s.CalendarDates()))
+			// for _, cd := range s.CalendarDates() {
+			// 	fmt.Printf("\tdate: %s dow: %d type: %d\n", cd.Date.Format("2006-01-02"), cd.Date.Weekday(), cd.ExceptionType)
+			// }
+			// fmt.Println("ret  :", ret.StartDate.String()[0:10], "end:", ret.EndDate.String()[0:10], "Days:", ret.Sunday, ret.Monday, ret.Tuesday, ret.Wednesday, ret.Thursday, ret.Friday, ret.Saturday, "calendar_date count:", len(ret.CalendarDates()))
+			// for _, cd := range ret.CalendarDates() {
+			// 	fmt.Printf("\tdate: %s dow: %d type: %d\n", cd.Date.Format("2006-01-02"), cd.Date.Weekday(), cd.ExceptionType)
+			// }
+			// if a, b := len(s.CalendarDates()), len(ret.CalendarDates()); b > a {
+			// 	fmt.Printf("calendar_dates increased: %d -> %d\n", a, b)
+			// } else if b < a {
+			// 	fmt.Printf("ok; calendar_dates decreased: %d -> %d\n", a, b)
+			// }
 			start, end := s.ServicePeriod()
 			for start.Before(end) || start.Equal(end) {
 				a := s.IsActive(start)
 				b := ret.IsActive(start)
+				// fmt.Printf("\tchecking %s dow: %d a: %t b: %t\n", start.Format("2006-01-02"), start.Weekday(), a, b)
 				if a != b {
 					t.Errorf("got %t on day %s, expected %t", b, start.Format("2006-01-02"), a)
 				}
 				start = start.AddDate(0, 0, 1)
 			}
+
 		})
 	}
 }

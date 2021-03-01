@@ -2,7 +2,6 @@ package tl
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -174,6 +173,7 @@ func (s *Service) IsActive(t time.Time) bool {
 	return v == 1
 }
 
+// Exception returns if a calendar exception exists on the given day.
 func (s *Service) Exception(t time.Time) (int, bool) {
 	a, ok := s.exceptions[newYMD(t)]
 	return a, ok
@@ -215,13 +215,7 @@ func (s *Service) Simplify() (*Service, error) {
 		active := activeCount[dow]
 		willBeAdded := active           // if 0, then add
 		willBeRemoved := total - active // if 1, then remove
-		// r := float64(active) / float64(total)
-		// _ = r
-		// added := addedCount[dow]
-		// removed := removedCount[dow]
-		// fmt.Println("dow:", dow, "total:", total, "active:", active, "added:", added, "removed:", removed, "willBeAdded:", willBeAdded, "willBeRemoved:", willBeRemoved)
 		if total == active || willBeAdded >= willBeRemoved {
-			// fmt.Println("setting active:", dow)
 			ret.SetWeekday(dow, 1)
 		}
 	}
@@ -235,22 +229,12 @@ func (s *Service) Simplify() (*Service, error) {
 			// both are active
 		} else if a && !b {
 			// existing is active, new is not active
-			// fmt.Println("adding:", start, "dow:", start.Weekday())
 			ret.AddCalendarDate(CalendarDate{Date: start, ExceptionType: 1})
 		} else if !a && b {
 			// existing is inactive, new is active
-			// fmt.Println("removing:", start, "dow:", start.Weekday())
 			ret.AddCalendarDate(CalendarDate{Date: start, ExceptionType: 2})
 		}
 		start = start.AddDate(0, 0, 1)
 	}
-	fmt.Println("input:", s.StartDate.String()[0:10], "end:", s.EndDate.String()[0:10], "Days:", s.Sunday, s.Monday, s.Tuesday, s.Wednesday, s.Thursday, s.Friday, s.Saturday, "calendar_date count:", len(s.CalendarDates()))
-	fmt.Println("ret  :", ret.StartDate.String()[0:10], "end:", ret.EndDate.String()[0:10], "Days:", ret.Sunday, ret.Monday, ret.Tuesday, ret.Wednesday, ret.Thursday, ret.Friday, ret.Saturday, "calendar_date count:", len(ret.CalendarDates()))
-	if a, b := len(s.CalendarDates()), len(ret.CalendarDates()); b > a {
-		fmt.Printf("calendar_dates increased: %d -> %d\n", a, b)
-	} else if b < a {
-		fmt.Printf("ok; calendar_dates decreased: %d -> %d\n", a, b)
-	}
-
 	return ret, nil
 }
