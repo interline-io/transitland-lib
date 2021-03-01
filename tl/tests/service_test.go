@@ -1,17 +1,19 @@
-package tl
+package tests
 
 import (
 	"testing"
 	"time"
+
+	"github.com/interline-io/transitland-lib/tl"
 )
 
-func newTestService() *Service {
+func newTestService() *tl.Service {
 	start, _ := time.Parse("20060102", "20190101")
 	end, _ := time.Parse("20060102", "20190131")
 	except, _ := time.Parse("20060102", "20190102")
 	added, _ := time.Parse("20060102", "20190105")
-	s := NewService(
-		Calendar{
+	s := tl.NewService(
+		tl.Calendar{
 			StartDate: start,
 			EndDate:   end,
 			Monday:    1,
@@ -22,8 +24,8 @@ func newTestService() *Service {
 			Saturday:  0,
 			Sunday:    0,
 		},
-		CalendarDate{Date: added, ExceptionType: 1},
-		CalendarDate{Date: except, ExceptionType: 2},
+		tl.CalendarDate{Date: added, ExceptionType: 1},
+		tl.CalendarDate{Date: except, ExceptionType: 2},
 	)
 	return s
 }
