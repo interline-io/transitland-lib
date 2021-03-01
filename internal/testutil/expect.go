@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type context interface {
+type HasContext interface {
 	Context() *causes.Context
 }
 
@@ -107,14 +107,14 @@ func (e *ExpectError) Match(errs []error) bool {
 	for _, err := range errs {
 		// Outer cause, if known
 		expect := ExpectError{}
-		if outer, ok := err.(context); ok {
+		if outer, ok := err.(HasContext); ok {
 			expect.Filename = outer.Context().Filename
 			expect.EntityID = outer.Context().EntityID
 			expect.Field = outer.Context().Field
 		}
 		// Inner most cause
 		cause := errors.Cause(err)
-		if inner, ok := cause.(context); ok {
+		if inner, ok := cause.(HasContext); ok {
 			ctx := inner.Context()
 			if len(ctx.Filename) > 0 {
 				expect.Filename = ctx.Filename

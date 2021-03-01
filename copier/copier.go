@@ -287,10 +287,11 @@ func (copier *Copier) Copy() *CopyResult {
 	// Handle source errors and warnings
 	sourceErrors := map[string][]error{}
 	for _, err := range copier.Reader.ValidateStructure() {
+		fn := ""
 		if v, ok := err.(errorWithContext); ok {
-			fn := v.Context().Filename
-			sourceErrors[fn] = append(sourceErrors[fn], err)
+			fn = v.Context().Filename
 		}
+		sourceErrors[fn] = append(sourceErrors[fn], err)
 	}
 	for fn, errs := range sourceErrors {
 		copier.ErrorHandler.HandleSourceErrors(fn, errs, nil)

@@ -29,6 +29,26 @@ import (
 // Maybe validations:
 //   route color starts with '#' ?
 
+// Best practice ideas?
+//   Calendar with service on no days of week
+//   stop_time shape_dist > shape max dist
+//   stop too far from shape
+//   stop too far from parent
+//   stop too close?
+//   Information on unknown columns/files?
+//   Feed expiration upcoming? less than 7 days of service?
+//   Too fast travel
+//   Unused stops, routes, agencies, etc.
+//   route_long_name begins with route_short_name
+//   Insufficient contrast in route colors?
+//   Consecutive stops with same time?
+//   Stop Too Far From Shape With Dist Traveled
+
+// HasContext is an error that includes location information.
+type HasContext interface {
+	Context() *Context
+}
+
 // Context adds structured context.
 type Context struct {
 	Filename string
@@ -37,6 +57,7 @@ type Context struct {
 	Field    string
 	Value    string
 	Message  string
+	cause    error
 }
 
 // bc avoids the problem of having a method
@@ -46,6 +67,39 @@ type bc = Context
 // Context returns the base context
 func (e *Context) Context() *Context {
 	return e
+}
+
+// Cause returns the underlying error and implements the Causer interface.
+func (e *Context) Cause() error {
+	return e.cause
+}
+
+// Update sets new values, if present
+func (e *Context) Update(v *Context) {
+	if v == nil {
+		return
+	}
+	if v.Filename != "" {
+		e.Filename = v.Filename
+	}
+	if v.Line > 0 {
+		e.Line = v.Line
+	}
+	if v.EntityID != "" {
+		e.EntityID = v.EntityID
+	}
+	if v.Field != "" {
+		e.Field = v.Field
+	}
+	if v.Value != "" {
+		e.Value = v.Value
+	}
+	if v.Message != "" {
+		e.Message = v.Message
+	}
+	if v.cause != nil {
+		e.cause = v.cause
+	}
 }
 
 func (e *Context) Error() string {
@@ -58,17 +112,16 @@ func (e *Context) Error() string {
 
 // SourceUnreadableError reports when the archive itself cannot be read
 type SourceUnreadableError struct {
-	cause error
 	bc
 }
 
 // NewSourceUnreadableError returns a new SourceUnreadableError
 func NewSourceUnreadableError(message string, err error) *SourceUnreadableError {
-	return &SourceUnreadableError{bc: bc{Message: message}, cause: err}
+	return &SourceUnreadableError{bc: bc{Message: message, cause: err}}
 }
 
 func (e *SourceUnreadableError) Error() string {
-	return fmt.Sprintf("could not read file '%s': %s", e.Filename, e.cause)
+	return fmt.Sprintf("could not read file '%s'", e.Filename)
 }
 
 ////////////////////////////
@@ -84,7 +137,7 @@ func NewFileRequiredError(filename string) *FileRequiredError {
 }
 
 func (e *FileRequiredError) Error() string {
-	return fmt.Sprintf("required file not present or could not be read: %s", e.Filename)
+	return fmt.Sprintf("required file '%s' not present or could not be read", e.Filename)
 }
 
 ////////////////////////////
@@ -105,36 +158,34 @@ func (e *FileNotPresentError) Error() string {
 
 ////////////////////////////
 
-// FileParseError reports an error parsing a row
-type FileParseError struct {
-	cause error
+// RowParseError reports an error parsing a row
+type RowParseError struct {
 	bc
 }
 
-// NewFileParseError returns a new FileParseError
-func NewFileParseError(line int, err error) *FileParseError {
-	return &FileParseError{bc: bc{Line: line}, cause: err}
+// NewRowParseError returns a new RowParseError
+func NewRowParseError(line int, err error) *RowParseError {
+	return &RowParseError{bc: bc{Line: line, cause: err}}
 }
 
-func (e *FileParseError) Error() string {
-	return fmt.Sprintf("could not parse row %d: %s", e.Line, e.cause)
+func (e *RowParseError) Error() string {
+	return fmt.Sprintf("could not parse row %d", e.Line)
 }
 
 ////////////////////////////
 
 // FileUnreadableError reports an error parsing a row
 type FileUnreadableError struct {
-	cause error
 	bc
 }
 
 // NewFileUnreadableError returns a new FileUnreadableError
 func NewFileUnreadableError(filename string, err error) *FileUnreadableError {
-	return &FileUnreadableError{bc: bc{Filename: filename}, cause: err}
+	return &FileUnreadableError{bc: bc{Filename: filename, cause: err}}
 }
 
 func (e *FileUnreadableError) Error() string {
-	return fmt.Sprintf("could not read file '%s': %s", e.Filename, e.cause)
+	return fmt.Sprintf("could not read file '%s'", e.Filename)
 }
 
 ////////////////////////////
@@ -261,17 +312,16 @@ func (e *ConditionallyRequiredFieldError) Error() string {
 
 // InvalidFieldError reports an invalid value for a field
 type InvalidFieldError struct {
-	cause error
 	bc
 }
 
 // NewInvalidFieldError returns a new InvalidFieldError
 func NewInvalidFieldError(field string, value string, err error) *InvalidFieldError {
-	return &InvalidFieldError{bc: bc{Field: field, Value: value}, cause: err}
+	return &InvalidFieldError{bc: bc{Field: field, Value: value, cause: err}}
 }
 
 func (e *InvalidFieldError) Error() string {
-	return fmt.Sprintf("invalid value for field %s: '%s', reason: %s", e.Field, e.Value, e.cause.Error())
+	return fmt.Sprintf("invalid value for field %s: '%s'", e.Field, e.Value)
 }
 
 ////////////////////////////
