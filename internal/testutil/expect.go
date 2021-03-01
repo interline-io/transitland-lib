@@ -3,7 +3,9 @@ package testutil
 import (
 	"fmt"
 	"strings"
+	"testing"
 
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/pkg/errors"
 )
@@ -13,6 +15,51 @@ type context interface {
 }
 
 ///////////
+
+// GetExpectErrors gets any ExpectError specified by an Entity.
+func GetExpectErrors(ent tl.Entity) []ExpectError {
+	ret := []ExpectError{}
+	ex := ent.Extra()
+	value, ok := ex["expect_error"]
+	if len(value) == 0 || !ok {
+		return ret
+	}
+	for _, v := range strings.Split(value, "|") {
+		ee := ParseExpectError(v)
+		if ee.Filename == "" {
+			ee.Filename = ent.Filename()
+		}
+		if ee.EntityID == "" {
+			ee.EntityID = ent.EntityID()
+		}
+		ret = append(ret, ee)
+	}
+	return ret
+}
+
+// CheckErrors checks actual vs. expected errors.
+func CheckErrors(expecterrs []ExpectError, errs []error, t *testing.T) {
+	s1 := []string{}
+	for _, err := range errs {
+		s1 = append(s1, fmt.Sprintf("%#v", err))
+	}
+	if len(errs) > len(expecterrs) {
+		s2 := []string{}
+		for _, err := range expecterrs {
+			s2 = append(s2, fmt.Sprintf("%#v", err))
+		}
+
+		t.Errorf("got %d errors/warnings, more than the expected expected %d, got: %s expect: %s", len(errs), len(expecterrs), strings.Join(s1, " "), strings.Join(s2, " "))
+		return
+	}
+	for _, expect := range expecterrs {
+		expect.Filename = ""
+		expect.EntityID = ""
+		if !expect.Match(errs) {
+			t.Errorf("did not find match for expected error %#v, got: %s", expect, strings.Join(s1, " "))
+		}
+	}
+}
 
 // ExpectError represents a single expected error.
 type ExpectError struct {

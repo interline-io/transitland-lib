@@ -246,8 +246,8 @@ func (g *Geometry) UnmarshalGQL(v interface{}) error {
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (g Geometry) MarshalGQL(w io.Writer) {
-	if g.Geometry == nil {
+func (g *Geometry) MarshalGQL(w io.Writer) {
+	if g == nil || g.Geometry == nil {
 		w.Write([]byte("null"))
 		return
 	}

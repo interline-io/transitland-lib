@@ -16,12 +16,12 @@ type StopTime struct {
 	ArrivalTime       int             `csv:"arrival_time" `
 	DepartureTime     int             `csv:"departure_time" `
 	StopID            string          `csv:"stop_id" required:"true"`
-	StopSequence      int             `csv:"stop_sequence" required:"true" min:"0"`
+	StopSequence      int             `csv:"stop_sequence" required:"true"`
 	StopHeadsign      sql.NullString  `csv:"stop_headsign"`
-	PickupType        sql.NullInt32   `csv:"pickup_type" min:"0" max:"3"`
-	DropOffType       sql.NullInt32   `csv:"drop_off_type" min:"0" max:"3"`
-	ShapeDistTraveled sql.NullFloat64 `csv:"shape_dist_traveled" min:"0"`
-	Timepoint         sql.NullInt32   `csv:"timepoint" min:"0" max:"1"`
+	PickupType        sql.NullInt32   `csv:"pickup_type"`
+	DropOffType       sql.NullInt32   `csv:"drop_off_type"`
+	ShapeDistTraveled sql.NullFloat64 `csv:"shape_dist_traveled"`
+	Timepoint         sql.NullInt32   `csv:"timepoint"`
 	Interpolated      sql.NullInt32   // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
 	FeedVersionID     int
 	extra             []string

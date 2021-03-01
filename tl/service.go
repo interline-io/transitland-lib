@@ -48,7 +48,7 @@ func NewService(c Calendar, cds ...CalendarDate) *Service {
 	return &s
 }
 
-// NewServicesFromReader returns
+// NewServicesFromReader returns Services from a Reader.
 func NewServicesFromReader(reader Reader) []*Service {
 	ret := []*Service{}
 	cds := map[string][]CalendarDate{}

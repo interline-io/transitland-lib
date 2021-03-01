@@ -218,7 +218,7 @@ func Test_fetchAndCreateFeedVersion(t *testing.T) {
 	})
 }
 
-func TestfetchAndCreateFeedVersion_404(t *testing.T) {
+func Test_fetchAndCreateFeedVersion_404(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Status-Code", "404")
 		w.Write([]byte("not found"))
@@ -248,7 +248,7 @@ func TestfetchAndCreateFeedVersion_404(t *testing.T) {
 	})
 }
 
-func TestfetchAndCreateFeedVersion_Exists(t *testing.T) {
+func Test_fetchAndCreateFeedVersion_Exists(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(ExampleZip.URL)
 		if err != nil {

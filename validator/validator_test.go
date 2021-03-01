@@ -1,10 +1,8 @@
 package validator
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
@@ -13,50 +11,6 @@ import (
 )
 
 //////////// helpers /////////////
-
-// getExpectErrors gets any ExpectError specified by an Entity.
-func getExpectErrors(ent tl.Entity) []testutil.ExpectError {
-	ret := []testutil.ExpectError{}
-	ex := ent.Extra()
-	value, ok := ex["expect_error"]
-	if len(value) == 0 || !ok {
-		return ret
-	}
-	for _, v := range strings.Split(value, "|") {
-		ee := testutil.ParseExpectError(v)
-		if ee.Filename == "" {
-			ee.Filename = ent.Filename()
-		}
-		if ee.EntityID == "" {
-			ee.EntityID = ent.EntityID()
-		}
-		ret = append(ret, ee)
-	}
-	return ret
-}
-
-func checkErrors(expecterrs []testutil.ExpectError, errs []error, t *testing.T) {
-	s1 := []string{}
-	for _, err := range errs {
-		s1 = append(s1, fmt.Sprintf("%#v", err))
-	}
-	if len(errs) > len(expecterrs) {
-		s2 := []string{}
-		for _, err := range expecterrs {
-			s2 = append(s2, fmt.Sprintf("%#v", err))
-		}
-
-		t.Errorf("got %d errors/warnings, more than the expected expected %d, got: %s expect: %s", len(errs), len(expecterrs), strings.Join(s1, " "), strings.Join(s2, " "))
-		return
-	}
-	for _, expect := range expecterrs {
-		expect.Filename = ""
-		expect.EntityID = ""
-		if !expect.Match(errs) {
-			t.Errorf("did not find match for expected error %#v, got: %s", expect, strings.Join(s1, " "))
-		}
-	}
-}
 
 func exampleReader(basepath string, overlaypath string) *tlcsv.Reader {
 	reader, err := tlcsv.NewReader(".")
@@ -77,38 +31,17 @@ func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []
 	errs = append(errs, warns...)
 	expecterrs := cr.expectSourceErrors[fn]
 	cr.expectErrorCount += len(expecterrs)
-	checkErrors(expecterrs, errs, cr.t)
+	testutil.CheckErrors(expecterrs, errs, cr.t)
 }
 
 func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
 	errs = append(errs, warns...)
-	expecterrs := getExpectErrors(ent)
+	expecterrs := testutil.GetExpectErrors(ent)
 	cr.expectErrorCount += len(expecterrs)
-	checkErrors(expecterrs, errs, cr.t)
+	testutil.CheckErrors(expecterrs, errs, cr.t)
 }
 
 //////////////
-
-func TestEntityErrors(t *testing.T) {
-	reader, err := tlcsv.NewReader("../test/data/bad-entities")
-	if err != nil {
-		t.Error(err)
-	}
-	if err := reader.Open(); err != nil {
-		t.Error(err)
-	}
-	testutil.AllEntities(reader, func(ent tl.Entity) {
-		t.Run(fmt.Sprintf("%s:%s", ent.Filename(), ent.EntityID()), func(t *testing.T) {
-			errs := ent.Errors()
-			errs = append(errs, ent.Warnings()...)
-			expecterrs := getExpectErrors(ent)
-			checkErrors(expecterrs, errs, t)
-		})
-	})
-	if err := reader.Close(); err != nil {
-		t.Error(err)
-	}
-}
 
 func TestValidator_Validate(t *testing.T) {
 	basepath := "../test/data/validator-examples"

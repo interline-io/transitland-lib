@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"time"
 )
@@ -97,16 +98,19 @@ type OptionalTime struct {
 
 // IsZero returns if this is a zero value.
 func (r *OptionalTime) IsZero() bool {
-	return r.Time.IsZero()
+	return !r.Valid
 }
 
 func (r *OptionalTime) String() string {
+	if !r.Valid {
+		return ""
+	}
 	return r.Time.Format("20060102")
 }
 
 // Value returns nil if empty
 func (r OptionalTime) Value() (driver.Value, error) {
-	if r.Time.IsZero() || !r.Valid {
+	if !r.Valid {
 		return nil, nil
 	}
 	return driver.Value(r.Time), nil
@@ -130,4 +134,23 @@ func (r *OptionalTime) Scan(src interface{}) error {
 		r.Valid = true
 	}
 	return p
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (r *OptionalTime) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (r OptionalTime) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
+}
+
+// MarshalJSON implements the json.Marshaler interface
+func (r *OptionalTime) MarshalJSON() ([]byte, error) {
+	if !r.Valid {
+		return []byte("null"), nil
+	}
+	return []byte("\"" + r.Time.Format("2006-01-02") + "\""), nil
 }

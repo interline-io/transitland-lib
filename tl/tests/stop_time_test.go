@@ -1,10 +1,11 @@
-package tl
+package tests
 
 import (
 	"database/sql"
-	"fmt"
 	"strconv"
 	"testing"
+
+	"github.com/interline-io/transitland-lib/tl"
 )
 
 type expectStopTime struct {
@@ -20,10 +21,10 @@ type expectTrip struct {
 	ShapeDistTraveled []float64
 }
 
-func expectTripToStopTime(e expectTrip) []StopTime {
-	ret := []StopTime{}
+func expectTripToStopTime(e expectTrip) []tl.StopTime {
+	ret := []tl.StopTime{}
 	for i := range e.ArrivalTime {
-		ret = append(ret, StopTime{
+		ret = append(ret, tl.StopTime{
 			TripID:            "1",
 			StopID:            strconv.Itoa(i),
 			StopSequence:      i,
@@ -48,7 +49,7 @@ func TestValidateStopTimes(t *testing.T) {
 	for _, et := range trips {
 		t.Run(et.ExpectError, func(t *testing.T) {
 			stoptimes := expectTripToStopTime(et)
-			if errs := ValidateStopTimes(stoptimes); len(errs) > 0 {
+			if errs := tl.ValidateStopTimes(stoptimes); len(errs) > 0 {
 				t.Errorf("got %d errors, expected %d: %s", len(errs), 0, errs)
 			}
 		})
@@ -63,7 +64,7 @@ func TestValidateStopTimes(t *testing.T) {
 	for _, et := range errortrips {
 		t.Run(et.ExpectError, func(t *testing.T) {
 			stoptimes := expectTripToStopTime(et)
-			if errs := ValidateStopTimes(stoptimes); len(errs) != 1 {
+			if errs := tl.ValidateStopTimes(stoptimes); len(errs) != 1 {
 				t.Errorf("expected 1 error, got 0")
 			}
 		})
@@ -75,7 +76,7 @@ func TestValidateStopTimes(t *testing.T) {
 		stoptimes[0].StopSequence = 1
 		stoptimes[1].StopSequence = 2
 		stoptimes[2].StopSequence = 2
-		if errs := ValidateStopTimes(stoptimes); len(errs) != 1 {
+		if errs := tl.ValidateStopTimes(stoptimes); len(errs) != 1 {
 			t.Errorf("expected 1 error, got 0")
 		}
 	})
@@ -86,71 +87,6 @@ func BenchmarkValidateStopTime(b *testing.B) {
 	stoptimes := expectTripToStopTime(trip)
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		ValidateStopTimes(stoptimes)
-	}
-}
-
-/////////
-
-type expectShape struct {
-	ExpectError string
-	lats        []float64
-	lons        []float64
-	distances   []float64
-}
-
-func TestValidateShapes(t *testing.T) {
-	// TODO
-}
-
-func TestNewShapeFromShapes(t *testing.T) {
-	// TODO
-}
-
-/////////////////////////
-
-// frequencies
-
-func TestFrequencyRepeatCount(t *testing.T) {
-	tcs := []struct {
-		start  string
-		end    string
-		hw     int
-		expect int
-	}{
-		{"08:00:00", "07:00:00", 60, 0},
-		{"08:00:00", "09:00:00", 0, 0},
-		{"08:00:00", "09:00:00", -1, 0},
-
-		{"08:00:00", "08:00:00", 60, 1},
-		{"08:00:00", "08:59:59", 60, 60},
-		{"08:00:00", "09:00:00", 60, 61},
-
-		{"08:00:00", "08:00:00", 600, 1},
-		{"08:00:00", "08:59:59", 600, 6},
-		{"08:00:00", "09:00:00", 600, 7},
-
-		{"00:00:00", "24:00:00", 60, 1441},
-		{"00:00:00", "23:59:59", 60, 1440},
-		{"00:00:00", "25:00:00", 60, 1440 + 60 + 1},
-
-		{"08:00:00", "08:00:00", 3600, 1},
-		{"08:00:00", "08:59:59", 3600, 1},
-		{"08:00:00", "09:00:00", 3600, 2},
-
-		{"08:00:00", "08:00:00", 3601, 1},
-		{"08:00:00", "08:59:59", 3601, 1},
-		{"08:00:00", "09:00:00", 3601, 1},
-	}
-	for _, tc := range tcs {
-		t.Run(fmt.Sprintf("%s->%s:%d", tc.start, tc.end, tc.hw), func(t *testing.T) {
-			f := Frequency{}
-			f.StartTime, _ = NewWideTime(tc.start)
-			f.EndTime, _ = NewWideTime(tc.end)
-			f.HeadwaySecs = tc.hw
-			if e := f.RepeatCount(); e != tc.expect {
-				t.Errorf("got %d repeat count from %s -> %s hw %d, expected %d", e, tc.start, tc.end, tc.hw, tc.expect)
-			}
-		})
+		tl.ValidateStopTimes(stoptimes)
 	}
 }
