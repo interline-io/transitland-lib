@@ -111,11 +111,11 @@ type Copier struct {
 }
 
 // NewCopier creates and initializes a new Copier.
-func NewCopier(reader tl.Reader, writer tl.Writer) Copier {
+func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 	copier := Copier{}
+	copier.Options = opts
 	copier.Reader = reader
 	copier.Writer = writer
-	copier.BatchSize = 1000000
 	// Result
 	result := NewCopyResult()
 	copier.result = result
@@ -130,6 +130,10 @@ func NewCopier(reader tl.Reader, writer tl.Writer) Copier {
 	copier.filters = []tl.EntityFilter{}
 	// Geom Cache
 	copier.geomCache = newGeomCache()
+	// Set the default BatchSize
+	if copier.BatchSize == 0 {
+		copier.BatchSize = 1000000 // TODO: 1_000_000 requires Go 1.13
+	}
 	// Set the DefaultAgencyID from the Reader
 	if copier.DefaultAgencyID == "" {
 		for e := range copier.Reader.Agencies() {

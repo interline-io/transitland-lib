@@ -252,7 +252,7 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	// Get writer with existing tx
 	writer := tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
-	cp := copier.NewCopier(reader, &writer)
+	cp := copier.NewCopier(reader, &writer, opts.Options)
 	for _, e := range opts.Extensions {
 		ext, err := ext.GetExtension(e)
 		if err != nil {
@@ -260,8 +260,6 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 		}
 		cp.AddExtension(ext)
 	}
-	// Settable options
-	cp.Options = opts.Options
 	// Non-settable options
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
