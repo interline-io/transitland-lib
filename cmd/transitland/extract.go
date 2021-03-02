@@ -73,8 +73,7 @@ func (cmd *extractCommand) Run(args []string) error {
 	writer := ext.MustGetWriter(fl.Arg(1), cmd.create)
 	defer writer.Close()
 	// Setup copier
-	cp := copier.NewCopier(reader, writer)
-	cp.Options = cmd.Options
+	cp := copier.NewCopier(reader, writer, cmd.Options)
 	if dbw, ok := writer.(*tldb.Writer); ok {
 		if cmd.fvid != 0 {
 			dbw.FeedVersionID = cmd.fvid
