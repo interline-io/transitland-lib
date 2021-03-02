@@ -7,9 +7,32 @@ import (
 
 // TODO
 //
-// Best Practice Warnings:
-//   NonuniformAgencyTimezoneError
+// Causes that are implemented and include some tests:
+//   FileRequiredError
+//   FileDuplicateFieldError
+//   DuplicateIDError
+//   FieldParseError
+//   RequiredFieldError
+//   ConditionallyRequiredFieldError
+//   InvalidFieldError
+//   InvalidReferenceError
+//   SequenceError
+//   InvalidParentStationError
+//   InvalidFarezoneError
+//   EmptyTripError
+//
+// Causes that are implemented but not fully tested:
+//   FileRequiredFieldError
+//   SourceUnreadableError
+//   FileNotPresentError
+//   RowParseError
+//   FileUnreadableError
+//   InconsistentTimezoneError
+//
+// Causes that exist but are not implemented:
 //   UnusedEntityError - warning that an named entity (agency, route, stop, calendar, etc.) is not referenced
+//
+// Best Practice Warning that do not exist but should:
 //   StationVisitError - stop_time visits location_type != 0
 //   StopTooCloseError - stop too close to another stop
 //   StopTooFarError - stop too far from a related stop
@@ -117,7 +140,7 @@ func (e *FileRequiredError) Error() string {
 
 ////////////////////////////
 
-// FileNotPresentError is returned when a file is not present
+// FileNotPresentError is returned when a requested file is not present
 type FileNotPresentError struct {
 	bc
 }
@@ -133,7 +156,7 @@ func (e *FileNotPresentError) Error() string {
 
 ////////////////////////////
 
-// RowParseError reports an error parsing a row
+// RowParseError reports an error parsing a CSV row
 type RowParseError struct {
 	bc
 }
@@ -149,7 +172,7 @@ func (e *RowParseError) Error() string {
 
 ////////////////////////////
 
-// FileUnreadableError reports an error parsing a row
+// FileUnreadableError reports a file that could not be read
 type FileUnreadableError struct {
 	bc
 }
