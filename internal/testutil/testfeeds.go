@@ -2,7 +2,7 @@ package testutil
 
 // ExampleDir .
 var ExampleDir = ReaderTester{
-	URL: "../test/data/example",
+	URL: RelPath("test/data/example"),
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"routes.txt":          5,
@@ -32,7 +32,7 @@ var ExampleDir = ReaderTester{
 
 // ExampleZip .
 var ExampleZip = ReaderTester{
-	URL:     "../test/data/example.zip",
+	URL:     RelPath("test/data/example.zip"),
 	SHA1:    "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
 	DirSHA1: "1aa738a7f692c0a32acdd3cf4242c3d9d554e0f9",
 	Size:    4197,
@@ -64,12 +64,12 @@ var ExampleZip = ReaderTester{
 
 // ExampleZipNestedDir .
 var ExampleZipNestedDir = ReaderTester{
-	URL: "../test/data/example-nested-dir.zip#example-nested-dir/example",
+	URL: RelPath("test/data/example-nested-dir.zip#example-nested-dir/example"),
 }
 
 // ExampleZipNestedZip .
 var ExampleZipNestedZip = ReaderTester{
-	URL: "../test/data/example-nested-zip.zip#example-nested-zip/example.zip",
+	URL: RelPath("test/data/example-nested-zip.zip#example-nested-zip/example.zip"),
 }
 
 // ExternalTestFeed .
@@ -81,7 +81,7 @@ func ExternalTestFeed(key string) (ReaderTester, bool) {
 // ExternalTestFeeds -- Generated from above commented out code
 var ExternalTestFeeds = map[string]ReaderTester{
 	"bart.zip": ReaderTester{
-		URL: "../test/data/external/bart.zip",
+		URL: RelPath("test/data/external/bart.zip"),
 		Counts: map[string]int{"agency.txt": 1,
 			"calendar.txt":        3,
 			"calendar_dates.txt":  12,
@@ -136,7 +136,7 @@ var ExternalTestFeeds = map[string]ReaderTester{
 				"3670448WKDY"}}},
 
 	"cdmx.zip": ReaderTester{
-		URL: "../test/data/external/cdmx.zip",
+		URL: RelPath("test/data/external/cdmx.zip"),
 		Counts: map[string]int{
 			"agency.txt":      8,
 			"calendar.txt":    99,
@@ -212,7 +212,7 @@ var ExternalTestFeeds = map[string]ReaderTester{
 				"14848",
 				"15171"}}},
 	"mbta.zip": ReaderTester{
-		URL: "../test/data/external/mbta.zip",
+		URL: RelPath("test/data/external/mbta.zip"),
 		Counts: map[string]int{
 			"agency.txt":         2,
 			"calendar.txt":       122,
