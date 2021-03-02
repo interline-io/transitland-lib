@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -16,8 +17,8 @@ type copyCommand struct {
 	// Typical DMFR options
 	fvid       int
 	create     bool
-	extensions arrayFlags
-	filters    arrayFlags
+	extensions cli.ArrayFlags
+	filters    cli.ArrayFlags
 }
 
 func (cmd *copyCommand) Run(args []string) error {

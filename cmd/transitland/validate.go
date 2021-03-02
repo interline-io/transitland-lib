@@ -5,13 +5,14 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/validator"
 )
 
 // validateCommand
 type validateCommand struct {
-	validateExtensions arrayFlags
+	validateExtensions cli.ArrayFlags
 }
 
 func (cmd *validateCommand) Run(args []string) error {
