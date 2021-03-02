@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -84,7 +85,7 @@ func TestService_Simplify(t *testing.T) {
 			panic(err)
 		}
 		for _, svc := range tl.NewServicesFromReader(reader) {
-			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", path, svc.ServiceID), svc})
+			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", filepath.Base(path), svc.ServiceID), svc})
 		}
 	}
 	for _, tc := range testcases {
