@@ -177,8 +177,8 @@ type DuplicateIDError struct {
 }
 
 // NewDuplicateIDError returns a new DuplicateIDErrror
-func NewDuplicateIDError(efn string, eid string) *DuplicateIDError {
-	return &DuplicateIDError{bc: bc{Filename: efn, EntityID: eid}}
+func NewDuplicateIDError(eid string) *DuplicateIDError {
+	return &DuplicateIDError{bc: bc{EntityID: eid}}
 }
 
 func (e *DuplicateIDError) Error() string {

@@ -250,7 +250,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	// Check for duplicate entities.
 	eid := ent.EntityID()
 	if _, ok := copier.duplicateMap.Get(efn, eid); ok && len(eid) > 0 {
-		errs = append(errs, causes.NewDuplicateIDError(efn, eid))
+		errs = append(errs, causes.NewDuplicateIDError(eid))
 	} else {
 		copier.duplicateMap.Set(efn, eid, eid)
 	}
@@ -580,7 +580,7 @@ func (copier *Copier) copyCalendars() error {
 		}
 		_, ok := svcs[ent.ServiceID]
 		if ok {
-			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.Filename(), ent.ServiceID)}, nil)
+			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.ServiceID)}, nil)
 			continue
 		}
 		svcs[ent.ServiceID] = tl.NewService(ent)
@@ -601,7 +601,7 @@ func (copier *Copier) copyCalendars() error {
 			svcs[ent.ServiceID] = svc
 		}
 		if _, ok := svc.Exception(ent.Date); ok {
-			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.Filename(), ent.ServiceID)}, nil)
+			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.ServiceID)}, nil)
 			continue
 		}
 		svc.AddCalendarDate(ent)
@@ -757,7 +757,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		// We need to check for duplicate ID errors here because they're put into a map
 		if _, ok := trips[eid]; ok {
-			copier.ErrorHandler.HandleEntityErrors(&trip, []error{causes.NewDuplicateIDError(trip.Filename(), eid)}, nil)
+			copier.ErrorHandler.HandleEntityErrors(&trip, []error{causes.NewDuplicateIDError(eid)}, nil)
 			continue
 		}
 		trips[eid] = trip
