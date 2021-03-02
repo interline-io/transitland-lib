@@ -10,7 +10,7 @@ import (
 )
 
 func TestEntityErrors(t *testing.T) {
-	reader, err := tlcsv.NewReader("../../test/data/bad-entities")
+	reader, err := tlcsv.NewReader(testutil.RelPath("test/data/bad-entities"))
 	if err != nil {
 		t.Error(err)
 	}

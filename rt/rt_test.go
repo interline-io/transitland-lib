@@ -2,10 +2,12 @@ package rt
 
 import (
 	"testing"
+
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 func Test_readmsg(t *testing.T) {
-	msg, err := readmsg("../test/data/rt/example.pb")
+	msg, err := readmsg(testutil.RelPath("test/data/rt/example.pb"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -38,7 +40,7 @@ func Test_readmsg(t *testing.T) {
 }
 
 func Test_readmsg_error(t *testing.T) {
-	_, err := readmsg("../test/data/example.zip")
+	_, err := readmsg(testutil.RelPath("test/data/example.zip"))
 	if err == nil {
 		t.Errorf("got no error, expected illegal tag")
 	}
