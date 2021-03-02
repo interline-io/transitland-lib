@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
@@ -68,11 +69,11 @@ func TestService_Simplify(t *testing.T) {
 	}
 	// get more examples from feeds
 	feedchecks := []string{
-		"../../test/data/example",
-		"../../test/data/external/caltrain.zip",
-		"../../test/data/external/bart.zip",
-		"../../test/data/external/mbta.zip",
-		"../../test/data/external/cdmx.zip",
+		testutil.RelPath("test/data/example"),
+		testutil.RelPath("test/data/external/caltrain.zip"),
+		testutil.RelPath("test/data/external/bart.zip"),
+		testutil.RelPath("test/data/external/mbta.zip"),
+		testutil.RelPath("test/data/external/cdmx.zip"),
 	}
 	for _, path := range feedchecks {
 		reader, err := tlcsv.NewReader(path)
