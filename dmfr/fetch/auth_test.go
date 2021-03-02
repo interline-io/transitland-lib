@@ -1,4 +1,4 @@
-package dmfr
+package fetch
 
 import (
 	"encoding/json"
@@ -9,42 +9,40 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-type FeedAuthorization = tl.FeedAuthorization
-
 func TestAuthorizedRequest(t *testing.T) {
 	secret := Secret{Key: "abcd", Username: "efgh", Password: "ijkl"}
 	testcases := []struct {
 		name       string
 		url        string
-		auth       FeedAuthorization
+		auth       tl.FeedAuthorization
 		checkkey   string
 		checkvalue string
 	}{
 		{
 			"query_param",
 			"http://httpbin.org/get",
-			FeedAuthorization{Type: "query_param", ParamName: "api_key"},
+			tl.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
 			"url",
 			"http://httpbin.org/get?api_key=abcd",
 		},
 		{
 			"path_segment",
 			"http://httpbin.org/anything/{}/ok",
-			FeedAuthorization{Type: "path_segment"},
+			tl.FeedAuthorization{Type: "path_segment"},
 			"url",
 			"http://httpbin.org/anything/abcd/ok",
 		},
 		{
 			"header",
 			"http://httpbin.org/headers",
-			FeedAuthorization{Type: "header", ParamName: "Auth"},
+			tl.FeedAuthorization{Type: "header", ParamName: "Auth"},
 			"", // TODO: check headers...
 			"",
 		},
 		{
 			"basic_auth",
 			"http://httpbin.org/basic-auth/efgh/ijkl",
-			FeedAuthorization{Type: "basic_auth"},
+			tl.FeedAuthorization{Type: "basic_auth"},
 			"user",
 			secret.Username,
 		},

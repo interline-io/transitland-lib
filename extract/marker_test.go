@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/graph"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
@@ -16,7 +17,7 @@ func nn(filename, eid string) node {
 
 func TestExtract_Filter_BART(t *testing.T) {
 	em := NewMarker()
-	reader, err := tlcsv.NewReader("../test/data/external/bart.zip")
+	reader, err := tlcsv.NewReader(testutil.ExampleFeedBART.URL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -38,7 +39,7 @@ func TestExtract_Filter_BART(t *testing.T) {
 }
 
 func TestExtract_Filter_ExampleFeed(t *testing.T) {
-	reader, err := tlcsv.NewReader("../test/data/extract-examples")
+	reader, err := tlcsv.NewReader(testutil.RelPath("test/data/extract-examples"))
 	if err != nil {
 		t.Error(err)
 	}

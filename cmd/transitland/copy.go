@@ -5,23 +5,20 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// basicCopyOptions
-type basicCopyOptions struct {
-	fvid                 int
-	create               bool
-	allowEntityErrors    bool
-	allowReferenceErrors bool
-	extensions           arrayFlags
-	filters              arrayFlags
-}
-
 // copyCommand
 type copyCommand struct {
-	basicCopyOptions
+	// Default options
+	copier.Options
+	// Typical DMFR options
+	fvid       int
+	create     bool
+	extensions cli.ArrayFlags
+	filters    cli.ArrayFlags
 }
 
 func (cmd *copyCommand) Run(args []string) error {
@@ -30,25 +27,25 @@ func (cmd *copyCommand) Run(args []string) error {
 		log.Print("Usage: copy <reader> <writer>")
 		fl.PrintDefaults()
 	}
-	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
-	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
+	// Copy options
+	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
+	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
+	//
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
 		log.Exit("Requires input reader and output writer")
 	}
 	// Reader / Writer
-	reader := MustGetReader(fl.Arg(0))
+	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
-	writer := MustGetWriter(fl.Arg(1), cmd.create)
+	writer := ext.MustGetWriter(fl.Arg(1), cmd.create)
 	defer writer.Close()
 	// Setup copier
-	cp := copier.NewCopier(reader, writer)
-	cp.AllowEntityErrors = cmd.allowEntityErrors
-	cp.AllowReferenceErrors = cmd.allowReferenceErrors
+	cp := copier.NewCopier(reader, writer, cmd.Options)
 	if dbw, ok := writer.(*tldb.Writer); ok {
 		if cmd.fvid != 0 {
 			dbw.FeedVersionID = cmd.fvid

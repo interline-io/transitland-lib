@@ -1,14 +1,17 @@
-package dmfr
+package importer
 
 import (
+	"bufio"
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
@@ -17,36 +20,47 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// ImportOptions sets various options for importing a feed.
-type ImportOptions struct {
-	FeedVersionID              int
-	Extensions                 []string
-	Directory                  string
-	S3                         string
-	Activate                   bool
-	CreateMissingShapes        bool
-	InterpolateStopTimes       bool
-	DeduplicateJourneyPatterns bool
+// Options sets various options for importing a feed.
+type Options struct {
+	FeedVersionID int
+	Extensions    []string
+	Directory     string
+	S3            string
+	Activate      bool
+	copier.Options
 }
 
-// ImportResult contains the results of a feed import.
-type ImportResult struct {
-	FeedVersionImport FeedVersionImport
+// Result contains the results of a feed import.
+type Result struct {
+	FeedVersionImport dmfr.FeedVersionImport
 }
 
 type canContext interface {
 	Context() *causes.Context
 }
 
-func copyResultCounts(result copier.CopyResult) FeedVersionImport {
-	fvi := FeedVersionImport{}
-	fvi.EntityCount = EntityCounter{}
-	fvi.WarningCount = EntityCounter{}
-	fvi.GeneratedCount = EntityCounter{}
-	fvi.SkipEntityErrorCount = EntityCounter{}
-	fvi.SkipEntityReferenceCount = EntityCounter{}
-	fvi.SkipEntityFilterCount = EntityCounter{}
-	fvi.SkipEntityMarkedCount = EntityCounter{}
+func getFileLines(fn string) ([]string, error) {
+	ret := []string{}
+	file, err := os.Open(fn)
+	if err != nil {
+		return ret, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if t := scanner.Text(); t != "" {
+			ret = append(ret, strings.TrimSpace(t))
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return ret, err
+	}
+	return ret, nil
+}
+
+func copyResultCounts(result copier.CopyResult) dmfr.FeedVersionImport {
+	fvi := dmfr.NewFeedVersionImport()
 	fvi.InterpolatedStopTimeCount = result.InterpolatedStopTimeCount
 	for k, v := range result.EntityCount {
 		fvi.EntityCount[k] = v
@@ -73,7 +87,7 @@ func copyResultCounts(result copier.CopyResult) FeedVersionImport {
 		}
 		fvi.WarningCount[fn]++
 	}
-	return fvi
+	return *fvi
 }
 
 // ActivateFeedVersion .
@@ -128,12 +142,12 @@ func FindImportableFeeds(adapter tldb.Adapter) ([]int, error) {
 }
 
 // MainImportFeedVersion create FVI and run Copier inside a Tx.
-func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResult, error) {
+func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV
-	fvi := FeedVersionImport{FeedVersionID: opts.FeedVersionID, InProgress: true}
+	fvi := dmfr.FeedVersionImport{FeedVersionID: opts.FeedVersionID, InProgress: true}
 	fv := tl.FeedVersion{ID: opts.FeedVersionID}
 	if err := adapter.Find(&fv); err != nil {
-		return ImportResult{FeedVersionImport: fvi}, err
+		return Result{FeedVersionImport: fvi}, err
 	}
 	// Check FVI
 	checkfviid := 0
@@ -141,10 +155,10 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 		// ok
 	} else if err == nil {
 		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
-		return ImportResult{FeedVersionImport: fvi}, nil
+		return Result{FeedVersionImport: fvi}, nil
 	} else {
 		// Serious error
-		return ImportResult{FeedVersionImport: fvi}, err
+		return Result{FeedVersionImport: fvi}, err
 	}
 	// Create FVI
 	fvi.UpdateTimestamps()
@@ -154,10 +168,10 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 	} else {
 		// Serious error
 		log.Error("Error creating FeedVersionImport: %s", err.Error())
-		return ImportResult{FeedVersionImport: fvi}, err
+		return Result{FeedVersionImport: fvi}, err
 	}
 	// Import
-	fviresult := FeedVersionImport{} // keep result
+	fviresult := dmfr.FeedVersionImport{} // keep result
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
 		var err error
 		fviresult, err = ImportFeedVersion(atx, fv, opts)
@@ -206,16 +220,16 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts ImportOptions) (ImportResu
 		if err := adapter.Update(&fvi); err != nil {
 			// Serious error
 			log.Error("Error saving FeedVersionImport: %s", err.Error())
-			return ImportResult{FeedVersionImport: fvi}, err
+			return Result{FeedVersionImport: fvi}, err
 		}
-		return ImportResult{FeedVersionImport: fvi}, errImport
+		return Result{FeedVersionImport: fvi}, errImport
 	}
-	return ImportResult{FeedVersionImport: fviresult}, nil
+	return Result{FeedVersionImport: fviresult}, nil
 }
 
 // ImportFeedVersion .
-func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts ImportOptions) (FeedVersionImport, error) {
-	fvi := FeedVersionImport{FeedVersionID: fv.ID}
+func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
 	url := fv.File
 	if opts.S3 != "" {
@@ -238,7 +252,7 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts ImportOptions) 
 	// Get writer with existing tx
 	writer := tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
-	cp := copier.NewCopier(reader, &writer)
+	cp := copier.NewCopier(reader, &writer, opts.Options)
 	for _, e := range opts.Extensions {
 		ext, err := ext.GetExtension(e)
 		if err != nil {
@@ -246,10 +260,6 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts ImportOptions) 
 		}
 		cp.AddExtension(ext)
 	}
-	// Settable options
-	cp.CreateMissingShapes = opts.CreateMissingShapes
-	cp.InterpolateStopTimes = opts.InterpolateStopTimes
-	cp.DeduplicateJourneyPatterns = opts.DeduplicateJourneyPatterns
 	// Non-settable options
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false

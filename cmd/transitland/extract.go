@@ -8,27 +8,30 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/extract"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // extractCommand
 type extractCommand struct {
-	basicCopyOptions
+	// Default options
+	copier.Options
+	// Typical DMFR options
+	fvid       int
+	create     bool
+	extensions cli.ArrayFlags
+	filters    cli.ArrayFlags
 	// extract specific arguments
-	onlyVisitedEntities  bool
-	allEntities          bool
-	interpolateStopTimes bool
-	createMissingShapes  bool
-	normalizeServiceIDs  bool
-	useBasicRouteTypes   bool
-	extractAgencies      arrayFlags
-	extractStops         arrayFlags
-	extractTrips         arrayFlags
-	extractCalendars     arrayFlags
-	extractRoutes        arrayFlags
-	extractRouteTypes    arrayFlags
-	extractSet           arrayFlags
+	onlyVisitedEntities bool
+	allEntities         bool
+	extractAgencies     cli.ArrayFlags
+	extractStops        cli.ArrayFlags
+	extractTrips        cli.ArrayFlags
+	extractCalendars    cli.ArrayFlags
+	extractRoutes       cli.ArrayFlags
+	extractRouteTypes   cli.ArrayFlags
+	extractSet          cli.ArrayFlags
 }
 
 func (cmd *extractCommand) Run(args []string) error {
@@ -37,19 +40,18 @@ func (cmd *extractCommand) Run(args []string) error {
 		log.Print("Usage: extract <input> <output>")
 		fl.PrintDefaults()
 	}
-	fl.BoolVar(&cmd.allowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
-	fl.BoolVar(&cmd.allowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
+	// Copy options
+	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
+	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
+	fl.BoolVar(&cmd.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
+	fl.BoolVar(&cmd.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
+	fl.BoolVar(&cmd.NormalizeServiceIDs, "normalize-service-ids", false, "Create any missing Calendar entities for CalendarDate service_id's")
+	fl.BoolVar(&cmd.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
+	fl.BoolVar(&cmd.UseBasicRouteTypes, "use-basic-route-types", false, "Collapse extended route_type's into basic GTFS values")
 	// Extract options
-	fl.BoolVar(&cmd.interpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
-	fl.BoolVar(&cmd.createMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
-	fl.BoolVar(&cmd.normalizeServiceIDs, "normalize-service-ids", false, "Create Calendar entities for CalendarDate service_id's")
-	fl.BoolVar(&cmd.useBasicRouteTypes, "use-basic-route-types", false, "Collapse extended route_type's into basic GTFS values")
-	// Entity selection options
-	// fl.BoolVar(&cmd.onlyVisitedEntities, "only-visited-entities", false, "Only copy visited entities")
-	// fl.BoolVar(&cmd.allEntities, "all-entities", false, "Copy all entities")
 	fl.Var(&cmd.extractAgencies, "extract-agency", "Extract Agency")
 	fl.Var(&cmd.extractStops, "extract-stop", "Extract Stop")
 	fl.Var(&cmd.extractTrips, "extract-trip", "Extract Trip")
@@ -57,24 +59,21 @@ func (cmd *extractCommand) Run(args []string) error {
 	fl.Var(&cmd.extractRoutes, "extract-route", "Extract Route")
 	fl.Var(&cmd.extractRouteTypes, "extract-route-type", "Extract Routes matching route_type")
 	fl.Var(&cmd.extractSet, "set", "Set values on output; format is filename,id,key,value")
+	// Entity selection options
+	// fl.BoolVar(&cmd.onlyVisitedEntities, "only-visited-entities", false, "Only copy visited entities")
+	// fl.BoolVar(&cmd.allEntities, "all-entities", false, "Copy all entities")
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
 		log.Exit("Requires input reader and output writer")
 	}
 	// Reader / Writer
-	reader := MustGetReader(fl.Arg(0))
+	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
-	writer := MustGetWriter(fl.Arg(1), cmd.create)
+	writer := ext.MustGetWriter(fl.Arg(1), cmd.create)
 	defer writer.Close()
 	// Setup copier
-	cp := copier.NewCopier(reader, writer)
-	cp.AllowEntityErrors = cmd.allowEntityErrors
-	cp.AllowReferenceErrors = cmd.allowReferenceErrors
-	cp.UseBasicRouteTypes = cmd.useBasicRouteTypes
-	cp.InterpolateStopTimes = cmd.interpolateStopTimes
-	cp.CreateMissingShapes = cmd.createMissingShapes
-	cp.NormalizeServiceIDs = cmd.normalizeServiceIDs
+	cp := copier.NewCopier(reader, writer, cmd.Options)
 	if dbw, ok := writer.(*tldb.Writer); ok {
 		if cmd.fvid != 0 {
 			dbw.FeedVersionID = cmd.fvid

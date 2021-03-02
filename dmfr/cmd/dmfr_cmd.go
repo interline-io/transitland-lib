@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"strings"
 
-	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/dmfr/fetch"
+	"github.com/interline-io/transitland-lib/dmfr/importer"
+	"github.com/interline-io/transitland-lib/dmfr/sync"
+	"github.com/interline-io/transitland-lib/dmfr/validate"
 )
 
 // Command is the main entry point to the DMFR command
@@ -22,7 +24,6 @@ func (cmd *Command) Run(args []string) error {
 		log.Print("Usage: dmfr <command> [<args>]")
 		log.Print("dmfr commands:")
 		log.Print("  validate")
-		log.Print("  merge")
 		log.Print("  sync")
 		log.Print("  import")
 		log.Print("  fetch")
@@ -42,17 +43,15 @@ func (cmd *Command) Run(args []string) error {
 	var r runner
 	switch subc {
 	case "validate":
-		r = &ValidateCommand{}
-	case "merge":
-		r = &MergeCommand{}
+		r = &validate.Command{}
 	case "sync":
-		r = &SyncCommand{}
+		r = &sync.Command{}
 	case "import":
-		r = &ImportCommand{}
+		r = &importer.Command{}
 	case "fetch":
-		r = &FetchCommand{}
+		r = &fetch.Command{}
 	case "recalculate":
-		r = &RecalculateCommand{}
+		r = &fetch.RecalculateCommand{}
 	default:
 		return fmt.Errorf("Invalid command: %q", subc)
 	}
@@ -76,36 +75,4 @@ func (MergeCommand) Parse(args []string) error {
 // Run executes this command.
 func (MergeCommand) Run() error {
 	return nil
-}
-
-//// Util
-
-// https://stackoverflow.com/questions/28322997/how-to-get-a-list-of-values-into-a-flag-in-golang/28323276#28323276
-type arrayFlags []string
-
-func (i *arrayFlags) String() string {
-	return strings.Join(*i, ",")
-}
-
-func (i *arrayFlags) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
-// mustGetWriter opens & creates a db writer, panic on failure
-func mustGetWriter(dburl string, create bool) *tldb.Writer {
-	// Writer
-	writer, err := tldb.NewWriter(dburl)
-	if err != nil {
-		panic(err)
-	}
-	if err := writer.Open(); err != nil {
-		panic(err)
-	}
-	if create {
-		if err := writer.Create(); err != nil {
-			panic(err)
-		}
-	}
-	return writer
 }

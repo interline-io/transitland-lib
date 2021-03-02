@@ -5,13 +5,14 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/validator"
 )
 
 // validateCommand
 type validateCommand struct {
-	validateExtensions arrayFlags
+	validateExtensions cli.ArrayFlags
 }
 
 func (cmd *validateCommand) Run(args []string) error {
@@ -27,7 +28,7 @@ func (cmd *validateCommand) Run(args []string) error {
 		log.Exit("Requires input reader")
 	}
 	//
-	reader := MustGetReader(fl.Arg(0))
+	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
 	v, err := validator.NewValidator(reader)
 	if err != nil {

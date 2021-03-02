@@ -3,6 +3,8 @@ package rt
 import (
 	"fmt"
 	"testing"
+
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 func newfi() *FeedInfo {
@@ -16,7 +18,7 @@ func newfi() *FeedInfo {
 
 func TestValidateHeader(t *testing.T) {
 	fi := newfi()
-	msg, err := readmsg("../test/data/rt/example.pb")
+	msg, err := readmsg(testutil.RelPath("test/data/rt/example.pb"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -29,7 +31,7 @@ func TestValidateHeader(t *testing.T) {
 
 func TestValidateTripUpdate(t *testing.T) {
 	fi := newfi()
-	msg, err := readmsg("../test/data/rt/example.pb")
+	msg, err := readmsg(testutil.RelPath("test/data/rt/example.pb"))
 	if err != nil {
 		t.Error(err)
 	}

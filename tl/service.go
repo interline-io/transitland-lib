@@ -1,6 +1,7 @@
 package tl
 
 import (
+	"errors"
 	"time"
 )
 
@@ -48,7 +49,7 @@ func NewService(c Calendar, cds ...CalendarDate) *Service {
 	return &s
 }
 
-// NewServicesFromReader returns Services from a Reader.
+// NewServicesFromReader returns
 func NewServicesFromReader(reader Reader) []*Service {
 	ret := []*Service{}
 	cds := map[string][]CalendarDate{}
@@ -72,6 +73,69 @@ func NewServicesFromReader(reader Reader) []*Service {
 // AddCalendarDate adds a service exception.
 func (s *Service) AddCalendarDate(cd CalendarDate) {
 	s.exceptions[newYMD(cd.Date)] = cd.ExceptionType
+}
+
+// CalendarDates returns CalendarDates for this service.
+func (s *Service) CalendarDates() []CalendarDate {
+	ret := []CalendarDate{}
+	for ymd, v := range s.exceptions {
+		ret = append(ret, CalendarDate{
+			ServiceID:     s.ServiceID,
+			Date:          ymd.Time(),
+			ExceptionType: v,
+		})
+	}
+	return ret
+}
+
+// GetWeekday returns the value fo the day of week.
+func (s *Service) GetWeekday(dow int) (int, error) {
+	v := 0
+	switch dow {
+	case 0:
+		v = s.Sunday
+	case 1:
+		v = s.Monday
+	case 2:
+		v = s.Tuesday
+	case 3:
+		v = s.Wednesday
+	case 4:
+		v = s.Thursday
+	case 5:
+		v = s.Friday
+	case 6:
+		v = s.Saturday
+	default:
+		return 0, errors.New("unknown weekday")
+	}
+	return v, nil
+}
+
+// SetWeekday sets the day of week.
+func (s *Service) SetWeekday(dow int, value int) error {
+	if value < 0 || value > 1 {
+		return errors.New("only 0,1 allowed")
+	}
+	switch dow {
+	case 0:
+		s.Sunday = value
+	case 1:
+		s.Monday = value
+	case 2:
+		s.Tuesday = value
+	case 3:
+		s.Wednesday = value
+	case 4:
+		s.Thursday = value
+	case 5:
+		s.Friday = value
+	case 6:
+		s.Saturday = value
+	default:
+		return errors.New("unknown weekday")
+	}
+	return nil
 }
 
 // ServicePeriod returns the widest possible range of days with transit service, including service exceptions.
@@ -102,21 +166,75 @@ func (s *Service) IsActive(t time.Time) bool {
 	if t.After(s.EndDate) {
 		return false
 	}
-	switch dow := t.Weekday(); dow {
-	case 0:
-		return s.Sunday == 1
-	case 1:
-		return s.Monday == 1
-	case 2:
-		return s.Tuesday == 1
-	case 3:
-		return s.Wednesday == 1
-	case 4:
-		return s.Thursday == 1
-	case 5:
-		return s.Friday == 1
-	case 6:
-		return s.Saturday == 1
+	v, err := s.GetWeekday(int(t.Weekday()))
+	if err != nil {
+		return false
 	}
-	return false
+	return v == 1
+}
+
+// Exception returns if a calendar exception exists on the given day.
+func (s *Service) Exception(t time.Time) (int, bool) {
+	a, ok := s.exceptions[newYMD(t)]
+	return a, ok
+}
+
+// Simplify tries to simplify exceptions down to a basic calendar with fewer exceptions.
+func (s *Service) Simplify() (*Service, error) {
+	inputServiceStart, inputServiceEnd := s.StartDate, s.EndDate
+	if s.Generated || s.StartDate.IsZero() || s.EndDate.IsZero() {
+		inputServiceStart, inputServiceEnd = s.ServicePeriod()
+	}
+	// Count the total days and active days, by day of week
+	totalCount := map[int]int{}
+	activeCount := map[int]int{}
+	addedCount := map[int]int{}
+	removedCount := map[int]int{}
+	start, end := inputServiceStart, inputServiceEnd
+	for start.Before(end) || start.Equal(end) {
+		dow := int(start.Weekday())
+		totalCount[dow]++
+		if s.IsActive(start) {
+			activeCount[dow]++
+		}
+		etype := s.exceptions[newYMD(start)]
+		if etype == 1 {
+			addedCount[dow]++
+		} else if etype == 2 {
+			removedCount[dow]++
+		}
+		start = start.AddDate(0, 0, 1)
+	}
+
+	// Set weekdays based on dow counts
+	ret := NewService(Calendar{ServiceID: s.ServiceID, Generated: s.Generated, StartDate: inputServiceStart, EndDate: inputServiceEnd})
+	for dow, total := range totalCount {
+		if total == 0 {
+			continue
+		}
+		active := activeCount[dow]
+		willBeAdded := active           // if 0, then add
+		willBeRemoved := total - active // if 1, then remove
+		if total == active || willBeAdded >= willBeRemoved {
+			ret.SetWeekday(dow, 1)
+		}
+	}
+
+	// Add exceptions
+	start, end = s.ServicePeriod() // check over the entire service range
+	for start.Before(end) || start.Equal(end) {
+		a := s.IsActive(start)
+		b := ret.IsActive(start)
+		if a && b {
+			// both are active
+		} else if a && !b {
+			// existing is active, new is not active
+			ret.AddCalendarDate(CalendarDate{Date: start, ExceptionType: 1})
+		} else if !a && b {
+			// existing is inactive, new is active
+			ret.AddCalendarDate(CalendarDate{Date: start, ExceptionType: 2})
+		}
+		start = start.AddDate(0, 0, 1)
+	}
+	return ret, nil
 }

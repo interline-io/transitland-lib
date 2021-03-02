@@ -3,10 +3,8 @@ package main
 import (
 	"flag"
 	"os"
-	"strings"
 
-	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/ext"
+	dmfr "github.com/interline-io/transitland-lib/dmfr/cmd"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
@@ -14,60 +12,11 @@ import (
 	_ "github.com/interline-io/transitland-lib/tldb"
 )
 
-// MustGetReader or exits.
-func MustGetReader(inurl string) tl.Reader {
-	if len(inurl) == 0 {
-		log.Exit("No reader specified")
-	}
-	// Reader
-	reader, err := ext.NewReader(inurl)
-	if err != nil {
-		log.Exit("No known reader for '%s': %s", inurl, err)
-	}
-	if err := reader.Open(); err != nil {
-		log.Exit("Could not open '%s': %s", inurl, err)
-	}
-	return reader
-}
-
-// MustGetWriter or exits.
-func MustGetWriter(outurl string, create bool) tl.Writer {
-	if len(outurl) == 0 {
-		log.Exit("No writer specified")
-	}
-	// Writer
-	writer, err := ext.NewWriter(outurl)
-	if err != nil {
-		log.Exit("No known writer for '%s': %s", outurl, err)
-	}
-	if err := writer.Open(); err != nil {
-		log.Exit("Could not open '%s': %s", outurl, err)
-	}
-	if create {
-		if err := writer.Create(); err != nil {
-			log.Exit("Could not create writer: %s", err)
-		}
-	}
-	return writer
-}
-
 func btos(b bool) string {
 	if b {
 		return "true"
 	}
 	return "false"
-}
-
-// https://stackoverflow.com/questions/28322997/how-to-get-a-list-of-values-into-a-flag-in-golang/28323276#28323276
-type arrayFlags []string
-
-func (i *arrayFlags) String() string {
-	return strings.Join(*i, ",")
-}
-
-func (i *arrayFlags) Set(value string) error {
-	*i = append(*i, value)
-	return nil
 }
 
 // Submodule

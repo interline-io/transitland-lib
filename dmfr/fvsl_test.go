@@ -26,7 +26,7 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 		},
 		{
 			"bart",
-			"../test/data/external/bart.zip",
+			testutil.ExampleFeedBART.URL,
 			msi{"01": 12, "11": 12, "03": 12},
 			[]string{
 				// feed

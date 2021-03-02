@@ -1,4 +1,4 @@
-package dmfr
+package fetch
 
 import (
 	"io/ioutil"
@@ -10,55 +10,14 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// Test some commands.
-// This should only test high level command functionality.
-// Use a disk-backed sqlite for simplicity.
-
-func Test_ImportCommand(t *testing.T) {
-
-}
-
-func Test_SyncCommand(t *testing.T) {
-	cases := []struct {
-		count       int
-		errContains string
-		command     []string
-	}{
-		{2, "", []string{"../test/data/dmfr/example.json"}},
-		{4, "", []string{"../test/data/dmfr/example.json", "../test/data/dmfr/bayarea-local.dmfr.json"}},
-		{0, "no such file", []string{"../testdaata/dmfr/does-not-exist.json"}},
-	}
-	_ = cases
-	for _, exp := range cases {
-		t.Run("", func(t *testing.T) {
-			w := mustGetWriter("sqlite3://:memory:", true)
-			c := SyncCommand{adapter: w.Adapter}
-			if err := c.Parse(exp.command); err != nil {
-				t.Error(err)
-			}
-			err := c.Run()
-			if err != nil {
-				if !strings.Contains(err.Error(), exp.errContains) {
-					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.errContains)
-				}
-			}
-			// Test
-			feeds := []Feed{}
-			w.Adapter.Select(&feeds, "SELECT * FROM current_feeds")
-			if len(feeds) != exp.count {
-				t.Errorf("got %d feeds, expect %d", len(feeds), exp.count)
-			}
-		})
-
-	}
-}
-
-func Test_FetchCommand(t *testing.T) {
+func TestCommand(t *testing.T) {
 	ts200 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(ExampleZip.URL)
+		buf, err := ioutil.ReadFile(testutil.ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}
@@ -78,28 +37,28 @@ func Test_FetchCommand(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpdir) // clean up
 	// note - Spec==gtfs is required for fetch
-	f200 := Feed{FeedID: "f--200", Spec: "gtfs", URLs: FeedUrls{StaticCurrent: ts200.URL}}
-	f404 := Feed{FeedID: "f--404", Spec: "gtfs", URLs: FeedUrls{StaticCurrent: ts404.URL}}
+	f200 := tl.Feed{FeedID: "f--200", Spec: "gtfs", URLs: tl.FeedUrls{StaticCurrent: ts200.URL}}
+	f404 := tl.Feed{FeedID: "f--404", Spec: "gtfs", URLs: tl.FeedUrls{StaticCurrent: ts404.URL}}
 	cases := []struct {
 		fvcount     int
 		errContains string
-		feeds       []Feed
+		feeds       []tl.Feed
 		gtfsdir     string
 		command     []string
 	}{
-		{1, "", []Feed{f200}, tmpdir, []string{"-gtfsdir", tmpdir}},
-		{1, "", []Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--200", "f--404"}},
-		{1, "", []Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--200"}},
-		{0, "", []Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--404"}},
+		{1, "", []tl.Feed{f200}, tmpdir, []string{"-gtfsdir", tmpdir}},
+		{1, "", []tl.Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--200", "f--404"}},
+		{1, "", []tl.Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--200"}},
+		{0, "", []tl.Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--404"}},
 	}
 	_ = cases
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
-			adapter := mustGetWriter("sqlite3://:memory:", true).Adapter
+			adapter := tldb.MustGetWriter("sqlite3://:memory:", true).Adapter
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
-			c := FetchCommand{adapter: adapter}
+			c := Command{adapter: adapter}
 			if err := c.Parse(exp.command); err != nil {
 				t.Error(err)
 			}
@@ -110,7 +69,7 @@ func Test_FetchCommand(t *testing.T) {
 				}
 			}
 			// Test
-			feeds := []Feed{}
+			feeds := []tl.Feed{}
 			testdb.ShouldSelect(t, adapter, &feeds, "SELECT * FROM current_feeds")
 			if len(feeds) != len(exp.feeds) {
 				t.Errorf("got %d feeds, expect %d", len(feeds), len(exp.feeds))

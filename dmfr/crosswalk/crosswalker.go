@@ -1,7 +1,12 @@
 package dmfr
 
+import (
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/tl"
+)
+
 // AddCrosswalkIDs TODO
-func AddCrosswalkIDs(baseRegistry *Registry, comparisonRegistries map[string]*Registry) *Registry {
+func AddCrosswalkIDs(baseRegistry *dmfr.Registry, comparisonRegistries map[string]*dmfr.Registry) *dmfr.Registry {
 	// Pass 1: by crosswalk IDs
 
 	// Pass 2: by URL + spec type
@@ -14,7 +19,7 @@ func AddCrosswalkIDs(baseRegistry *Registry, comparisonRegistries map[string]*Re
 	// Pass 3 (optional): by domain
 }
 
-func findMatchingFeed(feedSpec string, feedURL string, comparisonRegistries map[string]*Registry) (string, *Feed) {
+func findMatchingFeed(feedSpec string, feedURL string, comparisonRegistries map[string]*dmfr.Registry) (string, *tl.Feed) {
 	for comparisonRegistryID, comparisonRegistry := range comparisonRegistries {
 		for _, comparisonFeed := range comparisonRegistry.Feeds {
 			if feedURL == comparisonFeed.URLs.StaticCurrent && feedSpec == comparisonFeed.Spec {

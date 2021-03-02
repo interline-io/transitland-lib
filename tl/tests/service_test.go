@@ -1,10 +1,14 @@
 package tests
 
 import (
+	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 func newTestService() *tl.Service {
@@ -53,5 +57,75 @@ func TestService_IsActive(t *testing.T) {
 		if result != exp.value {
 			t.Errorf("day %s got %t expect %t", exp.day, result, exp.value)
 		}
+	}
+}
+
+func TestService_Simplify(t *testing.T) {
+	type testcase struct {
+		name    string
+		service *tl.Service
+	}
+	testcases := []testcase{
+		{"TestService", newTestService()},
+	}
+	// get more examples from feeds
+	feedchecks := []string{}
+	for _, v := range testutil.ExternalTestFeeds {
+		feedchecks = append(feedchecks, v.URL)
+	}
+	for _, path := range feedchecks {
+		reader, err := tlcsv.NewReader(path)
+		if err != nil {
+			panic(err)
+		}
+		if err := reader.Open(); err != nil {
+			panic(err)
+		}
+		for _, svc := range tl.NewServicesFromReader(reader) {
+			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", filepath.Base(path), svc.ServiceID), svc})
+		}
+	}
+	for _, tc := range testcases {
+		if len(tc.service.CalendarDates()) == 0 {
+			// No need to test services without exceptions...
+			continue
+		}
+		t.Run(tc.name, func(t *testing.T) {
+			s := tc.service
+			ret, err := s.Simplify()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			if a, b := len(s.CalendarDates()), len(ret.CalendarDates()); b > a {
+				t.Errorf("got %d calendar dates for simplified service, which is more than the input of %d calendar dates", b, a)
+			}
+			// Verify all IsActive values match through entire service period, not just StartDate, EndDate
+			// debugging....
+			// fmt.Println("input:", s.StartDate.String()[0:10], "end:", s.EndDate.String()[0:10], "Days:", s.Sunday, s.Monday, s.Tuesday, s.Wednesday, s.Thursday, s.Friday, s.Saturday, "calendar_date count:", len(s.CalendarDates()))
+			// for _, cd := range s.CalendarDates() {
+			// 	fmt.Printf("\tdate: %s dow: %d type: %d\n", cd.Date.Format("2006-01-02"), cd.Date.Weekday(), cd.ExceptionType)
+			// }
+			// fmt.Println("ret  :", ret.StartDate.String()[0:10], "end:", ret.EndDate.String()[0:10], "Days:", ret.Sunday, ret.Monday, ret.Tuesday, ret.Wednesday, ret.Thursday, ret.Friday, ret.Saturday, "calendar_date count:", len(ret.CalendarDates()))
+			// for _, cd := range ret.CalendarDates() {
+			// 	fmt.Printf("\tdate: %s dow: %d type: %d\n", cd.Date.Format("2006-01-02"), cd.Date.Weekday(), cd.ExceptionType)
+			// }
+			// if a, b := len(s.CalendarDates()), len(ret.CalendarDates()); b > a {
+			// 	fmt.Printf("calendar_dates increased: %d -> %d\n", a, b)
+			// } else if b < a {
+			// 	fmt.Printf("ok; calendar_dates decreased: %d -> %d\n", a, b)
+			// }
+			start, end := s.ServicePeriod()
+			for start.Before(end) || start.Equal(end) {
+				a := s.IsActive(start)
+				b := ret.IsActive(start)
+				// fmt.Printf("\tchecking %s dow: %d a: %t b: %t\n", start.Format("2006-01-02"), start.Weekday(), a, b)
+				if a != b {
+					t.Errorf("got %t on day %s, expected %t", b, start.Format("2006-01-02"), a)
+				}
+				start = start.AddDate(0, 0, 1)
+			}
+
+		})
 	}
 }

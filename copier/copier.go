@@ -66,10 +66,9 @@ func (ce *CopyError) Context() *causes.Context {
 ////////// Copier //////////
 ////////////////////////////
 
-// Copier copies from Reader to Writer
-type Copier struct {
-	Reader    tl.Reader
-	Writer    tl.Writer
+// Options defines the settable options for a Copier.
+type Options struct {
+	// Batch size
 	BatchSize int
 	// Attempt to save an entity that returns validation errors
 	AllowEntityErrors    bool
@@ -80,12 +79,23 @@ type Copier struct {
 	CreateMissingShapes bool
 	// Create missing Calendar entries
 	NormalizeServiceIDs bool
+	// Simplify Calendars that use mostly CalendarDates
+	SimplifyCalendars bool
 	// Convert extended route types to primitives
 	UseBasicRouteTypes bool
 	// Default AgencyID
 	DefaultAgencyID string
 	// DeduplicateStopTimes
 	DeduplicateJourneyPatterns bool
+}
+
+// Copier copies from Reader to Writer
+type Copier struct {
+	// Default options
+	Options
+	// Reader and writer
+	Reader tl.Reader
+	Writer tl.Writer
 	// Entity selection strategy
 	Marker Marker
 	// Error handler, called for each entity
@@ -101,17 +111,11 @@ type Copier struct {
 }
 
 // NewCopier creates and initializes a new Copier.
-func NewCopier(reader tl.Reader, writer tl.Writer) Copier {
-	copier := Copier{
-		Reader:               reader,
-		Writer:               writer,
-		BatchSize:            1000000,
-		AllowEntityErrors:    false,
-		AllowReferenceErrors: false,
-		InterpolateStopTimes: false,
-		CreateMissingShapes:  false,
-		NormalizeServiceIDs:  false,
-	}
+func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
+	copier := Copier{}
+	copier.Options = opts
+	copier.Reader = reader
+	copier.Writer = writer
 	// Result
 	result := NewCopyResult()
 	copier.result = result
@@ -126,11 +130,16 @@ func NewCopier(reader tl.Reader, writer tl.Writer) Copier {
 	copier.filters = []tl.EntityFilter{}
 	// Geom Cache
 	copier.geomCache = newGeomCache()
+	// Set the default BatchSize
+	if copier.BatchSize == 0 {
+		copier.BatchSize = 1000000 // TODO: 1_000_000 requires Go 1.13
+	}
 	// Set the DefaultAgencyID from the Reader
-	copier.DefaultAgencyID = ""
-	for e := range copier.Reader.Agencies() {
-		copier.DefaultAgencyID = e.AgencyID
-		copier.agencyCount++
+	if copier.DefaultAgencyID == "" {
+		for e := range copier.Reader.Agencies() {
+			copier.DefaultAgencyID = e.AgencyID
+			copier.agencyCount++
+		}
 	}
 	return copier
 }
@@ -564,62 +573,90 @@ func (copier *Copier) copyRoutes() error {
 	return nil
 }
 
-// copyCalendars copies Calendars and CalendarDates
+// copyCalendars
 func (copier *Copier) copyCalendars() error {
-	// Calendars
-	bt := []tl.Entity{}
+	// Get the basic Calendars as Services
+	// This is essentially the same as NewServicesFromReader,
+	// but we need additional error checking and accounting.
+	svcs := map[string]*tl.Service{}
 	for ent := range copier.Reader.Calendars() {
-		ent := ent
-		var err error
-		if bt, err = copier.checkBatch(bt, &ent); err != nil {
+		if !copier.isMarked(&tl.Calendar{}) {
+			continue
+		}
+		_, ok := svcs[ent.ServiceID]
+		if ok {
+			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.ServiceID)}, nil)
+			continue
+		}
+		svcs[ent.ServiceID] = tl.NewService(ent)
+	}
+
+	// Add the CalendarDates to Services
+	for ent := range copier.Reader.CalendarDates() {
+		cal := tl.Calendar{
+			ServiceID: ent.ServiceID,
+			Generated: true,
+		}
+		if !copier.isMarked(&cal) {
+			continue
+		}
+		svc, ok := svcs[ent.ServiceID]
+		if !ok {
+			svc = tl.NewService(cal)
+			svcs[ent.ServiceID] = svc
+		}
+		if _, ok := svc.Exception(ent.Date); ok {
+			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.ServiceID)}, nil)
+			continue
+		}
+		svc.AddCalendarDate(ent)
+	}
+
+	// Write Calendars
+	var err error
+	bt := []tl.Entity{}
+	for _, svc := range svcs {
+		// Simplify generated and non-generated calendars
+		if copier.SimplifyCalendars {
+			if s, err := svc.Simplify(); err == nil {
+				svc = s
+				svcs[svc.ServiceID] = svc
+			}
+		}
+		// Generated calendars may need their service period set...
+		if svc.Generated && (svc.StartDate.IsZero() || svc.EndDate.IsZero()) {
+			svc.StartDate, svc.EndDate = svc.ServicePeriod()
+		}
+		// Write out generated calendars IF normalizing OR simplifying
+		if svc.Generated {
+			if copier.NormalizeServiceIDs || copier.SimplifyCalendars {
+				// Add entity
+			} else {
+				// Don't add entity, but update emap, so dates don't error
+				copier.SetEntity(&svc.Calendar, svc.ServiceID, svc.ServiceID)
+				continue
+			}
+		}
+		if bt, err = copier.checkBatch(bt, &svc.Calendar); err != nil {
 			return err
+		}
+		if svc.Generated {
+			copier.result.GeneratedCount["calendar.txt"]++
 		}
 	}
 	if err := copier.writeBatch(bt); err != nil {
 		return err
 	}
-
-	// Create additional Calendars
-	if copier.NormalizeServiceIDs {
-		if err := copier.createMissingCalendars(); err != nil {
-			return err
-		}
-	}
 	copier.logCount(&tl.Calendar{})
 
-	// Add CalendarDates
-	// Keep track of duplicate CalendarDates
-	type calkey struct {
-		ServiceID string
-		Date      string
-	}
-	dups := map[calkey]int{}
+	// Write CalendarDates
 	bt = nil
-	for ent := range copier.Reader.CalendarDates() {
-		if !copier.isMarked(&tl.Calendar{ServiceID: ent.ServiceID}) {
-			continue
-		}
-		// Check for duplicates (service_id,date)
-		key := calkey{
-			ServiceID: ent.ServiceID,
-			Date:      ent.Date.Format("20060102"),
-		}
-		if _, ok := dups[key]; ok {
-			ent.AddError(causes.NewDuplicateIDError(ent.EntityID()))
-		}
-		dups[key]++
-		// Allow unchecked/invalid ServiceID references.
-		if !copier.NormalizeServiceIDs {
-			if _, ok := copier.EntityMap.Get("calendar.txt", ent.ServiceID); !ok {
-				copier.EntityMap.Set("calendar.txt", ent.ServiceID, ent.ServiceID)
+	for _, svc := range svcs {
+		for _, cd := range svc.CalendarDates() {
+			if bt, err = copier.checkBatch(bt, &cd); err != nil {
+				return err
 			}
 		}
-		ent := ent
-		var err error
-		if bt, err = copier.checkBatch(bt, &ent); err != nil {
-			return err
-		}
-
 	}
 	if err := copier.writeBatch(bt); err != nil {
 		return err
@@ -927,55 +964,4 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []tl.StopTime
 		copier.result.GeneratedCount["shapes.txt"]++
 	}
 	return shape.ShapeID, nil
-}
-
-// createMissingCalendars to fully normalize ServiceIDs
-func (copier *Copier) createMissingCalendars() error {
-	// Prepare to create missing Calendars
-	missing := map[string]tl.Calendar{}
-	for e := range copier.Reader.CalendarDates() {
-		cal := tl.Calendar{
-			ServiceID: e.ServiceID,
-			Generated: true,
-			StartDate: e.Date,
-			EndDate:   e.Date,
-		}
-		if !copier.isMarked(&cal) {
-			continue
-		}
-		// Do we already have this Calendar?
-		if _, ok := copier.GetEntity(&cal); ok {
-			continue
-		}
-		// Do we already know this ServiceID?
-		if c, ok := missing[cal.ServiceID]; ok {
-			cal = c
-		}
-		// Update the date range
-		if e.ExceptionType == 1 {
-			if e.Date.After(cal.EndDate) {
-				cal.EndDate = e.Date
-			}
-			if e.Date.Before(cal.StartDate) {
-				cal.StartDate = e.Date
-			}
-		}
-		missing[e.ServiceID] = cal
-	}
-	// Create the missing Calendars
-	bt := []tl.Entity{}
-	for _, e := range missing {
-		log.Debug("Create missing cal: %#v\n", e)
-		e := e
-		var err error
-		bt, err = copier.checkBatch(bt, &e)
-		if err != nil {
-			return err
-		}
-	}
-	if err := copier.writeBatch(bt); err != nil {
-		return err
-	}
-	copier.result.GeneratedCount["calendar.txt"] += len(bt)
-	return nil
 }

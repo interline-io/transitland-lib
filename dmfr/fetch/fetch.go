@@ -1,4 +1,4 @@
-package dmfr
+package fetch
 
 import (
 	"database/sql"
@@ -12,13 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// FetchOptions sets options for a fetch operation.
-type FetchOptions struct {
+// Options sets options for a fetch operation.
+type Options struct {
 	FeedURL                 string
 	FeedID                  string
 	FeedCreate              bool
@@ -29,8 +30,8 @@ type FetchOptions struct {
 	Secrets                 Secrets
 }
 
-// FetchResult contains results of a fetch operation.
-type FetchResult struct {
+// Result contains results of a fetch operation.
+type Result struct {
 	FeedVersion  tl.FeedVersion
 	Path         string
 	FoundSHA1    bool
@@ -41,10 +42,10 @@ type FetchResult struct {
 // DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
 // An error return from this function is a serious failure.
 // Saves FeedState.LastFetchError for regular failures.
-func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
-	fr := FetchResult{}
+func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
+	fr := Result{}
 	// Get feed, create if not present and FeedCreate is specified
-	tlfeed := Feed{}
+	tlfeed := tl.Feed{}
 	if err := atx.Get(&tlfeed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, opts.FeedID); err == sql.ErrNoRows && opts.FeedCreate {
 		tlfeed.FeedID = opts.FeedID
 		tlfeed.Spec = "gtfs"
@@ -61,7 +62,7 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 		opts.FetchedAt = time.Now().UTC()
 	}
 	// Get state, create if necessary
-	tlstate := FeedState{FeedID: tlfeed.ID}
+	tlstate := dmfr.FeedState{FeedID: tlfeed.ID}
 	if err := atx.Get(&tlstate, `SELECT * FROM feed_states WHERE feed_id = ?`, tlfeed.ID); err == sql.ErrNoRows {
 		tlstate.ID, err = atx.Insert(&tlstate)
 		if err != nil {
@@ -98,10 +99,10 @@ func DatabaseFetch(atx tldb.Adapter, opts FetchOptions) (FetchResult, error) {
 
 // fetchAndCreateFeedVersion from a URL.
 // Returns an error if a serious failure occurs, such as database or filesystem access.
-// Sets FetchResult.FetchError if a regular failure occurs, such as a 404.
+// Sets Result.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
-func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts FetchOptions) (FetchResult, error) {
-	fr := FetchResult{}
+func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Result, error) {
+	fr := Result{}
 	if opts.FeedURL == "" {
 		fr.FetchError = errors.New("no url")
 		return fr, nil
@@ -205,7 +206,7 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts FetchOptions
 
 func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	// Get FeedVersionFileInfos
-	fvfis, err := NewFeedVersionFileInfosFromReader(reader)
+	fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader)
 	if err != nil {
 		return err
 	}
@@ -217,7 +218,7 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 		}
 	}
 	// Get service statistics
-	fvsls, err := NewFeedVersionServiceInfosFromReader(reader)
+	fvsls, err := dmfr.NewFeedVersionServiceInfosFromReader(reader)
 	if err != nil {
 		return err
 	}
