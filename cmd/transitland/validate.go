@@ -27,7 +27,7 @@ func (cmd *validateCommand) Run(args []string) error {
 		log.Exit("Requires input reader")
 	}
 	//
-	reader := MustGetReader(fl.Arg(0))
+	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
 	v, err := validator.NewValidator(reader)
 	if err != nil {

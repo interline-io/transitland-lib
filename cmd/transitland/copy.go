@@ -39,9 +39,9 @@ func (cmd *copyCommand) Run(args []string) error {
 		log.Exit("Requires input reader and output writer")
 	}
 	// Reader / Writer
-	reader := MustGetReader(fl.Arg(0))
+	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
-	writer := MustGetWriter(fl.Arg(1), cmd.create)
+	writer := ext.MustGetWriter(fl.Arg(1), cmd.create)
 	defer writer.Close()
 	// Setup copier
 	cp := copier.NewCopier(reader, writer)
