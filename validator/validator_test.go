@@ -12,6 +12,7 @@ import (
 
 //////////// helpers /////////////
 
+// exampleReader returns an overlay feed reader.
 func exampleReader(basepath string, overlaypath string) *tlcsv.Reader {
 	reader, err := tlcsv.NewReader(".")
 	if err != nil {
@@ -21,6 +22,7 @@ func exampleReader(basepath string, overlaypath string) *tlcsv.Reader {
 	return reader
 }
 
+// testErrorHandler verifies that every error found is in the specified list.
 type testErrorHandler struct {
 	t                  *testing.T
 	expectSourceErrors map[string][]testutil.ExpectError
@@ -72,6 +74,8 @@ func TestValidator_Validate(t *testing.T) {
 				handler.expectSourceErrors[ee.Filename] = append(handler.expectSourceErrors[ee.Filename], ee)
 			})
 			////////
+			// For every overlay feed, check that every error is expected
+			// At least one error must be specified per overlay feed, otherwise fail
 			v, _ := NewValidator(reader)
 			v.Copier.ErrorHandler = &handler
 			errs, warns := v.Validate()

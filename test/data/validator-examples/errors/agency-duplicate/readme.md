@@ -1,0 +1,1 @@
+checks if two agencies have the same agency_id

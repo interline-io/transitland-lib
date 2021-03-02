@@ -1,0 +1,1 @@
+checks if two calendars have the same service_id

@@ -7,7 +7,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/pkg/errors"
 )
 
 type HasContext interface {
@@ -112,9 +111,8 @@ func (e *ExpectError) Match(errs []error) bool {
 			expect.EntityID = outer.Context().EntityID
 			expect.Field = outer.Context().Field
 		}
-		// Inner most cause
-		cause := errors.Cause(err)
-		if inner, ok := cause.(HasContext); ok {
+		// Get error location context
+		if inner, ok := err.(HasContext); ok {
 			ctx := inner.Context()
 			if len(ctx.Filename) > 0 {
 				expect.Filename = ctx.Filename
@@ -124,7 +122,7 @@ func (e *ExpectError) Match(errs []error) bool {
 			}
 			expect.Field = ctx.Field
 		}
-		errtype := strings.Replace(fmt.Sprintf("%T", cause), "*", "", 1)
+		errtype := strings.Replace(fmt.Sprintf("%T", err), "*", "", 1)
 		if len(strings.Split(errtype, ".")) > 1 {
 			errtype = strings.Split(errtype, ".")[1]
 		}

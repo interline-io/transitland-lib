@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // CopyResult stores Copier results and statistics.
@@ -35,23 +36,43 @@ func NewCopyResult() *CopyResult {
 	}
 }
 
+type ctx = causes.Context
+
+type updateContext interface {
+	Update(*causes.Context)
+}
+
 // HandleSourceErrors .
 func (cr *CopyResult) HandleSourceErrors(fn string, errs []error, warns []error) {
 	for _, err := range errs {
-		cr.Errors = append(cr.Errors, NewCopyError(fn, "", err))
+		if v, ok := err.(updateContext); ok {
+			v.Update(&ctx{Filename: fn})
+		}
+		cr.Errors = append(cr.Errors, err)
 	}
 	for _, err := range warns {
-		cr.Warnings = append(cr.Warnings, NewCopyError(fn, "", err))
+		if v, ok := err.(updateContext); ok {
+			v.Update(&ctx{Filename: fn})
+		}
+		cr.Warnings = append(cr.Warnings, err)
 	}
 }
 
 // HandleEntityErrors .
 func (cr *CopyResult) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
+	efn := ent.Filename()
+	eid := ent.EntityID()
 	for _, err := range errs {
-		cr.Errors = append(cr.Errors, NewCopyError(ent.Filename(), ent.EntityID(), err))
+		if v, ok := err.(updateContext); ok {
+			v.Update(&ctx{Filename: efn, EntityID: eid})
+		}
+		cr.Errors = append(cr.Errors, err)
 	}
 	for _, err := range warns {
-		cr.Warnings = append(cr.Warnings, NewCopyError(ent.Filename(), ent.EntityID(), err))
+		if v, ok := err.(updateContext); ok {
+			v.Update(&ctx{Filename: efn, EntityID: eid})
+		}
+		cr.Warnings = append(cr.Warnings, err)
 	}
 }
 

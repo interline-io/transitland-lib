@@ -1,0 +1,1 @@
+agency_id is conditionally required in fare_attributes when more than one agency exists

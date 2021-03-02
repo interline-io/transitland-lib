@@ -6,48 +6,22 @@ import (
 )
 
 // TODO
-// Errors:
-//   FileEmptyError
-//   DuplicateColumnError
-//   MissingColumnError
-//   NoHeaderError
-//   InvalidZoneError
-//   TripWithoutStopTimes
 //
-// Warnings:
+// Best Practice Warnings:
 //   NonuniformAgencyTimezoneError
-//   UnusedEntityError
-//   StationVisitError
-//   StopTooCloseError
-//   StopTooFarError
-//   NoServiceError
-//   FastTravelError
-//   UnequalColumnError
-//   ShapeReversedError
-//   StopTooFarFromShapeError
-//
-// Maybe validations:
-//   route color starts with '#' ?
-
-// Best practice ideas?
-//   Calendar with service on no days of week
-//   stop_time shape_dist > shape max dist
-//   stop too far from shape
-//   stop too far from parent
-//   stop too close?
-//   Information on unknown columns/files?
-//   Feed expiration upcoming? less than 7 days of service?
-//   Too fast travel
-//   Unused stops, routes, agencies, etc.
-//   route_long_name begins with route_short_name
-//   Insufficient contrast in route colors?
-//   Consecutive stops with same time?
-//   Stop Too Far From Shape With Dist Traveled
-
-// HasContext is an error that includes location information.
-type HasContext interface {
-	Context() *Context
-}
+//   UnusedEntityError - warning that an named entity (agency, route, stop, calendar, etc.) is not referenced
+//   StationVisitError - stop_time visits location_type != 0
+//   StopTooCloseError - stop too close to another stop
+//   StopTooFarError - stop too far from a related stop
+//   NoServiceError - warning that service contains no positive days
+//   FastTravelError - what it says
+//   UnequalColumnError - file contains rows with unequal columns
+//   ShapeReversedError - shape is valid and stops are close but reverse direction
+//   StopTooFarFromShapeError - stop_time too far from associated shape
+//   StopTimeSequenceConsecutive - >2 visits to the same stop in a row, or time not increasing
+//   InsufficientRouteColorContrast - colors not distinguishable
+//   TravelDistanceError - shape_dist_travel and shape length mismatch, or related
+//   FeedServiceDurationError - feed covers < 30 days
 
 // Context adds structured context.
 type Context struct {
@@ -79,6 +53,7 @@ func (e *Context) Update(v *Context) {
 	if v == nil {
 		return
 	}
+	fmt.Println("update context")
 	if v.Filename != "" {
 		e.Filename = v.Filename
 	}
