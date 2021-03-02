@@ -1,4 +1,4 @@
-package dmfr
+package sync
 
 import (
 	"database/sql"
@@ -7,32 +7,33 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// SyncOptions sets options for a sync operation.
-type SyncOptions struct {
+// Options sets options for a sync operation.
+type Options struct {
 	Filenames  []string
 	HideUnseen bool
 }
 
-// SyncResult is the result of a sync operation.
-type SyncResult struct {
+// Result is the result of a sync operation.
+type Result struct {
 	FeedIDs     []int
 	Errors      []error
 	HiddenCount int
 }
 
 // MainSync .
-func MainSync(atx tldb.Adapter, opts SyncOptions) (SyncResult, error) {
+func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 	// Load
-	sr := SyncResult{}
+	sr := Result{}
 	feedids := []int{}
 	errs := []error{}
 	for _, fn := range opts.Filenames {
-		reg, err := LoadAndParseRegistry(fn)
+		reg, err := dmfr.LoadAndParseRegistry(fn)
 		if err != nil {
 			log.Error("%s: Error parsing DMFR: %s", fn, err.Error())
 			errs = append(errs, err)
@@ -40,7 +41,7 @@ func MainSync(atx tldb.Adapter, opts SyncOptions) (SyncResult, error) {
 		}
 		for _, rfeed := range reg.Feeds {
 			rfeed.File = filepath.Base(fn)
-			feedid, found, err := ImportFeed(atx, rfeed)
+			feedid, found, err := UpdateFeed(atx, rfeed)
 			if found {
 				log.Info("%s: updated feed %s (id:%d)", fn, rfeed.FeedID, feedid)
 			} else {
@@ -74,13 +75,13 @@ func MainSync(atx tldb.Adapter, opts SyncOptions) (SyncResult, error) {
 	return sr, nil
 }
 
-// ImportFeed .
-func ImportFeed(atx tldb.Adapter, rfeed Feed) (int, bool, error) {
+// UpdateFeed .
+func UpdateFeed(atx tldb.Adapter, rfeed tl.Feed) (int, bool, error) {
 	// Check if we have the existing Feed
 	feedid := 0
 	found := false
 	var errTx error
-	dbfeed := Feed{}
+	dbfeed := tl.Feed{}
 	err := atx.Get(&dbfeed, "SELECT * FROM current_feeds WHERE onestop_id = ?", rfeed.FeedID)
 	if err == nil {
 		// Exists, update key values

@@ -1,13 +1,13 @@
-package dmfr
+package fetch
 
 import (
 	"errors"
 	"net/url"
 	"os"
 
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 // AuthenticatedURLAdapter is similar to URLAdapter but takes auth and secrets.

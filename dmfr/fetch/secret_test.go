@@ -1,12 +1,14 @@
-package dmfr
+package fetch
 
 import (
 	"testing"
+
+	"github.com/interline-io/transitland-lib/internal/testutil"
 )
 
 func TestSecrets(t *testing.T) {
 	s := Secrets{}
-	if err := s.Load("../test/data/dmfr/secrets.json"); err != nil {
+	if err := s.Load(testutil.RelPath("test/data/dmfr/secrets.json")); err != nil {
 		t.Error(err)
 	}
 	if len(s) != 4 {
@@ -16,7 +18,7 @@ func TestSecrets(t *testing.T) {
 
 func TestSecrets_MatchFilename(t *testing.T) {
 	s := Secrets{}
-	if err := s.Load("../test/data/dmfr/secrets.json"); err != nil {
+	if err := s.Load(testutil.RelPath("test/data/dmfr/secrets.json")); err != nil {
 		t.Error(err)
 	}
 	testcases := []struct {
@@ -43,7 +45,7 @@ func TestSecrets_MatchFilename(t *testing.T) {
 
 func TestSecrets_MatchFeed(t *testing.T) {
 	s := Secrets{}
-	if err := s.Load("../test/data/dmfr/secrets.json"); err != nil {
+	if err := s.Load(testutil.RelPath("test/data/dmfr/secrets.json")); err != nil {
 		t.Error(err)
 	}
 	testcases := []struct {

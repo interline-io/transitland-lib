@@ -3,9 +3,8 @@ package main
 import (
 	"flag"
 	"os"
-	"strings"
 
-	"github.com/interline-io/transitland-lib/dmfr"
+	dmfr "github.com/interline-io/transitland-lib/dmfr/cmd"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
@@ -18,18 +17,6 @@ func btos(b bool) string {
 		return "true"
 	}
 	return "false"
-}
-
-// https://stackoverflow.com/questions/28322997/how-to-get-a-list-of-values-into-a-flag-in-golang/28323276#28323276
-type arrayFlags []string
-
-func (i *arrayFlags) String() string {
-	return strings.Join(*i, ",")
-}
-
-func (i *arrayFlags) Set(value string) error {
-	*i = append(*i, value)
-	return nil
 }
 
 // Submodule

@@ -5,7 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"strings"
+
+	fetch "github.com/interline-io/transitland-lib/dmfr/fetch"
+	"github.com/interline-io/transitland-lib/dmfr/importer"
+	"github.com/interline-io/transitland-lib/dmfr/sync"
+	"github.com/interline-io/transitland-lib/dmfr/validate"
 )
 
 // Command is the main entry point to the DMFR command
@@ -40,17 +44,15 @@ func (cmd *Command) Run(args []string) error {
 	var r runner
 	switch subc {
 	case "validate":
-		r = &ValidateCommand{}
-	case "merge":
-		r = &MergeCommand{}
+		r = &validate.Command{}
 	case "sync":
-		r = &SyncCommand{}
+		r = &sync.Command{}
 	case "import":
-		r = &ImportCommand{}
+		r = &importer.Command{}
 	case "fetch":
-		r = &FetchCommand{}
-	case "recalculate":
-		r = &RecalculateCommand{}
+		r = &fetch.Command{}
+	// case "recalculate":
+	// 	r = &RecalculateCommand{}
 	default:
 		return fmt.Errorf("Invalid command: %q", subc)
 	}
@@ -73,19 +75,5 @@ func (MergeCommand) Parse(args []string) error {
 
 // Run executes this command.
 func (MergeCommand) Run() error {
-	return nil
-}
-
-//// Util
-
-// https://stackoverflow.com/questions/28322997/how-to-get-a-list-of-values-into-a-flag-in-golang/28323276#28323276
-type arrayFlags []string
-
-func (i *arrayFlags) String() string {
-	return strings.Join(*i, ",")
-}
-
-func (i *arrayFlags) Set(value string) error {
-	*i = append(*i, value)
 	return nil
 }

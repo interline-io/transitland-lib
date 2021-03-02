@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/extract"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -19,18 +20,18 @@ type extractCommand struct {
 	// Typical DMFR options
 	fvid       int
 	create     bool
-	extensions arrayFlags
-	filters    arrayFlags
+	extensions cli.ArrayFlags
+	filters    cli.ArrayFlags
 	// extract specific arguments
 	onlyVisitedEntities bool
 	allEntities         bool
-	extractAgencies     arrayFlags
-	extractStops        arrayFlags
-	extractTrips        arrayFlags
-	extractCalendars    arrayFlags
-	extractRoutes       arrayFlags
-	extractRouteTypes   arrayFlags
-	extractSet          arrayFlags
+	extractAgencies     cli.ArrayFlags
+	extractStops        cli.ArrayFlags
+	extractTrips        cli.ArrayFlags
+	extractCalendars    cli.ArrayFlags
+	extractRoutes       cli.ArrayFlags
+	extractRouteTypes   cli.ArrayFlags
+	extractSet          cli.ArrayFlags
 }
 
 func (cmd *extractCommand) Run(args []string) error {

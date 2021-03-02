@@ -29,6 +29,19 @@ type FeedVersionImport struct {
 	tl.Timestamps
 }
 
+// NewFeedVersionImport returns an initialized FeedVersionImport.
+func NewFeedVersionImport() *FeedVersionImport {
+	fvi := FeedVersionImport{}
+	fvi.EntityCount = EntityCounter{}
+	fvi.WarningCount = EntityCounter{}
+	fvi.GeneratedCount = EntityCounter{}
+	fvi.SkipEntityErrorCount = EntityCounter{}
+	fvi.SkipEntityReferenceCount = EntityCounter{}
+	fvi.SkipEntityFilterCount = EntityCounter{}
+	fvi.SkipEntityMarkedCount = EntityCounter{}
+	return &fvi
+}
+
 // GetID returns the ID
 func (fvi *FeedVersionImport) GetID() int {
 	return fvi.ID

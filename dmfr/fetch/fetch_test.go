@@ -1,4 +1,4 @@
-package dmfr
+package fetch
 
 import (
 	"io/ioutil"
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
@@ -16,15 +17,6 @@ import (
 )
 
 var ExampleZip = testutil.ExampleZip
-
-func caltrain(atx tldb.Adapter, url string) Feed {
-	// Create dummy feed
-	tlfeed := Feed{}
-	tlfeed.FeedID = url
-	tlfeed.URLs.StaticCurrent = url
-	tlfeed.ID = testdb.MustInsert(atx, &tlfeed)
-	return tlfeed
-}
 
 func TestDatabaseFetch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +36,8 @@ func TestDatabaseFetch(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		//
 		url := ts.URL
-		feed := caltrain(atx, ts.URL)
-		fr, err := DatabaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
+		feed := testdb.Caltrain(atx, ts.URL)
+		fr, err := DatabaseFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -71,7 +63,7 @@ func TestDatabaseFetch(t *testing.T) {
 			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
 		}
 		// Check FeedState
-		tlf := FeedState{}
+		tlf := dmfr.FeedState{}
 		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feed.ID)
 		if !tlf.LastSuccessfulFetchAt.Valid {
 			t.Errorf("expected non-nil value")
@@ -108,13 +100,13 @@ func TestDatabaseFetchCreateFeed(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		//
 		url := ts.URL
-		fr, err := DatabaseFetch(atx, FetchOptions{FeedID: "caltrain", FeedURL: ts.URL, FeedCreate: true, Directory: tmpdir})
+		fr, err := DatabaseFetch(atx, Options{FeedID: "caltrain", FeedURL: ts.URL, FeedCreate: true, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
 		}
 		// Check Feed
-		tf2 := Feed{}
+		tf2 := tl.Feed{}
 		testdb.ShouldGet(t, atx, &tf2, `SELECT * FROM current_feeds WHERE onestop_id = ?`, "caltrain")
 		// Check FV
 		fv2 := tl.FeedVersion{ID: fr.FeedVersion.ID}
@@ -126,7 +118,7 @@ func TestDatabaseFetchCreateFeed(t *testing.T) {
 			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
 		}
 		// Check FeedState
-		tlf := FeedState{}
+		tlf := dmfr.FeedState{}
 		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, fv2.FeedID)
 		if !tlf.LastSuccessfulFetchAt.Valid {
 			t.Errorf("expected non-nil value")
@@ -148,15 +140,15 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 			return nil
 		}
 		defer os.RemoveAll(tmpdir) // clean up
-		feed := caltrain(atx, ts.URL)
+		feed := testdb.Caltrain(atx, ts.URL)
 		// Fetch
-		_, err = DatabaseFetch(atx, FetchOptions{FeedID: feed.FeedID, Directory: tmpdir})
+		_, err = DatabaseFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
 		}
 		// Check FeedState
-		tlf := FeedState{}
+		tlf := dmfr.FeedState{}
 		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feed.ID)
 		experr := "file does not exist"
 		if tlf.LastFetchError == "" {
@@ -189,8 +181,8 @@ func Test_fetchAndCreateFeedVersion(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpdir) // clean up
 		url := ts.URL
-		feed := caltrain(atx, url)
-		fr, err := fetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: tmpdir})
+		feed := testdb.Caltrain(atx, url)
+		fr, err := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return err
@@ -226,8 +218,8 @@ func Test_fetchAndCreateFeedVersion_404(t *testing.T) {
 	defer ts.Close()
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
-		feed := caltrain(atx, url)
-		fr, err := fetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: ""})
+		feed := testdb.Caltrain(atx, url)
+		fr, err := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
 			return err
@@ -258,8 +250,8 @@ func Test_fetchAndCreateFeedVersion_Exists(t *testing.T) {
 	}))
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
-		feed := caltrain(atx, url)
-		fr, err := fetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: ""})
+		feed := testdb.Caltrain(atx, url)
+		fr, err := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
 		}
@@ -269,7 +261,7 @@ func Test_fetchAndCreateFeedVersion_Exists(t *testing.T) {
 		if fr.FeedVersion.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fr.FeedVersion.SHA1, ExampleZip.SHA1)
 		}
-		fr2, err2 := fetchAndCreateFeedVersion(atx, feed, FetchOptions{FeedURL: url, Directory: ""})
+		fr2, err2 := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err2 != nil {
 			t.Error(err2)
 			return err2

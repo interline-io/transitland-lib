@@ -1,10 +1,11 @@
-package dmfr
+package sync
 
 import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -12,13 +13,13 @@ import (
 func TestMainSync(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create a feed we will check is soft-deleted
-		caltrain(atx, "caltrain")
+		testdb.Caltrain(atx, "caltrain")
 		// Import
 		regs := []string{
-			"../test/data/dmfr/rtfeeds.dmfr.json",
-			"../test/data/dmfr/bayarea-local.dmfr.json",
+			"../../test/data/dmfr/rtfeeds.dmfr.json",
+			"../../test/data/dmfr/bayarea-local.dmfr.json",
 		}
-		opts := SyncOptions{
+		opts := Options{
 			Filenames:  regs,
 			HideUnseen: true,
 		}
@@ -31,7 +32,7 @@ func TestMainSync(t *testing.T) {
 		for _, i := range found.FeedIDs {
 			expect[i] = true
 		}
-		tlfeeds := []Feed{}
+		tlfeeds := []tl.Feed{}
 		testdb.ShouldSelect(t, atx, &tlfeeds, "SELECT * FROM current_feeds WHERE deleted_at IS NULL")
 		if len(tlfeeds) != len(expect) {
 			t.Errorf("got %d feeds, expect %d", len(tlfeeds), len(expect))
@@ -41,7 +42,7 @@ func TestMainSync(t *testing.T) {
 				t.Errorf("did not find feed %s", tlfeed.FeedID)
 			}
 		}
-		hf := Feed{}
+		hf := tl.Feed{}
 		testdb.ShouldGet(t, atx, &hf, "SELECT * FROM current_feeds WHERE onestop_id = ?", "caltrain")
 		if !hf.DeletedAt.Valid {
 			t.Errorf("expected DeletedAt to be non-nil")
@@ -57,7 +58,7 @@ func TestMainSync_Update(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create existing feed
 		exposid := "f-c20-trimet"
-		tlfeed := Feed{}
+		tlfeed := tl.Feed{}
 		tlfeed.URLs.StaticCurrent = "http://example.com"
 		tlfeed.FeedNamespaceID = "o-example-nsid"
 		tlfeed.FeedID = exposid
@@ -67,8 +68,8 @@ func TestMainSync_Update(t *testing.T) {
 			t.Error(err)
 		}
 		// Import
-		regs := []string{"../test/data/dmfr/rtfeeds.dmfr.json"}
-		opts := SyncOptions{
+		regs := []string{"../../test/data/dmfr/rtfeeds.dmfr.json"}
+		opts := Options{
 			Filenames: regs,
 		}
 		if _, err = MainSync(atx, opts); err != nil {
@@ -97,17 +98,17 @@ func TestMainSync_Update(t *testing.T) {
 
 // Unit tests
 
-func TestImportFeed(t *testing.T) {
+func TestUpdateFeed(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
 		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-			rfeed := Feed{}
+			rfeed := tl.Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Spec = "gtfs"
 			rfeed.URLs.StaticCurrent = "http://example.com/caltrain.zip"
 			rfeed.License.UseWithoutAttribution = "yes"
 			rfeed.Authorization.ParamName = "test"
-			rfeed.Languages = FeedLanguages{"en"}
-			feedid, found, err := ImportFeed(atx, rfeed)
+			rfeed.Languages = tl.FeedLanguages{"en"}
+			feedid, found, err := UpdateFeed(atx, rfeed)
 			if err != nil {
 				t.Error(err)
 			}
@@ -115,7 +116,7 @@ func TestImportFeed(t *testing.T) {
 				t.Errorf("expected new feed")
 			}
 			//
-			dfeed := Feed{}
+			dfeed := tl.Feed{}
 			testdb.ShouldGet(t, atx, &dfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid)
 			if a, b := dfeed.FeedID, rfeed.FeedID; a != b {
 				t.Errorf("got %s expect %s", a, b)
@@ -145,9 +146,9 @@ func TestImportFeed(t *testing.T) {
 	})
 	t.Run("Update", func(t *testing.T) {
 		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-			rfeed := Feed{}
+			rfeed := tl.Feed{}
 			rfeed.FeedID = "caltrain"
-			feedid, found, err := ImportFeed(atx, rfeed)
+			feedid, found, err := UpdateFeed(atx, rfeed)
 			if err != nil {
 				t.Error(err)
 			}
@@ -157,9 +158,9 @@ func TestImportFeed(t *testing.T) {
 			// Reload
 			testdb.ShouldGet(t, atx, &rfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid)
 			//
-			dfeed := Feed{}
+			dfeed := tl.Feed{}
 			dfeed.FeedID = "caltrain"
-			feedid2, found2, err2 := ImportFeed(atx, dfeed)
+			feedid2, found2, err2 := UpdateFeed(atx, dfeed)
 			if err2 != nil {
 				t.Error(err)
 			}
@@ -198,7 +199,7 @@ func TestHideUnseedFeeds(t *testing.T) {
 		feedids := []string{"caltrain", "seen"}
 		fids := []int{}
 		for _, feedid := range feedids {
-			f := caltrain(atx, feedid)
+			f := testdb.Caltrain(atx, feedid)
 			fids = append(fids, f.ID)
 		}
 		expseen := fids[0:1]

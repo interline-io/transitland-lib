@@ -1,8 +1,9 @@
-package dmfr
+package importer
 
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
@@ -11,7 +12,7 @@ import (
 
 func TestFindImportableFeeds(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-		f := caltrain(atx, "test")
+		f := testdb.Caltrain(atx, "test")
 		allfvids := []int{}
 		for i := 0; i < 10; i++ {
 			fv1 := testdb.ShouldInsert(t, atx, &tl.FeedVersion{FeedID: f.ID})
@@ -19,7 +20,7 @@ func TestFindImportableFeeds(t *testing.T) {
 		}
 		expfvids := allfvids[:5]
 		for _, fvid := range allfvids[5:] {
-			testdb.ShouldInsert(t, atx, &FeedVersionImport{FeedVersionID: fvid})
+			testdb.ShouldInsert(t, atx, &dmfr.FeedVersionImport{FeedVersionID: fvid})
 		}
 		foundfvids, err := FindImportableFeeds(atx)
 		if err != nil {
@@ -44,14 +45,14 @@ func TestMainImportFeedVersion(t *testing.T) {
 	}
 	t.Run("Success", func(t *testing.T) {
 		testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-			fvid := setup(atx, testutil.ExampleDir.URL)
+			fvid := setup(atx, "../../test/data/example")
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := MainImportFeedVersion(&atx2, ImportOptions{Activate: true, FeedVersionID: fvid})
+			_, err := MainImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid})
 			if err != nil {
 				t.Fatal(err)
 			}
 			// Check results
-			fvi := FeedVersionImport{}
+			fvi := dmfr.FeedVersionImport{}
 			testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fvid)
 			if fvi.Success != true {
 				t.Errorf("expected success = true")
@@ -78,13 +79,13 @@ func TestMainImportFeedVersion(t *testing.T) {
 	t.Run("Failed", func(t *testing.T) {
 		fvid := 0
 		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-			fvid = setup(atx, "../test/data/does-not-exist")
+			fvid = setup(atx, "../../test/data/does-not-exist")
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := MainImportFeedVersion(&atx2, ImportOptions{FeedVersionID: fvid})
+			_, err := MainImportFeedVersion(&atx2, Options{FeedVersionID: fvid})
 			if err == nil {
 				t.Errorf("expected an error, got none")
 			}
-			fvi := FeedVersionImport{}
+			fvi := dmfr.FeedVersionImport{}
 			testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fvid)
 			if fvi.Success != false {
 				t.Errorf("expected success = false")
@@ -107,11 +108,11 @@ func TestMainImportFeedVersion(t *testing.T) {
 func TestImportFeedVersion(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create FV
-		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
+		fv := tl.FeedVersion{File: "../../test/data/example.zip"}
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		fviresult, err := ImportFeedVersion(atx, fv, ImportOptions{})
+		fviresult, err := ImportFeedVersion(atx, fv, Options{})
 		if err != nil {
 			t.Error(err)
 		}
