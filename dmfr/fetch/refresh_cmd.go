@@ -1,10 +1,14 @@
-package dmfr
+package fetch
 
 import (
+	"bufio"
 	"flag"
 	"os"
+	"strings"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -22,8 +26,8 @@ type RecalculateOptions struct {
 type RecalculateCommand struct {
 	Workers            int
 	DBURL              string
-	FVIDs              arrayFlags
-	FVSHA1             arrayFlags
+	FVIDs              cli.ArrayFlags
+	FVSHA1             cli.ArrayFlags
 	Adapter            tldb.Adapter // allow for mocks
 	Limit              int
 	DryRun             bool
@@ -79,7 +83,7 @@ func (cmd *RecalculateCommand) Parse(args []string) error {
 // Run this command
 func (cmd *RecalculateCommand) Run() error {
 	if cmd.Adapter == nil {
-		writer := mustGetWriter(cmd.DBURL, true)
+		writer := tldb.MustGetWriter(cmd.DBURL, true)
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
@@ -144,11 +148,11 @@ func dmfrRecalculate(adapter tldb.Adapter, opts RecalculateOptions) error {
 	}
 	defer reader.Close()
 	// Delete file infos
-	if _, err := adapter.Sqrl().Delete(FeedVersionFileInfo{}.TableName()).Where(sq.Eq{"feed_version_id": fv.ID}).Exec(); err != nil {
+	if _, err := adapter.Sqrl().Delete(dmfr.FeedVersionFileInfo{}.TableName()).Where(sq.Eq{"feed_version_id": fv.ID}).Exec(); err != nil {
 		return err
 	}
 	// Delete service levels
-	if _, err := adapter.Sqrl().Delete(FeedVersionServiceLevel{}.TableName()).Where(sq.Eq{"feed_version_id": fv.ID}).Exec(); err != nil {
+	if _, err := adapter.Sqrl().Delete(dmfr.FeedVersionServiceLevel{}.TableName()).Where(sq.Eq{"feed_version_id": fv.ID}).Exec(); err != nil {
 		return err
 	}
 	// Update stats
@@ -156,4 +160,24 @@ func dmfrRecalculate(adapter tldb.Adapter, opts RecalculateOptions) error {
 		return err
 	}
 	return nil
+}
+
+func getFileLines(fn string) ([]string, error) {
+	ret := []string{}
+	file, err := os.Open(fn)
+	if err != nil {
+		return ret, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if t := scanner.Text(); t != "" {
+			ret = append(ret, strings.TrimSpace(t))
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return ret, err
+	}
+	return ret, nil
 }

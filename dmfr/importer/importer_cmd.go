@@ -1,37 +1,36 @@
-package dmfr
+package importer
 
 import (
-	"bufio"
 	"flag"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// ImportCommand imports FeedVersions into a database.
-type ImportCommand struct {
-	ImportOptions ImportOptions
-	Workers       int
-	Limit         int
-	DBURL         string
-	CoverDate     string
-	FetchedSince  string
-	Latest        bool
-	DryRun        bool
-	FeedIDs       []string
-	FVIDs         arrayFlags
-	FVSHA1        arrayFlags
-	Adapter       tldb.Adapter // allow for mocks
+// Command imports FeedVersions into a database.
+type Command struct {
+	Options      Options
+	Workers      int
+	Limit        int
+	DBURL        string
+	CoverDate    string
+	FetchedSince string
+	Latest       bool
+	DryRun       bool
+	FeedIDs      []string
+	FVIDs        cli.ArrayFlags
+	FVSHA1       cli.ArrayFlags
+	Adapter      tldb.Adapter // allow for mocks
 }
 
 // Parse command line flags
-func (cmd *ImportCommand) Parse(args []string) error {
-	extflags := arrayFlags{}
+func (cmd *Command) Parse(args []string) error {
+	extflags := cli.ArrayFlags{}
 	fvidfile := ""
 	fvsha1file := ""
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
@@ -46,24 +45,24 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Import at most n feeds")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
-	fl.StringVar(&cmd.ImportOptions.Directory, "gtfsdir", ".", "GTFS Directory")
-	fl.StringVar(&cmd.ImportOptions.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
+	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
+	fl.StringVar(&cmd.Options.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
 	fl.StringVar(&cmd.CoverDate, "date", "", "Service on date")
 	fl.StringVar(&cmd.FetchedSince, "fetched-since", "", "Fetched since")
 	fl.BoolVar(&cmd.Latest, "latest", false, "Only import latest feed version available for each feed")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
-	fl.BoolVar(&cmd.ImportOptions.Activate, "activate", false, "Set as active feed version after import")
+	fl.BoolVar(&cmd.Options.Activate, "activate", false, "Set as active feed version after import")
 	// Copy options
-	fl.BoolVar(&cmd.ImportOptions.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
-	fl.BoolVar(&cmd.ImportOptions.DeduplicateJourneyPatterns, "deduplicate-stop-times", false, "Deduplicate StopTimes using Journey Patterns")
-	fl.BoolVar(&cmd.ImportOptions.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
-	fl.BoolVar(&cmd.ImportOptions.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
+	fl.BoolVar(&cmd.Options.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
+	fl.BoolVar(&cmd.Options.DeduplicateJourneyPatterns, "deduplicate-stop-times", false, "Deduplicate StopTimes using Journey Patterns")
+	fl.BoolVar(&cmd.Options.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
+	fl.BoolVar(&cmd.Options.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
 	fl.Parse(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
 	}
-	cmd.ImportOptions.Extensions = extflags
+	cmd.Options.Extensions = extflags
 	if fvidfile != "" {
 		lines, err := getFileLines(fvidfile)
 		if err != nil {
@@ -90,9 +89,9 @@ func (cmd *ImportCommand) Parse(args []string) error {
 }
 
 // Run this command
-func (cmd *ImportCommand) Run() error {
+func (cmd *Command) Run() error {
 	if cmd.Adapter == nil {
-		writer := mustGetWriter(cmd.DBURL, true)
+		writer := tldb.MustGetWriter(cmd.DBURL, true)
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
@@ -148,16 +147,16 @@ func (cmd *ImportCommand) Run() error {
 	///////////////
 	// Here we go
 	log.Info("Importing %d feed versions", len(qrs))
-	jobs := make(chan ImportOptions, len(qrs))
-	results := make(chan ImportResult, len(qrs))
+	jobs := make(chan Options, len(qrs))
+	results := make(chan Result, len(qrs))
 	for _, fvid := range qrs {
-		jobs <- ImportOptions{
+		jobs <- Options{
 			FeedVersionID: fvid,
-			Directory:     cmd.ImportOptions.Directory,
-			S3:            cmd.ImportOptions.S3,
-			Extensions:    cmd.ImportOptions.Extensions,
-			Activate:      cmd.ImportOptions.Activate,
-			Options:       cmd.ImportOptions.Options,
+			Directory:     cmd.Options.Directory,
+			S3:            cmd.Options.S3,
+			Extensions:    cmd.Options.Extensions,
+			Activate:      cmd.Options.Activate,
+			Options:       cmd.Options.Options,
 		}
 	}
 	close(jobs)
@@ -171,7 +170,7 @@ func (cmd *ImportCommand) Run() error {
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan ImportOptions, results chan<- ImportResult, wg *sync.WaitGroup) {
+func dmfrImportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan Options, results chan<- Result, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -202,24 +201,4 @@ func dmfrImportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan Imp
 		results <- result
 	}
 	wg.Done()
-}
-
-func getFileLines(fn string) ([]string, error) {
-	ret := []string{}
-	file, err := os.Open(fn)
-	if err != nil {
-		return ret, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		if t := scanner.Text(); t != "" {
-			ret = append(ret, strings.TrimSpace(t))
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return ret, err
-	}
-	return ret, nil
 }

@@ -1,4 +1,4 @@
-package dmfr
+package fetch
 
 import (
 	"errors"

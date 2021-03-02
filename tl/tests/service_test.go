@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -68,12 +69,9 @@ func TestService_Simplify(t *testing.T) {
 		{"TestService", newTestService()},
 	}
 	// get more examples from feeds
-	feedchecks := []string{
-		testutil.RelPath("test/data/example"),
-		testutil.RelPath("test/data/external/caltrain.zip"),
-		testutil.RelPath("test/data/external/bart.zip"),
-		testutil.RelPath("test/data/external/mbta.zip"),
-		testutil.RelPath("test/data/external/cdmx.zip"),
+	feedchecks := []string{}
+	for _, v := range testutil.ExternalTestFeeds {
+		feedchecks = append(feedchecks, v.URL)
 	}
 	for _, path := range feedchecks {
 		reader, err := tlcsv.NewReader(path)
@@ -84,7 +82,7 @@ func TestService_Simplify(t *testing.T) {
 			panic(err)
 		}
 		for _, svc := range tl.NewServicesFromReader(reader) {
-			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", path, svc.ServiceID), svc})
+			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", filepath.Base(path), svc.ServiceID), svc})
 		}
 	}
 	for _, tc := range testcases {

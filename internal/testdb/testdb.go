@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -126,4 +127,14 @@ type AdapterIgnoreTx struct {
 // Tx runs in same tx if tx already open, otherwise runs without tx
 func (atx *AdapterIgnoreTx) Tx(cb func(tldb.Adapter) error) error {
 	return cb(atx)
+}
+
+// CreateTestFeed returns a simple feed inserted into a database.
+func CreateTestFeed(atx tldb.Adapter, url string) tl.Feed {
+	// Create dummy feed
+	tlfeed := tl.Feed{}
+	tlfeed.FeedID = url
+	tlfeed.URLs.StaticCurrent = url
+	tlfeed.ID = MustInsert(atx, &tlfeed)
+	return tlfeed
 }

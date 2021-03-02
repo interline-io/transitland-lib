@@ -17,7 +17,7 @@ func nn(filename, eid string) node {
 
 func TestExtract_Filter_BART(t *testing.T) {
 	em := NewMarker()
-	reader, err := tlcsv.NewReader(testutil.RelPath("test/data/external/bart.zip"))
+	reader, err := tlcsv.NewReader(testutil.ExampleFeedBART.URL)
 	if err != nil {
 		t.Error(err)
 	}

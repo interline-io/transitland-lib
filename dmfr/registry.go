@@ -14,19 +14,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-// Feed .
-type Feed = tl.Feed
-
-// FeedUrls .
-type FeedUrls = tl.FeedUrls
-
-// FeedLanguages .
-type FeedLanguages = tl.FeedLanguages
-
 // Registry represents a parsed Distributed Mobility Feed Registry (DMFR) file
 type Registry struct {
 	Schema                string `json:"$schema"`
-	Feeds                 []Feed
+	Feeds                 []tl.Feed
 	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
 }
 

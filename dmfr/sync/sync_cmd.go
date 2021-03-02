@@ -1,4 +1,4 @@
-package dmfr
+package sync
 
 import (
 	"flag"
@@ -8,16 +8,16 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// SyncCommand syncs a DMFR to a database.
-type SyncCommand struct {
+// Command syncs a DMFR to a database.
+type Command struct {
 	DBURL      string
 	Filenames  []string
 	HideUnseen bool
-	adapter    tldb.Adapter
+	Adapter    tldb.Adapter
 }
 
 // Parse command line options.
-func (cmd *SyncCommand) Parse(args []string) error {
+func (cmd *Command) Parse(args []string) error {
 	fl := flag.NewFlagSet("sync", flag.ExitOnError)
 	fl.Usage = func() {
 		log.Print("Usage: sync <Filenames...>")
@@ -34,17 +34,17 @@ func (cmd *SyncCommand) Parse(args []string) error {
 }
 
 // Run this command.
-func (cmd *SyncCommand) Run() error {
-	if cmd.adapter == nil {
-		writer := mustGetWriter(cmd.DBURL, true)
-		cmd.adapter = writer.Adapter
-		defer cmd.adapter.Close()
+func (cmd *Command) Run() error {
+	if cmd.Adapter == nil {
+		writer := tldb.MustGetWriter(cmd.DBURL, true)
+		cmd.Adapter = writer.Adapter
+		defer cmd.Adapter.Close()
 	}
-	opts := SyncOptions{
+	opts := Options{
 		Filenames:  cmd.Filenames,
 		HideUnseen: cmd.HideUnseen,
 	}
-	return cmd.adapter.Tx(func(atx tldb.Adapter) error {
+	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
 		_, err := MainSync(atx, opts)
 		return err
 	})
