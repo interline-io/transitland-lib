@@ -9,6 +9,24 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
+// MustGetWriter opens & creates a db writer, panic on failure
+func MustGetWriter(dburl string, create bool) *Writer {
+	// Writer
+	writer, err := NewWriter(dburl)
+	if err != nil {
+		panic(err)
+	}
+	if err := writer.Open(); err != nil {
+		panic(err)
+	}
+	if create {
+		if err := writer.Create(); err != nil {
+			panic(err)
+		}
+	}
+	return writer
+}
+
 // Writer takes a Reader and saves it to a database.
 type Writer struct {
 	FeedVersionID int
