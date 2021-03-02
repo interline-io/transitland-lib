@@ -19,14 +19,12 @@ import (
 
 // ImportOptions sets various options for importing a feed.
 type ImportOptions struct {
-	FeedVersionID              int
-	Extensions                 []string
-	Directory                  string
-	S3                         string
-	Activate                   bool
-	CreateMissingShapes        bool
-	InterpolateStopTimes       bool
-	DeduplicateJourneyPatterns bool
+	FeedVersionID int
+	Extensions    []string
+	Directory     string
+	S3            string
+	Activate      bool
+	copier.Options
 }
 
 // ImportResult contains the results of a feed import.
@@ -247,9 +245,7 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts ImportOptions) 
 		cp.AddExtension(ext)
 	}
 	// Settable options
-	cp.CreateMissingShapes = opts.CreateMissingShapes
-	cp.InterpolateStopTimes = opts.InterpolateStopTimes
-	cp.DeduplicateJourneyPatterns = opts.DeduplicateJourneyPatterns
+	cp.Options = opts.Options
 	// Non-settable options
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
