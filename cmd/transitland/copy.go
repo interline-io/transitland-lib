@@ -9,18 +9,15 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// basicCopyOptions
-type basicCopyOptions struct {
+// copyCommand
+type copyCommand struct {
+	// Default options
 	copier.Options
+	// Typical DMFR options
 	fvid       int
 	create     bool
 	extensions arrayFlags
 	filters    arrayFlags
-}
-
-// copyCommand
-type copyCommand struct {
-	basicCopyOptions
 }
 
 func (cmd *copyCommand) Run(args []string) error {

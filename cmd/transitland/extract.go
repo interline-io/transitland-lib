@@ -15,7 +15,12 @@ import (
 // extractCommand
 type extractCommand struct {
 	// Default options
-	basicCopyOptions
+	copier.Options
+	// Typical DMFR options
+	fvid       int
+	create     bool
+	extensions arrayFlags
+	filters    arrayFlags
 	// extract specific arguments
 	onlyVisitedEntities bool
 	allEntities         bool
