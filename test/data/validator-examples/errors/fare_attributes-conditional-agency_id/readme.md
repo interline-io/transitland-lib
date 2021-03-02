@@ -1,1 +1,1 @@
-agency_id is conditionally required in fare_attributes when more than one agency exists
+Feed that contains more than one agency and fare_attributes.txt that do not have the conditionally required agency_id value.

@@ -1,1 +1,1 @@
-checks if two calendars have the same service_id
+Feed that contains calendar.txt with duplicate service_id values.

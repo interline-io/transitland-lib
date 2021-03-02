@@ -1,1 +1,1 @@
-checks if two agencies have the same agency_id
+Feed that contains agencies.txt with duplicate agency_id values.

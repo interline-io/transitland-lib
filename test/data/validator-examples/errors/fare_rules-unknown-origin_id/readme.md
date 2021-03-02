@@ -1,1 +1,1 @@
-fare_rules references unknown zone in origin_id
+Feed that contains fare_rules.txt that reference an zone that does not exist on any stop via origin_id.

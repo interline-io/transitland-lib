@@ -1,1 +1,1 @@
-checks if two calendar_dates have the same (service_id, date)
+Feed that contains calendar_dates.txt that contains duplicate (service_id,date) values.

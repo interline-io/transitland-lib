@@ -1,0 +1,1 @@
+Feed that contains trips.entities where the stop_time with the highest stop_sequence has no arrival time. Note that the SequenceError is associated with the trip.

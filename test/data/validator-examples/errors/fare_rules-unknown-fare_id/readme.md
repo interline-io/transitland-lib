@@ -1,1 +1,1 @@
-fare_rules references unknown fare_attribute in fare_id
+Feed that contains fare_rules.txt that reference an unknown fare_attribute via fare_id.

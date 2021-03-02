@@ -1,0 +1,1 @@
+Feed that contains a csv file, stop_times.txt, with missing headers. this generates FileRequiredError for stop_times.txt and EmptyTripError for trips.txt. TODO: this test should check for FileRequiredFieldError.

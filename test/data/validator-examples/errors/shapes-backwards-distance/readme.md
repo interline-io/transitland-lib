@@ -1,0 +1,1 @@
+Feed that contains shapes.txt entities that have a decreasing shape_dist_traveled with respect to shape_pt_sequence

@@ -1,0 +1,1 @@
+Feed that contains trips.txt entities where the first stop_time stop_sequence does not have a departure_time.

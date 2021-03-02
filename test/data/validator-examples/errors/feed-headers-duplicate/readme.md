@@ -1,0 +1,1 @@
+Feed that contains a file, agency.txt, with a header that contains duplicate columns (agency_name).

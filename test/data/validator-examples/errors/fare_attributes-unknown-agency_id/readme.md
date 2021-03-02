@@ -1,1 +1,1 @@
-fare_attributes references unknown agency_id
+Feed that contains fare_attributes.txt that references an unknown agency via agency_id.

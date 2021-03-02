@@ -1,0 +1,1 @@
+Feed that contains stops.txt entities with duplicate stop_ids.

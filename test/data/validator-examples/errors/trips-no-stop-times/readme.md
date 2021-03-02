@@ -1,0 +1,1 @@
+Feed with trips.txt entities that do not have any associated stop_times.
