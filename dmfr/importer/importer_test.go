@@ -45,7 +45,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 	}
 	t.Run("Success", func(t *testing.T) {
 		testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-			fvid := setup(atx, "../../test/data/example")
+			fvid := setup(atx, testutil.ExampleDir.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := MainImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid})
 			if err != nil {
@@ -79,7 +79,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 	t.Run("Failed", func(t *testing.T) {
 		fvid := 0
 		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-			fvid = setup(atx, "../../test/data/does-not-exist")
+			fvid = setup(atx, testutil.RelPath("test/data/does-not-exist"))
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := MainImportFeedVersion(&atx2, Options{FeedVersionID: fvid})
 			if err == nil {
@@ -108,7 +108,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 func TestImportFeedVersion(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create FV
-		fv := tl.FeedVersion{File: "../../test/data/example.zip"}
+		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import

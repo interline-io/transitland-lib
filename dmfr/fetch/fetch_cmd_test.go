@@ -17,7 +17,7 @@ import (
 
 func TestCommand(t *testing.T) {
 	ts200 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testutil.RelPath(testutil.ExampleZip.URL))
+		buf, err := ioutil.ReadFile(testutil.ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}

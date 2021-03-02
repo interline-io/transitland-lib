@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -14,9 +15,9 @@ func TestCommand(t *testing.T) {
 		errContains string
 		command     []string
 	}{
-		{2, "", []string{"../../test/data/dmfr/example.json"}},
-		{4, "", []string{"../../test/data/dmfr/example.json", "../../test/data/dmfr/bayarea-local.dmfr.json"}},
-		{0, "no such file", []string{"../../test/data/dmfr/does-not-exist.json"}},
+		{2, "", []string{testutil.RelPath("test/data/dmfr/example.json")}},
+		{4, "", []string{testutil.RelPath("test/data/dmfr/example.json"), testutil.RelPath("test/data/dmfr/bayarea-local.dmfr.json")}},
+		{0, "no such file", []string{testutil.RelPath("test/data/dmfr/does-not-exist.json")}},
 	}
 	_ = cases
 	for _, exp := range cases {
