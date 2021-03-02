@@ -69,7 +69,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 func (cmd *FetchCommand) Run() error {
 	// Get feeds
 	if cmd.adapter == nil {
-		writer := mustGetWriter(cmd.DBURL, true)
+		writer := tldb.MustGetWriter(cmd.DBURL, true)
 		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}

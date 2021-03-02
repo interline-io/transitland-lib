@@ -92,7 +92,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 // Run this command
 func (cmd *ImportCommand) Run() error {
 	if cmd.Adapter == nil {
-		writer := mustGetWriter(cmd.DBURL, true)
+		writer := tldb.MustGetWriter(cmd.DBURL, true)
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}

@@ -36,7 +36,7 @@ func (cmd *SyncCommand) Parse(args []string) error {
 // Run this command.
 func (cmd *SyncCommand) Run() error {
 	if cmd.adapter == nil {
-		writer := mustGetWriter(cmd.DBURL, true)
+		writer := tldb.MustGetWriter(cmd.DBURL, true)
 		cmd.adapter = writer.Adapter
 		defer cmd.adapter.Close()
 	}

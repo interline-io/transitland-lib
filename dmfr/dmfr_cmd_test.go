@@ -11,6 +11,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // Test some commands.
@@ -34,7 +35,7 @@ func Test_SyncCommand(t *testing.T) {
 	_ = cases
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
-			w := mustGetWriter("sqlite3://:memory:", true)
+			w := tldb.MustGetWriter("sqlite3://:memory:", true)
 			c := SyncCommand{adapter: w.Adapter}
 			if err := c.Parse(exp.command); err != nil {
 				t.Error(err)
@@ -95,7 +96,7 @@ func Test_FetchCommand(t *testing.T) {
 	_ = cases
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
-			adapter := mustGetWriter("sqlite3://:memory:", true).Adapter
+			adapter := tldb.MustGetWriter("sqlite3://:memory:", true).Adapter
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}

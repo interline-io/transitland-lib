@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-
-	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // Command is the main entry point to the DMFR command
@@ -90,22 +88,4 @@ func (i *arrayFlags) String() string {
 func (i *arrayFlags) Set(value string) error {
 	*i = append(*i, value)
 	return nil
-}
-
-// mustGetWriter opens & creates a db writer, panic on failure
-func mustGetWriter(dburl string, create bool) *tldb.Writer {
-	// Writer
-	writer, err := tldb.NewWriter(dburl)
-	if err != nil {
-		panic(err)
-	}
-	if err := writer.Open(); err != nil {
-		panic(err)
-	}
-	if create {
-		if err := writer.Create(); err != nil {
-			panic(err)
-		}
-	}
-	return writer
 }
