@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	fetch "github.com/interline-io/transitland-lib/dmfr/fetch"
+	"github.com/interline-io/transitland-lib/dmfr/fetch"
 	"github.com/interline-io/transitland-lib/dmfr/importer"
 	"github.com/interline-io/transitland-lib/dmfr/sync"
 	"github.com/interline-io/transitland-lib/dmfr/validate"
@@ -24,7 +24,6 @@ func (cmd *Command) Run(args []string) error {
 		log.Print("Usage: dmfr <command> [<args>]")
 		log.Print("dmfr commands:")
 		log.Print("  validate")
-		log.Print("  merge")
 		log.Print("  sync")
 		log.Print("  import")
 		log.Print("  fetch")
@@ -51,8 +50,8 @@ func (cmd *Command) Run(args []string) error {
 		r = &importer.Command{}
 	case "fetch":
 		r = &fetch.Command{}
-	// case "recalculate":
-	// 	r = &RecalculateCommand{}
+	case "recalculate":
+		r = &fetch.RecalculateCommand{}
 	default:
 		return fmt.Errorf("Invalid command: %q", subc)
 	}

@@ -12,7 +12,7 @@ import (
 
 func TestFindImportableFeeds(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-		f := testdb.Caltrain(atx, "test")
+		f := testdb.CreateTestFeed(atx, "test")
 		allfvids := []int{}
 		for i := 0; i < 10; i++ {
 			fv1 := testdb.ShouldInsert(t, atx, &tl.FeedVersion{FeedID: f.ID})

@@ -20,7 +20,7 @@ type Command struct {
 	DBURL   string
 	DryRun  bool
 	FeedIDs []string
-	Adapter tldb.Adapter
+	adapter tldb.Adapter
 }
 
 // Parse sets options from command line flags.
@@ -69,13 +69,13 @@ func (cmd *Command) Parse(args []string) error {
 // Run executes this command.
 func (cmd *Command) Run() error {
 	// Get feeds
-	if cmd.Adapter == nil {
+	if cmd.adapter == nil {
 		writer := tldb.MustGetWriter(cmd.DBURL, true)
-		cmd.Adapter = writer.Adapter
+		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}
 	if len(cmd.FeedIDs) == 0 {
-		q := cmd.Adapter.Sqrl().
+		q := cmd.adapter.Sqrl().
 			Select("*").
 			From("current_feeds").
 			Where("deleted_at IS NULL").
@@ -88,7 +88,7 @@ func (cmd *Command) Run() error {
 			return err
 		}
 		feeds := []tl.Feed{}
-		err = cmd.Adapter.Select(&feeds, qstr, qargs...)
+		err = cmd.adapter.Select(&feeds, qstr, qargs...)
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,7 @@ func (cmd *Command) Run() error {
 	results := make(chan Result, len(cmd.FeedIDs))
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go fetchWorker(w, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
+		go fetchWorker(w, cmd.adapter, cmd.DryRun, jobs, results, &wg)
 	}
 	for _, feedid := range cmd.FeedIDs {
 		opts := Options{

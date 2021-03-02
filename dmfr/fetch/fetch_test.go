@@ -36,7 +36,7 @@ func TestDatabaseFetch(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		//
 		url := ts.URL
-		feed := testdb.Caltrain(atx, ts.URL)
+		feed := testdb.CreateTestFeed(atx, ts.URL)
 		fr, err := DatabaseFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
@@ -140,7 +140,7 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 			return nil
 		}
 		defer os.RemoveAll(tmpdir) // clean up
-		feed := testdb.Caltrain(atx, ts.URL)
+		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
 		_, err = DatabaseFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
@@ -181,7 +181,7 @@ func Test_fetchAndCreateFeedVersion(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpdir) // clean up
 		url := ts.URL
-		feed := testdb.Caltrain(atx, url)
+		feed := testdb.CreateTestFeed(atx, url)
 		fr, err := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
@@ -218,7 +218,7 @@ func Test_fetchAndCreateFeedVersion_404(t *testing.T) {
 	defer ts.Close()
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
-		feed := testdb.Caltrain(atx, url)
+		feed := testdb.CreateTestFeed(atx, url)
 		fr, err := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
@@ -250,7 +250,7 @@ func Test_fetchAndCreateFeedVersion_Exists(t *testing.T) {
 	}))
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
-		feed := testdb.Caltrain(atx, url)
+		feed := testdb.CreateTestFeed(atx, url)
 		fr, err := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)

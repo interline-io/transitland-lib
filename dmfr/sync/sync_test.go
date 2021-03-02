@@ -13,7 +13,7 @@ import (
 func TestMainSync(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create a feed we will check is soft-deleted
-		testdb.Caltrain(atx, "caltrain")
+		testdb.CreateTestFeed(atx, "caltrain")
 		// Import
 		regs := []string{
 			testutil.RelPath("test/data/dmfr/rtfeeds.dmfr.json"),
@@ -199,7 +199,7 @@ func TestHideUnseedFeeds(t *testing.T) {
 		feedids := []string{"caltrain", "seen"}
 		fids := []int{}
 		for _, feedid := range feedids {
-			f := testdb.Caltrain(atx, feedid)
+			f := testdb.CreateTestFeed(atx, feedid)
 			fids = append(fids, f.ID)
 		}
 		expseen := fids[0:1]

@@ -58,7 +58,7 @@ func TestCommand(t *testing.T) {
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
-			c := Command{Adapter: adapter}
+			c := Command{adapter: adapter}
 			if err := c.Parse(exp.command); err != nil {
 				t.Error(err)
 			}
