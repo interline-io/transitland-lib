@@ -28,40 +28,6 @@ type errorWithContext interface {
 	Context() *causes.Context
 }
 
-// // CopyError wraps an underlying GTFS Error with the filename and entity ID.
-// type CopyError struct {
-// 	filename string
-// 	entityID string
-// 	cause    error
-// }
-
-// // NewCopyError returns a new CopyError error with filename and id set.
-// func NewCopyError(efn string, eid string, err error) *CopyError {
-// 	return &CopyError{
-// 		filename: efn,
-// 		entityID: eid,
-// 		cause:    err,
-// 	}
-// }
-
-// // Error returns the error string.
-// func (ce *CopyError) Error() string {
-// 	return fmt.Sprintf("%s '%s': %s", ce.filename, ce.entityID, ce.cause)
-// }
-
-// // Cause returns the underlying GTFS Error
-// func (ce *CopyError) Cause() error {
-// 	return ce.cause
-// }
-
-// // Context returns the error Context
-// func (ce *CopyError) Context() *causes.Context {
-// 	return &causes.Context{
-// 		Filename: ce.filename,
-// 		EntityID: ce.entityID,
-// 	}
-// }
-
 ////////////////////////////
 ////////// Copier //////////
 ////////////////////////////
