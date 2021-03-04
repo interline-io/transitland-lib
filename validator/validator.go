@@ -18,9 +18,10 @@ func NewValidator(reader tl.Reader) (*Validator, error) {
 	w := emptyWriter{}
 	w.Open()
 	// Copy to empty writer and validate
-	cp := copier.NewCopier(reader, &w, copier.Options{})
-	cp.AllowEntityErrors = true
-	cp.AllowReferenceErrors = true
+	cp := copier.NewCopier(reader, &w, copier.Options{
+		AllowEntityErrors:    true,
+		AllowReferenceErrors: true,
+	})
 	return &Validator{Reader: reader, Copier: &cp}, nil
 }
 
