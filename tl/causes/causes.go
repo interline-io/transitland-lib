@@ -76,7 +76,6 @@ func (e *Context) Update(v *Context) {
 	if v == nil {
 		return
 	}
-	fmt.Println("update context")
 	if v.Filename != "" {
 		e.Filename = v.Filename
 	}

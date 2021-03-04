@@ -1,8 +1,6 @@
 package copier
 
 import (
-	"fmt"
-
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
@@ -17,7 +15,6 @@ type Validator interface {
 type EntityErrorCheck struct{}
 
 func (e *EntityErrorCheck) ValidateEntity(c *Copier, ent tl.Entity) ([]error, []error) {
-	fmt.Println("checking entity:", ent.Filename(), ent.EntityID())
 	return ent.Errors(), ent.Warnings()
 }
 
