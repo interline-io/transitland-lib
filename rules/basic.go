@@ -1,0 +1,199 @@
+package rules
+
+import (
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/causes"
+)
+
+// EntityErrorCheck runs the entity's built in Errors() check.
+type EntityErrorCheck struct{}
+
+// ValidateEntity .
+func (e *EntityErrorCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+	return ent.Errors(), nil
+}
+
+// EntityWarningCheck runs the entity's built in Warnings() check.
+type EntityWarningCheck struct{}
+
+// ValidateEntity .
+func (e *EntityWarningCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+	return nil, ent.Warnings()
+}
+
+///////////////////
+
+// EntityDuplicateCheck determines if a unique entity ID is present more than once in the file.
+type EntityDuplicateCheck struct {
+	duplicates *tl.EntityMap
+}
+
+// ValidateEntity .
+func (e *EntityDuplicateCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+	if e.duplicates == nil {
+		e.duplicates = tl.NewEntityMap()
+	}
+	eid := ent.EntityID()
+	if eid == "" {
+		return nil, nil
+	}
+	var errs []error
+	efn := ent.Filename()
+	if _, ok := e.duplicates.Get(efn, eid); ok {
+		errs = append(errs, causes.NewDuplicateIDError(eid))
+	} else {
+		e.duplicates.Set(efn, eid, eid)
+	}
+	return errs, nil
+}
+
+///////////////////
+
+// ValidFarezoneCheck checks if fare_rules are referencing zone_id values seen on stops.
+type ValidFarezoneCheck struct {
+	zones map[string]string
+}
+
+// ValidateEntity .
+func (e *ValidFarezoneCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+	if e.zones == nil {
+		e.zones = map[string]string{}
+	}
+	var errs []error
+	switch v := ent.(type) {
+	case *tl.Stop:
+		e.zones[v.ZoneID] = v.ZoneID
+	case *tl.FareRule:
+		// TODO: updating values should be handled in UpdateKeys
+		// probably shouldn't mutate in validators...
+		if fz, ok := e.zones[v.OriginID]; ok {
+			v.OriginID = fz
+		} else if v.OriginID != "" {
+			errs = append(errs, causes.NewInvalidFarezoneError("origin_id", v.OriginID))
+		}
+		if fz, ok := e.zones[v.DestinationID]; ok {
+			v.DestinationID = fz
+		} else if v.DestinationID != "" {
+			errs = append(errs, causes.NewInvalidFarezoneError("destination_id", v.DestinationID))
+		}
+		if fz, ok := e.zones[v.ContainsID]; ok {
+			v.ContainsID = fz
+		} else if v.ContainsID != "" {
+			errs = append(errs, causes.NewInvalidFarezoneError("contains_id", v.ContainsID))
+		}
+	}
+	return errs, nil
+}
+
+///////////////////
+
+// AgencyIDConditionallyRequiredCheck checks if agency_id is missing when more than one agency is present.
+type AgencyIDConditionallyRequiredCheck struct {
+	agencyCount int
+}
+
+// ValidateEntity .
+func (e *AgencyIDConditionallyRequiredCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+	var errs []error
+	var warns []error
+	switch v := ent.(type) {
+	case *tl.FareAttribute:
+		if e.agencyCount > 1 && v.AgencyID.Key == "" {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
+		}
+	case *tl.Route:
+		if v.AgencyID != "" {
+			// ok
+		} else if e.agencyCount > 1 {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
+		} else if e.agencyCount == 1 {
+			warns = append(warns, causes.NewConditionallyRequiredFieldError("agency_id"))
+		}
+	case *tl.Agency:
+		e.agencyCount++
+		if e.agencyCount > 1 && v.AgencyID == "" {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
+		}
+	}
+	return errs, warns
+}
+
+///////////////////
+
+// InconsistentTimezoneCheck checks if agency_timezone doesn't match the first seen agency_timezone
+type InconsistentTimezoneCheck struct {
+	firstTimeZone string
+}
+
+// ValidateEntity .
+func (e *InconsistentTimezoneCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+	v, ok := ent.(*tl.Agency)
+	if !ok {
+		return nil, nil
+	}
+	if e.firstTimeZone == "" {
+		e.firstTimeZone = v.AgencyTimezone
+	}
+	if v.AgencyTimezone != e.firstTimeZone {
+		return []error{causes.NewInconsistentTimezoneError(v.AgencyTimezone)}, nil
+	}
+	return nil, nil
+}
+
+///////////////////
+
+// ParentStationLocationTypeCheck checks if a stop's parent_station is of the allowed type.
+type ParentStationLocationTypeCheck struct {
+	locationTypes map[string]int
+}
+
+// ValidateEntity .
+func (e *ParentStationLocationTypeCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+	// Confirm the parent station location_type is acceptable
+	stop, ok := ent.(*tl.Stop)
+	if !ok {
+		return nil, nil
+	}
+	if e.locationTypes == nil {
+		e.locationTypes = map[string]int{}
+	}
+	e.locationTypes[stop.StopID] = stop.LocationType
+	if stop.ParentStation.Key == "" {
+		return nil, nil
+	}
+	// We need to compare as strings because EntityMap is map[string]string
+	var errs []error
+	stype := stop.LocationType
+	ptype, ok := e.locationTypes[stop.ParentStation.Key]
+	if !ok {
+		// parent station not found; this is checked during UpdateKeys
+	} else if stype == 4 {
+		// Boarding areas may only link to type = 0
+		if ptype != 0 {
+			errs = append(errs, causes.NewInvalidParentStationError(stop.ParentStation.Key))
+		}
+	} else if ptype != 1 {
+		// All other types must have station as parent
+		errs = append(errs, causes.NewInvalidParentStationError(stop.ParentStation.Key))
+	}
+	return errs, nil
+}
+
+///////////////////
+
+// StopTimeSequenceCheck checks that all sequences stop_time sequences in a trip are valid.
+// This should be split into multiple validators.
+type StopTimeSequenceCheck struct{}
+
+// ValidateEntity .
+func (e *StopTimeSequenceCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+	trip, ok := ent.(*tl.Trip)
+	if !ok {
+		return nil, nil
+	}
+	// Use existing validator.
+	var errs = tl.ValidateStopTimes(trip.StopTimes)
+	return errs, nil
+}
+
+///////////////////
