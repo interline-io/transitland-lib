@@ -17,6 +17,7 @@ type Trip struct {
 	ShapeID              OptionalRelationship `csv:"shape_id"`
 	WheelchairAccessible int                  `csv:"wheelchair_accessible"`
 	BikesAllowed         int                  `csv:"bikes_allowed"`
+	StopTimes            []StopTime           `db:"-"` // for validation methods
 	StopPatternID        int
 	JourneyPatternID     string
 	JourneyPatternOffset int
