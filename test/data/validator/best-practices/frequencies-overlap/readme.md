@@ -1,0 +1,1 @@
+This feed contains frequencies.txt entities that have overlapping times for the same trip.

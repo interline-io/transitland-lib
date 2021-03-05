@@ -13,4 +13,4 @@ parse_route_sort_order,ok,parse route_sort_order,,ok,3,,,,xyz,FieldParseError:ro
 warning_same_route_desc,ok,xyz,route_desc = route_short_name,xyz,3,,,,,ValidationWarning:route_desc
 warning_extended_vehicle_type,ok,extended vehicle_type,,ok,1000,,,,,ValidationWarning:route_type
 warning_same_color,ok,route_color = route_text_color,,ok,3,,#ffffff,#ffffff,,ValidationWarning:route_text_color
-really_long_route_short_name,ok,very long route_short_name,,abc123_def456_ghi789,3,,,,,ValidationWarning:route_short_name
+really_long_route_short_name,ok,very long route_short_name,,abc123_def456_ghi789,3,,#ffffff,#ffffff,,ValidationWarning:route_short_name

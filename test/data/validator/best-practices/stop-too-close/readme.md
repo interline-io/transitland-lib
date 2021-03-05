@@ -1,0 +1,1 @@
+This feed contains stops.txt stations that are within 1m of each other.
