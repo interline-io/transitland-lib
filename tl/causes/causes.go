@@ -32,11 +32,19 @@ import (
 // Causes that exist but are not implemented:
 //   UnusedEntityError - warning that an named entity (agency, route, stop, calendar, etc.) is not referenced
 //
+// Best Practice Warnings implemented:
+//   NoScheduledServiceError - all days are 0, no type 1 exceptions
+//   StopTooFarError - stop too far from a related stop
+//
+// Warnings or generic errors that are implemented and need names:
+//   Duplicate fare_rules
+//   Duplicate route route_short_name, route_long_name, etc. combinations
+//   NoServiceError - warning that service contains no positive days
+//   OverlappingFrequencyError - maybe?
+//
 // Best Practice Warning that do not exist but should:
 //   StationVisitError - stop_time visits location_type != 0
 //   StopTooCloseError - stop too close to another stop
-//   StopTooFarError - stop too far from a related stop
-//   NoServiceError - warning that service contains no positive days
 //   FastTravelError - what it says
 //   UnequalColumnError - file contains rows with unequal columns
 //   ShapeReversedError - shape is valid and stops are close but reverse direction
@@ -44,17 +52,22 @@ import (
 //   StopTimeSequenceConsecutive - >2 visits to the same stop in a row, or time not increasing
 //   InsufficientRouteColorContrast - colors not distinguishable
 //   TravelDistanceError - shape_dist_travel and shape length mismatch, or related
-//   FeedServiceDurationError - feed covers < 30 days
+//   FeedServiceDurationError - feed covers < 30 days (note: can only be checked after all others)
+//   InconsistentLanguageError - feed_info or agency contains more than 1 language
+//   OverlappingBlockError - maybe?
+//   DuplicateStopNameError - maybe?
+//   Some feed_info rules
 
 // Context adds structured context.
 type Context struct {
-	Filename string
-	Line     int
-	EntityID string
-	Field    string
-	Value    string
-	Message  string
-	cause    error
+	Filename   string
+	Line       int
+	EntityID   string
+	Field      string
+	Value      string
+	Message    string
+	errorLevel int
+	cause      error
 }
 
 // bc avoids the problem of having a method
@@ -65,6 +78,13 @@ type bc = Context
 func (e *Context) Context() *Context {
 	return e
 }
+
+// ErrorLevel 0 = error, 1 = warning, 2 = best practice
+func (e *Context) ErrorLevel() int {
+	return e.errorLevel
+}
+
+// ErrorLevel returns the error level
 
 // Cause returns the underlying error and implements the Causer interface.
 func (e *Context) Cause() error {
@@ -101,6 +121,30 @@ func (e *Context) Update(v *Context) {
 
 func (e *Context) Error() string {
 	return ""
+}
+
+////////////////////////////
+// Error wrappers
+////////////////////////////
+
+// Warning wraps an error.
+type Warning struct {
+	cause error
+}
+
+// ErrorLevel returns type 1.
+func (Warning) ErrorLevel() int {
+	return 1
+}
+
+// BestPractice wraps an error.
+type BestPractice struct {
+	cause error
+}
+
+// ErrorLevel returns type 2.
+func (BestPractice) ErrorLevel() int {
+	return 2
 }
 
 ////////////////////////////
@@ -415,7 +459,11 @@ type ValidationWarning struct {
 // NewValidationWarning returns a new ValidationWarning
 func NewValidationWarning(field string, message string) *ValidationWarning {
 	return &ValidationWarning{bc: bc{Message: message, Field: field}}
+}
 
+// ErrorLevel .
+func (e *ValidationWarning) ErrorLevel() int {
+	return 1
 }
 
 func (e *ValidationWarning) Error() string {
@@ -435,9 +483,71 @@ func NewInconsistentTimezoneError(value string) *InconsistentTimezoneError {
 }
 
 func (e *InconsistentTimezoneError) Error() string {
-	return fmt.Sprintf("file contaims more than one timezone")
+	return "file contains inconsistent timezones"
 }
 
 ////////////////////////////
-// Validation suggestions
+// Best Practices
 ////////////////////////////
+
+// NoScheduledServiceError reports when a service entry contains no active days.
+type NoScheduledServiceError struct{ bc }
+
+func (e *NoScheduledServiceError) Error() string {
+	return "service contains no active days"
+}
+
+///////////////
+
+// StopTooFarError .
+type StopTooFarError struct{ bc }
+
+// NewStopTooFarError .
+func NewStopTooFarError() *StopTooFarError {
+	return &StopTooFarError{}
+}
+
+func (e *StopTooFarError) Error() string {
+	return "stop too far from parent"
+}
+
+///////////////
+
+// StopTooCloseError .
+type StopTooCloseError struct {
+	Target   string
+	Distance float64
+	bc
+}
+
+// NewStopTooCloseError .
+func NewStopTooCloseError(target string, distance float64) *StopTooCloseError {
+	return &StopTooCloseError{Target: target, Distance: distance}
+}
+
+func (e *StopTooCloseError) Error() string {
+	return fmt.Sprintf("stop is too close to another stop '%s' at %0.2f m", e.Target, e.Distance)
+}
+
+///////////////
+
+// StopTooFarFromShapeError reports when a stop is too far from a shape.
+type StopTooFarFromShapeError struct {
+	StopID   string
+	ShapeID  string
+	Distance float64
+	bc
+}
+
+// NewStopTooFarFromShapeError .
+func NewStopTooFarFromShapeError(stopid string, shapeid string, distance float64) *StopTooFarFromShapeError {
+	return &StopTooFarFromShapeError{
+		StopID:   stopid,
+		ShapeID:  shapeid,
+		Distance: distance,
+	}
+}
+
+func (e *StopTooFarFromShapeError) Error() string {
+	return fmt.Sprintf("stop '%s' is too far from shape '%s' at %0.2fm", e.StopID, e.ShapeID, e.Distance)
+}
