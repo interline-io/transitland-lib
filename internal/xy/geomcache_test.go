@@ -1,14 +1,14 @@
-package copier
+package xy
 
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
-func Test_geomCache(t *testing.T) {
+func TestGeomCache(t *testing.T) {
 	r, err := tlcsv.NewReader(testutil.ExampleDir.URL)
 	if err != nil {
 		t.Error(err)
@@ -22,7 +22,7 @@ func Test_geomCache(t *testing.T) {
 		trips[trip.TripID] = trip
 		count++
 	}
-	cache := newGeomCache()
+	cache := NewGeomCache()
 	for e := range r.Shapes() {
 		cache.AddShape(e.ShapeID, e)
 	}
@@ -31,7 +31,8 @@ func Test_geomCache(t *testing.T) {
 	}
 	for stoptimes := range r.StopTimesByTripID() {
 		trip := trips[stoptimes[0].TripID]
-		stoptimes2, err := cache.InterpolateStopTimes(trip, stoptimes)
+		trip.StopTimes = stoptimes
+		stoptimes2, err := cache.InterpolateStopTimes(trip)
 		if err != nil {
 			t.Error(err)
 		}
