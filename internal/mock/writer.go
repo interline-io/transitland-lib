@@ -33,11 +33,6 @@ func (mw *Writer) Create() error {
 	return nil
 }
 
-// Delete .
-func (mw *Writer) Delete() error {
-	return nil
-}
-
 // NewReader .
 func (mw *Writer) NewReader() (tl.Reader, error) {
 	return &mw.Reader, nil

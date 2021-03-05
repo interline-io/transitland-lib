@@ -38,11 +38,6 @@ func (writer *Writer) Create() error {
 	return nil
 }
 
-// Delete the Writer.
-func (writer *Writer) Delete() error {
-	return nil
-}
-
 // NewReader returns a new Reader for the Writer destination.
 func (writer *Writer) NewReader() (tl.Reader, error) {
 	return NewReader(writer.WriterAdapter.Path())
