@@ -2,6 +2,7 @@ package validator
 
 import (
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
@@ -24,11 +25,18 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	w := emptyWriter{}
 	w.Open()
 	// Copy to empty writer and validate
-	cp := copier.NewCopier(reader, &w, copier.Options{
-		AllowEntityErrors:    true,
-		AllowReferenceErrors: true,
-	})
-	return &Validator{Reader: reader, Copier: &cp}, nil
+	cp := copier.NewCopier(reader, &w, copier.Options{})
+	cp.AllowEntityErrors = true
+	cp.AllowReferenceErrors = true
+	if options.BestPractices {
+		cp.AddValidator(&rules.NoScheduledServiceCheck{})
+		cp.AddValidator(&rules.StopTooCloseCheck{})
+		cp.AddValidator(&rules.StopTooFarCheck{})
+		cp.AddValidator(&rules.DuplicateRouteNameCheck{})
+		cp.AddValidator(&rules.DuplicateFareRuleCheck{})
+		cp.AddValidator(&rules.FrequencyOverlapCheck{})
+		cp.AddValidator(&rules.StopTooFarFromShapeCheck{})
+	}
 	return &Validator{Reader: reader, Copier: &cp, Options: options}, nil
 }
 
@@ -37,6 +45,7 @@ func (v *Validator) Validate() ([]error, []error) {
 	result := v.Copier.Copy()
 	result.DisplayErrors()
 	result.DisplaySummary()
+
 	return result.Errors, result.Warnings
 }
 
