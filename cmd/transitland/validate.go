@@ -30,7 +30,7 @@ func (cmd *validateCommand) Run(args []string) error {
 	//
 	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
-	v, err := validator.NewValidator(reader)
+	v, err := validator.NewValidator(reader, validator.Options{})
 	if err != nil {
 		return err
 	}
