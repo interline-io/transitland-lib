@@ -167,6 +167,80 @@ func (e *StopTooFarFromShapeCheck) ValidateEntity(ent tl.Entity) ([]error, []err
 
 ///////////////////
 
+var maxSpeeds = map[int]float64{
+	0:  200, // tram
+	1:  200, // metro
+	2:  500, // rail
+	3:  200, // bus
+	4:  100, // ferry
+	5:  100, // cable car
+	6:  100, // gondola
+	7:  100, // funicular
+	11: 100, // trolleybus
+	12: 100, // monorail
+}
+
+// StopTimeFastTravelCheck checks if a trip exeeds reasonable max speed between stops for at least 30 seconds.
+type StopTimeFastTravelCheck struct {
+	routeTypes map[string]int     // keep track of route_types
+	stopDist   map[string]float64 // cache stop-to-stop distances
+	geomCache  *xy.GeomCache      // share with copier
+}
+
+// SetGeomCache sets a shared geometry cache.
+func (e *StopTimeFastTravelCheck) SetGeomCache(g *xy.GeomCache) {
+	e.geomCache = g
+}
+
+// ValidateEntity .
+func (e *StopTimeFastTravelCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+	if v, ok := ent.(*tl.Route); ok {
+		if e.routeTypes == nil {
+			e.routeTypes = map[string]int{}
+		}
+		e.routeTypes[v.RouteID] = v.RouteType
+	}
+	// Use stop to stop distances, shape_dist_traveled is not reliable.
+	trip, ok := ent.(*tl.Trip)
+	if !ok {
+		return nil, nil
+	}
+	if e.stopDist == nil {
+		e.stopDist = map[string]float64{}
+	}
+	maxspeed := 200.0 // default max speed
+	if rtype, ok := e.routeTypes[trip.RouteID]; ok {
+		if m, ok := maxSpeeds[rtype]; ok {
+			maxspeed = m
+		}
+	}
+	// todo: cache for trip pattern?
+	var errs []error
+	s1 := trip.StopTimes[0].StopID
+	t := trip.StopTimes[0].DepartureTime
+	for i := 1; i < len(trip.StopTimes); i++ {
+		s2 := trip.StopTimes[i].StopID
+		key := s1 + ":" + s2 // use a real separator...
+		dx, ok := e.stopDist[key]
+		if !ok {
+			g1, g2 := e.geomCache.GetStop(s1), e.geomCache.GetStop(s2)
+			dx = xy.DistanceHaversine(g1[0], g1[1], g2[0], g2[1])
+			e.stopDist[key] = dx
+			e.stopDist[s2+":"+s1] = dx
+		}
+		dt := trip.StopTimes[i].ArrivalTime - t
+		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
+		if dt > 30 && speed > maxspeed {
+			errs = append(errs, causes.NewFastTravelError(s1, s2, dt, dx, speed, maxspeed))
+		}
+		s1 = s2
+		t = trip.StopTimes[i].DepartureTime
+	}
+	return nil, errs
+}
+
+///////////////////
+
 // DuplicateRouteNameCheck checks for routes of the same agency with identical route_long_names.
 type DuplicateRouteNameCheck struct {
 	names map[string]int

@@ -36,6 +36,7 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 		cp.AddValidator(&rules.DuplicateFareRuleCheck{})
 		cp.AddValidator(&rules.FrequencyOverlapCheck{})
 		cp.AddValidator(&rules.StopTooFarFromShapeCheck{})
+		cp.AddValidator(&rules.StopTimeFastTravelCheck{})
 	}
 	return &Validator{Reader: reader, Copier: &cp, Options: options}, nil
 }
@@ -45,7 +46,6 @@ func (v *Validator) Validate() ([]error, []error) {
 	result := v.Copier.Copy()
 	result.DisplayErrors()
 	result.DisplaySummary()
-
 	return result.Errors, result.Warnings
 }
 

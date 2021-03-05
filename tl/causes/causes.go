@@ -20,6 +20,7 @@ import (
 //   InvalidParentStationError
 //   InvalidFarezoneError
 //   EmptyTripError
+//   InconsistentTimezoneError
 //
 // Causes that are implemented but not fully tested:
 //   FileRequiredFieldError
@@ -27,7 +28,7 @@ import (
 //   FileNotPresentError
 //   RowParseError
 //   FileUnreadableError
-//   InconsistentTimezoneError
+//   FastTravelError - what it says
 //
 // Causes that exist but are not implemented:
 //   UnusedEntityError - warning that an named entity (agency, route, stop, calendar, etc.) is not referenced
@@ -35,8 +36,10 @@ import (
 // Best Practice Warnings implemented:
 //   NoScheduledServiceError - all days are 0, no type 1 exceptions
 //   StopTooFarError - stop too far from a related stop
+//   StopTooFarFromShapeError - stop_time too far from associated shape
+//   StopTooCloseError - stop too close to another stop
 //
-// Warnings or generic errors that are implemented and need names:
+// Best practice warnings that need named types:
 //   Duplicate fare_rules
 //   Duplicate route route_short_name, route_long_name, etc. combinations
 //   NoServiceError - warning that service contains no positive days
@@ -44,11 +47,7 @@ import (
 //
 // Best Practice Warning that do not exist but should:
 //   StationVisitError - stop_time visits location_type != 0
-//   StopTooCloseError - stop too close to another stop
-//   FastTravelError - what it says
-//   UnequalColumnError - file contains rows with unequal columns
 //   ShapeReversedError - shape is valid and stops are close but reverse direction
-//   StopTooFarFromShapeError - stop_time too far from associated shape
 //   StopTimeSequenceConsecutive - >2 visits to the same stop in a row, or time not increasing
 //   InsufficientRouteColorContrast - colors not distinguishable
 //   TravelDistanceError - shape_dist_travel and shape length mismatch, or related
@@ -550,4 +549,33 @@ func NewStopTooFarFromShapeError(stopid string, shapeid string, distance float64
 
 func (e *StopTooFarFromShapeError) Error() string {
 	return fmt.Sprintf("stop '%s' is too far from shape '%s' at %0.2fm", e.StopID, e.ShapeID, e.Distance)
+}
+
+///////////////
+
+// FastTravelError reports when reasonable maximum speeds have been exceeded.
+type FastTravelError struct {
+	FromStopID string
+	ToStopID   string
+	Distance   float64
+	Time       int
+	Speed      float64
+	SpeedLimit float64
+	bc
+}
+
+// NewFastTravelError .
+func NewFastTravelError(from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
+	return &FastTravelError{
+		FromStopID: from,
+		ToStopID:   to,
+		Time:       t,
+		Distance:   distance,
+		Speed:      speed,
+		SpeedLimit: limit,
+	}
+}
+
+func (e *FastTravelError) Error() string {
+	return fmt.Sprintf("traveled from stop '%s' to stop '%s' in %d seconds, a distance of %0.2f m and speed of %0.2f km/h where %0.2f km/h is the assumed maximum for this route type", e.FromStopID, e.ToStopID, e.Time, e.Distance, e.Speed, e.SpeedLimit)
 }

@@ -12,6 +12,7 @@ import (
 
 // validateCommand
 type validateCommand struct {
+	Options            validator.Options
 	validateExtensions cli.ArrayFlags
 }
 
@@ -22,6 +23,7 @@ func (cmd *validateCommand) Run(args []string) error {
 		fl.PrintDefaults()
 	}
 	fl.Var(&cmd.validateExtensions, "ext", "Include GTFS Extension")
+	fl.BoolVar(&cmd.Options.BestPractices, "best-practices", false, "Include Best Practices validations")
 	err := fl.Parse(args)
 	if err != nil || fl.NArg() < 1 {
 		fl.Usage()
@@ -30,7 +32,7 @@ func (cmd *validateCommand) Run(args []string) error {
 	//
 	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
-	v, err := validator.NewValidator(reader, validator.Options{})
+	v, err := validator.NewValidator(reader, cmd.Options)
 	if err != nil {
 		return err
 	}
