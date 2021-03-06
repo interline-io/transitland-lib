@@ -7,3 +7,4 @@ LAKE_platform,platform 1,,37.797027,-122.265180,,,0,LAKE_station,,1
 LAKE_platform_boarding_area,boarding area 1,,37.797027,-122.265180,,,4,LAKE_platform,,1,
 LAKE_platform_platform,platform 2,,37.797027,-122.265180,,,0,LAKE_platform,,1,InvalidParentStationError|InvalidReferenceError
 LAKE_platform_boarding_area_invalid,boarding area 2,,37.797027,-122.265180,,,4,LAKE_station,,1,InvalidParentStationError
+
