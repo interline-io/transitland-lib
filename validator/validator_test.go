@@ -76,8 +76,9 @@ func TestValidator_Validate(t *testing.T) {
 			////////
 			// For every overlay feed, check that every error is expected
 			// At least one error must be specified per overlay feed, otherwise fail
-			v, _ := NewValidator(reader, Options{})
-			v.Copier.ErrorHandler = &handler
+			opts := Options{}
+			opts.ErrorHandler = &handler
+			v, _ := NewValidator(reader, opts)
 			v.Validate()
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")
@@ -118,9 +119,11 @@ func TestValidator_BestPractices(t *testing.T) {
 			////////
 			// For every overlay feed, check that every error is expected
 			// At least one error must be specified per overlay feed, otherwise fail
-			v, _ := NewValidator(reader, Options{BestPractices: true})
-			v.Copier.ErrorHandler = &handler
-			result := v.Validate()
+			opts := Options{}
+			opts.BestPractices = true
+			opts.ErrorHandler = &handler
+			v, _ := NewValidator(reader, opts)
+			result, _ := v.Validate()
 			_ = result
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")
