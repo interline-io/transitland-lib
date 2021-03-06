@@ -9,16 +9,16 @@ import (
 type EntityErrorCheck struct{}
 
 // ValidateEntity .
-func (e *EntityErrorCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
-	return ent.Errors(), nil
+func (e *EntityErrorCheck) ValidateEntity(ent tl.Entity) []error {
+	return ent.Errors()
 }
 
 // EntityWarningCheck runs the entity's built in Warnings() check.
 type EntityWarningCheck struct{}
 
 // ValidateEntity .
-func (e *EntityWarningCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
-	return nil, ent.Warnings()
+func (e *EntityWarningCheck) ValidateEntity(ent tl.Entity) []error {
+	return ent.Warnings()
 }
 
 ///////////////////
@@ -29,13 +29,13 @@ type EntityDuplicateCheck struct {
 }
 
 // ValidateEntity .
-func (e *EntityDuplicateCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *EntityDuplicateCheck) ValidateEntity(ent tl.Entity) []error {
 	if e.duplicates == nil {
 		e.duplicates = tl.NewEntityMap()
 	}
 	eid := ent.EntityID()
 	if eid == "" {
-		return nil, nil
+		return nil
 	}
 	var errs []error
 	efn := ent.Filename()
@@ -44,7 +44,7 @@ func (e *EntityDuplicateCheck) ValidateEntity(ent tl.Entity) ([]error, []error) 
 	} else {
 		e.duplicates.Set(efn, eid, eid)
 	}
-	return errs, nil
+	return errs
 }
 
 ///////////////////
@@ -55,7 +55,7 @@ type ValidFarezoneCheck struct {
 }
 
 // ValidateEntity .
-func (e *ValidFarezoneCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *ValidFarezoneCheck) ValidateEntity(ent tl.Entity) []error {
 	if e.zones == nil {
 		e.zones = map[string]string{}
 	}
@@ -82,7 +82,7 @@ func (e *ValidFarezoneCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
 			errs = append(errs, causes.NewInvalidFarezoneError("contains_id", v.ContainsID))
 		}
 	}
-	return errs, nil
+	return errs
 }
 
 ///////////////////
@@ -93,9 +93,8 @@ type AgencyIDConditionallyRequiredCheck struct {
 }
 
 // ValidateEntity .
-func (e *AgencyIDConditionallyRequiredCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *AgencyIDConditionallyRequiredCheck) ValidateEntity(ent tl.Entity) []error {
 	var errs []error
-	var warns []error
 	switch v := ent.(type) {
 	case *tl.FareAttribute:
 		if e.agencyCount > 1 && v.AgencyID.Key == "" {
@@ -106,16 +105,18 @@ func (e *AgencyIDConditionallyRequiredCheck) ValidateEntity(ent tl.Entity) ([]er
 			// ok
 		} else if e.agencyCount > 1 {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
-		} else if e.agencyCount == 1 {
-			warns = append(warns, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
+		// TODO: Move to best practice warning
+		// else if e.agencyCount == 1 {
+		// 	warns = append(warns, causes.NewConditionallyRequiredFieldError("agency_id"))
+		// }
 	case *tl.Agency:
 		e.agencyCount++
 		if e.agencyCount > 1 && v.AgencyID == "" {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
 	}
-	return errs, warns
+	return errs
 }
 
 ///////////////////
@@ -126,18 +127,18 @@ type InconsistentTimezoneCheck struct {
 }
 
 // ValidateEntity .
-func (e *InconsistentTimezoneCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *InconsistentTimezoneCheck) ValidateEntity(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Agency)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	if e.firstTimeZone == "" {
 		e.firstTimeZone = v.AgencyTimezone
 	}
 	if v.AgencyTimezone != e.firstTimeZone {
-		return []error{causes.NewInconsistentTimezoneError(v.AgencyTimezone)}, nil
+		return []error{causes.NewInconsistentTimezoneError(v.AgencyTimezone)}
 	}
-	return nil, nil
+	return nil
 }
 
 ///////////////////
@@ -148,18 +149,18 @@ type ParentStationLocationTypeCheck struct {
 }
 
 // ValidateEntity .
-func (e *ParentStationLocationTypeCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *ParentStationLocationTypeCheck) ValidateEntity(ent tl.Entity) []error {
 	// Confirm the parent station location_type is acceptable
 	stop, ok := ent.(*tl.Stop)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	if e.locationTypes == nil {
 		e.locationTypes = map[string]int{}
 	}
 	e.locationTypes[stop.StopID] = stop.LocationType
 	if stop.ParentStation.Key == "" {
-		return nil, nil
+		return nil
 	}
 	// We need to compare as strings because EntityMap is map[string]string
 	var errs []error
@@ -176,7 +177,7 @@ func (e *ParentStationLocationTypeCheck) ValidateEntity(ent tl.Entity) ([]error,
 		// All other types must have station as parent
 		errs = append(errs, causes.NewInvalidParentStationError(stop.ParentStation.Key))
 	}
-	return errs, nil
+	return errs
 }
 
 ///////////////////
@@ -186,14 +187,14 @@ func (e *ParentStationLocationTypeCheck) ValidateEntity(ent tl.Entity) ([]error,
 type StopTimeSequenceCheck struct{}
 
 // ValidateEntity .
-func (e *StopTimeSequenceCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *StopTimeSequenceCheck) ValidateEntity(ent tl.Entity) []error {
 	trip, ok := ent.(*tl.Trip)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	// Use existing validator.
 	var errs = tl.ValidateStopTimes(trip.StopTimes)
-	return errs, nil
+	return errs
 }
 
 ///////////////////

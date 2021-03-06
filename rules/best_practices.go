@@ -15,15 +15,15 @@ import (
 type NoScheduledServiceCheck struct{}
 
 // ValidateEntity .
-func (e *NoScheduledServiceCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *NoScheduledServiceCheck) ValidateEntity(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Service)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	if v.HasAtLeastOneDay() {
-		return nil, nil
+		return nil
 	}
-	return nil, []error{&causes.NoScheduledServiceError{}}
+	return []error{&causes.NoScheduledServiceError{}}
 }
 
 ///////////////////
@@ -35,21 +35,21 @@ type StopTooFarCheck struct {
 }
 
 // ValidateEntity .
-func (e *StopTooFarCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *StopTooFarCheck) ValidateEntity(ent tl.Entity) []error {
 	e.maxdist = 1000.0
 	if e.geoms == nil {
 		e.geoms = map[string]*tl.Point{}
 	}
 	v, ok := ent.(*tl.Stop)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	var errs []error
 	coords := v.Geometry.Coords()
 	newp := tl.NewPoint(coords[0], coords[1]) // copy
 	e.geoms[v.StopID] = &newp
 	if v.ParentStation.Key == "" {
-		return nil, nil
+		return nil
 	}
 	// Check if parent stop is >1km
 	if pgeom, ok := e.geoms[v.ParentStation.Key]; ok {
@@ -59,7 +59,7 @@ func (e *StopTooFarCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
 			errs = append(errs, causes.NewStopTooFarError())
 		}
 	}
-	return nil, errs
+	return errs
 }
 
 ///////////////////
@@ -77,7 +77,7 @@ type StopTooCloseCheck struct {
 }
 
 // ValidateEntity .
-func (e *StopTooCloseCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *StopTooCloseCheck) ValidateEntity(ent tl.Entity) []error {
 	e.maxdist = 1.0
 	if e.geoms == nil {
 		e.geoms = map[string][]*stopPoint{}
@@ -85,12 +85,12 @@ func (e *StopTooCloseCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
 	v, ok := ent.(*tl.Stop)
 	// This only checks location_type == 0 and no parent
 	if !ok || v.ParentStation.Key != "" || v.LocationType != 0 || !v.Geometry.Valid {
-		return nil, nil
+		return nil
 	}
 	// Use geohash for fast neighbor search; precision = 9 is approx 5m x 5m at the equator.
 	coords := v.Geometry.Coords()
 	if len(coords) < 2 {
-		return nil, nil
+		return nil
 	}
 	var errs []error
 	gh := geohash.EncodeWithPrecision(coords[0], coords[1], 9)
@@ -109,7 +109,7 @@ func (e *StopTooCloseCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
 	}
 	// add to index
 	e.geoms[gh] = append(e.geoms[gh], &g)
-	return nil, errs
+	return errs
 }
 
 ///////////////////
@@ -127,7 +127,7 @@ func (e *StopTooFarFromShapeCheck) SetGeomCache(g *xy.GeomCache) {
 }
 
 // ValidateEntity .
-func (e *StopTooFarFromShapeCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *StopTooFarFromShapeCheck) ValidateEntity(ent tl.Entity) []error {
 	// An initial approach used geohashes to check shape <-> stop as an initial filter, but it turns
 	// out in practice that just checking directly is almost exactly the same speed.
 	// Even the largest feeds are only a few tens of thousands of comparisons. Just keep track
@@ -135,14 +135,14 @@ func (e *StopTooFarFromShapeCheck) ValidateEntity(ent tl.Entity) ([]error, []err
 	e.maxdist = 100.0
 	v, ok := ent.(*tl.Trip)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	if e.checked == nil {
 		e.checked = map[string]map[string]bool{}
 	}
 	shapeid := v.ShapeID.Key
 	if shapeid == "" || len(v.StopTimes) == 0 {
-		return nil, nil
+		return nil
 	}
 	if e.checked[shapeid] == nil {
 		e.checked[shapeid] = map[string]bool{}
@@ -162,7 +162,7 @@ func (e *StopTooFarFromShapeCheck) ValidateEntity(ent tl.Entity) ([]error, []err
 			errs = append(errs, causes.NewStopTooFarFromShapeError(st.StopID, shapeid, distance))
 		}
 	}
-	return nil, errs
+	return errs
 }
 
 ///////////////////
@@ -193,7 +193,7 @@ func (e *StopTimeFastTravelCheck) SetGeomCache(g *xy.GeomCache) {
 }
 
 // ValidateEntity .
-func (e *StopTimeFastTravelCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *StopTimeFastTravelCheck) ValidateEntity(ent tl.Entity) []error {
 	if v, ok := ent.(*tl.Route); ok {
 		if e.routeTypes == nil {
 			e.routeTypes = map[string]int{}
@@ -203,7 +203,7 @@ func (e *StopTimeFastTravelCheck) ValidateEntity(ent tl.Entity) ([]error, []erro
 	// Use stop to stop distances, shape_dist_traveled is not reliable.
 	trip, ok := ent.(*tl.Trip)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	if e.stopDist == nil {
 		e.stopDist = map[string]float64{}
@@ -236,7 +236,7 @@ func (e *StopTimeFastTravelCheck) ValidateEntity(ent tl.Entity) ([]error, []erro
 		s1 = s2
 		t = trip.StopTimes[i].DepartureTime
 	}
-	return nil, errs
+	return errs
 }
 
 ///////////////////
@@ -247,20 +247,20 @@ type DuplicateRouteNameCheck struct {
 }
 
 // ValidateEntity .
-func (e *DuplicateRouteNameCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *DuplicateRouteNameCheck) ValidateEntity(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Route)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	if e.names == nil {
 		e.names = map[string]int{}
 	}
 	key := v.AgencyID + ":" + strconv.Itoa(v.RouteType) + ":" + v.RouteLongName // todo: use a real separator
 	if _, ok := e.names[key]; ok {
-		return nil, []error{causes.NewValidationWarning("route_long_name", "duplicate route_long_name in same agency_id,route_type")}
+		return []error{causes.NewValidationWarning("route_long_name", "duplicate route_long_name in same agency_id,route_type")}
 	}
 	e.names[key]++
-	return nil, nil
+	return nil
 }
 
 ///////////////////
@@ -271,20 +271,20 @@ type DuplicateFareRuleCheck struct {
 }
 
 // ValidateEntity .
-func (e *DuplicateFareRuleCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *DuplicateFareRuleCheck) ValidateEntity(ent tl.Entity) []error {
 	v, ok := ent.(*tl.FareRule)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	if e.rules == nil {
 		e.rules = map[string]int{}
 	}
 	key := v.RouteID.Key + ":" + v.OriginID + ":" + v.DestinationID + ":" + v.ContainsID
 	if _, ok := e.rules[key]; ok {
-		return nil, []error{causes.NewValidationWarning("origin_id", "duplicate fare_rule")}
+		return []error{causes.NewValidationWarning("origin_id", "duplicate fare_rule")}
 	}
 	e.rules[key]++
-	return nil, nil
+	return nil
 }
 
 ////////////////////
@@ -300,10 +300,10 @@ type FrequencyOverlapCheck struct {
 }
 
 // ValidateEntity .
-func (e *FrequencyOverlapCheck) ValidateEntity(ent tl.Entity) ([]error, []error) {
+func (e *FrequencyOverlapCheck) ValidateEntity(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Frequency)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	if e.freqs == nil {
 		e.freqs = map[string][]*freqValue{}
@@ -319,5 +319,5 @@ func (e *FrequencyOverlapCheck) ValidateEntity(ent tl.Entity) ([]error, []error)
 		}
 	}
 	e.freqs[v.TripID] = append(e.freqs[v.TripID], &tf)
-	return nil, errs
+	return errs
 }

@@ -16,7 +16,7 @@ import (
 
 // Validator is used to create an extensible list of validators run for each entity.
 type Validator interface {
-	ValidateEntity(tl.Entity) ([]error, []error)
+	ValidateEntity(tl.Entity) []error
 }
 
 // ErrorHandler is called on each source file and entity; errors can be nil
@@ -74,12 +74,13 @@ type Copier struct {
 	// Error handler, called for each entity
 	ErrorHandler ErrorHandler
 	// book keeping
-	agencyCount int
-	extensions  []copyableExtension // interface
-	filters     []tl.EntityFilter   // interface
-	validators  []Validator         // interface
-	geomCache   *xy.GeomCache
-	result      *CopyResult
+	agencyCount       int
+	extensions        []copyableExtension
+	filters           []tl.EntityFilter
+	errorValidators   []Validator
+	warningValidators []Validator
+	geomCache         *xy.GeomCache
+	result            *Result
 	*tl.EntityMap
 }
 
@@ -90,7 +91,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 	copier.Reader = reader
 	copier.Writer = writer
 	// Result
-	result := NewCopyResult()
+	result := NewResult()
 	copier.result = result
 	copier.ErrorHandler = result
 	// Default Markers
@@ -109,8 +110,8 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 		copier.filters = append(copier.filters, &BasicRouteTypeFilter{})
 	}
 	// Default set of validators
-	copier.validators = []Validator{}
-	copier.validators = append(copier.validators,
+	copier.errorValidators = []Validator{}
+	copier.errorValidators = append(copier.errorValidators,
 		&rules.EntityErrorCheck{},
 		&rules.EntityWarningCheck{},
 		&rules.EntityDuplicateCheck{},
@@ -125,11 +126,17 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 }
 
 // AddValidator adds an additional entity validator.
-func (copier *Copier) AddValidator(e Validator) error {
+func (copier *Copier) AddValidator(e Validator, level int) error {
 	if v, ok := e.(canShareGeomCache); ok {
 		v.SetGeomCache(copier.geomCache)
 	}
-	copier.validators = append(copier.validators, e)
+	if level == 0 {
+		copier.errorValidators = append(copier.errorValidators, e)
+	} else if level == 1 {
+		copier.warningValidators = append(copier.warningValidators, e)
+	} else {
+		return errors.New("unknown validation level")
+	}
 	return nil
 }
 
@@ -161,7 +168,7 @@ func (copier *Copier) isMarked(ent tl.Entity) bool {
 // CopyEntity performs validation and saves errors and warnings, returns new EntityID if written, otherwise an entity error or write error.
 // An entity error means the entity was not not written because it had an error or was filtered out; not fatal.
 // A write error should be considered fatal and should stop any further write attempts.
-// Any errors and warnings are added to the CopyResult.
+// Any errors and warnings are added to the Result.
 func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 	efn := ent.Filename()
 	sid := ent.EntityID()
@@ -243,10 +250,11 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	if referr != nil {
 		errs = append(errs, referr)
 	}
-	for _, v := range copier.validators {
-		a, b := v.ValidateEntity(ent)
-		errs = append(errs, a...)
-		warns = append(warns, b...)
+	for _, v := range copier.errorValidators {
+		errs = append(errs, v.ValidateEntity(ent)...)
+	}
+	for _, v := range copier.warningValidators {
+		warns = append(warns, v.ValidateEntity(ent)...)
 	}
 	// Error handler
 	copier.ErrorHandler.HandleEntityErrors(ent, errs, warns)
@@ -265,8 +273,8 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 ////////// Copy Methods //////////
 //////////////////////////////////
 
-// Copy copies Base GTFS entities from the Reader to the Writer, returning the summary as a CopyResult.
-func (copier *Copier) Copy() *CopyResult {
+// Copy copies Base GTFS entities from the Reader to the Writer, returning the summary as a Result.
+func (copier *Copier) Copy() *Result {
 	// Handle source errors and warnings
 	sourceErrors := map[string][]error{}
 	for _, err := range copier.Reader.ValidateStructure() {

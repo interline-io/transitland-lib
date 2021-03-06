@@ -29,14 +29,14 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	cp.AllowEntityErrors = true
 	cp.AllowReferenceErrors = true
 	if options.BestPractices {
-		cp.AddValidator(&rules.NoScheduledServiceCheck{})
-		cp.AddValidator(&rules.StopTooCloseCheck{})
-		cp.AddValidator(&rules.StopTooFarCheck{})
-		cp.AddValidator(&rules.DuplicateRouteNameCheck{})
-		cp.AddValidator(&rules.DuplicateFareRuleCheck{})
-		cp.AddValidator(&rules.FrequencyOverlapCheck{})
-		cp.AddValidator(&rules.StopTooFarFromShapeCheck{})
-		cp.AddValidator(&rules.StopTimeFastTravelCheck{})
+		cp.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
+		cp.AddValidator(&rules.StopTooCloseCheck{}, 1)
+		cp.AddValidator(&rules.StopTooFarCheck{}, 1)
+		cp.AddValidator(&rules.DuplicateRouteNameCheck{}, 1)
+		cp.AddValidator(&rules.DuplicateFareRuleCheck{}, 1)
+		cp.AddValidator(&rules.FrequencyOverlapCheck{}, 1)
+		cp.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
+		cp.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
 	}
 	return &Validator{Reader: reader, Copier: &cp, Options: options}, nil
 }
