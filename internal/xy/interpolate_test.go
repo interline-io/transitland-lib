@@ -1,4 +1,4 @@
-package copier
+package xy
 
 import (
 	"database/sql"

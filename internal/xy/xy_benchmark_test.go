@@ -1,4 +1,4 @@
-package copier
+package xy
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 ////////////////////
 
-func Benchmark_segmentClosestPoint(b *testing.B) {
+func BenchmarkSegmentClosestPoint(b *testing.B) {
 	l, _ := decodeGeojson(testLines[0].Geojson)
 	q := unflattenCoordinates(l.FlatCoords())
 	// get the midpoint
@@ -14,11 +14,11 @@ func Benchmark_segmentClosestPoint(b *testing.B) {
 	sb := q[1]
 	p := [2]float64{sa[0] + (sb[0]-sa[0])/2, sa[1] + (sb[1]-sa[1])/2}
 	for n := 0; n < b.N; n++ {
-		segmentClosestPoint(sa, sb, p)
+		SegmentClosestPoint(sa, sb, p)
 	}
 }
 
-func Benchmark_lineClosestPoint(b *testing.B) {
+func BenchmarkLineClosestPoint(b *testing.B) {
 	l, _ := decodeGeojson(testLines[0].Geojson)
 	q := unflattenCoordinates(l.FlatCoords())
 	// get the midpoint of the two middle points
@@ -26,11 +26,11 @@ func Benchmark_lineClosestPoint(b *testing.B) {
 	sb := q[len(q)/2+1]
 	p := [2]float64{sa[0] + (sb[0]-sa[0])/2, sa[1] + (sb[1]-sa[1])/2}
 	for n := 0; n < b.N; n++ {
-		lineClosestPoint(q, p)
+		LineClosestPoint(q, p)
 	}
 }
 
-func Benchmark_linePositions(b *testing.B) {
+func BenchmarkLinePositions(b *testing.B) {
 	line, points := decodeGeojson(testPositions[0].Geojson)
 	lc := unflattenCoordinates(line.FlatCoords())
 	pp := [][2]float64{}
@@ -39,12 +39,12 @@ func Benchmark_linePositions(b *testing.B) {
 	}
 	var r []float64
 	for n := 0; n < b.N; n++ {
-		r = linePositions(lc, pp)
+		r = LinePositions(lc, pp)
 	}
 	_ = r
 }
 
-func Benchmark_linePositionsFallback(b *testing.B) {
+func BenchmarkLinePositionsFallback(b *testing.B) {
 	_, points := decodeGeojson(testPositions[0].Geojson)
 	pp := [][2]float64{}
 	for _, p := range points {
@@ -52,45 +52,45 @@ func Benchmark_linePositionsFallback(b *testing.B) {
 	}
 	var r []float64
 	for n := 0; n < b.N; n++ {
-		r = linePositionsFallback(pp)
+		r = LinePositionsFallback(pp)
 	}
 	_ = r
 }
 
-func Benchmark_distance2d(b *testing.B) {
+func BenchmarkDistance2d(b *testing.B) {
 	dp := testDistancePoints[0]
 	var r float64
 	for n := 0; n < b.N; n++ {
-		r = distance2d(dp.orig, dp.dest)
+		r = Distance2d(dp.orig, dp.dest)
 	}
 	_ = r
 }
 
-func Benchmark_distanceHaversine(b *testing.B) {
+func BenchmarkDistanceHaversine(b *testing.B) {
 	dp := testDistancePoints[0]
 	var r float64
 	for n := 0; n < b.N; n++ {
-		r = distanceHaversine(dp.orig, dp.dest)
+		r = DistanceHaversine(dp.orig[0], dp.orig[1], dp.dest[0], dp.dest[1])
 	}
 	_ = r
 }
 
-func Benchmark_length2d(b *testing.B) {
+func BenchmarkLength2d(b *testing.B) {
 	l, _ := decodeGeojson(testLines[0].Geojson)
 	line := unflattenCoordinates(l.FlatCoords())
 	var r float64
 	for n := 0; n < b.N; n++ {
-		r = length2d(line)
+		r = Length2d(line)
 	}
 	_ = r
 }
 
-func Benchmark_lengthHaversine(b *testing.B) {
+func BenchmarkLengthHaversine(b *testing.B) {
 	l, _ := decodeGeojson(testLines[0].Geojson)
 	line := unflattenCoordinates(l.FlatCoords())
 	var r float64
 	for n := 0; n < b.N; n++ {
-		r = lengthHaversine(line)
+		r = LengthHaversine(line)
 	}
 	_ = r
 }

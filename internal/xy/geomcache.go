@@ -1,4 +1,4 @@
-package copier
+package xy
 
 import (
 	"database/sql"
@@ -22,17 +22,17 @@ func arePositionsSorted(a []float64) bool {
 	return true
 }
 
-// geomCache helps speed up StopTime interpolating by caching various results
-type geomCache struct {
+// GeomCache helps speed up StopTime interpolating by caching various results
+type GeomCache struct {
 	positions map[string][]float64
 	stops     map[string][2]float64
 	shapes    map[string][][2]float64
 	lengths   map[string]float64
 }
 
-// newGeomCache returns an initialized geomCache
-func newGeomCache() *geomCache {
-	return &geomCache{
+// NewGeomCache returns an initialized geomCache
+func NewGeomCache() *GeomCache {
+	return &GeomCache{
 		positions: map[string][]float64{},
 		stops:     map[string][2]float64{},
 		shapes:    map[string][][2]float64{},
@@ -41,13 +41,23 @@ func newGeomCache() *geomCache {
 }
 
 // AddStop adds a Stop to the geometry cache.
-func (g *geomCache) AddStop(eid string, stop tl.Stop) {
+func (g *GeomCache) AddStop(eid string, stop tl.Stop) {
 	c := stop.Geometry.FlatCoords()
 	g.stops[eid] = [2]float64{c[0], c[1]}
 }
 
+// GetStop returns the coordinates for the cached stop.
+func (g *GeomCache) GetStop(eid string) [2]float64 {
+	return g.stops[eid]
+}
+
+// GetShape returns the coordinates for the cached shape.
+func (g *GeomCache) GetShape(eid string) [][2]float64 {
+	return g.shapes[eid]
+}
+
 // AddShape adds a Shape to the geometry cache.
-func (g *geomCache) AddShape(eid string, shape tl.Shape) {
+func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 	if !shape.Geometry.Valid {
 		return
 	}
@@ -59,7 +69,7 @@ func (g *geomCache) AddShape(eid string, shape tl.Shape) {
 }
 
 // MakeShape returns geometry for the given stops.
-func (g *geomCache) MakeShape(stopids ...string) (tl.Shape, error) {
+func (g *GeomCache) MakeShape(stopids ...string) (tl.Shape, error) {
 	shape := tl.Shape{}
 	stopline := []float64{} // flatcoords
 	for _, stopid := range stopids {
@@ -75,8 +85,12 @@ func (g *geomCache) MakeShape(stopids ...string) (tl.Shape, error) {
 }
 
 // InterpolateStopTimes uses the cached geometries to interpolate StopTimes.
-func (g *geomCache) InterpolateStopTimes(trip tl.Trip, stoptimes []tl.StopTime) ([]tl.StopTime, error) {
+func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	// Check cache; make stopline
+	stoptimes := trip.StopTimes
+	if len(stoptimes) == 0 {
+		return stoptimes, nil
+	}
 	stopline := make([][2]float64, len(stoptimes))
 	shapeid := trip.ShapeID.Key
 	k := strings.Join([]string{shapeid, strconv.Itoa(trip.StopPatternID)}, "|")
@@ -91,16 +105,16 @@ func (g *geomCache) InterpolateStopTimes(trip tl.Trip, stoptimes []tl.StopTime) 
 	// Check cache
 	positions, ok := g.positions[k]
 	if !ok {
-		positions = linePositions(shapeline, stopline)
-		length := lengthHaversine(shapeline)
+		positions = LinePositions(shapeline, stopline)
+		length := LengthHaversine(shapeline)
 		// Check for simple or fallback positions
 		if !arePositionsSorted(positions) || len(shapeline) == 0 {
 			// log.Debug("positions %f not increasing, falling back to stop positions; shapeline %f stopline %f", positions, shapeline, stopline)
-			positions = linePositionsFallback(stopline)
+			positions = LinePositionsFallback(stopline)
 			if !arePositionsSorted(positions) {
 				return stoptimes, errors.New("fallback positions not sorted")
 			}
-			length = lengthHaversine(stopline)
+			length = LengthHaversine(stopline)
 		}
 		g.positions[k] = positions
 		g.lengths[k] = length

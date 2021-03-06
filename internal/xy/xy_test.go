@@ -1,4 +1,4 @@
-package copier
+package xy
 
 import (
 	"math"
@@ -77,21 +77,21 @@ func makeTestLine(gj string) [][2]float64 {
 	return unflattenCoordinates(line.FlatCoords())
 }
 
-func Test_distance2d(t *testing.T) {
+func TestDistance2d(t *testing.T) {
 	for _, dp := range testDistancePoints {
-		d := distance2d(dp.orig, dp.dest)
+		d := Distance2d(dp.orig, dp.dest)
 		testApproxEqual(t, dp.Distance2d, d)
 	}
 }
 
-func Test_distanceHaversine(t *testing.T) {
+func TestDistanceHaversine(t *testing.T) {
 	for _, dp := range testDistancePoints {
-		d := distanceHaversine(dp.orig, dp.dest)
+		d := DistanceHaversine(dp.orig[0], dp.orig[1], dp.dest[0], dp.dest[1])
 		testApproxEqual(t, dp.distanceHaversine, d)
 	}
 }
 
-func Test_linePositions(t *testing.T) {
+func TestLinePositions(t *testing.T) {
 	for _, dp := range testPositions {
 		line, points := decodeGeojson(dp.Geojson)
 		lc := unflattenCoordinates(line.FlatCoords())
@@ -99,7 +99,7 @@ func Test_linePositions(t *testing.T) {
 		for _, p := range points {
 			pp = append(pp, [2]float64{p.FlatCoords()[0], p.FlatCoords()[1]})
 		}
-		pos := linePositions(lc, pp)
+		pos := LinePositions(lc, pp)
 		if len(pos) != len(dp.Positions) {
 			t.Errorf("expect %d positions, got %d", len(dp.Positions), len(pos))
 			continue
@@ -110,14 +110,14 @@ func Test_linePositions(t *testing.T) {
 	}
 }
 
-func Test_linePositionsFallback(t *testing.T) {
+func TestLinePositionsFallback(t *testing.T) {
 	for _, dp := range testPositions {
 		_, points := decodeGeojson(dp.Geojson)
 		pp := [][2]float64{}
 		for _, p := range points {
 			pp = append(pp, [2]float64{p.FlatCoords()[0], p.FlatCoords()[1]})
 		}
-		pos := linePositionsFallback(pp)
+		pos := LinePositionsFallback(pp)
 		if len(pos) != len(dp.FallbackPositions) {
 			t.Errorf("expect %d positions, got %d", len(dp.FallbackPositions), len(pos))
 			continue
@@ -128,20 +128,20 @@ func Test_linePositionsFallback(t *testing.T) {
 	}
 }
 
-func Test_length2d(t *testing.T) {
+func TestLength2d(t *testing.T) {
 	for _, line := range testLines {
 		l, _ := decodeGeojson(line.Geojson)
 		coords := unflattenCoordinates(l.FlatCoords())
-		d := length2d(coords)
+		d := Length2d(coords)
 		testApproxEqual(t, line.Length2d, d)
 	}
 }
 
-func Test_lengthHaversine(t *testing.T) {
+func TestLengthHaversine(t *testing.T) {
 	for _, line := range testLines {
 		l, _ := decodeGeojson(line.Geojson)
 		coords := unflattenCoordinates(l.FlatCoords())
-		d := lengthHaversine(coords)
+		d := LengthHaversine(coords)
 		testApproxEqual(t, line.lengthHaversine, d)
 	}
 }
