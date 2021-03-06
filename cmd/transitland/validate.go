@@ -43,6 +43,9 @@ func (cmd *validateCommand) Run(args []string) error {
 		}
 		v.Copier.AddExtension(e)
 	}
-	v.Validate()
+	result := v.Validate()
+	result.DisplayErrors()
+	result.DisplayWarnings()
+	result.DisplaySummary()
 	return nil
 }

@@ -1,18 +1,81 @@
 package copier
 
 import (
+	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+type ctx = causes.Context
+
+type updateContext interface {
+	Update(*causes.Context)
+}
+
+type hasContext interface {
+	Context() *causes.Context
+}
+
+func getErrorType(err error) string {
+	errtype := strings.Replace(fmt.Sprintf("%T", err), "*", "", 1)
+	if len(strings.Split(errtype, ".")) > 1 {
+		errtype = strings.Split(errtype, ".")[1]
+	}
+	return errtype
+}
+
+func getErrorFilename(err error) string {
+	if v, ok := err.(hasContext); ok {
+		return v.Context().Filename
+	}
+	return ""
+}
+
+func getErrorKey(err error) string {
+	return getErrorFilename(err) + ":" + getErrorType(err)
+}
+
+func msiSum(m map[string]int) int {
+	ret := 0
+	for _, v := range m {
+		ret += v
+	}
+	return ret
+}
+
+func sortedKeys(m map[string]int) []string {
+	keys := []string{}
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// ErrorGroup helps group errors together with a maximum limit on the number stored.
+type ErrorGroup struct {
+	Filename  string
+	ErrorType string
+	Count     int
+	Limit     int
+	Errors    []error
+}
+
+// Add an error to the error group.
+func (e *ErrorGroup) Add(err error) {
+	if e.Count < e.Limit || e.Limit == 0 {
+		e.Errors = append(e.Errors, err)
+	}
+	e.Count++
+}
+
 // Result stores Copier results and statistics.
 type Result struct {
 	WriteError                error
-	Errors                    []error
-	Warnings                  []error
 	InterpolatedStopTimeCount int
 	EntityCount               map[string]int
 	GeneratedCount            map[string]int
@@ -20,26 +83,24 @@ type Result struct {
 	SkipEntityReferenceCount  map[string]int
 	SkipEntityFilterCount     map[string]int
 	SkipEntityMarkedCount     map[string]int
+	Errors                    map[string]*ErrorGroup
+	Warnings                  map[string]*ErrorGroup
+	ErrorLimit                int
 }
 
 // NewResult returns a new Result.
 func NewResult() *Result {
 	return &Result{
-		Errors:                   []error{},
-		Warnings:                 []error{},
 		EntityCount:              map[string]int{},
 		GeneratedCount:           map[string]int{},
 		SkipEntityErrorCount:     map[string]int{},
 		SkipEntityReferenceCount: map[string]int{},
 		SkipEntityFilterCount:    map[string]int{},
 		SkipEntityMarkedCount:    map[string]int{},
+		Errors:                   map[string]*ErrorGroup{},
+		Warnings:                 map[string]*ErrorGroup{},
+		ErrorLimit:               10,
 	}
-}
-
-type ctx = causes.Context
-
-type updateContext interface {
-	Update(*causes.Context)
 }
 
 // HandleSourceErrors .
@@ -48,13 +109,25 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 		if v, ok := err.(updateContext); ok {
 			v.Update(&ctx{Filename: fn})
 		}
-		cr.Errors = append(cr.Errors, err)
+		key := getErrorKey(err)
+		v, ok := cr.Errors[key]
+		if !ok {
+			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			cr.Errors[key] = v
+		}
+		v.Add(err)
 	}
 	for _, err := range warns {
 		if v, ok := err.(updateContext); ok {
 			v.Update(&ctx{Filename: fn})
 		}
-		cr.Warnings = append(cr.Warnings, err)
+		key := getErrorKey(err)
+		v, ok := cr.Warnings[key]
+		if !ok {
+			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			cr.Warnings[key] = v
+		}
+		v.Add(err)
 	}
 }
 
@@ -66,42 +139,62 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		if v, ok := err.(updateContext); ok {
 			v.Update(&ctx{Filename: efn, EntityID: eid})
 		}
-		cr.Errors = append(cr.Errors, err)
+		key := getErrorKey(err)
+		v, ok := cr.Errors[key]
+		if !ok {
+			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			cr.Errors[key] = v
+		}
+		v.Add(err)
 	}
 	for _, err := range warns {
 		if v, ok := err.(updateContext); ok {
 			v.Update(&ctx{Filename: efn, EntityID: eid})
 		}
-		cr.Warnings = append(cr.Warnings, err)
+		key := getErrorKey(err)
+		v, ok := cr.Warnings[key]
+		if !ok {
+			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			cr.Warnings[key] = v
+		}
+		v.Add(err)
 	}
 }
 
 // DisplayErrors shows individual errors in log.Info
 func (cr *Result) DisplayErrors() {
-	keys := map[string][]error{}
-	for _, err := range cr.Errors {
-		efn := ""
-		if v, ok := err.(errorWithContext); ok {
-			ctx := v.Context()
-			efn = ctx.Filename
-		}
-		keys[efn] = append(keys[efn], err)
+	if len(cr.Errors) == 0 {
+		log.Info("No errors")
+		return
 	}
-	log.Info("Logged errors:")
-	for fn, v := range keys {
-		group := map[string][]error{}
-		for _, err := range v {
-			eid := ""
-			if v, ok := err.(errorWithContext); ok {
-				ctx := v.Context()
-				eid = ctx.EntityID
-			}
-			group[eid] = append(group[eid], err)
+	log.Info("Errors:")
+	for _, v := range cr.Errors {
+		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
+		for _, err := range v.Errors {
+			log.Info("\t\t", err.Error())
 		}
-		for k, v := range group {
-			for _, err := range v {
-				log.Info("\t%s '%s': %s", fn, k, err)
-			}
+		remain := v.Count - len(v.Errors)
+		if remain > 0 {
+			log.Info("\t\t... and %d more", remain)
+		}
+	}
+}
+
+// DisplayWarnings shows individual warnings in log.Info
+func (cr *Result) DisplayWarnings() {
+	if len(cr.Warnings) == 0 {
+		log.Info("No warnings")
+		return
+	}
+	log.Info("Warnings:")
+	for _, v := range cr.Warnings {
+		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
+		for _, err := range v.Errors {
+			log.Info("\t\t %s", err.Error())
+		}
+		remain := v.Count - len(v.Errors)
+		if remain > 0 {
+			log.Info("\t\t... and %d more", remain)
 		}
 	}
 }
@@ -112,34 +205,37 @@ func (cr *Result) DisplaySummary() {
 	for _, k := range sortedKeys(cr.EntityCount) {
 		log.Info("\t%s: %d", k, cr.EntityCount[k])
 	}
-	log.Info("Generated count:")
-	for _, k := range sortedKeys(cr.GeneratedCount) {
-		log.Info("\t%s: %d", k, cr.GeneratedCount[k])
+	if msiSum(cr.GeneratedCount) > 0 {
+		log.Info("Generated count:")
+		for _, k := range sortedKeys(cr.GeneratedCount) {
+			log.Info("\t%s: %d", k, cr.GeneratedCount[k])
+		}
 	}
-	log.Info("Interpolated stop_time count: %d", cr.InterpolatedStopTimeCount)
-	log.Info("Skipped with errors:")
-	for _, k := range sortedKeys(cr.SkipEntityErrorCount) {
-		log.Info("\t%s: %d", k, cr.SkipEntityErrorCount[k])
+	if cr.InterpolatedStopTimeCount > 0 {
+		log.Info("Interpolated stop_time count: %d", cr.InterpolatedStopTimeCount)
 	}
-	log.Info("Skipped with reference errors:")
-	for _, k := range sortedKeys(cr.SkipEntityReferenceCount) {
-		log.Info("\t%s: %d", k, cr.SkipEntityReferenceCount[k])
+	if msiSum(cr.SkipEntityErrorCount) > 0 {
+		log.Info("Skipped with errors:")
+		for _, k := range sortedKeys(cr.SkipEntityErrorCount) {
+			log.Info("\t%s: %d", k, cr.SkipEntityErrorCount[k])
+		}
 	}
-	log.Info("Skipped by filter:")
-	for _, k := range sortedKeys(cr.SkipEntityFilterCount) {
-		log.Info("\t%s: %d", k, cr.SkipEntityFilterCount[k])
+	if msiSum(cr.SkipEntityReferenceCount) > 0 {
+		log.Info("Skipped with reference errors:")
+		for _, k := range sortedKeys(cr.SkipEntityReferenceCount) {
+			log.Info("\t%s: %d", k, cr.SkipEntityReferenceCount[k])
+		}
 	}
-	log.Info("Skipped by marker:")
-	for _, k := range sortedKeys(cr.SkipEntityMarkedCount) {
-		log.Info("\t%s: %d", k, cr.SkipEntityMarkedCount[k])
+	if msiSum(cr.SkipEntityFilterCount) > 0 {
+		log.Info("Skipped by filter:")
+		for _, k := range sortedKeys(cr.SkipEntityFilterCount) {
+			log.Info("\t%s: %d", k, cr.SkipEntityFilterCount[k])
+		}
 	}
-}
-
-func sortedKeys(m map[string]int) []string {
-	keys := []string{}
-	for k := range m {
-		keys = append(keys, k)
+	if msiSum(cr.SkipEntityMarkedCount) > 0 {
+		log.Info("Skipped by marker:")
+		for _, k := range sortedKeys(cr.SkipEntityMarkedCount) {
+			log.Info("\t%s: %d", k, cr.SkipEntityMarkedCount[k])
+		}
 	}
-	sort.Strings(keys)
-	return keys
 }

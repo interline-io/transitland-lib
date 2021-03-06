@@ -28,7 +28,6 @@ import (
 //   FileNotPresentError
 //   RowParseError
 //   FileUnreadableError
-//   FastTravelError - what it says
 //
 // Causes that exist but are not implemented:
 //   UnusedEntityError - warning that an named entity (agency, route, stop, calendar, etc.) is not referenced
@@ -38,12 +37,13 @@ import (
 //   StopTooFarError - stop too far from a related stop
 //   StopTooFarFromShapeError - stop_time too far from associated shape
 //   StopTooCloseError - stop too close to another stop
+//   FastTravelError - what it says
 //
-// Best practice warnings that need named types:
+// Best practice warnings that are implemented as warnings but need named types:
 //   Duplicate fare_rules
 //   Duplicate route route_short_name, route_long_name, etc. combinations
 //   NoServiceError - warning that service contains no positive days
-//   OverlappingFrequencyError - maybe?
+//   OverlappingFrequencyError
 //
 // Best Practice Warning that do not exist but should:
 //   StationVisitError - stop_time visits location_type != 0
@@ -54,7 +54,6 @@ import (
 //   FeedServiceDurationError - feed covers < 30 days (note: can only be checked after all others)
 //   InconsistentLanguageError - feed_info or agency contains more than 1 language
 //   OverlappingBlockError - maybe?
-//   DuplicateStopNameError - maybe?
 //   Some feed_info rules
 
 // Context adds structured context.

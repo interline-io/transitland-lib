@@ -42,11 +42,8 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 }
 
 // Validate checks the feed and returns any errors and warnings that are found.
-func (v *Validator) Validate() ([]error, []error) {
-	result := v.Copier.Copy()
-	result.DisplayErrors()
-	result.DisplaySummary()
-	return result.Errors, result.Warnings
+func (v *Validator) Validate() *copier.Result {
+	return v.Copier.Copy()
 }
 
 type errorWithContext interface {

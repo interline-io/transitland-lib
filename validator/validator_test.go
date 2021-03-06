@@ -78,9 +78,7 @@ func TestValidator_Validate(t *testing.T) {
 			// At least one error must be specified per overlay feed, otherwise fail
 			v, _ := NewValidator(reader, Options{})
 			v.Copier.ErrorHandler = &handler
-			errs, warns := v.Validate()
-			_ = errs
-			_ = warns
+			v.Validate()
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")
 			}
@@ -89,7 +87,7 @@ func TestValidator_Validate(t *testing.T) {
 }
 
 func TestValidator_BestPractices(t *testing.T) {
-	// TODO: Combine with above...
+	// TODO: Combine with above... test best practice rules.
 	basepath := testutil.RelPath("test/data/validator")
 	searchpath := testutil.RelPath("test/data/validator/best-practices")
 	files, err := ioutil.ReadDir(searchpath)
@@ -122,9 +120,8 @@ func TestValidator_BestPractices(t *testing.T) {
 			// At least one error must be specified per overlay feed, otherwise fail
 			v, _ := NewValidator(reader, Options{BestPractices: true})
 			v.Copier.ErrorHandler = &handler
-			errs, warns := v.Validate()
-			_ = errs
-			_ = warns
+			result := v.Validate()
+			_ = result
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")
 			}
