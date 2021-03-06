@@ -60,6 +60,8 @@ type Options struct {
 	UseBasicRouteTypes bool
 	// DeduplicateStopTimes
 	DeduplicateJourneyPatterns bool
+	// Default error handler
+	ErrorHandler ErrorHandler
 }
 
 // Copier copies from Reader to Writer
@@ -93,7 +95,9 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 	// Result
 	result := NewResult()
 	copier.result = result
-	copier.ErrorHandler = result
+	if opts.ErrorHandler == nil {
+		copier.ErrorHandler = result
+	}
 	// Default Markers
 	copier.Marker = newYesMarker()
 	// Default EntityMap
@@ -102,7 +106,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 	copier.geomCache = xy.NewGeomCache()
 	// Set the default BatchSize
 	if copier.BatchSize == 0 {
-		copier.BatchSize = 1000000 // TODO: 1_000_000 requires Go 1.13
+		copier.BatchSize = 1_000_000
 	}
 	// Default filters
 	copier.filters = []tl.EntityFilter{}

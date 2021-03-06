@@ -171,7 +171,7 @@ func (cr *Result) DisplayErrors() {
 	for _, v := range cr.Errors {
 		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 		for _, err := range v.Errors {
-			log.Info("\t\t", err.Error())
+			log.Info("\t\t%s", err.Error())
 		}
 		remain := v.Count - len(v.Errors)
 		if remain > 0 {
@@ -190,7 +190,7 @@ func (cr *Result) DisplayWarnings() {
 	for _, v := range cr.Warnings {
 		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 		for _, err := range v.Errors {
-			log.Info("\t\t %s", err.Error())
+			log.Info("\t\t%s", err.Error())
 		}
 		remain := v.Count - len(v.Errors)
 		if remain > 0 {
