@@ -8,16 +8,16 @@ import (
 // EntityErrorCheck runs the entity's built in Errors() check.
 type EntityErrorCheck struct{}
 
-// ValidateEntity .
-func (e *EntityErrorCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *EntityErrorCheck) Validate(ent tl.Entity) []error {
 	return ent.Errors()
 }
 
 // EntityWarningCheck runs the entity's built in Warnings() check.
 type EntityWarningCheck struct{}
 
-// ValidateEntity .
-func (e *EntityWarningCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *EntityWarningCheck) Validate(ent tl.Entity) []error {
 	return ent.Warnings()
 }
 
@@ -28,8 +28,8 @@ type EntityDuplicateCheck struct {
 	duplicates *tl.EntityMap
 }
 
-// ValidateEntity .
-func (e *EntityDuplicateCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *EntityDuplicateCheck) Validate(ent tl.Entity) []error {
 	if e.duplicates == nil {
 		e.duplicates = tl.NewEntityMap()
 	}
@@ -54,8 +54,8 @@ type ValidFarezoneCheck struct {
 	zones map[string]string
 }
 
-// ValidateEntity .
-func (e *ValidFarezoneCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *ValidFarezoneCheck) Validate(ent tl.Entity) []error {
 	if e.zones == nil {
 		e.zones = map[string]string{}
 	}
@@ -92,8 +92,8 @@ type AgencyIDConditionallyRequiredCheck struct {
 	agencyCount int
 }
 
-// ValidateEntity .
-func (e *AgencyIDConditionallyRequiredCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *AgencyIDConditionallyRequiredCheck) Validate(ent tl.Entity) []error {
 	var errs []error
 	switch v := ent.(type) {
 	case *tl.FareAttribute:
@@ -126,8 +126,8 @@ type InconsistentTimezoneCheck struct {
 	firstTimeZone string
 }
 
-// ValidateEntity .
-func (e *InconsistentTimezoneCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *InconsistentTimezoneCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Agency)
 	if !ok {
 		return nil
@@ -148,8 +148,8 @@ type ParentStationLocationTypeCheck struct {
 	locationTypes map[string]int
 }
 
-// ValidateEntity .
-func (e *ParentStationLocationTypeCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 	// Confirm the parent station location_type is acceptable
 	stop, ok := ent.(*tl.Stop)
 	if !ok {
@@ -186,8 +186,8 @@ func (e *ParentStationLocationTypeCheck) ValidateEntity(ent tl.Entity) []error {
 // This should be split into multiple validators.
 type StopTimeSequenceCheck struct{}
 
-// ValidateEntity .
-func (e *StopTimeSequenceCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *StopTimeSequenceCheck) Validate(ent tl.Entity) []error {
 	trip, ok := ent.(*tl.Trip)
 	if !ok {
 		return nil

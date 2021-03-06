@@ -14,8 +14,8 @@ import (
 // NoScheduledServiceCheck checks that a service contains at least one scheduled day, otherwise returns a warning.
 type NoScheduledServiceCheck struct{}
 
-// ValidateEntity .
-func (e *NoScheduledServiceCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *NoScheduledServiceCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Service)
 	if !ok {
 		return nil
@@ -34,8 +34,8 @@ type StopTooFarCheck struct {
 	maxdist float64
 }
 
-// ValidateEntity .
-func (e *StopTooFarCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
 	e.maxdist = 1000.0
 	if e.geoms == nil {
 		e.geoms = map[string]*tl.Point{}
@@ -76,8 +76,8 @@ type StopTooCloseCheck struct {
 	maxdist float64
 }
 
-// ValidateEntity .
-func (e *StopTooCloseCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *StopTooCloseCheck) Validate(ent tl.Entity) []error {
 	e.maxdist = 1.0
 	if e.geoms == nil {
 		e.geoms = map[string][]*stopPoint{}
@@ -126,8 +126,8 @@ func (e *StopTooFarFromShapeCheck) SetGeomCache(g *xy.GeomCache) {
 	e.geomCache = g
 }
 
-// ValidateEntity .
-func (e *StopTooFarFromShapeCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *StopTooFarFromShapeCheck) Validate(ent tl.Entity) []error {
 	// An initial approach used geohashes to check shape <-> stop as an initial filter, but it turns
 	// out in practice that just checking directly is almost exactly the same speed.
 	// Even the largest feeds are only a few tens of thousands of comparisons. Just keep track
@@ -192,8 +192,8 @@ func (e *StopTimeFastTravelCheck) SetGeomCache(g *xy.GeomCache) {
 	e.geomCache = g
 }
 
-// ValidateEntity .
-func (e *StopTimeFastTravelCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 	if v, ok := ent.(*tl.Route); ok {
 		if e.routeTypes == nil {
 			e.routeTypes = map[string]int{}
@@ -246,8 +246,8 @@ type DuplicateRouteNameCheck struct {
 	names map[string]int
 }
 
-// ValidateEntity .
-func (e *DuplicateRouteNameCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *DuplicateRouteNameCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Route)
 	if !ok {
 		return nil
@@ -270,8 +270,8 @@ type DuplicateFareRuleCheck struct {
 	rules map[string]int
 }
 
-// ValidateEntity .
-func (e *DuplicateFareRuleCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *DuplicateFareRuleCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.FareRule)
 	if !ok {
 		return nil
@@ -299,8 +299,8 @@ type FrequencyOverlapCheck struct {
 	freqs map[string][]*freqValue
 }
 
-// ValidateEntity .
-func (e *FrequencyOverlapCheck) ValidateEntity(ent tl.Entity) []error {
+// Validate .
+func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Frequency)
 	if !ok {
 		return nil

@@ -16,7 +16,7 @@ import (
 
 // Validator is used to create an extensible list of validators run for each entity.
 type Validator interface {
-	ValidateEntity(tl.Entity) []error
+	Validate(tl.Entity) []error
 }
 
 // ErrorHandler is called on each source file and entity; errors can be nil
@@ -251,10 +251,10 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		errs = append(errs, referr)
 	}
 	for _, v := range copier.errorValidators {
-		errs = append(errs, v.ValidateEntity(ent)...)
+		errs = append(errs, v.Validate(ent)...)
 	}
 	for _, v := range copier.warningValidators {
-		warns = append(warns, v.ValidateEntity(ent)...)
+		warns = append(warns, v.Validate(ent)...)
 	}
 	// Error handler
 	copier.ErrorHandler.HandleEntityErrors(ent, errs, warns)
