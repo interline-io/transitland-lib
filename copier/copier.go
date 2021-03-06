@@ -9,6 +9,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/enum"
@@ -104,7 +105,7 @@ type Copier struct {
 	agencyCount  int
 	extensions   []copyableExtension // interface
 	filters      []tl.EntityFilter   // interface
-	geomCache    *geomCache
+	geomCache    *xy.GeomCache
 	result       *CopyResult
 	duplicateMap *tl.EntityMap
 	*tl.EntityMap
@@ -129,7 +130,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 	// Default filters
 	copier.filters = []tl.EntityFilter{}
 	// Geom Cache
-	copier.geomCache = newGeomCache()
+	copier.geomCache = xy.NewGeomCache()
 	// Set the default BatchSize
 	if copier.BatchSize == 0 {
 		copier.BatchSize = 1000000 // TODO: 1_000_000 requires Go 1.13
@@ -800,36 +801,38 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		return nil
 	}
 
-	for stoptimes := range copier.Reader.StopTimesByTripID() {
+	for sts := range copier.Reader.StopTimesByTripID() {
 		// Write batch
-		if batchCount+len(stoptimes) >= copier.BatchSize {
+		if batchCount+len(sts) >= copier.BatchSize {
 			if err := writeBatch(); err != nil {
 				return err
 			}
 		}
 
 		// Error handling for trips without stop_times is after this block
-		if len(stoptimes) == 0 {
+		if len(sts) == 0 {
 			continue
 		}
 		// Does this trip exist?
-		tripid := stoptimes[0].TripID
+		tripid := sts[0].TripID
 		if _, ok := alltripids[tripid]; !ok {
-			copier.ErrorHandler.HandleEntityErrors(&stoptimes[0], []error{causes.NewInvalidReferenceError("trip_id", tripid)}, nil)
-			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(stoptimes)
+			copier.ErrorHandler.HandleEntityErrors(&sts[0], []error{causes.NewInvalidReferenceError("trip_id", tripid)}, nil)
+			copier.result.SkipEntityReferenceCount["stop_times.txt"] += len(sts)
 			continue
 		}
 		// Is this trip marked?
 		trip, ok := trips[tripid]
 		if !ok { // trip_id exists but is not marked
-			copier.result.SkipEntityMarkedCount["stop_times.txt"] += len(stoptimes)
+			copier.result.SkipEntityMarkedCount["stop_times.txt"] += len(sts)
 			continue
 		}
+		// Add StopTimes to Trip
+		trip.StopTimes = sts
 		// Mark trip as associated with at least 1 stop_time
 		delete(trips, tripid)
 
 		// Set StopPattern
-		patkey := stopPatternKey(stoptimes)
+		patkey := stopPatternKey(trip.StopTimes)
 		if pat, ok := stopPatterns[patkey]; ok {
 			trip.StopPatternID = pat
 		} else {
@@ -844,7 +847,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				trip.ShapeID.Key = shapeid
 				trip.ShapeID.Valid = true
 			} else {
-				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), stoptimes); err != nil {
+				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), trip.StopTimes); err != nil {
 					log.Error("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
 					trip.AddError(err)
 				} else {
@@ -858,33 +861,33 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 
 		// Check StopTime GROUP errors; log errors with trip; can block trip
 		// Example errors: less than 2 stop_times, non-increasing sequences and times, etc.
-		sterrs := tl.ValidateStopTimes(stoptimes)
+		sterrs := tl.ValidateStopTimes(trip.StopTimes)
 		for _, err := range sterrs {
 			trip.AddError(err)
 		}
 		// Interpolate StopTimes if necessary - only if no other errors; log errors with trip
 		if len(sterrs) == 0 && copier.InterpolateStopTimes {
-			if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip, stoptimes); err != nil {
+			if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip); err != nil {
 				// stwarns = append(stwarns, err)
 				trip.AddWarning(err)
 			} else {
-				stoptimes = stoptimes2
+				trip.StopTimes = stoptimes2
 			}
 		}
 
 		// Set JourneyPattern
-		jkey := journeyPatternKey(trip, stoptimes)
-		stlen := len(stoptimes)
+		jkey := journeyPatternKey(trip, trip.StopTimes)
+		stlen := len(trip.StopTimes)
 		if jpat, ok := journeyPatterns[jkey]; ok {
 			trip.JourneyPatternID = jpat.key
-			trip.JourneyPatternOffset = stoptimes[0].ArrivalTime - jpat.firstArrival
+			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime - jpat.firstArrival
 			if copier.DeduplicateJourneyPatterns {
-				stoptimes = nil
+				trip.StopTimes = nil
 			}
 		} else {
 			trip.JourneyPatternID = trip.TripID
 			trip.JourneyPatternOffset = 0
-			journeyPatterns[jkey] = patInfo{firstArrival: stoptimes[0].ArrivalTime, key: trip.JourneyPatternID}
+			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime, key: trip.JourneyPatternID}
 		}
 
 		// Validate trip & add to batch
@@ -895,8 +898,8 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			continue
 		}
 		// Add StopTimes to batch -- final validation after writing trips
-		for i := range stoptimes {
-			stbt = append(stbt, stoptimes[i])
+		for i := range trip.StopTimes {
+			stbt = append(stbt, trip.StopTimes[i])
 		}
 		batchCount += stlen
 	}
