@@ -1,7 +1,0 @@
-stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station,stop_timezone,wheelchair_boarding,expect_error
-12TH,12th St. Oakland City Center,,37.803768,-122.271450,12TH,http://www.bart.gov/stations/12TH/,0,,,1
-19TH,19th St. Oakland,,37.808350,-122.268602,19TH,http://www.bart.gov/stations/19TH/,0,,,1
-LAKE,Lake Merritt,,37.797027,-122.265180,LAKE,http://www.bart.gov/stations/LAKE/,0,,,1
-LAKE_station,station,,37.797027,-122.265180,,,1,,,1
-LAKE_platform,platform,,37.797027,-122.265180,,,0,LAKE_station,,1
-LAKE_platform_platform,platform,,37.797027,-122.265180,,,0,LAKE_platform,,1,InvalidParentStationError|InvalidReferenceError

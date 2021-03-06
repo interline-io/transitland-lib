@@ -1,0 +1,1 @@
+Feed that contains more than one agency and fare_attributes.txt that do not have the conditionally required agency_id value.
