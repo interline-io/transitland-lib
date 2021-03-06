@@ -59,7 +59,7 @@ func getFileLines(fn string) ([]string, error) {
 	return ret, nil
 }
 
-func copyResultCounts(result copier.CopyResult) dmfr.FeedVersionImport {
+func copyResultCounts(result copier.Result) dmfr.FeedVersionImport {
 	fvi := dmfr.NewFeedVersionImport()
 	fvi.InterpolatedStopTimeCount = result.InterpolatedStopTimeCount
 	for k, v := range result.EntityCount {

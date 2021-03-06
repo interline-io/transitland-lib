@@ -8,8 +8,8 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
-// CopyResult stores Copier results and statistics.
-type CopyResult struct {
+// Result stores Copier results and statistics.
+type Result struct {
 	WriteError                error
 	Errors                    []error
 	Warnings                  []error
@@ -22,9 +22,9 @@ type CopyResult struct {
 	SkipEntityMarkedCount     map[string]int
 }
 
-// NewCopyResult returns a new CopyResult.
-func NewCopyResult() *CopyResult {
-	return &CopyResult{
+// NewResult returns a new Result.
+func NewResult() *Result {
+	return &Result{
 		Errors:                   []error{},
 		Warnings:                 []error{},
 		EntityCount:              map[string]int{},
@@ -43,7 +43,7 @@ type updateContext interface {
 }
 
 // HandleSourceErrors .
-func (cr *CopyResult) HandleSourceErrors(fn string, errs []error, warns []error) {
+func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 	for _, err := range errs {
 		if v, ok := err.(updateContext); ok {
 			v.Update(&ctx{Filename: fn})
@@ -59,7 +59,7 @@ func (cr *CopyResult) HandleSourceErrors(fn string, errs []error, warns []error)
 }
 
 // HandleEntityErrors .
-func (cr *CopyResult) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
+func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
 	efn := ent.Filename()
 	eid := ent.EntityID()
 	for _, err := range errs {
@@ -77,7 +77,7 @@ func (cr *CopyResult) HandleEntityErrors(ent tl.Entity, errs []error, warns []er
 }
 
 // DisplayErrors shows individual errors in log.Info
-func (cr *CopyResult) DisplayErrors() {
+func (cr *Result) DisplayErrors() {
 	keys := map[string][]error{}
 	for _, err := range cr.Errors {
 		efn := ""
@@ -107,7 +107,7 @@ func (cr *CopyResult) DisplayErrors() {
 }
 
 // DisplaySummary shows entity and error counts in log.Info
-func (cr *CopyResult) DisplaySummary() {
+func (cr *Result) DisplaySummary() {
 	log.Info("Copied count:")
 	for _, k := range sortedKeys(cr.EntityCount) {
 		log.Info("\t%s: %d", k, cr.EntityCount[k])
