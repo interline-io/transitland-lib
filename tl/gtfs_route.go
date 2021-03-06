@@ -48,6 +48,9 @@ func (ent *Route) Warnings() (errs []error) {
 	if len(ent.RouteColor) > 0 && ent.RouteColor == ent.RouteTextColor {
 		errs = append(errs, causes.NewValidationWarning("route_text_color", "route_text_color should provide contrast with route_color"))
 	}
+	if len(ent.RouteShortName) > 12 {
+		errs = append(errs, causes.NewValidationWarning("route_short_name", "route_short_name should be no more than 12 characters"))
+	}
 	return errs
 }
 

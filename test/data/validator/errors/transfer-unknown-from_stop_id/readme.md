@@ -1,0 +1,1 @@
+Feed that contains transfers.txt entities that reference an unknown stop using from_stop_id.

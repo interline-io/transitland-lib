@@ -1,0 +1,1 @@
+Feed that contains trips.txt entities where stop_times.txt shape_dist_traveles decreases with respect to stop_time stop_sequence. Note that the SequenceError is associated with the trip.

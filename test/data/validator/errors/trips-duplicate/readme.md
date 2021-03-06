@@ -1,0 +1,1 @@
+Feed that contains trips.txt entities with duplicate trip_id.

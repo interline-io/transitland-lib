@@ -44,8 +44,8 @@ func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warn
 //////////////
 
 func TestValidator_Validate(t *testing.T) {
-	basepath := testutil.RelPath("test/data/validator-examples")
-	searchpath := testutil.RelPath("test/data/validator-examples/errors")
+	basepath := testutil.RelPath("test/data/validator")
+	searchpath := testutil.RelPath("test/data/validator/errors")
 	files, err := ioutil.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)
