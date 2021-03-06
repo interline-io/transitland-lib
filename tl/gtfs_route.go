@@ -20,7 +20,7 @@ type Route struct {
 	RouteColor     string   `csv:"route_color"`
 	RouteTextColor string   `csv:"route_text_color"`
 	RouteSortOrder int      `csv:"route_sort_order"`
-	Geometry       Geometry `csv:"-" db:"-"`
+	Geometry       Geometry `db:"-"`
 	BaseEntity
 }
 
