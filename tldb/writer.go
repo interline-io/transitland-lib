@@ -29,8 +29,9 @@ func MustGetWriter(dburl string, create bool) *Writer {
 
 // Writer takes a Reader and saves it to a database.
 type Writer struct {
-	FeedVersionID int
-	Adapter       Adapter
+	FeedVersionID   int
+	Adapter         Adapter
+	defaultAgencyID int // required for routes
 }
 
 // NewWriter returns a Writer appropriate for the given connection url.
@@ -74,6 +75,9 @@ func (writer *Writer) Delete() error {
 
 // AddEntity writes an entity to the database.
 func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
+	if v, ok := ent.(*tl.Route); ok && v.AgencyID == "" {
+		v.AgencyID = strconv.Itoa(writer.defaultAgencyID)
+	}
 	// Set the FeedVersionID
 	if z, ok := ent.(canSetFeedVersion); ok {
 		z.SetFeedVersionID(writer.FeedVersionID)
@@ -86,7 +90,11 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	eid, err := writer.Adapter.Insert(ent)
 	// Update ID
 	if v, ok := ent.(canSetID); ok {
-		v.SetID(int(eid))
+		v.SetID(eid)
+	}
+	// Set a default AgencyID if possible.
+	if _, ok := ent.(*tl.Agency); ok && writer.defaultAgencyID == 0 {
+		writer.defaultAgencyID = eid
 	}
 	return strconv.Itoa(eid), err
 }
@@ -103,6 +111,11 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		if ent.EntityID() != "" {
 			useCopy = false
 		}
+		// Routes may need a default AgencyID set before writing to database.
+		if v, ok := ent.(*tl.Route); ok && v.AgencyID == "" {
+			v.AgencyID = strconv.Itoa(writer.defaultAgencyID)
+		}
+		// Set FeedVersion, Timestamps
 		if v, ok := ent.(canSetFeedVersion); ok {
 			v.SetFeedVersionID(writer.FeedVersionID)
 		}

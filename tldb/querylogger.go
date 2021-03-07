@@ -84,6 +84,7 @@ func (p *QueryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
 	return p.sqext.QueryRowx(query, args...)
 }
 
+// Beginx .
 func (p *QueryLogger) Beginx() (*sqlx.Tx, error) {
 	if a, ok := p.sqext.(*sqlx.Tx); ok {
 		return a, nil
