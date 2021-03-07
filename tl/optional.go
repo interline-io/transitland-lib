@@ -65,9 +65,47 @@ func (r *OptionalRelationship) Scan(src interface{}) error {
 	return nil
 }
 
+// MarshalJSON implements the json.Marshaler interface
+func (r *OptionalRelationship) MarshalJSON() ([]byte, error) {
+	if !r.Valid {
+		return []byte("null"), nil
+	}
+	return []byte("\"" + r.Key + "\""), nil
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (r *OptionalRelationship) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (r OptionalRelationship) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
+}
+
 // OptionalKey is the same as sql.NullInt
 type OptionalKey struct {
 	sql.NullInt64
+}
+
+// MarshalJSON implements the json.Marshaler interface
+func (r *OptionalKey) MarshalJSON() ([]byte, error) {
+	if !r.Valid {
+		return []byte("null"), nil
+	}
+	return []byte(strconv.Itoa(int(r.Int64))), nil
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (r *OptionalKey) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (r OptionalKey) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }
 
 // OptionalTime is a nullable time, but can scan strings
@@ -116,6 +154,14 @@ func (r *OptionalTime) Scan(src interface{}) error {
 	return p
 }
 
+// MarshalJSON implements the json.Marshaler interface
+func (r *OptionalTime) MarshalJSON() ([]byte, error) {
+	if !r.Valid {
+		return []byte("null"), nil
+	}
+	return []byte("\"" + r.Time.Format("2006-01-02") + "\""), nil
+}
+
 // UnmarshalGQL implements the graphql.Unmarshaler interface
 func (r *OptionalTime) UnmarshalGQL(v interface{}) error {
 	return nil
@@ -125,12 +171,4 @@ func (r *OptionalTime) UnmarshalGQL(v interface{}) error {
 func (r OptionalTime) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
-}
-
-// MarshalJSON implements the json.Marshaler interface
-func (r *OptionalTime) MarshalJSON() ([]byte, error) {
-	if !r.Valid {
-		return []byte("null"), nil
-	}
-	return []byte("\"" + r.Time.Format("2006-01-02") + "\""), nil
 }
