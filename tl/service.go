@@ -179,6 +179,40 @@ func (s *Service) Exception(t time.Time) (int, bool) {
 	return a, ok
 }
 
+// HasAtLeastOneDay checks if the Service is active for at least one day.
+func (s *Service) HasAtLeastOneDay() bool {
+	// Quick checks before iterating through each day.
+	days := s.Monday + s.Tuesday + s.Wednesday + s.Thursday + s.Friday + s.Saturday + s.Sunday
+	if days > 0 && len(s.exceptions) == 0 {
+		return true
+	}
+	add, remove := 0, 0
+	for _, v := range s.exceptions {
+		if v == 1 {
+			add++
+		} else if v == 2 {
+			remove++
+		}
+	}
+	// By definition, at least one day
+	if add > 0 {
+		return true
+	}
+	// By definition, no days
+	if days == 0 && add == 0 {
+		return false
+	}
+	// Now unfortunately have to check every day
+	start, end := s.ServicePeriod()
+	for start.Before(end) || start.Equal(end) {
+		if s.IsActive(start) {
+			return true
+		}
+		start = start.AddDate(0, 0, 1)
+	}
+	return false
+}
+
 // Simplify tries to simplify exceptions down to a basic calendar with fewer exceptions.
 func (s *Service) Simplify() (*Service, error) {
 	inputServiceStart, inputServiceEnd := s.StartDate, s.EndDate
