@@ -29,7 +29,7 @@ func (v *Validator) Validate() ([]error, []error) {
 	result := v.Copier.Copy()
 	result.DisplayErrors()
 	result.DisplaySummary()
-	return result.Errors, result.Warnings
+	return nil, nil
 }
 
 type errorWithContext interface {

@@ -74,9 +74,7 @@ func TestValidator_Validate(t *testing.T) {
 			////////
 			v, _ := NewValidator(reader)
 			v.Copier.ErrorHandler = &handler
-			errs, warns := v.Validate()
-			_ = errs
-			_ = warns
+			v.Validate()
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")
 			}
