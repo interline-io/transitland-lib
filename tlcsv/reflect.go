@@ -190,7 +190,7 @@ func loadRow(ent tl.Entity, row Row) {
 func loadRowFast(ent canSetString, row Row) {
 	// Return if there was a row parsing error
 	if row.Err != nil {
-		ent.AddError(causes.NewFileParseError(row.Line, row.Err))
+		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
 		return
 	}
 	header := row.Header
@@ -206,7 +206,7 @@ func loadRowFast(ent canSetString, row Row) {
 func loadRowReflect(ent tl.Entity, row Row) {
 	// Return if there was a row parsing error
 	if row.Err != nil {
-		ent.AddError(causes.NewFileParseError(row.Line, row.Err))
+		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
 		return
 	}
 	// Get the struct tag map
