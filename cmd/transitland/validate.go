@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/internal/snakejson"
 	"github.com/interline-io/transitland-lib/validator"
 )
 
@@ -57,7 +58,7 @@ func (cmd *validateCommand) Run(args []string) error {
 		if err != nil {
 			panic(err)
 		}
-		b, err := json.Marshal(result)
+		b, err := json.MarshalIndent(snakejson.SnakeMarshaller{Value: result}, "", "  ")
 		if err != nil {
 			panic(err)
 		}
