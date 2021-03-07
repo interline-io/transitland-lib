@@ -5,38 +5,16 @@ import (
 	"strconv"
 )
 
-// TODO
-// Errors:
-//   FileEmptyError
-//   DuplicateColumnError
-//   MissingColumnError
-//   NoHeaderError
-//   InvalidZoneError
-//   TripWithoutStopTimes
-//
-// Warnings:
-//   NonuniformAgencyTimezoneError
-//   UnusedEntityError
-//   StationVisitError
-//   StopTooCloseError
-//   StopTooFarError
-//   NoServiceError
-//   FastTravelError
-//   UnequalColumnError
-//   ShapeReversedError
-//   StopTooFarFromShapeError
-//
-// Maybe validations:
-//   route color starts with '#' ?
-
 // Context adds structured context.
 type Context struct {
-	Filename string
-	Line     int
-	EntityID string
-	Field    string
-	Value    string
-	Message  string
+	Filename   string
+	Line       int
+	EntityID   string
+	Field      string
+	Value      string
+	Message    string
+	errorLevel int
+	cause      error
 }
 
 // bc avoids the problem of having a method
@@ -48,8 +26,72 @@ func (e *Context) Context() *Context {
 	return e
 }
 
+// ErrorLevel 0 = error, 1 = warning, 2 = best practice
+func (e *Context) ErrorLevel() int {
+	return e.errorLevel
+}
+
+// ErrorLevel returns the error level
+
+// Cause returns the underlying error and implements the Causer interface.
+func (e *Context) Cause() error {
+	return e.cause
+}
+
+// Update sets new values, if present
+func (e *Context) Update(v *Context) {
+	if v == nil {
+		return
+	}
+	if v.Filename != "" {
+		e.Filename = v.Filename
+	}
+	if v.Line > 0 {
+		e.Line = v.Line
+	}
+	if v.EntityID != "" {
+		e.EntityID = v.EntityID
+	}
+	if v.Field != "" {
+		e.Field = v.Field
+	}
+	if v.Value != "" {
+		e.Value = v.Value
+	}
+	if v.Message != "" {
+		e.Message = v.Message
+	}
+	if v.cause != nil {
+		e.cause = v.cause
+	}
+}
+
 func (e *Context) Error() string {
 	return ""
+}
+
+////////////////////////////
+// Error wrappers
+////////////////////////////
+
+// Warning wraps an error.
+type Warning struct {
+	cause error
+}
+
+// ErrorLevel returns type 1.
+func (Warning) ErrorLevel() int {
+	return 1
+}
+
+// BestPractice wraps an error.
+type BestPractice struct {
+	cause error
+}
+
+// ErrorLevel returns type 2.
+func (BestPractice) ErrorLevel() int {
+	return 2
 }
 
 ////////////////////////////
@@ -58,17 +100,16 @@ func (e *Context) Error() string {
 
 // SourceUnreadableError reports when the archive itself cannot be read
 type SourceUnreadableError struct {
-	cause error
 	bc
 }
 
 // NewSourceUnreadableError returns a new SourceUnreadableError
 func NewSourceUnreadableError(message string, err error) *SourceUnreadableError {
-	return &SourceUnreadableError{bc: bc{Message: message}, cause: err}
+	return &SourceUnreadableError{bc: bc{Message: message, cause: err}}
 }
 
 func (e *SourceUnreadableError) Error() string {
-	return fmt.Sprintf("could not read file '%s': %s", e.Filename, e.cause)
+	return fmt.Sprintf("could not read file '%s'", e.Filename)
 }
 
 ////////////////////////////
@@ -84,12 +125,12 @@ func NewFileRequiredError(filename string) *FileRequiredError {
 }
 
 func (e *FileRequiredError) Error() string {
-	return fmt.Sprintf("required file not present or could not be read: %s", e.Filename)
+	return fmt.Sprintf("required file '%s' not present or could not be read", e.Filename)
 }
 
 ////////////////////////////
 
-// FileNotPresentError is returned when a file is not present
+// FileNotPresentError is returned when a requested file is not present
 type FileNotPresentError struct {
 	bc
 }
@@ -105,36 +146,34 @@ func (e *FileNotPresentError) Error() string {
 
 ////////////////////////////
 
-// FileParseError reports an error parsing a row
-type FileParseError struct {
-	cause error
+// RowParseError reports an error parsing a CSV row
+type RowParseError struct {
 	bc
 }
 
-// NewFileParseError returns a new FileParseError
-func NewFileParseError(line int, err error) *FileParseError {
-	return &FileParseError{bc: bc{Line: line}, cause: err}
+// NewRowParseError returns a new RowParseError
+func NewRowParseError(line int, err error) *RowParseError {
+	return &RowParseError{bc: bc{Line: line, cause: err}}
 }
 
-func (e *FileParseError) Error() string {
-	return fmt.Sprintf("could not parse row %d: %s", e.Line, e.cause)
+func (e *RowParseError) Error() string {
+	return fmt.Sprintf("could not parse row %d", e.Line)
 }
 
 ////////////////////////////
 
-// FileUnreadableError reports an error parsing a row
+// FileUnreadableError reports a file that could not be read
 type FileUnreadableError struct {
-	cause error
 	bc
 }
 
 // NewFileUnreadableError returns a new FileUnreadableError
 func NewFileUnreadableError(filename string, err error) *FileUnreadableError {
-	return &FileUnreadableError{bc: bc{Filename: filename}, cause: err}
+	return &FileUnreadableError{bc: bc{Filename: filename, cause: err}}
 }
 
 func (e *FileUnreadableError) Error() string {
-	return fmt.Sprintf("could not read file '%s': %s", e.Filename, e.cause)
+	return fmt.Sprintf("could not read file '%s'", e.Filename)
 }
 
 ////////////////////////////
@@ -261,17 +300,16 @@ func (e *ConditionallyRequiredFieldError) Error() string {
 
 // InvalidFieldError reports an invalid value for a field
 type InvalidFieldError struct {
-	cause error
 	bc
 }
 
 // NewInvalidFieldError returns a new InvalidFieldError
 func NewInvalidFieldError(field string, value string, err error) *InvalidFieldError {
-	return &InvalidFieldError{bc: bc{Field: field, Value: value}, cause: err}
+	return &InvalidFieldError{bc: bc{Field: field, Value: value, cause: err}}
 }
 
 func (e *InvalidFieldError) Error() string {
-	return fmt.Sprintf("invalid value for field %s: '%s', reason: %s", e.Field, e.Value, e.cause.Error())
+	return fmt.Sprintf("invalid value for field %s: '%s'", e.Field, e.Value)
 }
 
 ////////////////////////////
@@ -368,7 +406,11 @@ type ValidationWarning struct {
 // NewValidationWarning returns a new ValidationWarning
 func NewValidationWarning(field string, message string) *ValidationWarning {
 	return &ValidationWarning{bc: bc{Message: message, Field: field}}
+}
 
+// ErrorLevel .
+func (e *ValidationWarning) ErrorLevel() int {
+	return 1
 }
 
 func (e *ValidationWarning) Error() string {
@@ -388,9 +430,100 @@ func NewInconsistentTimezoneError(value string) *InconsistentTimezoneError {
 }
 
 func (e *InconsistentTimezoneError) Error() string {
-	return fmt.Sprintf("file contaims more than one timezone")
+	return "file contains inconsistent timezones"
 }
 
 ////////////////////////////
-// Validation suggestions
+// Best Practices
 ////////////////////////////
+
+// NoScheduledServiceError reports when a service entry contains no active days.
+type NoScheduledServiceError struct{ bc }
+
+func (e *NoScheduledServiceError) Error() string {
+	return "service contains no active days"
+}
+
+///////////////
+
+// StopTooFarError .
+type StopTooFarError struct{ bc }
+
+// NewStopTooFarError .
+func NewStopTooFarError() *StopTooFarError {
+	return &StopTooFarError{}
+}
+
+func (e *StopTooFarError) Error() string {
+	return "stop too far from parent"
+}
+
+///////////////
+
+// StopTooCloseError .
+type StopTooCloseError struct {
+	Target   string
+	Distance float64
+	bc
+}
+
+// NewStopTooCloseError .
+func NewStopTooCloseError(target string, distance float64) *StopTooCloseError {
+	return &StopTooCloseError{Target: target, Distance: distance}
+}
+
+func (e *StopTooCloseError) Error() string {
+	return fmt.Sprintf("stop is too close to another stop '%s' at %0.2f m", e.Target, e.Distance)
+}
+
+///////////////
+
+// StopTooFarFromShapeError reports when a stop is too far from a shape.
+type StopTooFarFromShapeError struct {
+	StopID   string
+	ShapeID  string
+	Distance float64
+	bc
+}
+
+// NewStopTooFarFromShapeError .
+func NewStopTooFarFromShapeError(stopid string, shapeid string, distance float64) *StopTooFarFromShapeError {
+	return &StopTooFarFromShapeError{
+		StopID:   stopid,
+		ShapeID:  shapeid,
+		Distance: distance,
+	}
+}
+
+func (e *StopTooFarFromShapeError) Error() string {
+	return fmt.Sprintf("stop '%s' is too far from shape '%s' at %0.2fm", e.StopID, e.ShapeID, e.Distance)
+}
+
+///////////////
+
+// FastTravelError reports when reasonable maximum speeds have been exceeded.
+type FastTravelError struct {
+	FromStopID string
+	ToStopID   string
+	Distance   float64
+	Time       int
+	Speed      float64
+	SpeedLimit float64
+	bc
+}
+
+// NewFastTravelError .
+func NewFastTravelError(from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
+	return &FastTravelError{
+		FromStopID: from,
+		ToStopID:   to,
+		Time:       t,
+		Distance:   distance,
+		Speed:      speed,
+		SpeedLimit: limit,
+	}
+}
+
+func (e *FastTravelError) Error() string {
+	return fmt.Sprintf("traveled from stop '%s' to stop '%s' in %d seconds, a distance of %0.2f m and speed of %0.2f km/h where %0.2f km/h is the assumed maximum for this route type", e.FromStopID, e.ToStopID, e.Time, e.Distance, e.Speed, e.SpeedLimit)
+}
