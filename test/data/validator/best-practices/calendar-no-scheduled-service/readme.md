@@ -1,0 +1,1 @@
+This feed contains a calendar.txt entry that has no days with scheduled service.
