@@ -10,10 +10,12 @@ import (
 var keyMatchRegex = regexp.MustCompile(`\"(\w+)\":`)
 var wordBarrierRegex = regexp.MustCompile(`([a-z_0-9])([A-Z])`)
 
+// SnakeMarshaller writes JSON with default snake_case property names.
 type SnakeMarshaller struct {
 	Value interface{}
 }
 
+// MarshalJSON implements json.Marshaler
 func (c SnakeMarshaller) MarshalJSON() ([]byte, error) {
 	marshalled, err := json.Marshal(c.Value)
 	converted := keyMatchRegex.ReplaceAllFunc(
