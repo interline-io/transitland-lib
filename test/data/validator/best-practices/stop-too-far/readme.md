@@ -1,0 +1,1 @@
+This feed contains a stop platform that is too far from the parent station.
