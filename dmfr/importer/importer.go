@@ -59,7 +59,7 @@ func getFileLines(fn string) ([]string, error) {
 	return ret, nil
 }
 
-func copyResultCounts(result copier.CopyResult) dmfr.FeedVersionImport {
+func copyResultCounts(result copier.Result) dmfr.FeedVersionImport {
 	fvi := dmfr.NewFeedVersionImport()
 	fvi.InterpolatedStopTimeCount = result.InterpolatedStopTimeCount
 	for k, v := range result.EntityCount {
@@ -81,11 +81,7 @@ func copyResultCounts(result copier.CopyResult) dmfr.FeedVersionImport {
 		fvi.SkipEntityMarkedCount[k] = v
 	}
 	for _, e := range result.Warnings {
-		fn := ""
-		if a, ok := e.(canContext); ok {
-			fn = a.Context().Filename
-		}
-		fvi.WarningCount[fn]++
+		fvi.WarningCount[e.Filename] += e.Count
 	}
 	return *fvi
 }
