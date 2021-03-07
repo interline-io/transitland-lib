@@ -61,9 +61,6 @@ func copyRiderCategories(copier *copier.Copier) {
 	out := make(chan RiderCategory, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
-		if len(ent.AgencyID) == 0 {
-			ent.AgencyID = copier.DefaultAgencyID
-		}
 		copier.CopyEntity(&ent)
 	}
 }
