@@ -81,7 +81,7 @@ func copyResultCounts(result copier.Result) dmfr.FeedVersionImport {
 		fvi.SkipEntityMarkedCount[k] = v
 	}
 	for _, e := range result.Warnings {
-		fvi.WarningCount[e.Filename]++
+		fvi.WarningCount[e.Filename] += e.Count
 	}
 	return *fvi
 }

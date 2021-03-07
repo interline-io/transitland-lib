@@ -716,8 +716,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			copier.result.SkipEntityMarkedCount["stop_times.txt"] += len(sts)
 			continue
 		}
-		// Add StopTimes to Trip
-		trip.StopTimes = sts
 		// Mark trip as associated with at least 1 stop_time
 		// We have to process these below because they won't come up via reader.StopTimesByTripID()
 		delete(trips, tripid)
