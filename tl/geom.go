@@ -64,6 +64,14 @@ func (g *Point) Scan(src interface{}) error {
 	return nil
 }
 
+// MarshalJSON implements the json.Marshaler interface
+func (g *Point) MarshalJSON() ([]byte, error) {
+	if !g.Valid {
+		return []byte("null"), nil
+	}
+	return geojsonEncode(&g.Point)
+}
+
 // UnmarshalGQL implements the graphql.Unmarshaler interface
 func (g *Point) UnmarshalGQL(v interface{}) error {
 	return nil
@@ -71,15 +79,8 @@ func (g *Point) UnmarshalGQL(v interface{}) error {
 
 // MarshalGQL implements the graphql.Marshaler interface
 func (g Point) MarshalGQL(w io.Writer) {
-	if !g.Valid {
-		w.Write([]byte("null"))
-		return
-	}
-	x, err := geojson.Marshal(&g.Point)
-	if err != nil {
-		panic(err)
-	}
-	w.Write(x)
+	b, _ := g.MarshalJSON()
+	w.Write(b)
 }
 
 /////////////////////
@@ -132,6 +133,14 @@ func (g *LineString) Scan(src interface{}) error {
 	return nil
 }
 
+// MarshalJSON implements the json.Marshaler interface
+func (g *LineString) MarshalJSON() ([]byte, error) {
+	if !g.Valid {
+		return []byte("null"), nil
+	}
+	return geojsonEncode(&g.LineString)
+}
+
 // UnmarshalGQL implements the graphql.Unmarshaler interface
 func (g *LineString) UnmarshalGQL(v interface{}) error {
 	return nil
@@ -139,15 +148,8 @@ func (g *LineString) UnmarshalGQL(v interface{}) error {
 
 // MarshalGQL implements the graphql.Marshaler interface
 func (g LineString) MarshalGQL(w io.Writer) {
-	if !g.Valid {
-		w.Write([]byte("null"))
-		return
-	}
-	x, err := geojson.Marshal(&g.LineString)
-	if err != nil {
-		panic(err)
-	}
-	w.Write(x)
+	b, _ := g.MarshalJSON()
+	w.Write(b)
 }
 
 ///////////////////////
@@ -190,6 +192,14 @@ func (g *Polygon) Scan(src interface{}) error {
 	return nil
 }
 
+// MarshalJSON implements the json.Marshaler interface
+func (g *Polygon) MarshalJSON() ([]byte, error) {
+	if !g.Valid {
+		return []byte("null"), nil
+	}
+	return geojsonEncode(&g.Polygon)
+}
+
 // UnmarshalGQL implements the graphql.Unmarshaler interface
 func (g *Polygon) UnmarshalGQL(v interface{}) error {
 	return nil
@@ -197,21 +207,15 @@ func (g *Polygon) UnmarshalGQL(v interface{}) error {
 
 // MarshalGQL implements the graphql.Marshaler interface
 func (g Polygon) MarshalGQL(w io.Writer) {
-	if !g.Valid {
-		w.Write([]byte("null"))
-		return
-	}
-	x, err := geojson.Marshal(&g.Polygon)
-	if err != nil {
-		panic(err)
-	}
-	w.Write(x)
+	b, _ := g.MarshalJSON()
+	w.Write(b)
 }
 
 //////////////////
 
 // Geometry is an EWKB/GeoJSON wrapper for arbitary geometry.
 type Geometry struct {
+	Valid    bool
 	Geometry geom.T
 }
 
@@ -229,15 +233,24 @@ func (g *Geometry) Scan(src interface{}) error {
 		return err
 	}
 	g.Geometry = got
+	g.Valid = true
 	return nil
 }
 
 // Value implements driver.Value
 func (g *Geometry) Value() (driver.Value, error) {
-	if g.Geometry == nil {
+	if g.Geometry == nil || !g.Valid {
 		return nil, nil
 	}
 	return ewkb.Marshal(g.Geometry, ewkb.NDR)
+}
+
+// MarshalJSON implements the json.Marshaler interface
+func (g *Geometry) MarshalJSON() ([]byte, error) {
+	if !g.Valid {
+		return []byte("null"), nil
+	}
+	return geojsonEncode(g.Geometry)
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
@@ -246,16 +259,9 @@ func (g *Geometry) UnmarshalGQL(v interface{}) error {
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (g *Geometry) MarshalGQL(w io.Writer) {
-	if g == nil || g.Geometry == nil {
-		w.Write([]byte("null"))
-		return
-	}
-	x, err := geojson.Marshal(g.Geometry)
-	if err != nil {
-		panic(err)
-	}
-	w.Write(x)
+func (g Geometry) MarshalGQL(w io.Writer) {
+	b, _ := g.MarshalJSON()
+	w.Write(b)
 }
 
 /////////// helpers
@@ -285,4 +291,11 @@ func wkbDecode(b []byte) (geom.T, error) {
 	return got, nil
 }
 
-/////////////////
+// geojsonEncode encodes a geometry into geojson.
+func geojsonEncode(g geom.T) ([]byte, error) {
+	b, err := geojson.Marshal(g)
+	if err != nil {
+		return []byte("null"), err
+	}
+	return b, nil
+}
