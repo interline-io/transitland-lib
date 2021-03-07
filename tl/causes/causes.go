@@ -5,57 +5,6 @@ import (
 	"strconv"
 )
 
-// TODO
-//
-// Causes that are implemented and include some tests:
-//   FileRequiredError
-//   FileDuplicateFieldError
-//   DuplicateIDError
-//   FieldParseError
-//   RequiredFieldError
-//   ConditionallyRequiredFieldError
-//   InvalidFieldError
-//   InvalidReferenceError
-//   SequenceError
-//   InvalidParentStationError
-//   InvalidFarezoneError
-//   EmptyTripError
-//   InconsistentTimezoneError
-//
-// Causes that are implemented but not fully tested:
-//   FileRequiredFieldError
-//   SourceUnreadableError
-//   FileNotPresentError
-//   RowParseError
-//   FileUnreadableError
-//
-// Causes that exist but are not implemented:
-//   UnusedEntityError - warning that an named entity (agency, route, stop, calendar, etc.) is not referenced
-//
-// Best Practice Warnings implemented:
-//   NoScheduledServiceError - all days are 0, no type 1 exceptions
-//   StopTooFarError - stop too far from a related stop
-//   StopTooFarFromShapeError - stop_time too far from associated shape
-//   StopTooCloseError - stop too close to another stop
-//   FastTravelError - what it says
-//
-// Best practice warnings that are implemented as warnings but need named types:
-//   Duplicate fare_rules
-//   Duplicate route route_short_name, route_long_name, etc. combinations
-//   NoServiceError - warning that service contains no positive days
-//   OverlappingFrequencyError
-//
-// Best Practice Warning that do not exist but should:
-//   StationVisitError - stop_time visits location_type != 0
-//   ShapeReversedError - shape is valid and stops are close but reverse direction
-//   StopTimeSequenceConsecutive - >2 visits to the same stop in a row, or time not increasing
-//   InsufficientRouteColorContrast - colors not distinguishable
-//   TravelDistanceError - shape_dist_travel and shape length mismatch, or related
-//   FeedServiceDurationError - feed covers < 30 days (note: can only be checked after all others)
-//   InconsistentLanguageError - feed_info or agency contains more than 1 language
-//   OverlappingBlockError - maybe?
-//   Some feed_info rules
-
 // Context adds structured context.
 type Context struct {
 	Filename   string
