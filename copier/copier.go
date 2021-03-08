@@ -118,7 +118,6 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 	copier.errorValidators = []Validator{}
 	copier.errorValidators = append(copier.errorValidators,
 		&rules.EntityErrorCheck{},
-		&rules.EntityWarningCheck{},
 		&rules.EntityDuplicateCheck{},
 		&rules.ValidFarezoneCheck{},
 		&rules.AgencyIDConditionallyRequiredCheck{},
