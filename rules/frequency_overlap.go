@@ -17,7 +17,14 @@ type FrequencyOverlapError struct {
 }
 
 func (e *FrequencyOverlapError) Error() string {
-	return fmt.Sprintf("frequency with start_time %s and end_time %s overlaps with another frequency block for trip '%s' with start_time %s and end_time %s", e.StartTime.String(), e.EndTime.String(), e.TripID, e.OtherStartTime.String(), e.OtherEndTime.String())
+	return fmt.Sprintf(
+		"frequency block for trip '%s' with interval %s -> %s overlaps another frequency block for this trip with interval %s -> %s",
+		e.TripID,
+		e.StartTime.String(),
+		e.EndTime.String(),
+		e.OtherStartTime.String(),
+		e.OtherEndTime.String(),
+	)
 }
 
 type freqValue struct {
@@ -25,7 +32,7 @@ type freqValue struct {
 	end   int
 }
 
-// FrequencyOverlapCheck checks that frequencies for the same trip do not overlap.
+// FrequencyOverlapCheck checks FrequencyOverlapErrors.
 type FrequencyOverlapCheck struct {
 	freqs map[string][]*freqValue
 }
@@ -47,11 +54,11 @@ func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
 	for _, hit := range e.freqs[v.TripID] {
 		if !(tf.start >= hit.end || tf.end <= hit.start) {
 			errs = append(errs, &FrequencyOverlapError{
+				TripID:         v.TripID,
 				StartTime:      v.StartTime,
 				EndTime:        v.EndTime,
-				TripID:         v.TripID,
-				OtherStartTime: tl.NewWideTimeFromSeconds(tf.start),
-				OtherEndTime:   tl.NewWideTimeFromSeconds(tf.end),
+				OtherStartTime: tl.NewWideTimeFromSeconds(hit.start),
+				OtherEndTime:   tl.NewWideTimeFromSeconds(hit.end),
 			})
 		}
 	}

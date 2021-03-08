@@ -1,0 +1,1 @@
+This feed contains trips.txt entities with the same block_id that have overlapping trips on the same service_id.

@@ -1,20 +1,27 @@
 package rules
 
 import (
+	"fmt"
+
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
 // StopTooFarError .
-type StopTooFarError struct{ bc }
-
-// NewStopTooFarError .
-func NewStopTooFarError() *StopTooFarError {
-	return &StopTooFarError{}
+type StopTooFarError struct {
+	StopID        string
+	ParentStation string
+	Distance      float64
+	bc
 }
 
 func (e *StopTooFarError) Error() string {
-	return "stop too far from parent"
+	return fmt.Sprintf(
+		"stop '%s' is too far from parent stop '%s' at %0.2fm",
+		e.StopID,
+		e.ParentStation,
+		e.Distance,
+	)
 }
 
 // StopTooFarCheck checks if two related stops are >1km away.
@@ -45,7 +52,11 @@ func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
 		// if not ok, then it's a parent error and out of scope for this check
 		d := xy.DistanceHaversinePoint(coords, pgeom.Coords())
 		if d > e.maxdist {
-			errs = append(errs, NewStopTooFarError())
+			errs = append(errs, &StopTooFarError{
+				StopID:        v.StopID,
+				ParentStation: v.ParentStation.Key,
+				Distance:      d,
+			})
 		}
 	}
 	return errs

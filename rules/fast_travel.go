@@ -18,8 +18,7 @@ type FastTravelError struct {
 	bc
 }
 
-// NewFastTravelError .
-func NewFastTravelError(from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
+func newFastTravelError(from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
 	return &FastTravelError{
 		FromStopID: from,
 		ToStopID:   to,
@@ -31,7 +30,15 @@ func NewFastTravelError(from string, to string, t int, distance float64, speed f
 }
 
 func (e *FastTravelError) Error() string {
-	return fmt.Sprintf("traveled from stop '%s' to stop '%s' in %d seconds, a distance of %0.2f m and speed of %0.2f km/h where %0.2f km/h is the assumed maximum for this route type", e.FromStopID, e.ToStopID, e.Time, e.Distance, e.Speed, e.SpeedLimit)
+	return fmt.Sprintf(
+		"traveled from stop '%s' to stop '%s' in %d seconds, a distance of %0.2f m and speed of %0.2f km/h where %0.2f km/h is the assumed maximum for this route type",
+		e.FromStopID,
+		e.ToStopID,
+		e.Time,
+		e.Distance,
+		e.Speed,
+		e.SpeedLimit,
+	)
 }
 
 var maxSpeeds = map[int]float64{
@@ -69,7 +76,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 	}
 	// Use stop to stop distances, shape_dist_traveled is not reliable.
 	trip, ok := ent.(*tl.Trip)
-	if !ok {
+	if !ok || len(trip.StopTimes) < 2 {
 		return nil
 	}
 	if e.stopDist == nil {
@@ -98,7 +105,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 		dt := trip.StopTimes[i].ArrivalTime - t
 		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
 		if dt > 30 && speed > maxspeed {
-			errs = append(errs, NewFastTravelError(s1, s2, dt, dx, speed, maxspeed))
+			errs = append(errs, newFastTravelError(s1, s2, dt, dx, speed, maxspeed))
 		}
 		s1 = s2
 		t = trip.StopTimes[i].DepartureTime

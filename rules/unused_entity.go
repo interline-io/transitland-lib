@@ -1,15 +1,14 @@
 package rules
 
-import "fmt"
+import (
+	"fmt"
+)
+
+// TODO: Unused entity checks
 
 // UnusedEntityError reports when an entity is present but not referenced.
 type UnusedEntityError struct {
 	bc
-}
-
-// NewUnusedEntityError returns a new UnusedEntityError
-func NewUnusedEntityError(eid string) *UnusedEntityError {
-	return &UnusedEntityError{bc: bc{EntityID: eid}}
 }
 
 func (e *UnusedEntityError) Error() string {

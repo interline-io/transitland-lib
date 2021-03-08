@@ -1,0 +1,19 @@
+route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id,wheelchair_accessible,bikes_allowed,expect_error
+03,WKDY,2230435WKDY,Fremont,0,,04_shp,1,1
+03,WKDY,block1a,,0,block1,,,
+03,WKDY,block1b,overlaps after block1a,0,block1,,,,BlockOverlapError
+
+03,WKDY,block2a,,0,block2,,,
+03,WKDY,block2b,overlaps before and after block2a,0,block2,,,,BlockOverlapError
+
+03,WKDY,block3a,,0,block3,,,
+03,WKDY,block3b,start is same as block3a end -- this is OK,0,block3,,,,
+
+03,WKDY,block4a,,0,block4,,,
+03,WKDY,block4b,exactly the same interval as block4a,0,block4,,,,BlockOverlapError
+
+03,WKDY,block5a,,0,block5,,,
+03,WKND,block5b,overlaps after block5a but different service ID -- this is OK,0,block5,,,,
+
+03,WKDY,block6a,,0,block6,,,
+03,WKDY,block6b,first arrival is before 6a but departure is after last 6a -- this is OK,0,block6,,,,

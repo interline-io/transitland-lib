@@ -1,12 +1,22 @@
 package rules
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"fmt"
+
+	"github.com/interline-io/transitland-lib/tl"
+)
 
 // NoScheduledServiceError reports when a service entry contains no active days.
-type NoScheduledServiceError struct{ bc }
+type NoScheduledServiceError struct {
+	ServiceID string
+	bc
+}
 
 func (e *NoScheduledServiceError) Error() string {
-	return "service contains no active days"
+	return fmt.Sprintf(
+		"service '%s' contains no active days",
+		e.ServiceID,
+	)
 }
 
 // NoScheduledServiceCheck checks that a service contains at least one scheduled day, otherwise returns a warning.
@@ -21,5 +31,5 @@ func (e *NoScheduledServiceCheck) Validate(ent tl.Entity) []error {
 	if v.HasAtLeastOneDay() {
 		return nil
 	}
-	return []error{&NoScheduledServiceError{}}
+	return []error{&NoScheduledServiceError{ServiceID: v.ServiceID}}
 }

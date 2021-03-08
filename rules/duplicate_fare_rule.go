@@ -1,11 +1,31 @@
 package rules
 
 import (
+	"fmt"
+
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
-// DuplicateFareRuleCheck checks for fare_rules that are effectively identical.
+// DuplicateFareRuleError reports when multiple FareRules have the same (route_id,origin_id,_destination_id,contains_id)
+type DuplicateFareRuleError struct {
+	RouteID       string
+	OriginID      string
+	DestinationID string
+	ContainsID    string
+	bc
+}
+
+func (e *DuplicateFareRuleError) Error() string {
+	return fmt.Sprintf(
+		"fare_rule with route_id '%s' origin_id '%s' destination_id '%s' and agency_id '%s' is duplicated",
+		e.RouteID,
+		e.OriginID,
+		e.DestinationID,
+		e.ContainsID,
+	)
+}
+
+// DuplicateFareRuleCheck checks for FareRules that are effectively identical.
 type DuplicateFareRuleCheck struct {
 	rules map[string]int
 }
@@ -21,7 +41,12 @@ func (e *DuplicateFareRuleCheck) Validate(ent tl.Entity) []error {
 	}
 	key := v.RouteID.Key + ":" + v.OriginID + ":" + v.DestinationID + ":" + v.ContainsID
 	if _, ok := e.rules[key]; ok {
-		return []error{causes.NewValidationWarning("origin_id", "duplicate fare_rule")}
+		return []error{&DuplicateFareRuleError{
+			RouteID:       v.RouteID.Key,
+			OriginID:      v.OriginID,
+			DestinationID: v.DestinationID,
+			ContainsID:    v.ContainsID,
+		}}
 	}
 	e.rules[key]++
 	return nil

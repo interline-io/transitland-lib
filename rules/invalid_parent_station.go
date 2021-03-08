@@ -6,21 +6,26 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-// InvalidParentStationError reports when a parent station is not location_type = 1.
+// InvalidParentStationError reports when a parent_station has a location_type that is not allowed.
 type InvalidParentStationError struct {
+	StopID            string
+	LocationType      int
+	ParentStation     string
+	ParentStationType int
 	bc
 }
 
-// NewInvalidParentStationError returns a new InvalidParentStationError
-func NewInvalidParentStationError(value string) *InvalidParentStationError {
-	return &InvalidParentStationError{bc: bc{Value: value}}
-}
-
 func (e *InvalidParentStationError) Error() string {
-	return fmt.Sprintf("parent_station '%s' is missing or has invalid location_type", e.Value)
+	return fmt.Sprintf(
+		"stop '%s' with location_type %d has parent_station '%s' with location_type %d which is not allowed",
+		e.StopID,
+		e.LocationType,
+		e.ParentStation,
+		e.ParentStationType,
+	)
 }
 
-// ParentStationLocationTypeCheck checks if a stop's parent_station is of the allowed type.
+// ParentStationLocationTypeCheck checks InvalidParentStationErrors.
 type ParentStationLocationTypeCheck struct {
 	locationTypes map[string]int
 }
@@ -48,11 +53,21 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 	} else if stype == 4 {
 		// Boarding areas may only link to type = 0
 		if ptype != 0 {
-			errs = append(errs, NewInvalidParentStationError(stop.ParentStation.Key))
+			errs = append(errs, &InvalidParentStationError{
+				StopID:            stop.StopID,
+				LocationType:      stop.LocationType,
+				ParentStation:     stop.ParentStation.Key,
+				ParentStationType: ptype,
+			})
 		}
 	} else if ptype != 1 {
 		// All other types must have station as parent
-		errs = append(errs, NewInvalidParentStationError(stop.ParentStation.Key))
+		errs = append(errs, &InvalidParentStationError{
+			StopID:            stop.StopID,
+			LocationType:      stop.LocationType,
+			ParentStation:     stop.ParentStation.Key,
+			ParentStationType: ptype,
+		})
 	}
 	return errs
 }

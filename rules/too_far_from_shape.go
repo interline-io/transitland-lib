@@ -9,23 +9,15 @@ import (
 
 // StopTooFarFromShapeError reports when a stop is too far from a shape.
 type StopTooFarFromShapeError struct {
+	TripID   string
 	StopID   string
 	ShapeID  string
 	Distance float64
 	bc
 }
 
-// NewStopTooFarFromShapeError .
-func NewStopTooFarFromShapeError(stopid string, shapeid string, distance float64) *StopTooFarFromShapeError {
-	return &StopTooFarFromShapeError{
-		StopID:   stopid,
-		ShapeID:  shapeid,
-		Distance: distance,
-	}
-}
-
 func (e *StopTooFarFromShapeError) Error() string {
-	return fmt.Sprintf("stop '%s' is too far from shape '%s' at %0.2fm", e.StopID, e.ShapeID, e.Distance)
+	return fmt.Sprintf("trip '%s' has stop '%s' that is too far from shape '%s' at %0.2fm", e.TripID, e.StopID, e.ShapeID, e.Distance)
 }
 
 // StopTooFarFromShapeCheck checks if a stop is more than 100m from an associated shape.
@@ -73,7 +65,12 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tl.Entity) []error {
 		nearest, _ := xy.LineClosestPoint(sgeom, g)
 		distance := xy.DistanceHaversine(g[0], g[1], nearest[0], nearest[1])
 		if distance > e.maxdist {
-			errs = append(errs, NewStopTooFarFromShapeError(st.StopID, shapeid, distance))
+			errs = append(errs, &StopTooFarFromShapeError{
+				TripID:   v.TripID,
+				StopID:   st.StopID,
+				ShapeID:  shapeid,
+				Distance: distance,
+			})
 		}
 	}
 	return errs

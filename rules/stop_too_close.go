@@ -12,18 +12,19 @@ import (
 
 // StopTooCloseError .
 type StopTooCloseError struct {
-	Target   string
-	Distance float64
+	StopID      string
+	OtherStopID string
+	Distance    float64
 	bc
 }
 
-// NewStopTooCloseError .
-func NewStopTooCloseError(target string, distance float64) *StopTooCloseError {
-	return &StopTooCloseError{Target: target, Distance: distance}
-}
-
 func (e *StopTooCloseError) Error() string {
-	return fmt.Sprintf("stop is too close to another stop '%s' at %0.2f m", e.Target, e.Distance)
+	return fmt.Sprintf(
+		"stop '%s' is too close to another stop '%s' at %0.2fm",
+		e.StopID,
+		e.OtherStopID,
+		e.Distance,
+	)
 }
 
 type stopPoint struct {
@@ -64,7 +65,11 @@ func (e *StopTooCloseCheck) Validate(ent tl.Entity) []error {
 			for _, hit := range hits {
 				d := xy.DistanceHaversine(g.lon, g.lat, hit.lon, hit.lat)
 				if d < e.maxdist {
-					errs = append(errs, NewStopTooCloseError(hit.id, d))
+					errs = append(errs, &StopTooCloseError{
+						StopID:      v.StopID,
+						OtherStopID: hit.id,
+						Distance:    d,
+					})
 				}
 			}
 		}

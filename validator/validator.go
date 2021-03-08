@@ -112,6 +112,7 @@ func (v *Validator) Validate() (*Result, error) {
 		copier.AddValidator(&rules.FrequencyOverlapCheck{}, 1)
 		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
 		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
+		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
 	}
 	if len(v.Options.ValidateRealtimeMessages) > 0 {
 		copier.AddValidator(v.rtValidator, 1)
