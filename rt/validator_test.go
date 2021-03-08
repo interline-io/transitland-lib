@@ -5,11 +5,15 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
-func newfi() *FeedInfo {
-	r := newReader()
-	fi, err := NewFeedInfoFromReader(r)
+func newTestValidator() *Validator {
+	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/bart-rt.zip"))
+	if err != nil {
+		panic(err)
+	}
+	fi, err := NewValidatorFromReader(r)
 	if err != nil {
 		panic(err)
 	}
@@ -17,21 +21,21 @@ func newfi() *FeedInfo {
 }
 
 func TestValidateHeader(t *testing.T) {
-	fi := newfi()
-	msg, err := readmsg(testutil.RelPath("test/data/rt/example.pb"))
+	fi := newTestValidator()
+	msg, err := readmsg(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)
 	}
 	header := msg.GetHeader()
-	errs := ValidateHeader(fi, header, msg)
+	errs := fi.ValidateHeader(header, msg)
 	for _, err := range errs {
 		fmt.Println(err)
 	}
 }
 
 func TestValidateTripUpdate(t *testing.T) {
-	fi := newfi()
-	msg, err := readmsg(testutil.RelPath("test/data/rt/example.pb"))
+	fi := newTestValidator()
+	msg, err := readmsg(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -43,7 +47,7 @@ func TestValidateTripUpdate(t *testing.T) {
 	if trip == nil {
 		t.Error("expected TripUpdate")
 	}
-	errs := ValidateTripUpdate(fi, trip, msg)
+	errs := fi.ValidateTripUpdate(trip, msg)
 	for _, err := range errs {
 		fmt.Println(err)
 	}
