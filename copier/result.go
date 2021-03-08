@@ -131,6 +131,19 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 	}
 }
 
+// HandleError .
+func (cr *Result) HandleError(fn string, errs []error) {
+	for _, err := range errs {
+		key := fn + ":" + getErrorType(err)
+		v, ok := cr.Errors[key]
+		if !ok {
+			v = &ErrorGroup{Filename: fn, ErrorType: getErrorType(err)}
+			cr.Errors[key] = v
+		}
+		v.Add(err)
+	}
+}
+
 // HandleEntityErrors .
 func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
 	efn := ent.Filename()

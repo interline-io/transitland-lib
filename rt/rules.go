@@ -1,55 +1,57 @@
 package rt
 
 import (
-	"time"
-
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/tl"
 )
 
-func ne(msg string, code int) *RealtimeError {
-	return &RealtimeError{
-		Code: code,
-		msg:  msg,
-	}
+// Rules defined by func(*Validator, *pb.FeedMessage, *pb.FeedMessage)
+
+// -------- WIP -----------
+// This set of rules, and the interface, is in flux.
+
+type RuleMsg struct {
+	Current  *pb.FeedMessage
+	Previous *pb.FeedMessage
+	Entity   interface{}
+	fi       *Validator
 }
 
-func checkTimestamp(ts uint64) bool {
-	// 1/1/1990 -> year 2038
-	if ts < 631152000 || ts > (1<<31-1) {
-		return false
-	}
-	return true
-}
-
-func checkFuture(ts uint64) bool {
-	// Is timestamp more than 1 minute in the future
-	if ts > uint64(time.Now().Unix()+60) {
-		return false
-	}
-	return true
-}
-
-// ValidateFeedMessage .
-func ValidateFeedMessage(fi *FeedInfo, current *pb.FeedMessage, previous *pb.FeedMessage) (errs []error) {
-	if current.Header == nil {
+func HeaderRequired(rm *RuleMsg) []error {
+	var errs []error
+	if rm.Current.Header == nil {
 		errs = append(errs, ne("FeedMessage Header is required", 0))
-	} else {
-		// Check previous Header timestamp
-		if current.GetHeader().GetTimestamp() < previous.GetHeader().GetTimestamp() {
-			errs = append(errs, ne("FeedMessage Header timestamp is earlier than previous update", 18))
-		}
-		errs = append(errs, ValidateHeader(fi, current.Header, current)...)
-	}
-	// TODO: Validate TripDescriptors are unique
-	for _, ent := range current.GetEntity() {
-		errs = append(errs, ValidateFeedEntity(fi, ent, current)...)
 	}
 	return errs
 }
 
-// ValidateHeader .
-func ValidateHeader(fi *FeedInfo, header *pb.FeedHeader, current *pb.FeedMessage) (errs []error) {
+func HeaderTimestampRequired(rm *RuleMsg) []error {
+	// Check the Header timestamp is present
+	var errs []error
+	header := rm.Current.GetHeader()
+	if header == nil {
+		return nil
+	}
+	if v := header.GetTimestamp(); header.Timestamp == nil || v == 0 {
+		errs = append(errs, ne("FeedHeader timestamp is required", 48))
+	}
+	return errs
+}
+
+func HeaderTimestampIncreasing(rm *RuleMsg) []error {
+	// Check previous Header timestamp
+	var errs []error
+	if rm.Current.GetHeader().GetTimestamp() < rm.Previous.GetHeader().GetTimestamp() {
+		errs = append(errs, ne("FeedMessage Header timestamp is earlier than previous update", 18))
+	}
+	return errs
+}
+
+func HeaderInvalidRealtimeVersion(rm *RuleMsg) []error {
+	var errs []error
+	header := rm.Current.GetHeader()
+	if header == nil {
+		return nil
+	}
 	if v := header.GetGtfsRealtimeVersion(); v == "3.0" || v == "2.0" {
 		// TODO: additional version specific checks
 	} else if v == "1.0" {
@@ -57,7 +59,15 @@ func ValidateHeader(fi *FeedInfo, header *pb.FeedHeader, current *pb.FeedMessage
 	} else {
 		errs = append(errs, E038)
 	}
-	//
+	return errs
+}
+
+func HeaderTimestampBoundsCheck(rm *RuleMsg) []error {
+	var errs []error
+	header := rm.Current.GetHeader()
+	if header == nil {
+		return nil
+	}
 	if v := header.GetTimestamp(); header.Timestamp == nil || v == 0 {
 		errs = append(errs, ne("FeedHeader timestamp is required", 48))
 	} else if !checkTimestamp(v) {
@@ -65,7 +75,15 @@ func ValidateHeader(fi *FeedInfo, header *pb.FeedHeader, current *pb.FeedMessage
 	} else if !checkFuture(v) {
 		errs = append(errs, ne("FeedHeader timestamp is in the future", 50))
 	}
-	//
+	return errs
+}
+
+func HeaderTimestampIncrementalityCheck(rm *RuleMsg) []error {
+	var errs []error
+	header := rm.Current.GetHeader()
+	if header == nil {
+		return nil
+	}
 	if header.Incrementality == nil {
 		errs = append(errs, ne("FeedHeader incrementality is required", 49))
 	} else if header.GetIncrementality() == pb.FeedHeader_DIFFERENTIAL {
@@ -74,173 +92,59 @@ func ValidateHeader(fi *FeedInfo, header *pb.FeedHeader, current *pb.FeedMessage
 	return errs
 }
 
-// ValidateFeedEntity .
-func ValidateFeedEntity(fi *FeedInfo, ent *pb.FeedEntity, current *pb.FeedMessage) (errs []error) {
-	incr := current.GetHeader().GetIncrementality()
-	if ent.Id == nil || ent.GetId() == "" {
-		errs = append(errs, ne("FeedEntity id is required", 0))
-	}
-	if ent.IsDeleted != nil && incr != pb.FeedHeader_DIFFERENTIAL {
-		errs = append(errs, ne("FeedEntity IsDeleted should only be provided for DIFFERENTIAL incrementality", 39))
-	}
-	if ent.TripUpdate == nil && ent.Vehicle == nil && ent.Alert == nil {
-		errs = append(errs, ne("FeedEntity must provide one of TripUpdate, VehiclePosition, or Alert", 0))
-	}
-	if ent.TripUpdate != nil {
-		errs = append(errs, ValidateTripUpdate(fi, ent.GetTripUpdate(), current)...)
-	}
-	if ent.Vehicle != nil {
-		// TODO: ValidateVehiclePosition
-	}
-	if ent.Alert != nil {
-		// TODO: ValidateAlert
-		// TODO: Check that route_id is not set in a TripDescriptor
+func FeedEntityIDCheck(rm *RuleMsg) []error {
+	var errs []error
+	for _, ent := range rm.Current.GetEntity() {
+		if ent.Id == nil || ent.GetId() == "" {
+			errs = append(errs, ne("FeedEntity id is required", 0))
+		}
 	}
 	return errs
 }
 
-// ValidateTripUpdate .
-func ValidateTripUpdate(fi *FeedInfo, trip *pb.TripUpdate, current *pb.FeedMessage) (errs []error) {
-	// Validate TripDescriptor
-	if trip.Trip == nil {
-		errs = append(errs, ne("TripDescriptor is required", 0))
-	} else {
-		errs = append(errs, ValidateTripDescriptor(fi, trip.Trip, current)...)
-	}
-	if trip.Delay != nil {
-		// experimental field
-	}
-	// Validate StopTimeUpdates
-	srel := trip.GetTrip().GetScheduleRelationship()
-	sts := trip.GetStopTimeUpdate()
-	if len(sts) == 0 && srel != pb.TripDescriptor_CANCELED {
-		errs = append(errs, ne("StopTimeUpdates are required unless the trip is canceled", 41))
-	}
-	seq := uint32(0)
-	visitedseq := map[uint32]int{}
-	visitedstop := map[string]int{}
-	prevstop := ""
-	prevtime := int64(0)
-	for _, st := range sts {
-		ss := st.StopSequence
-		stopid := st.StopId
-		if stopid != nil {
-			s2 := *stopid
-			visitedstop[s2]++
-			if ss == nil && visitedstop[s2] > 1 {
-				errs = append(errs, ne("StopTimeUpdate must specify stop_sequence when a stop is visited more than once", 9))
-			}
-			if s2 == prevstop {
-				errs = append(errs, ne("StopTimeUpdates visits the same stop twice in a row", 37))
-			}
-			prevstop = s2
+func FeedEntityIsDeletedCheck(rm *RuleMsg) []error {
+	var errs []error
+	incr := rm.Current.Header.GetIncrementality()
+	for _, ent := range rm.Current.GetEntity() {
+		if ent.IsDeleted != nil && incr != pb.FeedHeader_DIFFERENTIAL {
+			errs = append(errs, ne("FeedEntity IsDeleted should only be provided for DIFFERENTIAL incrementality", 39))
 		}
-		if ss != nil {
-			s2 := *ss
-			visitedseq[s2]++
-			if visitedseq[s2] > 1 {
-				errs = append(errs, ne("StopTimeUpdates repeats the same stop_sequence", 36))
-			}
-			if s2 < seq {
-				errs = append(errs, ne("StopTimeUpdates not sorted by stop_sequence", 2))
-			}
-			seq = s2
-		}
-		if st.GetArrival().Time != nil {
-			a := st.GetArrival().GetTime()
-			if a < prevtime {
-				errs = append(errs, ne("StopTimeUpdates are not increasing in time", 22))
-			}
-			prevtime = a
-		}
-		if st.GetDeparture().Time != nil {
-			a := st.GetDeparture().GetTime()
-			if a < prevtime {
-				errs = append(errs, ne("StopTimeUpdates are not increasing in time", 22))
-			}
-			prevtime = a
-		}
-		// Check individual values
-		errs = append(errs, ValidateStopTimeUpdate(fi, st, current)...)
 	}
 	return errs
 }
 
-// ValidateStopTimeUpdate .
-func ValidateStopTimeUpdate(fi *FeedInfo, st *pb.TripUpdate_StopTimeUpdate, current *pb.FeedMessage) (errs []error) {
-	if st.StopId == nil && st.StopSequence == nil {
-		errs = append(errs, ne("StopTimeUpdate must specify stop_sequence or stop_id", 40))
-	}
-	if st.StopId != nil {
-		v, ok := fi.stopLocationTypes[*st.StopId]
-		if !ok {
-			errs = append(errs, ne("StopTimeUpdate references unknown stop_id", 11))
-		}
-		if v != 0 {
-			errs = append(errs, ne("StopTimeUpdate cannot reference stop where location_type is not 0", 15))
+func FeedEntityCompletenessCheck(rm *RuleMsg) []error {
+	var errs []error
+	for _, ent := range rm.Current.GetEntity() {
+		if ent.TripUpdate == nil && ent.Vehicle == nil && ent.Alert == nil {
+			errs = append(errs, ne("FeedEntity must provide one of TripUpdate, VehiclePosition, or Alert", 0))
 		}
 	}
-	// Arrival, Departure
-	switch st.GetScheduleRelationship() {
-	case pb.TripUpdate_StopTimeUpdate_SCHEDULED:
-		if st.Arrival == nil && st.Departure == nil {
-			errs = append(errs, ne("StopTimeUpdate must specify either arrival or departure when schedule_relationship is scheduled", 43))
-		}
-	case pb.TripUpdate_StopTimeUpdate_NO_DATA:
-		if st.Arrival != nil || st.Departure != nil {
-			errs = append(errs, ne("StopTimeUpdate cannot specify arrival or departure when schedule_relationship is NO_DATA", 42))
-		}
-	case pb.TripUpdate_StopTimeUpdate_SKIPPED:
-		// ok
-	}
-	if st.GetArrival().GetTime() > st.GetDeparture().GetTime() {
-		errs = append(errs, ne("StopTimeUpdate arrival time is later than departure time", 25))
-	}
-	// ValidateStopTimeEvent .
-	// TODO
 	return errs
 }
 
-// ValidateTripDescriptor .
-func ValidateTripDescriptor(fi *FeedInfo, td *pb.TripDescriptor, current *pb.FeedMessage) (errs []error) {
-	if td.TripId != nil {
-		tripid := *td.TripId
-		v, ok := fi.tripDirections[tripid]
-		if !ok {
+func TripUpdateTripDescriptorRequiredCheck(rm *RuleMsg) []error {
+	var errs []error
+	for _, ent := range rm.Current.GetEntity() {
+		trip := ent.TripUpdate
+		if trip == nil {
+			continue
+		}
+		if trip.Trip == nil {
+			errs = append(errs, ne("TripDescriptor is required", 0))
+		}
+	}
+	return errs
+}
+
+func TripDescriptorTripIDCheck(rm *RuleMsg) []error {
+	var errs []error
+	c := func(trip *pb.TripDescriptor) error {
+		if _, ok := rm.fi.tripInfo[*trip.TripId]; !ok {
 			errs = append(errs, ne("TripDescriptor references unknown trip_id", 3))
 		}
-		if td.DirectionId != nil && td.GetDirectionId() != uint32(v) {
-			errs = append(errs, ne("TripDescriptor trip does not match GTFS direction", 24))
-		}
-		freq := false
-		if freq {
-			if td.StartTime == nil || td.StartDate == nil {
-				errs = append(errs, ne("TripDescriptor must provide start_date and start_time for frequency based trips", 0))
-			}
-			// TODO: Additional frequency based trip checks
-		}
-	} else {
-		if td.RouteId == nil || td.DirectionId == nil || td.StartDate == nil || td.StartTime == nil {
-			errs = append(errs, ne("TripDescriptor must provided a trip_id or all of route_id, direction_id, start_date, and start_time", 0))
-		}
-		if td.GetScheduleRelationship() != pb.TripDescriptor_SCHEDULED {
-			errs = append(errs, ne("TripDescriptor must be SCHEDULED if no trip_id is provided", 0))
-		}
+		return nil
 	}
-	if td.RouteId != nil {
-		if !fi.Contains("routes.txt", *td.RouteId) {
-			errs = append(errs, ne("TripDescriptor references unknown route_id", 4))
-		}
-	}
-	if td.StartTime != nil {
-		if _, err := tl.NewWideTime(*td.StartTime); err != nil {
-			errs = append(errs, ne("TripDescriptor could not parse StartTime", 20))
-		}
-	}
-	if td.StartDate != nil {
-		if _, err := time.Parse("20060102", *td.StartDate); err != nil {
-			errs = append(errs, ne("TripDescriptor could not parse StartDate", 21))
-		}
-	}
+	_ = c
 	return errs
 }

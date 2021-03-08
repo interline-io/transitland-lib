@@ -129,3 +129,11 @@ func NewWideTime(value string) (wt WideTime, err error) {
 	wt.Seconds = a
 	return wt, nil
 }
+
+// NewWideTimeFromSeconds creates a valid WideTime from Seconds.
+func NewWideTimeFromSeconds(value int) WideTime {
+	if value < 0 {
+		return WideTime{Seconds: 0, Valid: false}
+	}
+	return WideTime{Seconds: value, Valid: true}
+}

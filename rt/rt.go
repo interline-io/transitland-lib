@@ -8,6 +8,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+func ReadMsg(filename string) (*pb.FeedMessage, error) {
+	return readmsg(filename)
+}
+
 func readmsg(filename string) (*pb.FeedMessage, error) {
 	msg := pb.FeedMessage{}
 	data, err := ioutil.ReadFile(filename)
