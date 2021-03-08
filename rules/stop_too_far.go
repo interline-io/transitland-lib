@@ -7,7 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-// StopTooFarError .
+// StopTooFarError reports when two related stops are >1km away.
 type StopTooFarError struct {
 	StopID        string
 	ParentStation string
@@ -24,7 +24,7 @@ func (e *StopTooFarError) Error() string {
 	)
 }
 
-// StopTooFarCheck checks if two related stops are >1km away.
+// StopTooFarCheck checks for StopTooFarErrors.
 type StopTooFarCheck struct {
 	geoms   map[string]*tl.Point // regularize and use copier geomCache?
 	maxdist float64

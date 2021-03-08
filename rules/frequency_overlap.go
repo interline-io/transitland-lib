@@ -32,7 +32,7 @@ type freqValue struct {
 	end   int
 }
 
-// FrequencyOverlapCheck checks FrequencyOverlapErrors.
+// FrequencyOverlapCheck checks for FrequencyOverlapErrors.
 type FrequencyOverlapCheck struct {
 	freqs map[string][]*freqValue
 }

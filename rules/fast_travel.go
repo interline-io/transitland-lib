@@ -7,7 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-// FastTravelError reports when reasonable maximum speeds have been exceeded.
+// FastTravelError reports when reasonable maximum speeds have been exceeded for at least 30 seconds.
 type FastTravelError struct {
 	FromStopID string
 	ToStopID   string
@@ -54,7 +54,7 @@ var maxSpeeds = map[int]float64{
 	12: 100, // monorail
 }
 
-// StopTimeFastTravelCheck checks if a trip exeeds reasonable max speed between stops for at least 30 seconds.
+// StopTimeFastTravelCheck checks for FastTravelErrors.
 type StopTimeFastTravelCheck struct {
 	routeTypes map[string]int     // keep track of route_types
 	stopDist   map[string]float64 // cache stop-to-stop distances

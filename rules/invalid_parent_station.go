@@ -25,7 +25,7 @@ func (e *InvalidParentStationError) Error() string {
 	)
 }
 
-// ParentStationLocationTypeCheck checks InvalidParentStationErrors.
+// ParentStationLocationTypeCheck checks for InvalidParentStationErrors.
 type ParentStationLocationTypeCheck struct {
 	locationTypes map[string]int
 }

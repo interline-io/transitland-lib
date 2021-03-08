@@ -19,7 +19,7 @@ func (e *NoScheduledServiceError) Error() string {
 	)
 }
 
-// NoScheduledServiceCheck checks that a service contains at least one scheduled day, otherwise returns a warning.
+// NoScheduledServiceCheck checks for NoScheduledServiceErrors.
 type NoScheduledServiceCheck struct{}
 
 // Validate .

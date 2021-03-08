@@ -10,7 +10,7 @@ import (
 
 ///////////////
 
-// StopTooCloseError .
+// StopTooCloseError reports when two stops of location_type = 0 that have no parent are within 1m of each other.
 type StopTooCloseError struct {
 	StopID      string
 	OtherStopID string
@@ -33,7 +33,7 @@ type stopPoint struct {
 	lon float64
 }
 
-// StopTooCloseCheck checks if two stops are within 1m
+// StopTooCloseCheck checks for StopTooCloseErrors.
 type StopTooCloseCheck struct {
 	geoms   map[string][]*stopPoint
 	maxdist float64

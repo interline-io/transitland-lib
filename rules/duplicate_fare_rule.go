@@ -25,7 +25,7 @@ func (e *DuplicateFareRuleError) Error() string {
 	)
 }
 
-// DuplicateFareRuleCheck checks for FareRules that are effectively identical.
+// DuplicateFareRuleCheck checks for DuplicateFareRuleErrors.
 type DuplicateFareRuleCheck struct {
 	rules map[string]int
 }

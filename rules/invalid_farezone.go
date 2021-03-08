@@ -20,7 +20,7 @@ func (e *InvalidFarezoneError) Error() string {
 	return fmt.Sprintf("%s farezone '%s' is not present on any stops", e.Field, e.Value)
 }
 
-// ValidFarezoneCheck checks if fare_rules are referencing zone_id values seen on stops.
+// ValidFarezoneCheck checks for InvalidFarezoneErrors.
 type ValidFarezoneCheck struct {
 	zones map[string]string
 }

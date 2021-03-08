@@ -6,9 +6,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-// TODO: Trips with overlapping block_id
-
-// BlockOverlapError reports when an entity is present but not referenced.
+// BlockOverlapError reports when two block_id's with the same service_id overlap in time.
 type BlockOverlapError struct {
 	BlockID        string
 	ServiceID      string
@@ -42,7 +40,7 @@ type tripBlockInfo struct {
 	end     int
 }
 
-// BlockOverlapCheck checks that two block_id's with the same service_id do not overlap in time.
+// BlockOverlapCheck checks for BlockOverlapErrors.
 type BlockOverlapCheck struct {
 	blocks map[string][]*tripBlockInfo
 }

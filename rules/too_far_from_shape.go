@@ -20,7 +20,7 @@ func (e *StopTooFarFromShapeError) Error() string {
 	return fmt.Sprintf("trip '%s' has stop '%s' that is too far from shape '%s' at %0.2fm", e.TripID, e.StopID, e.ShapeID, e.Distance)
 }
 
-// StopTooFarFromShapeCheck checks if a stop is more than 100m from an associated shape.
+// StopTooFarFromShapeCheck checks for StopTooFarFromShapeErrors.
 type StopTooFarFromShapeCheck struct {
 	maxdist   float64
 	geomCache *xy.GeomCache // share stop/shape geometry cache with copier

@@ -2,7 +2,7 @@ package rules
 
 import "github.com/interline-io/transitland-lib/tl"
 
-// InconsistentTimezoneError reports when agency.txt has more than 1 timezone present.
+// InconsistentTimezoneError reports when agency.txt has more than 1 unique timezone present.
 type InconsistentTimezoneError struct {
 	bc
 }
@@ -16,7 +16,7 @@ func (e *InconsistentTimezoneError) Error() string {
 	return "file contains inconsistent timezones"
 }
 
-// InconsistentTimezoneCheck checks if agency_timezone doesn't match the first seen agency_timezone
+// InconsistentTimezoneCheck checks for InconsistentTimezoneErrors.
 type InconsistentTimezoneCheck struct {
 	firstTimeZone string
 }
