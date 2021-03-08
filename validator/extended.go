@@ -38,7 +38,6 @@ func openFeed(src io.Reader) (tl.Reader, error) {
 
 func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 	// Generate some route geoms...
-	fmt.Println("shape lengths")
 	shapeLengths := map[string]float64{}
 	for ent := range reader.Shapes() {
 		if !ent.Geometry.Valid {
@@ -48,7 +47,6 @@ func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 		shapeLengths[ent.ShapeID] = ent.Geometry.Length()
 	}
 
-	fmt.Println("shape counts")
 	shapeCounts := map[string]map[int]map[string]int{}
 	for ent := range reader.Trips() {
 		if !ent.ShapeID.Valid {
