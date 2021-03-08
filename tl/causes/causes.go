@@ -71,30 +71,6 @@ func (e *Context) Error() string {
 }
 
 ////////////////////////////
-// Error wrappers
-////////////////////////////
-
-// Warning wraps an error.
-type Warning struct {
-	cause error
-}
-
-// ErrorLevel returns type 1.
-func (Warning) ErrorLevel() int {
-	return 1
-}
-
-// BestPractice wraps an error.
-type BestPractice struct {
-	cause error
-}
-
-// ErrorLevel returns type 2.
-func (BestPractice) ErrorLevel() int {
-	return 2
-}
-
-////////////////////////////
 // Feed level errors
 ////////////////////////////
 
@@ -226,22 +202,6 @@ func (e *DuplicateIDError) Error() string {
 
 ////////////////////////////
 
-// UnusedEntityError reports when an entity is present but not referenced.
-type UnusedEntityError struct {
-	bc
-}
-
-// NewUnusedEntityError returns a new UnusedEntityError
-func NewUnusedEntityError(eid string) *UnusedEntityError {
-	return &UnusedEntityError{bc: bc{EntityID: eid}}
-}
-
-func (e *UnusedEntityError) Error() string {
-	return fmt.Sprintf("entity '%s' exists but is not referenced", e.EntityID)
-}
-
-////////////////////////////
-
 ////////////////////////////
 // Entity level errors
 ////////////////////////////
@@ -346,36 +306,6 @@ func (e *SequenceError) Error() string {
 	return fmt.Sprintf("invalid sequence in field %s: %s", e.Field, e.Value)
 }
 
-////////////////////////////
-
-// InvalidParentStationError reports when a parent station is not location_type = 1.
-type InvalidParentStationError struct {
-	bc
-}
-
-// NewInvalidParentStationError returns a new InvalidParentStationError
-func NewInvalidParentStationError(value string) *InvalidParentStationError {
-	return &InvalidParentStationError{bc: bc{Value: value}}
-}
-
-func (e *InvalidParentStationError) Error() string {
-	return fmt.Sprintf("parent_station '%s' is missing or has invalid location_type", e.Value)
-}
-
-// InvalidFarezoneError reports when a farezone does not exist.
-type InvalidFarezoneError struct {
-	bc
-}
-
-// NewInvalidFarezoneError returns a new InvalidFarezoneError
-func NewInvalidFarezoneError(field string, value string) *InvalidFarezoneError {
-	return &InvalidFarezoneError{bc: bc{Field: field, Value: value}}
-}
-
-func (e *InvalidFarezoneError) Error() string {
-	return fmt.Sprintf("%s farezone '%s' is not present on any stops", e.Field, e.Value)
-}
-
 //////////////////////////////
 
 // EmptyTripError reports when a trip has one or zero stop times.
@@ -415,115 +345,4 @@ func (e *ValidationWarning) ErrorLevel() int {
 
 func (e *ValidationWarning) Error() string {
 	return fmt.Sprintf("validation warning: %s", e.Message)
-}
-
-///////////////
-
-// InconsistentTimezoneError reports when agency.txt has more than 1 timezone present.
-type InconsistentTimezoneError struct {
-	bc
-}
-
-// NewInconsistentTimezoneError returns a new InconsistentTimezoneError.
-func NewInconsistentTimezoneError(value string) *InconsistentTimezoneError {
-	return &InconsistentTimezoneError{bc: bc{Value: value}}
-}
-
-func (e *InconsistentTimezoneError) Error() string {
-	return "file contains inconsistent timezones"
-}
-
-////////////////////////////
-// Best Practices
-////////////////////////////
-
-// NoScheduledServiceError reports when a service entry contains no active days.
-type NoScheduledServiceError struct{ bc }
-
-func (e *NoScheduledServiceError) Error() string {
-	return "service contains no active days"
-}
-
-///////////////
-
-// StopTooFarError .
-type StopTooFarError struct{ bc }
-
-// NewStopTooFarError .
-func NewStopTooFarError() *StopTooFarError {
-	return &StopTooFarError{}
-}
-
-func (e *StopTooFarError) Error() string {
-	return "stop too far from parent"
-}
-
-///////////////
-
-// StopTooCloseError .
-type StopTooCloseError struct {
-	Target   string
-	Distance float64
-	bc
-}
-
-// NewStopTooCloseError .
-func NewStopTooCloseError(target string, distance float64) *StopTooCloseError {
-	return &StopTooCloseError{Target: target, Distance: distance}
-}
-
-func (e *StopTooCloseError) Error() string {
-	return fmt.Sprintf("stop is too close to another stop '%s' at %0.2f m", e.Target, e.Distance)
-}
-
-///////////////
-
-// StopTooFarFromShapeError reports when a stop is too far from a shape.
-type StopTooFarFromShapeError struct {
-	StopID   string
-	ShapeID  string
-	Distance float64
-	bc
-}
-
-// NewStopTooFarFromShapeError .
-func NewStopTooFarFromShapeError(stopid string, shapeid string, distance float64) *StopTooFarFromShapeError {
-	return &StopTooFarFromShapeError{
-		StopID:   stopid,
-		ShapeID:  shapeid,
-		Distance: distance,
-	}
-}
-
-func (e *StopTooFarFromShapeError) Error() string {
-	return fmt.Sprintf("stop '%s' is too far from shape '%s' at %0.2fm", e.StopID, e.ShapeID, e.Distance)
-}
-
-///////////////
-
-// FastTravelError reports when reasonable maximum speeds have been exceeded.
-type FastTravelError struct {
-	FromStopID string
-	ToStopID   string
-	Distance   float64
-	Time       int
-	Speed      float64
-	SpeedLimit float64
-	bc
-}
-
-// NewFastTravelError .
-func NewFastTravelError(from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
-	return &FastTravelError{
-		FromStopID: from,
-		ToStopID:   to,
-		Time:       t,
-		Distance:   distance,
-		Speed:      speed,
-		SpeedLimit: limit,
-	}
-}
-
-func (e *FastTravelError) Error() string {
-	return fmt.Sprintf("traveled from stop '%s' to stop '%s' in %d seconds, a distance of %0.2f m and speed of %0.2f km/h where %0.2f km/h is the assumed maximum for this route type", e.FromStopID, e.ToStopID, e.Time, e.Distance, e.Speed, e.SpeedLimit)
 }
