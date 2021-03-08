@@ -15,6 +15,7 @@ import (
 // validateCommand
 type validateCommand struct {
 	Options            validator.Options
+	rtFiles            cli.ArrayFlags
 	OutputFile         string
 	validateExtensions cli.ArrayFlags
 }
@@ -28,6 +29,7 @@ func (cmd *validateCommand) Run(args []string) error {
 	fl.Var(&cmd.validateExtensions, "ext", "Include GTFS Extension")
 	fl.StringVar(&cmd.OutputFile, "o", "", "Write validation report as JSON to file")
 	fl.BoolVar(&cmd.Options.BestPractices, "best-practices", false, "Include Best Practices validations")
+	fl.Var(&cmd.rtFiles, "rt", "Include GTFS-RT proto message in validation report")
 	err := fl.Parse(args)
 	if err != nil || fl.NArg() < 1 {
 		fl.Usage()
@@ -35,6 +37,7 @@ func (cmd *validateCommand) Run(args []string) error {
 	}
 	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
+	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles
 	v, err := validator.NewValidator(reader, cmd.Options)
 	if err != nil {
 		return err

@@ -2,10 +2,12 @@ package validator
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -30,19 +32,21 @@ var defaultMaxFileRows = map[string]int64{
 
 // Options defines options for the Validator.
 type Options struct {
-	BestPractices          bool
-	CheckFileLimits        bool
-	IncludeServiceLevels   bool
-	IncludeEntities        bool
-	IncludeEntitiesLimit   int
-	IncludeRouteGeometries bool
+	BestPractices            bool
+	CheckFileLimits          bool
+	IncludeServiceLevels     bool
+	IncludeEntities          bool
+	IncludeEntitiesLimit     int
+	IncludeRouteGeometries   bool
+	ValidateRealtimeMessages []string
 	copier.Options
 }
 
 // Validator checks a GTFS source for errors and warnings.
 type Validator struct {
-	Reader  tl.Reader
-	Options Options
+	Reader      tl.Reader
+	Options     Options
+	rtValidator *rt.Validator
 }
 
 // NewValidator returns a new Validator.
@@ -55,14 +59,14 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 		options.IncludeEntitiesLimit = defaultMaxEnts
 	}
 	return &Validator{
-		Reader:  reader,
-		Options: options,
+		Reader:      reader,
+		Options:     options,
+		rtValidator: rt.NewValidator(),
 	}, nil
 }
 
 // Validate performs a basic validation, as well as optional extended reports.
 func (v *Validator) Validate() (*Result, error) {
-	t := time.Now()
 	reader := v.Reader
 	result := Result{}
 	result.EarliestCalendarDate = time.Now()
@@ -70,7 +74,6 @@ func (v *Validator) Validate() (*Result, error) {
 
 	// Check file infos first, so we exit early if a file exceeds the row limit.
 	if reader2, ok := reader.(*tlcsv.Reader); ok {
-		fmt.Println("file infos")
 		fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader2)
 		if err != nil {
 			result.FailureReason = fmt.Sprintf("Could not read basic CSV data from file: %s", err.Error())
@@ -91,18 +94,16 @@ func (v *Validator) Validate() (*Result, error) {
 				}
 			}
 		}
-		fmt.Println("done:", float64(time.Now().UnixNano()-t.UnixNano())/1e9)
-		t = time.Now()
 	}
 
 	// Main validation
-	t = time.Now()
 	w := emptyWriter{}
 	w.Open()
 	copier := copier.NewCopier(v.Reader, &w, v.Options.Options)
 	copier.AllowEntityErrors = true
 	copier.AllowReferenceErrors = true
 	if v.Options.BestPractices {
+		copier.AddValidator(&rules.EntityWarningCheck{}, 1)
 		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
 		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
 		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
@@ -112,18 +113,29 @@ func (v *Validator) Validate() (*Result, error) {
 		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
 		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
 	}
+	if len(v.Options.ValidateRealtimeMessages) > 0 {
+		copier.AddValidator(v.rtValidator, 1)
+	}
 	if r := copier.Copy(); r != nil {
 		result.Result = *r
 	} else {
 		result.FailureReason = "Failed to validate feed"
 		return &result, nil
 	}
-	fmt.Println("done:", float64(time.Now().UnixNano()-t.UnixNano())/1e9)
-	t = time.Now()
+
+	// Validate realtime messages
+	for _, fn := range v.Options.ValidateRealtimeMessages {
+		fmt.Println("validating rt message:", fn)
+		msg, err := rt.ReadMsg(fn)
+		if err != nil {
+			panic(err)
+		}
+		rterrs := v.rtValidator.ValidateFeedMessage(msg, nil)
+		result.HandleError(filepath.Base(fn), rterrs)
+	}
 
 	// Service levels
 	if v.Options.IncludeServiceLevels {
-		fmt.Println("service levels")
 		fvsls, err := dmfr.NewFeedVersionServiceInfosFromReader(reader)
 		if err != nil {
 			result.FailureReason = fmt.Sprintf("Could not calculate service levels: %s", err.Error())
@@ -140,23 +152,17 @@ func (v *Validator) Validate() (*Result, error) {
 			}
 			result.ServiceLevels = append(result.ServiceLevels, fvsl)
 		}
-		fmt.Println("done:", float64(time.Now().UnixNano()-t.UnixNano())/1e9)
-		t = time.Now()
 	}
 
 	routeShapes := map[string]*geom.MultiLineString{}
 	if v.Options.IncludeRouteGeometries {
 		// Build shapes...
-		fmt.Println("building shapes")
 		routeShapes = buildRouteShapes(reader)
-		fmt.Println("done:", float64(time.Now().UnixNano()-t.UnixNano())/1e9)
-		t = time.Now()
 	}
 
 	// Include some basic entities in the report
 	if v.Options.IncludeEntities {
 		// Add basic entities
-		fmt.Println("adding basic entities")
 		for ent := range reader.Agencies() {
 			result.Agencies = append(result.Agencies, ent)
 			if len(result.Agencies) >= v.Options.IncludeEntitiesLimit {
@@ -186,7 +192,6 @@ func (v *Validator) Validate() (*Result, error) {
 				break
 			}
 		}
-		fmt.Println("done:", float64(time.Now().UnixNano()-t.UnixNano())/1e9)
 	}
 	result.Success = true
 	return &result, nil
