@@ -275,7 +275,7 @@ func NewConditionallyRequiredFieldError(field string) *ConditionallyRequiredFiel
 }
 
 func (e *ConditionallyRequiredFieldError) Error() string {
-	return fmt.Sprintf("no value for required field %s", e.Field)
+	return fmt.Sprintf("no value for required field %s %s", e.Field, e.Message)
 }
 
 ////////////////////////////
@@ -291,7 +291,10 @@ func NewInvalidFieldError(field string, value string, err error) *InvalidFieldEr
 }
 
 func (e *InvalidFieldError) Error() string {
-	return fmt.Sprintf("invalid value for field %s: '%s'", e.Field, e.Value)
+	if e.cause != nil {
+		return fmt.Sprintf("invalid value for field %s '%s': %s", e.Field, e.Value, e.cause.Error())
+	}
+	return fmt.Sprintf("invalid value for field %s '%s'", e.Field, e.Value)
 }
 
 ////////////////////////////

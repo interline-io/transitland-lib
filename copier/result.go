@@ -183,6 +183,22 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 	}
 }
 
+func errfmt(err error) string {
+	errc, ok := err.(hasContext)
+	if !ok {
+		return err.Error()
+	}
+	c := errc.Context()
+	s := err.Error()
+	if c.EntityID != "" {
+		s = fmt.Sprintf("entity '%s': %s\"", c.EntityID, s)
+	}
+	if cc := c.Cause(); cc != nil {
+		s = s + ": " + cc.Error()
+	}
+	return s
+}
+
 // DisplayErrors shows individual errors in log.Info
 func (cr *Result) DisplayErrors() {
 	if len(cr.Errors) == 0 {
@@ -193,7 +209,7 @@ func (cr *Result) DisplayErrors() {
 	for _, v := range cr.Errors {
 		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 		for _, err := range v.Errors {
-			log.Info("\t\t%s", err.Error())
+			log.Info("\t\t%s", errfmt(err))
 		}
 		remain := v.Count - len(v.Errors)
 		if remain > 0 {
@@ -212,7 +228,7 @@ func (cr *Result) DisplayWarnings() {
 	for _, v := range cr.Warnings {
 		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 		for _, err := range v.Errors {
-			log.Info("\t\t%s", err.Error())
+			log.Info("\t\t%s", errfmt(err))
 		}
 		remain := v.Count - len(v.Errors)
 		if remain > 0 {

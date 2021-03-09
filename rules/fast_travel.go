@@ -22,6 +22,7 @@ type FastTravelError struct {
 
 func newFastTravelError(trip string, seq int, from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
 	return &FastTravelError{
+		TripID:     trip,
 		FromStopID: from,
 		ToStopID:   to,
 		Time:       t,
@@ -98,11 +99,15 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 	t := trip.StopTimes[0].DepartureTime
 	for i := 1; i < len(trip.StopTimes); i++ {
 		s2 := trip.StopTimes[i].StopID
-		key := s1 + ":" + s2 // use a real separator...
+		key := s1 + ":" + s2 // todo: use a real separator...
 		dx, ok := e.stopDist[key]
 		if !ok {
 			g1, g2 := e.geomCache.GetStop(s1), e.geomCache.GetStop(s2)
-			dx = xy.DistanceHaversine(g1[0], g1[1], g2[0], g2[1])
+			dx = 0
+			// Only consider this edge if valid geoms.
+			if (g1[0] != 0 && g1[1] != 0) && (g2[0] != 0 && g2[1] != 0) {
+				dx = xy.DistanceHaversine(g1[0], g1[1], g2[0], g2[1])
+			}
 			e.stopDist[key] = dx
 			e.stopDist[s2+":"+s1] = dx
 		}
