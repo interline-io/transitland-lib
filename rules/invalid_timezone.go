@@ -6,12 +6,12 @@ import (
 	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
-// AgencyInvalidTimezoneCheck returns an error if an agency has an invalid timezone.
+// InvalidTimezoneCheck returns an error if an agency has an invalid timezone.
 // This is handled as a Best Practices warning because it is so common.
-type AgencyInvalidTimezoneCheck struct{}
+type InvalidTimezoneCheck struct{}
 
 // Validate .
-func (e *AgencyInvalidTimezoneCheck) Validate(ent tl.Entity) []error {
+func (e *InvalidTimezoneCheck) Validate(ent tl.Entity) []error {
 	var errs []error
 	if v, ok := ent.(*tl.Agency); ok {
 		if !enum.IsValidTimezone(v.AgencyTimezone) {

@@ -1,7 +1,6 @@
 package tl
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -46,7 +45,7 @@ func (ent *Route) Errors() (errs []error) {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("route_short_name"))
 	}
 	if _, ok := enum.GetRouteType(ent.RouteType); !ok {
-		errs = append(errs, causes.NewInvalidFieldError("route_type", strconv.Itoa(ent.RouteType), fmt.Errorf("invalid route_type %d", ent.RouteType)))
+		errs = append(errs, causes.NewInvalidFieldError("route_type", strconv.Itoa(ent.RouteType), nil))
 	}
 	return errs
 }

@@ -191,7 +191,7 @@ func errfmt(err error) string {
 	c := errc.Context()
 	s := err.Error()
 	if c.EntityID != "" {
-		s = fmt.Sprintf("entity '%s': %s\"", c.EntityID, s)
+		s = fmt.Sprintf("entity '%s': %s", c.EntityID, s)
 	}
 	if cc := c.Cause(); cc != nil {
 		s = s + ": " + cc.Error()
