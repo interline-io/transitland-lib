@@ -1,0 +1,1 @@
+This feed contains frequencies.txt entries where end_time - start_time is less than headway_secs.

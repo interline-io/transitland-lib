@@ -55,6 +55,9 @@ func (e *StopTooCloseCheck) Validate(ent tl.Entity) []error {
 	if len(coords) < 2 {
 		return nil
 	}
+	if coords[0] == 0 && coords[1] == 0 {
+		return nil // 0,0 is handled elsewhere
+	}
 	var errs []error
 	gh := geohash.EncodeWithPrecision(coords[0], coords[1], 9)
 	neighbors := geohash.Neighbors(gh)

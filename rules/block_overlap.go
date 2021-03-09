@@ -21,13 +21,13 @@ type BlockOverlapError struct {
 
 func (e *BlockOverlapError) Error() string {
 	return fmt.Sprintf(
-		"trip '%s' with block_id '%s' and service_id '%s' has interval %s -> %s which overlaps another trip in the same block '%s' with interval %s -> %s",
+		"trip '%s' with block_id '%s' and service_id '%s' has interval %s -> %s which overlaps another trip '%s' in the same block with interval %s -> %s",
 		e.TripID,
-		e.ServiceID,
 		e.BlockID,
+		e.ServiceID,
 		e.StartTime.String(),
 		e.EndTime.String(),
-		e.TripID,
+		e.OtherTripID,
 		e.OtherStartTime.String(),
 		e.OtherEndTime.String(),
 	)
@@ -75,6 +75,7 @@ func (e *BlockOverlapCheck) Validate(ent tl.Entity) []error {
 		if trip.ServiceID == hit.service && tf.start < hit.end && tf.end > hit.start {
 			errs = append(errs, &BlockOverlapError{
 				TripID:         tf.trip,
+				BlockID:        trip.BlockID,
 				ServiceID:      tf.service,
 				StartTime:      tl.NewWideTimeFromSeconds(tf.start),
 				EndTime:        tl.NewWideTimeFromSeconds(tf.end),

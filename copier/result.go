@@ -65,6 +65,15 @@ type ErrorGroup struct {
 	Errors    []error
 }
 
+// NewErrorGroup returns a new ErrorGroup.
+func NewErrorGroup(filename string, etype string, limit int) *ErrorGroup {
+	return &ErrorGroup{
+		Filename:  filename,
+		ErrorType: etype,
+		Limit:     limit,
+	}
+}
+
 // Add an error to the error group.
 func (e *ErrorGroup) Add(err error) {
 	if e.Count < e.Limit || e.Limit == 0 {
@@ -112,7 +121,7 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -124,7 +133,7 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {
-			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
@@ -137,7 +146,7 @@ func (cr *Result) HandleError(fn string, errs []error) {
 		key := fn + ":" + getErrorType(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = &ErrorGroup{Filename: fn, ErrorType: getErrorType(err)}
+			v = NewErrorGroup(fn, getErrorType(err), cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -155,7 +164,7 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -167,11 +176,27 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {
-			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
 	}
+}
+
+func errfmt(err error) string {
+	errc, ok := err.(hasContext)
+	if !ok {
+		return err.Error()
+	}
+	c := errc.Context()
+	s := err.Error()
+	if c.EntityID != "" {
+		s = fmt.Sprintf("entity '%s': %s", c.EntityID, s)
+	}
+	if cc := c.Cause(); cc != nil {
+		s = s + ": " + cc.Error()
+	}
+	return s
 }
 
 // DisplayErrors shows individual errors in log.Info
@@ -184,7 +209,7 @@ func (cr *Result) DisplayErrors() {
 	for _, v := range cr.Errors {
 		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 		for _, err := range v.Errors {
-			log.Info("\t\t%s", err.Error())
+			log.Info("\t\t%s", errfmt(err))
 		}
 		remain := v.Count - len(v.Errors)
 		if remain > 0 {
@@ -203,7 +228,7 @@ func (cr *Result) DisplayWarnings() {
 	for _, v := range cr.Warnings {
 		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 		for _, err := range v.Errors {
-			log.Info("\t\t%s", err.Error())
+			log.Info("\t\t%s", errfmt(err))
 		}
 		remain := v.Count - len(v.Errors)
 		if remain > 0 {

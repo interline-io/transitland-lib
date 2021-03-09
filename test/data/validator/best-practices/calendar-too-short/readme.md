@@ -1,0 +1,1 @@
+This feed contains a calendar.txt entry that only covers a single day of service. This should be a calendar_dates.txt entry.

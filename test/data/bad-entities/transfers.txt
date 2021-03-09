@@ -6,5 +6,3 @@ ok1,ok2,xyz,,FieldParseError:transfer_type
 ok1,ok2,0,xyz,FieldParseError:min_transfer_time
 ok1,ok2,4,,InvalidFieldError:transfer_type
 ok1,ok2,2,-1,InvalidFieldError:min_transfer_time
-ok1,ok2,0,600,ValidationWarning:min_transfer_time
-ok1,ok2,2,,ValidationWarning:min_transfer_time

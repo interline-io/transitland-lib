@@ -42,6 +42,9 @@ func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
 	}
 	var errs []error
 	coords := v.Geometry.Coords()
+	if coords[0] == 0 && coords[1] == 0 {
+		return nil // 0,0 handled elsewhere
+	}
 	newp := tl.NewPoint(coords[0], coords[1]) // copy
 	e.geoms[v.StopID] = &newp
 	if v.ParentStation.Key == "" {

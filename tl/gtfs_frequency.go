@@ -28,20 +28,6 @@ func (ent *Frequency) RepeatCount() int {
 	return count
 }
 
-// Warnings for this Entity.
-func (ent *Frequency) Warnings() (errs []error) {
-	errs = append(errs, ent.loadWarnings...)
-	st, et := ent.StartTime.Seconds, ent.EndTime.Seconds
-	if st != 0 && et != 0 {
-		if st == et {
-			errs = append(errs, causes.NewValidationWarning("end_time", "end_time is equal to start_time"))
-		} else if et > st && (et-st) < ent.HeadwaySecs {
-			errs = append(errs, causes.NewValidationWarning("end_time", "end_time is less than start_time + headway_secs"))
-		}
-	}
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *Frequency) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.loadErrors...)

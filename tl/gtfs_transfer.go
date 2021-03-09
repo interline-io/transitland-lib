@@ -16,18 +16,6 @@ type Transfer struct {
 	BaseEntity
 }
 
-// Warnings for this Entity.
-func (ent *Transfer) Warnings() (errs []error) {
-	errs = append(errs, ent.loadWarnings...)
-	if ent.TransferType != 2 && ent.MinTransferTime.Valid {
-		errs = append(errs, causes.NewValidationWarning("min_transfer_time", "should not set min_transfer_time unless transfer_type = 2"))
-	}
-	if ent.TransferType == 2 && !ent.MinTransferTime.Valid {
-		errs = append(errs, causes.NewValidationWarning("min_transfer_time", "transfer_type = 2 requires min_transfer_time to be set"))
-	}
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *Transfer) Errors() (errs []error) {
 	// transfer_type is required but can also be empty, so hard to distinguish

@@ -20,7 +20,6 @@ func TestEntityErrors(t *testing.T) {
 	testutil.AllEntities(reader, func(ent tl.Entity) {
 		t.Run(fmt.Sprintf("%s:%s", ent.Filename(), ent.EntityID()), func(t *testing.T) {
 			errs := ent.Errors()
-			errs = append(errs, ent.Warnings()...)
 			expecterrs := testutil.GetExpectErrors(ent)
 			testutil.CheckErrors(expecterrs, errs, t)
 		})

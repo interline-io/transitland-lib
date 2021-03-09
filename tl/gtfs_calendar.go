@@ -34,20 +34,6 @@ func (ent *Calendar) EntityKey() string {
 	return ent.ServiceID
 }
 
-// Warnings for this Entity.
-func (ent *Calendar) Warnings() (errs []error) {
-	errs = append(errs, ent.loadWarnings...)
-	// Are all days empty?
-	if ent.Monday == 0 && ent.Tuesday == 0 && ent.Wednesday == 0 && ent.Thursday == 0 && ent.Friday == 0 && ent.Saturday == 0 && ent.Sunday == 0 {
-		errs = append(errs, causes.NewValidationWarning("", "all days are empty"))
-	}
-	// Does this cover less than 24 hours? End before start is checked in Errors().
-	if diff := ent.EndDate.Sub(ent.StartDate).Hours(); diff >= 0 && diff <= 24 {
-		errs = append(errs, causes.NewValidationWarning("", "covers one day or less"))
-	}
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *Calendar) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)

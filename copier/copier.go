@@ -185,7 +185,7 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, sid, err, ent)
 		return "", err, err
 	}
-	log.Debug("%s '%s': saved -> %s", efn, sid, eid)
+	// log.Debug("%s '%s': saved -> %s", efn, sid, eid)
 	copier.EntityMap.Set(efn, sid, eid)
 	copier.result.EntityCount[efn]++
 	return eid, nil, nil
@@ -209,7 +209,7 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 	}
 	for i, eid := range eids {
 		sid := sids[i]
-		log.Debug("%s '%s': saved -> %s", efn, sid, eid)
+		// log.Debug("%s '%s': saved -> %s", efn, sid, eid)
 		copier.EntityMap.Set(efn, sid, eid)
 	}
 	copier.result.EntityCount[efn] += len(ents)
@@ -571,7 +571,7 @@ func (copier *Copier) copyCalendars() error {
 			svcs[ent.ServiceID] = svc
 		}
 		if _, ok := svc.Exception(ent.Date); ok {
-			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.ServiceID)}, nil)
+			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateServiceExceptionError(ent.ServiceID, ent.Date)}, nil)
 			continue
 		}
 		svc.AddCalendarDate(ent)

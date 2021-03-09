@@ -26,5 +26,3 @@ invalid_sunday,1,1,1,1,1,1,2,20100101,21001231,InvalidFieldError:sunday
 parse_start_date,1,1,1,1,1,1,1,xyz,21001231,FieldParseError:start_date|InvalidFieldError:start_date
 parse_end_date,1,1,1,1,1,1,1,20100101,xyz,FieldParseError:end_date|InvalidFieldError:end_date
 start_date_after_end_date,1,1,1,1,1,1,1,20100101,20010101,InvalidFieldError:end_date
-warning_no_days,1,1,1,1,1,1,1,20100101,20100101,ValidationWarning:
-warning_no_weekdays,0,0,0,0,0,0,0,20100101,21001231,ValidationWarning:
