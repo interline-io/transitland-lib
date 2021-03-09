@@ -1,0 +1,1 @@
+This feed contains a shapes.txt entry with a 0,0 coordinate.

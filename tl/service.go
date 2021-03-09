@@ -182,8 +182,11 @@ func (s *Service) Exception(t time.Time) (int, bool) {
 // HasAtLeastOneDay checks if the Service is active for at least one day.
 func (s *Service) HasAtLeastOneDay() bool {
 	// Quick checks before iterating through each day.
+	// quick check that we have at least a week of service,
+	// otherwise fall back to full check...
+	duration := s.EndDate.Sub(s.StartDate).Hours() / 24
 	days := s.Monday + s.Tuesday + s.Wednesday + s.Thursday + s.Friday + s.Saturday + s.Sunday
-	if days > 0 && len(s.exceptions) == 0 {
+	if duration >= 7 && days > 0 && len(s.exceptions) == 0 {
 		return true
 	}
 	add, remove := 0, 0

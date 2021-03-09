@@ -3,6 +3,7 @@ package causes
 import (
 	"fmt"
 	"strconv"
+	"time"
 )
 
 // Context adds structured context.
@@ -202,6 +203,27 @@ func (e *DuplicateIDError) Error() string {
 
 ////////////////////////////
 
+// DuplicateServiceExceptionError reports when a (service_id,date) value is present more than once.
+type DuplicateServiceExceptionError struct {
+	ServiceID string
+	Date      string
+	bc
+}
+
+func (e *DuplicateServiceExceptionError) Error() string {
+	return fmt.Sprintf("service_id '%s' has more than one exception for date %s", e.ServiceID, e.Date)
+}
+
+// NewDuplicateServiceExceptionError returns a new DuplicateServiceExceptionError.
+func NewDuplicateServiceExceptionError(service string, date time.Time) *DuplicateServiceExceptionError {
+	return &DuplicateServiceExceptionError{
+		ServiceID: service,
+		Date:      date.Format("20060102"),
+	}
+}
+
+////////////////////////////
+
 ////////////////////////////
 // Entity level errors
 ////////////////////////////
@@ -345,4 +367,27 @@ func (e *ValidationWarning) ErrorLevel() int {
 
 func (e *ValidationWarning) Error() string {
 	return fmt.Sprintf("validation warning: %s", e.Message)
+}
+
+// InvalidTimezoneError reports when a timezone is not valid.
+type InvalidTimezoneError struct{ bc }
+
+func (e *InvalidTimezoneError) Error() string {
+	return fmt.Sprintf(
+		"entity %s field %s: invalid timezone value '%s'",
+		e.EntityID,
+		e.Field,
+		e.Value,
+	)
+}
+
+// NewInvalidTimezoneError returns a new InvalidTimezoneError.
+func NewInvalidTimezoneError(eid string, field string, value string) *InvalidTimezoneError {
+	return &InvalidTimezoneError{
+		bc: bc{
+			EntityID: eid,
+			Field:    field,
+			Value:    value,
+		},
+	}
 }

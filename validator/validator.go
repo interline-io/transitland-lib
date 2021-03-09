@@ -103,7 +103,6 @@ func (v *Validator) Validate() (*Result, error) {
 	copier.AllowEntityErrors = true
 	copier.AllowReferenceErrors = true
 	if v.Options.BestPractices {
-		copier.AddValidator(&rules.EntityWarningCheck{}, 1)
 		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
 		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
 		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
@@ -113,6 +112,17 @@ func (v *Validator) Validate() (*Result, error) {
 		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
 		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
 		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
+		copier.AddValidator(&rules.AgencyInvalidTimezoneCheck{}, 1)
+		copier.AddValidator(&rules.AgencyIDConditionallyRecommendedCheck{}, 1)
+		copier.AddValidator(&rules.DescriptionEqualsName{}, 1)
+		copier.AddValidator(&rules.RouteExtendedTypesCheck{}, 1)
+		copier.AddValidator(&rules.InsufficientColorContrastCheck{}, 1)
+		copier.AddValidator(&rules.RouteShortNameTooLongCheck{}, 1)
+		copier.AddValidator(&rules.ShortServiceCheck{}, 1)
+		copier.AddValidator(&rules.ServiceAllDaysEmptyCheck{}, 1)
+		copier.AddValidator(&rules.NullIslandCheck{}, 1)
+		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
+		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
 	}
 	if len(v.Options.ValidateRealtimeMessages) > 0 {
 		copier.AddValidator(v.rtValidator, 1)

@@ -81,22 +81,6 @@ func (ent *Shape) EntityKey() string {
 	return ent.ShapeID
 }
 
-// Warnings for this Entity.
-func (ent *Shape) Warnings() (errs []error) {
-	errs = append(errs, ent.loadWarnings...)
-	coords := []float64{ent.ShapePtLon, ent.ShapePtLat}
-	if ent.Geometry.Valid {
-		coords = ent.Geometry.FlatCoords()
-	}
-	if coords[0] == 0 {
-		errs = append(errs, causes.NewValidationWarning("shape_pt_lon", "required field shape_pt_lon is 0.0"))
-	}
-	if coords[1] == 0 {
-		errs = append(errs, causes.NewValidationWarning("shape_pt_lat", "required field shape_pt_lat is 0.0"))
-	}
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *Shape) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)

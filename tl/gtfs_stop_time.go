@@ -63,9 +63,6 @@ func (ent *StopTime) EntityID() string {
 	return ""
 }
 
-// Warnings returns validation warnings.
-func (ent *StopTime) Warnings() []error { return ent.loadWarnings }
-
 // Errors for this Entity.
 func (ent *StopTime) Errors() []error {
 	// No reflection

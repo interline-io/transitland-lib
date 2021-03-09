@@ -35,6 +35,7 @@ func (cmd *validateCommand) Run(args []string) error {
 		fl.Usage()
 		log.Exit("Requires input reader")
 	}
+	log.Info("Validating: %s", fl.Arg(0))
 	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles

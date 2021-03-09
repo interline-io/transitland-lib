@@ -1,0 +1,3 @@
+from_stop_id,to_stop_id,transfer_type,min_transfer_time,expect_error
+12TH,LAKE,1,600,ValidationWarning:min_transfer_time
+12TH,LAKE,2,,ValidationWarning:min_transfer_time

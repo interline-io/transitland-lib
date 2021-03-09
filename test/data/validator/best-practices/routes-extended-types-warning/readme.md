@@ -1,0 +1,1 @@
+This feed contains routes.txt entries with extended route_types. A warning is generated because there are not universally supported. A route_type that is not in either base or extended types is a warning, checked in the entity.

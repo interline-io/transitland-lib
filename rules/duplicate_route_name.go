@@ -9,43 +9,49 @@ import (
 
 // DuplicateRouteNameError reports when routes of the same agency have identical route_long_name values.
 type DuplicateRouteNameError struct {
+	RouteID       string
 	RouteLongName string
 	RouteType     int
 	AgencyID      string
+	OtherRouteID  string
 	bc
 }
 
 func (e *DuplicateRouteNameError) Error() string {
 	return fmt.Sprintf(
-		"route '%s' with route_type %d and agency_id '%s' has the same route_long_name as another route of the same type and agency",
+		"route '%s' with route_long_name '%s', route_type %d, and agency_id '%s' has the same route_long_name, route_type and agency_id as route '%s'",
+		e.RouteID,
 		e.RouteLongName,
 		e.RouteType,
 		e.AgencyID,
+		e.OtherRouteID,
 	)
 }
 
 // DuplicateRouteNameCheck checks for routes of the same agency with identical route_long_names.
 type DuplicateRouteNameCheck struct {
-	names map[string]int
+	names map[string]string
 }
 
 // Validate .
 func (e *DuplicateRouteNameCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Route)
-	if !ok {
+	if !ok || v.RouteLongName == "" {
 		return nil
 	}
 	if e.names == nil {
-		e.names = map[string]int{}
+		e.names = map[string]string{}
 	}
 	key := v.AgencyID + ":" + strconv.Itoa(v.RouteType) + ":" + v.RouteLongName // todo: use a real separator
-	if _, ok := e.names[key]; ok {
+	if hit, ok := e.names[key]; ok {
 		return []error{&DuplicateRouteNameError{
+			RouteID:       v.RouteID,
 			RouteLongName: v.RouteLongName,
 			RouteType:     v.RouteType,
 			AgencyID:      v.AgencyID,
+			OtherRouteID:  hit,
 		}}
 	}
-	e.names[key]++
+	e.names[key] = v.RouteID
 	return nil
 }

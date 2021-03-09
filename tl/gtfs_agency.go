@@ -1,7 +1,6 @@
 package tl
 
 import (
-	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
@@ -26,18 +25,6 @@ func (ent *Agency) EntityID() string {
 // EntityKey returns the GTFS identifier.
 func (ent *Agency) EntityKey() string {
 	return ent.AgencyID
-}
-
-// Warnings for this Entity.
-func (ent *Agency) Warnings() (errs []error) {
-	errs = append(errs, ent.loadWarnings...)
-	if len(ent.AgencyID) == 0 {
-		errs = append(errs, causes.NewValidationWarning("agency_id", "agency_id should be set"))
-	}
-	if !enum.IsValidTimezone(ent.AgencyTimezone) {
-		errs = append(errs, causes.NewValidationWarning("agency_timezone", "agency_timezone is not a valid timezone"))
-	}
-	return errs
 }
 
 // Errors for this Entity.

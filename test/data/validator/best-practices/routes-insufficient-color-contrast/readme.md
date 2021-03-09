@@ -1,0 +1,1 @@
+This feed contains routes.txt entities that provide both route_color and route_text_color but without sufficient contrast to be legible.

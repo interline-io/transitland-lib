@@ -1,0 +1,7 @@
+trip_id,start_time,end_time,headway_secs,expect_error
+2230435WKDY,10:00:00,12:00:00,600
+2230435WKDY,14:00:00,14:00:00,600,ValidationWarning:end_time
+2230435WKDY,15:00:00,15:02:00,600,ValidationWarning:end_time
+2230435WKDY,16:00:00,16:09:59,600,ValidationWarning:end_time
+2230435WKDY,17:00:00,17:10:00,600,
+

@@ -34,27 +34,6 @@ func (ent *Route) EntityKey() string {
 	return ent.RouteID
 }
 
-// Warnings for this Entity.
-func (ent *Route) Warnings() (errs []error) {
-	errs = append(errs, ent.loadWarnings...)
-	if len(ent.AgencyID) == 0 {
-		errs = append(errs, causes.NewValidationWarning("agency_id", "optional agency_id value recommended"))
-	}
-	if len(ent.RouteDesc) > 0 && (ent.RouteDesc == ent.RouteLongName || ent.RouteDesc == ent.RouteShortName) {
-		errs = append(errs, causes.NewValidationWarning("route_desc", "route_desc should not duplicate route_short_name or route_long_name"))
-	}
-	if _, ok := enum.GetRouteType(ent.RouteType); ok && ent.RouteType > 7 {
-		errs = append(errs, causes.NewValidationWarning("route_type", "extended route_types not universally supported"))
-	}
-	if len(ent.RouteColor) > 0 && ent.RouteColor == ent.RouteTextColor {
-		errs = append(errs, causes.NewValidationWarning("route_text_color", "route_text_color should provide contrast with route_color"))
-	}
-	if len(ent.RouteShortName) > 12 {
-		errs = append(errs, causes.NewValidationWarning("route_short_name", "route_short_name should be no more than 12 characters"))
-	}
-	return errs
-}
-
 // Errors for this Entity.
 func (ent *Route) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)

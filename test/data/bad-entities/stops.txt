@@ -7,23 +7,19 @@ invalid_stop_url,invalid stop_url,,36.425288,-117.133162,,abcxyz,,,,,,InvalidFie
 no_stop_name,,no stop_name,36.641496,-116.40094,,,,,,,,ConditionallyRequiredFieldError:stop_name
 ok_no_stop_name_for_nodes,,no stop_name,36.641496,-116.40094,,,3,,,,ok_station,
 ok_no_stop_name_for_boarding_areas,,no stop_name,36.641496,-116.40094,,,4,,,,ok_stop,
-warning_same_desc,test,test,36.641496,-116.40094,,,,,,,,ValidationWarning:stop_desc
 invalid_stop_lat1,stop_lat < -90,,-91.0,-116.40094,,,,,,,,InvalidFieldError:stop_lat
 invalid_stop_lon1,stop_lon < -180,,36.641496,-181.0,,,,,,,,InvalidFieldError:stop_lon
 invalid_stop_lat2,stop_lat > 90,,91.0,-116.40094,,,,,,,,InvalidFieldError:stop_lat
 invalid_stop_lon2,stop_lat > 180,,36.641496,181.0,,,,,,,,InvalidFieldError:stop_lon
-warning_stop_lat,stop_lat = 0,,0.0,-116.40094,,,,,,,,ValidationWarning:stop_lat
-warning_stop_lon,stop_lon = 0,,36.641496,0.0,,,,,,,,ValidationWarning:stop_lon
 ok_no_stop_lat_for_nodes,node stop_lat = 0,,0.0,-116.40094,,,3,,,,ok_station,
 ok_no_stop_lon_for_nodes,node stop_lon = 0,,36.641496,0.0,,,3,,,,ok_station,
 ok_no_stop_lat_for_boarding_areas,area stop_lat = 0,,,-116.40094,,,4,,,,ok_stop,
 ok_no_stop_lon_for_boarding_areas,area stop_lon = 0,,36.641496,,,,4,,,,ok_stop,
-parse_stop_lon,stop_lat parse error,,36.641496,xyz,,,,,,,,FieldParseError:stop_lon|ValidationWarning:stop_lon
-parse_stop_lat,stop_lon parse error,,xyz,-116.40094,,,,,,,,FieldParseError:stop_lat|ValidationWarning:stop_lat
+parse_stop_lon,stop_lat parse error,,36.641496,xyz,,,,,,,,FieldParseError:stop_lon
+parse_stop_lat,stop_lon parse error,,xyz,-116.40094,,,,,,,,FieldParseError:stop_lat
 invalid_location_type,location_type = 6,,36.641496,-116.40094,,,6,,,,,InvalidFieldError:location_type
 parse_location_type,location_type parse error,,36.641496,-116.40094,,,xyz,,,,,FieldParseError:location_type
 parse_wheelchair_boarding,wheelchair_boarding parse error,,36.641496,-116.40094,,,,xyz,,,,FieldParseError:wheelchair_boarding
 invalid_wheelchair_boarding,wheelchair_boarding > 2,,36.641496,-116.40094,,,,3,,,,InvalidFieldError:wheelchair_boarding
-invalid_stop_timezone,invalid stop_timezone,,36.641496,-116.40094,,,,,,xyz,,ValidationWarning:stop_timezone
 error_location_type_without_parent_station,location_type = 2 without parent_station,,36.641496,-116.40094,,,2,,,,,ConditionallyRequiredFieldError:parent_station
 error_station_with_parent_station,location_type = 1 with parent_station,,36.641496,-116.40094,,,1,,,,station,InvalidFieldError:parent_station

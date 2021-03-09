@@ -65,6 +65,15 @@ type ErrorGroup struct {
 	Errors    []error
 }
 
+// NewErrorGroup returns a new ErrorGroup.
+func NewErrorGroup(filename string, etype string, limit int) *ErrorGroup {
+	return &ErrorGroup{
+		Filename:  filename,
+		ErrorType: etype,
+		Limit:     limit,
+	}
+}
+
 // Add an error to the error group.
 func (e *ErrorGroup) Add(err error) {
 	if e.Count < e.Limit || e.Limit == 0 {
@@ -112,7 +121,7 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -124,7 +133,7 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {
-			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
@@ -137,7 +146,7 @@ func (cr *Result) HandleError(fn string, errs []error) {
 		key := fn + ":" + getErrorType(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = &ErrorGroup{Filename: fn, ErrorType: getErrorType(err)}
+			v = NewErrorGroup(fn, getErrorType(err), cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -155,7 +164,7 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -167,7 +176,7 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {
-			v = &ErrorGroup{Filename: getErrorFilename(err), ErrorType: getErrorType(err)}
+			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)

@@ -1,0 +1,1 @@
+This feed contains an agency.txt entity with an invalid timezone. This should theoretically be a full error, but is so prevalent in real world feeds that it becomes a challenge to enforce this rule strictly.

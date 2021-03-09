@@ -9,16 +9,18 @@ import (
 
 // FastTravelError reports when reasonable maximum speeds have been exceeded for at least 30 seconds.
 type FastTravelError struct {
-	FromStopID string
-	ToStopID   string
-	Distance   float64
-	Time       int
-	Speed      float64
-	SpeedLimit float64
+	TripID       string
+	StopSequence int
+	FromStopID   string
+	ToStopID     string
+	Distance     float64
+	Time         int
+	Speed        float64
+	SpeedLimit   float64
 	bc
 }
 
-func newFastTravelError(from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
+func newFastTravelError(trip string, seq int, from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
 	return &FastTravelError{
 		FromStopID: from,
 		ToStopID:   to,
@@ -31,7 +33,9 @@ func newFastTravelError(from string, to string, t int, distance float64, speed f
 
 func (e *FastTravelError) Error() string {
 	return fmt.Sprintf(
-		"traveled from stop '%s' to stop '%s' in %d seconds, a distance of %0.2f m and speed of %0.2f km/h where %0.2f km/h is the assumed maximum for this route type",
+		"trip '%s' stop_sequence %d traveled from stop '%s' to stop '%s' in %d seconds, a distance of %0.2f m and speed of %0.2f km/h where %0.2f km/h is the assumed maximum for this route type",
+		e.TripID,
+		e.StopSequence,
 		e.FromStopID,
 		e.ToStopID,
 		e.Time,
@@ -105,7 +109,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 		dt := trip.StopTimes[i].ArrivalTime - t
 		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
 		if dt > 30 && speed > maxspeed {
-			errs = append(errs, newFastTravelError(s1, s2, dt, dx, speed, maxspeed))
+			errs = append(errs, newFastTravelError(trip.TripID, trip.StopTimes[i].StopSequence, s1, s2, dt, dx, speed, maxspeed))
 		}
 		s1 = s2
 		t = trip.StopTimes[i].DepartureTime

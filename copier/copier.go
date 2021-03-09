@@ -571,7 +571,7 @@ func (copier *Copier) copyCalendars() error {
 			svcs[ent.ServiceID] = svc
 		}
 		if _, ok := svc.Exception(ent.Date); ok {
-			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.ServiceID)}, nil)
+			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateServiceExceptionError(ent.ServiceID, ent.Date)}, nil)
 			continue
 		}
 		svc.AddCalendarDate(ent)

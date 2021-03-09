@@ -1,0 +1,1 @@
+This feed contains a calendar.txt entity where no days are set. This is a separate check from minimum service duration and at least one day has service when including exceptions.

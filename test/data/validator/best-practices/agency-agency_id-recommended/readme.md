@@ -1,0 +1,1 @@
+This feed contains a agency.txt with more than one agency, where one entity agency_id is blank. This should be considered a warning; if more than one agency is missing agency_id then it is a duplicate ID error and handled elsewhere.

@@ -4,8 +4,6 @@ ok,xyz,02:00:00,600,,FieldParseError:start_time
 ok,01:00:00,xyz,600,,FieldParseError:end_time
 ok,01:00:00,02:00:00,xyz,,FieldParseError:headway_secs|InvalidFieldError:headway_secs
 ok,01:00:00,02:00:00,600,xyz,FieldParseError:exact_times
-ok,01:00:00,01:00:00,600,,ValidationWarning:end_time
-ok,01:00:00,01:01:00,600,,ValidationWarning:end_time
 ok,01:00:00,00:30:00,600,,InvalidFieldError:end_time
 ok,01:00:00,02:00:00,,,RequiredFieldError:headway_secs|InvalidFieldError:headway_secs
 ok,,02:00:00,600,,RequiredFieldError:start_time
