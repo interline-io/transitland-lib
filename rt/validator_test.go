@@ -22,7 +22,7 @@ func newTestValidator() *Validator {
 
 func TestValidateHeader(t *testing.T) {
 	fi := newTestValidator()
-	msg, err := readmsg(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
+	msg, err := ReadFile(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -35,7 +35,7 @@ func TestValidateHeader(t *testing.T) {
 
 func TestValidateTripUpdate(t *testing.T) {
 	fi := newTestValidator()
-	msg, err := readmsg(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
+	msg, err := ReadFile(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)
 	}
