@@ -137,7 +137,7 @@ func (v *Validator) Validate() (*Result, error) {
 	// Validate realtime messages
 	for _, fn := range v.Options.ValidateRealtimeMessages {
 		fmt.Println("validating rt message:", fn)
-		msg, err := rt.ReadMsg(fn)
+		msg, err := rt.Read(fn)
 		if err != nil {
 			panic(err)
 		}

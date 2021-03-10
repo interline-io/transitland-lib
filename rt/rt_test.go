@@ -7,7 +7,7 @@ import (
 )
 
 func Test_readmsg(t *testing.T) {
-	msg, err := readmsg(testutil.RelPath("test/data/rt/example.pb"))
+	msg, err := ReadFile(testutil.RelPath("test/data/rt/example.pb"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -39,8 +39,8 @@ func Test_readmsg(t *testing.T) {
 	// fmt.Printf("%s\n", z)
 }
 
-func Test_readmsg_error(t *testing.T) {
-	_, err := readmsg(testutil.RelPath("test/data/example.zip"))
+func TestReadFileError(t *testing.T) {
+	_, err := ReadFile(testutil.RelPath("test/data/example.zip"))
 	if err == nil {
 		t.Errorf("got no error, expected illegal tag")
 	}
