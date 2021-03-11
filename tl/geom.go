@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
+	"fmt"
 	"io"
 
 	geom "github.com/twpayne/go-geom"
@@ -242,7 +243,9 @@ func (g *Geometry) Value() (driver.Value, error) {
 	if g.Geometry == nil || !g.Valid {
 		return nil, nil
 	}
-	return ewkb.Marshal(g.Geometry, ewkb.NDR)
+	a, err := wkbEncode(g.Geometry)
+	fmt.Printf("%x", a)
+	return a, err
 }
 
 // MarshalJSON implements the json.Marshaler interface

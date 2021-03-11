@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/interline-io/transitland-lib/tl"
+	geomxy "github.com/twpayne/go-geom/xy"
 )
 
 func arePositionsSorted(a []float64) bool {
@@ -64,6 +65,30 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 	sl := make([][2]float64, shape.Geometry.NumCoords())
 	for i, c := range shape.Geometry.Coords() {
 		sl[i] = [2]float64{c[0], c[1]}
+	}
+	g.shapes[eid] = sl
+}
+
+// AddSimplifiedShape adds a simplified Shape to the geometry cache.
+func (g *GeomCache) AddSimplifiedShape(eid string, shape tl.Shape, threshold float64) {
+	if !shape.Geometry.Valid {
+		return
+	}
+	pnts := shape.Geometry.FlatCoords()
+	fmt.Println("shape input length:", eid, len(pnts))
+	stride := shape.Geometry.Stride()
+	ii := geomxy.SimplifyFlatCoords(pnts, threshold, stride)
+	for i, j := range ii {
+		if i == j*stride {
+			continue
+		}
+		pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
+	}
+	pnts = pnts[:len(ii)*stride]
+	fmt.Println("shape output length:", eid, len(pnts))
+	sl := make([][2]float64, len(pnts)/stride)
+	for i := 0; i < len(pnts)-stride+1; i += stride {
+		sl[i/stride] = [2]float64{pnts[i], pnts[i+1]}
 	}
 	g.shapes[eid] = sl
 }

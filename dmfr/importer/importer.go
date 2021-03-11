@@ -245,10 +245,15 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 		return fvi, err
 	}
 	defer reader.Close()
+
+	// Get builders
+	shapeBuilder := NewDefaultShapeBuilder()
+
 	// Get writer with existing tx
 	writer := tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer, opts.Options)
+	cp.AddValidator(shapeBuilder, 1)
 	for _, e := range opts.Extensions {
 		ext, err := ext.GetExtension(e)
 		if err != nil {
@@ -268,6 +273,12 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	if cpresult.WriteError != nil {
 		return fvi, cpresult.WriteError
 	}
+
+	// Insert shapes
+	if err := shapeBuilder.BuildRouteShapes(cp.EntityMap, atx); err != nil {
+		return fvi, err
+	}
+
 	cpresult.DisplaySummary()
 	counts := copyResultCounts(*cpresult)
 	fvi.InterpolatedStopTimeCount = counts.InterpolatedStopTimeCount

@@ -248,17 +248,17 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	// Run Entity Validators
 	var errs []error
 	var warns []error
-	// UpdateKeys is handled separately from other validators.
-	// It is more like a filter than an error, since it mutates entities.
-	referr := ent.UpdateKeys(copier.EntityMap)
-	if referr != nil {
-		errs = append(errs, referr)
-	}
 	for _, v := range copier.errorValidators {
 		errs = append(errs, v.Validate(ent)...)
 	}
 	for _, v := range copier.warningValidators {
 		warns = append(warns, v.Validate(ent)...)
+	}
+	// UpdateKeys is handled separately from other validators.
+	// It is more like a filter than an error, since it mutates entities.
+	referr := ent.UpdateKeys(copier.EntityMap)
+	if referr != nil {
+		errs = append(errs, referr)
 	}
 	// Error handler
 	copier.ErrorHandler.HandleEntityErrors(ent, errs, warns)
@@ -516,7 +516,7 @@ func (copier *Copier) copyShapes() error {
 		if _, ok, err := copier.CopyEntity(&e); err != nil {
 			return err
 		} else if ok == nil {
-			copier.geomCache.AddShape(sid, e)
+			copier.geomCache.AddSimplifiedShape(sid, e, 0.000005)
 		}
 	}
 	copier.logCount(&tl.Shape{})
