@@ -7,9 +7,9 @@ import (
 
 // Trip trips.txt
 type Trip struct {
-	RouteID              string               `csv:"route_id" required:"true"`
-	ServiceID            string               `csv:"service_id" required:"true"`
-	TripID               string               `csv:"trip_id" required:"true"`
+	RouteID              string               `csv:"route_id,required" required:"true"`
+	ServiceID            string               `csv:"service_id,required" required:"true"`
+	TripID               string               `csv:"trip_id,required" required:"true"`
 	TripHeadsign         string               `csv:"trip_headsign"`
 	TripShortName        string               `csv:"trip_short_name"`
 	DirectionID          int                  `csv:"direction_id"`
@@ -18,9 +18,9 @@ type Trip struct {
 	WheelchairAccessible int                  `csv:"wheelchair_accessible"`
 	BikesAllowed         int                  `csv:"bikes_allowed"`
 	StopTimes            []StopTime           `db:"-"` // for validation methods
-	StopPatternID        int
-	JourneyPatternID     string
-	JourneyPatternOffset int
+	StopPatternID        int                  `csv:"-"`
+	JourneyPatternID     string               `csv:"-"`
+	JourneyPatternOffset int                  `csv:"-"`
 	BaseEntity
 }
 

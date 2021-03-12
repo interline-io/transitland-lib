@@ -284,22 +284,28 @@ func dumpRow(ent tl.Entity, header []string) ([]string, error) {
 		return row, nil
 	}
 	// Reflect path
-	val := reflect.ValueOf(ent).Elem()
-	fmap := tags.GetStructTagMap(ent)
-	for _, k := range header {
-		field, ok := fmap[k]
-		if !ok {
-			continue
-		}
-		if len(field.Csv) == 0 {
-			continue
-		}
-		valueField := val.Field(field.Index)
-		value, err := valGetString(valueField, k)
-		if err != nil {
-			return row, err
-		}
+	rv, _ := tags.GetInsert(ent, header)
+	for _, v := range rv {
+		value, err := valGetString(reflect.ValueOf(v), "test")
+		_ = err
 		row = append(row, value)
 	}
+	// val := reflect.ValueOf(ent).Elem()
+	// fmap := tags.GetStructTagMap(ent)
+	// for _, k := range header {
+	// 	field, ok := fmap[k]
+	// 	if !ok {
+	// 		continue
+	// 	}
+	// 	if len(field.Csv) == 0 {
+	// 		continue
+	// 	}
+	// 	valueField := val.Field(field.Index)
+	// 	value, err := valGetString(valueField, k)
+	// 	if err != nil {
+	// 		return row, err
+	// 	}
+	// 	row = append(row, value)
+	// }
 	return row, nil
 }

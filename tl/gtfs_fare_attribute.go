@@ -9,10 +9,10 @@ import (
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
-	FareID           string               `csv:"fare_id" required:"true"`
-	Price            float64              `csv:"price" required:"true"`
-	CurrencyType     string               `csv:"currency_type" required:"true"`
-	PaymentMethod    int                  `csv:"payment_method" required:"true"`
+	FareID           string               `csv:"fare_id,required" required:"true"`
+	Price            float64              `csv:"price,required" required:"true"`
+	CurrencyType     string               `csv:"currency_type,required" required:"true"`
+	PaymentMethod    int                  `csv:"payment_method,required" required:"true"`
 	Transfers        sql.NullInt32        `csv:"transfers"` // string, empty is meaningful
 	AgencyID         OptionalRelationship `csv:"agency_id" `
 	TransferDuration int                  `csv:"transfer_duration"`

@@ -29,8 +29,8 @@ type Entity interface {
 // BaseEntity provides default methods.
 type BaseEntity struct {
 	Timestamps
-	ID            int
-	FeedVersionID int
+	ID            int `csv:"-"`
+	FeedVersionID int `csv:"-"`
 	extra         []string
 	loadErrors    []error
 	loadWarnings  []error
@@ -97,8 +97,8 @@ func entID(id int, gtfsid string) string {
 
 // Timestamps .
 type Timestamps struct {
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt time.Time `csv:"-"`
+	UpdatedAt time.Time `csv:"-"`
 }
 
 // UpdateTimestamps initializes or updates CreatedAt / UpdatedAt

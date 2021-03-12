@@ -9,7 +9,7 @@ import (
 
 // Stop stops.txt
 type Stop struct {
-	StopID             string               `csv:"stop_id" required:"true"`
+	StopID             string               `csv:"stop_id,required" required:"true"`
 	StopName           string               `csv:"stop_name"` // conditionally required
 	StopCode           string               `csv:"stop_code"`
 	StopDesc           string               `csv:"stop_desc"`
@@ -22,7 +22,7 @@ type Stop struct {
 	StopTimezone       string               `csv:"stop_timezone"`
 	WheelchairBoarding int                  `csv:"wheelchair_boarding"`
 	LevelID            OptionalRelationship `csv:"level_id"`
-	Geometry           Point                `db:"geometry"`
+	Geometry           Point                `csv:"-" db:"geometry"`
 	BaseEntity
 }
 

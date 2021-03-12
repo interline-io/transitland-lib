@@ -6,7 +6,7 @@ import (
 )
 
 type testEntity struct {
-	req    string `csv:"req" required:"true"`
+	req    string `csv:"req,required" required:"true"`
 	number int    `csv:"number" min:"-10" max:"10"`
 	url    string `csv:"url" validator:"url"`
 }
