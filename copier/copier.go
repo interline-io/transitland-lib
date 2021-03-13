@@ -597,11 +597,8 @@ func (copier *Copier) copyCalendars() error {
 	for _, svc := range svcs {
 		// Skip main Calendar entity if generated and not normalizing service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			fmt.Println("skip svc:", svc.ServiceID, "generated:", svc.Generated, "normalize:", copier.NormalizeServiceIDs, "simplify:", copier.SimplifyCalendars)
 			copier.SetEntity(&svc.Calendar, svc.ServiceID, svc.ServiceID)
 			continue
-		} else {
-			fmt.Println("write svc:", svc.ServiceID, "generated:", svc.Generated, "normalize:", copier.NormalizeServiceIDs, "simplify:", copier.SimplifyCalendars)
 		}
 		// Validate as Service, with attached exceptions, for better validation.
 		if bt, err = copier.checkBatch(bt, svc); err != nil {
