@@ -9,16 +9,16 @@ import (
 
 // Route routes.txt
 type Route struct {
-	RouteID        string   `csv:"route_id,required" required:"true"`
-	AgencyID       string   `csv:"agency_id"`
-	RouteShortName string   `csv:"route_short_name"`
-	RouteLongName  string   `csv:"route_long_name"`
-	RouteDesc      string   `csv:"route_desc"`
-	RouteType      int      `csv:"route_type,required" required:"true"`
-	RouteURL       string   `csv:"route_url"`
-	RouteColor     string   `csv:"route_color"`
-	RouteTextColor string   `csv:"route_text_color"`
-	RouteSortOrder int      `csv:"route_sort_order"`
+	RouteID        string `csv:"route_id,required"`
+	AgencyID       string
+	RouteShortName string
+	RouteLongName  string
+	RouteDesc      string
+	RouteType      int `csv:"route_type,required"`
+	RouteURL       string
+	RouteColor     string
+	RouteTextColor string
+	RouteSortOrder int
 	Geometry       Geometry `csv:"-" db:"-"`
 	BaseEntity
 }
@@ -62,10 +62,14 @@ func (ent *Route) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *Route) UpdateKeys(emap *EntityMap) error {
-	if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID}); ok {
-		ent.AgencyID = agencyID
+	if ent.AgencyID == "" {
+		// this is a best practice warning, handled elsewhere
 	} else {
-		return causes.NewInvalidReferenceError("agency_id", ent.AgencyID)
+		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID}); ok {
+			ent.AgencyID = agencyID
+		} else {
+			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID)
+		}
 	}
 	return nil
 }

@@ -9,20 +9,20 @@ import (
 
 // Stop stops.txt
 type Stop struct {
-	StopID             string               `csv:"stop_id,required" required:"true"`
-	StopName           string               `csv:"stop_name"` // conditionally required
-	StopCode           string               `csv:"stop_code"`
-	StopDesc           string               `csv:"stop_desc"`
-	StopLat            float64              `csv:"stop_lat" db:"-"` // csv load to Geometry
-	StopLon            float64              `csv:"stop_lon" db:"-"`
-	ZoneID             string               `csv:"zone_id"`
-	StopURL            string               `csv:"stop_url"`
-	LocationType       int                  `csv:"location_type"`
-	ParentStation      OptionalRelationship `csv:"parent_station"`
-	StopTimezone       string               `csv:"stop_timezone"`
-	WheelchairBoarding int                  `csv:"wheelchair_boarding"`
-	LevelID            OptionalRelationship `csv:"level_id"`
-	Geometry           Point                `csv:"-" db:"geometry"`
+	StopID             string `csv:"stop_id,required" required:"true"`
+	StopName           string
+	StopCode           string
+	StopDesc           string
+	StopLat            float64 `db:"-"` // csv load to Geometry
+	StopLon            float64 `db:"-"`
+	ZoneID             string
+	StopURL            string
+	LocationType       int
+	ParentStation      OptionalRelationship
+	StopTimezone       string
+	WheelchairBoarding int
+	LevelID            OptionalRelationship
+	Geometry           Point `csv:"-" db:"geometry"`
 	BaseEntity
 }
 

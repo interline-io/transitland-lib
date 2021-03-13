@@ -6,14 +6,14 @@ import (
 
 // Agency agency.txt
 type Agency struct {
-	AgencyID       string `csv:"agency_id"`
-	AgencyName     string `csv:"agency_name,required" required:"true"`
-	AgencyURL      string `csv:"agency_url,required" required:"true"`
-	AgencyTimezone string `csv:"agency_timezone,required" required:"true"`
-	AgencyLang     string `csv:"agency_lang"`
-	AgencyPhone    string `csv:"agency_phone"`
-	AgencyFareURL  string `csv:"agency_fare_url"`
-	AgencyEmail    string `csv:"agency_email"`
+	AgencyID       string
+	AgencyName     string `csv:",required"`
+	AgencyURL      string `csv:"agency_url,required"`
+	AgencyTimezone string `csv:"agency_timezone,required"`
+	AgencyLang     string
+	AgencyPhone    string
+	AgencyFareURL  string
+	AgencyEmail    string
 	BaseEntity
 }
 

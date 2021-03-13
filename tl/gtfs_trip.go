@@ -7,20 +7,20 @@ import (
 
 // Trip trips.txt
 type Trip struct {
-	RouteID              string               `csv:"route_id,required" required:"true"`
-	ServiceID            string               `csv:"service_id,required" required:"true"`
-	TripID               string               `csv:"trip_id,required" required:"true"`
-	TripHeadsign         string               `csv:"trip_headsign"`
-	TripShortName        string               `csv:"trip_short_name"`
-	DirectionID          int                  `csv:"direction_id"`
-	BlockID              string               `csv:"block_id"`
-	ShapeID              OptionalRelationship `csv:"shape_id"`
-	WheelchairAccessible int                  `csv:"wheelchair_accessible"`
-	BikesAllowed         int                  `csv:"bikes_allowed"`
-	StopTimes            []StopTime           `db:"-"` // for validation methods
-	StopPatternID        int                  `csv:"-"`
-	JourneyPatternID     string               `csv:"-"`
-	JourneyPatternOffset int                  `csv:"-"`
+	RouteID              string `csv:"route_id,required"`
+	ServiceID            string `csv:"service_id,required"`
+	TripID               string `csv:"trip_id,required"`
+	TripHeadsign         string
+	TripShortName        string
+	DirectionID          int
+	BlockID              string
+	ShapeID              OptionalRelationship
+	WheelchairAccessible int
+	BikesAllowed         int
+	StopTimes            []StopTime `csv:"-" db:"-"` // for validation methods
+	StopPatternID        int        `csv:"-"`
+	JourneyPatternID     string     `csv:"-"`
+	JourneyPatternOffset int        `csv:"-"`
 	BaseEntity
 }
 

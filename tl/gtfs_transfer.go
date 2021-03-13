@@ -9,10 +9,10 @@ import (
 
 // Transfer transfers.txt
 type Transfer struct {
-	FromStopID      string        `csv:"from_stop_id,required" required:"true"`
-	ToStopID        string        `csv:"to_stop_id,required" required:"true"`
-	TransferType    int           `csv:"transfer_type"`
-	MinTransferTime sql.NullInt64 `csv:"min_transfer_time"`
+	FromStopID      string `csv:"from_stop_id,required" required:"true"`
+	ToStopID        string `csv:"to_stop_id,required" required:"true"`
+	TransferType    int
+	MinTransferTime sql.NullInt64
 	BaseEntity
 }
 

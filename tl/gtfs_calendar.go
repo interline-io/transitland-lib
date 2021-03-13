@@ -10,16 +10,16 @@ import (
 
 // Calendar calendars.txt
 type Calendar struct {
-	ServiceID string    `csv:"service_id,required" required:"true"`
-	Monday    int       `csv:"monday,required" required:"true"`
-	Tuesday   int       `csv:"tuesday,required" required:"true"`
-	Wednesday int       `csv:"wednesday,required" required:"true"`
-	Thursday  int       `csv:"thursday,required" required:"true"`
-	Friday    int       `csv:"friday,required" required:"true"`
-	Saturday  int       `csv:"saturday,required" required:"true"`
-	Sunday    int       `csv:"sunday,required" required:"true"`
-	StartDate time.Time `csv:"start_date,required" required:"true"`
-	EndDate   time.Time `csv:"end_date,required" required:"true"`
+	ServiceID string    `csv:"service_id,required"`
+	Monday    int       `csv:"monday,required"`
+	Tuesday   int       `csv:"tuesday,required"`
+	Wednesday int       `csv:"wednesday,required"`
+	Thursday  int       `csv:"thursday,required"`
+	Friday    int       `csv:"friday,required"`
+	Saturday  int       `csv:"saturday,required"`
+	Sunday    int       `csv:"sunday,required"`
+	StartDate time.Time `csv:"start_date,required"`
+	EndDate   time.Time `csv:"end_date,required"`
 	Generated bool      `csv:"-" db:"generated"`
 	BaseEntity
 }
