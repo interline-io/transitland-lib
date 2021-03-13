@@ -67,11 +67,11 @@ func TestMainImportFeedVersion(t *testing.T) {
 			expstops := testutil.ExampleDir.Counts["stops.txt"]
 			testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 			if count != expstops {
-				t.Errorf("expect %d stops, got %d", count, expstops)
+				t.Errorf("got %d stops, expect %d stops", count, expstops)
 			}
 			expfvistops := fvi.EntityCount["stops.txt"]
 			if count != expfvistops {
-				t.Errorf("expect %d stops in fvi result, got %d", count, expfvistops)
+				t.Errorf("got %d stops, expect %d stops", count, expfvistops)
 			}
 			return nil
 		})

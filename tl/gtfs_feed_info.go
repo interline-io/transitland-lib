@@ -9,12 +9,12 @@ import (
 
 // FeedInfo feed_info.txt
 type FeedInfo struct {
-	FeedPublisherName string       `csv:"feed_publisher_name" required:"true"`
-	FeedPublisherURL  string       `csv:"feed_publisher_url" required:"true"`
-	FeedLang          string       `csv:"feed_lang" required:"true"`
-	FeedStartDate     OptionalTime `csv:"feed_start_date"`
-	FeedEndDate       OptionalTime `csv:"feed_end_date"`
-	FeedVersion       string       `csv:"feed_version" db:"feed_version_name"`
+	FeedPublisherName string `csv:",required"`
+	FeedPublisherURL  string `csv:",required"`
+	FeedLang          string `csv:",required"`
+	FeedVersion       string `db:"feed_version_name"`
+	FeedStartDate     OptionalTime
+	FeedEndDate       OptionalTime
 	BaseEntity
 }
 

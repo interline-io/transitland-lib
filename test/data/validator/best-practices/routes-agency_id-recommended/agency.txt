@@ -1,2 +1,2 @@
-agency_id,agency_name,agency_url,agency_timezone,agency_lang
-,Bay Area Rapid Transit,http://www.bart.gov,America/Los_Angeles,en
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,expect_error
+,Bay Area Rapid Transit,http://www.bart.gov,America/Los_Angeles,en,ConditionallyRequiredFieldError:agency_id

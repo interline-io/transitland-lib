@@ -2,7 +2,6 @@ package tl
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -12,18 +11,18 @@ import (
 
 // StopTime stop_times.txt
 type StopTime struct {
-	TripID            string          `csv:"trip_id"`
-	ArrivalTime       int             `csv:"arrival_time" `
-	DepartureTime     int             `csv:"departure_time" `
-	StopID            string          `csv:"stop_id" required:"true"`
-	StopSequence      int             `csv:"stop_sequence" required:"true"`
-	StopHeadsign      sql.NullString  `csv:"stop_headsign"`
-	PickupType        sql.NullInt32   `csv:"pickup_type"`
-	DropOffType       sql.NullInt32   `csv:"drop_off_type"`
-	ShapeDistTraveled sql.NullFloat64 `csv:"shape_dist_traveled"`
-	Timepoint         sql.NullInt32   `csv:"timepoint"`
-	Interpolated      sql.NullInt32   // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
-	FeedVersionID     int
+	TripID            string
+	ArrivalTime       int
+	DepartureTime     int
+	StopID            string `csv:",required" required:"true"`
+	StopSequence      int    `csv:",required" required:"true"`
+	StopHeadsign      sql.NullString
+	PickupType        sql.NullInt32
+	DropOffType       sql.NullInt32
+	ShapeDistTraveled sql.NullFloat64
+	Timepoint         sql.NullInt32
+	Interpolated      sql.NullInt32 `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
+	FeedVersionID     int           `csv:"-"`
 	extra             []string
 	loadErrors        []error
 	loadWarnings      []error
@@ -139,7 +138,7 @@ func (ent *StopTime) GetString(key string) (string, error) {
 			v = strconv.Itoa(int(ent.Timepoint.Int32))
 		}
 	default:
-		return v, errors.New("unknown key")
+		return v, fmt.Errorf("unknown key: %s", key)
 	}
 	return v, nil
 }

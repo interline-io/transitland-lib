@@ -11,13 +11,13 @@ import (
 
 // Shape shapes.txt
 type Shape struct {
-	ShapeID           string     `csv:"shape_id" required:"true"`
-	ShapePtLat        float64    `csv:"shape_pt_lat" db:"-" required:"true"`
-	ShapePtLon        float64    `csv:"shape_pt_lon" db:"-" required:"true"`
-	ShapePtSequence   int        `csv:"shape_pt_sequence" db:"-" required:"true"`
-	ShapeDistTraveled float64    `csv:"shape_dist_traveled" db:"-"`
-	Geometry          LineString `db:"geometry"`
-	Generated         bool       `db:"generated"`
+	ShapeID           string     `csv:",required"`
+	ShapePtLat        float64    `db:"-" csv:",required"`
+	ShapePtLon        float64    `db:"-" csv:",required"`
+	ShapePtSequence   int        `db:"-" csv:",required"`
+	ShapeDistTraveled float64    `db:"-"`
+	Geometry          LineString `db:"geometry" csv:"-"`
+	Generated         bool       `db:"generated" csv:"-"`
 	BaseEntity
 }
 

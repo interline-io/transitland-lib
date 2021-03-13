@@ -8,6 +8,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/schema"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/jmoiron/sqlx"
@@ -68,7 +69,7 @@ func (adapter *SQLiteAdapter) Open() error {
 	if err != nil {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
-	db.Mapper = mapper
+	db.Mapper = MapperCache.Mapper
 	adapter.db = &QueryLogger{db.Unsafe()}
 	return nil
 }
@@ -91,11 +92,7 @@ func (adapter *SQLiteAdapter) Create() error {
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
-	schema, err := getSchema("/sqlite.sql")
-	if err != nil {
-		return err
-	}
-	_, err = adb.Exec(schema)
+	_, err := adb.Exec(schema.SqliteSchema)
 	return err
 }
 
@@ -152,13 +149,14 @@ func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 	table := getTableName(ent)
-	cols, vals, err := getInsert(ent)
+	header, err := MapperCache.GetHeader(ent)
+	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
 		return 0, err
 	}
 	q := sq.
 		Insert(table).
-		Columns(cols...).
+		Columns(header...).
 		Values(vals...).
 		RunWith(adapter.db)
 	result, err := q.Exec()
@@ -176,11 +174,12 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 		return retids, nil
 	}
 	table := getTableName(ents[0])
-	cols, vals, err := getInsert(ents[0])
+	header, err := MapperCache.GetHeader(ents[0])
+	vals, err := MapperCache.GetInsert(ents[0], header)
 	if err != nil {
 		return retids, err
 	}
-	q, _, err := sq.Insert(table).Columns(cols...).Values(vals...).ToSql()
+	q, _, err := sq.Insert(table).Columns(header...).Values(vals...).ToSql()
 	if err != nil {
 		return retids, err
 	}
@@ -188,7 +187,7 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	// if err := adapter.Tx(func(adapter Adapter) error {
 	db := adapter.DBX()
 	for _, d := range ents {
-		_, vals, err := getInsert(d)
+		vals, err := MapperCache.GetInsert(d, header)
 		if err != nil {
 			return retids, err
 		}

@@ -10,9 +10,9 @@ import (
 
 // CalendarDate calendar_dates.txt
 type CalendarDate struct {
-	ServiceID     string    `csv:"service_id" required:"true"`
-	Date          time.Time `csv:"date" required:"true"`
-	ExceptionType int       `csv:"exception_type" required:"true"`
+	ServiceID     string    `csv:",required"`
+	Date          time.Time `csv:",required"`
+	ExceptionType int       `csv:",required"`
 	BaseEntity
 }
 
