@@ -24,8 +24,7 @@ func ToSnakeCase(str string) string {
 type FieldInfo struct {
 	Name     string
 	Required bool
-	Index3   int
-	Index2   []int
+	Index    []int
 }
 
 // FieldMap contains all the parsed tags for a struct.
@@ -66,7 +65,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			m[fi.Name] = &FieldInfo{
 				Name:     fi.Name,
 				Required: required,
-				Index2:   fi.Index,
+				Index:    fi.Index,
 			}
 		}
 		c.typemap[t] = m
@@ -83,7 +82,7 @@ func (c *Cache) GetHeader(ent interface{}) ([]string, error) {
 	for _, stm := range fmap {
 		stms = append(stms, stm)
 	}
-	sort.Slice(stms, func(i, j int) bool { return stms[i].Index2[0] < stms[j].Index2[0] })
+	sort.Slice(stms, func(i, j int) bool { return stms[i].Index[0] < stms[j].Index[0] })
 	for _, stm := range stms {
 		row = append(row, stm.Name)
 	}
@@ -99,9 +98,9 @@ func (c *Cache) GetInsert(ent interface{}, header []string) ([]interface{}, erro
 		fi, ok := fmap[key]
 		if !ok {
 			// This should not happen.
-			return nil, fmt.Errorf("unknown field: %s index: %d", key, fi.Index2)
+			return nil, fmt.Errorf("unknown field: %s index: %d", key, fi.Index)
 		}
-		v := reflectx.FieldByIndexesReadOnly(val, fi.Index2)
+		v := reflectx.FieldByIndexesReadOnly(val, fi.Index)
 		vals = append(vals, v.Interface())
 	}
 	return vals, nil

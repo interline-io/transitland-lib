@@ -50,7 +50,7 @@ func SetString(ent tl.Entity, key string, value string) error {
 	}
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()
-	valueField := reflectx.FieldByIndexes(elem, k.Index2) // elem.Field(k.Index)
+	valueField := reflectx.FieldByIndexes(elem, k.Index) // elem.Field(k.Index)
 	if err := valSetString(valueField, value); err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func GetString(ent tl.Entity, key string) (string, error) {
 	}
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()
-	valueField := reflectx.FieldByIndexesReadOnly(elem, k.Index2) // .Field(k.Index)
+	valueField := reflectx.FieldByIndexesReadOnly(elem, k.Index) // .Field(k.Index)
 	v, err := valGetString(valueField, key)
 	if err != nil {
 		return "", err
@@ -225,7 +225,7 @@ func loadRowReflect(ent tl.Entity, row Row) {
 		if len(strv) == 0 {
 			if k.Required {
 				// empty string type shandled in regular validators; avoid double errors
-				switch reflectx.FieldByIndexes(val, k.Index2).Interface().(type) {
+				switch reflectx.FieldByIndexes(val, k.Index).Interface().(type) {
 				case string:
 				default:
 					errs = append(errs, causes.NewRequiredFieldError(h))
@@ -234,7 +234,7 @@ func loadRowReflect(ent tl.Entity, row Row) {
 			continue
 		}
 		// Handle different known types
-		valueField := reflectx.FieldByIndexes(val, k.Index2)
+		valueField := reflectx.FieldByIndexes(val, k.Index)
 		if err := valSetString(valueField, strv); err != nil {
 			errs = append(errs, causes.NewFieldParseError(k.Name, strv))
 		}
