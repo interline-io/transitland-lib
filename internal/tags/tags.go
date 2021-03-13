@@ -2,66 +2,106 @@ package tags
 
 import (
 	"fmt"
-	"math"
 	"reflect"
-	"strconv"
+	"regexp"
+	"sort"
+	"strings"
 	"sync"
+
+	"github.com/jmoiron/sqlx/reflectx"
 )
 
-// StructTagMap contains the parsed tag values for a single attribute.
-type StructTagMap struct {
-	Csv       string
-	Validator string
-	Min       float64
-	Max       float64
-	Required  bool
-	Index     int
+var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+func ToSnakeCase(str string) string {
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
 }
 
-// FieldTagMap contains all the parsed tags for a struct.
-type FieldTagMap = map[string]StructTagMap
+// FieldInfo contains the parsed tag values for a single attribute.
+type FieldInfo struct {
+	Name     string
+	Required bool
+	Index    []int
+}
 
-var structTagMapCache = map[string]FieldTagMap{}
-var structTagMapLock sync.Mutex
+// FieldMap contains all the parsed tags for a struct.
+type FieldMap = map[string]*FieldInfo
 
-// GetStructTagMap returns Struct tags.
-func GetStructTagMap(q interface{}) FieldTagMap {
-	structTagMapLock.Lock()
-	t := fmt.Sprintf("%T", q)
-	m, ok := structTagMapCache[t]
+// Cache caches the result of field/tag parsing for each type.
+type Cache struct {
+	Mapper  *reflectx.Mapper
+	lock    sync.Mutex
+	typemap map[string]FieldMap
+}
+
+// NewCache initializes a new cache.
+func NewCache(mapper *reflectx.Mapper) *Cache {
+	return &Cache{
+		Mapper:  mapper,
+		typemap: map[string]FieldMap{},
+	}
+}
+
+// GetStructTagMap .
+func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
+	c.lock.Lock()
+	t := fmt.Sprintf("%T", ent)
+	m, ok := c.typemap[t]
 	if !ok {
-		m = newStructTagMap(q)
-		structTagMapCache[t] = m
+		m = FieldMap{}
+		fields := c.Mapper.TypeMap(reflect.TypeOf(ent))
+		for i, fi := range fields.Index {
+			_ = i
+			if fi.Name == "" {
+				fi.Name = ToSnakeCase(fi.Field.Name)
+			}
+			if fi.Embedded == true || fi.Name == "id" || strings.Contains(fi.Path, ".") {
+				continue
+			}
+			_, required := fi.Options["required"]
+			m[fi.Name] = &FieldInfo{
+				Name:     fi.Name,
+				Required: required,
+				Index:    fi.Index,
+			}
+		}
+		c.typemap[t] = m
 	}
-	structTagMapLock.Unlock()
+	c.lock.Unlock()
 	return m
 }
 
-// newStructTagMap returns a FieldTagMap for an Entity.
-func newStructTagMap(q interface{}) FieldTagMap {
-	m := FieldTagMap{}
-	qtype := reflect.TypeOf(q).Elem()
-	for i := 0; i < qtype.NumField(); i++ {
-		t := qtype.Field(i).Tag
-		ftag := StructTagMap{}
-		ftag.Index = i
-		ftag.Csv = t.Get("csv")
-		if len(ftag.Csv) == 0 {
-			continue
-		}
-		ftag.Validator = t.Get("validator")
-		ftag.Min = math.Inf(-1)
-		ftag.Max = math.Inf(1)
-		if v, err := strconv.ParseFloat(t.Get("min"), 64); err == nil {
-			ftag.Min = v
-		}
-		if v, err := strconv.ParseFloat(t.Get("max"), 64); err == nil {
-			ftag.Max = v
-		}
-		if t.Get("required") == "true" {
-			ftag.Required = true
-		}
-		m[ftag.Csv] = ftag
+// Header returns the field names in the same order as the struct definition.
+func (c *Cache) GetHeader(ent interface{}) ([]string, error) {
+	row := []string{}
+	fmap := c.GetStructTagMap(ent)
+	stms := []*FieldInfo{}
+	for _, stm := range fmap {
+		stms = append(stms, stm)
 	}
-	return m
+	sort.Slice(stms, func(i, j int) bool { return stms[i].Index[0] < stms[j].Index[0] })
+	for _, stm := range stms {
+		row = append(row, stm.Name)
+	}
+	return row, nil
+}
+
+// GetInsert returns values in the same order as the header.
+func (c *Cache) GetInsert(ent interface{}, header []string) ([]interface{}, error) {
+	fmap := c.GetStructTagMap(ent)
+	vals := make([]interface{}, 0)
+	val := reflect.ValueOf(ent).Elem()
+	for _, key := range header {
+		fi, ok := fmap[key]
+		if !ok {
+			// This should not happen.
+			return nil, fmt.Errorf("unknown field: %s index: %d", key, fi.Index)
+		}
+		v := reflectx.FieldByIndexesReadOnly(val, fi.Index)
+		vals = append(vals, v.Interface())
+	}
+	return vals, nil
 }

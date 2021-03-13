@@ -20,7 +20,7 @@ type NullIslandCheck struct{}
 func (e *NullIslandCheck) Validate(ent tl.Entity) []error {
 	switch v := ent.(type) {
 	case *tl.Stop:
-		if v.LocationType == 3 {
+		if v.LocationType == 3 || v.LocationType == 4 {
 			return nil // allowed
 		}
 		coords := v.Coordinates()

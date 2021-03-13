@@ -122,7 +122,6 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 		&rules.ValidFarezoneCheck{},
 		&rules.AgencyIDConditionallyRequiredCheck{},
 		&rules.StopTimeSequenceCheck{},
-		// &rules.EmptyTripErrorCheck{},
 		&rules.InconsistentTimezoneCheck{},
 		&rules.ParentStationLocationTypeCheck{},
 	)

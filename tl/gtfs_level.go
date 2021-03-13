@@ -2,8 +2,8 @@ package tl
 
 // Level levels.txt
 type Level struct {
-	LevelID    string  `csv:"level_id" required:"true"`
-	LevelIndex float64 `csv:"level_index" required:"true"`
+	LevelID    string  `csv:",required"`
+	LevelIndex float64 `csv:",required"`
 	LevelName  string  `csv:"level_name"`
 	BaseEntity
 }

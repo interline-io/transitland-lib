@@ -6,6 +6,7 @@ import (
 )
 
 // AgencyIDConditionallyRequiredCheck checks if agency_id is missing when more than one agency is present.
+// This check is for when agency_id is *required* - see AgencyIDRecommendedCheck for when it is recommended but not required.
 type AgencyIDConditionallyRequiredCheck struct {
 	agencyCount int
 }
@@ -15,24 +16,16 @@ func (e *AgencyIDConditionallyRequiredCheck) Validate(ent tl.Entity) []error {
 	var errs []error
 	switch v := ent.(type) {
 	case *tl.FareAttribute:
-		if e.agencyCount > 1 && v.AgencyID.Key == "" {
+		if v.AgencyID.Key == "" && e.agencyCount > 1 {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
 	case *tl.Route:
-		if v.AgencyID != "" {
-			// ok
-		} else if e.agencyCount > 1 {
+		if v.AgencyID == "" && e.agencyCount > 1 {
+			// routes.agency_id is required when more than one agency is present
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
-		// TODO: Move to best practice warning
-		// else if e.agencyCount == 1 {
-		// 	warns = append(warns, causes.NewConditionallyRequiredFieldError("agency_id"))
-		// }
 	case *tl.Agency:
 		e.agencyCount++
-		if e.agencyCount > 1 && v.AgencyID == "" {
-			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
-		}
 	}
 	return errs
 }
