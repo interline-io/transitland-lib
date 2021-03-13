@@ -5,6 +5,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/schema"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -53,11 +54,7 @@ func (adapter *PostgresAdapter) Create() error {
 	if _, err := adapter.db.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
-	schema, err := getSchema("/postgres.pgsql")
-	if err != nil {
-		return err
-	}
-	_, err = adapter.db.Exec(schema)
+	_, err := adapter.db.Exec(schema.PostgresSchema)
 	return err
 }
 

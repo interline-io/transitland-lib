@@ -3,12 +3,10 @@ package tldb
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/jmoiron/sqlx/reflectx"
-	"github.com/rakyll/statik/fs"
 )
 
 var MapperCache = tags.NewCache(reflectx.NewMapperFunc("db", tags.ToSnakeCase))
@@ -31,19 +29,6 @@ type canUpdateTimestamps interface {
 
 type canSetFeedVersion interface {
 	SetFeedVersionID(int)
-}
-
-func getSchema(filename string) (string, error) {
-	statikFS, err := fs.New()
-	if err != nil {
-		return "", err
-	}
-	f, err := statikFS.Open(filename)
-	if err != nil {
-		return "", err
-	}
-	data, err := ioutil.ReadAll(f)
-	return string(data), err
 }
 
 func getTableName(ent interface{}) string {
