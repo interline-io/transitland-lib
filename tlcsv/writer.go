@@ -2,7 +2,6 @@ package tlcsv
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"strings"
 
@@ -57,7 +56,6 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	}
 	ent := ents[0]
 	efn := ents[0].Filename()
-	fmt.Println("efn:", efn)
 	for _, ent := range ents {
 		if efn != ent.Filename() {
 			return eids, errors.New("all entities must be same type")
@@ -65,7 +63,6 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	}
 	header, ok := writer.headers[efn]
 	if !ok {
-		fmt.Println("filename:", efn)
 		h, err := dumpHeader(ent)
 		if err != nil {
 			return eids, err
