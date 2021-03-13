@@ -6,14 +6,16 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"sort"
 	"strconv"
 	"time"
 
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/jmoiron/sqlx/reflectx"
 )
+
+var MapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
 
 // check for SetString interface
 type canSetString interface {
@@ -34,8 +36,6 @@ type canScan interface {
 	Scan(src interface{}) error
 }
 
-// TODO: use reflectx.Mapper for consistency
-
 // SetString //
 
 // SetString convenience method; checks for SetString method.
@@ -43,16 +43,14 @@ func SetString(ent tl.Entity, key string, value string) error {
 	if fastent, ok := ent.(canSetString); ok {
 		return fastent.SetString(key, value)
 	}
-	fmap := tags.GetStructTagMap(ent)
+	fmap := MapperCache.GetStructTagMap(ent)
 	k, ok := fmap[key]
-	if !ok {
-		// only SetExtra when loading from csv...
-		// ent.SetExtra(key, value)
+	if !ok || k == nil {
 		return errors.New("unknown field")
 	}
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()
-	valueField := elem.Field(k.Index)
+	valueField := reflectx.FieldByIndexes(elem, k.Index2) // elem.Field(k.Index)
 	if err := valSetString(valueField, value); err != nil {
 		return err
 	}
@@ -108,16 +106,14 @@ func GetString(ent tl.Entity, key string) (string, error) {
 	if fastent, ok := ent.(canGetString); ok {
 		return fastent.GetString(key)
 	}
-	fmap := tags.GetStructTagMap(ent)
+	fmap := MapperCache.GetStructTagMap(ent)
 	k, ok := fmap[key]
-	if !ok {
-		// only SetExtra when loading from csv...
-		// ent.SetExtra(key, value)
+	if !ok || k == nil {
 		return "", errors.New("unknown field")
 	}
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()
-	valueField := elem.Field(k.Index)
+	valueField := reflectx.FieldByIndexesReadOnly(elem, k.Index2) // .Field(k.Index)
 	v, err := valGetString(valueField, key)
 	if err != nil {
 		return "", err
@@ -210,7 +206,7 @@ func loadRowReflect(ent tl.Entity, row Row) {
 		return
 	}
 	// Get the struct tag map
-	fmap := tags.GetStructTagMap(ent)
+	fmap := MapperCache.GetStructTagMap(ent)
 	errs := []error{}
 	// For each struct tag, set the field value
 	val := reflect.ValueOf(ent).Elem()
@@ -229,7 +225,7 @@ func loadRowReflect(ent tl.Entity, row Row) {
 		if len(strv) == 0 {
 			if k.Required {
 				// empty string type shandled in regular validators; avoid double errors
-				switch val.Field(k.Index).Interface().(type) {
+				switch reflectx.FieldByIndexes(val, k.Index2).Interface().(type) {
 				case string:
 				default:
 					errs = append(errs, causes.NewRequiredFieldError(h))
@@ -238,9 +234,9 @@ func loadRowReflect(ent tl.Entity, row Row) {
 			continue
 		}
 		// Handle different known types
-		valueField := val.Field(k.Index)
+		valueField := reflectx.FieldByIndexes(val, k.Index2)
 		if err := valSetString(valueField, strv); err != nil {
-			errs = append(errs, causes.NewFieldParseError(k.Csv, strv))
+			errs = append(errs, causes.NewFieldParseError(k.Name, strv))
 		}
 	}
 	for _, err := range errs {
@@ -252,21 +248,7 @@ func loadRowReflect(ent tl.Entity, row Row) {
 
 // dumpHeader returns the header for an Entity.
 func dumpHeader(ent tl.Entity) ([]string, error) {
-	row := []string{}
-	fmap := tags.GetStructTagMap(ent)
-	// Order fields
-	stms := []tags.StructTagMap{}
-	for _, stm := range fmap {
-		stms = append(stms, stm)
-	}
-	sort.Slice(stms, func(i, j int) bool { return stms[i].Index < stms[j].Index })
-	// Return known CSV fields
-	for _, stm := range stms {
-		if len(stm.Csv) > 0 {
-			row = append(row, stm.Csv)
-		}
-	}
-	return row, nil
+	return MapperCache.GetHeader(ent)
 }
 
 // dumpRow returns a []string for the Entity.
@@ -277,35 +259,23 @@ func dumpRow(ent tl.Entity, header []string) ([]string, error) {
 		for _, k := range header {
 			v, err := a.GetString(k)
 			if err != nil {
-				return row, err
+				return nil, err
 			}
 			row = append(row, v)
 		}
 		return row, nil
 	}
 	// Reflect path
-	rv, _ := tags.GetInsert(ent, header)
-	for _, v := range rv {
-		value, err := valGetString(reflect.ValueOf(v), "test")
-		_ = err
+	rv, err := MapperCache.GetInsert(ent, header)
+	if err != nil || len(rv) != len(header) {
+		return nil, errors.New("error getting insert values")
+	}
+	for i, v := range rv {
+		value, err := valGetString(reflect.ValueOf(v), header[i])
+		if err != nil {
+			return nil, err
+		}
 		row = append(row, value)
 	}
-	// val := reflect.ValueOf(ent).Elem()
-	// fmap := tags.GetStructTagMap(ent)
-	// for _, k := range header {
-	// 	field, ok := fmap[k]
-	// 	if !ok {
-	// 		continue
-	// 	}
-	// 	if len(field.Csv) == 0 {
-	// 		continue
-	// 	}
-	// 	valueField := val.Field(field.Index)
-	// 	value, err := valGetString(valueField, k)
-	// 	if err != nil {
-	// 		return row, err
-	// 	}
-	// 	row = append(row, value)
-	// }
 	return row, nil
 }

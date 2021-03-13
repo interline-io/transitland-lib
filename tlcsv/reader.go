@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
@@ -99,11 +98,11 @@ func (reader *Reader) ValidateStructure() []error {
 			// Ensure we have at least one matching column ID.
 			found := []string{}
 			missing := []string{}
-			for _, field := range tags.GetStructTagMap(ent) {
-				if _, ok := columns[field.Csv]; ok {
-					found = append(found, field.Csv)
+			for _, field := range MapperCache.GetStructTagMap(ent) {
+				if _, ok := columns[field.Name]; ok {
+					found = append(found, field.Name)
 				} else if field.Required {
-					missing = append(missing, field.Csv)
+					missing = append(missing, field.Name)
 				}
 			}
 			if len(found) == 0 {

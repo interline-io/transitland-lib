@@ -2,7 +2,66 @@ package tldb
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"strings"
+
+	"github.com/interline-io/transitland-lib/internal/tags"
+	"github.com/jmoiron/sqlx/reflectx"
+	"github.com/rakyll/statik/fs"
 )
+
+var MapperCache = tags.NewCache(reflectx.NewMapperFunc("db", tags.ToSnakeCase))
+
+type hasTableName interface {
+	TableName() string
+}
+
+type canSetID interface {
+	SetID(int)
+}
+
+type canGetID interface {
+	GetID() int
+}
+
+type canUpdateTimestamps interface {
+	UpdateTimestamps()
+}
+
+type canSetFeedVersion interface {
+	SetFeedVersionID(int)
+}
+
+func getSchema(filename string) (string, error) {
+	statikFS, err := fs.New()
+	if err != nil {
+		return "", err
+	}
+	f, err := statikFS.Open(filename)
+	if err != nil {
+		return "", err
+	}
+	data, err := ioutil.ReadAll(f)
+	return string(data), err
+}
+
+func getTableName(ent interface{}) string {
+	if v, ok := ent.(hasTableName); ok {
+		return v.TableName()
+	}
+	s := strings.Split(fmt.Sprintf("%T", ent), ".")
+	return tags.ToSnakeCase(s[len(s)-1])
+}
+
+func contains(a string, b []string) bool {
+	for _, v := range b {
+		if a == v {
+			return true
+		}
+	}
+	return false
+}
 
 // find a single record.
 func find(adapter Adapter, dest interface{}, args ...interface{}) error {
@@ -28,12 +87,13 @@ func update(adapter Adapter, ent interface{}, columns ...string) error {
 		return errors.New("cannot get ID")
 	}
 	table := getTableName(ent)
-	cols, vals, err := getInsert(ent)
+	header, err := MapperCache.GetHeader(ent)
+	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
 		return err
 	}
 	colmap := make(map[string]interface{})
-	for i, col := range cols {
+	for i, col := range header {
 		if len(columns) > 0 && !contains(col, columns) {
 			continue
 		}

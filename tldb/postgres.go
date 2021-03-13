@@ -35,7 +35,7 @@ func (adapter *PostgresAdapter) Open() error {
 	if err != nil {
 		return err
 	}
-	db.Mapper = mapper
+	db.Mapper = MapperCache.Mapper
 	adapter.db = &QueryLogger{db.Unsafe()}
 	return nil
 }
@@ -114,14 +114,15 @@ func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	table := getTableName(ent)
-	cols, vals, err := getInsert(ent)
+	header, err := MapperCache.GetHeader(ent)
+	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
 		return 0, err
 	}
 	var eid sql.NullInt64
 	q := adapter.Sqrl().
 		Insert(table).
-		Columns(cols...).
+		Columns(header...).
 		Values(vals...)
 	if _, ok := ent.(canSetID); ok {
 		err = q.Suffix(`RETURNING "id"`).QueryRow().Scan(&eid)
@@ -140,15 +141,15 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	if len(ents) == 0 {
 		return retids, nil
 	}
-	cols, _, err := getInsert(ents[0])
+	header, err := MapperCache.GetHeader(ents[0])
 	table := getTableName(ents[0])
 	_, setid := ents[0].(canSetID)
-	batchSize := 65536 / (len(cols) + 1)
+	batchSize := 65536 / (len(header) + 1)
 	for i := 0; i < len(ents); i += batchSize {
 		batch := ents[i:min(i+batchSize, len(ents))]
-		q := adapter.Sqrl().Insert(table).Columns(cols...)
+		q := adapter.Sqrl().Insert(table).Columns(header...)
 		for _, d := range batch {
-			_, vals, _ := getInsert(d)
+			vals, _ := MapperCache.GetInsert(d, header)
 			q = q.Values(vals...)
 		}
 		if setid {
@@ -194,15 +195,15 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	if err != nil {
 		return err
 	}
-	cols, _, err := getInsert(ents[0])
+	header, err := MapperCache.GetHeader(ents[0])
 	table := getTableName(ents[0])
-	stmt, err := tx.Prepare(pq.CopyIn(table, cols...))
+	stmt, err := tx.Prepare(pq.CopyIn(table, header...))
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, d := range ents {
-		_, vals, err := getInsert(d)
+		vals, err := MapperCache.GetInsert(d, header)
 		if err != nil {
 			return err
 		}
