@@ -10,11 +10,11 @@ import (
 
 // Pathway pathways.txt
 type Pathway struct {
-	PathwayID           string  `csv:"pathway_id,required"`
-	FromStopID          string  `csv:"from_stop_id,required"`
-	ToStopID            string  `csv:"to_stop_id,required"`
-	PathwayMode         int     `csv:"pathway_mode,required"`
-	IsBidirectional     int     `csv:"is_bidirectional,required"`
+	PathwayID           string  `csv:",required"`
+	FromStopID          string  `csv:",required"`
+	ToStopID            string  `csv:",required"`
+	PathwayMode         int     `csv:",required"`
+	IsBidirectional     int     `csv:",required"`
 	Length              float64 `csv:"length" min:"0"`
 	TraversalTime       int     `csv:"traversal_time" min:"0"`
 	StairCount          int     `csv:"stair_count"`

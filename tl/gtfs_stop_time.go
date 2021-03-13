@@ -14,8 +14,8 @@ type StopTime struct {
 	TripID            string
 	ArrivalTime       int
 	DepartureTime     int
-	StopID            string `csv:"stop_id,required" required:"true"`
-	StopSequence      int    `csv:"stop_sequence,required" required:"true"`
+	StopID            string `csv:",required" required:"true"`
+	StopSequence      int    `csv:",required" required:"true"`
 	StopHeadsign      sql.NullString
 	PickupType        sql.NullInt32
 	DropOffType       sql.NullInt32

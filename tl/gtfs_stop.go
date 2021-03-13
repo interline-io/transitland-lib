@@ -9,7 +9,7 @@ import (
 
 // Stop stops.txt
 type Stop struct {
-	StopID             string `csv:"stop_id,required" required:"true"`
+	StopID             string `csv:",required" required:"true"`
 	StopName           string
 	StopCode           string
 	StopDesc           string

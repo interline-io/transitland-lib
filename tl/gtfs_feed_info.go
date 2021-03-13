@@ -9,9 +9,9 @@ import (
 
 // FeedInfo feed_info.txt
 type FeedInfo struct {
-	FeedPublisherName string `csv:"feed_publisher_name,required"`
-	FeedPublisherURL  string `csv:"feed_publisher_url,required"`
-	FeedLang          string `csv:"feed_lang,required"`
+	FeedPublisherName string `csv:",required"`
+	FeedPublisherURL  string `csv:",required"`
+	FeedLang          string `csv:",required"`
 	FeedVersion       string `db:"feed_version_name"`
 	FeedStartDate     OptionalTime
 	FeedEndDate       OptionalTime

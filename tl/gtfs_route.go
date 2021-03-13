@@ -9,12 +9,12 @@ import (
 
 // Route routes.txt
 type Route struct {
-	RouteID        string `csv:"route_id,required"`
+	RouteID        string `csv:",required"`
 	AgencyID       string
 	RouteShortName string
 	RouteLongName  string
 	RouteDesc      string
-	RouteType      int `csv:"route_type,required"`
+	RouteType      int `csv:",required"`
 	RouteURL       string
 	RouteColor     string
 	RouteTextColor string

@@ -7,7 +7,7 @@ import (
 
 // FareRule fare_rules.txt
 type FareRule struct {
-	FareID        string `csv:"fare_id,required"`
+	FareID        string `csv:",required"`
 	RouteID       OptionalRelationship
 	OriginID      string
 	DestinationID string

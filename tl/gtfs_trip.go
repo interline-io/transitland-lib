@@ -7,9 +7,9 @@ import (
 
 // Trip trips.txt
 type Trip struct {
-	RouteID              string `csv:"route_id,required"`
-	ServiceID            string `csv:"service_id,required"`
-	TripID               string `csv:"trip_id,required"`
+	RouteID              string `csv:",required"`
+	ServiceID            string `csv:",required"`
+	TripID               string `csv:",required"`
 	TripHeadsign         string
 	TripShortName        string
 	DirectionID          int

@@ -9,10 +9,10 @@ import (
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
-	FareID           string  `csv:"fare_id,required"`
-	Price            float64 `csv:"price,required"`
-	CurrencyType     string  `csv:"currency_type,required"`
-	PaymentMethod    int     `csv:"payment_method,required"`
+	FareID           string  `csv:",required"`
+	Price            float64 `csv:",required"`
+	CurrencyType     string  `csv:",required"`
+	PaymentMethod    int     `csv:",required"`
 	Transfers        sql.NullInt32
 	AgencyID         OptionalRelationship
 	TransferDuration int

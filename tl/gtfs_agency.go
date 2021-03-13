@@ -8,8 +8,8 @@ import (
 type Agency struct {
 	AgencyID       string
 	AgencyName     string `csv:",required"`
-	AgencyURL      string `csv:"agency_url,required"`
-	AgencyTimezone string `csv:"agency_timezone,required"`
+	AgencyURL      string `csv:",required"`
+	AgencyTimezone string `csv:",required"`
 	AgencyLang     string
 	AgencyPhone    string
 	AgencyFareURL  string
