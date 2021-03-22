@@ -617,6 +617,7 @@ func (copier *Copier) copyCalendars() error {
 	bt = nil
 	for _, svc := range svcs {
 		for _, cd := range svc.CalendarDates() {
+			cd := cd
 			if bt, err = copier.checkBatch(bt, &cd); err != nil {
 				return err
 			}
