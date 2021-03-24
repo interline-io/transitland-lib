@@ -50,7 +50,7 @@ func (r *OString) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
-	return []byte(r.String), nil
+	return []byte("\"" + r.String + "\""), nil
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
@@ -78,7 +78,7 @@ func NewOInt(v int) OInt {
 // Value returns nil if empty
 func (r OInt) Value() (driver.Value, error) {
 	if r.Valid {
-		return r.Int, nil
+		return int64(r.Int), nil
 	}
 	return nil, nil
 }
@@ -204,6 +204,10 @@ func (r OFloat) MarshalGQL(w io.Writer) {
 type OKey struct {
 	Key   string
 	Valid bool
+}
+
+func NewOKey(v string) OKey {
+	return OKey{Valid: true, Key: v}
 }
 
 func (r *OKey) String() string {

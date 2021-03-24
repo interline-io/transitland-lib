@@ -9,8 +9,8 @@ import (
 // Frequency frequencies.txt
 type Frequency struct {
 	TripID      string   `csv:",required"`
-	StartTime   WideTime `csv:",required"`
-	EndTime     WideTime `csv:",required"`
+	StartTime   WideTime `csv:","`
+	EndTime     WideTime `csv:","`
 	HeadwaySecs int      `csv:",required"`
 	ExactTimes  int
 	BaseEntity
