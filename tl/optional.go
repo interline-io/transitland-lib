@@ -1,7 +1,6 @@
 package tl
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"fmt"
@@ -10,49 +9,225 @@ import (
 	"time"
 )
 
-// The only nullable types in the database are foreign-key constraints and some times.
+type OString struct {
+	Valid  bool
+	String string
+}
 
-// OptionalRelationship is a nullable foreign key constraint, similar to sql.NullString
-type OptionalRelationship struct {
+func NewOString(v string) OString {
+	return OString{Valid: true, String: v}
+}
+
+// Value returns nil if empty
+func (r OString) Value() (driver.Value, error) {
+	if r.Valid {
+		return r.String, nil
+	}
+	return nil, nil
+}
+
+// Scan implements sql.Scanner
+func (r *OString) Scan(src interface{}) error {
+	r.Valid = false
+	switch v := src.(type) {
+	case nil:
+		return nil
+	case string:
+		r.String = v
+	case int:
+		r.String = strconv.Itoa(v)
+	case int64:
+		r.String = strconv.Itoa(int(v))
+	default:
+		return errors.New("cant convert")
+	}
+	r.Valid = true
+	return nil
+}
+
+// MarshalJSON implements the json.marshaler interface.
+func (r *OString) MarshalJSON() ([]byte, error) {
+	if !r.Valid {
+		return []byte("null"), nil
+	}
+	return []byte(r.String), nil
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (r *OString) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (r OString) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
+}
+
+/////////////////////
+
+type OInt struct {
+	Valid bool
+	Int   int
+}
+
+func NewOInt(v int) OInt {
+	return OInt{Valid: true, Int: v}
+}
+
+// Value returns nil if empty
+func (r OInt) Value() (driver.Value, error) {
+	if r.Valid {
+		return r.Int, nil
+	}
+	return nil, nil
+}
+
+// Scan implements sql.Scanner
+func (r *OInt) Scan(src interface{}) error {
+	r.Valid = false
+	var err error
+	switch v := src.(type) {
+	case nil:
+		return nil
+	case string:
+		r.Int, err = strconv.Atoi(v)
+	case int:
+		r.Int = v
+	case int64:
+		r.Int = int(v)
+	case float64:
+		r.Int = int(v)
+	default:
+		err = errors.New("cant convert")
+	}
+	if err != nil {
+		return err
+	}
+	r.Valid = true
+	return nil
+}
+
+func (r *OInt) String() string {
+	return strconv.Itoa(r.Int)
+}
+
+// MarshalJSON implements the json.Marshaler interface
+func (r *OInt) MarshalJSON() ([]byte, error) {
+	if !r.Valid {
+		return []byte("null"), nil
+	}
+	return []byte(fmt.Sprintf("\"%d\"", r.Int)), nil
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (r *OInt) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (r OInt) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
+}
+
+/////////////////////
+
+type OFloat struct {
+	Valid bool
+	Float float64
+}
+
+func NewOFloat(v float64) OFloat {
+	return OFloat{Valid: true, Float: v}
+}
+
+// Value returns nil if empty
+func (r OFloat) Value() (driver.Value, error) {
+	if r.Valid {
+		return r.Float, nil
+	}
+	return nil, nil
+}
+
+// Scan implements sql.Scanner
+func (r *OFloat) Scan(src interface{}) error {
+	r.Valid = false
+	var err error
+	switch v := src.(type) {
+	case nil:
+		return nil
+	case string:
+		r.Float, err = strconv.ParseFloat(v, 64)
+	case int:
+		r.Float = float64(v)
+	case int64:
+		r.Float = float64(v)
+	case float64:
+		r.Float = v
+	default:
+		err = errors.New("cant convert")
+	}
+	if err != nil {
+		return err
+	}
+	r.Valid = true
+	return nil
+}
+
+func (r *OFloat) String() string {
+	return fmt.Sprintf("%0.5f", r.Float)
+}
+
+// MarshalJSON implements the json.Marshaler interface
+func (r *OFloat) MarshalJSON() ([]byte, error) {
+	if !r.Valid {
+		return []byte("null"), nil
+	}
+	return []byte(fmt.Sprintf("\"%0.5f\"", r.Float)), nil
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (r *OFloat) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (r OFloat) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
+}
+
+/////////////////////
+
+// OKey is a nullable foreign key constraint, similar to sql.NullString
+type OKey struct {
 	Key   string
 	Valid bool
 }
 
-// IsZero returns if this is a zero value.
-func (r *OptionalRelationship) IsZero() bool {
-	return r.Key == ""
-}
-
-func (r *OptionalRelationship) String() string {
+func (r *OKey) String() string {
 	return r.Key
 }
 
-// Int try to convert key to int
-func (r *OptionalRelationship) Int() int {
-	if !r.Valid {
-		return 0
-	}
-	if v, err := strconv.Atoi(r.Key); err == nil {
-		return v
-	}
-	return 0
-}
-
 // Value returns nil if empty
-func (r OptionalRelationship) Value() (driver.Value, error) {
-	if r.IsZero() {
+func (r OKey) Value() (driver.Value, error) {
+	if !r.Valid || r.Key == "" {
 		return nil, nil
 	}
 	return r.Key, nil
 }
 
 // Scan implements sql.Scanner
-func (r *OptionalRelationship) Scan(src interface{}) error {
+func (r *OKey) Scan(src interface{}) error {
 	r.Valid = false
 	switch v := src.(type) {
 	case nil:
 		return nil
 	case string:
+		if v == "" {
+			return nil
+		}
 		r.Key = v
 	case int:
 		r.Key = strconv.Itoa(v)
@@ -65,8 +240,13 @@ func (r *OptionalRelationship) Scan(src interface{}) error {
 	return nil
 }
 
+func (r *OKey) Int() int {
+	a, _ := strconv.Atoi(r.Key)
+	return a
+}
+
 // MarshalJSON implements the json.Marshaler interface
-func (r *OptionalRelationship) MarshalJSON() ([]byte, error) {
+func (r *OKey) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -74,39 +254,17 @@ func (r *OptionalRelationship) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *OptionalRelationship) UnmarshalGQL(v interface{}) error {
+func (r *OKey) UnmarshalGQL(v interface{}) error {
 	return nil
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (r OptionalRelationship) MarshalGQL(w io.Writer) {
+func (r OKey) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }
 
-// OptionalKey is the same as sql.NullInt
-type OptionalKey struct {
-	sql.NullInt64
-}
-
-// MarshalJSON implements the json.Marshaler interface
-func (r *OptionalKey) MarshalJSON() ([]byte, error) {
-	if !r.Valid {
-		return []byte("null"), nil
-	}
-	return []byte(strconv.Itoa(int(r.Int64))), nil
-}
-
-// UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *OptionalKey) UnmarshalGQL(v interface{}) error {
-	return nil
-}
-
-// MarshalGQL implements the graphql.Marshaler interface
-func (r OptionalKey) MarshalGQL(w io.Writer) {
-	b, _ := r.MarshalJSON()
-	w.Write(b)
-}
+/////////////////////
 
 // OptionalTime is a nullable time, but can scan strings
 type OptionalTime struct {

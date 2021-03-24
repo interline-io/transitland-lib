@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"database/sql"
 	"strconv"
 	"testing"
 
@@ -30,7 +29,7 @@ func expectTripToStopTime(e expectTrip) []tl.StopTime {
 			StopSequence:      i,
 			ArrivalTime:       e.ArrivalTime[i],
 			DepartureTime:     e.DepartureTime[i],
-			ShapeDistTraveled: sql.NullFloat64{Float64: e.ShapeDistTraveled[i], Valid: true},
+			ShapeDistTraveled: tl.NewOFloat(e.ShapeDistTraveled[i]),
 		})
 	}
 	return ret

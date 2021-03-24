@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/interline-io/transitland-lib/internal/mock"
@@ -44,7 +43,7 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{FareID: "fare1"},
 		},
 		FareAttributeList: []tl.FareAttribute{
-			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: sql.NullInt32{Valid: true, Int32: 1}},
+			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: tl.NewOInt(1)},
 		},
 		FrequencyList: []tl.Frequency{
 			{TripID: "trip1", HeadwaySecs: 600, StartTime: tl.WideTime{Seconds: 3600}, EndTime: tl.WideTime{Seconds: 7200}},

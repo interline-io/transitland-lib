@@ -1,7 +1,6 @@
 package tlcsv
 
 import (
-	"database/sql"
 	"math"
 	"testing"
 
@@ -14,7 +13,7 @@ func TestGetString(t *testing.T) {
 		StopID:            "456",
 		ArrivalTime:       3600,
 		DepartureTime:     7200,
-		ShapeDistTraveled: sql.NullFloat64{Float64: 123.456, Valid: true},
+		ShapeDistTraveled: tl.NewOFloat(123.456),
 	}
 	expect := map[string]string{
 		"trip_id":             "123",

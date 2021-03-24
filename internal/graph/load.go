@@ -55,7 +55,7 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 		if c, ok := eg.Node(NewNode("calendar.txt", ent.ServiceID)); ok {
 			eg.AddEdge(c, en)
 		}
-		if !ent.ShapeID.IsZero() {
+		if ent.ShapeID.Valid {
 			if s, ok := eg.Node(NewNode("shapes.txt", ent.ShapeID.Key)); ok {
 				eg.AddEdge(s, en)
 			}

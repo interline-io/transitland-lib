@@ -12,7 +12,7 @@ type Transfer struct {
 	FromStopID      string `csv:",required" required:"true"`
 	ToStopID        string `csv:",required" required:"true"`
 	TransferType    int
-	MinTransferTime sql.NullInt64
+	MinTransferTime OInt
 	BaseEntity
 }
 
@@ -23,7 +23,7 @@ func (ent *Transfer) Errors() (errs []error) {
 	errs = append(errs, enum.CheckPresent("from_stop_id", ent.FromStopID)...)
 	errs = append(errs, enum.CheckPresent("to_stop_id", ent.ToStopID)...)
 	errs = append(errs, enum.CheckInsideRangeInt("transfer_type", ent.TransferType, 0, 3)...)
-	errs = append(errs, enum.CheckPositiveInt("min_transfer_time", int(ent.MinTransferTime.Int64))...)
+	errs = append(errs, enum.CheckPositiveInt("min_transfer_time", ent.MinTransferTime.Int)...)
 	return errs
 }
 

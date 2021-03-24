@@ -18,10 +18,10 @@ type Stop struct {
 	ZoneID             string
 	StopURL            string
 	LocationType       int
-	ParentStation      OptionalRelationship
+	ParentStation      OKey
 	StopTimezone       string
 	WheelchairBoarding int
-	LevelID            OptionalRelationship
+	LevelID            OKey
 	Geometry           Point `csv:"-" db:"geometry"`
 	BaseEntity
 }

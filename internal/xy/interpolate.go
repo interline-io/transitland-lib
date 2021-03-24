@@ -1,8 +1,6 @@
 package xy
 
 import (
-	"database/sql"
-
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -34,7 +32,7 @@ func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 	stStart := sts[start]
 	stEnd := sts[end]
 	t := float64(stEnd.ArrivalTime - stStart.DepartureTime)
-	x := stEnd.ShapeDistTraveled.Float64 - stStart.ShapeDistTraveled.Float64
+	x := stEnd.ShapeDistTraveled.Float - stStart.ShapeDistTraveled.Float
 	// For StopTimes *between* start and end
 	// log.Trace(
 	// 	"trip '%s' interpolating %d stoptimes: index %d -> %d time: %d .. %d = %f distance: %f .. %f = %f",
@@ -45,7 +43,7 @@ func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 	// 	stStart.ShapeDistTraveled, stEnd.ShapeDistTraveled, x,
 	// )
 	for i := start + 1; i < end; i++ {
-		dx := (sts[i].ShapeDistTraveled.Float64 - stStart.ShapeDistTraveled.Float64) / x
+		dx := (sts[i].ShapeDistTraveled.Float - stStart.ShapeDistTraveled.Float) / x
 		dt := stStart.DepartureTime + int(t*dx)
 		// log.Trace(
 		// 	"\tindex: %d traveled: %f dx: %f dt: %d",
@@ -53,6 +51,6 @@ func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 		// )
 		sts[i].ArrivalTime = dt
 		sts[i].DepartureTime = dt
-		sts[i].Interpolated = sql.NullInt32{Int32: 1, Valid: true}
+		sts[i].Interpolated = tl.NewOInt(1)
 	}
 }

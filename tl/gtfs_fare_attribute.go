@@ -1,8 +1,6 @@
 package tl
 
 import (
-	"database/sql"
-
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/enum"
 )
@@ -13,8 +11,8 @@ type FareAttribute struct {
 	Price            float64 `csv:",required"`
 	CurrencyType     string  `csv:",required"`
 	PaymentMethod    int     `csv:",required"`
-	Transfers        sql.NullInt32
-	AgencyID         OptionalRelationship
+	Transfers        OInt
+	AgencyID         OKey
 	TransferDuration int
 	BaseEntity
 }
@@ -38,7 +36,7 @@ func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, enum.CheckCurrency("currency_type", ent.CurrencyType)...)
 	errs = append(errs, enum.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
 	errs = append(errs, enum.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
-	errs = append(errs, enum.CheckInsideRangeInt("transfers", int(ent.Transfers.Int32), 0, 2)...)
+	errs = append(errs, enum.CheckInsideRangeInt("transfers", int(ent.Transfers.Int), 0, 2)...)
 	return errs
 }
 
