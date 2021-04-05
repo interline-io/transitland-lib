@@ -1,7 +1,6 @@
 package dmfr
 
 import (
-	"database/sql"
 	"sort"
 	"strconv"
 	"time"
@@ -14,7 +13,7 @@ import (
 type FeedVersionServiceLevel struct {
 	ID            int
 	FeedVersionID int
-	RouteID       sql.NullString
+	RouteID       tl.OString
 	StartDate     time.Time
 	EndDate       time.Time
 	Monday        int

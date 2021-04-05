@@ -1,7 +1,6 @@
 package dmfr
 
 import (
-	"database/sql"
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl"
@@ -11,11 +10,11 @@ import (
 type FeedState struct {
 	ID                    int
 	FeedID                int
-	FeedVersionID         tl.OptionalKey
+	FeedVersionID         tl.OInt
 	LastFetchError        string
 	LastFetchedAt         tl.OptionalTime
 	LastSuccessfulFetchAt tl.OptionalTime
-	FeedPriority          sql.NullInt64
+	FeedPriority          tl.OInt
 	FeedRealtimeEnabled   bool
 	tl.Timestamps
 }

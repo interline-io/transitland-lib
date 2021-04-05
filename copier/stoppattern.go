@@ -27,10 +27,10 @@ func journeyPatternKey(trip tl.Trip, stoptimes []tl.StopTime) string {
 			st.DepartureTime-b,
 			st.StopID,
 			st.StopHeadsign.String,
-			st.PickupType.Int32,
-			st.DropOffType.Int32,
-			st.Timepoint.Int32,
-			st.ShapeDistTraveled.Float64,
+			st.PickupType.Int,
+			st.DropOffType.Int,
+			st.Timepoint.Int,
+			st.ShapeDistTraveled.Float,
 		)
 	}
 	return strings.Join(stkey, "-")

@@ -115,5 +115,16 @@ jobs:
           asset_name: transitland-macos.zip
           asset_label: macOS AMD-64 binary
           asset_content_type: application/binary
-
-  
+  release-notes:
+    needs: release
+    if: ${{ github.event_name == 'release' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - run: npm install github-release-notes -g
+      - run: gren release --override
+        env:
+          GREN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

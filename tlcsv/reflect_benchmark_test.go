@@ -1,7 +1,6 @@
 package tlcsv
 
 import (
-	"database/sql"
 	"strings"
 	"testing"
 
@@ -121,11 +120,11 @@ func Benchmark_dumpRow_StopTime(b *testing.B) {
 	ent := tl.StopTime{
 		TripID:            "xyz",
 		StopID:            "abc",
-		StopHeadsign:      sql.NullString{Valid: true, String: "hello"},
+		StopHeadsign:      tl.NewOString("hello"),
 		StopSequence:      123,
 		ArrivalTime:       3600,
 		DepartureTime:     7200,
-		ShapeDistTraveled: sql.NullFloat64{Float64: 123.456, Valid: true},
+		ShapeDistTraveled: tl.NewOFloat(123.456),
 	}
 	header := strings.Split("trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled", ",")
 	for n := 0; n < b.N; n++ {

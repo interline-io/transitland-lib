@@ -9,8 +9,8 @@ import (
 // Frequency frequencies.txt
 type Frequency struct {
 	TripID      string   `csv:",required"`
-	StartTime   WideTime `csv:",required"`
-	EndTime     WideTime `csv:",required"`
+	StartTime   WideTime `csv:","`
+	EndTime     WideTime `csv:","`
 	HeadwaySecs int      `csv:",required"`
 	ExactTimes  int
 	BaseEntity
@@ -31,6 +31,12 @@ func (ent *Frequency) RepeatCount() int {
 // Errors for this Entity.
 func (ent *Frequency) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.loadErrors...)
+	if !ent.StartTime.Valid {
+		errs = append(errs, causes.NewRequiredFieldError("start_time"))
+	}
+	if !ent.EndTime.Valid {
+		errs = append(errs, causes.NewRequiredFieldError("end_time"))
+	}
 	st, et := ent.StartTime.Seconds, ent.EndTime.Seconds
 	if ent.HeadwaySecs < 1 {
 		errs = append(errs, causes.NewInvalidFieldError("headway_secs", "", fmt.Errorf("headway_secs must be a positive integer")))

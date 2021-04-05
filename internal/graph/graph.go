@@ -63,7 +63,7 @@ func (eg *EntityGraph) Search(queue []*Node, up bool, f func(*Node)) {
 		}
 		cur := queue[0]
 		f(cur)
-		queue = queue[1:len(queue)]
+		queue = queue[1:]
 		var edges []*Node
 		if up == false {
 			edges, _ = eg.findChildren(cur)
