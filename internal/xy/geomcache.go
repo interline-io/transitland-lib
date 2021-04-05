@@ -1,7 +1,6 @@
 package xy
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"strconv"
@@ -128,7 +127,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	}
 	// Set ShapeDistTraveled
 	for i := 0; i < len(stoptimes); i++ {
-		stoptimes[i].ShapeDistTraveled = sql.NullFloat64{Valid: true, Float64: positions[i] * length}
+		stoptimes[i].ShapeDistTraveled = tl.NewOFloat(positions[i] * length)
 	}
 	return InterpolateStopTimes(stoptimes)
 }

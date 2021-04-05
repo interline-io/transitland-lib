@@ -1,7 +1,6 @@
 package xy
 
 import (
-	"database/sql"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tl"
@@ -27,7 +26,7 @@ func expectTripToStopTime(e []expectStopTime) []tl.StopTime {
 		ret = append(ret, tl.StopTime{
 			ArrivalTime:       i.ArrivalTime,
 			DepartureTime:     i.DepartureTime,
-			ShapeDistTraveled: sql.NullFloat64{Valid: true, Float64: i.ShapeDistTraveled},
+			ShapeDistTraveled: tl.NewOFloat(i.ShapeDistTraveled),
 		})
 	}
 	return ret

@@ -1,7 +1,6 @@
 package tl
 
 import (
-	"database/sql"
 	"fmt"
 	"strconv"
 
@@ -16,13 +15,13 @@ type StopTime struct {
 	DepartureTime     int
 	StopID            string `csv:",required" required:"true"`
 	StopSequence      int    `csv:",required" required:"true"`
-	StopHeadsign      sql.NullString
-	PickupType        sql.NullInt32
-	DropOffType       sql.NullInt32
-	ShapeDistTraveled sql.NullFloat64
-	Timepoint         sql.NullInt32
-	Interpolated      sql.NullInt32 `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
-	FeedVersionID     int           `csv:"-"`
+	StopHeadsign      OString
+	PickupType        OInt
+	DropOffType       OInt
+	ShapeDistTraveled OFloat
+	Timepoint         OInt
+	Interpolated      OInt `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
+	FeedVersionID     int  `csv:"-"`
 	extra             []string
 	loadErrors        []error
 	loadWarnings      []error
@@ -70,10 +69,10 @@ func (ent *StopTime) Errors() []error {
 	errs = append(errs, enum.CheckPresent("trip_id", ent.TripID)...)
 	errs = append(errs, enum.CheckPresent("stop_id", ent.StopID)...)
 	errs = append(errs, enum.CheckPositiveInt("stop_sequence", ent.StopSequence)...)
-	errs = append(errs, enum.CheckInsideRangeInt("pickup_type", int(ent.PickupType.Int32), 0, 3)...)
-	errs = append(errs, enum.CheckInsideRangeInt("drop_off_type", int(ent.DropOffType.Int32), 0, 3)...)
-	errs = append(errs, enum.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Float64)...)
-	errs = append(errs, enum.CheckInsideRangeInt("timepoint", int(ent.Timepoint.Int32), -1, 1)...)
+	errs = append(errs, enum.CheckInsideRangeInt("pickup_type", ent.PickupType.Int, 0, 3)...)
+	errs = append(errs, enum.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Int, 0, 3)...)
+	errs = append(errs, enum.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Float)...)
+	errs = append(errs, enum.CheckInsideRangeInt("timepoint", ent.Timepoint.Int, -1, 1)...)
 	errs = append(errs, enum.CheckInsideRangeInt("arrival_time", ent.ArrivalTime, -1, 1<<31)...)
 	errs = append(errs, enum.CheckInsideRangeInt("departure", ent.DepartureTime, -1, 1<<31)...)
 	// Other errors
@@ -126,16 +125,16 @@ func (ent *StopTime) GetString(key string) (string, error) {
 	case "stop_sequence":
 		v = strconv.Itoa(ent.StopSequence)
 	case "pickup_type":
-		v = strconv.Itoa(int(ent.PickupType.Int32))
+		v = strconv.Itoa(int(ent.PickupType.Int))
 	case "drop_off_type":
-		v = strconv.Itoa(int(ent.DropOffType.Int32))
+		v = strconv.Itoa(int(ent.DropOffType.Int))
 	case "shape_dist_traveled":
 		if ent.ShapeDistTraveled.Valid {
-			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled.Float64)
+			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled.Float)
 		}
 	case "timepoint":
 		if ent.Timepoint.Valid {
-			v = strconv.Itoa(int(ent.Timepoint.Int32))
+			v = strconv.Itoa(int(ent.Timepoint.Int))
 		}
 	default:
 		return v, fmt.Errorf("unknown key: %s", key)
@@ -151,7 +150,7 @@ func (ent *StopTime) SetString(key, value string) error {
 	case "trip_id":
 		ent.TripID = hi
 	case "stop_headsign":
-		ent.StopHeadsign = sql.NullString{Valid: true, String: hi}
+		ent.StopHeadsign = NewOString(hi)
 	case "stop_id":
 		ent.StopID = hi
 	case "arrival_time":
@@ -178,36 +177,36 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "pickup_type":
 		if len(hi) == 0 {
-			ent.PickupType = sql.NullInt32{Valid: false}
+			ent.PickupType = OInt{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
 		} else {
-			ent.PickupType = sql.NullInt32{Valid: true, Int32: int32(a)}
+			ent.PickupType = OInt{Valid: true, Int: a}
 		}
 	case "drop_off_type":
 		if len(hi) == 0 {
-			ent.DropOffType = sql.NullInt32{Valid: false}
+			ent.DropOffType = OInt{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
 		} else {
-			ent.DropOffType = sql.NullInt32{Valid: true, Int32: int32(a)}
+			ent.DropOffType = OInt{Valid: true, Int: a}
 		}
 	case "shape_dist_traveled":
 		if len(hi) == 0 {
-			ent.ShapeDistTraveled = sql.NullFloat64{Float64: 0, Valid: false}
+			ent.ShapeDistTraveled = OFloat{}
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
 		} else {
-			ent.ShapeDistTraveled = sql.NullFloat64{Float64: a, Valid: true}
+			ent.ShapeDistTraveled = OFloat{Valid: true, Float: a}
 		}
 	case "timepoint":
 		// special use -1 for empty timepoint value
 		if len(hi) == 0 {
-			ent.Timepoint = sql.NullInt32{Valid: false}
+			ent.Timepoint = OInt{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
 		} else {
-			ent.Timepoint = sql.NullInt32{Valid: true, Int32: int32(a)}
+			ent.Timepoint = OInt{Valid: true, Int: a}
 		}
 	default:
 		ent.SetExtra(key, hi)
@@ -246,9 +245,9 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 		} else if st.DepartureTime > 0 {
 			lastTime = st.DepartureTime
 		}
-		if st.ShapeDistTraveled.Float64 > 0 && st.ShapeDistTraveled.Float64 < lastDist.Float64 {
-			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", fmt.Sprintf("%f", st.ShapeDistTraveled.Float64)))
-		} else if st.ShapeDistTraveled.Float64 > 0 {
+		if st.ShapeDistTraveled.Valid && st.ShapeDistTraveled.Float < lastDist.Float {
+			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", st.ShapeDistTraveled.String()))
+		} else if st.ShapeDistTraveled.Valid {
 			lastDist = st.ShapeDistTraveled
 		}
 	}

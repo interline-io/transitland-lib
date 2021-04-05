@@ -278,6 +278,19 @@ func (e *ConditionallyRequiredFieldError) Error() string {
 	return fmt.Sprintf("no value for required field %s %s", e.Field, e.Message)
 }
 
+// ConditionallyForbiddenFieldError reports a value that is present but disallowed.
+type ConditionallyForbiddenFieldError struct {
+	bc
+}
+
+func NewConditionallyForbiddenFieldError(field string, msg string) *ConditionallyForbiddenFieldError {
+	return &ConditionallyForbiddenFieldError{bc: bc{Field: field, Message: msg}}
+}
+
+func (e *ConditionallyForbiddenFieldError) Error() string {
+	return fmt.Sprintf("field %s is conditionally forbidden: %s", e.Field, e.Message)
+}
+
 ////////////////////////////
 
 // InvalidFieldError reports an invalid value for a field

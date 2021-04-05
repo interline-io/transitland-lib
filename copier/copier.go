@@ -675,7 +675,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		for i := range stbt {
 			if err := copier.checkEntity(&stbt[i]); err == nil {
 				stbt2 = append(stbt2, &stbt[i])
-				if stbt[i].Interpolated.Int32 > 0 {
+				if stbt[i].Interpolated.Int > 0 {
 					copier.result.InterpolatedStopTimeCount++
 				}
 			}
@@ -732,7 +732,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 
 		// Do we need to create a shape for this trip
-		if trip.ShapeID.IsZero() && copier.CreateMissingShapes {
+		if !trip.ShapeID.Valid && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
 			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID]; ok {
 				trip.ShapeID.Key = shapeid
