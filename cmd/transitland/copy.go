@@ -71,13 +71,13 @@ func (cmd *copyCommand) Run(args []string) error {
 	// 	}
 	// }
 	// Add filters
-	for _, extName := range cmd.filters {
-		ef, err := ext.GetEntityFilter(extName)
-		if err != nil {
-			log.Exit("No filter for '%s': %s", extName, err)
-		}
-		cp.AddEntityFilter(ef)
-	}
+	// for _, extName := range cmd.filters {
+	// 	ef, err := ext.GetEntityFilter(extName)
+	// 	if err != nil {
+	// 		log.Exit("No filter for '%s': %s", extName, err)
+	// 	}
+	// 	cp.AddEntityFilter(ef)
+	// }
 	result := cp.Copy()
 	result.DisplaySummary()
 	return nil

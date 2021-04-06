@@ -98,13 +98,13 @@ func (cmd *extractCommand) Run(args []string) error {
 	// 		}
 	// 	}
 	// }
-	for _, extName := range cmd.filters {
-		ef, err := ext.GetEntityFilter(extName)
-		if err != nil {
-			log.Exit("No filter for '%s': %s", extName, err)
-		}
-		cp.AddEntityFilter(ef)
-	}
+	// for _, extName := range cmd.filters {
+	// 	ef, err := ext.GetEntityFilter(extName)
+	// 	if err != nil {
+	// 		log.Exit("No filter for '%s': %s", extName, err)
+	// 	}
+	// 	cp.AddEntityFilter(ef)
+	// }
 	// Create SetterFilter
 	setvalues := [][]string{}
 	for _, setv := range cmd.extractSet {
@@ -118,7 +118,7 @@ func (cmd *extractCommand) Run(args []string) error {
 			}
 			tx.AddValue(setv[0], setv[1], setv[2], setv[3])
 		}
-		cp.AddEntityFilter(tx)
+		cp.AddExtension(tx)
 	}
 	// Create Marker
 	rthits := map[int]bool{}

@@ -245,21 +245,11 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	}
 	defer reader.Close()
 
-	// Get builders
-	shapeBuilder := NewDefaultShapeBuilder()
-
 	// Get writer with existing tx
 	writer := tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer, opts.Options)
-	cp.AddExtension(shapeBuilder)
-	// for _, e := range opts.Extensions {
-	// 	ext, err := ext.GetExtension(e)
-	// 	if err != nil {
-	// 		panic("Extension not found")
-	// 	}
-	// 	cp.AddExtension(ext)
-	// }
+
 	// Non-settable options
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
