@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -48,7 +49,7 @@ func (pp *DefaultShapeBuilder) SetGeomCache(g *xy.GeomCache) {
 }
 
 // Validate .
-func (pp *DefaultShapeBuilder) Validate(ent tl.Entity) []error {
+func (pp *DefaultShapeBuilder) AfterValidate(ent tl.Entity) []error {
 	switch v := ent.(type) {
 	case *tl.Shape:
 		pp.shapeInfos[v.ShapeID] = shapeInfo{generated: v.Generated, length: v.Geometry.Length()}
@@ -67,7 +68,13 @@ func (pp *DefaultShapeBuilder) Validate(ent tl.Entity) []error {
 }
 
 // BuildRouteShapes .
-func (pp *DefaultShapeBuilder) BuildRouteShapes(emap *tl.EntityMap, atx tldb.Adapter) error {
+func (pp *DefaultShapeBuilder) Copy(copier *copier.Copier) error {
+	emap := copier.EntityMap
+	v, ok := copier.Writer.(*tldb.Writer)
+	if !ok {
+		return nil
+	}
+	atx := v.Adapter
 	// Get the candidate shapes
 	commonCount := 2
 	selectedShapes := map[string][]string{}

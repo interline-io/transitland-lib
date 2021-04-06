@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/rules"
@@ -14,19 +13,35 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
-// Validator is used to create an extensible list of validators run for each entity.
+// Filter is called before validation.
+type Filter interface {
+	Filter(tl.Entity, *tl.EntityMap) error
+}
+
+// Validator is called for each entity.
 type Validator interface {
 	Validate(tl.Entity) []error
+}
+
+// AfterValidator is called for each fully validated entity before writing.
+type AfterValidator interface {
+	AfterValidator(tl.Entity) error
+}
+
+// Extension is run after normal copying has completed.
+type Extension interface {
+	Copy(*Copier) error
+}
+
+// AfterCopy is called after normal copying and extensions have completed.
+type AfterCopy interface {
+	AfterCopy(*Copier) error
 }
 
 // ErrorHandler is called on each source file and entity; errors can be nil
 type ErrorHandler interface {
 	HandleEntityErrors(tl.Entity, []error, []error)
 	HandleSourceErrors(string, []error, []error)
-}
-
-type copyableExtension interface {
-	Copy(*Copier) error
 }
 
 type errorWithContext interface {
@@ -75,14 +90,17 @@ type Copier struct {
 	Marker Marker
 	// Error handler, called for each entity
 	ErrorHandler ErrorHandler
+	// Exts
+	Extensions        []Extension
+	Filters           []Filter
+	ErrorValidators   []Validator
+	WarningValidators []Validator
+	AfterValidators   []AfterValidator
+	AfterCopiers      []AfterCopy
 	// book keeping
-	agencyCount       int
-	extensions        []copyableExtension
-	filters           []tl.EntityFilter
-	errorValidators   []Validator
-	warningValidators []Validator
-	geomCache         *xy.GeomCache
-	result            *Result
+	agencyCount int
+	geomCache   *xy.GeomCache
+	result      *Result
 	*tl.EntityMap
 }
 
@@ -103,20 +121,17 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 	copier.Marker = newYesMarker()
 	// Default EntityMap
 	copier.EntityMap = tl.NewEntityMap()
-	// Geom Cache
-	copier.geomCache = xy.NewGeomCache()
 	// Set the default BatchSize
 	if copier.BatchSize == 0 {
 		copier.BatchSize = 1_000_000
 	}
 	// Default filters
-	copier.filters = []tl.EntityFilter{}
+	copier.Filters = []Filter{}
 	if copier.UseBasicRouteTypes {
-		copier.filters = append(copier.filters, &BasicRouteTypeFilter{})
+		copier.Filters = append(copier.Filters, &BasicRouteTypeFilter{})
 	}
 	// Default set of validators
-	copier.errorValidators = []Validator{}
-	copier.errorValidators = append(copier.errorValidators,
+	copier.ErrorValidators = append(copier.ErrorValidators,
 		&rules.EntityErrorCheck{},
 		&rules.EntityDuplicateCheck{},
 		&rules.ValidFarezoneCheck{},
@@ -130,13 +145,10 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 
 // AddValidator adds an additional entity validator.
 func (copier *Copier) AddValidator(e Validator, level int) error {
-	if v, ok := e.(canShareGeomCache); ok {
-		v.SetGeomCache(copier.geomCache)
-	}
 	if level == 0 {
-		copier.errorValidators = append(copier.errorValidators, e)
+		copier.ErrorValidators = append(copier.ErrorValidators, e)
 	} else if level == 1 {
-		copier.warningValidators = append(copier.warningValidators, e)
+		copier.WarningValidators = append(copier.WarningValidators, e)
 	} else {
 		return errors.New("unknown validation level")
 	}
@@ -144,18 +156,14 @@ func (copier *Copier) AddValidator(e Validator, level int) error {
 }
 
 // AddExtension adds an Extension to the copy process.
-func (copier *Copier) AddExtension(e ext.Extension) error {
-	extc, ok := e.(copyableExtension)
-	if !ok {
-		return fmt.Errorf("Extension does not provide Copy method")
-	}
-	copier.extensions = append(copier.extensions, extc)
+func (copier *Copier) AddExtension(ext Extension) error {
+	copier.Extensions = append(copier.Extensions, ext)
 	return nil
 }
 
 // AddEntityFilter adds an EntityFilter to the copy process.
 func (copier *Copier) AddEntityFilter(ef tl.EntityFilter) error {
-	copier.filters = append(copier.filters, ef)
+	copier.Filters = append(copier.Filters, ef)
 	return nil
 }
 
@@ -184,7 +192,6 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, sid, err, ent)
 		return "", err, err
 	}
-	// log.Debug("%s '%s': saved -> %s", efn, sid, eid)
 	copier.EntityMap.Set(efn, sid, eid)
 	copier.result.EntityCount[efn]++
 	return eid, nil, nil
@@ -237,7 +244,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	}
 	// Check the entity against filters.
 	sid := ent.EntityID() // source ID
-	for _, ef := range copier.filters {
+	for _, ef := range copier.Filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
 			log.Debug("%s '%s' skipped by filter: %s", efn, sid, err)
 			copier.result.SkipEntityFilterCount[efn]++
@@ -247,10 +254,10 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	// Run Entity Validators
 	var errs []error
 	var warns []error
-	for _, v := range copier.errorValidators {
+	for _, v := range copier.ErrorValidators {
 		errs = append(errs, v.Validate(ent)...)
 	}
-	for _, v := range copier.warningValidators {
+	for _, v := range copier.WarningValidators {
 		warns = append(warns, v.Validate(ent)...)
 	}
 	// UpdateKeys is handled separately from other validators.
@@ -269,6 +276,12 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
 	}
+	// Handle after validators
+	for _, v := range copier.AfterValidators {
+		if err := v.AfterValidator(ent); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -278,6 +291,17 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 
 // Copy copies Base GTFS entities from the Reader to the Writer, returning the summary as a Result.
 func (copier *Copier) Copy() *Result {
+	copier.geomCache = xy.NewGeomCache()
+	for _, e := range copier.ErrorValidators {
+		if v, ok := e.(canShareGeomCache); ok {
+			v.SetGeomCache(copier.geomCache)
+		}
+	}
+	for _, e := range copier.WarningValidators {
+		if v, ok := e.(canShareGeomCache); ok {
+			v.SetGeomCache(copier.geomCache)
+		}
+	}
 	// Handle source errors and warnings
 	sourceErrors := map[string][]error{}
 	for _, err := range copier.Reader.ValidateStructure() {
@@ -311,12 +335,19 @@ func (copier *Copier) Copy() *Result {
 			return copier.result
 		}
 	}
-	for _, e := range copier.extensions {
+	for _, e := range copier.Extensions {
 		if err := e.Copy(copier); err != nil {
 			copier.result.WriteError = err
 			return copier.result
 		}
 	}
+	for _, e := range copier.AfterCopiers {
+		if err := e.AfterCopy(copier); err != nil {
+			copier.result.WriteError = err
+			return copier.result
+		}
+	}
+
 	return copier.result
 }
 

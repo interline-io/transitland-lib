@@ -12,7 +12,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -253,14 +252,14 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	writer := tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 	// Import, run in txn
 	cp := copier.NewCopier(reader, &writer, opts.Options)
-	cp.AddValidator(shapeBuilder, 1)
-	for _, e := range opts.Extensions {
-		ext, err := ext.GetExtension(e)
-		if err != nil {
-			panic("Extension not found")
-		}
-		cp.AddExtension(ext)
-	}
+	cp.AddExtension(shapeBuilder)
+	// for _, e := range opts.Extensions {
+	// 	ext, err := ext.GetExtension(e)
+	// 	if err != nil {
+	// 		panic("Extension not found")
+	// 	}
+	// 	cp.AddExtension(ext)
+	// }
 	// Non-settable options
 	cp.AllowEntityErrors = false
 	cp.AllowReferenceErrors = false
@@ -272,11 +271,6 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	}
 	if cpresult.WriteError != nil {
 		return fvi, cpresult.WriteError
-	}
-
-	// Insert shapes
-	if err := shapeBuilder.BuildRouteShapes(cp.EntityMap, atx); err != nil {
-		return fvi, err
 	}
 
 	cpresult.DisplaySummary()

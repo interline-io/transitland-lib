@@ -58,18 +58,18 @@ func (cmd *copyCommand) Run(args []string) error {
 		}
 		cp.NormalizeServiceIDs = true
 	}
-	for _, extName := range cmd.extensions {
-		e, err := ext.GetExtension(extName)
-		if err != nil {
-			log.Exit("No extension for: %s", extName)
-		}
-		cp.AddExtension(e)
-		if cmd.create {
-			if err := e.Create(writer); err != nil {
-				log.Exit("Could not load extension: %s", err)
-			}
-		}
-	}
+	// for _, extName := range cmd.extensions {
+	// 	e, err := ext.GetExtension(extName)
+	// 	if err != nil {
+	// 		log.Exit("No extension for: %s", extName)
+	// 	}
+	// 	cp.AddExtension(e)
+	// 	if cmd.create {
+	// 		if err := e.Create(writer); err != nil {
+	// 			log.Exit("Could not load extension: %s", err)
+	// 		}
+	// 	}
+	// }
 	// Add filters
 	for _, extName := range cmd.filters {
 		ef, err := ext.GetEntityFilter(extName)
