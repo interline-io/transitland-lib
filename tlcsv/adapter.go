@@ -112,13 +112,18 @@ func (adapter *S3Adapter) Open() error {
 	defer tmpfile.Close()
 	// Get the full path
 	tmpfilepath := tmpfile.Name()
+	za := ZipAdapter{path: tmpfilepath, tmpfilepath: tmpfilepath}
+	spliturl := strings.SplitN(adapter.url, "#", 2)
+	if len(spliturl) > 1 {
+		za.internalPrefix = spliturl[1]
+	}
 	// Download from S3 using the CLI
-	awscmd := exec.Command("aws", "s3", "cp", adapter.url, tmpfilepath)
+	awscmd := exec.Command("aws", "s3", "cp", spliturl[0], tmpfilepath)
 	if output, err := awscmd.Output(); err != nil {
 		return fmt.Errorf("error downloading %s: %s %s", adapter.url, output, err.Error())
 	}
 	log.Debug("Downloaded %s to %s", adapter.url, tmpfilepath)
-	adapter.ZipAdapter = ZipAdapter{path: tmpfilepath, tmpfilepath: tmpfilepath}
+	adapter.ZipAdapter = za
 	return adapter.ZipAdapter.Open()
 }
 

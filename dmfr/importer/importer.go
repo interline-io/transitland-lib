@@ -234,7 +234,7 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 		url = filepath.Join(opts.Directory, fv.File)
 	}
 	urlsplit := strings.SplitN(fv.URL, "#", 2)
-	if len(urlsplit) > 1 {
+	if len(urlsplit) > 1 && !strings.HasSuffix(fv.URL, ".zip") {
 		url = url + "#" + urlsplit[1]
 	}
 	reader, err := tlcsv.NewReader(url)
