@@ -8,14 +8,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/interline-io/transitland-lib/internal/download"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
@@ -41,8 +41,15 @@ type WriterAdapter interface {
 
 // URLAdapter downloads a GTFS URL to a temporary file, and removes the file when it is closed.
 type URLAdapter struct {
-	url string
+	url    string
+	secret download.Secret
+	auth   tl.FeedAuthorization
 	ZipAdapter
+}
+
+func (adapter *URLAdapter) SetAuth(auth tl.FeedAuthorization, secret download.Secret) {
+	adapter.secret = secret
+	adapter.auth = auth
 }
 
 // Open the adapter, and download the provided URL to a temporary file.
@@ -50,39 +57,27 @@ func (adapter *URLAdapter) Open() error {
 	if adapter.ZipAdapter.path != "" {
 		return nil // already open
 	}
-	// Get the data
-	split := strings.SplitN(adapter.url, "#", 2)
+	// Remove and keep internal path prefix
+	url := adapter.url
 	fragment := ""
+	split := strings.SplitN(adapter.url, "#", 2)
 	if len(split) > 1 {
-		adapter.url = split[0]
-		fragment = split[1]
+		url = split[0]
+		fragment = split[0]
 	}
-	resp, err := http.Get(adapter.url)
+	// Download to temporary file
+	tmpfilepath, err := download.AuthenticatedRequest(url, adapter.secret, adapter.auth)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	// Create the file
-	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
-	if err != nil {
-		return err
-	}
-	defer tmpfile.Close()
-	// Get the full path
-	tmpfilepath := tmpfile.Name()
-	// Write the body to file
-	_, err = io.Copy(tmpfile, resp.Body)
+	// Add internal path prefix back
 	log.Debug("Downloaded %s to %s", adapter.url, tmpfilepath)
-	checkzip := tmpfilepath
-	if fragment != "" {
-		checkzip = tmpfilepath + "#" + fragment
-	}
-	za := NewZipAdapter(checkzip)
+	za := NewZipAdapter(tmpfilepath + "#" + fragment)
 	if za == nil {
 		return errors.New("could not open")
 	}
 	adapter.ZipAdapter = *za
-	adapter.ZipAdapter.tmpfilepath = tmpfilepath
+	adapter.ZipAdapter.tmpfilepath = tmpfilepath // remove temp file on Close()
 	return adapter.ZipAdapter.Open()
 }
 
@@ -95,41 +90,7 @@ func (adapter *URLAdapter) Close() error {
 
 // S3Adapter downloads a GTFS file from an S3 bucket to a temporary file, and removes the file when it is closed.
 type S3Adapter struct {
-	url string
-	ZipAdapter
-}
-
-// Open the adapter, and download the provided URL to a temporary file.
-func (adapter *S3Adapter) Open() error {
-	if adapter.ZipAdapter.path != "" {
-		return nil // already open
-	}
-	// Create the file
-	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
-	if err != nil {
-		return err
-	}
-	defer tmpfile.Close()
-	// Get the full path
-	tmpfilepath := tmpfile.Name()
-	za := ZipAdapter{path: tmpfilepath, tmpfilepath: tmpfilepath}
-	spliturl := strings.SplitN(adapter.url, "#", 2)
-	if len(spliturl) > 1 {
-		za.internalPrefix = spliturl[1]
-	}
-	// Download from S3 using the CLI
-	awscmd := exec.Command("aws", "s3", "cp", spliturl[0], tmpfilepath)
-	if output, err := awscmd.Output(); err != nil {
-		return fmt.Errorf("error downloading %s: %s %s", adapter.url, output, err.Error())
-	}
-	log.Debug("Downloaded %s to %s", adapter.url, tmpfilepath)
-	adapter.ZipAdapter = za
-	return adapter.ZipAdapter.Open()
-}
-
-// Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
-func (adapter *S3Adapter) Close() error {
-	return adapter.ZipAdapter.Close()
+	URLAdapter
 }
 
 /////////////////////
@@ -144,13 +105,13 @@ type ZipAdapter struct {
 // NewZipAdapter returns an initialized zip adapter.
 func NewZipAdapter(path string) *ZipAdapter {
 	// Does this zip have a nested path?
-	adapter := ZipAdapter{path: path}
+	adapter := &ZipAdapter{path: path}
 	spliturl := strings.SplitN(adapter.path, "#", 2)
 	if len(spliturl) > 1 {
 		adapter.path = spliturl[0]
 		adapter.internalPrefix = spliturl[1]
 	}
-	// Do we need to extract a nested zip.
+	// If the internal prefix is a zip, extract this to a temp file
 	if strings.HasSuffix(adapter.internalPrefix, ".zip") {
 		pf := adapter.internalPrefix
 		adapter.internalPrefix = ""
@@ -166,13 +127,13 @@ func NewZipAdapter(path string) *ZipAdapter {
 			log.Debug("Extracted %s internal prefix %s to %s", adapter.path, adapter.internalPrefix, tmpfilepath)
 		})
 		if err != nil {
-			return &adapter
+			return nil
 		}
 		adapter.path = tmpfilepath
 		adapter.tmpfilepath = tmpfilepath
 		adapter.internalPrefix = ""
 	}
-	return &adapter
+	return adapter
 }
 
 // Open the adapter. Return an error if the file does not exist.

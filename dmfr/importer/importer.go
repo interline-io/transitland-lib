@@ -227,17 +227,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	url := fv.File
-	if opts.S3 != "" {
-		url = opts.S3 + "/" + fv.File
-	} else if opts.Directory != "" {
-		url = filepath.Join(opts.Directory, fv.File)
-	}
-	urlsplit := strings.SplitN(fv.URL, "#", 2)
-	if len(urlsplit) > 1 && !strings.HasSuffix(fv.URL, ".zip") {
-		url = url + "#" + urlsplit[1]
-	}
-	reader, err := tlcsv.NewReader(url)
+	reader, err := tlcsv.NewReader(dmfrGetReaderURL(opts.S3, opts.Directory, fv.File))
 	if err != nil {
 		return fvi, err
 	}
@@ -279,4 +269,19 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	fvi.SkipEntityFilterCount = counts.SkipEntityFilterCount
 	fvi.SkipEntityMarkedCount = counts.SkipEntityMarkedCount
 	return fvi, nil
+}
+
+// dmfrGetReaderURL helps load a file from an S3 or Directory location
+func dmfrGetReaderURL(s3 string, directory string, url string) string {
+	if s3 != "" {
+		url = s3 + "/" + url
+	} else if directory != "" {
+		url = filepath.Join(directory, url)
+	}
+	urlsplit := strings.SplitN(url, "#", 2)
+	if len(urlsplit) > 1 && !strings.HasSuffix(url, ".zip") {
+		// Add fragment back only if fragment does not end in ".zip"
+		url = url + "#" + urlsplit[1]
+	}
+	return url
 }
