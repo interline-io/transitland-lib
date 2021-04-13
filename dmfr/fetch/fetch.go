@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/download"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -27,7 +26,7 @@ type Options struct {
 	Directory               string
 	S3                      string
 	FetchedAt               time.Time
-	Secrets                 Secrets
+	Secrets                 download.Secrets
 }
 
 // Result contains results of a fetch operation.
@@ -97,6 +96,10 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	return fr, nil
 }
 
+type canSetAuth interface {
+	SetAuth(tl.FeedAuthorization, download.Secret)
+}
+
 // fetchAndCreateFeedVersion from a URL.
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
@@ -107,14 +110,8 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 		fr.FetchError = errors.New("no url")
 		return fr, nil
 	}
-	// Handle fragments
-	u, err := url.Parse(opts.FeedURL)
-	if err != nil {
-		fr.FetchError = errors.New("cannot parse url")
-		return fr, nil
-	}
 	// Get secret
-	secret := Secret{}
+	secret := download.Secret{}
 	if a, err := opts.Secrets.MatchFeed(opts.FeedID); err == nil {
 		secret = a
 	} else if a, err := opts.Secrets.MatchFilename(feed.File); err == nil {
@@ -123,20 +120,14 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 		fr.FetchError = errors.New("no secret found")
 		return fr, nil
 	}
-	// Check reader type
+	// Get reader
 	reader, err := tlcsv.NewReader(opts.FeedURL)
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil
 	}
-	// Override the default URLAdapter
-	if u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "ftp" || u.Scheme == "s3" {
-		aa := AuthenticatedURLAdapter{}
-		if err := aa.Download(opts.FeedURL, feed.Authorization, secret); err != nil {
-			fr.FetchError = err
-			return fr, nil
-		}
-		reader.Adapter = &aa
+	if v, ok := reader.Adapter.(canSetAuth); ok {
+		v.SetAuth(feed.Authorization, secret)
 	}
 	// Open
 	if err := reader.Open(); err != nil {
@@ -256,18 +247,4 @@ func copyFileContents(src, dst string) (err error) {
 	}
 	err = out.Sync()
 	return
-}
-
-// dmfrGetReaderURL helps load a file from an S3 or Directory location
-func dmfrGetReaderURL(s3 string, directory string, url string) string {
-	if s3 != "" {
-		url = s3 + "/" + url
-	} else if directory != "" {
-		url = filepath.Join(directory, url)
-	}
-	urlsplit := strings.SplitN(url, "#", 2)
-	if len(urlsplit) > 1 {
-		url = url + "#" + urlsplit[1]
-	}
-	return url
 }

@@ -8,14 +8,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/interline-io/transitland-lib/internal/download"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
@@ -41,8 +41,15 @@ type WriterAdapter interface {
 
 // URLAdapter downloads a GTFS URL to a temporary file, and removes the file when it is closed.
 type URLAdapter struct {
-	url string
+	url    string
+	secret download.Secret
+	auth   tl.FeedAuthorization
 	ZipAdapter
+}
+
+func (adapter *URLAdapter) SetAuth(auth tl.FeedAuthorization, secret download.Secret) {
+	adapter.secret = secret
+	adapter.auth = auth
 }
 
 // Open the adapter, and download the provided URL to a temporary file.
@@ -50,80 +57,29 @@ func (adapter *URLAdapter) Open() error {
 	if adapter.ZipAdapter.path != "" {
 		return nil // already open
 	}
-	// Get the data
-	split := strings.SplitN(adapter.url, "#", 2)
+	// Remove and keep internal path prefix
+	url := adapter.url
 	fragment := ""
+	split := strings.SplitN(adapter.url, "#", 2)
 	if len(split) > 1 {
-		adapter.url = split[0]
+		url = split[0]
 		fragment = split[1]
 	}
-	resp, err := http.Get(adapter.url)
+	// Download to temporary file
+	tmpfilepath, err := download.AuthenticatedRequest(url, adapter.secret, adapter.auth)
 	if err != nil {
-		return err
+		return errors.New("could not download file")
 	}
-	defer resp.Body.Close()
-	// Create the file
-	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
-	if err != nil {
-		return err
+	// Add internal path prefix back
+	adapter.ZipAdapter = ZipAdapter{
+		path:        tmpfilepath + "#" + fragment,
+		tmpfilepath: tmpfilepath, // delete on close
 	}
-	defer tmpfile.Close()
-	// Get the full path
-	tmpfilepath := tmpfile.Name()
-	// Write the body to file
-	_, err = io.Copy(tmpfile, resp.Body)
-	log.Debug("Downloaded %s to %s", adapter.url, tmpfilepath)
-	checkzip := tmpfilepath
-	if fragment != "" {
-		checkzip = tmpfilepath + "#" + fragment
-	}
-	za := NewZipAdapter(checkzip)
-	if za == nil {
-		return errors.New("could not open")
-	}
-	adapter.ZipAdapter = *za
-	adapter.ZipAdapter.tmpfilepath = tmpfilepath
 	return adapter.ZipAdapter.Open()
 }
 
 // Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
 func (adapter *URLAdapter) Close() error {
-	return adapter.ZipAdapter.Close()
-}
-
-/////////////////////
-
-// S3Adapter downloads a GTFS file from an S3 bucket to a temporary file, and removes the file when it is closed.
-type S3Adapter struct {
-	url string
-	ZipAdapter
-}
-
-// Open the adapter, and download the provided URL to a temporary file.
-func (adapter *S3Adapter) Open() error {
-	if adapter.ZipAdapter.path != "" {
-		return nil // already open
-	}
-	// Create the file
-	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
-	if err != nil {
-		return err
-	}
-	defer tmpfile.Close()
-	// Get the full path
-	tmpfilepath := tmpfile.Name()
-	// Download from S3 using the CLI
-	awscmd := exec.Command("aws", "s3", "cp", adapter.url, tmpfilepath)
-	if output, err := awscmd.Output(); err != nil {
-		return fmt.Errorf("error downloading %s: %s %s", adapter.url, output, err.Error())
-	}
-	log.Debug("Downloaded %s to %s", adapter.url, tmpfilepath)
-	adapter.ZipAdapter = ZipAdapter{path: tmpfilepath, tmpfilepath: tmpfilepath}
-	return adapter.ZipAdapter.Open()
-}
-
-// Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
-func (adapter *S3Adapter) Close() error {
 	return adapter.ZipAdapter.Close()
 }
 
@@ -138,15 +94,30 @@ type ZipAdapter struct {
 
 // NewZipAdapter returns an initialized zip adapter.
 func NewZipAdapter(path string) *ZipAdapter {
-	// Does this zip have a nested path?
-	adapter := ZipAdapter{path: path}
+	return &ZipAdapter{path: path}
+}
+
+// Open the adapter. Return an error if the file does not exist.
+func (adapter *ZipAdapter) Open() error {
+	// Split fragment
 	spliturl := strings.SplitN(adapter.path, "#", 2)
 	if len(spliturl) > 1 {
 		adapter.path = spliturl[0]
 		adapter.internalPrefix = spliturl[1]
 	}
-	// Do we need to extract a nested zip.
-	if strings.HasSuffix(adapter.internalPrefix, ".zip") {
+	if !adapter.Exists() {
+		return errors.New("file does not exist")
+	}
+	// Try to auto discover internal path fragment if unspecified
+	if adapter.internalPrefix == "" {
+		pfx, err := adapter.findInternalPrefix()
+		if err != nil {
+			return err
+		}
+		log.Debug("Using auto-discovered internal prefix: %s", pfx)
+		adapter.internalPrefix = pfx
+	} else if strings.HasSuffix(adapter.internalPrefix, ".zip") {
+		// If the internal prefix is a zip, extract this to a temp file
 		pf := adapter.internalPrefix
 		adapter.internalPrefix = ""
 		tmpfilepath := ""
@@ -161,25 +132,17 @@ func NewZipAdapter(path string) *ZipAdapter {
 			log.Debug("Extracted %s internal prefix %s to %s", adapter.path, adapter.internalPrefix, tmpfilepath)
 		})
 		if err != nil {
-			return &adapter
+			return err
 		}
 		adapter.path = tmpfilepath
 		adapter.tmpfilepath = tmpfilepath
 		adapter.internalPrefix = ""
 	}
-	return &adapter
-}
-
-// Open the adapter. Return an error if the file does not exist.
-func (adapter ZipAdapter) Open() error {
-	if !adapter.Exists() {
-		return errors.New("file does not exist")
-	}
 	return nil
 }
 
 // Close the adapter.
-func (adapter ZipAdapter) Close() error {
+func (adapter *ZipAdapter) Close() error {
 	if adapter.tmpfilepath != "" {
 		log.Debug("removing temp file: %s", adapter.tmpfilepath)
 		if err := os.Remove(adapter.tmpfilepath); err != nil {
@@ -190,12 +153,12 @@ func (adapter ZipAdapter) Close() error {
 }
 
 // Path returns the path to the zip file.
-func (adapter ZipAdapter) Path() string {
+func (adapter *ZipAdapter) Path() string {
 	return adapter.path
 }
 
 // Exists returns if the zip file exists.
-func (adapter ZipAdapter) Exists() bool {
+func (adapter *ZipAdapter) Exists() bool {
 	// Is the file readable
 	r, err := zip.OpenReader(adapter.path)
 	if err != nil {
@@ -206,7 +169,7 @@ func (adapter ZipAdapter) Exists() bool {
 }
 
 // OpenFile opens the file inside the archive and passes it to the provided callback.
-func (adapter ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
+func (adapter *ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 	r, err := zip.OpenReader(adapter.path)
 	if err != nil {
 		return err
@@ -233,14 +196,14 @@ func (adapter ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 }
 
 // ReadRows opens the specified file and runs the callback on each Row. An error is returned if the file cannot be read.
-func (adapter ZipAdapter) ReadRows(filename string, cb func(Row)) error {
+func (adapter *ZipAdapter) ReadRows(filename string, cb func(Row)) error {
 	return adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
 }
 
 // SHA1 returns the SHA1 checksum of the zip archive.
-func (adapter ZipAdapter) SHA1() (string, error) {
+func (adapter *ZipAdapter) SHA1() (string, error) {
 	f, err := os.Open(adapter.path)
 	if err != nil {
 		return "", err
@@ -253,7 +216,7 @@ func (adapter ZipAdapter) SHA1() (string, error) {
 }
 
 // DirSHA1 returns the SHA1 of all the .txt files in the main directory, sorted, and concatenated.
-func (adapter ZipAdapter) DirSHA1() (string, error) {
+func (adapter *ZipAdapter) DirSHA1() (string, error) {
 	r, err := zip.OpenReader(adapter.path)
 	if err != nil {
 		return "", err
@@ -282,8 +245,8 @@ func (adapter ZipAdapter) DirSHA1() (string, error) {
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-// FileInfos returns a list of os.FileInfo for all top-level .txt files.
-func (adapter ZipAdapter) FileInfos() ([]os.FileInfo, error) {
+// FileInfos returns a list of os.FileInfo for all .txt files.
+func (adapter *ZipAdapter) FileInfos() ([]os.FileInfo, error) {
 	ret := []os.FileInfo{}
 	r, err := zip.OpenReader(adapter.path)
 	if err != nil {
@@ -303,6 +266,31 @@ func (adapter ZipAdapter) FileInfos() ([]os.FileInfo, error) {
 		ret = append(ret, fi)
 	}
 	return ret, nil
+}
+
+func (adapter *ZipAdapter) findInternalPrefix() (string, error) {
+	r, err := zip.OpenReader(adapter.path)
+	if err != nil {
+		return "", err
+	}
+	prefixes := []string{}
+	defer r.Close()
+	for _, zf := range r.File {
+		fi := zf.FileInfo()
+		fn := zf.Name
+		if fi.IsDir() || strings.HasPrefix(fn, ".") {
+			continue
+		}
+		if filepath.Base(fn) == "stops.txt" {
+			prefixes = append(prefixes, filepath.Dir(fn))
+		}
+	}
+	if len(prefixes) > 1 {
+		return "", errors.New("more than one valid prefix found")
+	} else if len(prefixes) == 1 {
+		return prefixes[0], nil
+	}
+	return "", nil
 }
 
 /////////////////////

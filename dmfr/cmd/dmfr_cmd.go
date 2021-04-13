@@ -27,7 +27,6 @@ func (cmd *Command) Run(args []string) error {
 		log.Print("  sync")
 		log.Print("  import")
 		log.Print("  fetch")
-		log.Print("  recalculate")
 		fl.PrintDefaults()
 	}
 	fl.Parse(args)
@@ -50,8 +49,6 @@ func (cmd *Command) Run(args []string) error {
 		r = &importer.Command{}
 	case "fetch":
 		r = &fetch.Command{}
-	case "recalculate":
-		r = &fetch.RecalculateCommand{}
 	default:
 		return fmt.Errorf("Invalid command: %q", subc)
 	}

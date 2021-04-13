@@ -19,6 +19,7 @@ func init() {
 	ext.RegisterReader("https", r)
 	ext.RegisterReader("s3", r)
 	ext.RegisterReader("overlay", r)
+	ext.RegisterReader("ftp", r)
 	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
 	ext.RegisterWriter("csv", w)
 	// Set chunkSize from config.
