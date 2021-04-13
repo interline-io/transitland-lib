@@ -26,6 +26,7 @@ func TestReader(t *testing.T, fe ReaderTester, newReader func() tl.Reader) {
 	t.Run("Open", func(t *testing.T) {
 		if openerr != nil {
 			t.Error(openerr)
+			t.FailNow()
 		}
 	})
 	t.Run("ValidateStructure", func(t *testing.T) {

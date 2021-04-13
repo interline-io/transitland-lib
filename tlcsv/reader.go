@@ -22,7 +22,7 @@ type Reader struct {
 // NewReader returns an initialized CSV Reader.
 func NewReader(path string) (*Reader, error) {
 	var a Adapter
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "ftp://") {
 		a = &URLAdapter{url: path}
 	} else if strings.HasPrefix(path, "s3://") {
 		a = &URLAdapter{url: path}
