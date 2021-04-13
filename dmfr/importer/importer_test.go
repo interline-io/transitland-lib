@@ -92,7 +92,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 			}
 			explog := "file does not exist"
 			if fvi.ExceptionLog != explog {
-				t.Errorf("got %s expected %s", fvi.ExceptionLog, explog)
+				t.Errorf("got '%s' expected '%s'", fvi.ExceptionLog, explog)
 			}
 			if fvi.InProgress != false {
 				t.Errorf("expected in_progress = false")

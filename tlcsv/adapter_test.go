@@ -98,6 +98,40 @@ func TestZipAdapterNestedDir(t *testing.T) {
 	testAdapter(t, v())
 }
 
+func TestZipAdapter_findInternalPrefix(t *testing.T) {
+	t.Run("single", func(t *testing.T) {
+		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-dir.zip")}
+		if err := v.Open(); err != nil {
+			t.Error(err)
+			return
+		}
+		p, err := v.findInternalPrefix()
+		if err != nil {
+			t.Error(err)
+		}
+		expect := "example-nested-dir/example"
+		if p != expect {
+			t.Errorf("got '%s' expect '%s'", p, expect)
+		}
+	})
+	t.Run("ambiguous", func(t *testing.T) {
+		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-dir-ambiguous.zip")}
+		v.internalPrefix = "example-nested-dir/example" // override for test
+		if err := v.Open(); err != nil {
+			t.Error(err)
+			return
+		}
+		p, err := v.findInternalPrefix()
+		if err == nil {
+			t.Errorf("expected error for ambiguous prefixes")
+		}
+		expect := ""
+		if p != expect {
+			t.Errorf("got '%s' expect '%s'", p, expect)
+		}
+	})
+}
+
 func TestZipAdapterNestedZip(t *testing.T) {
 	v, ok := getTestAdapters()["ZipAdapterNestedZip"]
 	if !ok {
