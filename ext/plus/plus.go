@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	e := func() ext.Extension { return Ext{} }
+	e := func() ext.Extension { return &Ext{} }
 	ext.RegisterExtension("plus", e)
 }
 
