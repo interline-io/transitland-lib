@@ -12,7 +12,7 @@ import (
 // BasicRouteTypeFilter checks for extended route_type's and converts to basic route_types.
 type BasicRouteTypeFilter struct{}
 
-// Filter .
+// Filter converts extended route_types to basic route_types.
 func (e *BasicRouteTypeFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	// Filters can edit in place, add entity errors, etc.
 	v, ok := ent.(*tl.Route)

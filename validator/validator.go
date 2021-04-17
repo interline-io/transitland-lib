@@ -47,6 +47,7 @@ type Validator struct {
 	Reader      tl.Reader
 	Options     Options
 	rtValidator *rt.Validator
+	copier      *copier.Copier
 }
 
 // NewValidator returns a new Validator.
@@ -58,51 +59,16 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	if options.IncludeEntitiesLimit == 0 {
 		options.IncludeEntitiesLimit = defaultMaxEnts
 	}
-	return &Validator{
-		Reader:      reader,
-		Options:     options,
-		rtValidator: rt.NewValidator(),
-	}, nil
-}
-
-// Validate performs a basic validation, as well as optional extended reports.
-func (v *Validator) Validate() (*Result, error) {
-	reader := v.Reader
-	result := Result{}
-	result.EarliestCalendarDate = time.Now()
-	result.LatestCalendarDate = time.Now()
-
-	// Check file infos first, so we exit early if a file exceeds the row limit.
-	if reader2, ok := reader.(*tlcsv.Reader); ok {
-		fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader2)
-		if err != nil {
-			result.FailureReason = fmt.Sprintf("Could not read basic CSV data from file: %s", err.Error())
-			return &result, nil
-		}
-		result.Files = fvfis
-		// Maximum file limits
-		if v.Options.CheckFileLimits {
-			for _, fvfi := range fvfis {
-				if maxRows, ok := defaultMaxFileRows[fvfi.Name]; ok && fvfi.Rows > maxRows {
-					result.FailureReason = fmt.Sprintf(
-						"File '%s' exceeded maximum size; got %d rows, max allowed %d rows",
-						fvfi.Name,
-						fvfi.Rows,
-						maxRows,
-					)
-					return &result, nil
-				}
-			}
-		}
+	writer := &emptyWriter{}
+	writer.Open()
+	// Prepare copier
+	options.Options.AllowEntityErrors = true
+	options.Options.AllowReferenceErrors = true
+	copier, err := copier.NewCopier(reader, writer, options.Options)
+	if err != nil {
+		return nil, err
 	}
-
-	// Main validation
-	w := emptyWriter{}
-	w.Open()
-	copier := copier.NewCopier(v.Reader, &w, v.Options.Options)
-	copier.AllowEntityErrors = true
-	copier.AllowReferenceErrors = true
-	if v.Options.BestPractices {
+	if options.BestPractices {
 		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
 		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
 		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
@@ -124,19 +90,60 @@ func (v *Validator) Validate() (*Result, error) {
 		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
 		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
 	}
-	if len(v.Options.ValidateRealtimeMessages) > 0 {
-		copier.AddValidator(v.rtValidator, 1)
+	rtv := rt.NewValidator()
+	if len(options.ValidateRealtimeMessages) > 0 {
+		copier.AddValidator(rtv, 1)
 	}
-	if r := copier.Copy(); r != nil {
+	// OK
+	return &Validator{
+		Reader:      reader,
+		Options:     options,
+		copier:      copier,
+		rtValidator: rtv,
+	}, nil
+}
+
+// Validate performs a basic validation, as well as optional extended reports.
+func (v *Validator) Validate() (*Result, error) {
+	reader := v.Reader
+	result := &Result{}
+	result.EarliestCalendarDate = time.Now()
+	result.LatestCalendarDate = time.Now()
+
+	// Check file infos first, so we exit early if a file exceeds the row limit.
+	if reader2, ok := reader.(*tlcsv.Reader); ok {
+		fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader2)
+		if err != nil {
+			result.FailureReason = fmt.Sprintf("Could not read basic CSV data from file: %s", err.Error())
+			return result, nil
+		}
+		result.Files = fvfis
+		// Maximum file limits
+		if v.Options.CheckFileLimits {
+			for _, fvfi := range fvfis {
+				if maxRows, ok := defaultMaxFileRows[fvfi.Name]; ok && fvfi.Rows > maxRows {
+					result.FailureReason = fmt.Sprintf(
+						"File '%s' exceeded maximum size; got %d rows, max allowed %d rows",
+						fvfi.Name,
+						fvfi.Rows,
+						maxRows,
+					)
+					return result, nil
+				}
+			}
+		}
+	}
+
+	// Main validation
+	if r := v.copier.Copy(); r != nil {
 		result.Result = *r
 	} else {
 		result.FailureReason = "Failed to validate feed"
-		return &result, nil
+		return result, nil
 	}
 
 	// Validate realtime messages
 	for _, fn := range v.Options.ValidateRealtimeMessages {
-		fmt.Println("validating rt message:", fn)
 		msg, err := rt.Read(fn)
 		if err != nil {
 			panic(err)
@@ -150,7 +157,7 @@ func (v *Validator) Validate() (*Result, error) {
 		fvsls, err := dmfr.NewFeedVersionServiceInfosFromReader(reader)
 		if err != nil {
 			result.FailureReason = fmt.Sprintf("Could not calculate service levels: %s", err.Error())
-			return &result, nil
+			return result, nil
 		}
 		for i, fvsl := range fvsls {
 			if i > v.Options.IncludeEntitiesLimit {
@@ -205,5 +212,5 @@ func (v *Validator) Validate() (*Result, error) {
 		}
 	}
 	result.Success = true
-	return &result, nil
+	return result, nil
 }

@@ -242,7 +242,8 @@ func (g *Geometry) Value() (driver.Value, error) {
 	if g.Geometry == nil || !g.Valid {
 		return nil, nil
 	}
-	return ewkb.Marshal(g.Geometry, ewkb.NDR)
+	a, err := wkbEncode(g.Geometry)
+	return a, err
 }
 
 // MarshalJSON implements the json.Marshaler interface

@@ -17,7 +17,7 @@ type validateCommand struct {
 	Options    validator.Options
 	rtFiles    cli.ArrayFlags
 	OutputFile string
-	// validateExtensions cli.ArrayFlags
+	extensions cli.ArrayFlags
 }
 
 func (cmd *validateCommand) Run(args []string) error {
@@ -26,7 +26,7 @@ func (cmd *validateCommand) Run(args []string) error {
 		log.Print("Usage: validate <reader>")
 		fl.PrintDefaults()
 	}
-	// fl.Var(&cmd.validateExtensions, "ext", "Include GTFS Extension")
+	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.StringVar(&cmd.OutputFile, "o", "", "Write validation report as JSON to file")
 	fl.BoolVar(&cmd.Options.BestPractices, "best-practices", false, "Include Best Practices validations")
 	fl.Var(&cmd.rtFiles, "rt", "Include GTFS-RT proto message in validation report")
@@ -38,20 +38,16 @@ func (cmd *validateCommand) Run(args []string) error {
 	reader := ext.MustGetReader(fl.Arg(0))
 	defer reader.Close()
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles
+	cmd.Options.Extensions = cmd.extensions
 	v, err := validator.NewValidator(reader, cmd.Options)
 	if err != nil {
 		return err
 	}
-	// // TODO
-	// for _, extName := range cmd.validateExtensions {
-	// 	e, err := ext.GetExtension(extName)
-	// 	if err != nil {
-	// 		return fmt.Errorf("No extension for: %s", extName)
-	// 	}
-	// 	v.Copier.AddExtension(e)
-	// }
 	log.Info("Validating: %s", fl.Arg(0))
-	result, _ := v.Validate()
+	result, err := v.Validate()
+	if err != nil {
+		return err
+	}
 	result.DisplayErrors()
 	result.DisplayWarnings()
 	result.DisplaySummary()

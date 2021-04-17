@@ -10,11 +10,6 @@ type EntityError interface {
 	Error() string
 }
 
-// EntityFilter provides an interface for modifying an entity, e.g. before writing
-type EntityFilter interface {
-	Filter(Entity, *EntityMap) error
-}
-
 // Entity provides an interface for GTFS entities.
 type Entity interface {
 	EntityID() string

@@ -10,19 +10,16 @@ import (
 
 // Extension defines two methods that specify the entities in an Extension and how to Create the necessary output structures, e.g. in a database.
 type Extension interface {
-	Create(tl.Writer) error
 	Entities() []tl.Entity
 }
 
 type readerFactory func(dburl string) (tl.Reader, error)
 type writerFactory func(dburl string) (tl.Writer, error)
 type extensionFactory func() Extension
-type entityFilterFactory func() tl.EntityFilter
 
 var readerFactories = map[string]readerFactory{}
 var writerFactories = map[string]writerFactory{}
 var extensionFactories = map[string]extensionFactory{}
-var entityFilterFactories = map[string]entityFilterFactory{}
 
 // RegisterReader registers a Reader.
 func RegisterReader(name string, factory readerFactory) {
@@ -58,11 +55,6 @@ func RegisterExtension(name string, factory extensionFactory) {
 	}
 	log.Debug("Registering Extension factory: %s", name)
 	extensionFactories[name] = factory
-}
-
-// RegisterEntityFilter registers a EntityFilter.
-func RegisterEntityFilter(name string) {
-	log.Debug("Registering EntityFilter factory: %s", name)
 }
 
 // NewReader uses the scheme prefix as the driver name, defaulting to csv.
@@ -153,14 +145,6 @@ func GetExtension(name string) (Extension, error) {
 		return f(), nil
 	}
 	return nil, fmt.Errorf("no Extension factory for %s", name)
-}
-
-// GetEntityFilter returns a Transform.
-func GetEntityFilter(name string) (tl.EntityFilter, error) {
-	if f, ok := entityFilterFactories[name]; ok {
-		return f(), nil
-	}
-	return nil, fmt.Errorf("no EntityFilter factory for %s", name)
 }
 
 // MustGetReader or exits.

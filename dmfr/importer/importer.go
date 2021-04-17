@@ -12,7 +12,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -23,7 +22,6 @@ import (
 // Options sets various options for importing a feed.
 type Options struct {
 	FeedVersionID int
-	Extensions    []string
 	Directory     string
 	S3            string
 	Activate      bool
@@ -235,21 +233,20 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 		return fvi, err
 	}
 	defer reader.Close()
+
 	// Get writer with existing tx
-	writer := tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
-	// Import, run in txn
-	cp := copier.NewCopier(reader, &writer, opts.Options)
-	for _, e := range opts.Extensions {
-		ext, err := ext.GetExtension(e)
-		if err != nil {
-			panic("Extension not found")
-		}
-		cp.AddExtension(ext)
-	}
+	writer := &tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
+
+	// Create copier
 	// Non-settable options
-	cp.AllowEntityErrors = false
-	cp.AllowReferenceErrors = false
-	cp.NormalizeServiceIDs = true
+	opts.Options.AllowEntityErrors = false
+	opts.Options.AllowReferenceErrors = false
+	opts.Options.NormalizeServiceIDs = true
+	cp, err := copier.NewCopier(reader, writer, opts.Options)
+	if err != nil {
+		return fvi, err
+	}
+
 	// Go
 	cpresult := cp.Copy()
 	if cpresult == nil {
@@ -258,6 +255,7 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	if cpresult.WriteError != nil {
 		return fvi, cpresult.WriteError
 	}
+
 	cpresult.DisplaySummary()
 	counts := copyResultCounts(*cpresult)
 	fvi.InterpolatedStopTimeCount = counts.InterpolatedStopTimeCount
