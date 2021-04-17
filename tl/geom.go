@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
-	"fmt"
 	"io"
 
 	geom "github.com/twpayne/go-geom"
@@ -244,7 +243,6 @@ func (g *Geometry) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	a, err := wkbEncode(g.Geometry)
-	fmt.Printf("%x", a)
 	return a, err
 }
 
