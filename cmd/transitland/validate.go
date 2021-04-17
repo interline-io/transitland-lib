@@ -45,7 +45,9 @@ func (cmd *validateCommand) Run(args []string) error {
 	}
 	log.Info("Validating: %s", fl.Arg(0))
 	result, err := v.Validate()
-
+	if err != nil {
+		return err
+	}
 	result.DisplayErrors()
 	result.DisplayWarnings()
 	result.DisplaySummary()
