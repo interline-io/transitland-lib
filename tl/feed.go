@@ -14,7 +14,7 @@ type Feed struct {
 	FeedNamespaceID string              `json:"feed_namespace_id"`
 	Spec            string              `json:"spec"`
 	URLs            FeedUrls            `json:"urls" db:"urls"`
-	AssociatedFeeds FeedAssociatedFeeds `json:"-"` // `json:"associated_feeds"`
+	AssociatedFeeds FeedAssociatedFeeds `json:"associated_feeds"` // `json:"associated_feeds"`
 	Languages       FeedLanguages       `json:"languages,omitempty"`
 	License         FeedLicense         `json:"license"`
 	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
@@ -22,6 +22,7 @@ type Feed struct {
 	IDCrosswalk     map[string]string   `json:"id_crosswalk" db:"-"`
 	File            string              `json:"-"` // internal
 	DeletedAt       OptionalTime        `json:"-"` // internal
+	Tags            map[string]string   `json:"tags" db:"-" `
 	Timestamps      `json:"-"`          // internal
 }
 
@@ -129,7 +130,7 @@ func (a *FeedAuthorization) Scan(value interface{}) error {
 }
 
 // FeedAssociatedFeeds .
-type FeedAssociatedFeeds map[string]string
+type FeedAssociatedFeeds []string
 
 // Value .
 func (a FeedAssociatedFeeds) Value() (driver.Value, error) {
