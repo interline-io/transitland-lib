@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/rules"
@@ -77,6 +78,8 @@ type Options struct {
 	DeduplicateJourneyPatterns bool
 	// Default error handler
 	ErrorHandler ErrorHandler
+	// Named extensions
+	Extensions []string
 }
 
 // Copier copies from Reader to Writer
@@ -105,8 +108,8 @@ type Copier struct {
 }
 
 // NewCopier creates and initializes a new Copier.
-func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
-	copier := Copier{}
+func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error) {
+	copier := &Copier{}
 	copier.Options = opts
 	copier.Reader = reader
 	copier.Writer = writer
@@ -141,7 +144,17 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) Copier {
 		&rules.InconsistentTimezoneCheck{},
 		&rules.ParentStationLocationTypeCheck{},
 	)
-	return copier
+	// Add extensions
+	for _, extName := range opts.Extensions {
+		e, err := ext.GetExtension(extName)
+		if err != nil || e == nil {
+			return nil, fmt.Errorf("No registered extension for '%s'", extName)
+		}
+		if err := copier.AddExtension(e); err != nil {
+			return nil, fmt.Errorf("Failed to add extension '%s': %s", extName, err.Error())
+		}
+	}
+	return copier, nil
 }
 
 // AddValidator adds an additional entity validator.

@@ -74,7 +74,6 @@ func (g *GeomCache) AddSimplifiedShape(eid string, shape tl.Shape, threshold flo
 		return
 	}
 	pnts := shape.Geometry.FlatCoords()
-	fmt.Println("shape input length:", eid, len(pnts))
 	stride := shape.Geometry.Stride()
 	ii := geomxy.SimplifyFlatCoords(pnts, threshold, stride)
 	for i, j := range ii {
@@ -84,7 +83,6 @@ func (g *GeomCache) AddSimplifiedShape(eid string, shape tl.Shape, threshold flo
 		pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
 	}
 	pnts = pnts[:len(ii)*stride]
-	fmt.Println("shape output length:", eid, len(pnts))
 	sl := make([][2]float64, len(pnts)/stride)
 	for i := 0; i < len(pnts)-stride+1; i += stride {
 		sl[i/stride] = [2]float64{pnts[i], pnts[i+1]}

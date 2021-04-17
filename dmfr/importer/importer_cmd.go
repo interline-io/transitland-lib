@@ -58,11 +58,11 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.Options.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
 	fl.BoolVar(&cmd.Options.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
 	fl.Parse(args)
+	cmd.Options.Extensions = extflags
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
 	}
-	cmd.Options.Extensions = extflags
 	if fvidfile != "" {
 		lines, err := getFileLines(fvidfile)
 		if err != nil {
@@ -154,7 +154,6 @@ func (cmd *Command) Run() error {
 			FeedVersionID: fvid,
 			Directory:     cmd.Options.Directory,
 			S3:            cmd.Options.S3,
-			Extensions:    cmd.Options.Extensions,
 			Activate:      cmd.Options.Activate,
 			Options:       cmd.Options.Options,
 		}

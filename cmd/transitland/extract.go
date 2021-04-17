@@ -21,7 +21,6 @@ type extractCommand struct {
 	fvid       int
 	create     bool
 	extensions cli.ArrayFlags
-	filters    cli.ArrayFlags
 	// extract specific arguments
 	onlyVisitedEntities bool
 	allEntities         bool
@@ -72,8 +71,7 @@ func (cmd *extractCommand) Run(args []string) error {
 	defer reader.Close()
 	writer := ext.MustGetWriter(fl.Arg(1), cmd.create)
 	defer writer.Close()
-	// Setup copier
-	cp := copier.NewCopier(reader, writer, cmd.Options)
+	// Create fv
 	if dbw, ok := writer.(*tldb.Writer); ok {
 		if cmd.fvid != 0 {
 			dbw.FeedVersionID = cmd.fvid
@@ -84,27 +82,14 @@ func (cmd *extractCommand) Run(args []string) error {
 			}
 			dbw.FeedVersionID = fvid
 		}
-		cp.NormalizeServiceIDs = true
+		cmd.Options.NormalizeServiceIDs = true
 	}
-	// for _, extName := range cmd.extensions {
-	// 	e, err := ext.GetExtension(extName)
-	// 	if err != nil {
-	// 		log.Exit("No extension for: %s", extName)
-	// 	}
-	// 	cp.AddExtension(e)
-	// 	if cmd.create {
-	// 		if err := e.Create(writer); err != nil {
-	// 			log.Exit("Could not create writer: %s", err)
-	// 		}
-	// 	}
-	// }
-	// for _, extName := range cmd.filters {
-	// 	ef, err := ext.GetEntityFilter(extName)
-	// 	if err != nil {
-	// 		log.Exit("No filter for '%s': %s", extName, err)
-	// 	}
-	// 	cp.AddEntityFilter(ef)
-	// }
+	// Setup copier
+	cmd.Options.Extensions = cmd.extensions
+	cp, err := copier.NewCopier(reader, writer, cmd.Options)
+	if err != nil {
+		log.Exit(err.Error())
+	}
 	// Create SetterFilter
 	setvalues := [][]string{}
 	for _, setv := range cmd.extractSet {

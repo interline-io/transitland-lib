@@ -7,17 +7,13 @@ import (
 )
 
 func init() {
-	e := func() ext.Extension { return Ext{} }
+	e := func() ext.Extension { return &Ext{} }
 	ext.RegisterExtension("plus", e)
 }
 
 // Ext is the GTFS Plus Extension.
 type Ext struct {
-}
-
-// Create the necessary database tables.
-func (ext Ext) Create(writer tl.Writer) error {
-	return nil
+	defaultAgency string
 }
 
 // Entities returns the entities defined by GTFS Plus.
@@ -35,8 +31,20 @@ func (ext Ext) Entities() []tl.Entity {
 	}
 }
 
+func (ext *Ext) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+	switch v := ent.(type) {
+	case *tl.Agency:
+		ext.defaultAgency = v.AgencyID
+	case *RiderCategory:
+		if v.AgencyID == "" {
+			v.AgencyID = ext.defaultAgency
+		}
+	}
+	return nil
+}
+
 // Copy uses the Copier to copy Entities.
-func (ext Ext) Copy(c *copier.Copier) error {
+func (ext *Ext) Copy(c *copier.Copier) error {
 	copyCalendarAttributes(c)
 	copyRiderCategories(c)
 	copyFareRiderCategories(c)

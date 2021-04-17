@@ -22,7 +22,6 @@ import (
 // Options sets various options for importing a feed.
 type Options struct {
 	FeedVersionID int
-	Extensions    []string
 	Directory     string
 	S3            string
 	Activate      bool
@@ -236,14 +235,18 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	defer reader.Close()
 
 	// Get writer with existing tx
-	writer := tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
-	// Import, run in txn
-	cp := copier.NewCopier(reader, &writer, opts.Options)
+	writer := &tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 
+	// Create copier
 	// Non-settable options
-	cp.AllowEntityErrors = false
-	cp.AllowReferenceErrors = false
-	cp.NormalizeServiceIDs = true
+	opts.Options.AllowEntityErrors = false
+	opts.Options.AllowReferenceErrors = false
+	opts.Options.NormalizeServiceIDs = true
+	cp, err := copier.NewCopier(reader, writer, opts.Options)
+	if err != nil {
+		return fvi, err
+	}
+
 	// Go
 	cpresult := cp.Copy()
 	if cpresult == nil {
