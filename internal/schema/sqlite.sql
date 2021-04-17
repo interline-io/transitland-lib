@@ -358,20 +358,3 @@ CREATE TABLE IF NOT EXISTS "feed_version_service_levels" (
 );
 
 CREATE INDEX idx_feed_version_service_levels_feed_version_id ON "feed_version_service_levels"(feed_version_id);
-
-
------------------------
-
-CREATE TABLE "tl_route_stops" (
-  "route_id" integer NOT NULL, 
-  "agency_id" integer NOT NULL, 
-  "stop_id" integer NOT NULL, 
-  "feed_version_id" integer NOT NULL
-);
-
-CREATE TABLE "tl_route_geometries2" (
-  "route_id" integer NOT NULL,
-  "generated" bool NOT NULL,
-  "geometry" blob NOT NULL,
-  "feed_version_id" integer NOT NULL
-)
