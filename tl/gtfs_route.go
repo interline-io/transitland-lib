@@ -20,6 +20,8 @@ type Route struct {
 	RouteTextColor string
 	RouteSortOrder int
 	Geometry       Geometry `csv:"-" db:"-"`
+	NetworkID      string   `db:"-"`
+	AsRoute        int      `db:"-"`
 	BaseEntity
 }
 

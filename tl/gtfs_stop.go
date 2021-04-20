@@ -22,16 +22,14 @@ type Stop struct {
 	StopTimezone       string
 	WheelchairBoarding int
 	LevelID            OKey
-	Geometry           Point `csv:"-" db:"geometry"`
+	Geometry           Point  `csv:"-" db:"geometry"`
+	AreaID             string `db:"-"`
 	BaseEntity
 }
 
 // SetCoordinates takes a [2]float64 and sets the Stop's lon,lat
 func (ent *Stop) SetCoordinates(p [2]float64) {
 	ent.Geometry = NewPoint(p[0], p[1])
-	// if p[0] == 0 && p[1] == 0 {
-	// 	ent.Geometry.Valid = false
-	// }
 }
 
 // Coordinates returns the stop lon,lat as a [2]float64
