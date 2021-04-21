@@ -5,8 +5,8 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
-// RiderCategory rider_categories.txt
-type RiderCategory struct {
+// PlusRiderCategory rider_categories.txt
+type PlusRiderCategory struct {
 	AgencyID                 string `csv:"agency_id"`
 	RiderCategoryID          int    `csv:"rider_category_id"`
 	RiderCategoryDescription string `csv:"rider_category_description"`
@@ -14,17 +14,17 @@ type RiderCategory struct {
 }
 
 // Filename rider_categories.txt
-func (ent *RiderCategory) Filename() string {
-	return "rider_categories.txt"
+func (ent *PlusRiderCategory) Filename() string {
+	return "mtc_rider_categories.txt"
 }
 
 // TableName ext_plus_rider_categories
-func (ent *RiderCategory) TableName() string {
+func (ent *PlusRiderCategory) TableName() string {
 	return "ext_plus_rider_categories"
 }
 
 // UpdateKeys updates Entity references.
-func (ent *RiderCategory) UpdateKeys(emap *tl.EntityMap) error {
+func (ent *PlusRiderCategory) UpdateKeys(emap *tl.EntityMap) error {
 	if len(ent.AgencyID) > 0 {
 		if fkey, ok := emap.GetEntity(&tl.Agency{AgencyID: ent.AgencyID}); ok {
 			ent.AgencyID = fkey
