@@ -20,7 +20,7 @@ type Ext struct {
 func (ext Ext) Entities() []tl.Entity {
 	return []tl.Entity{
 		&CalendarAttribute{},
-		&RiderCategory{},
+		&PlusRiderCategory{},
 		&FareRiderCategory{},
 		&FarezoneAttribute{},
 		&Direction{},
@@ -35,7 +35,7 @@ func (ext *Ext) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		ext.defaultAgency = v.AgencyID
-	case *RiderCategory:
+	case *PlusRiderCategory:
 		if v.AgencyID == "" {
 			v.AgencyID = ext.defaultAgency
 		}
@@ -66,7 +66,7 @@ func copyCalendarAttributes(copier *copier.Copier) {
 }
 
 func copyRiderCategories(copier *copier.Copier) {
-	out := make(chan RiderCategory, 1000)
+	out := make(chan PlusRiderCategory, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
 		copier.CopyEntity(&ent)

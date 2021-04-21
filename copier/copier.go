@@ -14,6 +14,11 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+// Prepare is called before general copying begins.
+type Prepare interface {
+	Prepare(tl.Reader, *tl.EntityMap) error
+}
+
 // Filter is called before validation.
 type Filter interface {
 	Filter(tl.Entity, *tl.EntityMap) error
@@ -129,21 +134,21 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	if copier.BatchSize == 0 {
 		copier.BatchSize = 1_000_000
 	}
-	// Default filters
-	copier.filters = []Filter{}
-	if copier.UseBasicRouteTypes {
-		copier.filters = append(copier.filters, &BasicRouteTypeFilter{})
-	}
+
 	// Default set of validators
-	copier.errorValidators = append(copier.errorValidators,
-		&rules.EntityErrorCheck{},
-		&rules.EntityDuplicateCheck{},
-		&rules.ValidFarezoneCheck{},
-		&rules.AgencyIDConditionallyRequiredCheck{},
-		&rules.StopTimeSequenceCheck{},
-		&rules.InconsistentTimezoneCheck{},
-		&rules.ParentStationLocationTypeCheck{},
-	)
+	copier.AddValidator(&rules.EntityErrorCheck{}, 0)
+	copier.AddValidator(&rules.EntityDuplicateCheck{}, 0)
+	copier.AddValidator(&rules.ValidFarezoneCheck{}, 0)
+	copier.AddValidator(&rules.AgencyIDConditionallyRequiredCheck{}, 0)
+	copier.AddValidator(&rules.StopTimeSequenceCheck{}, 0)
+	copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
+	copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
+
+	// Default extensions
+	if copier.UseBasicRouteTypes {
+		copier.AddExtension(&BasicRouteTypeFilter{})
+	}
+
 	// Add extensions
 	for _, extName := range opts.Extensions {
 		e, err := ext.GetExtension(extName)
@@ -158,14 +163,17 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 }
 
 // AddValidator adds an additional entity validator.
-func (copier *Copier) AddValidator(e Validator, level int) error {
-	if v, ok := e.(canShareGeomCache); ok {
+func (copier *Copier) AddValidator(ext Validator, level int) error {
+	if v, ok := ext.(canShareGeomCache); ok {
 		v.SetGeomCache(copier.geomCache)
 	}
+	if v, ok := ext.(Prepare); ok {
+		v.Prepare(copier.Reader, copier.EntityMap)
+	}
 	if level == 0 {
-		copier.errorValidators = append(copier.errorValidators, e)
+		copier.errorValidators = append(copier.errorValidators, ext)
 	} else if level == 1 {
-		copier.warningValidators = append(copier.warningValidators, e)
+		copier.warningValidators = append(copier.warningValidators, ext)
 	} else {
 		return errors.New("unknown validation level")
 	}
@@ -177,6 +185,9 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 	added := false
 	if v, ok := ext.(canShareGeomCache); ok {
 		v.SetGeomCache(copier.geomCache)
+	}
+	if v, ok := ext.(Prepare); ok {
+		v.Prepare(copier.Reader, copier.EntityMap)
 	}
 	if v, ok := ext.(Filter); ok {
 		copier.filters = append(copier.filters, v)
