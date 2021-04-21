@@ -98,7 +98,7 @@ func (c *Cache) GetInsert(ent interface{}, header []string) ([]interface{}, erro
 		fi, ok := fmap[key]
 		if !ok {
 			// This should not happen.
-			return nil, fmt.Errorf("unknown field: %s index: %d", key, fi.Index)
+			return nil, fmt.Errorf("unknown field: %s", key)
 		}
 		v := reflectx.FieldByIndexesReadOnly(val, fi.Index)
 		vals = append(vals, v.Interface())

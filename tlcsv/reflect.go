@@ -268,7 +268,7 @@ func dumpRow(ent tl.Entity, header []string) ([]string, error) {
 	// Reflect path
 	rv, err := MapperCache.GetInsert(ent, header)
 	if err != nil || len(rv) != len(header) {
-		return nil, errors.New("error getting insert values")
+		return nil, errors.New("failed to get insert values for entity")
 	}
 	for i, v := range rv {
 		value, err := valGetString(reflect.ValueOf(v), header[i])
