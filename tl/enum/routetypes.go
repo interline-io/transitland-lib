@@ -21,6 +21,8 @@ var routeTypes = []RouteType{
 	{Code: 5, Name: "Cablecar"},
 	{Code: 6, Name: "Gondola"},
 	{Code: 7, Name: "Funicular"},
+	{Code: 11, Name: "Trolleybus"},
+	{Code: 12, Name: "Monorail"},
 
 	{Code: 100, Name: "Railway Service", Parent: 2},
 	{Code: 101, Name: "High Speed Rail Service", Parent: 2},
