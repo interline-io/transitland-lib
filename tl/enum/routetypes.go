@@ -21,6 +21,8 @@ var routeTypes = []RouteType{
 	{Code: 5, Name: "Cablecar"},
 	{Code: 6, Name: "Gondola"},
 	{Code: 7, Name: "Funicular"},
+	{Code: 11, Name: "Trolleybus"},
+	{Code: 12, Name: "Monorail"},
 
 	{Code: 100, Name: "Railway Service", Parent: 2},
 	{Code: 101, Name: "High Speed Rail Service", Parent: 2},
@@ -59,7 +61,7 @@ var routeTypes = []RouteType{
 	{Code: 402, Name: "Underground Service", Parent: 1},
 	{Code: 403, Name: "Urban Railway Service", Parent: 1},
 	{Code: 404, Name: "All Urban Railway Services", Parent: 1},
-	{Code: 405, Name: "Monorail", Parent: 1},
+	{Code: 405, Name: "Monorail", Parent: 12},
 
 	{Code: 700, Name: "Bus Service", Parent: 3},
 	{Code: 701, Name: "Regional Bus Service", Parent: 3},
@@ -80,7 +82,7 @@ var routeTypes = []RouteType{
 	{Code: 716, Name: "All Bus Services", Parent: 3},
 	{Code: 717, Name: "Share Taxi Service", Parent: 3},
 
-	{Code: 800, Name: "Trolleybus Service", Parent: 3},
+	{Code: 800, Name: "Trolleybus Service", Parent: 11},
 
 	{Code: 900, Name: "Tram Service", Parent: 0},
 	{Code: 901, Name: "City Tram Service", Parent: 0},
@@ -184,7 +186,7 @@ func GetRouteType(code int) (RouteType, bool) {
 func GetBasicRouteType(code int) (RouteType, bool) {
 	parents := map[int]int{}
 	for _, i := range routeTypes {
-		if i.Code > 7 {
+		if i.Code > 12 {
 			parents[i.Code] = i.Parent
 		}
 	}
@@ -201,7 +203,7 @@ func GetBasicRouteType(code int) (RouteType, bool) {
 func getRouteChildren(code int) []RouteType {
 	children := map[int][]int{}
 	for _, i := range routeTypes {
-		if i.Code > 7 {
+		if i.Code > 12 {
 			children[i.Parent] = append(children[i.Parent], i.Code)
 		}
 	}
