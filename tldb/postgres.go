@@ -27,6 +27,10 @@ type PostgresAdapter struct {
 	db    sqlx.Ext
 }
 
+func NewPostgresAdapterFromDBX(db sqlx.Ext) *PostgresAdapter {
+	return &PostgresAdapter{DBURL: "", db: db}
+}
+
 // Open the adapter.
 func (adapter *PostgresAdapter) Open() error {
 	if adapter.db != nil {
