@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 
 	geom "github.com/twpayne/go-geom"
@@ -314,16 +313,4 @@ func geojsonEncode(g geom.T) ([]byte, error) {
 		return []byte("null"), err
 	}
 	return b, nil
-}
-
-// geojsonDecode decodes a geometry from geojson.
-func geojsonDecode(b []byte, g geom.T) error {
-	var x geom.T
-	fmt.Println("b:::", string(b))
-	err := geojson.Unmarshal(b, &x)
-	if err != nil {
-		return err
-	}
-	fmt.Println("x:", x)
-	return nil
 }
