@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"io"
 
 	geom "github.com/twpayne/go-geom"
@@ -202,6 +204,18 @@ func (g *Polygon) MarshalJSON() ([]byte, error) {
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
 func (g *Polygon) UnmarshalGQL(v interface{}) error {
+	vb, err := json.Marshal(v)
+	if err != nil {
+		return errors.New("invalid geometry")
+	}
+	var x geom.T
+	err = geojson.Unmarshal(vb, &x)
+	if a, ok := x.(*geom.Polygon); err == nil && ok {
+		g.Polygon = *a
+		g.Valid = true
+	} else {
+		return errors.New("invalid geometry")
+	}
 	return nil
 }
 
