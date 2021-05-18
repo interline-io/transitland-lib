@@ -20,6 +20,8 @@ type canPath interface {
 // FeedVersion represents a single GTFS data source.
 type FeedVersion struct {
 	ID                   int
+	Name                 OString
+	Description          OString
 	FeedID               int
 	FeedType             string
 	SHA1                 string
