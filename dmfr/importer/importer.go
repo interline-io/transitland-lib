@@ -225,7 +225,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	reader, err := tlcsv.NewReader(dmfrGetReaderURL(opts.S3, opts.Directory, fv.File))
+	reader, err := tlcsv.NewReader(dmfrGetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1))
 	if err != nil {
 		return fvi, err
 	}
@@ -270,9 +270,9 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 }
 
 // dmfrGetReaderURL helps load a file from an S3 or Directory location
-func dmfrGetReaderURL(s3 string, directory string, url string) string {
+func dmfrGetReaderURL(s3 string, directory string, url string, sha1 string) string {
 	if s3 != "" {
-		url = s3 + "/" + url
+		url = s3 + "/" + sha1
 	} else if directory != "" {
 		url = filepath.Join(directory, url)
 	}
