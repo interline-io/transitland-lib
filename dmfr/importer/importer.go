@@ -271,8 +271,8 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 
 // dmfrGetReaderURL helps load a file from an S3 or Directory location
 func dmfrGetReaderURL(s3 string, directory string, url string, sha1 string) string {
-	if s3 != "" {
-		url = s3 + "/" + sha1
+	if s3 != "" && sha1 != "" {
+		url = fmt.Sprintf("%s/%s.zip", s3, sha1)
 	} else if directory != "" {
 		url = filepath.Join(directory, url)
 	}
