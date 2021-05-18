@@ -29,6 +29,10 @@ type FeedVersion struct {
 	EarliestCalendarDate time.Time
 	LatestCalendarDate   time.Time
 	FetchedAt            time.Time
+	Name                 OString
+	Description          OString
+	CreatedBy            OString
+	UpdatedBy            OString
 	Timestamps
 }
 
