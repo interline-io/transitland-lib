@@ -99,7 +99,11 @@ CREATE TABLE IF NOT EXISTS "feed_versions" (
   "fetched_at" datetime NOT NULL, 
   "id" integer primary key autoincrement, 
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "created_by" varchar(255),
+  "updated_by" varchar(255),
+  "name" varchar(255),
+  "description" varchar(255)
 );
 
 CREATE TABLE IF NOT EXISTS "feed_states" (

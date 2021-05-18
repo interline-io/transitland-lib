@@ -20,8 +20,6 @@ type canPath interface {
 // FeedVersion represents a single GTFS data source.
 type FeedVersion struct {
 	ID                   int
-	Name                 OString
-	Description          OString
 	FeedID               int
 	FeedType             string
 	SHA1                 string
@@ -31,6 +29,10 @@ type FeedVersion struct {
 	EarliestCalendarDate time.Time
 	LatestCalendarDate   time.Time
 	FetchedAt            time.Time
+	Name                 OString
+	Description          OString
+	CreatedBy            OString
+	UpdatedBy            OString
 	Timestamps
 }
 
