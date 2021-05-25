@@ -12,6 +12,7 @@ type Feed struct {
 	ID              int                 `json:"-"`
 	FeedID          string              `json:"id" db:"onestop_id"`
 	FeedNamespaceID string              `json:"feed_namespace_id"`
+	Name            string              `json:"name"`
 	Spec            string              `json:"spec"`
 	URLs            FeedUrls            `json:"urls" db:"urls"`
 	AssociatedFeeds FeedAssociatedFeeds `json:"associated_feeds"` // `json:"associated_feeds"`
