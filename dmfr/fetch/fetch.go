@@ -27,6 +27,9 @@ type Options struct {
 	S3                      string
 	FetchedAt               time.Time
 	Secrets                 download.Secrets
+	CreatedBy               tl.OString
+	Name                    tl.OString
+	Description             tl.OString
 }
 
 // Result contains results of a fetch operation.
@@ -144,6 +147,9 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 	fv.URL = opts.FeedURL
 	fv.FeedID = feed.ID
 	fv.FetchedAt = opts.FetchedAt
+	fv.CreatedBy = opts.CreatedBy
+	fv.Name = opts.Name
+	fv.Description = opts.Description
 	// Is this SHA1 already present?
 	checkfvid := tl.FeedVersion{}
 	err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
