@@ -38,8 +38,27 @@ CREATE TABLE public.feed_versions (
     md5_raw character varying,
     file_feedvalidator character varying,
     deleted_at timestamp without time zone,
-    sha1_dir character varying
+    sha1_dir character varying,
+    name text,
+    description text,
+    created_by text,
+    updated_by text
 );
+CREATE TABLE public.gtfs_stop_times (
+    feed_version_id bigint NOT NULL,
+    trip_id bigint NOT NULL,
+    stop_id bigint NOT NULL,
+    arrival_time integer NOT NULL,
+    departure_time integer NOT NULL,
+    stop_sequence integer NOT NULL,
+    shape_dist_traveled double precision,
+    pickup_type smallint,
+    drop_off_type smallint,
+    timepoint smallint,
+    interpolated smallint,
+    stop_headsign text
+)
+PARTITION BY HASH (feed_version_id);
 CREATE TABLE public.current_feeds (
     id bigint NOT NULL,
     onestop_id character varying NOT NULL,
@@ -64,11 +83,19 @@ CREATE TABLE public.current_feeds (
     last_fetch_error character varying DEFAULT ''::character varying NOT NULL,
     license jsonb DEFAULT '{}'::jsonb NOT NULL,
     other_ids jsonb DEFAULT '{}'::jsonb NOT NULL,
-    associated_feeds jsonb DEFAULT '{}'::jsonb NOT NULL,
-    languages jsonb DEFAULT '{}'::jsonb NOT NULL,
+    associated_feeds jsonb DEFAULT '[]'::jsonb NOT NULL,
+    languages jsonb DEFAULT '[]'::jsonb NOT NULL,
     feed_namespace_id character varying DEFAULT ''::character varying NOT NULL,
-    file character varying DEFAULT ''::character varying NOT NULL
+    file character varying DEFAULT ''::character varying NOT NULL,
+    textsearch tsvector GENERATED ALWAYS AS (((setweight(to_tsvector('public.tl'::regconfig, (onestop_id)::text), 'A'::"char") || setweight(to_tsvector('public.tl'::regconfig, (COALESCE(name, ''::character varying))::text), 'A'::"char")) || setweight(to_tsvector('public.tl'::regconfig, COALESCE((urls ->> 'static_current'::text), ''::text)), 'B'::"char"))) STORED
 );
+CREATE SEQUENCE public.current_feeds_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public.current_feeds_id_seq OWNED BY public.current_feeds.id;
 CREATE TABLE public.feed_states (
     id bigint NOT NULL,
     feed_id bigint NOT NULL,
@@ -83,61 +110,6 @@ CREATE TABLE public.feed_states (
     updated_at timestamp without time zone NOT NULL,
     feed_version_import_retention_period integer DEFAULT 90 NOT NULL
 );
-CREATE TABLE public.gtfs_agencies (
-    id bigint NOT NULL,
-    agency_id character varying NOT NULL,
-    agency_name character varying NOT NULL,
-    agency_url character varying NOT NULL,
-    agency_timezone character varying NOT NULL,
-    agency_lang character varying NOT NULL,
-    agency_phone character varying NOT NULL,
-    agency_fare_url character varying NOT NULL,
-    agency_email character varying NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    feed_version_id bigint NOT NULL
-);
-CREATE TABLE public.gtfs_routes (
-    id bigint NOT NULL,
-    route_id character varying NOT NULL,
-    route_short_name character varying NOT NULL,
-    route_long_name character varying NOT NULL,
-    route_desc character varying NOT NULL,
-    route_type integer NOT NULL,
-    route_url character varying NOT NULL,
-    route_color character varying NOT NULL,
-    route_text_color character varying NOT NULL,
-    route_sort_order integer NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    feed_version_id bigint NOT NULL,
-    agency_id bigint NOT NULL
-);
-CREATE TABLE public.gtfs_stops (
-    id bigint NOT NULL,
-    stop_id character varying NOT NULL,
-    stop_code character varying NOT NULL,
-    stop_name character varying NOT NULL,
-    stop_desc character varying NOT NULL,
-    zone_id character varying NOT NULL,
-    stop_url character varying NOT NULL,
-    location_type integer NOT NULL,
-    stop_timezone character varying NOT NULL,
-    wheelchair_boarding integer NOT NULL,
-    geometry public.geography(Point,4326) NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    feed_version_id bigint NOT NULL,
-    parent_station bigint,
-    level_id bigint
-);
-CREATE SEQUENCE public.current_feeds_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-ALTER SEQUENCE public.current_feeds_id_seq OWNED BY public.current_feeds.id;
 CREATE SEQUENCE public.feed_states_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -223,6 +195,21 @@ CREATE SEQUENCE public.feed_versions_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.feed_versions_id_seq OWNED BY public.feed_versions.id;
+CREATE TABLE public.gtfs_agencies (
+    id bigint NOT NULL,
+    agency_id character varying NOT NULL,
+    agency_name character varying NOT NULL,
+    agency_url character varying NOT NULL,
+    agency_timezone character varying NOT NULL,
+    agency_lang character varying NOT NULL,
+    agency_phone character varying NOT NULL,
+    agency_fare_url character varying NOT NULL,
+    agency_email character varying NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    feed_version_id bigint NOT NULL,
+    textsearch tsvector GENERATED ALWAYS AS ((((setweight(to_tsvector('public.tl'::regconfig, (agency_name)::text), 'A'::"char") || setweight(to_tsvector('public.tl'::regconfig, (agency_url)::text), 'B'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (agency_email)::text), 'C'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (agency_id)::text), 'B'::"char"))) STORED
+);
 CREATE SEQUENCE public.gtfs_agencies_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -335,7 +322,9 @@ CREATE TABLE public.gtfs_levels (
     level_index double precision NOT NULL,
     level_name character varying NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    geometry public.geography(Polygon,4326),
+    parent_station bigint
 );
 CREATE SEQUENCE public.gtfs_levels_id_seq
     START WITH 1
@@ -369,6 +358,25 @@ CREATE SEQUENCE public.gtfs_pathways_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_pathways_id_seq OWNED BY public.gtfs_pathways.id;
+CREATE TABLE public.gtfs_routes (
+    id bigint NOT NULL,
+    route_id character varying NOT NULL,
+    route_short_name character varying NOT NULL,
+    route_long_name character varying NOT NULL,
+    route_desc character varying NOT NULL,
+    route_type integer NOT NULL,
+    route_url character varying NOT NULL,
+    route_color character varying NOT NULL,
+    route_text_color character varying NOT NULL,
+    route_sort_order integer NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    feed_version_id bigint NOT NULL,
+    agency_id bigint NOT NULL,
+    textsearch tsvector GENERATED ALWAYS AS ((((setweight(to_tsvector('public.tl'::regconfig, (route_short_name)::text), 'A'::"char") || setweight(to_tsvector('public.tl'::regconfig, (route_long_name)::text), 'A'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (route_desc)::text), 'B'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (route_id)::text), 'C'::"char"))) STORED,
+    network_id text,
+    as_route integer
+);
 CREATE SEQUENCE public.gtfs_routes_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -392,21 +400,6 @@ CREATE SEQUENCE public.gtfs_shapes_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_shapes_id_seq OWNED BY public.gtfs_shapes.id;
-CREATE TABLE public.gtfs_stop_times (
-    feed_version_id bigint NOT NULL,
-    trip_id bigint NOT NULL,
-    stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
-    stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
-    pickup_type smallint,
-    drop_off_type smallint,
-    timepoint smallint,
-    interpolated smallint,
-    stop_headsign text
-)
-PARTITION BY HASH (feed_version_id);
 CREATE TABLE public.gtfs_stop_times_0 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -414,7 +407,7 @@ CREATE TABLE public.gtfs_stop_times_0 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -429,7 +422,7 @@ CREATE TABLE public.gtfs_stop_times_1 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -444,7 +437,7 @@ CREATE TABLE public.gtfs_stop_times_2 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -459,7 +452,7 @@ CREATE TABLE public.gtfs_stop_times_3 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -474,7 +467,7 @@ CREATE TABLE public.gtfs_stop_times_4 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -489,7 +482,7 @@ CREATE TABLE public.gtfs_stop_times_5 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -504,7 +497,7 @@ CREATE TABLE public.gtfs_stop_times_6 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -519,7 +512,7 @@ CREATE TABLE public.gtfs_stop_times_7 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -534,7 +527,7 @@ CREATE TABLE public.gtfs_stop_times_8 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -549,7 +542,7 @@ CREATE TABLE public.gtfs_stop_times_9 (
     arrival_time integer NOT NULL,
     departure_time integer NOT NULL,
     stop_sequence integer NOT NULL,
-    shape_dist_traveled real,
+    shape_dist_traveled double precision,
     pickup_type smallint,
     drop_off_type smallint,
     timepoint smallint,
@@ -581,6 +574,26 @@ CREATE SEQUENCE public.gtfs_stop_times_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_stop_times_id_seq OWNED BY public.gtfs_stop_times_unpartitioned.id;
+CREATE TABLE public.gtfs_stops (
+    id bigint NOT NULL,
+    stop_id character varying NOT NULL,
+    stop_code character varying NOT NULL,
+    stop_name character varying NOT NULL,
+    stop_desc character varying NOT NULL,
+    zone_id character varying NOT NULL,
+    stop_url character varying NOT NULL,
+    location_type integer NOT NULL,
+    stop_timezone character varying NOT NULL,
+    wheelchair_boarding integer NOT NULL,
+    geometry public.geography(Point,4326) NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    feed_version_id bigint NOT NULL,
+    parent_station bigint,
+    level_id bigint,
+    textsearch tsvector GENERATED ALWAYS AS (((((setweight(to_tsvector('public.tl'::regconfig, (stop_name)::text), 'A'::"char") || setweight(to_tsvector('public.tl'::regconfig, (stop_desc)::text), 'B'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (stop_code)::text), 'C'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (stop_url)::text), 'C'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (stop_id)::text), 'D'::"char"))) STORED,
+    area_id text
+);
 CREATE SEQUENCE public.gtfs_stops_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -596,7 +609,8 @@ CREATE TABLE public.gtfs_transfers (
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     feed_version_id bigint NOT NULL,
     from_stop_id bigint NOT NULL,
-    to_stop_id bigint NOT NULL
+    to_stop_id bigint NOT NULL,
+    as_route integer
 );
 CREATE SEQUENCE public.gtfs_transfers_id_seq
     START WITH 1
@@ -716,6 +730,7 @@ ALTER TABLE ONLY public.gtfs_transfers
     ADD CONSTRAINT gtfs_transfers_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT gtfs_trips_pkey PRIMARY KEY (id);
+CREATE INDEX current_feeds_textsearch_idx ON public.current_feeds USING gin (textsearch);
 CREATE INDEX feed_version_file_infos_feed_version_id_idx ON public.feed_version_file_infos USING btree (feed_version_id);
 CREATE INDEX feed_version_file_infos_name_idx ON public.feed_version_file_infos USING btree (name);
 CREATE INDEX feed_version_file_infos_sha1_idx ON public.feed_version_file_infos USING btree (sha1);
@@ -724,8 +739,10 @@ CREATE INDEX feed_version_service_levels_feed_version_id_idx ON public.feed_vers
 CREATE UNIQUE INDEX feed_version_service_levels_feed_version_id_route_id_start__idx ON public.feed_version_service_levels USING btree (feed_version_id, route_id, start_date, end_date);
 CREATE INDEX feed_version_service_levels_route_id_idx ON public.feed_version_service_levels USING btree (route_id);
 CREATE INDEX feed_version_service_levels_start_date_idx ON public.feed_version_service_levels USING btree (start_date);
+CREATE INDEX gtfs_agencies_textsearch_idx ON public.gtfs_agencies USING gin (textsearch);
 CREATE INDEX gtfs_calendar_dates_service_id_exception_type_date_idx ON public.gtfs_calendar_dates USING btree (service_id, exception_type, date);
 CREATE INDEX gtfs_feed_infos_feed_version_id_idx ON public.gtfs_feed_infos USING btree (feed_version_id);
+CREATE INDEX gtfs_routes_textsearch_idx ON public.gtfs_routes USING gin (textsearch);
 CREATE INDEX gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ON ONLY public.gtfs_stop_times USING btree (feed_version_id, trip_id, stop_id);
 CREATE INDEX gtfs_stop_times_0_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_0 USING btree (feed_version_id, trip_id, stop_id);
 CREATE INDEX gtfs_stop_times_stop_id_idx ON ONLY public.gtfs_stop_times USING btree (stop_id);
@@ -759,6 +776,7 @@ CREATE INDEX gtfs_stop_times_8_trip_id_idx ON public.gtfs_stop_times_8 USING btr
 CREATE INDEX gtfs_stop_times_9_feed_version_id_trip_id_stop_id_idx ON public.gtfs_stop_times_9 USING btree (feed_version_id, trip_id, stop_id);
 CREATE INDEX gtfs_stop_times_9_stop_id_idx ON public.gtfs_stop_times_9 USING btree (stop_id);
 CREATE INDEX gtfs_stop_times_9_trip_id_idx ON public.gtfs_stop_times_9 USING btree (trip_id);
+CREATE INDEX gtfs_stops_textsearch_idx ON public.gtfs_stops USING gin (textsearch);
 CREATE INDEX gtfs_trips_journey_pattern_id_idx ON public.gtfs_trips USING btree (journey_pattern_id);
 CREATE INDEX index_current_feeds_on_active_feed_version_id ON public.current_feeds USING btree (active_feed_version_id);
 CREATE INDEX index_current_feeds_on_auth ON public.current_feeds USING btree (auth);
@@ -956,6 +974,8 @@ ALTER TABLE ONLY public.gtfs_feed_infos
     ADD CONSTRAINT fk_rails_eb863abbac FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT fk_rails_mid93550f50 FOREIGN KEY (route_id) REFERENCES public.gtfs_routes(id);
+ALTER TABLE ONLY public.gtfs_levels
+    ADD CONSTRAINT gtfs_levels_parent_station_fkey FOREIGN KEY (parent_station) REFERENCES public.gtfs_stops(id);
 ALTER TABLE public.gtfs_stop_times
     ADD CONSTRAINT gtfs_stop_times_feed_version_id_fkey FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE public.gtfs_stop_times

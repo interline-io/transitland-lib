@@ -89,7 +89,7 @@ func UpdateFeed(atx tldb.Adapter, rfeed tl.Feed) (int, bool, error) {
 		feedid = dbfeed.ID
 		rfeed.ID = dbfeed.ID
 		rfeed.CreatedAt = dbfeed.CreatedAt
-		rfeed.DeletedAt = tl.OptionalTime{Valid: false}
+		rfeed.DeletedAt = tl.OTime{Valid: false}
 		rfeed.UpdateTimestamps()
 		errTx = atx.Update(&rfeed)
 	} else if err == sql.ErrNoRows {
@@ -108,7 +108,7 @@ func UpdateFeed(atx tldb.Adapter, rfeed tl.Feed) (int, bool, error) {
 // HideUnseedFeeds .
 func HideUnseedFeeds(atx tldb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
-	t := tl.OptionalTime{Time: time.Now(), Valid: true}
+	t := tl.OTime{Time: time.Now(), Valid: true}
 	r, err := atx.Sqrl().
 		Update("current_feeds").
 		Where(sq.NotEq{"id": found}).

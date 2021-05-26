@@ -12,5 +12,3 @@ pg_dump \
     --no-owner \
     -s \
     --no-comments $PGDATABASE | egrep -v "^(SET|SELECT pg_catalog|--)" | sed -e '/^$/d'  >> postgres.pgsql
-
-(cd ../internal; statik -src=../schema -p schema)

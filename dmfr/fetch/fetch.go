@@ -27,6 +27,9 @@ type Options struct {
 	S3                      string
 	FetchedAt               time.Time
 	Secrets                 download.Secrets
+	CreatedBy               tl.OString
+	Name                    tl.OString
+	Description             tl.OString
 }
 
 // Result contains results of a fetch operation.
@@ -71,7 +74,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 		return fr, err
 	}
 	// Immediately save LastFetchedAt
-	tlstate.LastFetchedAt = tl.OptionalTime{Time: opts.FetchedAt, Valid: true}
+	tlstate.LastFetchedAt = tl.OTime{Time: opts.FetchedAt, Valid: true}
 	tlstate.LastFetchError = ""
 	tlstate.UpdateTimestamps()
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
@@ -85,7 +88,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	if fr.FetchError != nil {
 		tlstate.LastFetchError = fr.FetchError.Error()
 	} else {
-		tlstate.LastSuccessfulFetchAt = tl.OptionalTime{Time: opts.FetchedAt, Valid: true}
+		tlstate.LastSuccessfulFetchAt = tl.OTime{Time: opts.FetchedAt, Valid: true}
 	}
 	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps
@@ -144,6 +147,9 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 	fv.URL = opts.FeedURL
 	fv.FeedID = feed.ID
 	fv.FetchedAt = opts.FetchedAt
+	fv.CreatedBy = opts.CreatedBy
+	fv.Name = opts.Name
+	fv.Description = opts.Description
 	// Is this SHA1 already present?
 	checkfvid := tl.FeedVersion{}
 	err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)

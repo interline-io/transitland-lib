@@ -12,6 +12,7 @@ type Feed struct {
 	ID              int                 `json:"-"`
 	FeedID          string              `json:"id" db:"onestop_id"`
 	FeedNamespaceID string              `json:"feed_namespace_id"`
+	Name            OString             `json:"name"`
 	Spec            string              `json:"spec"`
 	URLs            FeedUrls            `json:"urls" db:"urls"`
 	AssociatedFeeds FeedAssociatedFeeds `json:"associated_feeds"` // `json:"associated_feeds"`
@@ -21,7 +22,7 @@ type Feed struct {
 	OtherIDs        map[string]string   `json:"other_ids" db:"-"`
 	IDCrosswalk     map[string]string   `json:"id_crosswalk" db:"-"`
 	File            string              `json:"-"` // internal
-	DeletedAt       OptionalTime        `json:"-"` // internal
+	DeletedAt       OTime               `json:"-"` // internal
 	Tags            map[string]string   `json:"tags" db:"-" `
 	Timestamps      `json:"-"`          // internal
 }

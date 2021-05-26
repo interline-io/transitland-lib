@@ -13,8 +13,8 @@ type FeedInfo struct {
 	FeedPublisherURL  string `csv:",required"`
 	FeedLang          string `csv:",required"`
 	FeedVersion       string `db:"feed_version_name"`
-	FeedStartDate     OptionalTime
-	FeedEndDate       OptionalTime
+	FeedStartDate     OTime
+	FeedEndDate       OTime
 	BaseEntity
 }
 

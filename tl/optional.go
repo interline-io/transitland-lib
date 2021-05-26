@@ -270,18 +270,18 @@ func (r OKey) MarshalGQL(w io.Writer) {
 
 /////////////////////
 
-// OptionalTime is a nullable time, but can scan strings
-type OptionalTime struct {
+// OTime is a nullable time, but can scan strings
+type OTime struct {
 	Time  time.Time
 	Valid bool
 }
 
 // IsZero returns if this is a zero value.
-func (r *OptionalTime) IsZero() bool {
+func (r *OTime) IsZero() bool {
 	return !r.Valid
 }
 
-func (r *OptionalTime) String() string {
+func (r *OTime) String() string {
 	if !r.Valid {
 		return ""
 	}
@@ -289,7 +289,7 @@ func (r *OptionalTime) String() string {
 }
 
 // Value returns nil if empty
-func (r OptionalTime) Value() (driver.Value, error) {
+func (r OTime) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
 	}
@@ -297,7 +297,7 @@ func (r OptionalTime) Value() (driver.Value, error) {
 }
 
 // Scan implements sql.Scanner
-func (r *OptionalTime) Scan(src interface{}) error {
+func (r *OTime) Scan(src interface{}) error {
 	r.Valid = false
 	var p error
 	switch v := src.(type) {
@@ -317,7 +317,7 @@ func (r *OptionalTime) Scan(src interface{}) error {
 }
 
 // MarshalJSON implements the json.Marshaler interface
-func (r *OptionalTime) MarshalJSON() ([]byte, error) {
+func (r *OTime) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -325,12 +325,12 @@ func (r *OptionalTime) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *OptionalTime) UnmarshalGQL(v interface{}) error {
+func (r *OTime) UnmarshalGQL(v interface{}) error {
 	return nil
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (r OptionalTime) MarshalGQL(w io.Writer) {
+func (r OTime) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }
