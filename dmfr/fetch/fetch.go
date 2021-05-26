@@ -74,7 +74,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 		return fr, err
 	}
 	// Immediately save LastFetchedAt
-	tlstate.LastFetchedAt = tl.OptionalTime{Time: opts.FetchedAt, Valid: true}
+	tlstate.LastFetchedAt = tl.OTime{Time: opts.FetchedAt, Valid: true}
 	tlstate.LastFetchError = ""
 	tlstate.UpdateTimestamps()
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
@@ -88,7 +88,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	if fr.FetchError != nil {
 		tlstate.LastFetchError = fr.FetchError.Error()
 	} else {
-		tlstate.LastSuccessfulFetchAt = tl.OptionalTime{Time: opts.FetchedAt, Valid: true}
+		tlstate.LastSuccessfulFetchAt = tl.OTime{Time: opts.FetchedAt, Valid: true}
 	}
 	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps

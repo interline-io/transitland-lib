@@ -29,7 +29,7 @@ type BaseEntity struct {
 	extra         []string
 	loadErrors    []error
 	loadWarnings  []error
-	// DeletedAt     OptionalTime
+	// DeletedAt     OTime
 }
 
 // SetID sets the integer ID.

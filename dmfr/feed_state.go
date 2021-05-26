@@ -12,8 +12,8 @@ type FeedState struct {
 	FeedID                int
 	FeedVersionID         tl.OInt
 	LastFetchError        string
-	LastFetchedAt         tl.OptionalTime
-	LastSuccessfulFetchAt tl.OptionalTime
+	LastFetchedAt         tl.OTime
+	LastSuccessfulFetchAt tl.OTime
 	FeedPriority          tl.OInt
 	FeedRealtimeEnabled   bool
 	tl.Timestamps
