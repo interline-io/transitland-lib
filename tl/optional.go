@@ -311,10 +311,14 @@ func (r OKey) MarshalGQL(w io.Writer) {
 
 /////////////////////
 
-// OTime is a nullable time, but can scan strings
+// OTime is a nullable date without time component
 type OTime struct {
 	Time  time.Time
 	Valid bool
+}
+
+func NewOTime(v time.Time) OTime {
+	return OTime{Valid: true, Time: v}
 }
 
 // IsZero returns if this is a zero value.
@@ -372,6 +376,94 @@ func (r *OTime) UnmarshalGQL(v interface{}) error {
 
 // MarshalGQL implements the graphql.Marshaler interface
 func (r OTime) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
+}
+
+/////
+
+/////////////////////
+
+// ODate is a nullable date, but can scan strings
+type ODate struct {
+	Time  time.Time
+	Valid bool
+}
+
+func NewODate(v time.Time) ODate {
+	return ODate{Valid: true, Time: v}
+}
+
+// IsZero returns if this is a zero value.
+func (r *ODate) IsZero() bool {
+	return !r.Valid
+}
+
+func (r *ODate) String() string {
+	if !r.Valid {
+		return ""
+	}
+	return r.Time.Format("20060102")
+}
+
+// Value returns nil if empty
+func (r ODate) Value() (driver.Value, error) {
+	if !r.Valid {
+		return nil, nil
+	}
+	return driver.Value(r.Time), nil
+}
+
+// Scan implements sql.Scanner
+func (r *ODate) Scan(src interface{}) error {
+	r.Valid = false
+	var p error
+	switch v := src.(type) {
+	case nil:
+		// pass
+	case string:
+		r.Time, p = time.Parse("20060102", v)
+	case time.Time:
+		r.Time = v
+	default:
+		p = fmt.Errorf("cant convert %T", src)
+	}
+	if p == nil {
+		r.Valid = true
+	}
+	return p
+}
+
+// MarshalJSON implements the json.Marshaler interface
+func (r *ODate) UnmarshalJSON(v []byte) error {
+	t := ""
+	if err := json.Unmarshal(v, &t); err != nil {
+		return err
+	}
+	var err error
+	r.Time, err = time.Parse("2006-01-02", t)
+	if err != nil {
+		return err
+	}
+	r.Valid = true
+	return nil
+}
+
+// MarshalJSON implements the json.Marshaler interface
+func (r *ODate) MarshalJSON() ([]byte, error) {
+	if !r.Valid {
+		return []byte("null"), nil
+	}
+	return json.Marshal(r.Time.Format("2006-01-02"))
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (r *ODate) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (r ODate) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }

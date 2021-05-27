@@ -14,8 +14,8 @@ type FeedVersionServiceLevel struct {
 	ID            int
 	FeedVersionID int
 	RouteID       tl.OString
-	StartDate     time.Time
-	EndDate       time.Time
+	StartDate     tl.ODate
+	EndDate       tl.ODate
 	Monday        int
 	Tuesday       int
 	Wednesday     int
@@ -142,8 +142,8 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 			ranges = append(ranges, [2]int{v[start], v[len(v)-1] + 6})
 			for _, r := range ranges {
 				a := FeedVersionServiceLevel{
-					StartDate: fromJulian(r[0]),
-					EndDate:   fromJulian(r[1]),
+					StartDate: tl.NewODate(fromJulian(r[0])),
+					EndDate:   tl.NewODate(fromJulian(r[1])),
 					Monday:    k[0],
 					Tuesday:   k[1],
 					Wednesday: k[2],
