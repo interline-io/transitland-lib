@@ -2,6 +2,7 @@ package tl
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -45,12 +46,22 @@ func (r *OString) Scan(src interface{}) error {
 	return nil
 }
 
+// UnmarshalJSON implements json.Marshaler interface.
+func (r *OString) UnmarshalJSON(v []byte) error {
+	err := json.Unmarshal(v, &r.String)
+	if err != nil {
+		return err
+	}
+	r.Valid = true
+	return nil
+}
+
 // MarshalJSON implements the json.marshaler interface.
 func (r *OString) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
-	return []byte("\"" + r.String + "\""), nil
+	return json.Marshal(r.String)
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
@@ -112,12 +123,22 @@ func (r *OInt) String() string {
 	return strconv.Itoa(r.Int)
 }
 
+// MarshalJSON implements the json.marshaler interface.
+func (r *OInt) UnmarshalJSON(v []byte) error {
+	err := json.Unmarshal(v, &r.Int)
+	if err != nil {
+		return err
+	}
+	r.Valid = true
+	return nil
+}
+
 // MarshalJSON implements the json.Marshaler interface
 func (r *OInt) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
-	return []byte(fmt.Sprintf("\"%d\"", r.Int)), nil
+	return json.Marshal(r.Int)
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
@@ -179,12 +200,22 @@ func (r *OFloat) String() string {
 	return fmt.Sprintf("%0.5f", r.Float)
 }
 
+// MarshalJSON implements the json.marshaler interface.
+func (r *OFloat) UnmarshalJSON(v []byte) error {
+	err := json.Unmarshal(v, &r.Float)
+	if err != nil {
+		return err
+	}
+	r.Valid = true
+	return nil
+}
+
 // MarshalJSON implements the json.Marshaler interface
 func (r *OFloat) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
-	return []byte(fmt.Sprintf("\"%0.5f\"", r.Float)), nil
+	return json.Marshal(r.Float)
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
@@ -249,12 +280,22 @@ func (r *OKey) Int() int {
 	return a
 }
 
+// MarshalJSON implements the json.marshaler interface.
+func (r *OKey) UnmarshalJSON(v []byte) error {
+	err := json.Unmarshal(v, &r.Key)
+	if err != nil {
+		return err
+	}
+	r.Valid = true
+	return nil
+}
+
 // MarshalJSON implements the json.Marshaler interface
 func (r *OKey) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
-	return []byte("\"" + r.Key + "\""), nil
+	return json.Marshal(r.Key)
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
@@ -321,7 +362,7 @@ func (r *OTime) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
-	return []byte("\"" + r.Time.Format("2006-01-02") + "\""), nil
+	return json.Marshal(r.Time.Format("2006-01-02"))
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
