@@ -30,14 +30,14 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 			msi{"01": 12, "11": 12, "03": 12},
 			[]string{
 				// feed
-				`{"ID":0,"RouteID":null,"StartDate":"2018-07-09T00:00:00Z","EndDate":"2018-09-02T00:00:00Z","Monday":3394620,"Tuesday":3394620,"Wednesday":3394620,"Thursday":3394620,"Friday":3394620,"Saturday":2147760,"Sunday":1567680,"AgencyName":"","RouteShortName":"","RouteLongName":"","RouteType":0}`,
-				`{"ID":0,"RouteID":null,"StartDate":"2018-11-19T00:00:00Z","EndDate":"2018-11-25T00:00:00Z","Monday":3394620,"Tuesday":3394620,"Wednesday":3394620,"Thursday":1567680,"Friday":3394620,"Saturday":2147760,"Sunday":1567680,"AgencyName":"","RouteShortName":"","RouteLongName":"","RouteType":0}`,
+				`{"ID":0,"RouteID":null,"StartDate":"2018-07-09","EndDate":"2018-09-02","Monday":3394620,"Tuesday":3394620,"Wednesday":3394620,"Thursday":3394620,"Friday":3394620,"Saturday":2147760,"Sunday":1567680,"AgencyName":"","RouteShortName":"","RouteLongName":"","RouteType":0}`,
+				`{"ID":0,"RouteID":null,"StartDate":"2018-11-19","EndDate":"2018-11-25","Monday":3394620,"Tuesday":3394620,"Wednesday":3394620,"Thursday":1567680,"Friday":3394620,"Saturday":2147760,"Sunday":1567680,"AgencyName":"","RouteShortName":"","RouteLongName":"","RouteType":0}`,
 				// a regular week
-				`{"ID":0,"RouteID":{"String":"01","Valid":true},"StartDate":"2018-11-26T00:00:00Z","EndDate":"2018-12-23T00:00:00Z","Monday":1068060,"Tuesday":1068060,"Wednesday":1068060,"Thursday":1068060,"Friday":1068060,"Saturday":720720,"Sunday":643140,"AgencyName":"Bay Area Rapid Transit","RouteShortName":"","RouteLongName":"Antioch - SFIA/Millbrae","RouteType":1}`,
+				`{"ID":0,"RouteID":"01","StartDate":"2018-11-26","EndDate":"2018-12-23","Monday":1068060,"Tuesday":1068060,"Wednesday":1068060,"Thursday":1068060,"Friday":1068060,"Saturday":720720,"Sunday":643140,"AgencyName":"Bay Area Rapid Transit","RouteShortName":"","RouteLongName":"Antioch - SFIA/Millbrae","RouteType":1}`,
 				// thanksgiving
-				`{"ID":0,"RouteID":{"String":"03","Valid":true},"StartDate":"2018-11-19T00:00:00Z","EndDate":"2018-11-25T00:00:00Z","Monday":581220,"Tuesday":581220,"Wednesday":581220,"Thursday":403860,"Friday":581220,"Saturday":452460,"Sunday":403860,"AgencyName":"Bay Area Rapid Transit","RouteShortName":"","RouteLongName":"Warm Springs/South Fremont - Richmond","RouteType":1}`,
+				`{"ID":0,"RouteID":"03","StartDate":"2018-11-19","EndDate":"2018-11-25","Monday":581220,"Tuesday":581220,"Wednesday":581220,"Thursday":403860,"Friday":581220,"Saturday":452460,"Sunday":403860,"AgencyName":"Bay Area Rapid Transit","RouteShortName":"","RouteLongName":"Warm Springs/South Fremont - Richmond","RouteType":1}`,
 				// end of feed
-				`{"ID":0,"RouteID":{"String":"11","Valid":true},"StartDate":"2019-07-01T00:00:00Z","EndDate":"2019-07-07T00:00:00Z","Monday":577380,"Tuesday":0,"Wednesday":0,"Thursday":0,"Friday":0,"Saturday":0,"Sunday":0,"AgencyName":"Bay Area Rapid Transit","RouteShortName":"","RouteLongName":"Dublin/Pleasanton - Daly City","RouteType":1}`,
+				`{"ID":0,"RouteID":"11","StartDate":"2019-07-01","EndDate":"2019-07-07","Monday":577380,"Tuesday":0,"Wednesday":0,"Thursday":0,"Friday":0,"Saturday":0,"Sunday":0,"AgencyName":"Bay Area Rapid Transit","RouteShortName":"","RouteLongName":"Dublin/Pleasanton - Daly City","RouteType":1}`,
 			},
 		},
 	}
@@ -63,20 +63,22 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 			// Check for matches; uses json marshal/unmarshal for comparison and loading.
 			for _, check := range tc.expectResult {
 				checksl := FeedVersionServiceLevel{}
-				json.Unmarshal([]byte(check), &checksl)
-				checkb, err := json.Marshal(&checksl)
-				if err != nil {
+				if err := json.Unmarshal([]byte(check), &checksl); err != nil {
 					t.Error(err)
 				}
-				check2 := string(checkb)
 				match := false
 				for _, a := range results {
-					z, err := json.Marshal(&a)
-					if err != nil {
-						t.Error(err)
-					}
-					// fmt.Println(string(z))
-					if check2 == string(z) {
+					if a.RouteID.String == checksl.RouteID.String &&
+						a.AgencyName == checksl.AgencyName &&
+						a.StartDate.String() == checksl.StartDate.String() &&
+						a.EndDate.String() == checksl.EndDate.String() &&
+						a.Monday == checksl.Monday &&
+						a.Tuesday == checksl.Tuesday &&
+						a.Wednesday == checksl.Wednesday &&
+						a.Thursday == checksl.Thursday &&
+						a.Friday == checksl.Friday &&
+						a.Saturday == checksl.Saturday &&
+						a.Sunday == checksl.Sunday {
 						match = true
 					}
 				}
