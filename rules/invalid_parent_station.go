@@ -40,7 +40,7 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 	if e.locationTypes == nil {
 		e.locationTypes = map[string]int{}
 	}
-	e.locationTypes[stop.StopID] = stop.LocationType
+	e.locationTypes[stop.EntityID()] = stop.LocationType
 	if stop.ParentStation.Key == "" {
 		return nil
 	}
