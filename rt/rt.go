@@ -7,6 +7,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/download"
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/tl"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -41,4 +42,12 @@ func ReadFile(filename string) (*pb.FeedMessage, error) {
 		return &msg, err
 	}
 	return &msg, nil
+}
+
+func ReadAuthenticatedURL(address string, auth tl.FeedAuthorization, key string) (*pb.FeedMessage, error) {
+	a, err := download.AuthenticatedRequest(address, download.Secret{Key: key}, auth)
+	if err != nil {
+		return nil, err
+	}
+	return ReadFile(a)
 }
