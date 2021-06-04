@@ -7,6 +7,7 @@ import (
 	dmfr "github.com/interline-io/transitland-lib/dmfr/cmd"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/server"
 	"github.com/interline-io/transitland-lib/tl"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
@@ -43,6 +44,7 @@ func main() {
 		log.Print("  extract")
 		log.Print("  validate")
 		log.Print("  dmfr")
+		log.Print("  server")
 		return
 	}
 	flag.Parse()
@@ -82,6 +84,8 @@ func main() {
 		r = &extractCommand{}
 	case "dmfr":
 		r = &dmfr.Command{}
+	case "server":
+		r = &server.Command{}
 	default:
 		log.Exit("%q is not valid command.", subc)
 	}

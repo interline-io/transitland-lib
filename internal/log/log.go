@@ -140,13 +140,13 @@ func SetQueryLog(v bool) {
 
 func init() {
 	log.SetOutput(os.Stdout)
-	if v := os.Getenv("TRANSITLAND_LOG_MICROSECONDS"); v == "true" {
+	if v := os.Getenv("TL_LOG_MICROSECONDS"); v == "true" {
 		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	}
-	if v := os.Getenv("TRANSITLAND_LOGLEVEL"); v != "" {
+	if v := os.Getenv("TL_LOG"); v != "" {
 		SetLevelByName(v)
 	}
-	if v := os.Getenv("TRANSITLAND_LOG_SQL"); v == "true" {
+	if v := os.Getenv("TL_LOG_SQL"); v == "true" {
 		SetQueryLog(true)
 	}
 }

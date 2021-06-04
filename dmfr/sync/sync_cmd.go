@@ -23,12 +23,12 @@ func (cmd *Command) Parse(args []string) error {
 		log.Print("Usage: sync <Filenames...>")
 		fl.PrintDefaults()
 	}
-	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")
 	fl.Parse(args)
 	cmd.Filenames = fl.Args()
 	if cmd.DBURL == "" {
-		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
+		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
 	return nil
 }
