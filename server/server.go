@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -26,7 +27,7 @@ func Serve(cfg config.Config) error {
 	// Open database
 	model.DB = model.MustOpenDB(cfg.DBURL)
 
-	// Setup CORS
+	// Setup CORS and logging
 	root := mux.NewRouter()
 	cors := handlers.CORS(
 		handlers.AllowedHeaders([]string{"content-type", "apikey", "authorization"}),
@@ -34,6 +35,7 @@ func Serve(cfg config.Config) error {
 		handlers.AllowCredentials(),
 	)
 	root.Use(cors)
+	root.Use(loggingMiddleware)
 
 	// Setup auth; default is all users will be anonymous.
 	if cfg.UseAuth == "admin" {
@@ -90,4 +92,11 @@ func newServer() http.Handler {
 	}
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(c))
 	return find.Middleware(model.DB, srv)
+}
+
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.RequestURI)
+		next.ServeHTTP(w, r)
+	})
 }
