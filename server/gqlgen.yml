@@ -56,12 +56,14 @@ models:
       - "github.com/interline-io/transitland-lib/tl.OTime"
   ID:
     model:
-      - github.com/99designs/gqlgen/graphql.ID
-      - github.com/99designs/gqlgen/graphql.Int
-      - github.com/99designs/gqlgen/graphql.Int64
-      - github.com/99designs/gqlgen/graphql.Int32
+      - "github.com/99designs/gqlgen/graphql.ID"
+      - "github.com/99designs/gqlgen/graphql.Int"
+      - "github.com/99designs/gqlgen/graphql.Int64"
+      - "github.com/99designs/gqlgen/graphql.Int32"
   Int:
     model:
-      - github.com/99designs/gqlgen/graphql.Int
-      - github.com/99designs/gqlgen/graphql.Int64
-      - github.com/99designs/gqlgen/graphql.Int32
+      - "github.com/99designs/gqlgen/graphql.Int"
+      - "github.com/99designs/gqlgen/graphql.Int64"
+      - "github.com/99designs/gqlgen/graphql.Int32"
+      - "github.com/interline-io/transitland-lib/tl.OInt"
+

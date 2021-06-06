@@ -637,10 +637,6 @@ type StopResolver interface {
 	CensusGeographies(ctx context.Context, obj *model.Stop, layer string, radius *float64, limit *int) ([]*model.CensusGeography, error)
 }
 type StopTimeResolver interface {
-	PickupType(ctx context.Context, obj *model.StopTime) (*int, error)
-	DropOffType(ctx context.Context, obj *model.StopTime) (*int, error)
-	Timepoint(ctx context.Context, obj *model.StopTime) (*int, error)
-	Interpolated(ctx context.Context, obj *model.StopTime) (*int, error)
 	Stop(ctx context.Context, obj *model.StopTime) (*model.Stop, error)
 	Trip(ctx context.Context, obj *model.StopTime) (*model.Trip, error)
 }
@@ -3397,7 +3393,6 @@ type Feed {
   urls: FeedUrls
   license: FeedLicense
   search_rank: String # only for search results
-  # geometry: Polygon
   associated_operators: [Operator!]
   feed_state: FeedState
   feed_versions(limit: Int, where: FeedVersionFilter): [FeedVersion!]!
@@ -4031,7 +4026,7 @@ func (ec *executionContext) dir_hasRole_args(ctx context.Context, rawArgs map[st
 	var arg0 model.Role
 	if tmp, ok := rawArgs["role"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("role"))
-		arg0, err = ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRole(ctx, tmp)
+		arg0, err = ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRole(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4088,7 +4083,7 @@ func (ec *executionContext) field_Agency_places_args(ctx context.Context, rawArg
 	var arg1 *model.AgencyPlaceFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalOAgencyPlaceFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyPlaceFilter(ctx, tmp)
+		arg1, err = ec.unmarshalOAgencyPlaceFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyPlaceFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4112,7 +4107,7 @@ func (ec *executionContext) field_Agency_routes_args(ctx context.Context, rawArg
 	var arg1 *model.RouteFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteFilter(ctx, tmp)
+		arg1, err = ec.unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4160,7 +4155,7 @@ func (ec *executionContext) field_FeedVersion_agencies_args(ctx context.Context,
 	var arg1 *model.AgencyFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalOAgencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyFilter(ctx, tmp)
+		arg1, err = ec.unmarshalOAgencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4214,7 +4209,7 @@ func (ec *executionContext) field_FeedVersion_routes_args(ctx context.Context, r
 	var arg1 *model.RouteFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteFilter(ctx, tmp)
+		arg1, err = ec.unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4238,7 +4233,7 @@ func (ec *executionContext) field_FeedVersion_service_levels_args(ctx context.Co
 	var arg1 *model.FeedVersionServiceLevelFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalOFeedVersionServiceLevelFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevelFilter(ctx, tmp)
+		arg1, err = ec.unmarshalOFeedVersionServiceLevelFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevelFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4262,7 +4257,7 @@ func (ec *executionContext) field_FeedVersion_stops_args(ctx context.Context, ra
 	var arg1 *model.StopFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopFilter(ctx, tmp)
+		arg1, err = ec.unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4286,7 +4281,7 @@ func (ec *executionContext) field_FeedVersion_trips_args(ctx context.Context, ra
 	var arg1 *model.TripFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTripFilter(ctx, tmp)
+		arg1, err = ec.unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4310,7 +4305,7 @@ func (ec *executionContext) field_Feed_feed_versions_args(ctx context.Context, r
 	var arg1 *model.FeedVersionFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalOFeedVersionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFilter(ctx, tmp)
+		arg1, err = ec.unmarshalOFeedVersionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4412,7 +4407,7 @@ func (ec *executionContext) field_Mutation_feed_version_update_args(ctx context.
 	var arg1 model.FeedVersionSetInput
 	if tmp, ok := rawArgs["set"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("set"))
-		arg1, err = ec.unmarshalNFeedVersionSetInput2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionSetInput(ctx, tmp)
+		arg1, err = ec.unmarshalNFeedVersionSetInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionSetInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4502,7 +4497,7 @@ func (ec *executionContext) field_Query_agencies_args(ctx context.Context, rawAr
 	var arg3 *model.AgencyFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg3, err = ec.unmarshalOAgencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyFilter(ctx, tmp)
+		arg3, err = ec.unmarshalOAgencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4544,7 +4539,7 @@ func (ec *executionContext) field_Query_feed_versions_args(ctx context.Context, 
 	var arg3 *model.FeedVersionFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg3, err = ec.unmarshalOFeedVersionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFilter(ctx, tmp)
+		arg3, err = ec.unmarshalOFeedVersionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4586,7 +4581,7 @@ func (ec *executionContext) field_Query_feeds_args(ctx context.Context, rawArgs 
 	var arg3 *model.FeedFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg3, err = ec.unmarshalOFeedFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedFilter(ctx, tmp)
+		arg3, err = ec.unmarshalOFeedFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4628,7 +4623,7 @@ func (ec *executionContext) field_Query_operators_args(ctx context.Context, rawA
 	var arg3 *model.OperatorFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg3, err = ec.unmarshalOOperatorFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐOperatorFilter(ctx, tmp)
+		arg3, err = ec.unmarshalOOperatorFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperatorFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4670,7 +4665,7 @@ func (ec *executionContext) field_Query_routes_args(ctx context.Context, rawArgs
 	var arg3 *model.RouteFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg3, err = ec.unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteFilter(ctx, tmp)
+		arg3, err = ec.unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4712,7 +4707,7 @@ func (ec *executionContext) field_Query_stops_args(ctx context.Context, rawArgs 
 	var arg3 *model.StopFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg3, err = ec.unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopFilter(ctx, tmp)
+		arg3, err = ec.unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4754,7 +4749,7 @@ func (ec *executionContext) field_Query_trips_args(ctx context.Context, rawArgs 
 	var arg3 *model.TripFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg3, err = ec.unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTripFilter(ctx, tmp)
+		arg3, err = ec.unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4871,7 +4866,7 @@ func (ec *executionContext) field_Route_trips_args(ctx context.Context, rawArgs 
 	var arg1 *model.TripFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTripFilter(ctx, tmp)
+		arg1, err = ec.unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -4988,7 +4983,7 @@ func (ec *executionContext) field_Stop_stop_times_args(ctx context.Context, rawA
 	var arg1 *model.StopTimeFilter
 	if tmp, ok := rawArgs["where"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("where"))
-		arg1, err = ec.unmarshalOStopTimeFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTimeFilter(ctx, tmp)
+		arg1, err = ec.unmarshalOStopTimeFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeFilter(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -5595,7 +5590,7 @@ func (ec *executionContext) _Agency_feed_version(ctx context.Context, field grap
 	}
 	res := resTmp.(*model.FeedVersion)
 	fc.Result = res
-	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Agency_search_rank(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
@@ -5666,7 +5661,7 @@ func (ec *executionContext) _Agency_places(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.([]*model.AgencyPlace)
 	fc.Result = res
-	return ec.marshalOAgencyPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyPlaceᚄ(ctx, field.Selections, res)
+	return ec.marshalOAgencyPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyPlaceᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Agency_routes(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
@@ -5708,7 +5703,7 @@ func (ec *executionContext) _Agency_routes(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.([]*model.Route)
 	fc.Result = res
-	return ec.marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteᚄ(ctx, field.Selections, res)
+	return ec.marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Agency_census_geographies(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
@@ -5747,7 +5742,7 @@ func (ec *executionContext) _Agency_census_geographies(ctx context.Context, fiel
 	}
 	res := resTmp.([]*model.CensusGeography)
 	fc.Result = res
-	return ec.marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusGeographyᚄ(ctx, field.Selections, res)
+	return ec.marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusGeographyᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AgencyPlace_name(ctx context.Context, field graphql.CollectedField, obj *model.AgencyPlace) (ret graphql.Marshaler) {
@@ -6637,7 +6632,7 @@ func (ec *executionContext) _CensusGeography_values(ctx context.Context, field g
 	}
 	res := resTmp.([]*model.CensusValue)
 	fc.Result = res
-	return ec.marshalNCensusValue2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusValue(ctx, field.Selections, res)
+	return ec.marshalNCensusValue2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValue(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _CensusTable_id(ctx context.Context, field graphql.CollectedField, obj *model.CensusTable) (ret graphql.Marshaler) {
@@ -6812,7 +6807,7 @@ func (ec *executionContext) _CensusValue_table(ctx context.Context, field graphq
 	}
 	res := resTmp.(*model.CensusTable)
 	fc.Result = res
-	return ec.marshalNCensusTable2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusTable(ctx, field.Selections, res)
+	return ec.marshalNCensusTable2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusTable(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _CensusValue_values(ctx context.Context, field graphql.CollectedField, obj *model.CensusValue) (ret graphql.Marshaler) {
@@ -7150,7 +7145,7 @@ func (ec *executionContext) _Feed_authorization(ctx context.Context, field graph
 	}
 	res := resTmp.(*model.FeedAuthorization)
 	fc.Result = res
-	return ec.marshalOFeedAuthorization2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedAuthorization(ctx, field.Selections, res)
+	return ec.marshalOFeedAuthorization2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedAuthorization(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Feed_urls(ctx context.Context, field graphql.CollectedField, obj *model.Feed) (ret graphql.Marshaler) {
@@ -7182,7 +7177,7 @@ func (ec *executionContext) _Feed_urls(ctx context.Context, field graphql.Collec
 	}
 	res := resTmp.(*model.FeedUrls)
 	fc.Result = res
-	return ec.marshalOFeedUrls2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedUrls(ctx, field.Selections, res)
+	return ec.marshalOFeedUrls2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedUrls(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Feed_license(ctx context.Context, field graphql.CollectedField, obj *model.Feed) (ret graphql.Marshaler) {
@@ -7214,7 +7209,7 @@ func (ec *executionContext) _Feed_license(ctx context.Context, field graphql.Col
 	}
 	res := resTmp.(*model.FeedLicense)
 	fc.Result = res
-	return ec.marshalOFeedLicense2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedLicense(ctx, field.Selections, res)
+	return ec.marshalOFeedLicense2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedLicense(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Feed_search_rank(ctx context.Context, field graphql.CollectedField, obj *model.Feed) (ret graphql.Marshaler) {
@@ -7278,7 +7273,7 @@ func (ec *executionContext) _Feed_associated_operators(ctx context.Context, fiel
 	}
 	res := resTmp.([]*model.Operator)
 	fc.Result = res
-	return ec.marshalOOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐOperatorᚄ(ctx, field.Selections, res)
+	return ec.marshalOOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperatorᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Feed_feed_state(ctx context.Context, field graphql.CollectedField, obj *model.Feed) (ret graphql.Marshaler) {
@@ -7310,7 +7305,7 @@ func (ec *executionContext) _Feed_feed_state(ctx context.Context, field graphql.
 	}
 	res := resTmp.(*model.FeedState)
 	fc.Result = res
-	return ec.marshalOFeedState2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedState(ctx, field.Selections, res)
+	return ec.marshalOFeedState2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedState(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Feed_feed_versions(ctx context.Context, field graphql.CollectedField, obj *model.Feed) (ret graphql.Marshaler) {
@@ -7352,7 +7347,7 @@ func (ec *executionContext) _Feed_feed_versions(ctx context.Context, field graph
 	}
 	res := resTmp.([]*model.FeedVersion)
 	fc.Result = res
-	return ec.marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionᚄ(ctx, field.Selections, res)
+	return ec.marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedAuthorization_type(ctx context.Context, field graphql.CollectedField, obj *model.FeedAuthorization) (ret graphql.Marshaler) {
@@ -8177,7 +8172,7 @@ func (ec *executionContext) _FeedState_feed_version(ctx context.Context, field g
 	}
 	res := resTmp.(*model.FeedVersion)
 	fc.Result = res
-	return ec.marshalOFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+	return ec.marshalOFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedUrls_static_current(ctx context.Context, field graphql.CollectedField, obj *model.FeedUrls) (ret graphql.Marshaler) {
@@ -8760,7 +8755,7 @@ func (ec *executionContext) _FeedVersion_feed(ctx context.Context, field graphql
 	}
 	res := resTmp.(*model.Feed)
 	fc.Result = res
-	return ec.marshalNFeed2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeed(ctx, field.Selections, res)
+	return ec.marshalNFeed2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeed(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_feed_version_gtfs_import(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -8792,7 +8787,7 @@ func (ec *executionContext) _FeedVersion_feed_version_gtfs_import(ctx context.Co
 	}
 	res := resTmp.(*model.FeedVersionGtfsImport)
 	fc.Result = res
-	return ec.marshalOFeedVersionGtfsImport2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionGtfsImport(ctx, field.Selections, res)
+	return ec.marshalOFeedVersionGtfsImport2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionGtfsImport(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_files(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -8834,7 +8829,7 @@ func (ec *executionContext) _FeedVersion_files(ctx context.Context, field graphq
 	}
 	res := resTmp.([]*model.FeedVersionFileInfo)
 	fc.Result = res
-	return ec.marshalNFeedVersionFileInfo2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFileInfoᚄ(ctx, field.Selections, res)
+	return ec.marshalNFeedVersionFileInfo2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFileInfoᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_service_levels(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -8876,7 +8871,7 @@ func (ec *executionContext) _FeedVersion_service_levels(ctx context.Context, fie
 	}
 	res := resTmp.([]*model.FeedVersionServiceLevel)
 	fc.Result = res
-	return ec.marshalNFeedVersionServiceLevel2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevelᚄ(ctx, field.Selections, res)
+	return ec.marshalNFeedVersionServiceLevel2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevelᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_agencies(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -8918,7 +8913,7 @@ func (ec *executionContext) _FeedVersion_agencies(ctx context.Context, field gra
 	}
 	res := resTmp.([]*model.Agency)
 	fc.Result = res
-	return ec.marshalNAgency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyᚄ(ctx, field.Selections, res)
+	return ec.marshalNAgency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_routes(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -8960,7 +8955,7 @@ func (ec *executionContext) _FeedVersion_routes(ctx context.Context, field graph
 	}
 	res := resTmp.([]*model.Route)
 	fc.Result = res
-	return ec.marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteᚄ(ctx, field.Selections, res)
+	return ec.marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_stops(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -9002,7 +8997,7 @@ func (ec *executionContext) _FeedVersion_stops(ctx context.Context, field graphq
 	}
 	res := resTmp.([]*model.Stop)
 	fc.Result = res
-	return ec.marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
+	return ec.marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_trips(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -9044,7 +9039,7 @@ func (ec *executionContext) _FeedVersion_trips(ctx context.Context, field graphq
 	}
 	res := resTmp.([]*model.Trip)
 	fc.Result = res
-	return ec.marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTripᚄ(ctx, field.Selections, res)
+	return ec.marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_feed_infos(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -9086,7 +9081,7 @@ func (ec *executionContext) _FeedVersion_feed_infos(ctx context.Context, field g
 	}
 	res := resTmp.([]*model.FeedInfo)
 	fc.Result = res
-	return ec.marshalNFeedInfo2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedInfoᚄ(ctx, field.Selections, res)
+	return ec.marshalNFeedInfo2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedInfoᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersionDeleteResult_success(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersionDeleteResult) (ret graphql.Marshaler) {
@@ -9153,7 +9148,7 @@ func (ec *executionContext) _FeedVersionFetchResult_feed_version(ctx context.Con
 	}
 	res := resTmp.(*model.FeedVersion)
 	fc.Result = res
-	return ec.marshalOFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+	return ec.marshalOFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersionFetchResult_fetch_error(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersionFetchResult) (ret graphql.Marshaler) {
@@ -10762,7 +10757,7 @@ func (ec *executionContext) _Mutation_validate_gtfs(ctx context.Context, field g
 			return ec.resolvers.Mutation().ValidateGtfs(rctx, args["file"].(*graphql.Upload), args["url"].(*string), args["realtime_urls"].([]string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRole(ctx, "USER")
+			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRole(ctx, "USER")
 			if err != nil {
 				return nil, err
 			}
@@ -10793,7 +10788,7 @@ func (ec *executionContext) _Mutation_validate_gtfs(ctx context.Context, field g
 	}
 	res := resTmp.(*model.ValidationResult)
 	fc.Result = res
-	return ec.marshalOValidationResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResult(ctx, field.Selections, res)
+	return ec.marshalOValidationResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_feed_version_update(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -10825,7 +10820,7 @@ func (ec *executionContext) _Mutation_feed_version_update(ctx context.Context, f
 			return ec.resolvers.Mutation().FeedVersionUpdate(rctx, args["id"].(int), args["set"].(model.FeedVersionSetInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRole(ctx, "ADMIN")
+			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRole(ctx, "ADMIN")
 			if err != nil {
 				return nil, err
 			}
@@ -10856,7 +10851,7 @@ func (ec *executionContext) _Mutation_feed_version_update(ctx context.Context, f
 	}
 	res := resTmp.(*model.FeedVersion)
 	fc.Result = res
-	return ec.marshalOFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+	return ec.marshalOFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_feed_version_fetch(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -10888,7 +10883,7 @@ func (ec *executionContext) _Mutation_feed_version_fetch(ctx context.Context, fi
 			return ec.resolvers.Mutation().FeedVersionFetch(rctx, args["file"].(*graphql.Upload), args["url"].(*string), args["feed_onestop_id"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRole(ctx, "ADMIN")
+			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRole(ctx, "ADMIN")
 			if err != nil {
 				return nil, err
 			}
@@ -10919,7 +10914,7 @@ func (ec *executionContext) _Mutation_feed_version_fetch(ctx context.Context, fi
 	}
 	res := resTmp.(*model.FeedVersionFetchResult)
 	fc.Result = res
-	return ec.marshalOFeedVersionFetchResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFetchResult(ctx, field.Selections, res)
+	return ec.marshalOFeedVersionFetchResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFetchResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_feed_version_import(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -10951,7 +10946,7 @@ func (ec *executionContext) _Mutation_feed_version_import(ctx context.Context, f
 			return ec.resolvers.Mutation().FeedVersionImport(rctx, args["sha1"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRole(ctx, "ADMIN")
+			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRole(ctx, "ADMIN")
 			if err != nil {
 				return nil, err
 			}
@@ -10985,7 +10980,7 @@ func (ec *executionContext) _Mutation_feed_version_import(ctx context.Context, f
 	}
 	res := resTmp.(*model.FeedVersionImportResult)
 	fc.Result = res
-	return ec.marshalNFeedVersionImportResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionImportResult(ctx, field.Selections, res)
+	return ec.marshalNFeedVersionImportResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionImportResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_feed_version_unimport(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -11017,7 +11012,7 @@ func (ec *executionContext) _Mutation_feed_version_unimport(ctx context.Context,
 			return ec.resolvers.Mutation().FeedVersionUnimport(rctx, args["id"].(int))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRole(ctx, "ADMIN")
+			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRole(ctx, "ADMIN")
 			if err != nil {
 				return nil, err
 			}
@@ -11051,7 +11046,7 @@ func (ec *executionContext) _Mutation_feed_version_unimport(ctx context.Context,
 	}
 	res := resTmp.(*model.FeedVersionUnimportResult)
 	fc.Result = res
-	return ec.marshalNFeedVersionUnimportResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionUnimportResult(ctx, field.Selections, res)
+	return ec.marshalNFeedVersionUnimportResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionUnimportResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_feed_version_delete(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -11083,7 +11078,7 @@ func (ec *executionContext) _Mutation_feed_version_delete(ctx context.Context, f
 			return ec.resolvers.Mutation().FeedVersionDelete(rctx, args["id"].(int))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRole(ctx, "ADMIN")
+			role, err := ec.unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRole(ctx, "ADMIN")
 			if err != nil {
 				return nil, err
 			}
@@ -11117,7 +11112,7 @@ func (ec *executionContext) _Mutation_feed_version_delete(ctx context.Context, f
 	}
 	res := resTmp.(*model.FeedVersionDeleteResult)
 	fc.Result = res
-	return ec.marshalNFeedVersionDeleteResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionDeleteResult(ctx, field.Selections, res)
+	return ec.marshalNFeedVersionDeleteResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionDeleteResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Operator_id(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
@@ -11824,7 +11819,7 @@ func (ec *executionContext) _Operator_agency(ctx context.Context, field graphql.
 	}
 	res := resTmp.(*model.Agency)
 	fc.Result = res
-	return ec.marshalOAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgency(ctx, field.Selections, res)
+	return ec.marshalOAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Pathway_id(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
@@ -12244,7 +12239,7 @@ func (ec *executionContext) _Pathway_from_stop(ctx context.Context, field graphq
 	}
 	res := resTmp.(*model.Stop)
 	fc.Result = res
-	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
+	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Pathway_to_stop(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
@@ -12279,7 +12274,7 @@ func (ec *executionContext) _Pathway_to_stop(ctx context.Context, field graphql.
 	}
 	res := resTmp.(*model.Stop)
 	fc.Result = res
-	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
+	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_agencies(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12321,7 +12316,7 @@ func (ec *executionContext) _Query_agencies(ctx context.Context, field graphql.C
 	}
 	res := resTmp.([]*model.Agency)
 	fc.Result = res
-	return ec.marshalNAgency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyᚄ(ctx, field.Selections, res)
+	return ec.marshalNAgency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_routes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12363,7 +12358,7 @@ func (ec *executionContext) _Query_routes(ctx context.Context, field graphql.Col
 	}
 	res := resTmp.([]*model.Route)
 	fc.Result = res
-	return ec.marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteᚄ(ctx, field.Selections, res)
+	return ec.marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_stops(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12405,7 +12400,7 @@ func (ec *executionContext) _Query_stops(ctx context.Context, field graphql.Coll
 	}
 	res := resTmp.([]*model.Stop)
 	fc.Result = res
-	return ec.marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
+	return ec.marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_feed_versions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12447,7 +12442,7 @@ func (ec *executionContext) _Query_feed_versions(ctx context.Context, field grap
 	}
 	res := resTmp.([]*model.FeedVersion)
 	fc.Result = res
-	return ec.marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionᚄ(ctx, field.Selections, res)
+	return ec.marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_feeds(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12489,7 +12484,7 @@ func (ec *executionContext) _Query_feeds(ctx context.Context, field graphql.Coll
 	}
 	res := resTmp.([]*model.Feed)
 	fc.Result = res
-	return ec.marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedᚄ(ctx, field.Selections, res)
+	return ec.marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_trips(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12531,7 +12526,7 @@ func (ec *executionContext) _Query_trips(ctx context.Context, field graphql.Coll
 	}
 	res := resTmp.([]*model.Trip)
 	fc.Result = res
-	return ec.marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTripᚄ(ctx, field.Selections, res)
+	return ec.marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_operators(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12573,7 +12568,7 @@ func (ec *executionContext) _Query_operators(ctx context.Context, field graphql.
 	}
 	res := resTmp.([]*model.Operator)
 	fc.Result = res
-	return ec.marshalNOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐOperatorᚄ(ctx, field.Selections, res)
+	return ec.marshalNOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperatorᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -13096,7 +13091,7 @@ func (ec *executionContext) _Route_agency(ctx context.Context, field graphql.Col
 	}
 	res := resTmp.(*model.Agency)
 	fc.Result = res
-	return ec.marshalNAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgency(ctx, field.Selections, res)
+	return ec.marshalNAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Route_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
@@ -13131,7 +13126,7 @@ func (ec *executionContext) _Route_feed_version(ctx context.Context, field graph
 	}
 	res := resTmp.(*model.FeedVersion)
 	fc.Result = res
-	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Route_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
@@ -13307,7 +13302,7 @@ func (ec *executionContext) _Route_trips(ctx context.Context, field graphql.Coll
 	}
 	res := resTmp.([]*model.Trip)
 	fc.Result = res
-	return ec.marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTripᚄ(ctx, field.Selections, res)
+	return ec.marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Route_route_stops(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
@@ -13349,7 +13344,7 @@ func (ec *executionContext) _Route_route_stops(ctx context.Context, field graphq
 	}
 	res := resTmp.([]*model.RouteStop)
 	fc.Result = res
-	return ec.marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteStopᚄ(ctx, field.Selections, res)
+	return ec.marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Route_headways(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
@@ -13391,7 +13386,7 @@ func (ec *executionContext) _Route_headways(ctx context.Context, field graphql.C
 	}
 	res := resTmp.([]*model.RouteHeadway)
 	fc.Result = res
-	return ec.marshalNRouteHeadway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteHeadwayᚄ(ctx, field.Selections, res)
+	return ec.marshalNRouteHeadway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteHeadwayᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Route_geometries(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
@@ -13433,7 +13428,7 @@ func (ec *executionContext) _Route_geometries(ctx context.Context, field graphql
 	}
 	res := resTmp.([]*model.RouteGeometry)
 	fc.Result = res
-	return ec.marshalNRouteGeometry2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteGeometryᚄ(ctx, field.Selections, res)
+	return ec.marshalNRouteGeometry2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteGeometryᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Route_census_geographies(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
@@ -13472,7 +13467,7 @@ func (ec *executionContext) _Route_census_geographies(ctx context.Context, field
 	}
 	res := resTmp.([]*model.CensusGeography)
 	fc.Result = res
-	return ec.marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusGeographyᚄ(ctx, field.Selections, res)
+	return ec.marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusGeographyᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Route_route_stop_buffer(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
@@ -13514,7 +13509,7 @@ func (ec *executionContext) _Route_route_stop_buffer(ctx context.Context, field 
 	}
 	res := resTmp.(*model.RouteStopBuffer)
 	fc.Result = res
-	return ec.marshalNRouteStopBuffer2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteStopBuffer(ctx, field.Selections, res)
+	return ec.marshalNRouteStopBuffer2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopBuffer(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _RouteGeometry_direction_id(ctx context.Context, field graphql.CollectedField, obj *model.RouteGeometry) (ret graphql.Marshaler) {
@@ -13654,7 +13649,7 @@ func (ec *executionContext) _RouteHeadway_stop(ctx context.Context, field graphq
 	}
 	res := resTmp.(*model.Stop)
 	fc.Result = res
-	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
+	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _RouteHeadway_dow_category(ctx context.Context, field graphql.CollectedField, obj *model.RouteHeadway) (ret graphql.Marshaler) {
@@ -14533,7 +14528,7 @@ func (ec *executionContext) _RouteStop_route(ctx context.Context, field graphql.
 	}
 	res := resTmp.(*model.Route)
 	fc.Result = res
-	return ec.marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRoute(ctx, field.Selections, res)
+	return ec.marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _RouteStop_stop(ctx context.Context, field graphql.CollectedField, obj *model.RouteStop) (ret graphql.Marshaler) {
@@ -14568,7 +14563,7 @@ func (ec *executionContext) _RouteStop_stop(ctx context.Context, field graphql.C
 	}
 	res := resTmp.(*model.Stop)
 	fc.Result = res
-	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
+	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _RouteStop_agency(ctx context.Context, field graphql.CollectedField, obj *model.RouteStop) (ret graphql.Marshaler) {
@@ -14603,7 +14598,7 @@ func (ec *executionContext) _RouteStop_agency(ctx context.Context, field graphql
 	}
 	res := resTmp.(*model.Agency)
 	fc.Result = res
-	return ec.marshalNAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgency(ctx, field.Selections, res)
+	return ec.marshalNAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _RouteStopBuffer_stop_points(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopBuffer) (ret graphql.Marshaler) {
@@ -15364,7 +15359,7 @@ func (ec *executionContext) _Stop_feed_version(ctx context.Context, field graphq
 	}
 	res := resTmp.(*model.FeedVersion)
 	fc.Result = res
-	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Stop_level(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
@@ -15396,7 +15391,7 @@ func (ec *executionContext) _Stop_level(ctx context.Context, field graphql.Colle
 	}
 	res := resTmp.(*model.Level)
 	fc.Result = res
-	return ec.marshalOLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐLevel(ctx, field.Selections, res)
+	return ec.marshalOLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLevel(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Stop_parent(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
@@ -15428,7 +15423,7 @@ func (ec *executionContext) _Stop_parent(ctx context.Context, field graphql.Coll
 	}
 	res := resTmp.(*model.Stop)
 	fc.Result = res
-	return ec.marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
+	return ec.marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Stop_children(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
@@ -15467,7 +15462,7 @@ func (ec *executionContext) _Stop_children(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.([]*model.Stop)
 	fc.Result = res
-	return ec.marshalOStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
+	return ec.marshalOStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Stop_route_stops(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
@@ -15509,7 +15504,7 @@ func (ec *executionContext) _Stop_route_stops(ctx context.Context, field graphql
 	}
 	res := resTmp.([]*model.RouteStop)
 	fc.Result = res
-	return ec.marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteStopᚄ(ctx, field.Selections, res)
+	return ec.marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Stop_pathways_from_stop(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
@@ -15551,7 +15546,7 @@ func (ec *executionContext) _Stop_pathways_from_stop(ctx context.Context, field 
 	}
 	res := resTmp.([]*model.Pathway)
 	fc.Result = res
-	return ec.marshalNPathway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐPathwayᚄ(ctx, field.Selections, res)
+	return ec.marshalNPathway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathwayᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Stop_pathways_to_stop(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
@@ -15593,7 +15588,7 @@ func (ec *executionContext) _Stop_pathways_to_stop(ctx context.Context, field gr
 	}
 	res := resTmp.([]*model.Pathway)
 	fc.Result = res
-	return ec.marshalNPathway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐPathwayᚄ(ctx, field.Selections, res)
+	return ec.marshalNPathway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathwayᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Stop_stop_times(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
@@ -15635,7 +15630,7 @@ func (ec *executionContext) _Stop_stop_times(ctx context.Context, field graphql.
 	}
 	res := resTmp.([]*model.StopTime)
 	fc.Result = res
-	return ec.marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTimeᚄ(ctx, field.Selections, res)
+	return ec.marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Stop_search_rank(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
@@ -15706,7 +15701,7 @@ func (ec *executionContext) _Stop_census_geographies(ctx context.Context, field 
 	}
 	res := resTmp.([]*model.CensusGeography)
 	fc.Result = res
-	return ec.marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusGeographyᚄ(ctx, field.Selections, res)
+	return ec.marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusGeographyᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StopTime_arrival_time(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
@@ -15857,14 +15852,14 @@ func (ec *executionContext) _StopTime_pickup_type(ctx context.Context, field gra
 		Object:     "StopTime",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.StopTime().PickupType(rctx, obj)
+		return obj.PickupType, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -15873,9 +15868,9 @@ func (ec *executionContext) _StopTime_pickup_type(ctx context.Context, field gra
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(tl.OInt)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StopTime_drop_off_type(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
@@ -15889,14 +15884,14 @@ func (ec *executionContext) _StopTime_drop_off_type(ctx context.Context, field g
 		Object:     "StopTime",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.StopTime().DropOffType(rctx, obj)
+		return obj.DropOffType, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -15905,9 +15900,9 @@ func (ec *executionContext) _StopTime_drop_off_type(ctx context.Context, field g
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(tl.OInt)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StopTime_timepoint(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
@@ -15921,14 +15916,14 @@ func (ec *executionContext) _StopTime_timepoint(ctx context.Context, field graph
 		Object:     "StopTime",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.StopTime().Timepoint(rctx, obj)
+		return obj.Timepoint, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -15937,9 +15932,9 @@ func (ec *executionContext) _StopTime_timepoint(ctx context.Context, field graph
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(tl.OInt)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StopTime_interpolated(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
@@ -15953,14 +15948,14 @@ func (ec *executionContext) _StopTime_interpolated(ctx context.Context, field gr
 		Object:     "StopTime",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.StopTime().Interpolated(rctx, obj)
+		return obj.Interpolated, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -15969,9 +15964,9 @@ func (ec *executionContext) _StopTime_interpolated(ctx context.Context, field gr
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(tl.OInt)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StopTime_stop(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
@@ -16006,7 +16001,7 @@ func (ec *executionContext) _StopTime_stop(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.(*model.Stop)
 	fc.Result = res
-	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
+	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StopTime_trip(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
@@ -16041,7 +16036,7 @@ func (ec *executionContext) _StopTime_trip(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.(*model.Trip)
 	fc.Result = res
-	return ec.marshalNTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTrip(ctx, field.Selections, res)
+	return ec.marshalNTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Trip_id(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
@@ -16391,7 +16386,7 @@ func (ec *executionContext) _Trip_calendar(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.(*model.Calendar)
 	fc.Result = res
-	return ec.marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCalendar(ctx, field.Selections, res)
+	return ec.marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Trip_route(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
@@ -16426,7 +16421,7 @@ func (ec *executionContext) _Trip_route(ctx context.Context, field graphql.Colle
 	}
 	res := resTmp.(*model.Route)
 	fc.Result = res
-	return ec.marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRoute(ctx, field.Selections, res)
+	return ec.marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Trip_shape(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
@@ -16458,7 +16453,7 @@ func (ec *executionContext) _Trip_shape(ctx context.Context, field graphql.Colle
 	}
 	res := resTmp.(*model.Shape)
 	fc.Result = res
-	return ec.marshalOShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐShape(ctx, field.Selections, res)
+	return ec.marshalOShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Trip_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
@@ -16493,7 +16488,7 @@ func (ec *executionContext) _Trip_feed_version(ctx context.Context, field graphq
 	}
 	res := resTmp.(*model.FeedVersion)
 	fc.Result = res
-	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Trip_stop_times(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
@@ -16535,7 +16530,7 @@ func (ec *executionContext) _Trip_stop_times(ctx context.Context, field graphql.
 	}
 	res := resTmp.([]*model.StopTime)
 	fc.Result = res
-	return ec.marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTime(ctx, field.Selections, res)
+	return ec.marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Trip_frequencies(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
@@ -16577,7 +16572,7 @@ func (ec *executionContext) _Trip_frequencies(ctx context.Context, field graphql
 	}
 	res := resTmp.([]*model.Frequency)
 	fc.Result = res
-	return ec.marshalNFrequency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFrequencyᚄ(ctx, field.Selections, res)
+	return ec.marshalNFrequency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFrequencyᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_success(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -16682,7 +16677,7 @@ func (ec *executionContext) _ValidationResult_errors(ctx context.Context, field 
 	}
 	res := resTmp.([]model.ValidationResultErrorGroup)
 	fc.Result = res
-	return ec.marshalNValidationResultErrorGroup2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResultErrorGroupᚄ(ctx, field.Selections, res)
+	return ec.marshalNValidationResultErrorGroup2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResultErrorGroupᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_warnings(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -16717,7 +16712,7 @@ func (ec *executionContext) _ValidationResult_warnings(ctx context.Context, fiel
 	}
 	res := resTmp.([]model.ValidationResultErrorGroup)
 	fc.Result = res
-	return ec.marshalNValidationResultErrorGroup2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResultErrorGroupᚄ(ctx, field.Selections, res)
+	return ec.marshalNValidationResultErrorGroup2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResultErrorGroupᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_sha1(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -16857,7 +16852,7 @@ func (ec *executionContext) _ValidationResult_files(ctx context.Context, field g
 	}
 	res := resTmp.([]model.FeedVersionFileInfo)
 	fc.Result = res
-	return ec.marshalNFeedVersionFileInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFileInfoᚄ(ctx, field.Selections, res)
+	return ec.marshalNFeedVersionFileInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFileInfoᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_service_levels(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -16899,7 +16894,7 @@ func (ec *executionContext) _ValidationResult_service_levels(ctx context.Context
 	}
 	res := resTmp.([]model.FeedVersionServiceLevel)
 	fc.Result = res
-	return ec.marshalNFeedVersionServiceLevel2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevelᚄ(ctx, field.Selections, res)
+	return ec.marshalNFeedVersionServiceLevel2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevelᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_agencies(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -16941,7 +16936,7 @@ func (ec *executionContext) _ValidationResult_agencies(ctx context.Context, fiel
 	}
 	res := resTmp.([]model.Agency)
 	fc.Result = res
-	return ec.marshalNAgency2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyᚄ(ctx, field.Selections, res)
+	return ec.marshalNAgency2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_routes(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -16983,7 +16978,7 @@ func (ec *executionContext) _ValidationResult_routes(ctx context.Context, field 
 	}
 	res := resTmp.([]model.Route)
 	fc.Result = res
-	return ec.marshalNRoute2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteᚄ(ctx, field.Selections, res)
+	return ec.marshalNRoute2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_stops(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -17025,7 +17020,7 @@ func (ec *executionContext) _ValidationResult_stops(ctx context.Context, field g
 	}
 	res := resTmp.([]model.Stop)
 	fc.Result = res
-	return ec.marshalNStop2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
+	return ec.marshalNStop2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_feed_infos(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -17067,7 +17062,7 @@ func (ec *executionContext) _ValidationResult_feed_infos(ctx context.Context, fi
 	}
 	res := resTmp.([]model.FeedInfo)
 	fc.Result = res
-	return ec.marshalNFeedInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedInfoᚄ(ctx, field.Selections, res)
+	return ec.marshalNFeedInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedInfoᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResultError_filename(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResultError) (ret graphql.Marshaler) {
@@ -17452,7 +17447,7 @@ func (ec *executionContext) _ValidationResultErrorGroup_errors(ctx context.Conte
 	}
 	res := resTmp.([]*model.ValidationResultError)
 	fc.Result = res
-	return ec.marshalNValidationResultError2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResultErrorᚄ(ctx, field.Selections, res)
+	return ec.marshalNValidationResultError2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResultErrorᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -18664,7 +18659,7 @@ func (ec *executionContext) unmarshalInputFeedFilter(ctx context.Context, obj in
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("import_status"))
-			it.ImportStatus, err = ec.unmarshalOImportStatus2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐImportStatus(ctx, v)
+			it.ImportStatus, err = ec.unmarshalOImportStatus2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐImportStatus(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -21690,49 +21685,13 @@ func (ec *executionContext) _StopTime(ctx context.Context, sel ast.SelectionSet,
 		case "stop_headsign":
 			out.Values[i] = ec._StopTime_stop_headsign(ctx, field, obj)
 		case "pickup_type":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._StopTime_pickup_type(ctx, field, obj)
-				return res
-			})
+			out.Values[i] = ec._StopTime_pickup_type(ctx, field, obj)
 		case "drop_off_type":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._StopTime_drop_off_type(ctx, field, obj)
-				return res
-			})
+			out.Values[i] = ec._StopTime_drop_off_type(ctx, field, obj)
 		case "timepoint":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._StopTime_timepoint(ctx, field, obj)
-				return res
-			})
+			out.Values[i] = ec._StopTime_timepoint(ctx, field, obj)
 		case "interpolated":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._StopTime_interpolated(ctx, field, obj)
-				return res
-			})
+			out.Values[i] = ec._StopTime_interpolated(ctx, field, obj)
 		case "stop":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -22351,11 +22310,11 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) marshalNAgency2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgency(ctx context.Context, sel ast.SelectionSet, v model.Agency) graphql.Marshaler {
+func (ec *executionContext) marshalNAgency2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx context.Context, sel ast.SelectionSet, v model.Agency) graphql.Marshaler {
 	return ec._Agency(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNAgency2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Agency) graphql.Marshaler {
+func (ec *executionContext) marshalNAgency2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Agency) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22379,7 +22338,7 @@ func (ec *executionContext) marshalNAgency2ᚕgithubᚗcomᚋinterlineᚑioᚋtl
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNAgency2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgency(ctx, sel, v[i])
+			ret[i] = ec.marshalNAgency2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22392,7 +22351,7 @@ func (ec *executionContext) marshalNAgency2ᚕgithubᚗcomᚋinterlineᚑioᚋtl
 	return ret
 }
 
-func (ec *executionContext) marshalNAgency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Agency) graphql.Marshaler {
+func (ec *executionContext) marshalNAgency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Agency) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22416,7 +22375,7 @@ func (ec *executionContext) marshalNAgency2ᚕᚖgithubᚗcomᚋinterlineᚑio�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgency(ctx, sel, v[i])
+			ret[i] = ec.marshalNAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22429,7 +22388,7 @@ func (ec *executionContext) marshalNAgency2ᚕᚖgithubᚗcomᚋinterlineᚑio�
 	return ret
 }
 
-func (ec *executionContext) marshalNAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgency(ctx context.Context, sel ast.SelectionSet, v *model.Agency) graphql.Marshaler {
+func (ec *executionContext) marshalNAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx context.Context, sel ast.SelectionSet, v *model.Agency) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22439,7 +22398,7 @@ func (ec *executionContext) marshalNAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtl
 	return ec._Agency(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNAgencyPlace2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyPlace(ctx context.Context, sel ast.SelectionSet, v *model.AgencyPlace) graphql.Marshaler {
+func (ec *executionContext) marshalNAgencyPlace2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyPlace(ctx context.Context, sel ast.SelectionSet, v *model.AgencyPlace) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22485,11 +22444,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNCalendar2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v model.Calendar) graphql.Marshaler {
+func (ec *executionContext) marshalNCalendar2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v model.Calendar) graphql.Marshaler {
 	return ec._Calendar(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v *model.Calendar) graphql.Marshaler {
+func (ec *executionContext) marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v *model.Calendar) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22499,7 +22458,7 @@ func (ec *executionContext) marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋ
 	return ec._Calendar(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCensusGeography2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusGeography(ctx context.Context, sel ast.SelectionSet, v *model.CensusGeography) graphql.Marshaler {
+func (ec *executionContext) marshalNCensusGeography2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusGeography(ctx context.Context, sel ast.SelectionSet, v *model.CensusGeography) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22509,11 +22468,11 @@ func (ec *executionContext) marshalNCensusGeography2ᚖgithubᚗcomᚋinterline�
 	return ec._CensusGeography(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCensusTable2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusTable(ctx context.Context, sel ast.SelectionSet, v model.CensusTable) graphql.Marshaler {
+func (ec *executionContext) marshalNCensusTable2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusTable(ctx context.Context, sel ast.SelectionSet, v model.CensusTable) graphql.Marshaler {
 	return ec._CensusTable(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNCensusTable2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusTable(ctx context.Context, sel ast.SelectionSet, v *model.CensusTable) graphql.Marshaler {
+func (ec *executionContext) marshalNCensusTable2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusTable(ctx context.Context, sel ast.SelectionSet, v *model.CensusTable) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22523,7 +22482,7 @@ func (ec *executionContext) marshalNCensusTable2ᚖgithubᚗcomᚋinterlineᚑio
 	return ec._CensusTable(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCensusValue2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusValue(ctx context.Context, sel ast.SelectionSet, v []*model.CensusValue) graphql.Marshaler {
+func (ec *executionContext) marshalNCensusValue2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValue(ctx context.Context, sel ast.SelectionSet, v []*model.CensusValue) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22547,7 +22506,7 @@ func (ec *executionContext) marshalNCensusValue2ᚕᚖgithubᚗcomᚋinterline�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalOCensusValue2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusValue(ctx, sel, v[i])
+			ret[i] = ec.marshalOCensusValue2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValue(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22570,11 +22529,11 @@ func (ec *executionContext) marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransit
 	return v
 }
 
-func (ec *executionContext) marshalNFeed2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeed(ctx context.Context, sel ast.SelectionSet, v model.Feed) graphql.Marshaler {
+func (ec *executionContext) marshalNFeed2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeed(ctx context.Context, sel ast.SelectionSet, v model.Feed) graphql.Marshaler {
 	return ec._Feed(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Feed) graphql.Marshaler {
+func (ec *executionContext) marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Feed) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22598,7 +22557,7 @@ func (ec *executionContext) marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋt
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFeed2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeed(ctx, sel, v[i])
+			ret[i] = ec.marshalNFeed2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeed(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22611,7 +22570,7 @@ func (ec *executionContext) marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋt
 	return ret
 }
 
-func (ec *executionContext) marshalNFeed2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeed(ctx context.Context, sel ast.SelectionSet, v *model.Feed) graphql.Marshaler {
+func (ec *executionContext) marshalNFeed2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeed(ctx context.Context, sel ast.SelectionSet, v *model.Feed) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22621,11 +22580,11 @@ func (ec *executionContext) marshalNFeed2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2
 	return ec._Feed(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNFeedInfo2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedInfo(ctx context.Context, sel ast.SelectionSet, v model.FeedInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedInfo2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedInfo(ctx context.Context, sel ast.SelectionSet, v model.FeedInfo) graphql.Marshaler {
 	return ec._FeedInfo(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFeedInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedInfoᚄ(ctx context.Context, sel ast.SelectionSet, v []model.FeedInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedInfoᚄ(ctx context.Context, sel ast.SelectionSet, v []model.FeedInfo) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22649,7 +22608,7 @@ func (ec *executionContext) marshalNFeedInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFeedInfo2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedInfo(ctx, sel, v[i])
+			ret[i] = ec.marshalNFeedInfo2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedInfo(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22662,7 +22621,7 @@ func (ec *executionContext) marshalNFeedInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋ
 	return ret
 }
 
-func (ec *executionContext) marshalNFeedInfo2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedInfoᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FeedInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedInfo2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedInfoᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FeedInfo) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22686,7 +22645,7 @@ func (ec *executionContext) marshalNFeedInfo2ᚕᚖgithubᚗcomᚋinterlineᚑio
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFeedInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedInfo(ctx, sel, v[i])
+			ret[i] = ec.marshalNFeedInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedInfo(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22699,7 +22658,7 @@ func (ec *executionContext) marshalNFeedInfo2ᚕᚖgithubᚗcomᚋinterlineᚑio
 	return ret
 }
 
-func (ec *executionContext) marshalNFeedInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedInfo(ctx context.Context, sel ast.SelectionSet, v *model.FeedInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedInfo(ctx context.Context, sel ast.SelectionSet, v *model.FeedInfo) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22709,11 +22668,11 @@ func (ec *executionContext) marshalNFeedInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋ
 	return ec._FeedInfo(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNFeedVersion2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx context.Context, sel ast.SelectionSet, v model.FeedVersion) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersion2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx context.Context, sel ast.SelectionSet, v model.FeedVersion) graphql.Marshaler {
 	return ec._FeedVersion(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FeedVersion) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FeedVersion) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22737,7 +22696,7 @@ func (ec *executionContext) marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterline�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx, sel, v[i])
+			ret[i] = ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22750,7 +22709,7 @@ func (ec *executionContext) marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterline�
 	return ret
 }
 
-func (ec *executionContext) marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22760,11 +22719,11 @@ func (ec *executionContext) marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑio
 	return ec._FeedVersion(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNFeedVersionDeleteResult2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionDeleteResult(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionDeleteResult) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionDeleteResult2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionDeleteResult(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionDeleteResult) graphql.Marshaler {
 	return ec._FeedVersionDeleteResult(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFeedVersionDeleteResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionDeleteResult(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionDeleteResult) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionDeleteResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionDeleteResult(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionDeleteResult) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22774,11 +22733,11 @@ func (ec *executionContext) marshalNFeedVersionDeleteResult2ᚖgithubᚗcomᚋin
 	return ec._FeedVersionDeleteResult(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNFeedVersionFileInfo2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFileInfo(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionFileInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionFileInfo2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFileInfo(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionFileInfo) graphql.Marshaler {
 	return ec._FeedVersionFileInfo(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFeedVersionFileInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFileInfoᚄ(ctx context.Context, sel ast.SelectionSet, v []model.FeedVersionFileInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionFileInfo2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFileInfoᚄ(ctx context.Context, sel ast.SelectionSet, v []model.FeedVersionFileInfo) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22802,7 +22761,7 @@ func (ec *executionContext) marshalNFeedVersionFileInfo2ᚕgithubᚗcomᚋinterl
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFeedVersionFileInfo2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFileInfo(ctx, sel, v[i])
+			ret[i] = ec.marshalNFeedVersionFileInfo2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFileInfo(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22815,7 +22774,7 @@ func (ec *executionContext) marshalNFeedVersionFileInfo2ᚕgithubᚗcomᚋinterl
 	return ret
 }
 
-func (ec *executionContext) marshalNFeedVersionFileInfo2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFileInfoᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FeedVersionFileInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionFileInfo2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFileInfoᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FeedVersionFileInfo) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22839,7 +22798,7 @@ func (ec *executionContext) marshalNFeedVersionFileInfo2ᚕᚖgithubᚗcomᚋint
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFeedVersionFileInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFileInfo(ctx, sel, v[i])
+			ret[i] = ec.marshalNFeedVersionFileInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFileInfo(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22852,7 +22811,7 @@ func (ec *executionContext) marshalNFeedVersionFileInfo2ᚕᚖgithubᚗcomᚋint
 	return ret
 }
 
-func (ec *executionContext) marshalNFeedVersionFileInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFileInfo(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionFileInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionFileInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFileInfo(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionFileInfo) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22862,11 +22821,11 @@ func (ec *executionContext) marshalNFeedVersionFileInfo2ᚖgithubᚗcomᚋinterl
 	return ec._FeedVersionFileInfo(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNFeedVersionImportResult2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionImportResult(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionImportResult) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionImportResult2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionImportResult(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionImportResult) graphql.Marshaler {
 	return ec._FeedVersionImportResult(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFeedVersionImportResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionImportResult(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionImportResult) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionImportResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionImportResult(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionImportResult) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22876,11 +22835,11 @@ func (ec *executionContext) marshalNFeedVersionImportResult2ᚖgithubᚗcomᚋin
 	return ec._FeedVersionImportResult(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNFeedVersionServiceLevel2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevel(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionServiceLevel) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionServiceLevel2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevel(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionServiceLevel) graphql.Marshaler {
 	return ec._FeedVersionServiceLevel(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevelᚄ(ctx context.Context, sel ast.SelectionSet, v []model.FeedVersionServiceLevel) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevelᚄ(ctx context.Context, sel ast.SelectionSet, v []model.FeedVersionServiceLevel) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22904,7 +22863,7 @@ func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚕgithubᚗcomᚋin
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFeedVersionServiceLevel2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevel(ctx, sel, v[i])
+			ret[i] = ec.marshalNFeedVersionServiceLevel2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevel(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22917,7 +22876,7 @@ func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚕgithubᚗcomᚋin
 	return ret
 }
 
-func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevelᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FeedVersionServiceLevel) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevelᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FeedVersionServiceLevel) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -22941,7 +22900,7 @@ func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚕᚖgithubᚗcom�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFeedVersionServiceLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevel(ctx, sel, v[i])
+			ret[i] = ec.marshalNFeedVersionServiceLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevel(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -22954,7 +22913,7 @@ func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚕᚖgithubᚗcom�
 	return ret
 }
 
-func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevel(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionServiceLevel) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevel(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionServiceLevel) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22964,16 +22923,16 @@ func (ec *executionContext) marshalNFeedVersionServiceLevel2ᚖgithubᚗcomᚋin
 	return ec._FeedVersionServiceLevel(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNFeedVersionSetInput2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionSetInput(ctx context.Context, v interface{}) (model.FeedVersionSetInput, error) {
+func (ec *executionContext) unmarshalNFeedVersionSetInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionSetInput(ctx context.Context, v interface{}) (model.FeedVersionSetInput, error) {
 	res, err := ec.unmarshalInputFeedVersionSetInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNFeedVersionUnimportResult2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionUnimportResult(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionUnimportResult) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionUnimportResult2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionUnimportResult(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionUnimportResult) graphql.Marshaler {
 	return ec._FeedVersionUnimportResult(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFeedVersionUnimportResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionUnimportResult(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionUnimportResult) graphql.Marshaler {
+func (ec *executionContext) marshalNFeedVersionUnimportResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionUnimportResult(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionUnimportResult) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -22998,7 +22957,7 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNFrequency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFrequencyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Frequency) graphql.Marshaler {
+func (ec *executionContext) marshalNFrequency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFrequencyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Frequency) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23022,7 +22981,7 @@ func (ec *executionContext) marshalNFrequency2ᚕᚖgithubᚗcomᚋinterlineᚑi
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFrequency2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFrequency(ctx, sel, v[i])
+			ret[i] = ec.marshalNFrequency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFrequency(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23035,7 +22994,7 @@ func (ec *executionContext) marshalNFrequency2ᚕᚖgithubᚗcomᚋinterlineᚑi
 	return ret
 }
 
-func (ec *executionContext) marshalNFrequency2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFrequency(ctx context.Context, sel ast.SelectionSet, v *model.Frequency) graphql.Marshaler {
+func (ec *executionContext) marshalNFrequency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFrequency(ctx context.Context, sel ast.SelectionSet, v *model.Frequency) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23095,7 +23054,7 @@ func (ec *executionContext) marshalNLineString2githubᚗcomᚋinterlineᚑioᚋt
 	return v
 }
 
-func (ec *executionContext) marshalNOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐOperatorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Operator) graphql.Marshaler {
+func (ec *executionContext) marshalNOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperatorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Operator) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23119,7 +23078,7 @@ func (ec *executionContext) marshalNOperator2ᚕᚖgithubᚗcomᚋinterlineᚑio
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐOperator(ctx, sel, v[i])
+			ret[i] = ec.marshalNOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperator(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23132,7 +23091,7 @@ func (ec *executionContext) marshalNOperator2ᚕᚖgithubᚗcomᚋinterlineᚑio
 	return ret
 }
 
-func (ec *executionContext) marshalNOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐOperator(ctx context.Context, sel ast.SelectionSet, v *model.Operator) graphql.Marshaler {
+func (ec *executionContext) marshalNOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperator(ctx context.Context, sel ast.SelectionSet, v *model.Operator) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23142,7 +23101,7 @@ func (ec *executionContext) marshalNOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋ
 	return ec._Operator(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNPathway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐPathwayᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Pathway) graphql.Marshaler {
+func (ec *executionContext) marshalNPathway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathwayᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Pathway) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23166,7 +23125,7 @@ func (ec *executionContext) marshalNPathway2ᚕᚖgithubᚗcomᚋinterlineᚑio�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNPathway2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐPathway(ctx, sel, v[i])
+			ret[i] = ec.marshalNPathway2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathway(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23179,7 +23138,7 @@ func (ec *executionContext) marshalNPathway2ᚕᚖgithubᚗcomᚋinterlineᚑio�
 	return ret
 }
 
-func (ec *executionContext) marshalNPathway2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐPathway(ctx context.Context, sel ast.SelectionSet, v *model.Pathway) graphql.Marshaler {
+func (ec *executionContext) marshalNPathway2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathway(ctx context.Context, sel ast.SelectionSet, v *model.Pathway) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23199,21 +23158,21 @@ func (ec *executionContext) marshalNPoint2githubᚗcomᚋinterlineᚑioᚋtransi
 	return v
 }
 
-func (ec *executionContext) unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRole(ctx context.Context, v interface{}) (model.Role, error) {
+func (ec *executionContext) unmarshalNRole2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRole(ctx context.Context, v interface{}) (model.Role, error) {
 	var res model.Role
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNRole2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRole(ctx context.Context, sel ast.SelectionSet, v model.Role) graphql.Marshaler {
+func (ec *executionContext) marshalNRole2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRole(ctx context.Context, sel ast.SelectionSet, v model.Role) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) marshalNRoute2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRoute(ctx context.Context, sel ast.SelectionSet, v model.Route) graphql.Marshaler {
+func (ec *executionContext) marshalNRoute2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx context.Context, sel ast.SelectionSet, v model.Route) graphql.Marshaler {
 	return ec._Route(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNRoute2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Route) graphql.Marshaler {
+func (ec *executionContext) marshalNRoute2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Route) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23237,7 +23196,7 @@ func (ec *executionContext) marshalNRoute2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRoute2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRoute(ctx, sel, v[i])
+			ret[i] = ec.marshalNRoute2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23250,7 +23209,7 @@ func (ec *executionContext) marshalNRoute2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv
 	return ret
 }
 
-func (ec *executionContext) marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Route) graphql.Marshaler {
+func (ec *executionContext) marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Route) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23274,7 +23233,7 @@ func (ec *executionContext) marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRoute(ctx, sel, v[i])
+			ret[i] = ec.marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23287,7 +23246,7 @@ func (ec *executionContext) marshalNRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋ
 	return ret
 }
 
-func (ec *executionContext) marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRoute(ctx context.Context, sel ast.SelectionSet, v *model.Route) graphql.Marshaler {
+func (ec *executionContext) marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx context.Context, sel ast.SelectionSet, v *model.Route) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23297,7 +23256,7 @@ func (ec *executionContext) marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv
 	return ec._Route(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNRouteGeometry2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteGeometryᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteGeometry) graphql.Marshaler {
+func (ec *executionContext) marshalNRouteGeometry2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteGeometryᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteGeometry) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23321,7 +23280,7 @@ func (ec *executionContext) marshalNRouteGeometry2ᚕᚖgithubᚗcomᚋinterline
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRouteGeometry2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteGeometry(ctx, sel, v[i])
+			ret[i] = ec.marshalNRouteGeometry2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteGeometry(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23334,7 +23293,7 @@ func (ec *executionContext) marshalNRouteGeometry2ᚕᚖgithubᚗcomᚋinterline
 	return ret
 }
 
-func (ec *executionContext) marshalNRouteGeometry2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteGeometry(ctx context.Context, sel ast.SelectionSet, v *model.RouteGeometry) graphql.Marshaler {
+func (ec *executionContext) marshalNRouteGeometry2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteGeometry(ctx context.Context, sel ast.SelectionSet, v *model.RouteGeometry) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23344,7 +23303,7 @@ func (ec *executionContext) marshalNRouteGeometry2ᚖgithubᚗcomᚋinterlineᚑ
 	return ec._RouteGeometry(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNRouteHeadway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteHeadwayᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteHeadway) graphql.Marshaler {
+func (ec *executionContext) marshalNRouteHeadway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteHeadwayᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteHeadway) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23368,7 +23327,7 @@ func (ec *executionContext) marshalNRouteHeadway2ᚕᚖgithubᚗcomᚋinterline�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRouteHeadway2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteHeadway(ctx, sel, v[i])
+			ret[i] = ec.marshalNRouteHeadway2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteHeadway(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23381,7 +23340,7 @@ func (ec *executionContext) marshalNRouteHeadway2ᚕᚖgithubᚗcomᚋinterline�
 	return ret
 }
 
-func (ec *executionContext) marshalNRouteHeadway2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteHeadway(ctx context.Context, sel ast.SelectionSet, v *model.RouteHeadway) graphql.Marshaler {
+func (ec *executionContext) marshalNRouteHeadway2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteHeadway(ctx context.Context, sel ast.SelectionSet, v *model.RouteHeadway) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23391,7 +23350,7 @@ func (ec *executionContext) marshalNRouteHeadway2ᚖgithubᚗcomᚋinterlineᚑi
 	return ec._RouteHeadway(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteStopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteStop) graphql.Marshaler {
+func (ec *executionContext) marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteStop) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23415,7 +23374,7 @@ func (ec *executionContext) marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑi
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRouteStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteStop(ctx, sel, v[i])
+			ret[i] = ec.marshalNRouteStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStop(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23428,7 +23387,7 @@ func (ec *executionContext) marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑi
 	return ret
 }
 
-func (ec *executionContext) marshalNRouteStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteStop(ctx context.Context, sel ast.SelectionSet, v *model.RouteStop) graphql.Marshaler {
+func (ec *executionContext) marshalNRouteStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStop(ctx context.Context, sel ast.SelectionSet, v *model.RouteStop) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23438,11 +23397,11 @@ func (ec *executionContext) marshalNRouteStop2ᚖgithubᚗcomᚋinterlineᚑio�
 	return ec._RouteStop(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNRouteStopBuffer2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteStopBuffer(ctx context.Context, sel ast.SelectionSet, v model.RouteStopBuffer) graphql.Marshaler {
+func (ec *executionContext) marshalNRouteStopBuffer2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopBuffer(ctx context.Context, sel ast.SelectionSet, v model.RouteStopBuffer) graphql.Marshaler {
 	return ec._RouteStopBuffer(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNRouteStopBuffer2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteStopBuffer(ctx context.Context, sel ast.SelectionSet, v *model.RouteStopBuffer) graphql.Marshaler {
+func (ec *executionContext) marshalNRouteStopBuffer2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopBuffer(ctx context.Context, sel ast.SelectionSet, v *model.RouteStopBuffer) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23462,11 +23421,11 @@ func (ec *executionContext) marshalNSeconds2githubᚗcomᚋinterlineᚑioᚋtran
 	return v
 }
 
-func (ec *executionContext) marshalNStop2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx context.Context, sel ast.SelectionSet, v model.Stop) graphql.Marshaler {
+func (ec *executionContext) marshalNStop2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx context.Context, sel ast.SelectionSet, v model.Stop) graphql.Marshaler {
 	return ec._Stop(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNStop2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Stop) graphql.Marshaler {
+func (ec *executionContext) marshalNStop2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Stop) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23490,7 +23449,7 @@ func (ec *executionContext) marshalNStop2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNStop2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx, sel, v[i])
+			ret[i] = ec.marshalNStop2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23503,7 +23462,7 @@ func (ec *executionContext) marshalNStop2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2
 	return ret
 }
 
-func (ec *executionContext) marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Stop) graphql.Marshaler {
+func (ec *executionContext) marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Stop) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23527,7 +23486,7 @@ func (ec *executionContext) marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋt
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx, sel, v[i])
+			ret[i] = ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23540,7 +23499,7 @@ func (ec *executionContext) marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋt
 	return ret
 }
 
-func (ec *executionContext) marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx context.Context, sel ast.SelectionSet, v *model.Stop) graphql.Marshaler {
+func (ec *executionContext) marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx context.Context, sel ast.SelectionSet, v *model.Stop) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23550,7 +23509,7 @@ func (ec *executionContext) marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2
 	return ec._Stop(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTime(ctx context.Context, sel ast.SelectionSet, v []*model.StopTime) graphql.Marshaler {
+func (ec *executionContext) marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTime(ctx context.Context, sel ast.SelectionSet, v []*model.StopTime) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23574,7 +23533,7 @@ func (ec *executionContext) marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑio
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalOStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTime(ctx, sel, v[i])
+			ret[i] = ec.marshalOStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTime(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23587,7 +23546,7 @@ func (ec *executionContext) marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑio
 	return ret
 }
 
-func (ec *executionContext) marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTimeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.StopTime) graphql.Marshaler {
+func (ec *executionContext) marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.StopTime) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23611,7 +23570,7 @@ func (ec *executionContext) marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑio
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTime(ctx, sel, v[i])
+			ret[i] = ec.marshalNStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTime(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23624,7 +23583,7 @@ func (ec *executionContext) marshalNStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑio
 	return ret
 }
 
-func (ec *executionContext) marshalNStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTime(ctx context.Context, sel ast.SelectionSet, v *model.StopTime) graphql.Marshaler {
+func (ec *executionContext) marshalNStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTime(ctx context.Context, sel ast.SelectionSet, v *model.StopTime) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23715,11 +23674,11 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 	return res
 }
 
-func (ec *executionContext) marshalNTrip2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTrip(ctx context.Context, sel ast.SelectionSet, v model.Trip) graphql.Marshaler {
+func (ec *executionContext) marshalNTrip2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx context.Context, sel ast.SelectionSet, v model.Trip) graphql.Marshaler {
 	return ec._Trip(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTripᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Trip) graphql.Marshaler {
+func (ec *executionContext) marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Trip) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23743,7 +23702,7 @@ func (ec *executionContext) marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋt
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTrip(ctx, sel, v[i])
+			ret[i] = ec.marshalNTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23756,7 +23715,7 @@ func (ec *executionContext) marshalNTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋt
 	return ret
 }
 
-func (ec *executionContext) marshalNTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTrip(ctx context.Context, sel ast.SelectionSet, v *model.Trip) graphql.Marshaler {
+func (ec *executionContext) marshalNTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx context.Context, sel ast.SelectionSet, v *model.Trip) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23766,7 +23725,7 @@ func (ec *executionContext) marshalNTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2
 	return ec._Trip(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNValidationResultError2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResultErrorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ValidationResultError) graphql.Marshaler {
+func (ec *executionContext) marshalNValidationResultError2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResultErrorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ValidationResultError) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23790,7 +23749,7 @@ func (ec *executionContext) marshalNValidationResultError2ᚕᚖgithubᚗcomᚋi
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNValidationResultError2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResultError(ctx, sel, v[i])
+			ret[i] = ec.marshalNValidationResultError2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResultError(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -23803,7 +23762,7 @@ func (ec *executionContext) marshalNValidationResultError2ᚕᚖgithubᚗcomᚋi
 	return ret
 }
 
-func (ec *executionContext) marshalNValidationResultError2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResultError(ctx context.Context, sel ast.SelectionSet, v *model.ValidationResultError) graphql.Marshaler {
+func (ec *executionContext) marshalNValidationResultError2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResultError(ctx context.Context, sel ast.SelectionSet, v *model.ValidationResultError) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -23813,11 +23772,11 @@ func (ec *executionContext) marshalNValidationResultError2ᚖgithubᚗcomᚋinte
 	return ec._ValidationResultError(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNValidationResultErrorGroup2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResultErrorGroup(ctx context.Context, sel ast.SelectionSet, v model.ValidationResultErrorGroup) graphql.Marshaler {
+func (ec *executionContext) marshalNValidationResultErrorGroup2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResultErrorGroup(ctx context.Context, sel ast.SelectionSet, v model.ValidationResultErrorGroup) graphql.Marshaler {
 	return ec._ValidationResultErrorGroup(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNValidationResultErrorGroup2ᚕgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResultErrorGroupᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ValidationResultErrorGroup) graphql.Marshaler {
+func (ec *executionContext) marshalNValidationResultErrorGroup2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResultErrorGroupᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ValidationResultErrorGroup) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -23841,7 +23800,7 @@ func (ec *executionContext) marshalNValidationResultErrorGroup2ᚕgithubᚗcom�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNValidationResultErrorGroup2githubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResultErrorGroup(ctx, sel, v[i])
+			ret[i] = ec.marshalNValidationResultErrorGroup2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResultErrorGroup(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -24083,14 +24042,14 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
-func (ec *executionContext) marshalOAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgency(ctx context.Context, sel ast.SelectionSet, v *model.Agency) graphql.Marshaler {
+func (ec *executionContext) marshalOAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx context.Context, sel ast.SelectionSet, v *model.Agency) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Agency(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOAgencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyFilter(ctx context.Context, v interface{}) (*model.AgencyFilter, error) {
+func (ec *executionContext) unmarshalOAgencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyFilter(ctx context.Context, v interface{}) (*model.AgencyFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24098,7 +24057,7 @@ func (ec *executionContext) unmarshalOAgencyFilter2ᚖgithubᚗcomᚋinterline�
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOAgencyPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyPlaceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.AgencyPlace) graphql.Marshaler {
+func (ec *executionContext) marshalOAgencyPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyPlaceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.AgencyPlace) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -24125,7 +24084,7 @@ func (ec *executionContext) marshalOAgencyPlace2ᚕᚖgithubᚗcomᚋinterline�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNAgencyPlace2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyPlace(ctx, sel, v[i])
+			ret[i] = ec.marshalNAgencyPlace2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyPlace(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -24138,7 +24097,7 @@ func (ec *executionContext) marshalOAgencyPlace2ᚕᚖgithubᚗcomᚋinterline�
 	return ret
 }
 
-func (ec *executionContext) unmarshalOAgencyPlaceFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐAgencyPlaceFilter(ctx context.Context, v interface{}) (*model.AgencyPlaceFilter, error) {
+func (ec *executionContext) unmarshalOAgencyPlaceFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyPlaceFilter(ctx context.Context, v interface{}) (*model.AgencyPlaceFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24185,7 +24144,7 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return graphql.MarshalBoolean(*v)
 }
 
-func (ec *executionContext) marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusGeographyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CensusGeography) graphql.Marshaler {
+func (ec *executionContext) marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusGeographyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CensusGeography) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -24212,7 +24171,7 @@ func (ec *executionContext) marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterli
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNCensusGeography2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusGeography(ctx, sel, v[i])
+			ret[i] = ec.marshalNCensusGeography2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusGeography(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -24225,7 +24184,7 @@ func (ec *executionContext) marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterli
 	return ret
 }
 
-func (ec *executionContext) marshalOCensusValue2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐCensusValue(ctx context.Context, sel ast.SelectionSet, v *model.CensusValue) graphql.Marshaler {
+func (ec *executionContext) marshalOCensusValue2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValue(ctx context.Context, sel ast.SelectionSet, v *model.CensusValue) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -24258,14 +24217,14 @@ func (ec *executionContext) marshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtran
 	return v
 }
 
-func (ec *executionContext) marshalOFeedAuthorization2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedAuthorization(ctx context.Context, sel ast.SelectionSet, v *model.FeedAuthorization) graphql.Marshaler {
+func (ec *executionContext) marshalOFeedAuthorization2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedAuthorization(ctx context.Context, sel ast.SelectionSet, v *model.FeedAuthorization) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._FeedAuthorization(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOFeedFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedFilter(ctx context.Context, v interface{}) (*model.FeedFilter, error) {
+func (ec *executionContext) unmarshalOFeedFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedFilter(ctx context.Context, v interface{}) (*model.FeedFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24273,42 +24232,42 @@ func (ec *executionContext) unmarshalOFeedFilter2ᚖgithubᚗcomᚋinterlineᚑi
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOFeedLicense2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedLicense(ctx context.Context, sel ast.SelectionSet, v *model.FeedLicense) graphql.Marshaler {
+func (ec *executionContext) marshalOFeedLicense2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedLicense(ctx context.Context, sel ast.SelectionSet, v *model.FeedLicense) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._FeedLicense(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOFeedState2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedState(ctx context.Context, sel ast.SelectionSet, v *model.FeedState) graphql.Marshaler {
+func (ec *executionContext) marshalOFeedState2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedState(ctx context.Context, sel ast.SelectionSet, v *model.FeedState) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._FeedState(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOFeedUrls2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedUrls(ctx context.Context, sel ast.SelectionSet, v *model.FeedUrls) graphql.Marshaler {
+func (ec *executionContext) marshalOFeedUrls2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedUrls(ctx context.Context, sel ast.SelectionSet, v *model.FeedUrls) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._FeedUrls(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersion(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+func (ec *executionContext) marshalOFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._FeedVersion(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOFeedVersionFetchResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFetchResult(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionFetchResult) graphql.Marshaler {
+func (ec *executionContext) marshalOFeedVersionFetchResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFetchResult(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionFetchResult) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._FeedVersionFetchResult(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOFeedVersionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionFilter(ctx context.Context, v interface{}) (*model.FeedVersionFilter, error) {
+func (ec *executionContext) unmarshalOFeedVersionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFilter(ctx context.Context, v interface{}) (*model.FeedVersionFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24316,14 +24275,14 @@ func (ec *executionContext) unmarshalOFeedVersionFilter2ᚖgithubᚗcomᚋinterl
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOFeedVersionGtfsImport2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionGtfsImport(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionGtfsImport) graphql.Marshaler {
+func (ec *executionContext) marshalOFeedVersionGtfsImport2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionGtfsImport(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionGtfsImport) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._FeedVersionGtfsImport(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOFeedVersionServiceLevelFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐFeedVersionServiceLevelFilter(ctx context.Context, v interface{}) (*model.FeedVersionServiceLevelFilter, error) {
+func (ec *executionContext) unmarshalOFeedVersionServiceLevelFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionServiceLevelFilter(ctx context.Context, v interface{}) (*model.FeedVersionServiceLevelFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24362,7 +24321,7 @@ func (ec *executionContext) marshalOGeometry2ᚖgithubᚗcomᚋinterlineᚑioᚋ
 	return v
 }
 
-func (ec *executionContext) unmarshalOImportStatus2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐImportStatus(ctx context.Context, v interface{}) (*model.ImportStatus, error) {
+func (ec *executionContext) unmarshalOImportStatus2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐImportStatus(ctx context.Context, v interface{}) (*model.ImportStatus, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24371,10 +24330,20 @@ func (ec *executionContext) unmarshalOImportStatus2ᚖgithubᚗcomᚋinterline�
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOImportStatus2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐImportStatus(ctx context.Context, sel ast.SelectionSet, v *model.ImportStatus) graphql.Marshaler {
+func (ec *executionContext) marshalOImportStatus2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐImportStatus(ctx context.Context, sel ast.SelectionSet, v *model.ImportStatus) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOInt(ctx context.Context, v interface{}) (tl.OInt, error) {
+	var res tl.OInt
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOInt(ctx context.Context, sel ast.SelectionSet, v tl.OInt) graphql.Marshaler {
 	return v
 }
 
@@ -24438,14 +24407,14 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return graphql.MarshalInt(*v)
 }
 
-func (ec *executionContext) marshalOLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐLevel(ctx context.Context, sel ast.SelectionSet, v *model.Level) graphql.Marshaler {
+func (ec *executionContext) marshalOLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLevel(ctx context.Context, sel ast.SelectionSet, v *model.Level) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Level(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐOperatorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Operator) graphql.Marshaler {
+func (ec *executionContext) marshalOOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperatorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Operator) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -24472,7 +24441,7 @@ func (ec *executionContext) marshalOOperator2ᚕᚖgithubᚗcomᚋinterlineᚑio
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐOperator(ctx, sel, v[i])
+			ret[i] = ec.marshalNOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperator(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -24485,7 +24454,7 @@ func (ec *executionContext) marshalOOperator2ᚕᚖgithubᚗcomᚋinterlineᚑio
 	return ret
 }
 
-func (ec *executionContext) unmarshalOOperatorFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐOperatorFilter(ctx context.Context, v interface{}) (*model.OperatorFilter, error) {
+func (ec *executionContext) unmarshalOOperatorFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperatorFilter(ctx context.Context, v interface{}) (*model.OperatorFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24509,7 +24478,7 @@ func (ec *executionContext) marshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋt
 	return v
 }
 
-func (ec *executionContext) unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐRouteFilter(ctx context.Context, v interface{}) (*model.RouteFilter, error) {
+func (ec *executionContext) unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteFilter(ctx context.Context, v interface{}) (*model.RouteFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24517,14 +24486,14 @@ func (ec *executionContext) unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑ
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v *model.Shape) graphql.Marshaler {
+func (ec *executionContext) marshalOShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v *model.Shape) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Shape(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Stop) graphql.Marshaler {
+func (ec *executionContext) marshalOStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Stop) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -24551,7 +24520,7 @@ func (ec *executionContext) marshalOStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋt
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx, sel, v[i])
+			ret[i] = ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -24564,14 +24533,14 @@ func (ec *executionContext) marshalOStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋt
 	return ret
 }
 
-func (ec *executionContext) marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStop(ctx context.Context, sel ast.SelectionSet, v *model.Stop) graphql.Marshaler {
+func (ec *executionContext) marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx context.Context, sel ast.SelectionSet, v *model.Stop) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Stop(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopFilter(ctx context.Context, v interface{}) (*model.StopFilter, error) {
+func (ec *executionContext) unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopFilter(ctx context.Context, v interface{}) (*model.StopFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24579,14 +24548,14 @@ func (ec *executionContext) unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑi
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTime(ctx context.Context, sel ast.SelectionSet, v *model.StopTime) graphql.Marshaler {
+func (ec *executionContext) marshalOStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTime(ctx context.Context, sel ast.SelectionSet, v *model.StopTime) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._StopTime(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOStopTimeFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐStopTimeFilter(ctx context.Context, v interface{}) (*model.StopTimeFilter, error) {
+func (ec *executionContext) unmarshalOStopTimeFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeFilter(ctx context.Context, v interface{}) (*model.StopTimeFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24688,7 +24657,7 @@ func (ec *executionContext) marshalOTime2ᚖtimeᚐTime(ctx context.Context, sel
 	return graphql.MarshalTime(*v)
 }
 
-func (ec *executionContext) unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐTripFilter(ctx context.Context, v interface{}) (*model.TripFilter, error) {
+func (ec *executionContext) unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripFilter(ctx context.Context, v interface{}) (*model.TripFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -24711,7 +24680,7 @@ func (ec *executionContext) marshalOUpload2ᚖgithubᚗcomᚋ99designsᚋgqlgen�
 	return graphql.MarshalUpload(*v)
 }
 
-func (ec *executionContext) marshalOValidationResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtlv2ᚋserverᚋmodelᚐValidationResult(ctx context.Context, sel ast.SelectionSet, v *model.ValidationResult) graphql.Marshaler {
+func (ec *executionContext) marshalOValidationResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationResult(ctx context.Context, sel ast.SelectionSet, v *model.ValidationResult) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

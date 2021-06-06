@@ -33,12 +33,25 @@ type expectJson struct {
 
 func TestFeedResolver(t *testing.T) {
 	testcases := []expectJson{
-		{`query { feeds {onestop_id}}`, hw{}, `{"feeds":[{"onestop_id":"CT"},{"onestop_id":"BA"}]}`},
+		{
+			`query { feeds {onestop_id}}`,
+			hw{},
+			`{"feeds":[{"onestop_id":"CT"},{"onestop_id":"BA"}]}`,
+		},
+		{
+			`query($onestop_id:String!) { feeds(where:{onestop_id:$onestop_id}) {onestop_id}}`,
+			hw{"onestop_id": "BA"},
+			`{"feeds":[{"onestop_id":"BA"}]}`,
+		},
 	}
 	c := client.New(newServer())
 	for _, tc := range testcases {
 		var resp map[string]interface{}
-		c.MustPost(tc.query, &resp)
+		opts := []client.Option{}
+		for k, v := range tc.vars {
+			opts = append(opts, client.Var(k, v))
+		}
+		c.MustPost(tc.query, &resp, opts...)
 		assert.JSONEq(t, tc.expect, toJson(resp))
 	}
 }

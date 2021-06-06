@@ -1,6 +1,7 @@
 package resolvers
 
 import (
+	"context"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql"
 	sq "github.com/Masterminds/squirrel"
 
 	"github.com/interline-io/transitland-lib/dmfr/fetch"
@@ -23,6 +25,42 @@ import (
 	"github.com/interline-io/transitland-lib/validator"
 	"github.com/jmoiron/sqlx"
 )
+
+// mutation root
+
+type mutationResolver struct{ *Resolver }
+
+func (r *mutationResolver) ValidateGtfs(ctx context.Context, file *graphql.Upload, url *string, rturls []string) (*model.ValidationResult, error) {
+	var src io.Reader
+	if file != nil {
+		src = file.File
+	}
+	return ValidateUpload(r.cfg, src, url, rturls, auth.ForContext(ctx))
+}
+
+func (r *mutationResolver) FeedVersionFetch(ctx context.Context, file *graphql.Upload, url *string, feed string) (*model.FeedVersionFetchResult, error) {
+	var src io.Reader
+	if file != nil {
+		src = file.File
+	}
+	return Fetch(r.cfg, src, url, feed, auth.ForContext(ctx))
+}
+
+func (r *mutationResolver) FeedVersionImport(ctx context.Context, sha1 string) (*model.FeedVersionImportResult, error) {
+	return Import(r.cfg, sha1, auth.ForContext(ctx))
+}
+
+func (r *mutationResolver) FeedVersionUpdate(ctx context.Context, id int, values model.FeedVersionSetInput) (*model.FeedVersion, error) {
+	return UpdateFeedVersion(id, values, auth.ForContext(ctx))
+}
+
+func (r *mutationResolver) FeedVersionUnimport(ctx context.Context, id int) (*model.FeedVersionUnimportResult, error) {
+	return UnimportFeedVersion(id)
+}
+
+func (r *mutationResolver) FeedVersionDelete(ctx context.Context, id int) (*model.FeedVersionDeleteResult, error) {
+	return FeedVersionDelete(id)
+}
 
 // Fetch adds a feed version to the database.
 func Fetch(cfg config.Config, src io.Reader, feedURL *string, feed string, user *auth.User) (*model.FeedVersionFetchResult, error) {
