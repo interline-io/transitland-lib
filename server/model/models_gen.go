@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"time"
 
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -23,6 +22,11 @@ type AgencyFilter struct {
 type AgencyPlaceFilter struct {
 	MinRank *float64 `json:"min_rank"`
 	Search  *string  `json:"search"`
+}
+
+type CalendarDateFilter struct {
+	Date          *tl.ODate `json:"date"`
+	ExceptionType *int      `json:"exception_type"`
 }
 
 type FeedFilter struct {
@@ -94,9 +98,9 @@ type StopFilter struct {
 }
 
 type StopTimeFilter struct {
-	ServiceDate *time.Time `json:"service_date"`
-	StartTime   *int       `json:"start_time"`
-	EndTime     *int       `json:"end_time"`
+	ServiceDate *tl.ODate `json:"service_date"`
+	StartTime   *int      `json:"start_time"`
+	EndTime     *int      `json:"end_time"`
 }
 
 type TripFilter struct {

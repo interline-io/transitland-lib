@@ -21,7 +21,7 @@ func TestFeedVersionResolver(t *testing.T) {
 			"basic fields",
 			`query($feed_version_sha1: String!) {  feed_versions(where:{sha1:$feed_version_sha1}) {sha1 url earliest_calendar_date latest_calendar_date name description} }`,
 			vars,
-			`{"feed_versions":[{"description":null,"earliest_calendar_date":"2017-10-02T00:00:00Z","latest_calendar_date":"2019-10-06T00:00:00Z","name":null,"sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6","url":"test/data/external/caltrain.zip"}]}`,
+			`{"feed_versions":[{"description":null,"earliest_calendar_date":"2017-10-02","latest_calendar_date":"2019-10-06","name":null,"sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6","url":"test/data/external/caltrain.zip"}]}`,
 			"",
 			nil,
 		},

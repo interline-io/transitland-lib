@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
-	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
@@ -255,8 +254,8 @@ type ValidationResult struct {
 	Errors               []ValidationResultErrorGroup `json:"errors"`
 	Warnings             []ValidationResultErrorGroup `json:"warnings"`
 	Sha1                 string                       `json:"sha1"`
-	EarliestCalendarDate time.Time                    `json:"earliest_calendar_date"`
-	LatestCalendarDate   time.Time                    `json:"latest_calendar_date"`
+	EarliestCalendarDate tl.ODate                     `json:"earliest_calendar_date"`
+	LatestCalendarDate   tl.ODate                     `json:"latest_calendar_date"`
 	Files                []FeedVersionFileInfo        `json:"files"`
 	ServiceLevels        []FeedVersionServiceLevel    `json:"service_levels"`
 	Agencies             []Agency                     `json:"agencies"`

@@ -106,12 +106,6 @@ type ComplexityRoot struct {
 		Wednesday    func(childComplexity int) int
 	}
 
-	CalendarDate struct {
-		Date          func(childComplexity int) int
-		ExceptionType func(childComplexity int) int
-		ID            func(childComplexity int) int
-	}
-
 	CensusGeography struct {
 		Aland     func(childComplexity int) int
 		Awater    func(childComplexity int) int
@@ -537,8 +531,11 @@ type AgencyResolver interface {
 	CensusGeographies(ctx context.Context, obj *model.Agency, layer string, radius *float64, limit *int) ([]*model.CensusGeography, error)
 }
 type CalendarResolver interface {
-	AddedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*model.CalendarDate, error)
-	RemovedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*model.CalendarDate, error)
+	StartDate(ctx context.Context, obj *model.Calendar) (*tl.ODate, error)
+	EndDate(ctx context.Context, obj *model.Calendar) (*tl.ODate, error)
+
+	AddedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*tl.ODate, error)
+	RemovedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*tl.ODate, error)
 }
 type CensusGeographyResolver interface {
 	Values(ctx context.Context, obj *model.CensusGeography, tableNames []string, limit *int) ([]*model.CensusValue, error)
@@ -933,27 +930,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Calendar.Wednesday(childComplexity), true
-
-	case "CalendarDate.date":
-		if e.complexity.CalendarDate.Date == nil {
-			break
-		}
-
-		return e.complexity.CalendarDate.Date(childComplexity), true
-
-	case "CalendarDate.exception_type":
-		if e.complexity.CalendarDate.ExceptionType == nil {
-			break
-		}
-
-		return e.complexity.CalendarDate.ExceptionType(childComplexity), true
-
-	case "CalendarDate.id":
-		if e.complexity.CalendarDate.ID == nil {
-			break
-		}
-
-		return e.complexity.CalendarDate.ID(childComplexity), true
 
 	case "CensusGeography.aland":
 		if e.complexity.CensusGeography.Aland == nil {
@@ -3471,8 +3447,8 @@ type FeedVersion {
   sha1: String!
   fetched_at: Time!
   url: String!
-  earliest_calendar_date: Time!
-  latest_calendar_date: Time!
+  earliest_calendar_date: Date!
+  latest_calendar_date: Date!
   created_by: String
   updated_by: String
   name: String
@@ -3678,8 +3654,8 @@ type Trip {
 type Calendar {
   id: Int!
   service_id: String!
-  start_date: Time!
-  end_date: Time!
+  start_date: Date!
+  end_date: Date!
   monday: Int!
   tuesday: Int!
   wednesday: Int!
@@ -3687,14 +3663,8 @@ type Calendar {
   friday: Int!
   saturday: Int!
   sunday: Int!
-  added_dates(limit: Int): [CalendarDate!]!
-  removed_dates(limit: Int): [CalendarDate!]!
-}
-
-type CalendarDate {
-  id: Int!
-  date: Time!
-  exception_type: Int!
+  added_dates(limit: Int): [Date!]!
+  removed_dates(limit: Int): [Date!]!
 }
 
 type Shape {
@@ -4004,7 +3974,7 @@ input StopFilter {
 }
 
 input StopTimeFilter {
-  service_date: Time
+  service_date: Date
   start_time: Int
   end_time: Int
 }
@@ -4031,6 +4001,11 @@ input FeedVersionServiceLevelFilter {
 input AgencyPlaceFilter {
   min_rank: Float
   search: String
+}
+
+input CalendarDateFilter {
+  date: Date
+  exception_type: Int
 }
 
 # Scalar types
@@ -6016,14 +5991,14 @@ func (ec *executionContext) _Calendar_start_date(ctx context.Context, field grap
 		Object:     "Calendar",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.StartDate, nil
+		return ec.resolvers.Calendar().StartDate(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6035,9 +6010,9 @@ func (ec *executionContext) _Calendar_start_date(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(time.Time)
+	res := resTmp.(*tl.ODate)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Calendar_end_date(ctx context.Context, field graphql.CollectedField, obj *model.Calendar) (ret graphql.Marshaler) {
@@ -6051,14 +6026,14 @@ func (ec *executionContext) _Calendar_end_date(ctx context.Context, field graphq
 		Object:     "Calendar",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.EndDate, nil
+		return ec.resolvers.Calendar().EndDate(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6070,9 +6045,9 @@ func (ec *executionContext) _Calendar_end_date(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(time.Time)
+	res := resTmp.(*tl.ODate)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Calendar_monday(ctx context.Context, field graphql.CollectedField, obj *model.Calendar) (ret graphql.Marshaler) {
@@ -6357,9 +6332,9 @@ func (ec *executionContext) _Calendar_added_dates(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.CalendarDate)
+	res := resTmp.([]*tl.ODate)
 	fc.Result = res
-	return ec.marshalNCalendarDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateᚄ(ctx, field.Selections, res)
+	return ec.marshalNDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODateᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Calendar_removed_dates(ctx context.Context, field graphql.CollectedField, obj *model.Calendar) (ret graphql.Marshaler) {
@@ -6399,114 +6374,9 @@ func (ec *executionContext) _Calendar_removed_dates(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.CalendarDate)
+	res := resTmp.([]*tl.ODate)
 	fc.Result = res
-	return ec.marshalNCalendarDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _CalendarDate_id(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "CalendarDate",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _CalendarDate_date(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "CalendarDate",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Date, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(time.Time)
-	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _CalendarDate_exception_type(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "CalendarDate",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ExceptionType, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODateᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _CensusGeography_id(ctx context.Context, field graphql.CollectedField, obj *model.CensusGeography) (ret graphql.Marshaler) {
@@ -8701,9 +8571,9 @@ func (ec *executionContext) _FeedVersion_earliest_calendar_date(ctx context.Cont
 		}
 		return graphql.Null
 	}
-	res := resTmp.(time.Time)
+	res := resTmp.(tl.ODate)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_latest_calendar_date(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -8736,9 +8606,9 @@ func (ec *executionContext) _FeedVersion_latest_calendar_date(ctx context.Contex
 		}
 		return graphql.Null
 	}
-	res := resTmp.(time.Time)
+	res := resTmp.(tl.ODate)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedVersion_created_by(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
@@ -18771,6 +18641,34 @@ func (ec *executionContext) unmarshalInputAgencyPlaceFilter(ctx context.Context,
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCalendarDateFilter(ctx context.Context, obj interface{}) (model.CalendarDateFilter, error) {
+	var it model.CalendarDateFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "date":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("date"))
+			it.Date, err = ec.unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "exception_type":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("exception_type"))
+			it.ExceptionType, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputFeedFilter(ctx context.Context, obj interface{}) (model.FeedFilter, error) {
 	var it model.FeedFilter
 	var asMap = obj.(map[string]interface{})
@@ -19165,7 +19063,7 @@ func (ec *executionContext) unmarshalInputStopTimeFilter(ctx context.Context, ob
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("service_date"))
-			it.ServiceDate, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			it.ServiceDate, err = ec.unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -19451,15 +19349,33 @@ func (ec *executionContext) _Calendar(ctx context.Context, sel ast.SelectionSet,
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "start_date":
-			out.Values[i] = ec._Calendar_start_date(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Calendar_start_date(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "end_date":
-			out.Values[i] = ec._Calendar_end_date(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Calendar_end_date(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "monday":
 			out.Values[i] = ec._Calendar_monday(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -19523,43 +19439,6 @@ func (ec *executionContext) _Calendar(ctx context.Context, sel ast.SelectionSet,
 				}
 				return res
 			})
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var calendarDateImplementors = []string{"CalendarDate"}
-
-func (ec *executionContext) _CalendarDate(ctx context.Context, sel ast.SelectionSet, obj *model.CalendarDate) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, calendarDateImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("CalendarDate")
-		case "id":
-			out.Values[i] = ec._CalendarDate_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "date":
-			out.Values[i] = ec._CalendarDate_date(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "exception_type":
-			out.Values[i] = ec._CalendarDate_exception_type(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -22640,53 +22519,6 @@ func (ec *executionContext) marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋ
 	return ec._Calendar(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCalendarDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CalendarDate) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNCalendarDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDate(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
-}
-
-func (ec *executionContext) marshalNCalendarDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDate(ctx context.Context, sel ast.SelectionSet, v *model.CalendarDate) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._CalendarDate(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalNCensusGeography2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusGeography(ctx context.Context, sel ast.SelectionSet, v *model.CensusGeography) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -22755,6 +22587,52 @@ func (ec *executionContext) unmarshalNDate2githubᚗcomᚋinterlineᚑioᚋtrans
 }
 
 func (ec *executionContext) marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx context.Context, sel ast.SelectionSet, v tl.ODate) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODateᚄ(ctx context.Context, v interface{}) ([]*tl.ODate, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]*tl.ODate, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODateᚄ(ctx context.Context, sel ast.SelectionSet, v []*tl.ODate) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, sel, v[i])
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx context.Context, v interface{}) (*tl.ODate, error) {
+	var res = new(tl.ODate)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx context.Context, sel ast.SelectionSet, v *tl.ODate) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
 	return v
 }
 

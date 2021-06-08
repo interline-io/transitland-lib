@@ -1,8 +1,6 @@
 package validator
 
 import (
-	"time"
-
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
@@ -14,8 +12,8 @@ type Result struct {
 	Success              bool                           `json:"success"`
 	FailureReason        string                         `json:"failure_reason"`
 	SHA1                 string                         `json:"sha1"`
-	EarliestCalendarDate time.Time                      `json:"earliest_calendar_date"`
-	LatestCalendarDate   time.Time                      `json:"latest_calendar_date"`
+	EarliestCalendarDate tl.ODate                       `json:"earliest_calendar_date"`
+	LatestCalendarDate   tl.ODate                       `json:"latest_calendar_date"`
 	Agencies             []tl.Agency                    `json:"agencies"`
 	Routes               []tl.Route                     `json:"routes"`
 	Stops                []tl.Stop                      `json:"stops"`

@@ -107,8 +107,8 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 func (v *Validator) Validate() (*Result, error) {
 	reader := v.Reader
 	result := &Result{}
-	result.EarliestCalendarDate = time.Now()
-	result.LatestCalendarDate = time.Now()
+	result.EarliestCalendarDate = tl.NewODate(time.Now())
+	result.LatestCalendarDate = tl.NewODate(time.Now())
 
 	// Check file infos first, so we exit early if a file exceeds the row limit.
 	if reader2, ok := reader.(*tlcsv.Reader); ok {

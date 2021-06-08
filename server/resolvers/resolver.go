@@ -63,6 +63,11 @@ func (r *Resolver) FeedVersionGtfsImport() gqlgen.FeedVersionGtfsImportResolver 
 	return &feedVersionGtfsImportResolver{r}
 }
 
+// Calendar .
+func (r *Resolver) Calendar() gqlgen.CalendarResolver {
+	return &calendarResolver{r}
+}
+
 // CensusGeography .
 func (r *Resolver) CensusGeography() gqlgen.CensusGeographyResolver {
 	return &censusGeographyResolver{r}

@@ -340,8 +340,8 @@ func ValidateUpload(cfg config.Config, src io.Reader, feedURL *string, rturls []
 	}
 	//////
 	result := model.ValidationResult{}
-	result.EarliestCalendarDate = time.Now()
-	result.LatestCalendarDate = time.Now()
+	result.EarliestCalendarDate = tl.NewODate(time.Now())
+	result.LatestCalendarDate = tl.NewODate(time.Now())
 
 	var reader tl.Reader
 	if src != nil {

@@ -47,6 +47,18 @@ func (r *feedVersionResolver) FeedInfos(ctx context.Context, obj *model.FeedVers
 	return find.For(ctx).FeedInfosByFeedVersionID.Load(model.FeedInfoParam{FeedVersionID: obj.ID, Limit: limit})
 }
 
+// EarliestCalendarDate map time.Time to tl.ODate
+// func (r *feedVersionResolver) EarliestCalendarDate(ctx context.Context, obj *model.FeedVersion) (*tl.ODate, error) {
+// 	a := tl.NewODate(obj.EarliestCalendarDate)
+// 	return &a, nil
+// }
+
+// LatestCalendarDate map time.Time to tl.ODate
+// func (r *feedVersionResolver) LatestCalendarDate(ctx context.Context, obj *model.FeedVersion) (*tl.ODate, error) {
+// 	a := tl.NewODate(obj.LatestCalendarDate)
+// 	return &a, nil
+// }
+
 // FEED VERSION GTFS IMPORT
 
 type feedVersionGtfsImportResolver struct{ *Resolver }

@@ -101,6 +101,12 @@ type OperatorParam struct {
 	Where  *OperatorFilter
 }
 
+type CalendarDateParam struct {
+	ServiceID int
+	Limit     *int
+	Where     *CalendarDateFilter
+}
+
 type CensusGeographyParam struct {
 	Radius     *float64
 	LayerName  string

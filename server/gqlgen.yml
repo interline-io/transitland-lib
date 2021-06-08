@@ -46,10 +46,6 @@ models:
     model: "github.com/interline-io/transitland-lib/tl.WideTime"
   Geometry:
     model: "github.com/interline-io/transitland-lib/tl.Geometry"    
-  # Time:
-  #   model: 
-  #     - "github.com/interline-io/transitland-lib/tl.ODate"
-  #     - "github.com/interline-io/transitland-lib/tl.OTime"
   Date:
     model: 
       - "github.com/interline-io/transitland-lib/tl.ODate"

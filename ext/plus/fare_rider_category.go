@@ -1,19 +1,17 @@
 package plus
 
 import (
-	"time"
-
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // FareRiderCategory fare_rider_categories.txt
 type FareRiderCategory struct {
-	FareID           string    `csv:"fare_id"`
-	RiderCategoryID  int       `csv:"rider_category_id"`
-	Price            float64   `csv:"price"`
-	ExpirationDate   time.Time `csv:"expiration_date"`
-	CommencementDate time.Time `csv:"commencement_date"`
+	FareID           string   `csv:"fare_id"`
+	RiderCategoryID  int      `csv:"rider_category_id"`
+	Price            float64  `csv:"price"`
+	ExpirationDate   tl.ODate `csv:"expiration_date"`
+	CommencementDate tl.ODate `csv:"commencement_date"`
 	tl.BaseEntity
 }
 

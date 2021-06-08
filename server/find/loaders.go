@@ -2,6 +2,7 @@ package find
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -61,6 +62,7 @@ type Loaders struct {
 	OperatorsByFeedID        dl.OperatorWhereLoader
 	PathwaysByFromStopID     dl.PathwayWhereLoader
 	PathwaysByToStopID       dl.PathwayWhereLoader
+	CalendarDatesByServiceID dl.CalendarDateWhereLoader
 	// Census
 	CensusTableByID             dl.CensusTableLoader
 	CensusGeographiesByEntityID dl.CensusGeographyWhereLoader
@@ -369,6 +371,7 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 						if p.EndTime != nil {
 							endTime = *p.EndTime
 						}
+						fmt.Printf("SERVICE DATE: %#v\n", p.ServiceDate)
 						q := sq.Expr("SELECT t.* FROM tl_stop_departures(?,?,?,?) t", pq.Array(ids), p.ServiceDate, startTime, endTime)
 						qstr, qargs, err := q.ToSql()
 						if err != nil {
@@ -906,6 +909,33 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 					group := map[int][]*model.Pathway{}
 					for _, ent := range qents {
 						group[atoi(ent.ToStopID)] = append(group[atoi(ent.ToStopID)], ent)
+					}
+					for _, id := range ids {
+						ents = append(ents, group[id])
+					}
+					return ents, nil
+				},
+			}),
+			CalendarDatesByServiceID: *dl.NewCalendarDateWhereLoader(dl.CalendarDateWhereLoaderConfig{
+				MaxBatch: MAXBATCH,
+				Wait:     WAIT,
+				Fetch: func(params []model.CalendarDateParam) (ents [][]*model.CalendarDate, errs []error) {
+					if len(params) == 0 {
+						return nil, nil
+					}
+					ids := []int{}
+					for _, p := range params {
+						ids = append(ids, p.ServiceID)
+					}
+					qents := []*model.CalendarDate{}
+					MustSelect(
+						atx,
+						quickSelectOrder("gtfs_calendar_dates", nil, nil, nil, "date").Where(sq.Eq{"service_id": ids}),
+						&qents,
+					)
+					group := map[int][]*model.CalendarDate{}
+					for _, ent := range qents {
+						group[atoi(ent.ServiceID)] = append(group[atoi(ent.ServiceID)], ent)
 					}
 					for _, id := range ids {
 						ents = append(ents, group[id])
