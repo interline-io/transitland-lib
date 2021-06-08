@@ -11,7 +11,6 @@ import (
 )
 
 type Feed struct {
-	Name       *string
 	SearchRank *string
 	tl.Feed
 }

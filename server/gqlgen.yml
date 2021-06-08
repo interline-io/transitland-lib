@@ -48,7 +48,10 @@ models:
     model: "github.com/interline-io/transitland-lib/tl.Geometry"    
   Date:
     model: 
-      - "github.com/interline-io/transitland-lib/tl.ODate"
+      - "github.com/interline-io/transitland-lib/tl.ODate"      
+  Time:
+    model:
+      - "github.com/99designs/gqlgen/graphql.Time"
       - "github.com/interline-io/transitland-lib/tl.OTime"
   ID:
     model:

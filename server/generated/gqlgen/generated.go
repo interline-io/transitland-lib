@@ -556,8 +556,6 @@ type FeedResolver interface {
 	FeedVersions(ctx context.Context, obj *model.Feed, limit *int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error)
 }
 type FeedStateResolver interface {
-	LastFetchedAt(ctx context.Context, obj *model.FeedState) (*time.Time, error)
-	LastSuccessfulFetchAt(ctx context.Context, obj *model.FeedState) (*time.Time, error)
 	FeedVersion(ctx context.Context, obj *model.FeedState) (*model.FeedVersion, error)
 }
 type FeedVersionResolver interface {
@@ -3824,8 +3822,8 @@ type ValidationResult {
   warnings: [ValidationResultErrorGroup!]!
   # FeedVersion-like
   sha1: String!
-  earliest_calendar_date: Time!
-  latest_calendar_date: Time!
+  earliest_calendar_date: Date!
+  latest_calendar_date: Date!
   files: [FeedVersionFileInfo!]!
   service_levels(limit: Int, route_id: String): [FeedVersionServiceLevel!]!
   agencies(limit: Int): [Agency!]!
@@ -6958,9 +6956,9 @@ func (ec *executionContext) _Feed_name(ctx context.Context, field graphql.Collec
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(tl.OString)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOString(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Feed_feed_namespace_id(ctx context.Context, field graphql.CollectedField, obj *model.Feed) (ret graphql.Marshaler) {
@@ -8106,14 +8104,14 @@ func (ec *executionContext) _FeedState_last_fetched_at(ctx context.Context, fiel
 		Object:     "FeedState",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.FeedState().LastFetchedAt(rctx, obj)
+		return obj.LastFetchedAt, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -8122,9 +8120,9 @@ func (ec *executionContext) _FeedState_last_fetched_at(ctx context.Context, fiel
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*time.Time)
+	res := resTmp.(tl.OTime)
 	fc.Result = res
-	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+	return ec.marshalOTime2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedState_last_successful_fetch_at(ctx context.Context, field graphql.CollectedField, obj *model.FeedState) (ret graphql.Marshaler) {
@@ -8138,14 +8136,14 @@ func (ec *executionContext) _FeedState_last_successful_fetch_at(ctx context.Cont
 		Object:     "FeedState",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.FeedState().LastSuccessfulFetchAt(rctx, obj)
+		return obj.LastSuccessfulFetchAt, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -8154,9 +8152,9 @@ func (ec *executionContext) _FeedState_last_successful_fetch_at(ctx context.Cont
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*time.Time)
+	res := resTmp.(tl.OTime)
 	fc.Result = res
-	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+	return ec.marshalOTime2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _FeedState_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.FeedState) (ret graphql.Marshaler) {
@@ -16796,9 +16794,9 @@ func (ec *executionContext) _ValidationResult_earliest_calendar_date(ctx context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(time.Time)
+	res := resTmp.(tl.ODate)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_latest_calendar_date(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -16831,9 +16829,9 @@ func (ec *executionContext) _ValidationResult_latest_calendar_date(ctx context.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(time.Time)
+	res := resTmp.(tl.ODate)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_files(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -19917,27 +19915,9 @@ func (ec *executionContext) _FeedState(ctx context.Context, sel ast.SelectionSet
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "last_fetched_at":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedState_last_fetched_at(ctx, field, obj)
-				return res
-			})
+			out.Values[i] = ec._FeedState_last_fetched_at(ctx, field, obj)
 		case "last_successful_fetch_at":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedState_last_successful_fetch_at(ctx, field, obj)
-				return res
-			})
+			out.Values[i] = ec._FeedState_last_successful_fetch_at(ctx, field, obj)
 		case "feed_version":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -24740,6 +24720,16 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return graphql.MarshalString(*v)
 }
 
+func (ec *executionContext) unmarshalOTime2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOTime(ctx context.Context, v interface{}) (tl.OTime, error) {
+	var res tl.OTime
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOTime2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOTime(ctx context.Context, sel ast.SelectionSet, v tl.OTime) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalOTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
 	res, err := graphql.UnmarshalTime(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -24747,21 +24737,6 @@ func (ec *executionContext) unmarshalOTime2timeᚐTime(ctx context.Context, v in
 
 func (ec *executionContext) marshalOTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
 	return graphql.MarshalTime(v)
-}
-
-func (ec *executionContext) unmarshalOTime2ᚖtimeᚐTime(ctx context.Context, v interface{}) (*time.Time, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalTime(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOTime2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return graphql.MarshalTime(*v)
 }
 
 func (ec *executionContext) unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripFilter(ctx context.Context, v interface{}) (*model.TripFilter, error) {

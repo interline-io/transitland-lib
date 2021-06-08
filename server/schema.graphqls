@@ -445,8 +445,8 @@ type ValidationResult {
   warnings: [ValidationResultErrorGroup!]!
   # FeedVersion-like
   sha1: String!
-  earliest_calendar_date: Time!
-  latest_calendar_date: Time!
+  earliest_calendar_date: Date!
+  latest_calendar_date: Date!
   files: [FeedVersionFileInfo!]!
   service_levels(limit: Int, route_id: String): [FeedVersionServiceLevel!]!
   agencies(limit: Int): [Agency!]!
