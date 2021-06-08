@@ -4,8 +4,25 @@
     {
       "spec": "gtfs",
       "id": "CT",
+      "name": "Caltrain",
+      "languages": ["en-US"],
+      "associated_feeds": [
+        "CT~rt"
+      ],
       "urls": {
-        "static_current": "test/data/external/caltrain.zip"
+        "static_current": "test/data/external/caltrain.zip",
+        "static_historic": ["https://caltrain.com/old_feed.zip"]
+      },
+      "license": {
+        "spdx_identifier": "test",
+        "url": "http://assets.511.org/pdf/nextgen/developers/511_Data_Agreement_Final.pdf",
+        "use_without_attribution": "no",
+        "create_derived_product": "yes",
+        "redistribute": "yes",
+        "commercial_use_allowed": "yes",
+        "share_alike_optional": "yes",
+        "attribution_text": "data provided by 511.org",
+        "attribution_instructions": "test attribution instructions"
       }
     },
     {

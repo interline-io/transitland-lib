@@ -160,6 +160,9 @@ func FindTrips(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.Tri
 	if len(ids) == 0 && (where == nil || where.FeedVersionSha1 == nil) {
 		q = q.Where(sq.NotEq{"active": nil})
 	}
+	if where.TripID != nil {
+		q = q.Where(sq.Eq{"trip_id": *where.TripID})
+	}
 	MustSelect(model.DB, q, &ents)
 	return ents, nil
 }

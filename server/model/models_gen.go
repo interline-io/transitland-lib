@@ -100,6 +100,7 @@ type StopTimeFilter struct {
 }
 
 type TripFilter struct {
+	TripID          *string `json:"trip_id"`
 	RouteID         *int    `json:"route_id"`
 	FeedVersionSha1 *string `json:"feed_version_sha1"`
 	FeedOnestopID   *string `json:"feed_onestop_id"`

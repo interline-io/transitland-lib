@@ -75,9 +75,10 @@ type RouteGeometryParam struct {
 }
 
 type TripParam struct {
-	RouteID int
-	Limit   *int
-	Where   *TripFilter
+	FeedVersionID int
+	RouteID       int
+	Limit         *int
+	Where         *TripFilter
 }
 
 type StopParam struct {

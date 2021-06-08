@@ -24,8 +24,7 @@ func (r *feedVersionResolver) Stops(ctx context.Context, obj *model.FeedVersion,
 }
 
 func (r *feedVersionResolver) Trips(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.TripFilter) ([]*model.Trip, error) {
-	// todo return find.For(ctx).TripsByFeedVersionID
-	return nil, nil
+	return find.For(ctx).TripsByFeedVersionID.Load(model.TripParam{FeedVersionID: obj.ID, Limit: limit, Where: where})
 }
 
 func (r *feedVersionResolver) Feed(ctx context.Context, obj *model.FeedVersion) (*model.Feed, error) {

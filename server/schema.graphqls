@@ -284,8 +284,8 @@ type Calendar {
   friday: Int!
   saturday: Int!
   sunday: Int!
-  # added_dates(limit: Int!=1000): [CalendarDate!]!
-  # removed_dates(limit: Int!=1000): [CalendarDate!]!
+  added_dates(limit: Int): [CalendarDate!]!
+  removed_dates(limit: Int): [CalendarDate!]!
 }
 
 type CalendarDate {
@@ -611,6 +611,7 @@ input PathwayFilter {
 }
 
 input TripFilter {
+  trip_id: String
   route_id: Int # keep?
   feed_version_sha1: String
   feed_onestop_id: String

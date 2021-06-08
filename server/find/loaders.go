@@ -43,6 +43,7 @@ type Loaders struct {
 	AgenciesByFeedVersionID                 dl.AgencyWhereLoader
 	RoutesByFeedVersionID                   dl.RouteWhereLoader
 	StopsByFeedVersionID                    dl.StopWhereLoader
+	TripsByFeedVersionID                    dl.TripWhereLoader
 	FeedInfosByFeedVersionID                dl.FeedInfoWhereLoader
 	// Where Loaders
 	StopsByParentStopID      dl.StopWhereLoader
@@ -711,6 +712,33 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 						&qents,
 					)
 					group := map[int][]*model.Stop{}
+					for _, ent := range qents {
+						group[ent.FeedVersionID] = append(group[ent.FeedVersionID], ent)
+					}
+					for _, id := range ids {
+						ents = append(ents, group[id])
+					}
+					return ents, nil
+				},
+			}),
+			TripsByFeedVersionID: *dl.NewTripWhereLoader(dl.TripWhereLoaderConfig{
+				MaxBatch: MAXBATCH,
+				Wait:     WAIT,
+				Fetch: func(params []model.TripParam) (ents [][]*model.Trip, errs []error) {
+					if len(params) == 0 {
+						return nil, nil
+					}
+					ids := []int{}
+					for _, p := range params {
+						ids = append(ids, p.FeedVersionID)
+					}
+					qents := []*model.Trip{}
+					MustSelect(
+						atx,
+						lateralWrap(TripSelect(params[0].Limit, nil, nil, params[0].Where), "feed_versions", "id", "feed_version_id", ids),
+						&qents,
+					)
+					group := map[int][]*model.Trip{}
 					for _, ent := range qents {
 						group[ent.FeedVersionID] = append(group[ent.FeedVersionID], ent)
 					}

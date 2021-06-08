@@ -39,6 +39,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	Agency() AgencyResolver
+	Calendar() CalendarResolver
 	CensusGeography() CensusGeographyResolver
 	CensusValue() CensusValueResolver
 	Feed() FeedResolver
@@ -90,17 +91,19 @@ type ComplexityRoot struct {
 	}
 
 	Calendar struct {
-		EndDate   func(childComplexity int) int
-		Friday    func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Monday    func(childComplexity int) int
-		Saturday  func(childComplexity int) int
-		ServiceID func(childComplexity int) int
-		StartDate func(childComplexity int) int
-		Sunday    func(childComplexity int) int
-		Thursday  func(childComplexity int) int
-		Tuesday   func(childComplexity int) int
-		Wednesday func(childComplexity int) int
+		AddedDates   func(childComplexity int, limit *int) int
+		EndDate      func(childComplexity int) int
+		Friday       func(childComplexity int) int
+		ID           func(childComplexity int) int
+		Monday       func(childComplexity int) int
+		RemovedDates func(childComplexity int, limit *int) int
+		Saturday     func(childComplexity int) int
+		ServiceID    func(childComplexity int) int
+		StartDate    func(childComplexity int) int
+		Sunday       func(childComplexity int) int
+		Thursday     func(childComplexity int) int
+		Tuesday      func(childComplexity int) int
+		Wednesday    func(childComplexity int) int
 	}
 
 	CalendarDate struct {
@@ -533,6 +536,10 @@ type AgencyResolver interface {
 	Routes(ctx context.Context, obj *model.Agency, limit *int, where *model.RouteFilter) ([]*model.Route, error)
 	CensusGeographies(ctx context.Context, obj *model.Agency, layer string, radius *float64, limit *int) ([]*model.CensusGeography, error)
 }
+type CalendarResolver interface {
+	AddedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*model.CalendarDate, error)
+	RemovedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*model.CalendarDate, error)
+}
 type CensusGeographyResolver interface {
 	Values(ctx context.Context, obj *model.CensusGeography, tableNames []string, limit *int) ([]*model.CensusValue, error)
 }
@@ -826,6 +833,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AgencyPlace.Rank(childComplexity), true
 
+	case "Calendar.added_dates":
+		if e.complexity.Calendar.AddedDates == nil {
+			break
+		}
+
+		args, err := ec.field_Calendar_added_dates_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Calendar.AddedDates(childComplexity, args["limit"].(*int)), true
+
 	case "Calendar.end_date":
 		if e.complexity.Calendar.EndDate == nil {
 			break
@@ -853,6 +872,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Calendar.Monday(childComplexity), true
+
+	case "Calendar.removed_dates":
+		if e.complexity.Calendar.RemovedDates == nil {
+			break
+		}
+
+		args, err := ec.field_Calendar_removed_dates_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Calendar.RemovedDates(childComplexity, args["limit"].(*int)), true
 
 	case "Calendar.saturday":
 		if e.complexity.Calendar.Saturday == nil {
@@ -3656,8 +3687,8 @@ type Calendar {
   friday: Int!
   saturday: Int!
   sunday: Int!
-  # added_dates(limit: Int!=1000): [CalendarDate!]!
-  # removed_dates(limit: Int!=1000): [CalendarDate!]!
+  added_dates(limit: Int): [CalendarDate!]!
+  removed_dates(limit: Int): [CalendarDate!]!
 }
 
 type CalendarDate {
@@ -3983,6 +4014,7 @@ input PathwayFilter {
 }
 
 input TripFilter {
+  trip_id: String
   route_id: Int # keep?
   feed_version_sha1: String
   feed_onestop_id: String
@@ -4113,6 +4145,36 @@ func (ec *executionContext) field_Agency_routes_args(ctx context.Context, rawArg
 		}
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Calendar_added_dates_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Calendar_removed_dates_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -6256,6 +6318,90 @@ func (ec *executionContext) _Calendar_sunday(ctx context.Context, field graphql.
 	res := resTmp.(int)
 	fc.Result = res
 	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Calendar_added_dates(ctx context.Context, field graphql.CollectedField, obj *model.Calendar) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Calendar",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Calendar_added_dates_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Calendar().AddedDates(rctx, obj, args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.CalendarDate)
+	fc.Result = res
+	return ec.marshalNCalendarDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Calendar_removed_dates(ctx context.Context, field graphql.CollectedField, obj *model.Calendar) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Calendar",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Calendar_removed_dates_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Calendar().RemovedDates(rctx, obj, args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.CalendarDate)
+	fc.Result = res
+	return ec.marshalNCalendarDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _CalendarDate_id(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
@@ -19051,6 +19197,14 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj in
 
 	for k, v := range asMap {
 		switch k {
+		case "trip_id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("trip_id"))
+			it.TripID, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "route_id":
 			var err error
 
@@ -19289,58 +19443,86 @@ func (ec *executionContext) _Calendar(ctx context.Context, sel ast.SelectionSet,
 		case "id":
 			out.Values[i] = ec._Calendar_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "service_id":
 			out.Values[i] = ec._Calendar_service_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "start_date":
 			out.Values[i] = ec._Calendar_start_date(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "end_date":
 			out.Values[i] = ec._Calendar_end_date(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "monday":
 			out.Values[i] = ec._Calendar_monday(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "tuesday":
 			out.Values[i] = ec._Calendar_tuesday(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "wednesday":
 			out.Values[i] = ec._Calendar_wednesday(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "thursday":
 			out.Values[i] = ec._Calendar_thursday(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "friday":
 			out.Values[i] = ec._Calendar_friday(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "saturday":
 			out.Values[i] = ec._Calendar_saturday(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "sunday":
 			out.Values[i] = ec._Calendar_sunday(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "added_dates":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Calendar_added_dates(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "removed_dates":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Calendar_removed_dates(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -22456,6 +22638,53 @@ func (ec *executionContext) marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋ
 		return graphql.Null
 	}
 	return ec._Calendar(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNCalendarDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CalendarDate) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCalendarDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDate(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalNCalendarDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDate(ctx context.Context, sel ast.SelectionSet, v *model.CalendarDate) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._CalendarDate(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNCensusGeography2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusGeography(ctx context.Context, sel ast.SelectionSet, v *model.CensusGeography) graphql.Marshaler {
