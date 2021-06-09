@@ -2,6 +2,7 @@ package find
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -73,6 +74,12 @@ func alphanumeric(v string) string {
 	return string(ret)
 }
 
+// az09 removes any character that is not a a-z or 0-9 or _
+func az09(v string) string {
+	reg := regexp.MustCompile("[^a-zA-Z0-9_]+")
+	return reg.ReplaceAllString(v, "")
+}
+
 func escapeWordsWithSuffix(v string, sfx string) []string {
 	f := strings.Fields(v)
 	for i, s := range f {
@@ -97,6 +104,9 @@ func tsQuery(s string) (rank sq.Sqlizer, wc sq.Sqlizer) {
 }
 
 func lateralWrap(q sq.SelectBuilder, parent string, pkey string, ckey string, pids []int) sq.SelectBuilder {
+	parent = az09(parent)
+	pkey = az09(pkey)
+	ckey = az09(ckey)
 	q = q.Where(fmt.Sprintf("%s = parent.%s", ckey, pkey))
 	q2 := sq.StatementBuilder.
 		Select("t.*").
@@ -111,6 +121,8 @@ func quickSelect(table string, limit *int, after *int, ids []int) sq.SelectBuild
 }
 
 func quickSelectOrder(table string, limit *int, after *int, ids []int, order string) sq.SelectBuilder {
+	table = az09(table)
+	order = az09(order)
 	q := sq.StatementBuilder.
 		Select("t.*").
 		From(table + " t").
@@ -159,9 +171,6 @@ func FindTrips(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.Tri
 	q := TripSelect(limit, after, ids, where)
 	if len(ids) == 0 && (where == nil || where.FeedVersionSha1 == nil) {
 		q = q.Where(sq.NotEq{"active": nil})
-	}
-	if where.TripID != nil {
-		q = q.Where(sq.Eq{"trip_id": *where.TripID})
 	}
 	MustSelect(model.DB, q, &ents)
 	return ents, nil

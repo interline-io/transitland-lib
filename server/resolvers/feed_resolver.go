@@ -50,19 +50,3 @@ func (r *feedResolver) Authorization(ctx context.Context, obj *model.Feed) (*mod
 // FEED STATE
 
 type feedStateResolver struct{ *Resolver }
-
-// func (r *feedStateResolver) LastFetchedAt(ctx context.Context, obj *model.FeedState) (*time.Time, error) {
-// 	// TODO: Add Custom Marshaler
-// 	if obj.LastFetchedAt.Valid {
-// 		return &obj.LastFetchedAt.Time, nil
-// 	}
-// 	return nil, nil
-// }
-
-// func (r *feedStateResolver) LastSuccessfulFetchAt(ctx context.Context, obj *model.FeedState) (*time.Time, error) {
-// 	// TODO: Add Custom Marshaler
-// 	if obj.LastSuccessfulFetchAt.Valid {
-// 		return &obj.LastSuccessfulFetchAt.Time, nil
-// 	}
-// 	return nil, nil
-// }

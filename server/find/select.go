@@ -79,6 +79,9 @@ func TripSelect(limit *int, after *int, ids []int, where *model.TripFilter) sq.S
 		if where.RouteID != nil {
 			q = q.Where(sq.Eq{"route_id": *where.RouteID})
 		}
+		if where.TripID != nil {
+			q = q.Where(sq.Eq{"trip_id": *where.TripID})
+		}
 	}
 	return q
 }
@@ -139,6 +142,7 @@ func OperatorSelect(limit *int, after *int, ids []int, where *model.OperatorFilt
 	}
 	return q
 }
+
 func PathwaySelect(limit *int, after *int, ids []int, where *model.PathwayFilter) sq.SelectBuilder {
 	q := quickSelectOrder("gtfs_pathways", limit, after, ids, "")
 	if where != nil {
@@ -150,7 +154,7 @@ func PathwaySelect(limit *int, after *int, ids []int, where *model.PathwayFilter
 }
 func FeedVersionSelect(limit *int, after *int, ids []int, where *model.FeedVersionFilter) sq.SelectBuilder {
 	q := quickSelectOrder("feed_versions", limit, after, ids, "")
-	q = q.Join("current_feeds cf on cf.id = t.feed_id")
+	q = q.Join("current_feeds cf on cf.id = t.feed_id").Where(sq.Eq{"cf.deleted_at": nil})
 	q = q.OrderBy("fetched_at desc")
 	if where != nil {
 		if where.Sha1 != nil {
@@ -302,5 +306,4 @@ func RouteStopBufferSelect(param model.RouteStopBufferParam) sq.SelectBuilder {
 		InnerJoin("tl_route_stops on tl_route_stops.stop_id = gtfs_stops.id").
 		Where(sq.Eq{"tl_route_stops.route_id": param.EntityID})
 	return q
-
 }

@@ -40,3 +40,25 @@ func Test_alphanumeric(t *testing.T) {
 		})
 	}
 }
+
+func Test_az09(t *testing.T) {
+	tcs := []struct {
+		name   string
+		value  string
+		expect string
+	}{
+		{"plain", "hello", "hello"},
+		{"underscore", "hello_world", "hello_world"},
+		{"digits", "123", "123"},
+		{"remove quotes", "a'b'\"c", "abc"},
+		{"remove symbols", "a!b@c#d$e%f;g(h", "abcdefgh"},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			ret := az09(tc.value)
+			if ret != tc.expect {
+				t.Errorf("got '%s', expect '%s'", ret, tc.expect)
+			}
+		})
+	}
+}

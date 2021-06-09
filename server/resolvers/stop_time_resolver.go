@@ -18,15 +18,3 @@ func (r *stopTimeResolver) Stop(ctx context.Context, obj *model.StopTime) (*mode
 func (r *stopTimeResolver) Trip(ctx context.Context, obj *model.StopTime) (*model.Trip, error) {
 	return find.For(ctx).TripsByID.Load(atoi(obj.TripID))
 }
-
-func (r *stopTimeResolver) Interpolated(ctx context.Context, obj *model.StopTime) (*int, error) {
-	return nil, nil
-}
-
-func (r *stopTimeResolver) StopHeadsign(ctx context.Context, obj *model.StopTime) (*string, error) {
-	return nil, nil
-}
-
-func (r *stopTimeResolver) Timepoint(ctx context.Context, obj *model.StopTime) (*int, error) {
-	return nil, nil
-}
