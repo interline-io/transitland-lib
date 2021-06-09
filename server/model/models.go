@@ -36,6 +36,7 @@ type Agency struct {
 	FeedOnestopID   string `json:"feed_onestop_id"`
 	FeedVersionSHA1 string `json:"feed_version_sha1"`
 	SearchRank      *string
+	Geometry        *tl.Polygon `json:"geometry"`
 	tl.Agency
 }
 

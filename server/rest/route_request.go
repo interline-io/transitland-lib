@@ -53,14 +53,14 @@ type RouteRequest struct {
 	RouteType         string  `json:"route_type"`
 	OnestopID         string  `json:"onestop_id"`
 	OperatorOnestopID string  `json:"operator_onestop_id"`
-	Lat               float64 `json:"lat,string"`
-	Lon               float64 `json:"lon,string"`
-	Radius            float64 `json:"radius,string"`
 	IncludeGeometry   string  `json:"include_geometry"`
 	Format            string  `json:"format"`
 	AgencyID          int     `json:"agency_id,string"`
 	FeedVersionSHA1   string  `json:"feed_version_sha1"`
 	FeedOnestopID     string  `json:"feed_onestop_id"`
+	Lat               float64 `json:"lat,string"`
+	Lon               float64 `json:"lon,string"`
+	Radius            float64 `json:"radius,string"`
 }
 
 // ResponseKey returns the GraphQL response entity key.
@@ -96,6 +96,9 @@ func (r RouteRequest) Query() (string, map[string]interface{}) {
 	}
 	if r.AgencyID > 0 {
 		where["agency_id"] = r.AgencyID
+	}
+	if r.Lat != 0.0 && r.Lon != 0.0 {
+		where["near"] = hw{"lat": r.Lat, "lon": r.Lon, "radius": r.Radius}
 	}
 	includeGeometry := false
 	if r.IncludeGeometry == "true" || r.Format == "geojson" || r.Format == "png" {

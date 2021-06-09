@@ -18,11 +18,10 @@ require (
 	github.com/jlaffaye/ftp v0.0.0-20191218041957-e1b8fdd0dcc3
 	github.com/jmoiron/sqlx v1.3.1
 	github.com/lib/pq v1.8.0
-	github.com/machinebox/graphql v0.2.2
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/snabb/isoweek v1.0.0
-	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.8.0
 	github.com/twpayne/go-geom v1.3.6
 	github.com/vektah/gqlparser/v2 v2.1.0

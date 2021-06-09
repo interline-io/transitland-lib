@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gorilla/mux"
-	"github.com/interline-io/transitland-lib/server/config"
 	"github.com/tidwall/gjson"
 )
 
@@ -43,7 +42,7 @@ query($feed_version_sha1:String!) {
 
 // Query redirects user to download the given fv from S3 public URL
 // assuming that redistribution is allowed for the feed.
-func feedDownloadLatestFeedVersionHandler(cfg config.Config, w http.ResponseWriter, r *http.Request) {
+func feedDownloadLatestFeedVersionHandler(cfg restConfig, w http.ResponseWriter, r *http.Request) {
 	key := mux.Vars(r)["key"]
 	gvars := hw{}
 	if key == "" {
@@ -55,7 +54,7 @@ func feedDownloadLatestFeedVersionHandler(cfg config.Config, w http.ResponseWrit
 		gvars["feed_onestop_id"] = key
 	}
 	// Check if we're allowed to redistribute feed and look up latest feed version
-	feedResponse, err := makeGraphQLRequest(cfg.Endpoint, latestFeedVersionQuery, gvars)
+	feedResponse, err := makeGraphQLRequest(cfg.srv, latestFeedVersionQuery, gvars)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -93,11 +92,11 @@ func feedDownloadLatestFeedVersionHandler(cfg config.Config, w http.ResponseWrit
 
 // Query redirects user to download the given fv from S3 public URL
 // assuming that redistribution is allowed for the feed.
-func fvDownloadHandler(cfg config.Config, w http.ResponseWriter, r *http.Request) {
+func fvDownloadHandler(cfg restConfig, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	fvsha1 := vars["key"]
 	// Check if we're allowed to redistribute feed
-	checkfv, err := makeGraphQLRequest(cfg.Endpoint, feedVersionFileQuery, hw{"feed_version_sha1": fvsha1})
+	checkfv, err := makeGraphQLRequest(cfg.srv, feedVersionFileQuery, hw{"feed_version_sha1": fvsha1})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

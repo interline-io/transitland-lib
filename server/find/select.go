@@ -31,6 +31,12 @@ func AgencySelect(limit *int, after *int, ids []int, where *model.AgencyFilter) 
 		if where.OnestopID != nil {
 			q = q.Where(sq.Eq{"onestop_id": *where.OnestopID})
 		}
+		if where.Within != nil && where.Within.Valid {
+			q = q.Where("ST_Intersects(t.geometry, ?)", where.Within)
+		}
+		if where.Near != nil {
+			q = q.Where("ST_DWithin(t.geometry, ST_MakePoint(?,?), ?)", where.Near.Lat, where.Near.Lon, where.Near.Radius)
+		}
 	}
 	return q
 }
@@ -63,6 +69,12 @@ func RouteSelect(limit *int, after *int, ids []int, where *model.RouteFilter) sq
 		if where.RouteType != nil {
 			q = q.Where(sq.Eq{"route_type": where.RouteType})
 		}
+		if where.Within != nil && where.Within.Valid {
+			q = q.Where("ST_Intersects(t.geometry, ?)", where.Within)
+		}
+		if where.Near != nil {
+			q = q.Where("ST_DWithin(t.geometry, ST_MakePoint(?,?), ?)", where.Near.Lat, where.Near.Lon, where.Near.Radius)
+		}
 	}
 	return q
 }
@@ -81,6 +93,32 @@ func TripSelect(limit *int, after *int, ids []int, where *model.TripFilter) sq.S
 		}
 		if where.TripID != nil {
 			q = q.Where(sq.Eq{"trip_id": *where.TripID})
+		}
+		if where.ServiceDate != nil {
+			q = q.JoinClause(`
+			inner join lateral (
+				select gc.id
+				from gtfs_calendars gc 
+				left join gtfs_calendar_dates gcda on gcda.service_id = gc.id and gcda.exception_type = 1 and gcda.date = ?::date
+				left join gtfs_calendar_dates gcdb on gcdb.service_id = gc.id and gcdb.exception_type = 2 and gcdb.date = ?::date
+				where 
+					gc.id = t.service_id 
+					AND ((
+						gc.start_date <= ?::date AND gc.end_date >= ?::date
+						AND (CASE EXTRACT(isodow FROM ?::date)
+						WHEN 1 THEN monday = 1
+						WHEN 2 THEN tuesday = 1
+						WHEN 3 THEN wednesday = 1
+						WHEN 4 THEN thursday = 1
+						WHEN 5 THEN friday = 1
+						WHEN 6 THEN saturday = 1
+						WHEN 7 THEN sunday = 1
+						END)
+					) OR gcda.date IS NOT NULL)
+					AND gcdb.date is null
+				LIMIT 1
+			) gc on true
+			`, where.ServiceDate, where.ServiceDate, where.ServiceDate, where.ServiceDate, where.ServiceDate)
 		}
 	}
 	return q
@@ -108,8 +146,11 @@ func StopSelect(limit *int, after *int, ids []int, where *model.StopFilter) sq.S
 		if len(where.AgencyIds) > 0 {
 			q = q.Join("tl_route_stops on tl_route_stops.stop_id = t.id").Where(sq.Eq{"tl_route_stops.agency_id": where.AgencyIds}).Distinct().Options("on (t.id)")
 		}
-		if where.Geometry != nil && where.Geometry.Valid {
-			q = q.Where("ST_Intersects(t.geometry, ?)", where.Geometry)
+		if where.Within != nil && where.Within.Valid {
+			q = q.Where("ST_Intersects(t.geometry, ?)", where.Within)
+		}
+		if where.Near != nil {
+			q = q.Where("ST_DWithin(t.geometry, ST_MakePoint(?,?), ?)", where.Near.Lat, where.Near.Lon, where.Near.Radius)
 		}
 	}
 	return q

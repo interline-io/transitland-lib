@@ -58,14 +58,14 @@ query($limit: Int, $ids: [Int!], $where: FeedFilter) {
 
 // FeedRequest holds options for a Route request
 type FeedRequest struct {
-	Key       string  `json:"key"`
-	ID        int     `json:"id,string"`
-	Limit     int     `json:"limit,string"`
-	After     int     `json:"after,string"`
-	OnestopID string  `json:"onestop_id"`
-	Lat       float64 `json:"lat,string"`
-	Lon       float64 `json:"lon,string"`
-	Radius    float64 `json:"radius,string"`
+	Key       string `json:"key"`
+	ID        int    `json:"id,string"`
+	Limit     int    `json:"limit,string"`
+	After     int    `json:"after,string"`
+	OnestopID string `json:"onestop_id"`
+	// Lat       float64 `json:"lat,string"`
+	// Lon       float64 `json:"lon,string"`
+	// Radius    float64 `json:"radius,string"`
 }
 
 // Query returns a GraphQL query string and variables.

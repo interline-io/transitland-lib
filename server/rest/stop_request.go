@@ -96,5 +96,8 @@ func (r StopRequest) Query() (string, map[string]interface{}) {
 	if r.StopID != "" {
 		where["stop_id"] = r.StopID
 	}
+	if r.Lat != 0.0 && r.Lon != 0.0 {
+		where["near"] = hw{"lat": r.Lat, "lon": r.Lon, "radius": r.Radius}
+	}
 	return stopQuery, hw{"limit": checkLimit(r.Limit), "after": checkAfter(r.After), "ids": checkIds(r.ID), "where": where}
 }

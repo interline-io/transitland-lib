@@ -35,6 +35,38 @@ func TestRouteResolver(t *testing.T) {
 			[]string{"LineString"},
 		},
 		{
+			"near 100m",
+			`query {routes(where:{near:{lat:-122.407974,lon:37.784471,radius:100.0}}) {route_id route_long_name}}`,
+			hw{},
+			``,
+			"routes.#.route_id",
+			[]string{"01", "05", "07", "11"},
+		},
+		{
+			"near 10000m",
+			`query {routes(where:{near:{lat:-122.407974,lon:37.784471,radius:10000.0}}) {route_id route_long_name}}`,
+			hw{},
+			``,
+			"routes.#.route_id",
+			[]string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
+		},
+		{
+			"within polygon",
+			`query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.396,37.8],[-122.408,37.79],[-122.393,37.778],[-122.38,37.787],[-122.396,37.8]]]}}){id route_id}}`,
+			hw{},
+			``,
+			"routes.#.route_id",
+			[]string{"01", "05", "07", "11"},
+		},
+		{
+			"within polygon big",
+			`query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.39481925964355,37.80151060070086],[-122.41653442382812,37.78652126637423],[-122.39662170410156,37.76847577247014],[-122.37301826477051,37.784757615348575],[-122.39481925964355,37.80151060070086]]]}}){id route_id}}`,
+			hw{},
+			``,
+			"routes.#.route_id",
+			[]string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
+		},
+		{
 			"feed_version",
 			`query($route_id: String!) {  routes(where:{route_id:$route_id}) {feed_version{sha1}} }`,
 			vars,
@@ -80,7 +112,7 @@ func TestRouteResolver(t *testing.T) {
 		// TODO: census_geographies
 		// TODO: route_stop_buffer
 	}
-	c := client.New(newServer())
+	c := client.New(NewServer())
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testquery(t, c, tc)

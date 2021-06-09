@@ -76,6 +76,7 @@ type ComplexityRoot struct {
 		FeedOnestopID     func(childComplexity int) int
 		FeedVersion       func(childComplexity int) int
 		FeedVersionSHA1   func(childComplexity int) int
+		Geometry          func(childComplexity int) int
 		ID                func(childComplexity int) int
 		OnestopID         func(childComplexity int) int
 		Places            func(childComplexity int, limit *int, where *model.AgencyPlaceFilter) int
@@ -599,11 +600,11 @@ type PathwayResolver interface {
 	ToStop(ctx context.Context, obj *model.Pathway) (*model.Stop, error)
 }
 type QueryResolver interface {
+	FeedVersions(ctx context.Context, limit *int, after *int, ids []int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error)
+	Feeds(ctx context.Context, limit *int, after *int, ids []int, where *model.FeedFilter) ([]*model.Feed, error)
 	Agencies(ctx context.Context, limit *int, after *int, ids []int, where *model.AgencyFilter) ([]*model.Agency, error)
 	Routes(ctx context.Context, limit *int, after *int, ids []int, where *model.RouteFilter) ([]*model.Route, error)
 	Stops(ctx context.Context, limit *int, after *int, ids []int, where *model.StopFilter) ([]*model.Stop, error)
-	FeedVersions(ctx context.Context, limit *int, after *int, ids []int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error)
-	Feeds(ctx context.Context, limit *int, after *int, ids []int, where *model.FeedFilter) ([]*model.Feed, error)
 	Trips(ctx context.Context, limit *int, after *int, ids []int, where *model.TripFilter) ([]*model.Trip, error)
 	Operators(ctx context.Context, limit *int, after *int, ids []int, where *model.OperatorFilter) ([]*model.Operator, error)
 }
@@ -754,6 +755,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Agency.FeedVersionSHA1(childComplexity), true
+
+	case "Agency.geometry":
+		if e.complexity.Agency.Geometry == nil {
+			break
+		}
+
+		return e.complexity.Agency.Geometry(childComplexity), true
 
 	case "Agency.id":
 		if e.complexity.Agency.ID == nil {
@@ -3383,6 +3391,37 @@ enum Role {
   USER
 }
 
+# Root query
+
+type Query {
+  feed_versions(
+    limit: Int
+    after: Int
+    ids: [Int!]
+    where: FeedVersionFilter
+  ): [FeedVersion!]!
+  feeds(
+    limit: Int
+    after: Int
+    ids: [Int!]
+    where: FeedFilter
+  ): [Feed!]!
+  agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
+  routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
+  stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
+  trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
+  operators(limit: Int, after: Int, ids: [Int!], where: OperatorFilter): [Operator!]!
+}
+
+type Mutation {
+    validate_gtfs(file: Upload, url: String, realtime_urls: [String!]): ValidationResult @hasRole(role: USER)
+    feed_version_update(id: Int!, set: FeedVersionSetInput!): FeedVersion @hasRole(role: ADMIN)
+    feed_version_fetch(file: Upload, url: String, feed_onestop_id: String!): FeedVersionFetchResult @hasRole(role: ADMIN)
+    feed_version_import(sha1: String!): FeedVersionImportResult! @hasRole(role: ADMIN)
+    feed_version_unimport(id: Int!): FeedVersionUnimportResult! @hasRole(role: ADMIN)
+    feed_version_delete(id: Int!): FeedVersionDeleteResult! @hasRole(role: ADMIN)
+}
+
 # Feed
 
 type Feed {
@@ -3547,6 +3586,7 @@ type Agency {
   feed_version_sha1: String
   feed_onestop_id: String
   feed_version: FeedVersion!
+  geometry: Polygon
   search_rank: String # only for search results
   places(limit: Int, where: AgencyPlaceFilter): [AgencyPlace!]
   routes(limit: Int, where: RouteFilter): [Route!]!
@@ -3868,47 +3908,11 @@ type FeedVersionDeleteResult {
   success: Boolean!
 }
 
-# Root query
-
-type Query {
-  agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
-  routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
-  stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
-  feed_versions(
-    limit: Int
-    after: Int
-    ids: [Int!]
-    where: FeedVersionFilter
-  ): [FeedVersion!]!
-  feeds(
-    limit: Int
-    after: Int
-    ids: [Int!]
-    where: FeedFilter
-  ): [Feed!]!
-  trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
-  operators(limit: Int, after: Int, ids: [Int!], where: OperatorFilter): [Operator!]!
-  # analysis functions
-}
-
-type Mutation {
-    validate_gtfs(file: Upload, url: String, realtime_urls: [String!]): ValidationResult @hasRole(role: USER)
-    feed_version_update(id: Int!, set: FeedVersionSetInput!): FeedVersion @hasRole(role: ADMIN)
-    feed_version_fetch(file: Upload, url: String, feed_onestop_id: String!): FeedVersionFetchResult @hasRole(role: ADMIN)
-    feed_version_import(sha1: String!): FeedVersionImportResult! @hasRole(role: ADMIN)
-    feed_version_unimport(id: Int!): FeedVersionUnimportResult! @hasRole(role: ADMIN)
-    feed_version_delete(id: Int!): FeedVersionDeleteResult! @hasRole(role: ADMIN)
-}
-
 # Update inputs
 
 input FeedVersionSetInput {
   name: String
   description: String
-}
-input UserProfileInput {
-  name: String
-  email: String
 }
 
 # Query filters
@@ -3947,6 +3951,8 @@ input AgencyFilter {
   feed_onestop_id: String
   agency_id: String
   agency_name: String
+  within: Polygon
+  near: PointRadius
   search: String
 }
 
@@ -3957,6 +3963,8 @@ input RouteFilter {
   route_id: String
   route_type: Int
   operator_onestop_id: String
+  within: Polygon
+  near: PointRadius  
   search: String
   agency_ids: [Int!] # keep?
 }
@@ -3967,7 +3975,8 @@ input StopFilter {
   feed_onestop_id: String
   stop_id: String
   agency_ids: [Int!] # keep?
-  geometry: Polygon
+  within: Polygon
+  near: PointRadius
   search: String
 }
 
@@ -3982,6 +3991,7 @@ input PathwayFilter {
 }
 
 input TripFilter {
+  service_date: Date
   trip_id: String
   route_id: Int # keep?
   feed_version_sha1: String
@@ -4004,6 +4014,12 @@ input AgencyPlaceFilter {
 input CalendarDateFilter {
   date: Date
   exception_type: Int
+}
+
+input PointRadius {
+  lat: Float!
+  lon: Float!
+  radius: Float!
 }
 
 # Scalar types
@@ -5626,6 +5642,38 @@ func (ec *executionContext) _Agency_feed_version(ctx context.Context, field grap
 	res := resTmp.(*model.FeedVersion)
 	fc.Result = res
 	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Agency_geometry(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Agency",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Geometry, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*tl.Polygon)
+	fc.Result = res
+	return ec.marshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐPolygon(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Agency_search_rank(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
@@ -12291,6 +12339,90 @@ func (ec *executionContext) _Pathway_to_stop(ctx context.Context, field graphql.
 	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Query_feed_versions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_feed_versions_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().FeedVersions(rctx, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.FeedVersionFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.FeedVersion)
+	fc.Result = res
+	return ec.marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_feeds(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_feeds_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Feeds(rctx, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.FeedFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Feed)
+	fc.Result = res
+	return ec.marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedᚄ(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_agencies(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -12415,90 +12547,6 @@ func (ec *executionContext) _Query_stops(ctx context.Context, field graphql.Coll
 	res := resTmp.([]*model.Stop)
 	fc.Result = res
 	return ec.marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Query_feed_versions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Query_feed_versions_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().FeedVersions(rctx, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.FeedVersionFilter))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.FeedVersion)
-	fc.Result = res
-	return ec.marshalNFeedVersion2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Query_feeds(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Query_feeds_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Feeds(rctx, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.FeedFilter))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Feed)
-	fc.Result = res
-	return ec.marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_trips(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -18597,6 +18645,22 @@ func (ec *executionContext) unmarshalInputAgencyFilter(ctx context.Context, obj 
 			if err != nil {
 				return it, err
 			}
+		case "within":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("within"))
+			it.Within, err = ec.unmarshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐPolygon(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "near":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("near"))
+			it.Near, err = ec.unmarshalOPointRadius2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPointRadius(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "search":
 			var err error
 
@@ -18907,6 +18971,42 @@ func (ec *executionContext) unmarshalInputPathwayFilter(ctx context.Context, obj
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputPointRadius(ctx context.Context, obj interface{}) (model.PointRadius, error) {
+	var it model.PointRadius
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "lat":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lat"))
+			it.Lat, err = ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lon":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lon"))
+			it.Lon, err = ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "radius":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("radius"))
+			it.Radius, err = ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputRouteFilter(ctx context.Context, obj interface{}) (model.RouteFilter, error) {
 	var it model.RouteFilter
 	var asMap = obj.(map[string]interface{})
@@ -18958,6 +19058,22 @@ func (ec *executionContext) unmarshalInputRouteFilter(ctx context.Context, obj i
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("operator_onestop_id"))
 			it.OperatorOnestopID, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "within":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("within"))
+			it.Within, err = ec.unmarshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐPolygon(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "near":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("near"))
+			it.Near, err = ec.unmarshalOPointRadius2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPointRadius(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -19029,11 +19145,19 @@ func (ec *executionContext) unmarshalInputStopFilter(ctx context.Context, obj in
 			if err != nil {
 				return it, err
 			}
-		case "geometry":
+		case "within":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geometry"))
-			it.Geometry, err = ec.unmarshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐPolygon(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("within"))
+			it.Within, err = ec.unmarshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐPolygon(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "near":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("near"))
+			it.Near, err = ec.unmarshalOPointRadius2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPointRadius(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -19093,6 +19217,14 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj in
 
 	for k, v := range asMap {
 		switch k {
+		case "service_date":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("service_date"))
+			it.ServiceDate, err = ec.unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "trip_id":
 			var err error
 
@@ -19122,34 +19254,6 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj in
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("feed_onestop_id"))
 			it.FeedOnestopID, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputUserProfileInput(ctx context.Context, obj interface{}) (model.UserProfileInput, error) {
-	var it model.UserProfileInput
-	var asMap = obj.(map[string]interface{})
-
-	for k, v := range asMap {
-		switch k {
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "email":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-			it.Email, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -19246,6 +19350,8 @@ func (ec *executionContext) _Agency(ctx context.Context, sel ast.SelectionSet, o
 				}
 				return res
 			})
+		case "geometry":
+			out.Values[i] = ec._Agency_geometry(ctx, field, obj)
 		case "search_rank":
 			out.Values[i] = ec._Agency_search_rank(ctx, field, obj)
 		case "places":
@@ -20903,6 +21009,34 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "feed_versions":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_feed_versions(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "feeds":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_feeds(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "agencies":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -20940,34 +21074,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_stops(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
-		case "feed_versions":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_feed_versions(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
-		case "feeds":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_feeds(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -24546,6 +24652,14 @@ func (ec *executionContext) unmarshalOOperatorFilter2ᚖgithubᚗcomᚋinterline
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputOperatorFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOPointRadius2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPointRadius(ctx context.Context, v interface{}) (*model.PointRadius, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputPointRadius(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

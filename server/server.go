@@ -1,22 +1,17 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/99designs/gqlgen/graphql"
-	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/interline-io/transitland-lib/server/auth"
 	"github.com/interline-io/transitland-lib/server/config"
-	"github.com/interline-io/transitland-lib/server/find"
-	generated "github.com/interline-io/transitland-lib/server/generated/gqlgen"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/resolvers"
 	"github.com/interline-io/transitland-lib/server/rest"
@@ -53,8 +48,9 @@ func Serve(cfg config.Config) error {
 	}
 
 	// Add paths
-	mount(root, "/rest", rest.MakeHandlers(cfg))
-	root.Handle("/query", newServer()).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
+	graphqlServer := resolvers.NewServer()
+	mount(root, "/rest", rest.NewServer(cfg, graphqlServer))
+	root.Handle("/query", graphqlServer).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
 	root.Handle("/", playground.Handler("GraphQL playground", "/query"))
 
 	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cfg.Port)
@@ -76,22 +72,6 @@ func mount(r *mux.Router, path string, handler http.Handler) {
 			handler,
 		),
 	)
-}
-
-func newServer() http.Handler {
-	c := generated.Config{Resolvers: &resolvers.Resolver{}}
-	c.Directives.HasRole = func(ctx context.Context, obj interface{}, next graphql.Resolver, role model.Role) (interface{}, error) {
-		user := auth.ForContext(ctx)
-		if user == nil {
-			user = &auth.User{}
-		}
-		if !user.HasRole(role) {
-			return nil, fmt.Errorf("Access denied")
-		}
-		return next(ctx)
-	}
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(c))
-	return find.Middleware(model.DB, srv)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {

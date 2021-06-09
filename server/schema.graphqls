@@ -6,6 +6,37 @@ enum Role {
   USER
 }
 
+# Root query
+
+type Query {
+  feed_versions(
+    limit: Int
+    after: Int
+    ids: [Int!]
+    where: FeedVersionFilter
+  ): [FeedVersion!]!
+  feeds(
+    limit: Int
+    after: Int
+    ids: [Int!]
+    where: FeedFilter
+  ): [Feed!]!
+  agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
+  routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
+  stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
+  trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
+  operators(limit: Int, after: Int, ids: [Int!], where: OperatorFilter): [Operator!]!
+}
+
+type Mutation {
+    validate_gtfs(file: Upload, url: String, realtime_urls: [String!]): ValidationResult @hasRole(role: USER)
+    feed_version_update(id: Int!, set: FeedVersionSetInput!): FeedVersion @hasRole(role: ADMIN)
+    feed_version_fetch(file: Upload, url: String, feed_onestop_id: String!): FeedVersionFetchResult @hasRole(role: ADMIN)
+    feed_version_import(sha1: String!): FeedVersionImportResult! @hasRole(role: ADMIN)
+    feed_version_unimport(id: Int!): FeedVersionUnimportResult! @hasRole(role: ADMIN)
+    feed_version_delete(id: Int!): FeedVersionDeleteResult! @hasRole(role: ADMIN)
+}
+
 # Feed
 
 type Feed {
@@ -170,6 +201,7 @@ type Agency {
   feed_version_sha1: String
   feed_onestop_id: String
   feed_version: FeedVersion!
+  geometry: Polygon
   search_rank: String # only for search results
   places(limit: Int, where: AgencyPlaceFilter): [AgencyPlace!]
   routes(limit: Int, where: RouteFilter): [Route!]!
@@ -491,47 +523,11 @@ type FeedVersionDeleteResult {
   success: Boolean!
 }
 
-# Root query
-
-type Query {
-  agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
-  routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
-  stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
-  feed_versions(
-    limit: Int
-    after: Int
-    ids: [Int!]
-    where: FeedVersionFilter
-  ): [FeedVersion!]!
-  feeds(
-    limit: Int
-    after: Int
-    ids: [Int!]
-    where: FeedFilter
-  ): [Feed!]!
-  trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
-  operators(limit: Int, after: Int, ids: [Int!], where: OperatorFilter): [Operator!]!
-  # analysis functions
-}
-
-type Mutation {
-    validate_gtfs(file: Upload, url: String, realtime_urls: [String!]): ValidationResult @hasRole(role: USER)
-    feed_version_update(id: Int!, set: FeedVersionSetInput!): FeedVersion @hasRole(role: ADMIN)
-    feed_version_fetch(file: Upload, url: String, feed_onestop_id: String!): FeedVersionFetchResult @hasRole(role: ADMIN)
-    feed_version_import(sha1: String!): FeedVersionImportResult! @hasRole(role: ADMIN)
-    feed_version_unimport(id: Int!): FeedVersionUnimportResult! @hasRole(role: ADMIN)
-    feed_version_delete(id: Int!): FeedVersionDeleteResult! @hasRole(role: ADMIN)
-}
-
 # Update inputs
 
 input FeedVersionSetInput {
   name: String
   description: String
-}
-input UserProfileInput {
-  name: String
-  email: String
 }
 
 # Query filters
@@ -570,6 +566,8 @@ input AgencyFilter {
   feed_onestop_id: String
   agency_id: String
   agency_name: String
+  within: Polygon
+  near: PointRadius
   search: String
 }
 
@@ -580,6 +578,8 @@ input RouteFilter {
   route_id: String
   route_type: Int
   operator_onestop_id: String
+  within: Polygon
+  near: PointRadius  
   search: String
   agency_ids: [Int!] # keep?
 }
@@ -590,7 +590,8 @@ input StopFilter {
   feed_onestop_id: String
   stop_id: String
   agency_ids: [Int!] # keep?
-  geometry: Polygon
+  within: Polygon
+  near: PointRadius
   search: String
 }
 
@@ -605,6 +606,7 @@ input PathwayFilter {
 }
 
 input TripFilter {
+  service_date: Date
   trip_id: String
   route_id: Int # keep?
   feed_version_sha1: String
@@ -627,6 +629,12 @@ input AgencyPlaceFilter {
 input CalendarDateFilter {
   date: Date
   exception_type: Int
+}
+
+input PointRadius {
+  lat: Float!
+  lon: Float!
+  radius: Float!
 }
 
 # Scalar types

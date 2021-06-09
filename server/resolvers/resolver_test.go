@@ -3,14 +3,10 @@ package resolvers
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/interline-io/transitland-lib/server/find"
-	generated "github.com/interline-io/transitland-lib/server/generated/gqlgen"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -22,12 +18,6 @@ func TestMain(m *testing.M) {
 }
 
 // Test helpers
-
-func newServer() http.Handler {
-	c := generated.Config{Resolvers: &Resolver{}}
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(c))
-	return find.Middleware(model.DB, srv)
-}
 
 func toJson(m map[string]interface{}) string {
 	rr, err := json.Marshal(&m)

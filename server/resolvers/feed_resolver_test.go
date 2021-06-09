@@ -59,7 +59,7 @@ func TestFeedResolver(t *testing.T) {
 			nil,
 		},
 	}
-	c := client.New(newServer())
+	c := client.New(NewServer())
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testquery(t, c, tc)

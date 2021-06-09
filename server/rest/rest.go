@@ -2,18 +2,16 @@ package rest
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 
+	"github.com/99designs/gqlgen/client"
 	"github.com/gorilla/mux"
 	"github.com/interline-io/transitland-lib/server/config"
-	"github.com/machinebox/graphql"
 )
 
 // DEFAULTLIMIT is the default API limit
@@ -25,29 +23,36 @@ const MAXLIMIT = 1000
 // MAXRADIUS is the maximum point search radius
 const MAXRADIUS = 100 * 1000.0
 
-// MakeHandlers .
-func MakeHandlers(cfg config.Config) *mux.Router {
+// restConfig holds the base config and the graphql handler
+type restConfig struct {
+	config.Config
+	srv http.Handler
+}
+
+// NewServer .
+func NewServer(cfg config.Config, srv http.Handler) http.Handler {
+	restcfg := restConfig{Config: cfg, srv: srv}
 	r := mux.NewRouter()
 
-	feedHandler := makeHandler(cfg, func() apiHandler { return &FeedRequest{} })
-	fvHandler := makeHandler(cfg, func() apiHandler { return &FeedVersionRequest{} })
-	agencyHandler := makeHandler(cfg, func() apiHandler { return &AgencyRequest{} })
-	routeHandler := makeHandler(cfg, func() apiHandler { return &RouteRequest{} })
-	tripHandler := makeHandler(cfg, func() apiHandler { return &TripRequest{} })
-	stopHandler := makeHandler(cfg, func() apiHandler { return &StopRequest{} })
-	stopTimeHandler := makeHandler(cfg, func() apiHandler { return &StopTimeRequest{} })
+	feedHandler := makeHandler(restcfg, func() apiHandler { return &FeedRequest{} })
+	fvHandler := makeHandler(restcfg, func() apiHandler { return &FeedVersionRequest{} })
+	agencyHandler := makeHandler(restcfg, func() apiHandler { return &AgencyRequest{} })
+	routeHandler := makeHandler(restcfg, func() apiHandler { return &RouteRequest{} })
+	tripHandler := makeHandler(restcfg, func() apiHandler { return &TripRequest{} })
+	stopHandler := makeHandler(restcfg, func() apiHandler { return &StopRequest{} })
+	operatorHandler := makeHandler(restcfg, func() apiHandler { return &OperatorRequest{} })
 
 	r.HandleFunc("/feeds.{format}", feedHandler)
 	r.HandleFunc("/feeds", feedHandler)
 	r.HandleFunc("/feeds/{key}.{format}", feedHandler)
 	r.HandleFunc("/feeds/{key}", feedHandler)
-	r.HandleFunc("/feeds/{key}/download_latest_feed_version", makeHandlerFunc(cfg, feedDownloadLatestFeedVersionHandler))
+	r.HandleFunc("/feeds/{key}/download_latest_feed_version", makeHandlerFunc(restcfg, feedDownloadLatestFeedVersionHandler))
 
 	r.HandleFunc("/feed_versions.{format}", fvHandler)
 	r.HandleFunc("/feed_versions", fvHandler)
 	r.HandleFunc("/feed_versions/{key}.{format}", fvHandler)
 	r.HandleFunc("/feed_versions/{key}", fvHandler)
-	r.HandleFunc("/feed_versions/{key}/download", makeHandlerFunc(cfg, fvDownloadHandler))
+	r.HandleFunc("/feed_versions/{key}/download", makeHandlerFunc(restcfg, fvDownloadHandler))
 
 	r.HandleFunc("/agencies.{format}", agencyHandler)
 	r.HandleFunc("/agencies", agencyHandler)
@@ -73,7 +78,13 @@ func MakeHandlers(cfg config.Config) *mux.Router {
 	r.HandleFunc("/stops/{key}.{format}", stopHandler)
 	r.HandleFunc("/stops/{key}", stopHandler)
 
-	r.HandleFunc("/stops/{stop_id}/departures", stopTimeHandler)
+	r.HandleFunc("/operators.{format}", operatorHandler)
+	r.HandleFunc("/operators", operatorHandler)
+	r.HandleFunc("/operators/{key}.{format}", operatorHandler)
+	r.HandleFunc("/operators/{key}", operatorHandler)
+
+	// r.HandleFunc("/stops/{stop_id}/departures", stopTimeHandler)
+
 	return r
 }
 
@@ -140,27 +151,79 @@ func queryToMap(vars url.Values) map[string]string {
 	return m
 }
 
+// makeHandler wraps an apiHandler into an HandlerFunc and performs common checks.
+func makeHandler(cfg restConfig, f func() apiHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ent := f()
+		opts := queryToMap(r.URL.Query())
+		for k, v := range mux.Vars(r) {
+			opts[k] = v
+		}
+		format := opts["format"]
+
+		// If this is a image request, check the local cache
+		urlkey := getKey(r.URL.Path + "/" + r.URL.RawQuery)
+		if format == "png" && localFileCache != nil {
+			if ok, _ := localFileCache.Has(urlkey); ok {
+				w.WriteHeader(http.StatusOK)
+				err := localFileCache.Get(w, urlkey)
+				if err != nil {
+					fmt.Println("file cache error:", err)
+				}
+				return
+			}
+		}
+
+		// Use json marshal/unmarshal to convert string params to correct types
+		s, err := json.Marshal(opts)
+		if err := json.Unmarshal(s, ent); err != nil {
+			fmt.Println("err:", err)
+			http.Error(w, "parameter error", http.StatusInternalServerError)
+			return
+		}
+
+		// Make the request
+		response, err := makeRequest(cfg, ent, format)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Write the output data
+		if format == "png" {
+			w.Header().Add("Content-Type", "image/png")
+		} else {
+			w.Header().Add("Content-Type", "application/json")
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(response)
+
+		// Cache image response
+		if format == "png" && localFileCache != nil {
+			if err := localFileCache.Put(urlkey, bytes.NewReader(response)); err != nil {
+				fmt.Println("file cache error:", err)
+			}
+		}
+	}
+}
+
 // makeGraphQLRequest issues the graphql request and unpacks the response.
-func makeGraphQLRequest(endpoint string, q string, vars map[string]interface{}) (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 100000*time.Millisecond)
-	defer cancel()
-	req := graphql.NewRequest(q)
-	for k, v := range vars {
-		req.Var(k, v)
-	}
-	client := graphql.NewClient(endpoint)
+func makeGraphQLRequest(srv http.Handler, q string, vars map[string]interface{}) (map[string]interface{}, error) {
 	d := hw{}
-	if err := client.Run(ctx, req, &d); err != nil {
-		return d, err
+	c2 := client.New(srv)
+	opts := []client.Option{}
+	for k, v := range vars {
+		opts = append(opts, client.Var(k, v))
 	}
-	return d, nil
+	err := c2.Post(q, &d, opts...)
+	return d, err
 }
 
 // makeRequest prepares an apiHandler and makes the request.
-func makeRequest(endpoint string, ent apiHandler, format string) ([]byte, error) {
+func makeRequest(cfg restConfig, ent apiHandler, format string) ([]byte, error) {
 	query, vars := ent.Query()
 	// fmt.Printf("debug query: %s\n vars:\n %s\n", query, vars)
-	response, err := makeGraphQLRequest(endpoint, query, vars)
+	response, err := makeGraphQLRequest(cfg.srv, query, vars)
 	x, _ := json.Marshal(vars)
 	if err != nil {
 		fmt.Printf("debug query: %s\n vars:\n %s\nresponse:\n%s\n", query, x, response)
@@ -188,63 +251,8 @@ func makeRequest(endpoint string, ent apiHandler, format string) ([]byte, error)
 	return json.Marshal(response)
 }
 
-func makeHandlerFunc(cfg config.Config, f func(config.Config, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+func makeHandlerFunc(cfg restConfig, f func(restConfig, http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		f(cfg, w, r)
-	}
-}
-
-// makeHandler wraps an apiHandler into an HandlerFunc and performs common checks.
-func makeHandler(cfg config.Config, f func() apiHandler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ent := f()
-		opts := queryToMap(r.URL.Query())
-		for k, v := range mux.Vars(r) {
-			opts[k] = v
-		}
-		format := opts["format"]
-
-		// If this is a image request, check the local cache
-		urlkey := getKey(r.URL.Path + "/" + r.URL.RawQuery)
-		if format == "png" && localFileCache != nil {
-			if ok, _ := localFileCache.Has(urlkey); ok {
-				w.WriteHeader(http.StatusOK)
-				err := localFileCache.Get(w, urlkey)
-				if err != nil {
-					fmt.Println("file cache error:", err)
-				}
-				return
-			}
-		}
-
-		// Use json marshal/unmarshal to convert string params to correct types
-		s, err := json.Marshal(opts)
-		if err := json.Unmarshal(s, ent); err != nil {
-			http.Error(w, "parameter error", http.StatusInternalServerError)
-			return
-		}
-
-		// Make the request
-		response, err := makeRequest(cfg.Endpoint, ent, format)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Write the output data
-		if format == "png" {
-			w.Header().Add("Content-Type", "image/png")
-		} else {
-			w.Header().Add("Content-Type", "application/json")
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(response)
-
-		// Cache image response
-		if format == "png" && localFileCache != nil {
-			if err := localFileCache.Put(urlkey, bytes.NewReader(response)); err != nil {
-				fmt.Println("file cache error:", err)
-			}
-		}
 	}
 }

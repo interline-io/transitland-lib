@@ -1,7 +1,5 @@
 package rest
 
-import "fmt"
-
 const tripQuery = `
 query(
 	$limit: Int
@@ -48,12 +46,8 @@ query(
 		friday
 		saturday
 		sunday
-		# added_dates: calendar_dates(limit: 1000, where: {exception_type: {_eq: 1}}) {
-		#   date
-		# }
-		# removed_dates: calendar_dates(limit: 1000, where: {exception_type: {_eq: 2}}) {
-		#   date
-		# }
+		added_dates
+		removed_dates
 	  }
 	  frequencies {
 		id
@@ -99,8 +93,11 @@ type TripRequest struct {
 	Limit           int    `json:"limit,string"`
 	After           int    `json:"after,string"`
 	RouteID         int    `json:"route_id,string"`
+	TripID          string `json:"trip_id,string"`
 	FeedOnestopID   string `json:"feed_onestop_id,string"`
+	FeedVersionSHA1 string `json:"feed_version_sha1"`
 	IncludeGeometry string `json:"include_geometry"`
+	ServiceDate     string `json:"service_date"`
 	Format          string
 }
 
@@ -111,6 +108,7 @@ func (r TripRequest) ResponseKey() string {
 
 // Query returns a GraphQL query string and variables.
 func (r TripRequest) Query() (string, map[string]interface{}) {
+	// ID or RouteID should be considered mandatory.
 	where := hw{}
 	if r.RouteID > 0 {
 		where["route_id"] = r.RouteID
@@ -118,10 +116,21 @@ func (r TripRequest) Query() (string, map[string]interface{}) {
 	if r.FeedOnestopID != "" {
 		where["feed_onestop_id"] = r.FeedOnestopID
 	}
+	if r.FeedVersionSHA1 != "" {
+		where["feed_version_sha1"] = r.FeedVersionSHA1
+	}
+	if r.TripID != "" {
+		where["trip_id"] = r.TripID
+	}
+	if r.ServiceDate != "" {
+		where["service_date"] = r.ServiceDate
+	}
+	// Include geometry when in geojson format
 	includeGeometry := false
 	if r.IncludeGeometry == "true" || r.Format == "geojson" {
 		includeGeometry = true
 	}
+	// Only include stop times when requesting a specific trip.
 	includeStopTimes := false
 	if r.ID > 0 {
 		includeStopTimes = true
@@ -135,7 +144,6 @@ func (r TripRequest) ProcessGeoJSON(response map[string]interface{}) error {
 	entities, ok := response[r.ResponseKey()].([]interface{})
 	if ok {
 		for _, feature := range entities {
-			fmt.Println("feature", feature)
 			if f2, ok := feature.(map[string]interface{}); ok {
 				shp := feature.(map[string]interface{})["shape"].(map[string]interface{})
 				f2["geometry"] = shp["geometry"]

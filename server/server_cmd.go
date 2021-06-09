@@ -2,7 +2,6 @@ package server
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
@@ -29,13 +28,9 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.GtfsDir, "gtfsdir", "", "Directory to store GTFS files")
 	fl.StringVar(&cmd.GtfsS3Bucket, "s3", "", "S3 bucket for GTFS files")
 	fl.BoolVar(&cmd.ValidateLargeFiles, "validate-large-files", false, "Allow validation of large files")
-
 	fl.Parse(args)
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
-	}
-	if cmd.Endpoint == "" {
-		cmd.Endpoint = fmt.Sprintf("http://localhost:%s/query", cmd.Port)
 	}
 	return nil
 }

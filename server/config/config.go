@@ -5,7 +5,6 @@ package config
 type Config struct {
 	Timeout            int
 	Port               string
-	Endpoint           string
 	UseAuth            string
 	DBURL              string
 	JwtAudience        string

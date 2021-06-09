@@ -50,6 +50,30 @@ func TestStopResolver(t *testing.T) {
 			"stops.0.route_stops.#.route.route_id",
 			[]string{"01", "03", "07"},
 		},
+		{
+			"near 10m",
+			`query {stops(where:{near:{lat:-122.407974,lon:37.784471,radius:10.0}}) {stop_id onestop_id geometry}}`,
+			vars,
+			``,
+			"stops.#.stop_id",
+			[]string{"POWL"},
+		},
+		{
+			"near 2000m",
+			`query {stops(where:{near:{lat:-122.407974,lon:37.784471,radius:2000.0}}) {stop_id onestop_id geometry}}`,
+			vars,
+			``,
+			"stops.#.stop_id",
+			[]string{"70011", "70012", "CIVC", "EMBR", "MONT", "POWL"},
+		},
+		{
+			"within polygon",
+			`query{stops(where:{within:{type:"Polygon",coordinates:[[[-122.396,37.8],[-122.408,37.79],[-122.393,37.778],[-122.38,37.787],[-122.396,37.8]]]}}){id stop_id}}`,
+			hw{},
+			``,
+			"stops.#.stop_id",
+			[]string{"EMBR", "MONT"},
+		},
 		// TODO: parent, children; test data has no stations.
 		// TODO: level, pathways_from_stop, pathways_to_stop: test data has no pathways...
 		// TODO: census_geographies
@@ -90,7 +114,7 @@ func TestStopResolver(t *testing.T) {
 		// TODO: census_geographies
 		// TODO: route_stop_buffer
 	}
-	c := client.New(newServer())
+	c := client.New(NewServer())
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testquery(t, c, tc)

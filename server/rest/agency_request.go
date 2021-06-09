@@ -63,5 +63,8 @@ func (r AgencyRequest) Query() (string, map[string]interface{}) {
 	if r.AgencyName != "" {
 		where["agency_name"] = r.AgencyName
 	}
+	if r.Lat != 0.0 && r.Lon != 0.0 {
+		where["near"] = hw{"lat": r.Lat, "lon": r.Lon, "radius": r.Radius}
+	}
 	return agencyQuery, hw{"limit": checkLimit(r.Limit), "after": checkAfter(r.After), "ids": checkIds(r.ID), "where": where}
 }
