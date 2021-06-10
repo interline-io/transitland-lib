@@ -19,6 +19,10 @@ import (
 )
 
 type Command struct {
+	DisableGraphql   bool
+	DisableRest      bool
+	DisableImage     bool
+	EnablePlayground bool
 	config.Config
 }
 
@@ -38,6 +42,10 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.GtfsDir, "gtfsdir", "", "Directory to store GTFS files")
 	fl.StringVar(&cmd.GtfsS3Bucket, "s3", "", "S3 bucket for GTFS files")
 	fl.BoolVar(&cmd.ValidateLargeFiles, "validate-large-files", false, "Allow validation of large files")
+	// fl.BoolVar(&cmd.DisableGraphql, "disable-image", false, "Disable image generation")
+	fl.BoolVar(&cmd.DisableGraphql, "disable-graphql", false, "Disable GraphQL endpoint")
+	fl.BoolVar(&cmd.DisableGraphql, "disable-rest", false, "Disable REST endpoint")
+	fl.BoolVar(&cmd.EnablePlayground, "playground", false, "Enable GraphQL playground")
 	fl.Parse(args)
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
@@ -50,20 +58,35 @@ func (cmd *Command) Run(args []string) error {
 	if err := cmd.Parse(args); err != nil {
 		panic(err)
 	}
-	return Serve(cmd.Config)
-}
-
-func Serve(cfg config.Config) error {
 	// Open database
-	model.DB = model.MustOpenDB(cfg.DBURL)
+	model.DB = model.MustOpenDB(cmd.DBURL)
+
 	// Create server
-	root, err := newServer(cfg)
-	if err != nil {
-		return err
+	// root, err := newServer(cfg)
+	// Setup CORS and logging
+	root := mux.NewRouter()
+	cors := handlers.CORS(
+		handlers.AllowedHeaders([]string{"content-type", "apikey", "authorization"}),
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowCredentials(),
+	)
+	root.Use(cors)
+	root.Use(loggingMiddleware)
+	// Add servers
+	graphqlServer := resolvers.NewServer(cmd.Config)
+	if !cmd.DisableGraphql {
+		mount(root, "/rest", rest.NewServer(cmd.Config, graphqlServer))
 	}
-	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cfg.Port)
+	if !cmd.DisableRest {
+		mount(root, "/query", graphqlServer)
+	}
+	if cmd.EnablePlayground {
+		root.Handle("/", playground.Handler("GraphQL playground", "/query/"))
+	}
+	// Start server
+	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cmd.Port)
 	fmt.Println("listening on:", addr)
-	timeOut := time.Duration(cfg.Timeout)
+	timeOut := time.Duration(cmd.Timeout)
 	srv := &http.Server{
 		Handler:      root,
 		Addr:         addr,
@@ -71,6 +94,7 @@ func Serve(cfg config.Config) error {
 		ReadTimeout:  timeOut * time.Second,
 	}
 	return srv.ListenAndServe()
+
 }
 
 func mount(r *mux.Router, path string, handler http.Handler) {
@@ -87,23 +111,4 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		log.Println(r.RequestURI)
 		next.ServeHTTP(w, r)
 	})
-}
-
-func newServer(cfg config.Config) (http.Handler, error) {
-	// Setup CORS and logging
-	root := mux.NewRouter()
-	cors := handlers.CORS(
-		handlers.AllowedHeaders([]string{"content-type", "apikey", "authorization"}),
-		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowCredentials(),
-	)
-	root.Use(cors)
-	root.Use(loggingMiddleware)
-
-	// Add paths
-	graphqlServer := resolvers.NewServer(cfg)
-	mount(root, "/rest", rest.NewServer(cfg, graphqlServer))
-	mount(root, "/query", graphqlServer)
-	root.Handle("/", playground.Handler("GraphQL playground", "/query/"))
-	return root, nil
 }
