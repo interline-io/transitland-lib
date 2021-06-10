@@ -370,6 +370,7 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 						if p.EndTime != nil {
 							endTime = *p.EndTime
 						}
+						// TODO: use regular MustSelect
 						q := sq.Expr("SELECT t.* FROM tl_stop_departures(?,?,?,?) t", pq.Array(ids), p.ServiceDate, startTime, endTime)
 						qstr, qargs, err := q.ToSql()
 						if err != nil {

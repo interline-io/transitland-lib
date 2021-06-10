@@ -30,10 +30,7 @@ func newTestClient() *client.Client {
 }
 
 func toJson(m map[string]interface{}) string {
-	rr, err := json.Marshal(&m)
-	if err != nil {
-		panic(err)
-	}
+	rr, _ := json.Marshal(&m)
 	return string(rr)
 }
 

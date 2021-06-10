@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -149,11 +150,12 @@ func (v *Validator) Validate() (*Result, error) {
 	// Validate realtime messages
 	for _, fn := range v.Options.ValidateRealtimeMessages {
 		msg, err := rt.Read(fn)
-		if err != nil {
-			panic(err)
+		if err == nil {
+			rterrs := v.rtValidator.ValidateFeedMessage(msg, nil)
+			result.HandleError(filepath.Base(fn), rterrs)
+		} else {
+			result.HandleError(filepath.Base(fn), []error{errors.New("could not read url")})
 		}
-		rterrs := v.rtValidator.ValidateFeedMessage(msg, nil)
-		result.HandleError(filepath.Base(fn), rterrs)
 	}
 
 	// Service levels

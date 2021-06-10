@@ -56,7 +56,7 @@ func (cmd *Command) Parse(args []string) error {
 func (cmd *Command) Run(args []string) error {
 	// TODO: fix interface
 	if err := cmd.Parse(args); err != nil {
-		panic(err)
+		return err
 	}
 	// Open database
 	model.DB = model.MustOpenDB(cmd.DBURL)
