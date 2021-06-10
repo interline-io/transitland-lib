@@ -3,11 +3,12 @@ package rest
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/config"
 	"github.com/interline-io/transitland-lib/server/resolvers"
 )
 
 func TestAgencyRequest(t *testing.T) {
-	cfg := restConfig{srv: resolvers.NewServer()}
+	cfg := restConfig{srv: resolvers.NewServer(config.Config{})}
 	fv := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
 	testcases := []testRest{
 		{"basic", AgencyRequest{}, "", "agencies.#.agency_id", []string{"caltrain-ca-us", "BART"}, 0},

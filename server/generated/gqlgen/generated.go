@@ -3391,21 +3391,11 @@ enum Role {
   USER
 }
 
-# Root query
+# Root query and mutation
 
 type Query {
-  feed_versions(
-    limit: Int
-    after: Int
-    ids: [Int!]
-    where: FeedVersionFilter
-  ): [FeedVersion!]!
-  feeds(
-    limit: Int
-    after: Int
-    ids: [Int!]
-    where: FeedFilter
-  ): [Feed!]!
+  feed_versions(limit: Int, after: Int, ids: [Int!], where: FeedVersionFilter): [FeedVersion!]!
+  feeds(limit: Int, after: Int, ids: [Int!], where: FeedFilter): [Feed!]!
   agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
   routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
   stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
@@ -3862,8 +3852,8 @@ type ValidationResult {
   warnings: [ValidationResultErrorGroup!]!
   # FeedVersion-like
   sha1: String!
-  earliest_calendar_date: Date!
-  latest_calendar_date: Date!
+  earliest_calendar_date: Date
+  latest_calendar_date: Date
   files: [FeedVersionFileInfo!]!
   service_levels(limit: Int, route_id: String): [FeedVersionServiceLevel!]!
   agencies(limit: Int): [Agency!]!
@@ -16837,14 +16827,11 @@ func (ec *executionContext) _ValidationResult_earliest_calendar_date(ctx context
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(tl.ODate)
 	fc.Result = res
-	return ec.marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
+	return ec.marshalODate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_latest_calendar_date(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -16872,14 +16859,11 @@ func (ec *executionContext) _ValidationResult_latest_calendar_date(ctx context.C
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(tl.ODate)
 	fc.Result = res
-	return ec.marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
+	return ec.marshalODate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐODate(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ValidationResult_files(ctx context.Context, field graphql.CollectedField, obj *model.ValidationResult) (ret graphql.Marshaler) {
@@ -22064,14 +22048,8 @@ func (ec *executionContext) _ValidationResult(ctx context.Context, sel ast.Selec
 			}
 		case "earliest_calendar_date":
 			out.Values[i] = ec._ValidationResult_earliest_calendar_date(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		case "latest_calendar_date":
 			out.Values[i] = ec._ValidationResult_latest_calendar_date(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		case "files":
 			out.Values[i] = ec._ValidationResult_files(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

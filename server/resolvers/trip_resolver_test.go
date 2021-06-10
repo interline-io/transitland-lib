@@ -2,8 +2,6 @@ package resolvers
 
 import (
 	"testing"
-
-	"github.com/99designs/gqlgen/client"
 )
 
 func TestTripResolver(t *testing.T) {
@@ -76,7 +74,7 @@ func TestTripResolver(t *testing.T) {
 		// TODO: check where feed_version_sha1, feed_onestop_id but only check count
 		// TODO: frequencies
 	}
-	c := client.New(NewServer())
+	c := newTestClient()
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testquery(t, c, tc)

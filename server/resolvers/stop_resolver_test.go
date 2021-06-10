@@ -2,8 +2,6 @@ package resolvers
 
 import (
 	"testing"
-
-	"github.com/99designs/gqlgen/client"
 )
 
 func TestStopResolver(t *testing.T) {
@@ -169,7 +167,7 @@ func TestStopResolver(t *testing.T) {
 		// TODO: census_geographies
 		// TODO: route_stop_buffer
 	}
-	c := client.New(NewServer())
+	c := newTestClient()
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testquery(t, c, tc)

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
+	"github.com/interline-io/transitland-lib/server/config"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -23,6 +24,10 @@ func TestMain(m *testing.M) {
 }
 
 // Test helpers
+
+func newTestClient() *client.Client {
+	return client.New(NewServer(config.Config{}))
+}
 
 func toJson(m map[string]interface{}) string {
 	rr, err := json.Marshal(&m)

@@ -2,7 +2,6 @@ package find
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -371,7 +370,6 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 						if p.EndTime != nil {
 							endTime = *p.EndTime
 						}
-						fmt.Printf("SERVICE DATE: %#v\n", p.ServiceDate)
 						q := sq.Expr("SELECT t.* FROM tl_stop_departures(?,?,?,?) t", pq.Array(ids), p.ServiceDate, startTime, endTime)
 						qstr, qargs, err := q.ToSql()
 						if err != nil {

@@ -12,7 +12,6 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/interline-io/transitland-lib/server/auth"
 	"github.com/interline-io/transitland-lib/server/config"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/resolvers"
@@ -57,38 +56,11 @@ func (cmd *Command) Run(args []string) error {
 func Serve(cfg config.Config) error {
 	// Open database
 	model.DB = model.MustOpenDB(cfg.DBURL)
-
-	// Setup CORS and logging
-	root := mux.NewRouter()
-	cors := handlers.CORS(
-		handlers.AllowedHeaders([]string{"content-type", "apikey", "authorization"}),
-		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowCredentials(),
-	)
-	root.Use(cors)
-	root.Use(loggingMiddleware)
-
-	// Setup auth; default is all users will be anonymous.
-	if cfg.UseAuth == "admin" {
-		if m, err := auth.NoAuthMiddleware(model.DB); err == nil {
-			root.Use(m)
-		} else {
-			return err
-		}
-	} else if cfg.UseAuth == "jwt" {
-		if m, err := auth.JWTMiddleware(cfg); err == nil {
-			root.Use(m)
-		} else {
-			return err
-		}
+	// Create server
+	root, err := newServer(cfg)
+	if err != nil {
+		return err
 	}
-
-	// Add paths
-	graphqlServer := resolvers.NewServer()
-	mount(root, "/rest", rest.NewServer(cfg, graphqlServer))
-	root.Handle("/query", graphqlServer).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
-	root.Handle("/", playground.Handler("GraphQL playground", "/query"))
-
 	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cfg.Port)
 	fmt.Println("listening on:", addr)
 	timeOut := time.Duration(cfg.Timeout)
@@ -115,4 +87,23 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		log.Println(r.RequestURI)
 		next.ServeHTTP(w, r)
 	})
+}
+
+func newServer(cfg config.Config) (http.Handler, error) {
+	// Setup CORS and logging
+	root := mux.NewRouter()
+	cors := handlers.CORS(
+		handlers.AllowedHeaders([]string{"content-type", "apikey", "authorization"}),
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowCredentials(),
+	)
+	root.Use(cors)
+	root.Use(loggingMiddleware)
+
+	// Add paths
+	graphqlServer := resolvers.NewServer(cfg)
+	mount(root, "/rest", rest.NewServer(cfg, graphqlServer))
+	mount(root, "/query", graphqlServer)
+	root.Handle("/", playground.Handler("GraphQL playground", "/query/"))
+	return root, nil
 }

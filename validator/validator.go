@@ -3,7 +3,6 @@ package validator
 import (
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -107,8 +106,6 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 func (v *Validator) Validate() (*Result, error) {
 	reader := v.Reader
 	result := &Result{}
-	result.EarliestCalendarDate = tl.NewODate(time.Now())
-	result.LatestCalendarDate = tl.NewODate(time.Now())
 
 	// Check file infos first, so we exit early if a file exceeds the row limit.
 	if reader2, ok := reader.(*tlcsv.Reader); ok {
@@ -133,6 +130,13 @@ func (v *Validator) Validate() (*Result, error) {
 			}
 		}
 	}
+
+	// get sha1 and service period; continue even if errors
+	fv, err := tl.NewFeedVersionFromReader(reader)
+	_ = err
+	result.SHA1 = fv.SHA1
+	result.EarliestCalendarDate = fv.EarliestCalendarDate
+	result.LatestCalendarDate = fv.LatestCalendarDate
 
 	// Main validation
 	if r := v.copier.Copy(); r != nil {

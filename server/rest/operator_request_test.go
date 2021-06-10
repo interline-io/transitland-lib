@@ -3,11 +3,12 @@ package rest
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/config"
 	"github.com/interline-io/transitland-lib/server/resolvers"
 )
 
 func TestOperatorRequest(t *testing.T) {
-	cfg := restConfig{srv: resolvers.NewServer()}
+	cfg := restConfig{srv: resolvers.NewServer(config.Config{})}
 	fv := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
 	testcases := []testRest{
 		{"basic", OperatorRequest{}, "", "operators.#.onestop_id", []string{"o-9q9-caltrain", "o-9q9-bayarearapidtransit"}, 0},

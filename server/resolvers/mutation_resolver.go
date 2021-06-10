@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"time"
 
 	"github.com/99designs/gqlgen/graphql"
 	sq "github.com/Masterminds/squirrel"
@@ -340,9 +339,8 @@ func ValidateUpload(cfg config.Config, src io.Reader, feedURL *string, rturls []
 	}
 	//////
 	result := model.ValidationResult{}
-	result.EarliestCalendarDate = tl.NewODate(time.Now())
-	result.LatestCalendarDate = tl.NewODate(time.Now())
-
+	result.EarliestCalendarDate = tl.ODate{}
+	result.LatestCalendarDate = tl.ODate{}
 	var reader tl.Reader
 	if src != nil {
 		// Prepare reader

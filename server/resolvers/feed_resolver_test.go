@@ -2,8 +2,6 @@ package resolvers
 
 import (
 	"testing"
-
-	"github.com/99designs/gqlgen/client"
 )
 
 func TestFeedResolver(t *testing.T) {
@@ -140,7 +138,7 @@ func TestFeedResolver(t *testing.T) {
 			[]string{"BA", "BA~rt"},
 		},
 	}
-	c := client.New(NewServer())
+	c := newTestClient()
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testquery(t, c, tc)

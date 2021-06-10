@@ -2,8 +2,6 @@ package resolvers
 
 import (
 	"testing"
-
-	"github.com/99designs/gqlgen/client"
 )
 
 func TestStopTimeResolver(t *testing.T) {
@@ -70,7 +68,7 @@ func TestStopTimeResolver(t *testing.T) {
 			[]string{"76440", "77640", "78840", "80040", "81240", "82440", "83640", "84840", "86040", "87240", "89220", "76440", "77640", "78840", "80040", "81240", "82440", "83640", "84840", "86040", "87240", "89220"},
 		},
 	}
-	c := client.New(NewServer())
+	c := newTestClient()
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testquery(t, c, tc)

@@ -2,8 +2,6 @@ package resolvers
 
 import (
 	"testing"
-
-	"github.com/99designs/gqlgen/client"
 )
 
 func TestRouteResolver(t *testing.T) {
@@ -190,7 +188,7 @@ func TestRouteResolver(t *testing.T) {
 		},
 		// TODO: census_geographies
 	}
-	c := client.New(NewServer())
+	c := newTestClient()
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testquery(t, c, tc)

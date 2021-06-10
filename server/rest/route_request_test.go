@@ -3,11 +3,12 @@ package rest
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/config"
 	"github.com/interline-io/transitland-lib/server/resolvers"
 )
 
 func TestRouteRequest(t *testing.T) {
-	cfg := restConfig{srv: resolvers.NewServer()}
+	cfg := restConfig{srv: resolvers.NewServer(config.Config{})}
 	routeIds := []string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130", "01", "03", "05", "07", "11", "19"}
 	fv := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
 	testcases := []testRest{
