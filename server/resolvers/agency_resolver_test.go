@@ -76,19 +76,53 @@ func TestAgencyResolver(t *testing.T) {
 		},
 		{
 			"routes",
-			`query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {routes { route_id }}}`, // todo: sorting
+			`query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {routes { route_id }}}`,
 			vars,
 			``,
 			"agencies.0.routes.#.route_id",
 			[]string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
 		},
+		// places should test filters because it's not a root resolver
 		{
 			"places",
-			`query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0name adm1name name}}}`, // todo: sorting
+			`query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0name adm1name name}}}`,
 			vars,
 			``,
 			"agencies.0.places.#.name",
 			[]string{"San Mateo", "San Francisco", "San Jose", "", "Salinas"},
+		},
+		{
+			"places rank 0.25",
+			`query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places(where:{min_rank:0.25}) {adm0name adm1name name}}}`,
+			vars,
+			``,
+			"agencies.0.places.#.name",
+			[]string{"San Mateo", "San Jose", ""},
+		},
+		{
+			"places rank 0.5",
+			`query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places(where:{min_rank:0.5}) {adm0name adm1name name}}}`,
+			vars,
+			``,
+			"agencies.0.places.#.adm1name",
+			[]string{"California"},
+		},
+		// search
+		{
+			"search",
+			`query($search:String!) { agencies(where:{search:$search}) {agency_id}}`,
+			hw{"search": "Bay Area"},
+			``,
+			"agencies.#.agency_id",
+			[]string{"BART"},
+		},
+		{
+			"search",
+			`query($search:String!) { agencies(where:{search:$search}) {agency_id}}`,
+			hw{"search": "caltrain"},
+			``,
+			"agencies.#.agency_id",
+			[]string{"caltrain-ca-us"},
 		},
 		// TODO
 		// {"census_geographies", }

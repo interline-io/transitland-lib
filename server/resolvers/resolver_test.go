@@ -56,7 +56,7 @@ func testquery(t *testing.T, c *client.Client, tc testcase) {
 		for _, v := range gjson.Get(jj, tc.selector).Array() {
 			a = append(a, v.String())
 		}
-		if len(a) == 0 {
+		if len(a) == 0 && tc.expectSelect == nil {
 			t.Errorf("selector '%s' returned zero elements", tc.selector)
 		} else {
 			if !assert.ElementsMatch(t, a, tc.expectSelect) {

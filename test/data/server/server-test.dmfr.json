@@ -10,7 +10,7 @@
         "CT~rt"
       ],
       "urls": {
-        "static_current": "test/data/external/caltrain.zip",
+        "static_current": "../test/data/external/caltrain.zip",
         "static_historic": ["https://caltrain.com/old_feed.zip"]
       },
       "license": {
@@ -29,8 +29,18 @@
       "spec": "gtfs",
       "id": "BA",
       "urls": {
-        "static_current": "test/data/external/bart.zip"
+        "static_current": "../test/data/external/bart.zip"
       }
+    },
+    {
+      "spec": "gtfs-rt",
+      "id": "BA~rt",
+      "urls": {}
+    },
+    {
+      "spec": "gtfs",
+      "id": "test",
+      "urls": {}
     }
   ],
   "license_spdx_identifier": "CC0-1.0"

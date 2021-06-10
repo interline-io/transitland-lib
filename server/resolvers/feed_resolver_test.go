@@ -14,7 +14,7 @@ func TestFeedResolver(t *testing.T) {
 			hw{},
 			``,
 			"feeds.#.onestop_id",
-			[]string{"BA", "CT"},
+			[]string{"BA", "CT", "BA~rt", "test"},
 		},
 		{
 			"basic fields",
@@ -30,7 +30,7 @@ func TestFeedResolver(t *testing.T) {
 			"urls",
 			`query($onestop_id:String!) { feeds(where:{onestop_id:$onestop_id}) {urls { static_current static_historic }}}`,
 			hw{"onestop_id": "CT"},
-			`{"feeds":[{"urls":{"static_current":"test/data/external/caltrain.zip","static_historic":["https://caltrain.com/old_feed.zip"]}}]}`,
+			`{"feeds":[{"urls":{"static_current":"../test/data/external/caltrain.zip","static_historic":["https://caltrain.com/old_feed.zip"]}}]}`,
 			"",
 			nil,
 		},
@@ -57,6 +57,87 @@ func TestFeedResolver(t *testing.T) {
 			`{"feeds":[{"feed_state":{"feed_version":{"sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}}}]}`,
 			"",
 			nil,
+		},
+		// filters
+		{
+			"where onestop_id",
+			`query { feeds(where:{onestop_id:"test"}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{"test"},
+		},
+		{
+			"where spec=gtfs",
+			`query { feeds(where:{spec:["gtfs"]}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{"CT", "BA", "test"},
+		},
+		{
+			"where spec=gtfs-rt",
+			`query { feeds(where:{spec:["gtfs-rt"]}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{"BA~rt"},
+		},
+		{
+			"where fetch_error=true",
+			`query { feeds(where:{fetch_error:true}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{"test"},
+		},
+		{
+			"where fetch_error=false",
+			`query { feeds(where:{fetch_error:false}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{"BA", "CT"},
+		},
+		{
+			"where import_status=success",
+			`query { feeds(where:{import_status:success}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{"BA", "CT"},
+		},
+		{
+			"where import_status=in_progress", // TODO: mock an in-progress import
+			`query { feeds(where:{import_status:in_progress}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{},
+		},
+		{
+			"where import_status=error", // TODO: mock an in-progress import
+			`query { feeds(where:{import_status:error}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{},
+		},
+		{
+			"where search", // TODO: mock an in-progress import
+			`query { feeds(where:{search:"cal"}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{"CT"},
+		},
+		{
+			"where search ba", // TODO: mock an in-progress import
+			`query { feeds(where:{search:"BA"}) {onestop_id}}`,
+			hw{},
+			``,
+			"feeds.#.onestop_id",
+			[]string{"BA", "BA~rt"},
 		},
 	}
 	c := client.New(NewServer())

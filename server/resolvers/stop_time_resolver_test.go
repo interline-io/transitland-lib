@@ -44,6 +44,31 @@ func TestStopTimeResolver(t *testing.T) {
 			"stops.0.stop_times.#.trip.trip_id",
 			[]string{"268", "274", "156"},
 		},
+		// check StopTimeFilter through a stop
+		{
+			"where service_date start_time end_time",
+			`query{ stops(where:{stop_id:"MCAR_S"}) { stop_times(where:{service_date:"2018-05-30", start_time: 26000, end_time: 30000}) {arrival_time}}}`,
+			hw{},
+			``,
+			"stops.0.stop_times.#.arrival_time",
+			[]string{"26280", "26640", "26880", "27180", "27540", "27780", "28080", "28440", "28680", "28980", "29340", "29880", "26640", "27540", "28440", "29340", "26160", "27060", "27960", "28860", "29760"},
+		},
+		{
+			"where service_date end_time",
+			`query{ stops(where:{stop_id:"MCAR_S"}) { stop_times(where:{service_date:"2018-05-30", end_time: 20000}) {arrival_time}}}`,
+			hw{},
+			``,
+			"stops.0.stop_times.#.arrival_time",
+			[]string{"16740", "17640", "18540", "19440", "16740", "17640", "18540", "19440", "16260", "17160", "18060", "18960", "19860"},
+		},
+		{
+			"where service_date start_time",
+			`query{ stops(where:{stop_id:"MCAR_S"}) { stop_times(where:{service_date:"2018-05-30", start_time: 76000}) {arrival_time}}}`,
+			hw{},
+			``,
+			"stops.0.stop_times.#.arrival_time",
+			[]string{"76440", "77640", "78840", "80040", "81240", "82440", "83640", "84840", "86040", "87240", "89220", "76440", "77640", "78840", "80040", "81240", "82440", "83640", "84840", "86040", "87240", "89220"},
+		},
 	}
 	c := client.New(NewServer())
 	for _, tc := range testcases {

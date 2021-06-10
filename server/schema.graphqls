@@ -6,21 +6,11 @@ enum Role {
   USER
 }
 
-# Root query
+# Root query and mutation
 
 type Query {
-  feed_versions(
-    limit: Int
-    after: Int
-    ids: [Int!]
-    where: FeedVersionFilter
-  ): [FeedVersion!]!
-  feeds(
-    limit: Int
-    after: Int
-    ids: [Int!]
-    where: FeedFilter
-  ): [Feed!]!
+  feed_versions(limit: Int, after: Int, ids: [Int!], where: FeedVersionFilter): [FeedVersion!]!
+  feeds(limit: Int, after: Int, ids: [Int!], where: FeedFilter): [Feed!]!
   agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
   routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
   stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!

@@ -570,13 +570,17 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 						return nil, nil
 					}
 					ids := []int{}
+					minRank := 0.0
 					for _, p := range params {
 						ids = append(ids, p.AgencyID)
+						if p.Where != nil && p.Where.MinRank != nil {
+							minRank = *p.Where.MinRank
+						}
 					}
 					qents := []*model.AgencyPlace{}
 					MustSelect(
 						atx,
-						lateralWrap(quickSelectOrder("tl_agency_places", params[0].Limit, nil, nil, "agency_id"), "gtfs_agencies", "id", "agency_id", ids),
+						lateralWrap(quickSelectOrder("tl_agency_places", params[0].Limit, nil, nil, "agency_id").Where(sq.GtOrEq{"rank": minRank}), "gtfs_agencies", "id", "agency_id", ids),
 						&qents,
 					)
 					group := map[int][]*model.AgencyPlace{}

@@ -51,7 +51,7 @@ func TestStopResolver(t *testing.T) {
 			[]string{"01", "03", "07"},
 		},
 		{
-			"near 10m",
+			"where near 10m",
 			`query {stops(where:{near:{lat:-122.407974,lon:37.784471,radius:10.0}}) {stop_id onestop_id geometry}}`,
 			vars,
 			``,
@@ -59,7 +59,7 @@ func TestStopResolver(t *testing.T) {
 			[]string{"POWL"},
 		},
 		{
-			"near 2000m",
+			"where near 2000m",
 			`query {stops(where:{near:{lat:-122.407974,lon:37.784471,radius:2000.0}}) {stop_id onestop_id geometry}}`,
 			vars,
 			``,
@@ -67,12 +67,68 @@ func TestStopResolver(t *testing.T) {
 			[]string{"70011", "70012", "CIVC", "EMBR", "MONT", "POWL"},
 		},
 		{
-			"within polygon",
+			"where within polygon",
 			`query{stops(where:{within:{type:"Polygon",coordinates:[[[-122.396,37.8],[-122.408,37.79],[-122.393,37.778],[-122.38,37.787],[-122.396,37.8]]]}}){id stop_id}}`,
 			hw{},
 			``,
 			"stops.#.stop_id",
 			[]string{"EMBR", "MONT"},
+		},
+		{
+			"where onestop_id",
+			`query{stops(where:{onestop_id:"s-9q9k658fd1-sanjosediridoncaltrain"}) {stop_id} }`,
+			vars,
+			``,
+			"stops.0.stop_id",
+			[]string{"70262"},
+		},
+		{
+			"where feed_version_sha1",
+			`query($feed_version_sha1:String!) { stops(where:{feed_version_sha1:$feed_version_sha1}) { stop_id } }`, // just check BART
+			hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+			``,
+			"stops.#.stop_id",
+			[]string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "ASHB", "BALB", "BAYF", "CAST", "CIVC", "COLS", "COLM", "CONC", "DALY", "DBRK", "DUBL", "DELN", "PLZA", "EMBR", "FRMT", "FTVL", "GLEN", "HAYW", "LAFY", "LAKE", "MCAR", "MCAR_S", "MLBR", "MONT", "NBRK", "NCON", "OAKL", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "RICH", "ROCK", "SBRN", "SFIA", "SANL", "SHAY", "SSAN", "UCTY", "WCRK", "WARM", "WDUB", "WOAK"},
+		},
+		{
+			"where feed_onestop_id",
+			`query{stops(where:{feed_onestop_id:"BA"}) { stop_id } }`, // just check BART
+			hw{},
+			``,
+			"stops.#.stop_id",
+			[]string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "ASHB", "BALB", "BAYF", "CAST", "CIVC", "COLS", "COLM", "CONC", "DALY", "DBRK", "DUBL", "DELN", "PLZA", "EMBR", "FRMT", "FTVL", "GLEN", "HAYW", "LAFY", "LAKE", "MCAR", "MCAR_S", "MLBR", "MONT", "NBRK", "NCON", "OAKL", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "RICH", "ROCK", "SBRN", "SFIA", "SANL", "SHAY", "SSAN", "UCTY", "WCRK", "WARM", "WDUB", "WOAK"},
+		},
+		{
+			"where stop_id",
+			`query{stops(where:{stop_id:"12TH"}) { stop_id } }`,
+			hw{},
+			``,
+			"stops.#.stop_id",
+			[]string{"12TH"},
+		},
+		{
+			"where search",
+			`query{stops(where:{search:"macarthur"}) { stop_id } }`,
+			hw{},
+			``,
+			"stops.#.stop_id",
+			[]string{"MCAR", "MCAR_S"},
+		},
+		{
+			"where search 2",
+			`query{stops(where:{search:"ftvl"}) { stop_id } }`,
+			hw{},
+			``,
+			"stops.#.stop_id",
+			[]string{"FTVL"},
+		},
+		{
+			"where search 3",
+			`query{stops(where:{search:"warm springs"}) { stop_id } }`,
+			hw{},
+			``,
+			"stops.#.stop_id",
+			[]string{"WARM"},
 		},
 		// TODO: parent, children; test data has no stations.
 		// TODO: level, pathways_from_stop, pathways_to_stop: test data has no pathways...
@@ -87,7 +143,7 @@ func TestStopResolver(t *testing.T) {
 			[]string{"268", "274", "156"},
 		},
 		{
-			"stop_times_weekday_morning",
+			"stop_times where weekday_morning",
 			`query($stop_id: String!, $service_date:Date!) {  stops(where:{stop_id:$stop_id}) {stop_times(where:{service_date:$service_date, start_time:21600, end_time:25200}) { trip { trip_id} }} }`,
 			hw{"stop_id": "MCAR", "service_date": "2018-05-29"},
 			``,
@@ -95,7 +151,7 @@ func TestStopResolver(t *testing.T) {
 			[]string{"3830503WKDY", "3850526WKDY", "3610541WKDY", "3630556WKDY", "3650611WKDY", "2210533WKDY", "2230548WKDY", "2250603WKDY", "2270618WKDY", "4410518WKDY", "4430533WKDY", "4450548WKDY", "4470603WKDY"},
 		},
 		{
-			"stop_times_sunday_morning",
+			"stop_times where sunday_morning",
 			`query($stop_id: String!, $service_date:Date!) {  stops(where:{stop_id:$stop_id}) {stop_times(where:{service_date:$service_date, start_time:21600, end_time:36000}) { trip { trip_id} }} }`,
 			hw{"stop_id": "MCAR", "service_date": "2018-05-27"},
 			``,
@@ -103,14 +159,13 @@ func TestStopResolver(t *testing.T) {
 			[]string{"3730756SUN", "3750757SUN", "3770801SUN", "3790821SUN", "3610841SUN", "3630901SUN", "2230800SUN", "2250748SUN", "2270808SUN", "2290828SUN", "2310848SUN", "2330908SUN"},
 		},
 		{
-			"stop_times_saturday_evening",
+			"stop_times where saturday_evening",
 			`query($stop_id: String!, $service_date:Date!) {  stops(where:{stop_id:$stop_id}) {stop_times(where:{service_date:$service_date, start_time:57600, end_time:72000}) { trip { trip_id} }} }`,
 			hw{"stop_id": "MCAR", "service_date": "2018-05-26"},
 			``,
 			"stops.0.stop_times.#.trip.trip_id",
 			[]string{"3611521SAT", "3631541SAT", "3651601SAT", "3671621SAT", "3691641SAT", "3711701SAT", "3731721SAT", "3751741SAT", "3771801SAT", "3791821SAT", "3611841SAT", "3631901SAT", "2231528SAT", "2251548SAT", "2271608SAT", "2291628SAT", "2311648SAT", "2331708SAT", "2351728SAT", "2211748SAT", "2231808SAT", "2251828SAT", "2271848SAT", "2291908SAT", "4471533SAT", "4491553SAT", "4511613SAT", "4531633SAT", "4411653SAT", "4431713SAT", "4451733SAT", "4471753SAT", "4491813SAT", "4511833SAT", "4531853SAT"},
 		},
-
 		// TODO: census_geographies
 		// TODO: route_stop_buffer
 	}
