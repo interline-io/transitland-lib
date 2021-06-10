@@ -30,7 +30,7 @@ type restConfig struct {
 }
 
 // NewServer .
-func NewServer(cfg config.Config, srv http.Handler) http.Handler {
+func NewServer(cfg config.Config, srv http.Handler) (http.Handler, error) {
 	restcfg := restConfig{Config: cfg, srv: srv}
 	r := mux.NewRouter()
 
@@ -84,7 +84,7 @@ func NewServer(cfg config.Config, srv http.Handler) http.Handler {
 	r.HandleFunc("/operators/{key}", operatorHandler)
 	// r.HandleFunc("/stops/{stop_id}/departures", stopTimeHandler)
 
-	return r
+	return r, nil
 }
 
 func getKey(value string) string {
@@ -159,6 +159,12 @@ func makeHandler(cfg restConfig, f func() apiHandler) http.HandlerFunc {
 			opts[k] = v
 		}
 		format := opts["format"]
+
+		fmt.Println("FORMAT?", format)
+		if format == "png" && cfg.DisableImage {
+			http.Error(w, "image generation disabled", http.StatusInternalServerError)
+			return
+		}
 
 		// If this is a image request, check the local cache
 		urlkey := getKey(r.URL.Path + "/" + r.URL.RawQuery)

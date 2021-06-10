@@ -21,7 +21,6 @@ import (
 type Command struct {
 	DisableGraphql   bool
 	DisableRest      bool
-	DisableImage     bool
 	EnablePlayground bool
 	config.Config
 }
@@ -42,9 +41,9 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.GtfsDir, "gtfsdir", "", "Directory to store GTFS files")
 	fl.StringVar(&cmd.GtfsS3Bucket, "s3", "", "S3 bucket for GTFS files")
 	fl.BoolVar(&cmd.ValidateLargeFiles, "validate-large-files", false, "Allow validation of large files")
-	// fl.BoolVar(&cmd.DisableGraphql, "disable-image", false, "Disable image generation")
+	fl.BoolVar(&cmd.DisableImage, "disable-image", false, "Disable image generation")
 	fl.BoolVar(&cmd.DisableGraphql, "disable-graphql", false, "Disable GraphQL endpoint")
-	fl.BoolVar(&cmd.DisableGraphql, "disable-rest", false, "Disable REST endpoint")
+	fl.BoolVar(&cmd.DisableRest, "disable-rest", false, "Disable REST endpoint")
 	fl.BoolVar(&cmd.EnablePlayground, "playground", false, "Enable GraphQL playground")
 	fl.Parse(args)
 	if cmd.DBURL == "" {
@@ -61,8 +60,6 @@ func (cmd *Command) Run(args []string) error {
 	// Open database
 	model.DB = model.MustOpenDB(cmd.DBURL)
 
-	// Create server
-	// root, err := newServer(cfg)
 	// Setup CORS and logging
 	root := mux.NewRouter()
 	cors := handlers.CORS(
@@ -72,15 +69,23 @@ func (cmd *Command) Run(args []string) error {
 	)
 	root.Use(cors)
 	root.Use(loggingMiddleware)
+
 	// Add servers
-	graphqlServer := resolvers.NewServer(cmd.Config)
-	if !cmd.DisableGraphql {
-		mount(root, "/rest", rest.NewServer(cmd.Config, graphqlServer))
+	graphqlServer, err := resolvers.NewServer(cmd.Config)
+	if err != nil {
+		return err
 	}
 	if !cmd.DisableRest {
+		restServer, err := rest.NewServer(cmd.Config, graphqlServer)
+		if err != nil {
+			return err
+		}
+		mount(root, "/rest", restServer)
+	}
+	if !cmd.DisableGraphql {
 		mount(root, "/query", graphqlServer)
 	}
-	if cmd.EnablePlayground {
+	if cmd.EnablePlayground && !cmd.DisableGraphql {
 		root.Handle("/", playground.Handler("GraphQL playground", "/query/"))
 	}
 	// Start server

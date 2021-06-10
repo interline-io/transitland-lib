@@ -13,4 +13,5 @@ type Config struct {
 	GtfsDir            string
 	GtfsS3Bucket       string
 	ValidateLargeFiles bool
+	DisableImage       bool
 }

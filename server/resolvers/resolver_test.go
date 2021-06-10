@@ -26,7 +26,8 @@ func TestMain(m *testing.M) {
 // Test helpers
 
 func newTestClient() *client.Client {
-	return client.New(NewServer(config.Config{}))
+	srv, _ := NewServer(config.Config{})
+	return client.New(srv)
 }
 
 func toJson(m map[string]interface{}) string {

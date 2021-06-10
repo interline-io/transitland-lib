@@ -3,13 +3,11 @@ package rest
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/server/config"
-	"github.com/interline-io/transitland-lib/server/resolvers"
 	"github.com/tidwall/gjson"
 )
 
 func TestTripRequest(t *testing.T) {
-	cfg := restConfig{srv: resolvers.NewServer(config.Config{})}
+	cfg := testRestConfig()
 	d, err := makeGraphQLRequest(cfg.srv, `query{routes(where:{feed_onestop_id:"BA",route_id:"11"}) {id}}`, nil)
 	if err != nil {
 		t.Error("failed to get route id for tests")

@@ -2,13 +2,10 @@ package rest
 
 import (
 	"testing"
-
-	"github.com/interline-io/transitland-lib/server/config"
-	"github.com/interline-io/transitland-lib/server/resolvers"
 )
 
 func TestStopRequest(t *testing.T) {
-	cfg := restConfig{srv: resolvers.NewServer(config.Config{})}
+	cfg := testRestConfig()
 	fv := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
 	osid := "s-9q8yyufxmv-sanfranciscocaltrain"
 	bartstops := []string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "ASHB", "BALB", "BAYF", "CAST", "CIVC", "COLS", "COLM", "CONC", "DALY", "DBRK", "DUBL", "DELN", "PLZA", "EMBR", "FRMT", "FTVL", "GLEN", "HAYW", "LAFY", "LAKE", "MCAR", "MCAR_S", "MLBR", "MONT", "NBRK", "NCON", "OAKL", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "RICH", "ROCK", "SBRN", "SFIA", "SANL", "SHAY", "SSAN", "UCTY", "WCRK", "WARM", "WDUB", "WOAK"}

@@ -15,7 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
-func NewServer(cfg config.Config) http.Handler {
+func NewServer(cfg config.Config) (http.Handler, error) {
 	c := generated.Config{Resolvers: &Resolver{}}
 	c.Directives.HasRole = func(ctx context.Context, obj interface{}, next graphql.Resolver, role model.Role) (interface{}, error) {
 		user := auth.ForContext(ctx)
@@ -38,22 +38,22 @@ func NewServer(cfg config.Config) http.Handler {
 		if m, err := auth.AdminAuthMiddleware(model.DB); err == nil {
 			root.Use(m)
 		} else {
-			panic(err)
+			return nil, err
 		}
 	} else if cfg.UseAuth == "user" {
 		if m, err := auth.UserAuthMiddleware(model.DB); err == nil {
 			root.Use(m)
 		} else {
-			panic(err)
+			return nil, err
 		}
 
 	} else if cfg.UseAuth == "jwt" {
 		if m, err := auth.JWTMiddleware(cfg); err == nil {
 			root.Use(m)
 		} else {
-			panic(err)
+			return nil, err
 		}
 	}
 	root.Handle("/", graphqlServer).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
-	return root
+	return root, nil
 }
