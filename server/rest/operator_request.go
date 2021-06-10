@@ -31,6 +31,7 @@ type OperatorRequest struct {
 	OnestopID       string `json:"onestop_id"`
 	FeedVersionSHA1 string `json:"feed_version_sha1"`
 	FeedOnestopID   string `json:"feed_onestop_id"`
+	Search          string `json:"search"`
 	// Lat             float64 `json:"lat,string"`
 	// Lon             float64 `json:"lon,string"`
 	// Radius          float64 `json:"radius,string"`
@@ -50,6 +51,9 @@ func (r OperatorRequest) Query() (string, map[string]interface{}) {
 	}
 	if r.OnestopID != "" {
 		where["onestop_id"] = r.OnestopID
+	}
+	if r.Search != "" {
+		where["search"] = r.Search
 	}
 	// if r.Lat != 0.0 && r.Lon != 0.0 {
 	// 	where["near"] = hw{"lat": r.Lat, "lon": r.Lon, "radius": r.Radius}

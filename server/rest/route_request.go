@@ -55,6 +55,7 @@ type RouteRequest struct {
 	OperatorOnestopID string  `json:"operator_onestop_id"`
 	IncludeGeometry   string  `json:"include_geometry"`
 	Format            string  `json:"format"`
+	Search            string  `json:"search"`
 	AgencyID          int     `json:"agency_id,string"`
 	FeedVersionSHA1   string  `json:"feed_version_sha1"`
 	FeedOnestopID     string  `json:"feed_onestop_id"`
@@ -99,6 +100,9 @@ func (r RouteRequest) Query() (string, map[string]interface{}) {
 	}
 	if r.Lat != 0.0 && r.Lon != 0.0 {
 		where["near"] = hw{"lat": r.Lat, "lon": r.Lon, "radius": r.Radius}
+	}
+	if r.Search != "" {
+		where["search"] = r.Search
 	}
 	includeGeometry := false
 	if r.IncludeGeometry == "true" || r.Format == "geojson" || r.Format == "png" {

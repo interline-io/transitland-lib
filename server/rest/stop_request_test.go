@@ -24,6 +24,7 @@ func TestStopRequest(t *testing.T) {
 		{"feed_version_sha1,limit:100", StopRequest{FeedVersionSHA1: fv, Limit: 100}, "", "stops.#.stop_id", nil, 50},
 		{"lat,lon,radius 10m", StopRequest{Lat: -122.407974, Lon: 37.784471, Radius: 10}, "", "stops.#.stop_id", []string{"POWL"}, 0},
 		{"lat,lon,radius 2000m", StopRequest{Lat: -122.407974, Lon: 37.784471, Radius: 2000}, "", "stops.#.stop_id", []string{"70011", "70012", "CIVC", "EMBR", "MONT", "POWL"}, 0},
+		{"search", StopRequest{Search: "macarthur"}, "", "stops.#.stop_id", []string{"MCAR", "MCAR_S"}, 0}, // default
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

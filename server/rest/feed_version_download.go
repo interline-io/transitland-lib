@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -46,7 +48,7 @@ func feedDownloadLatestFeedVersionHandler(cfg restConfig, w http.ResponseWriter,
 	key := mux.Vars(r)["key"]
 	gvars := hw{}
 	if key == "" {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	} else if v, err := strconv.Atoi(key); err == nil {
 		gvars["id"] = v
@@ -56,14 +58,14 @@ func feedDownloadLatestFeedVersionHandler(cfg restConfig, w http.ResponseWriter,
 	// Check if we're allowed to redistribute feed and look up latest feed version
 	feedResponse, err := makeGraphQLRequest(cfg.srv, latestFeedVersionQuery, gvars)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
 	found := false
 	allowed := false
 	json, err := json.Marshal(feedResponse)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
 	if gjson.Get(string(json), "feeds.0.feed_versions.0.sha1").Exists() {
@@ -74,20 +76,25 @@ func feedDownloadLatestFeedVersionHandler(cfg restConfig, w http.ResponseWriter,
 	}
 	fvsha1 := gjson.Get(string(json), "feeds.0.feed_versions.0.sha1").String()
 	if !found {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	if !allowed {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	signedURL, err := generatePresignedURLForFeedVersion(fvsha1)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if cfg.GtfsS3Bucket != "" {
+		signedURL, err := generatePresignedURLForFeedVersion(cfg.GtfsS3Bucket, fvsha1)
+		if err != nil {
+			http.Error(w, "failed to create signed url", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Add("Location", signedURL)
+		w.WriteHeader(http.StatusFound)
+	} else {
+		p := filepath.Join(cfg.GtfsDir, fmt.Sprintf("%s.zip", fvsha1))
+		http.ServeFile(w, r, p)
 	}
-	w.Header().Add("Location", signedURL)
-	w.WriteHeader(http.StatusFound)
 }
 
 // Query redirects user to download the given fv from S3 public URL
@@ -98,9 +105,10 @@ func fvDownloadHandler(cfg restConfig, w http.ResponseWriter, r *http.Request) {
 	// Check if we're allowed to redistribute feed
 	checkfv, err := makeGraphQLRequest(cfg.srv, feedVersionFileQuery, hw{"feed_version_sha1": fvsha1})
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
+	// todo: use gjson
 	found := false
 	allowed := false
 	if v, ok := checkfv["feed_versions"].([]interface{}); len(v) > 0 && ok {
@@ -116,24 +124,28 @@ func fvDownloadHandler(cfg restConfig, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !found {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	if !allowed {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	//
-	signedURL, err := generatePresignedURLForFeedVersion(fvsha1)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if cfg.GtfsS3Bucket != "" {
+		signedURL, err := generatePresignedURLForFeedVersion(cfg.GtfsS3Bucket, fvsha1)
+		if err != nil {
+			http.Error(w, "failed to create signed url", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Add("Location", signedURL)
+		w.WriteHeader(http.StatusFound)
+	} else {
+		p := filepath.Join(cfg.GtfsDir, fmt.Sprintf("%s.zip", fvsha1))
+		http.ServeFile(w, r, p)
 	}
-	w.Header().Add("Location", signedURL)
-	w.WriteHeader(http.StatusFound)
 }
 
-func generatePresignedURLForFeedVersion(fvHash string) (string, error) {
+func generatePresignedURLForFeedVersion(s3bucket string, fvHash string) (string, error) {
 	// Initialize a session in that the SDK will use to load
 	// credentials from the shared credentials file ~/.aws/credentials.
 	sess, err := session.NewSession(&aws.Config{
@@ -143,10 +155,13 @@ func generatePresignedURLForFeedVersion(fvHash string) (string, error) {
 		return "", err
 	}
 	// Create S3 service client
+	u, _ := url.Parse(s3bucket)
+	bucket := u.Host
+	prefix := u.Path
 	svc := s3.New(sess)
 	req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String("transitland-gtfs"),
-		Key:    aws.String(fmt.Sprintf("datastore-uploads/feed_version/%s.zip", fvHash)),
+		Bucket: aws.String(bucket),
+		Key:    aws.String(fmt.Sprintf("%s/%s.zip", prefix, fvHash)),
 	})
 	return req.Presign(1 * time.Hour)
 }

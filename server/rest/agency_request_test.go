@@ -21,6 +21,7 @@ func TestAgencyRequest(t *testing.T) {
 		{"onestop_id,feed_version_sha1", AgencyRequest{OnestopID: "o-9q9-bayarearapidtransit", FeedVersionSHA1: fv}, "", "agencies.#.feed_version.sha1", []string{fv}, 0},
 		{"lat,lon,radius 10m", AgencyRequest{Lat: -122.407974, Lon: 37.784471, Radius: 10}, "", "agencies.#.agency_id", []string{"BART"}, 0},
 		{"lat,lon,radius 2000m", AgencyRequest{Lat: -122.407974, Lon: 37.784471, Radius: 2000}, "", "agencies.#.agency_id", []string{"caltrain-ca-us", "BART"}, 0},
+		{"search", AgencyRequest{Search: "caltrain"}, "", "agencies.#.agency_id", []string{"caltrain-ca-us"}, 0},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

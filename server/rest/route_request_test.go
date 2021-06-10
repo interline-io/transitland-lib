@@ -14,6 +14,7 @@ func TestRouteRequest(t *testing.T) {
 		{"none", RouteRequest{}, "", "routes.#.route_id", routeIds, 0},
 		{"limit:1", RouteRequest{Limit: 1}, "", "routes.#.route_id", nil, 1},
 		{"limit:100", RouteRequest{Limit: 100}, "", "routes.#.route_id", nil, 12},
+		{"search", RouteRequest{Search: "bullet"}, "", "routes.#.route_id", []string{"Bu-130"}, 0},
 		{"feed_onestop_id", RouteRequest{FeedOnestopID: "CT"}, "", "routes.#.route_id", []string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"}, 0},
 		{"route_type:2", RouteRequest{RouteType: "2"}, "", "routes.#.route_id", []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130"}, 0},
 		{"route_type:1", RouteRequest{RouteType: "1"}, "", "routes.#.route_id", []string{"01", "03", "05", "07", "11", "19"}, 0},

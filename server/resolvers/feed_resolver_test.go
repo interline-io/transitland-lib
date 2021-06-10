@@ -38,7 +38,7 @@ func TestFeedResolver(t *testing.T) {
 			"license",
 			`query($onestop_id:String!) { feeds(where:{onestop_id:$onestop_id}) {license {spdx_identifier url use_without_attribution create_derived_product redistribution_allowed commercial_use_allowed share_alike_optional attribution_text attribution_instructions}}}`,
 			hw{"onestop_id": "CT"},
-			`{"feeds":[{"license":{"attribution_instructions":"test attribution instructions","attribution_text":"data provided by 511.org","commercial_use_allowed":"yes","create_derived_product":"yes","redistribution_allowed":"","share_alike_optional":"yes","spdx_identifier":"test","url":"http://assets.511.org/pdf/nextgen/developers/511_Data_Agreement_Final.pdf","use_without_attribution":"no"}}]}`,
+			` {"feeds":[{"license":{"attribution_instructions":"test attribution instructions","attribution_text":"data provided by 511.org","commercial_use_allowed":"yes","create_derived_product":"yes","redistribution_allowed":"no","share_alike_optional":"yes","spdx_identifier":"test","url":"http://assets.511.org/pdf/nextgen/developers/511_Data_Agreement_Final.pdf","use_without_attribution":"no"}}]}`,
 			"",
 			nil,
 		},

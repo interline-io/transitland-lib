@@ -82,7 +82,6 @@ func NewServer(cfg config.Config, srv http.Handler) http.Handler {
 	r.HandleFunc("/operators", operatorHandler)
 	r.HandleFunc("/operators/{key}.{format}", operatorHandler)
 	r.HandleFunc("/operators/{key}", operatorHandler)
-
 	// r.HandleFunc("/stops/{stop_id}/departures", stopTimeHandler)
 
 	return r

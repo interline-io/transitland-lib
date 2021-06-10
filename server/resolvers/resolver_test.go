@@ -13,7 +13,12 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	model.DB = model.MustOpenDB(os.Getenv("TL_DATABASE_URL"))
+	g := os.Getenv("TL_TEST_SERVER_DATABASE_URL")
+	if g == "" {
+		fmt.Println("TL_TEST_SERVER_DATABASE_URL not set, skipping")
+		return
+	}
+	model.DB = model.MustOpenDB(g)
 	os.Exit(m.Run())
 }
 

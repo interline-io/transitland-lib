@@ -66,6 +66,7 @@ type StopRequest struct {
 	OnestopID       string  `json:"onestop_id"`
 	FeedVersionSHA1 string  `json:"feed_version_sha1"`
 	FeedOnestopID   string  `json:"feed_onestop_id"`
+	Search          string  `json:"search"`
 	Lat             float64 `json:"lat,string"`
 	Lon             float64 `json:"lon,string"`
 	Radius          float64 `json:"radius,string"`
@@ -98,6 +99,9 @@ func (r StopRequest) Query() (string, map[string]interface{}) {
 	}
 	if r.Lat != 0.0 && r.Lon != 0.0 {
 		where["near"] = hw{"lat": r.Lat, "lon": r.Lon, "radius": r.Radius}
+	}
+	if r.Search != "" {
+		where["search"] = r.Search
 	}
 	return stopQuery, hw{"limit": checkLimit(r.Limit), "after": checkAfter(r.After), "ids": checkIds(r.ID), "where": where}
 }
