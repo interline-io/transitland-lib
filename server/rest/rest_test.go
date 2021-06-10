@@ -6,7 +6,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/config"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/server/resolvers"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -25,6 +27,12 @@ func TestMain(m *testing.M) {
 }
 
 // Test helpers
+
+func testRestConfig() restConfig {
+	cfg := config.Config{}
+	srv, _ := resolvers.NewServer(cfg)
+	return restConfig{srv: srv, Config: cfg}
+}
 
 func toJson(m map[string]interface{}) string {
 	rr, _ := json.Marshal(&m)

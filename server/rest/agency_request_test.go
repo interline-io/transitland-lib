@@ -2,15 +2,7 @@ package rest
 
 import (
 	"testing"
-
-	"github.com/interline-io/transitland-lib/server/config"
-	"github.com/interline-io/transitland-lib/server/resolvers"
 )
-
-func testRestConfig() restConfig {
-	srv, _ := resolvers.NewServer(config.Config{})
-	return restConfig{srv: srv}
-}
 
 func TestAgencyRequest(t *testing.T) {
 	cfg := testRestConfig()
