@@ -56,11 +56,11 @@ func (cmd *validateCommand) Run(args []string) error {
 	if cmd.OutputFile != "" {
 		f, err := os.Create(cmd.OutputFile)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		b, err := json.MarshalIndent(snakejson.SnakeMarshaller{Value: result}, "", "  ")
 		if err != nil {
-			panic(err)
+			return err
 		}
 		f.Write(b)
 		f.Close()

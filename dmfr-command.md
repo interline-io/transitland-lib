@@ -3,9 +3,10 @@
 Transitland DMFR provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html). Transitland provides both a cli interface for managing a DMFR instance, as well as a library. The cli interface can synchronize DMFR files to feed records in the database, fetch each feed and create feed version records, and import the GTFS data from each feed version into the database.
 
 DMFR Subcommands:
-- [sync](#sync-command)
-- [fetch](#fetch-command)
-- [import](#import-command)
+- [DMFR Command Help](#dmfr-command-help)
+  - [sync command](#sync-command)
+  - [fetch command](#fetch-command)
+  - [import command](#import-command)
 
 ## sync command
 
@@ -13,7 +14,7 @@ DMFR Subcommands:
 % transitland dmfr sync -h
 Usage: sync <Filenames...>
   -dburl string
-    	Database URL (default: $DMFR_DATABASE_URL)
+    	Database URL (default: $TL_DATABASE_URL)
   -hide-unseen
     	Hide unseen feeds
 ```
@@ -24,7 +25,7 @@ Usage: sync <Filenames...>
 % transitland dmfr fetch -h
 Usage: fetch [feed_id...]
   -dburl string
-    	Database URL (default: $DMFR_DATABASE_URL)
+    	Database URL (default: $TL_DATABASE_URL)
   -dry-run
     	Dry run; print feeds that would be imported and exit
   -feed-url string
@@ -57,7 +58,7 @@ Usage: import [feedids...]
   -date string
     	Service on date
   -dburl string
-    	Database URL (default: $DMFR_DATABASE_URL)
+    	Database URL (default: $TL_DATABASE_URL)
   -dryrun
     	Dry run; print feeds that would be imported and exit
   -ext value

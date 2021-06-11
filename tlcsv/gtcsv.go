@@ -23,7 +23,7 @@ func init() {
 	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
 	ext.RegisterWriter("csv", w)
 	// Set chunkSize from config.
-	if v, e := strconv.Atoi(os.Getenv("TRANSITLAND_GTFS_CHUNKSIZE")); e == nil {
+	if v, e := strconv.Atoi(os.Getenv("TL_GTFS_CHUNKSIZE")); e == nil {
 		chunkSize = v
 	}
 }

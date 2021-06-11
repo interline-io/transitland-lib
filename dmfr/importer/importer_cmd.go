@@ -44,7 +44,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Import at most n feeds")
-	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $DMFR_DATABASE_URL)")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
 	fl.StringVar(&cmd.Options.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
 	fl.StringVar(&cmd.CoverDate, "date", "", "Service on date")
@@ -61,7 +61,7 @@ func (cmd *Command) Parse(args []string) error {
 	cmd.Options.Extensions = extflags
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
-		cmd.DBURL = os.Getenv("DMFR_DATABASE_URL")
+		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
 	if fvidfile != "" {
 		lines, err := getFileLines(fvidfile)

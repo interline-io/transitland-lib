@@ -1,9 +1,9 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -107,8 +107,6 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 func (v *Validator) Validate() (*Result, error) {
 	reader := v.Reader
 	result := &Result{}
-	result.EarliestCalendarDate = time.Now()
-	result.LatestCalendarDate = time.Now()
 
 	// Check file infos first, so we exit early if a file exceeds the row limit.
 	if reader2, ok := reader.(*tlcsv.Reader); ok {
@@ -134,6 +132,13 @@ func (v *Validator) Validate() (*Result, error) {
 		}
 	}
 
+	// get sha1 and service period; continue even if errors
+	fv, err := tl.NewFeedVersionFromReader(reader)
+	_ = err
+	result.SHA1 = fv.SHA1
+	result.EarliestCalendarDate = fv.EarliestCalendarDate
+	result.LatestCalendarDate = fv.LatestCalendarDate
+
 	// Main validation
 	if r := v.copier.Copy(); r != nil {
 		result.Result = *r
@@ -145,11 +150,12 @@ func (v *Validator) Validate() (*Result, error) {
 	// Validate realtime messages
 	for _, fn := range v.Options.ValidateRealtimeMessages {
 		msg, err := rt.Read(fn)
-		if err != nil {
-			panic(err)
+		if err == nil {
+			rterrs := v.rtValidator.ValidateFeedMessage(msg, nil)
+			result.HandleError(filepath.Base(fn), rterrs)
+		} else {
+			result.HandleError(filepath.Base(fn), []error{errors.New("could not read url")})
 		}
-		rterrs := v.rtValidator.ValidateFeedMessage(msg, nil)
-		result.HandleError(filepath.Base(fn), rterrs)
 	}
 
 	// Service levels

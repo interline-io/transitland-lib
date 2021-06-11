@@ -76,10 +76,10 @@ func TestService_Simplify(t *testing.T) {
 	for _, path := range feedchecks {
 		reader, err := tlcsv.NewReader(path)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		if err := reader.Open(); err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		for _, svc := range tl.NewServicesFromReader(reader) {
 			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", filepath.Base(path), svc.ServiceID), svc})
