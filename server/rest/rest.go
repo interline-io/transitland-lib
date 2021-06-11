@@ -159,8 +159,6 @@ func makeHandler(cfg restConfig, f func() apiHandler) http.HandlerFunc {
 			opts[k] = v
 		}
 		format := opts["format"]
-
-		fmt.Println("FORMAT?", format)
 		if format == "png" && cfg.DisableImage {
 			http.Error(w, "image generation disabled", http.StatusInternalServerError)
 			return

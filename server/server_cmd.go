@@ -75,15 +75,15 @@ func (cmd *Command) Run(args []string) error {
 	if err != nil {
 		return err
 	}
+	if !cmd.DisableGraphql {
+		mount(root, "/query", graphqlServer)
+	}
 	if !cmd.DisableRest {
 		restServer, err := rest.NewServer(cmd.Config, graphqlServer)
 		if err != nil {
 			return err
 		}
 		mount(root, "/rest", restServer)
-	}
-	if !cmd.DisableGraphql {
-		mount(root, "/query", graphqlServer)
 	}
 	if cmd.EnablePlayground && !cmd.DisableGraphql {
 		root.Handle("/", playground.Handler("GraphQL playground", "/query/"))
@@ -103,12 +103,15 @@ func (cmd *Command) Run(args []string) error {
 }
 
 func mount(r *mux.Router, path string, handler http.Handler) {
-	r.PathPrefix(path).Handler(
-		http.StripPrefix(
-			strings.TrimSuffix(path, "/"),
-			handler,
-		),
-	)
+	r.PathPrefix(path).Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If requesting /query rewrite to /query/ to match subrouter's "/"
+		if r.URL.Path == path {
+			r.URL.Path = r.URL.Path + "/"
+		}
+		// Remove path prefix
+		r.URL.Path = strings.TrimPrefix(r.URL.Path, path)
+		handler.ServeHTTP(w, r)
+	}))
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {

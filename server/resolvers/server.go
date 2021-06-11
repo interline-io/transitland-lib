@@ -32,7 +32,6 @@ func NewServer(cfg config.Config) (http.Handler, error) {
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(c))
 	graphqlServer := find.Middleware(model.DB, srv)
 	root := mux.NewRouter()
-
 	// Setup auth; default is all users will be anonymous.
 	if cfg.UseAuth == "admin" {
 		if m, err := auth.AdminAuthMiddleware(model.DB); err == nil {
