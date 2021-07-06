@@ -329,6 +329,8 @@ See API docs at https://godoc.org/github.com/interline-io/transitland-lib
 
 2. Populate a Postgres database with one or more feeds using `transitland-lib`, or just create an empty database using `transitland-lib`'s schema. Use [Hasura](https://hasura.io/) to provide a complete GraphQL API for reading and writing into the database. 
 
+For more information about how these web services are used within the overall architecture of the Transitland platform, see https://www.transit.land/documentation#transitland-architecture 
+
 ### `server` command
 
 _TODO: document the flags in `server/server_cmd.go` and provide some example calls_
