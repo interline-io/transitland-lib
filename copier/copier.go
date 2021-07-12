@@ -83,6 +83,8 @@ type Options struct {
 	DeduplicateJourneyPatterns bool
 	// Default error handler
 	ErrorHandler ErrorHandler
+	// Journey Pattern Key Function
+	JourneyPatternKey func(*tl.Trip) string
 	// Named extensions
 	Extensions []string
 }
@@ -106,9 +108,8 @@ type Copier struct {
 	afterValidators   []AfterValidator
 	afterCopiers      []AfterCopy
 	// book keeping
-	agencyCount int
-	geomCache   *xy.GeomCache
-	result      *Result
+	geomCache *xy.GeomCache
+	result    *Result
 	*tl.EntityMap
 }
 
@@ -133,6 +134,10 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	// Set the default BatchSize
 	if copier.BatchSize == 0 {
 		copier.BatchSize = 1_000_000
+	}
+	// Set the default Journey Pattern function
+	if copier.JourneyPatternKey == nil {
+		copier.JourneyPatternKey = journeyPatternKey
 	}
 
 	// Default set of validators
@@ -828,7 +833,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 
 		// Set JourneyPattern
-		jkey := journeyPatternKey(trip, trip.StopTimes)
+		jkey := copier.JourneyPatternKey(&trip)
 		stlen := len(trip.StopTimes)
 		if jpat, ok := journeyPatterns[jkey]; ok {
 			trip.JourneyPatternID = jpat.key
