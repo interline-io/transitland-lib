@@ -13,8 +13,13 @@ query ($limit: Int, $ids:[Int!], $where:FeedVersionFilter ) {
 	  url
 	  earliest_calendar_date
 	  latest_calendar_date
+	  # geometry
+	  feed {
+		onestop_id
+		name
+		spec
+	  }
 	  files {
-		id
 		name
 		rows
 		sha1
@@ -35,10 +40,15 @@ query ($limit: Int, $ids:[Int!], $where:FeedVersionFilter ) {
         route_id
       }
 	  feed_version_gtfs_import {
-	    id
 	    in_progress
 	    success
 	    exception_log
+		# generated_count
+		warning_count
+		skip_entity_error_count
+		skip_entity_filter_count
+		skip_entity_marked_count
+		interpolated_stop_time_count
 	  }
 	}
   }  
@@ -48,8 +58,8 @@ query ($limit: Int, $ids:[Int!], $where:FeedVersionFilter ) {
 type FeedVersionRequest struct {
 	Key           string `json:"key"`
 	ID            int    `json:"id,string"`
-	Limit         int    `json:"limit"`
-	After         int    `json:"after"`
+	Limit         int    `json:"limit,string"`
+	After         int    `json:"after,string"`
 	FeedOnestopID string `json:"feed_onestop_id"`
 	Sha1          string `json:"sha1"`
 }

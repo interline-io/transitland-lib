@@ -20,7 +20,6 @@ query(
 	  bikes_allowed
 	  stop_pattern_id
 	  feed_version {
-		id
 		sha1
 		fetched_at
 		feed {
@@ -29,13 +28,11 @@ query(
 		}
 	  }
 	  shape {
-		id
 		shape_id
 		geometry @include(if: $include_geometry)
 		generated
 	  }
 	  calendar {
-		id
 		service_id
 		start_date
 		end_date
@@ -50,10 +47,10 @@ query(
 		removed_dates
 	  }
 	  frequencies {
-		id
 		start_time
 		end_time
 		headway_secs
+		exact_times
 	  }
 	  route @include(if: $include_route) {
 		id
@@ -89,16 +86,17 @@ query(
 
 // TripRequest holds options for a /trips request
 type TripRequest struct {
-	ID              int    `json:"id,string"`
-	Limit           int    `json:"limit,string"`
-	After           int    `json:"after,string"`
-	RouteID         int    `json:"route_id,string"`
-	TripID          string `json:"trip_id,string"`
-	FeedOnestopID   string `json:"feed_onestop_id,string"`
-	FeedVersionSHA1 string `json:"feed_version_sha1"`
-	IncludeGeometry string `json:"include_geometry"`
-	ServiceDate     string `json:"service_date"`
-	Format          string
+	ID               int    `json:"id,string"`
+	Limit            int    `json:"limit,string"`
+	After            int    `json:"after,string"`
+	RouteID          int    `json:"route_id,string"`
+	TripID           string `json:"trip_id,string"`
+	FeedOnestopID    string `json:"feed_onestop_id,string"`
+	FeedVersionSHA1  string `json:"feed_version_sha1"`
+	IncludeGeometry  string `json:"include_geometry"`
+	IncludeStopTimes string `json:"include_stop_times"`
+	ServiceDate      string `json:"service_date"`
+	Format           string
 }
 
 // ResponseKey .
@@ -127,12 +125,12 @@ func (r TripRequest) Query() (string, map[string]interface{}) {
 	}
 	// Include geometry when in geojson format
 	includeGeometry := false
-	if r.IncludeGeometry == "true" || r.Format == "geojson" {
+	if r.ID > 0 || r.IncludeGeometry == "true" || r.Format == "geojson" {
 		includeGeometry = true
 	}
 	// Only include stop times when requesting a specific trip.
 	includeStopTimes := false
-	if r.ID > 0 {
+	if r.ID > 0 || r.IncludeStopTimes == "true" || r.Format == "geojson" {
 		includeStopTimes = true
 	}
 	includeRoute := false

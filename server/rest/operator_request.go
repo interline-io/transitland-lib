@@ -14,7 +14,7 @@ query ($limit: Int, $after: Int, $where:OperatorFilter) {
 	  places_cache
 	  agency {
 		places(where:{min_rank:0.2}) {
-		  name
+		  city_name: name
 		  adm0name
 		  adm1name
 		}

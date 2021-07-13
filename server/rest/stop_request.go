@@ -27,7 +27,6 @@ query($limit: Int, $ids: [Int!], $where: StopFilter) {
 		}
 	  }
 	  level {
-		id
 		level_id
 		level_name
 		level_index

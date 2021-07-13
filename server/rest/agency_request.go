@@ -7,6 +7,13 @@ query ($limit: Int, $ids: [Int!], $where:AgencyFilter) {
 	  agency_name
 	  agency_id
 	  onestop_id
+	  agency_url
+	  agency_timeone
+	  agency_lang
+	  agency_phone
+	  agency_fare_url
+	  agency_email
+
 	  geometry
 	  feed_version {
 		  id

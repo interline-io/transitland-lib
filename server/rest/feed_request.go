@@ -12,15 +12,25 @@ query($limit: Int, $ids: [Int!], $where: FeedFilter) {
 	  name
 	  onestop_id
 	  languages
-	  # geometry
-
+	  geometry
 	  urls {
 		static_current
-		static_planned
 		static_historic
+		static_planned
+		realtime_vehicle_positions
+		realtime_trip_updates
+		realtime_alerts
 	  }
 	  license {
-		  url
+		spdx_identifier
+		url
+		use_without_attribution
+		create_derived_product
+		redistribution_allowed
+		commercial_use_allowed
+		share_alike_optional
+		attribution_text
+		attribution_instructions
 	  }
 	  authorization {
 		  type
