@@ -323,6 +323,7 @@ type Frequency {
   start_time: Seconds!
   end_time: Seconds!
   headway_secs: Int!
+  exact_times: Int!
 }
 
 type StopTime {
