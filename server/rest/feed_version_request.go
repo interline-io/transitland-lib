@@ -13,7 +13,7 @@ query ($limit: Int, $ids:[Int!], $where:FeedVersionFilter ) {
 	  url
 	  earliest_calendar_date
 	  latest_calendar_date
-	  # geometry
+	  geometry
 	  feed {
 		onestop_id
 		name
