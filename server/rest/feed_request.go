@@ -12,7 +12,6 @@ query($limit: Int, $ids: [Int!], $where: FeedFilter) {
 	  name
 	  onestop_id
 	  languages
-	  geometry
 	  urls {
 		static_current
 		static_historic
@@ -46,6 +45,7 @@ query($limit: Int, $ids: [Int!], $where: FeedFilter) {
 		  sha1
 		  url
 		  fetched_at
+		  geometry
 		  feed_version_gtfs_import {
 			id
 			in_progress

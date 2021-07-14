@@ -32,11 +32,11 @@ type FeedAuthorization struct {
 	tl.FeedAuthorization
 }
 type Agency struct {
-	OnestopID       string `json:"onestop_id"`
-	FeedOnestopID   string `json:"feed_onestop_id"`
-	FeedVersionSHA1 string `json:"feed_version_sha1"`
-	SearchRank      *string
+	OnestopID       string      `json:"onestop_id"`
+	FeedOnestopID   string      `json:"feed_onestop_id"`
+	FeedVersionSHA1 string      `json:"feed_version_sha1"`
 	Geometry        *tl.Polygon `json:"geometry"`
+	SearchRank      *string
 	tl.Agency
 }
 
@@ -49,6 +49,7 @@ type FeedState struct {
 }
 
 type FeedVersion struct {
+	Geometry *tl.Polygon `json:"geometry"`
 	tl.FeedVersion
 }
 

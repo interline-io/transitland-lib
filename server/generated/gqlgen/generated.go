@@ -203,6 +203,7 @@ type ComplexityRoot struct {
 		FeedVersionGtfsImport func(childComplexity int) int
 		FetchedAt             func(childComplexity int) int
 		Files                 func(childComplexity int, limit *int) int
+		Geometry              func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		LatestCalendarDate    func(childComplexity int) int
 		Name                  func(childComplexity int) int
@@ -278,6 +279,7 @@ type ComplexityRoot struct {
 
 	Frequency struct {
 		EndTime     func(childComplexity int) int
+		ExactTimes  func(childComplexity int) int
 		HeadwaySecs func(childComplexity int) int
 		ID          func(childComplexity int) int
 		StartTime   func(childComplexity int) int
@@ -1438,6 +1440,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.FeedVersion.Files(childComplexity, args["limit"].(*int)), true
 
+	case "FeedVersion.geometry":
+		if e.complexity.FeedVersion.Geometry == nil {
+			break
+		}
+
+		return e.complexity.FeedVersion.Geometry(childComplexity), true
+
 	case "FeedVersion.id":
 		if e.complexity.FeedVersion.ID == nil {
 			break
@@ -1814,6 +1823,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Frequency.EndTime(childComplexity), true
+
+	case "Frequency.exact_times":
+		if e.complexity.Frequency.ExactTimes == nil {
+			break
+		}
+
+		return e.complexity.Frequency.ExactTimes(childComplexity), true
 
 	case "Frequency.headway_secs":
 		if e.complexity.Frequency.HeadwaySecs == nil {
@@ -3480,6 +3496,7 @@ type FeedVersion {
   updated_by: String
   name: String
   description: String
+  geometry: Polygon
   feed: Feed!
   feed_version_gtfs_import: FeedVersionGtfsImport
   files(limit: Int): [FeedVersionFileInfo!]!
@@ -3707,6 +3724,7 @@ type Frequency {
   start_time: Seconds!
   end_time: Seconds!
   headway_secs: Int!
+  exact_times: Int!
 }
 
 type StopTime {
@@ -8775,6 +8793,38 @@ func (ec *executionContext) _FeedVersion_description(ctx context.Context, field 
 	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐOString(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _FeedVersion_geometry(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Geometry, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*tl.Polygon)
+	fc.Result = res
+	return ec.marshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋtlᚐPolygon(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _FeedVersion_feed(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -10624,6 +10674,41 @@ func (ec *executionContext) _Frequency_headway_secs(ctx context.Context, field g
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.HeadwaySecs, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Frequency_exact_times(ctx context.Context, field graphql.CollectedField, obj *model.Frequency) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Frequency",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExactTimes, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -20131,6 +20216,8 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._FeedVersion_name(ctx, field, obj)
 		case "description":
 			out.Values[i] = ec._FeedVersion_description(ctx, field, obj)
+		case "geometry":
+			out.Values[i] = ec._FeedVersion_geometry(ctx, field, obj)
 		case "feed":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -20665,6 +20752,11 @@ func (ec *executionContext) _Frequency(ctx context.Context, sel ast.SelectionSet
 			}
 		case "headway_secs":
 			out.Values[i] = ec._Frequency_headway_secs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "exact_times":
+			out.Values[i] = ec._Frequency_exact_times(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

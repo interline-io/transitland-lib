@@ -95,6 +95,7 @@ type FeedVersion {
   updated_by: String
   name: String
   description: String
+  geometry: Polygon
   feed: Feed!
   feed_version_gtfs_import: FeedVersionGtfsImport
   files(limit: Int): [FeedVersionFileInfo!]!
