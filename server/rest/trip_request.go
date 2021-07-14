@@ -2,6 +2,7 @@ package rest
 
 import (
 	_ "embed"
+	"strconv"
 )
 
 //go:embed trip_request.gql
@@ -12,8 +13,10 @@ type TripRequest struct {
 	ID               int    `json:"id,string"`
 	Limit            int    `json:"limit,string"`
 	After            int    `json:"after,string"`
-	RouteID          int    `json:"route_id,string"`
 	TripID           string `json:"trip_id,string"`
+	RouteKey         string `json:"route_key"`
+	RouteID          int    `json:"route_id,string"`
+	RouteOnestopID   string `json:"route_onestop_id,string"`
 	FeedOnestopID    string `json:"feed_onestop_id,string"`
 	FeedVersionSHA1  string `json:"feed_version_sha1"`
 	IncludeGeometry  string `json:"include_geometry"`
@@ -31,8 +34,18 @@ func (r TripRequest) ResponseKey() string {
 func (r TripRequest) Query() (string, map[string]interface{}) {
 	// ID or RouteID should be considered mandatory.
 	where := hw{}
+	if r.RouteKey == "" {
+		// pass
+	} else if v, err := strconv.Atoi(r.RouteKey); err == nil {
+		r.RouteID = v
+	} else {
+		r.RouteOnestopID = r.RouteKey
+	}
 	if r.RouteID > 0 {
-		where["route_id"] = r.RouteID
+		where["route_ids"] = []int{r.RouteID}
+	}
+	if r.RouteOnestopID != "" {
+		where["route_onestop_ids"] = []string{r.RouteOnestopID}
 	}
 	if r.FeedOnestopID != "" {
 		where["feed_onestop_id"] = r.FeedOnestopID

@@ -67,11 +67,10 @@ func NewServer(cfg config.Config, srv http.Handler) (http.Handler, error) {
 	r.HandleFunc("/routes/{key}.{format}", routeHandler)
 	r.HandleFunc("/routes/{key}", routeHandler)
 
-	r.HandleFunc("/routes/{route_id}/trips.{format}", tripHandler)
-	r.HandleFunc("/routes/{route_id}/trips", tripHandler)
-
-	r.HandleFunc("/routes/{route_id}/trips/{id}", tripHandler)
-	r.HandleFunc("/routes/{route_id}/trips/{id}.{format}", tripHandler)
+	r.HandleFunc("/routes/{route_key}/trips.{format}", tripHandler)
+	r.HandleFunc("/routes/{route_key}/trips", tripHandler)
+	r.HandleFunc("/routes/{route_key}/trips/{id}", tripHandler)
+	r.HandleFunc("/routes/{route_key}/trips/{id}.{format}", tripHandler)
 
 	r.HandleFunc("/stops.{format}", stopHandler)
 	r.HandleFunc("/stops", stopHandler)

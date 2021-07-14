@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/tidwall/gjson"
@@ -8,11 +9,12 @@ import (
 
 func TestTripRequest(t *testing.T) {
 	cfg := testRestConfig()
-	d, err := makeGraphQLRequest(cfg.srv, `query{routes(where:{feed_onestop_id:"BA",route_id:"11"}) {id}}`, nil)
+	d, err := makeGraphQLRequest(cfg.srv, `query{routes(where:{feed_onestop_id:"BA",route_id:"11"}) {id onestop_id}}`, nil)
 	if err != nil {
 		t.Error("failed to get route id for tests")
 	}
 	routeId := int(gjson.Get(toJson(d), "routes.0.id").Int())
+	routeOnestopId := gjson.Get(toJson(d), "routes.0.onestop_id").String()
 
 	d2, err := makeGraphQLRequest(cfg.srv, `query{trips(where:{trip_id:"5132248WKDY"}){id}}`, nil)
 	if err != nil {
@@ -44,6 +46,8 @@ func TestTripRequest(t *testing.T) {
 		{"include_geometry=false", TripRequest{TripID: "5132248WKDY", IncludeGeometry: "false"}, "", "trips.0.shape.geometry.type", []string{}, 0},
 		{"does not include stop_times without id", TripRequest{TripID: "5132248WKDY"}, "", "trips.0.stop_times.#.stop_sequence", nil, 0},
 		{"id includes stop_times", TripRequest{ID: tripId}, "", "trips.0.stop_times.#.stop_sequence", nil, 18},
+		{"route_key onestop_id", TripRequest{Limit: 1000, RouteKey: routeOnestopId}, "", "trips.#.trip_id", nil, 364},
+		{"route_key int", TripRequest{Limit: 1000, RouteKey: strconv.Itoa(routeId)}, "", "trips.#.trip_id", nil, 364},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

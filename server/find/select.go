@@ -88,8 +88,12 @@ func TripSelect(limit *int, after *int, ids []int, where *model.TripFilter) sq.S
 		if where.FeedOnestopID != nil {
 			q = q.Where(sq.Eq{"feed_onestop_id": *where.FeedOnestopID})
 		}
-		if where.RouteID != nil {
-			q = q.Where(sq.Eq{"route_id": *where.RouteID})
+		if len(where.RouteIds) > 0 {
+			q = q.Where(sq.Eq{"route_id": where.RouteIds})
+		}
+		if len(where.RouteOnestopIds) > 0 {
+			q = q.Join("tl_route_onestop_ids tlros on tlros.route_id = t.route_id")
+			q = q.Where(sq.Eq{"tlros.onestop_id": where.RouteOnestopIds})
 		}
 		if where.TripID != nil {
 			q = q.Where(sq.Eq{"trip_id": *where.TripID})

@@ -118,6 +118,8 @@ type TripFilter struct {
 	ServiceDate     *tl.ODate `json:"service_date"`
 	TripID          *string   `json:"trip_id"`
 	RouteID         *int      `json:"route_id"`
+	RouteIds        []int     `json:"route_ids"`
+	RouteOnestopIds []string  `json:"route_onestop_ids"`
 	FeedVersionSha1 *string   `json:"feed_version_sha1"`
 	FeedOnestopID   *string   `json:"feed_onestop_id"`
 }

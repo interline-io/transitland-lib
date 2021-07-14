@@ -600,7 +600,8 @@ input PathwayFilter {
 input TripFilter {
   service_date: Date
   trip_id: String
-  route_id: Int # keep?
+  route_ids: [Int!] # keep?
+  route_onestop_ids: [String!] # keep?
   feed_version_sha1: String
   feed_onestop_id: String
 }

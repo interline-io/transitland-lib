@@ -4002,6 +4002,8 @@ input TripFilter {
   service_date: Date
   trip_id: String
   route_id: Int # keep?
+  route_ids: [Int!]
+  route_onestop_ids: [String!] # keep?
   feed_version_sha1: String
   feed_onestop_id: String
 }
@@ -19307,6 +19309,22 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj in
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("route_id"))
 			it.RouteID, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "route_ids":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("route_ids"))
+			it.RouteIds, err = ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "route_onestop_ids":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("route_onestop_ids"))
+			it.RouteOnestopIds, err = ec.unmarshalOString2ᚕstringᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
