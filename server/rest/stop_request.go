@@ -1,59 +1,12 @@
 package rest
 
-import "strconv"
+import (
+	_ "embed"
+	"strconv"
+)
 
-const stopQuery = `
-query($limit: Int, $ids: [Int!], $where: StopFilter) {
-	stops(limit: $limit, ids: $ids, where: $where) {
-	  id
-	  stop_id
-	  stop_name
-	  stop_url
-	  stop_timezone
-	  stop_desc
-	  stop_code
-	  zone_id
-	  wheelchair_boarding
-	  location_type
-	  onestop_id
-	  geometry
-	  feed_version {
-		id
-		sha1
-		fetched_at
-		feed {
-		  id
-		  onestop_id
-		}
-	  }
-	  level {
-		level_id
-		level_name
-		level_index
-	  }
-	  parent {
-		id
-		stop_id
-		stop_name
-		geometry
-	  }
-	  route_stops(limit: 1000) {
-		route {
-		  id
-		  route_id
-		  route_short_name
-		  route_long_name
-		  agency {
-			id
-			agency_id
-			agency_name
-		  }
-		}
-	  }
-	}
-  }
-  
-`
+//go:embed stop_request.gql
+var stopQuery string
 
 // StopRequest holds options for a /stops request
 type StopRequest struct {

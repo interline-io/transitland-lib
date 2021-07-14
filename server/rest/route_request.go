@@ -1,47 +1,12 @@
 package rest
 
-import "strconv"
+import (
+	_ "embed"
+	"strconv"
+)
 
-const routeQuery = `
-query($limit: Int, $ids: [Int!], $where: RouteFilter, $include_geometry: Boolean!) {
-	routes(limit: $limit, ids: $ids, where: $where) {
-	  id
-	  route_color
-	  route_desc
-	  route_id
-	  route_long_name
-	  route_short_name
-	  route_sort_order
-	  route_text_color
-	  route_type
-	  route_url
-	  onestop_id
-	  geometry @include(if: $include_geometry)
-	  agency {
-		id
-		agency_id
-		agency_name
-	  }
-	  feed_version {
-		id
-		sha1
-		fetched_at
-		feed {
-		  id
-		  onestop_id
-		}
-	  }
-	  route_stops(limit: 1000) {
-		stop {
-		  id
-		  stop_id
-		  stop_name
-		  geometry @include(if: $include_geometry)
-		}
-	  }
-	}
-  }   
-`
+//go:embed route_request.gql
+var routeQuery string
 
 // RouteRequest holds options for a Route request
 type RouteRequest struct {

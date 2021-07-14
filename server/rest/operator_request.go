@@ -1,27 +1,11 @@
 package rest
 
-const operatorQuery = `
-query ($limit: Int, $after: Int, $where:OperatorFilter) {
-	operators(after: $after, limit: $limit, where: $where) {
-	  id
-	  agency_name
-	  operator_name
-	  operator_short_name
-	  onestop_id
-	  city_name
-	  adm1name
-	  adm0name
-	  places_cache
-	  agency {
-		places(where:{min_rank:0.2}) {
-		  city_name: name
-		  adm0name
-		  adm1name
-		}
-	  }
-	}
-  }
-`
+import (
+	_ "embed"
+)
+
+//go:embed operator_request.gql
+var operatorQuery string
 
 // OperatorRequest holds options for a Route request
 type OperatorRequest struct {

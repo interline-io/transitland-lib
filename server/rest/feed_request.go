@@ -1,70 +1,12 @@
 package rest
 
 import (
+	_ "embed"
 	"strconv"
 )
 
-const feedQuery = `
-query($limit: Int, $ids: [Int!], $where: FeedFilter) {
-	feeds(limit: $limit, ids: $ids, where: $where) {
-	  id
-	  spec
-	  name
-	  onestop_id
-	  languages
-	  urls {
-		static_current
-		static_historic
-		static_planned
-		realtime_vehicle_positions
-		realtime_trip_updates
-		realtime_alerts
-	  }
-	  license {
-		spdx_identifier
-		url
-		use_without_attribution
-		create_derived_product
-		redistribution_allowed
-		commercial_use_allowed
-		share_alike_optional
-		attribution_text
-		attribution_instructions
-	  }
-	  authorization {
-		  type
-		  param_name
-		  info_url
-	  }
-	  feed_state {
-		last_fetch_error
-		last_fetched_at
-		last_successful_fetch_at
-		feed_version {
-		  id
-		  sha1
-		  url
-		  fetched_at
-		  geometry
-		  feed_version_gtfs_import {
-			id
-			in_progress
-			success
-			exception_log
-		  }
-		}
-	  }
-	  feed_versions(limit: 1000) {
-		id
-		sha1
-		fetched_at
-		url
-		earliest_calendar_date
-		latest_calendar_date
-	  }
-	}
-  }   
-`
+//go:embed feed_request.gql
+var feedQuery string
 
 // FeedRequest holds options for a Route request
 type FeedRequest struct {

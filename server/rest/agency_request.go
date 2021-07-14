@@ -1,37 +1,9 @@
 package rest
 
-const agencyQuery = `
-query ($limit: Int, $ids: [Int!], $where:AgencyFilter) {
-	agencies(limit: $limit, ids: $ids, where: $where) {
-	  id
-	  agency_name
-	  agency_id
-	  onestop_id
-	  agency_url
-	  agency_timezone
-	  agency_lang
-	  agency_phone
-	  agency_fare_url
-	  agency_email
-	  geometry
-	  feed_version {
-		  id
-		  sha1
-		  fetched_at
-		  feed {
-			id
-			onestop_id
-		  }
-	  }
-	  routes(limit:1000) {
-		id
-		route_id
-		route_short_name
-		route_long_name
-	  }	  
-	}
-  }
-`
+import _ "embed"
+
+//go:embed agency_request.gql
+var agencyQuery string
 
 // AgencyRequest holds options for a Route request
 type AgencyRequest struct {
