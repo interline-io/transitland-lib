@@ -23,6 +23,11 @@ type FeedRequest struct {
 	// Radius    float64 `json:"radius,string"`
 }
 
+// ResponseKey .
+func (r FeedRequest) ResponseKey() string {
+	return "feeds"
+}
+
 // Query returns a GraphQL query string and variables.
 func (r FeedRequest) Query() (string, map[string]interface{}) {
 	if r.Key == "" {
@@ -48,4 +53,23 @@ func (r FeedRequest) Query() (string, map[string]interface{}) {
 		where["fetch_error"] = false
 	}
 	return feedQuery, hw{"limit": checkLimit(r.Limit), "after": checkAfter(r.After), "ids": checkIds(r.ID), "where": where}
+}
+
+// ProcessGeoJSON .
+func (r FeedRequest) ProcessGeoJSON(response map[string]interface{}) error {
+	// This is not ideal. Use gjson?
+	entities, ok := response[r.ResponseKey()].([]interface{})
+	if ok {
+		for _, feature := range entities {
+			if f2, ok := feature.(map[string]interface{}); ok {
+				if f3, ok := f2["feed_state"].(map[string]interface{}); ok {
+					if f4, ok := f3["feed_version"].(hw); ok {
+						f2["geometry"] = f4["geometry"]
+						delete(f4, "geometry")
+					}
+				}
+			}
+		}
+	}
+	return processGeoJSON(r, response)
 }

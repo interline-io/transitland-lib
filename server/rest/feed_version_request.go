@@ -36,3 +36,8 @@ func (r FeedVersionRequest) Query() (string, map[string]interface{}) {
 	}
 	return feedVersionQuery, hw{"limit": checkLimit(r.Limit), "after": checkAfter(r.After), "ids": checkIds(r.ID), "where": where}
 }
+
+// ResponseKey .
+func (r FeedVersionRequest) ResponseKey() string {
+	return "feed_versions"
+}
