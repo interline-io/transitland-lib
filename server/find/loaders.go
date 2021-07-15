@@ -9,7 +9,6 @@ import (
 	dl "github.com/interline-io/transitland-lib/server/generated/dataloader"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 )
 
 // MAXBATCH is maximum batch size
@@ -357,7 +356,7 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 					qents := []*model.StopTime{}
 					MustSelect(
 						atx,
-						lateralWrap(quickSelectOrder("tl_vw_trip_offset_stop_times", params[0].Limit, nil, nil, "stop_sequence"), "gtfs_trips", "id", "trip_id", ids),
+						lateralWrap(StopTimeSelect(params[0].Limit, nil, nil, params[0].Where).Where(sq.Eq{"id": ids}), "gtfs_trips", "id", "trip_id", ids),
 						&qents,
 					)
 					group := map[int][]*model.StopTime{}
@@ -383,17 +382,7 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 						ids = append(ids, p.StopID)
 					}
 					if p := params[0].Where; p != nil && p.ServiceDate != nil {
-						// Different from other loaders -- calls tl_stop_departures postgres function
-						startTime := 0
-						endTime := 1000000
-						if p.StartTime != nil {
-							startTime = *p.StartTime
-						}
-						if p.EndTime != nil {
-							endTime = *p.EndTime
-						}
-						// TODO: use regular MustSelect
-						q := sq.Expr("SELECT t.* FROM tl_stop_departures(?,?,?,?) t", pq.Array(ids), p.ServiceDate, startTime, endTime)
+						q := StopDeparturesSelect(nil, nil, ids, p)
 						qstr, qargs, err := q.ToSql()
 						if err != nil {
 							panic(err)
@@ -405,7 +394,7 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 						// Otherwise get all stop_times for stop
 						MustSelect(
 							atx,
-							lateralWrap(quickSelectOrder("tl_vw_trip_offset_stop_times", params[0].Limit, nil, nil, "stop_sequence"), "gtfs_stops", "id", "stop_id", ids),
+							lateralWrap(StopTimeSelect(params[0].Limit, nil, nil, params[0].Where), "gtfs_stops", "id", "stop_id", ids),
 							&qents,
 						)
 					}

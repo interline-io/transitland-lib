@@ -8,7 +8,6 @@ import (
 	"unicode"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -30,20 +29,6 @@ func checkLimit(limit *int) uint64 {
 		return MAXLIMIT
 	}
 	return uint64(*limit)
-}
-
-func checkAfter(after *int) int {
-	if after == nil {
-		return 0
-	}
-	return *after
-}
-
-func checkBool(v *bool) bool {
-	if v == nil || *v == false {
-		return false
-	}
-	return true
 }
 
 func checkFloat(v *float64, min float64, max float64) float64 {
@@ -137,56 +122,4 @@ func quickSelectOrder(table string, limit *int, after *int, ids []int, order str
 		q = q.Where(sq.Gt{"t.id": *after})
 	}
 	return q
-}
-
-func FindFeedVersions(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.FeedVersionFilter) (ents []*model.FeedVersion, err error) {
-	MustSelect(model.DB, FeedVersionSelect(limit, after, ids, where), &ents)
-	return ents, nil
-}
-
-func FindFeeds(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.FeedFilter) (ents []*model.Feed, err error) {
-	MustSelect(model.DB, FeedSelect(limit, after, ids, where), &ents)
-	return ents, nil
-}
-
-func FindAgencies(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.AgencyFilter) (ents []*model.Agency, err error) {
-	q := AgencySelect(limit, after, ids, where)
-	if len(ids) == 0 && (where == nil || where.FeedVersionSha1 == nil) {
-		q = q.Where(sq.NotEq{"active": nil})
-	}
-	MustSelect(model.DB, q, &ents)
-	return ents, nil
-}
-
-func FindRoutes(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.RouteFilter) (ents []*model.Route, err error) {
-	q := RouteSelect(limit, after, ids, where)
-	if len(ids) == 0 && (where == nil || where.FeedVersionSha1 == nil) {
-		q = q.Where(sq.NotEq{"active": nil})
-	}
-	MustSelect(model.DB, q, &ents)
-	return ents, nil
-}
-
-func FindTrips(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.TripFilter) (ents []*model.Trip, err error) {
-	q := TripSelect(limit, after, ids, where)
-	if len(ids) == 0 && (where == nil || where.FeedVersionSha1 == nil) {
-		q = q.Where(sq.NotEq{"active": nil})
-	}
-	MustSelect(model.DB, q, &ents)
-	return ents, nil
-}
-
-func FindStops(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.StopFilter) (ents []*model.Stop, err error) {
-	q := StopSelect(limit, after, ids, where)
-	if len(ids) == 0 && (where == nil || where.FeedVersionSha1 == nil) {
-		q = q.Where(sq.NotEq{"active": nil})
-	}
-	MustSelect(model.DB, q, &ents)
-	return ents, nil
-}
-
-func FindOperators(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.OperatorFilter) (ents []*model.Operator, err error) {
-	q := OperatorSelect(limit, after, ids, where)
-	MustSelect(model.DB, q, &ents)
-	return ents, nil
 }
