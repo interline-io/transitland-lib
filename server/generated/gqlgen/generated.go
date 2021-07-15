@@ -79,6 +79,7 @@ type ComplexityRoot struct {
 		Geometry          func(childComplexity int) int
 		ID                func(childComplexity int) int
 		OnestopID         func(childComplexity int) int
+		Operator          func(childComplexity int) int
 		Places            func(childComplexity int, limit *int, where *model.AgencyPlaceFilter) int
 		Routes            func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SearchRank        func(childComplexity int) int
@@ -529,6 +530,7 @@ type ComplexityRoot struct {
 type AgencyResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Agency) (*model.FeedVersion, error)
 
+	Operator(ctx context.Context, obj *model.Agency) (*model.Operator, error)
 	Places(ctx context.Context, obj *model.Agency, limit *int, where *model.AgencyPlaceFilter) ([]*model.AgencyPlace, error)
 	Routes(ctx context.Context, obj *model.Agency, limit *int, where *model.RouteFilter) ([]*model.Route, error)
 	CensusGeographies(ctx context.Context, obj *model.Agency, layer string, radius *float64, limit *int) ([]*model.CensusGeography, error)
@@ -778,6 +780,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Agency.OnestopID(childComplexity), true
+
+	case "Agency.operator":
+		if e.complexity.Agency.Operator == nil {
+			break
+		}
+
+		return e.complexity.Agency.Operator(childComplexity), true
 
 	case "Agency.places":
 		if e.complexity.Agency.Places == nil {
@@ -3595,6 +3604,7 @@ type Agency {
   feed_version: FeedVersion!
   geometry: Polygon
   search_rank: String # only for search results
+  operator: Operator
   places(limit: Int, where: AgencyPlaceFilter): [AgencyPlace!]
   routes(limit: Int, where: RouteFilter): [Route!]!
   census_geographies(layer: String!, radius: Float, limit: Int): [CensusGeography!]
@@ -5716,6 +5726,38 @@ func (ec *executionContext) _Agency_search_rank(ctx context.Context, field graph
 	res := resTmp.(*string)
 	fc.Result = res
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Agency_operator(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Agency",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Agency().Operator(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Operator)
+	fc.Result = res
+	return ec.marshalOOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperator(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Agency_places(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
@@ -19441,6 +19483,17 @@ func (ec *executionContext) _Agency(ctx context.Context, sel ast.SelectionSet, o
 			out.Values[i] = ec._Agency_geometry(ctx, field, obj)
 		case "search_rank":
 			out.Values[i] = ec._Agency_search_rank(ctx, field, obj)
+		case "operator":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agency_operator(ctx, field, obj)
+				return res
+			})
 		case "places":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -24733,6 +24786,13 @@ func (ec *executionContext) marshalOOperator2ᚕᚖgithubᚗcomᚋinterlineᚑio
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalOOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperator(ctx context.Context, sel ast.SelectionSet, v *model.Operator) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Operator(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOOperatorFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperatorFilter(ctx context.Context, v interface{}) (*model.OperatorFilter, error) {

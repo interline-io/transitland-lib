@@ -98,7 +98,7 @@ func tsQuery(s string) (rank sq.Sqlizer, wc sq.Sqlizer) {
 		}
 	}
 	wordstsq := strings.Join(words, " & ")
-	rank = sq.Expr("ts_rank_cd(textsearch,to_tsquery('tl',?)) as search_rank", wordstsq)
+	rank = sq.Expr("ts_rank_cd(t.textsearch,to_tsquery('tl',?)) as search_rank", wordstsq)
 	wc = sq.Expr("t.textsearch @@ to_tsquery('tl',?)", wordstsq)
 	return rank, wc
 }

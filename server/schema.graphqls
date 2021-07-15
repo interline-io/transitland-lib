@@ -194,6 +194,7 @@ type Agency {
   feed_version: FeedVersion!
   geometry: Polygon
   search_rank: String # only for search results
+  operator: Operator
   places(limit: Int, where: AgencyPlaceFilter): [AgencyPlace!]
   routes(limit: Int, where: RouteFilter): [Route!]!
   census_geographies(layer: String!, radius: Float, limit: Int): [CensusGeography!]

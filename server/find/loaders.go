@@ -35,7 +35,8 @@ type Loaders struct {
 	LevelsByID       dl.LevelLoader
 	TripsByID        dl.TripLoader
 	// Other ID loaders
-	FeedStatesByFeedID dl.FeedStateLoader
+	FeedStatesByFeedID  dl.FeedStateLoader
+	OperatorsByAgencyID dl.OperatorLoader
 	// FeedVersionID Loaders
 	FeedVersionGtfsImportsByFeedVersionID   dl.FeedVersionGtfsImportLoader
 	FeedVersionServiceLevelsByFeedVersionID dl.FeedVersionServiceLevelWhereLoader
@@ -293,6 +294,27 @@ func Middleware(atx sqlx.Ext, next http.Handler) http.Handler {
 					return ents2, nil
 				},
 			}),
+			OperatorsByAgencyID: *dl.NewOperatorLoader(dl.OperatorLoaderConfig{
+				MaxBatch: MAXBATCH,
+				Wait:     WAIT,
+				Fetch: func(ids []int) (ents []*model.Operator, errs []error) {
+					MustSelect(
+						atx,
+						quickSelect("tl_mv_active_agency_operators", nil, nil, nil).Where(sq.Eq{"feed_id": ids}),
+						&ents,
+					)
+					byid := map[int]*model.Operator{}
+					for _, ent := range ents {
+						byid[*ent.AgencyID] = ent
+					}
+					ents2 := make([]*model.Operator, len(ids))
+					for i, id := range ids {
+						ents2[i] = byid[id]
+					}
+					return ents2, nil
+				},
+			}),
+
 			// Where loaders
 			FrequenciesByTripID: *dl.NewFrequencyWhereLoader(dl.FrequencyWhereLoaderConfig{
 				MaxBatch: MAXBATCH,

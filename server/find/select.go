@@ -10,7 +10,49 @@ import (
 // This file contains functions that generate squirrel SelectBuilders based on GraphQL filters.
 
 func AgencySelect(limit *int, after *int, ids []int, where *model.AgencyFilter) sq.SelectBuilder {
-	q := quickSelect("tl_vw_gtfs_agencies", limit, after, ids)
+	qView := sq.StatementBuilder.
+		Select(
+			"t1.*",
+			"tl_agency_geometries.geometry",
+			"tl_agency_geometries.centroid",
+			"tlp.name AS city_name",
+			"tlp.adm1name AS adm1name",
+			"tlp.adm0name AS adm0name",
+			"current_feeds.id AS feed_id",
+			"current_feeds.onestop_id AS feed_onestop_id",
+			"feed_versions.sha1 AS feed_version_sha1",
+			`COALESCE(coif.onestop_id, tl_agency_onestop_ids.onestop_id::character varying, ((('o-'::text || "right"(current_feeds.onestop_id::text, length(current_feeds.onestop_id::text) - 2)) || '-'::text) || tl_onestop_regex(t1.agency_name::text))::character varying) AS onestop_id`,
+			"feed_states.feed_version_id AS active",
+		).
+		From("gtfs_agencies t1").
+		Join("feed_versions ON feed_versions.id = t1.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+		JoinClause("LEFT JOIN tl_agency_geometries ON tl_agency_geometries.agency_id = t1.id").
+		JoinClause("LEFT JOIN tl_agency_onestop_ids ON tl_agency_onestop_ids.agency_id = t1.id").
+		JoinClause("LEFT JOIN feed_states ON feed_states.feed_version_id = t1.feed_version_id").
+		JoinClause(`LEFT JOIN LATERAL ( SELECT co.onestop_id
+			   FROM current_operators co
+				 JOIN current_operators_in_feed coif_1 ON coif_1.operator_id = co.id
+			  WHERE co.deleted_at IS NULL AND coif_1.feed_id = current_feeds.id AND coif_1.gtfs_agency_id::text = t1.agency_id::text
+			  ORDER BY co.onestop_id
+			 LIMIT 1) coif ON true`).
+		JoinClause(`LEFT JOIN LATERAL ( SELECT tlp_1.name,
+				tlp_1.adm1name,
+				tlp_1.adm0name
+			   FROM tl_agency_places tlp_1
+			  WHERE tlp_1.agency_id = t1.id AND tlp_1.rank > 0.2::double precision
+			  ORDER BY tlp_1.rank DESC
+			 LIMIT 1) tlp ON true`).
+		Where(sq.Eq{"current_feeds.deleted_at": nil})
+
+	q := sq.StatementBuilder.Select("*").FromSelect(qView, "t")
+	if len(ids) > 0 {
+		q = q.Where(sq.Eq{"t.id": ids})
+	}
+	if after != nil {
+		q = q.Where(sq.Gt{"t.id": *after})
+	}
+	q = q.Limit(checkLimit(limit))
 	if where != nil {
 		if where.Search != nil && len(*where.Search) > 1 {
 			rank, wc := tsQuery(*where.Search)
@@ -42,7 +84,64 @@ func AgencySelect(limit *int, after *int, ids []int, where *model.AgencyFilter) 
 }
 
 func RouteSelect(limit *int, after *int, ids []int, where *model.RouteFilter) sq.SelectBuilder {
-	q := quickSelect("tl_vw_gtfs_routes", limit, after, ids)
+	qView := sq.StatementBuilder.Select(
+		"gtfs_routes.id",
+		"gtfs_routes.route_id",
+		"gtfs_routes.route_short_name",
+		"gtfs_routes.route_long_name",
+		"gtfs_routes.route_desc",
+		"gtfs_routes.route_type",
+		"gtfs_routes.route_url",
+		"gtfs_routes.route_color",
+		"gtfs_routes.route_text_color",
+		"gtfs_routes.route_sort_order",
+		"gtfs_routes.created_at",
+		"gtfs_routes.updated_at",
+		"gtfs_routes.feed_version_id",
+		"gtfs_routes.agency_id",
+		"g.geometry",
+		"g.centroid AS geometry_centroid",
+		"g.generated AS geometry_generated",
+		"current_feeds.id AS feed_id",
+		"current_feeds.onestop_id AS feed_onestop_id",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"tl_agency_onestop_ids.onestop_id AS operator_onestop_id",
+		"tl_route_onestop_ids.onestop_id",
+		"feed_states.feed_version_id AS active",
+		"rh.headway_seconds_weekday_morning",
+		"gtfs_routes.textsearch",
+	).
+		From("gtfs_routes").
+		Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+		JoinClause("LEFT JOIN tl_route_onestop_ids ON tl_route_onestop_ids.route_id = gtfs_routes.id").
+		JoinClause("LEFT JOIN tl_agency_onestop_ids ON tl_agency_onestop_ids.agency_id = gtfs_routes.agency_id").
+		JoinClause("LEFT JOIN feed_states ON feed_states.feed_version_id = gtfs_routes.feed_version_id").
+		JoinClause(`LEFT JOIN LATERAL ( SELECT tl_route_geometries.route_id,
+            tl_route_geometries.feed_version_id,
+            tl_route_geometries.shape_id,
+            tl_route_geometries.direction_id,
+            tl_route_geometries.generated,
+            tl_route_geometries.geometry,
+            tl_route_geometries.centroid
+           FROM tl_route_geometries
+          WHERE tl_route_geometries.route_id = gtfs_routes.id
+          ORDER BY tl_route_geometries.route_id, tl_route_geometries.direction_id
+         LIMIT 1) g ON true`).
+		JoinClause(`LEFT JOIN LATERAL ( SELECT rh_1.headway_seconds_morning_mid AS headway_seconds_weekday_morning
+           FROM tl_route_headways rh_1
+          WHERE rh_1.dow_category = 1 AND rh_1.route_id = gtfs_routes.id) rh ON true`).
+		Where(sq.Eq{"current_feeds.deleted_at": nil})
+
+	q := sq.StatementBuilder.Select("*").FromSelect(qView, "t")
+	if len(ids) > 0 {
+		q = q.Where(sq.Eq{"t.id": ids})
+	}
+	if after != nil {
+		q = q.Where(sq.Gt{"t.id": *after})
+	}
+	q = q.Limit(checkLimit(limit))
+
 	if where != nil {
 		if where.Search != nil && len(*where.Search) > 0 {
 			rank, wc := tsQuery(*where.Search)
