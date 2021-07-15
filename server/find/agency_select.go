@@ -27,7 +27,15 @@ func AgencySelect(limit *int, after *int, ids []int, where *model.AgencyFilter) 
 			"current_feeds.id AS feed_id",
 			"current_feeds.onestop_id AS feed_onestop_id",
 			"feed_versions.sha1 AS feed_version_sha1",
-			`COALESCE(coif.onestop_id, tl_agency_onestop_ids.onestop_id::character varying, ((('o-'::text || "right"(current_feeds.onestop_id::text, length(current_feeds.onestop_id::text) - 2)) || '-'::text) || tl_onestop_regex(gtfs_agencies.agency_name::text))::character varying) AS onestop_id`,
+			`COALESCE(
+				coif.onestop_id, 
+				tl_agency_onestop_ids.onestop_id::character varying, 
+				(
+					(('o-'::text || "right"(current_feeds.onestop_id::text, length(current_feeds.onestop_id::text) - 2)) || 
+					'-'::text) || 
+					regexp_replace(regexp_replace(lower(gtfs_agencies.agency_name), '[\-\:\&\@\/]', '~', 'g'), '[^[:alnum:]\~\>\<]', '', 'g')
+				)::character varying
+			) AS onestop_id`,
 			"feed_states.feed_version_id AS active",
 		).
 		From("gtfs_agencies").
