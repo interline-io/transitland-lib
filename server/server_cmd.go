@@ -12,10 +12,10 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/interline-io/transitland-lib/server/config"
-	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/server/resolvers"
-	"github.com/interline-io/transitland-lib/server/rest"
+	"github.com/interline-io/transitland-lib/internal/server/config"
+	"github.com/interline-io/transitland-lib/internal/server/model"
+	"github.com/interline-io/transitland-lib/internal/server/resolvers"
+	"github.com/interline-io/transitland-lib/internal/server/rest"
 )
 
 type Command struct {
