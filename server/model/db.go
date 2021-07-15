@@ -15,7 +15,6 @@ import (
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
-var mapper = reflectx.NewMapperFunc("db", toSnakeCase)
 
 // TODO: replace with middleware or configuration
 var DB canBeginx
@@ -31,7 +30,7 @@ func MustOpenDB(url string) canBeginx {
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
-	db.Mapper = mapper
+	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
 	db = db.Unsafe()
 	return tldb.NewQueryLogger(db)
 }

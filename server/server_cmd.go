@@ -40,6 +40,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.UseAuth, "auth", "", "")
 	fl.StringVar(&cmd.GtfsDir, "gtfsdir", "", "Directory to store GTFS files")
 	fl.StringVar(&cmd.GtfsS3Bucket, "s3", "", "S3 bucket for GTFS files")
+	fl.StringVar(&cmd.RestPrefix, "rest-prefix", "", "REST prefix for generating pagination links")
 	fl.BoolVar(&cmd.ValidateLargeFiles, "validate-large-files", false, "Allow validation of large files")
 	fl.BoolVar(&cmd.DisableImage, "disable-image", false, "Disable image generation")
 	fl.BoolVar(&cmd.DisableGraphql, "disable-graphql", false, "Disable GraphQL endpoint")

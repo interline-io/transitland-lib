@@ -1,5 +1,5 @@
-query($limit: Int, $ids: [Int!], $where: RouteFilter, $include_geometry: Boolean!) {
-	routes(limit: $limit, ids: $ids, where: $where) {
+query($limit: Int, $ids: [Int!], $after: Int, $where: RouteFilter, $include_geometry: Boolean!) {
+	routes(limit: $limit, ids: $ids, after: $after, where: $where) {
 	  id
 	  route_color
 	  route_desc

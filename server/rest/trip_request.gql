@@ -1,12 +1,13 @@
 query(
   $limit: Int
   $ids: [Int!]
+  $after: Int,
   $include_route: Boolean!
   $include_stop_times: Boolean!
   $include_geometry: Boolean!
   $where: TripFilter
 ) {
-  trips(limit: $limit, ids: $ids, where: $where) {
+  trips(limit: $limit, ids: $ids, after: $after, where: $where) {
     id
     trip_id
     trip_headsign

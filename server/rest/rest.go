@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/gorilla/mux"
@@ -178,6 +179,11 @@ func makeHandler(cfg restConfig, f func() apiHandler) http.HandlerFunc {
 
 		// Use json marshal/unmarshal to convert string params to correct types
 		s, err := json.Marshal(opts)
+		if err != nil {
+			fmt.Println("err:", err)
+			http.Error(w, "parameter error", http.StatusInternalServerError)
+			return
+		}
 		if err := json.Unmarshal(s, ent); err != nil {
 			fmt.Println("err:", err)
 			http.Error(w, "parameter error", http.StatusInternalServerError)
@@ -185,7 +191,7 @@ func makeHandler(cfg restConfig, f func() apiHandler) http.HandlerFunc {
 		}
 
 		// Make the request
-		response, err := makeRequest(cfg, ent, format)
+		response, err := makeRequest(cfg, ent, format, r.URL)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -222,7 +228,7 @@ func makeGraphQLRequest(srv http.Handler, q string, vars map[string]interface{})
 }
 
 // makeRequest prepares an apiHandler and makes the request.
-func makeRequest(cfg restConfig, ent apiHandler, format string) ([]byte, error) {
+func makeRequest(cfg restConfig, ent apiHandler, format string, u *url.URL) ([]byte, error) {
 	query, vars := ent.Query()
 	// fmt.Printf("debug query: %s\n vars:\n %s\n", query, vars)
 	response, err := makeGraphQLRequest(cfg.srv, query, vars)
@@ -231,6 +237,18 @@ func makeRequest(cfg restConfig, ent apiHandler, format string) ([]byte, error) 
 		fmt.Printf("debug query: %s\n vars:\n %s\nresponse:\n%s\n", query, x, response)
 		return nil, errors.New("request error")
 	}
+
+	// get highest ID
+	if maxid, err := getMaxID(ent, response); err != nil {
+		fmt.Println("getmaxid err:", err)
+	} else if maxid > 0 && u != nil {
+		rq := u.Query()
+		rq.Set("after", strconv.Itoa(maxid))
+		u.RawQuery = rq.Encode()
+		nextUrl := cfg.RestPrefix + u.String()
+		response["meta"] = hw{"after": maxid, "next": nextUrl}
+	}
+
 	if format == "geojson" || format == "png" {
 		// TODO: Don't process response in-place.
 		if v, ok := ent.(canProcessGeoJSON); ok {

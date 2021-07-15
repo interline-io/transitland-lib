@@ -63,7 +63,8 @@ func StopSelect(limit *int, after *int, ids []int, where *model.StopFilter) sq.S
 			q = q.Where("ST_Intersects(t.geometry, ?)", where.Within)
 		}
 		if where.Near != nil {
-			q = q.Where("ST_DWithin(t.geometry, ST_MakePoint(?,?), ?)", where.Near.Lat, where.Near.Lon, where.Near.Radius)
+			radius := checkFloat(&where.Near.Radius, 0, 10_000)
+			q = q.Where("ST_DWithin(t.geometry, ST_MakePoint(?,?), ?)", where.Near.Lat, where.Near.Lon, radius)
 		}
 	}
 	return q

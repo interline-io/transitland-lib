@@ -1,5 +1,5 @@
-query($limit: Int, $ids: [Int!], $where: StopFilter) {
-  stops(limit: $limit, ids: $ids, where: $where) {
+query($limit: Int, $after: Int, $ids: [Int!], $where: StopFilter) {
+  stops(limit: $limit, ids: $ids, after: $after, where: $where) {
     id
     stop_id
     stop_name

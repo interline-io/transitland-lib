@@ -13,11 +13,11 @@ type TripRequest struct {
 	ID               int    `json:"id,string"`
 	Limit            int    `json:"limit,string"`
 	After            int    `json:"after,string"`
-	TripID           string `json:"trip_id,string"`
+	TripID           string `json:"trip_id"`
 	RouteKey         string `json:"route_key"`
 	RouteID          int    `json:"route_id,string"`
-	RouteOnestopID   string `json:"route_onestop_id,string"`
-	FeedOnestopID    string `json:"feed_onestop_id,string"`
+	RouteOnestopID   string `json:"route_onestop_id"`
+	FeedOnestopID    string `json:"feed_onestop_id"`
 	FeedVersionSHA1  string `json:"feed_version_sha1"`
 	IncludeGeometry  string `json:"include_geometry"`
 	IncludeStopTimes string `json:"include_stop_times"`

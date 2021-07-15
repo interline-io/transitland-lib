@@ -49,7 +49,7 @@ type testRest struct {
 }
 
 func testquery(t *testing.T, cfg restConfig, tc testRest) {
-	data, err := makeRequest(cfg, tc.h, tc.format)
+	data, err := makeRequest(cfg, tc.h, tc.format, nil)
 	if err != nil {
 		t.Error(err)
 		return

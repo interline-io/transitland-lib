@@ -1,5 +1,5 @@
-query ($limit: Int, $ids:[Int!], $where:FeedVersionFilter ) {
-	feed_versions(limit: $limit, ids: $ids, where: $where) {
+query ($limit: Int, $ids:[Int!], $after: Int, $where:FeedVersionFilter ) {
+	feed_versions(limit: $limit, ids: $ids, after: $after, where: $where) {
 	  id
 	  sha1
 	  fetched_at
