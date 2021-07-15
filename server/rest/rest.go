@@ -44,28 +44,28 @@ func NewServer(cfg config.Config, srv http.Handler) (http.Handler, error) {
 
 	r.HandleFunc("/feeds.{format}", feedHandler)
 	r.HandleFunc("/feeds", feedHandler)
-	r.HandleFunc("/feeds/{key}.{format}", feedHandler)
-	r.HandleFunc("/feeds/{key}", feedHandler)
-	r.HandleFunc("/feeds/{key}/download_latest_feed_version", makeHandlerFunc(restcfg, feedDownloadLatestFeedVersionHandler))
+	r.HandleFunc("/feeds/{feed_key}.{format}", feedHandler)
+	r.HandleFunc("/feeds/{feed_key}", feedHandler)
+	r.HandleFunc("/feeds/{feed_key}/download_latest_feed_version", makeHandlerFunc(restcfg, feedDownloadLatestFeedVersionHandler))
 
 	r.HandleFunc("/feed_versions.{format}", fvHandler)
 	r.HandleFunc("/feed_versions", fvHandler)
-	r.HandleFunc("/feed_versions/{key}.{format}", fvHandler)
-	r.HandleFunc("/feed_versions/{key}", fvHandler)
-	r.HandleFunc("/feed_versions/{key}/download", makeHandlerFunc(restcfg, fvDownloadHandler))
+	r.HandleFunc("/feed_versions/{feed_version_key}.{format}", fvHandler)
+	r.HandleFunc("/feed_versions/{feed_version_key}", fvHandler)
+	r.HandleFunc("/feeds/{feed_key}/feed_versions", fvHandler)
+	r.HandleFunc("/feed_versions/{feed_version_key}/download", makeHandlerFunc(restcfg, fvDownloadHandler))
 
 	r.HandleFunc("/agencies.{format}", agencyHandler)
 	r.HandleFunc("/agencies", agencyHandler)
-	r.HandleFunc("/agencies/{key}.{format}", agencyHandler)
-	r.HandleFunc("/agencies/{key}", agencyHandler)
-
-	r.HandleFunc("/agencies/{agency_id}/routes.{format}", routeHandler)
-	r.HandleFunc("/agencies/{agency_id}/routes", routeHandler)
+	r.HandleFunc("/agencies/{agency_key}.{format}", agencyHandler)
+	r.HandleFunc("/agencies/{agency_key}", agencyHandler)
 
 	r.HandleFunc("/routes.{format}", routeHandler)
 	r.HandleFunc("/routes", routeHandler)
-	r.HandleFunc("/routes/{key}.{format}", routeHandler)
-	r.HandleFunc("/routes/{key}", routeHandler)
+	r.HandleFunc("/routes/{route_key}.{format}", routeHandler)
+	r.HandleFunc("/routes/{route_key}", routeHandler)
+	r.HandleFunc("/agencies/{agency_key}/routes.{format}", routeHandler)
+	r.HandleFunc("/agencies/{agency_key}/routes", routeHandler)
 
 	r.HandleFunc("/routes/{route_key}/trips.{format}", tripHandler)
 	r.HandleFunc("/routes/{route_key}/trips", tripHandler)
@@ -74,8 +74,8 @@ func NewServer(cfg config.Config, srv http.Handler) (http.Handler, error) {
 
 	r.HandleFunc("/stops.{format}", stopHandler)
 	r.HandleFunc("/stops", stopHandler)
-	r.HandleFunc("/stops/{key}.{format}", stopHandler)
-	r.HandleFunc("/stops/{key}", stopHandler)
+	r.HandleFunc("/stops/{stop_key}.{format}", stopHandler)
+	r.HandleFunc("/stops/{stop_key}", stopHandler)
 
 	r.HandleFunc("/operators.{format}", operatorHandler)
 	r.HandleFunc("/operators", operatorHandler)

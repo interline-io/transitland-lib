@@ -46,6 +46,7 @@ type FeedVersionDeleteResult struct {
 type FeedVersionFilter struct {
 	FeedOnestopID *string `json:"feed_onestop_id"`
 	Sha1          *string `json:"sha1"`
+	FeedIds       []int   `json:"feed_ids"`
 }
 
 type FeedVersionServiceLevelFilter struct {
@@ -90,10 +91,10 @@ type RouteFilter struct {
 	FeedOnestopID     *string      `json:"feed_onestop_id"`
 	RouteID           *string      `json:"route_id"`
 	RouteType         *int         `json:"route_type"`
-	OperatorOnestopID *string      `json:"operator_onestop_id"`
 	Within            *tl.Polygon  `json:"within"`
 	Near              *PointRadius `json:"near"`
 	Search            *string      `json:"search"`
+	OperatorOnestopID *string      `json:"operator_onestop_id"`
 	AgencyIds         []int        `json:"agency_ids"`
 }
 
@@ -117,7 +118,6 @@ type StopTimeFilter struct {
 type TripFilter struct {
 	ServiceDate     *tl.ODate `json:"service_date"`
 	TripID          *string   `json:"trip_id"`
-	RouteID         *int      `json:"route_id"`
 	RouteIds        []int     `json:"route_ids"`
 	RouteOnestopIds []string  `json:"route_onestop_ids"`
 	FeedVersionSha1 *string   `json:"feed_version_sha1"`

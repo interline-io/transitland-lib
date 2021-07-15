@@ -17,8 +17,8 @@ import (
 )
 
 const latestFeedVersionQuery = `
-query($feed_onestop_id: String!) {
-	feeds(where: { onestop_id: $feed_onestop_id }) {
+query($feed_onestop_id: String!, $ids: [Int!]) {
+	feeds(ids: $ids, where: { onestop_id: $feed_onestop_id }) {
 	  license {
 		redistribution_allowed
 	  }
@@ -29,29 +29,16 @@ query($feed_onestop_id: String!) {
   }
 `
 
-const feedVersionFileQuery = `
-query($feed_version_sha1:String!) {
-	feed_versions(limit:1, where:{sha1:$feed_version_sha1}) {
-	  sha1
-	  feed {
-		license {
-			redistribution_allowed
-		}
-	  }
-	}
-  }
-`
-
 // Query redirects user to download the given fv from S3 public URL
 // assuming that redistribution is allowed for the feed.
 func feedDownloadLatestFeedVersionHandler(cfg restConfig, w http.ResponseWriter, r *http.Request) {
-	key := mux.Vars(r)["key"]
+	key := mux.Vars(r)["feed_key"]
 	gvars := hw{}
 	if key == "" {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	} else if v, err := strconv.Atoi(key); err == nil {
-		gvars["id"] = v
+		gvars["ids"] = []int{v}
 	} else {
 		gvars["feed_onestop_id"] = key
 	}
@@ -97,13 +84,37 @@ func feedDownloadLatestFeedVersionHandler(cfg restConfig, w http.ResponseWriter,
 	}
 }
 
+const feedVersionFileQuery = `
+query($feed_version_sha1:String!, $ids: [Int!]) {
+	feed_versions(limit:1, ids: $ids, where:{sha1:$feed_version_sha1}) {
+	  sha1
+	  feed {
+		license {
+			redistribution_allowed
+		}
+	  }
+	}
+  }
+`
+
 // Query redirects user to download the given fv from S3 public URL
 // assuming that redistribution is allowed for the feed.
 func fvDownloadHandler(cfg restConfig, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	fvsha1 := vars["key"]
+	gvars := hw{}
+	key := vars["feed_version_key"]
+	if key == "" {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	} else if v, err := strconv.Atoi(key); err == nil {
+		gvars["ids"] = []int{v}
+	} else {
+		gvars["feed_version_sha1"] = key
+	}
+	fmt.Println("gvars:", gvars)
+
 	// Check if we're allowed to redistribute feed
-	checkfv, err := makeGraphQLRequest(cfg.srv, feedVersionFileQuery, hw{"feed_version_sha1": fvsha1})
+	checkfv, err := makeGraphQLRequest(cfg.srv, feedVersionFileQuery, gvars)
 	if err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
@@ -111,9 +122,11 @@ func fvDownloadHandler(cfg restConfig, w http.ResponseWriter, r *http.Request) {
 	// todo: use gjson
 	found := false
 	allowed := false
+	fvsha1 := ""
 	if v, ok := checkfv["feed_versions"].([]interface{}); len(v) > 0 && ok {
 		found = true
 		if v2, ok := v[0].(hw); ok {
+			fvsha1 = v2["sha1"].(string)
 			if v3, ok := v2["feed"].(hw); ok {
 				if v4, ok := v3["license"].(hw); ok {
 					if v4["redistribution_allowed"] != "no" {

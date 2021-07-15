@@ -215,6 +215,9 @@ func FeedVersionSelect(limit *int, after *int, ids []int, where *model.FeedVersi
 		if where.Sha1 != nil {
 			q = q.Where(sq.Eq{"sha1": *where.Sha1})
 		}
+		if len(where.FeedIds) > 0 {
+			q = q.Where(sq.Eq{"feed_id": where.FeedIds})
+		}
 		if where.FeedOnestopID != nil {
 			q = q.Where(sq.Eq{"cf.onestop_id": *where.FeedOnestopID})
 		}

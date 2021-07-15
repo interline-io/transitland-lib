@@ -536,6 +536,7 @@ input OperatorFilter {
 input FeedVersionFilter {
   feed_onestop_id: String
   sha1: String
+  feed_ids: [Int!] # keep?
 }
 
 enum ImportStatus {
@@ -569,10 +570,10 @@ input RouteFilter {
   feed_onestop_id: String
   route_id: String
   route_type: Int
-  operator_onestop_id: String
   within: Polygon
   near: PointRadius  
   search: String
+  operator_onestop_id: String
   agency_ids: [Int!] # keep?
 }
 

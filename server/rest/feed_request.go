@@ -10,7 +10,7 @@ var feedQuery string
 
 // FeedRequest holds options for a Route request
 type FeedRequest struct {
-	Key        string `json:"key"`
+	FeedKey    string `json:"feed_key"`
 	ID         int    `json:"id,string"`
 	Limit      int    `json:"limit,string"`
 	After      int    `json:"after,string"`
@@ -30,12 +30,12 @@ func (r FeedRequest) ResponseKey() string {
 
 // Query returns a GraphQL query string and variables.
 func (r FeedRequest) Query() (string, map[string]interface{}) {
-	if r.Key == "" {
+	if r.FeedKey == "" {
 		// pass
-	} else if v, err := strconv.Atoi(r.Key); err == nil {
+	} else if v, err := strconv.Atoi(r.FeedKey); err == nil {
 		r.ID = v
 	} else {
-		r.OnestopID = r.Key
+		r.OnestopID = r.FeedKey
 	}
 	where := hw{}
 	if r.OnestopID != "" {

@@ -11,6 +11,11 @@ query ($limit: Int, $ids: [Int!], $where:AgencyFilter) {
 	  agency_fare_url
 	  agency_email
 	  geometry
+		places(where:{min_rank:0.2}) {
+		  city_name: name
+		  adm0name
+		  adm1name
+		}
 	  feed_version {
 		  id
 		  sha1

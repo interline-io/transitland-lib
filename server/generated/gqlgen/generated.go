@@ -3937,6 +3937,7 @@ input OperatorFilter {
 input FeedVersionFilter {
   feed_onestop_id: String
   sha1: String
+  feed_ids: [Int!] # keep?
 }
 
 enum ImportStatus {
@@ -3970,10 +3971,10 @@ input RouteFilter {
   feed_onestop_id: String
   route_id: String
   route_type: Int
-  operator_onestop_id: String
   within: Polygon
   near: PointRadius  
   search: String
+  operator_onestop_id: String
   agency_ids: [Int!] # keep?
 }
 
@@ -4001,8 +4002,7 @@ input PathwayFilter {
 input TripFilter {
   service_date: Date
   trip_id: String
-  route_id: Int # keep?
-  route_ids: [Int!]
+  route_ids: [Int!] # keep?
   route_onestop_ids: [String!] # keep?
   feed_version_sha1: String
   feed_onestop_id: String
@@ -18876,6 +18876,14 @@ func (ec *executionContext) unmarshalInputFeedVersionFilter(ctx context.Context,
 			if err != nil {
 				return it, err
 			}
+		case "feed_ids":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("feed_ids"))
+			it.FeedIds, err = ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		}
 	}
 
@@ -19124,14 +19132,6 @@ func (ec *executionContext) unmarshalInputRouteFilter(ctx context.Context, obj i
 			if err != nil {
 				return it, err
 			}
-		case "operator_onestop_id":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("operator_onestop_id"))
-			it.OperatorOnestopID, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
 		case "within":
 			var err error
 
@@ -19153,6 +19153,14 @@ func (ec *executionContext) unmarshalInputRouteFilter(ctx context.Context, obj i
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
 			it.Search, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "operator_onestop_id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("operator_onestop_id"))
+			it.OperatorOnestopID, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -19301,14 +19309,6 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj in
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("trip_id"))
 			it.TripID, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "route_id":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("route_id"))
-			it.RouteID, err = ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}

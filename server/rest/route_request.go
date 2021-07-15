@@ -10,10 +10,11 @@ var routeQuery string
 
 // RouteRequest holds options for a Route request
 type RouteRequest struct {
-	Key               string  `json:"key"`
 	ID                int     `json:"id,string"`
 	Limit             int     `json:"limit,string"`
 	After             int     `json:"after,string"`
+	AgencyKey         string  `json:"agency_key"`
+	RouteKey          string  `json:"route_key"`
 	RouteID           string  `json:"route_id"`
 	RouteType         string  `json:"route_type"`
 	OnestopID         string  `json:"onestop_id"`
@@ -34,12 +35,21 @@ func (r RouteRequest) ResponseKey() string { return "routes" }
 
 // Query returns a GraphQL query string and variables.
 func (r RouteRequest) Query() (string, map[string]interface{}) {
-	if r.Key == "" {
+	// Handle operator key
+	if r.AgencyKey == "" {
 		// pass
-	} else if v, err := strconv.Atoi(r.Key); err == nil {
+	} else if v, err := strconv.Atoi(r.AgencyKey); err == nil {
+		r.AgencyID = v
+	} else {
+		r.OperatorOnestopID = r.AgencyKey
+	}
+	// Handle route key
+	if r.RouteKey == "" {
+		// pass
+	} else if v, err := strconv.Atoi(r.RouteKey); err == nil {
 		r.ID = v
 	} else {
-		r.OnestopID = r.Key
+		r.OnestopID = r.RouteKey
 	}
 	where := hw{}
 	if r.FeedVersionSHA1 != "" {
@@ -61,7 +71,7 @@ func (r RouteRequest) Query() (string, map[string]interface{}) {
 		where["operator_onestop_id"] = r.OperatorOnestopID
 	}
 	if r.AgencyID > 0 {
-		where["agency_id"] = r.AgencyID
+		where["agency_ids"] = []int{r.AgencyID}
 	}
 	if r.Lat != 0.0 && r.Lon != 0.0 {
 		where["near"] = hw{"lat": r.Lat, "lon": r.Lon, "radius": r.Radius}

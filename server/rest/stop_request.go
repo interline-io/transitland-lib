@@ -10,7 +10,7 @@ var stopQuery string
 
 // StopRequest holds options for a /stops request
 type StopRequest struct {
-	Key             string  `json:"key"`
+	StopKey         string  `json:"stop_key"`
 	ID              int     `json:"id,string"`
 	Limit           int     `json:"limit,string"`
 	After           int     `json:"after,string"`
@@ -29,12 +29,12 @@ func (r StopRequest) ResponseKey() string { return "stops" }
 
 // Query returns a GraphQL query string and variables.
 func (r StopRequest) Query() (string, map[string]interface{}) {
-	if r.Key == "" {
+	if r.StopKey == "" {
 		// pass
-	} else if v, err := strconv.Atoi(r.Key); err == nil {
+	} else if v, err := strconv.Atoi(r.StopKey); err == nil {
 		r.ID = v
 	} else {
-		r.OnestopID = r.Key
+		r.OnestopID = r.StopKey
 	}
 	where := hw{}
 	if r.FeedVersionSHA1 != "" {

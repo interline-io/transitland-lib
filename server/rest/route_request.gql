@@ -16,6 +16,7 @@ query($limit: Int, $ids: [Int!], $where: RouteFilter, $include_geometry: Boolean
 		id
 		agency_id
 		agency_name
+		onestop_id
 	  }
 	  feed_version {
 		id

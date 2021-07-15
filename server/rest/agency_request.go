@@ -1,6 +1,9 @@
 package rest
 
-import _ "embed"
+import (
+	_ "embed"
+	"strconv"
+)
 
 //go:embed agency_request.gql
 var agencyQuery string
@@ -10,6 +13,7 @@ type AgencyRequest struct {
 	ID              int     `json:"id,string"`
 	Limit           int     `json:"limit,string"`
 	After           int     `json:"after,string"`
+	AgencyKey       string  `json:"agency_key"`
 	AgencyID        string  `json:"agency_id"`
 	AgencyName      string  `json:"agency_name"`
 	OnestopID       string  `json:"onestop_id"`
@@ -26,6 +30,13 @@ func (r AgencyRequest) ResponseKey() string { return "agencies" }
 
 // Query returns a GraphQL query string and variables.
 func (r AgencyRequest) Query() (string, map[string]interface{}) {
+	if r.AgencyKey == "" {
+		// pass
+	} else if v, err := strconv.Atoi(r.AgencyKey); err == nil {
+		r.ID = v
+	} else {
+		r.OnestopID = r.AgencyKey
+	}
 	where := hw{}
 	if r.FeedVersionSHA1 != "" {
 		where["feed_version_sha1"] = r.FeedVersionSHA1
