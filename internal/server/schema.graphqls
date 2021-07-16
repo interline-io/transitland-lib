@@ -1,0 +1,646 @@
+directive @hasRole(role: Role!) on FIELD_DEFINITION
+
+enum Role {
+  ANON
+  ADMIN
+  USER
+}
+
+# Root query and mutation
+
+type Query {
+  feed_versions(limit: Int, after: Int, ids: [Int!], where: FeedVersionFilter): [FeedVersion!]!
+  feeds(limit: Int, after: Int, ids: [Int!], where: FeedFilter): [Feed!]!
+  agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
+  routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
+  stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
+  trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
+  operators(limit: Int, after: Int, ids: [Int!], where: OperatorFilter): [Operator!]!
+}
+
+type Mutation {
+    validate_gtfs(file: Upload, url: String, realtime_urls: [String!]): ValidationResult @hasRole(role: USER)
+    feed_version_update(id: Int!, set: FeedVersionSetInput!): FeedVersion @hasRole(role: ADMIN)
+    feed_version_fetch(file: Upload, url: String, feed_onestop_id: String!): FeedVersionFetchResult @hasRole(role: ADMIN)
+    feed_version_import(sha1: String!): FeedVersionImportResult! @hasRole(role: ADMIN)
+    feed_version_unimport(id: Int!): FeedVersionUnimportResult! @hasRole(role: ADMIN)
+    feed_version_delete(id: Int!): FeedVersionDeleteResult! @hasRole(role: ADMIN)
+}
+
+# Feed
+
+type Feed {
+  id: Int!
+  onestop_id: String!
+  name: String
+  feed_namespace_id: String!
+  file: String!
+  spec: String!
+  languages: [String!]
+  associated_feeds: [String!]
+  authorization: FeedAuthorization
+  urls: FeedUrls
+  license: FeedLicense
+  search_rank: String # only for search results
+  associated_operators: [Operator!]
+  feed_state: FeedState
+  feed_versions(limit: Int, where: FeedVersionFilter): [FeedVersion!]!
+}
+
+type FeedState {
+  id: Int!
+  last_fetch_error: String!
+  last_fetched_at: Time
+  last_successful_fetch_at: Time
+  feed_version: FeedVersion
+}
+
+type FeedAuthorization {
+  type: String!
+  param_name: String!
+  info_url: String!
+}
+
+type FeedLicense {
+	spdx_identifier: String!
+	url: String!
+	use_without_attribution: String!
+  create_derived_product: String!
+  redistribution_allowed: String!
+  commercial_use_allowed: String!
+  share_alike_optional: String!
+	attribution_text: String!
+	attribution_instructions: String!
+}
+
+type FeedUrls {
+  static_current: String!
+  static_historic: [String!]!
+  static_planned: String!
+  realtime_vehicle_positions: String!
+  realtime_trip_updates: String!
+  realtime_alerts: String!
+}
+
+# Feed Version
+
+type FeedVersion {
+  id: Int!
+  sha1: String!
+  fetched_at: Time!
+  url: String!
+  earliest_calendar_date: Date!
+  latest_calendar_date: Date!
+  created_by: String
+  updated_by: String
+  name: String
+  description: String
+  geometry: Polygon
+  feed: Feed!
+  feed_version_gtfs_import: FeedVersionGtfsImport
+  files(limit: Int): [FeedVersionFileInfo!]!
+  service_levels(limit: Int, where: FeedVersionServiceLevelFilter): [FeedVersionServiceLevel!]!
+  agencies(limit: Int, where: AgencyFilter): [Agency!]!
+  routes(limit: Int, where: RouteFilter): [Route!]!
+  stops(limit: Int, where: StopFilter): [Stop!]!
+  trips(limit: Int, where: TripFilter): [Trip!]!
+  feed_infos(limit: Int): [FeedInfo!]!
+}
+
+type FeedVersionFileInfo {
+  id: Int!
+  name: String!
+  rows: Int!
+  sha1: String!
+  header: String!
+  csv_like: Boolean!
+  size: Int!
+}
+
+type FeedVersionGtfsImport {
+  id: Int!
+  in_progress: Boolean!
+  success: Boolean!
+  exception_log: String!
+  skip_entity_error_count: Any
+  entity_count: Any
+  warning_count: Any
+  created_at: Time
+  updated_at: Time
+  skip_entity_reference_count: Any
+  skip_entity_filter_count: Any
+  skip_entity_marked_count: Any
+  interpolated_stop_time_count: Int
+}
+
+type FeedVersionServiceLevel {
+  id: Int!
+  route_id: String
+  route_short_name: String!
+  route_long_name: String!
+  start_date: Date!
+  end_date: Date!
+  monday: Int!
+  tuesday: Int!
+  wednesday: Int!
+  thursday: Int!
+  friday: Int!
+  saturday: Int!
+  sunday: Int!
+}
+
+# Operator
+
+type Operator {
+  id: Int!
+  agency_id: Int     
+  agency_name: String
+  agency_onestop_id: String 
+  feed_id: Int
+  feed_version_id: Int    
+  feed_version_sha1: String
+  feed_onestop_id: String  
+  feed_namespace_id: String
+  onestop_id: String
+  operator_id: Int
+  operator_onestop_id: String
+  operator_name: String
+  operator_short_name: String
+  operator_tags: Any # use map? 'any' is for pass through.
+  operator_associated_feeds: Any
+  city_name: String
+  adm1name: String
+  adm0name: String
+  places_cache: [String!]
+  search_rank: String # only for search results
+  agency: Agency
+}
+
+# GTFS Entities
+
+type Agency {
+  id: Int!
+  onestop_id: String!
+  agency_email: String!
+  agency_fare_url: String!
+  agency_id: String!
+  agency_lang: String!
+  agency_name: String!
+  agency_phone: String!
+  agency_timezone: String!
+  agency_url: String!
+  feed_version_sha1: String
+  feed_onestop_id: String
+  feed_version: FeedVersion!
+  geometry: Polygon
+  search_rank: String # only for search results
+  operator: Operator
+  places(limit: Int, where: AgencyPlaceFilter): [AgencyPlace!]
+  routes(limit: Int, where: RouteFilter): [Route!]!
+  census_geographies(layer: String!, radius: Float, limit: Int): [CensusGeography!]
+}
+
+
+type Route {
+  id: Int!
+  onestop_id: String
+  route_id: String!
+  route_short_name: String!
+  route_long_name: String!
+  route_type: Int!
+  route_color: String!
+  route_text_color: String!
+  route_sort_order: Int!
+  route_url: String!
+  route_desc: String!
+  geometry: Geometry!
+  agency: Agency!
+  feed_version: FeedVersion!
+  feed_version_sha1: String!
+  feed_onestop_id: String!
+  headway_seconds_weekday_morning: Int
+  search_rank: String # only for search results
+  trips(limit: Int, where: TripFilter): [Trip!]!
+  route_stops(limit: Int): [RouteStop!]!
+  headways(limit: Int): [RouteHeadway!]!
+  geometries(limit: Int): [RouteGeometry!]!
+  census_geographies(layer: String!, radius: Float, limit: Int): [CensusGeography!]
+  route_stop_buffer(radius: Float): RouteStopBuffer!
+}
+
+type Stop {
+  id: Int!
+  onestop_id: String!
+  location_type: Int!
+  stop_code: String!
+  stop_desc: String!
+  stop_id: String!
+  stop_name: String!
+  stop_timezone: String!
+  stop_url: String!
+  wheelchair_boarding: Int!
+  zone_id: String!
+  geometry: Point!
+  feed_version_sha1: String!
+  feed_onestop_id: String!  
+  feed_version: FeedVersion!
+  level: Level
+  parent: Stop
+  children(limit: Int): [Stop!]
+  route_stops(limit: Int): [RouteStop!]!
+  pathways_from_stop(limit: Int): [Pathway!]!
+  pathways_to_stop(limit: Int): [Pathway!]!
+  stop_times(limit: Int, where: StopTimeFilter): [StopTime!]!
+  search_rank: String # only for search results
+  census_geographies(layer: String!, radius: Float, limit: Int): [CensusGeography!]
+}
+
+type Pathway {
+  id: Int!
+  pathway_id: String!
+  pathway_mode: Int!
+  is_bidirectional: Int!
+  length: Float!
+  traversal_time: Int!
+  stair_count: Int!
+  max_slope: Float!
+  min_width: Float!
+  signposted_as: String!
+  reverse_signposted_as: String!
+  from_stop: Stop!
+  to_stop: Stop!
+}
+
+type Level {
+  id: Int!
+  level_id: String!
+  level_name: String!
+  level_index: Float!
+}
+
+type Trip {
+  id: Int!
+  trip_id: String!
+  trip_headsign: String!
+  trip_short_name: String!
+  direction_id: Int!
+  block_id: String!
+  wheelchair_accessible: Int!
+  bikes_allowed: Int!
+  stop_pattern_id: Int!
+  calendar: Calendar!
+  route: Route!
+  shape: Shape
+  feed_version: FeedVersion!
+  stop_times(limit: Int): [StopTime]!
+  frequencies(limit: Int): [Frequency!]!
+}
+
+type Calendar {
+  id: Int!
+  service_id: String!
+  start_date: Date!
+  end_date: Date!
+  monday: Int!
+  tuesday: Int!
+  wednesday: Int!
+  thursday: Int!
+  friday: Int!
+  saturday: Int!
+  sunday: Int!
+  added_dates(limit: Int): [Date!]!
+  removed_dates(limit: Int): [Date!]!
+}
+
+type Shape {
+  id: Int!
+  shape_id: String!
+  geometry: LineString!
+  generated: Boolean!
+}
+
+type Frequency {
+  id: Int!
+  start_time: Seconds!
+  end_time: Seconds!
+  headway_secs: Int!
+  exact_times: Int!
+}
+
+type StopTime {
+  arrival_time: Int!
+  departure_time: Int!
+  stop_sequence: Int!
+  stop_headsign: String
+  pickup_type: Int
+  drop_off_type: Int
+  timepoint: Int
+  interpolated: Int
+  stop: Stop!
+  trip: Trip!
+}
+
+type FeedInfo {
+  id: Int!
+  feed_publisher_name: String!
+  feed_publisher_url: String!
+  feed_lang: String!
+  feed_version: String!
+  feed_start_date: Date
+  feed_end_date: Date
+}
+
+# GTFS Support Entities
+
+type AgencyPlace {
+  name: String
+  adm0name: String
+  adm1name: String
+  rank: Float
+}
+
+type RouteStop {
+  id: Int!
+  stop_id: Int!
+  route_id: Int!
+  agency_id: Int!
+  route: Route!
+  stop: Stop!
+  agency: Agency!
+}
+
+type RouteGeometry {
+  direction_id: Int!
+  generated: Boolean!
+  geometry: LineString!
+}
+
+type RouteHeadway {
+  stop: Stop!
+  dow_category: Int
+  direction_id: Int
+  headway_secs: Int
+  service_date: Date
+  service_seconds: Int
+  stop_trip_count: Int
+  headway_seconds_morning_count: Int
+  headway_seconds_morning_min: Int
+  headway_seconds_morning_mid: Int
+  headway_seconds_morning_max: Int
+  headway_seconds_midday_count: Int
+  headway_seconds_midday_min: Int
+  headway_seconds_midday_mid: Int
+  headway_seconds_midday_max: Int
+  headway_seconds_afternoon_count: Int
+  headway_seconds_afternoon_min: Int
+  headway_seconds_afternoon_mid: Int
+  headway_seconds_afternoon_max: Int
+  headway_seconds_night_count: Int
+  headway_seconds_night_min: Int
+  headway_seconds_night_mid: Int
+  headway_seconds_night_max: Int
+}
+
+# Census entities
+
+type CensusGeography {
+  id: Int!
+  layer_name: String!
+  geoid: String
+  name: String
+  aland: Float
+  awater: Float
+  geometry: Polygon
+  values(table_names: [String!]!, limit: Int): [CensusValue]! 
+  # source: CensusSource!
+}
+
+type CensusValue {
+  table: CensusTable!
+  values: Any! # json blob
+  # geography: CensusGeography!
+}
+
+type CensusTable {
+  id: Int!
+  table_name: String!
+  table_title: String!
+  table_group: String!
+  # dataset: CensusDataset!
+}
+
+# type CensusDataset {
+#   id: Int!
+#   dataset_name: String!
+#   year_min: Int!
+#   year_max: Int!
+#   url: String!
+# }
+
+# type CensusField {
+#   id: Int!
+#   field_name: String!
+#   field_title: String!
+#   table: CensusTable!
+# }
+
+# type CensusSource {
+#   id: Int!
+#   source_name: String!
+#   url: String!
+#   sha1: String!
+#   dataset: CensusDataset!
+# }
+
+# Analysis tools
+
+type RouteStopBuffer {
+  stop_points: Geometry
+  stop_buffer: Geometry
+  stop_convexhull: Polygon
+}
+
+# Validation tools
+
+type ValidationResult {
+  # Validation output
+  success: Boolean!
+  failure_reason: String!
+  errors: [ValidationResultErrorGroup!]!
+  warnings: [ValidationResultErrorGroup!]!
+  # FeedVersion-like
+  sha1: String!
+  earliest_calendar_date: Date
+  latest_calendar_date: Date
+  files: [FeedVersionFileInfo!]!
+  service_levels(limit: Int, route_id: String): [FeedVersionServiceLevel!]!
+  agencies(limit: Int): [Agency!]!
+  routes(limit: Int): [Route!]!
+  stops(limit: Int): [Stop!]!
+  feed_infos(limit: Int): [FeedInfo!]!
+}
+
+type ValidationResultErrorGroup {
+  filename: String!
+  error_type: String!
+  count: Int!
+  limit: Int!
+  errors: [ValidationResultError!]!
+}
+
+type ValidationResultError {
+  filename: String!
+  error_type: String!
+  entity_id: String!
+  field: String!
+  value: String!
+  message: String!
+}
+
+type FeedVersionFetchResult {
+  feed_version: FeedVersion
+  fetch_error: String
+  found_sha1: Boolean!
+  found_dir_sha1: Boolean!
+}
+
+type FeedVersionImportResult {
+  success: Boolean!
+}
+
+type FeedVersionUnimportResult {
+  success: Boolean!
+}
+
+type FeedVersionDeleteResult {
+  success: Boolean!
+}
+
+# Update inputs
+
+input FeedVersionSetInput {
+  name: String
+  description: String
+}
+
+# Query filters
+
+input OperatorFilter {
+  merged: Boolean
+  onestop_id: String
+  feed_version_sha1: String
+  feed_onestop_id: String
+  agency_id: String
+  search: String
+}
+
+input FeedVersionFilter {
+  feed_onestop_id: String
+  sha1: String
+  feed_ids: [Int!] # keep?
+}
+
+enum ImportStatus {
+  success
+  error
+  in_progress
+}
+
+input FeedFilter {
+  onestop_id: String
+  spec: [String!]
+  fetch_error: Boolean
+  import_status: ImportStatus
+  search: String
+}
+
+input AgencyFilter {
+  onestop_id: String
+  feed_version_sha1: String
+  feed_onestop_id: String
+  agency_id: String
+  agency_name: String
+  within: Polygon
+  near: PointRadius
+  search: String
+}
+
+input RouteFilter {
+  onestop_id: String
+  feed_version_sha1: String
+  feed_onestop_id: String
+  route_id: String
+  route_type: Int
+  within: Polygon
+  near: PointRadius  
+  search: String
+  operator_onestop_id: String
+  agency_ids: [Int!] # keep?
+}
+
+input StopFilter {
+  onestop_id: String
+  feed_version_sha1: String
+  feed_onestop_id: String
+  stop_id: String
+  agency_ids: [Int!] # keep?
+  within: Polygon
+  near: PointRadius
+  search: String
+}
+
+input StopTimeFilter {
+  service_date: Date
+  start_time: Int
+  end_time: Int
+}
+
+input PathwayFilter {
+  pathway_mode: Int
+}
+
+input TripFilter {
+  service_date: Date
+  trip_id: String
+  route_ids: [Int!] # keep?
+  route_onestop_ids: [String!] # keep?
+  feed_version_sha1: String
+  feed_onestop_id: String
+}
+
+input FeedVersionServiceLevelFilter {
+  start_date: Date
+  end_date: Date
+  all_routes: Boolean
+  distinct_on: String
+  route_ids: [String!]
+}
+
+input AgencyPlaceFilter {
+  min_rank: Float
+  search: String
+}
+
+input CalendarDateFilter {
+  date: Date
+  exception_type: Int
+}
+
+input PointRadius {
+  lat: Float!
+  lon: Float!
+  radius: Float!
+}
+
+# Scalar types
+
+scalar Geometry
+scalar Time
+scalar Date
+scalar Point
+scalar LineString
+scalar Seconds
+scalar Polygon
+scalar Map
+scalar Any
+scalar Upload

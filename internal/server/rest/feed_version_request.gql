@@ -1,0 +1,47 @@
+query ($limit: Int, $ids:[Int!], $after: Int, $where:FeedVersionFilter ) {
+	feed_versions(limit: $limit, ids: $ids, after: $after, where: $where) {
+	  id
+	  sha1
+	  fetched_at
+	  url
+	  earliest_calendar_date
+	  latest_calendar_date
+	  geometry
+	  feed {
+		onestop_id
+		name
+		spec
+	  }
+	  files {
+		name
+		rows
+		sha1
+		header
+		csv_like
+		size
+	  }
+      service_levels {
+        start_date
+        end_date
+        monday
+        tuesday
+        wednesday
+        thursday
+        friday
+        saturday
+        sunday
+        route_id
+      }
+	  feed_version_gtfs_import {
+	    in_progress
+	    success
+	    exception_log
+		# generated_count
+		warning_count
+		skip_entity_error_count
+		skip_entity_filter_count
+		skip_entity_marked_count
+		interpolated_stop_time_count
+	  }
+	}
+  } 

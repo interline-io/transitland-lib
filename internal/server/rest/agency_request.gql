@@ -1,0 +1,45 @@
+query($limit: Int, $ids: [Int!], $after: Int, $where: AgencyFilter) {
+  agencies(limit: $limit, after: $after, ids: $ids, where: $where) {
+    id
+    agency_name
+    agency_id
+    onestop_id
+    agency_url
+    agency_timezone
+    agency_lang
+    agency_phone
+    agency_fare_url
+    agency_email
+    geometry
+    operator {
+      onestop_id
+      operator_name
+      operator_short_name
+      operator_tags
+      operator_associated_feeds
+      city_name
+      adm1name
+      adm0name
+    }
+    places(where: { min_rank: 0.2 }) {
+      city_name: name
+      adm0name
+      adm1name
+    }
+    feed_version {
+      id
+      sha1
+      fetched_at
+      feed {
+        id
+        onestop_id
+      }
+    }
+    routes(limit: 1000) {
+      id
+      route_id
+      route_short_name
+      route_long_name
+    }
+  }
+}

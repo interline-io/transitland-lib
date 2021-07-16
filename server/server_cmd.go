@@ -12,10 +12,10 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/interline-io/transitland-lib/server/config"
-	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/server/resolvers"
-	"github.com/interline-io/transitland-lib/server/rest"
+	"github.com/interline-io/transitland-lib/internal/server/config"
+	"github.com/interline-io/transitland-lib/internal/server/model"
+	"github.com/interline-io/transitland-lib/internal/server/resolvers"
+	"github.com/interline-io/transitland-lib/internal/server/rest"
 )
 
 type Command struct {
@@ -40,6 +40,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.UseAuth, "auth", "", "")
 	fl.StringVar(&cmd.GtfsDir, "gtfsdir", "", "Directory to store GTFS files")
 	fl.StringVar(&cmd.GtfsS3Bucket, "s3", "", "S3 bucket for GTFS files")
+	fl.StringVar(&cmd.RestPrefix, "rest-prefix", "", "REST prefix for generating pagination links")
 	fl.BoolVar(&cmd.ValidateLargeFiles, "validate-large-files", false, "Allow validation of large files")
 	fl.BoolVar(&cmd.DisableImage, "disable-image", false, "Disable image generation")
 	fl.BoolVar(&cmd.DisableGraphql, "disable-graphql", false, "Disable GraphQL endpoint")
