@@ -14,6 +14,7 @@ func FindStops(atx sqlx.Ext, limit *int, after *int, ids []int, where *model.Sto
 	MustSelect(model.DB, q, &ents)
 	return ents, nil
 }
+
 func StopSelect(limit *int, after *int, ids []int, where *model.StopFilter) sq.SelectBuilder {
 	qView := sq.StatementBuilder.Select(
 		"gtfs_stops.*",

@@ -111,8 +111,6 @@ func fvDownloadHandler(cfg restConfig, w http.ResponseWriter, r *http.Request) {
 	} else {
 		gvars["feed_version_sha1"] = key
 	}
-	fmt.Println("gvars:", gvars)
-
 	// Check if we're allowed to redistribute feed
 	checkfv, err := makeGraphQLRequest(cfg.srv, feedVersionFileQuery, gvars)
 	if err != nil {

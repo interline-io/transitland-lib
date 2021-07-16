@@ -66,7 +66,8 @@ func (r TripRequest) Query() (string, map[string]interface{}) {
 	}
 	// Only include stop times when requesting a specific trip.
 	includeStopTimes := false
-	if r.ID > 0 || r.IncludeStopTimes == "true" || r.Format == "geojson" {
+	// || r.IncludeStopTimes == "true"
+	if r.ID > 0 || r.Format == "geojson" {
 		includeStopTimes = true
 	}
 	includeRoute := false
