@@ -7,23 +7,10 @@ import (
 	dmfr "github.com/interline-io/transitland-lib/dmfr/cmd"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/internal/log"
-	"github.com/interline-io/transitland-lib/server"
 	"github.com/interline-io/transitland-lib/tl"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
 )
-
-func btos(b bool) string {
-	if b {
-		return "true"
-	}
-	return "false"
-}
-
-// Submodule
-type runner interface {
-	run([]string) error
-}
 
 ///////////////
 
@@ -45,21 +32,20 @@ func main() {
 		log.Print("  validate")
 		log.Print("  dmfr")
 		log.Print("  server")
-		return
 	}
 	flag.Parse()
-	if versionFlag == true {
+	if versionFlag {
 		log.Print("transitland-lib version: %s", tl.VERSION)
 		log.Print("gtfs spec version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
 		return
 	}
-	if quietFlag == true {
+	if quietFlag {
 		log.SetLevel(log.ERROR)
 	}
-	if debugFlag == true {
+	if debugFlag {
 		log.SetLevel(log.DEBUG)
 	}
-	if traceFlag == true {
+	if traceFlag {
 		log.SetLevel(log.TRACE)
 		log.SetQueryLog(true)
 	}
@@ -69,7 +55,6 @@ func main() {
 		flag.Usage()
 		log.Exit("")
 	}
-	args = flag.Args()
 	type runnable interface {
 		Run([]string) error
 	}
@@ -84,8 +69,6 @@ func main() {
 		r = &extractCommand{}
 	case "dmfr":
 		r = &dmfr.Command{}
-	case "server":
-		r = &server.Command{}
 	default:
 		log.Exit("%q is not valid command.", subc)
 	}
