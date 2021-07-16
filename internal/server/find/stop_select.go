@@ -28,7 +28,8 @@ func StopSelect(limit *int, after *int, ids []int, where *model.StopFilter) sq.S
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		JoinClause(`LEFT JOIN tl_stop_onestop_ids ON tl_stop_onestop_ids.stop_id = gtfs_stops.id`).
 		JoinClause(`LEFT JOIN feed_states ON feed_states.feed_version_id = gtfs_stops.feed_version_id`).
-		Where(sq.Eq{"current_feeds.deleted_at": nil})
+		Where(sq.Eq{"current_feeds.deleted_at": nil}).
+		OrderBy("gtfs_stops.id")
 
 	q := sq.StatementBuilder.Select("*").FromSelect(qView, "t")
 	if len(ids) > 0 {

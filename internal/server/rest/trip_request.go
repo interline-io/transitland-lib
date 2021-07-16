@@ -33,7 +33,6 @@ func (r TripRequest) ResponseKey() string {
 // Query returns a GraphQL query string and variables.
 func (r TripRequest) Query() (string, map[string]interface{}) {
 	// ID or RouteID should be considered mandatory.
-	where := hw{}
 	if r.RouteKey == "" {
 		// pass
 	} else if v, err := strconv.Atoi(r.RouteKey); err == nil {
@@ -41,6 +40,7 @@ func (r TripRequest) Query() (string, map[string]interface{}) {
 	} else {
 		r.RouteOnestopID = r.RouteKey
 	}
+	where := hw{}
 	if r.RouteID > 0 {
 		where["route_ids"] = []int{r.RouteID}
 	}

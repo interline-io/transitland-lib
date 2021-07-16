@@ -14,17 +14,17 @@ func FindFeedVersions(atx sqlx.Ext, limit *int, after *int, ids []int, where *mo
 func FeedVersionSelect(limit *int, after *int, ids []int, where *model.FeedVersionFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select("t.*, tl_feed_version_geometries.geometry").
+		From("feed_versions t").
 		Join("current_feeds cf on cf.id = t.feed_id").Where(sq.Eq{"cf.deleted_at": nil}).
 		JoinClause("left join tl_feed_version_geometries on tl_feed_version_geometries.feed_version_id = t.id").
-		From("feed_versions t").
-		Limit(checkLimit(limit))
+		Limit(checkLimit(limit)).
+		OrderBy("t.id")
 	if len(ids) > 0 {
 		q = q.Where(sq.Eq{"t.id": ids})
 	}
 	if after != nil {
 		q = q.Where(sq.Gt{"t.id": *after})
 	}
-	q = q.OrderBy("fetched_at desc")
 	if where != nil {
 		if where.Sha1 != nil {
 			q = q.Where(sq.Eq{"sha1": *where.Sha1})

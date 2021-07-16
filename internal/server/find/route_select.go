@@ -49,7 +49,8 @@ func RouteSelect(limit *int, after *int, ids []int, where *model.RouteFilter) sq
 		JoinClause(`LEFT JOIN LATERAL ( SELECT rh_1.headway_seconds_morning_mid AS headway_seconds_weekday_morning
            FROM tl_route_headways rh_1
           WHERE rh_1.dow_category = 1 AND rh_1.route_id = gtfs_routes.id) rh ON true`).
-		Where(sq.Eq{"current_feeds.deleted_at": nil})
+		Where(sq.Eq{"current_feeds.deleted_at": nil}).
+		OrderBy("gtfs_routes.id")
 
 	q := sq.StatementBuilder.Select("*").FromSelect(qView, "t")
 	if len(ids) > 0 {

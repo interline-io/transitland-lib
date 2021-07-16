@@ -57,7 +57,8 @@ func AgencySelect(limit *int, after *int, ids []int, where *model.AgencyFilter) 
 			WHERE tlp_1.agency_id = gtfs_agencies.id AND tlp_1.rank > 0.2::double precision
 			ORDER BY tlp_1.rank DESC
 			LIMIT 1) tlp ON true`).
-		Where(sq.Eq{"current_feeds.deleted_at": nil})
+		Where(sq.Eq{"current_feeds.deleted_at": nil}).
+		OrderBy("gtfs_agencies.id")
 
 	q := sq.StatementBuilder.Select("*").FromSelect(qView, "t")
 	if len(ids) > 0 {
