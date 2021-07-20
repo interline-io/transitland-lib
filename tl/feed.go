@@ -19,11 +19,11 @@ type Feed struct {
 	Languages       FeedLanguages       `json:"languages,omitempty"`
 	License         FeedLicense         `json:"license"`
 	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
+	Tags            Tags                `json:"tags" db:"feed_tags" `
 	OtherIDs        map[string]string   `json:"other_ids" db:"-"`
 	IDCrosswalk     map[string]string   `json:"id_crosswalk" db:"-"`
 	File            string              `json:"-"` // internal
 	DeletedAt       OTime               `json:"-"` // internal
-	Tags            map[string]string   `json:"tags" db:"-" `
 	Timestamps      `json:"-"`          // internal
 }
 
