@@ -18,6 +18,7 @@ import (
 type Registry struct {
 	Schema                string `json:"$schema"`
 	Feeds                 []tl.Feed
+	Operators             []tl.Operator
 	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
 }
 

@@ -6,7 +6,13 @@
 			"id": "GT",
 			"urls": {
 				"static_current": "http://example.com/gtfs.zip"
-			}
+			},
+			"operators": [
+				{
+					"onestop_id": "test",
+					"name": "OK Hello"
+				}
+			]
 		},
 		{
 			"spec": "gtfs",
@@ -14,6 +20,18 @@
 			"urls": {
 				"static_current": "http://example.com/example.zip"
 			}
+		}
+	],
+	"operators": [
+		{
+			"onestop_id": "foo",
+			"name": "bar",
+			"associated_feeds": [
+				{
+					"feed_onestop_id": "GT",
+					"gtfs_agency_id": "abc"
+				}
+			]
 		}
 	],
 	"license_spdx_identifier": "CC0-1.0"

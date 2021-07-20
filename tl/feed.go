@@ -19,6 +19,7 @@ type Feed struct {
 	Languages       FeedLanguages       `json:"languages,omitempty"`
 	License         FeedLicense         `json:"license"`
 	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
+	Operators       []Operator          `json:"operators" db:"-"`
 	Tags            Tags                `json:"tags" db:"feed_tags" `
 	OtherIDs        map[string]string   `json:"other_ids" db:"-"`
 	IDCrosswalk     map[string]string   `json:"id_crosswalk" db:"-"`
