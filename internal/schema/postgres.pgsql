@@ -27,6 +27,7 @@ CREATE TABLE public.feed_versions (
     sha1 character varying NOT NULL,
     md5 character varying,
     tags public.hstore,
+    feed_tags jsonb,
     fetched_at timestamp without time zone NOT NULL,
     imported_at timestamp without time zone,
     created_at timestamp without time zone DEFAULT now() NOT NULL,

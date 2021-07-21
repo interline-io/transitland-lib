@@ -24,10 +24,10 @@ CREATE TABLE IF NOT EXISTS "current_operators" (
   "name" varchar(255) NOT NULL,
   "short_name" varchar(255) NOT NULL,
   "website" varchar(255) NOT NULL,
-  "operator_tags" BLOB
+  "operator_tags" BLOB,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-  "deleted_at" datetime,
+  "deleted_at" datetime
 );
 CREATE INDEX idx_current_operators_onestop_id ON "current_operators"(onestop_id);
 

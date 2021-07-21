@@ -81,7 +81,50 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 		return nil, err
 	}
 	readerSkippingBOM, _ := utfbom.Skip(reader)
-	return NewRegistry(readerSkippingBOM)
+	reg, err := NewRegistry(readerSkippingBOM)
+	if err != nil {
+		return nil, err
+	}
+	// merge operators
+	operators := []tl.Operator{}
+	for _, rfeed := range reg.Feeds {
+		fsid := rfeed.FeedID
+		for _, operator := range rfeed.Operators {
+			for i, oif := range operator.AssociatedFeeds {
+				oif.FeedOnestopID = tl.NewOString(fsid)
+				operator.AssociatedFeeds[i] = oif
+			}
+			if len(operator.AssociatedFeeds) == 0 {
+				operator.AssociatedFeeds = append(operator.AssociatedFeeds, tl.OperatorAssociatedFeed{FeedOnestopID: tl.NewOString(fsid)})
+			}
+			operators = append(operators, operator)
+		}
+		rfeed.Operators = nil
+	}
+	operators = append(operators, reg.Operators...)
+	mergeOperators := map[string]tl.Operator{}
+	for _, operator := range operators {
+		osid := operator.OnestopID.String
+		a, ok := mergeOperators[osid]
+		if ok {
+			operator.AssociatedFeeds = append(operator.AssociatedFeeds, a.AssociatedFeeds...)
+			if operator.Name.String == "" {
+				operator.Name = a.Name
+			}
+			if operator.ShortName.String == "" {
+				operator.ShortName = a.ShortName
+			}
+			if operator.Website.String == "" {
+				operator.Website = a.Website
+			}
+		}
+		mergeOperators[osid] = operator
+	}
+	reg.Operators = nil
+	for _, operator := range mergeOperators {
+		reg.Operators = append(reg.Operators, operator)
+	}
+	return reg, nil
 }
 
 // ParseString TODO

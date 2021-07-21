@@ -6,26 +6,30 @@
 			"id": "GT",
 			"urls": {
 				"static_current": "http://example.com/gtfs.zip"
-			},
-			"operators": [
-				{
-					"onestop_id": "test",
-					"name": "OK Hello"
-				}
-			]
+			}
 		},
 		{
 			"spec": "gtfs",
 			"id": "EX",
 			"urls": {
 				"static_current": "http://example.com/example.zip"
-			}
+			},
+			"operators": [
+				{
+					"onestop_id": "test"
+				}
+			]
 		}
 	],
 	"operators": [
 		{
-			"onestop_id": "foo",
+			"onestop_id": "test",
 			"name": "bar",
+			"short_name": "baz",
+			"website": "https://transit.land",
+			"tags": {
+				"us_ntd_id": "1234"
+			},
 			"associated_feeds": [
 				{
 					"feed_onestop_id": "GT",

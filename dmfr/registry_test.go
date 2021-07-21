@@ -24,8 +24,8 @@ func TestLoadAndParseRegistry_from_file(t *testing.T) {
 	}
 	for _, feed := range parsedContents.Feeds {
 		if feed.FeedID == "GT" {
-			if len(feed.Operators) != 1 {
-				t.Errorf("got %d operators in feed, expected %d", len(feed.Operators), 1)
+			if len(feed.Operators) != 2 {
+				t.Errorf("got %d operators in feed, expected %d", len(feed.Operators), 2)
 			}
 		}
 	}
@@ -40,20 +40,19 @@ func TestParseOperators(t *testing.T) {
 		t.Fatalf("got %d top level operators, expected %d", len(parsedContents.Operators), 1)
 	}
 	o := parsedContents.Operators[0]
-	if o.OnestopID.String != "foo" {
-		t.Errorf("got '%s' onestop_id, expected '%s'", o.OnestopID.String, "foo")
+	if o.OnestopID.String != "test" {
+		t.Errorf("got '%s' onestop_id, expected '%s'", o.OnestopID.String, "test")
 	}
 	if len(o.AssociatedFeeds) != 1 {
 		t.Fatalf("got %d operator associated feeds, expected %d", len(o.AssociatedFeeds), 1)
 	}
-	oif := o.AssociatedFeeds[0]
-	if oif.FeedOnestopID.String != "GT" {
-		t.Errorf("got '%s' feed_onestop_id, expected '%s'", oif.FeedOnestopID.String, "GT")
+	for _, oif := range o.AssociatedFeeds {
+		if oif.FeedOnestopID.String == "GT" {
+			if oif.AgencyID.String != "abc" {
+				t.Errorf("got '%s' agency_id, expected '%s'", oif.AgencyID.String, "abc")
+			}
+		}
 	}
-	if oif.AgencyID.String != "abc" {
-		t.Errorf("got '%s' agency_id, expected '%s'", oif.AgencyID.String, "abc")
-	}
-
 }
 
 func TestLoadAndParseRegistry_from_URL(t *testing.T) {
