@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS "current_operators_in_feed" (
   "id" integer primary key autoincrement, 
   "operator_id" integer not null,
   "feed_id" integer not null,
-  "gtfs_agency_id" varchar(255) NOT NULL
+  "gtfs_agency_id" varchar(255)
 );
 
 CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (

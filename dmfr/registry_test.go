@@ -22,12 +22,8 @@ func TestLoadAndParseRegistry_from_file(t *testing.T) {
 	if parsedContents.LicenseSpdxIdentifier != "CC0-1.0" {
 		t.Error("LicenseSpdxIdentifier is not equal to 'CC0-1.0'")
 	}
-	for _, feed := range parsedContents.Feeds {
-		if feed.FeedID == "GT" {
-			if len(feed.Operators) != 2 {
-				t.Errorf("got %d operators in feed, expected %d", len(feed.Operators), 2)
-			}
-		}
+	if len(parsedContents.Operators) != 1 {
+		t.Errorf("got %d operators in feed, expected %d", len(parsedContents.Operators), 1)
 	}
 }
 
@@ -43,8 +39,8 @@ func TestParseOperators(t *testing.T) {
 	if o.OnestopID.String != "test" {
 		t.Errorf("got '%s' onestop_id, expected '%s'", o.OnestopID.String, "test")
 	}
-	if len(o.AssociatedFeeds) != 1 {
-		t.Fatalf("got %d operator associated feeds, expected %d", len(o.AssociatedFeeds), 1)
+	if len(o.AssociatedFeeds) != 2 {
+		t.Fatalf("got %d operator associated feeds, expected %d", len(o.AssociatedFeeds), 2)
 	}
 	for _, oif := range o.AssociatedFeeds {
 		if oif.FeedOnestopID.String == "GT" {
