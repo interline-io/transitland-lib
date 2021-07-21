@@ -3,8 +3,6 @@ set -ex
 echo "CREATE EXTENSION postgis; CREATE EXTENSION hstore;" > postgres.pgsql
 echo "CREATE EXTENSION pg_trgm; CREATE EXTENSION unaccent; CREATE TEXT SEARCH CONFIGURATION tl ( COPY = simple ); ALTER TEXT SEARCH CONFIGURATION tl ALTER MAPPING FOR hword, hword_part, word WITH unaccent;" >> postgres.pgsql
 
-cat functions-pre.pgsql >> postgres.pgsql
-
 pg_dump \
     -t 'current_feeds' \
     -t 'feed_versions' \
@@ -31,11 +29,6 @@ pg_dump \
     -t "tl_tile_active_stops" \
     -t "tl_vw_agency_operators" \
     -t "tl_mv_active_agency_operators" \
-    -t "tl_vw_gtfs_agencies" \
-    -t "tl_vw_gtfs_routes" \
-    -t "tl_vw_gtfs_stops" \
-    -t "tl_vw_gtfs_trips" \
-    -t "tl_vw_trip_offset_stop_times" \
     -t "tl_stop_external_references" \
     -t "tl_ext_fare_networks" \
     -t "tl_ext_gtfs_stops" \
