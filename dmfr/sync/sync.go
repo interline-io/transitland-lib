@@ -15,8 +15,9 @@ import (
 
 // Options sets options for a sync operation.
 type Options struct {
-	Filenames  []string
-	HideUnseen bool
+	Filenames           []string
+	HideUnseen          bool
+	HideUnseenOperators bool
 }
 
 // Result is the result of a sync operation.
@@ -90,6 +91,9 @@ func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 		if sr.HiddenCount > 0 {
 			log.Info("Soft-deleted %d feeds", sr.HiddenCount)
 		}
+	}
+	if opts.HideUnseenOperators {
+		var err error
 		sr.HiddenOperators, err = HideUnseedOperators(atx, sr.OperatorIDs)
 		if err != nil {
 			log.Error("Error soft-deleting operators: %s", err.Error())

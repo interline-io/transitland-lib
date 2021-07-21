@@ -10,10 +10,9 @@ import (
 
 // Command syncs a DMFR to a database.
 type Command struct {
-	DBURL      string
-	Filenames  []string
-	HideUnseen bool
-	Adapter    tldb.Adapter
+	DBURL   string
+	Adapter tldb.Adapter
+	Options
 }
 
 // Parse command line options.
@@ -25,6 +24,7 @@ func (cmd *Command) Parse(args []string) error {
 	}
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")
+	fl.BoolVar(&cmd.HideUnseenOperators, "hide-unseen-operators", false, "Hide unseen operators")
 	fl.Parse(args)
 	cmd.Filenames = fl.Args()
 	if cmd.DBURL == "" {
@@ -40,12 +40,8 @@ func (cmd *Command) Run() error {
 		cmd.Adapter = writer.Adapter
 		defer cmd.Adapter.Close()
 	}
-	opts := Options{
-		Filenames:  cmd.Filenames,
-		HideUnseen: cmd.HideUnseen,
-	}
 	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-		_, err := MainSync(atx, opts)
+		_, err := MainSync(atx, cmd.Options)
 		return err
 	})
 }
