@@ -29,10 +29,11 @@ func (r OString) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OString) Scan(src interface{}) error {
-	r.Valid = false
-	switch v := src.(type) {
-	case nil:
+	r.String, r.Valid = "", false
+	if src == nil {
 		return nil
+	}
+	switch v := src.(type) {
 	case string:
 		r.String = v
 	case int:
@@ -96,11 +97,12 @@ func (r OInt) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OInt) Scan(src interface{}) error {
-	r.Valid = false
+	r.Int, r.Valid = 0, false
+	if src == nil {
+		return nil
+	}
 	var err error
 	switch v := src.(type) {
-	case nil:
-		return nil
 	case string:
 		r.Int, err = strconv.Atoi(v)
 	case int:
@@ -112,11 +114,8 @@ func (r *OInt) Scan(src interface{}) error {
 	default:
 		err = errors.New("cant convert")
 	}
-	if err != nil {
-		return err
-	}
-	r.Valid = true
-	return nil
+	r.Valid = (err == nil)
+	return err
 }
 
 func (r *OInt) String() string {
@@ -173,11 +172,12 @@ func (r OFloat) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OFloat) Scan(src interface{}) error {
-	r.Valid = false
+	r.Float, r.Valid = 0.0, false
+	if src == nil {
+		return nil
+	}
 	var err error
 	switch v := src.(type) {
-	case nil:
-		return nil
 	case string:
 		r.Float, err = strconv.ParseFloat(v, 64)
 	case int:
@@ -189,11 +189,8 @@ func (r *OFloat) Scan(src interface{}) error {
 	default:
 		err = errors.New("cant convert")
 	}
-	if err != nil {
-		return err
-	}
-	r.Valid = true
-	return nil
+	r.Valid = (err == nil)
+	return err
 }
 
 func (r *OFloat) String() string {
@@ -255,10 +252,12 @@ func (r OKey) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OKey) Scan(src interface{}) error {
-	r.Valid = false
-	switch v := src.(type) {
-	case nil:
+	r.Key, r.Valid = "", false
+	if src == nil {
 		return nil
+	}
+	var err error
+	switch v := src.(type) {
 	case string:
 		if v == "" {
 			return nil
@@ -269,10 +268,10 @@ func (r *OKey) Scan(src interface{}) error {
 	case int64:
 		r.Key = strconv.Itoa(int(v))
 	default:
-		return errors.New("cant convert")
+		err = errors.New("cant convert")
 	}
-	r.Valid = true
-	return nil
+	r.Valid = (err == nil)
+	return err
 }
 
 func (r *OKey) Int() int {
@@ -343,22 +342,21 @@ func (r OTime) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OTime) Scan(src interface{}) error {
-	r.Valid = false
-	var p error
+	r.Time, r.Valid = time.Time{}, false
+	if src == nil {
+		return nil
+	}
+	var err error
 	switch v := src.(type) {
-	case nil:
-		// pass
 	case string:
-		r.Time, p = time.Parse("20060102", v)
+		r.Time, err = time.Parse("20060102", v)
 	case time.Time:
 		r.Time = v
 	default:
-		p = fmt.Errorf("cant convert %T", src)
+		err = fmt.Errorf("cant convert %T", src)
 	}
-	if p == nil {
-		r.Valid = true
-	}
-	return p
+	r.Valid = (err == nil)
+	return err
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -414,22 +412,21 @@ func (r ODate) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *ODate) Scan(src interface{}) error {
-	r.Valid = false
-	var p error
+	r.Time, r.Valid = time.Time{}, false
+	if src == nil {
+		return nil
+	}
+	var err error
 	switch v := src.(type) {
-	case nil:
-		// pass
 	case string:
-		r.Time, p = time.Parse("20060102", v)
+		r.Time, err = time.Parse("20060102", v)
 	case time.Time:
 		r.Time = v
 	default:
-		p = fmt.Errorf("cant convert %T", src)
+		err = fmt.Errorf("cant convert %T", src)
 	}
-	if p == nil {
-		r.Valid = true
-	}
-	return p
+	r.Valid = (err == nil)
+	return err
 }
 
 // UnmarshalJSON implements the json.Marshaler interface
