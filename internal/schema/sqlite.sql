@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS "current_operators" (
   "short_name" varchar(255) NOT NULL,
   "website" varchar(255) NOT NULL,
   "operator_tags" BLOB,
+  "associated_feeds" BLOB,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "deleted_at" datetime
@@ -35,7 +36,8 @@ CREATE TABLE IF NOT EXISTS "current_operators_in_feed" (
   "id" integer primary key autoincrement, 
   "operator_id" integer not null,
   "feed_id" integer not null,
-  "gtfs_agency_id" varchar(255) NOT NULL
+  "agency_id" integer,
+  "gtfs_agency_id" varchar(255)
 );
 
 CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (

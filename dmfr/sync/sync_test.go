@@ -108,7 +108,7 @@ func TestUpdateFeed(t *testing.T) {
 			rfeed.License.UseWithoutAttribution = "yes"
 			rfeed.Authorization.ParamName = "test"
 			rfeed.Languages = tl.FeedLanguages{"en"}
-			feedid, found, err := UpdateFeed(atx, rfeed)
+			feedid, found, _, err := UpdateFeed(atx, rfeed)
 			if err != nil {
 				t.Error(err)
 			}
@@ -148,7 +148,8 @@ func TestUpdateFeed(t *testing.T) {
 		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 			rfeed := tl.Feed{}
 			rfeed.FeedID = "caltrain"
-			feedid, found, err := UpdateFeed(atx, rfeed)
+			rfeed.Name = tl.NewOString("An Updated Name")
+			feedid, found, _, err := UpdateFeed(atx, rfeed)
 			if err != nil {
 				t.Error(err)
 			}
@@ -160,7 +161,7 @@ func TestUpdateFeed(t *testing.T) {
 			//
 			dfeed := tl.Feed{}
 			dfeed.FeedID = "caltrain"
-			feedid2, found2, err2 := UpdateFeed(atx, dfeed)
+			feedid2, found2, _, err2 := UpdateFeed(atx, dfeed)
 			if err2 != nil {
 				t.Error(err)
 			}

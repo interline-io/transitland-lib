@@ -29,10 +29,11 @@ func (r OString) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OString) Scan(src interface{}) error {
-	r.Valid = false
-	switch v := src.(type) {
-	case nil:
+	r.String, r.Valid = "", false
+	if src == nil {
 		return nil
+	}
+	switch v := src.(type) {
 	case string:
 		r.String = v
 	case int:
@@ -42,18 +43,21 @@ func (r *OString) Scan(src interface{}) error {
 	default:
 		return errors.New("cant convert")
 	}
-	r.Valid = true
+	if r.String != "" {
+		r.Valid = true
+	}
 	return nil
 }
 
 // UnmarshalJSON implements json.Marshaler interface.
 func (r *OString) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.String)
-	if err != nil {
-		return err
+	r.String, r.Valid = "", false
+	if len(v) == 0 {
+		return nil
 	}
-	r.Valid = true
-	return nil
+	err := json.Unmarshal(v, &r.String)
+	r.Valid = (err == nil && r.String != "")
+	return err
 }
 
 // MarshalJSON implements the json.marshaler interface.
@@ -96,11 +100,12 @@ func (r OInt) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OInt) Scan(src interface{}) error {
-	r.Valid = false
+	r.Int, r.Valid = 0, false
+	if src == nil {
+		return nil
+	}
 	var err error
 	switch v := src.(type) {
-	case nil:
-		return nil
 	case string:
 		r.Int, err = strconv.Atoi(v)
 	case int:
@@ -112,11 +117,8 @@ func (r *OInt) Scan(src interface{}) error {
 	default:
 		err = errors.New("cant convert")
 	}
-	if err != nil {
-		return err
-	}
-	r.Valid = true
-	return nil
+	r.Valid = (err == nil)
+	return err
 }
 
 func (r *OInt) String() string {
@@ -125,12 +127,13 @@ func (r *OInt) String() string {
 
 // UnmarshalJSON implements the json.marshaler interface.
 func (r *OInt) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.Int)
-	if err != nil {
-		return err
+	r.Int, r.Valid = 0, false
+	if len(v) == 0 {
+		return nil
 	}
-	r.Valid = true
-	return nil
+	err := json.Unmarshal(v, &r.Int)
+	r.Valid = (err == nil)
+	return err
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -173,11 +176,12 @@ func (r OFloat) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OFloat) Scan(src interface{}) error {
-	r.Valid = false
+	r.Float, r.Valid = 0.0, false
+	if src == nil {
+		return nil
+	}
 	var err error
 	switch v := src.(type) {
-	case nil:
-		return nil
 	case string:
 		r.Float, err = strconv.ParseFloat(v, 64)
 	case int:
@@ -189,11 +193,8 @@ func (r *OFloat) Scan(src interface{}) error {
 	default:
 		err = errors.New("cant convert")
 	}
-	if err != nil {
-		return err
-	}
-	r.Valid = true
-	return nil
+	r.Valid = (err == nil)
+	return err
 }
 
 func (r *OFloat) String() string {
@@ -202,12 +203,13 @@ func (r *OFloat) String() string {
 
 // UnmarshalJSON implements the json.marshaler interface.
 func (r *OFloat) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.Float)
-	if err != nil {
-		return err
+	r.Float, r.Valid = 0, false
+	if len(v) == 0 {
+		return nil
 	}
-	r.Valid = true
-	return nil
+	err := json.Unmarshal(v, &r.Float)
+	r.Valid = (err == nil)
+	return err
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -255,10 +257,12 @@ func (r OKey) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OKey) Scan(src interface{}) error {
-	r.Valid = false
-	switch v := src.(type) {
-	case nil:
+	r.Key, r.Valid = "", false
+	if src == nil {
 		return nil
+	}
+	var err error
+	switch v := src.(type) {
 	case string:
 		if v == "" {
 			return nil
@@ -269,10 +273,10 @@ func (r *OKey) Scan(src interface{}) error {
 	case int64:
 		r.Key = strconv.Itoa(int(v))
 	default:
-		return errors.New("cant convert")
+		err = errors.New("cant convert")
 	}
-	r.Valid = true
-	return nil
+	r.Valid = (err == nil && r.Key != "")
+	return err
 }
 
 func (r *OKey) Int() int {
@@ -282,12 +286,13 @@ func (r *OKey) Int() int {
 
 // UnmarshalJSON implements the json.marshaler interface.
 func (r *OKey) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.Key)
-	if err != nil {
-		return err
+	r.Key, r.Valid = "", false
+	if len(v) == 0 {
+		return nil
 	}
-	r.Valid = true
-	return nil
+	err := json.Unmarshal(v, &r.Key)
+	r.Valid = (err == nil)
+	return err
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -343,22 +348,21 @@ func (r OTime) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *OTime) Scan(src interface{}) error {
-	r.Valid = false
-	var p error
+	r.Time, r.Valid = time.Time{}, false
+	if src == nil {
+		return nil
+	}
+	var err error
 	switch v := src.(type) {
-	case nil:
-		// pass
 	case string:
-		r.Time, p = time.Parse("20060102", v)
+		r.Time, err = time.Parse("20060102", v)
 	case time.Time:
 		r.Time = v
 	default:
-		p = fmt.Errorf("cant convert %T", src)
+		err = fmt.Errorf("cant convert %T", src)
 	}
-	if p == nil {
-		r.Valid = true
-	}
-	return p
+	r.Valid = (err == nil)
+	return err
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -379,8 +383,6 @@ func (r OTime) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }
-
-/////
 
 /////////////////////
 
@@ -416,27 +418,29 @@ func (r ODate) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner
 func (r *ODate) Scan(src interface{}) error {
-	r.Valid = false
-	var p error
+	r.Time, r.Valid = time.Time{}, false
+	if src == nil {
+		return nil
+	}
+	var err error
 	switch v := src.(type) {
-	case nil:
-		// pass
 	case string:
-		r.Time, p = time.Parse("20060102", v)
+		r.Time, err = time.Parse("20060102", v)
 	case time.Time:
 		r.Time = v
 	default:
-		p = fmt.Errorf("cant convert %T", src)
+		err = fmt.Errorf("cant convert %T", src)
 	}
-	if p == nil {
-		r.Valid = true
-	}
-	return p
+	r.Valid = (err == nil)
+	return err
 }
 
 // UnmarshalJSON implements the json.Marshaler interface
 func (r *ODate) UnmarshalJSON(v []byte) error {
-	r.Valid = false
+	r.Time, r.Valid = time.Time{}, false
+	if len(v) == 0 {
+		return nil
+	}
 	b := ""
 	if err := json.Unmarshal(v, &b); err != nil {
 		return err
@@ -445,8 +449,7 @@ func (r *ODate) UnmarshalJSON(v []byte) error {
 	if err != nil {
 		return err
 	}
-	r.Time = a
-	r.Valid = true
+	r.Time, r.Valid = a, true
 	return nil
 }
 
@@ -482,4 +485,71 @@ func (r *ODate) UnmarshalGQL(src interface{}) error {
 func (r ODate) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
+}
+
+/////////////////////
+
+// Tags is a map[string]string with json and gql marshal support.
+// This is a struct instead of bare map[string]string because of a gqlgen issue.
+type Tags struct {
+	tags map[string]string
+}
+
+// Value .
+func (r Tags) Value() (driver.Value, error) {
+	return json.Marshal(r.tags)
+}
+
+// Scan .
+func (r *Tags) Scan(value interface{}) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	return json.Unmarshal(b, &r.tags)
+}
+
+// MarshalJSON implements the json.marshaler interface.
+func (r *Tags) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(r.tags)
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (r Tags) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
+}
+
+// UnmarshalJSON implements json.Marshaler interface.
+func (r *Tags) UnmarshalJSON(v []byte) error {
+	r.tags = nil
+	if len(v) == 0 {
+		return nil
+	}
+	return json.Unmarshal(v, &r.tags)
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (r *Tags) UnmarshalGQL(v interface{}) error {
+	return r.Scan(v)
+}
+
+// Set a tag value
+func (r *Tags) Set(k, v string) {
+	if r.tags == nil {
+		r.tags = map[string]string{}
+	}
+	r.tags[k] = v
+}
+
+// Get a tag value by key
+func (r *Tags) Get(k string) (string, bool) {
+	if r.tags == nil {
+		return "", false
+	}
+	a, ok := r.tags[k]
+	return a, ok
 }

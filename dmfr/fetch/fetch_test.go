@@ -157,7 +157,7 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 		if !strings.HasPrefix(tlf.LastFetchError, experr) {
 			t.Errorf("got '%s' expected prefix '%s'", tlf.LastFetchError, experr)
 		}
-		if !tlf.LastSuccessfulFetchAt.Valid {
+		if tlf.LastSuccessfulFetchAt.Valid {
 			t.Errorf("got %t expected false", tlf.LastSuccessfulFetchAt.Valid)
 		}
 		return nil

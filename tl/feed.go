@@ -19,12 +19,25 @@ type Feed struct {
 	Languages       FeedLanguages       `json:"languages,omitempty"`
 	License         FeedLicense         `json:"license"`
 	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
-	OtherIDs        map[string]string   `json:"other_ids" db:"-"`
-	IDCrosswalk     map[string]string   `json:"id_crosswalk" db:"-"`
-	File            string              `json:"-"` // internal
-	DeletedAt       OTime               `json:"-"` // internal
-	Tags            map[string]string   `json:"tags" db:"-" `
+	Operators       []Operator          `json:"operators" db:"-"`
+	Tags            Tags                `json:"tags" db:"feed_tags" `
+	File            string              `json:"file"`       // internal
+	DeletedAt       OTime               `json:"deleted_at"` // internal
 	Timestamps      `json:"-"`          // internal
+}
+
+// Equal compares the JSON representation of two feeds, excluding Operators.
+func (ent *Feed) Equal(other *Feed) bool {
+	if other == nil {
+		return false
+	}
+	a1 := *ent
+	a1.Operators = nil
+	a2 := *other
+	a2.Operators = nil
+	a1j, _ := json.Marshal(&a1)
+	a2j, _ := json.Marshal(&a2)
+	return string(a1j) == string(a2j)
 }
 
 // SetID .

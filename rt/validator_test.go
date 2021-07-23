@@ -1,7 +1,6 @@
 package rt
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
@@ -29,7 +28,8 @@ func TestValidateHeader(t *testing.T) {
 	header := msg.GetHeader()
 	errs := fi.ValidateHeader(header, msg)
 	for _, err := range errs {
-		fmt.Println(err)
+		_ = err
+		// fmt.Println(err)
 	}
 }
 
@@ -49,7 +49,8 @@ func TestValidateTripUpdate(t *testing.T) {
 	}
 	errs := fi.ValidateTripUpdate(trip, msg)
 	for _, err := range errs {
-		fmt.Println(err)
+		_ = err
+		// fmt.Println(err)
 	}
 }
 

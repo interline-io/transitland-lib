@@ -24,7 +24,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.8.0
 	github.com/twpayne/go-geom v1.3.6
-	github.com/vektah/dataloaden v0.2.1-0.20190515034641-a19b9a6e7c9e // indirect
 	github.com/vektah/gqlparser/v2 v2.1.0
 	google.golang.org/protobuf v1.25.0
 )

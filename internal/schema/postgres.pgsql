@@ -159,7 +159,8 @@ CREATE TABLE public.current_operators_in_feed (
     updated_at timestamp without time zone DEFAULT now(),
     operator_id integer,
     feed_id integer,
-    created_or_updated_in_changeset_id integer
+    created_or_updated_in_changeset_id integer,
+    agency_id bigint
 );
 CREATE SEQUENCE public.current_operators_in_feed_id_seq
     AS integer
@@ -1635,6 +1636,7 @@ CREATE INDEX agency_places_feed_version_id_idx ON public.tl_agency_places USING 
 CREATE INDEX current_feeds_feed_tags_idx ON public.current_feeds USING btree (feed_tags);
 CREATE INDEX current_feeds_textsearch_idx ON public.current_feeds USING gin (textsearch);
 CREATE INDEX current_oif ON public.current_operators_in_feed USING btree (created_or_updated_in_changeset_id);
+CREATE INDEX current_operators_in_feed_agency_id_idx ON public.current_operators_in_feed USING btree (agency_id);
 CREATE INDEX current_operators_operator_tags_idx ON public.current_operators USING btree (operator_tags);
 CREATE INDEX current_operators_textsearch_idx ON public.current_operators USING gin (textsearch);
 CREATE INDEX ext_plus_calendar_attributes_feed_version_id_idx ON public.ext_plus_calendar_attributes USING btree (feed_version_id);
@@ -1893,6 +1895,12 @@ ALTER INDEX public.gtfs_stop_times_feed_version_id_trip_id_stop_id_idx ATTACH PA
 ALTER INDEX public.gtfs_stop_times_pkey1 ATTACH PARTITION public.gtfs_stop_times_9_pkey;
 ALTER INDEX public.gtfs_stop_times_stop_id_idx ATTACH PARTITION public.gtfs_stop_times_9_stop_id_idx;
 ALTER INDEX public.gtfs_stop_times_trip_id_idx ATTACH PARTITION public.gtfs_stop_times_9_trip_id_idx;
+ALTER TABLE ONLY public.current_operators_in_feed
+    ADD CONSTRAINT current_operators_in_feed_agency_id_fkey FOREIGN KEY (agency_id) REFERENCES public.gtfs_agencies(id);
+ALTER TABLE ONLY public.current_operators_in_feed
+    ADD CONSTRAINT current_operators_in_feed_feed_id_fkey FOREIGN KEY (feed_id) REFERENCES public.current_feeds(id);
+ALTER TABLE ONLY public.current_operators_in_feed
+    ADD CONSTRAINT current_operators_in_feed_operator_id_fkey FOREIGN KEY (operator_id) REFERENCES public.current_operators(id);
 ALTER TABLE ONLY public.ext_faresv2_areas
     ADD CONSTRAINT ext_faresv2_areas_feed_version_id_fkey FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.ext_faresv2_fare_capping
