@@ -76,13 +76,15 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 	if err != nil {
 		return nil, err
 	}
-	// merge operators
+	// Apply nested operator rules and merge operators
 	operators := []tl.Operator{}
 	for _, rfeed := range reg.Feeds {
 		fsid := rfeed.FeedID
 		for _, operator := range rfeed.Operators {
 			for i, oif := range operator.AssociatedFeeds {
-				oif.FeedOnestopID = tl.NewOString(fsid)
+				if oif.FeedOnestopID.String == "" {
+					oif.FeedOnestopID = tl.NewOString(fsid)
+				}
 				operator.AssociatedFeeds[i] = oif
 			}
 			if len(operator.AssociatedFeeds) == 0 {

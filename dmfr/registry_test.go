@@ -44,8 +44,8 @@ func TestParseOperators(t *testing.T) {
 	}
 	for _, oif := range o.AssociatedFeeds {
 		if oif.FeedOnestopID.String == "GT" {
-			if oif.AgencyID.String != "abc" {
-				t.Errorf("got '%s' agency_id, expected '%s'", oif.AgencyID.String, "abc")
+			if oif.GtfsAgencyID.String != "abc" {
+				t.Errorf("got '%s' agency_id, expected '%s'", oif.GtfsAgencyID.String, "abc")
 			}
 		}
 	}
