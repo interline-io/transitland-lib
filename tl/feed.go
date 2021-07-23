@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -21,11 +22,22 @@ type Feed struct {
 	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
 	Operators       []Operator          `json:"operators" db:"-"`
 	Tags            Tags                `json:"tags" db:"feed_tags" `
-	OtherIDs        map[string]string   `json:"other_ids" db:"-"`
-	IDCrosswalk     map[string]string   `json:"id_crosswalk" db:"-"`
 	File            string              `json:"-"` // internal
 	DeletedAt       OTime               `json:"-"` // internal
 	Timestamps      `json:"-"`          // internal
+}
+
+// Equal compares the JSON representation of two feeds, excluding Operators.
+func (ent *Feed) Equal(other *Feed) bool {
+	a1 := *ent
+	a1.Operators = nil
+	a2 := *other
+	a2.Operators = nil
+	a1j, _ := json.Marshal(&a1)
+	a2j, _ := json.Marshal(&a2)
+	fmt.Println("a1:", string(a1j))
+	fmt.Println("a2:", string(a2j))
+	return string(a1j) == string(a2j)
 }
 
 // SetID .

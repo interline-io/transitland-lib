@@ -40,7 +40,6 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 		log.Debug("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
 	}
 	for i := 0; i < len(registry.Feeds); i++ {
-		registry.Feeds[i].OtherIDs = map[string]string{}
 		feedSpec := strings.ToLower(registry.Feeds[i].Spec)
 		if feedSpec == "gtfs" || feedSpec == "gtfs-rt" || feedSpec == "gbfs" || feedSpec == "mds" {
 			continue
@@ -50,14 +49,6 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 
 	}
 	return &registry, nil
-}
-
-func (registry *Registry) writeToJSONFile(path string) error {
-	registryJSON, err := json.Marshal(registry)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(path, registryJSON, 0644)
 }
 
 // LoadAndParseRegistry loads and parses a Distributed Mobility Feed Registry (DMFR) file from either a file system path or a URL

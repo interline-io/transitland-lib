@@ -118,11 +118,16 @@ func UpdateFeed(atx tldb.Adapter, rfeed tl.Feed) (int, bool, error) {
 		// Exists, update key values
 		found = true
 		feedid = dbfeed.ID
-		rfeed.ID = dbfeed.ID
-		rfeed.CreatedAt = dbfeed.CreatedAt
-		rfeed.DeletedAt = tl.OTime{Valid: false}
-		rfeed.UpdateTimestamps()
-		errTx = atx.Update(&rfeed)
+		if !dbfeed.Equal(&rfeed) {
+			rfeed.ID = dbfeed.ID
+			rfeed.CreatedAt = dbfeed.CreatedAt
+			rfeed.DeletedAt = tl.OTime{Valid: false}
+			rfeed.UpdateTimestamps()
+			fmt.Println("updating feed:", rfeed.FeedID)
+			errTx = atx.Update(&rfeed)
+		} else {
+			fmt.Println("no change to feed, skipping", rfeed.FeedID)
+		}
 	} else if err == sql.ErrNoRows {
 		rfeed.UpdateTimestamps()
 		feedid, errTx = atx.Insert(&rfeed)
