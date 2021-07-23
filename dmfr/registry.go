@@ -18,6 +18,7 @@ import (
 type Registry struct {
 	Schema                string `json:"$schema"`
 	Feeds                 []tl.Feed
+	Operators             []tl.Operator
 	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
 }
 
@@ -39,7 +40,6 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 		log.Debug("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
 	}
 	for i := 0; i < len(registry.Feeds); i++ {
-		registry.Feeds[i].OtherIDs = map[string]string{}
 		feedSpec := strings.ToLower(registry.Feeds[i].Spec)
 		if feedSpec == "gtfs" || feedSpec == "gtfs-rt" || feedSpec == "gbfs" || feedSpec == "mds" {
 			continue
@@ -49,14 +49,6 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 
 	}
 	return &registry, nil
-}
-
-func (registry *Registry) writeToJSONFile(path string) error {
-	registryJSON, err := json.Marshal(registry)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(path, registryJSON, 0644)
 }
 
 // LoadAndParseRegistry loads and parses a Distributed Mobility Feed Registry (DMFR) file from either a file system path or a URL
@@ -80,7 +72,52 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 		return nil, err
 	}
 	readerSkippingBOM, _ := utfbom.Skip(reader)
-	return NewRegistry(readerSkippingBOM)
+	reg, err := NewRegistry(readerSkippingBOM)
+	if err != nil {
+		return nil, err
+	}
+	// Apply nested operator rules and merge operators
+	operators := []tl.Operator{}
+	for _, rfeed := range reg.Feeds {
+		fsid := rfeed.FeedID
+		for _, operator := range rfeed.Operators {
+			for i, oif := range operator.AssociatedFeeds {
+				if oif.FeedOnestopID.String == "" {
+					oif.FeedOnestopID = tl.NewOString(fsid)
+				}
+				operator.AssociatedFeeds[i] = oif
+			}
+			if len(operator.AssociatedFeeds) == 0 {
+				operator.AssociatedFeeds = append(operator.AssociatedFeeds, tl.OperatorAssociatedFeed{FeedOnestopID: tl.NewOString(fsid)})
+			}
+			operators = append(operators, operator)
+		}
+		rfeed.Operators = nil
+	}
+	operators = append(operators, reg.Operators...)
+	mergeOperators := map[string]tl.Operator{}
+	for _, operator := range operators {
+		osid := operator.OnestopID.String
+		a, ok := mergeOperators[osid]
+		if ok {
+			operator.AssociatedFeeds = append(operator.AssociatedFeeds, a.AssociatedFeeds...)
+			if operator.Name.String == "" {
+				operator.Name = a.Name
+			}
+			if operator.ShortName.String == "" {
+				operator.ShortName = a.ShortName
+			}
+			if operator.Website.String == "" {
+				operator.Website = a.Website
+			}
+		}
+		mergeOperators[osid] = operator
+	}
+	reg.Operators = nil
+	for _, operator := range mergeOperators {
+		reg.Operators = append(reg.Operators, operator)
+	}
+	return reg, nil
 }
 
 // ParseString TODO

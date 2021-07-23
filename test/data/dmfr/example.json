@@ -13,7 +13,29 @@
 			"id": "EX",
 			"urls": {
 				"static_current": "http://example.com/example.zip"
-			}
+			},
+			"operators": [
+				{
+					"onestop_id": "test"
+				}
+			]
+		}
+	],
+	"operators": [
+		{
+			"onestop_id": "test",
+			"name": "bar",
+			"short_name": "baz",
+			"website": "https://transit.land",
+			"tags": {
+				"us_ntd_id": "1234"
+			},
+			"associated_feeds": [
+				{
+					"feed_onestop_id": "GT",
+					"gtfs_agency_id": "abc"
+				}
+			]
 		}
 	],
 	"license_spdx_identifier": "CC0-1.0"
