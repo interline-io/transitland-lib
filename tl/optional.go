@@ -43,18 +43,21 @@ func (r *OString) Scan(src interface{}) error {
 	default:
 		return errors.New("cant convert")
 	}
-	r.Valid = true
+	if r.String != "" {
+		r.Valid = true
+	}
 	return nil
 }
 
 // UnmarshalJSON implements json.Marshaler interface.
 func (r *OString) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.String)
-	if err != nil {
-		return err
+	r.String, r.Valid = "", false
+	if len(v) == 0 {
+		return nil
 	}
-	r.Valid = true
-	return nil
+	err := json.Unmarshal(v, &r.String)
+	r.Valid = (err == nil && r.String != "")
+	return err
 }
 
 // MarshalJSON implements the json.marshaler interface.
@@ -124,12 +127,13 @@ func (r *OInt) String() string {
 
 // UnmarshalJSON implements the json.marshaler interface.
 func (r *OInt) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.Int)
-	if err != nil {
-		return err
+	r.Int, r.Valid = 0, false
+	if len(v) == 0 {
+		return nil
 	}
-	r.Valid = true
-	return nil
+	err := json.Unmarshal(v, &r.Int)
+	r.Valid = (err == nil)
+	return err
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -199,12 +203,13 @@ func (r *OFloat) String() string {
 
 // UnmarshalJSON implements the json.marshaler interface.
 func (r *OFloat) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.Float)
-	if err != nil {
-		return err
+	r.Float, r.Valid = 0, false
+	if len(v) == 0 {
+		return nil
 	}
-	r.Valid = true
-	return nil
+	err := json.Unmarshal(v, &r.Float)
+	r.Valid = (err == nil)
+	return err
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -270,7 +275,7 @@ func (r *OKey) Scan(src interface{}) error {
 	default:
 		err = errors.New("cant convert")
 	}
-	r.Valid = (err == nil)
+	r.Valid = (err == nil && r.Key != "")
 	return err
 }
 
@@ -281,12 +286,13 @@ func (r *OKey) Int() int {
 
 // UnmarshalJSON implements the json.marshaler interface.
 func (r *OKey) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.Key)
-	if err != nil {
-		return err
+	r.Key, r.Valid = "", false
+	if len(v) == 0 {
+		return nil
 	}
-	r.Valid = true
-	return nil
+	err := json.Unmarshal(v, &r.Key)
+	r.Valid = (err == nil)
+	return err
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -431,7 +437,10 @@ func (r *ODate) Scan(src interface{}) error {
 
 // UnmarshalJSON implements the json.Marshaler interface
 func (r *ODate) UnmarshalJSON(v []byte) error {
-	r.Valid = false
+	r.Time, r.Valid = time.Time{}, false
+	if len(v) == 0 {
+		return nil
+	}
 	b := ""
 	if err := json.Unmarshal(v, &b); err != nil {
 		return err
@@ -440,8 +449,7 @@ func (r *ODate) UnmarshalJSON(v []byte) error {
 	if err != nil {
 		return err
 	}
-	r.Time = a
-	r.Valid = true
+	r.Time, r.Valid = a, true
 	return nil
 }
 
@@ -517,11 +525,11 @@ func (r Tags) MarshalGQL(w io.Writer) {
 
 // UnmarshalJSON implements json.Marshaler interface.
 func (r *Tags) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.tags)
-	if err != nil {
-		return err
+	r.tags = nil
+	if len(v) == 0 {
+		return nil
 	}
-	return nil
+	return json.Unmarshal(v, &r.tags)
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
