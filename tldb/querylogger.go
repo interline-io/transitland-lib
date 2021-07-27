@@ -18,14 +18,10 @@ type canClose interface {
 	Close() error
 }
 
-// canToSQL is the squirrel interface
-type canToSQL interface {
-	ToSql() (string, []interface{}, error)
-}
-
 // ext is for wrapped sqlx to be used in squirrel.
 type sqext interface {
 	sqlx.Ext
+	sqlx.Preparer
 	// These are required for squirrel.. :(
 	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
 	QueryRow(string, ...interface{}) *sql.Row
@@ -39,8 +35,8 @@ type QueryLogger struct {
 }
 
 // NewQueryLogger returns the db wrapped into a QueryLogger.
-func NewQueryLogger(db *sqlx.DB) *QueryLogger {
-	return &QueryLogger{sqext: db.Unsafe()}
+func NewQueryLogger(db sqext) *QueryLogger {
+	return &QueryLogger{sqext: db}
 }
 
 func logt1(qstr string, a ...interface{}) time.Time {
@@ -93,4 +89,9 @@ func (p *QueryLogger) Beginx() (*sqlx.Tx, error) {
 		return a.Beginx()
 	}
 	return nil, errors.New("cannot start tx")
+}
+
+// Prepare .
+func (p *QueryLogger) Prepare(query string) (*sql.Stmt, error) {
+	return p.sqext.Prepare(query)
 }
