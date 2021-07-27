@@ -20,7 +20,7 @@
 	- [Install as a library](#install-as-a-library)
 	- [Example of how to use as a library](#example-of-how-to-use-as-a-library)
 - [Usage as a Web Service](#usage-as-a-web-service)
-	- [`server` command](#server-command)
+	- [`transitland_server` command](#transitland_server-command)
 	- [Hasura](#hasura)
 - [Included Readers and Writers](#included-readers-and-writers)
 - [Development](#development)
@@ -325,66 +325,15 @@ See API docs at https://godoc.org/github.com/interline-io/transitland-lib
 
 `transitland-lib` can be used in a variety of ways to power a web service. Interline currently uses two approaches:
 
-1. Populate a database with one or more feeds using `transitland-lib` and use the `transitland server` command to serve the Transitland v2 REST and/or v2 GraphQL API endpoints. These API endpoints are primarily read-only and focused on querying and analyzing transit data.
+1. Populate a database with one or more feeds using `transitland-lib` and use the `transitland-server` package to serve the Transitland v2 REST and/or v2 GraphQL API endpoints. These API endpoints are primarily read-only and focused on querying and analyzing transit data.
 
 2. Populate a Postgres database with one or more feeds using `transitland-lib`, or just create an empty database using `transitland-lib`'s schema. Use [Hasura](https://hasura.io/) to provide a complete GraphQL API for reading and writing into the database. 
 
 For more information about how these web services are used within the overall architecture of the Transitland platform, see https://www.transit.land/documentation#transitland-architecture 
 
-### `server` command
+### `transitland_server` command
 
-To start the server with the REST API endpoints, GraphQL API endpoint, GraphQL explorer UI, image generation endpoints, and without authentication (all requests run as admin):
-
-```
-transitland server -playground -auth=admin -dburl=postgres://localhost/transitland_db?sslmode=disable
-```
-
-The above command assumes you have a Postgres database named "transitland_db" running on your machine under the default Postgres port. Alternatively set the database URL using the `TL_DATABASE_URL` environment variable.
-
-Open `http://localhost:8080/` in your web browser or query it using an HTTP client.
-
-To start stripped down, with only REST API endpoints (no GraphQL API or explorer UI, no static image API endpoints) and with JWT authentication:
-
-```
-transitland server -disable-image -disable-graphql -auth=jwt -jwt-audience="http://example.com" -jwt-issuer="<issuer_id>" -jwt-public-key-file="<key.pem>"
-```
-
-Note that if you are using `transitland server` with JWT authentication, place the process behind a reverse-proxy or gateway that can issue JWT tokens. At Interline, we use the combination of [Kong](https://docs.konghq.com/) and [Auth0](https://auth0.com/).
-
-More options:
-
-```
-% transitland server --help
-Usage: server
-  -auth string
-
-  -dburl string
-    	Database URL (default: $TL_DATABASE_URL)
-  -disable-graphql
-    	Disable GraphQL endpoint
-  -disable-image
-    	Disable image generation
-  -disable-rest
-    	Disable REST endpoint
-  -gtfsdir string
-    	Directory to store GTFS files
-  -jwt-audience string
-    	JWT Audience
-  -jwt-issuer string
-    	JWT Issuer
-  -jwt-public-key-file string
-    	Path to JWT public key file
-  -playground
-    	Enable GraphQL playground
-  -port string
-    	 (default "8080")
-  -s3 string
-    	S3 bucket for GTFS files
-  -timeout int
-    	 (default 60)
-  -validate-large-files
-    	Allow validation of large files
-```
+See [transitland-server](https://github.com/interline-io/transitland-server) documentation.
 
 ### Hasura
 
