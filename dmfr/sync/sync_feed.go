@@ -17,7 +17,7 @@ func UpdateFeed(atx tldb.Adapter, rfeed tl.Feed) (int, bool, bool, error) {
 	updated := false
 	var errTx error
 	dbfeed := tl.Feed{}
-	if err := atx.Get(&dbfeed, "SELECT * FROM current_feeds WHERE onestop_id = ?", rfeed.FeedID); err == nil {
+	if err := atx.Get(&dbfeed, "select * from current_feeds where onestop_id = ?", rfeed.FeedID); err == nil {
 		// Exists, update key values
 		found = true
 		feedid = dbfeed.ID
@@ -54,4 +54,18 @@ func HideUnseedFeeds(atx tldb.Adapter, found []int) (int, error) {
 	}
 	c, err := r.RowsAffected()
 	return int(c), err
+}
+
+// UpdateFeedGeneratedOperators creates OperatorInFeed records for agencies that are not associated with an operator
+func UpdateFeedGeneratedOperators(atx tldb.Adapter, found []int) error {
+	for _, id := range found {
+		feed := tl.Feed{}
+		if err := atx.Get(&feed, "select * from current_feeds where id = ?", id); err != nil {
+			return err
+		}
+		if _, err := feedUpdateOifs(atx, feed); err != nil {
+			return err
+		}
+	}
+	return nil
 }

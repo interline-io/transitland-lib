@@ -28,8 +28,8 @@ type Result struct {
 
 // MainSync .
 func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
-	// Load
 	sr := Result{}
+	// Load Feeds
 	for _, fn := range opts.Filenames {
 		reg, err := dmfr.LoadAndParseRegistry(fn)
 		if err != nil {
@@ -57,6 +57,7 @@ func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 			sr.FeedIDs = append(sr.FeedIDs, feedid)
 		}
 	}
+	// Load Operators
 	for _, fn := range opts.Filenames {
 		reg, err := dmfr.LoadAndParseRegistry(fn)
 		if err != nil {
@@ -82,6 +83,7 @@ func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 			sr.OperatorIDs = append(sr.OperatorIDs, operatorid)
 		}
 	}
+	// Rollback on any errors
 	if len(sr.Errors) > 0 {
 		log.Error("Rollback due to one or more failures")
 		return sr, fmt.Errorf("failed: %s", sr.Errors[0].Error())
@@ -108,6 +110,15 @@ func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 		if sr.HiddenOperators > 0 {
 			log.Info("Soft-deleted %d operators", sr.HiddenOperators)
 		}
+	}
+	// Update any automatically generated agency-operator associations
+	if err := UpdateFeedGeneratedOperators(atx, sr.FeedIDs); err != nil {
+		sr.Errors = append(sr.Errors, err)
+	}
+	// Rollback on any errors
+	if len(sr.Errors) > 0 {
+		log.Error("Rollback due to one or more failures")
+		return sr, fmt.Errorf("failed: %s", sr.Errors[0].Error())
 	}
 	return sr, nil
 }

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -50,75 +49,6 @@ func UpdateOperator(atx tldb.Adapter, operator tl.Operator) (int, bool, bool, er
 		updated = true
 	}
 	return operator.ID, found, updated, nil
-}
-
-func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
-	updated := false
-	id := operator.ID
-	type oifmatch struct {
-		feedID       int
-		agencyID     int
-		gtfsAgencyID string
-	}
-	oiflookup := map[oifmatch]int{}
-	oifmatches := map[int]bool{}
-	oifexisting := []tl.OperatorAssociatedFeed{}
-	if err := atx.Select(&oifexisting, "select * from current_operators_in_feed where operator_id = ?", id); err != nil {
-		return false, err
-	}
-	for _, oif := range oifexisting {
-		oiflookup[oifmatch{feedID: oif.FeedID, gtfsAgencyID: oif.GtfsAgencyID.String, agencyID: oif.AgencyID.Int}] = oif.ID
-	}
-	for _, oif := range operator.AssociatedFeeds {
-		// Get feed id
-		fsid := oif.FeedOnestopID.String
-		feedid := 0
-		if err := atx.Get(&feedid, "select id from current_feeds where onestop_id = ?", fsid); err == sql.ErrNoRows {
-			log.Info("Warning: no feed for '%s'", fsid)
-			continue
-		} else if err != nil {
-			return false, err
-		}
-		// Get agencies
-		agencies := []tl.Agency{}
-		if err := atx.Select(&agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states using(feed_version_id) where feed_states.feed_id = ?", feedid); err != nil {
-			return false, err
-		}
-		if len(agencies) == 1 {
-			// match regardless of gtfs_agency_id
-			oif.AgencyID = tl.NewOInt(agencies[0].ID)
-		} else if len(agencies) > 1 {
-			// match on first gtfs_agency_id
-			for _, agency := range agencies {
-				if agency.AgencyID == oif.GtfsAgencyID.String {
-					oif.AgencyID = tl.NewOInt(agency.ID)
-				}
-			}
-		}
-		// Match or insert
-		if match, ok := oiflookup[oifmatch{feedID: feedid, gtfsAgencyID: oif.GtfsAgencyID.String, agencyID: oif.AgencyID.Int}]; ok {
-			// ok
-			oifmatches[match] = true
-		} else {
-			updated = true
-			if _, err := atx.Sqrl().Insert("current_operators_in_feed").Columns("operator_id", "feed_id", "gtfs_agency_id", "agency_id").Values(id, feedid, oif.GtfsAgencyID, oif.AgencyID).Exec(); err != nil {
-				return false, err
-			}
-		}
-	}
-	deleteoifs := []int{}
-	for _, oif := range oifexisting {
-		if _, ok := oifmatches[oif.ID]; !ok {
-			deleteoifs = append(deleteoifs, oif.ID)
-		}
-	}
-	if len(deleteoifs) > 0 {
-		updated = true
-		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).Exec(); err != nil {
-			return false, err
-		}
-	}
-	return updated, nil
 }
 
 // HideUnseedOperators .
