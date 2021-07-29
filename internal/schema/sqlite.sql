@@ -36,8 +36,12 @@ CREATE TABLE IF NOT EXISTS "current_operators_in_feed" (
   "id" integer primary key autoincrement, 
   "operator_id" integer not null,
   "feed_id" integer not null,
-  "agency_id" integer,
-  "gtfs_agency_id" varchar(255)
+  "gtfs_agency_id" varchar(255),
+  "resolved_onestop_id" varchar(255),
+  "resolved_gtfs_agency_id" varchar(255),
+  "resolved_name" varchar(255),
+  "resolved_short_name" varchar(255),
+  "resolved_places" varchar(255)
 );
 
 CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
@@ -399,4 +403,20 @@ CREATE INDEX idx_gtfs_fare_attributes_feed_version_id ON "gtfs_fare_attributes"(
 
 -------------------
 
+CREATE TABLE IF NOT EXISTS "tl_agency_onestop_ids" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer not null,
+  "agency_id" integer not null,
+  "onestop_id" varchar(255)
+);
+
+CREATE TABLE IF NOT EXISTS "tl_agency_places" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer not null,
+  "agency_id" integer not null,
+  "rank" real not null,
+  "name" varchar(255),
+  "adm1name" varchar(255),
+  "adm0name" varchar(255)
+);
 
