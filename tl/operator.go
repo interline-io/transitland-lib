@@ -25,9 +25,6 @@ func (ent *Operator) Equal(other *Operator) bool {
 	if other == nil {
 		return false
 	}
-	if other.File != ent.File {
-		return false
-	}
 	a1 := *ent
 	a2 := *other
 	a1j, _ := json.Marshal(&a1)
