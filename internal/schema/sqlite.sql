@@ -21,6 +21,7 @@ CREATE INDEX idx_current_feeds_onestop_id ON "current_feeds"(onestop_id);
 CREATE TABLE IF NOT EXISTS "current_operators" (
   "id" integer primary key autoincrement, 
   "onestop_id" varchar(255) NOT NULL,
+  "file" varchar(255) NOT NULL,
   "name" varchar(255) NOT NULL,
   "short_name" varchar(255) NOT NULL,
   "website" varchar(255) NOT NULL,
