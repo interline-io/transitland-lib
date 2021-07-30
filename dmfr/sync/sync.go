@@ -67,7 +67,7 @@ func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 		}
 		for _, operator := range reg.Operators {
 			osid := operator.OnestopID.String
-			operator.File = filepath.Base(fn)
+			operator.File = tl.NewOString(filepath.Base(fn))
 			operator.DeletedAt = tl.OTime{Valid: false}
 			operatorid, found, updated, err := UpdateOperator(atx, operator)
 			if err != nil {
