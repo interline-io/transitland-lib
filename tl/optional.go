@@ -502,6 +502,7 @@ func (r Tags) Value() (driver.Value, error) {
 
 // Scan .
 func (r *Tags) Scan(value interface{}) error {
+	r.tags = nil
 	if value == nil {
 		return nil
 	}
@@ -514,7 +515,7 @@ func (r *Tags) Scan(value interface{}) error {
 
 // MarshalJSON implements the json.marshaler interface.
 func (r *Tags) MarshalJSON() ([]byte, error) {
-	if r == nil {
+	if r.tags == nil {
 		return []byte("null"), nil
 	}
 	return json.Marshal(r.tags)
