@@ -15,7 +15,7 @@ type Operator struct {
 	ShortName       OString                 `json:"short_name"`
 	Website         OString                 `json:"website"`
 	AssociatedFeeds OperatorAssociatedFeeds `json:"associated_feeds"`
-	File            string                  `json:"file"`       // internal
+	File            OString                 `json:"file"`       // internal
 	DeletedAt       OTime                   `json:"deleted_at"` // internal
 	Timestamps      `json:"-"`
 }
