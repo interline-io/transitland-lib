@@ -15,13 +15,17 @@ type Operator struct {
 	ShortName       OString                 `json:"short_name"`
 	Website         OString                 `json:"website"`
 	AssociatedFeeds OperatorAssociatedFeeds `json:"associated_feeds"`
-	DeletedAt       OTime                   `json:"-"`
+	File            string                  `json:"file"`       // internal
+	DeletedAt       OTime                   `json:"deleted_at"` // internal
 	Timestamps      `json:"-"`
 }
 
 // Equal compares the JSON representation of two operators.
 func (ent *Operator) Equal(other *Operator) bool {
 	if other == nil {
+		return false
+	}
+	if other.File != ent.File {
 		return false
 	}
 	a1 := *ent
