@@ -60,11 +60,6 @@ func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
 	return fi, nil
 }
 
-// SetGeomCache sets a shared geometry cache.
-func (fi *Validator) SetGeomCache(g *xy.GeomCache) {
-	fi.geomCache = g
-}
-
 // Validate gets a stream of entities from Copier to build up the cache.
 func (fi *Validator) Validate(ent tl.Entity) []error {
 	switch v := ent.(type) {

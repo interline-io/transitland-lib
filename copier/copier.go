@@ -16,12 +16,12 @@ import (
 
 // Prepare is called before general copying begins.
 type Prepare interface {
-	Prepare(tl.Reader, *tl.EntityMap) error
+	Prepare(tl.Reader, tl.EMap) error
 }
 
 // Filter is called before validation.
 type Filter interface {
-	Filter(tl.Entity, *tl.EntityMap) error
+	Filter(tl.Entity, tl.EMap) error
 }
 
 // Validator is called for each entity.
@@ -54,8 +54,13 @@ type errorWithContext interface {
 	Context() *causes.Context
 }
 
+type GeomCache interface {
+	GetStop(eid string) [2]float64
+	GetShape(eid string) [][2]float64
+}
+
 type canShareGeomCache interface {
-	SetGeomCache(*xy.GeomCache)
+	SetGeomCache(GeomCache)
 }
 
 ////////////////////////////

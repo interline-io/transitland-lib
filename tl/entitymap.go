@@ -1,5 +1,12 @@
 package tl
 
+type EMap interface {
+	Set(string, string, string) error
+	Get(string, string) (string, bool)
+	SetEntity(Entity, string, string) error
+	GetEntity(Entity) (string, bool)
+}
+
 // EntityMap stores correspondances between Entity IDs, e.g. StopID -> Stop's integer ID in a database.
 type EntityMap struct {
 	ids map[string]map[string]string
@@ -54,13 +61,13 @@ func (emap *EntityMap) KeysFor(efn string) []string {
 }
 
 // Update copies values from another EntityMap.
-func (emap *EntityMap) Update(other EntityMap) {
-	for efn, m := range other.ids {
-		if _, ok := emap.ids[efn]; !ok {
-			emap.ids[efn] = map[string]string{}
-		}
-		for sid, eid := range m {
-			emap.ids[efn][sid] = eid
-		}
-	}
-}
+// func (emap *EntityMap) Update(other EntityMap) {
+// 	for efn, m := range other.ids {
+// 		if _, ok := emap.ids[efn]; !ok {
+// 			emap.ids[efn] = map[string]string{}
+// 		}
+// 		for sid, eid := range m {
+// 			emap.ids[efn][sid] = eid
+// 		}
+// 	}
+// }
