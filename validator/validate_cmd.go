@@ -1,4 +1,4 @@
-package main
+package validator
 
 import (
 	"encoding/json"
@@ -9,18 +9,18 @@ import (
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/internal/snakejson"
-	"github.com/interline-io/transitland-lib/validator"
 )
 
-// validateCommand
-type validateCommand struct {
-	Options    validator.Options
+// Command
+type Command struct {
+	Options    Options
 	rtFiles    cli.ArrayFlags
 	OutputFile string
 	extensions cli.ArrayFlags
+	readerPath string
 }
 
-func (cmd *validateCommand) Run(args []string) error {
+func (cmd *Command) Parse(args []string) error {
 	fl := flag.NewFlagSet("validate", flag.ExitOnError)
 	fl.Usage = func() {
 		log.Print("Usage: validate <reader>")
@@ -35,15 +35,20 @@ func (cmd *validateCommand) Run(args []string) error {
 		fl.Usage()
 		log.Exit("Requires input reader")
 	}
-	reader := ext.MustGetReader(fl.Arg(0))
-	defer reader.Close()
+	cmd.readerPath = fl.Arg(0)
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles
 	cmd.Options.Extensions = cmd.extensions
-	v, err := validator.NewValidator(reader, cmd.Options)
+	return nil
+}
+
+func (cmd *Command) Run() error {
+	log.Info("Validating: %s", cmd.readerPath)
+	reader := ext.MustGetReader(cmd.readerPath)
+	defer reader.Close()
+	v, err := NewValidator(reader, cmd.Options)
 	if err != nil {
 		return err
 	}
-	log.Info("Validating: %s", fl.Arg(0))
 	result, err := v.Validate()
 	if err != nil {
 		return err

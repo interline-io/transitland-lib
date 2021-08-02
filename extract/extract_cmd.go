@@ -1,4 +1,4 @@
-package main
+package extract
 
 import (
 	"flag"
@@ -7,14 +7,13 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/extract"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// extractCommand
-type extractCommand struct {
+// Command
+type Command struct {
 	// Default options
 	copier.Options
 	// Typical DMFR options
@@ -22,18 +21,18 @@ type extractCommand struct {
 	create     bool
 	extensions cli.ArrayFlags
 	// extract specific arguments
-	onlyVisitedEntities bool
-	allEntities         bool
-	extractAgencies     cli.ArrayFlags
-	extractStops        cli.ArrayFlags
-	extractTrips        cli.ArrayFlags
-	extractCalendars    cli.ArrayFlags
-	extractRoutes       cli.ArrayFlags
-	extractRouteTypes   cli.ArrayFlags
-	extractSet          cli.ArrayFlags
+	extractAgencies   cli.ArrayFlags
+	extractStops      cli.ArrayFlags
+	extractTrips      cli.ArrayFlags
+	extractCalendars  cli.ArrayFlags
+	extractRoutes     cli.ArrayFlags
+	extractRouteTypes cli.ArrayFlags
+	extractSet        cli.ArrayFlags
+	readerPath        string
+	writerPath        string
 }
 
-func (cmd *extractCommand) Run(args []string) error {
+func (cmd *Command) Parse(args []string) error {
 	fl := flag.NewFlagSet("extract", flag.ExitOnError)
 	fl.Usage = func() {
 		log.Print("Usage: extract <input> <output>")
@@ -66,10 +65,16 @@ func (cmd *extractCommand) Run(args []string) error {
 		fl.Usage()
 		log.Exit("Requires input reader and output writer")
 	}
+	cmd.readerPath = fl.Arg(0)
+	cmd.writerPath = fl.Arg(1)
+	return nil
+}
+
+func (cmd *Command) Run() error {
 	// Reader / Writer
-	reader := ext.MustGetReader(fl.Arg(0))
+	reader := ext.MustGetReader(cmd.readerPath)
 	defer reader.Close()
-	writer := ext.MustGetWriter(fl.Arg(1), cmd.create)
+	writer := ext.MustGetWriter(cmd.writerPath, cmd.create)
 	defer writer.Close()
 	// Create fv
 	if dbw, ok := writer.(*tldb.Writer); ok {
@@ -96,7 +101,7 @@ func (cmd *extractCommand) Run(args []string) error {
 		setvalues = append(setvalues, strings.Split(setv, ","))
 	}
 	if len(setvalues) > 0 {
-		tx := extract.NewSetterFilter()
+		tx := NewSetterFilter()
 		for _, setv := range setvalues {
 			if len(setv) != 4 {
 				log.Exit("Invalid set argument")
@@ -139,7 +144,7 @@ func (cmd *extractCommand) Run(args []string) error {
 				log.Debug("\t%s: %s", k, i)
 			}
 		}
-		em := extract.NewMarker()
+		em := NewMarker()
 		log.Debug("Loading graph")
 		em.Filter(reader, fm)
 		cp.Marker = &em
