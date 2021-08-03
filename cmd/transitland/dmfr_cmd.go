@@ -46,11 +46,7 @@ func (cmd *dmfrCommand) Parse(args []string) error {
 	default:
 		return fmt.Errorf("invalid command: %q", subc)
 	}
-	// Parse; consume first arg
-	if err := cmd.subcommand.Parse(subargs); err != nil {
-		return err
-	}
-	return nil
+	return cmd.subcommand.Parse(subargs)
 }
 
 // Run the DMFR command.
