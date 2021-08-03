@@ -36,7 +36,7 @@ func (cmd *Command) Parse(args []string) error {
 		log.Exit("Requires input reader and output writer")
 	}
 	cmd.readerPath = fl.Arg(0)
-	cmd.readerPath = fl.Arg(1)
+	cmd.writerPath = fl.Arg(1)
 	return nil
 }
 
