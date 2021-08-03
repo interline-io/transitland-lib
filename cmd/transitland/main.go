@@ -17,7 +17,10 @@ import (
 	"github.com/interline-io/transitland-lib/validator"
 )
 
-///////////////
+type runner interface {
+	Parse([]string) error
+	Run() error
+}
 
 func main() {
 	log.SetLevel(log.INFO)
@@ -33,10 +36,13 @@ func main() {
 		log.Print("Usage of %s:", os.Args[0])
 		log.Print("Commands:")
 		log.Print("  copy")
-		log.Print("  extract")
 		log.Print("  validate")
+		log.Print("  extract")
+		log.Print("  fetch")
+		log.Print("  import")
+		log.Print("  sync")
 		log.Print("  dmfr")
-		log.Print("  server")
+
 	}
 	flag.Parse()
 	if versionFlag {
@@ -60,11 +66,7 @@ func main() {
 		flag.Usage()
 		log.Exit("")
 	}
-	type runnable interface {
-		Parse([]string) error
-		Run() error
-	}
-	var r runnable
+	var r runner
 	switch subc {
 	case "copy":
 		r = &copier.Command{}

@@ -11,11 +11,6 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/validate"
 )
 
-type runner interface {
-	Parse([]string) error
-	Run() error
-}
-
 // dmfrCommand is the main entry point to the DMFR command
 type dmfrCommand struct {
 	subcommand runner
