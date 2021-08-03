@@ -1,26 +1,25 @@
-package main
+package copier
 
 import (
 	"flag"
 
-	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// copyCommand
-type copyCommand struct {
-	// Default options
-	copier.Options
-	// Typical DMFR options
+// Command
+type Command struct {
+	Options
 	fvid       int
 	create     bool
 	extensions cli.ArrayFlags
+	readerPath string
+	writerPath string
 }
 
-func (cmd *copyCommand) Run(args []string) error {
+func (cmd *Command) Parse(args []string) error {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
 	fl.Usage = func() {
 		log.Print("Usage: copy <reader> <writer>")
@@ -29,19 +28,23 @@ func (cmd *copyCommand) Run(args []string) error {
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
-	// Copy options
 	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
 	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
-	//
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
 		log.Exit("Requires input reader and output writer")
 	}
+	cmd.readerPath = fl.Arg(0)
+	cmd.readerPath = fl.Arg(1)
+	return nil
+}
+
+func (cmd *Command) Run() error {
 	// Reader / Writer
-	reader := ext.MustGetReader(fl.Arg(0))
+	reader := ext.MustGetReader(cmd.readerPath)
 	defer reader.Close()
-	writer := ext.MustGetWriter(fl.Arg(1), cmd.create)
+	writer := ext.MustGetWriter(cmd.writerPath, cmd.create)
 	defer writer.Close()
 	// Create feed version
 	if dbw, ok := writer.(*tldb.Writer); ok {
@@ -58,7 +61,7 @@ func (cmd *copyCommand) Run(args []string) error {
 	}
 	// Setup copier
 	cmd.Options.Extensions = cmd.extensions
-	cp, err := copier.NewCopier(reader, writer, cmd.Options)
+	cp, err := NewCopier(reader, writer, cmd.Options)
 	if err != nil {
 		log.Exit(err.Error())
 	}

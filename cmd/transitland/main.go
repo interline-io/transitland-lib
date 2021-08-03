@@ -4,15 +4,23 @@ import (
 	"flag"
 	"os"
 
-	dmfr "github.com/interline-io/transitland-lib/dmfr/cmd"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/dmfr/fetch"
+	"github.com/interline-io/transitland-lib/dmfr/importer"
+	"github.com/interline-io/transitland-lib/dmfr/sync"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
+	"github.com/interline-io/transitland-lib/extract"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/validator"
 )
 
-///////////////
+type runner interface {
+	Parse([]string) error
+	Run() error
+}
 
 func main() {
 	log.SetLevel(log.INFO)
@@ -28,10 +36,13 @@ func main() {
 		log.Print("Usage of %s:", os.Args[0])
 		log.Print("Commands:")
 		log.Print("  copy")
-		log.Print("  extract")
 		log.Print("  validate")
+		log.Print("  extract")
+		log.Print("  fetch")
+		log.Print("  import")
+		log.Print("  sync")
 		log.Print("  dmfr")
-		log.Print("  server")
+
 	}
 	flag.Parse()
 	if versionFlag {
@@ -55,25 +66,30 @@ func main() {
 		flag.Usage()
 		log.Exit("")
 	}
-	type runnable interface {
-		Run([]string) error
-	}
-	var r runnable
-	var err error
+	var r runner
 	switch subc {
 	case "copy":
-		r = &copyCommand{}
+		r = &copier.Command{}
 	case "validate":
-		r = &validateCommand{}
+		r = &validator.Command{}
 	case "extract":
-		r = &extractCommand{}
-	case "dmfr":
-		r = &dmfr.Command{}
+		r = &extract.Command{}
+	case "fetch":
+		r = &fetch.Command{}
+	case "import":
+		r = &importer.Command{}
+	case "sync":
+		r = &sync.Command{}
+	case "dmfr": // backwards compat
+		r = &dmfrCommand{}
+
 	default:
 		log.Exit("%q is not valid command.", subc)
 	}
-	err = r.Run(args[1:]) // consume first arg
-	if err != nil {
+	if err := r.Parse(args[1:]); err != nil {
+		log.Exit("Erorr: %s", err.Error())
+	}
+	if err := r.Run(); err != nil {
 		log.Exit("Error: %s", err.Error())
 	}
 }
