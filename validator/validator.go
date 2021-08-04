@@ -50,6 +50,10 @@ type Validator struct {
 	copier      *copier.Copier
 }
 
+func (v *Validator) AddExtension(ext interface{}) error {
+	return v.copier.AddExtension(ext)
+}
+
 // NewValidator returns a new Validator.
 func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	// Default options
