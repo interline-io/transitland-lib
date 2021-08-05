@@ -63,7 +63,7 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	if options.IncludeEntitiesLimit == 0 {
 		options.IncludeEntitiesLimit = defaultMaxEnts
 	}
-	writer := &emptyWriter{}
+	writer := &tl.NullWriter{}
 	writer.Open()
 	// Prepare copier
 	options.Options.AllowEntityErrors = true
