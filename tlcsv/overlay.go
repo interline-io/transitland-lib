@@ -29,6 +29,52 @@ func NewOverlayAdapter(paths ...string) OverlayAdapter {
 	return OverlayAdapter{paths: paths}
 }
 
+func (adapter OverlayAdapter) Files() ([]string, error) {
+	check := map[string]bool{}
+	for _, path := range adapter.paths {
+		files, err := filepath.Glob(filepath.Join(path, "*.txt"))
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range files {
+			fn := filepath.Base(f)
+			if check[fn] {
+				continue
+			}
+			check[fn] = true
+		}
+	}
+	files := []string{}
+	for k := range check {
+		files = append(files, k)
+	}
+	return files, nil
+}
+
+func (adapter OverlayAdapter) CreateZip(outfile string) error {
+	outadapter := NewZipWriterAdapter(outfile)
+	if err := adapter.Open(); err != nil {
+		return err
+	}
+	files, err := adapter.Files()
+	if err != nil {
+		return err
+	}
+	for _, filename := range files {
+		var err2 error
+		err := adapter.OpenFile(filename, func(r io.Reader) {
+			err2 = outadapter.AddFile(filename, r)
+		})
+		if err != nil {
+			return err
+		}
+		if err2 != nil {
+			return err
+		}
+	}
+	return outadapter.Close()
+}
+
 // SHA1 is an alias for DirSHA1
 func (adapter OverlayAdapter) SHA1() (string, error) {
 	return adapter.DirSHA1()

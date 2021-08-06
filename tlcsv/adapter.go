@@ -393,6 +393,23 @@ func (adapter *DirAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 	return nil
 }
 
+// AddFile directly adds a file to this directory. Useful for manual feed operations.
+func (adapter *DirAdapter) AddFile(filename string, reader io.Reader) error {
+	in, ok := adapter.files[filename]
+	if !ok {
+		i, err := os.Create(filepath.Join(adapter.path, filename))
+		if err != nil {
+			return err
+		}
+		in = i
+		adapter.files[filename] = in
+	}
+	if _, err := io.Copy(in, reader); err != nil {
+		return err
+	}
+	return nil
+}
+
 // ReadRows opens the file and runs the callback for each row. An error is returned if the file cannot be read.
 func (adapter *DirAdapter) ReadRows(filename string, cb func(Row)) error {
 	return adapter.OpenFile(filename, func(in io.Reader) {
