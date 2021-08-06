@@ -50,6 +50,10 @@ type Validator struct {
 	copier      *copier.Copier
 }
 
+func (v *Validator) AddExtension(ext interface{}) error {
+	return v.copier.AddExtension(ext)
+}
+
 // NewValidator returns a new Validator.
 func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	// Default options
@@ -59,7 +63,7 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	if options.IncludeEntitiesLimit == 0 {
 		options.IncludeEntitiesLimit = defaultMaxEnts
 	}
-	writer := &emptyWriter{}
+	writer := &tl.NullWriter{}
 	writer.Open()
 	// Prepare copier
 	options.Options.AllowEntityErrors = true

@@ -31,7 +31,7 @@ type Validator interface {
 
 // AfterValidator is called for each fully validated entity before writing.
 type AfterValidator interface {
-	AfterValidator(tl.Entity) error
+	AfterValidator(tl.Entity, *tl.EntityMap) error
 }
 
 // Extension is run after normal copying has completed.
@@ -331,7 +331,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	}
 	// Handle after validators
 	for _, v := range copier.afterValidators {
-		if err := v.AfterValidator(ent); err != nil {
+		if err := v.AfterValidator(ent, copier.EntityMap); err != nil {
 			return err
 		}
 	}

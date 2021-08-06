@@ -108,7 +108,7 @@ func NewResult() *Result {
 		SkipEntityMarkedCount:    map[string]int{},
 		Errors:                   map[string]*ErrorGroup{},
 		Warnings:                 map[string]*ErrorGroup{},
-		ErrorLimit:               10,
+		ErrorLimit:               1000,
 	}
 }
 
