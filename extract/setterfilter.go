@@ -5,7 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/graph"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tlrow"
 )
 
 // SetterFilter overrides entity values using a copier filter.
@@ -26,7 +26,7 @@ func (tx *SetterFilter) AddValuesFromFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	tlcsv.ReadRows(f, func(row tlcsv.Row) {
+	tlrow.ReadRows(f, func(row tlrow.Row) {
 		efn, _ := row.Get("filename")
 		eid, _ := row.Get("entity_id")
 		key, _ := row.Get("key")
@@ -57,7 +57,7 @@ func (tx *SetterFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	if v, ok := ent.(hasEntityKey); ok {
 		if entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), v.EntityKey())]; ok {
 			for k, v := range entv {
-				if err := tlcsv.SetString(ent, k, v); err != nil {
+				if err := tlrow.SetString(ent, k, v); err != nil {
 					return err
 				}
 			}

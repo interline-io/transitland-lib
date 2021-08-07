@@ -1,4 +1,4 @@
-package tlcsv
+package tlrow
 
 import (
 	"database/sql/driver"
@@ -172,18 +172,18 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 
 // Loading: fast and reflect paths //
 
-// loadRow selects the fastest method for loading an entity.
-func loadRow(ent tl.Entity, row Row) {
+// LoadRow selects the fastest method for loading an entity.
+func LoadRow(ent tl.Entity, row Row) {
 	// Check for fast path
 	if entfast, ok := ent.(canSetString); ok {
-		loadRowFast(entfast, row)
+		LoadRowFast(entfast, row)
 	} else {
-		loadRowReflect(ent, row)
+		LoadRowReflect(ent, row)
 	}
 }
 
 // LoadRowFast uses a fast path for entities that support SetString and AddError.
-func loadRowFast(ent canSetString, row Row) {
+func LoadRowFast(ent canSetString, row Row) {
 	// Return if there was a row parsing error
 	if row.Err != nil {
 		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
@@ -198,8 +198,8 @@ func loadRowFast(ent canSetString, row Row) {
 	}
 }
 
-// loadRowReflect is the Reflect path
-func loadRowReflect(ent tl.Entity, row Row) {
+// LoadRowReflect is the Reflect path
+func LoadRowReflect(ent tl.Entity, row Row) {
 	// Return if there was a row parsing error
 	if row.Err != nil {
 		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
@@ -246,13 +246,13 @@ func loadRowReflect(ent tl.Entity, row Row) {
 
 // Dumping: fast and reflect paths //
 
-// dumpHeader returns the header for an Entity.
-func dumpHeader(ent tl.Entity) ([]string, error) {
+// DumpHeader returns the header for an Entity.
+func DumpHeader(ent tl.Entity) ([]string, error) {
 	return MapperCache.GetHeader(ent)
 }
 
-// dumpRow returns a []string for the Entity.
-func dumpRow(ent tl.Entity, header []string) ([]string, error) {
+// DumpRow returns a []string for the Entity.
+func DumpRow(ent tl.Entity, header []string) ([]string, error) {
 	row := []string{}
 	// Fast path
 	if a, ok := ent.(canGetString); ok {

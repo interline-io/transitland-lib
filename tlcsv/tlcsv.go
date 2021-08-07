@@ -6,7 +6,14 @@ import (
 
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlrow"
 )
+
+type WriterAdapter = tlrow.WriterAdapter
+type Row = tlrow.Row
+type Adapter = tlrow.Adapter
+type URLAdapter = tlrow.URLAdapter
+type ZipAdapter = tlrow.ZipAdapter
 
 var bufferSize = 1000
 var chunkSize = 1000000

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlrow"
 )
 
 type hasEntityKey interface {
@@ -22,9 +23,9 @@ type Writer struct {
 func NewWriter(path string) (*Writer, error) {
 	var a WriterAdapter
 	if strings.HasSuffix(path, ".zip") {
-		a = NewZipWriterAdapter(path)
+		a = tlrow.NewZipWriterAdapter(path)
 	} else {
-		a = NewDirAdapter(path)
+		a = tlrow.NewDirAdapter(path)
 	}
 	return &Writer{
 		WriterAdapter: a,
@@ -63,7 +64,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	}
 	header, ok := writer.headers[efn]
 	if !ok {
-		h, err := dumpHeader(ent)
+		h, err := tlrow.DumpHeader(ent)
 		if err != nil {
 			return eids, err
 		}
@@ -77,7 +78,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		if v, ok := ent.(hasEntityKey); ok {
 			sid = v.EntityKey()
 		}
-		row, err := dumpRow(ent, header)
+		row, err := tlrow.DumpRow(ent, header)
 		if err != nil {
 			return eids, err
 		}

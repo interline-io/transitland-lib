@@ -1,4 +1,4 @@
-package tlcsv
+package tlrow
 
 import (
 	"encoding/csv"

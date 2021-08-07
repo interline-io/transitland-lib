@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tlrow"
 )
 
 //////////// helpers /////////////
@@ -18,7 +19,7 @@ func exampleReader(basepath string, overlaypath string) *tlcsv.Reader {
 	if err != nil {
 		return nil
 	}
-	reader.Adapter = tlcsv.NewOverlayAdapter(overlaypath, basepath)
+	reader.Adapter = tlrow.NewOverlayAdapter(overlaypath, basepath)
 	return reader
 }
 

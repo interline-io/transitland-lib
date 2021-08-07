@@ -1,4 +1,4 @@
-package tlcsv
+package tlrow
 
 import (
 	"io"
@@ -151,10 +151,10 @@ func TestURLAdapter(t *testing.T) {
 	}))
 	defer ts.Close()
 	// Main tests
-	testAdapter(t, &URLAdapter{url: ts.URL})
+	testAdapter(t, &URLAdapter{URL: ts.URL})
 	//
 	t.Run("Download", func(t *testing.T) {
-		a := URLAdapter{url: ts.URL}
+		a := URLAdapter{URL: ts.URL}
 		if err := a.Open(); err != nil {
 			t.Error(err)
 		}
@@ -254,7 +254,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		total := 0
 		adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.StopTime{}
-			loadRow(&e, row)
+			LoadRow(&e, row)
 			m[e.StopID]++
 			total++
 		})

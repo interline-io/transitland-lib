@@ -9,6 +9,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tlrow"
 )
 
 // s2D is two dimensional string slice
@@ -23,15 +24,15 @@ type Reader struct {
 func NewReader(path string) (*Reader, error) {
 	var a Adapter
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "ftp://") {
-		a = &URLAdapter{url: path}
+		a = &URLAdapter{URL: path}
 	} else if strings.HasPrefix(path, "s3://") {
-		a = &URLAdapter{url: path}
+		a = &URLAdapter{URL: path}
 	} else if strings.HasPrefix(path, "overlay://") {
-		a = NewOverlayAdapter(path)
+		a = tlrow.NewOverlayAdapter(path)
 	} else if fi, err := os.Stat(path); err == nil && fi.IsDir() {
-		a = NewDirAdapter(path)
+		a = tlrow.NewDirAdapter(path)
 	} else {
-		a = NewZipAdapter(path)
+		a = tlrow.NewZipAdapter(path)
 	}
 	return &Reader{Adapter: a}, nil
 }
@@ -50,7 +51,7 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			a := reflect.New(outInnerType)
 			e := a.Interface().(tl.Entity)
-			loadRow(e, row)
+			tlrow.LoadRow(e, row)
 			outValue.Send(a.Elem())
 		})
 		outValue.Close()
@@ -75,7 +76,7 @@ func (reader *Reader) ValidateStructure() []error {
 		err := reader.Adapter.OpenFile(efn, func(in io.Reader) {
 			rowcount := 0
 			rowheader := []string{}
-			readerr := ReadRows(in, func(row Row) {
+			readerr := tlrow.ReadRows(in, func(row tlrow.Row) {
 				if len(rowheader) == 0 {
 					rowheader = row.Header
 				}
@@ -98,7 +99,7 @@ func (reader *Reader) ValidateStructure() []error {
 			// Ensure we have at least one matching column ID.
 			found := []string{}
 			missing := []string{}
-			for _, field := range MapperCache.GetStructTagMap(ent) {
+			for _, field := range tlrow.MapperCache.GetStructTagMap(ent) {
 				if _, ok := columns[field.Name]; ok {
 					found = append(found, field.Name)
 				} else if field.Required {
@@ -206,7 +207,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 				sid, _ := row.Get("trip_id")
 				if _, ok := set[sid]; ok {
 					ent := tl.StopTime{}
-					loadRowFast(&ent, row)
+					tlrow.LoadRowFast(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
 				// If we know the file is grouped, send the stoptimes at transition
@@ -290,7 +291,7 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
 				sid, _ := row.Get("shape_id")
 				if _, ok := set[sid]; ok {
 					ent := tl.Shape{}
-					loadRow(&ent, row)
+					tlrow.LoadRow(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
 				// If we know the file is grouped, send the shape at transition
@@ -327,7 +328,7 @@ func (reader *Reader) Stops() (out chan tl.Stop) {
 		ent := tl.Stop{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Stop{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			e.SetCoordinates([2]float64{e.StopLon, e.StopLat})
 			out <- e
 		})
@@ -343,7 +344,7 @@ func (reader *Reader) StopTimes() (out chan tl.StopTime) {
 		ent := tl.StopTime{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.StopTime{}
-			loadRowFast(&e, row)
+			tlrow.LoadRowFast(&e, row)
 			out <- e
 		})
 		close(out)
@@ -358,7 +359,7 @@ func (reader *Reader) Agencies() (out chan tl.Agency) {
 		ent := tl.Agency{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Agency{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -373,7 +374,7 @@ func (reader *Reader) Calendars() (out chan tl.Calendar) {
 		ent := tl.Calendar{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Calendar{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -388,7 +389,7 @@ func (reader *Reader) CalendarDates() (out chan tl.CalendarDate) {
 		ent := tl.CalendarDate{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.CalendarDate{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -403,7 +404,7 @@ func (reader *Reader) FareAttributes() (out chan tl.FareAttribute) {
 		ent := tl.FareAttribute{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.FareAttribute{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -418,7 +419,7 @@ func (reader *Reader) FareRules() (out chan tl.FareRule) {
 		ent := tl.FareRule{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.FareRule{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -433,7 +434,7 @@ func (reader *Reader) FeedInfos() (out chan tl.FeedInfo) {
 		ent := tl.FeedInfo{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.FeedInfo{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -448,7 +449,7 @@ func (reader *Reader) Frequencies() (out chan tl.Frequency) {
 		ent := tl.Frequency{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Frequency{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -463,7 +464,7 @@ func (reader *Reader) Routes() (out chan tl.Route) {
 		ent := tl.Route{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Route{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -478,7 +479,7 @@ func (reader *Reader) Transfers() (out chan tl.Transfer) {
 		ent := tl.Transfer{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Transfer{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -493,7 +494,7 @@ func (reader *Reader) Trips() (out chan tl.Trip) {
 		ent := tl.Trip{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Trip{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -508,7 +509,7 @@ func (reader *Reader) Levels() (out chan tl.Level) {
 		ent := tl.Level{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Level{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)
@@ -523,7 +524,7 @@ func (reader *Reader) Pathways() (out chan tl.Pathway) {
 		ent := tl.Pathway{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Pathway{}
-			loadRow(&e, row)
+			tlrow.LoadRow(&e, row)
 			out <- e
 		})
 		close(out)

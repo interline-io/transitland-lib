@@ -1,4 +1,4 @@
-package tlcsv
+package tlrow
 
 import (
 	"archive/zip"
@@ -41,7 +41,7 @@ type WriterAdapter interface {
 
 // URLAdapter downloads a GTFS URL to a temporary file, and removes the file when it is closed.
 type URLAdapter struct {
-	url    string
+	URL    string
 	secret download.Secret
 	auth   tl.FeedAuthorization
 	ZipAdapter
@@ -58,9 +58,9 @@ func (adapter *URLAdapter) Open() error {
 		return nil // already open
 	}
 	// Remove and keep internal path prefix
-	url := adapter.url
+	url := adapter.URL
 	fragment := ""
-	split := strings.SplitN(adapter.url, "#", 2)
+	split := strings.SplitN(adapter.URL, "#", 2)
 	if len(split) > 1 {
 		url = split[0]
 		fragment = split[1]
