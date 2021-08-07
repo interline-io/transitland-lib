@@ -1,4 +1,4 @@
-package tldb
+package tlsql
 
 import (
 	"errors"
@@ -11,6 +11,14 @@ import (
 
 var MapperCache = tags.NewCache(reflectx.NewMapperFunc("db", tags.ToSnakeCase))
 
+func GetTableName(ent interface{}) string {
+	if v, ok := ent.(hasTableName); ok {
+		return v.TableName()
+	}
+	s := strings.Split(fmt.Sprintf("%T", ent), ".")
+	return tags.ToSnakeCase(s[len(s)-1])
+}
+
 type hasTableName interface {
 	TableName() string
 }
@@ -21,22 +29,6 @@ type canSetID interface {
 
 type canGetID interface {
 	GetID() int
-}
-
-type canUpdateTimestamps interface {
-	UpdateTimestamps()
-}
-
-type canSetFeedVersion interface {
-	SetFeedVersionID(int)
-}
-
-func getTableName(ent interface{}) string {
-	if v, ok := ent.(hasTableName); ok {
-		return v.TableName()
-	}
-	s := strings.Split(fmt.Sprintf("%T", ent), ".")
-	return tags.ToSnakeCase(s[len(s)-1])
 }
 
 func contains(a string, b []string) bool {
@@ -56,11 +48,11 @@ func find(adapter Adapter, dest interface{}, args ...interface{}) error {
 	} else {
 		return errors.New("cannot get ID")
 	}
-	qstr, args, err := adapter.Sqrl().Select("*").From(getTableName(dest)).Where("id = ?", entid).ToSql()
+	qstr, qargs, err := adapter.Sqrl().Select("*").From(GetTableName(dest)).Where("id = ?", entid).ToSql()
 	if err != nil {
 		return err
 	}
-	return adapter.Get(dest, qstr, args...)
+	return adapter.Get(dest, qstr, qargs...)
 }
 
 // update a single record.
@@ -71,7 +63,7 @@ func update(adapter Adapter, ent interface{}, columns ...string) error {
 	} else {
 		return errors.New("cannot get ID")
 	}
-	table := getTableName(ent)
+	table := GetTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
 	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {

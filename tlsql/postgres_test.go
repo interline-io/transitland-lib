@@ -1,4 +1,4 @@
-package tldb
+package tlsql
 
 import (
 	"os"

@@ -1,25 +1,13 @@
-package tldb
+package tlsql
 
 import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/schema"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
-
-func init() {
-	// Register driver
-	adapters["postgres"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
-	// Register readers and writers
-	r := func(url string) (tl.Reader, error) { return NewReader(url) }
-	ext.RegisterReader("postgres", r)
-	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
-	ext.RegisterWriter("postgres", w)
-}
 
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
@@ -114,7 +102,7 @@ func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
-	table := getTableName(ent)
+	table := GetTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
 	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
@@ -143,7 +131,7 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 		return retids, nil
 	}
 	header, err := MapperCache.GetHeader(ents[0])
-	table := getTableName(ents[0])
+	table := GetTableName(ents[0])
 	_, setid := ents[0].(canSetID)
 	batchSize := 65536 / (len(header) + 1)
 	for i := 0; i < len(ents); i += batchSize {
@@ -197,7 +185,7 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 		return err
 	}
 	header, err := MapperCache.GetHeader(ents[0])
-	table := getTableName(ents[0])
+	table := GetTableName(ents[0])
 	stmt, err := tx.Prepare(pq.CopyIn(table, header...))
 	if err != nil {
 		return err

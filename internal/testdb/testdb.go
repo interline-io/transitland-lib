@@ -6,6 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tlsql"
 )
 
 // MustInsert panics on failure
@@ -107,7 +108,7 @@ func WithAdapterRollback(cb func(tldb.Adapter) error) error {
 
 // WithAdapterTx runs a callback inside a Tx, commits if callback returns nil.
 func WithAdapterTx(cb func(tldb.Adapter) error) error {
-	adapter := tldb.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
+	adapter := tlsql.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
 	writer := tldb.Writer{Adapter: &adapter}
 	if err := writer.Open(); err != nil {
 		panic(err)

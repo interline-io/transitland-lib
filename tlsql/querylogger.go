@@ -1,7 +1,6 @@
-package tldb
+package tlsql
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"time"
@@ -9,29 +8,6 @@ import (
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/jmoiron/sqlx"
 )
-
-type canBeginx interface {
-	Beginx() (*sqlx.Tx, error)
-}
-
-type canClose interface {
-	Close() error
-}
-
-// canToSQL is the squirrel interface
-type canToSQL interface {
-	ToSql() (string, []interface{}, error)
-}
-
-// ext is for wrapped sqlx to be used in squirrel.
-type sqext interface {
-	sqlx.Ext
-	// These are required for squirrel.. :(
-	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-	QueryRow(string, ...interface{}) *sql.Row
-	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
-	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-}
 
 // QueryLogger wraps sql/sqlx methods with loggers.
 type QueryLogger struct {

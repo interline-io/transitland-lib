@@ -1,32 +1,15 @@
-package tldb
+package tlsql
 
 import (
-	"net/url"
-
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 )
-
-var adapters = map[string]func(string) Adapter{}
 
 func min(a, b int) int {
 	if a <= b {
 		return a
 	}
 	return b
-}
-
-// newAdapter returns a Adapter for the given dburl.
-func newAdapter(dburl string) Adapter {
-	u, err := url.Parse(dburl)
-	if err != nil {
-		return nil
-	}
-	fn, ok := adapters[u.Scheme]
-	if !ok {
-		return nil
-	}
-	return fn(dburl)
 }
 
 // Adapter provides an interface for connecting to various kinds of database backends.

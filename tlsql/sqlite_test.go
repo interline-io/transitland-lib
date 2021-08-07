@@ -1,6 +1,6 @@
 // +build cgo
 
-package tldb
+package tlsql
 
 import (
 	"testing"

@@ -4,16 +4,10 @@ import (
 	"reflect"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tlsql"
 )
-
-func check(err error) {
-	if err != nil {
-		log.Debug("Error: %s", err)
-	}
-}
 
 // Reader reads from a database.
 type Reader struct {
@@ -70,7 +64,7 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	z := x.Elem()
 	z.Set(slice)
 	//
-	qstr, args, err := reader.Where().From(getTableName(ent)).ToSql()
+	qstr, args, err := reader.Where().From(tlsql.GetTableName(ent)).ToSql()
 	if err != nil {
 		return err
 	}

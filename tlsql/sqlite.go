@@ -1,57 +1,15 @@
 // +build cgo
 
-package tldb
+package tlsql
 
 import (
-	"database/sql"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/schema"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/jmoiron/sqlx"
-
-	// sqlite3
-	"github.com/mattn/go-sqlite3"
 )
-
-// Register.
-func init() {
-	// Register test adapter
-	adapters["sqlite3"] = func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} }
-	// Register readers and writers
-	r := func(url string) (tl.Reader, error) { return NewReader(url) }
-	ext.RegisterReader("sqlite3", r)
-	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
-	ext.RegisterWriter("sqlite3", w)
-	// Dummy handlers for SQL functions.
-	dummy := func(fvid int) int {
-		return 0
-	}
-	sqlfuncs := []string{
-		"tl_generate_agency_geometries",
-		"tl_generate_agency_places",
-		"tl_generate_feed_version_geometries",
-		"tl_generate_onestop_ids",
-		"tl_generate_route_geometries",
-		"tl_generate_route_headways",
-		"tl_generate_route_stops",
-	}
-	sql.Register("sqlite3_w_funcs",
-		&sqlite3.SQLiteDriver{
-			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-				for _, f := range sqlfuncs {
-					if err := conn.RegisterFunc(f, dummy, true); err != nil {
-						return err
-					}
-				}
-				return nil
-			},
-		},
-	)
-}
 
 // SQLiteAdapter provides support for SQLite.
 type SQLiteAdapter struct {
@@ -148,7 +106,7 @@ func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
-	table := getTableName(ent)
+	table := GetTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
 	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
@@ -173,7 +131,7 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	if len(ents) == 0 {
 		return retids, nil
 	}
-	table := getTableName(ents[0])
+	table := GetTableName(ents[0])
 	header, err := MapperCache.GetHeader(ents[0])
 	vals, err := MapperCache.GetInsert(ents[0], header)
 	if err != nil {
