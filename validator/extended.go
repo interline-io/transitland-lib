@@ -5,7 +5,6 @@ import (
 	"io"
 	"io/ioutil"
 	"sort"
-	"time"
 
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
@@ -16,7 +15,7 @@ import (
 func openFeed(src io.Reader) (tl.Reader, error) {
 	// Prepare reader
 	// fmt.Println("preparing reader")
-	t := time.Now()
+	// t := time.Now()
 	tmpfile, err := ioutil.TempFile("", "validator-upload")
 	if err != nil {
 		// This should result in a failed request
