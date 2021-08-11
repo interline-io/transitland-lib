@@ -2,12 +2,12 @@ package validator
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"sort"
 	"time"
 
+	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/twpayne/go-geom"
@@ -15,7 +15,7 @@ import (
 
 func openFeed(src io.Reader) (tl.Reader, error) {
 	// Prepare reader
-	fmt.Println("preparing reader")
+	// fmt.Println("preparing reader")
 	t := time.Now()
 	tmpfile, err := ioutil.TempFile("", "validator-upload")
 	if err != nil {
@@ -32,7 +32,7 @@ func openFeed(src io.Reader) (tl.Reader, error) {
 	if err := reader.Open(); err != nil {
 		return nil, errors.New("could not read file")
 	}
-	fmt.Println("done:", float64(time.Now().UnixNano()-t.UnixNano())/1e9)
+	// fmt.Println("done:", float64(time.Now().UnixNano()-t.UnixNano())/1e9)
 	return nil, nil
 }
 
@@ -119,7 +119,7 @@ func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 					g = geom.NewMultiLineString(geom.XY)
 				}
 				if err := g.Push(shape); err != nil {
-					fmt.Println("failed to build route geometry:", err)
+					log.Error("failed to build route geometry: %s", err.Error())
 				} else {
 					routeShapes[rid] = g
 				}

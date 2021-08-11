@@ -198,7 +198,6 @@ func (r *OFloat) Scan(src interface{}) error {
 }
 
 func (r *OFloat) String() string {
-	fmt.Println("r.Float:", r.Float)
 	return fmt.Sprintf("%f", r.Float)
 }
 
