@@ -198,7 +198,8 @@ func (r *OFloat) Scan(src interface{}) error {
 }
 
 func (r *OFloat) String() string {
-	return fmt.Sprintf("%0.5f", r.Float)
+	fmt.Println("r.Float:", r.Float)
+	return fmt.Sprintf("%f", r.Float)
 }
 
 // UnmarshalJSON implements the json.marshaler interface.
