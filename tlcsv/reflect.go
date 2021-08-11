@@ -153,6 +153,9 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 	case float64:
 		if math.IsNaN(v) {
 			value = ""
+		} else if v > -100_000 && v < 100_000 {
+			// use pretty %g formatting but avoid exponents
+			value = fmt.Sprintf("%g", v)
 		} else {
 			value = fmt.Sprintf("%0.5f", v)
 		}

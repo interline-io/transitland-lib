@@ -198,6 +198,9 @@ func (r *OFloat) Scan(src interface{}) error {
 }
 
 func (r *OFloat) String() string {
+	if r.Float > -100_000 && r.Float < 100_000 {
+		return fmt.Sprintf("%g", r.Float)
+	}
 	return fmt.Sprintf("%0.5f", r.Float)
 }
 
