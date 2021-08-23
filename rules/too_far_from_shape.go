@@ -3,7 +3,6 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -23,12 +22,12 @@ func (e *StopTooFarFromShapeError) Error() string {
 // StopTooFarFromShapeCheck checks for StopTooFarFromShapeErrors.
 type StopTooFarFromShapeCheck struct {
 	maxdist   float64
-	geomCache *xy.GeomCache // share stop/shape geometry cache with copier
+	geomCache tl.GeomCache // share stop/shape geometry cache with copier
 	checked   map[string]map[string]bool
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (e *StopTooFarFromShapeCheck) SetGeomCache(g *xy.GeomCache) {
+func (e *StopTooFarFromShapeCheck) SetGeomCache(g tl.GeomCache) {
 	e.geomCache = g
 }
 
@@ -60,10 +59,10 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tl.Entity) []error {
 			continue
 		}
 		e.checked[shapeid][st.StopID] = true
-		g := e.geomCache.GetStop(st.StopID)
-		sgeom := e.geomCache.GetShape(shapeid)
-		nearest, _ := xy.LineClosestPoint(sgeom, g)
-		distance := xy.DistanceHaversine(g[0], g[1], nearest[0], nearest[1])
+		g, _ := e.geomCache.GetStop(st.StopID)
+		// sgeom, _ := e.geomCache.GetShape(shapeid)
+		// nearest, _ := xy.LineClosestPoint(sgeom, g)
+		distance := g.DistanceHaversine(&g)
 		if distance > e.maxdist {
 			errs = append(errs, &StopTooFarFromShapeError{
 				TripID:   v.TripID,

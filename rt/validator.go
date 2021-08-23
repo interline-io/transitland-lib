@@ -3,7 +3,6 @@ package rt
 import (
 	"time"
 
-	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -27,7 +26,7 @@ type Validator struct {
 	tripInfo  map[string]tripInfo
 	routeInfo map[string]routeInfo
 	stopInfo  map[string]stopInfo
-	geomCache *xy.GeomCache // shared with copier
+	geomCache tl.GeomCache // shared with copier
 }
 
 // NewValidator returns an initialized validator.
@@ -36,7 +35,6 @@ func NewValidator() *Validator {
 		tripInfo:  map[string]tripInfo{},
 		routeInfo: map[string]routeInfo{},
 		stopInfo:  map[string]stopInfo{},
-		geomCache: xy.NewGeomCache(),
 	}
 }
 
@@ -61,7 +59,7 @@ func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (fi *Validator) SetGeomCache(g *xy.GeomCache) {
+func (fi *Validator) SetGeomCache(g tl.GeomCache) {
 	fi.geomCache = g
 }
 

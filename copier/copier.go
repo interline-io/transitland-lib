@@ -55,7 +55,7 @@ type errorWithContext interface {
 }
 
 type canShareGeomCache interface {
-	SetGeomCache(*xy.GeomCache)
+	SetGeomCache(tl.GeomCache)
 }
 
 ////////////////////////////

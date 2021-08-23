@@ -47,13 +47,15 @@ func (g *GeomCache) AddStop(eid string, stop tl.Stop) {
 }
 
 // GetStop returns the coordinates for the cached stop.
-func (g *GeomCache) GetStop(eid string) [2]float64 {
-	return g.stops[eid]
+func (g *GeomCache) GetStop(eid string) (tl.Point, bool) {
+	// return g.stops[eid]
+	return tl.Point{}, true
 }
 
 // GetShape returns the coordinates for the cached shape.
-func (g *GeomCache) GetShape(eid string) [][2]float64 {
-	return g.shapes[eid]
+func (g *GeomCache) GetShape(eid string) (tl.LineString, bool) {
+	// return g.shapes[eid]
+	return tl.LineString{}, true
 }
 
 // AddShape adds a Shape to the geometry cache.

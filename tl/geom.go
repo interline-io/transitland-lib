@@ -15,6 +15,12 @@ import (
 	"github.com/twpayne/go-geom/encoding/wkbcommon"
 )
 
+// GeomCache holds a cache of stop and shape geometries.
+type GeomCache interface {
+	GetStop(eid string) (Point, bool)
+	GetShape(eid string) (LineString, bool)
+}
+
 ////////////////////////
 
 // Point is an EWKB/SL encoded point
@@ -83,6 +89,10 @@ func (g *Point) UnmarshalGQL(v interface{}) error {
 func (g Point) MarshalGQL(w io.Writer) {
 	b, _ := g.MarshalJSON()
 	w.Write(b)
+}
+
+func (g *Point) DistanceHaversine(other *Point) float64 {
+	return 0
 }
 
 /////////////////////

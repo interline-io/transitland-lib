@@ -3,7 +3,6 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -63,11 +62,11 @@ var maxSpeeds = map[int]float64{
 type StopTimeFastTravelCheck struct {
 	routeTypes map[string]int     // keep track of route_types
 	stopDist   map[string]float64 // cache stop-to-stop distances
-	geomCache  *xy.GeomCache      // share with copier
+	geomCache  tl.GeomCache       // share with copier
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (e *StopTimeFastTravelCheck) SetGeomCache(g *xy.GeomCache) {
+func (e *StopTimeFastTravelCheck) SetGeomCache(g tl.GeomCache) {
 	e.geomCache = g
 }
 
@@ -102,12 +101,13 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 		key := s1 + ":" + s2 // todo: use a real separator...
 		dx, ok := e.stopDist[key]
 		if !ok {
-			g1, g2 := e.geomCache.GetStop(s1), e.geomCache.GetStop(s2)
-			dx = 0
+			g1, ok1 := e.geomCache.GetStop(s1)
+			g2, ok2 := e.geomCache.GetStop(s2)
 			// Only consider this edge if valid geoms.
-			if (g1[0] != 0 && g1[1] != 0) && (g2[0] != 0 && g2[1] != 0) {
-				dx = xy.DistanceHaversine(g1[0], g1[1], g2[0], g2[1])
+			if ok1 && ok2 {
+				dx = g1.DistanceHaversine(&g2)
 			}
+			dx = 0
 			e.stopDist[key] = dx
 			e.stopDist[s2+":"+s1] = dx
 		}
