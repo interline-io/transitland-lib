@@ -101,13 +101,12 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 		key := s1 + ":" + s2 // todo: use a real separator...
 		dx, ok := e.stopDist[key]
 		if !ok {
-			g1, ok1 := e.geomCache.GetStop(s1)
-			g2, ok2 := e.geomCache.GetStop(s2)
+			g1, ok1 := e.geomCache.GetStopGeometry(s1)
+			g2, ok2 := e.geomCache.GetStopGeometry(s2)
 			// Only consider this edge if valid geoms.
 			if ok1 && ok2 {
 				dx = g1.DistanceHaversine(&g2)
 			}
-			dx = 0
 			e.stopDist[key] = dx
 			e.stopDist[s2+":"+s1] = dx
 		}

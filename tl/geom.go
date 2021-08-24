@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/interline-io/transitland-lib/internal/xy"
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/ewkb"
 	"github.com/twpayne/go-geom/encoding/geojson"
@@ -17,8 +18,8 @@ import (
 
 // GeomCache holds a cache of stop and shape geometries.
 type GeomCache interface {
-	GetStop(eid string) (Point, bool)
-	GetShape(eid string) (LineString, bool)
+	GetStopGeometry(eid string) (Point, bool)
+	GetShapeGeometry(eid string) (LineString, bool)
 }
 
 ////////////////////////
@@ -91,8 +92,26 @@ func (g Point) MarshalGQL(w io.Writer) {
 	w.Write(b)
 }
 
+// Distance returns the Cartesian distance to another point.
+func (g *Point) Distance(other *Point) float64 {
+	return xy.Distance2d([2]float64{g.X(), g.Y()}, [2]float64{other.X(), other.Y()})
+}
+
+// DistanceHaversine returns the approximate spherical distance to another point.
 func (g *Point) DistanceHaversine(other *Point) float64 {
-	return 0
+	return xy.DistanceHaversine(g.X(), g.Y(), other.X(), other.Y())
+}
+
+// DistanceToLineString returns the nearest point on a LineString, and the Cartesian distance.
+func (g *Point) DistanceToLineString(s *LineString) (Point, float64) {
+	// xy.LineClosestPoint expects [2]float coordinates
+	coords := [][2]float64{}
+	for _, coord := range s.Coords() {
+		coords = append(coords, [2]float64{coord.X(), coord.Y()})
+	}
+	pt := [2]float64{g.X(), g.Y()}
+	nearestpt, d := xy.LineClosestPoint(coords, pt)
+	return NewPoint(nearestpt[0], nearestpt[1]), d
 }
 
 /////////////////////
@@ -306,8 +325,7 @@ func wkbEncode(g geom.T) ([]byte, error) {
 // wkbDecode tries to guess the encoding returned from the driver.
 // When not wrapped in anything, postgis returns EWKB, and spatialite returns its internal blob format.
 func wkbDecode(b []byte) (geom.T, error) {
-	var data []byte
-	data = make([]byte, len(b)/2)
+	data := make([]byte, len(b)/2)
 	hex.Decode(data, b)
 	got, err := ewkb.Unmarshal(data)
 	if err != nil {

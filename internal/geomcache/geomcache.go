@@ -1,4 +1,4 @@
-package xy
+package geomcache
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 	geomxy "github.com/twpayne/go-geom/xy"
 )
@@ -47,13 +48,13 @@ func (g *GeomCache) AddStop(eid string, stop tl.Stop) {
 }
 
 // GetStop returns the coordinates for the cached stop.
-func (g *GeomCache) GetStop(eid string) (tl.Point, bool) {
+func (g *GeomCache) GetStopGeometry(eid string) (tl.Point, bool) {
 	// return g.stops[eid]
 	return tl.Point{}, true
 }
 
 // GetShape returns the coordinates for the cached shape.
-func (g *GeomCache) GetShape(eid string) (tl.LineString, bool) {
+func (g *GeomCache) GetShapeGeometry(eid string) (tl.LineString, bool) {
 	// return g.shapes[eid]
 	return tl.LineString{}, true
 }
@@ -129,16 +130,16 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	// Check cache
 	positions, ok := g.positions[k]
 	if !ok {
-		positions = LinePositions(shapeline, stopline)
-		length := LengthHaversine(shapeline)
+		positions = xy.LinePositions(shapeline, stopline)
+		length := xy.LengthHaversine(shapeline)
 		// Check for simple or fallback positions
 		if !arePositionsSorted(positions) || len(shapeline) == 0 {
 			// log.Debug("positions %f not increasing, falling back to stop positions; shapeline %f stopline %f", positions, shapeline, stopline)
-			positions = LinePositionsFallback(stopline)
+			positions = xy.LinePositionsFallback(stopline)
 			if !arePositionsSorted(positions) {
 				return stoptimes, errors.New("fallback positions not sorted")
 			}
-			length = LengthHaversine(stopline)
+			length = xy.LengthHaversine(stopline)
 		}
 		g.positions[k] = positions
 		g.lengths[k] = length

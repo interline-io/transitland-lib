@@ -155,10 +155,7 @@ func (s *Service) ServicePeriod() (time.Time, time.Time) {
 // IsActive returns if this Service period is active on a specified date.
 func (s *Service) IsActive(t time.Time) bool {
 	if etype, ok := s.exceptions[newYMD(t)]; ok {
-		if etype == 1 {
-			return true
-		}
-		return false
+		return etype == 1
 	}
 	if t.Before(s.StartDate) {
 		return false

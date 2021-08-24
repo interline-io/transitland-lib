@@ -1,4 +1,4 @@
-package xy
+package geomcache
 
 import (
 	"testing"

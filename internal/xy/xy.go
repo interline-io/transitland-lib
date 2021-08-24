@@ -11,16 +11,13 @@ import (
 var epsilon = 1e-6
 var earthRadiusMetres float64 = 6371008
 
-func deg2rad(v float64) float64 {
-	return v * math.Pi / 180
+type Point struct {
+	Lat float64
+	Lon float64
 }
 
-// DistanceHaversinePoint .
-func DistanceHaversinePoint(a, b []float64) float64 {
-	if len(a) < 2 || len(b) < 2 {
-		return 0.0
-	}
-	return DistanceHaversine(a[0], a[1], b[0], b[1])
+func deg2rad(v float64) float64 {
+	return v * math.Pi / 180
 }
 
 // DistanceHaversine .

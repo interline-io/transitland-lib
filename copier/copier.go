@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/internal/log"
-	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -100,6 +100,8 @@ type Copier struct {
 	Marker Marker
 	// Error handler, called for each entity
 	ErrorHandler ErrorHandler
+	// Entitymap
+	EntityMap *tl.EntityMap
 	// Exts
 	extensions        []Extension
 	filters           []Filter
@@ -108,9 +110,8 @@ type Copier struct {
 	afterValidators   []AfterValidator
 	afterCopiers      []AfterCopy
 	// book keeping
-	geomCache *xy.GeomCache
+	geomCache *geomcache.GeomCache
 	result    *Result
-	*tl.EntityMap
 }
 
 // NewCopier creates and initializes a new Copier.
@@ -122,7 +123,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	// Result
 	result := NewResult()
 	copier.result = result
-	copier.geomCache = xy.NewGeomCache()
+	copier.geomCache = geomcache.NewGeomCache()
 	copier.ErrorHandler = opts.ErrorHandler
 	if copier.ErrorHandler == nil {
 		copier.ErrorHandler = result
@@ -670,7 +671,7 @@ func (copier *Copier) copyCalendars() error {
 	for _, svc := range svcs {
 		// Skip main Calendar entity if generated and not normalizing service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			copier.SetEntity(&svc.Calendar, svc.ServiceID, svc.ServiceID)
+			copier.EntityMap.SetEntity(&svc.Calendar, svc.ServiceID, svc.ServiceID)
 			continue
 		}
 		// Validate as Service, with attached exceptions, for better validation.

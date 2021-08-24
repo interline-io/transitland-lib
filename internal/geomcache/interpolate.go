@@ -1,6 +1,7 @@
-package xy
+package geomcache
 
 import (
+	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -53,4 +54,27 @@ func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 		sts[i].DepartureTime = dt
 		sts[i].Interpolated = tl.NewOInt(1)
 	}
+}
+
+// LinePositionsFallback returns the relative position along the line for each point.
+func LinePositionsFallback(line [][2]float64) []float64 {
+	ret := make([]float64, len(line))
+	length := xy.Length2d(line)
+	position := 0.0
+	ret[0] = 0.0
+	for i := 1; i < len(line); i++ {
+		position += xy.Distance2d(line[i], line[i-1])
+		ret[i] = position / length
+	}
+	return ret
+}
+
+// LinePositions finds the relative position of the closest point along the line for each point.
+func LinePositions(line [][2]float64, points [][2]float64) []float64 {
+	positions := make([]float64, len(points))
+	for i, p := range points {
+		_, d := xy.LineClosestPoint(line, p)
+		positions[i] = d
+	}
+	return positions
 }
