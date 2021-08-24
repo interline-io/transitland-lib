@@ -1,8 +1,20 @@
 package tl
 
+type EMap interface {
+	Get(string, string) error
+	GetEntity(Entity, string) error
+	Set(string, string, string) error
+	SetEntity(Entity, string, string) error
+	KeysFor(string) []string
+	GetStopGeometry(string) (Point, bool)
+	GetShapeGeometry(string) (LineString, bool)
+}
+
 // EntityMap stores correspondances between Entity IDs, e.g. StopID -> Stop's integer ID in a database.
 type EntityMap struct {
-	ids map[string]map[string]string
+	ids             map[string]map[string]string
+	stopGeometries  map[string]Point
+	shapeGeometries map[string]LineString
 }
 
 // NewEntityMap returns a new EntityMap.
@@ -63,4 +75,26 @@ func (emap *EntityMap) Update(other EntityMap) {
 			emap.ids[efn][sid] = eid
 		}
 	}
+}
+
+// GetStopGeometry returns a cached stop geometry.
+func (emap *EntityMap) GetStopGeometry(eid string) (Point, bool) {
+	a, ok := emap.stopGeometries[eid]
+	return a, ok
+}
+
+// GetShapeGeometry returns a cached shape geometry.
+func (emap *EntityMap) GetShapeGeometry(eid string) (LineString, bool) {
+	a, ok := emap.shapeGeometries[eid]
+	return a, ok
+}
+
+// AddStopGeometry adds a stop geometry to the cache.
+func (emap *EntityMap) AddStopGeometry(eid string, g Point) {
+	emap.stopGeometries[eid] = g
+}
+
+// AddShapeGeometry adds a shape geometry to the cache.
+func (emap *EntityMap) AddShapeGeometry(eid string, g LineString) {
+	emap.shapeGeometries[eid] = g
 }
