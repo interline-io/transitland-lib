@@ -39,11 +39,6 @@ type Extension interface {
 	Copy(*Copier) error
 }
 
-// AfterCopy is called after normal copying and extensions have completed.
-type AfterCopy interface {
-	AfterCopy(*Copier) error
-}
-
 // ErrorHandler is called on each source file and entity; errors can be nil
 type ErrorHandler interface {
 	HandleEntityErrors(tl.Entity, []error, []error)
@@ -106,7 +101,6 @@ type Copier struct {
 	errorValidators   []Validator
 	warningValidators []Validator
 	afterValidators   []AfterValidator
-	afterCopiers      []AfterCopy
 	// book keeping
 	geomCache *xy.GeomCache
 	result    *Result
@@ -208,10 +202,6 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 	}
 	if v, ok := ext.(Extension); ok {
 		copier.extensions = append(copier.extensions, v)
-		added = true
-	}
-	if v, ok := ext.(AfterCopy); ok {
-		copier.afterCopiers = append(copier.afterCopiers, v)
 		added = true
 	}
 	if !added {
@@ -383,13 +373,6 @@ func (copier *Copier) Copy() *Result {
 			return copier.result
 		}
 	}
-	for _, e := range copier.afterCopiers {
-		if err := e.AfterCopy(copier); err != nil {
-			copier.result.WriteError = err
-			return copier.result
-		}
-	}
-
 	return copier.result
 }
 
