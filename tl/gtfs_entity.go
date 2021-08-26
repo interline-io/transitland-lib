@@ -21,34 +21,17 @@ type Entity interface {
 	UpdateKeys(*EntityMap) error
 }
 
-// BaseEntity provides default methods.
-type BaseEntity struct {
-	Timestamps
-	ID            int `csv:"-"`
-	FeedVersionID int `csv:"-"`
-	extra         []string
-	loadErrors    []error
-	loadWarnings  []error
-	// DeletedAt     OTime
-}
+/////////
 
-// SetID sets the integer ID.
-func (ent *BaseEntity) SetID(id int) {
-	ent.ID = id
-}
-
-// GetID returns the integer ID.
-func (ent *BaseEntity) GetID() int {
-	return ent.ID
-}
-
-// SetFeedVersionID sets the Entity's FeedVersionID.
-func (ent *BaseEntity) SetFeedVersionID(fvid int) {
-	ent.FeedVersionID = fvid
+// MinEntity provides default methods.
+type MinEntity struct {
+	extra        []string
+	loadErrors   []error
+	loadWarnings []error
 }
 
 // Extra provides any additional fields that were present.
-func (ent *BaseEntity) Extra() map[string]string {
+func (ent *MinEntity) Extra() map[string]string {
 	ret := map[string]string{}
 	for i := 0; i < len(ent.extra); i += 2 {
 		ret[ent.extra[i]] = ent.extra[i+1]
@@ -57,31 +40,53 @@ func (ent *BaseEntity) Extra() map[string]string {
 }
 
 // SetExtra adds a string key, value pair to the entity's extra fields.
-func (ent *BaseEntity) SetExtra(key string, value string) {
+func (ent *MinEntity) SetExtra(key string, value string) {
 	ent.extra = append(ent.extra, key, value)
 }
 
 // AddError adds a loading error to the entity, e.g. from a CSV parse failure
-func (ent *BaseEntity) AddError(err error) {
+func (ent *MinEntity) AddError(err error) {
 	ent.loadErrors = append(ent.loadErrors, err)
 }
 
 // AddWarning .
-func (ent *BaseEntity) AddWarning(err error) {
+func (ent *MinEntity) AddWarning(err error) {
 	ent.loadWarnings = append(ent.loadErrors, err)
 }
 
 // Errors returns validation errors.
-func (ent *BaseEntity) Errors() []error { return ent.loadErrors }
+func (ent *MinEntity) Errors() []error { return ent.loadErrors }
 
 // Filename returns the filename for this entity.
-func (ent *BaseEntity) Filename() string { return "" }
+func (ent *MinEntity) Filename() string { return "" }
 
 // EntityID returns the entity ID.
-func (ent *BaseEntity) EntityID() string { return "" }
+func (ent *MinEntity) EntityID() string { return "" }
 
 // UpdateKeys updates entity referencespdates foreign keys based on an EntityMap.
-func (ent *BaseEntity) UpdateKeys(emap *EntityMap) error { return nil }
+func (ent *MinEntity) UpdateKeys(emap *EntityMap) error { return nil }
+
+/////////////
+
+type DatabaseEntity struct {
+	ID            int `csv:"-"`
+	FeedVersionID int `csv:"-"`
+}
+
+// SetID sets the integer ID.
+func (ent *DatabaseEntity) SetID(id int) {
+	ent.ID = id
+}
+
+// GetID returns the integer ID.
+func (ent *DatabaseEntity) GetID() int {
+	return ent.ID
+}
+
+// SetFeedVersionID sets the Entity's FeedVersionID.
+func (ent *DatabaseEntity) SetFeedVersionID(fvid int) {
+	ent.FeedVersionID = fvid
+}
 
 func entID(id int, gtfsid string) string {
 	if id > 0 {
@@ -89,6 +94,8 @@ func entID(id int, gtfsid string) string {
 	}
 	return gtfsid
 }
+
+/////////////
 
 // Timestamps .
 type Timestamps struct {
@@ -103,4 +110,12 @@ func (ent *Timestamps) UpdateTimestamps() {
 		ent.CreatedAt = t
 	}
 	ent.UpdatedAt = t
+}
+
+/////////////
+
+type BaseEntity struct {
+	MinEntity
+	DatabaseEntity
+	Timestamps
 }
