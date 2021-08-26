@@ -14,7 +14,8 @@ type RouteGeometry struct {
 	RouteID   string
 	Generated bool
 	Geometry  tl.Geometry
-	tl.BaseEntity
+	tl.MinEntity
+	tl.FeedVersionEntity
 }
 
 func (ent *RouteGeometry) Filename() string {
@@ -22,7 +23,7 @@ func (ent *RouteGeometry) Filename() string {
 }
 
 func (ent *RouteGeometry) TableName() string {
-	return "tl_route_geometries2"
+	return "tl_route_geometries"
 }
 
 type shapeInfo struct {
@@ -122,7 +123,6 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 			selectedShapes[dbid] = selectedGenerated
 		}
 	}
-
 	// Now build the selected shapes
 	for rid, shapeids := range selectedShapes {
 		g := geom.NewMultiLineString(geom.XY)

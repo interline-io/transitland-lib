@@ -68,9 +68,19 @@ func (ent *MinEntity) UpdateKeys(emap *EntityMap) error { return nil }
 
 /////////////
 
-type DatabaseEntity struct {
-	ID            int `csv:"-"`
+type FeedVersionEntity struct {
 	FeedVersionID int `csv:"-"`
+}
+
+// SetFeedVersionID sets the Entity's FeedVersionID.
+func (ent *FeedVersionEntity) SetFeedVersionID(fvid int) {
+	ent.FeedVersionID = fvid
+}
+
+/////////////
+
+type DatabaseEntity struct {
+	ID int `csv:"-"`
 }
 
 // SetID sets the integer ID.
@@ -81,11 +91,6 @@ func (ent *DatabaseEntity) SetID(id int) {
 // GetID returns the integer ID.
 func (ent *DatabaseEntity) GetID() int {
 	return ent.ID
-}
-
-// SetFeedVersionID sets the Entity's FeedVersionID.
-func (ent *DatabaseEntity) SetFeedVersionID(fvid int) {
-	ent.FeedVersionID = fvid
 }
 
 func entID(id int, gtfsid string) string {
@@ -117,5 +122,6 @@ func (ent *Timestamps) UpdateTimestamps() {
 type BaseEntity struct {
 	MinEntity
 	DatabaseEntity
+	FeedVersionEntity
 	Timestamps
 }

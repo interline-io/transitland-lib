@@ -37,7 +37,7 @@ type RouteHeadway struct {
 	HeadwaySecondsNightMid       tl.OInt
 	HeadwaySecondsNightMax       tl.OInt
 	tl.MinEntity
-	tl.DatabaseEntity
+	tl.FeedVersionEntity
 }
 
 func (ent *RouteHeadway) Filename() string {

@@ -31,7 +31,8 @@ func TestBuilders(t *testing.T) {
 	copier.AddExtension(NewRouteGeometryBuilder())
 	copier.AddExtension(NewRouteStopBuilder())
 	copier.AddExtension(NewRouteHeadwayBuilder())
-	// copier.AddExtension(NewOnestopIDBuilder())
+	copier.AddExtension(NewConvexHullBuilder())
+	copier.AddExtension(NewOnestopIDBuilder())
 	result := copier.Copy()
 	if result.WriteError != nil {
 		t.Fatal(result.WriteError)

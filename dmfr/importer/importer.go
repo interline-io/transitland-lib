@@ -96,14 +96,15 @@ func AfterFeedVersionImport(atx tldb.Adapter, fvid int) error {
 	// Ensure runs in a txn
 	t := time.Now()
 	fns := []string{
-		"SELECT tl_generate_feed_version_geometries($1)",
-		"SELECT tl_generate_route_geometries($1)",
-		"SELECT tl_generate_route_stops($1)",
-		"SELECT tl_generate_agency_geometries($1)",
-		"SELECT tl_generate_route_headways($1)",
 		"SELECT tl_generate_agency_places($1)",
-		"SELECT tl_generate_onestop_ids($1)",
 	}
+	// "SELECT tl_generate_feed_version_geometries($1)",
+	// "SELECT tl_generate_agency_geometries($1)",
+	// "SELECT tl_generate_route_headways($1)",
+	// "SELECT tl_generate_onestop_ids($1)",
+	// "SELECT tl_generate_route_geometries($1)",
+	// "SELECT tl_generate_route_stops($1)",
+
 	for _, q := range fns {
 		tt := time.Now()
 		if _, err := atx.DBX().Exec(q, fvid); err != nil {

@@ -9,7 +9,8 @@ type RouteStop struct {
 	RouteID  string
 	AgencyID string
 	StopID   string
-	tl.BaseEntity
+	tl.MinEntity
+	tl.FeedVersionEntity
 }
 
 func (rs *RouteStop) TableName() string {
