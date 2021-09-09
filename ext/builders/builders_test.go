@@ -4,13 +4,14 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 func TestBuilders(t *testing.T) {
-	bartZip := testutil.ExampleFeedBART.URL
-	// bartZip = "/Users/irees/src/interline-io/tlv2/test/data/bootstrap/f-9q9-actransit.zip"
+	// bartZip := testutil.ExampleFeedBART.URL
+	bartZip := "/Users/irees/src/interline-io/tlv2/test/data/bootstrap/f-9q9-actransit.zip"
+	// bartZip := "/Users/irees/Downloads/GTFSTransitData_RG.zip"
+	// bartZip := "/Users/irees/Downloads/f-u-nl.zip"
 	reader, err := tlcsv.NewReader(bartZip)
 	if err != nil {
 		panic(err)

@@ -1,10 +1,8 @@
 package builders
 
 import (
-	"database/sql/driver"
-	"encoding/json"
-	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"time"
 
@@ -15,6 +13,7 @@ import (
 type RouteHeadway struct {
 	RouteID                      string
 	SelectedStopID               string
+	DirectionID                  tl.OInt
 	HeadwaySecs                  tl.OInt
 	DowCategory                  tl.OInt
 	ServiceDate                  tl.ODate
@@ -48,49 +47,12 @@ func (ent *RouteHeadway) TableName() string {
 	return "tl_route_headways"
 }
 
-/////////////////
-
-// IntSlice .
-type IntSlice struct {
-	Valid bool
-	Ints  []int
-}
-
-// Value .
-func (a IntSlice) Value() (driver.Value, error) {
-	if !a.Valid {
-		return []byte("null"), nil
-	}
-	return json.Marshal(a.Ints)
-}
-
-// Scan .
-func (a *IntSlice) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
-	}
-	return json.Unmarshal(b, &a)
-}
-
-//////////////////
+//////
 
 type RouteHeadwayBuilder struct {
 	serviceDays map[string][]string
 	routeInfos0 map[string]*routeInfo
 	routeInfos1 map[string]*routeInfo
-}
-
-type routeInfo struct {
-	tripsByServiceID          map[string]int
-	stopDeparturesByServiceID map[string]map[string][]int
-}
-
-func newRouteInfo() *routeInfo {
-	return &routeInfo{
-		tripsByServiceID:          map[string]int{},
-		stopDeparturesByServiceID: map[string]map[string][]int{},
-	}
 }
 
 func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
@@ -101,7 +63,7 @@ func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
 	}
 }
 
-func (pp *RouteHeadwayBuilder) AfterValidator(ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	// Keep track of all services and departures
 	switch v := ent.(type) {
 	case *tl.Service:
@@ -111,7 +73,7 @@ func (pp *RouteHeadwayBuilder) AfterValidator(ent tl.Entity, emap *tl.EntityMap)
 		for startDate.Before(endDate) {
 			if v.IsActive(startDate) {
 				d := startDate.Format("2006-01-02")
-				pp.serviceDays[d] = append(pp.serviceDays[d], v.ServiceID)
+				pp.serviceDays[d] = append(pp.serviceDays[d], eid)
 			}
 			startDate = startDate.AddDate(0, 0, 1)
 		}
@@ -139,7 +101,6 @@ func (pp *RouteHeadwayBuilder) AfterValidator(ent tl.Entity, emap *tl.EntityMap)
 }
 
 func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
-	fmt.Println("RouteHeadwayBuilder Copy:")
 	// Process each route
 	emap := copier.EntityMap
 	ppris := []map[string]*routeInfo{pp.routeInfos0, pp.routeInfos1}
@@ -201,42 +162,59 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 					fmt.Println("no emap for stop:", mostVisitedStop)
 					continue
 				}
-
-				fmt.Println("\trid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
 				departures := []int{}
 				for _, serviceid := range serviceids {
 					departures = append(departures, ri.stopDeparturesByServiceID[serviceid][mostVisitedStop]...)
 				}
-				fmt.Println("departures:", departures)
 				sort.Ints(departures)
-				for _, departure := range departures {
-					wt := tl.NewWideTimeFromSeconds(departure)
-					fmt.Println("\t", wt.String())
-				}
+				// fmt.Println("\trid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
+				// fmt.Println("departures:", departures)
+				// for _, departure := range departures {
+				// 	wt := tl.NewWideTimeFromSeconds(departure)
+				// 	fmt.Println("\t", wt.String())
+				// }
+				_ = direction
 				rh := &RouteHeadway{
-					RouteID:                      dbid,
-					SelectedStopID:               stopdbid,
-					HeadwaySecs:                  tl.OInt{},
-					DowCategory:                  tl.NewOInt(dowCat),
-					ServiceDate:                  tl.NewODate(d),
-					StopTripCount:                tl.NewOInt(mostVisitedStopCount),
-					Departures:                   IntSlice{Valid: true, Ints: departures},
-					HeadwaySecondsMorningCount:   tl.OInt{},
-					HeadwaySecondsMorningMin:     tl.OInt{},
-					HeadwaySecondsMorningMid:     tl.OInt{},
-					HeadwaySecondsMorningMax:     tl.OInt{},
-					HeadwaySecondsMiddayCount:    tl.OInt{},
-					HeadwaySecondsMiddayMin:      tl.OInt{},
-					HeadwaySecondsMiddayMid:      tl.OInt{},
-					HeadwaySecondsMiddayMax:      tl.OInt{},
-					HeadwaySecondsAfternoonCount: tl.OInt{},
-					HeadwaySecondsAfternoonMin:   tl.OInt{},
-					HeadwaySecondsAfternoonMid:   tl.OInt{},
-					HeadwaySecondsAfternoonMax:   tl.OInt{},
-					HeadwaySecondsNightCount:     tl.OInt{},
-					HeadwaySecondsNightMin:       tl.OInt{},
-					HeadwaySecondsNightMid:       tl.OInt{},
-					HeadwaySecondsNightMax:       tl.OInt{},
+					RouteID:        dbid,
+					SelectedStopID: stopdbid,
+					HeadwaySecs:    tl.OInt{},
+					DowCategory:    tl.NewOInt(dowCat),
+					ServiceDate:    tl.NewODate(d),
+					StopTripCount:  tl.NewOInt(mostVisitedStopCount),
+					DirectionID:    tl.NewOInt(direction),
+					Departures:     IntSlice{Valid: true, Ints: departures},
+				}
+				// Calculate stats for backwards compat
+				if ws, ok := getStats(getWindow(departures, 21600, 36000)); ok {
+					rh.HeadwaySecs = tl.NewOInt(ws.mid) // also sets overall headway seconds
+					rh.HeadwaySecondsMorningCount = tl.NewOInt(ws.count)
+					rh.HeadwaySecondsMorningMin = tl.NewOInt(ws.min)
+					rh.HeadwaySecondsMorningMid = tl.NewOInt(ws.mid)
+					rh.HeadwaySecondsMorningMax = tl.NewOInt(ws.max)
+				}
+				if ws, ok := getStats(getWindow(departures, 36000, 57600)); ok {
+					rh.HeadwaySecondsMiddayCount = tl.NewOInt(ws.count)
+					rh.HeadwaySecondsMiddayMin = tl.NewOInt(ws.min)
+					rh.HeadwaySecondsMiddayMid = tl.NewOInt(ws.mid)
+					rh.HeadwaySecondsMiddayMax = tl.NewOInt(ws.max)
+				}
+				if ws, ok := getStats(getWindow(departures, 57600, 72000)); ok {
+					rh.HeadwaySecondsAfternoonCount = tl.NewOInt(ws.count)
+					rh.HeadwaySecondsAfternoonMin = tl.NewOInt(ws.min)
+					rh.HeadwaySecondsAfternoonMid = tl.NewOInt(ws.mid)
+					rh.HeadwaySecondsAfternoonMax = tl.NewOInt(ws.max)
+				}
+				night := []int{}
+				for _, i := range departures {
+					if i >= 72000 || i < 21600 {
+						night = append(night, i)
+					}
+				}
+				if ws, ok := getStats(night); ok {
+					rh.HeadwaySecondsNightCount = tl.NewOInt(ws.count)
+					rh.HeadwaySecondsNightMin = tl.NewOInt(ws.min)
+					rh.HeadwaySecondsNightMid = tl.NewOInt(ws.mid)
+					rh.HeadwaySecondsNightMax = tl.NewOInt(ws.max)
 				}
 				if _, err := copier.Writer.AddEntity(rh); err != nil {
 					return err
@@ -245,4 +223,66 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 		}
 	}
 	return nil
+}
+
+////////
+
+type windowStat struct {
+	min   int
+	max   int
+	mid   int
+	count int
+}
+
+func getWindow(v []int, lowerBoundInc int, upperBound int) []int {
+	f := []int{}
+	for _, i := range v {
+		if i >= lowerBoundInc && i < upperBound {
+			f = append(f, i)
+		}
+	}
+	return f
+}
+
+// must be sorted
+func getStats(v []int) (windowStat, bool) {
+	ws := windowStat{}
+	count := len(v)
+	if count < 3 {
+		return ws, false
+	}
+	ws.min = 10000000
+	ws.mid = int(math.Floor(median(v)))
+	for _, i := range v {
+		if i < ws.min {
+			ws.min = i
+		}
+		if i > ws.max {
+			ws.max = i
+		}
+	}
+	return ws, true
+}
+
+// must be sorted
+func median(v []int) float64 {
+	m := len(v) / 2
+	if len(v)%2 == 0 {
+		return float64(v[m])
+	}
+	return float64(v[m-1]+v[m]) / 2
+}
+
+////////
+
+type routeInfo struct {
+	tripsByServiceID          map[string]int
+	stopDeparturesByServiceID map[string]map[string][]int
+}
+
+func newRouteInfo() *routeInfo {
+	return &routeInfo{
+		tripsByServiceID:          map[string]int{},
+		stopDeparturesByServiceID: map[string]map[string][]int{},
+	}
 }

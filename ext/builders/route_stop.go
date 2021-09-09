@@ -21,6 +21,8 @@ func (rs *RouteStop) Filename() string {
 	return "tl_route_stops.txt"
 }
 
+////////
+
 type RouteStopBuilder struct {
 	routeAgencies map[string]string
 	routeStops    map[string]map[string]bool
@@ -33,10 +35,10 @@ func NewRouteStopBuilder() *RouteStopBuilder {
 	}
 }
 
-func (pp *RouteStopBuilder) AfterValidator(ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteStopBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Route:
-		pp.routeAgencies[v.RouteID] = v.AgencyID
+		pp.routeAgencies[eid] = v.AgencyID
 	case *tl.Trip:
 		rid := v.RouteID
 		rs, ok := pp.routeStops[rid]

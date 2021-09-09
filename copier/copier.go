@@ -29,9 +29,9 @@ type Validator interface {
 	Validate(tl.Entity) []error
 }
 
-// AfterValidator is called for each fully validated entity before writing.
-type AfterValidator interface {
-	AfterValidator(tl.Entity, *tl.EntityMap) error
+// AfterWrite is called for each fully validated entity before writing.
+type AfterWrite interface {
+	AfterWrite(string, tl.Entity, *tl.EntityMap) error
 }
 
 // Extension is run after normal copying has completed.
@@ -100,7 +100,7 @@ type Copier struct {
 	filters           []Filter
 	errorValidators   []Validator
 	warningValidators []Validator
-	afterValidators   []AfterValidator
+	afterWriters      []AfterWrite
 	// book keeping
 	geomCache *xy.GeomCache
 	result    *Result
@@ -196,8 +196,8 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 		copier.AddValidator(v, 0)
 		added = true
 	}
-	if v, ok := ext.(AfterValidator); ok {
-		copier.afterValidators = append(copier.afterValidators, v)
+	if v, ok := ext.(AfterWrite); ok {
+		copier.afterWriters = append(copier.afterWriters, v)
 		added = true
 	}
 	if v, ok := ext.(Extension); ok {
@@ -237,6 +237,12 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 	}
 	copier.EntityMap.Set(efn, sid, eid)
 	copier.result.EntityCount[efn]++
+	// AfterWriters
+	for _, v := range copier.afterWriters {
+		if err := v.AfterWrite(eid, ent, copier.EntityMap); err != nil {
+			return eid, nil, err
+		}
+	}
 	return eid, nil, nil
 }
 
@@ -262,6 +268,14 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 		copier.EntityMap.Set(efn, sid, eid)
 	}
 	copier.result.EntityCount[efn] += len(ents)
+	// AfterWriters
+	for i, eid := range eids {
+		for _, v := range copier.afterWriters {
+			if err := v.AfterWrite(eid, ents[i], copier.EntityMap); err != nil {
+				return err
+			}
+		}
+	}
 	// Return an emtpy slice and no error
 	return nil
 }
@@ -318,12 +332,6 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	if len(errs) > 0 && !copier.AllowEntityErrors {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
-	}
-	// Handle after validators
-	for _, v := range copier.afterValidators {
-		if err := v.AfterValidator(ent, copier.EntityMap); err != nil {
-			return err
-		}
 	}
 	return nil
 }

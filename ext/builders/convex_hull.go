@@ -10,20 +10,6 @@ import (
 )
 
 //////////
-// these structs also used by OnestopIDBuilder
-
-type stopGeom struct {
-	fvid int
-	lat  float64
-	lon  float64
-}
-
-type routeStopGeoms struct {
-	agency    string
-	stopGeoms map[string]*stopGeom
-}
-
-//////////
 
 type AgencyGeometry struct {
 	AgencyID tl.OKey
@@ -63,16 +49,16 @@ func NewConvexHullBuilder() *ConvexHullBuilder {
 }
 
 // AfterValidator keeps track of which routes/agencies visit which stops
-func (pp *ConvexHullBuilder) AfterValidator(ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Stop:
-		pp.stops[v.StopID] = &stopGeom{
-			lat:  v.Geometry.X(),
-			lon:  v.Geometry.Y(),
+		pp.stops[eid] = &stopGeom{
+			lon:  v.Geometry.X(),
+			lat:  v.Geometry.Y(),
 			fvid: v.FeedVersionID,
 		}
 	case *tl.Route:
-		pp.routeStopGeoms[v.RouteID] = &routeStopGeoms{
+		pp.routeStopGeoms[eid] = &routeStopGeoms{
 			agency:    v.AgencyID,
 			stopGeoms: map[string]*stopGeom{},
 		}
@@ -105,8 +91,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		for _, coord := range v {
 			coords = append(coords, coord.lon, coord.lat)
 		}
-		gl := geom.NewLineStringFlat(geom.XY, coords)
-		ch := geomxy.ConvexHull(gl)
+		ch := geomxy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
 			fmt.Println("feed version convex hull is not polygon:", fvid)
@@ -116,16 +101,20 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 			Geometry: tl.Polygon{Valid: true, Polygon: *v},
 		}
 		ent.FeedVersionID = fvid
-		fmt.Println(ent.FeedVersionID, ent.Geometry.String())
 		if _, err := copier.Writer.AddEntity(&ent); err != nil {
 			return err
 		}
 	}
 	// now build agency convex hulls
-	agencyStops := map[string][]*stopGeom{}
+	agencyStops := map[string]map[string]*stopGeom{}
 	for _, rsg := range pp.routeStopGeoms {
-		for _, sg := range rsg.stopGeoms {
-			agencyStops[rsg.agency] = append(agencyStops[rsg.agency], sg)
+		r, ok := agencyStops[rsg.agency]
+		if !ok {
+			r = map[string]*stopGeom{}
+			agencyStops[rsg.agency] = r
+		}
+		for stopid, sg := range rsg.stopGeoms {
+			r[stopid] = sg
 		}
 	}
 	for aid, v := range agencyStops {
@@ -133,8 +122,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		for _, sg := range v {
 			coords = append(coords, sg.lon, sg.lat)
 		}
-		gl := geom.NewLineStringFlat(geom.XY, coords)
-		ch := geomxy.ConvexHull(gl)
+		ch := geomxy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
 			fmt.Println("agency convex hull is not polygon:", aid)
@@ -144,7 +132,6 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 			AgencyID: tl.NewOKey(aid),
 			Geometry: tl.Polygon{Valid: true, Polygon: *v},
 		}
-		fmt.Println(ent.Geometry.String())
 		if _, err := copier.Writer.AddEntity(&ent); err != nil {
 			return err
 		}

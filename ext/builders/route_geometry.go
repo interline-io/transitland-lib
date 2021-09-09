@@ -11,9 +11,10 @@ import (
 )
 
 type RouteGeometry struct {
-	RouteID   string
-	Generated bool
-	Geometry  tl.Geometry
+	RouteID          string
+	Generated        bool
+	Geometry         tl.LineString
+	CombinedGeometry tl.Geometry
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -26,10 +27,7 @@ func (ent *RouteGeometry) TableName() string {
 	return "tl_route_geometries"
 }
 
-type shapeInfo struct {
-	length    float64
-	generated bool
-}
+////////
 
 // RouteGeometryBuilder creates default shapes for routes.
 type RouteGeometryBuilder struct {
@@ -52,10 +50,10 @@ func (pp *RouteGeometryBuilder) SetGeomCache(g *xy.GeomCache) {
 }
 
 // AfterValidate counts the number of times a shape is used for each route,direction_id
-func (pp *RouteGeometryBuilder) AfterValidator(ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Shape:
-		pp.shapeInfos[v.ShapeID] = shapeInfo{generated: v.Generated, length: v.Geometry.Length()}
+		pp.shapeInfos[eid] = shapeInfo{generated: v.Generated, length: v.Geometry.Length()}
 	case *tl.Trip:
 		if v.ShapeID.Valid {
 			if _, ok := pp.shapeCounts[v.RouteID]; !ok {
@@ -144,9 +142,9 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 			}
 		}
 		_, _, err := copier.CopyEntity(&RouteGeometry{
-			RouteID:   rid,
-			Generated: false,
-			Geometry:  tl.Geometry{Geometry: g, Valid: true},
+			RouteID:          rid,
+			Generated:        false,
+			CombinedGeometry: tl.Geometry{Geometry: g, Valid: true},
 		})
 		if err != nil {
 			return err
@@ -154,6 +152,15 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 	}
 	return nil
 }
+
+///////
+
+type shapeInfo struct {
+	length    float64
+	generated bool
+}
+
+///////
 
 func sortMap(value map[string]int) []string {
 	type kv struct {
