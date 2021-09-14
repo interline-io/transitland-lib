@@ -19,7 +19,7 @@ import (
 func downloadHTTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorization) error {
 	w, err := os.Create(fn)
 	if err != nil {
-		return err
+		return errors.New("could not open file for writing")
 	}
 	defer w.Close()
 	// Download HTTP
@@ -28,7 +28,7 @@ func downloadHTTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorizati
 	}
 	req, err := http.NewRequest("GET", ustr, nil)
 	if err != nil {
-		return err
+		return errors.New("invalid request")
 	}
 	if auth.Type == "basic_auth" {
 		req.SetBasicAuth(secret.Username, secret.Password)
@@ -37,10 +37,14 @@ func downloadHTTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorizati
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		// return error directly
 		return err
 	}
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("response status code: %d", resp.StatusCode)
+	}
 	if _, err := io.Copy(w, resp.Body); err != nil {
-		return err
+		return errors.New("could not write response to file")
 	}
 	return nil
 }
@@ -48,13 +52,13 @@ func downloadHTTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorizati
 func downloadFTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorization) error {
 	w, err := os.Create(fn)
 	if err != nil {
-		return err
+		return errors.New("could not open file for writing")
 	}
 	defer w.Close()
 	// Download FTP
 	u, err := url.Parse(ustr)
 	if err != nil {
-		return err
+		return errors.New("could not parse url")
 	}
 	p := u.Port()
 	if p == "" {
@@ -62,7 +66,7 @@ func downloadFTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorizatio
 	}
 	c, err := ftp.Dial(fmt.Sprintf("%s:%s", u.Hostname(), p), ftp.DialWithTimeout(600*time.Second))
 	if err != nil {
-		return err
+		return errors.New("could not connect to server")
 	}
 	if auth.Type != "basic_auth" {
 		secret.Username = "anonymous"
@@ -70,14 +74,15 @@ func downloadFTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorizatio
 	}
 	err = c.Login(secret.Username, secret.Password)
 	if err != nil {
-		return err
+		return errors.New("could not connect to server")
 	}
 	r, err := c.Retr(u.Path)
 	if err != nil {
+		// return error directly
 		return err
 	}
 	if _, err := io.Copy(w, r); err != nil {
-		return err
+		return errors.New("could not write response to file")
 	}
 	return nil
 }
@@ -93,7 +98,8 @@ func downloadS3(ustr string, fn string, secret Secret, auth tl.FeedAuthorization
 		awscmd.Env = env
 	}
 	if output, err := awscmd.Output(); err != nil {
-		return fmt.Errorf("error downloading %s: %s %s", ustr, output, err.Error())
+		_ = output
+		return fmt.Errorf("could not download file")
 	}
 	return nil
 }
@@ -102,12 +108,12 @@ func downloadS3(ustr string, fn string, secret Secret, auth tl.FeedAuthorization
 func AuthenticatedRequest(address string, secret Secret, auth tl.FeedAuthorization) (string, error) {
 	u, err := url.Parse(address)
 	if err != nil {
-		return "", err
+		return "", errors.New("could not parse url")
 	}
 	if auth.Type == "query_param" {
 		v, err := url.ParseQuery(u.RawQuery)
 		if err != nil {
-			return "", err
+			return "", errors.New("could not parse query string")
 		}
 		v.Set(auth.ParamName, secret.Key)
 		u.RawQuery = v.Encode()
@@ -119,7 +125,7 @@ func AuthenticatedRequest(address string, secret Secret, auth tl.FeedAuthorizati
 	ustr := u.String()
 	tmpfile, err := ioutil.TempFile("", "fetch")
 	if err != nil {
-		return "", err
+		return "", errors.New("could not create temporary file")
 	}
 	tmpfilepath := tmpfile.Name()
 	tmpfile.Close()
