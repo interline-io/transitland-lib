@@ -40,6 +40,9 @@ func downloadHTTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorizati
 		// return error directly
 		return err
 	}
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("response status code: %d", resp.StatusCode)
+	}
 	if _, err := io.Copy(w, resp.Body); err != nil {
 		return errors.New("could not write response to file")
 	}
