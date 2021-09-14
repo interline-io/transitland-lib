@@ -68,7 +68,7 @@ func (adapter *URLAdapter) Open() error {
 	// Download to temporary file
 	tmpfilepath, err := download.AuthenticatedRequest(url, adapter.secret, adapter.auth)
 	if err != nil {
-		return errors.New("could not download file")
+		return err
 	}
 	// Add internal path prefix back
 	adapter.ZipAdapter = ZipAdapter{
