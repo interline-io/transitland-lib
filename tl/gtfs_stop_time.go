@@ -51,6 +51,10 @@ func (ent *StopTime) Extra() map[string]string {
 	return ret
 }
 
+func (ent *StopTime) GetExtra(key string) (string, bool) {
+	return "", false
+}
+
 // SetExtra adds a string key, value pair to the entity's extra fields.
 func (ent *StopTime) SetExtra(key string, value string) {
 	ent.extra = append(ent.extra, key, value)

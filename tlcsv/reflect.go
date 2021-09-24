@@ -46,7 +46,8 @@ func SetString(ent tl.Entity, key string, value string) error {
 	fmap := MapperCache.GetStructTagMap(ent)
 	k, ok := fmap[key]
 	if !ok || k == nil {
-		return errors.New("unknown field")
+		ent.SetExtra(key, value)
+		return nil
 	}
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()
@@ -109,7 +110,11 @@ func GetString(ent tl.Entity, key string) (string, error) {
 	fmap := MapperCache.GetStructTagMap(ent)
 	k, ok := fmap[key]
 	if !ok || k == nil {
-		return "", errors.New("unknown field")
+		a, ok := ent.GetExtra(key)
+		if !ok {
+			return "", errors.New("unknown field")
+		}
+		return a, nil
 	}
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()

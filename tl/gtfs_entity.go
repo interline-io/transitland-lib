@@ -16,6 +16,7 @@ type Entity interface {
 	Filename() string
 	Errors() []error
 	AddError(error)
+	GetExtra(string) (string, bool)
 	SetExtra(string, string)
 	Extra() map[string]string
 	UpdateKeys(*EntityMap) error
@@ -54,6 +55,16 @@ func (ent *BaseEntity) Extra() map[string]string {
 		ret[ent.extra[i]] = ent.extra[i+1]
 	}
 	return ret
+}
+
+// GetExtra gets an extra key, value pair.
+func (ent *BaseEntity) GetExtra(key string) (string, bool) {
+	for i := 0; i < len(ent.extra); i += 2 {
+		if ent.extra[i] == key {
+			return ent.extra[i+1], true
+		}
+	}
+	return "", false
 }
 
 // SetExtra adds a string key, value pair to the entity's extra fields.

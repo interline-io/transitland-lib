@@ -15,7 +15,8 @@ type hasEntityKey interface {
 // Writer implements a GTFS CSV Writer.
 type Writer struct {
 	WriterAdapter
-	headers map[string][]string
+	entHeaders map[string][]string
+	extHeaders map[string][]string
 }
 
 // NewWriter returns a new Writer.
@@ -28,7 +29,8 @@ func NewWriter(path string) (*Writer, error) {
 	}
 	return &Writer{
 		WriterAdapter: a,
-		headers:       map[string][]string{},
+		entHeaders:    map[string][]string{},
+		extHeaders:    map[string][]string{},
 	}, nil
 }
 
@@ -61,15 +63,23 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 			return eids, errors.New("all entities must be same type")
 		}
 	}
-	header, ok := writer.headers[efn]
+	extHeader := writer.extHeaders[efn]
+	entHeader, ok := writer.entHeaders[efn]
 	if !ok {
 		h, err := dumpHeader(ent)
 		if err != nil {
 			return eids, err
 		}
-		header = h
-		writer.headers[efn] = header
-		writer.WriterAdapter.WriteRows(efn, [][]string{header})
+		entHeader = h
+		for k := range ent.Extra() {
+			extHeader = append(extHeader, k)
+		}
+		writer.entHeaders[efn] = entHeader
+		writer.extHeaders[efn] = extHeader
+		fileHeader := []string{}
+		fileHeader = append(fileHeader, entHeader...)
+		fileHeader = append(fileHeader, extHeader...)
+		writer.WriterAdapter.WriteRows(efn, [][]string{fileHeader})
 	}
 	rows := [][]string{}
 	for _, ent := range ents {
@@ -77,9 +87,13 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		if v, ok := ent.(hasEntityKey); ok {
 			sid = v.EntityKey()
 		}
-		row, err := dumpRow(ent, header)
+		row, err := dumpRow(ent, entHeader)
 		if err != nil {
 			return eids, err
+		}
+		for _, k := range extHeader {
+			eh, _ := ent.GetExtra(k)
+			row = append(row, eh)
 		}
 		rows = append(rows, row)
 		eids = append(eids, sid)
