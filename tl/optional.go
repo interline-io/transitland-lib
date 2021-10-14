@@ -541,18 +541,19 @@ func (r *Tags) UnmarshalJSON(v []byte) error {
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
 func (r *Tags) UnmarshalGQL(v interface{}) error {
-	r.tags = map[string]string{}
+	rt := map[string]string{}
 	a, ok := v.(map[string]interface{})
 	if !ok {
 		return errors.New("cannot unmarshal")
 	}
 	for k, value := range a {
 		if c, ok := value.(string); ok {
-			r.tags[k] = c
+			rt[k] = c
 		} else {
 			return errors.New("cannot unmarshal")
 		}
 	}
+	r.tags = rt
 	return nil
 }
 
