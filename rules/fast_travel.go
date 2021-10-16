@@ -105,8 +105,8 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 			g1, g2 := e.geomCache.GetStop(s1), e.geomCache.GetStop(s2)
 			dx = 0
 			// Only consider this edge if valid geoms.
-			if (g1[0] != 0 && g1[1] != 0) && (g2[0] != 0 && g2[1] != 0) {
-				dx = xy.DistanceHaversine(g1[0], g1[1], g2[0], g2[1])
+			if (g1.Lon != 0 && g1.Lat != 0) && (g2.Lon != 0 && g2.Lat != 0) {
+				dx = xy.DistanceHaversine(g1.Lon, g1.Lat, g2.Lon, g2.Lat)
 			}
 			e.stopDist[key] = dx
 			e.stopDist[s2+":"+s1] = dx

@@ -6,6 +6,11 @@ import (
 
 // TODO: Replace most of this with go-geom functions. I understand things better than when I originally wrote this :)
 
+type Point struct {
+	Lon float64
+	Lat float64
+}
+
 // Simple XY geometry helper functions
 
 var epsilon = 1e-6
@@ -37,16 +42,16 @@ func DistanceHaversine(lon1, lat1, lon2, lat2 float64) float64 {
 }
 
 // LengthHaversine returns the Haversine approximate length of a line.
-func LengthHaversine(line [][2]float64) float64 {
+func LengthHaversine(line []Point) float64 {
 	length := 0.0
 	for i := 1; i < len(line); i++ {
-		length += DistanceHaversine(line[i-1][0], line[i-1][1], line[i][0], line[i][1])
+		length += DistanceHaversine(line[i-1].Lon, line[i-1].Lat, line[i].Lon, line[i].Lat)
 	}
 	return length
 }
 
 // Length2d returns the cartesian length of line
-func Length2d(line [][2]float64) float64 {
+func Length2d(line []Point) float64 {
 	length := 0.0
 	for i := 1; i < len(line); i++ {
 		length += Distance2d(line[i-1], line[i])
@@ -55,14 +60,14 @@ func Length2d(line [][2]float64) float64 {
 }
 
 // Distance2d returns the cartesian distance
-func Distance2d(a, b [2]float64) float64 {
-	dx := a[0] - b[0]
-	dy := a[1] - b[1]
+func Distance2d(a, b Point) float64 {
+	dx := a.Lon - b.Lon
+	dy := a.Lat - b.Lat
 	return math.Sqrt(dx*dx + dy*dy)
 }
 
 // SegmentClosestPoint returns the point (and position) on AB closest to P.
-func SegmentClosestPoint(a, b, p [2]float64) ([2]float64, float64) {
+func SegmentClosestPoint(a, b, p Point) (Point, float64) {
 	// check ends
 	if Distance2d(a, p) < epsilon {
 		return a, 0.0
@@ -71,22 +76,22 @@ func SegmentClosestPoint(a, b, p [2]float64) ([2]float64, float64) {
 		return b, 0.0
 	}
 	// get the projection of p onto ab
-	r := ((p[0]-a[0])*(b[0]-a[0]) + (p[1]-a[1])*(b[1]-a[1])) / ((b[0]-a[0])*(b[0]-a[0]) + (b[1]-a[1])*(b[1]-a[1]))
+	r := ((p.Lon-a.Lon)*(b.Lon-a.Lon) + (p.Lat-a.Lat)*(b.Lat-a.Lat)) / ((b.Lon-a.Lon)*(b.Lon-a.Lon) + (b.Lat-a.Lat)*(b.Lat-a.Lat))
 	if r < 0 {
 		return a, Distance2d(a, p)
 	} else if r > 1 {
 		return b, Distance2d(b, p)
 	}
 	// get coordinates
-	ret := [2]float64{}
-	ret[0] = a[0] + ((b[0] - a[0]) * r)
-	ret[1] = a[1] + ((b[1] - a[1]) * r)
+	ret := Point{}
+	ret.Lon = a.Lon + ((b.Lon - a.Lon) * r)
+	ret.Lat = a.Lat + ((b.Lat - a.Lat) * r)
 	return ret, Distance2d(ret, p)
 }
 
 // LineClosestPoint returns the point (and position) on line closest to point.
 // Based on go-geom DistanceFromPointToLineString
-func LineClosestPoint(line [][2]float64, point [2]float64) ([2]float64, float64) {
+func LineClosestPoint(line []Point, point Point) (Point, float64) {
 	position := 0.0
 	length := Length2d(line)
 	if length == 0 {
@@ -94,7 +99,7 @@ func LineClosestPoint(line [][2]float64, point [2]float64) ([2]float64, float64)
 	}
 	segpos := 0.0
 	mind := math.MaxFloat64
-	minp := [2]float64{}
+	minp := Point{}
 	start := line[0]
 	for i := 1; i < len(line); i++ {
 		end := line[i]
@@ -114,7 +119,7 @@ func LineClosestPoint(line [][2]float64, point [2]float64) ([2]float64, float64)
 }
 
 // LinePositionsFallback returns the relative position along the line for each point.
-func LinePositionsFallback(line [][2]float64) []float64 {
+func LinePositionsFallback(line []Point) []float64 {
 	ret := make([]float64, len(line))
 	length := Length2d(line)
 	position := 0.0
@@ -127,7 +132,7 @@ func LinePositionsFallback(line [][2]float64) []float64 {
 }
 
 // LinePositions finds the relative position of the closest point along the line for each point.
-func LinePositions(line [][2]float64, points [][2]float64) []float64 {
+func LinePositions(line []Point, points []Point) []float64 {
 	positions := make([]float64, len(points))
 	for i, p := range points {
 		_, d := LineClosestPoint(line, p)
