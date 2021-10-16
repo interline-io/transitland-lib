@@ -82,7 +82,22 @@ func (c *Cache) GetHeader(ent interface{}) ([]string, error) {
 	for _, stm := range fmap {
 		stms = append(stms, stm)
 	}
-	sort.Slice(stms, func(i, j int) bool { return stms[i].Index[0] < stms[j].Index[0] })
+	sort.Slice(stms, func(i, j int) bool {
+		for pos := 0; ; pos++ {
+			if pos >= len(stms[i].Index) {
+				return true
+			}
+			if pos >= len(stms[j].Index) {
+				return false
+			}
+			a := stms[i].Index[pos]
+			b := stms[j].Index[pos]
+			if a == b {
+				continue
+			}
+			return a < b
+		}
+	})
 	for _, stm := range stms {
 		row = append(row, stm.Name)
 	}
