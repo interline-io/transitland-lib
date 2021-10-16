@@ -71,14 +71,9 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 // AfterCopy collects and assembles the default shapes and writes to the database
 func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 	// Get the candidate shapes
-	emap := copier.EntityMap
 	commonCount := 2
 	selectedShapes := map[string][]string{}
 	for rid, dirs := range pp.shapeCounts {
-		dbid, ok := emap.Get("routes.txt", rid)
-		if !ok {
-			continue
-		}
 		selected := map[string]bool{}
 		for _, dirshapes := range dirs {
 			longest := ""
@@ -116,9 +111,9 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 			}
 		}
 		if len(selectedReal) > 0 {
-			selectedShapes[dbid] = selectedReal
+			selectedShapes[rid] = selectedReal
 		} else {
-			selectedShapes[dbid] = selectedGenerated
+			selectedShapes[rid] = selectedGenerated
 		}
 	}
 	// Now build the selected shapes
@@ -132,7 +127,7 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 			}
 			pnts := []float64{}
 			for _, c := range coords {
-				pnts = append(pnts, c[0], c[1])
+				pnts = append(pnts, c.Lon, c.Lat)
 			}
 			sl := geom.NewLineStringFlat(geom.XY, pnts)
 			if sl != nil {

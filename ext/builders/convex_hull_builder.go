@@ -53,9 +53,8 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Enti
 	switch v := ent.(type) {
 	case *tl.Stop:
 		pp.stops[eid] = &stopGeom{
-			lon:  v.Geometry.X(),
-			lat:  v.Geometry.Y(),
-			fvid: v.FeedVersionID,
+			lon: v.Geometry.X(),
+			lat: v.Geometry.Y(),
 		}
 	case *tl.Route:
 		pp.routeStopGeoms[eid] = &routeStopGeoms{
@@ -100,7 +99,6 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		ent := FeedVersionGeometry{
 			Geometry: tl.Polygon{Valid: true, Polygon: *v},
 		}
-		ent.FeedVersionID = fvid
 		if _, err := copier.Writer.AddEntity(&ent); err != nil {
 			return err
 		}

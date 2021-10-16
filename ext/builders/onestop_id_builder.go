@@ -58,7 +58,6 @@ func NewOnestopIDBuilder() *OnestopIDBuilder {
 }
 
 func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
-	// same as ConvexHullBuilder
 	switch v := ent.(type) {
 	case *tl.Agency:
 		pp.agencyNames[eid] = v.AgencyName
@@ -98,14 +97,12 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 
 func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 	// generate stop onestop id's
-	stoposids := map[string]string{}
 	for stopid, sg := range pp.stops {
 		gh := geohash.EncodeWithPrecision(sg.lat, sg.lon, 10)
 		ent := StopOnestopID{
 			StopID:    stopid,
 			OnestopID: fmt.Sprintf("s-%s-%s", gh, filterName(sg.name)),
 		}
-		stoposids[stopid] = ent.OnestopID
 		if _, err := copier.Writer.AddEntity(&ent); err != nil {
 			return err
 		}

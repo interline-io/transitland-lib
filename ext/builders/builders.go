@@ -27,6 +27,7 @@ type stopGeom struct {
 type routeStopGeoms struct {
 	agency    string
 	name      string
+	fvid      int
 	stopGeoms map[string]*stopGeom
 }
 
