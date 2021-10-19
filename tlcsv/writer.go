@@ -60,6 +60,12 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		if efn != ent.Filename() {
 			return eids, errors.New("all entities must be same type")
 		}
+		// Horrible special case bug fix
+		if v, ok := ent.(*tl.Stop); ok {
+			c := v.Coordinates()
+			v.StopLon = c[0]
+			v.StopLat = c[1]
+		}
 	}
 	header, ok := writer.headers[efn]
 	if !ok {
