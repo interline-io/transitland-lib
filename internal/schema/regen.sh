@@ -24,14 +24,11 @@ pg_dump \
     -t "tl_route_stops" \
     -t "tl_stop_onestop_ids" \
     -t "tl_census_*" \
-    -t "tl_retained_feed_versions" \
-    -t "tl_tile_active_routes" \
-    -t "tl_tile_active_stops" \
-    -t "tl_vw_agency_operators" \
-    -t "tl_mv_active_agency_operators" \
     -t "tl_stop_external_references" \
     -t "tl_ext_fare_networks" \
     -t "tl_ext_gtfs_stops" \
+    -t "ne_10m_admin_1_states_provinces" \
+    -t "ne_10m_populated_places" \
     -s \
     --no-owner \
     --no-comments $PGDATABASE | egrep -v "^(SET|SELECT pg_catalog|--)" | sed -e '/^$/d'  >> postgres.pgsql

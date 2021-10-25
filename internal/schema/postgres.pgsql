@@ -141,7 +141,8 @@ CREATE TABLE public.current_operators (
     associated_feeds jsonb DEFAULT '{}'::jsonb NOT NULL,
     deleted_at timestamp without time zone,
     textsearch tsvector GENERATED ALWAYS AS (((setweight(to_tsvector('public.tl'::regconfig, (COALESCE(name, ''::character varying))::text), 'A'::"char") || setweight(to_tsvector('public.tl'::regconfig, (COALESCE(short_name, ''::character varying))::text), 'A'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (COALESCE(onestop_id, ''::character varying))::text), 'A'::"char"))) STORED,
-    operator_tags jsonb
+    operator_tags jsonb,
+    file text NOT NULL
 );
 CREATE SEQUENCE public.current_operators_id_seq
     AS integer
@@ -160,7 +161,13 @@ CREATE TABLE public.current_operators_in_feed (
     operator_id integer,
     feed_id integer,
     created_or_updated_in_changeset_id integer,
-    agency_id bigint
+    agency_id bigint,
+    resolved_onestop_id text,
+    resolved_gtfs_agency_id text,
+    resolved_name text,
+    resolved_short_name text,
+    resolved_places text,
+    textsearch tsvector GENERATED ALWAYS AS (((((setweight(to_tsvector('public.tl'::regconfig, COALESCE(resolved_onestop_id, (''::character varying)::text)), 'A'::"char") || setweight(to_tsvector('public.tl'::regconfig, COALESCE(resolved_name, (''::character varying)::text)), 'A'::"char")) || setweight(to_tsvector('public.tl'::regconfig, COALESCE(resolved_short_name, (''::character varying)::text)), 'B'::"char")) || setweight(to_tsvector('public.tl'::regconfig, COALESCE(resolved_places, (''::character varying)::text)), 'B'::"char")) || setweight(to_tsvector('public.tl'::regconfig, COALESCE(resolved_gtfs_agency_id, (''::character varying)::text)), 'C'::"char"))) STORED
 );
 CREATE SEQUENCE public.current_operators_in_feed_id_seq
     AS integer
@@ -850,7 +857,6 @@ CREATE TABLE public.gtfs_stop_times_0 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_0 FOR VALUES WITH (modulus 10, remainder 0);
 CREATE TABLE public.gtfs_stop_times_1 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -865,7 +871,6 @@ CREATE TABLE public.gtfs_stop_times_1 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_1 FOR VALUES WITH (modulus 10, remainder 1);
 CREATE TABLE public.gtfs_stop_times_2 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -880,7 +885,6 @@ CREATE TABLE public.gtfs_stop_times_2 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_2 FOR VALUES WITH (modulus 10, remainder 2);
 CREATE TABLE public.gtfs_stop_times_3 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -895,7 +899,6 @@ CREATE TABLE public.gtfs_stop_times_3 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_3 FOR VALUES WITH (modulus 10, remainder 3);
 CREATE TABLE public.gtfs_stop_times_4 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -910,7 +913,6 @@ CREATE TABLE public.gtfs_stop_times_4 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_4 FOR VALUES WITH (modulus 10, remainder 4);
 CREATE TABLE public.gtfs_stop_times_5 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -925,7 +927,6 @@ CREATE TABLE public.gtfs_stop_times_5 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_5 FOR VALUES WITH (modulus 10, remainder 5);
 CREATE TABLE public.gtfs_stop_times_6 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -940,7 +941,6 @@ CREATE TABLE public.gtfs_stop_times_6 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_6 FOR VALUES WITH (modulus 10, remainder 6);
 CREATE TABLE public.gtfs_stop_times_7 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -955,7 +955,6 @@ CREATE TABLE public.gtfs_stop_times_7 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_7 FOR VALUES WITH (modulus 10, remainder 7);
 CREATE TABLE public.gtfs_stop_times_8 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -970,7 +969,6 @@ CREATE TABLE public.gtfs_stop_times_8 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_8 FOR VALUES WITH (modulus 10, remainder 8);
 CREATE TABLE public.gtfs_stop_times_9 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
@@ -985,7 +983,6 @@ CREATE TABLE public.gtfs_stop_times_9 (
     interpolated smallint,
     stop_headsign text
 );
-ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_9 FOR VALUES WITH (modulus 10, remainder 9);
 CREATE TABLE public.gtfs_stop_times_unpartitioned (
     id bigint NOT NULL,
     arrival_time integer NOT NULL,
@@ -1081,6 +1078,151 @@ CREATE SEQUENCE public.gtfs_trips_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_trips_id_seq OWNED BY public.gtfs_trips.id;
+CREATE TABLE public.ne_10m_admin_1_states_provinces (
+    ogc_fid integer NOT NULL,
+    featurecla character varying(20),
+    scalerank numeric(2,0),
+    adm1_code character varying(9),
+    diss_me numeric(5,0),
+    iso_3166_2 character varying(8),
+    wikipedia character varying(84),
+    iso_a2 character varying(2),
+    adm0_sr numeric(1,0),
+    name character varying(44),
+    name_alt character varying(129),
+    name_local character varying(66),
+    type character varying(38),
+    type_en character varying(27),
+    code_local character varying(5),
+    code_hasc character varying(8),
+    note character varying(114),
+    hasc_maybe character varying(13),
+    region character varying(43),
+    region_cod character varying(15),
+    provnum_ne numeric(5,0),
+    gadm_level numeric(2,0),
+    check_me numeric(2,0),
+    datarank numeric(2,0),
+    abbrev character varying(9),
+    postal character varying(3),
+    area_sqkm numeric(1,0),
+    sameascity numeric(3,0),
+    labelrank numeric(2,0),
+    name_len numeric(2,0),
+    mapcolor9 numeric(1,0),
+    mapcolor13 numeric(2,0),
+    fips character varying(5),
+    fips_alt character varying(9),
+    woe_id numeric(9,0),
+    woe_label character varying(64),
+    woe_name character varying(44),
+    latitude numeric(12,8),
+    longitude numeric(12,7),
+    sov_a3 character varying(3),
+    adm0_a3 character varying(3),
+    adm0_label numeric(2,0),
+    admin character varying(36),
+    geonunit character varying(40),
+    gu_a3 character varying(3),
+    gn_id numeric(8,0),
+    gn_name character varying(72),
+    gns_id numeric(8,0),
+    gns_name character varying(80),
+    gn_level numeric(2,0),
+    gn_region character varying(1),
+    gn_a1_code character varying(10),
+    region_sub character varying(41),
+    sub_code character varying(5),
+    gns_level numeric(3,0),
+    gns_lang character varying(3),
+    gns_adm1 character varying(4),
+    gns_region character varying(4),
+    min_label numeric(4,1),
+    max_label numeric(4,1),
+    min_zoom numeric(4,1),
+    wikidataid character varying(9),
+    name_ar character varying(85),
+    name_bn character varying(128),
+    name_de character varying(51),
+    name_en character varying(47),
+    name_es character varying(52),
+    name_fr character varying(52),
+    name_el character varying(82),
+    name_hi character varying(134),
+    name_hu character varying(41),
+    name_id character varying(45),
+    name_it character varying(49),
+    name_ja character varying(93),
+    name_ko character varying(58),
+    name_nl character varying(44),
+    name_pl character varying(45),
+    name_pt character varying(43),
+    name_ru character varying(91),
+    name_sv character varying(48),
+    name_tr character varying(44),
+    name_vi character varying(49),
+    name_zh character varying(61),
+    ne_id numeric(10,0),
+    geometry public.geography(MultiPolygon,4326)
+);
+CREATE SEQUENCE public.ne_10m_admin_1_states_provinces_ogc_fid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public.ne_10m_admin_1_states_provinces_ogc_fid_seq OWNED BY public.ne_10m_admin_1_states_provinces.ogc_fid;
+CREATE TABLE public.ne_10m_populated_places (
+    ogc_fid integer NOT NULL,
+    scalerank numeric(4,0),
+    natscale numeric(4,0),
+    labelrank numeric(4,0),
+    featurecla character varying(50),
+    name character varying(100),
+    namepar character varying(254),
+    namealt character varying(254),
+    diffascii numeric(4,0),
+    nameascii character varying(100),
+    adm0cap numeric(19,11),
+    capalt numeric(4,0),
+    capin character varying(15),
+    worldcity numeric(19,11),
+    megacity numeric(4,0),
+    sov0name character varying(100),
+    sov_a3 character varying(3),
+    adm0name character varying(50),
+    adm0_a3 character varying(3),
+    adm1name character varying(50),
+    iso_a2 character varying(5),
+    note character varying(254),
+    latitude numeric(19,11),
+    longitude numeric(19,11),
+    changed numeric(19,11),
+    namediff numeric(4,0),
+    diffnote character varying(254),
+    pop_max numeric(9,0),
+    pop_min numeric(9,0),
+    pop_other numeric(9,0),
+    rank_max numeric(9,0),
+    rank_min numeric(9,0),
+    geonameid numeric(19,11),
+    meganame character varying(50),
+    ls_name character varying(41),
+    ls_match numeric(4,0),
+    checkme numeric(4,0),
+    min_zoom numeric(6,1),
+    ne_id numeric(10,0),
+    geometry public.geography(Point,4326)
+);
+CREATE SEQUENCE public.ne_10m_populated_places_ogc_fid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public.ne_10m_populated_places_ogc_fid_seq OWNED BY public.ne_10m_populated_places.ogc_fid;
 CREATE TABLE public.tl_route_headways (
     id bigint NOT NULL,
     feed_version_id bigint NOT NULL,
@@ -1239,78 +1381,6 @@ CREATE TABLE public.tl_feed_version_geometries (
     geometry public.geography(Polygon,4326),
     centroid public.geography(Point,4326)
 );
-CREATE VIEW public.tl_vw_agency_operators AS
- SELECT agencies.id AS agency_id,
-    agencies.agency_name,
-    tlao.onestop_id AS agency_onestop_id,
-    feed_versions.id AS feed_version_id,
-    feed_versions.sha1 AS feed_version_sha1,
-    cf.id AS feed_id,
-    cf.onestop_id AS feed_onestop_id,
-    cf.feed_namespace_id,
-    coif.onestop_id AS coif_onestop_id,
-    co.id AS operator_id,
-    co.name AS operator_name,
-    co.short_name AS operator_short_name,
-    co.onestop_id AS operator_onestop_id,
-    (co.tags)::json AS operator_tags,
-    co.associated_feeds AS operator_associated_feeds,
-    COALESCE(c2.merged_onestop_id, co.onestop_id) AS onestop_id,
-    tlp.name AS city_name,
-    tlp.adm1name,
-    tlp.adm0name,
-    tlp_cache.places_cache,
-    concat(agencies.agency_name, ' ', cf.onestop_id, ' ', COALESCE(c2.merged_onestop_id, co.onestop_id), ' ', co.name, ' ', co.short_name) AS search_tokens,
-    ((((setweight(to_tsvector('public.tl'::regconfig, (COALESCE(agencies.agency_name, ''::character varying))::text), 'A'::"char") || setweight(to_tsvector('public.tl'::regconfig, (COALESCE(co.name, ''::character varying))::text), 'A'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (COALESCE(co.short_name, ''::character varying))::text), 'A'::"char")) || setweight(to_tsvector('public.tl'::regconfig, (COALESCE(c2.merged_onestop_id, co.onestop_id, ''::character varying))::text), 'C'::"char")) || setweight(to_tsvector('public.tl'::regconfig, COALESCE(array_to_string(tlp_cache.places_cache, ','::text), ''::text)), 'D'::"char")) AS textsearch
-   FROM ((((((((public.gtfs_agencies agencies
-     JOIN public.feed_versions ON ((feed_versions.id = agencies.feed_version_id)))
-     JOIN public.current_feeds cf ON ((cf.id = feed_versions.feed_id)))
-     LEFT JOIN public.tl_agency_onestop_ids tlao ON ((tlao.agency_id = agencies.id)))
-     LEFT JOIN LATERAL ( SELECT tlp_1.name,
-            tlp_1.adm1name,
-            tlp_1.adm0name
-           FROM public.tl_agency_places tlp_1
-          WHERE ((tlp_1.agency_id = agencies.id) AND (tlp_1.rank > (0.2)::double precision))
-          ORDER BY tlp_1.rank DESC
-         LIMIT 1) tlp ON (true))
-     LEFT JOIN LATERAL ( SELECT array_agg((((((COALESCE(tlp_1.adm0name, ''::character varying))::text || ' / '::text) || (COALESCE(tlp_1.adm1name, ''::character varying))::text) || ' / '::text) || (COALESCE(tlp_1.name, ''::character varying))::text)) AS places_cache
-           FROM public.tl_agency_places tlp_1
-          WHERE ((tlp_1.agency_id = agencies.id) AND (tlp_1.rank > (0.2)::double precision))) tlp_cache ON (true))
-     LEFT JOIN LATERAL ( SELECT co_1.onestop_id
-           FROM (public.current_operators_in_feed coif_1
-             JOIN public.current_operators co_1 ON ((co_1.id = coif_1.operator_id)))
-          WHERE ((coif_1.feed_id = cf.id) AND ((coif_1.gtfs_agency_id)::text = (agencies.agency_id)::text))) coif ON (true))
-     LEFT JOIN LATERAL ( SELECT COALESCE(coif.onestop_id, (NULLIF((cf.feed_namespace_id)::text, ''::text))::character varying, (tlao.onestop_id)::character varying) AS merged_onestop_id) c2 ON (true))
-     FULL JOIN public.current_operators co ON (((co.onestop_id)::text = (c2.merged_onestop_id)::text)));
-CREATE MATERIALIZED VIEW public.tl_mv_active_agency_operators AS
- SELECT row_number() OVER (ORDER BY tlvw.agency_id, tlvw.operator_id) AS id,
-    tlvw.agency_id,
-    tlvw.agency_name,
-    tlvw.agency_onestop_id,
-    tlvw.feed_version_id,
-    tlvw.feed_version_sha1,
-    tlvw.feed_id,
-    tlvw.feed_onestop_id,
-    tlvw.feed_namespace_id,
-    tlvw.coif_onestop_id,
-    tlvw.operator_id,
-    tlvw.operator_name,
-    tlvw.operator_short_name,
-    tlvw.operator_onestop_id,
-    tlvw.operator_tags,
-    tlvw.operator_associated_feeds,
-    tlvw.onestop_id,
-    tlvw.city_name,
-    tlvw.adm1name,
-    tlvw.adm0name,
-    tlvw.places_cache,
-    tlvw.search_tokens,
-    tlvw.textsearch
-   FROM (public.tl_vw_agency_operators tlvw
-     LEFT JOIN public.feed_states USING (feed_version_id))
-  WHERE ((tlvw.agency_id IS NULL) OR (feed_states.id IS NOT NULL))
-  ORDER BY tlvw.agency_id, tlvw.operator_id
-  WITH NO DATA;
 CREATE TABLE public.tl_route_geometries (
     route_id bigint NOT NULL,
     feed_version_id bigint NOT NULL,
@@ -1332,39 +1402,6 @@ CREATE TABLE public.tl_stop_onestop_ids (
     stop_id bigint NOT NULL,
     onestop_id text NOT NULL
 );
-CREATE VIEW public.tl_retained_feed_versions AS
- WITH most_recent_fv AS (
-         SELECT DISTINCT ON (fv_1.feed_id) fv_1.id
-           FROM ((public.feed_versions fv_1
-             JOIN public.current_feeds ON ((current_feeds.id = fv_1.feed_id)))
-             JOIN public.feed_states ON ((feed_states.feed_id = current_feeds.id)))
-          ORDER BY fv_1.feed_id, fv_1.fetched_at DESC
-        ), recent_fvs AS (
-         SELECT fv_1.id
-           FROM ((public.feed_versions fv_1
-             JOIN public.current_feeds ON ((current_feeds.id = fv_1.feed_id)))
-             JOIN public.feed_states ON ((feed_states.feed_id = current_feeds.id)))
-          WHERE (fv_1.fetched_at >= (CURRENT_DATE - make_interval(days => feed_states.feed_version_import_retention_period)))
-        ), active_fv AS (
-         SELECT fv_1.id
-           FROM (public.feed_versions fv_1
-             JOIN public.feed_states ON ((feed_states.feed_version_id = fv_1.id)))
-        ), importable_fvs AS (
-         SELECT DISTINCT ON (recent_fvs.id) recent_fvs.id
-           FROM recent_fvs
-        UNION
-         SELECT active_fv.id
-           FROM active_fv
-        UNION
-         SELECT most_recent_fv.id
-           FROM most_recent_fv
-        )
- SELECT fv.id
-   FROM ((importable_fvs
-     JOIN public.feed_versions fv USING (id))
-     JOIN public.current_feeds cf ON ((cf.id = fv.feed_id)))
-  WHERE ((cf.deleted_at IS NULL) AND ((cf.spec)::text = 'gtfs'::text))
-  ORDER BY fv.fetched_at;
 CREATE SEQUENCE public.tl_route_onestop_ids_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -1393,60 +1430,16 @@ CREATE SEQUENCE public.tl_stop_onestop_ids_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.tl_stop_onestop_ids_id_seq OWNED BY public.tl_stop_onestop_ids.id;
-CREATE VIEW public.tl_tile_active_routes AS
- SELECT gtfs_routes.id,
-    gtfs_routes.route_id,
-    gtfs_routes.route_short_name,
-    gtfs_routes.route_long_name,
-    tl_route_onestop_ids.onestop_id,
-    fv.sha1 AS feed_version_sha1,
-    cf.onestop_id AS feed_onestop_id,
-    tl_route_geometries.geometry,
-    tl_route_geometries.generated,
-    public.st_length(tl_route_geometries.geometry) AS geometry_length,
-    gtfs_agencies.agency_id,
-    gtfs_agencies.agency_name,
-        CASE
-            WHEN ((gtfs_routes.route_color)::text = ''::text) THEN NULL::text
-            WHEN ("substring"((gtfs_routes.route_color)::text, 1, 1) <> '#'::text) THEN ('#'::text || lower((gtfs_routes.route_color)::text))
-            ELSE lower((gtfs_routes.route_color)::text)
-        END AS route_color,
-        CASE
-            WHEN (gtfs_routes.route_type <= 7) THEN gtfs_routes.route_type
-            WHEN ((gtfs_routes.route_type >= 100) AND (gtfs_routes.route_type <= 199)) THEN 2
-            WHEN ((gtfs_routes.route_type >= 200) AND (gtfs_routes.route_type <= 299)) THEN 3
-            WHEN ((gtfs_routes.route_type >= 300) AND (gtfs_routes.route_type <= 399)) THEN 2
-            WHEN ((gtfs_routes.route_type >= 300) AND (gtfs_routes.route_type <= 399)) THEN 2
-            WHEN ((gtfs_routes.route_type >= 400) AND (gtfs_routes.route_type <= 699)) THEN 1
-            WHEN ((gtfs_routes.route_type >= 700) AND (gtfs_routes.route_type <= 899)) THEN 3
-            WHEN ((gtfs_routes.route_type >= 800) AND (gtfs_routes.route_type <= 999)) THEN 0
-            WHEN ((gtfs_routes.route_type >= 1000) AND (gtfs_routes.route_type <= 1099)) THEN 4
-            WHEN ((gtfs_routes.route_type >= 1100) AND (gtfs_routes.route_type <= 1199)) THEN 3
-            WHEN ((gtfs_routes.route_type >= 1200) AND (gtfs_routes.route_type <= 1299)) THEN 4
-            WHEN ((gtfs_routes.route_type >= 1300) AND (gtfs_routes.route_type <= 1399)) THEN 6
-            WHEN ((gtfs_routes.route_type >= 1400) AND (gtfs_routes.route_type <= 1499)) THEN 7
-            WHEN (gtfs_routes.route_type >= 1500) THEN 3
-            ELSE 3
-        END AS route_type,
-        CASE
-            WHEN ((tl_route_headways.headway_secs = 0) OR (tl_route_headways.headway_secs IS NULL)) THEN 1000000
-            ELSE tl_route_headways.headway_secs
-        END AS headway_secs
-   FROM (((((((public.gtfs_routes
-     JOIN public.feed_states USING (feed_version_id))
-     JOIN public.feed_versions fv ON ((fv.id = gtfs_routes.feed_version_id)))
-     JOIN public.current_feeds cf ON ((cf.id = fv.feed_id)))
-     JOIN public.tl_route_geometries ON ((tl_route_geometries.route_id = gtfs_routes.id)))
-     JOIN public.gtfs_agencies ON ((gtfs_agencies.id = gtfs_routes.agency_id)))
-     LEFT JOIN public.tl_route_onestop_ids ON ((tl_route_onestop_ids.route_id = gtfs_routes.id)))
-     LEFT JOIN public.tl_route_headways ON (((tl_route_headways.route_id = gtfs_routes.id) AND (tl_route_headways.dow_category = 1))));
-CREATE VIEW public.tl_tile_active_stops AS
- SELECT gtfs_stops.id,
-    gtfs_stops.stop_id,
-    gtfs_stops.stop_name,
-    gtfs_stops.geometry
-   FROM (public.gtfs_stops
-     JOIN public.feed_states USING (feed_version_id));
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_0 FOR VALUES WITH (modulus 10, remainder 0);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_1 FOR VALUES WITH (modulus 10, remainder 1);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_2 FOR VALUES WITH (modulus 10, remainder 2);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_3 FOR VALUES WITH (modulus 10, remainder 3);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_4 FOR VALUES WITH (modulus 10, remainder 4);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_5 FOR VALUES WITH (modulus 10, remainder 5);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_6 FOR VALUES WITH (modulus 10, remainder 6);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_7 FOR VALUES WITH (modulus 10, remainder 7);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_8 FOR VALUES WITH (modulus 10, remainder 8);
+ALTER TABLE ONLY public.gtfs_stop_times ATTACH PARTITION public.gtfs_stop_times_9 FOR VALUES WITH (modulus 10, remainder 9);
 ALTER TABLE ONLY public.current_feeds ALTER COLUMN id SET DEFAULT nextval('public.current_feeds_id_seq'::regclass);
 ALTER TABLE ONLY public.current_operators ALTER COLUMN id SET DEFAULT nextval('public.current_operators_id_seq'::regclass);
 ALTER TABLE ONLY public.current_operators_in_feed ALTER COLUMN id SET DEFAULT nextval('public.current_operators_in_feed_id_seq'::regclass);
@@ -1488,6 +1481,8 @@ ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned ALTER COLUMN id SET DEFAUL
 ALTER TABLE ONLY public.gtfs_stops ALTER COLUMN id SET DEFAULT nextval('public.gtfs_stops_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_transfers ALTER COLUMN id SET DEFAULT nextval('public.gtfs_transfers_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_trips ALTER COLUMN id SET DEFAULT nextval('public.gtfs_trips_id_seq'::regclass);
+ALTER TABLE ONLY public.ne_10m_admin_1_states_provinces ALTER COLUMN ogc_fid SET DEFAULT nextval('public.ne_10m_admin_1_states_provinces_ogc_fid_seq'::regclass);
+ALTER TABLE ONLY public.ne_10m_populated_places ALTER COLUMN ogc_fid SET DEFAULT nextval('public.ne_10m_populated_places_ogc_fid_seq'::regclass);
 ALTER TABLE ONLY public.tl_agency_onestop_ids ALTER COLUMN id SET DEFAULT nextval('public.tl_agency_onestop_ids_id_seq'::regclass);
 ALTER TABLE ONLY public.tl_agency_places ALTER COLUMN id SET DEFAULT nextval('public.agency_places_id_seq'::regclass);
 ALTER TABLE ONLY public.tl_census_datasets ALTER COLUMN id SET DEFAULT nextval('public.tl_census_datasets_id_seq'::regclass);
@@ -1605,6 +1600,10 @@ ALTER TABLE ONLY public.gtfs_transfers
     ADD CONSTRAINT gtfs_transfers_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_trips
     ADD CONSTRAINT gtfs_trips_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.ne_10m_admin_1_states_provinces
+    ADD CONSTRAINT ne_10m_admin_1_states_provinces_pkey PRIMARY KEY (ogc_fid);
+ALTER TABLE ONLY public.ne_10m_populated_places
+    ADD CONSTRAINT ne_10m_populated_places_pkey PRIMARY KEY (ogc_fid);
 ALTER TABLE ONLY public.tl_route_headways
     ADD CONSTRAINT route_headways_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.tl_agency_onestop_ids
@@ -1637,6 +1636,12 @@ CREATE INDEX current_feeds_feed_tags_idx ON public.current_feeds USING btree (fe
 CREATE INDEX current_feeds_textsearch_idx ON public.current_feeds USING gin (textsearch);
 CREATE INDEX current_oif ON public.current_operators_in_feed USING btree (created_or_updated_in_changeset_id);
 CREATE INDEX current_operators_in_feed_agency_id_idx ON public.current_operators_in_feed USING btree (agency_id);
+CREATE INDEX current_operators_in_feed_resolved_gtfs_agency_id_idx ON public.current_operators_in_feed USING btree (resolved_gtfs_agency_id);
+CREATE INDEX current_operators_in_feed_resolved_name_idx ON public.current_operators_in_feed USING btree (resolved_name);
+CREATE INDEX current_operators_in_feed_resolved_onestop_id_idx ON public.current_operators_in_feed USING btree (resolved_onestop_id);
+CREATE INDEX current_operators_in_feed_resolved_places_idx ON public.current_operators_in_feed USING btree (resolved_places);
+CREATE INDEX current_operators_in_feed_resolved_short_name_idx ON public.current_operators_in_feed USING btree (resolved_short_name);
+CREATE INDEX current_operators_in_feed_textsearch_idx ON public.current_operators_in_feed USING gin (textsearch);
 CREATE INDEX current_operators_operator_tags_idx ON public.current_operators USING btree (operator_tags);
 CREATE INDEX current_operators_textsearch_idx ON public.current_operators USING gin (textsearch);
 CREATE INDEX ext_plus_calendar_attributes_feed_version_id_idx ON public.ext_plus_calendar_attributes USING btree (feed_version_id);
@@ -1810,6 +1815,8 @@ CREATE INDEX index_route_stops_on_agency_id ON public.tl_route_stops USING btree
 CREATE INDEX index_route_stops_on_feed_version_id ON public.tl_route_stops USING btree (feed_version_id);
 CREATE INDEX index_route_stops_on_route_id ON public.tl_route_stops USING btree (route_id);
 CREATE INDEX index_route_stops_on_stop_id ON public.tl_route_stops USING btree (stop_id);
+CREATE INDEX ne_10m_admin_1_states_provinces_geometry_geom_idx ON public.ne_10m_admin_1_states_provinces USING gist (geometry);
+CREATE INDEX ne_10m_populated_places_geometry_geom_idx ON public.ne_10m_populated_places USING gist (geometry);
 CREATE INDEX route_headways_feed_version_id_idx ON public.tl_route_headways USING btree (feed_version_id);
 CREATE UNIQUE INDEX tl_agency_onestop_ids_agency_id_idx ON public.tl_agency_onestop_ids USING btree (agency_id);
 CREATE INDEX tl_agency_onestop_ids_feed_version_id_idx ON public.tl_agency_onestop_ids USING btree (feed_version_id);
@@ -1832,19 +1839,6 @@ CREATE UNIQUE INDEX tl_census_values_geography_id_table_id_idx ON public.tl_cens
 CREATE INDEX tl_ext_gtfs_stops_feed_version_id_idx ON public.tl_ext_gtfs_stops USING btree (feed_version_id);
 CREATE INDEX tl_ext_gtfs_stops_target_feed_onestop_id_idx ON public.tl_ext_gtfs_stops USING btree (target_feed_onestop_id);
 CREATE INDEX tl_ext_gtfs_stops_target_stop_id_idx ON public.tl_ext_gtfs_stops USING btree (target_stop_id);
-CREATE INDEX tl_mv_active_agency_operators_adm0name_idx ON public.tl_mv_active_agency_operators USING btree (adm0name);
-CREATE INDEX tl_mv_active_agency_operators_adm1name_idx ON public.tl_mv_active_agency_operators USING btree (adm1name);
-CREATE INDEX tl_mv_active_agency_operators_agency_id_idx ON public.tl_mv_active_agency_operators USING btree (agency_id);
-CREATE INDEX tl_mv_active_agency_operators_agency_id_idx1 ON public.tl_mv_active_agency_operators USING btree (agency_id);
-CREATE INDEX tl_mv_active_agency_operators_city_name_idx ON public.tl_mv_active_agency_operators USING btree (city_name);
-CREATE INDEX tl_mv_active_agency_operators_feed_id_idx ON public.tl_mv_active_agency_operators USING btree (feed_id);
-CREATE INDEX tl_mv_active_agency_operators_feed_id_idx1 ON public.tl_mv_active_agency_operators USING btree (feed_id);
-CREATE INDEX tl_mv_active_agency_operators_feed_onestop_id_idx ON public.tl_mv_active_agency_operators USING btree (feed_onestop_id);
-CREATE INDEX tl_mv_active_agency_operators_feed_onestop_id_idx1 ON public.tl_mv_active_agency_operators USING btree (feed_onestop_id);
-CREATE INDEX tl_mv_active_agency_operators_id_idx ON public.tl_mv_active_agency_operators USING btree (id);
-CREATE INDEX tl_mv_active_agency_operators_onestop_id_idx ON public.tl_mv_active_agency_operators USING btree (onestop_id);
-CREATE INDEX tl_mv_active_agency_operators_search_tokens_idx ON public.tl_mv_active_agency_operators USING gin (search_tokens public.gin_trgm_ops);
-CREATE INDEX tl_mv_active_agency_operators_textsearch_idx ON public.tl_mv_active_agency_operators USING gin (textsearch);
 CREATE UNIQUE INDEX tl_route_headways_route_dow_category_id_idx ON public.tl_route_headways USING btree (route_id, dow_category);
 CREATE INDEX tl_route_onestop_ids_feed_version_id_idx ON public.tl_route_onestop_ids USING btree (feed_version_id);
 CREATE INDEX tl_route_onestop_ids_onestop_id_idx ON public.tl_route_onestop_ids USING btree (onestop_id);
