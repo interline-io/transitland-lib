@@ -133,6 +133,7 @@ func NewWideTime(value string) (wt WideTime, err error) {
 		return wt, err
 	}
 	wt.Seconds = a
+	wt.Valid = true
 	return wt, nil
 }
 
