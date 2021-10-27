@@ -11,6 +11,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -216,6 +217,11 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	if err != nil {
 		return fvi, err
 	}
+	cp.AddExtension(builders.NewRouteGeometryBuilder())
+	cp.AddExtension(builders.NewRouteStopBuilder())
+	cp.AddExtension(builders.NewRouteHeadwayBuilder())
+	cp.AddExtension(builders.NewConvexHullBuilder())
+	cp.AddExtension(builders.NewOnestopIDBuilder())
 
 	// Go
 	cpresult := cp.Copy()

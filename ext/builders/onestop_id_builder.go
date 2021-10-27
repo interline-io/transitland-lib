@@ -19,6 +19,10 @@ func (ent *StopOnestopID) Filename() string {
 	return "tl_stop_onestop_ids.txt"
 }
 
+func (ent *StopOnestopID) TableName() string {
+	return "tl_stop_onestop_ids"
+}
+
 type RouteOnestopID struct {
 	RouteID   string
 	OnestopID string
@@ -28,6 +32,9 @@ type RouteOnestopID struct {
 
 func (ent *RouteOnestopID) Filename() string {
 	return "tl_route_onestop_ids.txt"
+}
+func (ent *RouteOnestopID) TableName() string {
+	return "tl_route_onestop_ids"
 }
 
 type AgencyOnestopID struct {
@@ -41,11 +48,16 @@ func (ent *AgencyOnestopID) Filename() string {
 	return "tl_agency_onestop_ids.txt"
 }
 
+func (ent *AgencyOnestopID) TableName() string {
+	return "tl_agency_onestop_ids"
+}
+
 //////////
 
 type OnestopIDBuilder struct {
 	agencyNames    map[string]string
 	stops          map[string]*stopGeom
+	tripRoutes     map[string]string
 	routeStopGeoms map[string]*routeStopGeoms
 }
 
@@ -53,6 +65,7 @@ func NewOnestopIDBuilder() *OnestopIDBuilder {
 	return &OnestopIDBuilder{
 		agencyNames:    map[string]string{},
 		stops:          map[string]*stopGeom{},
+		tripRoutes:     map[string]string{},
 		routeStopGeoms: map[string]*routeStopGeoms{},
 	}
 }
@@ -62,7 +75,7 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 	case *tl.Agency:
 		pp.agencyNames[eid] = v.AgencyName
 	case *tl.Stop:
-		pp.stops[v.StopID] = &stopGeom{
+		pp.stops[eid] = &stopGeom{
 			name: v.StopName,
 			lon:  v.Geometry.X(),
 			lat:  v.Geometry.Y(),
@@ -78,19 +91,19 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 			stopGeoms: map[string]*stopGeom{},
 		}
 	case *tl.Trip:
-		r, ok := pp.routeStopGeoms[v.RouteID]
+		pp.tripRoutes[eid] = v.RouteID
+	case *tl.StopTime:
+		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID]]
 		if !ok {
-			fmt.Println("no route:", v.RouteID)
+			fmt.Println("OnestopIDBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
-		for _, st := range v.StopTimes {
-			s, ok := pp.stops[st.StopID]
-			if !ok {
-				fmt.Println("no stop:", st.StopID)
-				return nil
-			}
-			r.stopGeoms[st.StopID] = s
+		s, ok := pp.stops[v.StopID]
+		if !ok {
+			fmt.Println("OnestopIDBuilder no stop:", v.StopID)
+			return nil
 		}
+		r.stopGeoms[v.StopID] = s
 	}
 	return nil
 }

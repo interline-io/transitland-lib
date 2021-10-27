@@ -25,12 +25,14 @@ func (rs *RouteStop) Filename() string {
 
 type RouteStopBuilder struct {
 	routeAgencies map[string]string
+	tripRoutes    map[string]string
 	routeStops    map[string]map[string]bool
 }
 
 func NewRouteStopBuilder() *RouteStopBuilder {
 	return &RouteStopBuilder{
 		routeAgencies: map[string]string{},
+		tripRoutes:    map[string]string{},
 		routeStops:    map[string]map[string]bool{},
 	}
 }
@@ -40,15 +42,15 @@ func (pp *RouteStopBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 	case *tl.Route:
 		pp.routeAgencies[eid] = v.AgencyID
 	case *tl.Trip:
-		rid := v.RouteID
+		pp.tripRoutes[eid] = v.RouteID
+	case *tl.StopTime:
+		rid := pp.tripRoutes[v.TripID]
 		rs, ok := pp.routeStops[rid]
 		if !ok {
 			rs = map[string]bool{}
 			pp.routeStops[rid] = rs
 		}
-		for _, st := range v.StopTimes {
-			rs[st.StopID] = true
-		}
+		rs[v.StopID] = true
 	}
 	return nil
 }

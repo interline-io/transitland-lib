@@ -22,6 +22,10 @@ func (ent *AgencyGeometry) Filename() string {
 	return "tl_agency_geometries.txt"
 }
 
+func (ent *AgencyGeometry) TableName() string {
+	return "tl_agency_geometries"
+}
+
 //////////
 
 type FeedVersionGeometry struct {
@@ -34,16 +38,22 @@ func (ent *FeedVersionGeometry) Filename() string {
 	return "tl_feed_version_geometries.txt"
 }
 
+func (ent *FeedVersionGeometry) TableName() string {
+	return "tl_feed_version_geometries"
+}
+
 //////////
 
 type ConvexHullBuilder struct {
 	stops          map[string]*stopGeom
+	tripRoutes     map[string]string
 	routeStopGeoms map[string]*routeStopGeoms
 }
 
 func NewConvexHullBuilder() *ConvexHullBuilder {
 	return &ConvexHullBuilder{
 		stops:          map[string]*stopGeom{},
+		tripRoutes:     map[string]string{},
 		routeStopGeoms: map[string]*routeStopGeoms{},
 	}
 }
@@ -62,19 +72,19 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Enti
 			stopGeoms: map[string]*stopGeom{},
 		}
 	case *tl.Trip:
-		r, ok := pp.routeStopGeoms[v.RouteID]
+		pp.tripRoutes[eid] = v.RouteID
+	case *tl.StopTime:
+		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID]]
 		if !ok {
-			fmt.Println("no route:", v.RouteID)
+			fmt.Println("ConvexHullBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
-		for _, st := range v.StopTimes {
-			s, ok := pp.stops[st.StopID]
-			if !ok {
-				fmt.Println("no stop:", st.StopID)
-				return nil
-			}
-			r.stopGeoms[st.StopID] = s
+		s, ok := pp.stops[v.StopID]
+		if !ok {
+			fmt.Println("ConvexHullBuilder no stop:", v.StopID)
+			return nil
 		}
+		r.stopGeoms[v.StopID] = s
 	}
 	return nil
 }

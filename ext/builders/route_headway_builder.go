@@ -49,17 +49,31 @@ func (ent *RouteHeadway) TableName() string {
 
 //////
 
+type riTrip struct {
+	RouteID   string
+	ServiceID string
+	Direction uint8
+}
+
+type riKey struct {
+	StopID    string
+	ServiceID string
+	Direction uint8
+}
+
 type RouteHeadwayBuilder struct {
-	serviceDays map[string][]string
-	routeInfos0 map[string]*routeInfo
-	routeInfos1 map[string]*routeInfo
+	tripDetails     map[string]riTrip
+	routeDepartures map[string]map[riKey][]int
+	serviceDays     map[string][]string
+	tripService     map[string]string
 }
 
 func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
 	return &RouteHeadwayBuilder{
-		routeInfos0: map[string]*routeInfo{},
-		routeInfos1: map[string]*routeInfo{},
-		serviceDays: map[string][]string{},
+		tripDetails:     map[string]riTrip{},
+		routeDepartures: map[string]map[riKey][]int{},
+		tripService:     map[string]string{},
+		serviceDays:     map[string][]string{},
 	}
 }
 
@@ -77,111 +91,107 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 			}
 			startDate = startDate.AddDate(0, 0, 1)
 		}
+	case *tl.Route:
+		pp.routeDepartures[eid] = map[riKey][]int{}
 	case *tl.Trip:
-		ppri := pp.routeInfos0
-		if v.DirectionID == 1 {
-			ppri = pp.routeInfos1
+		pp.tripDetails[eid] = riTrip{
+			Direction: uint8(v.DirectionID),
+			ServiceID: v.ServiceID,
+			RouteID:   v.RouteID,
 		}
-		ri, ok := ppri[v.RouteID]
-		if !ok {
-			ri = newRouteInfo()
-			ppri[v.RouteID] = ri
-		}
-		ri.tripsByServiceID[v.ServiceID]++
-		rist, ok := ri.stopDeparturesByServiceID[v.ServiceID]
-		if !ok {
-			rist = map[string][]int{}
-			ri.stopDeparturesByServiceID[v.ServiceID] = rist
-		}
-		for _, st := range v.StopTimes {
-			rist[st.StopID] = append(rist[st.StopID], st.DepartureTime)
+	case *tl.StopTime:
+		ti, ok := pp.tripDetails[v.TripID]
+		if ok {
+			rkey := riKey{
+				ServiceID: ti.ServiceID,
+				Direction: ti.Direction,
+				StopID:    v.StopID,
+			}
+			if rd, ok := pp.routeDepartures[ti.RouteID]; ok {
+				rd[rkey] = append(rd[rkey], v.DepartureTime)
+			}
 		}
 	}
 	return nil
 }
 
 func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
-	// Process each route
-	emap := copier.EntityMap
-	ppris := []map[string]*routeInfo{pp.routeInfos0, pp.routeInfos1}
-	for direction, ppri := range ppris {
-		for rid, ri := range ppri {
-			dbid, ok := emap.Get("routes.txt", rid)
-			if !ok {
-				fmt.Println("no emap for route:", rid)
-				continue
+	for rid, ri := range pp.routeDepartures {
+		// Both directions will use the same day
+		_ = rid
+		departuresByService := map[string]int{}
+		for k, v := range ri {
+			departuresByService[k.ServiceID] += len(v)
+		}
+		tripsByDay := map[string]int{}
+		for day, serviceids := range pp.serviceDays {
+			for _, sid := range serviceids {
+				tripsByDay[day] += departuresByService[sid]
 			}
-			// Get the number of trips by day
-			tripsByDay := map[string]int{}
-			for day, serviceids := range pp.serviceDays {
-				for _, sid := range serviceids {
-					tripsByDay[day] += ri.tripsByServiceID[sid]
-				}
+		}
+		// Get the highest trip count for each dow category
+		dowCatDay := map[int]string{}
+		dowCatCounts := map[int]int{}
+		for day, count := range tripsByDay {
+			// parse day again to get weekday
+			d, _ := time.Parse("2006-01-02", day)
+			dow := int(d.Weekday())
+			dowCat := 1
+			if dow == 0 {
+				dowCat = 6
+			} else if dow == 6 {
+				dowCat = 7
 			}
-			// Get the highest trip count for each dow category
-			dowCatDay := map[int]string{}
-			dowCatCounts := map[int]int{}
-			for day, count := range tripsByDay {
-				// parse day again to get weekday
-				d, _ := time.Parse("2006-01-02", day)
-				dow := int(d.Weekday())
-				dowCat := 1
-				if dow == 0 {
-					dowCat = 6
-				} else if dow == 6 {
-					dowCat = 7
-				}
-				// Use earliest day in ties
-				cd := dowCatDay[dowCat]
-				if count > dowCatCounts[dowCat] && (cd == "" || day < cd) {
-					dowCatCounts[dowCat] = count
-					dowCatDay[dowCat] = day
-				}
+			// Use earliest day in ties
+			cd := dowCatDay[dowCat]
+			if count > dowCatCounts[dowCat] && (cd == "" || day < cd) {
+				dowCatCounts[dowCat] = count
+				dowCatDay[dowCat] = day
 			}
-			// Find the stop with the most visit on the highest day in each dow category
+		}
+		// For each direction...
+		for direction := uint8(0); direction < 2; direction++ {
+			// Find the stop with the most visits on the highest day in each dow category
 			for dowCat, day := range dowCatDay {
 				d, _ := time.Parse("2006-01-02", day)
-				stopCounts := map[string]int{}
+				stopDepartures := map[string][]int{}
 				serviceids := pp.serviceDays[day]
-				for _, sid := range serviceids {
-					for stopid, departures := range ri.stopDeparturesByServiceID[sid] {
-						stopCounts[stopid] += len(departures)
+				for k, v := range ri {
+					for _, sid := range serviceids {
+						if k.Direction == direction && k.ServiceID == sid {
+							stopDepartures[k.StopID] = append(stopDepartures[k.StopID], v...)
+						}
 					}
 				}
 				mostVisitedStop := ""
 				mostVisitedStopCount := 0
-				for stopid, count := range stopCounts {
+				for stopid, deps := range stopDepartures {
 					// Use earliest stopid in ties
+					count := len(deps)
 					if count > mostVisitedStopCount && (mostVisitedStop == "" || stopid < mostVisitedStop) {
 						mostVisitedStopCount = count
 						mostVisitedStop = stopid
 					}
 				}
-				stopdbid, ok := emap.Get("stops.txt", mostVisitedStop)
-				if !ok {
-					fmt.Println("no emap for stop:", mostVisitedStop)
+				if mostVisitedStop == "" {
 					continue
 				}
-				departures := []int{}
-				for _, serviceid := range serviceids {
-					departures = append(departures, ri.stopDeparturesByServiceID[serviceid][mostVisitedStop]...)
-				}
+				departures := stopDepartures[mostVisitedStop]
 				sort.Ints(departures)
-				// fmt.Println("\trid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
-				// fmt.Println("departures:", departures)
-				// for _, departure := range departures {
-				// 	wt := tl.NewWideTimeFromSeconds(departure)
-				// 	fmt.Println("\t", wt.String())
-				// }
-				_ = direction
+				fmt.Println("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
+				fmt.Println("\tdepartures:", departures)
+				for _, departure := range departures {
+					wt := tl.NewWideTimeFromSeconds(departure)
+					fmt.Println("\t", wt.String())
+				}
 				rh := &RouteHeadway{
-					RouteID:        dbid,
-					SelectedStopID: stopdbid,
+					RouteID:        rid,
+					SelectedStopID: mostVisitedStop,
 					HeadwaySecs:    tl.OInt{},
 					DowCategory:    tl.NewOInt(dowCat),
 					ServiceDate:    tl.NewODate(d),
 					StopTripCount:  tl.NewOInt(mostVisitedStopCount),
-					DirectionID:    tl.NewOInt(direction),
+					DirectionID:    tl.NewOInt(int(direction)),
 					Departures:     IntSlice{Valid: true, Ints: departures},
 				}
 				// Calculate stats for backwards compat
@@ -271,18 +281,4 @@ func median(v []int) float64 {
 		return float64(v[m])
 	}
 	return float64(v[m-1]+v[m]) / 2
-}
-
-////////
-
-type routeInfo struct {
-	tripsByServiceID          map[string]int
-	stopDeparturesByServiceID map[string]map[string][]int
-}
-
-func newRouteInfo() *routeInfo {
-	return &routeInfo{
-		tripsByServiceID:          map[string]int{},
-		stopDeparturesByServiceID: map[string]map[string][]int{},
-	}
 }
