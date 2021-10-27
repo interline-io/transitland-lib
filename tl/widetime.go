@@ -74,11 +74,17 @@ type WideTime struct {
 }
 
 func (wt *WideTime) String() string {
+	if !wt.Valid {
+		return ""
+	}
 	return SecondsToString(wt.Seconds)
 }
 
 // Value implements driver.Value
 func (wt WideTime) Value() (driver.Value, error) {
+	if !wt.Valid {
+		return nil, nil
+	}
 	return int64(wt.Seconds), nil
 }
 
