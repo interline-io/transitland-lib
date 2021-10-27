@@ -128,6 +128,9 @@ func (wt WideTime) MarshalGQL(w io.Writer) {
 
 // NewWideTime converts the csv string to a WideTime.
 func NewWideTime(value string) (wt WideTime, err error) {
+	if value == "" {
+		return WideTime{}, nil
+	}
 	a, err := StringToSeconds(value)
 	if err != nil {
 		return wt, err
