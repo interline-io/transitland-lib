@@ -4,16 +4,9 @@ import (
 	"reflect"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
-
-func check(err error) {
-	if err != nil {
-		log.Debug("Error: %s", err)
-	}
-}
 
 // Reader reads from a database.
 type Reader struct {
@@ -24,7 +17,11 @@ type Reader struct {
 
 // NewReader returns an initialized Reader based on the provided url string.
 func NewReader(dburl string) (*Reader, error) {
-	return &Reader{Adapter: newAdapter(dburl), PageSize: 1000}, nil
+	fvids, newurl, err := getFvids(dburl)
+	if err != nil {
+		return nil, err
+	}
+	return &Reader{Adapter: newAdapter(newurl), PageSize: 1000, FeedVersionIDs: fvids}, nil
 }
 
 // ValidateStructure returns if all the necessary tables are present. Not implemented.

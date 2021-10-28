@@ -36,7 +36,15 @@ type Writer struct {
 
 // NewWriter returns a Writer appropriate for the given connection url.
 func NewWriter(dburl string) (*Writer, error) {
-	return &Writer{Adapter: newAdapter(dburl)}, nil
+	fvids, newurl, err := getFvids(dburl)
+	if err != nil {
+		return nil, err
+	}
+	writer := &Writer{Adapter: newAdapter(newurl)}
+	if len(fvids) > 0 {
+		writer.FeedVersionID = fvids[0]
+	}
+	return writer, nil
 }
 
 // Open the database.

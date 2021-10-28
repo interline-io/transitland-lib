@@ -50,7 +50,8 @@ func (cmd *Command) Run() error {
 	if dbw, ok := writer.(*tldb.Writer); ok {
 		if cmd.fvid != 0 {
 			dbw.FeedVersionID = cmd.fvid
-		} else {
+		}
+		if dbw.FeedVersionID == 0 {
 			fvid, err := dbw.CreateFeedVersion(reader)
 			if err != nil {
 				log.Exit("Error creating FeedVersion: %s", err)
