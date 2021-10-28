@@ -155,7 +155,6 @@ func (ent *StopTime) SetString(key, value string) error {
 		ent.StopID = hi
 	case "arrival_time":
 		if hi == "" {
-			ent.ArrivalTime = -1
 		} else if s, err := StringToSeconds(hi); err != nil {
 			perr = causes.NewFieldParseError("arrival_time", hi)
 		} else {
@@ -163,7 +162,6 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "departure_time":
 		if hi == "" {
-			ent.DepartureTime = -1
 		} else if s, err := StringToSeconds(hi); err != nil {
 			perr = causes.NewFieldParseError("departure_time", hi)
 		} else {

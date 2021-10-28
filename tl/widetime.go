@@ -74,11 +74,17 @@ type WideTime struct {
 }
 
 func (wt *WideTime) String() string {
+	if !wt.Valid {
+		return ""
+	}
 	return SecondsToString(wt.Seconds)
 }
 
 // Value implements driver.Value
 func (wt WideTime) Value() (driver.Value, error) {
+	if !wt.Valid {
+		return nil, nil
+	}
 	return int64(wt.Seconds), nil
 }
 
@@ -122,11 +128,15 @@ func (wt WideTime) MarshalGQL(w io.Writer) {
 
 // NewWideTime converts the csv string to a WideTime.
 func NewWideTime(value string) (wt WideTime, err error) {
+	if value == "" {
+		return WideTime{}, nil
+	}
 	a, err := StringToSeconds(value)
 	if err != nil {
 		return wt, err
 	}
 	wt.Seconds = a
+	wt.Valid = true
 	return wt, nil
 }
 
