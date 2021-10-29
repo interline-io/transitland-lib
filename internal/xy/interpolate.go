@@ -24,9 +24,6 @@ func InterpolateStopTimes(stoptimes []tl.StopTime) ([]tl.StopTime, error) {
 	return stoptimes, nil
 }
 
-func newWt(s int) tl.WideTime {
-	return tl.WideTime{Seconds: s, Valid: true}
-}
 func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 	if start == end {
 		return
@@ -52,8 +49,8 @@ func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 		// 	"\tindex: %d traveled: %f dx: %f dt: %d",
 		// 	i, sts[i].ShapeDistTraveled, dx, dt,
 		// )
-		sts[i].ArrivalTime = newWt(dt)
-		sts[i].DepartureTime = newWt(dt)
+		sts[i].ArrivalTime = tl.NewWideTimeFromSeconds(dt)
+		sts[i].DepartureTime = tl.NewWideTimeFromSeconds(dt)
 		sts[i].Interpolated = tl.NewOInt(1)
 	}
 }

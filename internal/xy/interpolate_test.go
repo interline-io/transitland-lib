@@ -24,8 +24,8 @@ func expectTripToStopTime(e []expectStopTime) []tl.StopTime {
 	ret := []tl.StopTime{}
 	for _, i := range e {
 		ret = append(ret, tl.StopTime{
-			ArrivalTime:       newWt(i.ArrivalTime),
-			DepartureTime:     newWt(i.DepartureTime),
+			ArrivalTime:       tl.NewWideTimeFromSeconds(i.ArrivalTime),
+			DepartureTime:     tl.NewWideTimeFromSeconds(i.DepartureTime),
 			ShapeDistTraveled: tl.NewOFloat(i.ShapeDistTraveled),
 		})
 	}
