@@ -91,15 +91,15 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		st1.StopID = strconv.Itoa(m.StopID1)
 		st1.TripID = strconv.Itoa(m.TripID)
 		st1.StopSequence = 1
-		st1.ArrivalTime = 0
-		st1.DepartureTime = 1
+		st1.ArrivalTime = tl.NewWideTimeFromSeconds(0)
+		st1.DepartureTime = tl.NewWideTimeFromSeconds(1)
 		st2 := tl.StopTime{}
 		st2.FeedVersionID = m.FeedVersionID
 		st2.StopID = strconv.Itoa(m.StopID2)
 		st2.TripID = strconv.Itoa(m.TripID)
 		st2.StopSequence = 2
-		st2.ArrivalTime = 2
-		st2.DepartureTime = 3
+		st2.ArrivalTime = tl.NewWideTimeFromSeconds(2)
+		st2.DepartureTime = tl.NewWideTimeFromSeconds(3)
 		sts := make([]interface{}, 0)
 		sts = append(sts, &st1, &st2)
 		if err := adapter.CopyInsert(sts); err != nil {
