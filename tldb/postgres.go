@@ -197,6 +197,9 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 		return err
 	}
 	header, err := MapperCache.GetHeader(ents[0])
+	if err != nil {
+		return err
+	}
 	table := getTableName(ents[0])
 	stmt, err := tx.Prepare(pq.CopyIn(table, header...))
 	if err != nil {

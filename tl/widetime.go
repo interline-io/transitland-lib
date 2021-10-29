@@ -82,6 +82,7 @@ func (wt *WideTime) String() string {
 
 // Value implements driver.Value
 func (wt WideTime) Value() (driver.Value, error) {
+	fmt.Println("wt value:", wt.Valid, wt.Seconds)
 	if !wt.Valid {
 		return nil, nil
 	}

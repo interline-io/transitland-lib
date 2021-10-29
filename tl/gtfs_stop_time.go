@@ -11,8 +11,8 @@ import (
 // StopTime stop_times.txt
 type StopTime struct {
 	TripID            string
-	ArrivalTime       int
-	DepartureTime     int
+	ArrivalTime       WideTime
+	DepartureTime     WideTime
 	StopID            string `csv:",required" required:"true"`
 	StopSequence      int    `csv:",required" required:"true"`
 	StopHeadsign      OString

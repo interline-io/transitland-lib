@@ -7,6 +7,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
+func newWt(s int) tl.WideTime {
+	return tl.WideTime{Seconds: s, Valid: true}
+}
+
 // NewMinimalTestFeed returns a minimal mock Reader & ReaderTester values.
 func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 	r := &mock.Reader{
@@ -24,8 +28,8 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{StopID: "stop2", StopName: "Stop 2", Geometry: tl.NewPoint(3, 4)},
 		},
 		StopTimeList: []tl.StopTime{
-			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: 0, DepartureTime: 5},
-			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: 10, DepartureTime: 15},
+			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: newWt(0), DepartureTime: newWt(5)},
+			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: newWt(10), DepartureTime: newWt(15)},
 		},
 		ShapeList: []tl.Shape{
 			{ShapeID: "shape1", Geometry: tl.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
