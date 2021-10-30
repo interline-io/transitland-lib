@@ -124,7 +124,7 @@ func (wt WideTime) MarshalGQL(w io.Writer) {
 		w.Write([]byte("null"))
 		return
 	}
-	w.Write([]byte(wt.String()))
+	w.Write([]byte(fmt.Sprintf("\"%s\"", wt.String())))
 }
 
 // NewWideTime converts the csv string to a WideTime.
