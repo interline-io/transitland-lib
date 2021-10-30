@@ -11,8 +11,8 @@ import (
 // StopTime stop_times.txt
 type StopTime struct {
 	TripID            string
-	ArrivalTime       int
-	DepartureTime     int
+	ArrivalTime       WideTime
+	DepartureTime     WideTime
 	StopID            string `csv:",required" required:"true"`
 	StopSequence      int    `csv:",required" required:"true"`
 	StopHeadsign      OString
@@ -73,10 +73,10 @@ func (ent *StopTime) Errors() []error {
 	errs = append(errs, enum.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Int, 0, 3)...)
 	errs = append(errs, enum.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Float)...)
 	errs = append(errs, enum.CheckInsideRangeInt("timepoint", ent.Timepoint.Int, -1, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("arrival_time", ent.ArrivalTime, -1, 1<<31)...)
-	errs = append(errs, enum.CheckInsideRangeInt("departure", ent.DepartureTime, -1, 1<<31)...)
+	errs = append(errs, enum.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Seconds, -1, 1<<31)...)
+	errs = append(errs, enum.CheckInsideRangeInt("departure", ent.DepartureTime.Seconds, -1, 1<<31)...)
 	// Other errors
-	at, dt := ent.ArrivalTime, ent.DepartureTime
+	at, dt := ent.ArrivalTime.Seconds, ent.DepartureTime.Seconds
 	if at != 0 && dt != 0 && at > dt {
 		errs = append(errs, causes.NewInvalidFieldError("departure_time", "", fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
 	}
@@ -119,9 +119,9 @@ func (ent *StopTime) GetString(key string) (string, error) {
 	case "stop_id":
 		v = ent.StopID
 	case "arrival_time":
-		v = SecondsToString(ent.ArrivalTime)
+		v = ent.ArrivalTime.String()
 	case "departure_time":
-		v = SecondsToString(ent.DepartureTime)
+		v = ent.DepartureTime.String()
 	case "stop_sequence":
 		v = strconv.Itoa(ent.StopSequence)
 	case "pickup_type":
@@ -155,14 +155,14 @@ func (ent *StopTime) SetString(key, value string) error {
 		ent.StopID = hi
 	case "arrival_time":
 		if hi == "" {
-		} else if s, err := StringToSeconds(hi); err != nil {
+		} else if s, err := NewWideTime(hi); err != nil {
 			perr = causes.NewFieldParseError("arrival_time", hi)
 		} else {
 			ent.ArrivalTime = s
 		}
 	case "departure_time":
 		if hi == "" {
-		} else if s, err := StringToSeconds(hi); err != nil {
+		} else if s, err := NewWideTime(hi); err != nil {
 			perr = causes.NewFieldParseError("departure_time", hi)
 		} else {
 			ent.DepartureTime = s
@@ -222,7 +222,7 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 	if len(stoptimes) < 2 {
 		errs = append(errs, causes.NewEmptyTripError(len(stoptimes)))
 	}
-	if stoptimes[len(stoptimes)-1].ArrivalTime <= 0 {
+	if stoptimes[len(stoptimes)-1].ArrivalTime.Seconds <= 0 {
 		errs = append(errs, causes.NewSequenceError("arrival_time", ""))
 	}
 	lastDist := stoptimes[0].ShapeDistTraveled
@@ -236,11 +236,11 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 			lastSequence = st.StopSequence
 		}
 		// Ensure the arrows of time are pointing towards the future.
-		if st.ArrivalTime > 0 && st.ArrivalTime < lastTime {
-			errs = append(errs, causes.NewSequenceError("arrival_time", strconv.Itoa(st.ArrivalTime)))
-		} else if st.DepartureTime > 0 && st.DepartureTime < st.ArrivalTime {
-			errs = append(errs, causes.NewSequenceError("departure_time", strconv.Itoa(st.DepartureTime)))
-		} else if st.DepartureTime > 0 {
+		if st.ArrivalTime.Seconds > 0 && st.ArrivalTime.Seconds < lastTime.Seconds {
+			errs = append(errs, causes.NewSequenceError("arrival_time", st.ArrivalTime.String()))
+		} else if st.DepartureTime.Seconds > 0 && st.DepartureTime.Seconds < st.ArrivalTime.Seconds {
+			errs = append(errs, causes.NewSequenceError("departure_time", st.DepartureTime.String()))
+		} else if st.DepartureTime.Seconds > 0 {
 			lastTime = st.DepartureTime
 		}
 		if st.ShapeDistTraveled.Valid && st.ShapeDistTraveled.Float < lastDist.Float {

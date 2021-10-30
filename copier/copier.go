@@ -837,14 +837,14 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		stlen := len(trip.StopTimes)
 		if jpat, ok := journeyPatterns[jkey]; ok {
 			trip.JourneyPatternID = jpat.key
-			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime - jpat.firstArrival
+			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime.Seconds - jpat.firstArrival
 			if copier.DeduplicateJourneyPatterns {
 				trip.StopTimes = nil
 			}
 		} else {
 			trip.JourneyPatternID = trip.TripID
 			trip.JourneyPatternOffset = 0
-			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime, key: trip.JourneyPatternID}
+			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Seconds, key: trip.JourneyPatternID}
 		}
 
 		// Validate trip & add to batch

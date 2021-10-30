@@ -24,8 +24,8 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{StopID: "stop2", StopName: "Stop 2", Geometry: tl.NewPoint(3, 4)},
 		},
 		StopTimeList: []tl.StopTime{
-			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: 0, DepartureTime: 5},
-			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: 10, DepartureTime: 15},
+			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: tl.NewWideTimeFromSeconds(0), DepartureTime: tl.NewWideTimeFromSeconds(5)},
+			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: tl.NewWideTimeFromSeconds(10), DepartureTime: tl.NewWideTimeFromSeconds(15)},
 		},
 		ShapeList: []tl.Shape{
 			{ShapeID: "shape1", Geometry: tl.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},

@@ -18,11 +18,6 @@ type canClose interface {
 	Close() error
 }
 
-// canToSQL is the squirrel interface
-type canToSQL interface {
-	ToSql() (string, []interface{}, error)
-}
-
 // ext is for wrapped sqlx to be used in squirrel.
 type sqext interface {
 	sqlx.Ext
