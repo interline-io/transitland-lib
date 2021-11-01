@@ -60,8 +60,8 @@ func (e *BlockOverlapCheck) Validate(ent tl.Entity) []error {
 	tf := tripBlockInfo{
 		trip:    trip.TripID,
 		service: trip.ServiceID,
-		start:   trip.StopTimes[0].DepartureTime,
-		end:     trip.StopTimes[len(trip.StopTimes)-1].ArrivalTime,
+		start:   trip.StopTimes[0].DepartureTime.Seconds,
+		end:     trip.StopTimes[len(trip.StopTimes)-1].ArrivalTime.Seconds,
 	}
 	for _, hit := range e.blocks[trip.BlockID] {
 		// fmt.Println(

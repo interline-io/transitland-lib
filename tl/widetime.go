@@ -74,35 +74,50 @@ type WideTime struct {
 }
 
 func (wt *WideTime) String() string {
+	if !wt.Valid {
+		return ""
+	}
 	return SecondsToString(wt.Seconds)
 }
 
 // Value implements driver.Value
 func (wt WideTime) Value() (driver.Value, error) {
+	if !wt.Valid {
+		return nil, nil
+	}
 	return int64(wt.Seconds), nil
 }
 
 // Scan implements sql.Scanner
 func (wt *WideTime) Scan(src interface{}) error {
 	wt.Valid = false
+	wt.Seconds = 0
 	var p error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
-		if s, err := StringToSeconds(v); err == nil {
+		if v == "" {
+			return nil
+		} else if s, err := StringToSeconds(v); err == nil {
 			wt.Seconds = s
 		} else {
 			p = err
 		}
 	case int:
+		if v < 0 {
+			return nil
+		}
 		wt.Seconds = v
 	case int64:
+		if v < 0 {
+			return nil
+		}
 		wt.Seconds = int(v)
 	default:
 		p = errors.New("could not parse time")
 	}
-	if p == nil {
-		wt.Valid = true
-	}
+	wt.Valid = (p == nil)
 	return p
 }
 
@@ -117,23 +132,18 @@ func (wt WideTime) MarshalGQL(w io.Writer) {
 		w.Write([]byte("null"))
 		return
 	}
-	w.Write([]byte(wt.String()))
+	w.Write([]byte(fmt.Sprintf("\"%s\"", wt.String())))
 }
 
 // NewWideTime converts the csv string to a WideTime.
 func NewWideTime(value string) (wt WideTime, err error) {
-	a, err := StringToSeconds(value)
-	if err != nil {
-		return wt, err
-	}
-	wt.Seconds = a
-	return wt, nil
+	err = wt.Scan(value)
+	return wt, err
 }
 
 // NewWideTimeFromSeconds creates a valid WideTime from Seconds.
 func NewWideTimeFromSeconds(value int) WideTime {
-	if value < 0 {
-		return WideTime{Seconds: 0, Valid: false}
-	}
-	return WideTime{Seconds: value, Valid: true}
+	wt := WideTime{}
+	wt.Scan(value)
+	return wt
 }
