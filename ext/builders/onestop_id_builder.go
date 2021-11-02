@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/mmcloughlin/geohash"
 )
@@ -95,12 +96,12 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 	case *tl.StopTime:
 		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID]]
 		if !ok {
-			fmt.Println("OnestopIDBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
+			log.Debug("OnestopIDBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
 		s, ok := pp.stops[v.StopID]
 		if !ok {
-			fmt.Println("OnestopIDBuilder no stop:", v.StopID)
+			log.Debug("OnestopIDBuilder no stop:", v.StopID)
 			return nil
 		}
 		r.stopGeoms[v.StopID] = s

@@ -1,7 +1,6 @@
 package builders
 
 import (
-	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -180,12 +179,12 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				}
 				departures := stopDepartures[mostVisitedStop]
 				sort.Ints(departures)
-				fmt.Println("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
-				fmt.Println("\tdepartures:", departures)
-				for _, departure := range departures {
-					wt := tl.NewWideTimeFromSeconds(departure)
-					fmt.Println("\t", wt.String())
-				}
+				// log.Debug("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
+				// log.Debug("\tdepartures:", departures)
+				// for _, departure := range departures {
+				// 	wt := tl.NewWideTimeFromSeconds(departure)
+				// 	log.Debug("\t", wt.String())
+				// }
 				rh := &RouteHeadway{
 					RouteID:        rid,
 					SelectedStopID: mostVisitedStop,

@@ -1,9 +1,8 @@
 package builders
 
 import (
-	"fmt"
-
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/twpayne/go-geom"
 	geomxy "github.com/twpayne/go-geom/xy"
@@ -76,12 +75,12 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Enti
 	case *tl.StopTime:
 		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID]]
 		if !ok {
-			fmt.Println("ConvexHullBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
+			log.Debug("ConvexHullBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
 		s, ok := pp.stops[v.StopID]
 		if !ok {
-			fmt.Println("ConvexHullBuilder no stop:", v.StopID)
+			log.Debug("ConvexHullBuilder no stop:", v.StopID)
 			return nil
 		}
 		r.stopGeoms[v.StopID] = s
@@ -103,7 +102,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		ch := geomxy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
-			fmt.Println("feed version convex hull is not polygon:", fvid)
+			log.Debug("feed version convex hull is not polygon:", fvid)
 			continue
 		}
 		ent := FeedVersionGeometry{
@@ -133,7 +132,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		ch := geomxy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
-			fmt.Println("agency convex hull is not polygon:", aid)
+			log.Debug("agency convex hull is not polygon:", aid)
 			continue
 		}
 		ent := AgencyGeometry{

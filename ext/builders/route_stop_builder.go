@@ -56,21 +56,14 @@ func (pp *RouteStopBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 }
 
 func (pp *RouteStopBuilder) Copy(copier *copier.Copier) error {
-	emap := copier.EntityMap
 	bt := []tl.Entity{}
-	for k, v := range pp.routeStops {
-		rid, ok := emap.Get("routes.txt", k)
-		if !ok {
-			continue
-		}
-		aid, ok := emap.Get("agency.txt", pp.routeAgencies[k])
+	for rid, v := range pp.routeStops {
+		aid, ok := pp.routeAgencies[rid]
 		if !ok {
 			continue
 		}
 		for stopid := range v {
-			if sid, ok := emap.Get("stops.txt", stopid); ok {
-				bt = append(bt, &RouteStop{RouteID: rid, StopID: sid, AgencyID: aid})
-			}
+			bt = append(bt, &RouteStop{RouteID: rid, StopID: stopid, AgencyID: aid})
 		}
 	}
 	if _, err := copier.Writer.AddEntities(bt); err != nil {

@@ -1,10 +1,10 @@
 package builders
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/twpayne/go-geom"
@@ -34,6 +34,7 @@ type RouteGeometryBuilder struct {
 	shapeInfos  map[string]shapeInfo
 	shapeCounts map[string]map[int]map[string]int
 	geomCache   *xy.GeomCache
+	shapeCache  map[string][]xy.Point
 }
 
 // NewRouteGeometryBuilder returns a new RouteGeometryBuilder.
@@ -41,12 +42,8 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 	return &RouteGeometryBuilder{
 		shapeInfos:  map[string]shapeInfo{},
 		shapeCounts: map[string]map[int]map[string]int{},
+		shapeCache:  map[string][]xy.Point{},
 	}
-}
-
-// SetGeomCache sets a shared geometry cache.
-func (pp *RouteGeometryBuilder) SetGeomCache(g *xy.GeomCache) {
-	pp.geomCache = g
 }
 
 // AfterValidate counts the number of times a shape is used for each route,direction_id
@@ -54,6 +51,11 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 	switch v := ent.(type) {
 	case *tl.Shape:
 		pp.shapeInfos[eid] = shapeInfo{generated: v.Generated, length: v.Geometry.Length()}
+		pts := []xy.Point{}
+		for _, c := range v.Geometry.Coords() {
+			pts = append(pts, xy.Point{Lon: c[0], Lat: c[1]})
+		}
+		pp.shapeCache[eid] = pts
 	case *tl.Trip:
 		if v.ShapeID.Valid {
 			if _, ok := pp.shapeCounts[v.RouteID]; !ok {
@@ -71,29 +73,43 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 // AfterCopy collects and assembles the default shapes and writes to the database
 func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 	// Get the candidate shapes
-	commonCount := 2
+	commonCount := 5
 	selectedShapes := map[string][]string{}
+	mostFrequentShapes := map[string]string{}
 	for rid, dirs := range pp.shapeCounts {
 		selected := map[string]bool{}
 		for _, dirshapes := range dirs {
-			longest := ""
-			longestlength := 0.0
+			// Check if this is the longest shape
+			longestShape := ""
+			longestShapelength := 0.0
 			for shapeid := range dirshapes {
 				si, ok := pp.shapeInfos[shapeid]
 				if !ok {
 					continue
 				}
-				if si.length > longestlength && !si.generated {
-					longest = shapeid
-					longestlength = si.length
+				if si.length > longestShapelength && !si.generated {
+					longestShape = shapeid
+					longestShapelength = si.length
 				}
 			}
-			if longest != "" {
-				selected[longest] = true
+			if longestShape != "" {
+				selected[longestShape] = true
 			}
-			// Now get the n most common
+			// Number of trips for this direction
+			dirTripCount := float64(0)
+			for _, v := range dirshapes {
+				dirTripCount += float64(v)
+			}
+			// Always include the most common shape
 			bycount := sortMap(dirshapes)
+			if len(bycount) > 0 {
+				mostFrequentShapes[rid] = bycount[0]
+			}
+			// Include the n most common shapes that are at least 10% of trips
 			for i, k := range bycount {
+				if float64(dirshapes[k])/dirTripCount < 0.1 {
+					continue
+				}
 				if i > commonCount {
 					break
 				}
@@ -118,11 +134,25 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 	}
 	// Now build the selected shapes
 	for rid, shapeids := range selectedShapes {
+		ent := RouteGeometry{RouteID: rid}
+		// most frequent shape
+		if shapeid, ok := mostFrequentShapes[rid]; ok {
+			if coords, ok := pp.shapeCache[shapeid]; ok && len(coords) > 2 {
+				pnts := []float64{}
+				for _, c := range coords {
+					pnts = append(pnts, c.Lon, c.Lat)
+				}
+				sl := geom.NewLineStringFlat(geom.XY, pnts)
+				if sl != nil {
+					ent.Geometry = tl.LineString{Valid: true, LineString: *sl}
+				}
+			}
+		}
+		// Build combined shape
 		g := geom.NewMultiLineString(geom.XY)
 		for _, shapeid := range shapeids {
-			coords := pp.geomCache.GetShape(shapeid)
+			coords := pp.shapeCache[shapeid]
 			if coords == nil || len(coords) < 2 {
-				fmt.Println("no shape:", shapeid)
 				continue
 			}
 			pnts := []float64{}
@@ -132,15 +162,14 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 			sl := geom.NewLineStringFlat(geom.XY, pnts)
 			if sl != nil {
 				if err := g.Push(sl); err != nil {
-					fmt.Println("failed to build route geometry:", err)
+					log.Debug("failed to build route geometry:", err)
 				}
 			}
 		}
-		_, _, err := copier.CopyEntity(&RouteGeometry{
-			RouteID:          rid,
-			Generated:        false,
-			CombinedGeometry: tl.Geometry{Geometry: g, Valid: true},
-		})
+		if g.NumLineStrings() > 0 {
+			ent.CombinedGeometry = tl.Geometry{Geometry: g, Valid: true}
+		}
+		_, _, err := copier.CopyEntity(&ent)
 		if err != nil {
 			return err
 		}
