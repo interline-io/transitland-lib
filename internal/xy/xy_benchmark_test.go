@@ -12,7 +12,7 @@ func BenchmarkSegmentClosestPoint(b *testing.B) {
 	// get the midpoint
 	sa := q[0]
 	sb := q[1]
-	p := [2]float64{sa[0] + (sb[0]-sa[0])/2, sa[1] + (sb[1]-sa[1])/2}
+	p := Point{sa.Lon + (sb.Lon-sa.Lon)/2, sa.Lat + (sb.Lat-sa.Lat)/2}
 	for n := 0; n < b.N; n++ {
 		SegmentClosestPoint(sa, sb, p)
 	}
@@ -24,7 +24,7 @@ func BenchmarkLineClosestPoint(b *testing.B) {
 	// get the midpoint of the two middle points
 	sa := q[len(q)/2]
 	sb := q[len(q)/2+1]
-	p := [2]float64{sa[0] + (sb[0]-sa[0])/2, sa[1] + (sb[1]-sa[1])/2}
+	p := Point{sa.Lon + (sb.Lon-sa.Lon)/2, sa.Lat + (sb.Lat-sa.Lat)/2}
 	for n := 0; n < b.N; n++ {
 		LineClosestPoint(q, p)
 	}
@@ -33,9 +33,9 @@ func BenchmarkLineClosestPoint(b *testing.B) {
 func BenchmarkLinePositions(b *testing.B) {
 	line, points := decodeGeojson(testPositions[0].Geojson)
 	lc := unflattenCoordinates(line.FlatCoords())
-	pp := [][2]float64{}
+	pp := []Point{}
 	for _, p := range points {
-		pp = append(pp, [2]float64{p.FlatCoords()[0], p.FlatCoords()[1]})
+		pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
 	}
 	var r []float64
 	for n := 0; n < b.N; n++ {
@@ -46,9 +46,9 @@ func BenchmarkLinePositions(b *testing.B) {
 
 func BenchmarkLinePositionsFallback(b *testing.B) {
 	_, points := decodeGeojson(testPositions[0].Geojson)
-	pp := [][2]float64{}
+	pp := []Point{}
 	for _, p := range points {
-		pp = append(pp, [2]float64{p.FlatCoords()[0], p.FlatCoords()[1]})
+		pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
 	}
 	var r []float64
 	for n := 0; n < b.N; n++ {
@@ -70,7 +70,7 @@ func BenchmarkDistanceHaversine(b *testing.B) {
 	dp := testDistancePoints[0]
 	var r float64
 	for n := 0; n < b.N; n++ {
-		r = DistanceHaversine(dp.orig[0], dp.orig[1], dp.dest[0], dp.dest[1])
+		r = DistanceHaversine(dp.orig.Lon, dp.orig.Lat, dp.dest.Lon, dp.dest.Lat)
 	}
 	_ = r
 }

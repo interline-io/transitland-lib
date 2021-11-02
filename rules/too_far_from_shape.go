@@ -63,7 +63,7 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tl.Entity) []error {
 		g := e.geomCache.GetStop(st.StopID)
 		sgeom := e.geomCache.GetShape(shapeid)
 		nearest, _ := xy.LineClosestPoint(sgeom, g)
-		distance := xy.DistanceHaversine(g[0], g[1], nearest[0], nearest[1])
+		distance := xy.DistanceHaversine(g.Lon, g.Lat, nearest.Lon, nearest.Lat)
 		if distance > e.maxdist {
 			errs = append(errs, &StopTooFarFromShapeError{
 				TripID:   v.TripID,

@@ -66,6 +66,12 @@ func (g *Point) Scan(src interface{}) error {
 	return nil
 }
 
+// String returns the GeoJSON representation
+func (g Point) String() string {
+	a, _ := g.MarshalJSON()
+	return string(a)
+}
+
 // MarshalJSON implements the json.Marshaler interface
 func (g *Point) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
@@ -135,6 +141,12 @@ func (g *LineString) Scan(src interface{}) error {
 	return nil
 }
 
+// String returns the GeoJSON representation
+func (g LineString) String() string {
+	a, _ := g.MarshalJSON()
+	return string(a)
+}
+
 // MarshalJSON implements the json.Marshaler interface
 func (g *LineString) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
@@ -192,6 +204,12 @@ func (g *Polygon) Scan(src interface{}) error {
 	g.Valid = true
 	g.Polygon = *p1
 	return nil
+}
+
+// String returns the GeoJSON representation
+func (g Polygon) String() string {
+	a, _ := g.MarshalJSON()
+	return string(a)
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -252,12 +270,18 @@ func (g *Geometry) Scan(src interface{}) error {
 }
 
 // Value implements driver.Value
-func (g *Geometry) Value() (driver.Value, error) {
+func (g Geometry) Value() (driver.Value, error) {
 	if g.Geometry == nil || !g.Valid {
 		return nil, nil
 	}
 	a, err := wkbEncode(g.Geometry)
 	return a, err
+}
+
+// String returns the GeoJSON representation
+func (g Geometry) String() string {
+	a, _ := g.MarshalJSON()
+	return string(a)
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -296,8 +320,7 @@ func wkbEncode(g geom.T) ([]byte, error) {
 // wkbDecode tries to guess the encoding returned from the driver.
 // When not wrapped in anything, postgis returns EWKB, and spatialite returns its internal blob format.
 func wkbDecode(b []byte) (geom.T, error) {
-	var data []byte
-	data = make([]byte, len(b)/2)
+	data := make([]byte, len(b)/2)
 	hex.Decode(data, b)
 	got, err := ewkb.Unmarshal(data)
 	if err != nil {
