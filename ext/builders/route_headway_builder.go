@@ -102,13 +102,15 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 	case *tl.StopTime:
 		ti, ok := pp.tripDetails[v.TripID]
 		if ok {
-			rkey := riKey{
-				ServiceID: ti.ServiceID,
-				Direction: ti.Direction,
-				StopID:    v.StopID,
-			}
-			if rd, ok := pp.routeDepartures[ti.RouteID]; ok {
-				rd[rkey] = append(rd[rkey], v.DepartureTime)
+			if v.DepartureTime.Valid {
+				rkey := riKey{
+					ServiceID: ti.ServiceID,
+					Direction: ti.Direction,
+					StopID:    v.StopID,
+				}
+				if rd, ok := pp.routeDepartures[ti.RouteID]; ok {
+					rd[rkey] = append(rd[rkey], v.DepartureTime.Seconds)
+				}
 			}
 		}
 	}

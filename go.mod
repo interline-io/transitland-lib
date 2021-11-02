@@ -13,6 +13,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/snabb/isoweek v1.0.0
+	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/twpayne/go-geom v1.4.1
 	google.golang.org/protobuf v1.25.0
 )
