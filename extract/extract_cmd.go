@@ -146,7 +146,9 @@ func (cmd *Command) Run() error {
 		}
 		em := NewMarker()
 		log.Debug("Loading graph")
-		em.Filter(reader, fm)
+		if err := em.Filter(reader, fm); err != nil {
+			return err
+		}
 		cp.Marker = &em
 		log.Debug("Graph loading complete")
 	}
