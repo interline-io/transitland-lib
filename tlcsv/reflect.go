@@ -129,7 +129,10 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 	if v, ok := rfi.(tl.WideTime); ok {
 		return v.String(), nil
 	}
-	// Otherwise get driver.Value
+	// Otherwise try String() and then driver.Value
+	if v, ok := rfi.(canString); ok {
+		return v.String(), nil
+	}
 	if v, ok := rfi.(canValue); ok {
 		var err error
 		rfi, err = v.Value()
@@ -167,8 +170,10 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 		}
 	case nil:
 		value = ""
+	case []byte:
+		value = string(v)
 	default:
-		return "", fmt.Errorf("dont know how to convert field %s to string", k)
+		return "", fmt.Errorf("can not convert field '%s' to string", k)
 	}
 	return value, nil
 }
