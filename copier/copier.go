@@ -34,14 +34,14 @@ type AfterValidator interface {
 	AfterValidator(tl.Entity, *tl.EntityMap) error
 }
 
+// AfterWrite is called for each fully validated entity before writing.
+type AfterWrite interface {
+	AfterWrite(string, tl.Entity, *tl.EntityMap) error
+}
+
 // Extension is run after normal copying has completed.
 type Extension interface {
 	Copy(*Copier) error
-}
-
-// AfterCopy is called after normal copying and extensions have completed.
-type AfterCopy interface {
-	AfterCopy(*Copier) error
 }
 
 // ErrorHandler is called on each source file and entity; errors can be nil
@@ -106,7 +106,7 @@ type Copier struct {
 	errorValidators   []Validator
 	warningValidators []Validator
 	afterValidators   []AfterValidator
-	afterCopiers      []AfterCopy
+	afterWriters      []AfterWrite
 	// book keeping
 	geomCache *xy.GeomCache
 	result    *Result
@@ -210,8 +210,8 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 		copier.extensions = append(copier.extensions, v)
 		added = true
 	}
-	if v, ok := ext.(AfterCopy); ok {
-		copier.afterCopiers = append(copier.afterCopiers, v)
+	if v, ok := ext.(AfterWrite); ok {
+		copier.afterWriters = append(copier.afterWriters, v)
 		added = true
 	}
 	if !added {
@@ -247,6 +247,12 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 	}
 	copier.EntityMap.Set(efn, sid, eid)
 	copier.result.EntityCount[efn]++
+	// AfterWriters
+	for _, v := range copier.afterWriters {
+		if err := v.AfterWrite(eid, ent, copier.EntityMap); err != nil {
+			return eid, nil, err
+		}
+	}
 	return eid, nil, nil
 }
 
@@ -272,6 +278,14 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 		copier.EntityMap.Set(efn, sid, eid)
 	}
 	copier.result.EntityCount[efn] += len(ents)
+	// AfterWriters
+	for i, eid := range eids {
+		for _, v := range copier.afterWriters {
+			if err := v.AfterWrite(eid, ents[i], copier.EntityMap); err != nil {
+				return err
+			}
+		}
+	}
 	// Return an emtpy slice and no error
 	return nil
 }
@@ -383,13 +397,6 @@ func (copier *Copier) Copy() *Result {
 			return copier.result
 		}
 	}
-	for _, e := range copier.afterCopiers {
-		if err := e.AfterCopy(copier); err != nil {
-			copier.result.WriteError = err
-			return copier.result
-		}
-	}
-
 	return copier.result
 }
 
