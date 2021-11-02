@@ -29,7 +29,12 @@ type Validator interface {
 	Validate(tl.Entity) []error
 }
 
-// AfterWrite is called for each fully validated entity before writing.
+// AfterValidator is called for each fully validated entity before writing.
+type AfterValidator interface {
+	AfterValidator(string, tl.Entity, *tl.EntityMap) error
+}
+
+// AfterWrite is called for after writing each entity.
 type AfterWrite interface {
 	AfterWrite(string, tl.Entity, *tl.EntityMap) error
 }
@@ -100,6 +105,7 @@ type Copier struct {
 	filters           []Filter
 	errorValidators   []Validator
 	warningValidators []Validator
+	afterValidators   []AfterValidator
 	afterWriters      []AfterWrite
 	// book keeping
 	geomCache *xy.GeomCache
@@ -202,6 +208,10 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 	}
 	if v, ok := ext.(Extension); ok {
 		copier.extensions = append(copier.extensions, v)
+		added = true
+	}
+	if v, ok := ext.(AfterWrite); ok {
+		copier.afterWriters = append(copier.afterWriters, v)
 		added = true
 	}
 	if !added {
