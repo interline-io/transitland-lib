@@ -1,7 +1,6 @@
 package builders
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
@@ -104,9 +103,9 @@ func TestOnestopIDBuilder(t *testing.T) {
 					hits[v.OnestopID] = append(hits[v.AgencyID], v.AgencyID)
 				}
 			}
-			for k, v := range hits {
-				fmt.Printf(`{"%s", hw{"%s":%#v}},`+"\n", k, k, v)
-			}
+			// for k, v := range hits {
+			// 	fmt.Printf(`{"%s", hw{"%s":%#v}},`+"\n", k, k, v)
+			// }
 			for _, tc := range testGroup.Cases {
 				t.Run(tc.Name, func(t *testing.T) {
 					for k, v := range tc.Hits {

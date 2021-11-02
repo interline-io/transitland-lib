@@ -1,7 +1,6 @@
 package builders
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
@@ -9,7 +8,6 @@ import (
 )
 
 func TestConvexHullBuilder(t *testing.T) {
-	// TODO: add multi-agency feed
 	type testcase struct {
 		FeedVersionGeometry []float64
 		AgencyGeoms         map[string][]float64
@@ -50,13 +48,14 @@ func TestConvexHullBuilder(t *testing.T) {
 				},
 			},
 		},
-		"MBTA": {
-			testutil.ExampleFeedMBTA.URL,
+		"TriMet-2Routes": {
+			testutil.RelPath("test/data/external/trimet-2routes.zip"),
 			[]testcase{
 				{
-					FeedVersionGeometry: []float64{-121.939313, 37.502171, -122.386702, 37.600271, -122.466233, 37.684638, -122.469081, 37.706121, -122.353099, 37.936853, -122.024653, 38.003193, -121.945154, 38.018914, -121.889457, 38.016941, -121.78042, 37.995388, -121.939313, 37.502171},
+					FeedVersionGeometry: []float64{-122.567769, 45.435721, -122.671376, 45.493891, -122.698688, 45.530612, -122.696445, 45.531308, -122.621367, 45.532957, -122.578437, 45.533478, -122.563627, 45.530839, -122.563602, 45.530554, -122.563578, 45.530269, -122.567769, 45.435721},
 					AgencyGeoms: map[string][]float64{
-						"BART": {-121.939313, 37.502171, -122.386702, 37.600271, -122.466233, 37.684638, -122.469081, 37.706121, -122.353099, 37.936853, -122.024653, 38.003193, -121.945154, 38.018914, -121.889457, 38.016941, -121.78042, 37.995388, -121.939313, 37.502171},
+						"TRIMET": {-122.567769, 45.435721, -122.682999, 45.508979, -122.683593, 45.509616, -122.676517, 45.527222, -122.665557, 45.530235, -122.621367, 45.532957, -122.578437, 45.533478, -122.563627, 45.530839, -122.563578, 45.530269, -122.567769, 45.435721},
+						"PSC":    {-122.671376, 45.493891, -122.698688, 45.530612, -122.696445, 45.531308, -122.694455, 45.531346, -122.689417, 45.531434, -122.685357, 45.531503, -122.68332, 45.531535, -122.681364, 45.53128, -122.670739, 45.498939, -122.670933, 45.495594, -122.671376, 45.493891},
 					},
 				},
 			},
@@ -64,7 +63,6 @@ func TestConvexHullBuilder(t *testing.T) {
 	}
 	for groupName, testGroup := range groups {
 		t.Run(groupName, func(t *testing.T) {
-			fmt.Println(testGroup.URL)
 			cp, writer, err := newMockCopier(testGroup.URL)
 			if err != nil {
 				t.Fatal(err)
@@ -81,6 +79,9 @@ func TestConvexHullBuilder(t *testing.T) {
 				switch v := ent.(type) {
 				case *AgencyGeometry:
 					aGeoms[v.AgencyID.Key] = v
+					// fmt.Printf("%s %#v\n", v.AgencyID.Key, v.Geometry.FlatCoords())
+					// z, _ := geojson.Marshal(&v.Geometry.Polygon)
+					// fmt.Println(string(z))
 				case *FeedVersionGeometry:
 					fvGeoms = append(fvGeoms, v)
 				}
@@ -95,7 +96,7 @@ func TestConvexHullBuilder(t *testing.T) {
 					}
 				})
 				for aid, v := range tc.AgencyGeoms {
-					t.Run(aid, func(t *testing.T) {
+					t.Run("Agency:"+aid, func(t *testing.T) {
 						if gotaidg, ok := aGeoms[aid]; !ok {
 							t.Errorf("no agency geometry for %s", aid)
 						} else {
@@ -103,7 +104,6 @@ func TestConvexHullBuilder(t *testing.T) {
 						}
 					})
 				}
-
 			}
 		})
 	}
