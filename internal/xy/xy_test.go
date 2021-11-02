@@ -15,15 +15,15 @@ func testApproxEqual(t *testing.T, result float64, expect float64) {
 }
 
 var testDistancePoints = []struct {
-	orig              [2]float64
-	dest              [2]float64
+	orig              Point
+	dest              Point
 	Distance2d        float64
 	distanceHaversine float64
 }{
-	{[2]float64{-122.2772554, 37.8039604}, [2]float64{-122.274464, 37.802963}, 0.0029642403276459884, 269.15621622898107},
-	{[2]float64{-122.2767695, 37.7770346}, [2]float64{-122.2768192, 37.7748926}, 0.0021425765073847646, 238.21988351245543},
-	{[2]float64{-122.2226131, 37.7839461}, [2]float64{-122.2220745, 37.7853226}, 0.00147812117568097, 160.2113624659609},
-	{[2]float64{-122.2173998, 37.7970237}, [2]float64{-122.2163427, 37.8000987}, 0.0032516281168069854, 354.31523902465915},
+	{Point{-122.2772554, 37.8039604}, Point{-122.274464, 37.802963}, 0.0029642403276459884, 269.15621622898107},
+	{Point{-122.2767695, 37.7770346}, Point{-122.2768192, 37.7748926}, 0.0021425765073847646, 238.21988351245543},
+	{Point{-122.2226131, 37.7839461}, Point{-122.2220745, 37.7853226}, 0.00147812117568097, 160.2113624659609},
+	{Point{-122.2173998, 37.7970237}, Point{-122.2163427, 37.8000987}, 0.0032516281168069854, 354.31523902465915},
 }
 
 var testLines = []struct {
@@ -61,15 +61,15 @@ func decodeGeojson(data string) (*geom.LineString, []*geom.Point) {
 	return line, points
 }
 
-func unflattenCoordinates(coords []float64) [][2]float64 {
-	ret := [][2]float64{}
+func unflattenCoordinates(coords []float64) []Point {
+	ret := []Point{}
 	for i := 0; i < len(coords); i += 2 {
-		ret = append(ret, [2]float64{coords[i], coords[i+1]})
+		ret = append(ret, Point{coords[i], coords[i+1]})
 	}
 	return ret
 }
 
-func makeTestLine(gj string) [][2]float64 {
+func makeTestLine(gj string) []Point {
 	var line geom.T
 	if err := geojson.Unmarshal([]byte(gj), &line); err != nil {
 		panic(err)
@@ -86,7 +86,7 @@ func TestDistance2d(t *testing.T) {
 
 func TestDistanceHaversine(t *testing.T) {
 	for _, dp := range testDistancePoints {
-		d := DistanceHaversine(dp.orig[0], dp.orig[1], dp.dest[0], dp.dest[1])
+		d := DistanceHaversine(dp.orig.Lon, dp.orig.Lat, dp.dest.Lon, dp.dest.Lat)
 		testApproxEqual(t, dp.distanceHaversine, d)
 	}
 }
@@ -95,9 +95,9 @@ func TestLinePositions(t *testing.T) {
 	for _, dp := range testPositions {
 		line, points := decodeGeojson(dp.Geojson)
 		lc := unflattenCoordinates(line.FlatCoords())
-		pp := [][2]float64{}
+		pp := []Point{}
 		for _, p := range points {
-			pp = append(pp, [2]float64{p.FlatCoords()[0], p.FlatCoords()[1]})
+			pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
 		}
 		pos := LinePositions(lc, pp)
 		if len(pos) != len(dp.Positions) {
@@ -113,9 +113,9 @@ func TestLinePositions(t *testing.T) {
 func TestLinePositionsFallback(t *testing.T) {
 	for _, dp := range testPositions {
 		_, points := decodeGeojson(dp.Geojson)
-		pp := [][2]float64{}
+		pp := []Point{}
 		for _, p := range points {
-			pp = append(pp, [2]float64{p.FlatCoords()[0], p.FlatCoords()[1]})
+			pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
 		}
 		pos := LinePositionsFallback(pp)
 		if len(pos) != len(dp.FallbackPositions) {
