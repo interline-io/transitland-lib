@@ -1,15 +1,5 @@
 package tl
 
-type EMap interface {
-	Get(string, string) error
-	GetEntity(Entity, string) error
-	Set(string, string, string) error
-	SetEntity(Entity, string, string) error
-	KeysFor(string) []string
-	GetStopGeometry(string) (Point, bool)
-	GetShapeGeometry(string) (LineString, bool)
-}
-
 // EntityMap stores correspondances between Entity IDs, e.g. StopID -> Stop's integer ID in a database.
 type EntityMap struct {
 	ids             map[string]map[string]string
