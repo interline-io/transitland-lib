@@ -14,5 +14,4 @@
 # Misc
 cmd/transitland/transitland
 tldb/test.db
-**/.DS_Storetmp
-**/tmp
+**/.DS_Store
