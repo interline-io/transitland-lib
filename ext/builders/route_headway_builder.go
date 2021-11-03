@@ -1,6 +1,7 @@
 package builders
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -10,30 +11,14 @@ import (
 )
 
 type RouteHeadway struct {
-	RouteID                      string
-	SelectedStopID               string
-	DirectionID                  tl.OInt
-	HeadwaySecs                  tl.OInt
-	DowCategory                  tl.OInt
-	ServiceDate                  tl.ODate
-	StopTripCount                tl.OInt
-	Departures                   IntSlice
-	HeadwaySecondsMorningCount   tl.OInt // Below for backward compat
-	HeadwaySecondsMorningMin     tl.OInt
-	HeadwaySecondsMorningMid     tl.OInt
-	HeadwaySecondsMorningMax     tl.OInt
-	HeadwaySecondsMiddayCount    tl.OInt
-	HeadwaySecondsMiddayMin      tl.OInt
-	HeadwaySecondsMiddayMid      tl.OInt
-	HeadwaySecondsMiddayMax      tl.OInt
-	HeadwaySecondsAfternoonCount tl.OInt
-	HeadwaySecondsAfternoonMin   tl.OInt
-	HeadwaySecondsAfternoonMid   tl.OInt
-	HeadwaySecondsAfternoonMax   tl.OInt
-	HeadwaySecondsNightCount     tl.OInt
-	HeadwaySecondsNightMin       tl.OInt
-	HeadwaySecondsNightMid       tl.OInt
-	HeadwaySecondsNightMax       tl.OInt
+	RouteID        string
+	SelectedStopID string
+	DirectionID    tl.OInt
+	HeadwaySecs    tl.OInt
+	DowCategory    tl.OInt
+	ServiceDate    tl.ODate
+	StopTripCount  tl.OInt
+	Departures     IntSlice
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -82,8 +67,7 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 	case *tl.Service:
 		// Use only the first 30 days of service
 		startDate := v.StartDate
-		endDate := startDate.AddDate(0, 0, 30)
-		for startDate.Before(endDate) {
+		for i := 0; i < 31; i++ {
 			if v.IsActive(startDate) {
 				d := startDate.Format("2006-01-02")
 				pp.serviceDays[d] = append(pp.serviceDays[d], eid)
@@ -99,17 +83,14 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 			RouteID:   v.RouteID,
 		}
 	case *tl.StopTime:
-		ti, ok := pp.tripDetails[v.TripID]
-		if ok {
-			if v.DepartureTime.Valid {
-				rkey := riKey{
-					ServiceID: ti.ServiceID,
-					Direction: ti.Direction,
-					StopID:    v.StopID,
-				}
-				if rd, ok := pp.routeDepartures[ti.RouteID]; ok {
-					rd[rkey] = append(rd[rkey], v.DepartureTime.Seconds)
-				}
+		if ti, ok := pp.tripDetails[v.TripID]; ok && v.DepartureTime.Valid {
+			rkey := riKey{
+				ServiceID: ti.ServiceID,
+				Direction: ti.Direction,
+				StopID:    v.StopID,
+			}
+			if rd, ok := pp.routeDepartures[ti.RouteID]; ok {
+				rd[rkey] = append(rd[rkey], v.DepartureTime.Seconds)
 			}
 		}
 	}
@@ -117,11 +98,10 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 }
 
 func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
-	for rid, ri := range pp.routeDepartures {
+	for rid, routeDepartures := range pp.routeDepartures {
 		// Both directions will use the same day
-		_ = rid
 		departuresByService := map[string]int{}
-		for k, v := range ri {
+		for k, v := range routeDepartures {
 			departuresByService[k.ServiceID] += len(v)
 		}
 		tripsByDay := map[string]int{}
@@ -130,53 +110,54 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				tripsByDay[day] += departuresByService[sid]
 			}
 		}
+		// Stable sort
+		tripsByDaySorted := sortMap(tripsByDay)
+		// fmt.Println("tripsByDay:")
+		// for _, day := range tripsByDaySorted {
+		// 	fmt.Println("\tday:", day, "count:", tripsByDay[day])
+		// }
 		// Get the highest trip count for each dow category
 		dowCatDay := map[int]string{}
 		dowCatCounts := map[int]int{}
-		for day, count := range tripsByDay {
+		for _, day := range tripsByDaySorted {
 			// parse day again to get weekday
 			d, _ := time.Parse("2006-01-02", day)
-			dow := int(d.Weekday())
+			dow := d.Weekday()
 			dowCat := 1
-			if dow == 0 {
+			if dow == time.Saturday {
 				dowCat = 6
-			} else if dow == 6 {
+			} else if dow == time.Sunday {
 				dowCat = 7
 			}
-			// Use earliest day in ties
-			cd := dowCatDay[dowCat]
-			if count > dowCatCounts[dowCat] && (cd == "" || day < cd) {
-				dowCatCounts[dowCat] = count
+			if _, ok := dowCatDay[dowCat]; !ok {
 				dowCatDay[dowCat] = day
+				dowCatCounts[dowCat] = tripsByDay[day]
 			}
 		}
 		// For each direction...
 		for direction := uint8(0); direction < 2; direction++ {
 			// Find the stop with the most visits on the highest day in each dow category
-			for dowCat, day := range dowCatDay {
-				d, _ := time.Parse("2006-01-02", day)
+			for dowCat, dowCatDay := range dowCatDay {
+				d, _ := time.Parse("2006-01-02", dowCatDay)
 				stopDepartures := map[string][]int{}
-				serviceids := pp.serviceDays[day]
-				for k, v := range ri {
-					for _, sid := range serviceids {
+				serviceIds := pp.serviceDays[dowCatDay]
+				for k, v := range routeDepartures {
+					for _, sid := range serviceIds {
 						if k.Direction == direction && k.ServiceID == sid {
 							stopDepartures[k.StopID] = append(stopDepartures[k.StopID], v...)
 						}
 					}
 				}
-				mostVisitedStop := ""
-				mostVisitedStopCount := 0
-				for stopid, deps := range stopDepartures {
-					// Use earliest stopid in ties
-					count := len(deps)
-					if count > mostVisitedStopCount && (mostVisitedStop == "" || stopid < mostVisitedStop) {
-						mostVisitedStopCount = count
-						mostVisitedStop = stopid
-					}
-				}
-				if mostVisitedStop == "" {
+				stopsByVisits := sortMapSlice(stopDepartures)
+				if len(stopsByVisits) == 0 {
 					continue
 				}
+				fmt.Println("direction:", direction, "dowCat:", dowCat, "dowCatDay:", dowCatDay)
+				for _, v := range stopsByVisits {
+					fmt.Println("\tstop:", v, "count:", len(stopDepartures[v]))
+				}
+				mostVisitedStop := stopsByVisits[0]
+				mostVisitedStopCount := len(stopDepartures[mostVisitedStop])
 				departures := stopDepartures[mostVisitedStop]
 				sort.Ints(departures)
 				// log.Debug("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
@@ -195,37 +176,9 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 					DirectionID:    tl.NewOInt(int(direction)),
 					Departures:     IntSlice{Valid: true, Ints: departures},
 				}
-				// Calculate stats for backwards compat
+				// HeadwaySecs based on morning rush hour
 				if ws, ok := getStats(getWindow(departures, 21600, 36000)); ok {
-					rh.HeadwaySecs = tl.NewOInt(ws.mid) // also sets overall headway seconds
-					rh.HeadwaySecondsMorningCount = tl.NewOInt(ws.count)
-					rh.HeadwaySecondsMorningMin = tl.NewOInt(ws.min)
-					rh.HeadwaySecondsMorningMid = tl.NewOInt(ws.mid)
-					rh.HeadwaySecondsMorningMax = tl.NewOInt(ws.max)
-				}
-				if ws, ok := getStats(getWindow(departures, 36000, 57600)); ok {
-					rh.HeadwaySecondsMiddayCount = tl.NewOInt(ws.count)
-					rh.HeadwaySecondsMiddayMin = tl.NewOInt(ws.min)
-					rh.HeadwaySecondsMiddayMid = tl.NewOInt(ws.mid)
-					rh.HeadwaySecondsMiddayMax = tl.NewOInt(ws.max)
-				}
-				if ws, ok := getStats(getWindow(departures, 57600, 72000)); ok {
-					rh.HeadwaySecondsAfternoonCount = tl.NewOInt(ws.count)
-					rh.HeadwaySecondsAfternoonMin = tl.NewOInt(ws.min)
-					rh.HeadwaySecondsAfternoonMid = tl.NewOInt(ws.mid)
-					rh.HeadwaySecondsAfternoonMax = tl.NewOInt(ws.max)
-				}
-				night := []int{}
-				for _, i := range departures {
-					if i >= 72000 || i < 21600 {
-						night = append(night, i)
-					}
-				}
-				if ws, ok := getStats(night); ok {
-					rh.HeadwaySecondsNightCount = tl.NewOInt(ws.count)
-					rh.HeadwaySecondsNightMin = tl.NewOInt(ws.min)
-					rh.HeadwaySecondsNightMid = tl.NewOInt(ws.mid)
-					rh.HeadwaySecondsNightMax = tl.NewOInt(ws.max)
+					rh.HeadwaySecs = tl.NewOInt(ws.mid)
 				}
 				if _, err := copier.Writer.AddEntity(rh); err != nil {
 					return err
@@ -239,10 +192,9 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 ////////
 
 type windowStat struct {
-	min   int
-	max   int
-	mid   int
-	count int
+	min int
+	max int
+	mid int
 }
 
 func getWindow(v []int, lowerBoundInc int, upperBound int) []int {
@@ -282,4 +234,28 @@ func median(v []int) float64 {
 		return float64(v[m])
 	}
 	return float64(v[m-1]+v[m]) / 2
+}
+
+func sortMapSlice(value map[string][]int) []string {
+	type kv struct {
+		Key   string
+		Value int
+	}
+	var ss []kv
+	for k, v := range value {
+		ss = append(ss, kv{k, len(v)})
+	}
+	sort.Slice(ss, func(i, j int) bool {
+		a := ss[i]
+		b := ss[j]
+		if a.Value == b.Value {
+			return a.Key < b.Key
+		}
+		return a.Value > b.Value
+	})
+	ret := []string{}
+	for _, k := range ss {
+		ret = append(ret, k.Key)
+	}
+	return ret
 }

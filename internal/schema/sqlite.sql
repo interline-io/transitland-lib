@@ -455,23 +455,7 @@ CREATE TABLE IF NOT EXISTS "tl_route_headways" (
   "service_date" datetime,
   "service_seconds" integer,
   "stop_trip_count" integer,
-  "departures" blob,
-  "headway_seconds_morning_count" integer,
-  "headway_seconds_morning_min" integer,
-  "headway_seconds_morning_mid" integer,
-  "headway_seconds_morning_max" integer,
-  "headway_seconds_midday_count" integer,
-  "headway_seconds_midday_min" integer,
-  "headway_seconds_midday_mid" integer,
-  "headway_seconds_midday_max" integer,
-  "headway_seconds_afternoon_count" integer,
-  "headway_seconds_afternoon_min" integer,
-  "headway_seconds_afternoon_mid" integer,
-  "headway_seconds_afternoon_max" integer,
-  "headway_seconds_night_count" integer,
-  "headway_seconds_night_min" integer,
-  "headway_seconds_night_mid" integer,
-  "headway_seconds_night_max" integer
+  "departures" blob
 );
 
 CREATE TABLE IF NOT EXISTS "tl_feed_version_geometries" (

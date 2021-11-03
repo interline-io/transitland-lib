@@ -125,11 +125,14 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 			if !ok || len(si.Line) < 2 {
 				continue
 			}
-			pnts := []float64{}
+			var pnts []float64
 			for _, c := range si.Line {
 				pnts = append(pnts, c.Lon, c.Lat)
 			}
 			sl := geom.NewLineStringFlat(geom.XY, pnts)
+			if sl == nil {
+				continue
+			}
 			// Most frequent shape
 			if i == 0 {
 				ent.Geometry = tl.LineString{LineString: *sl, Valid: true}
@@ -173,7 +176,7 @@ func sortMap(value map[string]int) []string {
 		a := ss[i]
 		b := ss[j]
 		if a.Value == b.Value {
-			return a.Key > b.Key
+			return a.Key < b.Key
 		}
 		return a.Value > b.Value
 	})
