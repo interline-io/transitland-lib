@@ -12,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	geomxy "github.com/twpayne/go-geom/xy"
 )
 
 // Prepare is called before general copying begins.
@@ -79,6 +80,8 @@ type Options struct {
 	SimplifyCalendars bool
 	// Convert extended route types to primitives
 	UseBasicRouteTypes bool
+	// Simplify shapes
+	SimplifyShapes float64
 	// DeduplicateStopTimes
 	DeduplicateJourneyPatterns bool
 	// Default error handler
@@ -590,12 +593,27 @@ func (copier *Copier) copyTransfers() error {
 // copyShapes writes Shapes
 func (copier *Copier) copyShapes() error {
 	// Not safe for batch copy (currently)
-	for e := range copier.Reader.Shapes() {
-		sid := e.EntityID()
-		if _, ok, err := copier.CopyEntity(&e); err != nil {
+	for ent := range copier.Reader.Shapes() {
+		sid := ent.EntityID()
+		if copier.SimplifyShapes > 0 {
+			pnts := ent.Geometry.FlatCoords()
+			before := len(pnts)
+			stride := ent.Geometry.Stride()
+			ii := geomxy.SimplifyFlatCoords(pnts, copier.SimplifyShapes, stride)
+			for i, j := range ii {
+				if i == j*stride {
+					continue
+				}
+				pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
+			}
+			pnts = pnts[:len(ii)*stride]
+			ent.Geometry = tl.NewLineStringFromFlatCoords(pnts)
+			fmt.Println("before:", before, "after:", len(pnts))
+		}
+		if _, ok, err := copier.CopyEntity(&ent); err != nil {
 			return err
 		} else if ok == nil {
-			copier.geomCache.AddSimplifiedShape(sid, e, 0.000005)
+			copier.geomCache.AddShape(sid, ent)
 		}
 	}
 	copier.logCount(&tl.Shape{})
