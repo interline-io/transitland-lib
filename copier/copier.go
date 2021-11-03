@@ -31,7 +31,7 @@ type Validator interface {
 
 // AfterValidator is called for each fully validated entity before writing.
 type AfterValidator interface {
-	AfterValidator(string, tl.Entity, *tl.EntityMap) error
+	AfterValidator(tl.Entity, *tl.EntityMap) error
 }
 
 // AfterWrite is called for after writing each entity.
@@ -202,8 +202,8 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 		copier.AddValidator(v, 0)
 		added = true
 	}
-	if v, ok := ext.(AfterWrite); ok {
-		copier.afterWriters = append(copier.afterWriters, v)
+	if v, ok := ext.(AfterValidator); ok {
+		copier.afterValidators = append(copier.afterValidators, v)
 		added = true
 	}
 	if v, ok := ext.(Extension); ok {
@@ -342,6 +342,12 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	if len(errs) > 0 && !copier.AllowEntityErrors {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
+	}
+	// Handle after validators
+	for _, v := range copier.afterValidators {
+		if err := v.AfterValidator(ent, copier.EntityMap); err != nil {
+			return err
+		}
 	}
 	return nil
 }
