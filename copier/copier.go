@@ -597,7 +597,7 @@ func (copier *Copier) copyShapes() error {
 		sid := ent.EntityID()
 		if copier.SimplifyShapes > 0 {
 			pnts := ent.Geometry.FlatCoords()
-			before := len(pnts)
+			// before := len(pnts)
 			stride := ent.Geometry.Stride()
 			ii := geomxy.SimplifyFlatCoords(pnts, copier.SimplifyShapes, stride)
 			for i, j := range ii {
@@ -608,7 +608,7 @@ func (copier *Copier) copyShapes() error {
 			}
 			pnts = pnts[:len(ii)*stride]
 			ent.Geometry = tl.NewLineStringFromFlatCoords(pnts)
-			fmt.Println("before:", before, "after:", len(pnts))
+			// fmt.Println("before:", before, "after:", len(pnts))
 		}
 		if _, ok, err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -759,6 +759,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	stopPatterns := map[string]int{}
 	stopPatternShapeIDs := map[int]string{}
 	journeyPatterns := map[string]patInfo{}
+	tripOffsets := map[string]int{} // used for deduplicating StopTimes
 	batchCount := 0
 	tripbt := []tl.Entity{}
 	stbt := []tl.StopTime{}
@@ -772,9 +773,13 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		stbt2 := []tl.Entity{}
 		for i := range stbt {
 			if err := copier.checkEntity(&stbt[i]); err == nil {
-				stbt2 = append(stbt2, &stbt[i])
-				if stbt[i].Interpolated.Int > 0 {
-					copier.result.InterpolatedStopTimeCount++
+				// check if we're deduping
+				if _, ok := tripOffsets[stbt[i].TripID]; copier.DeduplicateJourneyPatterns && ok {
+				} else {
+					stbt2 = append(stbt2, &stbt[i])
+					if stbt[i].Interpolated.Int > 0 {
+						copier.result.InterpolatedStopTimeCount++
+					}
 				}
 			}
 		}
@@ -863,9 +868,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if jpat, ok := journeyPatterns[jkey]; ok {
 			trip.JourneyPatternID = jpat.key
 			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime.Seconds - jpat.firstArrival
-			if copier.DeduplicateJourneyPatterns {
-				trip.StopTimes = nil
-			}
+			tripOffsets[trip.TripID] = trip.JourneyPatternOffset
 		} else {
 			trip.JourneyPatternID = trip.TripID
 			trip.JourneyPatternOffset = 0
