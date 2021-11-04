@@ -27,37 +27,37 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 		"Caltrain": {
 			testutil.ExampleFeedCaltrain.URL,
 			[]testcase{
-				{RouteID: "Bu-130"},
-				{RouteID: "Lo-130"},
+				{RouteID: "Bu-130", DowCat: 1, DirectionID: 0, StopID: "70011", ServiceDate: "2017-10-02"},
+				{RouteID: "Lo-130", DowCat: 1, DirectionID: 0, StopID: "70011", ServiceDate: "2017-10-02"},
 			},
 		},
 		"BART": {
 			testutil.ExampleFeedBART.URL,
 			[]testcase{
-				{RouteID: "07", DowCat: 1, DirectionID: 0, StopID: "12TH", ServiceDate: "2018-05-29"},
-				{RouteID: "07", DowCat: 1, DirectionID: 1, StopID: "12TH", ServiceDate: "2018-05-29"},
-				{RouteID: "07", DowCat: 6, DirectionID: 0, StopID: "12TH", ServiceDate: "2018-05-26"},
-				{RouteID: "03", DowCat: 1, DirectionID: 0, StopID: "12TH", ServiceDate: "2018-05-29"},
-				{RouteID: "03", DowCat: 1, DirectionID: 1, StopID: "12TH", ServiceDate: "2018-05-29"},
-				{RouteID: "03", DowCat: 6, DirectionID: 0, StopID: "12TH", ServiceDate: "2018-05-26"},
-				{RouteID: "05", DowCat: 1, DirectionID: 0, StopID: "FRMT", ServiceDate: "2018-05-29"},
-				{RouteID: "05", DowCat: 1, DirectionID: 1, StopID: "16TH", ServiceDate: "2018-05-29"},
+				{RouteID: "07", DowCat: 1, DirectionID: 0, StopID: "12TH", ServiceDate: "2018-05-29", HeadwaySecs: 900},
+				{RouteID: "07", DowCat: 1, DirectionID: 1, StopID: "12TH", ServiceDate: "2018-05-29", HeadwaySecs: 900},
+				{RouteID: "07", DowCat: 6, DirectionID: 0, StopID: "12TH", ServiceDate: "2018-05-26", HeadwaySecs: 1200},
+				{RouteID: "03", DowCat: 1, DirectionID: 0, StopID: "12TH", ServiceDate: "2018-05-29", HeadwaySecs: 900},
+				{RouteID: "03", DowCat: 1, DirectionID: 1, StopID: "12TH", ServiceDate: "2018-05-29", HeadwaySecs: 900},
+				{RouteID: "03", DowCat: 6, DirectionID: 0, StopID: "12TH", ServiceDate: "2018-05-26", HeadwaySecs: 1200},
+				{RouteID: "05", DowCat: 1, DirectionID: 0, StopID: "FRMT", ServiceDate: "2018-05-29", HeadwaySecs: 900},
+				{RouteID: "05", DowCat: 1, DirectionID: 1, StopID: "16TH", ServiceDate: "2018-05-29", HeadwaySecs: 900},
 				{RouteID: "05", DowCat: 6, DirectionID: 0, StopID: "16TH", ServiceDate: "2018-05-26"},
-				{RouteID: "11", DowCat: 1, DirectionID: 0, StopID: "BAYF", ServiceDate: "2018-05-29"},
-				{RouteID: "11", DowCat: 1, DirectionID: 1, StopID: "BAYF", ServiceDate: "2018-05-29"},
-				{RouteID: "11", DowCat: 6, DirectionID: 0, StopID: "16TH", ServiceDate: "2018-05-26"},
-				{RouteID: "11", DowCat: 7, DirectionID: 1, StopID: "BAYF", ServiceDate: "2018-05-27"},
-				{RouteID: "19", DowCat: 1, DirectionID: 0, StopID: "COLS", ServiceDate: "2018-05-29"},
-				{RouteID: "19", DowCat: 1, DirectionID: 1, StopID: "COLS", ServiceDate: "2018-05-29"},
-				{RouteID: "19", DowCat: 6, DirectionID: 0, StopID: "COLS", ServiceDate: "2018-05-26"},
-				{RouteID: "19", DowCat: 7, DirectionID: 0, StopID: "COLS", ServiceDate: "2018-05-27"},
+				{RouteID: "11", DowCat: 1, DirectionID: 0, StopID: "BAYF", ServiceDate: "2018-05-29", HeadwaySecs: 900},
+				{RouteID: "11", DowCat: 1, DirectionID: 1, StopID: "BAYF", ServiceDate: "2018-05-29", HeadwaySecs: 900},
+				{RouteID: "11", DowCat: 6, DirectionID: 0, StopID: "16TH", ServiceDate: "2018-05-26", HeadwaySecs: 1200},
+				{RouteID: "11", DowCat: 7, DirectionID: 1, StopID: "BAYF", ServiceDate: "2018-05-27", HeadwaySecs: 1200},
+				{RouteID: "19", DowCat: 1, DirectionID: 0, StopID: "COLS", ServiceDate: "2018-05-29", HeadwaySecs: 360},
+				{RouteID: "19", DowCat: 1, DirectionID: 1, StopID: "COLS", ServiceDate: "2018-05-29", HeadwaySecs: 360},
+				{RouteID: "19", DowCat: 6, DirectionID: 0, StopID: "COLS", ServiceDate: "2018-05-26", HeadwaySecs: 360},
+				{RouteID: "19", DowCat: 7, DirectionID: 0, StopID: "COLS", ServiceDate: "2018-05-27", HeadwaySecs: 360},
 			},
 		},
 		"TriMet-2Routes": {
 			testutil.RelPath("test/data/external/trimet-2routes.zip"),
 			[]testcase{
-				{RouteID: "193"},
-				{RouteID: "200"},
+				{RouteID: "193", DowCat: 1, DirectionID: 0, StopID: "10776", ServiceDate: "2021-10-18", HeadwaySecs: 960},
+				{RouteID: "200", DowCat: 1, DirectionID: 0, StopID: "10293", ServiceDate: "2021-10-25", HeadwaySecs: 900},
 			},
 		},
 	}
@@ -92,6 +92,9 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 							found = true
 							assert.Equal(t, tc.StopID, ent.SelectedStopID)
 							assert.Equal(t, tc.ServiceDate, ent.ServiceDate.Time.Format("2006-01-02"))
+							if tc.HeadwaySecs > 0 {
+								assert.Equal(t, tc.HeadwaySecs, ent.HeadwaySecs.Int)
+							}
 						}
 					}
 					if !found {

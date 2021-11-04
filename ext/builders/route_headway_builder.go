@@ -1,7 +1,6 @@
 package builders
 
 import (
-	"math"
 	"sort"
 	"time"
 
@@ -179,7 +178,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 					Departures:     tl.IntSlice{Valid: true, Ints: departures},
 				}
 				// HeadwaySecs based on morning rush hour
-				if ws, ok := getStats(getWindow(departures, 21600, 36000)); ok {
+				if ws, ok := getStats(departures, 21600, 36000); ok {
 					rh.HeadwaySecs = tl.NewOInt(ws.mid)
 				}
 				if _, err := copier.Writer.AddEntity(rh); err != nil {
@@ -199,33 +198,26 @@ type windowStat struct {
 	mid int
 }
 
-func getWindow(v []int, lowerBoundInc int, upperBound int) []int {
-	f := []int{}
-	for _, i := range v {
-		if i >= lowerBoundInc && i < upperBound {
-			f = append(f, i)
+func getStats(v []int, lowerBoundInc int, upperBound int) (windowStat, bool) {
+	var window []int
+	for i := 0; i < len(v)-1; i++ {
+		a, b := v[i], v[i+1]
+		if a >= lowerBoundInc {
+			window = append(window, b-a)
+		}
+		if b > upperBound {
+			break
 		}
 	}
-	return f
-}
-
-// must be sorted
-func getStats(v []int) (windowStat, bool) {
+	sort.Ints(window)
 	ws := windowStat{}
-	count := len(v)
+	count := len(window)
 	if count < 3 {
 		return ws, false
 	}
-	ws.min = 10000000
-	ws.mid = int(math.Floor(median(v)))
-	for _, i := range v {
-		if i < ws.min {
-			ws.min = i
-		}
-		if i > ws.max {
-			ws.max = i
-		}
-	}
+	ws.min = window[0]
+	ws.max = window[len(window)-1]
+	ws.mid = int(median(window))
 	return ws, true
 }
 
