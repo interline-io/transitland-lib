@@ -158,7 +158,6 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				// 	fmt.Println("\tstop:", v, "count:", len(stopDepartures[v]))
 				// }
 				mostVisitedStop := stopsByVisits[0]
-				mostVisitedStopCount := len(stopDepartures[mostVisitedStop])
 				departures := stopDepartures[mostVisitedStop]
 				sort.Ints(departures)
 				// log.Debug("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
@@ -173,12 +172,12 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 					HeadwaySecs:    tl.OInt{},
 					DowCategory:    tl.NewOInt(dowCat),
 					ServiceDate:    tl.NewODate(d),
-					StopTripCount:  tl.NewOInt(mostVisitedStopCount),
+					StopTripCount:  tl.NewOInt(len(departures)),
 					DirectionID:    tl.NewOInt(int(direction)),
 					Departures:     tl.IntSlice{Valid: true, Ints: departures},
 				}
 				// HeadwaySecs based on morning rush hour
-				if ws, ok := getStats(departures, 21600, 36000); ok {
+				if ws, ok := getStats(departures, 21600, 36000); ok && len(departures) >= 10 {
 					rh.HeadwaySecs = tl.NewOInt(ws.mid)
 				}
 				if _, err := copier.Writer.AddEntity(rh); err != nil {
@@ -211,8 +210,7 @@ func getStats(v []int, lowerBoundInc int, upperBound int) (windowStat, bool) {
 	}
 	sort.Ints(window)
 	ws := windowStat{}
-	count := len(window)
-	if count < 3 {
+	if len(window) < 3 {
 		return ws, false
 	}
 	ws.min = window[0]
