@@ -1,7 +1,6 @@
 package builders
 
 import (
-	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -18,7 +17,7 @@ type RouteHeadway struct {
 	DowCategory    tl.OInt
 	ServiceDate    tl.ODate
 	StopTripCount  tl.OInt
-	Departures     IntSlice
+	Departures     tl.IntSlice
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -83,13 +82,13 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 			RouteID:   v.RouteID,
 		}
 	case *tl.StopTime:
-		if ti, ok := pp.tripDetails[v.TripID]; ok && v.DepartureTime.Valid {
+		if ti, ok := pp.tripDetails[v.TripID]; ok {
 			rkey := riKey{
 				ServiceID: ti.ServiceID,
 				Direction: ti.Direction,
 				StopID:    v.StopID,
 			}
-			if rd, ok := pp.routeDepartures[ti.RouteID]; ok {
+			if rd, ok := pp.routeDepartures[ti.RouteID]; ok && v.DepartureTime.Valid {
 				rd[rkey] = append(rd[rkey], v.DepartureTime.Seconds)
 			}
 		}
@@ -99,6 +98,7 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 
 func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 	for rid, routeDepartures := range pp.routeDepartures {
+		// fmt.Println("\n============", rid)
 		// Both directions will use the same day
 		departuresByService := map[string]int{}
 		for k, v := range routeDepartures {
@@ -148,14 +148,16 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 						}
 					}
 				}
+				// fmt.Println("routeDepartures:", routeDepartures)
+				// fmt.Println("stopDepartures:", stopDepartures)
 				stopsByVisits := sortMapSlice(stopDepartures)
 				if len(stopsByVisits) == 0 {
 					continue
 				}
-				fmt.Println("direction:", direction, "dowCat:", dowCat, "dowCatDay:", dowCatDay)
-				for _, v := range stopsByVisits {
-					fmt.Println("\tstop:", v, "count:", len(stopDepartures[v]))
-				}
+				// fmt.Println("direction:", direction, "dowCat:", dowCat, "dowCatDay:", dowCatDay)
+				// for _, v := range stopsByVisits {
+				// 	fmt.Println("\tstop:", v, "count:", len(stopDepartures[v]))
+				// }
 				mostVisitedStop := stopsByVisits[0]
 				mostVisitedStopCount := len(stopDepartures[mostVisitedStop])
 				departures := stopDepartures[mostVisitedStop]
@@ -174,7 +176,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 					ServiceDate:    tl.NewODate(d),
 					StopTripCount:  tl.NewOInt(mostVisitedStopCount),
 					DirectionID:    tl.NewOInt(int(direction)),
-					Departures:     IntSlice{Valid: true, Ints: departures},
+					Departures:     tl.IntSlice{Valid: true, Ints: departures},
 				}
 				// HeadwaySecs based on morning rush hour
 				if ws, ok := getStats(getWindow(departures, 21600, 36000)); ok {
