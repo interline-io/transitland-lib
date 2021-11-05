@@ -57,7 +57,7 @@ func NewConvexHullBuilder() *ConvexHullBuilder {
 	}
 }
 
-// AfterValidator keeps track of which routes/agencies visit which stops
+// AfterWrite keeps track of which routes/agencies visit which stops
 func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Stop:
@@ -75,12 +75,12 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Enti
 	case *tl.StopTime:
 		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID]]
 		if !ok {
-			log.Debug("ConvexHullBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
+			log.Debug("no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
 		s, ok := pp.stops[v.StopID]
 		if !ok {
-			log.Debug("ConvexHullBuilder no stop:", v.StopID)
+			log.Debug("no stop:", v.StopID)
 			return nil
 		}
 		r.stopGeoms[v.StopID] = s

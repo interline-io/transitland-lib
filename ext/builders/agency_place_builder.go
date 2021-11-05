@@ -1,8 +1,13 @@
 package builders
 
 import (
+	"database/sql"
+	"fmt"
+
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/mmcloughlin/geohash"
 )
 
 type AgencyPlace struct {
@@ -22,21 +27,95 @@ func (rs *AgencyPlace) Filename() string {
 ////////
 
 type AgencyPlaceBuilder struct {
+	stops       map[string]string // store just geohash
+	routeAgency map[string]string
+	tripAgency  map[string]string
+	agencyStops map[string]map[string]int
 }
 
 func NewAgencyPlaceBuilder() *AgencyPlaceBuilder {
-	return &AgencyPlaceBuilder{}
+	return &AgencyPlaceBuilder{
+		stops:       map[string]string{},
+		routeAgency: map[string]string{},
+		tripAgency:  map[string]string{},
+		agencyStops: map[string]map[string]int{},
+	}
 }
 
 func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
-		_ = v
+		pp.agencyStops[eid] = map[string]int{}
+	case *tl.Stop:
+		pp.stops[eid] = geohash.EncodeWithPrecision(v.Geometry.Y(), v.Geometry.X(), 6) // note reversed coords
+	case *tl.Route:
+		pp.routeAgency[eid] = v.AgencyID
+	case *tl.Trip:
+		pp.tripAgency[eid] = pp.routeAgency[v.RouteID]
+	case *tl.StopTime:
+		aid := pp.tripAgency[v.TripID]
+		if sg, ok := pp.stops[v.StopID]; ok {
+			if v, ok := pp.agencyStops[aid]; ok {
+				v[sg] += 1
+			}
+		}
 	}
 	return nil
 }
 
 func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
+	// get places for each point
+	ghPoints := map[string]bool{}
+	for _, v := range pp.stops {
+		ghPoints[v] = true
+	}
+	fmt.Println("AgencyPlaceBuilder", ghPoints)
+
+	dbWriter, ok := copier.Writer.(*tldb.Writer)
+	if !ok {
+		// Not db writer
+		fmt.Println("writer is not dbwriter")
+		fmt.Printf("%#v\n", copier.Writer)
+		return nil
+	}
+	db := dbWriter.Adapter
+
+	type foundPlace struct {
+		Name     tl.OString
+		Adm0name tl.OString
+		Adm1name tl.OString
+		Distance tl.OFloat
+	}
+	query := `
+	select 
+		name, 
+		adm0name, 
+		adm1name, 
+		ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance 
+	from ne_10m_populated_places ne 
+	where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, 100000) 
+	order by distance asc
+	limit 1
+	`
+	for ghPoint := range ghPoints {
+		fmt.Println("searching for:", ghPoint)
+		gLat, gLon := geohash.Decode(ghPoint)
+		r := []foundPlace{}
+		if err := db.Select(&r, query, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
+			// ok
+		} else if err != nil {
+			panic(err)
+			return nil
+		}
+		for _, rp := range r {
+			fmt.Println("found place:", rp)
+		}
+	}
+
+	////////
+
+	return nil
+
 	// 	CREATE OR REPLACE FUNCTION tl_generate_agency_places(fvid bigint) RETURNS integer
 	//     LANGUAGE plpgsql
 	//     AS $_$
@@ -126,9 +205,4 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	// RETURN 0;
 	// END;
 	// $_$;
-	bt := []tl.Entity{}
-	if _, err := copier.Writer.AddEntities(bt); err != nil {
-		return err
-	}
-	return nil
 }
