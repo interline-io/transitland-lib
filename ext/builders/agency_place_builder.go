@@ -65,26 +65,25 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Ent
 
 func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	// get places for each point
-	ghPoints := map[string]bool{}
-	for _, v := range pp.stops {
-		ghPoints[v] = true
+	ghPoints := map[string][]string{}
+	for stopId, ghPoint := range pp.stops {
+		ghPoints[ghPoint] = append(ghPoints[ghPoint], stopId)
 	}
-	fmt.Println("AgencyPlaceBuilder", ghPoints)
-
 	dbWriter, ok := copier.Writer.(*tldb.Writer)
 	if !ok {
-		// Not db writer
 		fmt.Println("writer is not dbwriter")
-		fmt.Printf("%#v\n", copier.Writer)
 		return nil
 	}
 	db := dbWriter.Adapter
+	if _, ok := db.(*tldb.PostgresAdapter); !ok {
+		fmt.Println("only postgres is supported")
+		return nil
+	}
 
 	type foundPlace struct {
 		Name     tl.OString
 		Adm0name tl.OString
 		Adm1name tl.OString
-		Distance tl.OFloat
 	}
 	query := `
 	select 
@@ -97,6 +96,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	order by distance asc
 	limit 1
 	`
+	pointPlaces := map[string]foundPlace{}
 	for ghPoint := range ghPoints {
 		fmt.Println("searching for:", ghPoint)
 		gLat, gLon := geohash.Decode(ghPoint)
@@ -104,11 +104,31 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 		if err := db.Select(&r, query, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
 			// ok
 		} else if err != nil {
-			panic(err)
 			return nil
 		}
-		for _, rp := range r {
-			fmt.Println("found place:", rp)
+		fmt.Println("found:", r)
+		if len(r) > 0 {
+			pointPlaces[ghPoint] = r[0]
+		}
+	}
+	for aid, agencyPoints := range pp.agencyStops {
+		fmt.Println("agency stops:", agencyPoints)
+		placeWeights := map[foundPlace]int{}
+		agencyTotalWeight := 0
+		for ghPoint, count := range agencyPoints {
+			if place, ok := pointPlaces[ghPoint]; ok {
+				placeWeights[place] += count
+				agencyTotalWeight += count
+			}
+		}
+		fmt.Println("aid:", aid, "total weight:", agencyTotalWeight)
+		selectedPlaces := []foundPlace{}
+		for k, v := range placeWeights {
+			score := float64(v) / float64(agencyTotalWeight)
+			if score > 0.05 {
+				fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
+				selectedPlaces = append(selectedPlaces, k)
+			}
 		}
 	}
 
