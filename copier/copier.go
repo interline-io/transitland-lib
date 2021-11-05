@@ -697,7 +697,6 @@ func (copier *Copier) copyCalendars() error {
 	for _, svc := range svcFilter {
 		for _, cd := range svc.CalendarDates() {
 			cd := cd
-			fmt.Println(cd.ServiceID)
 			if bt, err = copier.checkBatch(bt, &cd); err != nil {
 				return err
 			}
