@@ -673,31 +673,31 @@ func (copier *Copier) copyCalendars() error {
 
 	// Write Calendars
 	var err error
-	bt := []tl.Entity{}
+	svcFilter := []*tl.Service{}
 	for _, svc := range svcs {
 		// Skip main Calendar entity if generated and not normalizing service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
 			copier.SetEntity(&svc.Calendar, svc.ServiceID, svc.ServiceID)
 			continue
 		}
-		// Validate as Service, with attached exceptions, for better validation.
-		if bt, err = copier.checkBatch(bt, svc); err != nil {
-			return err
+		if _, err, err2 := copier.CopyEntity(svc); err2 != nil {
+			return err2
+		} else if err != nil {
+			continue
 		}
 		if svc.Generated {
 			copier.result.GeneratedCount["calendar.txt"]++
 		}
-	}
-	if err := copier.writeBatch(bt); err != nil {
-		return err
+		svcFilter = append(svcFilter, svc)
 	}
 	copier.logCount(&tl.Calendar{})
 
 	// Write CalendarDates
-	bt = nil
-	for _, svc := range svcs {
+	bt := []tl.Entity{}
+	for _, svc := range svcFilter {
 		for _, cd := range svc.CalendarDates() {
 			cd := cd
+			fmt.Println(cd.ServiceID)
 			if bt, err = copier.checkBatch(bt, &cd); err != nil {
 				return err
 			}

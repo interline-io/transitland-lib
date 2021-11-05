@@ -70,6 +70,13 @@ func NewServicesFromReader(reader Reader) []*Service {
 	return ret
 }
 
+// Reset resets calendars, except ServiceID
+func (s *Service) Reset() {
+	sid := s.ServiceID
+	s.Calendar = Calendar{ServiceID: sid}
+	s.exceptions = map[ymd]int{}
+}
+
 // AddCalendarDate adds a service exception.
 func (s *Service) AddCalendarDate(cd CalendarDate) {
 	s.exceptions[newYMD(cd.Date)] = cd.ExceptionType
