@@ -125,6 +125,9 @@ func GetString(ent tl.Entity, key string) (string, error) {
 func valGetString(valueField reflect.Value, k string) (string, error) {
 	value := ""
 	rfi := valueField.Interface()
+	if v, ok := rfi.(tl.WideTime); ok {
+		return v.String(), nil
+	}
 	if v, ok := rfi.(canValue); ok {
 		var err error
 		rfi, err = v.Value()
