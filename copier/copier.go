@@ -638,7 +638,7 @@ func (copier *Copier) copyCalendars() error {
 	// Add the CalendarDates to Services
 	for ent := range copier.Reader.CalendarDates() {
 		cal := tl.Calendar{
-			ServiceID: ent.EntityID(),
+			ServiceID: ent.ServiceID,
 			Generated: true,
 		}
 		if !copier.isMarked(&cal) {
@@ -677,7 +677,7 @@ func (copier *Copier) copyCalendars() error {
 	for _, svc := range svcs {
 		// Skip main Calendar entity if generated and not normalizing service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			copier.SetEntity(&svc.Calendar, svc.ServiceID, svc.ServiceID)
+			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.EntityID())
 			continue
 		}
 		if _, err, err2 := copier.CopyEntity(svc); err2 != nil {
