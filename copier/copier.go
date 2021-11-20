@@ -672,39 +672,42 @@ func (copier *Copier) copyCalendars() error {
 	}
 
 	// Write Calendars
-	var err error
-	svcFilter := []*tl.Service{}
+	bt := []tl.Entity{}
+	var btErr error
 	for _, svc := range svcs {
 		// Skip main Calendar entity if generated and not normalizing service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
 			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.EntityID())
+			for _, cd := range svc.CalendarDates() {
+				cd := cd
+				if bt, btErr = copier.checkBatch(bt, &cd); btErr != nil {
+					return btErr
+				}
+			}
 			continue
 		}
-		if _, err, err2 := copier.CopyEntity(svc); err2 != nil {
+		// Write out regular calendars
+		cds := svc.CalendarDates() // Need to get before ID might be updated
+		if _, err1, err2 := copier.CopyEntity(svc); err2 != nil {
 			return err2
-		} else if err != nil {
+		} else if err1 != nil {
 			continue
+		} else {
+			for _, cd := range cds {
+				cd := cd
+				if bt, btErr = copier.checkBatch(bt, &cd); btErr != nil {
+					return btErr
+				}
+			}
 		}
 		if svc.Generated {
 			copier.result.GeneratedCount["calendar.txt"]++
 		}
-		svcFilter = append(svcFilter, svc)
+	}
+	if btErr = copier.writeBatch(bt); btErr != nil {
+		return btErr
 	}
 	copier.logCount(&tl.Calendar{})
-
-	// Write CalendarDates
-	bt := []tl.Entity{}
-	for _, svc := range svcFilter {
-		for _, cd := range svc.CalendarDates() {
-			cd := cd
-			if bt, err = copier.checkBatch(bt, &cd); err != nil {
-				return err
-			}
-		}
-	}
-	if err := copier.writeBatch(bt); err != nil {
-		return err
-	}
 	copier.logCount(&tl.CalendarDate{})
 	return nil
 }
