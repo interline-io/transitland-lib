@@ -627,18 +627,18 @@ func (copier *Copier) copyCalendars() error {
 		if !copier.isMarked(&tl.Calendar{}) {
 			continue
 		}
-		_, ok := svcs[ent.ServiceID]
+		_, ok := svcs[ent.EntityID()]
 		if ok {
 			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.ServiceID)}, nil)
 			continue
 		}
-		svcs[ent.ServiceID] = tl.NewService(ent)
+		svcs[ent.EntityID()] = tl.NewService(ent)
 	}
 
 	// Add the CalendarDates to Services
 	for ent := range copier.Reader.CalendarDates() {
 		cal := tl.Calendar{
-			ServiceID: ent.ServiceID,
+			ServiceID: ent.EntityID(),
 			Generated: true,
 		}
 		if !copier.isMarked(&cal) {
@@ -662,7 +662,7 @@ func (copier *Copier) copyCalendars() error {
 		if copier.SimplifyCalendars {
 			if s, err := svc.Simplify(); err == nil {
 				svc = s
-				svcs[svc.ServiceID] = svc
+				svcs[svc.EntityID()] = svc
 			}
 		}
 		// Generated calendars may need their service period set...
@@ -673,29 +673,28 @@ func (copier *Copier) copyCalendars() error {
 
 	// Write Calendars
 	var err error
-	bt := []tl.Entity{}
+	svcFilter := []*tl.Service{}
 	for _, svc := range svcs {
 		// Skip main Calendar entity if generated and not normalizing service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
 			copier.SetEntity(&svc.Calendar, svc.ServiceID, svc.ServiceID)
 			continue
 		}
-		// Validate as Service, with attached exceptions, for better validation.
-		if bt, err = copier.checkBatch(bt, svc); err != nil {
-			return err
+		if _, err, err2 := copier.CopyEntity(svc); err2 != nil {
+			return err2
+		} else if err != nil {
+			continue
 		}
 		if svc.Generated {
 			copier.result.GeneratedCount["calendar.txt"]++
 		}
-	}
-	if err := copier.writeBatch(bt); err != nil {
-		return err
+		svcFilter = append(svcFilter, svc)
 	}
 	copier.logCount(&tl.Calendar{})
 
 	// Write CalendarDates
-	bt = nil
-	for _, svc := range svcs {
+	bt := []tl.Entity{}
+	for _, svc := range svcFilter {
 		for _, cd := range svc.CalendarDates() {
 			cd := cd
 			if bt, err = copier.checkBatch(bt, &cd); err != nil {
