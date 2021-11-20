@@ -14,9 +14,18 @@ func init() {
 }
 
 type RedateFilter struct {
-	StartDate  time.Time
-	TargetDate time.Time
-	TargetDays int
+	StartDate           time.Time
+	TargetDate          time.Time
+	TargetDays          int
+	RemoveOutsideWindow bool
+}
+
+func NewRedateFilter(startDate, targetDate time.Time, targetDays int) *RedateFilter {
+	return &RedateFilter{
+		StartDate:  startDate,
+		TargetDate: targetDate,
+		TargetDays: targetDays,
+	}
 }
 
 func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
@@ -24,11 +33,13 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	if !ok {
 		return nil
 	}
+	fmt.Println("redate:", v.ServiceID, "id:", v.ID)
 	// Copy active service days in window into new calendar
 	startDate := tf.StartDate
 	targetDate := tf.TargetDate
-	targetDays := 31
+	targetDays := tf.TargetDays
 	newSvc := tl.NewService(tl.Calendar{ServiceID: v.ServiceID, StartDate: targetDate})
+	newSvc.ID = v.ID
 	active := false
 	for i := 0; i < targetDays-1; i++ {
 		if v.IsActive(startDate) {
@@ -39,7 +50,7 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 		targetDate = targetDate.AddDate(0, 0, 1)
 	}
 	newSvc.EndDate = targetDate
-	if !active {
+	if !active && tf.RemoveOutsideWindow {
 		return fmt.Errorf("service not in window")
 	}
 	// Simplify back to regular calendar
@@ -47,6 +58,7 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	if err != nil {
 		panic(err)
 	}
+	newSvc.Generated = false
 	// Reset and update in place
 	v.Reset()
 	v.Calendar = newSvc.Calendar

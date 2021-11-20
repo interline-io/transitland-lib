@@ -87,7 +87,7 @@ func (s *Service) CalendarDates() []CalendarDate {
 	ret := []CalendarDate{}
 	for ymd, v := range s.exceptions {
 		ret = append(ret, CalendarDate{
-			ServiceID:     s.ServiceID,
+			ServiceID:     s.EntityID(),
 			Date:          ymd.Time(),
 			ExceptionType: v,
 		})
@@ -252,6 +252,7 @@ func (s *Service) Simplify() (*Service, error) {
 
 	// Set weekdays based on dow counts
 	ret := NewService(Calendar{ServiceID: s.ServiceID, Generated: s.Generated, StartDate: inputServiceStart, EndDate: inputServiceEnd})
+	ret.ID = s.ID
 	for dow, total := range totalCount {
 		if total == 0 {
 			continue
