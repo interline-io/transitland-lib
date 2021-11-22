@@ -234,26 +234,11 @@ func (copier *Copier) isMarked(ent tl.Entity) bool {
 // A write error should be considered fatal and should stop any further write attempts.
 // Any errors and warnings are added to the Result.
 func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
-	efn := ent.Filename()
-	sid := ent.EntityID()
 	if err := copier.checkEntity(ent); err != nil {
 		return "", err, nil
 	}
-	// OK, Save
-	eid, err := copier.Writer.AddEntity(ent)
-	if err != nil {
-		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, sid, err, ent)
-		return "", err, err
-	}
-	copier.EntityMap.Set(efn, sid, eid)
-	copier.result.EntityCount[efn]++
-	// AfterWriters
-	for _, v := range copier.afterWriters {
-		if err := v.AfterWrite(eid, ent, copier.EntityMap); err != nil {
-			return eid, nil, err
-		}
-	}
-	return eid, nil, nil
+	eid, err := copier.addEntity(ent)
+	return eid, nil, err
 }
 
 // writeBatch handles writing a batch of entities, all of the same kind.
@@ -350,6 +335,26 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		}
 	}
 	return nil
+}
+
+func (copier *Copier) addEntity(ent tl.Entity) (string, error) {
+	// OK, Save
+	efn := ent.Filename()
+	sid := ent.EntityID()
+	eid, err := copier.Writer.AddEntity(ent)
+	if err != nil {
+		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, sid, err, ent)
+		return "", err
+	}
+	copier.EntityMap.Set(efn, sid, eid)
+	copier.result.EntityCount[efn]++
+	// AfterWriters
+	for _, v := range copier.afterWriters {
+		if err := v.AfterWrite(eid, ent, copier.EntityMap); err != nil {
+			return "", err
+		}
+	}
+	return eid, nil
 }
 
 //////////////////////////////////
@@ -675,30 +680,23 @@ func (copier *Copier) copyCalendars() error {
 	bt := []tl.Entity{}
 	var btErr error
 	for _, svc := range svcs {
+		if err := copier.checkEntity(svc); err != nil {
+			continue
+		}
 		// Need to get before ID might be updated
 		cds := svc.CalendarDates()
 		// Skip main Calendar entity if generated and not normalizing service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.EntityID())
-			for _, cd := range cds {
-				cd := cd
-				if bt, btErr = copier.checkBatch(bt, &cd); btErr != nil {
-					return btErr
-				}
-			}
-			continue
-		}
-		// Write out regular calendars
-		if _, err1, err2 := copier.CopyEntity(svc); err2 != nil {
-			return err2
-		} else if err1 != nil {
-			continue
+			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
 		} else {
-			for _, cd := range cds {
-				cd := cd
-				if bt, btErr = copier.checkBatch(bt, &cd); btErr != nil {
-					return btErr
-				}
+			if _, err := copier.addEntity(svc); err != nil {
+				continue
+			}
+		}
+		for _, cd := range cds {
+			cd := cd
+			if bt, btErr = copier.checkBatch(bt, &cd); btErr != nil {
+				return btErr
 			}
 		}
 		if svc.Generated {
