@@ -125,12 +125,7 @@ func GetString(ent tl.Entity, key string) (string, error) {
 func valGetString(valueField reflect.Value, k string) (string, error) {
 	value := ""
 	rfi := valueField.Interface()
-	// Special case WideTime for now...
 	if v, ok := rfi.(tl.WideTime); ok {
-		return v.String(), nil
-	}
-	// Otherwise try String() and then driver.Value
-	if v, ok := rfi.(canString); ok {
 		return v.String(), nil
 	}
 	if v, ok := rfi.(canValue); ok {
@@ -141,6 +136,8 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 		}
 	}
 	switch v := rfi.(type) {
+	case nil:
+		value = ""
 	case string:
 		value = v
 	case int:
@@ -168,10 +165,10 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 		} else {
 			value = v.Format("20060102")
 		}
-	case nil:
-		value = ""
 	case []byte:
 		value = string(v)
+	case canString:
+		value = v.String()
 	default:
 		return "", fmt.Errorf("can not convert field '%s' to string", k)
 	}
