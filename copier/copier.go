@@ -601,10 +601,11 @@ func (copier *Copier) copyShapes() error {
 	for ent := range copier.Reader.Shapes() {
 		sid := ent.EntityID()
 		if copier.SimplifyShapes > 0 {
+			simplifyValue := copier.SimplifyShapes / 1e6
 			pnts := ent.Geometry.FlatCoords()
 			// before := len(pnts)
 			stride := ent.Geometry.Stride()
-			ii := geomxy.SimplifyFlatCoords(pnts, copier.SimplifyShapes, stride)
+			ii := geomxy.SimplifyFlatCoords(pnts, simplifyValue, stride)
 			for i, j := range ii {
 				if i == j*stride {
 					continue
