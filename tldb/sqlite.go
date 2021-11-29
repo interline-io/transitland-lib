@@ -175,6 +175,9 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	}
 	table := getTableName(ents[0])
 	header, err := MapperCache.GetHeader(ents[0])
+	if err != nil {
+		return retids, nil
+	}
 	vals, err := MapperCache.GetInsert(ents[0], header)
 	if err != nil {
 		return retids, err
@@ -193,7 +196,6 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 		}
 		result, err := db.Exec(q, vals...)
 		if err != nil {
-			panic(err)
 			return retids, err
 		}
 		eid, err := result.LastInsertId()
