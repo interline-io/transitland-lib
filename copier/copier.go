@@ -254,7 +254,7 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 	// OK, Save
 	eids, err := copier.Writer.AddEntities(ents)
 	if err != nil {
-		log.Error("Critical error: failed to write %d entities for %s", len(ents), efn)
+		log.Error("Critical error: failed to write %d entities for %s: %s", len(ents), efn, err.Error())
 		return err
 	}
 	for i, eid := range eids {
@@ -343,7 +343,7 @@ func (copier *Copier) addEntity(ent tl.Entity) (string, error) {
 	sid := ent.EntityID()
 	eid, err := copier.Writer.AddEntity(ent)
 	if err != nil {
-		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, sid, err, ent)
+		log.Error("Critical error: failed to write %s '%s': %s -- entity dump: %#v", efn, sid, err.Error(), ent)
 		return "", err
 	}
 	copier.EntityMap.Set(efn, sid, eid)
@@ -820,7 +820,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				trip.ShapeID.Valid = true
 			} else {
 				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), trip.StopTimes); err != nil {
-					log.Error("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
+					log.Error("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err.Error())
 					trip.AddError(err)
 				} else {
 					// Set ShapeID

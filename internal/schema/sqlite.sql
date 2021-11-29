@@ -355,8 +355,8 @@ CREATE INDEX idx_gtfs_routes_feed_version_id ON "gtfs_routes"(feed_version_id);
 
 CREATE TABLE IF NOT EXISTS "gtfs_stop_times" (
   "trip_id" int NOT NULL, 
-  "arrival_time" int NOT NULL, 
-  "departure_time" int NOT NULL, 
+  "arrival_time" int, 
+  "departure_time" int,
   "stop_id" int NOT NULL, 
   "stop_sequence" integer NOT NULL, 
   "stop_headsign" varchar(255), 
