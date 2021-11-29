@@ -193,6 +193,7 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 		}
 		result, err := db.Exec(q, vals...)
 		if err != nil {
+			panic(err)
 			return retids, err
 		}
 		eid, err := result.LastInsertId()
