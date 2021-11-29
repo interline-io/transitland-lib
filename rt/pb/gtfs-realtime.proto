@@ -24,7 +24,6 @@
 
 syntax = "proto2";
 option java_package = "com.google.transit.realtime";
-option go_package = ".;pb";
 package transit_realtime;
 
 // The contents of a feed message.
@@ -104,6 +103,9 @@ message FeedEntity {
   optional TripUpdate trip_update = 3;
   optional VehiclePosition vehicle = 4;
   optional Alert alert = 5;
+
+  // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future.
+  optional Shape shape = 6;
 
   // The extensions namespace allows 3rd-party developers to extend the
   // GTFS Realtime Specification in order to add and evaluate new features and
@@ -211,7 +213,13 @@ message TripUpdate {
     optional StopTimeEvent arrival = 2;
     optional StopTimeEvent departure = 3;
 
-    // The relation between this StopTime and the static schedule.
+    // Expected occupancy after departure from the given stop.
+    // Should be provided only for future stops.
+    // In order to provide departure_occupancy_status without either arrival or
+    // departure StopTimeEvents, ScheduleRelationship should be set to NO_DATA. 
+    optional VehiclePosition.OccupancyStatus departure_occupancy_status = 7;
+    
+    // The relation between the StopTimeEvents and the static schedule.
     enum ScheduleRelationship {
       // The vehicle is proceeding in accordance with its static schedule of
       // stops, although not necessarily according to the times of the schedule.
@@ -225,10 +233,11 @@ message TripUpdate {
       // Arrival and departure are optional.
       SKIPPED = 1;
 
-      // No data is given for this stop. The main intention for this value is to
-      // give the predictions only for part of a trip, i.e., if the last update
-      // for a trip has a NO_DATA specifier, then StopTimes for the rest of the
-      // stops in the trip are considered to be unspecified as well.
+      // No StopTimeEvents are given for this stop.
+      // The main intention for this value is to give time predictions only for
+      // part of a trip, i.e., if the last update for a trip has a NO_DATA
+      // specifier, then StopTimeEvents for the rest of the stops in the trip
+      // are considered to be unspecified as well.
       // Neither arrival nor departure should be supplied.
       NO_DATA = 2;
 
@@ -304,7 +313,9 @@ message TripUpdate {
   // - stop_sequences 10,... have unknown delay.
   repeated StopTimeUpdate stop_time_update = 2;
 
-  // Moment at which the vehicle's real-time progress was measured. In POSIX
+  // The most recent moment at which the vehicle's real-time progress was measured
+  // to estimate StopTimes in the future. When StopTimes in the past are provided,
+  // arrival/departure times may be earlier than this value. In POSIX
   // time (i.e., the number of seconds since January 1st 1970 00:00:00 UTC).
   optional uint64 timestamp = 4;
 
@@ -328,7 +339,8 @@ message TripUpdate {
   // formally adopted in the future.
   optional int32 delay = 5;
 
-  // Defines updated properties of the trip
+  // Defines updated properties of the trip, such as a new shape_id when there is a detour. Or defines the
+  // trip_id, start_date, and start_time of a DUPLICATED trip. 
   // NOTE: This message is still experimental, and subject to change. It may be formally adopted in the future.
   message TripProperties {
     // Defines the identifier of a new trip that is a duplicate of an existing trip defined in (CSV) GTFS trips.txt
@@ -355,6 +367,15 @@ message TripUpdate {
     // populated and will be ignored by consumers.
     // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future.
     optional string start_time = 3;
+    // Specifies the shape of the vehicle travel path when the trip shape differs from the shape specified in
+    // (CSV) GTFS or to specify it in real-time when it's not provided by (CSV) GTFS, such as a vehicle that takes differing
+    // paths based on rider demand. See definition of trips.shape_id in (CSV) GTFS. If a shape is neither defined in (CSV) GTFS
+    // nor in real-time, the shape is considered unknown. This field can refer to a shape defined in the (CSV) GTFS in shapes.txt
+    // or a Shape in the (protobuf) real-time feed. The order of stops (stop sequences) for this trip must remain the same as
+    // (CSV) GTFS. Stops that are a part of the original trip but will no longer be made, such as when a detour occurs, should
+    // be marked as schedule_relationship=SKIPPED.
+    // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future. 
+    optional string shape_id = 4;
 
     // The extensions namespace allows 3rd-party developers to extend the
     // GTFS Realtime Specification in order to add and evaluate new features
@@ -875,6 +896,36 @@ message TranslatedString {
   }
   // At least one translation must be provided.
   repeated Translation translation = 1;
+
+  // The extensions namespace allows 3rd-party developers to extend the
+  // GTFS Realtime Specification in order to add and evaluate new features and
+  // modifications to the spec.
+  extensions 1000 to 1999;
+
+  // The following extension IDs are reserved for private use by any organization.
+  extensions 9000 to 9999;
+}
+
+
+// Describes the physical path that a vehicle takes when it's not part of the (CSV) GTFS,
+// such as for a detour. Shapes belong to Trips, and consist of a sequence of shape points.
+// Tracing the points in order provides the path of the vehicle.  Shapes do not need to intercept
+// the location of Stops exactly, but all Stops on a trip should lie within a small distance of
+// the shape for that trip, i.e. close to straight line segments connecting the shape points
+// NOTE: This message is still experimental, and subject to change. It may be formally adopted in the future.
+message Shape {
+  // Identifier of the shape. Must be different than any shape_id defined in the (CSV) GTFS.
+  // This field is required as per reference.md, but needs to be specified here optional because "Required is Forever"
+  // See https://developers.google.com/protocol-buffers/docs/proto#specifying_field_rules
+  // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future.
+  optional string shape_id = 1;
+  
+  // Encoded polyline representation of the shape. This polyline must contain at least two points.
+  // For more information about encoded polylines, see https://developers.google.com/maps/documentation/utilities/polylinealgorithm
+  // This field is required as per reference.md, but needs to be specified here optional because "Required is Forever"
+  // See https://developers.google.com/protocol-buffers/docs/proto#specifying_field_rules
+  // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future.
+  optional string encoded_polyline = 2;
 
   // The extensions namespace allows 3rd-party developers to extend the
   // GTFS Realtime Specification in order to add and evaluate new features and
