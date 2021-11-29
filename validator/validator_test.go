@@ -30,17 +30,28 @@ type testErrorHandler struct {
 }
 
 func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []error) {
-	errs = append(errs, warns...)
-	expecterrs := cr.expectSourceErrors[fn]
-	cr.expectErrorCount += len(expecterrs)
-	testutil.CheckErrors(expecterrs, errs, cr.t)
+	// errs = append(errs, warns...)
+	// expecterrs := cr.expectSourceErrors[fn]
+	// cr.expectErrorCount += len(expecterrs)
+	// testutil.CheckErrors(expecterrs, errs, cr.t)
 }
 
 func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
-	errs = append(errs, warns...)
+}
+
+type hasWarnings interface {
+	Warnings() []error
+}
+
+func (cr *testErrorHandler) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+	errs := ent.Errors()
+	if v, ok := ent.(hasWarnings); ok {
+		errs = append(errs, v.Warnings()...)
+	}
 	expecterrs := testutil.GetExpectErrors(ent)
 	cr.expectErrorCount += len(expecterrs)
 	testutil.CheckErrors(expecterrs, errs, cr.t)
+	return nil
 }
 
 //////////////
@@ -78,7 +89,10 @@ func TestValidator_Validate(t *testing.T) {
 			// At least one error must be specified per overlay feed, otherwise fail
 			opts := Options{}
 			opts.ErrorHandler = &handler
+			opts.AllowEntityErrors = true
+			opts.AllowReferenceErrors = true
 			v, _ := NewValidator(reader, opts)
+			v.AddExtension(&handler)
 			v.Validate()
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")

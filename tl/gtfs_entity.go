@@ -16,6 +16,7 @@ type Entity interface {
 	Filename() string
 	Errors() []error
 	AddError(error)
+	AddWarning(error)
 	SetExtra(string, string)
 	Extra() map[string]string
 	UpdateKeys(*EntityMap) error
@@ -56,6 +57,9 @@ func (ent *MinEntity) AddWarning(err error) {
 
 // Errors returns validation errors.
 func (ent *MinEntity) Errors() []error { return ent.loadErrors }
+
+// Errors returns validation errors.
+func (ent *MinEntity) Warnings() []error { return ent.loadWarnings }
 
 // Filename returns the filename for this entity.
 func (ent *MinEntity) Filename() string { return "" }
