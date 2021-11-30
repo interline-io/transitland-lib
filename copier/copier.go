@@ -142,13 +142,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 		copier.JourneyPatternKey = journeyPatternKey
 	}
 
-	// Default extensions
-	if copier.UseBasicRouteTypes {
-		copier.AddExtension(&BasicRouteTypeFilter{})
-	}
-
 	// Default set of validators
-	// copier.AddValidator(&rules.EntityErrorCheck{}, 0)
 	copier.AddValidator(&rules.EntityDuplicateCheck{}, 0)
 	copier.AddValidator(&rules.ValidFarezoneCheck{}, 0)
 	copier.AddValidator(&rules.AgencyIDConditionallyRequiredCheck{}, 0)
@@ -178,6 +172,11 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 		copier.AddValidator(&rules.NullIslandCheck{}, 1)
 		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
 		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
+	}
+
+	// Default extensions
+	if copier.UseBasicRouteTypes {
+		copier.AddExtension(&BasicRouteTypeFilter{})
 	}
 
 	// Add extensions

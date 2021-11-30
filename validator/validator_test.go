@@ -126,6 +126,7 @@ func TestValidator_BestPractices(t *testing.T) {
 			// For every overlay feed, check that every error is expected
 			// At least one error must be specified per overlay feed, otherwise fail
 			opts := Options{}
+			opts.ErrorHandler = &handler
 			opts.BestPractices = true
 			v, _ := NewValidator(reader, opts)
 			v.AddExtension(&handler)
