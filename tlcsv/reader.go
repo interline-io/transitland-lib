@@ -248,7 +248,7 @@ func (reader *Reader) Shapes() chan tl.Shape {
 
 // shapesByShapeID returns a map with grouped Shapes.
 func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
-	chunks := s2D{}
+	var chunks s2D
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
 	if len(shapeIDs) == 0 {

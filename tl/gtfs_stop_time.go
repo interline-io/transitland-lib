@@ -83,6 +83,11 @@ func (ent *StopTime) Errors() []error {
 	return errs
 }
 
+// Warnings for this Entity.
+func (ent *StopTime) Warnings() []error {
+	return ent.loadWarnings
+}
+
 // Filename stop_times.txt
 func (ent *StopTime) Filename() string {
 	return "stop_times.txt"

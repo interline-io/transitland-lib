@@ -87,6 +87,8 @@ type Options struct {
 	JourneyPatternKey func(*tl.Trip) string
 	// Named extensions
 	Extensions []string
+	// Extension groups
+	BestPractices bool
 }
 
 // Copier copies from Reader to Writer
@@ -140,8 +142,13 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 		copier.JourneyPatternKey = journeyPatternKey
 	}
 
+	// Default extensions
+	if copier.UseBasicRouteTypes {
+		copier.AddExtension(&BasicRouteTypeFilter{})
+	}
+
 	// Default set of validators
-	copier.AddValidator(&rules.EntityErrorCheck{}, 0)
+	// copier.AddValidator(&rules.EntityErrorCheck{}, 0)
 	copier.AddValidator(&rules.EntityDuplicateCheck{}, 0)
 	copier.AddValidator(&rules.ValidFarezoneCheck{}, 0)
 	copier.AddValidator(&rules.AgencyIDConditionallyRequiredCheck{}, 0)
@@ -149,9 +156,28 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
 	copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
 
-	// Default extensions
-	if copier.UseBasicRouteTypes {
-		copier.AddExtension(&BasicRouteTypeFilter{})
+	// Best practices extension
+	if opts.BestPractices {
+		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
+		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
+		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
+		copier.AddValidator(&rules.DuplicateRouteNameCheck{}, 1)
+		copier.AddValidator(&rules.DuplicateFareRuleCheck{}, 1)
+		copier.AddValidator(&rules.FrequencyOverlapCheck{}, 1)
+		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
+		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
+		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
+		copier.AddValidator(&rules.InvalidTimezoneCheck{}, 1)
+		copier.AddValidator(&rules.AgencyIDRecommendedCheck{}, 1)
+		copier.AddValidator(&rules.DescriptionEqualsName{}, 1)
+		copier.AddValidator(&rules.RouteExtendedTypesCheck{}, 1)
+		copier.AddValidator(&rules.InsufficientColorContrastCheck{}, 1)
+		copier.AddValidator(&rules.RouteShortNameTooLongCheck{}, 1)
+		copier.AddValidator(&rules.ShortServiceCheck{}, 1)
+		copier.AddValidator(&rules.ServiceAllDaysEmptyCheck{}, 1)
+		copier.AddValidator(&rules.NullIslandCheck{}, 1)
+		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
+		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
 	}
 
 	// Add extensions
@@ -304,37 +330,36 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		}
 	}
 	// Run Entity Validators
-	var errs []error
-	var warns []error
 	for _, v := range copier.errorValidators {
 		for _, err := range v.Validate(ent) {
-			errs = append(errs, err)
 			ent.AddError(err)
 		}
 	}
 	for _, v := range copier.warningValidators {
 		for _, err := range v.Validate(ent) {
-			warns = append(warns, err)
 			ent.AddWarning(err)
 		}
 	}
+	// Perform entity level validation; includes any previous errors
+	errs := ent.Errors()
+	warns := ent.Warnings()
+	copier.ErrorHandler.HandleEntityErrors(ent, errs, warns)
+	if len(errs) > 0 && !copier.AllowEntityErrors {
+		copier.result.SkipEntityErrorCount[efn]++
+		return errs[0]
+	}
+
 	// UpdateKeys is handled separately from other validators.
 	// It is more like a filter than an error, since it mutates entities.
 	referr := ent.UpdateKeys(copier.EntityMap)
 	if referr != nil {
 		ent.AddError(referr)
-		errs = append(errs, referr)
 	}
-	// Error handler
-	copier.ErrorHandler.HandleEntityErrors(ent, errs, warns)
 	if referr != nil && !copier.AllowReferenceErrors {
 		copier.result.SkipEntityReferenceCount[efn]++
 		return referr
 	}
-	if len(errs) > 0 && !copier.AllowEntityErrors {
-		copier.result.SkipEntityErrorCount[efn]++
-		return errs[0]
-	}
+
 	// Handle after validators
 	for _, v := range copier.afterValidators {
 		if err := v.AfterValidator(ent, copier.EntityMap); err != nil {
@@ -440,39 +465,29 @@ func (copier *Copier) copyLevels() error {
 }
 
 func (copier *Copier) copyStops() error {
-	// Copy fn
-	copyStop := func(ent tl.Stop) error {
-		sid := ent.EntityID()
-		copier.geomCache.AddStop(sid, ent)
-		var err error
-		if _, _, err = copier.CopyEntity(&ent); err != nil {
-			return err
-		}
-		return nil
-	}
-
 	// First pass for stations
-	for e := range copier.Reader.Stops() {
-		if e.LocationType == 1 {
-			if err := copyStop(e); err != nil {
+	for ent := range copier.Reader.Stops() {
+		if ent.LocationType == 1 {
+			copier.geomCache.AddStop(ent.EntityID(), ent)
+			if _, _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
 		}
 	}
-
 	// Second pass for platforms, exits, and generic nodes
-	for e := range copier.Reader.Stops() {
-		if e.LocationType == 0 || e.LocationType == 2 || e.LocationType == 3 {
-			if err := copyStop(e); err != nil {
+	for ent := range copier.Reader.Stops() {
+		if ent.LocationType == 0 || ent.LocationType == 2 || ent.LocationType == 3 {
+			copier.geomCache.AddStop(ent.EntityID(), ent)
+			if _, _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
 		}
 	}
-
 	// Third pass for boarding areas
-	for e := range copier.Reader.Stops() {
-		if e.LocationType == 4 {
-			if err := copyStop(e); err != nil {
+	for ent := range copier.Reader.Stops() {
+		if ent.LocationType == 4 {
+			copier.geomCache.AddStop(ent.EntityID(), ent)
+			if _, _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
 		}

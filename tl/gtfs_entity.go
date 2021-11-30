@@ -15,6 +15,7 @@ type Entity interface {
 	EntityID() string
 	Filename() string
 	Errors() []error
+	Warnings() []error
 	AddError(error)
 	AddWarning(error)
 	SetExtra(string, string)
@@ -52,7 +53,7 @@ func (ent *MinEntity) AddError(err error) {
 
 // AddWarning .
 func (ent *MinEntity) AddWarning(err error) {
-	ent.loadWarnings = append(ent.loadErrors, err)
+	ent.loadWarnings = append(ent.loadWarnings, err)
 }
 
 // Errors returns validation errors.
