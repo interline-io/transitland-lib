@@ -817,6 +817,9 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			return err
 		}
 	}
+
+	copier.logCount(&tl.Trip{})
+	copier.logCount(&tl.StopTime{})
 	return nil
 }
 
