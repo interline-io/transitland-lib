@@ -14,6 +14,11 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+type ICopier interface {
+	CopyEntity(tl.Entity) (string, error, error)
+	ErrorHandler
+}
+
 // Prepare is called before general copying begins.
 type Prepare interface {
 	Prepare(tl.Reader, *tl.EntityMap) error
@@ -42,6 +47,10 @@ type AfterWrite interface {
 // Extension is run after normal copying has completed.
 type Extension interface {
 	Copy(*Copier) error
+}
+
+type AfterCopy interface {
+	AfterCopy(tl.Writer, *tl.EntityMap, ErrorHandler) error
 }
 
 // ErrorHandler is called on each source file and entity; errors can be nil

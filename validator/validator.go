@@ -93,6 +93,9 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 		copier.AddValidator(&rules.NullIslandCheck{}, 1)
 		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
 		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
+		////
+		copier.AddValidator(&rules.RouteNamesPrefixCheck{}, 1)
+		copier.AddValidator(&rules.RouteNamesCharactersCheck{}, 1)
 	}
 	rtv := rt.NewValidator()
 	if len(options.ValidateRealtimeMessages) > 0 {
