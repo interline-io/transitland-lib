@@ -55,6 +55,9 @@ func centroid(points []point) point {
 }
 
 func pointsGeohash(points []point) string {
+	if len(points) == 0 {
+		return ""
+	}
 	c := centroid(points)
 	g := geohash.Encode(c.lat, c.lon)
 	gs := []string{}

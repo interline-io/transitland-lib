@@ -2,7 +2,6 @@ package builders
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
@@ -10,8 +9,24 @@ import (
 	"github.com/mmcloughlin/geohash"
 )
 
+// id              | bigint            |           | not null | nextval('agency_places_id_seq'::regclass)
+// feed_version_id | bigint            |           | not null |
+// agency_id       | bigint            |           | not null |
+// count           | integer           |           | not null |
+// rank            | double precision  |           | not null |
+// name            | character varying |           |          |
+// adm1name        | character varying |           |          |
+// adm0name        | character varying |           |          |
+// best_match      | boolean           |           |          |
+// best_match_type | integer           |           |          |
+
 type AgencyPlace struct {
 	AgencyID string
+	Name     tl.OString
+	Adm1name tl.OString
+	Adm0name tl.OString
+	Count    int
+	Rank     float64
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -63,6 +78,18 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Ent
 	return nil
 }
 
+var agencyPlaceQuery = `
+select 
+	name, 
+	adm0name, 
+	adm1name, 
+	ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance 
+from ne_10m_populated_places ne 
+where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, 100000) 
+order by distance asc
+limit 1
+`
+
 func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	// get places for each point
 	ghPoints := map[string][]string{}
@@ -71,12 +98,12 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	}
 	dbWriter, ok := copier.Writer.(*tldb.Writer)
 	if !ok {
-		fmt.Println("writer is not dbwriter")
+		// fmt.Println("writer is not dbwriter")
 		return nil
 	}
 	db := dbWriter.Adapter
 	if _, ok := db.(*tldb.PostgresAdapter); !ok {
-		fmt.Println("only postgres is supported")
+		// fmt.Println("only postgres is supported")
 		return nil
 	}
 
@@ -85,34 +112,21 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 		Adm0name tl.OString
 		Adm1name tl.OString
 	}
-	query := `
-	select 
-		name, 
-		adm0name, 
-		adm1name, 
-		ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance 
-	from ne_10m_populated_places ne 
-	where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, 100000) 
-	order by distance asc
-	limit 1
-	`
 	pointPlaces := map[string]foundPlace{}
 	for ghPoint := range ghPoints {
-		fmt.Println("searching for:", ghPoint)
 		gLat, gLon := geohash.Decode(ghPoint)
 		r := []foundPlace{}
-		if err := db.Select(&r, query, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
+		if err := db.Select(&r, agencyPlaceQuery, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
 			// ok
 		} else if err != nil {
 			return nil
 		}
-		fmt.Println("found:", r)
 		if len(r) > 0 {
 			pointPlaces[ghPoint] = r[0]
 		}
 	}
 	for aid, agencyPoints := range pp.agencyStops {
-		fmt.Println("agency stops:", agencyPoints)
+		// fmt.Println("agency stops:", agencyPoints)
 		placeWeights := map[foundPlace]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
@@ -121,108 +135,26 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				agencyTotalWeight += count
 			}
 		}
-		fmt.Println("aid:", aid, "total weight:", agencyTotalWeight)
-		selectedPlaces := []foundPlace{}
+		// fmt.Println("aid:", aid, "total weight:", agencyTotalWeight)
 		for k, v := range placeWeights {
 			score := float64(v) / float64(agencyTotalWeight)
 			if score > 0.05 {
-				fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
-				selectedPlaces = append(selectedPlaces, k)
+				// fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
+				ap := AgencyPlace{}
+				ap.AgencyID = aid
+				ap.Name = k.Name
+				ap.Adm0name = k.Adm0name
+				ap.Adm1name = k.Adm1name
+				ap.Count = v
+				ap.Rank = score
+				if _, err := copier.Writer.AddEntity(&ap); err != nil {
+					return err
+				}
+
 			}
 		}
 	}
-
 	////////
 
 	return nil
-
-	// 	CREATE OR REPLACE FUNCTION tl_generate_agency_places(fvid bigint) RETURNS integer
-	//     LANGUAGE plpgsql
-	//     AS $_$
-	// DECLARE
-	//     fvid ALIAS for $1;
-	// BEGIN
-	// DELETE FROM tl_agency_places WHERE feed_version_id = fvid;
-	// INSERT INTO tl_agency_places(feed_version_id, agency_id, count, rank, name, adm1name, adm0name)
-	// WITH
-	// agency_stops AS (
-	//     SELECT agency_id,stop_id FROM tl_route_stops WHERE feed_version_id = fvid GROUP BY (agency_id,stop_id)
-	// ),
-	// agency_totals AS (
-	//     SELECT agency_id,count(*)::numeric FROM agency_stops GROUP BY agency_id
-	// ),
-	// ne_places AS (
-	//     SELECT
-	//         gtfs_stops.id AS stop_id,
-	//         a.ogc_fid,
-	//         count(*) AS count
-	//     FROM gtfs_stops
-	//     CROSS JOIN LATERAL (
-	//         SELECT
-	//             ogc_fid AS ogc_fid,
-	//             ST_Distance(gtfs_stops.geometry, ne.geometry) AS distance
-	//         FROM ne_10m_populated_places ne
-	//         ORDER BY gtfs_stops.geometry <-> ne.geometry ASC
-	//         LIMIT 1
-	//     ) AS a
-	//     WHERE feed_version_id = fvid and a.distance < 100000
-	//     GROUP BY (gtfs_stops.id,a.ogc_fid)
-	// ),
-	// ne_admins AS (
-	//     select
-	//         gtfs_stops.id AS stop_id,
-	//         ne.ogc_fid
-	//     FROM gtfs_stops
-	//     INNER JOIN ne_10m_admin_1_states_provinces ne ON st_intersects(ne.geometry, gtfs_stops.geometry)
-	//     WHERE feed_version_id = fvid
-	// ),
-	// agency_places_group AS (
-	//     SELECT
-	//         agency_stops.agency_id,
-	//         ne_places.ogc_fid,
-	//         count(*)
-	//     FROM agency_stops
-	//     INNER JOIN ne_places ON ne_places.stop_id = agency_stops.stop_id
-	//     GROUP BY (agency_stops.agency_id,ne_places.ogc_fid)
-	// ),
-	// agency_places AS (
-	//     SELECT
-	//         agency_places_group.agency_id,
-	//         agency_places_group.count,
-	//         agency_places_group.count / agency_totals.count AS rank,
-	//         ne.name,
-	//         ne.adm1name,
-	//         ne.adm0name
-	//     FROM agency_places_group
-	//     INNER JOIN ne_10m_populated_places ne ON ne.ogc_fid = agency_places_group.ogc_fid
-	//     INNER JOIN agency_totals ON agency_totals.agency_id = agency_places_group.agency_id
-	// ),
-	// agency_admins_group AS (
-	//     SELECT
-	//         agency_stops.agency_id,
-	//         ne_admins.ogc_fid,
-	//         count(*)
-	//     FROM agency_stops
-	//     INNER JOIN ne_admins ON ne_admins.stop_id = agency_stops.stop_id
-	//     GROUP BY (agency_stops.agency_id,ne_admins.ogc_fid)
-	// ),
-	// agency_admins AS (
-	//     select
-	//         agency_admins_group.agency_id,
-	//         agency_admins_group.count,
-	//         agency_admins_group.count / agency_totals.count AS rank,
-	//         null,
-	//         ne.name,
-	//         ne.admin
-	//     FROM agency_admins_group
-	//     INNER JOIN ne_10m_admin_1_states_provinces ne ON ne.ogc_fid = agency_admins_group.ogc_fid
-	//     INNER JOIN agency_totals ON agency_totals.agency_id = agency_admins_group.agency_id
-	// ),
-	// result AS (
-	//     SELECT * FROM agency_places UNION SELECT * FROM agency_admins
-	// )
-	// SELECT fvid AS feed_version_id, result.* FROM result;
-	// RETURN 0;
-	// END;
-	// $_$;
 }

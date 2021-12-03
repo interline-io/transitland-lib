@@ -112,13 +112,14 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 	// generate stop onestop id's
 	for stopid, sg := range pp.stops {
-		gh := geohash.EncodeWithPrecision(sg.lat, sg.lon, 10)
-		ent := StopOnestopID{
-			StopID:    stopid,
-			OnestopID: fmt.Sprintf("s-%s-%s", gh, filterName(sg.name)),
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			return err
+		if gh := geohash.EncodeWithPrecision(sg.lat, sg.lon, 10); len(gh) > 0 {
+			ent := StopOnestopID{
+				StopID:    stopid,
+				OnestopID: fmt.Sprintf("s-%s-%s", gh, filterName(sg.name)),
+			}
+			if _, err := copier.Writer.AddEntity(&ent); err != nil {
+				return err
+			}
 		}
 	}
 	// generate route onstop id's
@@ -127,13 +128,14 @@ func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 		for _, sg := range rsg.stopGeoms {
 			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
 		}
-		gh := pointsGeohash(pts)
-		ent := RouteOnestopID{
-			RouteID:   rid,
-			OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			return err
+		if gh := pointsGeohash(pts); len(gh) > 0 {
+			ent := RouteOnestopID{
+				RouteID:   rid,
+				OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
+			}
+			if _, err := copier.Writer.AddEntity(&ent); err != nil {
+				return err
+			}
 		}
 	}
 	// group stops by agency
@@ -158,13 +160,14 @@ func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 		for _, sg := range sgs {
 			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
 		}
-		gh := pointsGeohash(pts)
-		ent := AgencyOnestopID{
-			AgencyID:  aid,
-			OnestopID: fmt.Sprintf("o-%s-%s", gh, filterName(name)),
-		}
-		if _, err := copier.Writer.AddEntity(&ent); err != nil {
-			return err
+		if gh := pointsGeohash(pts); len(gh) > 0 {
+			ent := AgencyOnestopID{
+				AgencyID:  aid,
+				OnestopID: fmt.Sprintf("o-%s-%s", gh, filterName(name)),
+			}
+			if _, err := copier.Writer.AddEntity(&ent); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
