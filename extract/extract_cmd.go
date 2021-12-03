@@ -7,7 +7,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/ext/builders"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	_ "github.com/interline-io/transitland-lib/ext/redate"
 	"github.com/interline-io/transitland-lib/internal/cli"
