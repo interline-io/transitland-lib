@@ -2,7 +2,6 @@ package builders
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
@@ -137,7 +136,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 		}
 	}
 	for aid, agencyPoints := range pp.agencyStops {
-		fmt.Println("agency stops:", agencyPoints)
+		// fmt.Println("agency stops:", agencyPoints)
 		placeWeights := map[foundPlace]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
@@ -156,11 +155,11 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				}
 			}
 		}
-		fmt.Println("aid:", aid, "total weight:", agencyTotalWeight)
+		// fmt.Println("aid:", aid, "total weight:", agencyTotalWeight)
 		for k, v := range placeWeights {
 			score := float64(v) / float64(agencyTotalWeight)
 			if score > 0.05 {
-				fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
+				// fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
 				ap := AgencyPlace{}
 				ap.AgencyID = aid
 				ap.Name = k.Name
