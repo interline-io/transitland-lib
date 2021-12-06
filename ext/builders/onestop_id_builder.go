@@ -128,7 +128,7 @@ func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 		for _, sg := range rsg.stopGeoms {
 			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
 		}
-		if gh := pointsGeohash(pts); len(gh) > 0 {
+		if gh := pointsGeohash(pts, 1, 6); len(gh) > 0 {
 			ent := RouteOnestopID{
 				RouteID:   rid,
 				OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
@@ -160,7 +160,7 @@ func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 		for _, sg := range sgs {
 			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
 		}
-		if gh := pointsGeohash(pts); len(gh) > 0 {
+		if gh := pointsGeohash(pts, 1, 6); len(gh) > 0 {
 			ent := AgencyOnestopID{
 				AgencyID:  aid,
 				OnestopID: fmt.Sprintf("o-%s-%s", gh, filterName(name)),

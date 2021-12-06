@@ -30,15 +30,12 @@ type routeStopGeoms struct {
 
 // OnestopID support functions
 
-var nameTilde = "[-:&@/]"
-var nameFilter = "[^[:alnum:]~><]"
-var geohashFilter = "[^0123456789bcdefghjkmnpqrstuvwxyz]"
-
 // filterName .
+var nameTilde = regexp.MustCompile("[-:&@/]")
+var nameFilter = regexp.MustCompile(`[^\pL0-9~><]`)
+
 func filterName(name string) string {
-	re1 := regexp.MustCompile(nameTilde)
-	re2 := regexp.MustCompile(nameFilter)
-	return strings.ToLower(re2.ReplaceAllString(re1.ReplaceAllString(name, "~"), ""))
+	return strings.ToLower(nameFilter.ReplaceAllString(nameTilde.ReplaceAllString(name, "~"), ""))
 }
 
 func centroid(points []point) point {
@@ -54,32 +51,39 @@ func centroid(points []point) point {
 	}
 }
 
-func pointsGeohash(points []point) string {
+func pointsGeohash(points []point, minc uint, maxc uint) string {
 	if len(points) == 0 {
 		return ""
 	}
+	if minc > maxc {
+		minc = maxc
+	}
 	c := centroid(points)
-	g := geohash.Encode(c.lat, c.lon)
+	g := geohash.EncodeWithPrecision(c.lat, c.lon, maxc)
+	// fmt.Println("centroid:", c, "g:", g, "minc:", minc, "maxc:", maxc)
 	gs := []string{}
 	for _, p := range points {
-		gs = append(gs, geohash.Encode(p.lat, p.lon))
+		gs = append(gs, geohash.EncodeWithPrecision(p.lat, p.lon, maxc))
 	}
-	for i := 1; i < len(g)-1; i++ {
-		r := g[0:i]
-		m := map[string]int{}
-		for _, n := range geohash.Neighbors(g[0:i]) {
-			m[n]++
+	// fmt.Println("points:", gs)
+	for i := maxc; i >= minc; i-- {
+		check := g[0:i]
+		m := map[string]bool{}
+		for _, n := range geohash.Neighbors(check) {
+			m[n] = true
 		}
-		m[r]++
-		b := false
+		m[check] = true
+		// fmt.Println(i, "checking:", check, "neighbors:", m)
+		allOk := true
 		for _, j := range gs {
 			if _, ok := m[j[0:i]]; !ok {
-				b = true
+				allOk = false
 			}
 		}
-		if b {
-			return g[0 : i-1]
+		if allOk {
+			// fmt.Println("ok:", check)
+			return check
 		}
 	}
-	return g
+	return ""
 }

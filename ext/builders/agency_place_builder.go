@@ -2,23 +2,13 @@ package builders
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/mmcloughlin/geohash"
 )
-
-// id              | bigint            |           | not null | nextval('agency_places_id_seq'::regclass)
-// feed_version_id | bigint            |           | not null |
-// agency_id       | bigint            |           | not null |
-// count           | integer           |           | not null |
-// rank            | double precision  |           | not null |
-// name            | character varying |           |          |
-// adm1name        | character varying |           |          |
-// adm0name        | character varying |           |          |
-// best_match      | boolean           |           |          |
-// best_match_type | integer           |           |          |
 
 type AgencyPlace struct {
 	AgencyID string
@@ -85,9 +75,17 @@ select
 	adm1name, 
 	ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance 
 from ne_10m_populated_places ne 
-where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, 100000) 
+where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, 40000) 
 order by distance asc
 limit 1
+`
+
+var agencyAdminQuery = `
+select 
+	name adm1name,
+	ne.admin adm0name
+from ne_10m_admin_1_states_provinces ne
+where st_intersects(ne.geometry, ST_MakePoint(?, ?));
 `
 
 func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
@@ -106,13 +104,14 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 		// fmt.Println("only postgres is supported")
 		return nil
 	}
-
+	// For each geohash, check nearby populated places and inside admin boundaries
 	type foundPlace struct {
 		Name     tl.OString
-		Adm0name tl.OString
 		Adm1name tl.OString
+		Adm0name tl.OString
 	}
 	pointPlaces := map[string]foundPlace{}
+	pointAdmins := map[string]foundPlace{}
 	for ghPoint := range ghPoints {
 		gLat, gLon := geohash.Decode(ghPoint)
 		r := []foundPlace{}
@@ -125,21 +124,43 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 			pointPlaces[ghPoint] = r[0]
 		}
 	}
+	for ghPoint := range ghPoints {
+		gLat, gLon := geohash.Decode(ghPoint)
+		r := []foundPlace{}
+		if err := db.Select(&r, agencyAdminQuery, gLon, gLat); err == sql.ErrNoRows {
+			// ok
+		} else if err != nil {
+			return nil
+		}
+		if len(r) > 0 {
+			pointAdmins[ghPoint] = r[0]
+		}
+	}
 	for aid, agencyPoints := range pp.agencyStops {
-		// fmt.Println("agency stops:", agencyPoints)
+		fmt.Println("agency stops:", agencyPoints)
 		placeWeights := map[foundPlace]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
-			if place, ok := pointPlaces[ghPoint]; ok {
+			agencyTotalWeight += count
+			if place, ok := pointAdmins[ghPoint]; ok {
 				placeWeights[place] += count
-				agencyTotalWeight += count
+			}
+			if place, ok := pointPlaces[ghPoint]; ok {
+				// include if we have a match for state/country, or no state/country matches
+				checkPlace := foundPlace{
+					Adm1name: place.Adm1name,
+					Adm0name: place.Adm0name,
+				}
+				if _, ok2 := placeWeights[checkPlace]; ok2 || len(pointAdmins) == 0 {
+					placeWeights[place] += count
+				}
 			}
 		}
-		// fmt.Println("aid:", aid, "total weight:", agencyTotalWeight)
+		fmt.Println("aid:", aid, "total weight:", agencyTotalWeight)
 		for k, v := range placeWeights {
 			score := float64(v) / float64(agencyTotalWeight)
 			if score > 0.05 {
-				// fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
+				fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
 				ap := AgencyPlace{}
 				ap.AgencyID = aid
 				ap.Name = k.Name
