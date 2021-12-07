@@ -339,7 +339,7 @@ See [transitland-server](https://github.com/interline-io/transitland-server) doc
 
 [Hasura](https://hasura.io/) is a web service that can provide an "instant" GraphQL API based on a Postgres database and its schema. We combine Hasura with `transitland-lib` for projects that involve creating new or complex queries (since Hasura can be more flexible than the queries provided by `transitland server`) and projects that involve an API with full read and write access (for example, editing GTFS data, which is also not provided by `transitland server`). Note that Hasura's automatically generated database queries are not guaranteed to be efficient (on the other hand, `transitland server` is tuned to provide better performance).
 
-To use Hasura with `transitland-lib` you can either import feeds into a new Postgres database (using the `transitland dmfr` command) or create a blank Postgres database (using the schema in `internal/schema/postgres.pgsql`). Configure Hasura to recognize all the tables and the foreign key relationships between them.
+To use Hasura with `transitland-lib` you can either import feeds into a new Postgres database (using the `transitland dmfr` command) or create a blank Postgres database (using the schema in `internal/schema/postgres/migrations`). Configure Hasura to recognize all the tables and the foreign key relationships between them.
 
 ## Included Readers and Writers
 
