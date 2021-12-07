@@ -90,8 +90,6 @@ type Options struct {
 	JourneyPatternKey func(*tl.Trip) string
 	// Named extensions
 	Extensions []string
-	// Extension groups
-	BestPractices bool
 }
 
 // Copier copies from Reader to Writer
@@ -152,30 +150,6 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	copier.AddValidator(&rules.StopTimeSequenceCheck{}, 0)
 	copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
 	copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
-
-	// Best practices extension
-	if opts.BestPractices {
-		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
-		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
-		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
-		copier.AddValidator(&rules.DuplicateRouteNameCheck{}, 1)
-		copier.AddValidator(&rules.DuplicateFareRuleCheck{}, 1)
-		copier.AddValidator(&rules.FrequencyOverlapCheck{}, 1)
-		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
-		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
-		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
-		copier.AddValidator(&rules.InvalidTimezoneCheck{}, 1)
-		copier.AddValidator(&rules.AgencyIDRecommendedCheck{}, 1)
-		copier.AddValidator(&rules.DescriptionEqualsName{}, 1)
-		copier.AddValidator(&rules.RouteExtendedTypesCheck{}, 1)
-		copier.AddValidator(&rules.InsufficientColorContrastCheck{}, 1)
-		copier.AddValidator(&rules.RouteShortNameTooLongCheck{}, 1)
-		copier.AddValidator(&rules.ShortServiceCheck{}, 1)
-		copier.AddValidator(&rules.ServiceAllDaysEmptyCheck{}, 1)
-		copier.AddValidator(&rules.NullIslandCheck{}, 1)
-		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
-		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
-	}
 
 	// Default extensions
 	if copier.UseBasicRouteTypes {
@@ -728,38 +702,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	stopPatternShapeIDs := map[int]string{}
 	journeyPatterns := map[string]patInfo{}
 	tripOffsets := map[string]int{} // used for deduplicating StopTimes
-	batchCount := 0
-	tripbt := []tl.Entity{}
-	stbt := []tl.StopTime{}
-	writeBatch := func() error {
-		// Write Trips
-		if err := copier.writeBatch(tripbt); err != nil {
-			return err
-		}
-		log.Info("Saved %d trips", len(tripbt))
-		// Perform StopTime validation
-		stbt2 := []tl.Entity{}
-		for i := range stbt {
-			if err := copier.checkEntity(&stbt[i]); err == nil {
-				// check if we're deduping
-				if _, ok := tripOffsets[stbt[i].TripID]; copier.DeduplicateJourneyPatterns && ok {
-				} else {
-					stbt2 = append(stbt2, &stbt[i])
-					if stbt[i].Interpolated.Int > 0 {
-						copier.result.InterpolatedStopTimeCount++
-					}
-				}
-			}
-		}
-		if err := copier.writeBatch(stbt2); err != nil {
-			return err
-		}
-		log.Info("Saved %d stop_times", len(stbt2))
-		tripbt = nil
-		stbt = nil
-		batchCount = 0
-		return nil
-	}
+	stbt := []tl.Entity{}
 
 	for sts := range copier.Reader.StopTimesByTripID() {
 		if len(sts) == 0 {

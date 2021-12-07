@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/rt"
+	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -31,6 +32,7 @@ var defaultMaxFileRows = map[string]int64{
 
 // Options defines options for the Validator.
 type Options struct {
+	BestPractices            bool
 	CheckFileLimits          bool
 	IncludeServiceLevels     bool
 	IncludeEntities          bool
@@ -70,6 +72,29 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	rtv := rt.NewValidator()
 	if len(options.ValidateRealtimeMessages) > 0 {
 		copier.AddValidator(rtv, 1)
+	}
+	// Best practices extension
+	if options.BestPractices {
+		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
+		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
+		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
+		copier.AddValidator(&rules.DuplicateRouteNameCheck{}, 1)
+		copier.AddValidator(&rules.DuplicateFareRuleCheck{}, 1)
+		copier.AddValidator(&rules.FrequencyOverlapCheck{}, 1)
+		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
+		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
+		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
+		copier.AddValidator(&rules.InvalidTimezoneCheck{}, 1)
+		copier.AddValidator(&rules.AgencyIDRecommendedCheck{}, 1)
+		copier.AddValidator(&rules.DescriptionEqualsName{}, 1)
+		copier.AddValidator(&rules.RouteExtendedTypesCheck{}, 1)
+		copier.AddValidator(&rules.InsufficientColorContrastCheck{}, 1)
+		copier.AddValidator(&rules.RouteShortNameTooLongCheck{}, 1)
+		copier.AddValidator(&rules.ShortServiceCheck{}, 1)
+		copier.AddValidator(&rules.ServiceAllDaysEmptyCheck{}, 1)
+		copier.AddValidator(&rules.NullIslandCheck{}, 1)
+		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
+		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
 	}
 	// OK
 	return &Validator{
