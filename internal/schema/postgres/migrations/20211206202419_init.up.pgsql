@@ -53,8 +53,8 @@ CREATE TABLE public.gtfs_stop_times (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -847,8 +847,8 @@ CREATE TABLE public.gtfs_stop_times_0 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -861,8 +861,8 @@ CREATE TABLE public.gtfs_stop_times_1 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -875,8 +875,8 @@ CREATE TABLE public.gtfs_stop_times_2 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -889,8 +889,8 @@ CREATE TABLE public.gtfs_stop_times_3 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -903,8 +903,8 @@ CREATE TABLE public.gtfs_stop_times_4 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -917,8 +917,8 @@ CREATE TABLE public.gtfs_stop_times_5 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -931,8 +931,8 @@ CREATE TABLE public.gtfs_stop_times_6 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -945,8 +945,8 @@ CREATE TABLE public.gtfs_stop_times_7 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -959,8 +959,8 @@ CREATE TABLE public.gtfs_stop_times_8 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -973,8 +973,8 @@ CREATE TABLE public.gtfs_stop_times_9 (
     feed_version_id bigint NOT NULL,
     trip_id bigint NOT NULL,
     stop_id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
+    arrival_time integer,
+    departure_time integer,
     stop_sequence integer NOT NULL,
     shape_dist_traveled double precision,
     pickup_type smallint,
@@ -983,30 +983,6 @@ CREATE TABLE public.gtfs_stop_times_9 (
     interpolated smallint,
     stop_headsign text
 );
-CREATE TABLE public.gtfs_stop_times_unpartitioned (
-    id bigint NOT NULL,
-    arrival_time integer NOT NULL,
-    departure_time integer NOT NULL,
-    stop_sequence integer NOT NULL,
-    stop_headsign character varying NOT NULL,
-    pickup_type integer NOT NULL,
-    drop_off_type integer NOT NULL,
-    shape_dist_traveled double precision NOT NULL,
-    timepoint integer NOT NULL,
-    interpolated integer DEFAULT 0 NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    feed_version_id bigint NOT NULL,
-    trip_id bigint NOT NULL,
-    stop_id bigint NOT NULL
-);
-CREATE SEQUENCE public.gtfs_stop_times_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-ALTER SEQUENCE public.gtfs_stop_times_id_seq OWNED BY public.gtfs_stop_times_unpartitioned.id;
 CREATE TABLE public.gtfs_stops (
     id bigint NOT NULL,
     stop_id character varying NOT NULL,
@@ -1250,7 +1226,8 @@ CREATE TABLE public.tl_route_headways (
     headway_seconds_night_count integer,
     headway_seconds_night_min integer,
     headway_seconds_night_mid integer,
-    headway_seconds_night_max integer
+    headway_seconds_night_max integer,
+    departures jsonb
 );
 CREATE SEQUENCE public.route_headways_id_seq
     START WITH 1
@@ -1384,11 +1361,12 @@ CREATE TABLE public.tl_feed_version_geometries (
 CREATE TABLE public.tl_route_geometries (
     route_id bigint NOT NULL,
     feed_version_id bigint NOT NULL,
-    shape_id bigint NOT NULL,
-    direction_id integer NOT NULL,
+    shape_id bigint,
+    direction_id integer,
     generated boolean NOT NULL,
-    geometry public.geography(LineString,4326) NOT NULL,
-    centroid public.geography(Point,4326) NOT NULL
+    geometry public.geography(LineString,4326),
+    centroid public.geography(Point,4326),
+    combined_geometry public.geometry(MultiLineString,4326)
 );
 CREATE TABLE public.tl_route_onestop_ids (
     id bigint NOT NULL,
@@ -1421,7 +1399,8 @@ CREATE TABLE public.tl_stop_external_references (
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     feed_version_id bigint NOT NULL,
     target_feed_onestop_id text NOT NULL,
-    target_stop_id text NOT NULL
+    target_stop_id text NOT NULL,
+    inactive boolean
 );
 CREATE SEQUENCE public.tl_stop_onestop_ids_id_seq
     START WITH 1
@@ -1477,7 +1456,6 @@ ALTER TABLE ONLY public.gtfs_levels ALTER COLUMN id SET DEFAULT nextval('public.
 ALTER TABLE ONLY public.gtfs_pathways ALTER COLUMN id SET DEFAULT nextval('public.gtfs_pathways_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_routes ALTER COLUMN id SET DEFAULT nextval('public.gtfs_routes_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_shapes ALTER COLUMN id SET DEFAULT nextval('public.gtfs_shapes_id_seq'::regclass);
-ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned ALTER COLUMN id SET DEFAULT nextval('public.gtfs_stop_times_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_stops ALTER COLUMN id SET DEFAULT nextval('public.gtfs_stops_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_transfers ALTER COLUMN id SET DEFAULT nextval('public.gtfs_transfers_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_trips ALTER COLUMN id SET DEFAULT nextval('public.gtfs_trips_id_seq'::regclass);
@@ -1592,8 +1570,6 @@ ALTER TABLE ONLY public.gtfs_stop_times_8
     ADD CONSTRAINT gtfs_stop_times_8_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
 ALTER TABLE ONLY public.gtfs_stop_times_9
     ADD CONSTRAINT gtfs_stop_times_9_pkey PRIMARY KEY (feed_version_id, trip_id, stop_sequence);
-ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned
-    ADD CONSTRAINT gtfs_stop_times_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_stops
     ADD CONSTRAINT gtfs_stops_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_transfers
@@ -1784,10 +1760,6 @@ CREATE INDEX index_gtfs_shapes_on_generated ON public.gtfs_shapes USING btree (g
 CREATE INDEX index_gtfs_shapes_on_geometry ON public.gtfs_shapes USING gist (geometry);
 CREATE INDEX index_gtfs_shapes_on_shape_id ON public.gtfs_shapes USING btree (shape_id);
 CREATE UNIQUE INDEX index_gtfs_shapes_unique ON public.gtfs_shapes USING btree (feed_version_id, shape_id);
-CREATE INDEX index_gtfs_stop_times_on_feed_version_id_trip_id_stop_id ON public.gtfs_stop_times_unpartitioned USING btree (feed_version_id, trip_id, stop_id);
-CREATE INDEX index_gtfs_stop_times_on_stop_id ON public.gtfs_stop_times_unpartitioned USING btree (stop_id);
-CREATE INDEX index_gtfs_stop_times_on_trip_id ON public.gtfs_stop_times_unpartitioned USING btree (trip_id);
-CREATE UNIQUE INDEX index_gtfs_stop_times_unique ON public.gtfs_stop_times_unpartitioned USING btree (feed_version_id, trip_id, stop_sequence);
 CREATE INDEX index_gtfs_stops_on_geometry ON public.gtfs_stops USING gist (geometry);
 CREATE INDEX index_gtfs_stops_on_location_type ON public.gtfs_stops USING btree (location_type);
 CREATE INDEX index_gtfs_stops_on_parent_station ON public.gtfs_stops USING btree (parent_station);
@@ -1839,7 +1811,7 @@ CREATE UNIQUE INDEX tl_census_values_geography_id_table_id_idx ON public.tl_cens
 CREATE INDEX tl_ext_gtfs_stops_feed_version_id_idx ON public.tl_ext_gtfs_stops USING btree (feed_version_id);
 CREATE INDEX tl_ext_gtfs_stops_target_feed_onestop_id_idx ON public.tl_ext_gtfs_stops USING btree (target_feed_onestop_id);
 CREATE INDEX tl_ext_gtfs_stops_target_stop_id_idx ON public.tl_ext_gtfs_stops USING btree (target_stop_id);
-CREATE UNIQUE INDEX tl_route_headways_route_dow_category_id_idx ON public.tl_route_headways USING btree (route_id, dow_category);
+CREATE INDEX tl_route_geometries_combined_geometry_idx ON public.tl_route_geometries USING gist (combined_geometry);
 CREATE INDEX tl_route_onestop_ids_feed_version_id_idx ON public.tl_route_onestop_ids USING btree (feed_version_id);
 CREATE INDEX tl_route_onestop_ids_onestop_id_idx ON public.tl_route_onestop_ids USING btree (onestop_id);
 CREATE UNIQUE INDEX tl_route_onestop_ids_route_id_idx ON public.tl_route_onestop_ids USING btree (route_id);
@@ -1971,12 +1943,8 @@ ALTER TABLE ONLY public.tl_route_stops
     ADD CONSTRAINT fk_rails_1dee96ee31 FOREIGN KEY (agency_id) REFERENCES public.gtfs_agencies(id);
 ALTER TABLE ONLY public.tl_route_stops
     ADD CONSTRAINT fk_rails_1f4cc828f8 FOREIGN KEY (route_id) REFERENCES public.gtfs_routes(id);
-ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned
-    ADD CONSTRAINT fk_rails_22a671077b FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.feed_version_gtfs_imports
     ADD CONSTRAINT fk_rails_2d141782c9 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
-ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned
-    ADD CONSTRAINT fk_rails_30ced0baa8 FOREIGN KEY (stop_id) REFERENCES public.gtfs_stops(id);
 ALTER TABLE ONLY public.gtfs_fare_rules
     ADD CONSTRAINT fk_rails_33e9869c97 FOREIGN KEY (route_id) REFERENCES public.gtfs_routes(id);
 ALTER TABLE ONLY public.gtfs_stops
@@ -2029,8 +1997,6 @@ ALTER TABLE ONLY public.gtfs_fare_attributes
     ADD CONSTRAINT fk_rails_b096f74e03 FOREIGN KEY (agency_id) REFERENCES public.gtfs_agencies(id);
 ALTER TABLE ONLY public.feed_versions
     ADD CONSTRAINT fk_rails_b5365c3cf3 FOREIGN KEY (feed_id) REFERENCES public.current_feeds(id);
-ALTER TABLE ONLY public.gtfs_stop_times_unpartitioned
-    ADD CONSTRAINT fk_rails_b5a47190ac FOREIGN KEY (trip_id) REFERENCES public.gtfs_trips(id);
 ALTER TABLE ONLY public.tl_route_geometries
     ADD CONSTRAINT fk_rails_b9fc0ae4ad FOREIGN KEY (shape_id) REFERENCES public.gtfs_shapes(id);
 ALTER TABLE ONLY public.gtfs_fare_rules
