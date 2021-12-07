@@ -12,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	geomxy "github.com/twpayne/go-geom/xy"
 )
 
 // Prepare is called before general copying begins.
@@ -34,7 +35,7 @@ type AfterValidator interface {
 	AfterValidator(tl.Entity, *tl.EntityMap) error
 }
 
-// AfterWrite is called for each fully validated entity before writing.
+// AfterWrite is called for after writing each entity.
 type AfterWrite interface {
 	AfterWrite(string, tl.Entity, *tl.EntityMap) error
 }
@@ -79,6 +80,8 @@ type Options struct {
 	SimplifyCalendars bool
 	// Convert extended route types to primitives
 	UseBasicRouteTypes bool
+	// Simplify shapes
+	SimplifyShapes float64
 	// DeduplicateStopTimes
 	DeduplicateJourneyPatterns bool
 	// Default error handler
@@ -561,12 +564,29 @@ func (copier *Copier) copyTransfers() error {
 
 // copyShapes writes Shapes
 func (copier *Copier) copyShapes() error {
-	for e := range copier.Reader.Shapes() {
-		sid := e.EntityID()
-		if _, ok, err := copier.CopyEntity(&e); err != nil {
+	// Not safe for batch copy (currently)
+	for ent := range copier.Reader.Shapes() {
+		sid := ent.EntityID()
+		if copier.SimplifyShapes > 0 {
+			simplifyValue := copier.SimplifyShapes / 1e6
+			pnts := ent.Geometry.FlatCoords()
+			// before := len(pnts)
+			stride := ent.Geometry.Stride()
+			ii := geomxy.SimplifyFlatCoords(pnts, simplifyValue, stride)
+			for i, j := range ii {
+				if i == j*stride {
+					continue
+				}
+				pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
+			}
+			pnts = pnts[:len(ii)*stride]
+			ent.Geometry = tl.NewLineStringFromFlatCoords(pnts)
+			// fmt.Println("before:", before, "after:", len(pnts))
+		}
+		if _, ok, err := copier.CopyEntity(&ent); err != nil {
 			return err
 		} else if ok == nil {
-			copier.geomCache.AddSimplifiedShape(sid, e, 0.000005)
+			copier.geomCache.AddShape(sid, ent)
 		}
 	}
 	copier.logCount(&tl.Shape{})
@@ -707,7 +727,40 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	stopPatterns := map[string]int{}
 	stopPatternShapeIDs := map[int]string{}
 	journeyPatterns := map[string]patInfo{}
-	stbt := []tl.Entity{}
+	tripOffsets := map[string]int{} // used for deduplicating StopTimes
+	batchCount := 0
+	tripbt := []tl.Entity{}
+	stbt := []tl.StopTime{}
+	writeBatch := func() error {
+		// Write Trips
+		if err := copier.writeBatch(tripbt); err != nil {
+			return err
+		}
+		log.Info("Saved %d trips", len(tripbt))
+		// Perform StopTime validation
+		stbt2 := []tl.Entity{}
+		for i := range stbt {
+			if err := copier.checkEntity(&stbt[i]); err == nil {
+				// check if we're deduping
+				if _, ok := tripOffsets[stbt[i].TripID]; copier.DeduplicateJourneyPatterns && ok {
+				} else {
+					stbt2 = append(stbt2, &stbt[i])
+					if stbt[i].Interpolated.Int > 0 {
+						copier.result.InterpolatedStopTimeCount++
+					}
+				}
+			}
+		}
+		if err := copier.writeBatch(stbt2); err != nil {
+			return err
+		}
+		log.Info("Saved %d stop_times", len(stbt2))
+		tripbt = nil
+		stbt = nil
+		batchCount = 0
+		return nil
+	}
+
 	for sts := range copier.Reader.StopTimesByTripID() {
 		if len(sts) == 0 {
 			continue
@@ -778,9 +831,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if jpat, ok := journeyPatterns[jkey]; ok {
 			trip.JourneyPatternID = jpat.key
 			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime.Seconds - jpat.firstArrival
-			if copier.DeduplicateJourneyPatterns {
-				trip.StopTimes = nil
-			}
+			tripOffsets[trip.TripID] = trip.JourneyPatternOffset
 		} else {
 			trip.JourneyPatternID = trip.TripID
 			trip.JourneyPatternOffset = 0

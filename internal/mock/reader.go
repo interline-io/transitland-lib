@@ -25,6 +25,7 @@ type Reader struct {
 	TransferList      []tl.Transfer
 	LevelList         []tl.Level
 	PathwayList       []tl.Pathway
+	OtherList         []tl.Entity
 }
 
 // NewReader returns a new Reader.

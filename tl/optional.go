@@ -582,3 +582,28 @@ func (r *Tags) Get(k string) (string, bool) {
 	a, ok := r.tags[k]
 	return a, ok
 }
+
+/////////////////
+
+// IntSlice .
+type IntSlice struct {
+	Valid bool
+	Ints  []int
+}
+
+// Value .
+func (a IntSlice) Value() (driver.Value, error) {
+	if !a.Valid {
+		return []byte("null"), nil
+	}
+	return json.Marshal(a.Ints)
+}
+
+// Scan .
+func (a *IntSlice) Scan(value interface{}) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	return json.Unmarshal(b, &a.Ints)
+}
