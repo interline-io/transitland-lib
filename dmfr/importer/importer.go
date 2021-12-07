@@ -8,10 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -91,32 +91,6 @@ func ActivateFeedVersion(atx tldb.Adapter, fvid int) error {
 	return err
 }
 
-// AfterFeedVersionImport .
-func AfterFeedVersionImport(atx tldb.Adapter, fvid int) error {
-	// Ensure runs in a txn
-	t := time.Now()
-	fns := []string{
-		"SELECT tl_generate_feed_version_geometries($1)",
-		"SELECT tl_generate_route_geometries($1)",
-		"SELECT tl_generate_route_stops($1)",
-		"SELECT tl_generate_agency_geometries($1)",
-		"SELECT tl_generate_route_headways($1)",
-		"SELECT tl_generate_agency_places($1)",
-		"SELECT tl_generate_onestop_ids($1)",
-	}
-	for _, q := range fns {
-		tt := time.Now()
-		if _, err := atx.DBX().Exec(q, fvid); err != nil {
-			return err
-		}
-		tt2 := float64(time.Now().UnixNano()-tt.UnixNano()) / 1e9 // 1000000000.0
-		log.Debug("fvid: %d t: %0.2f s q: %s", fvid, tt2, q)
-	}
-	t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
-	log.Debug("Done finalizing import: fvid: %d t: %0.2fs", fvid, t2)
-	return nil
-}
-
 // FindImportableFeeds .
 func FindImportableFeeds(adapter tldb.Adapter) ([]int, error) {
 	fvids := []int{}
@@ -180,9 +154,6 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		}
 		// Update route_stops, agency_geometries, etc...
 		log.Info("Finalizing import")
-		if err := AfterFeedVersionImport(atx, fv.ID); err != nil {
-			return fmt.Errorf("error finalizing import: %s", err.Error())
-		}
 		if opts.Activate {
 			log.Info("Activating feed version")
 			if err := ActivateFeedVersion(atx, opts.FeedVersionID); err != nil {
@@ -246,6 +217,12 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	if err != nil {
 		return fvi, err
 	}
+	cp.AddExtension(builders.NewRouteGeometryBuilder())
+	cp.AddExtension(builders.NewRouteStopBuilder())
+	cp.AddExtension(builders.NewRouteHeadwayBuilder())
+	cp.AddExtension(builders.NewConvexHullBuilder())
+	cp.AddExtension(builders.NewOnestopIDBuilder())
+	cp.AddExtension(builders.NewAgencyPlaceBuilder())
 
 	// Go
 	cpresult := cp.Copy()
