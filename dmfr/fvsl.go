@@ -62,7 +62,7 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 		if len(stoptimes) < 2 {
 			continue
 		}
-		d := stoptimes[len(stoptimes)-1].ArrivalTime - stoptimes[0].DepartureTime
+		d := stoptimes[len(stoptimes)-1].ArrivalTime.Seconds - stoptimes[0].DepartureTime.Seconds
 		tripdurations[stoptimes[0].TripID] = d
 	}
 	// Group durations by route,service

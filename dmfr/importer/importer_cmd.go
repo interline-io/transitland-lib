@@ -54,6 +54,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.Activate, "activate", false, "Set as active feed version after import")
 	// Copy options
+	fl.Float64Var(&cmd.Options.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance (ex. 0.000005)")
 	fl.BoolVar(&cmd.Options.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
 	fl.BoolVar(&cmd.Options.DeduplicateJourneyPatterns, "deduplicate-stop-times", false, "Deduplicate StopTimes using Journey Patterns")
 	fl.BoolVar(&cmd.Options.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")

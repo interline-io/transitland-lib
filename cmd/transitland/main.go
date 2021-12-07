@@ -47,7 +47,8 @@ func main() {
 	flag.Parse()
 	if versionFlag {
 		log.Print("transitland-lib version: %s", tl.VERSION)
-		log.Print("gtfs spec version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
+		log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
+		log.Print("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto", tl.GTFSRTVERSION)
 		return
 	}
 	if quietFlag {

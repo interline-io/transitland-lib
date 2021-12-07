@@ -355,8 +355,8 @@ CREATE INDEX idx_gtfs_routes_feed_version_id ON "gtfs_routes"(feed_version_id);
 
 CREATE TABLE IF NOT EXISTS "gtfs_stop_times" (
   "trip_id" int NOT NULL, 
-  "arrival_time" int NOT NULL, 
-  "departure_time" int NOT NULL, 
+  "arrival_time" int, 
+  "departure_time" int,
   "stop_id" int NOT NULL, 
   "stop_sequence" integer NOT NULL, 
   "stop_headsign" varchar(255), 
@@ -411,6 +411,20 @@ CREATE TABLE IF NOT EXISTS "tl_agency_onestop_ids" (
   "onestop_id" varchar(255)
 );
 
+CREATE TABLE IF NOT EXISTS "tl_stop_onestop_ids" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer not null,
+  "stop_id" integer not null,
+  "onestop_id" varchar(255)
+);
+
+CREATE TABLE IF NOT EXISTS "tl_route_onestop_ids" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer not null,
+  "route_id" integer not null,
+  "onestop_id" varchar(255)
+);
+
 CREATE TABLE IF NOT EXISTS "tl_agency_places" (
   "id" integer primary key autoincrement, 
   "feed_version_id" integer not null,
@@ -421,3 +435,52 @@ CREATE TABLE IF NOT EXISTS "tl_agency_places" (
   "adm0name" varchar(255)
 );
 
+CREATE TABLE IF NOT EXISTS "tl_route_stops" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer not null,
+  "agency_id" integer not null,
+  "route_id" integer not null,
+  "stop_id" integer not null
+);
+
+CREATE TABLE IF NOT EXISTS "tl_route_headways" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer not null,
+  "route_id" integer not null,
+  "selected_stop_id" integer not null,
+  "service_id" integer,
+  "direction_id" integer,
+  "headway_secs" integer,
+  "dow_category" integer,
+  "service_date" datetime,
+  "service_seconds" integer,
+  "stop_trip_count" integer,
+  "departures" blob
+);
+
+CREATE TABLE IF NOT EXISTS "tl_feed_version_geometries" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer not null,
+  "geometry" blob,
+  "centroid" blob
+);
+
+CREATE TABLE IF NOT EXISTS "tl_agency_geometries" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer not null,
+  "agency_id" integer not null,
+  "geometry" blob,
+  "centroid" blob
+);
+
+CREATE TABLE IF NOT EXISTS "tl_route_geometries" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer not null,
+  "route_id" integer not null,
+  "generated" bool not null,
+  "shape_id" integer,
+  "direction_id" integer,
+  "geometry" blob,
+  "centroid" blob,
+  "combined_geometry" blob
+);

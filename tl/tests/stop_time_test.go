@@ -27,8 +27,8 @@ func expectTripToStopTime(e expectTrip) []tl.StopTime {
 			TripID:            "1",
 			StopID:            strconv.Itoa(i),
 			StopSequence:      i,
-			ArrivalTime:       e.ArrivalTime[i],
-			DepartureTime:     e.DepartureTime[i],
+			ArrivalTime:       tl.NewWideTimeFromSeconds(e.ArrivalTime[i]),
+			DepartureTime:     tl.NewWideTimeFromSeconds(e.DepartureTime[i]),
 			ShapeDistTraveled: tl.NewOFloat(e.ShapeDistTraveled[i]),
 		})
 	}

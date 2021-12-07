@@ -12,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	geomxy "github.com/twpayne/go-geom/xy"
 )
 
 // Prepare is called before general copying begins.
@@ -34,14 +35,14 @@ type AfterValidator interface {
 	AfterValidator(tl.Entity, *tl.EntityMap) error
 }
 
+// AfterWrite is called for after writing each entity.
+type AfterWrite interface {
+	AfterWrite(string, tl.Entity, *tl.EntityMap) error
+}
+
 // Extension is run after normal copying has completed.
 type Extension interface {
 	Copy(*Copier) error
-}
-
-// AfterCopy is called after normal copying and extensions have completed.
-type AfterCopy interface {
-	AfterCopy(*Copier) error
 }
 
 // ErrorHandler is called on each source file and entity; errors can be nil
@@ -79,6 +80,8 @@ type Options struct {
 	SimplifyCalendars bool
 	// Convert extended route types to primitives
 	UseBasicRouteTypes bool
+	// Simplify shapes
+	SimplifyShapes float64
 	// DeduplicateStopTimes
 	DeduplicateJourneyPatterns bool
 	// Default error handler
@@ -106,7 +109,7 @@ type Copier struct {
 	errorValidators   []Validator
 	warningValidators []Validator
 	afterValidators   []AfterValidator
-	afterCopiers      []AfterCopy
+	afterWriters      []AfterWrite
 	// book keeping
 	geomCache *xy.GeomCache
 	result    *Result
@@ -210,8 +213,8 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 		copier.extensions = append(copier.extensions, v)
 		added = true
 	}
-	if v, ok := ext.(AfterCopy); ok {
-		copier.afterCopiers = append(copier.afterCopiers, v)
+	if v, ok := ext.(AfterWrite); ok {
+		copier.afterWriters = append(copier.afterWriters, v)
 		added = true
 	}
 	if !added {
@@ -234,20 +237,11 @@ func (copier *Copier) isMarked(ent tl.Entity) bool {
 // A write error should be considered fatal and should stop any further write attempts.
 // Any errors and warnings are added to the Result.
 func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
-	efn := ent.Filename()
-	sid := ent.EntityID()
 	if err := copier.checkEntity(ent); err != nil {
 		return "", err, nil
 	}
-	// OK, Save
-	eid, err := copier.Writer.AddEntity(ent)
-	if err != nil {
-		log.Error("Critical error: failed to write %s '%s': %s entity dump: %#v", efn, sid, err, ent)
-		return "", err, err
-	}
-	copier.EntityMap.Set(efn, sid, eid)
-	copier.result.EntityCount[efn]++
-	return eid, nil, nil
+	eid, err := copier.addEntity(ent)
+	return eid, nil, err
 }
 
 // writeBatch handles writing a batch of entities, all of the same kind.
@@ -263,7 +257,7 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 	// OK, Save
 	eids, err := copier.Writer.AddEntities(ents)
 	if err != nil {
-		log.Error("Critical error: failed to write %d entities for %s", len(ents), efn)
+		log.Error("Critical error: failed to write %d entities for %s: %s", len(ents), efn, err.Error())
 		return err
 	}
 	for i, eid := range eids {
@@ -272,6 +266,14 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 		copier.EntityMap.Set(efn, sid, eid)
 	}
 	copier.result.EntityCount[efn] += len(ents)
+	// AfterWriters
+	for i, eid := range eids {
+		for _, v := range copier.afterWriters {
+			if err := v.AfterWrite(eid, ents[i], copier.EntityMap); err != nil {
+				return err
+			}
+		}
+	}
 	// Return an emtpy slice and no error
 	return nil
 }
@@ -338,6 +340,26 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	return nil
 }
 
+func (copier *Copier) addEntity(ent tl.Entity) (string, error) {
+	// OK, Save
+	efn := ent.Filename()
+	sid := ent.EntityID()
+	eid, err := copier.Writer.AddEntity(ent)
+	if err != nil {
+		log.Error("Critical error: failed to write %s '%s': %s -- entity dump: %#v", efn, sid, err.Error(), ent)
+		return "", err
+	}
+	copier.EntityMap.Set(efn, sid, eid)
+	copier.result.EntityCount[efn]++
+	// AfterWriters
+	for _, v := range copier.afterWriters {
+		if err := v.AfterWrite(eid, ent, copier.EntityMap); err != nil {
+			return "", err
+		}
+	}
+	return eid, nil
+}
+
 //////////////////////////////////
 ////////// Copy Methods //////////
 //////////////////////////////////
@@ -383,13 +405,6 @@ func (copier *Copier) Copy() *Result {
 			return copier.result
 		}
 	}
-	for _, e := range copier.afterCopiers {
-		if err := e.AfterCopy(copier); err != nil {
-			copier.result.WriteError = err
-			return copier.result
-		}
-	}
-
 	return copier.result
 }
 
@@ -583,12 +598,28 @@ func (copier *Copier) copyTransfers() error {
 // copyShapes writes Shapes
 func (copier *Copier) copyShapes() error {
 	// Not safe for batch copy (currently)
-	for e := range copier.Reader.Shapes() {
-		sid := e.EntityID()
-		if _, ok, err := copier.CopyEntity(&e); err != nil {
+	for ent := range copier.Reader.Shapes() {
+		sid := ent.EntityID()
+		if copier.SimplifyShapes > 0 {
+			simplifyValue := copier.SimplifyShapes / 1e6
+			pnts := ent.Geometry.FlatCoords()
+			// before := len(pnts)
+			stride := ent.Geometry.Stride()
+			ii := geomxy.SimplifyFlatCoords(pnts, simplifyValue, stride)
+			for i, j := range ii {
+				if i == j*stride {
+					continue
+				}
+				pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
+			}
+			pnts = pnts[:len(ii)*stride]
+			ent.Geometry = tl.NewLineStringFromFlatCoords(pnts)
+			// fmt.Println("before:", before, "after:", len(pnts))
+		}
+		if _, ok, err := copier.CopyEntity(&ent); err != nil {
 			return err
 		} else if ok == nil {
-			copier.geomCache.AddSimplifiedShape(sid, e, 0.000005)
+			copier.geomCache.AddShape(sid, ent)
 		}
 	}
 	copier.logCount(&tl.Shape{})
@@ -620,12 +651,12 @@ func (copier *Copier) copyCalendars() error {
 		if !copier.isMarked(&tl.Calendar{}) {
 			continue
 		}
-		_, ok := svcs[ent.ServiceID]
+		_, ok := svcs[ent.EntityID()]
 		if ok {
 			copier.ErrorHandler.HandleEntityErrors(&ent, []error{causes.NewDuplicateIDError(ent.ServiceID)}, nil)
 			continue
 		}
-		svcs[ent.ServiceID] = tl.NewService(ent)
+		svcs[ent.EntityID()] = tl.NewService(ent)
 	}
 
 	// Add the CalendarDates to Services
@@ -655,7 +686,7 @@ func (copier *Copier) copyCalendars() error {
 		if copier.SimplifyCalendars {
 			if s, err := svc.Simplify(); err == nil {
 				svc = s
-				svcs[svc.ServiceID] = svc
+				svcs[svc.EntityID()] = svc
 			}
 		}
 		// Generated calendars may need their service period set...
@@ -665,40 +696,36 @@ func (copier *Copier) copyCalendars() error {
 	}
 
 	// Write Calendars
-	var err error
 	bt := []tl.Entity{}
+	var btErr error
 	for _, svc := range svcs {
-		// Skip main Calendar entity if generated and not normalizing service IDs.
-		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			copier.SetEntity(&svc.Calendar, svc.ServiceID, svc.ServiceID)
+		if err := copier.checkEntity(svc); err != nil {
 			continue
 		}
-		// Validate as Service, with attached exceptions, for better validation.
-		if bt, err = copier.checkBatch(bt, svc); err != nil {
-			return err
+		// Need to get before ID might be updated
+		cds := svc.CalendarDates()
+		// Skip main Calendar entity if generated and not normalizing service IDs.
+		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
+			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
+		} else {
+			if _, err := copier.addEntity(svc); err != nil {
+				continue
+			}
+		}
+		for _, cd := range cds {
+			cd := cd
+			if bt, btErr = copier.checkBatch(bt, &cd); btErr != nil {
+				return btErr
+			}
 		}
 		if svc.Generated {
 			copier.result.GeneratedCount["calendar.txt"]++
 		}
 	}
-	if err := copier.writeBatch(bt); err != nil {
-		return err
+	if btErr = copier.writeBatch(bt); btErr != nil {
+		return btErr
 	}
 	copier.logCount(&tl.Calendar{})
-
-	// Write CalendarDates
-	bt = nil
-	for _, svc := range svcs {
-		for _, cd := range svc.CalendarDates() {
-			cd := cd
-			if bt, err = copier.checkBatch(bt, &cd); err != nil {
-				return err
-			}
-		}
-	}
-	if err := copier.writeBatch(bt); err != nil {
-		return err
-	}
 	copier.logCount(&tl.CalendarDate{})
 	return nil
 }
@@ -734,6 +761,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	stopPatterns := map[string]int{}
 	stopPatternShapeIDs := map[int]string{}
 	journeyPatterns := map[string]patInfo{}
+	tripOffsets := map[string]int{} // used for deduplicating StopTimes
 	batchCount := 0
 	tripbt := []tl.Entity{}
 	stbt := []tl.StopTime{}
@@ -747,9 +775,13 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		stbt2 := []tl.Entity{}
 		for i := range stbt {
 			if err := copier.checkEntity(&stbt[i]); err == nil {
-				stbt2 = append(stbt2, &stbt[i])
-				if stbt[i].Interpolated.Int > 0 {
-					copier.result.InterpolatedStopTimeCount++
+				// check if we're deduping
+				if _, ok := tripOffsets[stbt[i].TripID]; copier.DeduplicateJourneyPatterns && ok {
+				} else {
+					stbt2 = append(stbt2, &stbt[i])
+					if stbt[i].Interpolated.Int > 0 {
+						copier.result.InterpolatedStopTimeCount++
+					}
 				}
 			}
 		}
@@ -813,7 +845,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			} else {
 				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), trip.StopTimes); err != nil {
 					log.Error("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
-					trip.AddError(err)
+					// trip.AddError(err)
 				} else {
 					// Set ShapeID
 					stopPatternShapeIDs[trip.StopPatternID] = shapeid
@@ -837,14 +869,12 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		stlen := len(trip.StopTimes)
 		if jpat, ok := journeyPatterns[jkey]; ok {
 			trip.JourneyPatternID = jpat.key
-			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime - jpat.firstArrival
-			if copier.DeduplicateJourneyPatterns {
-				trip.StopTimes = nil
-			}
+			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime.Seconds - jpat.firstArrival
+			tripOffsets[trip.TripID] = trip.JourneyPatternOffset
 		} else {
 			trip.JourneyPatternID = trip.TripID
 			trip.JourneyPatternOffset = 0
-			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime, key: trip.JourneyPatternID}
+			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Seconds, key: trip.JourneyPatternID}
 		}
 
 		// Validate trip & add to batch

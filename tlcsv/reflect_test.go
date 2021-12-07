@@ -11,8 +11,8 @@ func TestGetString(t *testing.T) {
 	ent := tl.StopTime{
 		TripID:            "123",
 		StopID:            "456",
-		ArrivalTime:       3600,
-		DepartureTime:     7200,
+		ArrivalTime:       tl.NewWideTimeFromSeconds(3600),
+		DepartureTime:     tl.NewWideTimeFromSeconds(7200),
 		ShapeDistTraveled: tl.NewOFloat(123.456),
 	}
 	expect := map[string]string{

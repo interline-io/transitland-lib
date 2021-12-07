@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/interline-io/transitland-lib/tl"
-	geomxy "github.com/twpayne/go-geom/xy"
 )
 
 func arePositionsSorted(a []float64) bool {
@@ -25,8 +24,8 @@ func arePositionsSorted(a []float64) bool {
 // GeomCache helps speed up StopTime interpolating by caching various results
 type GeomCache struct {
 	positions map[string][]float64
-	stops     map[string][2]float64
-	shapes    map[string][][2]float64
+	stops     map[string]Point
+	shapes    map[string][]Point
 	lengths   map[string]float64
 }
 
@@ -34,8 +33,8 @@ type GeomCache struct {
 func NewGeomCache() *GeomCache {
 	return &GeomCache{
 		positions: map[string][]float64{},
-		stops:     map[string][2]float64{},
-		shapes:    map[string][][2]float64{},
+		stops:     map[string]Point{},
+		shapes:    map[string][]Point{},
 		lengths:   map[string]float64{},
 	}
 }
@@ -43,16 +42,16 @@ func NewGeomCache() *GeomCache {
 // AddStop adds a Stop to the geometry cache.
 func (g *GeomCache) AddStop(eid string, stop tl.Stop) {
 	c := stop.Geometry.FlatCoords()
-	g.stops[eid] = [2]float64{c[0], c[1]}
+	g.stops[eid] = Point{c[0], c[1]}
 }
 
 // GetStop returns the coordinates for the cached stop.
-func (g *GeomCache) GetStop(eid string) [2]float64 {
+func (g *GeomCache) GetStop(eid string) Point {
 	return g.stops[eid]
 }
 
 // GetShape returns the coordinates for the cached shape.
-func (g *GeomCache) GetShape(eid string) [][2]float64 {
+func (g *GeomCache) GetShape(eid string) []Point {
 	return g.shapes[eid]
 }
 
@@ -61,31 +60,9 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 	if !shape.Geometry.Valid {
 		return
 	}
-	sl := make([][2]float64, shape.Geometry.NumCoords())
+	sl := make([]Point, shape.Geometry.NumCoords())
 	for i, c := range shape.Geometry.Coords() {
-		sl[i] = [2]float64{c[0], c[1]}
-	}
-	g.shapes[eid] = sl
-}
-
-// AddSimplifiedShape adds a simplified Shape to the geometry cache.
-func (g *GeomCache) AddSimplifiedShape(eid string, shape tl.Shape, threshold float64) {
-	if !shape.Geometry.Valid {
-		return
-	}
-	pnts := shape.Geometry.FlatCoords()
-	stride := shape.Geometry.Stride()
-	ii := geomxy.SimplifyFlatCoords(pnts, threshold, stride)
-	for i, j := range ii {
-		if i == j*stride {
-			continue
-		}
-		pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
-	}
-	pnts = pnts[:len(ii)*stride]
-	sl := make([][2]float64, len(pnts)/stride)
-	for i := 0; i < len(pnts)-stride+1; i += stride {
-		sl[i/stride] = [2]float64{pnts[i], pnts[i+1]}
+		sl[i] = Point{c[0], c[1]}
 	}
 	g.shapes[eid] = sl
 }
@@ -94,9 +71,16 @@ func (g *GeomCache) AddSimplifiedShape(eid string, shape tl.Shape, threshold flo
 func (g *GeomCache) MakeShape(stopids ...string) (tl.Shape, error) {
 	shape := tl.Shape{}
 	stopline := []float64{} // flatcoords
-	for _, stopid := range stopids {
-		if geom, ok := g.stops[stopid]; ok {
-			stopline = append(stopline, geom[0], geom[1], 0.0)
+	prevPoint := Point{}
+	for i, stopid := range stopids {
+		if newPoint, ok := g.stops[stopid]; ok {
+			if i > 0 {
+				if d := Distance2d(prevPoint, newPoint); d > 10.0 {
+					return shape, fmt.Errorf("distance from (%f,%f) to (%f,%f) is %f decimal degrees", prevPoint.Lon, prevPoint.Lat, newPoint.Lon, newPoint.Lat, d)
+				}
+			}
+			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
+			prevPoint = newPoint
 		} else {
 			return shape, fmt.Errorf("stop '%s' not in cache", stopid)
 		}
@@ -113,7 +97,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	if len(stoptimes) == 0 {
 		return stoptimes, nil
 	}
-	stopline := make([][2]float64, len(stoptimes))
+	stopline := make([]Point, len(stoptimes))
 	shapeid := trip.ShapeID.Key
 	k := strings.Join([]string{shapeid, strconv.Itoa(trip.StopPatternID)}, "|")
 	for i := 0; i < len(stoptimes); i++ {

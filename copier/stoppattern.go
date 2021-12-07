@@ -23,8 +23,8 @@ func journeyPatternKey(trip *tl.Trip) string {
 		st := trip.StopTimes[i]
 		stkey[i] = fmt.Sprintf(
 			"%d-%d-%s-%s-%d-%d-%d",
-			st.ArrivalTime-a,
-			st.DepartureTime-b,
+			st.ArrivalTime.Seconds-a.Seconds,
+			st.DepartureTime.Seconds-b.Seconds,
 			st.StopID,
 			st.StopHeadsign.String,
 			st.PickupType.Int,

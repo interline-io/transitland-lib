@@ -10,7 +10,6 @@ import (
 
 // Extension defines two methods that specify the entities in an Extension and how to Create the necessary output structures, e.g. in a database.
 type Extension interface {
-	Entities() []tl.Entity
 }
 
 type readerFactory func(dburl string) (tl.Reader, error)
