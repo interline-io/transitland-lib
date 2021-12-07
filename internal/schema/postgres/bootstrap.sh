@@ -12,7 +12,7 @@ createdb "${PGDATABASE}"
 # Database schema
 migrate -path="${SCRIPTDIR}/migrations" -database="postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=disable" up
 
-# Load Natural Earth
+# Load Natural Earth - ogr2ogr is required for this.
 UNZIPDIR=$(mktemp -d)
 DATADIR="${SCRIPTDIR}/../ne"
 (cd "$UNZIPDIR" && unzip "${DATADIR}/ne_10m_admin_1_states_provinces.zip")

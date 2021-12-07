@@ -19,6 +19,7 @@
 	- [Key library components](#key-library-components)
 	- [Install as a library](#install-as-a-library)
 	- [Example of how to use as a library](#example-of-how-to-use-as-a-library)
+- [Database migrations](#database-migrations)
 - [Usage as a Web Service](#usage-as-a-web-service)
 	- [`transitland_server` command](#transitland_server-command)
 	- [Hasura](#hasura)
@@ -321,6 +322,12 @@ func TestExample3(t *testing.T) {
 
 See API docs at https://godoc.org/github.com/interline-io/transitland-lib
 
+## Database migrations
+
+Migrations are supported for PostgreSQL, using the schema files in `internal/schema/postgres/migrations`. These files can be read and applied using [golang-migrate](https://github.com/golang-migrate/migrate), which will store the most recently applied migration version in `schema_migrations`. See the `bootstrap.sh` script in that directory for an example, as well as details on how to import Natural Earth data files for associating agencies with places.
+
+SQLite database are intended to be short-lived. They can be created on an as needed basis by passing the `-create` flag to some commands that accept a writer. They use a single executable schema, defined in `internal/schema/sqlite.sql`.
+
 ## Usage as a Web Service
 
 `transitland-lib` can be used in a variety of ways to power a web service. Interline currently uses two approaches:
@@ -339,7 +346,7 @@ See [transitland-server](https://github.com/interline-io/transitland-server) doc
 
 [Hasura](https://hasura.io/) is a web service that can provide an "instant" GraphQL API based on a postgres database and its schema. We combine Hasura with `transitland-lib` for projects that involve creating new or complex queries (since Hasura can be more flexible than the queries provided by `transitland server`) and projects that involve an API with full read and write access (for example, editing GTFS data, which is also not provided by `transitland server`). Note that Hasura's automatically generated database queries are not guaranteed to be efficient (on the other hand, `transitland server` is tuned to provide better performance).
 
-To use Hasura with `transitland-lib` you can either import feeds into an existing postgres database (using the `transitland dmfr` command) or create a blank postgres database (using the schema in `internal/schema/postgres/migrations`, which can be read and applied using [golang-migrate](https://github.com/golang-migrate/migrate)). Configure Hasura to recognize all the tables and the foreign key relationships between them.
+To use Hasura with `transitland-lib` you can either import feeds into an existing postgres database (using the `transitland dmfr` command) and configure Hasura to recognize all the tables and the foreign key relationships between them.
 
 ## Included Readers and Writers
 
