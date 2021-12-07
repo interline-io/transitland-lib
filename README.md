@@ -19,6 +19,7 @@
 	- [Key library components](#key-library-components)
 	- [Install as a library](#install-as-a-library)
 	- [Example of how to use as a library](#example-of-how-to-use-as-a-library)
+- [Database migrations](#database-migrations)
 - [Usage as a Web Service](#usage-as-a-web-service)
 	- [`transitland_server` command](#transitland_server-command)
 	- [Hasura](#hasura)
@@ -196,7 +197,7 @@ This command is still under active development and may change in future releases
 ### Key library components
 
 - Entity: An `Entity` is entity as specified by GTFS, such as an Agency, Route, Stop, etc.
-- Reader: A `Reader` provides streams of GTFS entities over channels. The `tlcsv` and `tldb` modules provide CSV and Postgres/SQLite support, respectively.
+- Reader: A `Reader` provides streams of GTFS entities over channels. The `tlcsv` and `tldb` modules provide CSV and PostgreSQL/SQLite support, respectively.
 - Writer: A `Writer` accepts GTFS entities. As above, `tlcsv` and `tldb` provide basic implementations. Custom writers can also be used to support non-GTFS outputs, such as building a routing graph.
 - Copier: A `Copier` reads a stream of GTFS entities from a `Reader`, checks each entity against a `Marker`, performs validation, applies any specified `Filters`, and sends to a `Writer`.
 - Marker: A `Marker` selects which GTFS entities will be processed by a `Copier`. For example, selecting only entities related to a single trip or route.
@@ -321,13 +322,19 @@ func TestExample3(t *testing.T) {
 
 See API docs at https://godoc.org/github.com/interline-io/transitland-lib
 
+## Database migrations
+
+Migrations are supported for PostgreSQL, using the schema files in `internal/schema/postgres/migrations`. These files can be read and applied using [golang-migrate](https://github.com/golang-migrate/migrate), which will store the most recently applied migration version in `schema_migrations`. See the `bootstrap.sh` script in that directory for an example, as well as details on how to import Natural Earth data files for associating agencies with places.
+
+SQLite database are intended to be short-lived. They can be created on an as needed basis by passing the `-create` flag to some commands that accept a writer. They use a single executable schema, defined in `internal/schema/sqlite.sql`.
+
 ## Usage as a Web Service
 
 `transitland-lib` can be used in a variety of ways to power a web service. Interline currently uses two approaches:
 
 1. Populate a database with one or more feeds using `transitland-lib` and use the `transitland-server` package to serve the Transitland v2 REST and/or v2 GraphQL API endpoints. These API endpoints are primarily read-only and focused on querying and analyzing transit data.
 
-2. Populate a Postgres database with one or more feeds using `transitland-lib`, or just create an empty database using `transitland-lib`'s schema. Use [Hasura](https://hasura.io/) to provide a complete GraphQL API for reading and writing into the database. 
+2. Populate a postgres database with one or more feeds using `transitland-lib` and use [Hasura](https://hasura.io/) to provide a basic GraphQL API for reading and writing into the database. 
 
 For more information about how these web services are used within the overall architecture of the Transitland platform, see https://www.transit.land/documentation#transitland-architecture 
 
@@ -337,9 +344,9 @@ See [transitland-server](https://github.com/interline-io/transitland-server) doc
 
 ### Hasura
 
-[Hasura](https://hasura.io/) is a web service that can provide an "instant" GraphQL API based on a Postgres database and its schema. We combine Hasura with `transitland-lib` for projects that involve creating new or complex queries (since Hasura can be more flexible than the queries provided by `transitland server`) and projects that involve an API with full read and write access (for example, editing GTFS data, which is also not provided by `transitland server`). Note that Hasura's automatically generated database queries are not guaranteed to be efficient (on the other hand, `transitland server` is tuned to provide better performance).
+[Hasura](https://hasura.io/) is a web service that can provide an "instant" GraphQL API based on a postgres database and its schema. We combine Hasura with `transitland-lib` for projects that involve creating new or complex queries (since Hasura can be more flexible than the queries provided by `transitland server`) and projects that involve an API with full read and write access (for example, editing GTFS data, which is also not provided by `transitland server`). Note that Hasura's automatically generated database queries are not guaranteed to be efficient (on the other hand, `transitland server` is tuned to provide better performance).
 
-To use Hasura with `transitland-lib` you can either import feeds into a new Postgres database (using the `transitland dmfr` command) or create a blank Postgres database (using the schema in `internal/schema/postgres.pgsql`). Configure Hasura to recognize all the tables and the foreign key relationships between them.
+To use Hasura with `transitland-lib` you can either import feeds into an existing postgres database (using the `transitland dmfr` command) and configure Hasura to recognize all the tables and the foreign key relationships between them.
 
 ## Included Readers and Writers
 
@@ -347,7 +354,7 @@ To use Hasura with `transitland-lib` you can either import feeds into a new Post
 | ------------------------ | ------- | ------------- | -------------- |
 | CSV                      | `tlcsv` | ✅             | ✅              |
 | SQLite                   | `tldb`  | ✅             | ✅              |
-| Postgres (with PostGIS)  | `tldb`  | ✅             | ✅              |
+| PostgreSQL (with PostGIS)  | `tldb`  | ✅             | ✅              |
 
 We welcome the addition of more readers and writers.
 
