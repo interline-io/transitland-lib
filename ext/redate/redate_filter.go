@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -33,7 +34,7 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	if !ok {
 		return nil
 	}
-	fmt.Println("redate:", v.ServiceID, "id:", v.ID)
+	log.Info("redate:", v.ServiceID, "id:", v.ID)
 	// Copy active service days in window into new calendar
 	startDate := tf.StartDate
 	targetDate := tf.TargetDate
