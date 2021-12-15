@@ -555,7 +555,6 @@ func (copier *Copier) copyShapes() error {
 			}
 			pnts = pnts[:len(ii)*stride]
 			ent.Geometry = tl.NewLineStringFromFlatCoords(pnts)
-			// fmt.Println("before:", before, "after:", len(pnts))
 		}
 		if _, ok, err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -702,8 +701,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	stopPatternShapeIDs := map[int]string{}
 	journeyPatterns := map[string]patInfo{}
 	tripOffsets := map[string]int{} // used for deduplicating StopTimes
-	stbt := []tl.Entity{}
-
+	var stbt []tl.Entity
 	for sts := range copier.Reader.StopTimesByTripID() {
 		if len(sts) == 0 {
 			continue
@@ -774,7 +772,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if jpat, ok := journeyPatterns[jkey]; ok {
 			trip.JourneyPatternID = jpat.key
 			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime.Seconds - jpat.firstArrival
-			tripOffsets[trip.TripID] = trip.JourneyPatternOffset
+			tripOffsets[trip.TripID] = trip.JourneyPatternOffset // do not write stop times for this trip
 		} else {
 			trip.JourneyPatternID = trip.TripID
 			trip.JourneyPatternOffset = 0
@@ -783,11 +781,16 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 
 		// Validate trip entity
 		if _, _, err := copier.CopyEntity(&trip); err == nil {
-			for i := range trip.StopTimes {
-				var err error
-				stbt, err = copier.checkBatch(stbt, &trip.StopTimes[i])
-				if err != nil {
-					return err
+			if _, dedupOk := tripOffsets[trip.TripID]; dedupOk && copier.DeduplicateJourneyPatterns {
+				// fmt.Println("deduplicating:", trip.TripID)
+				// skip
+			} else {
+				for i := range trip.StopTimes {
+					var err error
+					stbt, err = copier.checkBatch(stbt, &trip.StopTimes[i])
+					if err != nil {
+						return err
+					}
 				}
 			}
 		} else {

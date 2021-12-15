@@ -3,8 +3,6 @@ package xy
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -99,7 +97,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	}
 	stopline := make([]Point, len(stoptimes))
 	shapeid := trip.ShapeID.Key
-	k := strings.Join([]string{shapeid, strconv.Itoa(trip.StopPatternID)}, "|")
+	k := fmt.Sprintf("%s-%d", shapeid, trip.StopPatternID)
 	for i := 0; i < len(stoptimes); i++ {
 		point, ok := g.stops[stoptimes[i].StopID]
 		if !ok {
