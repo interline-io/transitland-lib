@@ -150,6 +150,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	copier.AddValidator(&rules.StopTimeSequenceCheck{}, 0)
 	copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
 	copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
+	copier.AddValidator(&rules.CalendarDuplicateDates{}, 0)
 
 	// Default extensions
 	if copier.UseBasicRouteTypes {
@@ -160,10 +161,10 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	for _, extName := range opts.Extensions {
 		e, err := ext.GetExtension(extName)
 		if err != nil || e == nil {
-			return nil, fmt.Errorf("No registered extension for '%s'", extName)
+			return nil, fmt.Errorf("no registered extension for '%s'", extName)
 		}
 		if err := copier.AddExtension(e); err != nil {
-			return nil, fmt.Errorf("Failed to add extension '%s': %s", extName, err.Error())
+			return nil, fmt.Errorf("failed to add extension '%s': %s", extName, err.Error())
 		}
 	}
 	return copier, nil
@@ -556,9 +557,9 @@ func (copier *Copier) copyShapes() error {
 			pnts = pnts[:len(ii)*stride]
 			ent.Geometry = tl.NewLineStringFromFlatCoords(pnts)
 		}
-		if _, ok, err := copier.CopyEntity(&ent); err != nil {
-			return err
-		} else if ok == nil {
+		if _, entErr, writeErr := copier.CopyEntity(&ent); writeErr != nil {
+			return writeErr
+		} else if entErr == nil {
 			copier.geomCache.AddShape(sid, ent)
 		}
 	}
@@ -588,6 +589,7 @@ func (copier *Copier) copyCalendars() error {
 		}
 		_, ok := svcs[ent.EntityID()]
 		if ok {
+			// save duplicates for later
 			duplicateServices = append(duplicateServices, &ent)
 			continue
 		}
@@ -608,11 +610,7 @@ func (copier *Copier) copyCalendars() error {
 			svc = tl.NewService(cal)
 			svcs[ent.ServiceID] = svc
 		}
-		if _, ok := svc.Exception(ent.Date); ok {
-			svc.AddError(causes.NewDuplicateServiceExceptionError(ent.ServiceID, ent.Date))
-		} else {
-			svc.AddCalendarDate(ent)
-		}
+		svc.AddCalendarDate(ent)
 	}
 
 	// Simplify and and adjust StartDate and EndDate
@@ -631,7 +629,7 @@ func (copier *Copier) copyCalendars() error {
 	}
 
 	// Write Calendars
-	bt := []tl.Entity{}
+	var bt []tl.Entity
 	var btErr error
 	for _, svc := range svcs {
 		// Need to get calendar dates before ID is updated
@@ -640,8 +638,11 @@ func (copier *Copier) copyCalendars() error {
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
 			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
 		} else {
-			if _, _, err := copier.CopyEntity(svc); err != nil {
-				return err
+			if _, entErr, writeErr := copier.CopyEntity(svc); writeErr != nil {
+				return writeErr
+			} else if entErr != nil {
+				// do not write calendar dates if service had error
+				cds = nil
 			}
 		}
 		// Copy dependent entities
@@ -712,7 +713,9 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if _, ok := allTripIds[tripid]; !ok {
 			// Trip doesn't exist, try to copy stop times anyway
 			for i := range sts {
-				copier.CopyEntity(&sts[i])
+				if _, _, err := copier.CopyEntity(&sts[i]); err != nil {
+					return err
+				}
 			}
 			continue
 		}
@@ -780,7 +783,9 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 
 		// Validate trip entity
-		if _, _, err := copier.CopyEntity(&trip); err == nil {
+		if _, entErr, writeErr := copier.CopyEntity(&trip); writeErr != nil {
+			return writeErr
+		} else if entErr == nil {
 			if _, dedupOk := tripOffsets[trip.TripID]; dedupOk && copier.DeduplicateJourneyPatterns {
 				// fmt.Println("deduplicating:", trip.TripID)
 				// skip
@@ -793,8 +798,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 					}
 				}
 			}
-		} else {
-			return err
 		}
 	}
 	if err := copier.writeBatch(stbt); err != nil {
@@ -862,9 +865,9 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []tl.StopTime
 		return "", err
 	}
 	shape.ShapeID = shapeID
-	if _, ok, err := copier.CopyEntity(&shape); err != nil {
-		return "", err
-	} else if ok == nil {
+	if _, entErr, writeErr := copier.CopyEntity(&shape); writeErr != nil {
+		return "", writeErr
+	} else if entErr == nil {
 		copier.result.GeneratedCount["shapes.txt"]++
 	}
 	return shape.ShapeID, nil
