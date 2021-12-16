@@ -75,20 +75,20 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 	case *tl.Route:
 		pp.routeDepartures[eid] = map[riKey][]int{}
 	case *tl.Trip:
-		pp.tripDetails[eid] = riTrip{
-			Direction: uint8(v.DirectionID),
-			ServiceID: v.ServiceID,
-			RouteID:   v.RouteID,
-		}
-	case *tl.StopTime:
-		if ti, ok := pp.tripDetails[v.TripID]; ok {
-			rkey := riKey{
-				ServiceID: ti.ServiceID,
-				Direction: ti.Direction,
-				StopID:    v.StopID,
+		// Process StopTimes assuming they will all be written
+		// otherwise this breaks on journey pattern deduplication.
+		for _, st := range v.StopTimes {
+			stopId, ok := emap.Get("stops.txt", st.StopID)
+			if !ok {
+				continue
 			}
-			if rd, ok := pp.routeDepartures[ti.RouteID]; ok && v.DepartureTime.Valid {
-				rd[rkey] = append(rd[rkey], v.DepartureTime.Seconds)
+			rkey := riKey{
+				ServiceID: v.ServiceID,
+				Direction: uint8(v.DirectionID),
+				StopID:    stopId,
+			}
+			if rd, ok := pp.routeDepartures[v.RouteID]; ok && st.DepartureTime.Valid {
+				rd[rkey] = append(rd[rkey], st.DepartureTime.Seconds)
 			}
 		}
 	}

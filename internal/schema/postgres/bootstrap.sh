@@ -19,5 +19,5 @@ DATADIR="${SCRIPTDIR}/../ne"
 (cd "$UNZIPDIR" && unzip "${DATADIR}/ne_10m_populated_places_simple.zip")
 ogr2ogr -f "PostgreSQL" PG:"" "${UNZIPDIR}/ne_10m_populated_places_simple.shp" -nln ne_10m_populated_places -lco GEOM_TYPE=geography -lco GEOMETRY_NAME=geometry -overwrite
 ogr2ogr -f "PostgreSQL" PG:"" "${UNZIPDIR}/ne_10m_admin_1_states_provinces.shp" -nln ne_10m_admin_1_states_provinces -lco GEOM_TYPE=geography -lco GEOMETRY_NAME=geometry -nlt PROMOTE_TO_MULTI  -overwrite
-rm "${UNZIPDIR}/*"
+rm "${UNZIPDIR}"/*.*
 rmdir "${UNZIPDIR}"
