@@ -297,6 +297,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		copier.result.SkipEntityMarkedCount[efn]++
 		return errors.New("skipped by marker")
 	}
+
 	// Check the entity against filters.
 	sid := ent.EntityID() // source ID
 	for _, ef := range copier.filters {
@@ -306,6 +307,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 			return errors.New("skipped by filter")
 		}
 	}
+
 	// Run Entity Validators
 	for _, v := range copier.errorValidators {
 		for _, err := range v.Validate(ent) {
@@ -317,21 +319,24 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 			ent.AddWarning(err)
 		}
 	}
+
+	// UpdateKeys is handled separately from other validators.
+	referr := ent.UpdateKeys(copier.EntityMap)
+	if referr != nil {
+		ent.AddError(referr)
+	}
+
 	// Perform entity level validation; includes any previous errors
 	errs := ent.Errors()
 	warns := ent.Warnings()
 	copier.ErrorHandler.HandleEntityErrors(ent, errs, warns)
+
+	// Check strictness
 	if len(errs) > 0 && !copier.AllowEntityErrors {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
 	}
 
-	// UpdateKeys is handled separately from other validators.
-	// It is more like a filter than an error, since it mutates entities.
-	referr := ent.UpdateKeys(copier.EntityMap)
-	if referr != nil {
-		ent.AddError(referr)
-	}
 	if referr != nil && !copier.AllowReferenceErrors {
 		copier.result.SkipEntityReferenceCount[efn]++
 		return referr
