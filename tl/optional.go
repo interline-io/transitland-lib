@@ -601,6 +601,10 @@ func (a IntSlice) Value() (driver.Value, error) {
 
 // Scan .
 func (a *IntSlice) Scan(value interface{}) error {
+	a.Ints, a.Valid = nil, false
+	if value == nil {
+		return nil
+	}
 	b, ok := value.([]byte)
 	if !ok {
 		return errors.New("type assertion to []byte failed")
