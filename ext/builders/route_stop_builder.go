@@ -66,7 +66,7 @@ func (pp *RouteStopBuilder) Copy(copier *copier.Copier) error {
 			bt = append(bt, &RouteStop{RouteID: rid, StopID: stopid, AgencyID: aid})
 		}
 	}
-	if _, err := copier.Writer.AddEntities(bt); err != nil {
+	if err := copier.CopyEntities(bt); err != nil {
 		return err
 	}
 	return nil

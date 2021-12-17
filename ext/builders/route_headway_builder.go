@@ -166,7 +166,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				// 	wt := tl.NewWideTimeFromSeconds(departure)
 				// 	log.Debug("\t", wt.String())
 				// }
-				rh := &RouteHeadway{
+				rh := RouteHeadway{
 					RouteID:        rid,
 					SelectedStopID: mostVisitedStop,
 					HeadwaySecs:    tl.OInt{},
@@ -180,7 +180,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				if ws, ok := getStats(departures, 21600, 36000); ok && len(departures) >= 10 {
 					rh.HeadwaySecs = tl.NewOInt(ws.mid)
 				}
-				if _, err := copier.Writer.AddEntity(rh); err != nil {
+				if _, _, err := copier.CopyEntity(&rh); err != nil {
 					return err
 				}
 			}

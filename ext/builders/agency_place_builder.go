@@ -167,7 +167,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				ap.Adm1name = k.Adm1name
 				ap.Count = v
 				ap.Rank = score
-				if _, err := copier.Writer.AddEntity(&ap); err != nil {
+				if _, _, err := copier.CopyEntity(&ap); err != nil {
 					return err
 				}
 
