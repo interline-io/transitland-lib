@@ -120,6 +120,7 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 		}
 		ent := RouteGeometry{RouteID: rid}
 		g := geom.NewMultiLineString(geom.XY)
+		g.SetSRID(4326)
 		for i, shapeId := range shapeIds {
 			si, ok := pp.shapeInfos[shapeId]
 			if !ok || len(si.Line) < 2 {
@@ -130,6 +131,7 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 				pnts = append(pnts, c.Lon, c.Lat)
 			}
 			sl := geom.NewLineStringFlat(geom.XY, pnts)
+			sl.SetSRID(4326)
 			if sl == nil {
 				continue
 			}
