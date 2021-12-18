@@ -92,8 +92,8 @@ func (adapter *PostgresAdapter) Sqrl() sq.StatementBuilderType {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *PostgresAdapter) Find(dest interface{}, args ...interface{}) error {
-	return find(adapter, dest, args...)
+func (adapter *PostgresAdapter) Find(dest interface{}) error {
+	return find(adapter, dest)
 }
 
 // Get wraps sqlx.Get
@@ -115,6 +115,9 @@ func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	table := getTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
+	if err != nil {
+		return 0, err
+	}
 	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
 		return 0, err

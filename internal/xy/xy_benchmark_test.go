@@ -7,7 +7,10 @@ import (
 ////////////////////
 
 func BenchmarkSegmentClosestPoint(b *testing.B) {
-	l, _ := decodeGeojson(testLines[0].Geojson)
+	l, _, err := decodeGeojson(testLines[0].Geojson)
+	if err != nil {
+		b.Fatal(err)
+	}
 	q := unflattenCoordinates(l.FlatCoords())
 	// get the midpoint
 	sa := q[0]
@@ -19,7 +22,10 @@ func BenchmarkSegmentClosestPoint(b *testing.B) {
 }
 
 func BenchmarkLineClosestPoint(b *testing.B) {
-	l, _ := decodeGeojson(testLines[0].Geojson)
+	l, _, err := decodeGeojson(testLines[0].Geojson)
+	if err != nil {
+		b.Fatal(err)
+	}
 	q := unflattenCoordinates(l.FlatCoords())
 	// get the midpoint of the two middle points
 	sa := q[len(q)/2]
@@ -31,7 +37,10 @@ func BenchmarkLineClosestPoint(b *testing.B) {
 }
 
 func BenchmarkLinePositions(b *testing.B) {
-	line, points := decodeGeojson(testPositions[0].Geojson)
+	line, points, err := decodeGeojson(testPositions[0].Geojson)
+	if err != nil {
+		b.Fatal(err)
+	}
 	lc := unflattenCoordinates(line.FlatCoords())
 	pp := []Point{}
 	for _, p := range points {
@@ -45,7 +54,10 @@ func BenchmarkLinePositions(b *testing.B) {
 }
 
 func BenchmarkLinePositionsFallback(b *testing.B) {
-	_, points := decodeGeojson(testPositions[0].Geojson)
+	_, points, err := decodeGeojson(testPositions[0].Geojson)
+	if err != nil {
+		b.Fatal(err)
+	}
 	pp := []Point{}
 	for _, p := range points {
 		pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
@@ -76,7 +88,10 @@ func BenchmarkDistanceHaversine(b *testing.B) {
 }
 
 func BenchmarkLength2d(b *testing.B) {
-	l, _ := decodeGeojson(testLines[0].Geojson)
+	l, _, err := decodeGeojson(testLines[0].Geojson)
+	if err != nil {
+		b.Fatal(err)
+	}
 	line := unflattenCoordinates(l.FlatCoords())
 	var r float64
 	for n := 0; n < b.N; n++ {
@@ -86,7 +101,10 @@ func BenchmarkLength2d(b *testing.B) {
 }
 
 func BenchmarkLengthHaversine(b *testing.B) {
-	l, _ := decodeGeojson(testLines[0].Geojson)
+	l, _, err := decodeGeojson(testLines[0].Geojson)
+	if err != nil {
+		b.Fatal(err)
+	}
 	line := unflattenCoordinates(l.FlatCoords())
 	var r float64
 	for n := 0; n < b.N; n++ {

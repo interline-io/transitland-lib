@@ -45,7 +45,7 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			reader, err := tlcsv.NewReader(tc.url)
 			if err != nil {
-				panic(err)
+				t.Fatal(err)
 			}
 			results, err := NewFeedVersionServiceInfosFromReader(reader)
 			if err != nil {

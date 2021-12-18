@@ -21,39 +21,42 @@ var writerFactories = map[string]writerFactory{}
 var extensionFactories = map[string]extensionFactory{}
 
 // RegisterReader registers a Reader.
-func RegisterReader(name string, factory readerFactory) {
+func RegisterReader(name string, factory readerFactory) error {
 	if factory == nil {
-		log.Fatal("Factory %s does not exist", name)
+		return fmt.Errorf("factory '%s' does not exist", name)
 	}
 	_, registered := readerFactories[name]
 	if registered {
-		log.Fatal("Factory %s already registered", name)
+		return fmt.Errorf("factory '%s' already registered", name)
 	}
 	log.Debug("Registering Reader factory: %s", name)
 	readerFactories[name] = factory
+	return nil
 }
 
 // RegisterWriter registers a Writer.
-func RegisterWriter(name string, factory writerFactory) {
+func RegisterWriter(name string, factory writerFactory) error {
 	if factory == nil {
-		log.Fatal("Factory %s does not exist", name)
+		return fmt.Errorf("factory '%s' does not exist", name)
 	}
 	_, registered := writerFactories[name]
 	if registered {
-		log.Fatal("Factory %s already registered", name)
+		return fmt.Errorf("factory '%s' already registered", name)
 	}
 	log.Debug("Registering Writer factory: %s", name)
 	writerFactories[name] = factory
+	return nil
 }
 
 // RegisterExtension registers an Extension.
-func RegisterExtension(name string, factory extensionFactory) {
+func RegisterExtension(name string, factory extensionFactory) error {
 	_, registered := extensionFactories[name]
 	if registered {
-		panic("failed")
+		return fmt.Errorf("extension '%s' already registered", name)
 	}
-	log.Debug("Registering Extension factory: %s", name)
+	log.Debug("registering Extension factory: %s", name)
 	extensionFactories[name] = factory
+	return nil
 }
 
 // NewReader uses the scheme prefix as the driver name, defaulting to csv.
@@ -69,10 +72,10 @@ func NewReader(url string) (tl.Reader, error) {
 func MustOpenReaderOrPanic(path string) tl.Reader {
 	r, err := NewReader(path)
 	if err != nil {
-		panic(fmt.Sprintf("No handler for reader '%s': %s", path, err.Error()))
+		panic(fmt.Sprintf("no handler for reader '%s': %s", path, err.Error()))
 	}
 	if err := r.Open(); err != nil {
-		panic(fmt.Sprintf("Could not open reader '%s': %s", path, err.Error()))
+		panic(fmt.Sprintf("could not open reader '%s': %s", path, err.Error()))
 	}
 	return r
 }

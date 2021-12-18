@@ -3,6 +3,7 @@ package dmfr
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -44,7 +45,7 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 		if feedSpec == "gtfs" || feedSpec == "gtfs-rt" || feedSpec == "gbfs" || feedSpec == "mds" {
 			continue
 		} else {
-			log.Fatal("At least one feed in the DMFR file is not of a valid spec (GTFS, GTFS-RT, GBFS, or MDS)")
+			return nil, errors.New("At least one feed in the DMFR file is not of a valid spec (GTFS, GTFS-RT, GBFS, or MDS)")
 		}
 
 	}

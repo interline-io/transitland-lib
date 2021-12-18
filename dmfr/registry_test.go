@@ -2,7 +2,6 @@ package dmfr
 
 import (
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +12,6 @@ import (
 func TestLoadAndParseRegistry_from_file(t *testing.T) {
 	parsedContents, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/example.json"))
 	if err != nil {
-		log.Fatal(err)
 		t.Error(err)
 	}
 	if len(parsedContents.Feeds) != 2 {
@@ -62,7 +60,6 @@ func TestLoadAndParseRegistry_from_URL(t *testing.T) {
 	defer ts.Close()
 	parsedContents, err := LoadAndParseRegistry(ts.URL)
 	if err != nil {
-		log.Fatal(err)
 		t.Error(err)
 	}
 	if len(parsedContents.Feeds) != 2 {

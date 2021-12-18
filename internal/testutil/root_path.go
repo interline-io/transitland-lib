@@ -14,7 +14,7 @@ var (
 func RootPath() string {
 	a, err := filepath.Abs(filepath.Join(basepath, "..", ".."))
 	if err != nil {
-		panic(err)
+		return ""
 	}
 	return a
 }

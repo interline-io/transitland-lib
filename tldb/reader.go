@@ -72,7 +72,6 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 		return err
 	}
 	if err := reader.Adapter.Select(x.Interface(), qstr, args...); err != nil {
-		check(err)
 		return err
 	}
 	go func() {

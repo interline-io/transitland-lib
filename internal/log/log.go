@@ -78,12 +78,6 @@ func Debug(fmts string, a ...interface{}) {
 	logLog(DEBUG, fmts, a...)
 }
 
-// Fatal for fatal, unrecoverable errors.
-func Fatal(fmts string, a ...interface{}) {
-	logLog(FATAL, fmts, a...)
-	panic(fmt.Sprintf(fmts, a...))
-}
-
 // Exit with an error message.
 func Exit(fmts string, args ...interface{}) {
 	Print(fmts, args...)

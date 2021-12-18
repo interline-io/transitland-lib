@@ -110,8 +110,8 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *SQLiteAdapter) Find(dest interface{}, args ...interface{}) error {
-	return find(adapter, dest, args...)
+func (adapter *SQLiteAdapter) Find(dest interface{}) error {
+	return find(adapter, dest)
 }
 
 // Get wraps sqlx.Get
@@ -133,6 +133,9 @@ func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
 func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 	table := getTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
+	if err != nil {
+		return 0, err
+	}
 	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
 		return 0, err
@@ -147,7 +150,7 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 		return 0, err
 	}
 	eid, err := result.LastInsertId()
-	return int(eid), nil
+	return int(eid), err
 }
 
 // MultiInsert inserts multiple entities.

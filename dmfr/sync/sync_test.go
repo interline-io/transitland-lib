@@ -50,7 +50,7 @@ func TestMainSync(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 }
 
@@ -226,6 +226,6 @@ func TestHideUnseedFeeds(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 }

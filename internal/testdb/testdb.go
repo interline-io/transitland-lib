@@ -26,8 +26,8 @@ func MustUpdate(atx tldb.Adapter, ent interface{}, columns ...string) {
 }
 
 // MustFind panics on failure
-func MustFind(atx tldb.Adapter, ent interface{}, qargs ...interface{}) {
-	err := atx.Find(ent, qargs...)
+func MustFind(atx tldb.Adapter, ent interface{}) {
+	err := atx.Find(ent)
 	if err != nil {
 		panic(err)
 	}
@@ -69,8 +69,8 @@ func ShouldUpdate(t *testing.T, atx tldb.Adapter, ent interface{}, columns ...st
 }
 
 // ShouldFind pasends a test error on failure
-func ShouldFind(t *testing.T, atx tldb.Adapter, ent interface{}, qargs ...interface{}) {
-	err := atx.Find(ent, qargs...)
+func ShouldFind(t *testing.T, atx tldb.Adapter, ent interface{}) {
+	err := atx.Find(ent)
 	if err != nil {
 		t.Errorf("failed find: %s", err.Error())
 	}
