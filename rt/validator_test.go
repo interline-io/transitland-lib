@@ -7,20 +7,23 @@ import (
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
-func newTestValidator() *Validator {
+func newTestValidator() (*Validator, error) {
 	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/bart-rt.zip"))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	fi, err := NewValidatorFromReader(r)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return fi
+	return fi, nil
 }
 
 func TestValidateHeader(t *testing.T) {
-	fi := newTestValidator()
+	fi, err := newTestValidator()
+	if err != nil {
+		t.Fatal(err)
+	}
 	msg, err := ReadFile(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)
@@ -34,7 +37,10 @@ func TestValidateHeader(t *testing.T) {
 }
 
 func TestValidateTripUpdate(t *testing.T) {
-	fi := newTestValidator()
+	fi, err := newTestValidator()
+	if err != nil {
+		t.Fatal(err)
+	}
 	msg, err := ReadFile(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)

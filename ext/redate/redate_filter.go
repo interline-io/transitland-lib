@@ -57,7 +57,7 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	// Simplify back to regular calendar
 	newSvc, err := newSvc.Simplify()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	newSvc.Generated = false
 	// Reset and update in place

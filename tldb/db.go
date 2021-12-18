@@ -12,6 +12,8 @@ import (
 
 var bufferSize = 1000
 
+// check for error and panic
+// TODO: don't do this. panic is bad.
 func check(err error) {
 	if err != nil {
 		log.Debug("Error: %s", err)

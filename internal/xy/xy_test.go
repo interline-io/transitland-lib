@@ -42,11 +42,11 @@ var testPositions = []struct {
 	{`{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[-122.2665023803711,37.87431138542283],[-122.26581573486328,37.853712122567565],[-122.26444244384766,37.83961457275219],[-122.26821899414061,37.82551432799189],[-122.26341247558594,37.819548028632376],[-122.27130889892578,37.803273851858656],[-122.26959228515624,37.80001858607365],[-122.24555969238281,37.788352705583755],[-122.22564697265625,37.77641361883315],[-122.19577789306639,37.75225820732335],[-122.16487884521483,37.72673718477409]]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.27062225341797,37.8724143256462]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.26289749145506,37.84354589127591]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.26427078247069,37.81507298760665]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.27027893066405,37.80544394934271]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.2258186340332,37.77695634643178]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.19697952270508,37.75347973770911]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.16487884521483,37.72782336496339]}}]}`, []float64{0.008487181237797688, 0.1496538990811318, 0.2964636787237469, 0.3509258016789892, 0.6191751524042424, 0.7983912644738984, 0.9966620810270027}, []float64{0, 0.14880713711146062, 0.2907521492606507, 0.3472678477073867, 0.6102041614615478, 0.7953741712658748, 1.0}},
 }
 
-func decodeGeojson(data string) (*geom.LineString, []*geom.Point) {
+func decodeGeojson(data string) (*geom.LineString, []*geom.Point, error) {
 	fc := geojson.FeatureCollection{}
 	err := fc.UnmarshalJSON([]byte(data))
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 	var line *geom.LineString
 	points := []*geom.Point{}
@@ -58,7 +58,7 @@ func decodeGeojson(data string) (*geom.LineString, []*geom.Point) {
 			points = append(points, v)
 		}
 	}
-	return line, points
+	return line, points, nil
 }
 
 func unflattenCoordinates(coords []float64) []Point {
@@ -69,12 +69,12 @@ func unflattenCoordinates(coords []float64) []Point {
 	return ret
 }
 
-func makeTestLine(gj string) []Point {
+func makeTestLine(gj string) ([]Point, error) {
 	var line geom.T
 	if err := geojson.Unmarshal([]byte(gj), &line); err != nil {
-		panic(err)
+		return nil, err
 	}
-	return unflattenCoordinates(line.FlatCoords())
+	return unflattenCoordinates(line.FlatCoords()), nil
 }
 
 func TestDistance2d(t *testing.T) {
@@ -93,7 +93,10 @@ func TestDistanceHaversine(t *testing.T) {
 
 func TestLinePositions(t *testing.T) {
 	for _, dp := range testPositions {
-		line, points := decodeGeojson(dp.Geojson)
+		line, points, err := decodeGeojson(dp.Geojson)
+		if err != nil {
+			t.Fatal(err)
+		}
 		lc := unflattenCoordinates(line.FlatCoords())
 		pp := []Point{}
 		for _, p := range points {
@@ -112,7 +115,10 @@ func TestLinePositions(t *testing.T) {
 
 func TestLinePositionsFallback(t *testing.T) {
 	for _, dp := range testPositions {
-		_, points := decodeGeojson(dp.Geojson)
+		_, points, err := decodeGeojson(dp.Geojson)
+		if err != nil {
+			t.Fatal(err)
+		}
 		pp := []Point{}
 		for _, p := range points {
 			pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
@@ -130,7 +136,10 @@ func TestLinePositionsFallback(t *testing.T) {
 
 func TestLength2d(t *testing.T) {
 	for _, line := range testLines {
-		l, _ := decodeGeojson(line.Geojson)
+		l, _, err := decodeGeojson(line.Geojson)
+		if err != nil {
+			t.Fatal(err)
+		}
 		coords := unflattenCoordinates(l.FlatCoords())
 		d := Length2d(coords)
 		testApproxEqual(t, line.Length2d, d)
@@ -139,7 +148,10 @@ func TestLength2d(t *testing.T) {
 
 func TestLengthHaversine(t *testing.T) {
 	for _, line := range testLines {
-		l, _ := decodeGeojson(line.Geojson)
+		l, _, err := decodeGeojson(line.Geojson)
+		if err != nil {
+			t.Fatal(err)
+		}
 		coords := unflattenCoordinates(l.FlatCoords())
 		d := LengthHaversine(coords)
 		testApproxEqual(t, line.lengthHaversine, d)

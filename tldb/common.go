@@ -49,7 +49,7 @@ func contains(a string, b []string) bool {
 }
 
 // find a single record.
-func find(adapter Adapter, dest interface{}, args ...interface{}) error {
+func find(adapter Adapter, dest interface{}) error {
 	entid := 0
 	if v, ok := dest.(canGetID); ok {
 		entid = v.GetID()
@@ -73,6 +73,9 @@ func update(adapter Adapter, ent interface{}, columns ...string) error {
 	}
 	table := getTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
+	if err != nil {
+		return err
+	}
 	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
 		return err
