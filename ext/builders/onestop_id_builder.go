@@ -117,7 +117,7 @@ func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 				StopID:    stopid,
 				OnestopID: fmt.Sprintf("s-%s-%s", gh, filterName(sg.name)),
 			}
-			if _, err := copier.Writer.AddEntity(&ent); err != nil {
+			if _, _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
 		}
@@ -133,7 +133,7 @@ func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 				RouteID:   rid,
 				OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
 			}
-			if _, err := copier.Writer.AddEntity(&ent); err != nil {
+			if _, _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
 		}
@@ -165,7 +165,7 @@ func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 				AgencyID:  aid,
 				OnestopID: fmt.Sprintf("o-%s-%s", gh, filterName(name)),
 			}
-			if _, err := copier.Writer.AddEntity(&ent); err != nil {
+			if _, _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
 		}

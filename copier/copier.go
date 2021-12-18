@@ -244,6 +244,17 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (string, error, error) {
 	return eid, nil, err
 }
 
+// CopyEntities validates a slice of entities and writes those that pass validation.
+func (copier *Copier) CopyEntities(ents []tl.Entity) error {
+	var okEnts []tl.Entity
+	for _, ent := range ents {
+		if err := copier.checkEntity(ent); err == nil {
+			okEnts = append(okEnts, ent)
+		}
+	}
+	return copier.writeBatch(okEnts)
+}
+
 // writeBatch handles writing a batch of entities, all of the same kind.
 func (copier *Copier) writeBatch(ents []tl.Entity) error {
 	if len(ents) == 0 {
