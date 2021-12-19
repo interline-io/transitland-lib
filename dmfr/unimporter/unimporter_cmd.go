@@ -36,7 +36,7 @@ func (cmd *Command) Parse(args []string) error {
 	}
 	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
 	fl.Var(&cmd.FeedIDs, "feed", "Feed ID")
-	fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension")
+	// fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension") // TODO
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport only trips and stop times")
@@ -56,6 +56,7 @@ type jobOptions struct {
 	FeedVersionID int
 	ScheduleOnly  bool
 	ExtraTables   []string
+	DryRun        bool
 }
 
 // Run this command
@@ -105,6 +106,7 @@ func (cmd *Command) Run() error {
 			FeedVersionID: fvid,
 			ScheduleOnly:  cmd.ScheduleOnly,
 			ExtraTables:   cmd.ExtraTables,
+			DryRun:        cmd.DryRun,
 		}
 	}
 	close(jobs)
@@ -112,13 +114,13 @@ func (cmd *Command) Run() error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go dmfrUnimportWorker(w, cmd.Adapter, cmd.DryRun, jobs, &wg)
+		go dmfrUnimportWorker(w, cmd.Adapter, jobs, &wg)
 	}
 	wg.Wait()
 	return nil
 }
 
-func dmfrUnimportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan jobOptions, wg *sync.WaitGroup) {
+func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -141,7 +143,7 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan j
 			log.Error("Could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}
-		if dryrun {
+		if opts.DryRun {
 			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue
 		}
