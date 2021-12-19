@@ -18,6 +18,7 @@ type FeedVersionImport struct {
 	ImportLevel               int  // deprecated
 	Success                   bool // Finished, Success Yes/No
 	InProgress                bool // In Progress
+	ScheduleRemoved           bool // Stop times and trips have been uimported
 	InterpolatedStopTimeCount int
 	EntityCount               EntityCounter
 	WarningCount              EntityCounter

@@ -104,7 +104,7 @@ func (cmd *Command) Run() error {
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
 		Where("feed_version_gtfs_imports.id IS NULL").
-		OrderBy("feed_versions.id")
+		OrderBy("feed_versions.id desc")
 	if cmd.Latest {
 		// Only fetch latest feed version for each feed
 		q = q.

@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/fetch"
 	"github.com/interline-io/transitland-lib/dmfr/importer"
 	"github.com/interline-io/transitland-lib/dmfr/sync"
+	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/extract"
 	"github.com/interline-io/transitland-lib/internal/log"
@@ -40,6 +41,7 @@ func main() {
 		log.Print("  extract")
 		log.Print("  fetch")
 		log.Print("  import")
+		log.Print("  unimport")
 		log.Print("  sync")
 		log.Print("  dmfr")
 
@@ -79,11 +81,12 @@ func main() {
 		r = &fetch.Command{}
 	case "import":
 		r = &importer.Command{}
+	case "unimport":
+		r = &unimporter.Command{}
 	case "sync":
 		r = &sync.Command{}
 	case "dmfr": // backwards compat
 		r = &dmfrCommand{}
-
 	default:
 		log.Exit("%q is not valid command.", subc)
 	}
