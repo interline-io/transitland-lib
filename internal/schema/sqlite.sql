@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "success" bool,
+  "schedule_removed" bool,
   "import_log" blob,
   "in_progress" bool,
   "exception_log" blob,
