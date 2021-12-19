@@ -1,6 +1,8 @@
 package unimporter
 
 import (
+	"fmt"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -27,6 +29,7 @@ func UnimportSchedule(atx tldb.Adapter, id int) error {
 			return err
 		}
 	}
+	fmt.Println("setting schedule removed")
 	if _, err := atx.Sqrl().Update("feed_version_gtfs_imports").Set("schedule_removed", true).Where(where).Exec(); err != nil {
 		return err
 	}
