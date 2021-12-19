@@ -36,7 +36,7 @@ func UnimportSchedule(atx tldb.Adapter, id int) error {
 	return nil
 }
 
-// UnimportFeedVersion
+// UnimportFeedVersion unimports a feed version and removes the feed_version_gtfs_import record.
 func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 	// Set of tables to delete where feed_version_id = fvid
 	// Order is important
@@ -59,8 +59,8 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 		"gtfs_feed_infos",
 		"gtfs_frequencies",
 		"gtfs_pathways",
-		// named entities
 		"gtfs_fare_rules",
+		// named entities
 		"gtfs_fare_attributes",
 		"gtfs_trips",
 		"gtfs_shapes",
