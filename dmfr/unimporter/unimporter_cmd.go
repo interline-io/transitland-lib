@@ -41,6 +41,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport only trips and stop times")
 	fl.Parse(args)
+	cmd.Workers = 1
 	cmd.FVIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
@@ -48,7 +49,6 @@ func (cmd *Command) Parse(args []string) error {
 	if len(cmd.FeedIDs)+len(cmd.FVIDs)+len(cmd.FVSHA1) == 0 {
 		return errors.New("must provide feed ids, feed version ids, or feed version sha1s")
 	}
-	cmd.Workers = 1
 	return nil
 }
 
