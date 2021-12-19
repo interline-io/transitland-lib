@@ -5,18 +5,36 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-type Options struct {
-	FeedVersionID int
-	ExtraTables   []string
+func feedVersionTableDelete(atx tldb.Adapter, table string, fvid int) error {
+	where := sq.Eq{"feed_version_id": fvid}
+	_, err := atx.Sqrl().Delete(table).Where(where).Exec()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-type Result struct {
-	Success      bool
-	ExceptionLog string
+// UnimportSchedule removes schedule data for a feed version and updates the import record.
+// gtfs_trips and gtfs_stop_times tables are affected.
+func UnimportSchedule(atx tldb.Adapter, id int) error {
+	tables := []string{
+		"gtfs_stop_times",
+		"gtfs_trips",
+	}
+	where := sq.Eq{"feed_version_id": id}
+	for _, table := range tables {
+		if err := feedVersionTableDelete(atx, table, id); err != nil {
+			return err
+		}
+	}
+	if _, err := atx.Sqrl().Update("feed_version_gtfs_imports").Set("schedule_removed", true).Where(where).Exec(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // UnimportFeedVersion
-func UnimportFeedVersion(atx tldb.Adapter, opts Options) (Result, error) {
+func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 	// Set of tables to delete where feed_version_id = fvid
 	// Order is important
 	tables := []string{
@@ -50,32 +68,23 @@ func UnimportFeedVersion(atx tldb.Adapter, opts Options) (Result, error) {
 		"gtfs_levels",
 	}
 	// Run in txn
-	err := atx.Tx(func(model tldb.Adapter) error {
-		id := opts.FeedVersionID
-		where := sq.Eq{"feed_version_id": id}
-		for _, table := range opts.ExtraTables {
-			_, err := model.Sqrl().Delete(table).Where(where).Exec()
-			if err != nil {
-				return err
-			}
-		}
-		for _, table := range tables {
-			_, err := model.Sqrl().Delete(table).Where(where).Exec()
-			if err != nil {
-				return err
-			}
-		}
-		if _, err := model.Sqrl().Delete("feed_version_gtfs_imports").Where(where).Exec(); err != nil {
+	where := sq.Eq{"feed_version_id": id}
+	for _, table := range extraTables {
+		_, err := atx.Sqrl().Delete(table).Where(where).Exec()
+		if err != nil {
 			return err
 		}
-		if _, err := model.Sqrl().Update("feed_states").Set("feed_version_id", nil).Where(where).Exec(); err != nil {
-			return err
-		}
-		return nil
-	})
-	res := Result{}
-	if err != nil {
-		return res, err
 	}
-	return res, nil
+	for _, table := range tables {
+		if err := feedVersionTableDelete(atx, table, id); err != nil {
+			return err
+		}
+	}
+	if _, err := atx.Sqrl().Delete("feed_version_gtfs_imports").Where(where).Exec(); err != nil {
+		return err
+	}
+	if _, err := atx.Sqrl().Update("feed_states").Set("feed_version_id", nil).Where(where).Exec(); err != nil {
+		return err
+	}
+	return nil
 }

@@ -41,6 +41,7 @@ func main() {
 		log.Print("  extract")
 		log.Print("  fetch")
 		log.Print("  import")
+		log.Print("  unimport")
 		log.Print("  sync")
 		log.Print("  dmfr")
 
@@ -86,7 +87,6 @@ func main() {
 		r = &sync.Command{}
 	case "dmfr": // backwards compat
 		r = &dmfrCommand{}
-
 	default:
 		log.Exit("%q is not valid command.", subc)
 	}

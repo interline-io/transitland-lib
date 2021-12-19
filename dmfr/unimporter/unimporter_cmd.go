@@ -1,10 +1,13 @@
 package unimporter
 
 import (
+	"errors"
 	"flag"
+	"os"
 	"sync"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -12,29 +15,47 @@ import (
 
 // Command imports FeedVersions into a database.
 type Command struct {
-	Options Options
-	DryRun  bool
-	FVIDs   cli.ArrayFlags
-	FVSHA1  cli.ArrayFlags
-	DBURL   string
-	Workers int
-	Adapter tldb.Adapter // allow for mocks
+	ScheduleOnly bool
+	ExtraTables  []string
+	DryRun       bool
+	FVIDs        []string
+	FVSHA1       cli.ArrayFlags
+	Extensions   cli.ArrayFlags
+	FeedIDs      cli.ArrayFlags
+	DBURL        string
+	Workers      int
+	Adapter      tldb.Adapter // allow for mocks
 }
 
 // Parse command line flags
 func (cmd *Command) Parse(args []string) error {
-	extflags := cli.ArrayFlags{}
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
 	fl.Usage = func() {
-		log.Print("Usage: import [feedids...]")
+		log.Print("Usage: unimport [fvids]")
 		fl.PrintDefaults()
 	}
-	fl.Var(&extflags, "ext", "Include GTFS Extension")
-	fl.Var(&cmd.FVIDs, "fvid", "Import specific feed version ID")
 	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
+	fl.Var(&cmd.FeedIDs, "feed", "Feed ID")
+	fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
+	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport only trips and stop times")
 	fl.Parse(args)
+	cmd.FVIDs = fl.Args()
+	if cmd.DBURL == "" {
+		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
+	}
+	if len(cmd.FeedIDs)+len(cmd.FVIDs)+len(cmd.FVSHA1) == 0 {
+		return errors.New("must provide feed ids, feed version ids, or feed version sha1s")
+	}
+	cmd.Workers = 1
 	return nil
+}
+
+type jobOptions struct {
+	FeedVersionID int
+	ScheduleOnly  bool
+	ExtraTables   []string
 }
 
 // Run this command
@@ -45,12 +66,45 @@ func (cmd *Command) Run() error {
 		defer writer.Close()
 	}
 	qrs := []int{}
-	log.Info("Importing %d feed versions", len(cmd.FVIDs))
-	jobs := make(chan Options, len(qrs))
-	results := make(chan Result, len(qrs))
+	q := cmd.Adapter.Sqrl().
+		Select("feed_versions.id").
+		From("feed_versions").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
+		Where("feed_version_gtfs_imports.id IS NOT NULL").
+		OrderBy("feed_versions.id desc")
+	if len(cmd.FeedIDs) > 0 {
+		// Limit to specified feeds
+		q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})
+	}
+	if len(cmd.FVIDs) > 0 {
+		// Explicitly specify fvids
+		q = q.Where(sq.Eq{"feed_versions.id": cmd.FVIDs})
+	}
+	if len(cmd.FVSHA1) > 0 {
+		// Explicitly specify fv sha1
+		q = q.Where(sq.Eq{"feed_versions.sha1": cmd.FVSHA1})
+	}
+	qstr, qargs, err := q.ToSql()
+	if err != nil {
+		return err
+	}
+	err = cmd.Adapter.Select(&qrs, qstr, qargs...)
+	if err != nil {
+		return err
+	}
+	if cmd.ScheduleOnly {
+		log.Info("Unmporting trips and stop times from %d feed versions", len(qrs))
+	} else {
+		log.Info("Unmporting %d feed versions", len(qrs))
+	}
+
+	jobs := make(chan jobOptions, len(qrs))
 	for _, fvid := range qrs {
-		jobs <- Options{
+		jobs <- jobOptions{
 			FeedVersionID: fvid,
+			ScheduleOnly:  cmd.ScheduleOnly,
+			ExtraTables:   cmd.ExtraTables,
 		}
 	}
 	close(jobs)
@@ -58,13 +112,13 @@ func (cmd *Command) Run() error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go dmfrUnimportWorker(w, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
+		go dmfrUnimportWorker(w, cmd.Adapter, cmd.DryRun, jobs, &wg)
 	}
 	wg.Wait()
 	return nil
 }
 
-func dmfrUnimportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan Options, results chan<- Result, wg *sync.WaitGroup) {
+func dmfrUnimportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan jobOptions, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -93,16 +147,21 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan O
 		}
 		log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
-		result, err := UnimportFeedVersion(adapter, opts)
+		err := adapter.Tx(func(atx tldb.Adapter) error {
+			var err error
+			if opts.ScheduleOnly {
+				err = UnimportSchedule(atx, opts.FeedVersionID)
+			} else {
+				err = UnimportFeedVersion(atx, opts.FeedVersionID, opts.ExtraTables)
+			}
+			return err
+		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.Error("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.ExceptionLog, t2)
-		} else if result.Success {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
+			log.Error("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
 		} else {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s, (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.ExceptionLog, t2)
+			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
 		}
-		results <- result
 	}
 	wg.Done()
 }
