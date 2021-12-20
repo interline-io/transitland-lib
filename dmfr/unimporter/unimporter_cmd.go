@@ -39,7 +39,7 @@ func (cmd *Command) Parse(args []string) error {
 	// fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension") // TODO
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
-	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport only trips and stop times")
+	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport stop times, trips, transfers, shapes, frequencies, and transfers")
 	fl.Parse(args)
 	cmd.Workers = 1
 	cmd.FVIDs = fl.Args()
@@ -95,7 +95,7 @@ func (cmd *Command) Run() error {
 		return err
 	}
 	if cmd.ScheduleOnly {
-		log.Info("Unmporting trips and stop times from %d feed versions", len(qrs))
+		log.Info("Unmporting schedule data from %d feed versions", len(qrs))
 	} else {
 		log.Info("Unmporting %d feed versions", len(qrs))
 	}
