@@ -15,11 +15,16 @@ func feedVersionTableDelete(atx tldb.Adapter, table string, fvid int) error {
 }
 
 // UnimportSchedule removes schedule data for a feed version and updates the import record.
-// gtfs_trips and gtfs_stop_times tables are affected.
+// stops, routes, agencies, pathways, levels are not affected.
 func UnimportSchedule(atx tldb.Adapter, id int) error {
 	tables := []string{
 		"gtfs_stop_times",
+		"gtfs_transfers",
+		"gtfs_calendar_dates",
+		"gtfs_frequencies",
 		"gtfs_trips",
+		"gtfs_shapes",
+		"gtfs_calendars",
 	}
 	where := sq.Eq{"feed_version_id": id}
 	for _, table := range tables {
@@ -55,9 +60,9 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 		"gtfs_calendar_dates",
 		"gtfs_feed_infos",
 		"gtfs_frequencies",
-		"gtfs_pathways",
 		"gtfs_fare_rules",
 		// named entities
+		"gtfs_pathways",
 		"gtfs_fare_attributes",
 		"gtfs_trips",
 		"gtfs_shapes",

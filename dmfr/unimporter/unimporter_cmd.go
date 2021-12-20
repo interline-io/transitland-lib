@@ -95,7 +95,7 @@ func (cmd *Command) Run() error {
 		return err
 	}
 	if cmd.ScheduleOnly {
-		log.Info("Unmporting trips and stop times from %d feed versions", len(qrs))
+		log.Info("Unmporting schedule data from %d feed versions", len(qrs))
 	} else {
 		log.Info("Unmporting %d feed versions", len(qrs))
 	}
