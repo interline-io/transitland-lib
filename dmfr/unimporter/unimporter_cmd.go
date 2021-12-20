@@ -1,9 +1,11 @@
 package unimporter
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,22 +31,48 @@ type Command struct {
 
 // Parse command line flags
 func (cmd *Command) Parse(args []string) error {
+	fvidfile := ""
+	fvsha1file := ""
 	fl := flag.NewFlagSet("import", flag.ExitOnError)
 	fl.Usage = func() {
 		log.Print("Usage: unimport [fvids]")
 		fl.PrintDefaults()
 	}
-	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
-	fl.Var(&cmd.FeedIDs, "feed", "Feed ID")
 	// fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension") // TODO
+	fl.Var(&cmd.FeedIDs, "feed", "Feed ID")
+	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
+	fl.StringVar(&fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
+	fl.StringVar(&fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
-	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport stop times, trips, transfers, shapes, frequencies, and transfers")
+	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport stop times, trips, transfers, shapes, and frequencies")
 	fl.Parse(args)
 	cmd.Workers = 1
 	cmd.FVIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
+	}
+	if fvidfile != "" {
+		lines, err := getFileLines(fvidfile)
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			if line != "" {
+				cmd.FVIDs = append(cmd.FVIDs, line)
+			}
+		}
+	}
+	if fvsha1file != "" {
+		lines, err := getFileLines(fvsha1file)
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			if line != "" {
+				cmd.FVSHA1 = append(cmd.FVSHA1, line)
+			}
+		}
 	}
 	if len(cmd.FeedIDs)+len(cmd.FVIDs)+len(cmd.FVSHA1) == 0 {
 		return errors.New("must provide feed ids, feed version ids, or feed version sha1s")
@@ -166,4 +194,24 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg
 		}
 	}
 	wg.Done()
+}
+
+func getFileLines(fn string) ([]string, error) {
+	ret := []string{}
+	file, err := os.Open(fn)
+	if err != nil {
+		return ret, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if t := scanner.Text(); t != "" {
+			ret = append(ret, strings.TrimSpace(t))
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return ret, err
+	}
+	return ret, nil
 }
