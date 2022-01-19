@@ -76,6 +76,8 @@ type Options struct {
 	CreateMissingShapes bool
 	// Create missing Calendar entries
 	NormalizeServiceIDs bool
+	// Normalize timezones, e.g. US/Pacific -> America/Los_Angeles
+	NormalizeTimezones bool
 	// Simplify Calendars that use mostly CalendarDates
 	SimplifyCalendars bool
 	// Convert extended route types to primitives
@@ -154,7 +156,13 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 
 	// Default extensions
 	if copier.UseBasicRouteTypes {
+		// Convert extended route types to basic route types
 		copier.AddExtension(&BasicRouteTypeFilter{})
+	}
+	if copier.NormalizeTimezones {
+		// Normalize timezones and apply agency/stop timezones where empty
+		copier.AddExtension(&NormalizeTimezoneFilter{})
+		copier.AddExtension(&ApplyParentTimezoneFilter{})
 	}
 
 	// Add extensions
