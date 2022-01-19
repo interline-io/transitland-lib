@@ -338,7 +338,7 @@ func (r *OTime) String() string {
 	if !r.Valid {
 		return ""
 	}
-	return r.Time.Format("20060102")
+	return r.Time.Format(time.RFC3339)
 }
 
 // Value returns nil if empty
@@ -358,7 +358,7 @@ func (r *OTime) Scan(src interface{}) error {
 	var err error
 	switch v := src.(type) {
 	case string:
-		r.Time, err = time.Parse("20060102", v)
+		r.Time, err = time.Parse(time.RFC3339, v)
 	case time.Time:
 		r.Time = v
 	default:
@@ -373,7 +373,7 @@ func (r *OTime) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
-	return json.Marshal(r.Time.Format("2006-01-02"))
+	return json.Marshal(r.Time.Format(time.RFC3339))
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
