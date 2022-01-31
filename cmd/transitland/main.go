@@ -11,11 +11,12 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/extract"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
+	"github.com/rs/zerolog"
 )
 
 type runner interface {
@@ -24,7 +25,6 @@ type runner interface {
 }
 
 func main() {
-	log.SetLevel(log.INFO)
 	quietFlag := false
 	debugFlag := false
 	traceFlag := false
@@ -54,15 +54,15 @@ func main() {
 		return
 	}
 	if quietFlag {
-		log.SetLevel(log.ERROR)
+		log.SetLevel(zerolog.Disabled)
+	} else if debugFlag {
+		log.SetLevel(zerolog.DebugLevel)
+	} else if traceFlag {
+		log.SetLevel(zerolog.TraceLevel)
+	} else {
+		log.SetLevel(zerolog.InfoLevel)
 	}
-	if debugFlag {
-		log.SetLevel(log.DEBUG)
-	}
-	if traceFlag {
-		log.SetLevel(log.TRACE)
-		log.SetQueryLog(true)
-	}
+
 	args := flag.Args()
 	subc := flag.Arg(0)
 	if subc == "" {

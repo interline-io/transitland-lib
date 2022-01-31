@@ -5,7 +5,7 @@ import (
 	"flag"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 )
 
 // Command validates a DMFR file.

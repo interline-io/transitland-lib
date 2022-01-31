@@ -6,11 +6,20 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
 var bufferSize = 1000
+
+type canBeginx interface {
+	Beginx() (*sqlx.Tx, error)
+}
+
+type canClose interface {
+	Close() error
+}
 
 // check for error and panic
 // TODO: don't do this. panic is bad.

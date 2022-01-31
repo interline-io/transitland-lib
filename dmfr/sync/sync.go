@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -43,7 +43,7 @@ func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 			rfeed.DeletedAt = tl.OTime{Valid: false}
 			feedid, found, updated, err := UpdateFeed(atx, rfeed)
 			if err != nil {
-				log.Error("%s: error on feed %s: %s", fn, feedid, err)
+				log.Error("%s: error on feed %d: %s", fn, feedid, err)
 				sr.Errors = append(sr.Errors, err)
 				continue
 			}

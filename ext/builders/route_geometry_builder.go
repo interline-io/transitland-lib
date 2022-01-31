@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/twpayne/go-geom"
@@ -141,7 +140,7 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 			}
 			// Add to MultiLineString
 			if err := g.Push(sl); err != nil {
-				log.Debug("failed to build route geometry:", err)
+				// log.Debug("failed to build route geometry:", err)
 			}
 		}
 		if g.NumLineStrings() > 0 {

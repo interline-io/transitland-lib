@@ -6,6 +6,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -41,16 +42,17 @@ func (adapter *PostgresAdapter) Open() error {
 		return err
 	}
 	db.Mapper = MapperCache.Mapper
-	adapter.db = &QueryLogger{db.Unsafe()}
+	adapter.db = db.Unsafe()
 	return nil
 }
 
 // Close the adapter.
 func (adapter *PostgresAdapter) Close() error {
-	if a, ok := adapter.db.(canClose); ok {
-		return a.Close()
-	}
 	return nil
+}
+
+func (adapter *PostgresAdapter) EnableLogging(trace bool) {
+	adapter.db = &log.QueryLogger{Ext: adapter.db, Trace: trace}
 }
 
 // Create an initial database schema.
@@ -76,7 +78,7 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{tx}}
+	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: tx}
 	if err2 := cb(adapter2); err2 != nil {
 		if errTx := tx.Rollback(); errTx != nil {
 			return errTx
@@ -186,12 +188,6 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	var err error
 	var tx *sqlx.Tx
 	commit := true
-	if a, ok := adapter.db.(*QueryLogger); ok {
-		if b, ok2 := a.sqext.(*sqlx.Tx); ok2 {
-			tx = b
-			commit = false
-		}
-	}
 	if a, ok := adapter.db.(canBeginx); tx == nil && ok {
 		tx, err = a.Beginx()
 	}

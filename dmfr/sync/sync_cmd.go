@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 

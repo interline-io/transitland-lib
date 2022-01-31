@@ -9,6 +9,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/schema"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/jmoiron/sqlx"
@@ -53,7 +54,7 @@ func (adapter *SQLiteAdapter) Open() error {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
 	db.Mapper = MapperCache.Mapper
-	adapter.db = &QueryLogger{db.Unsafe()}
+	adapter.db = db.Unsafe()
 	return nil
 }
 
@@ -65,12 +66,16 @@ func (adapter *SQLiteAdapter) Close() error {
 	return nil
 }
 
+func (adapter *SQLiteAdapter) EnableLogging(trace bool) {
+	adapter.db = &log.QueryLogger{Ext: adapter.db, Trace: trace}
+}
+
 // Create the database if necessary.
 func (adapter *SQLiteAdapter) Create() error {
 	// Dont log, used often in tests
 	adb := adapter.db
-	if a, ok := adapter.db.(*QueryLogger); ok {
-		adb = a.sqext
+	if a, ok := adapter.db.(*log.QueryLogger); ok {
+		adb = a.Ext
 	}
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
@@ -99,7 +104,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{tx}}
+	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: tx}
 	if errTx := cb(adapter2); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3

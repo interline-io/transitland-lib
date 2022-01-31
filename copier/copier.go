@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"

@@ -3,7 +3,7 @@ package validator
 import (
 	"sort"
 
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/twpayne/go-geom"
 )
