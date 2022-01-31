@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/Masterminds/squirrel v1.5.0
+	github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e // indirect
 	github.com/dimchansky/utfbom v1.1.0
 	github.com/golang/protobuf v1.4.1
 	github.com/gookit/color v1.2.0
@@ -12,8 +13,10 @@ require (
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/mmcloughlin/geohash v0.10.0
+	github.com/rs/zerolog v1.26.1 // indirect
 	github.com/snabb/isoweek v1.0.0
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/twpayne/go-geom v1.4.1
+	github.com/zenazn/goji v0.9.0 // indirect
 	google.golang.org/protobuf v1.25.0
 )
