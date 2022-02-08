@@ -433,7 +433,9 @@ CREATE TABLE IF NOT EXISTS "tl_agency_places" (
   "rank" real not null,
   "name" varchar(255),
   "adm1name" varchar(255),
-  "adm0name" varchar(255)
+  "adm0name" varchar(255),
+  "adm1iso" varchar(255),
+  "adm0iso" varchar(255)
 );
 
 CREATE TABLE IF NOT EXISTS "tl_route_stops" (

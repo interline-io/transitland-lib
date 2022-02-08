@@ -2,6 +2,7 @@ package builders
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
@@ -14,6 +15,8 @@ type AgencyPlace struct {
 	Name     tl.OString
 	Adm1name tl.OString
 	Adm0name tl.OString
+	Adm0iso  tl.OString
+	Adm1iso  tl.OString
 	Count    int
 	Rank     float64
 	tl.MinEntity
@@ -82,7 +85,9 @@ limit 1
 var agencyAdminQuery = `
 select 
 	name adm1name,
-	ne.admin adm0name
+	ne.admin adm0name,
+	iso_a2 as adm0iso,
+	iso_3166_2 as adm1iso
 from ne_10m_admin_1_states_provinces ne
 where st_intersects(ne.geometry, ST_MakePoint(?, ?));
 `
@@ -106,8 +111,10 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	// For each geohash, check nearby populated places and inside admin boundaries
 	type foundPlace struct {
 		Name     tl.OString
-		Adm1name tl.OString
 		Adm0name tl.OString
+		Adm1name tl.OString
+		Adm0iso  tl.OString
+		Adm1iso  tl.OString
 	}
 	pointPlaces := map[string]foundPlace{}
 	pointAdmins := map[string]foundPlace{}
@@ -136,7 +143,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 		}
 	}
 	for aid, agencyPoints := range pp.agencyStops {
-		// fmt.Println("agency stops:", agencyPoints)
+		fmt.Println("agency stops:", agencyPoints)
 		placeWeights := map[foundPlace]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
@@ -159,12 +166,14 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 		for k, v := range placeWeights {
 			score := float64(v) / float64(agencyTotalWeight)
 			if score > 0.05 {
-				// fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
+				fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
 				ap := AgencyPlace{}
 				ap.AgencyID = aid
 				ap.Name = k.Name
 				ap.Adm0name = k.Adm0name
 				ap.Adm1name = k.Adm1name
+				ap.Adm1iso = k.Adm1iso
+				ap.Adm0iso = k.Adm0iso
 				ap.Count = v
 				ap.Rank = score
 				if _, _, err := copier.CopyEntity(&ap); err != nil {
