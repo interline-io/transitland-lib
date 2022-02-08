@@ -115,12 +115,12 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 			var cc []tl.StopTime
 			for _, st := range ents {
 				if len(cc) == 0 {
-					cc = append(cc, st)
+					// ok
 				} else if cc[len(cc)-1].TripID != st.TripID {
 					out <- cc
 					cc = nil
-					cc = append(cc, st)
 				}
+				cc = append(cc, st)
 			}
 			if len(cc) > 0 {
 				out <- cc
