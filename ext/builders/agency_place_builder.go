@@ -72,11 +72,14 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Ent
 
 var agencyPlaceQuery = `
 select 
-	name, 
-	adm0name, 
-	adm1name, 
-	ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance 
+	ne.name, 
+	ne.adm0name, 
+	ne.adm1name,
+	ne_admin.iso_a2 as adm0iso,
+	ne_admin.iso_3166_2 as adm1iso,
+	ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance
 from ne_10m_populated_places ne 
+left join ne_10m_admin_1_states_provinces ne_admin on ne_admin.name = ne.adm1name and ne_admin.admin = ne.adm0name
 where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, 40000) 
 order by distance asc
 limit 1
@@ -85,7 +88,7 @@ limit 1
 var agencyAdminQuery = `
 select 
 	name adm1name,
-	ne.admin adm0name,
+	admin adm0name,
 	iso_a2 as adm0iso,
 	iso_3166_2 as adm1iso
 from ne_10m_admin_1_states_provinces ne
@@ -156,6 +159,8 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				checkPlace := foundPlace{
 					Adm1name: place.Adm1name,
 					Adm0name: place.Adm0name,
+					Adm1iso:  place.Adm1iso,
+					Adm0iso:  place.Adm0iso,
 				}
 				if _, ok2 := placeWeights[checkPlace]; ok2 || len(pointAdmins) == 0 {
 					placeWeights[place] += count
