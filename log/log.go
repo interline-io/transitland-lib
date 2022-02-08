@@ -10,6 +10,38 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+func ZInfo() *zerolog.Event {
+	return log.Info()
+}
+
+func ZError() *zerolog.Event {
+	return log.Error()
+}
+
+func ZDebug() *zerolog.Event {
+	return log.Debug()
+}
+
+// Error for notable errors.
+func Errorf(fmts string, a ...interface{}) {
+	log.Error().Msgf(fmts, a...)
+}
+
+// Info for regular messages.
+func Infof(fmts string, a ...interface{}) {
+	log.Info().Msgf(fmts, a...)
+}
+
+// Debug for debugging messages.
+func Debugf(fmts string, a ...interface{}) {
+	log.Debug().Msgf(fmts, a...)
+}
+
+// Trace for debugging messages.
+func Tracef(fmts string, a ...interface{}) {
+	log.Trace().Msgf(fmts, a...)
+}
+
 // Error for notable errors.
 func Error(fmts string, a ...interface{}) {
 	log.Error().Msgf(fmts, a...)
