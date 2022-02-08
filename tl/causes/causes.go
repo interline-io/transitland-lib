@@ -398,12 +398,11 @@ func (e *InvalidTimezoneError) Error() string {
 }
 
 // NewInvalidTimezoneError returns a new InvalidTimezoneError.
-func NewInvalidTimezoneError(eid string, field string, value string) *InvalidTimezoneError {
+func NewInvalidTimezoneError(field string, value string) *InvalidTimezoneError {
 	return &InvalidTimezoneError{
 		bc: bc{
-			EntityID: eid,
-			Field:    field,
-			Value:    value,
+			Field: field,
+			Value: value,
 		},
 	}
 }

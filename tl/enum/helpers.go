@@ -67,8 +67,8 @@ func CheckCurrency(field string, value string) (errs []error) {
 
 // CheckTimezone returns an error if the value is not a known timezone
 func CheckTimezone(field string, value string) (errs []error) {
-	if !IsValidTimezone(value) {
-		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid timezone")))
+	if _, ok := IsValidTimezone(value); !ok {
+		errs = append(errs, causes.NewInvalidTimezoneError(field, value))
 	}
 	return errs
 }
@@ -120,12 +120,12 @@ func IsValidCurrency(value string) bool {
 }
 
 // IsValidTimezone check is valid timezone
-func IsValidTimezone(value string) bool {
+func IsValidTimezone(value string) (string, bool) {
 	if len(value) == 0 {
-		return true
+		return "", true
 	}
-	_, ok := timezones[strings.ToLower(value)]
-	return ok
+	nornmalized, ok := timezones[strings.ToLower(value)]
+	return nornmalized, ok
 }
 
 // IsValidEmail check if valid email

@@ -84,7 +84,6 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
 		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
 		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
-		copier.AddValidator(&rules.InvalidTimezoneCheck{}, 1)
 		copier.AddValidator(&rules.AgencyIDRecommendedCheck{}, 1)
 		copier.AddValidator(&rules.DescriptionEqualsName{}, 1)
 		copier.AddValidator(&rules.RouteExtendedTypesCheck{}, 1)
