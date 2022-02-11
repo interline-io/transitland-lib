@@ -168,7 +168,7 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
-		log.Debug("error %s '%s': %s", efn, eid, err.Error())
+		log.Debugf("error %s '%s': %s", efn, eid, err.Error())
 	}
 	for _, err := range warns {
 		if v, ok := err.(updateContext); ok {
@@ -181,7 +181,7 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
-		log.Debug("warning %s '%s': %s", efn, eid, err.Error())
+		log.Debugf("warning %s '%s': %s", efn, eid, err.Error())
 	}
 }
 
@@ -204,18 +204,18 @@ func errfmt(err error) string {
 // DisplayErrors shows individual errors in log.Info
 func (cr *Result) DisplayErrors() {
 	if len(cr.Errors) == 0 {
-		log.Info("No errors")
+		log.Infof("No errors")
 		return
 	}
-	log.Info("Errors:")
+	log.Infof("Errors:")
 	for _, v := range cr.Errors {
-		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
+		log.Infof("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 		for _, err := range v.Errors {
-			log.Info("\t\t%s", errfmt(err))
+			log.Infof("\t\t%s", errfmt(err))
 		}
 		remain := v.Count - len(v.Errors)
 		if remain > 0 {
-			log.Info("\t\t... and %d more", remain)
+			log.Infof("\t\t... and %d more", remain)
 		}
 	}
 }
@@ -223,59 +223,59 @@ func (cr *Result) DisplayErrors() {
 // DisplayWarnings shows individual warnings in log.Info
 func (cr *Result) DisplayWarnings() {
 	if len(cr.Warnings) == 0 {
-		log.Info("No warnings")
+		log.Infof("No warnings")
 		return
 	}
-	log.Info("Warnings:")
+	log.Infof("Warnings:")
 	for _, v := range cr.Warnings {
-		log.Info("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
+		log.Infof("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 		for _, err := range v.Errors {
-			log.Info("\t\t%s", errfmt(err))
+			log.Infof("\t\t%s", errfmt(err))
 		}
 		remain := v.Count - len(v.Errors)
 		if remain > 0 {
-			log.Info("\t\t... and %d more", remain)
+			log.Infof("\t\t... and %d more", remain)
 		}
 	}
 }
 
 // DisplaySummary shows entity and error counts in log.Info
 func (cr *Result) DisplaySummary() {
-	log.Info("Copied count:")
+	log.Infof("Copied count:")
 	for _, k := range sortedKeys(cr.EntityCount) {
-		log.Info("\t%s: %d", k, cr.EntityCount[k])
+		log.Infof("\t%s: %d", k, cr.EntityCount[k])
 	}
 	if msiSum(cr.GeneratedCount) > 0 {
-		log.Info("Generated count:")
+		log.Infof("Generated count:")
 		for _, k := range sortedKeys(cr.GeneratedCount) {
-			log.Info("\t%s: %d", k, cr.GeneratedCount[k])
+			log.Infof("\t%s: %d", k, cr.GeneratedCount[k])
 		}
 	}
 	if cr.InterpolatedStopTimeCount > 0 {
-		log.Info("Interpolated stop_time count: %d", cr.InterpolatedStopTimeCount)
+		log.Infof("Interpolated stop_time count: %d", cr.InterpolatedStopTimeCount)
 	}
 	if msiSum(cr.SkipEntityErrorCount) > 0 {
-		log.Info("Skipped with errors:")
+		log.Infof("Skipped with errors:")
 		for _, k := range sortedKeys(cr.SkipEntityErrorCount) {
-			log.Info("\t%s: %d", k, cr.SkipEntityErrorCount[k])
+			log.Infof("\t%s: %d", k, cr.SkipEntityErrorCount[k])
 		}
 	}
 	if msiSum(cr.SkipEntityReferenceCount) > 0 {
-		log.Info("Skipped with reference errors:")
+		log.Infof("Skipped with reference errors:")
 		for _, k := range sortedKeys(cr.SkipEntityReferenceCount) {
-			log.Info("\t%s: %d", k, cr.SkipEntityReferenceCount[k])
+			log.Infof("\t%s: %d", k, cr.SkipEntityReferenceCount[k])
 		}
 	}
 	if msiSum(cr.SkipEntityFilterCount) > 0 {
-		log.Info("Skipped by filter:")
+		log.Infof("Skipped by filter:")
 		for _, k := range sortedKeys(cr.SkipEntityFilterCount) {
-			log.Info("\t%s: %d", k, cr.SkipEntityFilterCount[k])
+			log.Infof("\t%s: %d", k, cr.SkipEntityFilterCount[k])
 		}
 	}
 	if msiSum(cr.SkipEntityMarkedCount) > 0 {
-		log.Info("Skipped by marker:")
+		log.Infof("Skipped by marker:")
 		for _, k := range sortedKeys(cr.SkipEntityMarkedCount) {
-			log.Info("\t%s: %d", k, cr.SkipEntityMarkedCount[k])
+			log.Infof("\t%s: %d", k, cr.SkipEntityMarkedCount[k])
 		}
 	}
 }

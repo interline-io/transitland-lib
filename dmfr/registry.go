@@ -32,20 +32,20 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 	var registry Registry
 	if err := json.Unmarshal([]byte(contents), &registry); err != nil {
 		if e, ok := err.(*json.SyntaxError); ok {
-			log.Debug("Syntax error at byte offset %d", e.Offset)
+			log.Debugf("syntax error at byte offset %d", e.Offset)
 		}
 		return nil, err
 	}
-	log.Debug("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
+	log.Debugf("Loaded a DMFR file containing %d feeds", len(registry.Feeds))
 	if registry.LicenseSpdxIdentifier != "CC0-1.0" {
-		log.Debug("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
+		log.Debugf("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
 	}
 	for i := 0; i < len(registry.Feeds); i++ {
 		feedSpec := strings.ToLower(registry.Feeds[i].Spec)
 		if feedSpec == "gtfs" || feedSpec == "gtfs-rt" || feedSpec == "gbfs" || feedSpec == "mds" {
 			continue
 		} else {
-			return nil, errors.New("At least one feed in the DMFR file is not of a valid spec (GTFS, GTFS-RT, GBFS, or MDS)")
+			return nil, errors.New("at least one feed in the DMFR file is not of a valid spec (GTFS, GTFS-RT, GBFS, or MDS)")
 		}
 
 	}

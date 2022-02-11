@@ -91,7 +91,7 @@ func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 					g = geom.NewMultiLineString(geom.XY)
 				}
 				if err := g.Push(shape); err != nil {
-					log.Error("failed to build route geometry: %s", err.Error())
+					log.Errorf("failed to build route geometry: %s", err.Error())
 				} else {
 					routeShapes[rid] = g
 				}

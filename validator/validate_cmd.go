@@ -42,7 +42,7 @@ func (cmd *Command) Parse(args []string) error {
 }
 
 func (cmd *Command) Run() error {
-	log.Info("Validating: %s", cmd.readerPath)
+	log.Infof("Validating: %s", cmd.readerPath)
 	reader := ext.MustGetReader(cmd.readerPath)
 	defer reader.Close()
 	v, err := NewValidator(reader, cmd.Options)

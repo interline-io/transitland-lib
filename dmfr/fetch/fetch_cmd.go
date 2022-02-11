@@ -98,7 +98,7 @@ func (cmd *Command) Run() error {
 	}
 	///////////////
 	// Here we go
-	log.Info("Fetching %d feeds", len(cmd.FeedIDs))
+	log.Infof("Fetching %d feeds", len(cmd.FeedIDs))
 	fetchNew := 0
 	fetchFound := 0
 	fetchErrs := 0
@@ -136,7 +136,7 @@ func (cmd *Command) Run() error {
 			fetchNew++
 		}
 	}
-	log.Info("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
+	log.Infof("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
 	return nil
 }
 
@@ -144,9 +144,9 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 	for opts := range jobs {
 		// Get FeedID for pretty printing.
 		osid := opts.FeedID
-		log.Info("Feed %s: start", osid)
+		log.Infof("Feed %s: start", osid)
 		if DryRun {
-			log.Info("Feed %s: dry-run", osid)
+			log.Infof("Feed %s: dry-run", osid)
 			continue
 		}
 		var fr Result
@@ -160,15 +160,15 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 		fid := fr.FeedVersion.FeedID
 		furl := fr.FeedVersion.URL
 		if err != nil {
-			log.Error("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
+			log.Errorf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
 		} else if fr.FetchError != nil {
-			log.Error("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", osid, fid, furl, fr.FetchError.Error(), t2)
+			log.Errorf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", osid, fid, furl, fr.FetchError.Error(), t2)
 		} else if fr.FoundSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
 		} else if fr.FoundDirSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID, t2)
 		} else {
-			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
 		}
 		results <- fr
 	}

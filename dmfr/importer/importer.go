@@ -135,7 +135,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		fvi.ID = fviid
 	} else {
 		// Serious error
-		log.Error("Error creating FeedVersionImport: %s", err.Error())
+		log.Errorf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Import
@@ -153,9 +153,9 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 			}
 		}
 		// Update route_stops, agency_geometries, etc...
-		log.Info("Finalizing import")
+		log.Infof("Finalizing import")
 		if opts.Activate {
-			log.Info("Activating feed version")
+			log.Infof("Activating feed version")
 			if err := ActivateFeedVersion(atx, opts.FeedVersionID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
@@ -171,7 +171,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		fviresult.UpdateTimestamps()
 		if err := atx.Update(&fviresult); err != nil {
 			// Serious error
-			log.Error("Error saving FeedVersionImport: %s", err.Error())
+			log.Errorf("Error saving FeedVersionImport: %s", err.Error())
 			return err
 		}
 		return err
@@ -184,7 +184,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		fvi.UpdateTimestamps()
 		if err := adapter.Update(&fvi); err != nil {
 			// Serious error
-			log.Error("Error saving FeedVersionImport: %s", err.Error())
+			log.Errorf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
 		}
 		return Result{FeedVersionImport: fvi}, errImport

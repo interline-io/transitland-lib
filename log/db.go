@@ -81,7 +81,7 @@ func QueryStart(qstr string, a ...interface{}) {
 		q := qval{strconv.Itoa(i + 1), val}
 		sts = append(sts, q.String())
 	}
-	Trace("%s -- %s [start]", color.Blue.Render(qstr), color.Gray.Render(strings.Join(sts, " ")))
+	Tracef("%s -- %s [start]", color.Blue.Render(qstr), color.Gray.Render(strings.Join(sts, " ")))
 }
 
 // QueryTime logs database queries and time relative to start; requires LogQuery or TRACE.
@@ -92,7 +92,7 @@ func QueryTime(t time.Time, qstr string, a ...interface{}) {
 		q := qval{strconv.Itoa(i + 1), val}
 		sts = append(sts, q.String())
 	}
-	Trace("[%s -- %s [time: %0.2f ms]", color.Blue.Render(qstr), color.Gray.Render(strings.Join(sts, " ")), t2)
+	Tracef("[%s -- %s [time: %0.2f ms]", color.Blue.Render(qstr), color.Gray.Render(strings.Join(sts, " ")), t2)
 }
 
 // Some helpers

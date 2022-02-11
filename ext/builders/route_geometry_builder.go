@@ -140,7 +140,7 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 			}
 			// Add to MultiLineString
 			if err := g.Push(sl); err != nil {
-				// log.Debug("failed to build route geometry:", err)
+				// log.Debugf("failed to build route geometry:", err)
 			}
 		}
 		if g.NumLineStrings() > 0 {

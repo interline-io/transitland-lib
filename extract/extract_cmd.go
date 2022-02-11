@@ -142,19 +142,19 @@ func (cmd *Command) Run() error {
 	}
 	// Marker
 	if count > 0 {
-		log.Debug("Extract filter:")
+		log.Debugf("Extract filter:")
 		for k, v := range fm {
 			for _, i := range v {
-				log.Debug("\t%s: %s", k, i)
+				log.Debugf("\t%s: %s", k, i)
 			}
 		}
 		em := NewMarker()
-		log.Debug("Loading graph")
+		log.Debugf("Loading graph")
 		if err := em.Filter(reader, fm); err != nil {
 			return err
 		}
 		cp.Marker = &em
-		log.Debug("Graph loading complete")
+		log.Debugf("Graph loading complete")
 	}
 	// Copy
 	result := cp.Copy()

@@ -29,7 +29,7 @@ func RegisterReader(name string, factory readerFactory) error {
 	if registered {
 		return fmt.Errorf("factory '%s' already registered", name)
 	}
-	log.Debug("Registering Reader factory: %s", name)
+	log.Debugf("Registering Reader factory: %s", name)
 	readerFactories[name] = factory
 	return nil
 }
@@ -43,7 +43,7 @@ func RegisterWriter(name string, factory writerFactory) error {
 	if registered {
 		return fmt.Errorf("factory '%s' already registered", name)
 	}
-	log.Debug("Registering Writer factory: %s", name)
+	log.Debugf("Registering Writer factory: %s", name)
 	writerFactories[name] = factory
 	return nil
 }
@@ -54,7 +54,7 @@ func RegisterExtension(name string, factory extensionFactory) error {
 	if registered {
 		return fmt.Errorf("extension '%s' already registered", name)
 	}
-	log.Debug("registering Extension factory: %s", name)
+	log.Debugf("registering Extension factory: %s", name)
 	extensionFactories[name] = factory
 	return nil
 }

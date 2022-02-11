@@ -10,17 +10,25 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func ZInfo() *zerolog.Event {
+// Zerolog
+
+func Info() *zerolog.Event {
 	return log.Info()
 }
 
-func ZError() *zerolog.Event {
+func Error() *zerolog.Event {
 	return log.Error()
 }
 
-func ZDebug() *zerolog.Event {
+func Debug() *zerolog.Event {
 	return log.Debug()
 }
+
+func Trace() *zerolog.Event {
+	return log.Trace()
+}
+
+// Zerolog simple wrappers
 
 // Error for notable errors.
 func Errorf(fmts string, a ...interface{}) {
@@ -42,25 +50,7 @@ func Tracef(fmts string, a ...interface{}) {
 	log.Trace().Msgf(fmts, a...)
 }
 
-// Error for notable errors.
-func Error(fmts string, a ...interface{}) {
-	log.Error().Msgf(fmts, a...)
-}
-
-// Info for regular messages.
-func Info(fmts string, a ...interface{}) {
-	log.Info().Msgf(fmts, a...)
-}
-
-// Debug for debugging messages.
-func Debug(fmts string, a ...interface{}) {
-	log.Debug().Msgf(fmts, a...)
-}
-
-// Trace for debugging messages.
-func Trace(fmts string, a ...interface{}) {
-	log.Trace().Msgf(fmts, a...)
-}
+// Helper functions
 
 // Exit with an error message.
 func Exit(fmts string, args ...interface{}) {
@@ -72,6 +62,8 @@ func Exit(fmts string, args ...interface{}) {
 func Print(fmts string, args ...interface{}) {
 	fmt.Fprintf(os.Stdout, fmts+"\n", args...)
 }
+
+// Log init and settings
 
 // SetLevel sets the log level.
 func SetLevel(lvalue zerolog.Level) {

@@ -25,7 +25,7 @@ type canClose interface {
 // TODO: don't do this. panic is bad.
 func check(err error) {
 	if err != nil {
-		log.Debug("Error: %s", err)
+		log.Debugf("Error: %s", err)
 		panic(err)
 	}
 }

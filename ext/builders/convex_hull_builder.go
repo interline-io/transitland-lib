@@ -74,12 +74,12 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Enti
 	case *tl.StopTime:
 		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID]]
 		if !ok {
-			// log.Debug("no route:", v.TripID, pp.tripRoutes[v.TripID])
+			// log.Debugf("no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
 		s, ok := pp.stops[v.StopID]
 		if !ok {
-			// log.Debug("no stop:", v.StopID)
+			// log.Debugf("no stop:", v.StopID)
 			return nil
 		}
 		r.stopGeoms[v.StopID] = s
@@ -102,7 +102,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		ch := geomxy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
-			// log.Debug("feed version convex hull is not polygon:", fvid)
+			// log.Debugf("feed version convex hull is not polygon:", fvid)
 			continue
 		}
 		ent := FeedVersionGeometry{
@@ -132,7 +132,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		ch := geomxy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
-			// log.Debug("agency convex hull is not polygon:", aid)
+			// log.Debugf("agency convex hull is not polygon:", aid)
 			continue
 		}
 		ent := AgencyGeometry{
