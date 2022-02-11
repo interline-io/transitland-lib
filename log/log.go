@@ -7,47 +7,52 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // Zerolog
 
+var Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+
 func Info() *zerolog.Event {
-	return log.Info()
+	return Logger.Info()
 }
 
 func Error() *zerolog.Event {
-	return log.Error()
+	return Logger.Error()
 }
 
 func Debug() *zerolog.Event {
-	return log.Debug()
+	return Logger.Debug()
 }
 
 func Trace() *zerolog.Event {
-	return log.Trace()
+	return Logger.Trace()
+}
+
+func With() zerolog.Context {
+	return Logger.With()
 }
 
 // Zerolog simple wrappers
 
 // Error for notable errors.
 func Errorf(fmts string, a ...interface{}) {
-	log.Error().Msgf(fmts, a...)
+	Logger.Error().Msgf(fmts, a...)
 }
 
 // Info for regular messages.
 func Infof(fmts string, a ...interface{}) {
-	log.Info().Msgf(fmts, a...)
+	Logger.Info().Msgf(fmts, a...)
 }
 
 // Debug for debugging messages.
 func Debugf(fmts string, a ...interface{}) {
-	log.Debug().Msgf(fmts, a...)
+	Logger.Debug().Msgf(fmts, a...)
 }
 
 // Trace for debugging messages.
 func Tracef(fmts string, a ...interface{}) {
-	log.Trace().Msgf(fmts, a...)
+	Logger.Trace().Msgf(fmts, a...)
 }
 
 // Helper functions
@@ -92,7 +97,7 @@ func setConsoleLogger() {
 	output.FormatLevel = func(i interface{}) string {
 		return strings.ToUpper(fmt.Sprintf("[%-5s]", i))
 	}
-	log.Logger = log.Output(output)
+	Logger = Logger.Output(output)
 }
 
 func init() {
