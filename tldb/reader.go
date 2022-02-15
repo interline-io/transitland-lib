@@ -105,13 +105,25 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 	}
 	out := make(chan []tl.StopTime, bufferSize)
 	go func() {
-		for _, tripID := range tripIDs {
+		tripChunks := chunkStrings(tripIDs, 1000)
+		for _, tripChunk := range tripChunks {
 			ents := []tl.StopTime{}
-			qstr, args, err := reader.Where().From("gtfs_stop_times").Where("trip_id = ?", tripID).OrderBy("stop_sequence").ToSql()
+			qstr, args, err := reader.Where().From("gtfs_stop_times").Where(sq.Eq{"trip_id": tripChunk}).OrderBy("trip_id", "stop_sequence").ToSql()
 			check(err)
 			check(reader.Adapter.Select(&ents, qstr, args...))
-			if len(ents) > 0 {
-				out <- ents
+			// split by trip
+			var cc []tl.StopTime
+			for _, st := range ents {
+				if len(cc) == 0 {
+					// ok
+				} else if cc[len(cc)-1].TripID != st.TripID {
+					out <- cc
+					cc = nil
+				}
+				cc = append(cc, st)
+			}
+			if len(cc) > 0 {
+				out <- cc
 			}
 		}
 		close(out)
@@ -462,4 +474,22 @@ func (reader *Reader) Trips() chan tl.Trip {
 		close(out)
 	}()
 	return out
+}
+
+//
+
+func chunkStrings(value []string, csize int) [][]string {
+	var output [][]string
+	var cur []string
+	for _, s := range value {
+		cur = append(cur, s)
+		if len(cur) >= csize {
+			output = append(output, cur)
+			cur = nil
+		}
+	}
+	if len(cur) > 0 {
+		output = append(output, cur)
+	}
+	return output
 }
