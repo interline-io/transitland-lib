@@ -68,26 +68,14 @@ func NewReader(url string) (tl.Reader, error) {
 	return GetReader("csv", url)
 }
 
-// MustOpenReaderOrPanic is a helper that returns an opened reader or panics.
-func MustOpenReaderOrPanic(path string) tl.Reader {
+// MustOpenReader is a helper that returns an opened reader or panics.
+func MustOpenReader(path string) tl.Reader {
 	r, err := NewReader(path)
 	if err != nil {
 		panic(fmt.Sprintf("no handler for reader '%s': %s", path, err.Error()))
 	}
 	if err := r.Open(); err != nil {
 		panic(fmt.Sprintf("could not open reader '%s': %s", path, err.Error()))
-	}
-	return r
-}
-
-// MustOpenReaderOrExit is a helper that returns an opened a reader or exits.
-func MustOpenReaderOrExit(path string) tl.Reader {
-	r, err := NewReader(path)
-	if err != nil {
-		log.Exit("No handler for reader '%s': %s", path, err.Error())
-	}
-	if err := r.Open(); err != nil {
-		log.Exit("Could not open reader '%s': %s", path, err.Error())
 	}
 	return r
 }
@@ -101,26 +89,19 @@ func NewWriter(dburl string) (tl.Writer, error) {
 	return GetWriter("csv", dburl)
 }
 
-// MustOpenWriterOrPanic is a helper that returns an opened writer or panics.
-func MustOpenWriterOrPanic(path string) tl.Writer {
+// MustOpenWriter is a helper that returns an opened writer or panics.
+func MustOpenWriter(path string, create bool) tl.Writer {
 	r, err := NewWriter(path)
 	if err != nil {
-		panic(fmt.Sprintf("No handler for reader '%s': %s", path, err.Error()))
+		panic(fmt.Sprintf("No handler for writer '%s': %s", path, err.Error()))
 	}
 	if err := r.Open(); err != nil {
-		panic(fmt.Sprintf("Could not open reader '%s': %s", path, err.Error()))
+		panic(fmt.Sprintf("Could not open writer '%s': %s", path, err.Error()))
 	}
-	return r
-}
-
-// MustOpenWriterOrExit is a helper that returns an opened a writer or exits.
-func MustOpenWriterOrExit(path string) tl.Writer {
-	r, err := NewWriter(path)
-	if err != nil {
-		log.Exit("No handler for writer '%s': %s", path, err.Error())
-	}
-	if err := r.Open(); err != nil {
-		log.Exit("Could not open writer '%s': %s", path, err.Error())
+	if create {
+		if err := r.Create(); err != nil {
+			panic(fmt.Sprintf("Could not create database '%s': %s", path, err.Error()))
+		}
 	}
 	return r
 }
@@ -147,41 +128,4 @@ func GetExtension(name string) (Extension, error) {
 		return f(), nil
 	}
 	return nil, fmt.Errorf("no Extension factory for %s", name)
-}
-
-// MustGetReader or exits.
-func MustGetReader(inurl string) tl.Reader {
-	if len(inurl) == 0 {
-		log.Exit("No reader specified")
-	}
-	// Reader
-	reader, err := NewReader(inurl)
-	if err != nil {
-		log.Exit("No known reader for '%s': %s", inurl, err)
-	}
-	if err := reader.Open(); err != nil {
-		log.Exit("Could not open '%s': %s", inurl, err)
-	}
-	return reader
-}
-
-// MustGetWriter or exits.
-func MustGetWriter(outurl string, create bool) tl.Writer {
-	if len(outurl) == 0 {
-		log.Exit("No writer specified")
-	}
-	// Writer
-	writer, err := NewWriter(outurl)
-	if err != nil {
-		log.Exit("No known writer for '%s': %s", outurl, err)
-	}
-	if err := writer.Open(); err != nil {
-		log.Exit("Could not open '%s': %s", outurl, err)
-	}
-	if create {
-		if err := writer.Create(); err != nil {
-			log.Exit("Could not create writer: %s", err)
-		}
-	}
-	return writer
 }

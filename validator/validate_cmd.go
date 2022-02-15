@@ -33,7 +33,7 @@ func (cmd *Command) Parse(args []string) error {
 	err := fl.Parse(args)
 	if err != nil || fl.NArg() < 1 {
 		fl.Usage()
-		log.Exit("Requires input reader")
+		log.Exit(1, "Requires input reader")
 	}
 	cmd.readerPath = fl.Arg(0)
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles
@@ -43,7 +43,7 @@ func (cmd *Command) Parse(args []string) error {
 
 func (cmd *Command) Run() error {
 	log.Infof("Validating: %s", cmd.readerPath)
-	reader := ext.MustGetReader(cmd.readerPath)
+	reader := ext.MustOpenReader(cmd.readerPath)
 	defer reader.Close()
 	v, err := NewValidator(reader, cmd.Options)
 	if err != nil {

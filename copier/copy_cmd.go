@@ -33,7 +33,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
-		log.Exit("Requires input reader and output writer")
+		log.Exit(1, "Requires input reader and output writer")
 	}
 	cmd.readerPath = fl.Arg(0)
 	cmd.writerPath = fl.Arg(1)
@@ -42,9 +42,9 @@ func (cmd *Command) Parse(args []string) error {
 
 func (cmd *Command) Run() error {
 	// Reader / Writer
-	reader := ext.MustGetReader(cmd.readerPath)
+	reader := ext.MustOpenReader(cmd.readerPath)
 	defer reader.Close()
-	writer := ext.MustGetWriter(cmd.writerPath, cmd.create)
+	writer := ext.MustOpenWriter(cmd.writerPath, cmd.create)
 	defer writer.Close()
 	// Create feed version
 	if dbw, ok := writer.(*tldb.Writer); ok {
@@ -54,7 +54,7 @@ func (cmd *Command) Run() error {
 		if dbw.FeedVersionID == 0 {
 			fvid, err := dbw.CreateFeedVersion(reader)
 			if err != nil {
-				log.Exit("Error creating FeedVersion: %s", err)
+				log.Exit(1, "Error creating FeedVersion: %s", err)
 			}
 			dbw.FeedVersionID = fvid
 		}
@@ -64,7 +64,7 @@ func (cmd *Command) Run() error {
 	cmd.Options.Extensions = cmd.extensions
 	cp, err := NewCopier(reader, writer, cmd.Options)
 	if err != nil {
-		log.Exit(err.Error())
+		log.Exit(1, err.Error())
 	}
 	result := cp.Copy()
 	result.DisplaySummary()

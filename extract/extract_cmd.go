@@ -67,7 +67,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
-		log.Exit("Requires input reader and output writer")
+		log.Exit(1, "Requires input reader and output writer")
 	}
 	cmd.readerPath = fl.Arg(0)
 	cmd.writerPath = fl.Arg(1)
@@ -76,9 +76,9 @@ func (cmd *Command) Parse(args []string) error {
 
 func (cmd *Command) Run() error {
 	// Reader / Writer
-	reader := ext.MustGetReader(cmd.readerPath)
+	reader := ext.MustOpenReader(cmd.readerPath)
 	defer reader.Close()
-	writer := ext.MustGetWriter(cmd.writerPath, cmd.create)
+	writer := ext.MustOpenWriter(cmd.writerPath, cmd.create)
 	defer writer.Close()
 	// Create fv
 	if dbw, ok := writer.(*tldb.Writer); ok {
@@ -87,7 +87,7 @@ func (cmd *Command) Run() error {
 		} else {
 			fvid, err := dbw.CreateFeedVersion(reader)
 			if err != nil {
-				log.Exit("Error creating FeedVersion: %s", err)
+				log.Exit(1, "Error creating FeedVersion: %s", err)
 			}
 			dbw.FeedVersionID = fvid
 		}
@@ -97,7 +97,7 @@ func (cmd *Command) Run() error {
 	cmd.Options.Extensions = cmd.extensions
 	cp, err := copier.NewCopier(reader, writer, cmd.Options)
 	if err != nil {
-		log.Exit(err.Error())
+		log.Exit(1, err.Error())
 	}
 	// Create SetterFilter
 	setvalues := [][]string{}
@@ -108,7 +108,7 @@ func (cmd *Command) Run() error {
 		tx := NewSetterFilter()
 		for _, setv := range setvalues {
 			if len(setv) != 4 {
-				log.Exit("Invalid set argument")
+				log.Exit(1, "Invalid set argument")
 			}
 			tx.AddValue(setv[0], setv[1], setv[2], setv[3])
 		}
@@ -121,7 +121,7 @@ func (cmd *Command) Run() error {
 		if v, err := strconv.Atoi(i); err == nil {
 			rthits[v] = true
 		} else {
-			log.Exit("Invalid route_type: %s", i)
+			log.Exit(1, "Invalid route_type: %s", i)
 		}
 	}
 	for ent := range reader.Routes() {

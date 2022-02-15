@@ -13,6 +13,10 @@ import (
 
 var Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
 
+func Fatal() *zerolog.Event {
+	return Logger.Info()
+}
+
 func Info() *zerolog.Event {
 	return Logger.Info()
 }
@@ -58,9 +62,9 @@ func Tracef(fmts string, a ...interface{}) {
 // Helper functions
 
 // Exit with an error message.
-func Exit(fmts string, args ...interface{}) {
+func Exit(code int, fmts string, args ...interface{}) {
 	Print(fmts, args...)
-	os.Exit(1)
+	os.Exit(code)
 }
 
 // Print - simple print, without timestamp, without regard to log level.
