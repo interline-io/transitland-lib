@@ -12,7 +12,6 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tldb"
 )
 
 func TestCommand(t *testing.T) {
@@ -54,7 +53,7 @@ func TestCommand(t *testing.T) {
 	_ = cases
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
-			adapter := tldb.MustGetWriter("sqlite3://:memory:", true).Adapter
+			adapter := testdb.MustOpenWriter("sqlite3://:memory:", true).Adapter
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}

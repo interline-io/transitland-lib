@@ -70,7 +70,10 @@ func (cmd *Command) Parse(args []string) error {
 func (cmd *Command) Run() error {
 	// Get feeds
 	if cmd.adapter == nil {
-		writer := tldb.MustGetWriter(cmd.DBURL, true)
+		writer, err := tldb.OpenWriter(cmd.DBURL, true)
+		if err != nil {
+			return err
+		}
 		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}

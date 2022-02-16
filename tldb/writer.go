@@ -9,22 +9,22 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-// MustGetWriter opens & creates a db writer, panic on failure
-func MustGetWriter(dburl string, create bool) *Writer {
+// OpenWriter opens & creates a db writer
+func OpenWriter(dburl string, create bool) (*Writer, error) {
 	// Writer
 	writer, err := NewWriter(dburl)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if err := writer.Open(); err != nil {
-		panic(err)
+		return nil, err
 	}
 	if create {
 		if err := writer.Create(); err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
-	return writer
+	return writer, nil
 }
 
 // Writer takes a Reader and saves it to a database.

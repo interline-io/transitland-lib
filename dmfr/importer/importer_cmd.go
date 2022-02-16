@@ -8,6 +8,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/internal/cli"
+	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -93,7 +94,7 @@ func (cmd *Command) Parse(args []string) error {
 // Run this command
 func (cmd *Command) Run() error {
 	if cmd.Adapter == nil {
-		writer := tldb.MustGetWriter(cmd.DBURL, true)
+		writer := testdb.MustOpenWriter(cmd.DBURL, true)
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}

@@ -90,7 +90,10 @@ type jobOptions struct {
 // Run this command
 func (cmd *Command) Run() error {
 	if cmd.Adapter == nil {
-		writer := tldb.MustGetWriter(cmd.DBURL, true)
+		writer, err := tldb.OpenWriter(cmd.DBURL, true)
+		if err != nil {
+			return err
+		}
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}

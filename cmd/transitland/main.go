@@ -88,12 +88,15 @@ func main() {
 	case "dmfr": // backwards compat
 		r = &dmfrCommand{}
 	default:
-		log.Fatalf("%q is not valid command.", subc)
+		log.Errorf("%q is not valid command.", subc)
+		os.Exit(1)
 	}
 	if err := r.Parse(args[1:]); err != nil {
-		log.Fatalf("Error: %s", err.Error())
+		log.Errorf(err.Error())
+		os.Exit(1)
 	}
 	if err := r.Run(); err != nil {
-		log.Fatalf("Error: %s", err.Error())
+		log.Errorf(err.Error())
+		os.Exit(1)
 	}
 }

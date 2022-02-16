@@ -44,9 +44,15 @@ func (cmd *Command) Parse(args []string) error {
 
 func (cmd *Command) Run() error {
 	// Reader / Writer
-	reader := ext.MustOpenReader(cmd.readerPath)
+	reader, err := ext.OpenReader(cmd.readerPath)
+	if err != nil {
+		return err
+	}
 	defer reader.Close()
-	writer := ext.MustOpenWriter(cmd.writerPath, cmd.create)
+	writer, err := ext.OpenWriter(cmd.writerPath, cmd.create)
+	if err != nil {
+		return err
+	}
 	defer writer.Close()
 	// Create feed version
 	if dbw, ok := writer.(*tldb.Writer); ok {

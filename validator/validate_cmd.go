@@ -44,7 +44,10 @@ func (cmd *Command) Parse(args []string) error {
 
 func (cmd *Command) Run() error {
 	log.Infof("Validating: %s", cmd.readerPath)
-	reader := ext.MustOpenReader(cmd.readerPath)
+	reader, err := ext.OpenReader(cmd.readerPath)
+	if err != nil {
+		return err
+	}
 	defer reader.Close()
 	v, err := NewValidator(reader, cmd.Options)
 	if err != nil {

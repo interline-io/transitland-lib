@@ -59,11 +59,6 @@ func Tracef(fmts string, a ...interface{}) {
 	Logger.Trace().Msgf(fmts, a...)
 }
 
-// Trace for debugging messages.
-func Fatalf(fmts string, a ...interface{}) {
-	Logger.Fatal().Msgf(fmts, a...)
-}
-
 // Helper functions
 
 // Print - simple print, without timestamp, without regard to log level.

@@ -60,66 +60,58 @@ func RegisterExtension(name string, factory extensionFactory) error {
 }
 
 // NewReader uses the scheme prefix as the driver name, defaulting to csv.
-func NewReader(url string) (tl.Reader, error) {
-	scheme := strings.Split(url, "://")
+func NewReader(addr string) (tl.Reader, error) {
+	scheme := strings.Split(addr, "://")
+	driver := "csv"
 	if len(scheme) > 1 {
-		return GetReader(scheme[0], url)
+		driver = scheme[0]
 	}
-	return GetReader("csv", url)
-}
-
-// MustOpenReader is a helper that returns an opened reader or panics.
-func MustOpenReader(path string) tl.Reader {
-	r, err := NewReader(path)
-	if err != nil {
-		panic(fmt.Sprintf("no handler for reader '%s': %s", path, err.Error()))
-	}
-	if err := r.Open(); err != nil {
-		panic(fmt.Sprintf("could not open reader '%s': %s", path, err.Error()))
-	}
-	return r
-}
-
-// NewWriter uses the scheme prefix as the driver name, defaulting to csv.
-func NewWriter(dburl string) (tl.Writer, error) {
-	url := strings.Split(dburl, "://")
-	if len(url) > 1 {
-		return GetWriter(url[0], dburl)
-	}
-	return GetWriter("csv", dburl)
-}
-
-// MustOpenWriter is a helper that returns an opened writer or panics.
-func MustOpenWriter(path string, create bool) tl.Writer {
-	r, err := NewWriter(path)
-	if err != nil {
-		panic(fmt.Sprintf("No handler for writer '%s': %s", path, err.Error()))
-	}
-	if err := r.Open(); err != nil {
-		panic(fmt.Sprintf("Could not open writer '%s': %s", path, err.Error()))
-	}
-	if create {
-		if err := r.Create(); err != nil {
-			panic(fmt.Sprintf("Could not create database '%s': %s", path, err.Error()))
-		}
-	}
-	return r
-}
-
-// GetReader returns a Reader for the URL.
-func GetReader(driver string, dburl string) (tl.Reader, error) {
 	if f, ok := readerFactories[driver]; ok {
-		return f(dburl)
+		return f(addr)
 	}
 	return nil, fmt.Errorf("no Reader factory for %s", driver)
 }
 
-// GetWriter returns a Writer for the URL.
-func GetWriter(driver string, dburl string) (tl.Writer, error) {
+// OpenReader returns an opened reader.
+func OpenReader(addr string) (tl.Reader, error) {
+	r, err := NewReader(addr)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.Open(); err != nil {
+		return nil, fmt.Errorf("could not open reader '%s': %s", addr, err.Error())
+	}
+	return r, nil
+}
+
+// NewWriter uses the scheme prefix as the driver name, defaulting to csv.
+func NewWriter(addr string) (tl.Writer, error) {
+	scheme := strings.Split(addr, "://")
+	driver := "csv"
+	if len(scheme) > 1 {
+		driver = scheme[0]
+	}
 	if f, ok := writerFactories[driver]; ok {
-		return f(dburl)
+		return f(addr)
 	}
 	return nil, fmt.Errorf("no Writer factory for %s", driver)
+}
+
+// OpenWriter returns an opened writer.
+func OpenWriter(addr string, create bool) (tl.Writer, error) {
+	w, err := NewWriter(addr)
+	if err != nil {
+		return nil, err
+	}
+	if err := w.Open(); err != nil {
+		return nil, fmt.Errorf("could not open writer '%s': %s", addr, err.Error())
+	}
+	if create {
+		if err := w.Create(); err != nil {
+			return nil, fmt.Errorf("could not create database '%s': %s", addr, err.Error())
+		}
+	}
+	return w, nil
 }
 
 // GetExtension returns an Extension.
