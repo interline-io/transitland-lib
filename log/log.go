@@ -59,13 +59,12 @@ func Tracef(fmts string, a ...interface{}) {
 	Logger.Trace().Msgf(fmts, a...)
 }
 
-// Helper functions
-
-// Exit with an error message.
-func Exit(code int, fmts string, args ...interface{}) {
-	Print(fmts, args...)
-	os.Exit(code)
+// Trace for debugging messages.
+func Fatalf(fmts string, a ...interface{}) {
+	Logger.Fatal().Msgf(fmts, a...)
 }
+
+// Helper functions
 
 // Print - simple print, without timestamp, without regard to log level.
 func Print(fmts string, args ...interface{}) {

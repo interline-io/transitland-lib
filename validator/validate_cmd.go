@@ -2,6 +2,7 @@ package validator
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"os"
 
@@ -33,7 +34,7 @@ func (cmd *Command) Parse(args []string) error {
 	err := fl.Parse(args)
 	if err != nil || fl.NArg() < 1 {
 		fl.Usage()
-		log.Exit(1, "Requires input reader")
+		return errors.New("requires input reader")
 	}
 	cmd.readerPath = fl.Arg(0)
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles

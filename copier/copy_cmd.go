@@ -1,7 +1,9 @@
 package copier
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/cli"
@@ -33,7 +35,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
-		log.Exit(1, "Requires input reader and output writer")
+		return errors.New("requires input reader and output writer")
 	}
 	cmd.readerPath = fl.Arg(0)
 	cmd.writerPath = fl.Arg(1)
@@ -54,7 +56,7 @@ func (cmd *Command) Run() error {
 		if dbw.FeedVersionID == 0 {
 			fvid, err := dbw.CreateFeedVersion(reader)
 			if err != nil {
-				log.Exit(1, "Error creating FeedVersion: %s", err)
+				return fmt.Errorf("error creating feed version: %s", err.Error())
 			}
 			dbw.FeedVersionID = fvid
 		}
@@ -64,7 +66,7 @@ func (cmd *Command) Run() error {
 	cmd.Options.Extensions = cmd.extensions
 	cp, err := NewCopier(reader, writer, cmd.Options)
 	if err != nil {
-		log.Exit(1, err.Error())
+		return err
 	}
 	result := cp.Copy()
 	result.DisplaySummary()

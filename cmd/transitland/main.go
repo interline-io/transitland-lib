@@ -67,7 +67,7 @@ func main() {
 	subc := flag.Arg(0)
 	if subc == "" {
 		flag.Usage()
-		log.Exit(1, "")
+		os.Exit(1)
 	}
 	var r runner
 	switch subc {
@@ -88,12 +88,12 @@ func main() {
 	case "dmfr": // backwards compat
 		r = &dmfrCommand{}
 	default:
-		log.Exit(1, "%q is not valid command.", subc)
+		log.Fatalf("%q is not valid command.", subc)
 	}
 	if err := r.Parse(args[1:]); err != nil {
-		log.Exit(1, "Error: %s", err.Error())
+		log.Fatalf("Error: %s", err.Error())
 	}
 	if err := r.Run(); err != nil {
-		log.Exit(1, "Error: %s", err.Error())
+		log.Fatalf("Error: %s", err.Error())
 	}
 }
