@@ -2,10 +2,10 @@ package tldb
 
 import (
 	"database/sql"
+	"errors"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/internal/schema"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -58,8 +58,7 @@ func (adapter *PostgresAdapter) Create() error {
 	if _, err := adapter.db.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
-	_, err := adapter.db.Exec(schema.PostgresSchema)
-	return err
+	return errors.New("please run postgres migrations manually")
 }
 
 // DBX returns sqlx.Ext
@@ -93,8 +92,8 @@ func (adapter *PostgresAdapter) Sqrl() sq.StatementBuilderType {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *PostgresAdapter) Find(dest interface{}, args ...interface{}) error {
-	return find(adapter, dest, args...)
+func (adapter *PostgresAdapter) Find(dest interface{}) error {
+	return find(adapter, dest)
 }
 
 // Get wraps sqlx.Get
@@ -116,6 +115,9 @@ func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	table := getTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
+	if err != nil {
+		return 0, err
+	}
 	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
 		return 0, err

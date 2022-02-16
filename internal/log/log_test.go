@@ -10,17 +10,6 @@ import (
 var prefix = "2019/03/19 17:08:58  "
 var msg = "test %d"
 
-func TestFatal(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			// ok
-		} else {
-			t.Error("expected to recover from Fatal")
-		}
-	}()
-	Fatal(msg, 123)
-}
-
 func TestLogLevels(t *testing.T) {
 	funcs := []struct {
 		name  string

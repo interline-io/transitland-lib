@@ -1,39 +1,12 @@
 package validator
 
 import (
-	"errors"
-	"io"
-	"io/ioutil"
 	"sort"
 
 	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/twpayne/go-geom"
 )
-
-func openFeed(src io.Reader) (tl.Reader, error) {
-	// Prepare reader
-	// fmt.Println("preparing reader")
-	// t := time.Now()
-	tmpfile, err := ioutil.TempFile("", "validator-upload")
-	if err != nil {
-		// This should result in a failed request
-		return nil, err
-	}
-	io.Copy(tmpfile, src)
-	tmpfile.Close()
-	// TODO: close
-	reader, err := tlcsv.NewReader(tmpfile.Name())
-	if err != nil {
-		return nil, err
-	}
-	if err := reader.Open(); err != nil {
-		return nil, errors.New("could not read file")
-	}
-	// fmt.Println("done:", float64(time.Now().UnixNano()-t.UnixNano())/1e9)
-	return nil, nil
-}
 
 func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 	// Generate some route geoms...

@@ -27,26 +27,9 @@ func init() {
 	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
 	ext.RegisterWriter("sqlite3", w)
 	// Dummy handlers for SQL functions.
-	dummy := func(fvid int) int {
-		return 0
-	}
-	sqlfuncs := []string{
-		"tl_generate_agency_geometries",
-		"tl_generate_agency_places",
-		"tl_generate_feed_version_geometries",
-		"tl_generate_onestop_ids",
-		"tl_generate_route_geometries",
-		"tl_generate_route_headways",
-		"tl_generate_route_stops",
-	}
 	sql.Register("sqlite3_w_funcs",
 		&sqlite3.SQLiteDriver{
 			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-				for _, f := range sqlfuncs {
-					if err := conn.RegisterFunc(f, dummy, true); err != nil {
-						return err
-					}
-				}
 				return nil
 			},
 		},
@@ -127,8 +110,8 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *SQLiteAdapter) Find(dest interface{}, args ...interface{}) error {
-	return find(adapter, dest, args...)
+func (adapter *SQLiteAdapter) Find(dest interface{}) error {
+	return find(adapter, dest)
 }
 
 // Get wraps sqlx.Get
@@ -150,6 +133,9 @@ func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
 func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 	table := getTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
+	if err != nil {
+		return 0, err
+	}
 	vals, err := MapperCache.GetInsert(ent, header)
 	if err != nil {
 		return 0, err
@@ -164,7 +150,7 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 		return 0, err
 	}
 	eid, err := result.LastInsertId()
-	return int(eid), nil
+	return int(eid), err
 }
 
 // MultiInsert inserts multiple entities.
@@ -175,6 +161,9 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	}
 	table := getTableName(ents[0])
 	header, err := MapperCache.GetHeader(ents[0])
+	if err != nil {
+		return retids, nil
+	}
 	vals, err := MapperCache.GetInsert(ents[0], header)
 	if err != nil {
 		return retids, err

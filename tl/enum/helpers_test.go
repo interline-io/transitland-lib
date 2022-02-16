@@ -91,7 +91,7 @@ func Test_IsValidTimezone(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsValidTimezone(tt.args.tz); got != tt.want {
+			if _, got := IsValidTimezone(tt.args.tz); got != tt.want {
 				t.Errorf("IsValidTimezone() = %v, want %v", got, tt.want)
 			}
 		})

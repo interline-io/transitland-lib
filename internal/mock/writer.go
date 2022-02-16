@@ -1,8 +1,6 @@
 package mock
 
 import (
-	"fmt"
-
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -73,7 +71,7 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 	case *tl.Trip:
 		mw.Reader.TripList = append(mw.Reader.TripList, *v)
 	default:
-		return "", fmt.Errorf("mockreader cannot handle type: %T", v)
+		mw.Reader.OtherList = append(mw.Reader.OtherList, v)
 	}
 	return ent.EntityID(), nil
 }

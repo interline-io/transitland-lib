@@ -3,11 +3,8 @@ package xy
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/interline-io/transitland-lib/tl"
-	geomxy "github.com/twpayne/go-geom/xy"
 )
 
 func arePositionsSorted(a []float64) bool {
@@ -68,35 +65,20 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 	g.shapes[eid] = sl
 }
 
-// AddSimplifiedShape adds a simplified Shape to the geometry cache.
-func (g *GeomCache) AddSimplifiedShape(eid string, shape tl.Shape, threshold float64) {
-	if !shape.Geometry.Valid {
-		return
-	}
-	pnts := shape.Geometry.FlatCoords()
-	stride := shape.Geometry.Stride()
-	ii := geomxy.SimplifyFlatCoords(pnts, threshold, stride)
-	for i, j := range ii {
-		if i == j*stride {
-			continue
-		}
-		pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
-	}
-	pnts = pnts[:len(ii)*stride]
-	sl := make([]Point, len(pnts)/stride)
-	for i := 0; i < len(pnts)-stride+1; i += stride {
-		sl[i/stride] = Point{pnts[i], pnts[i+1]}
-	}
-	g.shapes[eid] = sl
-}
-
 // MakeShape returns geometry for the given stops.
 func (g *GeomCache) MakeShape(stopids ...string) (tl.Shape, error) {
 	shape := tl.Shape{}
 	stopline := []float64{} // flatcoords
-	for _, stopid := range stopids {
-		if geom, ok := g.stops[stopid]; ok {
-			stopline = append(stopline, geom.Lon, geom.Lat, 0.0)
+	prevPoint := Point{}
+	for i, stopid := range stopids {
+		if newPoint, ok := g.stops[stopid]; ok {
+			if i > 0 {
+				if d := Distance2d(prevPoint, newPoint); d > 10.0 {
+					return shape, fmt.Errorf("distance from (%f,%f) to (%f,%f) is %f decimal degrees", prevPoint.Lon, prevPoint.Lat, newPoint.Lon, newPoint.Lat, d)
+				}
+			}
+			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
+			prevPoint = newPoint
 		} else {
 			return shape, fmt.Errorf("stop '%s' not in cache", stopid)
 		}
@@ -115,7 +97,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	}
 	stopline := make([]Point, len(stoptimes))
 	shapeid := trip.ShapeID.Key
-	k := strings.Join([]string{shapeid, strconv.Itoa(trip.StopPatternID)}, "|")
+	k := fmt.Sprintf("%s-%d", shapeid, trip.StopPatternID)
 	for i := 0; i < len(stoptimes); i++ {
 		point, ok := g.stops[stoptimes[i].StopID]
 		if !ok {

@@ -33,6 +33,7 @@ func (ent *Agency) Errors() (errs []error) {
 	errs = append(errs, enum.CheckPresent("agency_name", ent.AgencyName)...)
 	errs = append(errs, enum.CheckPresent("agency_url", ent.AgencyURL)...)
 	errs = append(errs, enum.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
+	errs = append(errs, enum.CheckTimezone("agency_timezone", ent.AgencyTimezone)...)
 	errs = append(errs, enum.CheckURL("agency_url", ent.AgencyURL)...)
 	errs = append(errs, enum.CheckURL("agency_fare_url", ent.AgencyFareURL)...)
 	errs = append(errs, enum.CheckLanguage("agency_lang", ent.AgencyLang)...)

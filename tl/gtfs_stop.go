@@ -66,6 +66,9 @@ func (ent *Stop) Errors() (errs []error) {
 	errs = append(errs, enum.CheckURL("stop_url", ent.StopURL)...)
 	errs = append(errs, enum.CheckInsideRangeInt("location_type", ent.LocationType, 0, 4)...)
 	errs = append(errs, enum.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding, 0, 2)...)
+	if ent.StopTimezone != "" {
+		errs = append(errs, enum.CheckTimezone("stop_timezone", ent.StopTimezone)...)
+	}
 	// TODO: This should be an enum for exhaustive search
 	lt := ent.LocationType
 	if (lt == 0 || lt == 1 || lt == 2) && len(ent.StopName) == 0 {

@@ -39,7 +39,7 @@ type Adapter interface {
 	Sqrl() sq.StatementBuilderType
 	Insert(interface{}) (int, error)
 	Update(interface{}, ...string) error
-	Find(interface{}, ...interface{}) error
+	Find(interface{}) error
 	Get(interface{}, string, ...interface{}) error
 	Select(interface{}, string, ...interface{}) error
 	MultiInsert([]interface{}) ([]int, error)

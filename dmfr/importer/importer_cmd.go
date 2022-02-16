@@ -54,10 +54,12 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.Activate, "activate", false, "Set as active feed version after import")
 	// Copy options
+	fl.Float64Var(&cmd.Options.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance (ex. 0.000005)")
 	fl.BoolVar(&cmd.Options.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
 	fl.BoolVar(&cmd.Options.DeduplicateJourneyPatterns, "deduplicate-stop-times", false, "Deduplicate StopTimes using Journey Patterns")
 	fl.BoolVar(&cmd.Options.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
 	fl.BoolVar(&cmd.Options.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
+	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
 	fl.Parse(args)
 	cmd.Options.Extensions = extflags
 	cmd.FeedIDs = fl.Args()
@@ -103,7 +105,7 @@ func (cmd *Command) Run() error {
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
 		Where("feed_version_gtfs_imports.id IS NULL").
-		OrderBy("feed_versions.id")
+		OrderBy("feed_versions.id desc")
 	if cmd.Latest {
 		// Only fetch latest feed version for each feed
 		q = q.

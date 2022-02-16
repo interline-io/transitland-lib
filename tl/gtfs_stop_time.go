@@ -11,11 +11,11 @@ import (
 // StopTime stop_times.txt
 type StopTime struct {
 	TripID            string
-	ArrivalTime       WideTime
-	DepartureTime     WideTime
 	StopID            string `csv:",required" required:"true"`
 	StopSequence      int    `csv:",required" required:"true"`
 	StopHeadsign      OString
+	ArrivalTime       WideTime
+	DepartureTime     WideTime
 	PickupType        OInt
 	DropOffType       OInt
 	ShapeDistTraveled OFloat
@@ -81,6 +81,11 @@ func (ent *StopTime) Errors() []error {
 		errs = append(errs, causes.NewInvalidFieldError("departure_time", "", fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
 	}
 	return errs
+}
+
+// Warnings for this Entity.
+func (ent *StopTime) Warnings() []error {
+	return ent.loadWarnings
 }
 
 // Filename stop_times.txt

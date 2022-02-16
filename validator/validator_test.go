@@ -37,10 +37,15 @@ func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []
 }
 
 func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
-	errs = append(errs, warns...)
+}
+
+func (cr *testErrorHandler) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+	errs := ent.Errors()
+	errs = append(errs, ent.Warnings()...)
 	expecterrs := testutil.GetExpectErrors(ent)
 	cr.expectErrorCount += len(expecterrs)
 	testutil.CheckErrors(expecterrs, errs, cr.t)
+	return nil
 }
 
 //////////////
@@ -79,6 +84,7 @@ func TestValidator_Validate(t *testing.T) {
 			opts := Options{}
 			opts.ErrorHandler = &handler
 			v, _ := NewValidator(reader, opts)
+			v.AddExtension(&handler)
 			v.Validate()
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")
@@ -120,9 +126,10 @@ func TestValidator_BestPractices(t *testing.T) {
 			// For every overlay feed, check that every error is expected
 			// At least one error must be specified per overlay feed, otherwise fail
 			opts := Options{}
-			opts.BestPractices = true
 			opts.ErrorHandler = &handler
+			opts.BestPractices = true
 			v, _ := NewValidator(reader, opts)
+			v.AddExtension(&handler)
 			result, _ := v.Validate()
 			_ = result
 			if handler.expectErrorCount == 0 {

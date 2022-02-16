@@ -2,8 +2,14 @@ package tl
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
+
+type calDate struct {
+	date          ymd
+	exceptionType int
+}
 
 // ymd for use as a map key
 type ymd struct {
@@ -33,16 +39,19 @@ func (d *ymd) IsZero() bool {
 	return d.year <= 1 && d.month <= 1 && d.day <= 1
 }
 
+func (d *ymd) String() string {
+	return fmt.Sprintf("%04d-%02d-%02d", d.year, d.month, d.day)
+}
+
 // Service is a Calendar / CalendarDate union.
 type Service struct {
-	exceptions map[ymd]int
+	dates []calDate
 	Calendar
 }
 
 // NewService returns a new Service.
 func NewService(c Calendar, cds ...CalendarDate) *Service {
 	s := Service{Calendar: c}
-	s.exceptions = map[ymd]int{}
 	for _, cd := range cds {
 		s.AddCalendarDate(cd)
 	}
@@ -74,22 +83,24 @@ func NewServicesFromReader(reader Reader) []*Service {
 func (s *Service) Reset() {
 	sid := s.ServiceID
 	s.Calendar = Calendar{ServiceID: sid}
-	s.exceptions = map[ymd]int{}
+	s.dates = nil
 }
 
 // AddCalendarDate adds a service exception.
-func (s *Service) AddCalendarDate(cd CalendarDate) {
-	s.exceptions[newYMD(cd.Date)] = cd.ExceptionType
+func (s *Service) AddCalendarDate(cd CalendarDate) error {
+	d := newYMD(cd.Date)
+	s.dates = append(s.dates, calDate{date: d, exceptionType: cd.ExceptionType})
+	return nil
 }
 
 // CalendarDates returns CalendarDates for this service.
 func (s *Service) CalendarDates() []CalendarDate {
 	ret := []CalendarDate{}
-	for ymd, v := range s.exceptions {
+	for _, cd := range s.dates {
 		ret = append(ret, CalendarDate{
 			ServiceID:     s.EntityID(),
-			Date:          ymd.Time(),
-			ExceptionType: v,
+			Date:          cd.date.Time(),
+			ExceptionType: cd.exceptionType,
 		})
 	}
 	return ret
@@ -148,24 +159,32 @@ func (s *Service) SetWeekday(dow int, value int) error {
 // ServicePeriod returns the widest possible range of days with transit service, including service exceptions.
 func (s *Service) ServicePeriod() (time.Time, time.Time) {
 	start, end := newYMD(s.StartDate), newYMD(s.EndDate)
-	for d := range s.exceptions {
-		if start.IsZero() || d.Before(start) {
-			start = d
+	for _, cd := range s.dates {
+		if start.IsZero() || cd.date.Before(start) {
+			start = cd.date
 		}
-		if end.IsZero() || d.After(end) {
-			end = d
+		if end.IsZero() || cd.date.After(end) {
+			end = cd.date
 		}
 	}
 	return start.Time(), end.Time()
 }
 
+func (s *Service) Exception(t time.Time) (int, bool) {
+	// Cache into map?
+	d := newYMD(t)
+	for _, cd := range s.dates {
+		if cd.date == d {
+			return cd.exceptionType, true
+		}
+	}
+	return 0, false
+}
+
 // IsActive returns if this Service period is active on a specified date.
 func (s *Service) IsActive(t time.Time) bool {
-	if etype, ok := s.exceptions[newYMD(t)]; ok {
-		if etype == 1 {
-			return true
-		}
-		return false
+	if v, ok := s.Exception(t); ok {
+		return v == 1
 	}
 	if t.Before(s.StartDate) {
 		return false
@@ -180,12 +199,6 @@ func (s *Service) IsActive(t time.Time) bool {
 	return v == 1
 }
 
-// Exception returns if a calendar exception exists on the given day.
-func (s *Service) Exception(t time.Time) (int, bool) {
-	a, ok := s.exceptions[newYMD(t)]
-	return a, ok
-}
-
 // HasAtLeastOneDay checks if the Service is active for at least one day.
 func (s *Service) HasAtLeastOneDay() bool {
 	// Quick checks before iterating through each day.
@@ -193,14 +206,14 @@ func (s *Service) HasAtLeastOneDay() bool {
 	// otherwise fall back to full check...
 	duration := s.EndDate.Sub(s.StartDate).Hours() / 24
 	days := s.Monday + s.Tuesday + s.Wednesday + s.Thursday + s.Friday + s.Saturday + s.Sunday
-	if duration >= 7 && days > 0 && len(s.exceptions) == 0 {
+	if duration >= 7 && days > 0 && len(s.dates) == 0 {
 		return true
 	}
 	add, remove := 0, 0
-	for _, v := range s.exceptions {
-		if v == 1 {
+	for _, v := range s.dates {
+		if v.exceptionType == 1 {
 			add++
-		} else if v == 2 {
+		} else if v.exceptionType == 2 {
 			remove++
 		}
 	}
@@ -241,11 +254,12 @@ func (s *Service) Simplify() (*Service, error) {
 		if s.IsActive(start) {
 			activeCount[dow]++
 		}
-		etype := s.exceptions[newYMD(start)]
-		if etype == 1 {
-			addedCount[dow]++
-		} else if etype == 2 {
-			removedCount[dow]++
+		if etype, ok := s.Exception(start); ok {
+			if etype == 1 {
+				addedCount[dow]++
+			} else if etype == 2 {
+				removedCount[dow]++
+			}
 		}
 		start = start.AddDate(0, 0, 1)
 	}

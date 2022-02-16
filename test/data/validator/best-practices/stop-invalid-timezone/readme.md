@@ -1,1 +1,0 @@
-This feed contains stops.txt entities with an invalid stop_timezone. This error is so prevalent that it should be treated as a warning.

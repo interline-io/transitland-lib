@@ -57,9 +57,6 @@ func (v *Validator) AddExtension(ext interface{}) error {
 // NewValidator returns a new Validator.
 func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	// Default options
-	options.IncludeServiceLevels = true
-	options.IncludeEntities = true
-	options.IncludeRouteGeometries = true
 	if options.IncludeEntitiesLimit == 0 {
 		options.IncludeEntitiesLimit = defaultMaxEnts
 	}
@@ -72,6 +69,11 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	if err != nil {
 		return nil, err
 	}
+	rtv := rt.NewValidator()
+	if len(options.ValidateRealtimeMessages) > 0 {
+		copier.AddValidator(rtv, 1)
+	}
+	// Best practices extension
 	if options.BestPractices {
 		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
 		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
@@ -82,7 +84,6 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
 		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
 		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
-		copier.AddValidator(&rules.InvalidTimezoneCheck{}, 1)
 		copier.AddValidator(&rules.AgencyIDRecommendedCheck{}, 1)
 		copier.AddValidator(&rules.DescriptionEqualsName{}, 1)
 		copier.AddValidator(&rules.RouteExtendedTypesCheck{}, 1)
@@ -93,10 +94,6 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 		copier.AddValidator(&rules.NullIslandCheck{}, 1)
 		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
 		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
-	}
-	rtv := rt.NewValidator()
-	if len(options.ValidateRealtimeMessages) > 0 {
-		copier.AddValidator(rtv, 1)
 	}
 	// OK
 	return &Validator{

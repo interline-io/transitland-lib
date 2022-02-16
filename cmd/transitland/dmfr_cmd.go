@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/fetch"
 	"github.com/interline-io/transitland-lib/dmfr/importer"
 	"github.com/interline-io/transitland-lib/dmfr/sync"
+	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	"github.com/interline-io/transitland-lib/dmfr/validate"
 )
 
@@ -24,6 +25,7 @@ func (cmd *dmfrCommand) Parse(args []string) error {
 		log.Print("  validate")
 		log.Print("  sync")
 		log.Print("  import")
+		log.Print("  unimport")
 		log.Print("  fetch")
 		fl.PrintDefaults()
 	}
@@ -41,6 +43,8 @@ func (cmd *dmfrCommand) Parse(args []string) error {
 		cmd.subcommand = &sync.Command{}
 	case "import":
 		cmd.subcommand = &importer.Command{}
+	case "unimport":
+		cmd.subcommand = &unimporter.Command{}
 	case "fetch":
 		cmd.subcommand = &fetch.Command{}
 	default:

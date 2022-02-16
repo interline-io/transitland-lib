@@ -1,3 +1,3 @@
-service_id,date,exception_type,expect_error
+service_id,date,exception_type
 WKDY,20190101,2
-WKDY,20190101,2,DuplicateServiceExceptionError
+WKDY,20190101,2
