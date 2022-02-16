@@ -94,6 +94,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	// Save updated timestamps
 	tlstate.UpdateTimestamps()
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
+		fmt.Println("err???", err)
 		return fr, err
 	}
 	return fr, nil

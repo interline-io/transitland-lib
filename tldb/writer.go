@@ -40,7 +40,11 @@ func NewWriter(dburl string) (*Writer, error) {
 	if err != nil {
 		return nil, err
 	}
-	writer := &Writer{Adapter: newAdapter(newurl)}
+	adapter := newAdapter(newurl)
+	if adapter == nil {
+		return nil, errors.New("no adapter")
+	}
+	writer := &Writer{Adapter: adapter}
 	if len(fvids) > 0 {
 		writer.FeedVersionID = fvids[0]
 	}

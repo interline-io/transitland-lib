@@ -9,7 +9,6 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/schema"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/jmoiron/sqlx"
@@ -66,15 +65,15 @@ func (adapter *SQLiteAdapter) Close() error {
 	return nil
 }
 
-func (adapter *SQLiteAdapter) EnableLogging(trace bool) {
-	adapter.db = &log.QueryLogger{Ext: adapter.db, Trace: trace}
+func (adapter *SQLiteAdapter) EnableLogging() {
+	adapter.db = &QueryLogger{Ext: adapter.db}
 }
 
 // Create the database if necessary.
 func (adapter *SQLiteAdapter) Create() error {
 	// Dont log, used often in tests
 	adb := adapter.db
-	if a, ok := adapter.db.(*log.QueryLogger); ok {
+	if a, ok := adapter.db.(*QueryLogger); ok {
 		adb = a.Ext
 	}
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
@@ -105,6 +104,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 		return err
 	}
 	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: tx}
+	adapter2.EnableLogging()
 	if errTx := cb(adapter2); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3

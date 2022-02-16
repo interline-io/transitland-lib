@@ -3,10 +3,10 @@ package tldb
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -43,6 +43,7 @@ func (adapter *PostgresAdapter) Open() error {
 	}
 	db.Mapper = MapperCache.Mapper
 	adapter.db = db.Unsafe()
+	adapter.EnableLogging()
 	return nil
 }
 
@@ -51,8 +52,8 @@ func (adapter *PostgresAdapter) Close() error {
 	return nil
 }
 
-func (adapter *PostgresAdapter) EnableLogging(trace bool) {
-	adapter.db = &log.QueryLogger{Ext: adapter.db, Trace: trace}
+func (adapter *PostgresAdapter) EnableLogging() {
+	adapter.db = &QueryLogger{Ext: adapter.db}
 }
 
 // Create an initial database schema.
@@ -78,8 +79,13 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("tx: %#v\n", tx)
 	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: tx}
+	fmt.Println("ADAPTER2:", adapter2)
+	adapter2.EnableLogging()
+	fmt.Println("ADAPTER2:", adapter2)
 	if err2 := cb(adapter2); err2 != nil {
+		panic(err2)
 		if errTx := tx.Rollback(); errTx != nil {
 			return errTx
 		}
@@ -100,6 +106,7 @@ func (adapter *PostgresAdapter) Find(dest interface{}) error {
 
 // Get wraps sqlx.Get
 func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
+	fmt.Println("get?", adapter.db)
 	return sqlx.Get(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
