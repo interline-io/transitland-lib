@@ -71,6 +71,7 @@ func Print(fmts string, args ...interface{}) {
 // SetLevel sets the log level.
 func SetLevel(lvalue zerolog.Level) {
 	zerolog.SetGlobalLevel(lvalue)
+	Infof("Set global log value to %s", lvalue)
 }
 
 // setLevelByName sets the log level by string name.
@@ -95,16 +96,16 @@ func setConsoleLogger() {
 	output.FormatLevel = func(i interface{}) string {
 		return strings.ToUpper(fmt.Sprintf("[%-5s]", i))
 	}
-	Logger = Logger.Output(output)
+	Logger = zerolog.New(os.Stderr).With().Timestamp().Logger().Output(output).Level(zerolog.TraceLevel)
 }
 
 func init() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if os.Getenv("TL_LOG_JSON") == "true" {
 		// use json logging
 	} else {
 		setConsoleLogger()
 	}
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if v := os.Getenv("TL_LOG"); v != "" {
 		setLevelByName(v)
 	}

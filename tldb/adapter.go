@@ -37,7 +37,6 @@ type Adapter interface {
 	DBX() sqlx.Ext
 	Tx(func(Adapter) error) error
 	Sqrl() sq.StatementBuilderType
-	EnableLogging()
 	Insert(interface{}) (int, error)
 	Update(interface{}, ...string) error
 	Find(interface{}) error

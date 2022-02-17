@@ -3,7 +3,6 @@ package fetch
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -158,7 +157,6 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
 			fr, fe = DatabaseFetch(atx, opts)
-			fmt.Println("fe?", fe)
 			return fe
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0

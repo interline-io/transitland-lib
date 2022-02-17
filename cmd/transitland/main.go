@@ -59,8 +59,6 @@ func main() {
 		log.SetLevel(zerolog.DebugLevel)
 	} else if traceFlag {
 		log.SetLevel(zerolog.TraceLevel)
-	} else {
-		log.SetLevel(zerolog.InfoLevel)
 	}
 
 	args := flag.Args()

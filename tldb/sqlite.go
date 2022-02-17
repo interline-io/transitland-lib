@@ -53,7 +53,7 @@ func (adapter *SQLiteAdapter) Open() error {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
 	db.Mapper = MapperCache.Mapper
-	adapter.db = db.Unsafe()
+	adapter.db = &QueryLogger{Ext: db.Unsafe()}
 	return nil
 }
 
@@ -63,10 +63,6 @@ func (adapter *SQLiteAdapter) Close() error {
 		return a.Close()
 	}
 	return nil
-}
-
-func (adapter *SQLiteAdapter) EnableLogging() {
-	adapter.db = &QueryLogger{Ext: adapter.db}
 }
 
 // Create the database if necessary.
@@ -103,8 +99,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: tx}
-	adapter2.EnableLogging()
+	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}
 	if errTx := cb(adapter2); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3
