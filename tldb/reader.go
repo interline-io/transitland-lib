@@ -1,6 +1,7 @@
 package tldb
 
 import (
+	"errors"
 	"reflect"
 
 	sq "github.com/Masterminds/squirrel"
@@ -21,7 +22,11 @@ func NewReader(dburl string) (*Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Reader{Adapter: newAdapter(newurl), PageSize: 1000, FeedVersionIDs: fvids}, nil
+	adapter := newAdapter(newurl)
+	if adapter == nil {
+		return nil, errors.New("no adapter available")
+	}
+	return &Reader{Adapter: adapter, PageSize: 1000, FeedVersionIDs: fvids}, nil
 }
 
 // ValidateStructure returns if all the necessary tables are present. Not implemented.

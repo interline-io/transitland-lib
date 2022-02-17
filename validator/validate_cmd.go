@@ -2,13 +2,14 @@ package validator
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"os"
 
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/cli"
-	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/internal/snakejson"
+	"github.com/interline-io/transitland-lib/log"
 )
 
 // Command
@@ -33,7 +34,7 @@ func (cmd *Command) Parse(args []string) error {
 	err := fl.Parse(args)
 	if err != nil || fl.NArg() < 1 {
 		fl.Usage()
-		log.Exit("Requires input reader")
+		return errors.New("requires input reader")
 	}
 	cmd.readerPath = fl.Arg(0)
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles
@@ -42,8 +43,11 @@ func (cmd *Command) Parse(args []string) error {
 }
 
 func (cmd *Command) Run() error {
-	log.Info("Validating: %s", cmd.readerPath)
-	reader := ext.MustGetReader(cmd.readerPath)
+	log.Infof("Validating: %s", cmd.readerPath)
+	reader, err := ext.OpenReader(cmd.readerPath)
+	if err != nil {
+		return err
+	}
 	defer reader.Close()
 	v, err := NewValidator(reader, cmd.Options)
 	if err != nil {

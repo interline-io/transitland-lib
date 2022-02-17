@@ -11,7 +11,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/internal/cli"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -90,7 +90,10 @@ type jobOptions struct {
 // Run this command
 func (cmd *Command) Run() error {
 	if cmd.Adapter == nil {
-		writer := tldb.MustGetWriter(cmd.DBURL, true)
+		writer, err := tldb.OpenWriter(cmd.DBURL, true)
+		if err != nil {
+			return err
+		}
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
@@ -123,9 +126,9 @@ func (cmd *Command) Run() error {
 		return err
 	}
 	if cmd.ScheduleOnly {
-		log.Info("Unmporting schedule data from %d feed versions", len(qrs))
+		log.Infof("Unmporting schedule data from %d feed versions", len(qrs))
 	} else {
-		log.Info("Unmporting %d feed versions", len(qrs))
+		log.Infof("Unmporting %d feed versions", len(qrs))
 	}
 
 	jobs := make(chan jobOptions, len(qrs))
@@ -168,14 +171,14 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg
 		WHERE feed_versions.id = ?
 		`
 		if err := adapter.Get(&q, query, opts.FeedVersionID); err != nil {
-			log.Error("Could not get details for FeedVersion %d", opts.FeedVersionID)
+			log.Errorf("Could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}
 		if opts.DryRun {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue
 		}
-		log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var err error
@@ -188,9 +191,9 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.Error("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
+			log.Errorf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
 		} else {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
+			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
 		}
 	}
 	wg.Done()

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -85,7 +85,7 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 		oif.ResolvedShortName = operator.ShortName
 		oif.OperatorID = tl.NewOInt(operator.ID)
 		if err := atx.Get(&oif.FeedID, "select id from current_feeds where onestop_id = ?", oif.FeedOnestopID.String); err == sql.ErrNoRows {
-			log.Info("Warning: no feed for '%s'", oif.FeedOnestopID.String)
+			log.Infof("Warning: no feed for '%s'", oif.FeedOnestopID.String)
 			continue
 		} else if err != nil {
 			return false, err

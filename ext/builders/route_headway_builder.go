@@ -160,11 +160,11 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				mostVisitedStop := stopsByVisits[0]
 				departures := stopDepartures[mostVisitedStop]
 				sort.Ints(departures)
-				// log.Debug("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
-				// log.Debug("\tdepartures:", departures)
+				// log.Debugf("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
+				// log.Debugf("\tdepartures:", departures)
 				// for _, departure := range departures {
 				// 	wt := tl.NewWideTimeFromSeconds(departure)
-				// 	log.Debug("\t", wt.String())
+				// 	log.Debugf("\t", wt.String())
 				// }
 				rh := RouteHeadway{
 					RouteID:        rid,

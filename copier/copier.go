@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -276,12 +276,12 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 	// OK, Save
 	eids, err := copier.Writer.AddEntities(ents)
 	if err != nil {
-		log.Error("Critical error: failed to write %d entities for %s: %s", len(ents), efn, err.Error())
+		log.Errorf("Critical error: failed to write %d entities for %s: %s", len(ents), efn, err.Error())
 		return err
 	}
 	for i, eid := range eids {
 		sid := sids[i]
-		// log.Debug("%s '%s': saved -> %s", efn, sid, eid)
+		log.Tracef("%s '%s': saved -> %s", efn, sid, eid)
 		copier.EntityMap.Set(efn, sid, eid)
 	}
 	copier.result.EntityCount[efn] += len(ents)
@@ -321,7 +321,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	sid := ent.EntityID() // source ID
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
-			log.Debug("%s '%s' skipped by filter: %s", efn, sid, err)
+			log.Debugf("%s '%s' skipped by filter: %s", efn, sid, err)
 			copier.result.SkipEntityFilterCount[efn]++
 			return errors.New("skipped by filter")
 		}
@@ -376,7 +376,7 @@ func (copier *Copier) addEntity(ent tl.Entity) (string, error) {
 	sid := ent.EntityID()
 	eid, err := copier.Writer.AddEntity(ent)
 	if err != nil {
-		log.Error("Critical error: failed to write %s '%s': %s -- entity dump: %#v", efn, sid, err.Error(), ent)
+		log.Errorf("Critical error: failed to write %s '%s': %s -- entity dump: %#v", efn, sid, err.Error(), ent)
 		return "", err
 	}
 	copier.EntityMap.Set(efn, sid, eid)
@@ -775,7 +775,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				trip.ShapeID = tl.NewOKey(shapeid)
 			} else {
 				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), trip.StopTimes); err != nil {
-					log.Error("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
+					log.Errorf("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
 					trip.AddWarning(err)
 				} else {
 					// Set ShapeID
@@ -876,7 +876,7 @@ func (copier *Copier) logCount(ent tl.Entity) {
 		return
 	}
 	outs := strings.Join(out, "; ")
-	log.Info(outs)
+	log.Infof(outs)
 }
 
 func (copier *Copier) createMissingShape(shapeID string, stoptimes []tl.StopTime) (string, error) {

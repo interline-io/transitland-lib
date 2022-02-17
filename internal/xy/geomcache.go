@@ -113,7 +113,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 		length := LengthHaversine(shapeline)
 		// Check for simple or fallback positions
 		if !arePositionsSorted(positions) || len(shapeline) == 0 {
-			// log.Debug("positions %f not increasing, falling back to stop positions; shapeline %f stopline %f", positions, shapeline, stopline)
+			// log.Debugf("positions %f not increasing, falling back to stop positions; shapeline %f stopline %f", positions, shapeline, stopline)
 			positions = LinePositionsFallback(stopline)
 			if !arePositionsSorted(positions) {
 				return stoptimes, errors.New("fallback positions not sorted")

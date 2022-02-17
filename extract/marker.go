@@ -100,6 +100,6 @@ func (em *Marker) Filter(reader tl.Reader, fm map[string][]string) error {
 		result[n] = true
 	})
 	em.found = result
-	// log.Debug("result: %#v\n", result)
+	// log.Debugf("result: %#v\n", result)
 	return nil
 }

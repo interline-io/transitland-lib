@@ -281,7 +281,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		}
 		foundrows := map[string]int{}
 		adapter.ReadRows("malformed.txt", func(row Row) {
-			// log.Debug("%d %#v\n", len(row.Row), row.Row)
+			// log.Debugf("%d %#v\n", len(row.Row), row.Row)
 			if row.Err != nil {
 				errcount++
 			}

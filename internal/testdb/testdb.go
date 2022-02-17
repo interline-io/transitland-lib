@@ -8,6 +8,14 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
+func MustOpenWriter(dburl string, create bool) *tldb.Writer {
+	w, err := tldb.OpenWriter(dburl, create)
+	if err != nil {
+		panic(err)
+	}
+	return w
+}
+
 // MustInsert panics on failure
 func MustInsert(atx tldb.Adapter, ent interface{}) int {
 	id, err := atx.Insert(ent)
