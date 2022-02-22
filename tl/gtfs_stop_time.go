@@ -18,6 +18,8 @@ type StopTime struct {
 	DepartureTime     WideTime
 	PickupType        OInt
 	DropOffType       OInt
+	ContinuousPickup  OInt
+	ContinuousDropOff OInt
 	ShapeDistTraveled OFloat
 	Timepoint         OInt
 	Interpolated      OInt `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line

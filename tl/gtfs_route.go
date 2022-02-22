@@ -9,19 +9,21 @@ import (
 
 // Route routes.txt
 type Route struct {
-	RouteID        string `csv:",required"`
-	AgencyID       string
-	RouteShortName string
-	RouteLongName  string
-	RouteDesc      string
-	RouteType      int `csv:",required"`
-	RouteURL       string
-	RouteColor     string
-	RouteTextColor string
-	RouteSortOrder int
-	Geometry       Geometry `csv:"-" db:"-"`
-	NetworkID      string   `db:"-"`
-	AsRoute        int      `db:"-"`
+	RouteID           string `csv:",required"`
+	AgencyID          string
+	RouteShortName    string
+	RouteLongName     string
+	RouteDesc         string
+	RouteType         int `csv:",required"`
+	RouteURL          string
+	RouteColor        string
+	RouteTextColor    string
+	RouteSortOrder    int
+	ContinuousPickup  OInt
+	ContinuousDropOff OInt
+	Geometry          Geometry `csv:"-" db:"-"`
+	NetworkID         string   `db:"-"`
+	AsRoute           int      `db:"-"`
 	BaseEntity
 }
 
