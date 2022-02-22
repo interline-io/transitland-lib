@@ -17,6 +17,8 @@ type Stop struct {
 	StopLon            float64 `db:"-"`
 	ZoneID             string
 	StopURL            string
+	TtsStopName        OString
+	PlatformCode       OString
 	LocationType       int
 	ParentStation      OKey
 	StopTimezone       string
