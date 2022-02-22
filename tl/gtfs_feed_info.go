@@ -15,6 +15,9 @@ type FeedInfo struct {
 	FeedVersion       string `db:"feed_version_name"`
 	FeedStartDate     ODate
 	FeedEndDate       ODate
+	DefaultLang       OString
+	FeedContactEmail  OString
+	FeedContactURL    OString
 	BaseEntity
 }
 
