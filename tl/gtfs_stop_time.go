@@ -77,6 +77,8 @@ func (ent *StopTime) Errors() []error {
 	errs = append(errs, enum.CheckInsideRangeInt("timepoint", ent.Timepoint.Int, -1, 1)...)
 	errs = append(errs, enum.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Seconds, -1, 1<<31)...)
 	errs = append(errs, enum.CheckInsideRangeInt("departure", ent.DepartureTime.Seconds, -1, 1<<31)...)
+	errs = append(errs, enum.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Int, 0, 1, 2, 3)...)
+	errs = append(errs, enum.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Int, 0, 1, 2, 3)...)
 	// Other errors
 	at, dt := ent.ArrivalTime.Seconds, ent.DepartureTime.Seconds
 	if at != 0 && dt != 0 && at > dt {

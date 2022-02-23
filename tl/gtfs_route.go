@@ -45,6 +45,8 @@ func (ent *Route) Errors() (errs []error) {
 	errs = append(errs, enum.CheckColor("route_color", ent.RouteColor)...)
 	errs = append(errs, enum.CheckColor("route_text_color", ent.RouteTextColor)...)
 	errs = append(errs, enum.CheckPositiveInt("route_sort_order", ent.RouteSortOrder)...)
+	errs = append(errs, enum.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Int, 0, 1, 2, 3)...)
+	errs = append(errs, enum.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Int, 0, 1, 2, 3)...)
 	if len(ent.RouteShortName) == 0 && len(ent.RouteLongName) == 0 {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("route_short_name"))
 	}
