@@ -143,6 +143,14 @@ func (ent *StopTime) GetString(key string) (string, error) {
 		if ent.Timepoint.Valid {
 			v = strconv.Itoa(int(ent.Timepoint.Int))
 		}
+	case "continuous_pickup":
+		if ent.ContinuousPickup.Valid {
+			v = strconv.Itoa(int(ent.ContinuousPickup.Int))
+		}
+	case "continuous_drop_off":
+		if ent.ContinuousPickup.Valid {
+			v = strconv.Itoa(int(ent.ContinuousDropOff.Int))
+		}
 	default:
 		return v, fmt.Errorf("unknown key: %s", key)
 	}
@@ -195,6 +203,22 @@ func (ent *StopTime) SetString(key, value string) error {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
 		} else {
 			ent.DropOffType = OInt{Valid: true, Int: a}
+		}
+	case "continuous_pickup":
+		if len(hi) == 0 {
+			ent.ContinuousPickup = OInt{}
+		} else if a, err := strconv.Atoi(hi); err != nil {
+			perr = causes.NewFieldParseError("continuous_pickup", hi)
+		} else {
+			ent.ContinuousPickup = OInt{Valid: true, Int: a}
+		}
+	case "continuous_drop_off":
+		if len(hi) == 0 {
+			ent.ContinuousDropOff = OInt{}
+		} else if a, err := strconv.Atoi(hi); err != nil {
+			perr = causes.NewFieldParseError("continuous_drop_off", hi)
+		} else {
+			ent.ContinuousDropOff = OInt{Valid: true, Int: a}
 		}
 	case "shape_dist_traveled":
 		if len(hi) == 0 {
