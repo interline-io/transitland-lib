@@ -23,4 +23,6 @@ type Reader interface {
 	Pathways() chan Pathway
 	Levels() chan Level
 	Trips() chan Trip
+	Translations() chan Translation
+	Attributions() chan Attribution
 }

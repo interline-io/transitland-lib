@@ -531,6 +531,36 @@ func (reader *Reader) Pathways() (out chan tl.Pathway) {
 	return out
 }
 
+// Attributions sends out Attributions.
+func (reader *Reader) Attributions() (out chan tl.Attribution) {
+	out = make(chan tl.Attribution, bufferSize)
+	go func() {
+		ent := tl.Attribution{}
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			e := tl.Attribution{}
+			loadRow(&e, row)
+			out <- e
+		})
+		close(out)
+	}()
+	return out
+}
+
+// Translations sends out Translations.
+func (reader *Reader) Translations() (out chan tl.Translation) {
+	out = make(chan tl.Translation, bufferSize)
+	go func() {
+		ent := tl.Translation{}
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			e := tl.Translation{}
+			loadRow(&e, row)
+			out <- e
+		})
+		close(out)
+	}()
+	return out
+}
+
 // chunkMSI takes a string counter and chunks it into groups of size <= chunkSize
 func chunkMSI(count map[string]int, chunkSize int) s2D {
 	result := s2D{}

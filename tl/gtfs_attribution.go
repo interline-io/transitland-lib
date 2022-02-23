@@ -34,8 +34,8 @@ func (ent *Attribution) Errors() (errs []error) {
 	errs = append(errs, enum.CheckPresent("organization_name", ent.OrganizationName.String)...)
 	errs = append(errs, enum.CheckURL("attribution_url", ent.AttributionURL.String)...)
 	errs = append(errs, enum.CheckInsideRangeInt("is_producer", ent.IsProducer.Int, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("is_operator", ent.IsProducer.Int, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("is_authority", ent.IsProducer.Int, 0, 1)...)
+	errs = append(errs, enum.CheckInsideRangeInt("is_operator", ent.IsOperator.Int, 0, 1)...)
+	errs = append(errs, enum.CheckInsideRangeInt("is_authority", ent.IsAuthority.Int, 0, 1)...)
 	errs = append(errs, enum.CheckEmail("attribution_email", ent.AttributionEmail.String)...)
 	// At least one must be present
 	if ent.IsProducer.Int == 0 && ent.IsOperator.Int == 0 && ent.IsAuthority.Int == 0 {
@@ -50,21 +50,10 @@ func (ent *Attribution) Errors() (errs []error) {
 			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", "trip_id cannot be set if agency_id is present"))
 		}
 	} else if ent.RouteID.Key != "" {
-		if ent.AgencyID.Key != "" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("agency_id", "agency_id cannot be set if route_id is present"))
-		}
 		if ent.TripID.Key != "" {
 			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", "trip_id cannot be set if route_id is present"))
 		}
-	} else if ent.TripID.Key != "" {
-		if ent.AgencyID.Key != "" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("agency_id", "agency_id cannot be set if trip_id is present"))
-		}
-		if ent.RouteID.Key != "" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("route_id", "route_id cannot be set if trip_id is present"))
-		}
 	}
-
 	return errs
 }
 

@@ -422,6 +422,8 @@ func (copier *Copier) Copy() *Result {
 		copier.copyFrequencies,
 		copier.copyTransfers,
 		copier.copyFeedInfos,
+		copier.copyTranslations,
+		copier.copyAttributions,
 	}
 	for i := range fns {
 		if err := fns[i](); err != nil {
@@ -599,6 +601,28 @@ func (copier *Copier) copyFrequencies() error {
 		}
 	}
 	copier.logCount(&tl.Frequency{})
+	return nil
+}
+
+// copyAttributions writes Attributions
+func (copier *Copier) copyAttributions() error {
+	for e := range copier.Reader.Attributions() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.Attribution{})
+	return nil
+}
+
+// copyTranslations writes Translations
+func (copier *Copier) copyTranslations() error {
+	for e := range copier.Reader.Translations() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.Translation{})
 	return nil
 }
 

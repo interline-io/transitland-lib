@@ -25,6 +25,8 @@ type Reader struct {
 	TransferList      []tl.Transfer
 	LevelList         []tl.Level
 	PathwayList       []tl.Pathway
+	AttributionList   []tl.Attribution
+	TranslationList   []tl.Translation
 	OtherList         []tl.Entity
 }
 
@@ -266,6 +268,30 @@ func (mr *Reader) Trips() chan tl.Trip {
 	out := make(chan tl.Trip, bufferSize)
 	go func() {
 		for _, ent := range mr.TripList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+// Attributions .
+func (mr *Reader) Attributions() chan tl.Attribution {
+	out := make(chan tl.Attribution, bufferSize)
+	go func() {
+		for _, ent := range mr.AttributionList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+// Translations .
+func (mr *Reader) Translations() chan tl.Translation {
+	out := make(chan tl.Translation, bufferSize)
+	go func() {
+		for _, ent := range mr.TranslationList {
 			out <- ent
 		}
 		close(out)

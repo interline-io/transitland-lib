@@ -70,6 +70,10 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 		mw.Reader.TransferList = append(mw.Reader.TransferList, *v)
 	case *tl.Trip:
 		mw.Reader.TripList = append(mw.Reader.TripList, *v)
+	case *tl.Translation:
+		mw.Reader.TranslationList = append(mw.Reader.TranslationList, *v)
+	case *tl.Attribution:
+		mw.Reader.AttributionList = append(mw.Reader.AttributionList, *v)
 	default:
 		mw.Reader.OtherList = append(mw.Reader.OtherList, v)
 	}
