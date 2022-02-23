@@ -481,6 +481,52 @@ func (reader *Reader) Trips() chan tl.Trip {
 	return out
 }
 
+// Attributions sends Attributions.
+func (reader *Reader) Attributions() chan tl.Attribution {
+	out := make(chan tl.Attribution, bufferSize)
+	go func() {
+		offset := 0
+		for {
+			ents := []tl.Attribution{}
+			qstr, args, err := reader.Where().From("gtfs_attributions").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
+			check(err)
+			check(reader.Adapter.Select(&ents, qstr, args...))
+			for _, ent := range ents {
+				out <- ent
+			}
+			if len(ents) < reader.PageSize {
+				break
+			}
+			offset = offset + reader.PageSize
+		}
+		close(out)
+	}()
+	return out
+}
+
+// Translations sends Translations.
+func (reader *Reader) Translations() chan tl.Translation {
+	out := make(chan tl.Translation, bufferSize)
+	go func() {
+		offset := 0
+		for {
+			ents := []tl.Translation{}
+			qstr, args, err := reader.Where().From("gtfs_translations").OrderBy("id").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
+			check(err)
+			check(reader.Adapter.Select(&ents, qstr, args...))
+			for _, ent := range ents {
+				out <- ent
+			}
+			if len(ents) < reader.PageSize {
+				break
+			}
+			offset = offset + reader.PageSize
+		}
+		close(out)
+	}()
+	return out
+}
+
 //
 
 func chunkStrings(value []string, csize int) [][]string {

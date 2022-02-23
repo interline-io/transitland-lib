@@ -1,0 +1,2 @@
+attribution_id,agency_id,route_id,trip_id,organization_name,is_producer,is_operator,is_authority,attribution_url,attribution_email,attribution_phone,expect_error
+ok,xyz,,,test organization,1,0,0,http://interline.io,info@interline.io,510-555-5555,InvalidReferenceError:agency_id
