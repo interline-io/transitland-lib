@@ -501,7 +501,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_translations" (
   "id" integer primary key autoincrement, 
   "feed_version_id" int NOT NULL, 
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
   "table_name" varchar(255),
   "field_name" varchar(255),
   "language" varchar(255),
@@ -515,7 +515,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_attributions" (
   "id" integer primary key autoincrement, 
   "feed_version_id" int NOT NULL, 
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
   "organization_name" varchar(255),
   "agency_id" integer,
   "route_id" integer,
