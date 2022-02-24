@@ -10,7 +10,7 @@ import (
 //////////
 
 type AgencyGeometry struct {
-	AgencyID tl.OKey
+	AgencyID tl.Key
 	Geometry tl.Polygon
 	tl.MinEntity
 	tl.FeedVersionEntity
@@ -136,7 +136,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 			continue
 		}
 		ent := AgencyGeometry{
-			AgencyID: tl.NewOKey(aid),
+			AgencyID: tl.NewKey(aid),
 			Geometry: tl.Polygon{Valid: true, Polygon: *v},
 		}
 		if _, _, err := copier.CopyEntity(&ent); err != nil {

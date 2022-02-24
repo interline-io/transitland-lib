@@ -16,7 +16,7 @@ func TestFindImportableFeeds(t *testing.T) {
 		f := testdb.CreateTestFeed(atx, "test")
 		allfvids := []int{}
 		for i := 0; i < 10; i++ {
-			fv1 := testdb.ShouldInsert(t, atx, &tl.FeedVersion{FeedID: f.ID, EarliestCalendarDate: tl.NewODate(time.Now()), LatestCalendarDate: tl.NewODate(time.Now())})
+			fv1 := testdb.ShouldInsert(t, atx, &tl.FeedVersion{FeedID: f.ID, EarliestCalendarDate: tl.NewDate(time.Now()), LatestCalendarDate: tl.NewDate(time.Now())})
 			allfvids = append(allfvids, fv1)
 		}
 		expfvids := allfvids[:5]
@@ -41,8 +41,8 @@ func TestMainImportFeedVersion(t *testing.T) {
 	setup := func(atx tldb.Adapter, filename string) int {
 		// Create FV
 		fv := tl.FeedVersion{}
-		fv.EarliestCalendarDate = tl.NewODate(time.Now())
-		fv.LatestCalendarDate = tl.NewODate(time.Now())
+		fv.EarliestCalendarDate = tl.NewDate(time.Now())
+		fv.LatestCalendarDate = tl.NewDate(time.Now())
 		fv.File = filename
 		return testdb.ShouldInsert(t, atx, &fv)
 	}
@@ -112,8 +112,8 @@ func TestImportFeedVersion(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create FV
 		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
-		fv.EarliestCalendarDate = tl.NewODate(time.Now())
-		fv.LatestCalendarDate = tl.NewODate(time.Now())
+		fv.EarliestCalendarDate = tl.NewDate(time.Now())
+		fv.LatestCalendarDate = tl.NewDate(time.Now())
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import

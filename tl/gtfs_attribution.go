@@ -6,17 +6,17 @@ import (
 )
 
 type Attribution struct {
-	OrganizationName OString
-	AgencyID         OKey
-	RouteID          OKey
-	TripID           OKey
-	IsProducer       OInt
-	IsOperator       OInt
-	IsAuthority      OInt
-	AttributionID    OString
-	AttributionURL   OString
-	AttributionEmail OString
-	AttributionPhone OString
+	OrganizationName String
+	AgencyID         Key
+	RouteID          Key
+	TripID           Key
+	IsProducer       Int
+	IsOperator       Int
+	IsAuthority      Int
+	AttributionID    String
+	AttributionURL   String
+	AttributionEmail String
+	AttributionPhone String
 	BaseEntity
 }
 
@@ -62,7 +62,7 @@ func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
 	// Adjust AgencyID
 	if ent.AgencyID.Key != "" {
 		if eid, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Key}); ok {
-			ent.AgencyID = NewOKey(eid)
+			ent.AgencyID = NewKey(eid)
 		} else {
 			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Key)
 		}
@@ -70,7 +70,7 @@ func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
 	// Adjust RouteID
 	if ent.RouteID.Key != "" {
 		if eid, ok := emap.GetEntity(&Route{RouteID: ent.RouteID.Key}); ok {
-			ent.RouteID = NewOKey(eid)
+			ent.RouteID = NewKey(eid)
 		} else {
 			return causes.NewInvalidReferenceError("route_id", ent.RouteID.Key)
 		}
@@ -78,7 +78,7 @@ func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
 	// Adjust TripID
 	if ent.TripID.Key != "" {
 		if eid, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Key}); ok {
-			ent.TripID = NewOKey(eid)
+			ent.TripID = NewKey(eid)
 		} else {
 			return causes.NewInvalidReferenceError("trip_id", ent.TripID.Key)
 		}

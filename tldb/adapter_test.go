@@ -186,8 +186,8 @@ func createTestFeedVersion(adapter Adapter) (int, error) {
 	fv := tl.FeedVersion{}
 	fv.SHA1 = t
 	fv.FeedID = feed.ID
-	fv.EarliestCalendarDate = tl.NewODate(time.Now())
-	fv.LatestCalendarDate = tl.NewODate(time.Now())
+	fv.EarliestCalendarDate = tl.NewDate(time.Now())
+	fv.LatestCalendarDate = tl.NewDate(time.Now())
 	m, err = adapter.Insert(&fv)
 	return m, err
 }

@@ -132,7 +132,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	}
 	// Set ShapeDistTraveled
 	for i := 0; i < len(stoptimes); i++ {
-		stoptimes[i].ShapeDistTraveled = tl.NewOFloat(positions[i] * length)
+		stoptimes[i].ShapeDistTraveled = tl.NewFloat(positions[i] * length)
 	}
 	return InterpolateStopTimes(stoptimes)
 }

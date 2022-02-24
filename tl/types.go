@@ -10,17 +10,19 @@ import (
 	"time"
 )
 
-type OString struct {
+////
+
+type String struct {
 	Valid  bool
 	String string
 }
 
-func NewOString(v string) OString {
-	return OString{Valid: true, String: v}
+func NewString(v string) String {
+	return String{Valid: true, String: v}
 }
 
 // Value returns nil if empty
-func (r OString) Value() (driver.Value, error) {
+func (r String) Value() (driver.Value, error) {
 	if r.Valid {
 		return r.String, nil
 	}
@@ -28,7 +30,7 @@ func (r OString) Value() (driver.Value, error) {
 }
 
 // Scan implements sql.Scanner
-func (r *OString) Scan(src interface{}) error {
+func (r *String) Scan(src interface{}) error {
 	r.String, r.Valid = "", false
 	if src == nil {
 		return nil
@@ -50,7 +52,7 @@ func (r *OString) Scan(src interface{}) error {
 }
 
 // UnmarshalJSON implements json.Marshaler interface.
-func (r *OString) UnmarshalJSON(v []byte) error {
+func (r *String) UnmarshalJSON(v []byte) error {
 	r.String, r.Valid = "", false
 	if len(v) == 0 {
 		return nil
@@ -61,7 +63,7 @@ func (r *OString) UnmarshalJSON(v []byte) error {
 }
 
 // MarshalJSON implements the json.marshaler interface.
-func (r *OString) MarshalJSON() ([]byte, error) {
+func (r *String) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -69,29 +71,29 @@ func (r *OString) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *OString) UnmarshalGQL(v interface{}) error {
+func (r *String) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (r OString) MarshalGQL(w io.Writer) {
+func (r String) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }
 
 /////////////////////
 
-type OInt struct {
+type Int struct {
 	Valid bool
 	Int   int
 }
 
-func NewOInt(v int) OInt {
-	return OInt{Valid: true, Int: v}
+func NewInt(v int) Int {
+	return Int{Valid: true, Int: v}
 }
 
 // Value returns nil if empty
-func (r OInt) Value() (driver.Value, error) {
+func (r Int) Value() (driver.Value, error) {
 	if r.Valid {
 		return int64(r.Int), nil
 	}
@@ -99,7 +101,7 @@ func (r OInt) Value() (driver.Value, error) {
 }
 
 // Scan implements sql.Scanner
-func (r *OInt) Scan(src interface{}) error {
+func (r *Int) Scan(src interface{}) error {
 	r.Int, r.Valid = 0, false
 	if src == nil {
 		return nil
@@ -121,12 +123,12 @@ func (r *OInt) Scan(src interface{}) error {
 	return err
 }
 
-func (r *OInt) String() string {
+func (r *Int) String() string {
 	return strconv.Itoa(r.Int)
 }
 
 // UnmarshalJSON implements the json.marshaler interface.
-func (r *OInt) UnmarshalJSON(v []byte) error {
+func (r *Int) UnmarshalJSON(v []byte) error {
 	r.Int, r.Valid = 0, false
 	if len(v) == 0 {
 		return nil
@@ -137,7 +139,7 @@ func (r *OInt) UnmarshalJSON(v []byte) error {
 }
 
 // MarshalJSON implements the json.Marshaler interface
-func (r *OInt) MarshalJSON() ([]byte, error) {
+func (r *Int) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -145,29 +147,29 @@ func (r *OInt) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *OInt) UnmarshalGQL(v interface{}) error {
+func (r *Int) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (r OInt) MarshalGQL(w io.Writer) {
+func (r Int) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }
 
 /////////////////////
 
-type OFloat struct {
+type Float struct {
 	Valid bool
 	Float float64
 }
 
-func NewOFloat(v float64) OFloat {
-	return OFloat{Valid: true, Float: v}
+func NewFloat(v float64) Float {
+	return Float{Valid: true, Float: v}
 }
 
 // Value returns nil if empty
-func (r OFloat) Value() (driver.Value, error) {
+func (r Float) Value() (driver.Value, error) {
 	if r.Valid {
 		return r.Float, nil
 	}
@@ -175,7 +177,7 @@ func (r OFloat) Value() (driver.Value, error) {
 }
 
 // Scan implements sql.Scanner
-func (r *OFloat) Scan(src interface{}) error {
+func (r *Float) Scan(src interface{}) error {
 	r.Float, r.Valid = 0.0, false
 	if src == nil {
 		return nil
@@ -197,7 +199,7 @@ func (r *OFloat) Scan(src interface{}) error {
 	return err
 }
 
-func (r *OFloat) String() string {
+func (r *Float) String() string {
 	if r.Float > -100_000 && r.Float < 100_000 {
 		return fmt.Sprintf("%g", r.Float)
 	}
@@ -205,7 +207,7 @@ func (r *OFloat) String() string {
 }
 
 // UnmarshalJSON implements the json.marshaler interface.
-func (r *OFloat) UnmarshalJSON(v []byte) error {
+func (r *Float) UnmarshalJSON(v []byte) error {
 	r.Float, r.Valid = 0, false
 	if len(v) == 0 {
 		return nil
@@ -216,7 +218,7 @@ func (r *OFloat) UnmarshalJSON(v []byte) error {
 }
 
 // MarshalJSON implements the json.Marshaler interface
-func (r *OFloat) MarshalJSON() ([]byte, error) {
+func (r *Float) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -224,34 +226,34 @@ func (r *OFloat) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *OFloat) UnmarshalGQL(v interface{}) error {
+func (r *Float) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (r OFloat) MarshalGQL(w io.Writer) {
+func (r Float) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }
 
 /////////////////////
 
-// OKey is a nullable foreign key constraint, similar to sql.NullString
-type OKey struct {
+// Key is a nullable foreign key constraint, similar to sql.NullString
+type Key struct {
 	Key   string
 	Valid bool
 }
 
-func NewOKey(v string) OKey {
-	return OKey{Valid: true, Key: v}
+func NewKey(v string) Key {
+	return Key{Valid: true, Key: v}
 }
 
-func (r *OKey) String() string {
+func (r *Key) String() string {
 	return r.Key
 }
 
 // Value returns nil if empty
-func (r OKey) Value() (driver.Value, error) {
+func (r Key) Value() (driver.Value, error) {
 	if !r.Valid || r.Key == "" {
 		return nil, nil
 	}
@@ -259,7 +261,7 @@ func (r OKey) Value() (driver.Value, error) {
 }
 
 // Scan implements sql.Scanner
-func (r *OKey) Scan(src interface{}) error {
+func (r *Key) Scan(src interface{}) error {
 	r.Key, r.Valid = "", false
 	if src == nil {
 		return nil
@@ -282,13 +284,13 @@ func (r *OKey) Scan(src interface{}) error {
 	return err
 }
 
-func (r *OKey) Int() int {
+func (r *Key) Int() int {
 	a, _ := strconv.Atoi(r.Key)
 	return a
 }
 
 // UnmarshalJSON implements the json.marshaler interface.
-func (r *OKey) UnmarshalJSON(v []byte) error {
+func (r *Key) UnmarshalJSON(v []byte) error {
 	r.Key, r.Valid = "", false
 	if len(v) == 0 {
 		return nil
@@ -299,7 +301,7 @@ func (r *OKey) UnmarshalJSON(v []byte) error {
 }
 
 // MarshalJSON implements the json.Marshaler interface
-func (r *OKey) MarshalJSON() ([]byte, error) {
+func (r *Key) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -307,34 +309,34 @@ func (r *OKey) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *OKey) UnmarshalGQL(v interface{}) error {
+func (r *Key) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (r OKey) MarshalGQL(w io.Writer) {
+func (r Key) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }
 
 /////////////////////
 
-// OTime is a nullable date without time component
-type OTime struct {
+// Time is a nullable date without time component
+type Time struct {
 	Time  time.Time
 	Valid bool
 }
 
-func NewOTime(v time.Time) OTime {
-	return OTime{Valid: true, Time: v}
+func NewTime(v time.Time) Time {
+	return Time{Valid: true, Time: v}
 }
 
 // IsZero returns if this is a zero value.
-func (r *OTime) IsZero() bool {
+func (r *Time) IsZero() bool {
 	return !r.Valid
 }
 
-func (r *OTime) String() string {
+func (r *Time) String() string {
 	if !r.Valid {
 		return ""
 	}
@@ -342,7 +344,7 @@ func (r *OTime) String() string {
 }
 
 // Value returns nil if empty
-func (r OTime) Value() (driver.Value, error) {
+func (r Time) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
 	}
@@ -350,7 +352,7 @@ func (r OTime) Value() (driver.Value, error) {
 }
 
 // Scan implements sql.Scanner
-func (r *OTime) Scan(src interface{}) error {
+func (r *Time) Scan(src interface{}) error {
 	r.Time, r.Valid = time.Time{}, false
 	if src == nil {
 		return nil
@@ -369,7 +371,7 @@ func (r *OTime) Scan(src interface{}) error {
 }
 
 // MarshalJSON implements the json.Marshaler interface
-func (r *OTime) MarshalJSON() ([]byte, error) {
+func (r *Time) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -377,34 +379,34 @@ func (r *OTime) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *OTime) UnmarshalGQL(v interface{}) error {
+func (r *Time) UnmarshalGQL(v interface{}) error {
 	return nil
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (r OTime) MarshalGQL(w io.Writer) {
+func (r Time) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }
 
 /////////////////////
 
-// ODate is a nullable date, but can scan strings
-type ODate struct {
+// Date is a nullable date, but can scan strings
+type Date struct {
 	Time  time.Time
 	Valid bool
 }
 
-func NewODate(v time.Time) ODate {
-	return ODate{Valid: true, Time: v}
+func NewDate(v time.Time) Date {
+	return Date{Valid: true, Time: v}
 }
 
 // IsZero returns if this is a zero value.
-func (r *ODate) IsZero() bool {
+func (r *Date) IsZero() bool {
 	return !r.Valid
 }
 
-func (r *ODate) String() string {
+func (r *Date) String() string {
 	if !r.Valid {
 		return ""
 	}
@@ -412,7 +414,7 @@ func (r *ODate) String() string {
 }
 
 // Value returns nil if empty
-func (r ODate) Value() (driver.Value, error) {
+func (r Date) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
 	}
@@ -420,7 +422,7 @@ func (r ODate) Value() (driver.Value, error) {
 }
 
 // Scan implements sql.Scanner
-func (r *ODate) Scan(src interface{}) error {
+func (r *Date) Scan(src interface{}) error {
 	r.Time, r.Valid = time.Time{}, false
 	if src == nil {
 		return nil
@@ -439,7 +441,7 @@ func (r *ODate) Scan(src interface{}) error {
 }
 
 // UnmarshalJSON implements the json.Marshaler interface
-func (r *ODate) UnmarshalJSON(v []byte) error {
+func (r *Date) UnmarshalJSON(v []byte) error {
 	r.Time, r.Valid = time.Time{}, false
 	if len(v) == 0 {
 		return nil
@@ -457,7 +459,7 @@ func (r *ODate) UnmarshalJSON(v []byte) error {
 }
 
 // MarshalJSON implements the json.Marshaler interface
-func (r *ODate) MarshalJSON() ([]byte, error) {
+func (r *Date) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -465,7 +467,7 @@ func (r *ODate) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *ODate) UnmarshalGQL(src interface{}) error {
+func (r *Date) UnmarshalGQL(src interface{}) error {
 	r.Valid = false
 	var p error
 	switch v := src.(type) {
@@ -485,7 +487,7 @@ func (r *ODate) UnmarshalGQL(src interface{}) error {
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (r ODate) MarshalGQL(w io.Writer) {
+func (r Date) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }
@@ -591,6 +593,10 @@ type IntSlice struct {
 	Ints  []int
 }
 
+func NewIntSlice(v []int) IntSlice {
+	return IntSlice{Valid: true, Ints: v}
+}
+
 // Value .
 func (a IntSlice) Value() (driver.Value, error) {
 	if !a.Valid {
@@ -610,4 +616,44 @@ func (a *IntSlice) Scan(value interface{}) error {
 		return errors.New("type assertion to []byte failed")
 	}
 	return json.Unmarshal(b, &a.Ints)
+}
+
+////////
+
+// Backwards compat
+
+type OString = String
+
+func NewOString(v string) String {
+	return NewString(v)
+}
+
+type OInt = Int
+
+func NewOInt(v int) Int {
+	return NewInt(v)
+}
+
+type OFloat = Float
+
+func NewOFloat(v float64) Float {
+	return NewFloat(v)
+}
+
+type OKey = Key
+
+func NewOKey(v string) Key {
+	return NewKey(v)
+}
+
+type OTime = Time
+
+func NewOTime(v time.Time) Time {
+	return NewTime(v)
+}
+
+type ODate = Date
+
+func NewODate(v time.Time) Date {
+	return NewDate(v)
 }

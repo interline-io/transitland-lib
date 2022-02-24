@@ -51,6 +51,6 @@ func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 		// )
 		sts[i].ArrivalTime = tl.NewWideTimeFromSeconds(dt)
 		sts[i].DepartureTime = tl.NewWideTimeFromSeconds(dt)
-		sts[i].Interpolated = tl.NewOInt(1)
+		sts[i].Interpolated = tl.NewInt(1)
 	}
 }

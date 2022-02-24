@@ -148,7 +148,7 @@ func TestUpdateFeed(t *testing.T) {
 		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 			rfeed := tl.Feed{}
 			rfeed.FeedID = "caltrain"
-			rfeed.Name = tl.NewOString("An Updated Name")
+			rfeed.Name = tl.NewString("An Updated Name")
 			feedid, found, _, err := UpdateFeed(atx, rfeed)
 			if err != nil {
 				t.Error(err)

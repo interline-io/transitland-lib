@@ -84,12 +84,12 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 		for _, operator := range rfeed.Operators {
 			for i, oif := range operator.AssociatedFeeds {
 				if oif.FeedOnestopID.String == "" {
-					oif.FeedOnestopID = tl.NewOString(fsid)
+					oif.FeedOnestopID = tl.NewString(fsid)
 				}
 				operator.AssociatedFeeds[i] = oif
 			}
 			if len(operator.AssociatedFeeds) == 0 {
-				operator.AssociatedFeeds = append(operator.AssociatedFeeds, tl.OperatorAssociatedFeed{FeedOnestopID: tl.NewOString(fsid)})
+				operator.AssociatedFeeds = append(operator.AssociatedFeeds, tl.OperatorAssociatedFeed{FeedOnestopID: tl.NewString(fsid)})
 			}
 			operators = append(operators, operator)
 		}

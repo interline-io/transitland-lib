@@ -11,11 +11,11 @@ import (
 type RouteHeadway struct {
 	RouteID        string
 	SelectedStopID string
-	DirectionID    tl.OInt
-	HeadwaySecs    tl.OInt
-	DowCategory    tl.OInt
-	ServiceDate    tl.ODate
-	StopTripCount  tl.OInt
+	DirectionID    tl.Int
+	HeadwaySecs    tl.Int
+	DowCategory    tl.Int
+	ServiceDate    tl.Date
+	StopTripCount  tl.Int
 	Departures     tl.IntSlice
 	tl.MinEntity
 	tl.FeedVersionEntity
@@ -169,16 +169,16 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				rh := RouteHeadway{
 					RouteID:        rid,
 					SelectedStopID: mostVisitedStop,
-					HeadwaySecs:    tl.OInt{},
-					DowCategory:    tl.NewOInt(dowCat),
-					ServiceDate:    tl.NewODate(d),
-					StopTripCount:  tl.NewOInt(len(departures)),
-					DirectionID:    tl.NewOInt(int(direction)),
-					Departures:     tl.IntSlice{Valid: true, Ints: departures},
+					HeadwaySecs:    tl.Int{},
+					DowCategory:    tl.NewInt(dowCat),
+					ServiceDate:    tl.NewDate(d),
+					StopTripCount:  tl.NewInt(len(departures)),
+					DirectionID:    tl.NewInt(int(direction)),
+					Departures:     tl.NewIntSlice(departures),
 				}
 				// HeadwaySecs based on morning rush hour
 				if ws, ok := getStats(departures, 21600, 36000); ok && len(departures) >= 10 {
-					rh.HeadwaySecs = tl.NewOInt(ws.mid)
+					rh.HeadwaySecs = tl.NewInt(ws.mid)
 				}
 				if _, _, err := copier.CopyEntity(&rh); err != nil {
 					return err
