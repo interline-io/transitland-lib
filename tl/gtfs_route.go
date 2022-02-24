@@ -19,8 +19,8 @@ type Route struct {
 	RouteColor        string
 	RouteTextColor    string
 	RouteSortOrder    int
-	ContinuousPickup  OInt
-	ContinuousDropOff OInt
+	ContinuousPickup  Int
+	ContinuousDropOff Int
 	Geometry          Geometry `csv:"-" db:"-"`
 	NetworkID         string   `db:"-"`
 	AsRoute           int      `db:"-"`

@@ -10,11 +10,11 @@ import (
 type FeedState struct {
 	ID                    int
 	FeedID                int
-	FeedVersionID         tl.OInt
+	FeedVersionID         tl.Int
 	LastFetchError        string
-	LastFetchedAt         tl.OTime
-	LastSuccessfulFetchAt tl.OTime
-	FeedPriority          tl.OInt
+	LastFetchedAt         tl.Time
+	LastSuccessfulFetchAt tl.Time
+	FeedPriority          tl.Int
 	FeedRealtimeEnabled   bool
 	tl.Timestamps
 }

@@ -12,8 +12,8 @@ type Result struct {
 	Success              bool                           `json:"success"`
 	FailureReason        string                         `json:"failure_reason"`
 	SHA1                 string                         `json:"sha1"`
-	EarliestCalendarDate tl.ODate                       `json:"earliest_calendar_date"`
-	LatestCalendarDate   tl.ODate                       `json:"latest_calendar_date"`
+	EarliestCalendarDate tl.Date                        `json:"earliest_calendar_date"`
+	LatestCalendarDate   tl.Date                        `json:"latest_calendar_date"`
 	Agencies             []tl.Agency                    `json:"agencies"`
 	Routes               []tl.Route                     `json:"routes"`
 	Stops                []tl.Stop                      `json:"stops"`

@@ -40,7 +40,7 @@ func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 		for _, rfeed := range reg.Feeds {
 			fsid := rfeed.FeedID
 			rfeed.File = filepath.Base(fn)
-			rfeed.DeletedAt = tl.OTime{Valid: false}
+			rfeed.DeletedAt = tl.Time{Valid: false}
 			feedid, found, updated, err := UpdateFeed(atx, rfeed)
 			if err != nil {
 				log.Errorf("%s: error on feed %d: %s", fn, feedid, err)
@@ -67,8 +67,8 @@ func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 		}
 		for _, operator := range reg.Operators {
 			osid := operator.OnestopID.String
-			operator.File = tl.NewOString(filepath.Base(fn))
-			operator.DeletedAt = tl.OTime{Valid: false}
+			operator.File = tl.NewString(filepath.Base(fn))
+			operator.DeletedAt = tl.Time{Valid: false}
 			operatorid, found, updated, err := UpdateOperator(atx, operator)
 			if err != nil {
 				log.Errorf("%s: error on operator %s: %s", fn, osid, err)

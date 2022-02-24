@@ -7,11 +7,11 @@ import (
 
 // FareRiderCategory fare_rider_categories.txt
 type FareRiderCategory struct {
-	FareID           string   `csv:"fare_id"`
-	RiderCategoryID  int      `csv:"rider_category_id"`
-	Price            float64  `csv:"price"`
-	ExpirationDate   tl.ODate `csv:"expiration_date"`
-	CommencementDate tl.ODate `csv:"commencement_date"`
+	FareID           string  `csv:"fare_id"`
+	RiderCategoryID  int     `csv:"rider_category_id"`
+	Price            float64 `csv:"price"`
+	ExpirationDate   tl.Date `csv:"expiration_date"`
+	CommencementDate tl.Date `csv:"commencement_date"`
 	tl.BaseEntity
 }
 

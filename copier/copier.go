@@ -796,7 +796,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if !trip.ShapeID.Valid && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
 			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID]; ok {
-				trip.ShapeID = tl.NewOKey(shapeid)
+				trip.ShapeID = tl.NewKey(shapeid)
 			} else {
 				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), trip.StopTimes); err != nil {
 					log.Errorf("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
@@ -804,7 +804,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				} else {
 					// Set ShapeID
 					stopPatternShapeIDs[trip.StopPatternID] = shapeid
-					trip.ShapeID = tl.NewOKey(shapeid)
+					trip.ShapeID = tl.NewKey(shapeid)
 				}
 			}
 		}

@@ -12,7 +12,7 @@ type Feed struct {
 	ID              int                 `json:"-"`
 	FeedID          string              `json:"id" db:"onestop_id"`
 	FeedNamespaceID string              `json:"feed_namespace_id"`
-	Name            OString             `json:"name"`
+	Name            String              `json:"name"`
 	Spec            string              `json:"spec"`
 	URLs            FeedUrls            `json:"urls" db:"urls"`
 	AssociatedFeeds FeedAssociatedFeeds `json:"associated_feeds"` // `json:"associated_feeds"`
@@ -22,7 +22,7 @@ type Feed struct {
 	Operators       []Operator          `json:"operators" db:"-"`
 	Tags            Tags                `json:"tags" db:"feed_tags" `
 	File            string              `json:"file"`       // internal
-	DeletedAt       OTime               `json:"deleted_at"` // internal
+	DeletedAt       Time                `json:"deleted_at"` // internal
 	Timestamps      `json:"-"`          // internal
 }
 

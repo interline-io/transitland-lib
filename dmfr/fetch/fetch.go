@@ -27,9 +27,9 @@ type Options struct {
 	S3                      string
 	FetchedAt               time.Time
 	Secrets                 download.Secrets
-	CreatedBy               tl.OString
-	Name                    tl.OString
-	Description             tl.OString
+	CreatedBy               tl.String
+	Name                    tl.String
+	Description             tl.String
 }
 
 // Result contains results of a fetch operation.
@@ -74,7 +74,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 		return fr, err
 	}
 	// Immediately save LastFetchedAt
-	tlstate.LastFetchedAt = tl.OTime{Time: opts.FetchedAt, Valid: true}
+	tlstate.LastFetchedAt = tl.NewTime(opts.FetchedAt)
 	tlstate.LastFetchError = ""
 	tlstate.UpdateTimestamps()
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
@@ -88,7 +88,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	if fr.FetchError != nil {
 		tlstate.LastFetchError = fr.FetchError.Error()
 	} else {
-		tlstate.LastSuccessfulFetchAt = tl.OTime{Time: opts.FetchedAt, Valid: true}
+		tlstate.LastSuccessfulFetchAt = tl.NewTime(opts.FetchedAt)
 	}
 	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps

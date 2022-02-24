@@ -26,13 +26,13 @@ type FeedVersion struct {
 	SHA1Dir              string
 	File                 string
 	URL                  string
-	EarliestCalendarDate ODate
-	LatestCalendarDate   ODate
+	EarliestCalendarDate Date
+	LatestCalendarDate   Date
 	FetchedAt            time.Time
-	Name                 OString
-	Description          OString
-	CreatedBy            OString
-	UpdatedBy            OString
+	Name                 String
+	Description          String
+	CreatedBy            String
+	UpdatedBy            String
 	Timestamps
 }
 
@@ -69,8 +69,8 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	if err != nil {
 		return fv, err
 	}
-	fv.EarliestCalendarDate = NewODate(start)
-	fv.LatestCalendarDate = NewODate(end)
+	fv.EarliestCalendarDate = NewDate(start)
+	fv.LatestCalendarDate = NewDate(end)
 	// Get path and sha1
 	if s, ok := reader.(canSHA1); ok {
 		if h, err := s.SHA1(); err == nil {
