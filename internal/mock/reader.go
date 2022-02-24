@@ -35,6 +35,10 @@ func NewReader() *Reader {
 	return &Reader{}
 }
 
+func (mr *Reader) String() string {
+	return "mock"
+}
+
 // Open .
 func (mr *Reader) Open() error {
 	return nil

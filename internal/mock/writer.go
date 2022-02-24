@@ -16,6 +16,10 @@ func NewWriter() *Writer {
 	}
 }
 
+func (mw *Writer) String() string {
+	return "mock"
+}
+
 // Open .
 func (mw *Writer) Open() error {
 	return nil
