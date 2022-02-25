@@ -125,7 +125,7 @@ func queryStart(rid int, qstr string, a ...interface{}) {
 		sts = append(sts, q.String())
 	}
 	qstr = qstrRex.ReplaceAllString(qstr, " ")
-	log.Trace().Int("queryId", rid).Str("query", qstr).Strs("queryArgs", sts).Msg("query: begin")
+	log.Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Msg("query: begin")
 }
 
 // QueryTime logs database queries and time relative to start; requires LogQuery or TRACE.
@@ -137,7 +137,7 @@ func queryTime(rid int, t time.Time, qstr string, a ...interface{}) {
 		sts = append(sts, q.String())
 	}
 	qstr = qstrRex.ReplaceAllString(qstr, " ")
-	log.Trace().Int("queryId", rid).Str("query", qstr).Strs("queryArgs", sts).Float64("queryTime", t2).Msg("query: complete")
+	log.Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Float64("queryTime", t2).Msg("query: complete")
 }
 
 // Some helpers
