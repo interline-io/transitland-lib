@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -108,6 +109,8 @@ func (p *QueryLogger) queryId() (time.Time, int) {
 
 //////
 
+var qstrRex = regexp.MustCompile(`[\s]+`)
+
 func logt1(rid int, qstr string, a ...interface{}) time.Time {
 	t := time.Now()
 	queryStart(rid, qstr, a...)
@@ -121,7 +124,8 @@ func queryStart(rid int, qstr string, a ...interface{}) {
 		q := qval{strconv.Itoa(i + 1), val}
 		sts = append(sts, q.String())
 	}
-	log.Trace().Int("queryId", rid).Str("query", qstr).Strs("queryArgs", sts).Msg("begin")
+	qstr = qstrRex.ReplaceAllString(qstr, " ")
+	log.Trace().Int("queryId", rid).Str("query", qstr).Strs("queryArgs", sts).Msg("query: begin")
 }
 
 // QueryTime logs database queries and time relative to start; requires LogQuery or TRACE.
@@ -132,7 +136,8 @@ func queryTime(rid int, t time.Time, qstr string, a ...interface{}) {
 		q := qval{strconv.Itoa(i + 1), val}
 		sts = append(sts, q.String())
 	}
-	log.Trace().Int("queryId", rid).Str("query", qstr).Strs("queryArgs", sts).Float64("queryTime", t2).Msg("complete")
+	qstr = qstrRex.ReplaceAllString(qstr, " ")
+	log.Trace().Int("queryId", rid).Str("query", qstr).Strs("queryArgs", sts).Float64("queryTime", t2).Msg("query: complete")
 }
 
 // Some helpers

@@ -128,7 +128,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	copier.Reader = reader
 	copier.Writer = writer
 	// Logging
-	copier.Options.sublogger = log.Logger.With().Str("reader", reader.String()).Str("writer", writer.String()).Logger().Level(zerolog.TraceLevel)
+	copier.Options.sublogger = log.Logger.With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
 
 	// Result
 	result := NewResult()
@@ -185,7 +185,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 }
 
 func (copier *Copier) SetLogger(g zerolog.Logger) {
-	copier.sublogger = log.Logger.With().Str("reader", "test").Str("writer", "test").Logger().Level(zerolog.TraceLevel)
+	copier.sublogger = log.Logger.With().Str("reader", "test").Str("writer", "test").Logger()
 }
 
 // AddValidator adds an additional entity validator.
@@ -291,7 +291,7 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 	}
 	for i, eid := range eids {
 		sid := sids[i]
-		copier.sublogger.Trace().Str("filename", efn).Str("source_id", sid).Str("output_id", eid).Msg("saved")
+		// copier.sublogger.Trace().Str("filename", efn).Str("source_id", sid).Str("output_id", eid).Msg("saved")
 		copier.EntityMap.Set(efn, sid, eid)
 	}
 	copier.result.EntityCount[efn] += len(ents)
