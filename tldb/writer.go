@@ -51,6 +51,10 @@ func NewWriter(dburl string) (*Writer, error) {
 	return writer, nil
 }
 
+func (writer *Writer) String() string {
+	return "db"
+}
+
 // Open the database.
 func (writer *Writer) Open() error {
 	return writer.Adapter.Open()

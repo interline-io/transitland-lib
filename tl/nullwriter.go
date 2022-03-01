@@ -4,6 +4,7 @@ package tl
 type NullWriter struct {
 }
 
+func (*NullWriter) String() string                       { return "null" }
 func (*NullWriter) Open() error                          { return nil }
 func (*NullWriter) Close() error                         { return nil }
 func (*NullWriter) Create() error                        { return nil }

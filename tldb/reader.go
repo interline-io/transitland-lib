@@ -29,6 +29,10 @@ func NewReader(dburl string) (*Reader, error) {
 	return &Reader{Adapter: adapter, PageSize: 1000, FeedVersionIDs: fvids}, nil
 }
 
+func (reader *Reader) String() string {
+	return "db"
+}
+
 // ValidateStructure returns if all the necessary tables are present. Not implemented.
 func (reader *Reader) ValidateStructure() []error {
 	errs := []error{}

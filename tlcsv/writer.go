@@ -32,6 +32,10 @@ func NewWriter(path string) (*Writer, error) {
 	}, nil
 }
 
+func (writer *Writer) String() string {
+	return writer.WriterAdapter.Path()
+}
+
 // Create the necessary files for the Writer.
 func (writer *Writer) Create() error {
 	// TODO: return error when output path exists

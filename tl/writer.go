@@ -9,4 +9,5 @@ type Writer interface {
 	NewReader() (Reader, error)
 	AddEntity(Entity) (string, error)
 	AddEntities([]Entity) ([]string, error)
+	String() string
 }
