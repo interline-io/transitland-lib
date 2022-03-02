@@ -55,11 +55,11 @@ func (cmd *Command) Parse(args []string) error {
 		}
 		cmd.Options.FetchedAt = t
 	}
-	if secretsFile != "" {
-		if err := cmd.Options.Secrets.Load(secretsFile); err != nil {
-			return err
-		}
-	}
+	// if secretsFile != "" {
+	// 	if err := cmd.Options.Secrets.Load(secretsFile); err != nil {
+	// 		return err
+	// 	}
+	// }
 	if cmd.Options.FeedURL != "" && len(cmd.FeedIDs) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
 	}

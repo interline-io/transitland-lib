@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/download"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -26,7 +25,7 @@ type Options struct {
 	Directory               string
 	S3                      string
 	FetchedAt               time.Time
-	Secrets                 download.Secrets
+	Secrets                 []tl.Secret
 	CreatedBy               tl.String
 	Name                    tl.String
 	Description             tl.String
@@ -100,7 +99,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 }
 
 type canSetAuth interface {
-	SetAuth(tl.FeedAuthorization, download.Secret)
+	SetAuth(tl.FeedAuthorization, tl.Secret)
 }
 
 // fetchAndCreateFeedVersion from a URL.
@@ -114,10 +113,10 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 		return fr, nil
 	}
 	// Get secret
-	secret := download.Secret{}
-	if a, err := opts.Secrets.MatchFeed(opts.FeedID); err == nil {
+	secret := tl.Secret{}
+	if a, err := SecretsMatchFeed(opts.Secrets, opts.FeedID); err == nil {
 		secret = a
-	} else if a, err := opts.Secrets.MatchFilename(feed.File); err == nil {
+	} else if a, err := SecretsMatchFilename(opts.Secrets, feed.File); err == nil {
 		secret = a
 	} else if feed.Authorization.Type != "" {
 		fr.FetchError = errors.New("no secret found")
@@ -253,4 +252,45 @@ func copyFileContents(src, dst string) (err error) {
 	}
 	err = out.Sync()
 	return
+}
+
+func SecretsMatchFilename(secrets []tl.Secret, filename string) (tl.Secret, error) {
+	if len(filename) == 0 {
+		return tl.Secret{}, errors.New("no filename provided")
+	}
+	found := tl.Secret{}
+	count := 0
+	for _, secret := range secrets {
+		if secret.MatchFilename(filename) {
+			count++
+			found = secret
+		}
+	}
+	if count == 0 {
+		return tl.Secret{}, errors.New("no results")
+	} else if count > 1 {
+		return tl.Secret{}, fmt.Errorf("ambiguous results; %d matches", count)
+	}
+	return found, nil
+}
+
+// MatchFeed finds secrets associated with a DMFR FeedID.
+func SecretsMatchFeed(secrets []tl.Secret, feedid string) (tl.Secret, error) {
+	if len(feedid) == 0 {
+		return tl.Secret{}, errors.New("no feedid provided")
+	}
+	found := tl.Secret{}
+	count := 0
+	for _, secret := range secrets {
+		if secret.MatchFeed(feedid) {
+			count++
+			found = secret
+		}
+	}
+	if count == 0 {
+		return tl.Secret{}, errors.New("no results")
+	} else if count > 1 {
+		return tl.Secret{}, fmt.Errorf("ambiguous results; %d matches", count)
+	}
+	return found, nil
 }

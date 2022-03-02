@@ -13,7 +13,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/internal/download"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -42,12 +41,12 @@ type WriterAdapter interface {
 // URLAdapter downloads a GTFS URL to a temporary file, and removes the file when it is closed.
 type URLAdapter struct {
 	url    string
-	secret download.Secret
+	secret tl.Secret
 	auth   tl.FeedAuthorization
 	ZipAdapter
 }
 
-func (adapter *URLAdapter) SetAuth(auth tl.FeedAuthorization, secret download.Secret) {
+func (adapter *URLAdapter) SetAuth(auth tl.FeedAuthorization, secret tl.Secret) {
 	adapter.secret = secret
 	adapter.auth = auth
 }
@@ -66,7 +65,7 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	tmpfilepath, err := download.AuthenticatedRequest(url, adapter.secret, adapter.auth)
+	tmpfilepath, err := tl.AuthenticatedRequest(url, adapter.secret, adapter.auth)
 	if err != nil {
 		return err
 	}

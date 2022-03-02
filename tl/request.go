@@ -1,4 +1,4 @@
-package download
+package tl
 
 import (
 	"errors"
@@ -12,11 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jlaffaye/ftp"
 )
 
-func downloadHTTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorization) error {
+func downloadHTTP(ustr string, fn string, secret Secret, auth FeedAuthorization) error {
 	w, err := os.Create(fn)
 	if err != nil {
 		return errors.New("could not open file for writing")
@@ -49,7 +48,7 @@ func downloadHTTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorizati
 	return nil
 }
 
-func downloadFTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorization) error {
+func downloadFTP(ustr string, fn string, secret Secret, auth FeedAuthorization) error {
 	w, err := os.Create(fn)
 	if err != nil {
 		return errors.New("could not open file for writing")
@@ -87,7 +86,7 @@ func downloadFTP(ustr string, fn string, secret Secret, auth tl.FeedAuthorizatio
 	return nil
 }
 
-func downloadS3(ustr string, fn string, secret Secret, auth tl.FeedAuthorization) error {
+func downloadS3(ustr string, fn string, secret Secret, auth FeedAuthorization) error {
 	awscmd := exec.Command("aws", "s3", "cp", ustr, fn)
 	if secret.AWSAccessKeyID != "" || secret.AWSSecretAccessKey != "" {
 		env := []string{
@@ -105,7 +104,7 @@ func downloadS3(ustr string, fn string, secret Secret, auth tl.FeedAuthorization
 }
 
 // AuthenticatedRequest fetches a url using a secret and auth description. Returns temp file path or error.
-func AuthenticatedRequest(address string, secret Secret, auth tl.FeedAuthorization) (string, error) {
+func AuthenticatedRequest(address string, secret Secret, auth FeedAuthorization) (string, error) {
 	u, err := url.Parse(address)
 	if err != nil {
 		return "", errors.New("could not parse url")

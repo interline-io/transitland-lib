@@ -1,4 +1,4 @@
-package download
+package dmfr
 
 import (
 	"errors"
@@ -9,8 +9,6 @@ import (
 	"os"
 	"time"
 )
-
-var a io.ReadCloser
 
 // TemporaryDownload saves a file to a temporary location and deletes it on Close().
 type TemporaryDownload struct {

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"net/url"
 
-	"github.com/interline-io/transitland-lib/internal/download"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"google.golang.org/protobuf/proto"
 )
@@ -22,7 +22,7 @@ func Read(address string) (*pb.FeedMessage, error) {
 
 // ReadURL opens a message from a url.
 func ReadURL(address string) (*pb.FeedMessage, error) {
-	td := download.TemporaryDownload{URL: address}
+	td := dmfr.TemporaryDownload{URL: address}
 	if err := td.Open(); err != nil {
 		return nil, err
 	}

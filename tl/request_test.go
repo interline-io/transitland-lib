@@ -1,12 +1,10 @@
-package download
+package tl
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
 	"testing"
-
-	"github.com/interline-io/transitland-lib/tl"
 )
 
 func TestAuthorizedRequest(t *testing.T) {
@@ -14,35 +12,35 @@ func TestAuthorizedRequest(t *testing.T) {
 	testcases := []struct {
 		name       string
 		url        string
-		auth       tl.FeedAuthorization
+		auth       FeedAuthorization
 		checkkey   string
 		checkvalue string
 	}{
 		{
 			"query_param",
 			"http://httpbin.org/get",
-			tl.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
+			FeedAuthorization{Type: "query_param", ParamName: "api_key"},
 			"url",
 			"http://httpbin.org/get?api_key=abcd",
 		},
 		{
 			"path_segment",
 			"http://httpbin.org/anything/{}/ok",
-			tl.FeedAuthorization{Type: "path_segment"},
+			FeedAuthorization{Type: "path_segment"},
 			"url",
 			"http://httpbin.org/anything/abcd/ok",
 		},
 		{
 			"header",
 			"http://httpbin.org/headers",
-			tl.FeedAuthorization{Type: "header", ParamName: "Auth"},
+			FeedAuthorization{Type: "header", ParamName: "Auth"},
 			"", // TODO: check headers...
 			"",
 		},
 		{
 			"basic_auth",
 			"http://httpbin.org/basic-auth/efgh/ijkl",
-			tl.FeedAuthorization{Type: "basic_auth"},
+			FeedAuthorization{Type: "basic_auth"},
 			"user",
 			secret.Username,
 		},

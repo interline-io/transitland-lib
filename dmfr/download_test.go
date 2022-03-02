@@ -1,4 +1,4 @@
-package download
+package dmfr
 
 import (
 	"io/ioutil"
