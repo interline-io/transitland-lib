@@ -4,6 +4,10 @@ go 1.16
 
 require (
 	github.com/Masterminds/squirrel v1.5.0
+	github.com/aws/aws-sdk-go-v2 v1.14.0
+	github.com/aws/aws-sdk-go-v2/config v1.14.0
+	github.com/aws/aws-sdk-go-v2/credentials v1.9.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.25.0
 	github.com/dimchansky/utfbom v1.1.0
 	github.com/golang/protobuf v1.4.1
 	github.com/jlaffaye/ftp v0.0.0-20191218041957-e1b8fdd0dcc3
