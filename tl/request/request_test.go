@@ -1,4 +1,4 @@
-package tl
+package request
 
 import (
 	"encoding/json"
@@ -47,7 +47,7 @@ func TestAuthorizedRequest(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			tmpfile, err := AuthenticatedRequest(tc.url, secret, tc.auth)
+			tmpfile, err := AuthenticatedRequestDownload(tc.url, secret, tc.auth)
 			if err != nil {
 				t.Error(err)
 				return

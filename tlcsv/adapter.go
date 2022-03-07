@@ -16,6 +16,7 @@ import (
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/request"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.
@@ -65,7 +66,7 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	tmpfilepath, err := tl.AuthenticatedRequest(url, adapter.secret, adapter.auth)
+	tmpfilepath, err := request.AuthenticatedRequestDownload(url, adapter.secret, adapter.auth)
 	if err != nil {
 		return err
 	}
