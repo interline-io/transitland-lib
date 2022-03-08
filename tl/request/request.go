@@ -203,6 +203,5 @@ func AuthenticatedRequestDownload(address string, secret tl.Secret, auth tl.Feed
 	}
 	defer r.Close()
 	_, err = io.Copy(tmpfile, r)
-	fmt.Println("!", err)
 	return tmpfilepath, err
 }
