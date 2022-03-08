@@ -20,6 +20,7 @@ type Registry struct {
 	Schema                string `json:"$schema"`
 	Feeds                 []tl.Feed
 	Operators             []tl.Operator
+	Secrets               []tl.Secret
 	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
 }
 

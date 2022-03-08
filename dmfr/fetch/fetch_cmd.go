@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -42,6 +43,8 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
+	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
+	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
 	fl.StringVar(&cmd.Options.S3, "s3", "", "Upload GTFS files to S3 bucket/prefix")
 	fl.Parse(args)
 	if cmd.DBURL == "" {
@@ -56,9 +59,11 @@ func (cmd *Command) Parse(args []string) error {
 		cmd.Options.FetchedAt = t
 	}
 	if secretsFile != "" {
-		if err := cmd.Options.Secrets.Load(secretsFile); err != nil {
+		r, err := dmfr.LoadAndParseRegistry(secretsFile)
+		if err != nil {
 			return err
 		}
+		cmd.Options.Secrets = r.Secrets
 	}
 	if cmd.Options.FeedURL != "" && len(cmd.FeedIDs) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
@@ -120,6 +125,8 @@ func (cmd *Command) Run() error {
 			Directory:               cmd.Options.Directory,
 			S3:                      cmd.Options.S3,
 			IgnoreDuplicateContents: cmd.Options.IgnoreDuplicateContents,
+			AllowS3Fetch:            cmd.Options.AllowS3Fetch,
+			AllowFTPFetch:           cmd.Options.AllowFTPFetch,
 			FetchedAt:               cmd.Options.FetchedAt,
 			Secrets:                 cmd.Options.Secrets,
 		}

@@ -1,18 +1,19 @@
 package fetch
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/download"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -25,8 +26,10 @@ type Options struct {
 	IgnoreDuplicateContents bool
 	Directory               string
 	S3                      string
+	AllowS3Fetch            bool
+	AllowFTPFetch           bool
 	FetchedAt               time.Time
-	Secrets                 download.Secrets
+	Secrets                 []tl.Secret
 	CreatedBy               tl.String
 	Name                    tl.String
 	Description             tl.String
@@ -100,7 +103,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 }
 
 type canSetAuth interface {
-	SetAuth(tl.FeedAuthorization, download.Secret)
+	SetAuth(tl.FeedAuthorization, tl.Secret)
 }
 
 // fetchAndCreateFeedVersion from a URL.
@@ -113,14 +116,31 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 		fr.FetchError = errors.New("no url")
 		return fr, nil
 	}
-	// Get secret
-	secret := download.Secret{}
-	if a, err := opts.Secrets.MatchFeed(opts.FeedID); err == nil {
-		secret = a
-	} else if a, err := opts.Secrets.MatchFilename(feed.File); err == nil {
-		secret = a
-	} else if feed.Authorization.Type != "" {
-		fr.FetchError = errors.New("no secret found")
+	// Check URL
+	u, err := url.Parse(opts.FeedURL)
+	if err != nil {
+		fr.FetchError = errors.New("invalid url")
+		return fr, nil
+	}
+	var schemeErr error
+	switch u.Scheme {
+	case "http":
+		// ok
+	case "https":
+		// ok
+	case "s3":
+		if !opts.AllowS3Fetch {
+			schemeErr = errors.New("s3 fetch disabled")
+		}
+	case "ftp":
+		if !opts.AllowFTPFetch {
+			schemeErr = errors.New("ftp fetch disabled")
+		}
+	default:
+		schemeErr = errors.New("unsupported fetch scheme")
+	}
+	if schemeErr != nil {
+		fr.FetchError = schemeErr
 		return fr, nil
 	}
 	// Get reader
@@ -129,8 +149,16 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 		fr.FetchError = err
 		return fr, nil
 	}
-	if v, ok := reader.Adapter.(canSetAuth); ok {
-		v.SetAuth(feed.Authorization, secret)
+	// Get secret and set auth
+	if feed.Authorization.Type != "" {
+		secret, err := feed.MatchSecrets(opts.Secrets)
+		if err != nil {
+			fr.FetchError = err
+			return fr, nil
+		}
+		if v, ok := reader.Adapter.(canSetAuth); ok {
+			v.SetAuth(feed.Authorization, secret)
+		}
 	}
 	// Open
 	if err := reader.Open(); err != nil {
@@ -167,15 +195,14 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 	}
 	// Upload file or copy to output directory
 	if opts.S3 != "" {
-		awscmd := exec.Command(
-			"aws",
-			"s3",
-			"cp",
-			reader.Path(),
-			fmt.Sprintf("%s/%s.zip", opts.S3, fv.SHA1),
-		)
-		if output, err := awscmd.Output(); err != nil {
-			return fr, fmt.Errorf("upload error: %s: %s", err, output)
+		rp, err := os.Open(reader.Path())
+		if err != nil {
+			return fr, err
+		}
+		defer rp.Close()
+		ustr := fmt.Sprintf("%s/%s.zip", opts.S3, fv.SHA1)
+		if err := request.UploadS3(context.Background(), ustr, tl.Secret{}, rp); err != nil {
+			return fr, err
 		}
 	}
 	if opts.Directory != "" {

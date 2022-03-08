@@ -2,11 +2,13 @@
 package rt
 
 import (
+	"context"
 	"io/ioutil"
 	"net/url"
 
-	"github.com/interline-io/transitland-lib/internal/download"
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/request"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -22,12 +24,20 @@ func Read(address string) (*pb.FeedMessage, error) {
 
 // ReadURL opens a message from a url.
 func ReadURL(address string) (*pb.FeedMessage, error) {
-	td := download.TemporaryDownload{URL: address}
-	if err := td.Open(); err != nil {
+	r, err := request.DownloadHTTP(context.Background(), address, tl.Secret{}, tl.FeedAuthorization{})
+	if err != nil {
 		return nil, err
 	}
-	defer td.Close()
-	return ReadFile(td.File.Name())
+	defer r.Close()
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	msg := pb.FeedMessage{}
+	if err := proto.Unmarshal(data, &msg); err != nil {
+		return nil, err
+	}
+	return &msg, nil
 }
 
 // ReadFile opens a message from a file.
