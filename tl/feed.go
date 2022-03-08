@@ -42,7 +42,7 @@ func (ent *Feed) MatchSecrets(secrets []Secret) (Secret, error) {
 	if count == 0 {
 		return Secret{}, errors.New("no results")
 	} else if count > 1 {
-		return Secret{}, fmt.Errorf("ambiguous results; %d matches", count)
+		return Secret{}, fmt.Errorf("ambiguous secrets; %d matches", count)
 	}
 	return found, nil
 }
