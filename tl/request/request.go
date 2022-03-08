@@ -147,7 +147,7 @@ func UploadS3(ctx context.Context, ustr string, secret tl.Secret, uploadFile io.
 }
 
 // AuthenticatedRequest fetches a url using a secret and auth description. Returns ReadCloser, caller responsible for closing.
-func AuthenticatedRequest(address string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
+func AuthenticatedRequest(ctx context.Context, address string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
 	u, err := url.Parse(address)
 	if err != nil {
 		return nil, errors.New("could not parse url")
@@ -165,8 +165,6 @@ func AuthenticatedRequest(address string, secret tl.Secret, auth tl.FeedAuthoriz
 	// Prepare file
 	ustr := u.String()
 	// Download
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
-	defer cancel()
 	var r io.ReadCloser
 	var reqErr error
 	log.Debug().Str("url", address).Str("auth_type", auth.Type).Msg("download")
@@ -188,6 +186,10 @@ func AuthenticatedRequest(address string, secret tl.Secret, auth tl.FeedAuthoriz
 // AuthenticatedRequestDownload fetches a url using a secret and auth description. Returns temp file path or error.
 // Caller is responsible for deleting the file.
 func AuthenticatedRequestDownload(address string, secret tl.Secret, auth tl.FeedAuthorization) (string, error) {
+	// 10 minute timeout
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
+	defer cancel()
+	//
 	tmpfile, err := ioutil.TempFile("", "fetch")
 	if err != nil {
 		return "", errors.New("could not create temporary file")
@@ -195,11 +197,12 @@ func AuthenticatedRequestDownload(address string, secret tl.Secret, auth tl.Feed
 	tmpfilepath := tmpfile.Name()
 	defer tmpfile.Close()
 	//
-	r, err := AuthenticatedRequest(address, secret, auth)
+	r, err := AuthenticatedRequest(ctx, address, secret, auth)
 	if err != nil {
 		return "", err
 	}
 	defer r.Close()
 	_, err = io.Copy(tmpfile, r)
+	fmt.Println("!", err)
 	return tmpfilepath, err
 }
