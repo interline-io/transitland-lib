@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -24,6 +25,26 @@ type Feed struct {
 	File            string              `json:"file"`       // internal
 	DeletedAt       Time                `json:"deleted_at"` // internal
 	Timestamps      `json:"-"`          // internal
+}
+
+func (ent *Feed) MatchSecrets(secrets []Secret) (Secret, error) {
+	found := Secret{}
+	count := 0
+	for _, secret := range secrets {
+		if secret.MatchFeed(ent.FeedID) {
+			count += 1
+			found = secret
+		} else if secret.MatchFilename(ent.File) {
+			count += 1
+			found = secret
+		}
+	}
+	if count == 0 {
+		return Secret{}, errors.New("no results")
+	} else if count > 1 {
+		return Secret{}, fmt.Errorf("ambiguous results; %d matches", count)
+	}
+	return found, nil
 }
 
 // Equal compares the JSON representation of two feeds, excluding Operators.

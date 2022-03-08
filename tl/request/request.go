@@ -20,7 +20,7 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-func downloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
+func DownloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
 	// Prepare HTTP request
 	req, err := http.NewRequest("GET", ustr, nil)
 	if err != nil {
@@ -46,7 +46,7 @@ func downloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.Fe
 	return resp.Body, nil
 }
 
-func downloadFTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
+func DownloadFTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
 	// Download FTP
 	u, err := url.Parse(ustr)
 	if err != nil {
@@ -76,7 +76,7 @@ func downloadFTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.Fee
 	return r, nil
 }
 
-func downloadS3(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
+func DownloadS3(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
 	// Parse url
 	s3uri, err := url.Parse(ustr)
 	if err != nil {
@@ -99,7 +99,7 @@ func downloadS3(ctx context.Context, ustr string, secret tl.Secret, auth tl.Feed
 		}
 		client = s3.NewFromConfig(cfg)
 	}
-	// Save object
+	// Get object
 	s3bucket := s3uri.Host
 	s3key := strings.TrimPrefix(s3uri.Path, "/")
 	s3obj, err := client.GetObject(ctx, &s3.GetObjectInput{
@@ -110,6 +110,40 @@ func downloadS3(ctx context.Context, ustr string, secret tl.Secret, auth tl.Feed
 		return nil, err
 	}
 	return s3obj.Body, nil
+}
+
+func UploadS3(ctx context.Context, ustr string, secret tl.Secret, uploadFile io.Reader) error {
+	s3uri, err := url.Parse(ustr)
+	if err != nil {
+		return err
+	}
+	// Create client
+	var client *s3.Client
+	if secret.AWSAccessKeyID != "" && secret.AWSSecretAccessKey != "" {
+		cfg, err := config.LoadDefaultConfig(ctx,
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(secret.AWSAccessKeyID, secret.AWSSecretAccessKey, "")),
+		)
+		if err != nil {
+			return err
+		}
+		client = s3.NewFromConfig(cfg)
+	} else {
+		cfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			return err
+		}
+		client = s3.NewFromConfig(cfg)
+	}
+	// Save object
+	s3bucket := s3uri.Host
+	s3key := strings.TrimPrefix(s3uri.Path, "/")
+	result, err := client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(s3bucket),
+		Key:    aws.String(s3key),
+		Body:   uploadFile,
+	})
+	_ = result
+	return err
 }
 
 // AuthenticatedRequest fetches a url using a secret and auth description. Returns ReadCloser, caller responsible for closing.
@@ -138,13 +172,13 @@ func AuthenticatedRequest(address string, secret tl.Secret, auth tl.FeedAuthoriz
 	log.Debug().Str("url", address).Str("auth_type", auth.Type).Msg("download")
 	switch u.Scheme {
 	case "http":
-		r, reqErr = downloadHTTP(ctx, ustr, secret, auth)
+		r, reqErr = DownloadHTTP(ctx, ustr, secret, auth)
 	case "https":
-		r, reqErr = downloadHTTP(ctx, ustr, secret, auth)
+		r, reqErr = DownloadHTTP(ctx, ustr, secret, auth)
 	case "ftp":
-		r, reqErr = downloadFTP(ctx, ustr, secret, auth)
+		r, reqErr = DownloadFTP(ctx, ustr, secret, auth)
 	case "s3":
-		r, reqErr = downloadS3(ctx, ustr, secret, auth)
+		r, reqErr = DownloadS3(ctx, ustr, secret, auth)
 	default:
 		reqErr = errors.New("unknown handler")
 	}
