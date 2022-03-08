@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -57,11 +58,13 @@ func (cmd *Command) Parse(args []string) error {
 		}
 		cmd.Options.FetchedAt = t
 	}
-	// if secretsFile != "" {
-	// 	if err := cmd.Options.Secrets.Load(secretsFile); err != nil {
-	// 		return err
-	// 	}
-	// }
+	if secretsFile != "" {
+		r, err := dmfr.LoadAndParseRegistry(secretsFile)
+		if err != nil {
+			return err
+		}
+		cmd.Options.Secrets = r.Secrets
+	}
 	if cmd.Options.FeedURL != "" && len(cmd.FeedIDs) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
 	}
