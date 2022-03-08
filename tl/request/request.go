@@ -20,10 +20,7 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-type Secret = tl.Secret
-type FeedAuthorization = tl.FeedAuthorization
-
-func downloadHTTP(ctx context.Context, ustr string, secret Secret, auth FeedAuthorization) (io.ReadCloser, error) {
+func downloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
 	// Prepare HTTP request
 	req, err := http.NewRequest("GET", ustr, nil)
 	if err != nil {
@@ -49,7 +46,7 @@ func downloadHTTP(ctx context.Context, ustr string, secret Secret, auth FeedAuth
 	return resp.Body, nil
 }
 
-func downloadFTP(ctx context.Context, ustr string, secret Secret, auth FeedAuthorization) (io.ReadCloser, error) {
+func downloadFTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
 	// Download FTP
 	u, err := url.Parse(ustr)
 	if err != nil {
@@ -79,7 +76,7 @@ func downloadFTP(ctx context.Context, ustr string, secret Secret, auth FeedAutho
 	return r, nil
 }
 
-func downloadS3(ctx context.Context, ustr string, secret Secret, auth FeedAuthorization) (io.ReadCloser, error) {
+func downloadS3(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
 	// Parse url
 	s3uri, err := url.Parse(ustr)
 	if err != nil {
@@ -116,7 +113,7 @@ func downloadS3(ctx context.Context, ustr string, secret Secret, auth FeedAuthor
 }
 
 // AuthenticatedRequest fetches a url using a secret and auth description. Returns ReadCloser, caller responsible for closing.
-func AuthenticatedRequest(address string, secret Secret, auth FeedAuthorization) (io.ReadCloser, error) {
+func AuthenticatedRequest(address string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
 	u, err := url.Parse(address)
 	if err != nil {
 		return nil, errors.New("could not parse url")
@@ -156,13 +153,13 @@ func AuthenticatedRequest(address string, secret Secret, auth FeedAuthorization)
 
 // AuthenticatedRequestDownload fetches a url using a secret and auth description. Returns temp file path or error.
 // Caller is responsible for deleting the file.
-func AuthenticatedRequestDownload(address string, secret Secret, auth FeedAuthorization) (string, error) {
+func AuthenticatedRequestDownload(address string, secret tl.Secret, auth tl.FeedAuthorization) (string, error) {
 	tmpfile, err := ioutil.TempFile("", "fetch")
 	if err != nil {
 		return "", errors.New("could not create temporary file")
 	}
 	tmpfilepath := tmpfile.Name()
-	tmpfile.Close()
+	defer tmpfile.Close()
 	//
 	r, err := AuthenticatedRequest(address, secret, auth)
 	if err != nil {
