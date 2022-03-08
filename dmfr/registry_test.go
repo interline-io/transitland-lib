@@ -70,6 +70,16 @@ func TestLoadAndParseRegistry_from_URL(t *testing.T) {
 	}
 }
 
+func TestLoadAndParseRegistry_Secrets(t *testing.T) {
+	parsedContents, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/secrets.json"))
+	if err != nil {
+		t.Error(err)
+	}
+	if len(parsedContents.Secrets) != 4 {
+		t.Errorf("got %d secrets, expected %d", len(parsedContents.Secrets), 4)
+	}
+}
+
 func TestParseString(t *testing.T) {
 	dmfrString, err := ioutil.ReadFile(testutil.RelPath("test/data/dmfr/example.json"))
 	if err != nil {
