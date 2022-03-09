@@ -15,6 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -196,7 +197,13 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	reader, err := tlcsv.NewReader(dmfrGetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1))
+	var reqOpts []request.RequestOption
+	reqOpts = append(reqOpts, request.WithAllowLocal)
+	if opts.S3 != "" {
+		reqOpts = append(reqOpts, request.WithAllowS3)
+	}
+	adapterUrl := dmfrGetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
+	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))
 	if err != nil {
 		return fvi, err
 	}
