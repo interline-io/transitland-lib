@@ -179,7 +179,7 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, error) {
 	// Download
 	log.Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")
 	var r io.ReadCloser
-	reqErr := errors.New("unknown handler")
+	var reqErr error
 	switch u.Scheme {
 	case "http":
 		r, reqErr = DownloadHTTP(ctx, req.URL, req.Secret, req.Auth)
@@ -188,15 +188,21 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, error) {
 	case "ftp":
 		if req.AllowFTP {
 			r, reqErr = DownloadFTP(ctx, req.URL, req.Secret, req.Auth)
+		} else {
+			reqErr = errors.New("request not configured to allow ftp")
 		}
 	case "s3":
 		if req.AllowS3 {
 			r, reqErr = DownloadS3(ctx, req.URL, req.Secret, req.Auth)
+		} else {
+			reqErr = errors.New("request not configured to allow s3")
 		}
 	default:
 		// file:// handler
 		if req.AllowLocal {
 			r, reqErr = os.Open(strings.TrimPrefix(req.URL, "file://"))
+		} else {
+			reqErr = errors.New("request not configured to allow filesystem access")
 		}
 	}
 	return r, reqErr
