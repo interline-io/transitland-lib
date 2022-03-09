@@ -2,6 +2,7 @@ package tlcsv
 
 import (
 	"io"
+	"net/url"
 	"os"
 	"reflect"
 	"sort"
@@ -19,19 +20,42 @@ type Reader struct {
 	Adapter
 }
 
+func NewAdapter(address string) (Adapter, error) {
+	parsedUrl, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+	var a Adapter
+	switch parsedUrl.Scheme {
+	case "http":
+		a = &URLAdapter{url: address}
+	case "https":
+		a = &URLAdapter{url: address}
+	case "ftp":
+		a = &URLAdapter{url: address}
+	case "s3":
+		a = &URLAdapter{url: address}
+	case "overlay":
+		a = NewOverlayAdapter(address)
+	default:
+		if fi, err := os.Stat(address); err == nil && fi.IsDir() {
+			a = NewDirAdapter(address)
+		} else {
+			a = NewZipAdapter(address)
+		}
+	}
+	return a, nil
+}
+
+func NewReaderFromAdapter(a Adapter) (*Reader, error) {
+	return &Reader{Adapter: a}, nil
+}
+
 // NewReader returns an initialized CSV Reader.
 func NewReader(path string) (*Reader, error) {
-	var a Adapter
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "ftp://") {
-		a = &URLAdapter{url: path}
-	} else if strings.HasPrefix(path, "s3://") {
-		a = &URLAdapter{url: path}
-	} else if strings.HasPrefix(path, "overlay://") {
-		a = NewOverlayAdapter(path)
-	} else if fi, err := os.Stat(path); err == nil && fi.IsDir() {
-		a = NewDirAdapter(path)
-	} else {
-		a = NewZipAdapter(path)
+	a, err := NewAdapter(path)
+	if err != nil {
+		return nil, err
 	}
 	return &Reader{Adapter: a}, nil
 }

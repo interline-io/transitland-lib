@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/interline-io/transitland-lib/log"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/request"
 )
@@ -41,15 +40,16 @@ type WriterAdapter interface {
 
 // URLAdapter downloads a GTFS URL to a temporary file, and removes the file when it is closed.
 type URLAdapter struct {
-	url    string
-	secret tl.Secret
-	auth   tl.FeedAuthorization
+	url     string
+	reqOpts []request.RequestOption
 	ZipAdapter
 }
 
-func (adapter *URLAdapter) SetAuth(auth tl.FeedAuthorization, secret tl.Secret) {
-	adapter.secret = secret
-	adapter.auth = auth
+func NewURLAdapter(address string, opts ...request.RequestOption) *URLAdapter {
+	return &URLAdapter{
+		url:     address,
+		reqOpts: opts,
+	}
 }
 
 // Open the adapter, and download the provided URL to a temporary file.
@@ -66,7 +66,7 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	tmpfilepath, err := request.AuthenticatedRequestDownload(url, adapter.secret, adapter.auth)
+	tmpfilepath, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,24 @@ type ZipAdapter struct {
 
 // NewZipAdapter returns an initialized zip adapter.
 func NewZipAdapter(path string) *ZipAdapter {
-	return &ZipAdapter{path: path}
+	return &ZipAdapter{path: strings.TrimPrefix(path, "file://")}
+}
+
+func NewZipAdapterFromReader(r io.Reader) (*ZipAdapter, error) {
+	w, err := ioutil.TempFile("", "gtfs")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(w, r); err != nil {
+		return nil, err
+	}
+	tmpfilepath := w.Name()
+	w.Close()
+	z := ZipAdapter{
+		path:        tmpfilepath,
+		tmpfilepath: tmpfilepath, // delete on close
+	}
+	return &z, nil
 }
 
 // Open the adapter. Return an error if the file does not exist.
@@ -304,7 +321,7 @@ type DirAdapter struct {
 // NewDirAdapter returns an initialized DirAdapter.
 func NewDirAdapter(path string) *DirAdapter {
 	return &DirAdapter{
-		path:  path,
+		path:  strings.TrimPrefix(path, "file://"),
 		files: map[string]*os.File{},
 	}
 }

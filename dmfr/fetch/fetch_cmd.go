@@ -45,6 +45,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
+	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
 	fl.StringVar(&cmd.Options.S3, "s3", "", "Upload GTFS files to S3 bucket/prefix")
 	fl.Parse(args)
 	if cmd.DBURL == "" {
@@ -127,6 +128,7 @@ func (cmd *Command) Run() error {
 			IgnoreDuplicateContents: cmd.Options.IgnoreDuplicateContents,
 			AllowS3Fetch:            cmd.Options.AllowS3Fetch,
 			AllowFTPFetch:           cmd.Options.AllowFTPFetch,
+			AllowLocalFetch:         cmd.Options.AllowLocalFetch,
 			FetchedAt:               cmd.Options.FetchedAt,
 			Secrets:                 cmd.Options.Secrets,
 		}
