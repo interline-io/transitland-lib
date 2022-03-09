@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -28,6 +27,7 @@ type Options struct {
 	S3                      string
 	AllowS3Fetch            bool
 	AllowFTPFetch           bool
+	AllowLocalFetch         bool
 	FetchedAt               time.Time
 	Secrets                 []tl.Secret
 	CreatedBy               tl.String
@@ -102,10 +102,6 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	return fr, nil
 }
 
-type canSetAuth interface {
-	SetAuth(tl.FeedAuthorization, tl.Secret)
-}
-
 // fetchAndCreateFeedVersion from a URL.
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
@@ -116,38 +112,16 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 		fr.FetchError = errors.New("no url")
 		return fr, nil
 	}
-	// Check URL
-	u, err := url.Parse(opts.FeedURL)
-	if err != nil {
-		fr.FetchError = errors.New("invalid url")
-		return fr, nil
+	// Get a reader with configured URL adapter
+	var reqOpts []request.RequestOption
+	if opts.AllowFTPFetch {
+		reqOpts = append(reqOpts, request.WithAllowFTP)
 	}
-	var schemeErr error
-	switch u.Scheme {
-	case "http":
-		// ok
-	case "https":
-		// ok
-	case "s3":
-		if !opts.AllowS3Fetch {
-			schemeErr = errors.New("s3 fetch disabled")
-		}
-	case "ftp":
-		if !opts.AllowFTPFetch {
-			schemeErr = errors.New("ftp fetch disabled")
-		}
-	default:
-		schemeErr = errors.New("unsupported fetch scheme")
+	if opts.AllowLocalFetch {
+		reqOpts = append(reqOpts, request.WithAllowLocal)
 	}
-	if schemeErr != nil {
-		fr.FetchError = schemeErr
-		return fr, nil
-	}
-	// Get reader
-	reader, err := tlcsv.NewReader(opts.FeedURL)
-	if err != nil {
-		fr.FetchError = err
-		return fr, nil
+	if opts.AllowS3Fetch {
+		reqOpts = append(reqOpts, request.WithAllowS3)
 	}
 	// Get secret and set auth
 	if feed.Authorization.Type != "" {
@@ -156,9 +130,12 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 			fr.FetchError = err
 			return fr, nil
 		}
-		if v, ok := reader.Adapter.(canSetAuth); ok {
-			v.SetAuth(feed.Authorization, secret)
-		}
+		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
+	}
+	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(opts.FeedURL, reqOpts...))
+	if err != nil {
+		fr.FetchError = err
+		return fr, nil
 	}
 	// Open
 	if err := reader.Open(); err != nil {

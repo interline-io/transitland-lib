@@ -2,7 +2,6 @@ package tlcsv
 
 import (
 	"io"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -19,19 +18,15 @@ type Reader struct {
 	Adapter
 }
 
+func NewReaderFromAdapter(a Adapter) (*Reader, error) {
+	return &Reader{Adapter: a}, nil
+}
+
 // NewReader returns an initialized CSV Reader.
 func NewReader(path string) (*Reader, error) {
-	var a Adapter
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "ftp://") {
-		a = &URLAdapter{url: path}
-	} else if strings.HasPrefix(path, "s3://") {
-		a = &URLAdapter{url: path}
-	} else if strings.HasPrefix(path, "overlay://") {
-		a = NewOverlayAdapter(path)
-	} else if fi, err := os.Stat(path); err == nil && fi.IsDir() {
-		a = NewDirAdapter(path)
-	} else {
-		a = NewZipAdapter(path)
+	a, err := NewAdapter(path)
+	if err != nil {
+		return nil, err
 	}
 	return &Reader{Adapter: a}, nil
 }

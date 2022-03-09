@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -21,6 +22,21 @@ import (
 )
 
 func DownloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
+	u, err := url.Parse(ustr)
+	if err != nil {
+		return nil, errors.New("could not parse url")
+	}
+	if auth.Type == "query_param" {
+		v, err := url.ParseQuery(u.RawQuery)
+		if err != nil {
+			return nil, errors.New("could not parse query string")
+		}
+		v.Set(auth.ParamName, secret.Key)
+		u.RawQuery = v.Encode()
+	} else if auth.Type == "path_segment" {
+		u.Path = strings.ReplaceAll(u.Path, "{}", secret.Key)
+	}
+	ustr = u.String()
 	// Prepare HTTP request
 	req, err := http.NewRequest("GET", ustr, nil)
 	if err != nil {
@@ -80,7 +96,7 @@ func DownloadS3(ctx context.Context, ustr string, secret tl.Secret, auth tl.Feed
 	// Parse url
 	s3uri, err := url.Parse(ustr)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("could not parse url")
 	}
 	// Create client
 	var client *s3.Client
@@ -115,7 +131,7 @@ func DownloadS3(ctx context.Context, ustr string, secret tl.Secret, auth tl.Feed
 func UploadS3(ctx context.Context, ustr string, secret tl.Secret, uploadFile io.Reader) error {
 	s3uri, err := url.Parse(ustr)
 	if err != nil {
-		return err
+		return errors.New("could not parse url")
 	}
 	// Create client
 	var client *s3.Client
@@ -146,46 +162,84 @@ func UploadS3(ctx context.Context, ustr string, secret tl.Secret, uploadFile io.
 	return err
 }
 
-// AuthenticatedRequest fetches a url using a secret and auth description. Returns ReadCloser, caller responsible for closing.
-func AuthenticatedRequest(ctx context.Context, address string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
-	u, err := url.Parse(address)
+type Request struct {
+	URL        string
+	AllowFTP   bool
+	AllowS3    bool
+	AllowLocal bool
+	Secret     tl.Secret
+	Auth       tl.FeedAuthorization
+}
+
+func (req *Request) Request(ctx context.Context) (io.ReadCloser, error) {
+	u, err := url.Parse(req.URL)
 	if err != nil {
 		return nil, errors.New("could not parse url")
 	}
-	if auth.Type == "query_param" {
-		v, err := url.ParseQuery(u.RawQuery)
-		if err != nil {
-			return nil, errors.New("could not parse query string")
-		}
-		v.Set(auth.ParamName, secret.Key)
-		u.RawQuery = v.Encode()
-	} else if auth.Type == "path_segment" {
-		u.Path = strings.ReplaceAll(u.Path, "{}", secret.Key)
-	}
-	// Prepare file
-	ustr := u.String()
 	// Download
+	log.Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")
 	var r io.ReadCloser
 	var reqErr error
-	log.Debug().Str("url", address).Str("auth_type", auth.Type).Msg("download")
 	switch u.Scheme {
 	case "http":
-		r, reqErr = DownloadHTTP(ctx, ustr, secret, auth)
+		r, reqErr = DownloadHTTP(ctx, req.URL, req.Secret, req.Auth)
 	case "https":
-		r, reqErr = DownloadHTTP(ctx, ustr, secret, auth)
+		r, reqErr = DownloadHTTP(ctx, req.URL, req.Secret, req.Auth)
 	case "ftp":
-		r, reqErr = DownloadFTP(ctx, ustr, secret, auth)
+		if req.AllowFTP {
+			r, reqErr = DownloadFTP(ctx, req.URL, req.Secret, req.Auth)
+		} else {
+			reqErr = errors.New("request not configured to allow ftp")
+		}
 	case "s3":
-		r, reqErr = DownloadS3(ctx, ustr, secret, auth)
+		if req.AllowS3 {
+			r, reqErr = DownloadS3(ctx, req.URL, req.Secret, req.Auth)
+		} else {
+			reqErr = errors.New("request not configured to allow s3")
+		}
 	default:
-		reqErr = errors.New("unknown handler")
+		// file:// handler
+		if req.AllowLocal {
+			r, reqErr = os.Open(strings.TrimPrefix(req.URL, "file://"))
+		} else {
+			reqErr = errors.New("request not configured to allow filesystem access")
+		}
 	}
 	return r, reqErr
 }
 
+func NewRequest(address string, opts ...RequestOption) *Request {
+	req := &Request{URL: address}
+	for _, opt := range opts {
+		opt(req)
+	}
+	return req
+}
+
+type RequestOption func(*Request)
+
+func WithAllowFTP(req *Request) {
+	req.AllowFTP = true
+}
+
+func WithAllowS3(req *Request) {
+	req.AllowS3 = true
+}
+
+func WithAllowLocal(req *Request) {
+	req.AllowLocal = true
+}
+
+func WithAuth(secret tl.Secret, auth tl.FeedAuthorization) func(req *Request) {
+	return func(req *Request) {
+		req.Secret = secret
+		req.Auth = auth
+	}
+}
+
 // AuthenticatedRequestDownload fetches a url using a secret and auth description. Returns temp file path or error.
 // Caller is responsible for deleting the file.
-func AuthenticatedRequestDownload(address string, secret tl.Secret, auth tl.FeedAuthorization) (string, error) {
+func AuthenticatedRequestDownload(address string, opts ...RequestOption) (string, error) {
 	// 10 minute timeout
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
 	defer cancel()
@@ -196,8 +250,8 @@ func AuthenticatedRequestDownload(address string, secret tl.Secret, auth tl.Feed
 	}
 	tmpfilepath := tmpfile.Name()
 	defer tmpfile.Close()
-	//
-	r, err := AuthenticatedRequest(ctx, address, secret, auth)
+	req := NewRequest(address, opts...)
+	r, err := req.Request(ctx)
 	if err != nil {
 		return "", err
 	}
