@@ -22,6 +22,21 @@ import (
 )
 
 func DownloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
+	u, err := url.Parse(ustr)
+	if err != nil {
+		return nil, errors.New("could not parse url")
+	}
+	if auth.Type == "query_param" {
+		v, err := url.ParseQuery(u.RawQuery)
+		if err != nil {
+			return nil, errors.New("could not parse query string")
+		}
+		v.Set(auth.ParamName, secret.Key)
+		u.RawQuery = v.Encode()
+	} else if auth.Type == "path_segment" {
+		u.Path = strings.ReplaceAll(u.Path, "{}", secret.Key)
+	}
+	ustr = u.String()
 	// Prepare HTTP request
 	req, err := http.NewRequest("GET", ustr, nil)
 	if err != nil {
@@ -81,7 +96,7 @@ func DownloadS3(ctx context.Context, ustr string, secret tl.Secret, auth tl.Feed
 	// Parse url
 	s3uri, err := url.Parse(ustr)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("could not parse url")
 	}
 	// Create client
 	var client *s3.Client
@@ -116,7 +131,7 @@ func DownloadS3(ctx context.Context, ustr string, secret tl.Secret, auth tl.Feed
 func UploadS3(ctx context.Context, ustr string, secret tl.Secret, uploadFile io.Reader) error {
 	s3uri, err := url.Parse(ustr)
 	if err != nil {
-		return err
+		return errors.New("could not parse url")
 	}
 	// Create client
 	var client *s3.Client
@@ -161,34 +176,22 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, errors.New("could not parse url")
 	}
-	if req.Auth.Type == "query_param" {
-		v, err := url.ParseQuery(u.RawQuery)
-		if err != nil {
-			return nil, errors.New("could not parse query string")
-		}
-		v.Set(req.Auth.ParamName, req.Secret.Key)
-		u.RawQuery = v.Encode()
-	} else if req.Auth.Type == "path_segment" {
-		u.Path = strings.ReplaceAll(u.Path, "{}", req.Secret.Key)
-	}
-	// Prepare file
-	ustr := u.String()
 	// Download
 	log.Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")
 	var r io.ReadCloser
 	reqErr := errors.New("unknown handler")
 	switch u.Scheme {
 	case "http":
-		r, reqErr = DownloadHTTP(ctx, ustr, req.Secret, req.Auth)
+		r, reqErr = DownloadHTTP(ctx, req.URL, req.Secret, req.Auth)
 	case "https":
-		r, reqErr = DownloadHTTP(ctx, ustr, req.Secret, req.Auth)
+		r, reqErr = DownloadHTTP(ctx, req.URL, req.Secret, req.Auth)
 	case "ftp":
 		if req.AllowFTP {
-			r, reqErr = DownloadFTP(ctx, ustr, req.Secret, req.Auth)
+			r, reqErr = DownloadFTP(ctx, req.URL, req.Secret, req.Auth)
 		}
 	case "s3":
 		if req.AllowS3 {
-			r, reqErr = DownloadS3(ctx, ustr, req.Secret, req.Auth)
+			r, reqErr = DownloadS3(ctx, req.URL, req.Secret, req.Auth)
 		}
 	default:
 		// file:// handler
@@ -230,7 +233,6 @@ func WithAuth(secret tl.Secret, auth tl.FeedAuthorization) func(req *Request) {
 
 // AuthenticatedRequestDownload fetches a url using a secret and auth description. Returns temp file path or error.
 // Caller is responsible for deleting the file.
-// Allows HTTP(S), FTP, S3, local file system.
 func AuthenticatedRequestDownload(address string, opts ...RequestOption) (string, error) {
 	// 10 minute timeout
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))

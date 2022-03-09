@@ -2,8 +2,6 @@ package tlcsv
 
 import (
 	"io"
-	"net/url"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -18,33 +16,6 @@ type s2D = [][]string
 // Reader reads GTFS entities from CSV files.
 type Reader struct {
 	Adapter
-}
-
-func NewAdapter(address string) (Adapter, error) {
-	parsedUrl, err := url.Parse(address)
-	if err != nil {
-		return nil, err
-	}
-	var a Adapter
-	switch parsedUrl.Scheme {
-	case "http":
-		a = &URLAdapter{url: address}
-	case "https":
-		a = &URLAdapter{url: address}
-	case "ftp":
-		a = &URLAdapter{url: address}
-	case "s3":
-		a = &URLAdapter{url: address}
-	case "overlay":
-		a = NewOverlayAdapter(address)
-	default:
-		if fi, err := os.Stat(address); err == nil && fi.IsDir() {
-			a = NewDirAdapter(address)
-		} else {
-			a = NewZipAdapter(address)
-		}
-	}
-	return a, nil
 }
 
 func NewReaderFromAdapter(a Adapter) (*Reader, error) {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -34,6 +35,37 @@ type Adapter interface {
 type WriterAdapter interface {
 	WriteRows(string, [][]string) error
 	Adapter
+}
+
+/////////////////////
+
+// NewAdapter returns a basic adapter for the given URL.
+// Use NewURLAdapter() to provide additional options.
+func NewAdapter(address string) (Adapter, error) {
+	parsedUrl, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+	var a Adapter
+	switch parsedUrl.Scheme {
+	case "http":
+		a = &URLAdapter{url: address}
+	case "https":
+		a = &URLAdapter{url: address}
+	case "ftp":
+		a = &URLAdapter{url: address}
+	case "s3":
+		a = &URLAdapter{url: address}
+	case "overlay":
+		a = NewOverlayAdapter(address)
+	default:
+		if fi, err := os.Stat(address); err == nil && fi.IsDir() {
+			a = NewDirAdapter(address)
+		} else {
+			a = NewZipAdapter(address)
+		}
+	}
+	return a, nil
 }
 
 /////////////////////
@@ -95,23 +127,6 @@ type ZipAdapter struct {
 // NewZipAdapter returns an initialized zip adapter.
 func NewZipAdapter(path string) *ZipAdapter {
 	return &ZipAdapter{path: strings.TrimPrefix(path, "file://")}
-}
-
-func NewZipAdapterFromReader(r io.Reader) (*ZipAdapter, error) {
-	w, err := ioutil.TempFile("", "gtfs")
-	if err != nil {
-		return nil, err
-	}
-	if _, err := io.Copy(w, r); err != nil {
-		return nil, err
-	}
-	tmpfilepath := w.Name()
-	w.Close()
-	z := ZipAdapter{
-		path:        tmpfilepath,
-		tmpfilepath: tmpfilepath, // delete on close
-	}
-	return &z, nil
 }
 
 // Open the adapter. Return an error if the file does not exist.
