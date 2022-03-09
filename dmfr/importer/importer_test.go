@@ -48,7 +48,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 	}
 	t.Run("Success", func(t *testing.T) {
 		testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-			fvid := setup(atx, testutil.ExampleDir.URL)
+			fvid := setup(atx, testutil.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := MainImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid})
 			if err != nil {
@@ -67,7 +67,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 				t.Errorf("expected in_progress = false")
 			}
 			count := 0
-			expstops := testutil.ExampleDir.Counts["stops.txt"]
+			expstops := testutil.ExampleZip.Counts["stops.txt"]
 			testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 			if count != expstops {
 				t.Errorf("got %d stops, expect %d stops", count, expstops)
@@ -93,9 +93,8 @@ func TestMainImportFeedVersion(t *testing.T) {
 			if fvi.Success != false {
 				t.Errorf("expected success = false")
 			}
-			explog := "file does not exist"
-			if fvi.ExceptionLog != explog {
-				t.Errorf("got '%s' expected '%s'", fvi.ExceptionLog, explog)
+			if fvi.ExceptionLog == "" {
+				t.Error("got no exception log error, expected something", fvi.ExceptionLog)
 			}
 			if fvi.InProgress != false {
 				t.Errorf("expected in_progress = false")
