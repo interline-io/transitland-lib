@@ -20,6 +20,15 @@ var MapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
 // check for SetString interface
 type canSetString interface {
 	SetString(string, string) error
+}
+
+// check for SetExtra
+type canSetExtra interface {
+	SetExtra(string, string)
+}
+
+// check for AddError
+type canAddError interface {
 	AddError(error)
 }
 
@@ -28,10 +37,12 @@ type canValue interface {
 	Value() (driver.Value, error)
 }
 
+// check for String
 type canString interface {
 	String() string
 }
 
+// check for Scan
 type canScan interface {
 	Scan(src interface{}) error
 }
@@ -39,7 +50,7 @@ type canScan interface {
 // SetString //
 
 // SetString convenience method; checks for SetString method.
-func SetString(ent tl.Entity, key string, value string) error {
+func SetString(ent interface{}, key string, value string) error {
 	if fastent, ok := ent.(canSetString); ok {
 		return fastent.SetString(key, value)
 	}
@@ -102,7 +113,7 @@ type canGetString interface {
 }
 
 // GetString convenience method; gets a string representation of a field.
-func GetString(ent tl.Entity, key string) (string, error) {
+func GetString(ent interface{}, key string) (string, error) {
 	if fastent, ok := ent.(canGetString); ok {
 		return fastent.GetString(key)
 	}
@@ -178,43 +189,61 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 // Loading: fast and reflect paths //
 
 // loadRow selects the fastest method for loading an entity.
-func loadRow(ent tl.Entity, row Row) {
+func LoadRow(ent interface{}, row Row) {
+	loadRow(ent, row)
+}
+
+// loadRow selects the fastest method for loading an entity.
+func loadRow(ent interface{}, row Row) {
 	// Check for fast path
+	var errs []error
 	if entfast, ok := ent.(canSetString); ok {
-		loadRowFast(entfast, row)
+		errs = loadRowFast(entfast, row)
 	} else {
-		loadRowReflect(ent, row)
+		errs = loadRowReflect(ent, row)
+	}
+	if v, ok := ent.(canAddError); ok {
+		for _, err := range errs {
+			v.AddError(err)
+		}
 	}
 }
 
 // LoadRowFast uses a fast path for entities that support SetString and AddError.
-func loadRowFast(ent canSetString, row Row) {
+func loadRowFast(ent canSetString, row Row) []error {
+	var errs []error
 	// Return if there was a row parsing error
 	if row.Err != nil {
-		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
-		return
+		errs = append(errs, causes.NewRowParseError(row.Line, row.Err))
+		return errs
 	}
 	header := row.Header
 	value := row.Row
 	for i := 0; i < len(value) && i < len(header); i++ {
 		if err := ent.SetString(header[i], value[i]); err != nil {
-			ent.AddError(err)
+			errs = append(errs, err)
 		}
 	}
+	return errs
 }
 
 // loadRowReflect is the Reflect path
-func loadRowReflect(ent tl.Entity, row Row) {
+func loadRowReflect(ent interface{}, row Row) []error {
+	var errs []error
 	// Return if there was a row parsing error
 	if row.Err != nil {
-		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
-		return
+		errs = append(errs, causes.NewRowParseError(row.Line, row.Err))
+		return errs
 	}
 	// Get the struct tag map
 	fmap := MapperCache.GetStructTagMap(ent)
-	errs := []error{}
 	// For each struct tag, set the field value
 	val := reflect.ValueOf(ent).Elem()
+
+	setExtra := func(key, value string) {}
+	if v, ok := ent.(canSetExtra); ok {
+		setExtra = v.SetExtra
+	}
 	for _, h := range row.Header {
 		strv, ok := row.Get(h)
 		if !ok {
@@ -223,7 +252,7 @@ func loadRowReflect(ent tl.Entity, row Row) {
 		k, ok := fmap[h]
 		// Add to extra fields if there's no struct tag
 		if !ok {
-			ent.SetExtra(h, strv)
+			setExtra(h, strv)
 			continue
 		}
 		// Skip if empty and not required
@@ -244,20 +273,18 @@ func loadRowReflect(ent tl.Entity, row Row) {
 			errs = append(errs, causes.NewFieldParseError(k.Name, strv))
 		}
 	}
-	for _, err := range errs {
-		ent.AddError(err)
-	}
+	return errs
 }
 
 // Dumping: fast and reflect paths //
 
 // dumpHeader returns the header for an Entity.
-func dumpHeader(ent tl.Entity) ([]string, error) {
+func dumpHeader(ent interface{}) ([]string, error) {
 	return MapperCache.GetHeader(ent)
 }
 
 // dumpRow returns a []string for the Entity.
-func dumpRow(ent tl.Entity, header []string) ([]string, error) {
+func dumpRow(ent interface{}, header []string) ([]string, error) {
 	row := []string{}
 	// Fast path
 	if a, ok := ent.(canGetString); ok {

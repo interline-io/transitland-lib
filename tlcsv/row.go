@@ -3,6 +3,7 @@ package tlcsv
 import (
 	"encoding/csv"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/dimchansky/utfbom"
@@ -25,6 +26,27 @@ func (row *Row) Get(k string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func (row *Row) Int(k string) (int, error) {
+	a, ok := row.Get(k)
+	if !ok {
+		return 0, nil
+	}
+	return strconv.Atoi(a)
+}
+
+func (row *Row) Float(k string) (float64, error) {
+	a, ok := row.Get(k)
+	if !ok {
+		return 0, nil
+	}
+	return strconv.ParseFloat(a, 64)
+}
+
+func (row Row) Unmarshal(v interface{}) error {
+	loadRow(v, row)
+	return nil
 }
 
 // ReadRows iterates through csv rows with callback.
