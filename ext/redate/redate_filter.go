@@ -41,7 +41,6 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	targetDate := tf.TargetDate
 	newSvc := tl.NewService(tl.Calendar{ServiceID: v.ServiceID, StartDate: targetDate})
 	newSvc.ID = v.ID
-	fmt.Printf("%#v\n", v.Calendar)
 	for i := 1; i < tf.TargetDays; i++ {
 		a := false
 		if v.IsActive(startDate) {
@@ -49,16 +48,16 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 			active = true
 			a = true
 		}
-		fmt.Println(
-			"svcId:", newSvc.ServiceID,
-			"startDate:", startDate,
-			startDate.Weekday().String(),
-			"targetDate:", targetDate,
-			targetDate.Weekday().String(),
-			"i:", i,
-			"a:", a,
-		)
-		startDate = tf.StartDate.AddDate(0, 0, i%tf.StartDays) // startDate.AddDate(0, 0, 1)
+		// fmt.Println(
+		// 	"svcId:", newSvc.ServiceID,
+		// 	"startDate:", startDate,
+		// 	startDate.Weekday().String(),
+		// 	"targetDate:", targetDate,
+		// 	targetDate.Weekday().String(),
+		// 	"i:", i,
+		// 	"a:", a,
+		// )
+		startDate = tf.StartDate.AddDate(0, 0, i%tf.StartDays)
 		targetDate = tf.TargetDate.AddDate(0, 0, i)
 	}
 	newSvc.EndDate = targetDate

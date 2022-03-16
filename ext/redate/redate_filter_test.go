@@ -45,24 +45,13 @@ func TestRedateFilter(t *testing.T) {
 	for _, tc := range tcs {
 		name := fmt.Sprintf("%s-%s:%d:%d", tc.StartDate, tc.EndDate, tc.StartDays, tc.EndDays)
 		t.Run(name, func(t *testing.T) {
-			rf := RedateFilter{}
-			var err error
-			rf.StartDate, err = time.Parse(tft, tc.StartDate)
-			if err != nil {
-				t.Fatal(err)
-			}
-			rf.TargetDate, err = time.Parse(tft, tc.EndDate)
-			if err != nil {
-				t.Fatal(err)
-			}
-			rf.StartDays = tc.StartDays
-			rf.TargetDays = tc.EndDays
+			rf := NewRedateFilter(ptime(tc.StartDate), ptime(tc.EndDate), tc.StartDays, tc.EndDays)
 			w := mock.Writer{}
 			cp, err := copier.NewCopier(reader, &w, copier.Options{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			cp.AddExtension(&rf)
+			cp.AddExtension(rf)
 			cp.Copy()
 			wr, err := w.NewReader()
 			if err != nil {
