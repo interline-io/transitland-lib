@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/sync"
 	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
+	_ "github.com/interline-io/transitland-lib/ext/redate"
 	"github.com/interline-io/transitland-lib/extract"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"

@@ -1,6 +1,7 @@
 package redate
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -9,8 +10,24 @@ import (
 )
 
 func init() {
-	e := func() ext.Extension { return &RedateFilter{} }
+	e := func(args string) (ext.Extension, error) {
+		opts := &redateOptions{}
+		if err := json.Unmarshal([]byte(args), opts); err != nil {
+			return nil, err
+		}
+		a, _ := opts.StartDays.Int64()
+		b, _ := opts.TargetDays.Int64()
+		return NewRedateFilter(opts.StartDate.Time, opts.TargetDate.Time, int(a), int(b))
+	}
 	ext.RegisterExtension("redate", e)
+}
+
+type redateOptions struct {
+	StartDate     tl.Date
+	StartDays     json.Number
+	TargetDate    tl.Date
+	TargetDays    json.Number
+	AllowInactive bool
 }
 
 type RedateFilter struct {
@@ -21,13 +38,13 @@ type RedateFilter struct {
 	AllowInactive bool
 }
 
-func NewRedateFilter(startDate, targetDate time.Time, startDays, targetDays int) *RedateFilter {
+func NewRedateFilter(startDate, targetDate time.Time, startDays, targetDays int) (*RedateFilter, error) {
 	return &RedateFilter{
 		StartDate:  startDate,
 		StartDays:  startDays,
 		TargetDate: targetDate,
 		TargetDays: targetDays,
-	}
+	}, nil
 }
 
 func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {

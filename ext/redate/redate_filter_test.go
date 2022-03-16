@@ -44,7 +44,10 @@ func TestRedateFilter(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.Name, func(t *testing.T) {
-			rf := NewRedateFilter(ptime(tc.StartDate), ptime(tc.EndDate), tc.StartDays, tc.EndDays)
+			rf, err := NewRedateFilter(ptime(tc.StartDate), ptime(tc.EndDate), tc.StartDays, tc.EndDays)
+			if err != nil {
+				t.Fatal(err)
+			}
 			// rf.AllowInactive = true
 			w := mock.Writer{}
 			cp, err := copier.NewCopier(reader, &w, copier.Options{})

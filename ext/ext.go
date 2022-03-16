@@ -1,7 +1,9 @@
 package ext
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/log"
@@ -14,7 +16,7 @@ type Extension interface {
 
 type readerFactory func(dburl string) (tl.Reader, error)
 type writerFactory func(dburl string) (tl.Writer, error)
-type extensionFactory func() Extension
+type extensionFactory func(string) (Extension, error)
 
 var readerFactories = map[string]readerFactory{}
 var writerFactories = map[string]writerFactory{}
@@ -115,9 +117,46 @@ func OpenWriter(addr string, create bool) (tl.Writer, error) {
 }
 
 // GetExtension returns an Extension.
-func GetExtension(name string) (Extension, error) {
+func GetExtension(name string, args string) (Extension, error) {
 	if f, ok := extensionFactories[name]; ok {
-		return f(), nil
+		return f(args)
 	}
 	return nil, fmt.Errorf("no Extension factory for %s", name)
+}
+
+func ParseExtensionArgs(value string) (string, string, error) {
+	sp := strings.SplitN(value, ":", 2)
+	if len(sp) < 2 {
+		return value, "", nil
+	}
+	extName := sp[0]
+	extArgs := sp[1]
+	if strings.HasPrefix(extArgs, "{") {
+		// Treat as JSON, but check validity
+		a := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(extArgs), &a); err != nil {
+			return "", "", err
+		}
+	} else {
+		// Treat as key=value,key=value pairs
+		a := make(map[string]interface{})
+		for _, kv := range strings.Split(extArgs, ",") {
+			k := strings.SplitN(kv, "=", 2)
+			if len(k) < 2 {
+				k = append(k, "")
+			}
+			// Attempt to convert to numeric
+			if v, err := strconv.ParseFloat(k[1], 64); err == nil {
+				a[k[0]] = v
+			} else {
+				a[k[0]] = k[1]
+			}
+		}
+		j, err := json.Marshal(&a)
+		if err != nil {
+			return "", "", err
+		}
+		extArgs = string(j)
+	}
+	return extName, extArgs, nil
 }
