@@ -14,11 +14,11 @@ func init() {
 }
 
 type RedateFilter struct {
-	StartDate           time.Time
-	StartDays           int
-	TargetDate          time.Time
-	TargetDays          int
-	RemoveOutsideWindow bool
+	StartDate     time.Time
+	StartDays     int
+	TargetDate    time.Time
+	TargetDays    int
+	AllowInactive bool
 }
 
 func NewRedateFilter(startDate, targetDate time.Time, startDays, targetDays int) *RedateFilter {
@@ -41,12 +41,10 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	targetDate := tf.TargetDate
 	newSvc := tl.NewService(tl.Calendar{ServiceID: v.ServiceID, StartDate: targetDate})
 	newSvc.ID = v.ID
-	for i := 1; i < tf.TargetDays; i++ {
-		a := false
+	for i := 1; i <= tf.TargetDays; i++ {
 		if v.IsActive(startDate) {
 			newSvc.AddCalendarDate(tl.CalendarDate{Date: targetDate, ExceptionType: 1})
 			active = true
-			a = true
 		}
 		// fmt.Println(
 		// 	"svcId:", newSvc.ServiceID,
@@ -60,8 +58,8 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 		startDate = tf.StartDate.AddDate(0, 0, i%tf.StartDays)
 		targetDate = tf.TargetDate.AddDate(0, 0, i)
 	}
-	newSvc.EndDate = targetDate
-	if !active && tf.RemoveOutsideWindow {
+	newSvc.EndDate = tf.TargetDate.AddDate(0, 0, tf.TargetDays-1)
+	if !active && !tf.AllowInactive {
 		return fmt.Errorf("service not in window")
 	}
 	// Simplify back to regular calendar

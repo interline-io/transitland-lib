@@ -1,7 +1,6 @@
 package redate
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -34,8 +33,9 @@ func TestRedateFilter(t *testing.T) {
 		{"7/28 days sunday", "2018-06-03", "2022-01-02", 7, 28, tl.Service{Calendar: tl.Calendar{ServiceID: "SUN", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Sunday: 1}}},
 		{"7/28 days monday holiday", "2018-05-27", "2022-01-02", 7, 28, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Monday: 0, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
 		{"7/365 days", "2018-06-03", "2022-01-02", 7, 365, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/1 days", "2018-06-03", "2022-01-02", 7, 1, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-02"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"1/1 days", "2018-06-03", "2022-01-02", 1, 1, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-02"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
+		{"7/365 days monday holiday", "2018-05-27", "2022-01-02", 7, 365, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: 0, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
+		{"7/1 days monday start", "2018-06-04", "2022-01-03", 7, 1, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: 1}}},
+		{"1/1 days monday start", "2018-06-04", "2022-01-03", 1, 1, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: 1}}},
 		{"1/7 days monday start", "2018-06-04", "2022-01-03", 1, 7, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-09"), Sunday: 1, Saturday: 1, Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
 	}
 	reader, err := tlcsv.NewReader(testutil.ExampleFeedBART.URL)
@@ -43,9 +43,9 @@ func TestRedateFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range tcs {
-		name := fmt.Sprintf("%s-%s:%d:%d", tc.StartDate, tc.EndDate, tc.StartDays, tc.EndDays)
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			rf := NewRedateFilter(ptime(tc.StartDate), ptime(tc.EndDate), tc.StartDays, tc.EndDays)
+			// rf.AllowInactive = true
 			w := mock.Writer{}
 			cp, err := copier.NewCopier(reader, &w, copier.Options{})
 			if err != nil {
@@ -76,7 +76,7 @@ func TestRedateFilter(t *testing.T) {
 				}
 			}
 			if !found {
-				t.Errorf("did not match expected output service %s", v.ServiceID)
+				t.Errorf("did not find expected output service %s", v.ServiceID)
 			}
 		})
 	}
