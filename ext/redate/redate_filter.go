@@ -39,12 +39,24 @@ type RedateFilter struct {
 	AllowInactive bool
 }
 
-func NewRedateFilter(SourceDate, targetDate time.Time, SourceDays, targetDays int) (*RedateFilter, error) {
+func NewRedateFilter(sourceDate, targetDate time.Time, SourceDays, targetDays int) (*RedateFilter, error) {
 	r := RedateFilter{
-		SourceDate: SourceDate,
+		SourceDate: sourceDate,
 		SourceDays: SourceDays,
 		TargetDate: targetDate,
 		TargetDays: targetDays,
+	}
+	if r.SourceDate.IsZero() {
+		return nil, errors.New("SourceDate not provided")
+	}
+	if r.TargetDate.IsZero() {
+		return nil, errors.New("TargetDate not provided")
+	}
+	if r.SourceDays <= 0 {
+		return nil, errors.New("SourceDays must be > 0")
+	}
+	if r.TargetDays <= 0 {
+		return nil, errors.New("TargetDays must be > 0")
 	}
 	if r.SourceDate.Weekday() != r.TargetDate.Weekday() {
 		return nil, errors.New("SourceDate and TargetDate must be same day of week")

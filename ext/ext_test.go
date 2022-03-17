@@ -14,6 +14,7 @@ func TestParseExtensionArgs(t *testing.T) {
 		ExpectArgs  string
 		ExpectError bool
 	}{
+		{"test (no args)", "test", "test", ``, false},
 		{"test a=b", "test:a=b", "test", `{"a":"b"}`, false},
 		{"test a=1 numeric", `test:a=1`, "test", `{"a":1}`, false},
 		{"test a=b json", `test:{"a":"b"}`, "test", `{"a":"b"}`, false},
