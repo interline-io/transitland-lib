@@ -2,6 +2,7 @@ package redate
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,36 +16,40 @@ func init() {
 		if err := json.Unmarshal([]byte(args), opts); err != nil {
 			return nil, err
 		}
-		a, _ := opts.StartDays.Int64()
+		a, _ := opts.SourceDays.Int64()
 		b, _ := opts.TargetDays.Int64()
-		return NewRedateFilter(opts.StartDate.Time, opts.TargetDate.Time, int(a), int(b))
+		return NewRedateFilter(opts.SourceDate.Time, opts.TargetDate.Time, int(a), int(b))
 	}
 	ext.RegisterExtension("redate", e)
 }
 
 type redateOptions struct {
-	StartDate     tl.Date
-	StartDays     json.Number
+	SourceDate    tl.Date
+	SourceDays    json.Number
 	TargetDate    tl.Date
 	TargetDays    json.Number
 	AllowInactive bool
 }
 
 type RedateFilter struct {
-	StartDate     time.Time
-	StartDays     int
+	SourceDate    time.Time
+	SourceDays    int
 	TargetDate    time.Time
 	TargetDays    int
 	AllowInactive bool
 }
 
-func NewRedateFilter(startDate, targetDate time.Time, startDays, targetDays int) (*RedateFilter, error) {
-	return &RedateFilter{
-		StartDate:  startDate,
-		StartDays:  startDays,
+func NewRedateFilter(SourceDate, targetDate time.Time, SourceDays, targetDays int) (*RedateFilter, error) {
+	r := RedateFilter{
+		SourceDate: SourceDate,
+		SourceDays: SourceDays,
 		TargetDate: targetDate,
 		TargetDays: targetDays,
-	}, nil
+	}
+	if r.SourceDate.Weekday() != r.TargetDate.Weekday() {
+		return nil, errors.New("SourceDate and TargetDate must be same day of week")
+	}
+	return &r, nil
 }
 
 func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
@@ -54,25 +59,25 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	}
 	// Copy active service days in window into new calendar
 	active := false
-	startDate := tf.StartDate
+	SourceDate := tf.SourceDate
 	targetDate := tf.TargetDate
 	newSvc := tl.NewService(tl.Calendar{ServiceID: v.ServiceID, StartDate: targetDate})
 	newSvc.ID = v.ID
 	for i := 1; i <= tf.TargetDays; i++ {
-		if v.IsActive(startDate) {
+		if v.IsActive(SourceDate) {
 			newSvc.AddCalendarDate(tl.CalendarDate{Date: targetDate, ExceptionType: 1})
 			active = true
 		}
 		// fmt.Println(
 		// 	"svcId:", newSvc.ServiceID,
-		// 	"startDate:", startDate,
-		// 	startDate.Weekday().String(),
+		// 	"SourceDate:", SourceDate,
+		// 	SourceDate.Weekday().String(),
 		// 	"targetDate:", targetDate,
 		// 	targetDate.Weekday().String(),
 		// 	"i:", i,
 		// 	"a:", a,
 		// )
-		startDate = tf.StartDate.AddDate(0, 0, i%tf.StartDays)
+		SourceDate = tf.SourceDate.AddDate(0, 0, i%tf.SourceDays)
 		targetDate = tf.TargetDate.AddDate(0, 0, i)
 	}
 	newSvc.EndDate = tf.TargetDate.AddDate(0, 0, tf.TargetDays-1)
