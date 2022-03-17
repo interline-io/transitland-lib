@@ -6,7 +6,9 @@ import (
 	"log"
 
 	"github.com/interline-io/transitland-lib/dmfr/fetch"
+	"github.com/interline-io/transitland-lib/dmfr/format"
 	"github.com/interline-io/transitland-lib/dmfr/importer"
+	"github.com/interline-io/transitland-lib/dmfr/lint"
 	"github.com/interline-io/transitland-lib/dmfr/sync"
 	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	"github.com/interline-io/transitland-lib/dmfr/validate"
@@ -23,6 +25,7 @@ func (cmd *dmfrCommand) Parse(args []string) error {
 		log.Print("Usage: dmfr <command> [<args>]")
 		log.Print("dmfr commands:")
 		log.Print("  validate")
+		log.Print("  format")
 		log.Print("  sync")
 		log.Print("  import")
 		log.Print("  unimport")
@@ -39,6 +42,10 @@ func (cmd *dmfrCommand) Parse(args []string) error {
 	switch subc {
 	case "validate":
 		cmd.subcommand = &validate.Command{}
+	case "format":
+		cmd.subcommand = &format.Command{}
+	case "lint":
+		cmd.subcommand = &lint.Command{}
 	case "sync":
 		cmd.subcommand = &sync.Command{}
 	case "import":
