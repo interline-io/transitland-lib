@@ -173,8 +173,14 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 
 	// Add extensions
 	for _, extName := range opts.Extensions {
-		e, err := ext.GetExtension(extName)
-		if err != nil || e == nil {
+		extName, extArgs, err := ext.ParseExtensionArgs(extName)
+		if err != nil {
+			return nil, err
+		}
+		e, err := ext.GetExtension(extName, extArgs)
+		if err != nil {
+			return nil, fmt.Errorf("error creating extension '%s' with args '%s': %s", extName, extArgs, err.Error())
+		} else if e == nil {
 			return nil, fmt.Errorf("no registered extension for '%s'", extName)
 		}
 		if err := copier.AddExtension(e); err != nil {
