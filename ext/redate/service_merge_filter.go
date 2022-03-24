@@ -6,15 +6,15 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-type ServiceMerge struct {
+type ServiceMergeFilter struct {
 	services map[string]*tl.Service
 }
 
-func NewServiceMerge() (*ServiceMerge, error) {
-	return &ServiceMerge{services: map[string]*tl.Service{}}, nil
+func NewServiceMergeFilter() (*ServiceMergeFilter, error) {
+	return &ServiceMergeFilter{services: map[string]*tl.Service{}}, nil
 }
 
-func (tf *ServiceMerge) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (tf *ServiceMergeFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	svc, ok := ent.(*tl.Service)
 	if !ok {
 		return nil
