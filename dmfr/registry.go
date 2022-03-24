@@ -140,9 +140,3 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 	}
 	return reg, nil
 }
-
-// ParseString TODO
-func ParseString(contents string) (*Registry, error) {
-	reader := strings.NewReader(contents)
-	return NewRegistry(reader)
-}
