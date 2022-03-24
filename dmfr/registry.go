@@ -24,7 +24,7 @@ type Registry struct {
 	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
 }
 
-// feed.Operators should be loaded but not manipulated
+// feed.Operators should be loaded but not exported
 type loadFeed struct {
 	Operators []tl.Operator
 	tl.Feed
