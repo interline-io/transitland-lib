@@ -26,7 +26,7 @@ func NewReader(dburl string) (*Reader, error) {
 	if adapter == nil {
 		return nil, errors.New("no adapter available")
 	}
-	return &Reader{Adapter: adapter, PageSize: 1_000_000, FeedVersionIDs: fvids}, nil
+	return &Reader{Adapter: adapter, PageSize: 1_000, FeedVersionIDs: fvids}, nil
 }
 
 func (reader *Reader) String() string {

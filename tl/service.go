@@ -236,6 +236,31 @@ func (s *Service) HasAtLeastOneDay() bool {
 	return false
 }
 
+// Equal checks if two services have exactly the same scheduled dates
+func (s *Service) Equal(other *Service) bool {
+	// fmt.Println("comparing:", s.ServiceID, ":", other.ServiceID)
+	a, b := s.ServicePeriod()
+	c, d := other.ServicePeriod()
+	// fmt.Println("a, b:", a, b)
+	// fmt.Println("c, d:", c, d)
+	if !a.Equal(c) {
+		// fmt.Println("a!=c")
+		return false
+	}
+	if !b.Equal(d) {
+		// fmt.Println("b!=d")
+		return false
+	}
+	for a.Before(b) || a.Equal(b) {
+		if s.IsActive(a) != other.IsActive(a) {
+			// fmt.Println("!= active", a)
+			return false
+		}
+		a = a.AddDate(0, 0, 1)
+	}
+	return true
+}
+
 // Simplify tries to simplify exceptions down to a basic calendar with fewer exceptions.
 func (s *Service) Simplify() (*Service, error) {
 	inputServiceStart, inputServiceEnd := s.StartDate, s.EndDate
