@@ -42,6 +42,7 @@ type Result struct {
 	FoundSHA1    bool
 	FoundDirSHA1 bool
 	FetchError   error
+	Error        error
 }
 
 // DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
