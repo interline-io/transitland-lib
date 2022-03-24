@@ -696,8 +696,7 @@ func (copier *Copier) copyCalendars() error {
 	var bt []tl.Entity
 	var btErr error
 	for _, svc := range svcs {
-		// Need to get calendar dates before ID is updated
-		cds := svc.CalendarDates()
+		cid := svc.EntityID()
 		// Skip main Calendar entity if generated and not normalizing/simplifying service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
 			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
@@ -706,11 +705,14 @@ func (copier *Copier) copyCalendars() error {
 				return writeErr
 			} else if entErr != nil {
 				// do not write calendar dates if service had error
-				cds = nil
+				continue
+				// cds = nil
 			}
 		}
 		// Copy dependent entities
+		cds := svc.CalendarDates()
 		for i := range cds {
+			cds[i].ServiceID = cid
 			if bt, btErr = copier.checkBatch(bt, &cds[i]); btErr != nil {
 				return btErr
 			}
