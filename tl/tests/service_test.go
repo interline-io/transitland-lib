@@ -9,17 +9,22 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/stretchr/testify/assert"
 )
 
+func tparse(v string) time.Time {
+	a, err := time.Parse("20060102", v)
+	if err != nil {
+		panic(err)
+	}
+	return a
+}
+
 func newTestService() *tl.Service {
-	start, _ := time.Parse("20060102", "20190101")
-	end, _ := time.Parse("20060102", "20190131")
-	except, _ := time.Parse("20060102", "20190102")
-	added, _ := time.Parse("20060102", "20190105")
 	s := tl.NewService(
 		tl.Calendar{
-			StartDate: start,
-			EndDate:   end,
+			StartDate: tparse("20190101"),
+			EndDate:   tparse("20190131"),
 			Monday:    1,
 			Tuesday:   1,
 			Wednesday: 1,
@@ -28,8 +33,8 @@ func newTestService() *tl.Service {
 			Saturday:  0,
 			Sunday:    0,
 		},
-		tl.CalendarDate{Date: added, ExceptionType: 1},
-		tl.CalendarDate{Date: except, ExceptionType: 2},
+		tl.CalendarDate{Date: tparse("20190102"), ExceptionType: 1},
+		tl.CalendarDate{Date: tparse("20190105"), ExceptionType: 2},
 	)
 	return s
 }
@@ -52,11 +57,60 @@ func TestService_IsActive(t *testing.T) {
 		{"20190105", true},  // saturday added
 	}
 	for _, exp := range dates {
-		day, _ := time.Parse("20060102", exp.day)
-		result := s.IsActive(day)
+		result := s.IsActive(tparse(exp.day))
 		if result != exp.value {
 			t.Errorf("day %s got %t expect %t", exp.day, result, exp.value)
 		}
+	}
+}
+
+func TestService_Equal(t *testing.T) {
+	type testcase struct {
+		name   string
+		a      *tl.Service
+		b      *tl.Service
+		expect bool
+	}
+	var tcs []testcase
+	s := newTestService()
+	tcs = append(tcs, testcase{"basic", s, s, true})
+	//
+	s2 := newTestService()
+	s2.StartDate = s2.StartDate.AddDate(0, 0, 1)
+	tcs = append(tcs, testcase{"start date diff", s, s2, false})
+	//
+	s3 := newTestService()
+	s3.EndDate = s2.EndDate.AddDate(0, 0, 1)
+	tcs = append(tcs, testcase{"end date diff", s, s3, false})
+	//
+	s4 := newTestService()
+	s4.Monday = 0
+	tcs = append(tcs, testcase{"dow diff", s, s4, false})
+	//
+	s5 := newTestService()
+	s5.AddCalendarDate(tl.CalendarDate{ExceptionType: 2, Date: s5.StartDate})
+	tcs = append(tcs, testcase{"removed diff", s, s5, false})
+	//
+	s6 := newTestService()
+	s6.AddCalendarDate(tl.CalendarDate{ExceptionType: 2, Date: s5.StartDate.AddDate(0, 0, -1)})
+	tcs = append(tcs, testcase{"removed diff outside window", s, s6, false})
+	//
+	s7 := newTestService()
+	s7.Reset()
+	tcs = append(tcs, testcase{"after reset", s, s7, false})
+	// this test expects equal
+	s8 := newTestService()
+	s8.AddCalendarDate(tl.CalendarDate{ExceptionType: 1, Date: tparse("20190111")})
+	tcs = append(tcs, testcase{"added equal inside window", s, s8, true})
+	//
+	s9 := newTestService()
+	s9.AddCalendarDate(tl.CalendarDate{ExceptionType: 1, Date: s8.StartDate.AddDate(0, 0, -1)})
+	tcs = append(tcs, testcase{"added diff outside window", s, s9, false})
+	// run
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expect, tc.a.Equal(tc.b))
+		})
 	}
 }
 

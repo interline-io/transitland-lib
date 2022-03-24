@@ -297,3 +297,22 @@ func (s *Service) Simplify() (*Service, error) {
 	}
 	return ret, nil
 }
+
+// Equal checks if two services have exactly the same scheduled dates
+func (s *Service) Equal(other *Service) bool {
+	a, b := s.ServicePeriod()
+	c, d := other.ServicePeriod()
+	if !a.Equal(c) {
+		return false
+	}
+	if !b.Equal(d) {
+		return false
+	}
+	for a.Before(b) || a.Equal(b) {
+		if s.IsActive(a) != other.IsActive(a) {
+			return false
+		}
+		a = a.AddDate(0, 0, 1)
+	}
+	return true
+}
