@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadAndParseRegistry_from_file(t *testing.T) {
@@ -80,16 +81,49 @@ func TestLoadAndParseRegistry_Secrets(t *testing.T) {
 	}
 }
 
-func TestParseString(t *testing.T) {
-	dmfrString, err := ioutil.ReadFile(testutil.RelPath("test/data/dmfr/example.json"))
+func TestImplicitOperatorInFeed(t *testing.T) {
+	reg, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/embedded.json"))
 	if err != nil {
-		t.Error("failed to read sample dmfr")
+		t.Fatal(err)
 	}
-	feed, _ := ParseString(string(dmfrString))
-	if len(feed.Feeds) != 2 {
-		t.Error("didn't load all 2 feeds")
+	tcs := []struct {
+		name     string
+		feedname string
+		feedOps  []string
+		opname   string
+		opFeeds  []string
+	}{
+		{"no operators", "f-other~feed", []string{}, "", []string{}}, // no operators??
+		{"with implicit", "f-with~implicit", []string{"o-with~implicit"}, "o-with~implicit", []string{"f-with~implicit"}},
+		{"with explicit", "f-with~explicit", []string{"o-with~explicit"}, "o-with~explicit", []string{"f-with~explicit"}},
+		{"with explicit mixed", "f-with~explicit~mixed", []string{"o-test"}, "o-test", []string{"f-other~feed", "f-with~explicit~mixed"}},
+
+		{"toplevel no feed", "", []string{}, "o-toplevel~nofeed", []string{}},
+		{"toplevel onefeed", "f-test2", []string{"o-toplevel~onefeed"}, "o-toplevel~onefeed", []string{"f-test2"}},
 	}
-	if feed.LicenseSpdxIdentifier != "CC0-1.0" {
-		t.Error("LicenseSpdxIdentifier is not equal to 'CC0-1.0'")
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			testMatch := false
+			matchFeeds := map[string][]string{}
+			for _, op := range reg.Operators {
+				if op.OnestopID.String != tc.opname {
+					continue
+				}
+				testMatch = true
+				foundFeeds := []string{}
+				for _, feed := range op.AssociatedFeeds {
+					foundFeeds = append(foundFeeds, feed.FeedOnestopID.String)
+					matchFeeds[feed.FeedOnestopID.String] = append(matchFeeds[feed.FeedOnestopID.String], op.OnestopID.String)
+				}
+				assert.ElementsMatchf(t, tc.opFeeds, foundFeeds, "operator %s did not match expected feeds", tc.opname)
+			}
+			if tc.feedname != "" {
+				testMatch = true
+				assert.ElementsMatchf(t, tc.feedOps, matchFeeds[tc.feedname], "feed %s did not match expected operators", tc.feedname)
+			}
+			if !testMatch {
+				t.Errorf("no matching tests")
+			}
+		})
 	}
 }

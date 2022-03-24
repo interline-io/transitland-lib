@@ -20,7 +20,6 @@ type Feed struct {
 	Languages       FeedLanguages       `json:"languages,omitempty"`
 	License         FeedLicense         `json:"license"`
 	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
-	Operators       []Operator          `json:"operators" db:"-"`
 	Tags            Tags                `json:"tags" db:"feed_tags" `
 	File            string              `json:"file"`       // internal
 	DeletedAt       Time                `json:"deleted_at"` // internal
@@ -47,15 +46,13 @@ func (ent *Feed) MatchSecrets(secrets []Secret) (Secret, error) {
 	return found, nil
 }
 
-// Equal compares the JSON representation of two feeds, excluding Operators.
+// Equal compares the JSON representation of two feeds
 func (ent *Feed) Equal(other *Feed) bool {
 	if other == nil {
 		return false
 	}
 	a1 := *ent
-	a1.Operators = nil
 	a2 := *other
-	a2.Operators = nil
 	a1j, _ := json.Marshal(&a1)
 	a2j, _ := json.Marshal(&a2)
 	return string(a1j) == string(a2j)
