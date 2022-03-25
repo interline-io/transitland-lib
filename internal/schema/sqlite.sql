@@ -529,3 +529,13 @@ CREATE TABLE IF NOT EXISTS "gtfs_attributions" (
   "attribution_phone" varchar(255)
 );
 CREATE INDEX idx_gtfs_attributions_feed_version_id ON "gtfs_attributions"(feed_version_id);
+
+CREATE TABLE tl_stop_external_references (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" int NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "target_feed_onestop_id" varchar(255) NOT NULL,
+  "target_stop_id" varchar(255) NOT NULL,
+  "inactive" bool
+);

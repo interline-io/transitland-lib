@@ -102,6 +102,17 @@ func (adapter *PostgresAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db).PlaceholderFormat(sq.Dollar)
 }
 
+// TableExists returns true if the requested table exists
+func (adapter *PostgresAdapter) TableExists(t string) (bool, error) {
+	qstr := `SELECT EXISTS ( SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = ?);`
+	exists := false
+	err := sqlx.Get(adapter.db, &exists, adapter.db.Rebind(qstr), t)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return exists, err
+}
+
 // Find finds a single entity based on the EntityID()
 func (adapter *PostgresAdapter) Find(dest interface{}) error {
 	return find(adapter, dest)
