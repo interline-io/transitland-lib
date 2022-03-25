@@ -85,6 +85,21 @@ func testAdapter(t *testing.T, adapter Adapter) {
 			}
 		}
 	})
+	t.Run("TableExists", func(t *testing.T) {
+		checkTable := "absolutely_does_not_exist"
+		if ok, err := adapter.TableExists(checkTable); err != nil {
+			t.Fatal(err)
+		} else if ok {
+			t.Errorf("expected table '%s' not to exist", checkTable)
+		}
+		doesExist := "feed_versions"
+		if ok, err := adapter.TableExists(doesExist); err != nil {
+			t.Fatal(err)
+		} else if !ok {
+			t.Errorf("expected table '%s' to exist", doesExist)
+		}
+
+	})
 	t.Run("CopyInsert", func(t *testing.T) {
 		st1 := tl.StopTime{}
 		st1.FeedVersionID = m.FeedVersionID

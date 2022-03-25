@@ -37,6 +37,7 @@ type Adapter interface {
 	DBX() sqlx.Ext
 	Tx(func(Adapter) error) error
 	Sqrl() sq.StatementBuilderType
+	TableExists(string) (bool, error)
 	Insert(interface{}) (int, error)
 	Update(interface{}, ...string) error
 	Find(interface{}) error
