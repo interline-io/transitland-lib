@@ -5,7 +5,7 @@ import (
 	"flag"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 )
 
 // Command validates a DMFR file.
@@ -33,13 +33,13 @@ func (cmd *Command) Parse(args []string) error {
 func (cmd *Command) Run() error {
 	errs := []error{}
 	for _, filename := range cmd.Filenames {
-		log.Info("Loading DMFR: %s", filename)
+		log.Infof("Loading DMFR: %s", filename)
 		registry, err := dmfr.LoadAndParseRegistry(filename)
 		if err != nil {
 			errs = append(errs, err)
-			log.Error("%s: Error when loading DMFR: %s", filename, err.Error())
+			log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
 		} else {
-			log.Info("%s: Success loading DMFR with %d feeds", filename, len(registry.Feeds))
+			log.Infof("%s: Success loading DMFR with %d feeds", filename, len(registry.Feeds))
 		}
 	}
 	if len(errs) > 0 {

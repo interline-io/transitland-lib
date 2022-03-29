@@ -1,18 +1,18 @@
 package fetch
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/download"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -25,11 +25,14 @@ type Options struct {
 	IgnoreDuplicateContents bool
 	Directory               string
 	S3                      string
+	AllowS3Fetch            bool
+	AllowFTPFetch           bool
+	AllowLocalFetch         bool
 	FetchedAt               time.Time
-	Secrets                 download.Secrets
-	CreatedBy               tl.OString
-	Name                    tl.OString
-	Description             tl.OString
+	Secrets                 []tl.Secret
+	CreatedBy               tl.String
+	Name                    tl.String
+	Description             tl.String
 }
 
 // Result contains results of a fetch operation.
@@ -39,6 +42,7 @@ type Result struct {
 	FoundSHA1    bool
 	FoundDirSHA1 bool
 	FetchError   error
+	Error        error
 }
 
 // DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
@@ -74,7 +78,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 		return fr, err
 	}
 	// Immediately save LastFetchedAt
-	tlstate.LastFetchedAt = tl.OTime{Time: opts.FetchedAt, Valid: true}
+	tlstate.LastFetchedAt = tl.NewTime(opts.FetchedAt)
 	tlstate.LastFetchError = ""
 	tlstate.UpdateTimestamps()
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error"); err != nil {
@@ -88,7 +92,7 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	if fr.FetchError != nil {
 		tlstate.LastFetchError = fr.FetchError.Error()
 	} else {
-		tlstate.LastSuccessfulFetchAt = tl.OTime{Time: opts.FetchedAt, Valid: true}
+		tlstate.LastSuccessfulFetchAt = tl.NewTime(opts.FetchedAt)
 	}
 	// else if fr.FoundSHA1 || fr.FoundDirSHA1 {}
 	// Save updated timestamps
@@ -97,10 +101,6 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 		return fr, err
 	}
 	return fr, nil
-}
-
-type canSetAuth interface {
-	SetAuth(tl.FeedAuthorization, download.Secret)
 }
 
 // fetchAndCreateFeedVersion from a URL.
@@ -113,24 +113,30 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 		fr.FetchError = errors.New("no url")
 		return fr, nil
 	}
-	// Get secret
-	secret := download.Secret{}
-	if a, err := opts.Secrets.MatchFeed(opts.FeedID); err == nil {
-		secret = a
-	} else if a, err := opts.Secrets.MatchFilename(feed.File); err == nil {
-		secret = a
-	} else if feed.Authorization.Type != "" {
-		fr.FetchError = errors.New("no secret found")
-		return fr, nil
+	// Get a reader with configured URL adapter
+	var reqOpts []request.RequestOption
+	if opts.AllowFTPFetch {
+		reqOpts = append(reqOpts, request.WithAllowFTP)
 	}
-	// Get reader
-	reader, err := tlcsv.NewReader(opts.FeedURL)
+	if opts.AllowLocalFetch {
+		reqOpts = append(reqOpts, request.WithAllowLocal)
+	}
+	if opts.AllowS3Fetch {
+		reqOpts = append(reqOpts, request.WithAllowS3)
+	}
+	// Get secret and set auth
+	if feed.Authorization.Type != "" {
+		secret, err := feed.MatchSecrets(opts.Secrets)
+		if err != nil {
+			fr.FetchError = err
+			return fr, nil
+		}
+		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
+	}
+	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(opts.FeedURL, reqOpts...))
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil
-	}
-	if v, ok := reader.Adapter.(canSetAuth); ok {
-		v.SetAuth(feed.Authorization, secret)
 	}
 	// Open
 	if err := reader.Open(); err != nil {
@@ -167,15 +173,14 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 	}
 	// Upload file or copy to output directory
 	if opts.S3 != "" {
-		awscmd := exec.Command(
-			"aws",
-			"s3",
-			"cp",
-			reader.Path(),
-			fmt.Sprintf("%s/%s.zip", opts.S3, fv.SHA1),
-		)
-		if output, err := awscmd.Output(); err != nil {
-			return fr, fmt.Errorf("upload error: %s: %s", err, output)
+		rp, err := os.Open(reader.Path())
+		if err != nil {
+			return fr, err
+		}
+		defer rp.Close()
+		ustr := fmt.Sprintf("%s/%s.zip", opts.S3, fv.SHA1)
+		if err := request.UploadS3(context.Background(), ustr, tl.Secret{}, rp); err != nil {
+			return fr, err
 		}
 	}
 	if opts.Directory != "" {

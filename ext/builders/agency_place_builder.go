@@ -11,9 +11,9 @@ import (
 
 type AgencyPlace struct {
 	AgencyID string
-	Name     tl.OString
-	Adm1name tl.OString
-	Adm0name tl.OString
+	Name     tl.String
+	Adm1name tl.String
+	Adm0name tl.String
 	Count    int
 	Rank     float64
 	tl.MinEntity
@@ -105,9 +105,9 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	}
 	// For each geohash, check nearby populated places and inside admin boundaries
 	type foundPlace struct {
-		Name     tl.OString
-		Adm1name tl.OString
-		Adm0name tl.OString
+		Name     tl.String
+		Adm1name tl.String
+		Adm0name tl.String
 	}
 	pointPlaces := map[string]foundPlace{}
 	pointAdmins := map[string]foundPlace{}

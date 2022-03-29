@@ -13,8 +13,11 @@ type FeedInfo struct {
 	FeedPublisherURL  string `csv:",required"`
 	FeedLang          string `csv:",required"`
 	FeedVersion       string `db:"feed_version_name"`
-	FeedStartDate     ODate
-	FeedEndDate       ODate
+	FeedStartDate     Date
+	FeedEndDate       Date
+	DefaultLang       String
+	FeedContactEmail  String
+	FeedContactURL    String
 	BaseEntity
 }
 
@@ -26,6 +29,9 @@ func (ent *FeedInfo) Errors() (errs []error) {
 	errs = append(errs, enum.CheckPresent("feed_lang", ent.FeedLang)...)
 	errs = append(errs, enum.CheckURL("feed_publisher_url", ent.FeedPublisherURL)...)
 	errs = append(errs, enum.CheckLanguage("feed_lang", ent.FeedLang)...)
+	errs = append(errs, enum.CheckLanguage("default_lang", ent.DefaultLang.String)...)
+	errs = append(errs, enum.CheckEmail("feed_contact_email", ent.FeedContactEmail.String)...)
+	errs = append(errs, enum.CheckURL("feed_contact_url", ent.FeedContactURL.String)...)
 	if ent.FeedStartDate.IsZero() && ent.FeedEndDate.IsZero() {
 		// skip
 	} else {

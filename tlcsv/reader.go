@@ -2,7 +2,6 @@ package tlcsv
 
 import (
 	"io"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -19,21 +18,21 @@ type Reader struct {
 	Adapter
 }
 
+func NewReaderFromAdapter(a Adapter) (*Reader, error) {
+	return &Reader{Adapter: a}, nil
+}
+
 // NewReader returns an initialized CSV Reader.
 func NewReader(path string) (*Reader, error) {
-	var a Adapter
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "ftp://") {
-		a = &URLAdapter{url: path}
-	} else if strings.HasPrefix(path, "s3://") {
-		a = &URLAdapter{url: path}
-	} else if strings.HasPrefix(path, "overlay://") {
-		a = NewOverlayAdapter(path)
-	} else if fi, err := os.Stat(path); err == nil && fi.IsDir() {
-		a = NewDirAdapter(path)
-	} else {
-		a = NewZipAdapter(path)
+	a, err := NewAdapter(path)
+	if err != nil {
+		return nil, err
 	}
 	return &Reader{Adapter: a}, nil
+}
+
+func (reader *Reader) String() string {
+	return reader.Adapter.Path()
 }
 
 // ReadEntities provides a generic interface for reading entities.
@@ -523,6 +522,36 @@ func (reader *Reader) Pathways() (out chan tl.Pathway) {
 		ent := tl.Pathway{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.Pathway{}
+			loadRow(&e, row)
+			out <- e
+		})
+		close(out)
+	}()
+	return out
+}
+
+// Attributions sends out Attributions.
+func (reader *Reader) Attributions() (out chan tl.Attribution) {
+	out = make(chan tl.Attribution, bufferSize)
+	go func() {
+		ent := tl.Attribution{}
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			e := tl.Attribution{}
+			loadRow(&e, row)
+			out <- e
+		})
+		close(out)
+	}()
+	return out
+}
+
+// Translations sends out Translations.
+func (reader *Reader) Translations() (out chan tl.Translation) {
+	out = make(chan tl.Translation, bufferSize)
+	go func() {
+		ent := tl.Translation{}
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			e := tl.Translation{}
 			loadRow(&e, row)
 			out <- e
 		})

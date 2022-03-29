@@ -12,9 +12,10 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -135,7 +136,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		fvi.ID = fviid
 	} else {
 		// Serious error
-		log.Error("Error creating FeedVersionImport: %s", err.Error())
+		log.Errorf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Import
@@ -153,9 +154,9 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 			}
 		}
 		// Update route_stops, agency_geometries, etc...
-		log.Info("Finalizing import")
+		log.Infof("Finalizing import")
 		if opts.Activate {
-			log.Info("Activating feed version")
+			log.Infof("Activating feed version")
 			if err := ActivateFeedVersion(atx, opts.FeedVersionID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
@@ -171,7 +172,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		fviresult.UpdateTimestamps()
 		if err := atx.Update(&fviresult); err != nil {
 			// Serious error
-			log.Error("Error saving FeedVersionImport: %s", err.Error())
+			log.Errorf("Error saving FeedVersionImport: %s", err.Error())
 			return err
 		}
 		return err
@@ -184,7 +185,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		fvi.UpdateTimestamps()
 		if err := adapter.Update(&fvi); err != nil {
 			// Serious error
-			log.Error("Error saving FeedVersionImport: %s", err.Error())
+			log.Errorf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
 		}
 		return Result{FeedVersionImport: fvi}, errImport
@@ -196,7 +197,13 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	reader, err := tlcsv.NewReader(dmfrGetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1))
+	var reqOpts []request.RequestOption
+	reqOpts = append(reqOpts, request.WithAllowLocal)
+	if opts.S3 != "" {
+		reqOpts = append(reqOpts, request.WithAllowS3)
+	}
+	adapterUrl := dmfrGetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
+	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))
 	if err != nil {
 		return fvi, err
 	}

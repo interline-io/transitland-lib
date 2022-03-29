@@ -16,7 +16,7 @@ func TestFindImportableFeeds(t *testing.T) {
 		f := testdb.CreateTestFeed(atx, "test")
 		allfvids := []int{}
 		for i := 0; i < 10; i++ {
-			fv1 := testdb.ShouldInsert(t, atx, &tl.FeedVersion{FeedID: f.ID, EarliestCalendarDate: tl.NewODate(time.Now()), LatestCalendarDate: tl.NewODate(time.Now())})
+			fv1 := testdb.ShouldInsert(t, atx, &tl.FeedVersion{FeedID: f.ID, EarliestCalendarDate: tl.NewDate(time.Now()), LatestCalendarDate: tl.NewDate(time.Now())})
 			allfvids = append(allfvids, fv1)
 		}
 		expfvids := allfvids[:5]
@@ -41,14 +41,14 @@ func TestMainImportFeedVersion(t *testing.T) {
 	setup := func(atx tldb.Adapter, filename string) int {
 		// Create FV
 		fv := tl.FeedVersion{}
-		fv.EarliestCalendarDate = tl.NewODate(time.Now())
-		fv.LatestCalendarDate = tl.NewODate(time.Now())
+		fv.EarliestCalendarDate = tl.NewDate(time.Now())
+		fv.LatestCalendarDate = tl.NewDate(time.Now())
 		fv.File = filename
 		return testdb.ShouldInsert(t, atx, &fv)
 	}
 	t.Run("Success", func(t *testing.T) {
 		testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-			fvid := setup(atx, testutil.ExampleDir.URL)
+			fvid := setup(atx, testutil.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := MainImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid})
 			if err != nil {
@@ -67,7 +67,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 				t.Errorf("expected in_progress = false")
 			}
 			count := 0
-			expstops := testutil.ExampleDir.Counts["stops.txt"]
+			expstops := testutil.ExampleZip.Counts["stops.txt"]
 			testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 			if count != expstops {
 				t.Errorf("got %d stops, expect %d stops", count, expstops)
@@ -93,9 +93,8 @@ func TestMainImportFeedVersion(t *testing.T) {
 			if fvi.Success != false {
 				t.Errorf("expected success = false")
 			}
-			explog := "file does not exist"
-			if fvi.ExceptionLog != explog {
-				t.Errorf("got '%s' expected '%s'", fvi.ExceptionLog, explog)
+			if fvi.ExceptionLog == "" {
+				t.Error("got no exception log error, expected something", fvi.ExceptionLog)
 			}
 			if fvi.InProgress != false {
 				t.Errorf("expected in_progress = false")
@@ -112,8 +111,8 @@ func TestImportFeedVersion(t *testing.T) {
 	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		// Create FV
 		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
-		fv.EarliestCalendarDate = tl.NewODate(time.Now())
-		fv.LatestCalendarDate = tl.NewODate(time.Now())
+		fv.EarliestCalendarDate = tl.NewDate(time.Now())
+		fv.LatestCalendarDate = tl.NewDate(time.Now())
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import

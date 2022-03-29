@@ -29,7 +29,7 @@ func expectTripToStopTime(e expectTrip) []tl.StopTime {
 			StopSequence:      i,
 			ArrivalTime:       tl.NewWideTimeFromSeconds(e.ArrivalTime[i]),
 			DepartureTime:     tl.NewWideTimeFromSeconds(e.DepartureTime[i]),
-			ShapeDistTraveled: tl.NewOFloat(e.ShapeDistTraveled[i]),
+			ShapeDistTraveled: tl.NewFloat(e.ShapeDistTraveled[i]),
 		})
 	}
 	return ret

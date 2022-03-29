@@ -53,7 +53,7 @@ func (adapter *SQLiteAdapter) Open() error {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
 	db.Mapper = MapperCache.Mapper
-	adapter.db = &QueryLogger{db.Unsafe()}
+	adapter.db = &QueryLogger{Ext: db.Unsafe()}
 	return nil
 }
 
@@ -70,7 +70,7 @@ func (adapter *SQLiteAdapter) Create() error {
 	// Dont log, used often in tests
 	adb := adapter.db
 	if a, ok := adapter.db.(*QueryLogger); ok {
-		adb = a.sqext
+		adb = a.Ext
 	}
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
@@ -99,7 +99,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{tx}}
+	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}
 	if errTx := cb(adapter2); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3
@@ -107,6 +107,17 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 		return errTx
 	}
 	return tx.Commit()
+}
+
+// TableExists returns true if the requested table exists
+func (adapter *SQLiteAdapter) TableExists(t string) (bool, error) {
+	qstr := `SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?;`
+	checkName := ""
+	err := sqlx.Get(adapter.db, &checkName, adapter.db.Rebind(qstr), t)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return checkName == t, err
 }
 
 // Find finds a single entity based on the EntityID()

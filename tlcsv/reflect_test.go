@@ -13,7 +13,7 @@ func TestGetString(t *testing.T) {
 		StopID:            "456",
 		ArrivalTime:       tl.NewWideTimeFromSeconds(3600),
 		DepartureTime:     tl.NewWideTimeFromSeconds(7200),
-		ShapeDistTraveled: tl.NewOFloat(123.456),
+		ShapeDistTraveled: tl.NewFloat(123.456),
 	}
 	expect := map[string]string{
 		"trip_id":             "123",

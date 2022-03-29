@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/internal/log"
 	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/rs/zerolog"
 	geomxy "github.com/twpayne/go-geom/xy"
 )
 
@@ -92,6 +93,8 @@ type Options struct {
 	JourneyPatternKey func(*tl.Trip) string
 	// Named extensions
 	Extensions []string
+	// Sub-logger
+	sublogger zerolog.Logger
 }
 
 // Copier copies from Reader to Writer
@@ -124,6 +127,9 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	copier.Options = opts
 	copier.Reader = reader
 	copier.Writer = writer
+	// Logging
+	copier.Options.sublogger = log.Logger.With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+
 	// Result
 	result := NewResult()
 	copier.result = result
@@ -167,8 +173,14 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 
 	// Add extensions
 	for _, extName := range opts.Extensions {
-		e, err := ext.GetExtension(extName)
-		if err != nil || e == nil {
+		extName, extArgs, err := ext.ParseExtensionArgs(extName)
+		if err != nil {
+			return nil, err
+		}
+		e, err := ext.GetExtension(extName, extArgs)
+		if err != nil {
+			return nil, fmt.Errorf("error creating extension '%s' with args '%s': %s", extName, extArgs, err.Error())
+		} else if e == nil {
 			return nil, fmt.Errorf("no registered extension for '%s'", extName)
 		}
 		if err := copier.AddExtension(e); err != nil {
@@ -176,6 +188,10 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 		}
 	}
 	return copier, nil
+}
+
+func (copier *Copier) SetLogger(g zerolog.Logger) {
+	copier.sublogger = log.Logger.With().Str("reader", "test").Str("writer", "test").Logger()
 }
 
 // AddValidator adds an additional entity validator.
@@ -276,12 +292,12 @@ func (copier *Copier) writeBatch(ents []tl.Entity) error {
 	// OK, Save
 	eids, err := copier.Writer.AddEntities(ents)
 	if err != nil {
-		log.Error("Critical error: failed to write %d entities for %s: %s", len(ents), efn, err.Error())
+		copier.sublogger.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(ents))
 		return err
 	}
 	for i, eid := range eids {
 		sid := sids[i]
-		// log.Debug("%s '%s': saved -> %s", efn, sid, eid)
+		// copier.sublogger.Trace().Str("filename", efn).Str("source_id", sid).Str("output_id", eid).Msg("saved")
 		copier.EntityMap.Set(efn, sid, eid)
 	}
 	copier.result.EntityCount[efn] += len(ents)
@@ -321,8 +337,8 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	sid := ent.EntityID() // source ID
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
-			log.Debug("%s '%s' skipped by filter: %s", efn, sid, err)
 			copier.result.SkipEntityFilterCount[efn]++
+			copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("skipped by filter")
 			return errors.New("skipped by filter")
 		}
 	}
@@ -376,7 +392,7 @@ func (copier *Copier) addEntity(ent tl.Entity) (string, error) {
 	sid := ent.EntityID()
 	eid, err := copier.Writer.AddEntity(ent)
 	if err != nil {
-		log.Error("Critical error: failed to write %s '%s': %s -- entity dump: %#v", efn, sid, err.Error(), ent)
+		copier.sublogger.Error().Err(err).Str("filename", efn).Str("source_id", sid).Msgf("critical error: failed to write -- entity dump %#v", ent)
 		return "", err
 	}
 	copier.EntityMap.Set(efn, sid, eid)
@@ -422,6 +438,8 @@ func (copier *Copier) Copy() *Result {
 		copier.copyFrequencies,
 		copier.copyTransfers,
 		copier.copyFeedInfos,
+		copier.copyTranslations,
+		copier.copyAttributions,
 	}
 	for i := range fns {
 		if err := fns[i](); err != nil {
@@ -602,6 +620,28 @@ func (copier *Copier) copyFrequencies() error {
 	return nil
 }
 
+// copyAttributions writes Attributions
+func (copier *Copier) copyAttributions() error {
+	for e := range copier.Reader.Attributions() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.Attribution{})
+	return nil
+}
+
+// copyTranslations writes Translations
+func (copier *Copier) copyTranslations() error {
+	for e := range copier.Reader.Translations() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.Translation{})
+	return nil
+}
+
 // copyCalendars
 func (copier *Copier) copyCalendars() error {
 	// Get Calendars as Services
@@ -656,8 +696,7 @@ func (copier *Copier) copyCalendars() error {
 	var bt []tl.Entity
 	var btErr error
 	for _, svc := range svcs {
-		// Need to get calendar dates before ID is updated
-		cds := svc.CalendarDates()
+		cid := svc.EntityID()
 		// Skip main Calendar entity if generated and not normalizing/simplifying service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
 			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
@@ -666,11 +705,14 @@ func (copier *Copier) copyCalendars() error {
 				return writeErr
 			} else if entErr != nil {
 				// do not write calendar dates if service had error
-				cds = nil
+				continue
+				// cds = nil
 			}
 		}
 		// Copy dependent entities
+		cds := svc.CalendarDates()
 		for i := range cds {
+			cds[i].ServiceID = cid
 			if bt, btErr = copier.checkBatch(bt, &cds[i]); btErr != nil {
 				return btErr
 			}
@@ -772,15 +814,15 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if !trip.ShapeID.Valid && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
 			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID]; ok {
-				trip.ShapeID = tl.NewOKey(shapeid)
+				trip.ShapeID = tl.NewKey(shapeid)
 			} else {
 				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), trip.StopTimes); err != nil {
-					log.Error("Error: failed to create shape for trip '%s': %s", trip.EntityID(), err)
+					copier.sublogger.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
 					trip.AddWarning(err)
 				} else {
 					// Set ShapeID
 					stopPatternShapeIDs[trip.StopPatternID] = shapeid
-					trip.ShapeID = tl.NewOKey(shapeid)
+					trip.ShapeID = tl.NewKey(shapeid)
 				}
 			}
 		}
@@ -857,26 +899,32 @@ func (copier *Copier) logCount(ent tl.Entity) {
 	fnr := strings.ReplaceAll(fn, ".txt", "")
 	saved := copier.result.EntityCount[fn]
 	out = append(out, fmt.Sprintf("Saved %d %s", saved, fnr))
+	evt := copier.sublogger.Info().Str("filename", fn).Int("saved", saved)
 	if a, ok := copier.result.GeneratedCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("generated %d", a))
+		evt = evt.Int("generated", a)
 	}
 	if a, ok := copier.result.SkipEntityMarkedCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("skipped %d as unmarked", a))
+		evt = evt.Int("skipped_marker", a)
 	}
 	if a, ok := copier.result.SkipEntityFilterCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("skipped %d by filter", a))
+		evt = evt.Int("skipped_filter", a)
 	}
 	if a, ok := copier.result.SkipEntityErrorCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("skipped %d with entity errors", a))
+		evt = evt.Int("entity_errors", a)
 	}
 	if a, ok := copier.result.SkipEntityReferenceCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("skipped %d with reference errors", a))
+		evt = evt.Int("reference_errors", a)
 	}
 	if saved == 0 && len(out) == 1 {
 		return
 	}
 	outs := strings.Join(out, "; ")
-	log.Info(outs)
+	evt.Msg(outs)
 }
 
 func (copier *Copier) createMissingShape(shapeID string, stoptimes []tl.StopTime) (string, error) {

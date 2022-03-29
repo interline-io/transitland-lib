@@ -9,6 +9,30 @@ import (
 
 // Error wrapping helpers
 
+// CheckInArray returns an error if the value is not in the set of provided values.
+func CheckInArray(field string, value string, values ...string) []error {
+	for _, v := range values {
+		if value == v {
+			return nil
+		}
+	}
+	return []error{causes.NewInvalidFieldError(field, value, fmt.Errorf("must be one of %s", strings.Join(values, ", ")))}
+}
+
+// CheckInArrayInt returns an error if the value is not in the set of provided values.
+func CheckInArrayInt(field string, value int, values ...int) []error {
+	for _, v := range values {
+		if value == v {
+			return nil
+		}
+	}
+	var valueStrs []string
+	for _, v := range values {
+		valueStrs = append(valueStrs, fmt.Sprintf("%d", v))
+	}
+	return []error{causes.NewInvalidFieldError(field, fmt.Sprintf("%d", value), fmt.Errorf("must be one of %s", strings.Join(valueStrs, ", ")))}
+}
+
 // CheckPositive returns an error if the value is non-negative
 func CheckPositive(field string, value float64) (errs []error) {
 	if value < 0 {

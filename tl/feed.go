@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -12,29 +13,46 @@ type Feed struct {
 	ID              int                 `json:"-"`
 	FeedID          string              `json:"id" db:"onestop_id"`
 	FeedNamespaceID string              `json:"feed_namespace_id"`
-	Name            OString             `json:"name"`
+	Name            String              `json:"name"`
 	Spec            string              `json:"spec"`
 	URLs            FeedUrls            `json:"urls" db:"urls"`
 	AssociatedFeeds FeedAssociatedFeeds `json:"associated_feeds"` // `json:"associated_feeds"`
 	Languages       FeedLanguages       `json:"languages,omitempty"`
 	License         FeedLicense         `json:"license"`
 	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
-	Operators       []Operator          `json:"operators" db:"-"`
 	Tags            Tags                `json:"tags" db:"feed_tags" `
 	File            string              `json:"file"`       // internal
-	DeletedAt       OTime               `json:"deleted_at"` // internal
+	DeletedAt       Time                `json:"deleted_at"` // internal
 	Timestamps      `json:"-"`          // internal
 }
 
-// Equal compares the JSON representation of two feeds, excluding Operators.
+func (ent *Feed) MatchSecrets(secrets []Secret) (Secret, error) {
+	found := Secret{}
+	count := 0
+	for _, secret := range secrets {
+		if secret.MatchFeed(ent.FeedID) {
+			count += 1
+			found = secret
+		} else if secret.MatchFilename(ent.File) {
+			count += 1
+			found = secret
+		}
+	}
+	if count == 0 {
+		return Secret{}, errors.New("no results")
+	} else if count > 1 {
+		return Secret{}, fmt.Errorf("ambiguous secrets; %d matches", count)
+	}
+	return found, nil
+}
+
+// Equal compares the JSON representation of two feeds
 func (ent *Feed) Equal(other *Feed) bool {
 	if other == nil {
 		return false
 	}
 	a1 := *ent
-	a1.Operators = nil
 	a2 := *other
-	a2.Operators = nil
 	a1j, _ := json.Marshal(&a1)
 	a2j, _ := json.Marshal(&a2)
 	return string(a1j) == string(a2j)

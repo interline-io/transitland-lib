@@ -8,15 +8,15 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/internal/download"
-	"github.com/interline-io/transitland-lib/internal/log"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/request"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.
@@ -39,17 +39,49 @@ type WriterAdapter interface {
 
 /////////////////////
 
+// NewAdapter returns a basic adapter for the given URL.
+// Use NewURLAdapter() to provide additional options.
+func NewAdapter(address string) (Adapter, error) {
+	parsedUrl, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+	var a Adapter
+	switch parsedUrl.Scheme {
+	case "http":
+		a = &URLAdapter{url: address}
+	case "https":
+		a = &URLAdapter{url: address}
+	case "ftp":
+		a = &URLAdapter{url: address}
+	case "s3":
+		a = &URLAdapter{url: address}
+	case "overlay":
+		a = NewOverlayAdapter(address)
+	default:
+		if fi, err := os.Stat(address); err == nil && fi.IsDir() {
+			a = NewDirAdapter(address)
+		} else {
+			a = NewZipAdapter(address)
+		}
+	}
+	return a, nil
+}
+
+/////////////////////
+
 // URLAdapter downloads a GTFS URL to a temporary file, and removes the file when it is closed.
 type URLAdapter struct {
-	url    string
-	secret download.Secret
-	auth   tl.FeedAuthorization
+	url     string
+	reqOpts []request.RequestOption
 	ZipAdapter
 }
 
-func (adapter *URLAdapter) SetAuth(auth tl.FeedAuthorization, secret download.Secret) {
-	adapter.secret = secret
-	adapter.auth = auth
+func NewURLAdapter(address string, opts ...request.RequestOption) *URLAdapter {
+	return &URLAdapter{
+		url:     address,
+		reqOpts: opts,
+	}
 }
 
 // Open the adapter, and download the provided URL to a temporary file.
@@ -66,7 +98,7 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	tmpfilepath, err := download.AuthenticatedRequest(url, adapter.secret, adapter.auth)
+	tmpfilepath, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
 	if err != nil {
 		return err
 	}
@@ -94,7 +126,7 @@ type ZipAdapter struct {
 
 // NewZipAdapter returns an initialized zip adapter.
 func NewZipAdapter(path string) *ZipAdapter {
-	return &ZipAdapter{path: path}
+	return &ZipAdapter{path: strings.TrimPrefix(path, "file://")}
 }
 
 // Open the adapter. Return an error if the file does not exist.
@@ -114,7 +146,7 @@ func (adapter *ZipAdapter) Open() error {
 		if err != nil {
 			return err
 		}
-		log.Debug("Using auto-discovered internal prefix: %s", pfx)
+		log.Debugf("Using auto-discovered internal prefix: %s", pfx)
 		adapter.internalPrefix = pfx
 	} else if strings.HasSuffix(adapter.internalPrefix, ".zip") {
 		// If the internal prefix is a zip, extract this to a temp file
@@ -129,7 +161,7 @@ func (adapter *ZipAdapter) Open() error {
 			tmpfilepath = tmpfile.Name()
 			// Write the body to file
 			io.Copy(tmpfile, r)
-			log.Debug("Extracted %s internal prefix %s to %s", adapter.path, adapter.internalPrefix, tmpfilepath)
+			log.Debugf("Extracted %s internal prefix %s to %s", adapter.path, adapter.internalPrefix, tmpfilepath)
 		})
 		if err != nil {
 			return err
@@ -144,7 +176,7 @@ func (adapter *ZipAdapter) Open() error {
 // Close the adapter.
 func (adapter *ZipAdapter) Close() error {
 	if adapter.tmpfilepath != "" {
-		log.Debug("removing temp file: %s", adapter.tmpfilepath)
+		log.Debugf("removing temp file: %s", adapter.tmpfilepath)
 		if err := os.Remove(adapter.tmpfilepath); err != nil {
 			return err
 		}
@@ -304,7 +336,7 @@ type DirAdapter struct {
 // NewDirAdapter returns an initialized DirAdapter.
 func NewDirAdapter(path string) *DirAdapter {
 	return &DirAdapter{
-		path:  path,
+		path:  strings.TrimPrefix(path, "file://"),
 		files: map[string]*os.File{},
 	}
 }

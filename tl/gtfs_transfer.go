@@ -10,7 +10,7 @@ type Transfer struct {
 	FromStopID      string `csv:",required" required:"true"`
 	ToStopID        string `csv:",required" required:"true"`
 	TransferType    int
-	MinTransferTime OInt
+	MinTransferTime Int
 	BaseEntity
 }
 

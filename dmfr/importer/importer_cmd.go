@@ -8,7 +8,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/internal/cli"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -94,7 +94,10 @@ func (cmd *Command) Parse(args []string) error {
 // Run this command
 func (cmd *Command) Run() error {
 	if cmd.Adapter == nil {
-		writer := tldb.MustGetWriter(cmd.DBURL, true)
+		writer, err := tldb.OpenWriter(cmd.DBURL, true)
+		if err != nil {
+			return err
+		}
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
@@ -149,7 +152,7 @@ func (cmd *Command) Run() error {
 	}
 	///////////////
 	// Here we go
-	log.Info("Importing %d feed versions", len(qrs))
+	log.Infof("Importing %d feed versions", len(qrs))
 	jobs := make(chan Options, len(qrs))
 	results := make(chan Result, len(qrs))
 	for _, fvid := range qrs {
@@ -182,23 +185,23 @@ func dmfrImportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan Opt
 	for opts := range jobs {
 		q := qr{}
 		if err := adapter.Get(&q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
-			log.Error("Could not get details for FeedVersion %d", opts.FeedVersionID)
+			log.Errorf("Could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}
 		if dryrun {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue
 		}
-		log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
 		result, err := MainImportFeedVersion(adapter, opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.Error("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
+			log.Errorf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
 		} else if result.FeedVersionImport.Success {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): success: count %v errors: %v referrors: %v (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.EntityCount, result.FeedVersionImport.SkipEntityErrorCount, result.FeedVersionImport.SkipEntityReferenceCount, t2)
+			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): success: count %v errors: %v referrors: %v (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.EntityCount, result.FeedVersionImport.SkipEntityErrorCount, result.FeedVersionImport.SkipEntityReferenceCount, t2)
 		} else {
-			log.Info("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s, (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
+			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s, (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
 		}
 		results <- result
 	}

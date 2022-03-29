@@ -11,12 +11,14 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/sync"
 	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
+	_ "github.com/interline-io/transitland-lib/ext/redate"
 	"github.com/interline-io/transitland-lib/extract"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
+	"github.com/rs/zerolog"
 )
 
 type runner interface {
@@ -25,7 +27,6 @@ type runner interface {
 }
 
 func main() {
-	log.SetLevel(log.INFO)
 	quietFlag := false
 	debugFlag := false
 	traceFlag := false
@@ -55,20 +56,18 @@ func main() {
 		return
 	}
 	if quietFlag {
-		log.SetLevel(log.ERROR)
+		log.SetLevel(zerolog.Disabled)
+	} else if debugFlag {
+		log.SetLevel(zerolog.DebugLevel)
+	} else if traceFlag {
+		log.SetLevel(zerolog.TraceLevel)
 	}
-	if debugFlag {
-		log.SetLevel(log.DEBUG)
-	}
-	if traceFlag {
-		log.SetLevel(log.TRACE)
-		log.SetQueryLog(true)
-	}
+
 	args := flag.Args()
 	subc := flag.Arg(0)
 	if subc == "" {
 		flag.Usage()
-		log.Exit("")
+		os.Exit(1)
 	}
 	var r runner
 	switch subc {
@@ -91,12 +90,15 @@ func main() {
 	case "dmfr": // backwards compat
 		r = &dmfrCommand{}
 	default:
-		log.Exit("%q is not valid command.", subc)
+		log.Errorf("%q is not valid command.", subc)
+		os.Exit(1)
 	}
 	if err := r.Parse(args[1:]); err != nil {
-		log.Exit("Erorr: %s", err.Error())
+		log.Errorf(err.Error())
+		os.Exit(1)
 	}
 	if err := r.Run(); err != nil {
-		log.Exit("Error: %s", err.Error())
+		log.Errorf(err.Error())
+		os.Exit(1)
 	}
 }

@@ -1,7 +1,9 @@
 package extract
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -10,7 +12,7 @@ import (
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	_ "github.com/interline-io/transitland-lib/ext/redate"
 	"github.com/interline-io/transitland-lib/internal/cli"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -68,7 +70,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
-		log.Exit("Requires input reader and output writer")
+		return errors.New("requires input reader and output writer")
 	}
 	cmd.readerPath = fl.Arg(0)
 	cmd.writerPath = fl.Arg(1)
@@ -77,9 +79,15 @@ func (cmd *Command) Parse(args []string) error {
 
 func (cmd *Command) Run() error {
 	// Reader / Writer
-	reader := ext.MustGetReader(cmd.readerPath)
+	reader, err := ext.OpenReader(cmd.readerPath)
+	if err != nil {
+		return err
+	}
 	defer reader.Close()
-	writer := ext.MustGetWriter(cmd.writerPath, cmd.create)
+	writer, err := ext.OpenWriter(cmd.writerPath, cmd.create)
+	if err != nil {
+		return err
+	}
 	defer writer.Close()
 	// Create fv
 	if dbw, ok := writer.(*tldb.Writer); ok {
@@ -88,7 +96,7 @@ func (cmd *Command) Run() error {
 		} else {
 			fvid, err := dbw.CreateFeedVersion(reader)
 			if err != nil {
-				log.Exit("Error creating FeedVersion: %s", err)
+				return fmt.Errorf("error creating feed version: %s", err.Error())
 			}
 			dbw.FeedVersionID = fvid
 		}
@@ -98,7 +106,7 @@ func (cmd *Command) Run() error {
 	cmd.Options.Extensions = cmd.extensions
 	cp, err := copier.NewCopier(reader, writer, cmd.Options)
 	if err != nil {
-		log.Exit(err.Error())
+		return err
 	}
 	// Create SetterFilter
 	setvalues := [][]string{}
@@ -109,7 +117,7 @@ func (cmd *Command) Run() error {
 		tx := NewSetterFilter()
 		for _, setv := range setvalues {
 			if len(setv) != 4 {
-				log.Exit("Invalid set argument")
+				return errors.New("invalid set argument")
 			}
 			tx.AddValue(setv[0], setv[1], setv[2], setv[3])
 		}
@@ -122,7 +130,7 @@ func (cmd *Command) Run() error {
 		if v, err := strconv.Atoi(i); err == nil {
 			rthits[v] = true
 		} else {
-			log.Exit("Invalid route_type: %s", i)
+			return fmt.Errorf("invalid route_type: %s", i)
 		}
 	}
 	for ent := range reader.Routes() {
@@ -143,19 +151,19 @@ func (cmd *Command) Run() error {
 	}
 	// Marker
 	if count > 0 {
-		log.Debug("Extract filter:")
+		log.Debugf("Extract filter:")
 		for k, v := range fm {
 			for _, i := range v {
-				log.Debug("\t%s: %s", k, i)
+				log.Debugf("\t%s: %s", k, i)
 			}
 		}
 		em := NewMarker()
-		log.Debug("Loading graph")
+		log.Debugf("Loading graph")
 		if err := em.Filter(reader, fm); err != nil {
 			return err
 		}
 		cp.Marker = &em
-		log.Debug("Graph loading complete")
+		log.Debugf("Graph loading complete")
 	}
 	// Copy
 	result := cp.Copy()

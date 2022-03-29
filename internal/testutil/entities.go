@@ -50,4 +50,10 @@ func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
 	for ent := range reader.FeedInfos() {
 		cb(&ent)
 	}
+	for ent := range reader.Attributions() {
+		cb(&ent)
+	}
+	for ent := range reader.Translations() {
+		cb(&ent)
+	}
 }

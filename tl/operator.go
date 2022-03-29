@@ -9,14 +9,14 @@ import (
 
 type Operator struct {
 	ID              int                     `json:"-"`
-	OnestopID       OString                 `json:"onestop_id"`
+	OnestopID       String                  `json:"onestop_id"`
 	Tags            Tags                    `json:"tags" db:"operator_tags"`
-	Name            OString                 `json:"name"`
-	ShortName       OString                 `json:"short_name"`
-	Website         OString                 `json:"website"`
+	Name            String                  `json:"name"`
+	ShortName       String                  `json:"short_name"`
+	Website         String                  `json:"website"`
 	AssociatedFeeds OperatorAssociatedFeeds `json:"associated_feeds"`
-	File            OString                 `json:"file"`       // internal
-	DeletedAt       OTime                   `json:"deleted_at"` // internal
+	File            String                  `json:"file"`       // internal
+	DeletedAt       Time                    `json:"deleted_at"` // internal
 	Timestamps      `json:"-"`
 }
 
@@ -50,16 +50,16 @@ func (ent *Operator) GetID() int {
 ////////////
 
 type OperatorAssociatedFeed struct {
-	GtfsAgencyID         OString `json:"gtfs_agency_id,omitempty" db:"gtfs_agency_id"`
-	FeedOnestopID        OString `json:"feed_onestop_id,omitempty" db:"-"`
-	ResolvedOnestopID    OString `json:"-"` // internal
-	ResolvedGtfsAgencyID OString `json:"-"` // internal
-	ResolvedName         OString `json:"-"` // internal
-	ResolvedShortName    OString `json:"-"` // internal
-	ResolvedPlaces       OString `json:"-"` // internal
-	OperatorID           OInt    `json:"-"` // internal
-	ID                   int     `json:"-"` // internal
-	FeedID               int     `json:"-"` // internal
+	GtfsAgencyID         String `json:"gtfs_agency_id,omitempty" db:"gtfs_agency_id"`
+	FeedOnestopID        String `json:"feed_onestop_id,omitempty" db:"-"`
+	ResolvedOnestopID    String `json:"-"` // internal
+	ResolvedGtfsAgencyID String `json:"-"` // internal
+	ResolvedName         String `json:"-"` // internal
+	ResolvedShortName    String `json:"-"` // internal
+	ResolvedPlaces       String `json:"-"` // internal
+	OperatorID           Int    `json:"-"` // internal
+	ID                   int    `json:"-"` // internal
+	FeedID               int    `json:"-"` // internal
 }
 
 func (o OperatorAssociatedFeed) TableName() string {

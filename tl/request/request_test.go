@@ -1,4 +1,4 @@
-package download
+package request
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestAuthorizedRequest(t *testing.T) {
-	secret := Secret{Key: "abcd", Username: "efgh", Password: "ijkl"}
+	secret := tl.Secret{Key: "abcd", Username: "efgh", Password: "ijkl"}
 	testcases := []struct {
 		name       string
 		url        string
@@ -49,7 +49,7 @@ func TestAuthorizedRequest(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			tmpfile, err := AuthenticatedRequest(tc.url, secret, tc.auth)
+			tmpfile, err := AuthenticatedRequestDownload(tc.url, WithAuth(secret, tc.auth))
 			if err != nil {
 				t.Error(err)
 				return

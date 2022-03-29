@@ -41,15 +41,12 @@ func (adapter *PostgresAdapter) Open() error {
 		return err
 	}
 	db.Mapper = MapperCache.Mapper
-	adapter.db = &QueryLogger{db.Unsafe()}
+	adapter.db = &QueryLogger{Ext: db.Unsafe()}
 	return nil
 }
 
 // Close the adapter.
 func (adapter *PostgresAdapter) Close() error {
-	if a, ok := adapter.db.(canClose); ok {
-		return a.Close()
-	}
 	return nil
 }
 
@@ -70,25 +67,50 @@ func (adapter *PostgresAdapter) DBX() sqlx.Ext {
 func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	var err error
 	var tx *sqlx.Tx
-	if a, ok := adapter.db.(canBeginx); ok {
+	// Special check for wrapped connections
+	commit := false
+	if a, ok := adapter.db.(*QueryLogger); ok {
+		if b, ok := a.Ext.(*sqlx.Tx); ok {
+			tx = b
+		}
+	}
+	// If we aren't already in a transaction, begin one, and commit at end
+	if a, ok := adapter.db.(canBeginx); tx == nil && ok {
 		tx, err = a.Beginx()
+		commit = true
 	}
 	if err != nil {
 		return err
 	}
-	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{tx}}
+	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}
 	if err2 := cb(adapter2); err2 != nil {
-		if errTx := tx.Rollback(); errTx != nil {
-			return errTx
+		if commit {
+			if errTx := tx.Rollback(); errTx != nil {
+				return errTx
+			}
 		}
 		return err2
 	}
-	return tx.Commit()
+	if commit {
+		return tx.Commit()
+	}
+	return nil
 }
 
 // Sqrl returns a properly configured Squirrel StatementBuilder.
 func (adapter *PostgresAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db).PlaceholderFormat(sq.Dollar)
+}
+
+// TableExists returns true if the requested table exists
+func (adapter *PostgresAdapter) TableExists(t string) (bool, error) {
+	qstr := `SELECT EXISTS ( SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = ?);`
+	exists := false
+	err := sqlx.Get(adapter.db, &exists, adapter.db.Rebind(qstr), t)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return exists, err
 }
 
 // Find finds a single entity based on the EntityID()
@@ -182,48 +204,36 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
 	}
-	// Must be in a txn
-	var err error
-	var tx *sqlx.Tx
-	commit := true
-	if a, ok := adapter.db.(*QueryLogger); ok {
-		if b, ok2 := a.sqext.(*sqlx.Tx); ok2 {
-			tx = b
-			commit = false
+	// Must run in transaction
+	return adapter.Tx(func(atx Adapter) error {
+		a, ok := atx.DBX().(sqlx.Preparer)
+		if !ok {
+			return errors.New("not Preparer")
 		}
-	}
-	if a, ok := adapter.db.(canBeginx); tx == nil && ok {
-		tx, err = a.Beginx()
-	}
-	if err != nil {
-		return err
-	}
-	header, err := MapperCache.GetHeader(ents[0])
-	if err != nil {
-		return err
-	}
-	table := getTableName(ents[0])
-	stmt, err := tx.Prepare(pq.CopyIn(table, header...))
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	for _, d := range ents {
-		vals, err := MapperCache.GetInsert(d, header)
+		header, err := MapperCache.GetHeader(ents[0])
 		if err != nil {
 			return err
 		}
-		_, err = stmt.Exec(vals...)
+		table := getTableName(ents[0])
+		stmt, err := a.Prepare(pq.CopyIn(table, header...))
 		if err != nil {
 			return err
 		}
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		return err
-	}
-	if commit {
-		return tx.Commit()
-	}
-	return nil
+		defer stmt.Close()
+		for _, d := range ents {
+			vals, err := MapperCache.GetInsert(d, header)
+			if err != nil {
+				return err
+			}
+			_, err = stmt.Exec(vals...)
+			if err != nil {
+				return err
+			}
+		}
+		_, err = stmt.Exec()
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }

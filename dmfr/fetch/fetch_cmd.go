@@ -7,7 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -42,6 +43,9 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
+	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
+	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
+	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
 	fl.StringVar(&cmd.Options.S3, "s3", "", "Upload GTFS files to S3 bucket/prefix")
 	fl.Parse(args)
 	if cmd.DBURL == "" {
@@ -56,9 +60,11 @@ func (cmd *Command) Parse(args []string) error {
 		cmd.Options.FetchedAt = t
 	}
 	if secretsFile != "" {
-		if err := cmd.Options.Secrets.Load(secretsFile); err != nil {
+		r, err := dmfr.LoadAndParseRegistry(secretsFile)
+		if err != nil {
 			return err
 		}
+		cmd.Options.Secrets = r.Secrets
 	}
 	if cmd.Options.FeedURL != "" && len(cmd.FeedIDs) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
@@ -70,7 +76,10 @@ func (cmd *Command) Parse(args []string) error {
 func (cmd *Command) Run() error {
 	// Get feeds
 	if cmd.adapter == nil {
-		writer := tldb.MustGetWriter(cmd.DBURL, true)
+		writer, err := tldb.OpenWriter(cmd.DBURL, true)
+		if err != nil {
+			return err
+		}
 		cmd.adapter = writer.Adapter
 		defer writer.Close()
 	}
@@ -98,7 +107,7 @@ func (cmd *Command) Run() error {
 	}
 	///////////////
 	// Here we go
-	log.Info("Fetching %d feeds", len(cmd.FeedIDs))
+	log.Infof("Fetching %d feeds", len(cmd.FeedIDs))
 	fetchNew := 0
 	fetchFound := 0
 	fetchErrs := 0
@@ -117,6 +126,9 @@ func (cmd *Command) Run() error {
 			Directory:               cmd.Options.Directory,
 			S3:                      cmd.Options.S3,
 			IgnoreDuplicateContents: cmd.Options.IgnoreDuplicateContents,
+			AllowS3Fetch:            cmd.Options.AllowS3Fetch,
+			AllowFTPFetch:           cmd.Options.AllowFTPFetch,
+			AllowLocalFetch:         cmd.Options.AllowLocalFetch,
 			FetchedAt:               cmd.Options.FetchedAt,
 			Secrets:                 cmd.Options.Secrets,
 		}
@@ -126,7 +138,9 @@ func (cmd *Command) Run() error {
 	wg.Wait()
 	close(results)
 	for fr := range results {
-		if fr.FetchError != nil {
+		if fr.Error != nil {
+			fetchErrs++
+		} else if fr.FetchError != nil {
 			fetchErrs++
 		} else if fr.FoundSHA1 {
 			fetchFound++
@@ -136,7 +150,7 @@ func (cmd *Command) Run() error {
 			fetchNew++
 		}
 	}
-	log.Info("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
+	log.Infof("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
 	return nil
 }
 
@@ -144,9 +158,9 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 	for opts := range jobs {
 		// Get FeedID for pretty printing.
 		osid := opts.FeedID
-		log.Info("Feed %s: start", osid)
+		log.Infof("Feed %s: start", osid)
 		if DryRun {
-			log.Info("Feed %s: dry-run", osid)
+			log.Infof("Feed %s: dry-run", osid)
 			continue
 		}
 		var fr Result
@@ -160,15 +174,16 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 		fid := fr.FeedVersion.FeedID
 		furl := fr.FeedVersion.URL
 		if err != nil {
-			log.Error("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
+			fr.Error = err
+			log.Error().Err(err).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
 		} else if fr.FetchError != nil {
-			log.Error("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", osid, fid, furl, fr.FetchError.Error(), t2)
+			log.Error().Err(fr.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", osid, fid, furl, fr.FetchError.Error(), t2)
 		} else if fr.FoundSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
 		} else if fr.FoundDirSHA1 {
-			log.Info("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID, t2)
 		} else {
-			log.Info("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
 		}
 		results <- fr
 	}

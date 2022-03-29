@@ -21,10 +21,7 @@ type OverlayAdapter struct {
 func NewOverlayAdapter(paths ...string) OverlayAdapter {
 	if len(paths) == 1 {
 		firstPath := paths[0]
-		if strings.HasPrefix(firstPath, "overlay://") {
-			firstPath = strings.Replace(firstPath, "overlay://", "", 1)
-		}
-		paths = strings.Split(firstPath, ",")
+		paths = strings.Split(strings.TrimPrefix(firstPath, "overlay://"), ",")
 	}
 	return OverlayAdapter{paths: paths}
 }

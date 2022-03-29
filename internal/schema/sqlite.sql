@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_stops" (
   "stop_timezone" varchar(255) NOT NULL, 
   "wheelchair_boarding" integer NOT NULL, 
   "level_id" integer,
+  "tts_stop_name" text,
+  "platform_code" text,
   "geometry" BLOB NOT NULL
 );
 CREATE INDEX idx_gtfs_stops_stop_id ON "gtfs_stops"(stop_id);
@@ -214,7 +216,10 @@ CREATE TABLE IF NOT EXISTS "gtfs_feed_infos" (
   "id" integer primary key autoincrement, 
   "feed_version_id" integer NOT NULL, 
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "default_lang" varchar(255),
+  "feed_contact_email" varchar(255),
+  "feed_contact_url" varchar(255)
 );
 CREATE INDEX idx_gtfs_feed_infos_feed_version_id ON "gtfs_feed_infos"(feed_version_id);
 
@@ -344,6 +349,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_routes" (
   "route_color" varchar(255) NOT NULL, 
   "route_text_color" varchar(255) NOT NULL, 
   "route_sort_order" integer NOT NULL, 
+  "continuous_pickup" integer,
+  "continuous_drop_off" integer,
   "id" integer primary key autoincrement, 
   "feed_version_id" integer NOT NULL, 
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
@@ -365,6 +372,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_stop_times" (
   "drop_off_type" integer, 
   "shape_dist_traveled" real, 
   "timepoint" integer, 
+  "continuous_pickup" integer,
+  "continuous_drop_off" integer,
   "interpolated" integer, 
   "feed_version_id" integer NOT NULL
 );
@@ -484,4 +493,49 @@ CREATE TABLE IF NOT EXISTS "tl_route_geometries" (
   "geometry" blob,
   "centroid" blob,
   "combined_geometry" blob
+);
+
+---------------
+
+CREATE TABLE IF NOT EXISTS "gtfs_translations" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" int NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "table_name" varchar(255),
+  "field_name" varchar(255),
+  "language" varchar(255),
+  "translation" varchar(255),
+  "record_id" varchar(255),
+  "record_sub_id" varchar(255)
+);
+CREATE INDEX idx_gtfs_translations_feed_version_id ON "gtfs_translations"(feed_version_id);
+
+CREATE TABLE IF NOT EXISTS "gtfs_attributions" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" int NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "organization_name" varchar(255),
+  "agency_id" integer,
+  "route_id" integer,
+  "trip_id" integer,
+  "is_producer" int,
+  "is_operator" int,
+  "is_authority" int,
+  "attribution_id" varchar(255),
+  "attribution_url" varchar(255),
+  "attribution_email" varchar(255),
+  "attribution_phone" varchar(255)
+);
+CREATE INDEX idx_gtfs_attributions_feed_version_id ON "gtfs_attributions"(feed_version_id);
+
+CREATE TABLE tl_stop_external_references (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" int NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "target_feed_onestop_id" varchar(255) NOT NULL,
+  "target_stop_id" varchar(255) NOT NULL,
+  "inactive" bool
 );

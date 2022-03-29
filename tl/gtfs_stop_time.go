@@ -13,15 +13,17 @@ type StopTime struct {
 	TripID            string
 	StopID            string `csv:",required" required:"true"`
 	StopSequence      int    `csv:",required" required:"true"`
-	StopHeadsign      OString
+	StopHeadsign      String
 	ArrivalTime       WideTime
 	DepartureTime     WideTime
-	PickupType        OInt
-	DropOffType       OInt
-	ShapeDistTraveled OFloat
-	Timepoint         OInt
-	Interpolated      OInt `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
-	FeedVersionID     int  `csv:"-"`
+	PickupType        Int
+	DropOffType       Int
+	ContinuousPickup  Int
+	ContinuousDropOff Int
+	ShapeDistTraveled Float
+	Timepoint         Int
+	Interpolated      Int `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
+	FeedVersionID     int `csv:"-"`
 	extra             []string
 	loadErrors        []error
 	loadWarnings      []error
@@ -75,6 +77,8 @@ func (ent *StopTime) Errors() []error {
 	errs = append(errs, enum.CheckInsideRangeInt("timepoint", ent.Timepoint.Int, -1, 1)...)
 	errs = append(errs, enum.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Seconds, -1, 1<<31)...)
 	errs = append(errs, enum.CheckInsideRangeInt("departure", ent.DepartureTime.Seconds, -1, 1<<31)...)
+	errs = append(errs, enum.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Int, 0, 1, 2, 3)...)
+	errs = append(errs, enum.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Int, 0, 1, 2, 3)...)
 	// Other errors
 	at, dt := ent.ArrivalTime.Seconds, ent.DepartureTime.Seconds
 	if at != 0 && dt != 0 && at > dt {
@@ -141,6 +145,14 @@ func (ent *StopTime) GetString(key string) (string, error) {
 		if ent.Timepoint.Valid {
 			v = strconv.Itoa(int(ent.Timepoint.Int))
 		}
+	case "continuous_pickup":
+		if ent.ContinuousPickup.Valid {
+			v = strconv.Itoa(int(ent.ContinuousPickup.Int))
+		}
+	case "continuous_drop_off":
+		if ent.ContinuousPickup.Valid {
+			v = strconv.Itoa(int(ent.ContinuousDropOff.Int))
+		}
 	default:
 		return v, fmt.Errorf("unknown key: %s", key)
 	}
@@ -155,7 +167,7 @@ func (ent *StopTime) SetString(key, value string) error {
 	case "trip_id":
 		ent.TripID = hi
 	case "stop_headsign":
-		ent.StopHeadsign = NewOString(hi)
+		ent.StopHeadsign = NewString(hi)
 	case "stop_id":
 		ent.StopID = hi
 	case "arrival_time":
@@ -180,36 +192,52 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "pickup_type":
 		if len(hi) == 0 {
-			ent.PickupType = OInt{}
+			ent.PickupType = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
 		} else {
-			ent.PickupType = OInt{Valid: true, Int: a}
+			ent.PickupType = NewInt(a)
 		}
 	case "drop_off_type":
 		if len(hi) == 0 {
-			ent.DropOffType = OInt{}
+			ent.DropOffType = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
 		} else {
-			ent.DropOffType = OInt{Valid: true, Int: a}
+			ent.DropOffType = NewInt(a)
+		}
+	case "continuous_pickup":
+		if len(hi) == 0 {
+			ent.ContinuousPickup = Int{}
+		} else if a, err := strconv.Atoi(hi); err != nil {
+			perr = causes.NewFieldParseError("continuous_pickup", hi)
+		} else {
+			ent.ContinuousPickup = NewInt(a)
+		}
+	case "continuous_drop_off":
+		if len(hi) == 0 {
+			ent.ContinuousDropOff = Int{}
+		} else if a, err := strconv.Atoi(hi); err != nil {
+			perr = causes.NewFieldParseError("continuous_drop_off", hi)
+		} else {
+			ent.ContinuousDropOff = NewInt(a)
 		}
 	case "shape_dist_traveled":
 		if len(hi) == 0 {
-			ent.ShapeDistTraveled = OFloat{}
+			ent.ShapeDistTraveled = Float{}
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
 		} else {
-			ent.ShapeDistTraveled = OFloat{Valid: true, Float: a}
+			ent.ShapeDistTraveled = NewFloat(a)
 		}
 	case "timepoint":
 		// special use -1 for empty timepoint value
 		if len(hi) == 0 {
-			ent.Timepoint = OInt{}
+			ent.Timepoint = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
 		} else {
-			ent.Timepoint = OInt{Valid: true, Int: a}
+			ent.Timepoint = NewInt(a)
 		}
 	default:
 		ent.SetExtra(key, hi)

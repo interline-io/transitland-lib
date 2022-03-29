@@ -24,7 +24,7 @@ func UpdateOperator(atx tldb.Adapter, operator tl.Operator) (int, bool, bool, er
 		if !ent.Equal(&operator) {
 			updated = true
 			operator.CreatedAt = ent.CreatedAt
-			operator.DeletedAt = tl.OTime{Valid: false}
+			operator.DeletedAt = tl.Time{Valid: false}
 			operator.UpdateTimestamps()
 			errTx = atx.Update(&operator)
 		}
@@ -54,7 +54,7 @@ func UpdateOperator(atx tldb.Adapter, operator tl.Operator) (int, bool, bool, er
 // HideUnseedOperators .
 func HideUnseedOperators(atx tldb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
-	t := tl.OTime{Time: time.Now(), Valid: true}
+	t := tl.NewTime(time.Now())
 	r, err := atx.Sqrl().
 		Update("current_operators").
 		Where(sq.NotEq{"id": found}).

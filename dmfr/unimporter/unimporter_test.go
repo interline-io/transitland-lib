@@ -14,8 +14,8 @@ import (
 func setupImport(t *testing.T, atx tldb.Adapter) int {
 	// Create FV
 	fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
-	fv.EarliestCalendarDate = tl.NewODate(time.Now())
-	fv.LatestCalendarDate = tl.NewODate(time.Now())
+	fv.EarliestCalendarDate = tl.NewDate(time.Now())
+	fv.LatestCalendarDate = tl.NewDate(time.Now())
 	fvid := testdb.ShouldInsert(t, atx, &fv)
 	fv.ID = fvid
 	// Import

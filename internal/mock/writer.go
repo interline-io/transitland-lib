@@ -16,6 +16,10 @@ func NewWriter() *Writer {
 	}
 }
 
+func (mw *Writer) String() string {
+	return "mock"
+}
+
 // Open .
 func (mw *Writer) Open() error {
 	return nil
@@ -50,6 +54,8 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 		mw.Reader.StopTimeList = append(mw.Reader.StopTimeList, *v)
 	case *tl.Agency:
 		mw.Reader.AgencyList = append(mw.Reader.AgencyList, *v)
+	case *tl.Service:
+		mw.Reader.CalendarList = append(mw.Reader.CalendarList, v.Calendar)
 	case *tl.Calendar:
 		mw.Reader.CalendarList = append(mw.Reader.CalendarList, *v)
 	case *tl.CalendarDate:
@@ -70,6 +76,10 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 		mw.Reader.TransferList = append(mw.Reader.TransferList, *v)
 	case *tl.Trip:
 		mw.Reader.TripList = append(mw.Reader.TripList, *v)
+	case *tl.Translation:
+		mw.Reader.TranslationList = append(mw.Reader.TranslationList, *v)
+	case *tl.Attribution:
+		mw.Reader.AttributionList = append(mw.Reader.AttributionList, *v)
 	default:
 		mw.Reader.OtherList = append(mw.Reader.OtherList, v)
 	}

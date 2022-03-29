@@ -1,4 +1,4 @@
-trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,timepoint,expect_error
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,timepoint,expect_error,continuous_pickup,continuous_drop_off
 ok,01:00:00,01:00:30,ok1,1,headsign,0,0,1.0,0,
 ok,01:01:00,01:01:30,ok2,2,,,,2.0,,
 parse_arrival_time,xyz,01:00:30,ok1,1,,,,,,FieldParseError:arrival_time
@@ -13,3 +13,7 @@ invalid_pickup_type,01:00:00,01:00:30,ok1,1,,4,,,,InvalidFieldError:pickup_type
 invalid_drop_off_type,01:00:00,01:00:30,ok1,1,,,4,,,InvalidFieldError:drop_off_type
 invalid_timepoint,01:00:00,01:00:30,ok1,1,,,,,2,InvalidFieldError:timepoint
 depart_before_arrive,01:00:00,00:30:00,ok1,1,,,,,,InvalidFieldError:departure_time
+parse_continuous_pickup,01:01:00,01:01:30,ok2,2,,,,2.0,,FieldParseError:continuous_pickup,xyz,0
+parse_continuous_drop_off,01:01:00,01:01:30,ok2,2,,,,2.0,,FieldParseError:continuous_drop_off,,xyz
+invalid_continuous_pickup,01:01:00,01:01:30,ok2,2,,,,2.0,,InvalidFieldError:continuous_pickup,100,0
+invalid_continuous_drop_off,01:01:00,01:01:30,ok2,2,,,,2.0,,InvalidFieldError:continuous_drop_off,,100

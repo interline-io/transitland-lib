@@ -17,11 +17,13 @@ type Stop struct {
 	StopLon            float64 `db:"-"`
 	ZoneID             string
 	StopURL            string
+	TtsStopName        String
+	PlatformCode       String
 	LocationType       int
-	ParentStation      OKey
+	ParentStation      Key
 	StopTimezone       string
 	WheelchairBoarding int
-	LevelID            OKey
+	LevelID            Key
 	Geometry           Point  `csv:"-" db:"geometry"`
 	AreaID             string `db:"-"`
 	BaseEntity
@@ -99,7 +101,7 @@ func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Pathway Level
 	if ent.LevelID.Key != "" {
 		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Key}); ok {
-			ent.LevelID = NewOKey(v)
+			ent.LevelID = NewKey(v)
 		} else {
 			return causes.NewInvalidReferenceError("level_id", ent.LevelID.Key)
 		}
@@ -107,7 +109,7 @@ func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Adjust ParentStation
 	if ent.ParentStation.Key != "" {
 		if parentID, ok := emap.GetEntity(&Stop{StopID: ent.ParentStation.Key}); ok {
-			ent.ParentStation = NewOKey(parentID)
+			ent.ParentStation = NewKey(parentID)
 		} else {
 			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Key)
 		}
