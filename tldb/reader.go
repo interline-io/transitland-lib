@@ -267,6 +267,7 @@ func (reader *Reader) FareAttributes() chan tl.FareAttribute {
 			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
+				lastId = ent.ID
 			}
 			if len(ents) < reader.PageSize {
 				break
