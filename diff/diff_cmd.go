@@ -11,7 +11,7 @@ import (
 	"sort"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/log"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
@@ -31,6 +31,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl := flag.NewFlagSet("diff", flag.ExitOnError)
 	fl.Usage = func() {
 		log.Print("Usage: diff <input1> <input2> <output>")
+		log.Print("This command is experimental; it may provide incorrect results or crash on large feeds.")
 		fl.PrintDefaults()
 	}
 	fl.BoolVar(&cmd.ShowSame, "same", false, "Show entities present in both files and identical")
@@ -41,11 +42,11 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
-		log.Exit("Requires two input readers")
+		return errors.New("Requires two input readers")
 	}
 	if fl.NArg() < 3 {
 		fl.Usage()
-		log.Exit("Requires output directory")
+		return errors.New("Requires output directory")
 	}
 	if !cmd.ShowAdded && !cmd.ShowDeleted && !cmd.ShowSame && !cmd.ShowDiff {
 		fmt.Println("Using default mode of -same -diff -added -deleted")
