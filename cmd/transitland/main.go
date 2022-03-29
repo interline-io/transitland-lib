@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/diff"
 	"github.com/interline-io/transitland-lib/dmfr/fetch"
 	"github.com/interline-io/transitland-lib/dmfr/importer"
 	"github.com/interline-io/transitland-lib/dmfr/sync"
@@ -76,6 +77,8 @@ func main() {
 		r = &validator.Command{}
 	case "extract":
 		r = &extract.Command{}
+	case "diff":
+		r = &diff.Command{}
 	case "fetch":
 		r = &fetch.Command{}
 	case "import":
