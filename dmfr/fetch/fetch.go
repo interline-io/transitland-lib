@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -111,8 +112,10 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	tlfetch.URLType = urlType
 	tlfetch.URL = opts.FeedURL
 	tlfetch.FetchedAt = tl.NewTime(opts.FetchedAt)
-	tlfetch.ResponseCode = tl.NewInt(fr.ResponseCode)
-	tlfetch.ResponseSize = tl.NewInt(fr.ResponseSize)
+	if fr.ResponseCode > 0 {
+		tlfetch.ResponseCode = tl.NewInt(fr.ResponseCode)
+		tlfetch.ResponseSize = tl.NewInt(fr.ResponseSize)
+	}
 	if fr.FetchError == nil {
 		tlfetch.Success = true
 		tlfetch.ResponseSHA1 = tl.NewString(fr.ResponseSHA1)
@@ -166,6 +169,10 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil
+	}
+	// Add fragment back in...
+	if a := strings.SplitN(opts.FeedURL, "#", 2); len(a) > 1 {
+		tmpfilepath = tmpfilepath + "#" + a[1]
 	}
 	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewZipAdapter(tmpfilepath))
 	if err != nil {
