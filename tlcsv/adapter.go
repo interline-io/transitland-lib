@@ -98,7 +98,7 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	tmpfilepath, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
+	tmpfilepath, _, _, _, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
 	if err != nil {
 		return err
 	}
@@ -132,8 +132,7 @@ func NewZipAdapter(path string) *ZipAdapter {
 // Open the adapter. Return an error if the file does not exist.
 func (adapter *ZipAdapter) Open() error {
 	// Split fragment
-	spliturl := strings.SplitN(adapter.path, "#", 2)
-	if len(spliturl) > 1 {
+	if spliturl := strings.SplitN(adapter.path, "#", 2); len(spliturl) > 1 {
 		adapter.path = spliturl[0]
 		adapter.internalPrefix = spliturl[1]
 	}
@@ -146,7 +145,7 @@ func (adapter *ZipAdapter) Open() error {
 		if err != nil {
 			return err
 		}
-		log.Debugf("Using auto-discovered internal prefix: %s", pfx)
+		log.Tracef("Using auto-discovered internal prefix: %s", pfx)
 		adapter.internalPrefix = pfx
 	} else if strings.HasSuffix(adapter.internalPrefix, ".zip") {
 		// If the internal prefix is a zip, extract this to a temp file

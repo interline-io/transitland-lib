@@ -14,6 +14,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/stretchr/testify/assert"
 )
 
 var ExampleZip = testutil.ExampleZip
@@ -68,6 +69,12 @@ func TestDatabaseFetch(t *testing.T) {
 		if !tlf.LastSuccessfulFetchAt.Valid {
 			t.Errorf("expected non-nil value")
 		}
+		// Check FeedFetch record
+		tlff := dmfr.FeedFetch{}
+		testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
+		assert.Equal(t, fr.FeedVersion.SHA1, tlff.ResponseSHA1.String, "did not get expected feed_fetch sha1")
+		assert.Equal(t, 200, tlff.ResponseCode.Int, "did not get expected feed_fetch response code")
+		assert.Equal(t, true, tlff.Success, "did not get expected feed_fetch success")
 		// Check that we saved the output file
 		outfn := filepath.Join(tmpdir, fr.FeedVersion.SHA1+".zip")
 		info, err := os.Stat(outfn)
@@ -129,8 +136,7 @@ func TestDatabaseFetchCreateFeed(t *testing.T) {
 
 func TestDatabaseFetch_LastFetchError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Status-Code", "404")
-		w.Write([]byte("not found"))
+		http.Error(w, "not found", 404)
 	}))
 	defer ts.Close()
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
@@ -150,7 +156,7 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 		// Check FeedState
 		tlf := dmfr.FeedState{}
 		testdb.ShouldGet(t, atx, &tlf, `SELECT * FROM feed_states WHERE feed_id = ?`, feed.ID)
-		experr := "file does not exist"
+		experr := "response status code: 404"
 		if tlf.LastFetchError == "" {
 			t.Errorf("expected value for LastFetchError")
 		}
@@ -160,6 +166,11 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 		if tlf.LastSuccessfulFetchAt.Valid {
 			t.Errorf("got %t expected false", tlf.LastSuccessfulFetchAt.Valid)
 		}
+		// Check FeedFetch record
+		tlff := dmfr.FeedFetch{}
+		testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
+		assert.Equal(t, 404, tlff.ResponseCode.Int, "did not get expected feed_fetch response code")
+		assert.Equal(t, false, tlff.Success, "did not get expected feed_fetch success")
 		return nil
 	})
 }
