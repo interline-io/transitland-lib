@@ -110,22 +110,22 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 
 	// Validate OK, upload
 	if newFile {
-		if opts.S3 != "" {
-			rp, err := os.Open(uploadDest)
-			if err != nil {
-				return result, err
-			}
-			defer rp.Close()
-			ustr := fmt.Sprintf("%s/%s", opts.S3, uploadDest)
-			log.Debug().Str("src", uploadFile).Str("dst", ustr).Msg("copying file")
-			if err := request.UploadS3(context.Background(), ustr, tl.Secret{}, rp); err != nil {
-				return result, err
-			}
-		}
 		if opts.Directory != "" {
 			outfn := filepath.Join(opts.Directory, uploadDest)
 			log.Debug().Str("src", uploadFile).Str("dst", outfn).Msg("copying file")
 			if err := copyFileContents(outfn, uploadFile); err != nil {
+				return result, err
+			}
+		}
+		if opts.S3 != "" {
+			ustr := fmt.Sprintf("%s/%s", opts.S3, uploadDest)
+			log.Debug().Str("src", uploadFile).Str("dst", ustr).Msg("copying file")
+			rp, err := os.Open(uploadFile)
+			if err != nil {
+				return result, err
+			}
+			defer rp.Close()
+			if err := request.UploadS3(context.Background(), ustr, tl.Secret{}, rp); err != nil {
 				return result, err
 			}
 		}
