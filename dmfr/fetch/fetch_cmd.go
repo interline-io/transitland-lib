@@ -108,9 +108,6 @@ func (cmd *Command) Run() error {
 	///////////////
 	// Here we go
 	log.Infof("Fetching %d feeds", len(cmd.FeedIDs))
-	fetchNew := 0
-	fetchFound := 0
-	fetchErrs := 0
 	var wg sync.WaitGroup
 	jobs := make(chan Options, len(cmd.FeedIDs))
 	results := make(chan Result, len(cmd.FeedIDs))
@@ -123,6 +120,7 @@ func (cmd *Command) Run() error {
 			FeedID:                  feedid,
 			FeedCreate:              cmd.Options.FeedCreate,
 			FeedURL:                 cmd.Options.FeedURL,
+			URLType:                 cmd.Options.URLType,
 			Directory:               cmd.Options.Directory,
 			S3:                      cmd.Options.S3,
 			IgnoreDuplicateContents: cmd.Options.IgnoreDuplicateContents,
@@ -137,9 +135,15 @@ func (cmd *Command) Run() error {
 	close(jobs)
 	wg.Wait()
 	close(results)
+	var fatalError error
+	fetchFatalErrors := 0
+	fetchNew := 0
+	fetchFound := 0
+	fetchErrs := 0
 	for fr := range results {
 		if fr.Error != nil {
-			fetchErrs++
+			fetchFatalErrors++
+			fatalError = fr.Error
 		} else if fr.FetchError != nil {
 			fetchErrs++
 		} else if fr.Found {
@@ -149,6 +153,10 @@ func (cmd *Command) Run() error {
 		}
 	}
 	log.Infof("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
+	if fatalError != nil {
+		log.Infof("Exiting with error because at least one feed had fatal error: %s", fatalError.Error())
+		return fatalError
+	}
 	return nil
 }
 
@@ -165,7 +173,7 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
-			fr, fe = DatabaseFetch(atx, opts)
+			fr, fe = FeedStateFetch(atx, opts)
 			return fe
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0

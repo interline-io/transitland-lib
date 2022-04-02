@@ -109,7 +109,7 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 	}
 
 	// Validate OK, upload
-	if newFile {
+	if newFile && uploadFile != "" {
 		if opts.Directory != "" {
 			outfn := filepath.Join(opts.Directory, uploadDest)
 			log.Debug().Str("src", uploadFile).Str("dst", outfn).Msg("copying file")
@@ -140,11 +140,13 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 	if result.ResponseCode > 0 {
 		tlfetch.ResponseCode = tl.NewInt(result.ResponseCode)
 		tlfetch.ResponseSize = tl.NewInt(result.ResponseSize)
+		tlfetch.ResponseSHA1 = tl.NewString(result.ResponseSHA1)
+	}
+	if result.FeedVersion.ID > 0 {
+		tlfetch.FeedVersionID = tl.NewOInt(result.FeedVersion.ID)
 	}
 	if result.FetchError == nil {
 		tlfetch.Success = true
-		tlfetch.ResponseSHA1 = tl.NewString(result.ResponseSHA1)
-		tlfetch.FeedVersionID = tl.NewOInt(result.FeedVersion.ID)
 	} else {
 		tlfetch.Success = false
 		tlfetch.FetchError = tl.NewString(result.FetchError.Error())
