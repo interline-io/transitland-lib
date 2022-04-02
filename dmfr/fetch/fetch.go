@@ -53,7 +53,7 @@ type validationResponse struct {
 	FeedVersion    tl.FeedVersion
 }
 
-type fetchCb func(string) (validationResponse, error)
+type fetchCb func(request.FetchResponse) (validationResponse, error)
 
 func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, error) {
 	result := Result{}
@@ -94,7 +94,7 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 	uploadFile := ""
 	uploadDest := ""
 	if result.FetchError == nil {
-		vr, err := cb(fetchResponse.Filename)
+		vr, err := cb(fetchResponse)
 		if err != nil {
 			return result, err
 		}

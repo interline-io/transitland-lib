@@ -137,7 +137,7 @@ func (adapter *ZipAdapter) Open() error {
 		adapter.internalPrefix = spliturl[1]
 	}
 	if !adapter.Exists() {
-		return errors.New("file does not exist")
+		return errors.New("file does not exist or invalid data")
 	}
 	// Try to auto discover internal path fragment if unspecified
 	if adapter.internalPrefix == "" {

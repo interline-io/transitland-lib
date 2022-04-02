@@ -7,6 +7,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -16,7 +17,8 @@ import (
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
 func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (Result, error) {
-	cb := func(tmpfilepath string) (validationResponse, error) {
+	cb := func(fr request.FetchResponse) (validationResponse, error) {
+		tmpfilepath := fr.Filename
 		vr := validationResponse{}
 		// Open reader
 		if a := strings.SplitN(opts.FeedURL, "#", 2); len(a) > 1 {
