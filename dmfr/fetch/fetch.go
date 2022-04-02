@@ -80,7 +80,7 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 		}
 		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
 	}
-	fetchResponse, err := request.AuthenticatedDownload2(opts.FeedURL, reqOpts...)
+	fetchResponse, err := request.AuthenticatedRequestDownload(opts.FeedURL, reqOpts...)
 	result.FetchError = fetchResponse.FetchError
 	result.ResponseCode = fetchResponse.ResponseCode
 	result.ResponseSize = fetchResponse.ResponseSize

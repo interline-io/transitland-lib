@@ -249,7 +249,7 @@ type FetchResponse struct {
 	FetchError   error
 }
 
-func AuthenticatedDownload2(address string, opts ...RequestOption) (FetchResponse, error) {
+func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchResponse, error) {
 	fr := FetchResponse{}
 	// 10 minute timeout
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
@@ -278,43 +278,23 @@ func AuthenticatedDownload2(address string, opts ...RequestOption) (FetchRespons
 	return fr, nil
 }
 
-// AuthenticatedRequestDownload fetches a url using a secret and auth description. Returns temp file path, sha1, size, response code.
-// Caller is responsible for deleting the file.
-func AuthenticatedRequestDownload(address string, opts ...RequestOption) (string, string, int, int, error) {
-	// 10 minute timeout
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
-	defer cancel()
-	//
-	tmpfile, err := ioutil.TempFile("", "fetch")
-	if err != nil {
-		return "", "", 0, 0, errors.New("could not create temporary file")
-	}
-	tmpfilepath := tmpfile.Name()
-	defer tmpfile.Close()
-	req := NewRequest(address, opts...)
-	r, responseCode, err := req.Request(ctx)
-	if err != nil {
-		return "", "", 0, responseCode, err
-	}
-	defer r.Close()
-	responseSize, responseSha1, err := copyTo(tmpfile, r)
-	fmt.Println("tmpfile:", tmpfilepath, "size:", responseSize, "sha1:", responseSha1, "code:", responseCode)
-	return tmpfilepath, responseSha1, responseSize, responseCode, err
-}
-
 // AuthenticatedRequest fetches a url using a secret and auth description. Returns []byte, sha1, size, response code.
-func AuthenticatedRequest(address string, opts ...RequestOption) ([]byte, string, int, int, error) {
+func AuthenticatedRequest(address string, opts ...RequestOption) (FetchResponse, error) {
+	fr := FetchResponse{}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
 	defer cancel()
 	req := NewRequest(address, opts...)
-	r, responseCode, err := req.Request(ctx)
-	if err != nil {
-		return nil, "", 0, 0, err
+	var err error
+	var r io.ReadCloser
+	r, fr.ResponseCode, fr.FetchError = req.Request(ctx)
+	if fr.FetchError != nil {
+		return fr, err
 	}
 	defer r.Close()
 	var buf bytes.Buffer
-	responseSize, responseSha1, err := copyTo(&buf, r)
-	return buf.Bytes(), responseSha1, responseSize, responseCode, err
+	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(&buf, r)
+	fr.Data = buf.Bytes()
+	return fr, err
 }
 
 func copyTo(dst io.Writer, src io.Reader) (int, string, error) {
