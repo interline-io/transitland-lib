@@ -43,7 +43,7 @@ func TestDatabaseFetch(t *testing.T) {
 			t.Error(err)
 			return nil
 		}
-		if fr.FoundSHA1 || fr.FoundDirSHA1 {
+		if fr.Found {
 			t.Errorf("expected new fv")
 			return nil
 		}
@@ -79,7 +79,7 @@ func TestDatabaseFetch(t *testing.T) {
 		outfn := filepath.Join(tmpdir, fr.FeedVersion.SHA1+".zip")
 		info, err := os.Stat(outfn)
 		if os.IsNotExist(err) {
-			t.Errorf("expected file to exist: %s", outfn)
+			t.Fatalf("expected file to exist: %s", outfn)
 		}
 		expsize := int64(ExampleZip.Size)
 		if info.Size() != expsize {
@@ -89,7 +89,7 @@ func TestDatabaseFetch(t *testing.T) {
 	})
 }
 
-func TestDatabaseFetchCreateFeed(t *testing.T) {
+func TestDatabaseFetch_CreateFeed(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(ExampleZip.URL)
 		if err != nil {
@@ -175,7 +175,7 @@ func TestDatabaseFetch_LastFetchError(t *testing.T) {
 	})
 }
 
-func Test_fetchAndCreateFeedVersion(t *testing.T) {
+func TestStaticFetch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(ExampleZip.URL)
 		if err != nil {
@@ -193,12 +193,12 @@ func Test_fetchAndCreateFeedVersion(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, url)
-		fr, err := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: tmpdir})
+		fr, err := StaticFetch(atx, feed, Options{FeedURL: url, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return err
 		}
-		if fr.FoundSHA1 || fr.FoundDirSHA1 {
+		if fr.Found {
 			t.Error("expected new feed")
 			return nil
 		}
@@ -221,7 +221,7 @@ func Test_fetchAndCreateFeedVersion(t *testing.T) {
 	})
 }
 
-func Test_fetchAndCreateFeedVersion_404(t *testing.T) {
+func TestStaticFetch_404(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Status-Code", "404")
 		w.Write([]byte("not found"))
@@ -230,7 +230,7 @@ func Test_fetchAndCreateFeedVersion_404(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, url)
-		fr, err := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: ""})
+		fr, err := StaticFetch(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
 			return err
@@ -251,7 +251,7 @@ func Test_fetchAndCreateFeedVersion_404(t *testing.T) {
 	})
 }
 
-func Test_fetchAndCreateFeedVersion_Exists(t *testing.T) {
+func TestStaticFetch_Exists(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(ExampleZip.URL)
 		if err != nil {
@@ -262,22 +262,22 @@ func Test_fetchAndCreateFeedVersion_Exists(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, url)
-		fr, err := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: ""})
+		fr, err := StaticFetch(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Error(err)
 		}
-		if fr.FoundSHA1 || fr.FoundDirSHA1 {
+		if fr.Found {
 			t.Error("expected new feed")
 		}
 		if fr.FeedVersion.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fr.FeedVersion.SHA1, ExampleZip.SHA1)
 		}
-		fr2, err2 := fetchAndCreateFeedVersion(atx, feed, Options{FeedURL: url, Directory: ""})
+		fr2, err2 := StaticFetch(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err2 != nil {
 			t.Error(err2)
 			return err2
 		}
-		if !(fr2.FoundSHA1 || fr.FoundDirSHA1) {
+		if !(fr2.Found) {
 			t.Error("expected found feed")
 		}
 		if fr2.FeedVersion.SHA1 != ExampleZip.SHA1 {

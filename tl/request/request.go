@@ -240,6 +240,44 @@ func WithAuth(secret tl.Secret, auth tl.FeedAuthorization) func(req *Request) {
 	}
 }
 
+type FetchResponse struct {
+	Filename     string
+	Data         []byte
+	ResponseSize int
+	ResponseCode int
+	ResponseSHA1 string
+	FetchError   error
+}
+
+func AuthenticatedDownload2(address string, opts ...RequestOption) (FetchResponse, error) {
+	fr := FetchResponse{}
+	// 10 minute timeout
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
+	defer cancel()
+	// Create temp file
+	tmpfile, err := ioutil.TempFile("", "fetch")
+	if err != nil {
+		return fr, errors.New("could not create temporary file")
+	}
+	fr.Filename = tmpfile.Name()
+	defer tmpfile.Close()
+	// Download
+	req := NewRequest(address, opts...)
+	var r io.ReadCloser
+	r, fr.ResponseCode, fr.FetchError = req.Request(ctx)
+	if fr.FetchError != nil {
+		return fr, nil
+	}
+	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(tmpfile, r)
+	if err != nil {
+		return fr, err
+	}
+	if r != nil {
+		r.Close()
+	}
+	return fr, nil
+}
+
 // AuthenticatedRequestDownload fetches a url using a secret and auth description. Returns temp file path, sha1, size, response code.
 // Caller is responsible for deleting the file.
 func AuthenticatedRequestDownload(address string, opts ...RequestOption) (string, string, int, int, error) {

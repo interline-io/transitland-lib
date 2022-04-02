@@ -142,9 +142,7 @@ func (cmd *Command) Run() error {
 			fetchErrs++
 		} else if fr.FetchError != nil {
 			fetchErrs++
-		} else if fr.FoundSHA1 {
-			fetchFound++
-		} else if fr.FoundDirSHA1 {
+		} else if fr.Found {
 			fetchFound++
 		} else {
 			fetchNew++
@@ -178,10 +176,8 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 			log.Error().Err(err).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
 		} else if fr.FetchError != nil {
 			log.Error().Err(fr.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", osid, fid, furl, fr.FetchError.Error(), t2)
-		} else if fr.FoundSHA1 {
-			log.Infof("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
-		} else if fr.FoundDirSHA1 {
-			log.Infof("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID, t2)
+		} else if fr.Found {
+			log.Infof("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
 		} else {
 			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
 		}
