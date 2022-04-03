@@ -145,7 +145,6 @@ func (adapter *ZipAdapter) Open() error {
 		if err != nil {
 			return err
 		}
-		log.Tracef("Using auto-discovered internal prefix: %s", pfx)
 		adapter.internalPrefix = pfx
 	} else if strings.HasSuffix(adapter.internalPrefix, ".zip") {
 		// If the internal prefix is a zip, extract this to a temp file
@@ -159,8 +158,8 @@ func (adapter *ZipAdapter) Open() error {
 			// Get the full path
 			tmpfilepath = tmpfile.Name()
 			// Write the body to file
+			log.Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
 			io.Copy(tmpfile, r)
-			log.Debugf("Extracted %s internal prefix %s to %s", adapter.path, adapter.internalPrefix, tmpfilepath)
 		})
 		if err != nil {
 			return err
@@ -169,13 +168,16 @@ func (adapter *ZipAdapter) Open() error {
 		adapter.tmpfilepath = tmpfilepath
 		adapter.internalPrefix = ""
 	}
+	if adapter.internalPrefix != "" {
+		log.Tracef("zip adapter: using internal prefix: %s", adapter.internalPrefix)
+	}
 	return nil
 }
 
 // Close the adapter.
 func (adapter *ZipAdapter) Close() error {
 	if adapter.tmpfilepath != "" {
-		log.Debugf("removing temp file: %s", adapter.tmpfilepath)
+		log.Debugf("zip adapter: removing temp file: %s", adapter.tmpfilepath)
 		if err := os.Remove(adapter.tmpfilepath); err != nil {
 			return err
 		}

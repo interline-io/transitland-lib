@@ -13,7 +13,7 @@ func RTFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (Result, error) {
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		// Validate
 		v := validationResponse{}
-		v.Filename = fr.Filename
+		v.UploadTmpfile = fr.Filename
 		v.UploadFilename = fmt.Sprintf("%s.pb", fr.ResponseSHA1)
 		v.Found = false
 		_, v.Error = rt.ReadFile(fr.Filename)

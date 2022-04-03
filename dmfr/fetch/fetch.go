@@ -46,7 +46,7 @@ type Result struct {
 }
 
 type validationResponse struct {
-	Filename       string
+	UploadTmpfile  string
 	UploadFilename string
 	Error          error
 	Found          bool
@@ -103,23 +103,31 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 		result.Found = vr.Found
 		if !result.Found {
 			newFile = true
-			uploadFile = vr.Filename
+			uploadFile = vr.UploadTmpfile
 			uploadDest = vr.UploadFilename
 		}
+	}
+
+	// Cleanup any temporary files
+	if fetchResponse.Filename != "" {
+		defer os.Remove(fetchResponse.Filename)
+	}
+	if uploadFile != "" && uploadFile != fetchResponse.Filename {
+		defer os.Remove(uploadFile)
 	}
 
 	// Validate OK, upload
 	if newFile && uploadFile != "" {
 		if opts.Directory != "" {
 			outfn := filepath.Join(opts.Directory, uploadDest)
-			log.Debug().Str("src", uploadFile).Str("dst", outfn).Msg("copying file")
+			log.Debug().Str("src", uploadFile).Str("dst", outfn).Msg("fetch: copying file to gtfs dir")
 			if err := copyFileContents(outfn, uploadFile); err != nil {
 				return result, err
 			}
 		}
 		if opts.S3 != "" {
 			ustr := fmt.Sprintf("%s/%s", opts.S3, uploadDest)
-			log.Debug().Str("src", uploadFile).Str("dst", ustr).Msg("copying file")
+			log.Debug().Str("src", uploadFile).Str("dst", ustr).Msg("fetch: copying file to s3")
 			rp, err := os.Open(uploadFile)
 			if err != nil {
 				return result, err

@@ -3,9 +3,11 @@ package fetch
 import (
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -72,8 +74,21 @@ func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (Result, error) {
 			return vr, err
 		}
 		vr.FeedVersion = fv
-		vr.Filename = reader.Path()
+		// If a second tmpfile is created, copy it and overwrite the input tmp file
+		vr.UploadTmpfile = reader.Path()
 		vr.UploadFilename = fv.File
+		if readerPath := reader.Path(); readerPath != fr.Filename {
+			tf2, err := ioutil.TempFile("", "nested")
+			if err != nil {
+				return vr, err
+			}
+			vr.UploadTmpfile = tf2.Name()
+			tf2.Close()
+			log.Info().Str("dst", vr.UploadTmpfile).Str("src", readerPath).Msg("fetch: copying extracted nested zip file for upload")
+			if err := copyFileContents(vr.UploadTmpfile, readerPath); err != nil {
+				return vr, err
+			}
+		}
 		return vr, nil
 	}
 	return ffetch(atx, feed, opts, cb)

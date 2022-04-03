@@ -18,25 +18,74 @@ import (
 func TestStaticFetch(t *testing.T) {
 	basedir := ""
 	tcs := []struct {
-		file        string
-		reqpath     string
-		found       bool
-		sha1        string
-		code        int
-		expectError bool
+		name          string
+		serveFile     string
+		requestPath   string
+		responseSha1  string
+		responseCode  int
+		responseError bool
+		fvFound       bool
+		fvSha1        string
 	}{
-		{"test/data/example.zip", "test/data/example.zip", false, "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8", 200, false},
-		{"test/data/example.zip", "404.zip", false, "", 404, true},
-		{"test/data/invalid.zip", "test/data/invalid.zip", false, "", 200, true},
+		{
+			"example.zip",
+			"test/data/example.zip",
+			"test/data/example.zip",
+			"ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
+			200,
+			false,
+			false,
+			"ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
+		},
+		{
+			"404",
+			"test/data/example.zip",
+			"404.zip",
+			"",
+			404,
+			true,
+			false,
+			"",
+		},
+		{
+			"invalid zip",
+			"test/data/invalid.zip",
+			"test/data/invalid.zip",
+			"",
+			200,
+			true,
+			false,
+			"",
+		},
+		{
+			"nested dir",
+			"test/data/example-nested-dir.zip",
+			"test/data/example-nested-dir.zip#example-nested-dir/example",
+			"",
+			200,
+			false,
+			false,
+			"97ae78529b47860f3d5b674f27121c078f7b3402",
+		},
+		{
+			"nested zip",
+			"test/data/example-nested-zip.zip",
+			"test/data/example-nested-zip.zip#example-nested-zip/example.zip",
+			"",
+			200,
+			false,
+			false,
+			"ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
+		},
 	}
 	for _, tc := range tcs {
-		t.Run("", func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "/"+tc.file {
+				if r.URL.Path != "/"+tc.serveFile {
 					http.Error(w, "404", 404)
 					return
 				}
-				buf, err := ioutil.ReadFile(testutil.RelPath(basedir + "/" + tc.file))
+				buf, err := ioutil.ReadFile(testutil.RelPath(basedir + "/" + tc.serveFile))
 				if err != nil {
 					t.Error(err)
 				}
@@ -49,32 +98,38 @@ func TestStaticFetch(t *testing.T) {
 			}
 			defer os.RemoveAll(tmpdir) // clean up
 			testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
-				url := ts.URL + "/" + tc.reqpath
+				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
 				fr, err := StaticFetch(atx, feed, Options{FeedURL: url, Directory: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err
 				}
-				assert.Equal(t, tc.found, fr.Found, "did not get expected found value")
-				assert.Equal(t, tc.code, fr.ResponseCode, "did not get expected response code")
-				assert.Equal(t, tc.expectError, fr.FetchError != nil)
-				if tc.sha1 != "" {
-					assert.Equal(t, tc.sha1, fr.ResponseSHA1, "did not get expected response sha1")
+				assert.Equal(t, tc.fvFound, fr.Found, "did not get expected found value")
+				assert.Equal(t, tc.responseCode, fr.ResponseCode, "did not get expected response code")
+				assert.Equal(t, tc.responseError, fr.FetchError != nil, "did not get expected value for fetch error")
+				if tc.responseError {
+					if fr.FetchError == nil {
+						t.Errorf("expected fetch error, got none")
+					}
+				} else if fr.FetchError != nil {
+					t.Errorf("got unexpected error: %s", fr.FetchError.Error())
+				}
+				if tc.responseSha1 != "" {
+					assert.Equal(t, tc.responseSha1, fr.ResponseSHA1, "did not get expected response sha1")
 				}
 				//
 				tlff := dmfr.FeedFetch{}
 				testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
-				assert.Equal(t, tc.code, tlff.ResponseCode.Int, "did not get expected feed_fetch response code")
-				assert.Equal(t, !tc.expectError, tlff.Success, "did not get expected feed_fetch success")
+				assert.Equal(t, tc.responseCode, tlff.ResponseCode.Int, "did not get expected feed_fetch response code")
+				assert.Equal(t, !tc.responseError, tlff.Success, "did not get expected feed_fetch success")
 				//
-				if !tc.expectError {
-					assert.Equal(t, tc.sha1, fr.FeedVersion.SHA1)
+				if !tc.responseError {
 					fv2 := tl.FeedVersion{ID: fr.FeedVersion.ID}
 					testdb.ShouldFind(t, atx, &fv2)
-					assert.Equal(t, url, fv2.URL)
-					assert.Equal(t, feed.ID, fv2.FeedID)
-					assert.Equal(t, tc.sha1, fv2.SHA1)
+					assert.Equal(t, url, fv2.URL, "did not get expected feed version url")
+					assert.Equal(t, tc.fvSha1, fr.FeedVersion.SHA1, "did not get expected feed version sha1")
+					assert.Equal(t, feed.ID, fv2.FeedID, "did not get expected feed version feed ID")
 				}
 				return nil
 			})
