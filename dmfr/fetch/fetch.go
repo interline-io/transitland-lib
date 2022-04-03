@@ -60,6 +60,8 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 	if opts.FeedURL == "" {
 		return result, nil
 	}
+	result.FeedVersion.FeedID = feed.ID
+	result.FeedVersion.URL = opts.FeedURL
 
 	// Fetch and check for serious errors - regular errors are in fr.FetchError
 	var reqOpts []request.RequestOption
@@ -76,6 +78,7 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 	if feed.Authorization.Type != "" {
 		secret, err := feed.MatchSecrets(opts.Secrets)
 		if err != nil {
+			result.FetchError = err
 			return result, nil
 		}
 		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
