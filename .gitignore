@@ -16,3 +16,4 @@ cmd/transitland/transitland
 tldb/test.db
 **/.DS_Store
 tmp
+**/tmp
