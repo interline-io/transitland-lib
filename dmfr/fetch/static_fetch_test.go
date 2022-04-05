@@ -100,7 +100,7 @@ func TestStaticFetch(t *testing.T) {
 			testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := StaticFetch(atx, feed, Options{FeedURL: url, Directory: tmpdir})
+				fv, fr, err := StaticFetch(atx, feed, Options{FeedURL: url, Directory: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err
@@ -125,10 +125,10 @@ func TestStaticFetch(t *testing.T) {
 				assert.Equal(t, !tc.responseError, tlff.Success, "did not get expected feed_fetch success")
 				//
 				if !tc.responseError {
-					fv2 := tl.FeedVersion{ID: fr.FeedVersion.ID}
+					fv2 := tl.FeedVersion{ID: fv.ID}
 					testdb.ShouldFind(t, atx, &fv2)
 					assert.Equal(t, url, fv2.URL, "did not get expected feed version url")
-					assert.Equal(t, tc.fvSha1, fr.FeedVersion.SHA1, "did not get expected feed version sha1")
+					assert.Equal(t, tc.fvSha1, fv.SHA1, "did not get expected feed version sha1")
 					assert.Equal(t, feed.ID, fv2.FeedID, "did not get expected feed version feed ID")
 				}
 				return nil
@@ -148,25 +148,25 @@ func TestStaticFetch_Exists(t *testing.T) {
 	testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, url)
-		fr, err := StaticFetch(atx, feed, Options{FeedURL: url, Directory: ""})
+		fv, _, err := StaticFetch(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Fatal(err)
 		}
-		fr2, err2 := StaticFetch(atx, feed, Options{FeedURL: url, Directory: ""})
+		fv2, fr2, err2 := StaticFetch(atx, feed, Options{FeedURL: url, Directory: ""})
 		if err2 != nil {
 			t.Error(err2)
 		}
 		if !(fr2.Found) {
 			t.Error("expected found feed")
 		}
-		if fr2.FeedVersion.SHA1 != ExampleZip.SHA1 {
-			t.Errorf("got %s expect %s", fr2.FeedVersion.SHA1, ExampleZip.SHA1)
+		if fv2.SHA1 != ExampleZip.SHA1 {
+			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
 		}
-		if fr2.FeedVersion.ID == 0 {
+		if fv2.ID == 0 {
 			t.Error("expected non-zero value")
 		}
-		if fr.FeedVersion.ID != fr2.FeedVersion.ID {
-			t.Errorf("got %d expected %d", fr.FeedVersion.ID, fr2.FeedVersion.ID)
+		if fv.ID != fv2.ID {
+			t.Errorf("got %d expected %d", fv.ID, fv2.ID)
 		}
 		return nil
 	})

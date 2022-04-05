@@ -36,7 +36,6 @@ type Options struct {
 
 // Result contains results of a fetch operation.
 type Result struct {
-	FeedVersion  tl.FeedVersion
 	Found        bool
 	Error        error
 	ResponseSize int
@@ -50,7 +49,6 @@ type validationResponse struct {
 	UploadFilename string
 	Error          error
 	Found          bool
-	FeedVersion    tl.FeedVersion
 }
 
 type fetchCb func(request.FetchResponse) (validationResponse, error)
@@ -60,8 +58,6 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 	if opts.FeedURL == "" {
 		return result, nil
 	}
-	result.FeedVersion.FeedID = feed.ID
-	result.FeedVersion.URL = opts.FeedURL
 
 	// Fetch and check for serious errors - regular errors are in fr.FetchError
 	var reqOpts []request.RequestOption
@@ -102,7 +98,6 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 			return result, err
 		}
 		result.FetchError = vr.Error
-		result.FeedVersion = vr.FeedVersion
 		result.Found = vr.Found
 		if !result.Found {
 			newFile = true
@@ -152,9 +147,6 @@ func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, e
 		tlfetch.ResponseCode = tl.NewInt(result.ResponseCode)
 		tlfetch.ResponseSize = tl.NewInt(result.ResponseSize)
 		tlfetch.ResponseSHA1 = tl.NewString(result.ResponseSHA1)
-	}
-	if result.FeedVersion.ID > 0 {
-		tlfetch.FeedVersionID = tl.NewOInt(result.FeedVersion.ID)
 	}
 	if result.FetchError == nil {
 		tlfetch.Success = true

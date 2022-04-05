@@ -170,24 +170,25 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 			continue
 		}
 		var fr Result
+		var fv tl.FeedVersion
 		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
-			fr, fe = FeedStateFetch(atx, opts)
+			fv, fr, fe = FeedStateFetch(atx, opts)
 			return fe
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
-		fid := fr.FeedVersion.FeedID
-		furl := fr.FeedVersion.URL
+		fid := fv.FeedID
+		furl := fv.URL
 		if err != nil {
 			fr.Error = err
 			log.Error().Err(err).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
 		} else if fr.FetchError != nil {
 			log.Error().Err(fr.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", osid, fid, furl, fr.FetchError.Error(), t2)
 		} else if fr.Found {
-			log.Infof("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fv.SHA1, fv.ID, t2)
 		} else {
-			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fv.SHA1, fv.ID, t2)
 		}
 		results <- fr
 	}

@@ -24,10 +24,11 @@ func TestRTFetch(t *testing.T) {
 		responseSha1  string
 		responseCode  int
 		responseError bool
+		entityCount   int
 	}{
-		{"example.pb", "example.pb", "example.pb", false, "1cb30340f47b5ced4238c8085f0d5bb1dffd6207", 200, false},
-		{"404", "example.pb", "404.pb", false, "", 404, true},
-		{"invalid", "invalid.pb", "invalid.pb", false, "cc0fcdb9351ee7cf357afc548236eff75acd8327", 200, true},
+		{"example.pb", "example.pb", "example.pb", false, "1cb30340f47b5ced4238c8085f0d5bb1dffd6207", 200, false, 26},
+		{"404", "example.pb", "404.pb", false, "", 404, true, 0},
+		{"invalid", "invalid.pb", "invalid.pb", false, "cc0fcdb9351ee7cf357afc548236eff75acd8327", 200, true, 0},
 	}
 	for _, tc := range tcs {
 		t.Run("", func(t *testing.T) {
@@ -51,10 +52,13 @@ func TestRTFetch(t *testing.T) {
 			testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := RTFetch(atx, feed, Options{FeedURL: url, Directory: tmpdir})
+				msg, fr, err := RTFetch(atx, feed, Options{FeedURL: url, Directory: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err
+				}
+				if msg != nil {
+					assert.Equal(t, tc.entityCount, len(msg.Entity), "did not get expected rt feed entity count")
 				}
 				assert.Equal(t, tc.fvFound, fr.Found, "did not get expected found value")
 				if tc.responseSha1 != "" {

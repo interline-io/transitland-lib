@@ -38,7 +38,7 @@ func TestFeedStateFetch(t *testing.T) {
 		//
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, ts.URL)
-		fr, err := FeedStateFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
+		fv, fr, err := FeedStateFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -47,12 +47,12 @@ func TestFeedStateFetch(t *testing.T) {
 			t.Errorf("expected new fv")
 			return nil
 		}
-		if fr.FeedVersion.SHA1 != ExampleZip.SHA1 {
-			t.Errorf("got %s expect %s", fr.FeedVersion.SHA1, ExampleZip.SHA1)
+		if fv.SHA1 != ExampleZip.SHA1 {
+			t.Errorf("got %s expect %s", fv.SHA1, ExampleZip.SHA1)
 			return nil
 		}
 		// Check FV
-		fv2 := tl.FeedVersion{ID: fr.FeedVersion.ID}
+		fv2 := tl.FeedVersion{ID: fv.ID}
 		testdb.ShouldFind(t, atx, &fv2)
 		if fv2.URL != url {
 			t.Errorf("got %s expect %s", fv2.URL, url)
@@ -72,11 +72,11 @@ func TestFeedStateFetch(t *testing.T) {
 		// Check FeedFetch record
 		tlff := dmfr.FeedFetch{}
 		testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
-		assert.Equal(t, fr.FeedVersion.SHA1, tlff.ResponseSHA1.String, "did not get expected feed_fetch sha1")
+		assert.Equal(t, fv.SHA1, tlff.ResponseSHA1.String, "did not get expected feed_fetch sha1")
 		assert.Equal(t, 200, tlff.ResponseCode.Int, "did not get expected feed_fetch response code")
 		assert.Equal(t, true, tlff.Success, "did not get expected feed_fetch success")
 		// Check that we saved the output file
-		outfn := filepath.Join(tmpdir, fr.FeedVersion.SHA1+".zip")
+		outfn := filepath.Join(tmpdir, fv.SHA1+".zip")
 		info, err := os.Stat(outfn)
 		if os.IsNotExist(err) {
 			t.Fatalf("expected file to exist: %s", outfn)
@@ -107,7 +107,7 @@ func TestFeedStateFetch_CreateFeed(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		//
 		url := ts.URL
-		fr, err := FeedStateFetch(atx, Options{FeedID: "caltrain", FeedURL: ts.URL, FeedCreate: true, Directory: tmpdir})
+		fv, _, err := FeedStateFetch(atx, Options{FeedID: "caltrain", FeedURL: ts.URL, FeedCreate: true, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -116,7 +116,7 @@ func TestFeedStateFetch_CreateFeed(t *testing.T) {
 		tf2 := tl.Feed{}
 		testdb.ShouldGet(t, atx, &tf2, `SELECT * FROM current_feeds WHERE onestop_id = ?`, "caltrain")
 		// Check FV
-		fv2 := tl.FeedVersion{ID: fr.FeedVersion.ID}
+		fv2 := tl.FeedVersion{ID: fv.ID}
 		testdb.ShouldFind(t, atx, &fv2)
 		if fv2.URL != url {
 			t.Errorf("got %s expect %s", fv2.URL, url)
@@ -148,7 +148,7 @@ func TestFeedStateFetch_LastFetchError(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, err = FeedStateFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
+		_, _, err = FeedStateFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil

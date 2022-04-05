@@ -18,7 +18,8 @@ import (
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
-func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (Result, error) {
+func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (tl.FeedVersion, Result, error) {
+	var fv tl.FeedVersion
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		tmpfilepath := fr.Filename
 		vr := validationResponse{}
@@ -37,7 +38,7 @@ func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (Result, error) {
 		}
 		defer reader.Close()
 		// Get initialized FeedVersion
-		fv, err := tl.NewFeedVersionFromReader(reader)
+		fv, err = tl.NewFeedVersionFromReader(reader)
 		if err != nil {
 			vr.Error = err
 			return vr, nil
@@ -54,7 +55,7 @@ func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (Result, error) {
 		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
 		if err == nil {
 			// Already present
-			vr.FeedVersion = checkfvid
+			fv = checkfvid
 			vr.Found = true
 			return vr, nil
 		} else if err == sql.ErrNoRows {
@@ -73,7 +74,6 @@ func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (Result, error) {
 		if err := createFeedStats(atx, reader, fv.ID); err != nil {
 			return vr, err
 		}
-		vr.FeedVersion = fv
 		// If a second tmpfile is created, copy it and overwrite the input tmp file
 		vr.UploadTmpfile = reader.Path()
 		vr.UploadFilename = fv.File
@@ -91,7 +91,8 @@ func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (Result, error) {
 		}
 		return vr, nil
 	}
-	return ffetch(atx, feed, opts, cb)
+	result, err := ffetch(atx, feed, opts, cb)
+	return fv, result, err
 }
 
 func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
