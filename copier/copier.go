@@ -173,8 +173,14 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 
 	// Add extensions
 	for _, extName := range opts.Extensions {
-		e, err := ext.GetExtension(extName)
-		if err != nil || e == nil {
+		extName, extArgs, err := ext.ParseExtensionArgs(extName)
+		if err != nil {
+			return nil, err
+		}
+		e, err := ext.GetExtension(extName, extArgs)
+		if err != nil {
+			return nil, fmt.Errorf("error creating extension '%s' with args '%s': %s", extName, extArgs, err.Error())
+		} else if e == nil {
 			return nil, fmt.Errorf("no registered extension for '%s'", extName)
 		}
 		if err := copier.AddExtension(e); err != nil {
@@ -690,8 +696,7 @@ func (copier *Copier) copyCalendars() error {
 	var bt []tl.Entity
 	var btErr error
 	for _, svc := range svcs {
-		// Need to get calendar dates before ID is updated
-		cds := svc.CalendarDates()
+		cid := svc.EntityID()
 		// Skip main Calendar entity if generated and not normalizing/simplifying service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
 			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
@@ -700,11 +705,14 @@ func (copier *Copier) copyCalendars() error {
 				return writeErr
 			} else if entErr != nil {
 				// do not write calendar dates if service had error
-				cds = nil
+				continue
+				// cds = nil
 			}
 		}
 		// Copy dependent entities
+		cds := svc.CalendarDates()
 		for i := range cds {
+			cds[i].ServiceID = cid
 			if bt, btErr = copier.checkBatch(bt, &cds[i]); btErr != nil {
 				return btErr
 			}

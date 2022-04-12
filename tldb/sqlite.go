@@ -109,6 +109,17 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	return tx.Commit()
 }
 
+// TableExists returns true if the requested table exists
+func (adapter *SQLiteAdapter) TableExists(t string) (bool, error) {
+	qstr := `SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?;`
+	checkName := ""
+	err := sqlx.Get(adapter.db, &checkName, adapter.db.Rebind(qstr), t)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return checkName == t, err
+}
+
 // Find finds a single entity based on the EntityID()
 func (adapter *SQLiteAdapter) Find(dest interface{}) error {
 	return find(adapter, dest)

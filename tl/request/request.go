@@ -1,7 +1,9 @@
 package request
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
@@ -21,15 +23,15 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-func DownloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
+func DownloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
 	u, err := url.Parse(ustr)
 	if err != nil {
-		return nil, errors.New("could not parse url")
+		return nil, 0, errors.New("could not parse url")
 	}
 	if auth.Type == "query_param" {
 		v, err := url.ParseQuery(u.RawQuery)
 		if err != nil {
-			return nil, errors.New("could not parse query string")
+			return nil, 0, errors.New("could not parse query string")
 		}
 		v.Set(auth.ParamName, secret.Key)
 		u.RawQuery = v.Encode()
@@ -40,7 +42,7 @@ func DownloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.Fe
 	// Prepare HTTP request
 	req, err := http.NewRequest("GET", ustr, nil)
 	if err != nil {
-		return nil, errors.New("invalid request")
+		return nil, 0, errors.New("invalid request")
 	}
 	if auth.Type == "basic_auth" {
 		req.SetBasicAuth(secret.Username, secret.Password)
@@ -53,13 +55,13 @@ func DownloadHTTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.Fe
 	resp, err := client.Do(req)
 	if err != nil {
 		// return error directly
-		return nil, err
+		return nil, 0, err
 	}
 	if resp.StatusCode >= 400 {
 		resp.Body.Close()
-		return nil, fmt.Errorf("response status code: %d", resp.StatusCode)
+		return nil, resp.StatusCode, fmt.Errorf("response status code: %d", resp.StatusCode)
 	}
-	return resp.Body, nil
+	return resp.Body, resp.StatusCode, nil
 }
 
 func DownloadFTP(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, error) {
@@ -171,10 +173,11 @@ type Request struct {
 	Auth       tl.FeedAuthorization
 }
 
-func (req *Request) Request(ctx context.Context) (io.ReadCloser, error) {
+func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
+	rd := 0
 	u, err := url.Parse(req.URL)
 	if err != nil {
-		return nil, errors.New("could not parse url")
+		return nil, rd, errors.New("could not parse url")
 	}
 	// Download
 	log.Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")
@@ -182,9 +185,9 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, error) {
 	var reqErr error
 	switch u.Scheme {
 	case "http":
-		r, reqErr = DownloadHTTP(ctx, req.URL, req.Secret, req.Auth)
+		r, rd, reqErr = DownloadHTTP(ctx, req.URL, req.Secret, req.Auth)
 	case "https":
-		r, reqErr = DownloadHTTP(ctx, req.URL, req.Secret, req.Auth)
+		r, rd, reqErr = DownloadHTTP(ctx, req.URL, req.Secret, req.Auth)
 	case "ftp":
 		if req.AllowFTP {
 			r, reqErr = DownloadFTP(ctx, req.URL, req.Secret, req.Auth)
@@ -205,7 +208,7 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, error) {
 			reqErr = errors.New("request not configured to allow filesystem access")
 		}
 	}
-	return r, reqErr
+	return r, rd, reqErr
 }
 
 func NewRequest(address string, opts ...RequestOption) *Request {
@@ -237,25 +240,62 @@ func WithAuth(secret tl.Secret, auth tl.FeedAuthorization) func(req *Request) {
 	}
 }
 
-// AuthenticatedRequestDownload fetches a url using a secret and auth description. Returns temp file path or error.
+// AuthenticatedRequestDownload fetches a url using a secret and auth description. Returns temp file path, sha1, size, response code.
 // Caller is responsible for deleting the file.
-func AuthenticatedRequestDownload(address string, opts ...RequestOption) (string, error) {
+func AuthenticatedRequestDownload(address string, opts ...RequestOption) (string, string, int, int, error) {
 	// 10 minute timeout
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
 	defer cancel()
 	//
 	tmpfile, err := ioutil.TempFile("", "fetch")
 	if err != nil {
-		return "", errors.New("could not create temporary file")
+		return "", "", 0, 0, errors.New("could not create temporary file")
 	}
 	tmpfilepath := tmpfile.Name()
 	defer tmpfile.Close()
 	req := NewRequest(address, opts...)
-	r, err := req.Request(ctx)
+	r, responseCode, err := req.Request(ctx)
 	if err != nil {
-		return "", err
+		return "", "", 0, responseCode, err
 	}
 	defer r.Close()
-	_, err = io.Copy(tmpfile, r)
-	return tmpfilepath, err
+	responseSize, responseSha1, err := copyTo(tmpfile, r)
+	fmt.Println("tmpfile:", tmpfilepath, "size:", responseSize, "sha1:", responseSha1, "code:", responseCode)
+	return tmpfilepath, responseSha1, responseSize, responseCode, err
+}
+
+// AuthenticatedRequest fetches a url using a secret and auth description. Returns []byte, sha1, size, response code.
+func AuthenticatedRequest(address string, opts ...RequestOption) ([]byte, string, int, int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
+	defer cancel()
+	req := NewRequest(address, opts...)
+	r, responseCode, err := req.Request(ctx)
+	if err != nil {
+		return nil, "", 0, 0, err
+	}
+	defer r.Close()
+	var buf bytes.Buffer
+	responseSize, responseSha1, err := copyTo(&buf, r)
+	return buf.Bytes(), responseSha1, responseSize, responseCode, err
+}
+
+func copyTo(dst io.Writer, src io.Reader) (int, string, error) {
+	size := 0
+	h := sha1.New()
+	buf := make([]byte, 1024*1024)
+	for {
+		n, err := src.Read(buf)
+		if err != nil && err != io.EOF {
+			return 0, "", err
+		}
+		if n == 0 {
+			break
+		}
+		size += n
+		h.Write(buf[:n])
+		if _, err := dst.Write(buf[:n]); err != nil {
+			return 0, "", err
+		}
+	}
+	return size, fmt.Sprintf("%x", h.Sum(nil)), nil
 }

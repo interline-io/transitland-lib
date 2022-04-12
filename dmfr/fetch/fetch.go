@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -39,9 +40,13 @@ type Options struct {
 type Result struct {
 	FeedVersion  tl.FeedVersion
 	Path         string
+	ResponseSHA1 string
+	ResponseSize int
+	ResponseCode int
 	FoundSHA1    bool
 	FoundDirSHA1 bool
 	FetchError   error
+	Error        error
 }
 
 // DatabaseFetch fetches and creates a new FeedVersion for a given Feed.
@@ -60,7 +65,9 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	} else if err != nil {
 		return fr, errors.New("feed does not exist")
 	}
+	urlType := "manual"
 	if opts.FeedURL == "" {
+		urlType = "static_current"
 		opts.FeedURL = tlfeed.URLs.StaticCurrent
 	}
 	if opts.FetchedAt.IsZero() {
@@ -99,6 +106,28 @@ func DatabaseFetch(atx tldb.Adapter, opts Options) (Result, error) {
 	if err := atx.Update(&tlstate, "last_fetched_at", "last_fetch_error", "last_successful_fetch_at"); err != nil {
 		return fr, err
 	}
+	// Prepare and save feed fetch record
+	tlfetch := dmfr.FeedFetch{}
+	tlfetch.FeedID = tlfeed.ID
+	tlfetch.URLType = urlType
+	tlfetch.URL = opts.FeedURL
+	tlfetch.FetchedAt = tl.NewTime(opts.FetchedAt)
+	if fr.ResponseCode > 0 {
+		tlfetch.ResponseCode = tl.NewInt(fr.ResponseCode)
+		tlfetch.ResponseSize = tl.NewInt(fr.ResponseSize)
+	}
+	if fr.FetchError == nil {
+		tlfetch.Success = true
+		tlfetch.ResponseSHA1 = tl.NewString(fr.ResponseSHA1)
+		tlfetch.FeedVersionID = tl.NewOInt(fr.FeedVersion.ID)
+	} else {
+		tlfetch.Success = false
+		tlfetch.FetchError = tl.NewString(fr.FetchError.Error())
+	}
+	tlfetch.UpdateTimestamps()
+	if _, err := atx.Insert(&tlfetch); err != nil {
+		return fr, err
+	}
 	return fr, nil
 }
 
@@ -132,7 +161,20 @@ func fetchAndCreateFeedVersion(atx tldb.Adapter, feed tl.Feed, opts Options) (Re
 		}
 		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
 	}
-	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(opts.FeedURL, reqOpts...))
+	// Download and create reader
+	// Save response SHA1, size, code
+	tmpfilepath := ""
+	var err error
+	tmpfilepath, fr.ResponseSHA1, fr.ResponseSize, fr.ResponseCode, err = request.AuthenticatedRequestDownload(opts.FeedURL, reqOpts...)
+	if err != nil {
+		fr.FetchError = err
+		return fr, nil
+	}
+	// Add fragment back in...
+	if a := strings.SplitN(opts.FeedURL, "#", 2); len(a) > 1 {
+		tmpfilepath = tmpfilepath + "#" + a[1]
+	}
+	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewZipAdapter(tmpfilepath))
 	if err != nil {
 		fr.FetchError = err
 		return fr, nil

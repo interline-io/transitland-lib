@@ -54,6 +54,8 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 		mw.Reader.StopTimeList = append(mw.Reader.StopTimeList, *v)
 	case *tl.Agency:
 		mw.Reader.AgencyList = append(mw.Reader.AgencyList, *v)
+	case *tl.Service:
+		mw.Reader.CalendarList = append(mw.Reader.CalendarList, v.Calendar)
 	case *tl.Calendar:
 		mw.Reader.CalendarList = append(mw.Reader.CalendarList, *v)
 	case *tl.CalendarDate:
