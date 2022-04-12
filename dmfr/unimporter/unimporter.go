@@ -28,14 +28,29 @@ func feedVersionTableDelete(atx tldb.Adapter, table string, fvid int, ifExists b
 // stops, routes, agencies, pathways, levels are not affected.
 // Note: calendars and calendar_dates MAY be deleted in future versions.
 func UnimportSchedule(atx tldb.Adapter, id int) error {
+	extensionTables := []string{
+		// can reference entities below
+		"ext_plus_calendar_attributes",
+		"ext_plus_realtime_stops",
+		"ext_plus_realtime_trips",
+		"ext_plus_timepoints",
+	}
 	tables := []string{
+		// gtfs entities
+		"gtfs_attributions",
 		"gtfs_stop_times",
 		"gtfs_transfers",
-		// "gtfs_calendar_dates",
+		"gtfs_calendar_dates",
 		"gtfs_frequencies",
 		"gtfs_trips",
 		"gtfs_shapes",
-		// "gtfs_calendars",
+		"gtfs_calendars",
+	}
+	// Allow extension tables to not exist
+	for _, table := range extensionTables {
+		if err := feedVersionTableDelete(atx, table, id, true); err != nil {
+			return err
+		}
 	}
 	for _, table := range tables {
 		if err := feedVersionTableDelete(atx, table, id, false); err != nil {
