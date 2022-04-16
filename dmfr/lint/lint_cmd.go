@@ -1,19 +1,18 @@
 package lint
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"os"
+	"strings"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/gjson_modifications"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/sergi/go-diff/diffmatchpatch"
-	"github.com/tidwall/gjson"
 )
 
-// Command merges two or more DMFR files.
+// Command lints a DMFR file.
 type Command struct {
 	Filenames []string
 }
@@ -36,6 +35,7 @@ func (cmd *Command) Parse(args []string) error {
 
 // Run this command.
 func (cmd *Command) Run() error {
+	var fileErrors []string
 	for _, filename := range cmd.Filenames {
 		// first validate DMFR
 		_, err := dmfr.LoadAndParseRegistry(filename)
@@ -43,20 +43,26 @@ func (cmd *Command) Run() error {
 			log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
 		}
 
-		// load JSON
-		jsonFile, err := os.Open(filename)
+		// Now load again as raw dmfr
+		rawJson, err := ioutil.ReadFile(filename)
+		rr, err := dmfr.ReadRawRegistry(bytes.NewBuffer(rawJson))
 		if err != nil {
-			log.Errorf("%s: Error when loading DMFR JSON: %s", filename, err.Error())
+			log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
 		}
-		defer jsonFile.Close()
-		byteValue, _ := ioutil.ReadAll(jsonFile)
-		originalJsonString := string(byteValue[:])
+		var buf bytes.Buffer
+		if err := rr.Write(&buf); err != nil {
+			return err
+		}
+
+		// load JSON
+		originalJsonString := string(rawJson)
+		formattedJsonString := string(buf.Bytes())
 
 		// sort feeds by Onestop ID, sort all properties alphabetically, and pretty print with two-space indent
-		gjson_modifications.AddSortModifier()
-		formattedJsonString := gjson.Get(originalJsonString, `@sort:{"array":"feeds","orderBy":"id","desc":false}.@pretty:{"sortKeys":true}`).Raw
-		if (formattedJsonString != originalJsonString) {
-			log.Errorf("%s: Not formatted properly.", filename)
+		if formattedJsonString != originalJsonString {
+			err := fmt.Errorf("%s: not formatted correctly", filename)
+			log.Errorf(err.Error())
+			fileErrors = append(fileErrors, filename)
 			// print out diff
 			dmp := diffmatchpatch.New()
 			diffs := dmp.DiffMain(originalJsonString, formattedJsonString, false)
@@ -64,6 +70,10 @@ func (cmd *Command) Run() error {
 		} else {
 			log.Infof("%s: Formatted properly.", filename)
 		}
+	}
+	if len(fileErrors) > 0 {
+		return fmt.Errorf("Incorrectly formatted files: %s", strings.Join(fileErrors, ", "))
+
 	}
 	return nil
 }

@@ -1,21 +1,20 @@
 package format
 
 import (
+	"bytes"
+	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/gjson_modifications"
 	"github.com/interline-io/transitland-lib/log"
-	"github.com/tidwall/gjson"
 )
 
 // Command formats a DMFR file.
 type Command struct {
 	Filename string
-	Save bool
+	Save     bool
 }
 
 // Parse command line options.
@@ -38,42 +37,41 @@ func (cmd *Command) Parse(args []string) error {
 // Run this command.
 func (cmd *Command) Run() error {
 	filename := cmd.Filename
-	if filename != "" {
-		// first validate DMFR
-		_, err := dmfr.LoadAndParseRegistry(filename)
-		if err != nil {
-			log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
-		}
-		
-		// load JSON
-		var jsonFile *os.File
-		if (cmd.Save) {
-			jsonFile, err = os.OpenFile(filename, os.O_RDWR, 0644)
-			if err != nil {
-				log.Errorf("%s: Error when loading DMFR JSON: %s", filename, err.Error())
-			}
-		} else {
-			jsonFile, err = os.Open(filename)
-			if err != nil {
-				log.Errorf("%s: Error when loading DMFR JSON: %s", filename, err.Error())
-			}
-		}
-	
-		defer jsonFile.Close()
-		byteValue, _ := ioutil.ReadAll(jsonFile)
+	if filename == "" {
+		return errors.New("must specify filename")
+	}
+	// First, validate DMFR
+	_, err := dmfr.LoadAndParseRegistry(filename)
+	if err != nil {
+		log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+	}
 
-		// sort feeds by Onestop ID, sort all properties alphabetically, and pretty print with two-space indent
-		gjson_modifications.AddSortModifier()
-		formattedResult := gjson.Get(string(byteValue[:]), `@sort:{"array":"feeds","orderBy":"id","desc":false}.@pretty:{"sortKeys":true}`).Raw
-		if (cmd.Save) {
-			jsonFile.Truncate(0)
-			jsonFile.Seek(0, 0)
-			jsonFile.WriteString(formattedResult)
-		} else {
-			fmt.Print(formattedResult)
+	// Re-read as raw registry
+	r, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	rr, err := dmfr.ReadRawRegistry(r)
+	if err != nil {
+		log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+	}
+	var buf bytes.Buffer
+	if err := rr.Write(&buf); err != nil {
+		return err
+	}
+	byteValue := buf.Bytes()
+	if cmd.Save {
+		// Write json
+		f, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+		if _, err := f.Write(byteValue); err != nil {
+			return err
 		}
 	} else {
-		log.Errorf("Must specify a filename")
+		// Print
+		fmt.Println(string(byteValue))
 	}
 	return nil
 }

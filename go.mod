@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.25.0
 	github.com/dimchansky/utfbom v1.1.0
 	github.com/golang/protobuf v1.4.1
+	github.com/iancoleman/orderedmap v0.2.0
 	github.com/jlaffaye/ftp v0.0.0-20191218041957-e1b8fdd0dcc3
 	github.com/jmoiron/sqlx v1.3.1
 	github.com/lib/pq v1.8.0
