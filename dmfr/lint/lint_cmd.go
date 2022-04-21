@@ -58,7 +58,7 @@ func (cmd *Command) Run() error {
 		originalJsonString := string(rawJson)
 		formattedJsonString := string(buf.Bytes())
 
-		// sort feeds by Onestop ID, sort all properties alphabetically, and pretty print with two-space indent
+		// Compare against input json
 		if formattedJsonString != originalJsonString {
 			err := fmt.Errorf("%s: not formatted correctly", filename)
 			log.Errorf(err.Error())
