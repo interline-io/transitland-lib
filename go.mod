@@ -20,7 +20,6 @@ require (
 	github.com/sergi/go-diff v1.2.0
 	github.com/snabb/isoweek v1.0.0
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.14.0
 	github.com/twpayne/go-geom v1.4.1
 	google.golang.org/protobuf v1.25.0
 )
