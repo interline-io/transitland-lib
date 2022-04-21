@@ -10,20 +10,19 @@ import (
 
 // Feed listed in a parsed DMFR file
 type Feed struct {
-	ID              int                 `json:"-"`
-	FeedID          string              `json:"id" db:"onestop_id"`
-	FeedNamespaceID string              `json:"feed_namespace_id"`
-	Name            String              `json:"name"`
-	Spec            string              `json:"spec"`
-	URLs            FeedUrls            `json:"urls" db:"urls"`
-	AssociatedFeeds FeedAssociatedFeeds `json:"associated_feeds"` // `json:"associated_feeds"`
-	Languages       FeedLanguages       `json:"languages,omitempty"`
-	License         FeedLicense         `json:"license"`
-	Authorization   FeedAuthorization   `json:"authorization" db:"auth"`
-	Tags            Tags                `json:"tags" db:"feed_tags" `
-	File            string              `json:"file"`       // internal
-	DeletedAt       Time                `json:"deleted_at"` // internal
-	Timestamps      `json:"-"`          // internal
+	ID              int               `json:"-"`
+	FeedID          string            `json:"id" db:"onestop_id"`
+	FeedNamespaceID string            `json:"feed_namespace_id,omitempty"`
+	Name            String            `json:"name,omitempty"`
+	Spec            string            `json:"spec,omitempty"`
+	URLs            FeedUrls          `json:"urls,omitempty" db:"urls"`
+	Languages       FeedLanguages     `json:"languages,omitempty"`
+	License         FeedLicense       `json:"license,omitempty"`
+	Authorization   FeedAuthorization `json:"authorization,omitempty" db:"auth"`
+	Tags            Tags              `json:"tags,omitempty" db:"feed_tags" `
+	File            string            `json:"-"` // internal
+	DeletedAt       Time              `json:"-"` // internal
+	Timestamps      `json:"-"`        // internal
 }
 
 func (ent *Feed) MatchSecrets(secrets []Secret) (Secret, error) {

@@ -1,6 +1,7 @@
 package dmfr
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -124,6 +125,44 @@ func TestImplicitOperatorInFeed(t *testing.T) {
 			if !testMatch {
 				t.Errorf("no matching tests")
 			}
+		})
+	}
+}
+
+func TestRegistry_Write(t *testing.T) {
+	// Assume checks not performed here are tested in RawRegistry Write tests
+	tcs := []struct {
+		name   string
+		data   string
+		output string
+	}{
+		{
+			"feed",
+			`{"feeds":[{"id":"test","spec":"gtfs"}]}`,
+			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.4.0.json","feeds":[{"id":"test","spec":"gtfs"}]}`,
+		},
+		{
+			"feed sorted",
+			`{"feeds":[{"id":"z","spec":"gtfs"},{"id":"a","spec":"gtfs"}]}`,
+			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.4.0.json","feeds":[{"id":"a","spec":"gtfs"},{"id":"z","spec":"gtfs"}]}`,
+		},
+		{
+			"nested operators moved to top level",
+			`{"feeds": [{"id": "z","spec": "gtfs","operators": [{"onestop_id": "o"}]}]}`,
+			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.4.0.json","feeds":[{"id":"z","spec":"gtfs"}],"operators":[{"onestop_id":"o","associated_feeds":[{"feed_onestop_id":"z"}]}]}`,
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := ReadRegistry(bytes.NewBuffer([]byte(tc.data)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			outbuf := bytes.NewBuffer(nil)
+			if err := r.Write(outbuf); err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, lineTrimSpaces(tc.output), lineTrimSpaces(outbuf.String()))
 		})
 	}
 }
