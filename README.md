@@ -14,6 +14,10 @@
 	- [`validate` command](#validate-command)
 	- [`copy` command](#copy-command)
 	- [`extract` command](#extract-command)
+	- [`sync` command](#sync-command)
+	- [`fetch` command](#fetch-command)
+	- [`import` command](#import-command)
+	- [`unimport` command](#unimport-command)
 	- [`dmfr` command](#dmfr-command)
 - [Usage as a library](#usage-as-a-library)
 	- [Key library components](#key-library-components)
@@ -64,22 +68,30 @@ The main subcommands are:
 - [validate](#validate-command)
 - [copy](#copy-command)
 - [extract](#extract-command)
+- [sync](#sync-command)
+- [fetch](#fetch-command)
+- [import](#import-command)
+- [unimport](#unimport-command)- 
 - [dmfr](#dmfr-command)
 
 ### `validate` command
 
 The validate command performs a basic validation on a data source and writes the results to standard out.
 
-```
+```bash
 % transitland validate --help
 Usage: validate <reader>
+  -best-practices
+    	Include Best Practices validations
   -ext value
     	Include GTFS Extension
+  -o string
+    	Write validation report as JSON to file
 ```
 
 Example: 
 
-```sh
+```bash
 % transitland validate "https://www.bart.gov/dev/schedules/google_transit.zip"
 ```
 
@@ -87,7 +99,7 @@ Example:
 
 The copy command performs a basic copy from a reader to a writer. By default, any entity with errors will be skipped and not written to output. This can be ignored with `-allow-entity-errors` to ignore simple errors and `-allow-reference-errors` to ignore entity relationship errors, such as a reference to a non-existent stop.
 
-```
+```bash
 % transitland copy --help
 Usage: copy <reader> <writer>
   -allow-entity-errors
@@ -104,7 +116,7 @@ Usage: copy <reader> <writer>
 
 Example:
 
-```sh
+```bash
 % transitland copy --allow-entity-errors "https://www.bart.gov/dev/schedules/google_transit.zip" output.zip
 
 % unzip -p output.zip agency.txt
@@ -116,7 +128,7 @@ BART,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6
 
 The extract command extends the basic copy command with a number of additional options and transformations. It can be used to pull out a single route or trip, interpolate stop times, override a single value on an entity, etc. This is a separate command to keep the basic copy command simple while allowing the extract command to grow and add more features over time.
 
-```
+```bash
 % transitland extract --help
 Usage: extract <input> <output>
   -allow-entity-errors
@@ -127,6 +139,8 @@ Usage: extract <input> <output>
     	Create a basic database schema if none exists
   -create-missing-shapes
     	Create missing Shapes from Trip stop-to-stop geometries
+  -deduplicate-stop-times
+    	Deduplicate StopTimes using Journey Patterns
   -ext value
     	Include GTFS Extension
   -extract-agency value
@@ -146,16 +160,22 @@ Usage: extract <input> <output>
   -interpolate-stop-times
     	Interpolate missing StopTime arrival/departure values
   -normalize-service-ids
-    	Create Calendar entities for CalendarDate service_id's
+    	Create any missing Calendar entities for CalendarDate service_ids
+  -normalize-timezones
+    	Normalize timezones and apply default stop timezones based on agency and parent stops
   -set value
     	Set values on output; format is filename,id,key,value
+  -simplify-calendars
+    	Attempt to simplify CalendarDates into regular Calendars
+  -simplify-shapes float
+    	Simplify shapes with this tolerance (ex. 0.000005)
   -use-basic-route-types
     	Collapse extended route_type's into basic GTFS values
 ```
 
 Example:
 
-```sh
+```bash
 # Extract a single trip from the BART GTFS, and rename the agency to "test".
 % transitland extract -extract-trip "3050453" -set "agency.txt,BART,agency_id,test" "https://www.bart.gov/dev/schedules/google_transit.zip" output2.zip
 
@@ -184,13 +204,135 @@ trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_t
 ...
 ```
 
+### `sync` command
+
+The `sync` command loads DMFR files into a database.
+
+```bash
+% transitland sync --help
+Usage: sync <Filenames...>
+  -dburl string
+    	Database URL (default: $TL_DATABASE_URL)
+  -hide-unseen
+    	Hide unseen feeds
+  -hide-unseen-operators
+    	Hide unseen operators
+```
+
+### `fetch` command
+
+The `fetch` command fetches GTFS data and saves feed version records to the database. Use after the `sync` command.
+
+```bash
+% transitland fetch --help
+Usage: fetch [feed_id...]
+  -allow-ftp-fetch
+    	Allow fetching from FTP urls
+  -allow-local-fetch
+    	Allow fetching from filesystem directories/zip files
+  -allow-s3-fetch
+    	Allow fetching from S3 urls
+  -create-feed
+    	Create feed records if not found
+  -dburl string
+    	Database URL (default: $TL_DATABASE_URL)
+  -dry-run
+    	Dry run; print feeds that would be imported and exit
+  -feed-url string
+    	Manually fetch a single URL; you must specify exactly one feed_id
+  -fetched-at string
+    	Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z
+  -gtfsdir string
+    	GTFS Directory (default ".")
+  -ignore-duplicate-contents
+    	Allow duplicate internal SHA1 contents
+  -limit int
+    	Maximum number of feeds to fetch
+  -s3 string
+    	Upload GTFS files to S3 bucket/prefix
+  -secrets string
+    	Path to DMFR Secrets file
+  -workers int
+    	Worker threads (default 1)
+```
+
+### `import` command
+
+The `import` command imports previously fetched feed versions into the database. Use after the `fetch` command.
+
+```bash
+% transitland import --help
+Usage: import [feedids...]
+  -activate
+    	Set as active feed version after import
+  -create-missing-shapes
+    	Create missing Shapes from Trip stop-to-stop geometries
+  -date string
+    	Service on date
+  -dburl string
+    	Database URL (default: $TL_DATABASE_URL)
+  -deduplicate-stop-times
+    	Deduplicate StopTimes using Journey Patterns
+  -dryrun
+    	Dry run; print feeds that would be imported and exit
+  -ext value
+    	Include GTFS Extension
+  -fetched-since string
+    	Fetched since
+  -fv-sha1 value
+    	Feed version SHA1
+  -fv-sha1-file string
+    	Specify feed version IDs by SHA1 in file, one per line
+  -fvid value
+    	Import specific feed version ID
+  -fvid-file string
+    	Specify feed version IDs in file, one per line; equivalent to multiple --fvid
+  -gtfsdir string
+    	GTFS Directory (default ".")
+  -interpolate-stop-times
+    	Interpolate missing StopTime arrival/departure values
+  -latest
+    	Only import latest feed version available for each feed
+  -limit int
+    	Import at most n feeds
+  -normalize-timezones
+    	Normalize timezones and apply default stop timezones based on agency and parent stops
+  -s3 string
+    	Get GTFS files from S3 bucket/prefix
+  -simplify-calendars
+    	Attempt to simplify CalendarDates into regular Calendars
+  -simplify-shapes float
+    	Simplify shapes with this tolerance (ex. 0.000005)
+  -workers int
+    	Worker threads (default 1)
+```
+
+### `unimport` command
+
+The `unimport` command deletes previously imported data from feed versions. The feed version record itself is not deleted. You may optionally specify removal of only schedule data, leaving routes, stops, etc. in place.
+
+```bash
+% transitland unimport --help
+Usage: unimport [fvids]
+  -dburl string
+    	Database URL (default: $TL_DATABASE_URL)
+  -dryrun
+    	Dry run; print feeds that would be imported and exit
+  -feed value
+    	Feed ID
+  -fv-sha1 value
+    	Feed version SHA1
+  -fv-sha1-file string
+    	Specify feed version IDs by SHA1 in file, one per line
+  -fvid-file string
+    	Specify feed version IDs in file, one per line; equivalent to multiple --fvid
+  -schedule-only
+    	Unimport stop times, trips, transfers, shapes, and frequencies
+```
+
 ### `dmfr` command
 
-_under development_
-
-The `dmfr` command enables processing multiple feeds at once using a catalog in the [Distributed Mobility Feed Registry]([dmfr](https://github.com/transitland/distributed-mobility-feed-registry)) format. It provides several additional subcommands for reading DMFR files, synchronizing these feeds to a database, downloading the latest versions of each feed, and automatically importing the feeds into a database. It provides the foundation for [Transitland v2](https://transit.land/news/2019/10/17/tlv2.html).
-
-This command is still under active development and may change in future releases. Please see [DMFR Command help](dmfr-command.md).
+The `dmfr` command enables validation, linting, and formatting of [Distributed Mobility Feed Registry]([dmfr](https://github.com/transitland/distributed-mobility-feed-registry)) format. Please see [DMFR Command help](dmfr-command.md).
 
 ## Usage as a library
 

@@ -2,7 +2,6 @@ package dmfr
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -17,40 +16,29 @@ import (
 
 // Registry represents a parsed Distributed Mobility Feed Registry (DMFR) file
 type Registry struct {
-	Schema                string `json:"$schema"`
-	Feeds                 []tl.Feed
-	Operators             []tl.Operator
-	Secrets               []tl.Secret
-	LicenseSpdxIdentifier string `json:"license_spdx_identifier"`
+	Schema                string        `json:"$schema,omitempty"`
+	Feeds                 []tl.Feed     `json:"feeds,omitempty"`
+	Operators             []tl.Operator `json:"operators,omitempty"`
+	Secrets               []tl.Secret   `json:"secrets,omitempty"`
+	LicenseSpdxIdentifier string        `json:"license_spdx_identifier,omitempty"`
 }
 
-// feed.Operators should be loaded but not exported
-type loadFeed struct {
-	Operators []tl.Operator
-	tl.Feed
-}
-
-type loadRegistry struct {
-	Feeds []loadFeed
-	Registry
-}
-
-// NewRegistry TODO
-func NewRegistry(reader io.Reader) (*Registry, error) {
-	contents, err := ioutil.ReadAll(reader)
+// ReadRegistry TODO
+func ReadRegistry(reader io.Reader) (*Registry, error) {
+	loadReg, err := ReadRawRegistry(reader)
 	if err != nil {
-		return nil, err
-	}
-	var loadReg loadRegistry
-	if err := json.Unmarshal([]byte(contents), &loadReg); err != nil {
-		if e, ok := err.(*json.SyntaxError); ok {
-			log.Debugf("syntax error at byte offset %d", e.Offset)
-		}
 		return nil, err
 	}
 
 	// Apply nested operator rules
-	reg := loadReg.Registry
+	reg := Registry{}
+	reg.LicenseSpdxIdentifier = loadReg.LicenseSpdxIdentifier
+	reg.Schema = loadReg.Schema
+	reg.Operators = loadReg.Operators
+	reg.Secrets = loadReg.Secrets
+	if reg.Schema == "" {
+		reg.Schema = "https://dmfr.transit.land/json-schema/dmfr.schema-v0.4.0.json"
+	}
 	operators := []tl.Operator{}
 	for _, rfeed := range loadReg.Feeds {
 		reg.Feeds = append(reg.Feeds, rfeed.Feed) // add feed without operator
@@ -113,6 +101,19 @@ func NewRegistry(reader io.Reader) (*Registry, error) {
 	return &reg, nil
 }
 
+// Format raw registry, before additional processing is applied
+func (r *Registry) Write(w io.Writer) error {
+	rr := RawRegistry{}
+	rr.Operators = r.Operators
+	rr.Secrets = r.Secrets
+	rr.Schema = r.Schema
+	rr.LicenseSpdxIdentifier = r.LicenseSpdxIdentifier
+	for _, feed := range r.Feeds {
+		rr.Feeds = append(rr.Feeds, RawRegistryFeed{Feed: feed})
+	}
+	return rr.Write(w)
+}
+
 // LoadAndParseRegistry loads and parses a Distributed Mobility Feed Registry (DMFR) file from either a file system path or a URL
 func LoadAndParseRegistry(path string) (*Registry, error) {
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
@@ -127,14 +128,14 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 		}
 		reader := bytes.NewReader(body)
 		readerSkippingBOM := utfbom.SkipOnly(reader)
-		return NewRegistry(readerSkippingBOM)
+		return ReadRegistry(readerSkippingBOM)
 	}
 	reader, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	readerSkippingBOM, _ := utfbom.Skip(reader)
-	reg, err := NewRegistry(readerSkippingBOM)
+	reg, err := ReadRegistry(readerSkippingBOM)
 	if err != nil {
 		return nil, err
 	}
