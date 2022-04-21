@@ -108,9 +108,6 @@ func (cmd *Command) Run() error {
 	///////////////
 	// Here we go
 	log.Infof("Fetching %d feeds", len(cmd.FeedIDs))
-	fetchNew := 0
-	fetchFound := 0
-	fetchErrs := 0
 	var wg sync.WaitGroup
 	jobs := make(chan Options, len(cmd.FeedIDs))
 	results := make(chan Result, len(cmd.FeedIDs))
@@ -123,6 +120,7 @@ func (cmd *Command) Run() error {
 			FeedID:                  feedid,
 			FeedCreate:              cmd.Options.FeedCreate,
 			FeedURL:                 cmd.Options.FeedURL,
+			URLType:                 cmd.Options.URLType,
 			Directory:               cmd.Options.Directory,
 			S3:                      cmd.Options.S3,
 			IgnoreDuplicateContents: cmd.Options.IgnoreDuplicateContents,
@@ -137,20 +135,28 @@ func (cmd *Command) Run() error {
 	close(jobs)
 	wg.Wait()
 	close(results)
+	var fatalError error
+	fetchFatalErrors := 0
+	fetchNew := 0
+	fetchFound := 0
+	fetchErrs := 0
 	for fr := range results {
 		if fr.Error != nil {
-			fetchErrs++
+			fetchFatalErrors++
+			fatalError = fr.Error
 		} else if fr.FetchError != nil {
 			fetchErrs++
-		} else if fr.FoundSHA1 {
-			fetchFound++
-		} else if fr.FoundDirSHA1 {
+		} else if fr.Found {
 			fetchFound++
 		} else {
 			fetchNew++
 		}
 	}
 	log.Infof("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
+	if fatalError != nil {
+		log.Infof("Exiting with error because at least one feed had fatal error: %s", fatalError.Error())
+		return fatalError
+	}
 	return nil
 }
 
@@ -164,26 +170,25 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 			continue
 		}
 		var fr Result
+		var fv tl.FeedVersion
 		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
-			fr, fe = DatabaseFetch(atx, opts)
+			fv, fr, fe = FeedStateFetch(atx, opts)
 			return fe
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
-		fid := fr.FeedVersion.FeedID
-		furl := fr.FeedVersion.URL
+		fid := fv.FeedID
+		furl := fv.URL
 		if err != nil {
 			fr.Error = err
 			log.Error().Err(err).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
 		} else if fr.FetchError != nil {
 			log.Error().Err(fr.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", osid, fid, furl, fr.FetchError.Error(), t2)
-		} else if fr.FoundSHA1 {
-			log.Infof("Feed %s (id:%d): url: %s found zip sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
-		} else if fr.FoundDirSHA1 {
-			log.Infof("Feed %s (id:%d): url: %s found contents sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1Dir, fr.FeedVersion.ID, t2)
+		} else if fr.Found {
+			log.Infof("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fv.SHA1, fv.ID, t2)
 		} else {
-			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fr.FeedVersion.SHA1, fr.FeedVersion.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fv.SHA1, fv.ID, t2)
 		}
 		results <- fr
 	}

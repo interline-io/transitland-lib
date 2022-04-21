@@ -93,24 +93,24 @@ func TestAuthorizedRequest(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			d, responseSha1, responseSize, responseCode, err := AuthenticatedRequest(ts.URL+tc.url, WithAuth(secret, tc.auth))
+			fr, err := AuthenticatedRequest(ts.URL+tc.url, WithAuth(secret, tc.auth))
 			if err != nil {
 				t.Error(err)
 				return
 			}
 			var result map[string]interface{}
-			if err := json.Unmarshal(d, &result); err != nil {
+			if err := json.Unmarshal(fr.Data, &result); err != nil {
 				t.Error(err)
 				return
 			}
 			if tc.checksize > 0 {
-				assert.Equal(t, tc.checksize, responseSize, "did not match expected size")
+				assert.Equal(t, tc.checksize, fr.ResponseSize, "did not match expected size")
 			}
 			if tc.checkcode > 0 {
-				assert.Equal(t, tc.checkcode, responseCode, "did not match expected response code")
+				assert.Equal(t, tc.checkcode, fr.ResponseCode, "did not match expected response code")
 			}
 			if tc.checksha1 != "" {
-				assert.Equal(t, tc.checksha1, responseSha1, "did not match expected sha1")
+				assert.Equal(t, tc.checksha1, fr.ResponseSHA1, "did not match expected sha1")
 			}
 			if tc.checkkey != "" {
 				a, ok := result[tc.checkkey].(string)

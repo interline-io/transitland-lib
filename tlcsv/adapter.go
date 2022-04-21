@@ -98,14 +98,14 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	tmpfilepath, _, _, _, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
+	fr, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
 	if err != nil {
 		return err
 	}
 	// Add internal path prefix back
 	adapter.ZipAdapter = ZipAdapter{
-		path:        tmpfilepath + "#" + fragment,
-		tmpfilepath: tmpfilepath, // delete on close
+		path:        fr.Filename + "#" + fragment,
+		tmpfilepath: fr.Filename, // delete on close
 	}
 	return adapter.ZipAdapter.Open()
 }
@@ -137,7 +137,7 @@ func (adapter *ZipAdapter) Open() error {
 		adapter.internalPrefix = spliturl[1]
 	}
 	if !adapter.Exists() {
-		return errors.New("file does not exist")
+		return errors.New("file does not exist or invalid data")
 	}
 	// Try to auto discover internal path fragment if unspecified
 	if adapter.internalPrefix == "" {
@@ -145,7 +145,6 @@ func (adapter *ZipAdapter) Open() error {
 		if err != nil {
 			return err
 		}
-		log.Tracef("Using auto-discovered internal prefix: %s", pfx)
 		adapter.internalPrefix = pfx
 	} else if strings.HasSuffix(adapter.internalPrefix, ".zip") {
 		// If the internal prefix is a zip, extract this to a temp file
@@ -159,8 +158,8 @@ func (adapter *ZipAdapter) Open() error {
 			// Get the full path
 			tmpfilepath = tmpfile.Name()
 			// Write the body to file
+			log.Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
 			io.Copy(tmpfile, r)
-			log.Debugf("Extracted %s internal prefix %s to %s", adapter.path, adapter.internalPrefix, tmpfilepath)
 		})
 		if err != nil {
 			return err
@@ -169,13 +168,16 @@ func (adapter *ZipAdapter) Open() error {
 		adapter.tmpfilepath = tmpfilepath
 		adapter.internalPrefix = ""
 	}
+	if adapter.internalPrefix != "" {
+		log.Tracef("zip adapter: using internal prefix: %s", adapter.internalPrefix)
+	}
 	return nil
 }
 
 // Close the adapter.
 func (adapter *ZipAdapter) Close() error {
 	if adapter.tmpfilepath != "" {
-		log.Debugf("removing temp file: %s", adapter.tmpfilepath)
+		log.Debugf("zip adapter: removing temp file: %s", adapter.tmpfilepath)
 		if err := os.Remove(adapter.tmpfilepath); err != nil {
 			return err
 		}
