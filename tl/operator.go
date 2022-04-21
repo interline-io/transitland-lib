@@ -10,11 +10,11 @@ import (
 type Operator struct {
 	ID              int                     `json:"-"`
 	OnestopID       String                  `json:"onestop_id"`
-	Tags            Tags                    `json:"tags,omitempty" db:"operator_tags"`
 	Name            String                  `json:"name,omitempty"`
 	ShortName       String                  `json:"short_name,omitempty"`
 	Website         String                  `json:"website,omitempty"`
 	AssociatedFeeds OperatorAssociatedFeeds `json:"associated_feeds,omitempty"`
+	Tags            Tags                    `json:"tags,omitempty" db:"operator_tags"`
 	File            String                  `json:"-"` // internal
 	DeletedAt       Time                    `json:"-"` // internal
 	Timestamps      `json:"-"`
