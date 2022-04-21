@@ -78,6 +78,7 @@ func (r *RawRegistry) Write(w io.Writer) error {
 	m := orderedmap.OrderedMap{}
 	json.Unmarshal(b, &m)
 	m = removeNulls(m)
+	m.SetEscapeHTML(false)
 	mb, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return err
