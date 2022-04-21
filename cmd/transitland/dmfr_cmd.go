@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -11,7 +12,6 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/lint"
 	"github.com/interline-io/transitland-lib/dmfr/sync"
 	"github.com/interline-io/transitland-lib/dmfr/unimporter"
-	"github.com/interline-io/transitland-lib/dmfr/validate"
 )
 
 // dmfrCommand is the main entry point to the DMFR command
@@ -24,28 +24,23 @@ func (cmd *dmfrCommand) Parse(args []string) error {
 	fl.Usage = func() {
 		log.Print("Usage: dmfr <command> [<args>]")
 		log.Print("dmfr commands:")
-		log.Print("  validate")
 		log.Print("  format")
-		log.Print("  sync")
-		log.Print("  import")
-		log.Print("  unimport")
-		log.Print("  fetch")
+		log.Print("  lint")
 		fl.PrintDefaults()
 	}
 	fl.Parse(args)
 	subc := fl.Arg(0)
 	if subc == "" {
 		fl.Usage()
-		return nil
+		return errors.New("subcommand required")
 	}
 	subargs := fl.Args()[1:]
 	switch subc {
-	case "validate":
-		cmd.subcommand = &validate.Command{}
 	case "format":
 		cmd.subcommand = &format.Command{}
 	case "lint":
 		cmd.subcommand = &lint.Command{}
+	// Backwards compat
 	case "sync":
 		cmd.subcommand = &sync.Command{}
 	case "import":
