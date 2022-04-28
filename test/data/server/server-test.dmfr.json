@@ -6,9 +6,6 @@
       "id": "CT",
       "name": "Caltrain",
       "languages": ["en-US"],
-      "associated_feeds": [
-        "CT~rt"
-      ],
       "urls": {
         "static_current": "../test/data/external/caltrain.zip",
         "static_historic": ["https://caltrain.com/old_feed.zip"]

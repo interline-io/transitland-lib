@@ -10,8 +10,6 @@ CREATE TABLE IF NOT EXISTS "current_feeds" (
   "auth" BLOB,
   "urls" BLOB,
   "languages" BLOB,
-  "associated_feeds" BLOB,
-  "feed_namespace_id" varchar(255) NOT NULL,
   "name" varchar(255),
   "file" varchar(255) NOT NULL,
   "feed_tags" BLOB

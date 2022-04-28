@@ -12,7 +12,6 @@ import (
 type Feed struct {
 	ID              int               `json:"-"`
 	FeedID          string            `json:"id" db:"onestop_id"`
-	FeedNamespaceID string            `json:"feed_namespace_id,omitempty"`
 	Name            String            `json:"name,omitempty"`
 	Spec            string            `json:"spec,omitempty"`
 	URLs            FeedUrls          `json:"urls,omitempty" db:"urls"`
