@@ -30,8 +30,8 @@ func slowStringToSeconds(value string) (int, error) {
 	return int(a*3600 + b*60 + c), nil
 }
 
-// SecondsTString takes seconds-since-midnight and returns a GTFS-style time.
-func SecondsTString(secs int) string {
+// SecondsToString takes seconds-since-midnight and returns a GTFS-style time.
+func SecondsToString(secs int) string {
 	if secs < 0 {
 		return ""
 	}
@@ -77,7 +77,7 @@ func (wt *WideTime) String() string {
 	if !wt.Valid {
 		return ""
 	}
-	return SecondsTString(wt.Seconds)
+	return SecondsToString(wt.Seconds)
 }
 
 // Value implements driver.Value
