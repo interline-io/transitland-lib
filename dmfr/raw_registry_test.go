@@ -95,6 +95,21 @@ func TestRawRegistry_Write(t *testing.T) {
 			`{"feeds":[{"id":"test","name":"ok","spec":"gtfs","urls":{"static_current":"x"},"languages":["en"]}]}`,
 		},
 		{"empty", `{}`, `{}`},
+		{
+			"allowed unescaped &",
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+		},
+		{
+			"allowed unescaped <",
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+		},
+		{
+			"allowed unescaped >",
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+		},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {

@@ -1,6 +1,7 @@
 package dmfr
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -75,15 +76,23 @@ func (r *RawRegistry) Write(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// Load JSON back into OrderedMap before removing null values
 	m := orderedmap.OrderedMap{}
+	m.SetEscapeHTML(false)
 	json.Unmarshal(b, &m)
 	m = removeNulls(m)
-	m.SetEscapeHTML(false)
-	mb, err := json.MarshalIndent(m, "", "  ")
+
+	// Convert back to JSON, then apply indent
+	// OrderedMap doesn't support MarshalIndent directly
+	mb, err := m.MarshalJSON()
 	if err != nil {
 		return err
 	}
-	_, err = w.Write(mb)
+	var mbi bytes.Buffer
+	if err := json.Indent(&mbi, mb, "", "  "); err != nil {
+		return err
+	}
+	_, err = w.Write(mbi.Bytes())
 	return err
 }
 
@@ -91,6 +100,7 @@ func removeNulls(m orderedmap.OrderedMap) orderedmap.OrderedMap {
 	// Create a new output OrderedMap,
 	// go through every element in input map, and remove any null or empty maps
 	m2 := orderedmap.New()
+	m2.SetEscapeHTML(false)
 	for _, k := range m.Keys() {
 		v, _ := m.Get(k)
 		if vx, ok := v.(orderedmap.OrderedMap); ok {
