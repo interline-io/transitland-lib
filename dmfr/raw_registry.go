@@ -85,9 +85,11 @@ func (r *RawRegistry) Write(w io.Writer) error {
 	// Convert back to JSON, then apply indent
 	// OrderedMap doesn't support MarshalIndent directly
 	mb, err := m.MarshalJSON()
-	var mbi bytes.Buffer
-	json.Indent(&mbi, mb, "", "  ")
 	if err != nil {
+		return err
+	}
+	var mbi bytes.Buffer
+	if err := json.Indent(&mbi, mb, "", "  "); err != nil {
 		return err
 	}
 	_, err = w.Write(mbi.Bytes())
