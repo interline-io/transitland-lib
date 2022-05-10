@@ -2,9 +2,12 @@ package dmfr
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/iancoleman/orderedmap"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -109,4 +112,31 @@ func TestRawRegistry_Write(t *testing.T) {
 			assert.Equal(t, lineTrimSpaces(tc.output), lineTrimSpaces(outbuf.String()))
 		})
 	}
+}
+
+func Test_escapeHTML(t *testing.T) {
+	// use New() instead of o := map[string]interface{}{}
+	o := orderedmap.New()
+
+	// use SetEscapeHTML() to whether escape problematic HTML characters or not, defaults is true
+	o.SetEscapeHTML(false)
+
+	// use Set instead of o["a"] = 1
+	o.Set("a", 1)
+
+	// add some value with special characters
+	o.Set("b", "\\.<>[]{}_-")
+
+	// use o.Delete instead of delete(o, key)
+	o.Delete("a")
+
+	// serialize to a json string using encoding/json
+	bytes, err := json.Marshal(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prettyBytes, err := json.MarshalIndent(o, "", "  ")
+	fmt.Println("bytes:", string(bytes))
+	fmt.Println("pbytes:", string(prettyBytes))
+
 }
