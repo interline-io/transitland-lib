@@ -77,7 +77,7 @@ func (r *RawRegistry) Write(w io.Writer) error {
 		return err
 	}
 	// Load JSON back into OrderedMap before removing null values
-	m := orderedmap.New()
+	m := orderedmap.OrderedMap{}
 	m.SetEscapeHTML(false)
 	json.Unmarshal(b, &m)
 	m = removeNulls(m)
@@ -94,14 +94,14 @@ func (r *RawRegistry) Write(w io.Writer) error {
 	return err
 }
 
-func removeNulls(m *orderedmap.OrderedMap) *orderedmap.OrderedMap {
+func removeNulls(m orderedmap.OrderedMap) orderedmap.OrderedMap {
 	// Create a new output OrderedMap,
 	// go through every element in input map, and remove any null or empty maps
 	m2 := orderedmap.New()
 	m2.SetEscapeHTML(false)
 	for _, k := range m.Keys() {
 		v, _ := m.Get(k)
-		if vx, ok := v.(*orderedmap.OrderedMap); ok {
+		if vx, ok := v.(orderedmap.OrderedMap); ok {
 			p := removeNulls(vx)
 			if len(p.Keys()) > 0 {
 				v = p
@@ -112,7 +112,7 @@ func removeNulls(m *orderedmap.OrderedMap) *orderedmap.OrderedMap {
 			var vll []interface{}
 			for i := 0; i < len(vx); i++ {
 				vxx := vx[i]
-				if vxxx, ok := vxx.(*orderedmap.OrderedMap); ok {
+				if vxxx, ok := vxx.(orderedmap.OrderedMap); ok {
 					p := removeNulls(vxxx)
 					if len(p.Keys()) > 0 {
 						vll = append(vll, p)
@@ -131,5 +131,5 @@ func removeNulls(m *orderedmap.OrderedMap) *orderedmap.OrderedMap {
 			m2.Set(k, v)
 		}
 	}
-	return m2
+	return *m2
 }
