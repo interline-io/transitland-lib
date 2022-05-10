@@ -96,7 +96,17 @@ func TestRawRegistry_Write(t *testing.T) {
 		},
 		{"empty", `{}`, `{}`},
 		{
-			"handles &",
+			"allowed unescaped &",
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+		},
+		{
+			"allowed unescaped <",
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
+		},
+		{
+			"allowed unescaped >",
 			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
 			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
 		},
