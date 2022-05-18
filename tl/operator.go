@@ -10,6 +10,7 @@ import (
 type Operator struct {
 	ID              int                     `json:"-"`
 	OnestopID       String                  `json:"onestop_id"`
+	SupersedesIds   []string                `json:"supersedes_ids,omitempty"`
 	Name            String                  `json:"name,omitempty"`
 	ShortName       String                  `json:"short_name,omitempty"`
 	Website         String                  `json:"website,omitempty"`
