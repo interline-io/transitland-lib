@@ -14,7 +14,7 @@ import (
 
 type oifmatch struct {
 	feedID               int
-	resolvedGtfsAgencyID string
+	resolvedGtfsAgencyID tl.String
 }
 
 type agencyOnestop struct {
@@ -76,7 +76,7 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 		return false, err
 	}
 	for _, oif := range oifexisting {
-		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.String}] = oif.ID
+		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID}] = oif.ID
 	}
 	for _, oif := range operator.AssociatedFeeds {
 		// Get feed id
@@ -110,7 +110,7 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 			}
 		}
 		// Match or insert
-		check := oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.String}
+		check := oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID}
 		if match, ok := oiflookup[check]; ok {
 			oifmatches[match] = true
 		} else {
@@ -151,7 +151,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
 		return false, err
 	}
 	for _, oif := range oifexisting {
-		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.String}] = oif.ID
+		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID}] = oif.ID
 		if oif.OperatorID.Valid {
 			oifmatches[oif.ID] = true // allow matching on operator associated oifs, but do not delete them
 		}
@@ -172,7 +172,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
 		return false, err
 	}
 	for _, agency := range agencies {
-		check := oifmatch{feedID: feedid, resolvedGtfsAgencyID: agency.AgencyID}
+		check := oifmatch{feedID: feedid, resolvedGtfsAgencyID: tl.NewString(agency.AgencyID)}
 		if match, ok := oiflookup[check]; ok {
 			oifmatches[match] = true
 		} else {
