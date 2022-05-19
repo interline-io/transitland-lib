@@ -12,7 +12,7 @@ import (
 type Feed struct {
 	ID            int               `json:"-"`
 	FeedID        string            `json:"id" db:"onestop_id"`
-	SupersedesIds []string          `json:"supersedes_ids,omitempty"`
+	SupersedesIDs Strings           `json:"supersedes_ids,omitempty" db:"-"`
 	Name          String            `json:"name,omitempty"`
 	Spec          string            `json:"spec,omitempty"`
 	URLs          FeedUrls          `json:"urls,omitempty" db:"urls"`

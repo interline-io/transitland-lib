@@ -110,6 +110,16 @@ func TestRawRegistry_Write(t *testing.T) {
 			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
 			`{"feeds":[{"id":"test", "name":"a&b"}]}`,
 		},
+		{
+			"supersedes_ids",
+			`{"feeds":[{"id":"test", "supersedes_ids":["previous","first"]}]}`,
+			`{"feeds":[{"id":"test", "supersedes_ids":["previous","first"]}]}`,
+		},
+		{
+			"supersedes_ids empty",
+			`{"feeds":[{"id":"test", "supersedes_ids":[]}]}`,
+			`{"feeds":[{"id":"test"}]}`,
+		},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
