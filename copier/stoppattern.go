@@ -1,6 +1,7 @@
 package copier
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"strings"
 
@@ -16,10 +17,10 @@ func stopPatternKey(stoptimes []tl.StopTime) string {
 }
 
 func journeyPatternKey(trip *tl.Trip) string {
-	stkey := make([]string, len(trip.StopTimes)+1)
+	m := sha1.New()
 	a := trip.StopTimes[0].ArrivalTime
 	b := trip.StopTimes[0].DepartureTime
-	stkey[0] = fmt.Sprintf(
+	m.Write([]byte(fmt.Sprintf(
 		"%s-%s-%s-%s-%s-%d-%d-%d-%s",
 		trip.RouteID,
 		trip.ServiceID,
@@ -30,10 +31,10 @@ func journeyPatternKey(trip *tl.Trip) string {
 		trip.WheelchairAccessible,
 		trip.BikesAllowed,
 		trip.BlockID,
-	)
+	)))
 	for i := 0; i < len(trip.StopTimes); i++ {
 		st := trip.StopTimes[i]
-		stkey[i+1] = fmt.Sprintf(
+		m.Write([]byte(fmt.Sprintf(
 			"%d-%d-%s-%s-%d-%d-%d",
 			st.ArrivalTime.Seconds-a.Seconds,
 			st.DepartureTime.Seconds-b.Seconds,
@@ -42,7 +43,7 @@ func journeyPatternKey(trip *tl.Trip) string {
 			st.PickupType.Int,
 			st.DropOffType.Int,
 			st.Timepoint.Int,
-		)
+		)))
 	}
-	return strings.Join(stkey, "|")
+	return fmt.Sprintf("%x", m.Sum(nil))
 }
