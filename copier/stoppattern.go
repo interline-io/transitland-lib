@@ -16,24 +16,24 @@ func stopPatternKey(stoptimes []tl.StopTime) string {
 }
 
 func journeyPatternKey(trip *tl.Trip) string {
-	stkey := make([]string, len(trip.StopTimes))
+	stkey := make([]string, len(trip.StopTimes)+1)
 	a := trip.StopTimes[0].ArrivalTime
 	b := trip.StopTimes[0].DepartureTime
-	stkey = append(stkey,
-		fmt.Sprintf("%s-%s-%s-%s-%s-%d-%d-%d-%s",
-			trip.RouteID,
-			trip.ServiceID,
-			trip.TripHeadsign,
-			trip.TripShortName,
-			trip.ShapeID.Key,
-			trip.DirectionID,
-			trip.WheelchairAccessible,
-			trip.BikesAllowed,
-			trip.BlockID,
-		))
+	stkey[0] = fmt.Sprintf(
+		"%s-%s-%s-%s-%s-%d-%d-%d-%s",
+		trip.RouteID,
+		trip.ServiceID,
+		trip.TripHeadsign,
+		trip.TripShortName,
+		trip.ShapeID.Key,
+		trip.DirectionID,
+		trip.WheelchairAccessible,
+		trip.BikesAllowed,
+		trip.BlockID,
+	)
 	for i := 0; i < len(trip.StopTimes); i++ {
 		st := trip.StopTimes[i]
-		stkey[i] = fmt.Sprintf(
+		stkey[i+1] = fmt.Sprintf(
 			"%d-%d-%s-%s-%d-%d-%d",
 			st.ArrivalTime.Seconds-a.Seconds,
 			st.DepartureTime.Seconds-b.Seconds,
