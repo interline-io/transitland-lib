@@ -17,9 +17,21 @@ func stopPatternKey(stoptimes []tl.StopTime) string {
 }
 
 func journeyPatternKey(trip *tl.Trip) string {
+	m := sha1.New()
 	a := trip.StopTimes[0].ArrivalTime
 	b := trip.StopTimes[0].DepartureTime
-	m := sha1.New()
+	m.Write([]byte(fmt.Sprintf(
+		"%s-%s-%s-%s-%s-%d-%d-%d-%s",
+		trip.RouteID,
+		trip.ServiceID,
+		trip.TripHeadsign,
+		trip.TripShortName,
+		trip.ShapeID.Key,
+		trip.DirectionID,
+		trip.WheelchairAccessible,
+		trip.BikesAllowed,
+		trip.BlockID,
+	)))
 	for i := 0; i < len(trip.StopTimes); i++ {
 		st := trip.StopTimes[i]
 		m.Write([]byte(fmt.Sprintf(
