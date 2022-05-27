@@ -27,6 +27,12 @@ type Ext interface {
 	sqlx.QueryerContext
 }
 
+func init() {
+	var a Ext
+	a = &QueryLogger{}
+	_ = a
+}
+
 // QueryLogger wraps sql/sqlx methods with loggers.
 type QueryLogger struct {
 	Ext
