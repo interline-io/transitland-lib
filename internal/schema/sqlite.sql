@@ -171,13 +171,8 @@ CREATE INDEX idx_feed_version_file_infos_feed_version_id ON "feed_version_file_i
 CREATE TABLE IF NOT EXISTS "feed_version_service_levels" (
     "id" integer primary key autoincrement,
     "feed_version_id" integer NOT NULL,
-    "route_id" varchar(255),
     "start_date" datetime NOT NULL,
     "end_date" datetime NOT NULL,
-    "agency_name" varchar(255) NOT NULL,
-    "route_short_name" varchar(255) NOT NULL,
-    "route_long_name" varchar(255) NOT NULL,
-    "route_type" integer NOT NULL,
     "monday" integer NOT NULL,
     "tuesday" integer NOT NULL,
     "wednesday" integer NOT NULL,

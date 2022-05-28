@@ -170,11 +170,6 @@ func (v *Validator) Validate() (*Result, error) {
 			if i > v.Options.IncludeEntitiesLimit {
 				break
 			}
-			// TODO: deal with routes later.
-			// For now only copy feed level service levels...
-			if !fvsl.RouteID.Valid {
-				continue
-			}
 			result.ServiceLevels = append(result.ServiceLevels, fvsl)
 		}
 	}
