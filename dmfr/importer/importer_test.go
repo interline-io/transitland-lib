@@ -12,7 +12,7 @@ import (
 )
 
 func TestFindImportableFeeds(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		f := testdb.CreateTestFeed(atx, "test")
 		allfvids := []int{}
 		for i := 0; i < 10; i++ {
@@ -47,7 +47,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		return testdb.ShouldInsert(t, atx, &fv)
 	}
 	t.Run("Success", func(t *testing.T) {
-		testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+		testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid := setup(atx, testutil.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := MainImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid})
@@ -81,7 +81,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 	})
 	t.Run("Failed", func(t *testing.T) {
 		fvid := 0
-		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid = setup(atx, testutil.RelPath("test/data/does-not-exist"))
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := MainImportFeedVersion(&atx2, Options{FeedVersionID: fvid})
@@ -108,7 +108,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 }
 
 func TestImportFeedVersion(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create FV
 		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
 		fv.EarliestCalendarDate = tl.NewDate(time.Now())

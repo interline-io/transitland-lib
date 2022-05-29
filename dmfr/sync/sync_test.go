@@ -11,7 +11,7 @@ import (
 
 // Full tests
 func TestMainSync(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create a feed we will check is soft-deleted
 		testdb.CreateTestFeed(atx, "caltrain")
 		// Import
@@ -55,7 +55,7 @@ func TestMainSync(t *testing.T) {
 }
 
 func TestMainSync_Update(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create existing feed
 		exposid := "f-c20-trimet"
 		tlfeed := tl.Feed{}
@@ -95,7 +95,7 @@ func TestMainSync_Update(t *testing.T) {
 
 func TestUpdateFeed(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
-		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			rfeed := tl.Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Spec = "gtfs"
@@ -140,7 +140,7 @@ func TestUpdateFeed(t *testing.T) {
 		}
 	})
 	t.Run("Update", func(t *testing.T) {
-		err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			rfeed := tl.Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Name = tl.NewString("An Updated Name")
@@ -191,7 +191,7 @@ func TestUpdateFeed(t *testing.T) {
 }
 
 func TestHideUnseedFeeds(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		feedids := []string{"caltrain", "seen"}
 		fids := []int{}
 		for _, feedid := range feedids {
