@@ -102,7 +102,9 @@ func (cmd *Command) Run() error {
 			return err
 		}
 		for _, feed := range feeds {
-			cmd.FeedIDs = append(cmd.FeedIDs, feed.FeedID)
+			if feed.URLs.StaticCurrent != "" {
+				cmd.FeedIDs = append(cmd.FeedIDs, feed.FeedID)
+			}
 		}
 	}
 	///////////////
