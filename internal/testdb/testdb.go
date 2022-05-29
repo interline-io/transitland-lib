@@ -1,7 +1,6 @@
 package testdb
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tl"
@@ -102,19 +101,8 @@ func ShouldSelect(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, 
 
 ////////////
 
-// WithAdapterRollback runs a callback inside a Tx and then aborts, returns any error from original callback.
-func WithAdapterRollback(cb func(tldb.Adapter) error) error {
-	var err error
-	cb2 := func(atx tldb.Adapter) error {
-		err = cb(atx)
-		return errors.New("rollback")
-	}
-	WithAdapterTx(cb2)
-	return err
-}
-
-// WithAdapterTx runs a callback inside a Tx, commits if callback returns nil.
-func WithAdapterTx(cb func(tldb.Adapter) error) error {
+// TempSqlite creates a temporary in-memory database and runs the callback inside a tx.
+func TempSqlite(cb func(tldb.Adapter) error) error {
 	adapter := tldb.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
 	writer := tldb.Writer{Adapter: &adapter}
 	if err := writer.Open(); err != nil {

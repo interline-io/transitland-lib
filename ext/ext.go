@@ -25,13 +25,13 @@ var extensionFactories = map[string]extensionFactory{}
 // RegisterReader registers a Reader.
 func RegisterReader(name string, factory readerFactory) error {
 	if factory == nil {
-		return fmt.Errorf("factory '%s' does not exist", name)
+		return fmt.Errorf("reader '%s' does not exist", name)
 	}
 	_, registered := readerFactories[name]
 	if registered {
-		return fmt.Errorf("factory '%s' already registered", name)
+		return fmt.Errorf("reader '%s' already registered", name)
 	}
-	log.Debugf("Registering Reader factory: %s", name)
+	log.Tracef("Registering reader: %s", name)
 	readerFactories[name] = factory
 	return nil
 }
@@ -39,13 +39,13 @@ func RegisterReader(name string, factory readerFactory) error {
 // RegisterWriter registers a Writer.
 func RegisterWriter(name string, factory writerFactory) error {
 	if factory == nil {
-		return fmt.Errorf("factory '%s' does not exist", name)
+		return fmt.Errorf("writer '%s' does not exist", name)
 	}
 	_, registered := writerFactories[name]
 	if registered {
-		return fmt.Errorf("factory '%s' already registered", name)
+		return fmt.Errorf("writer '%s' already registered", name)
 	}
-	log.Debugf("Registering Writer factory: %s", name)
+	log.Tracef("Registering writer: %s", name)
 	writerFactories[name] = factory
 	return nil
 }
@@ -56,7 +56,7 @@ func RegisterExtension(name string, factory extensionFactory) error {
 	if registered {
 		return fmt.Errorf("extension '%s' already registered", name)
 	}
-	log.Debugf("registering Extension factory: %s", name)
+	log.Tracef("registering extension: %s", name)
 	extensionFactories[name] = factory
 	return nil
 }
@@ -71,7 +71,7 @@ func NewReader(addr string) (tl.Reader, error) {
 	if f, ok := readerFactories[driver]; ok {
 		return f(addr)
 	}
-	return nil, fmt.Errorf("no Reader factory for %s", driver)
+	return nil, fmt.Errorf("no reader for %s", driver)
 }
 
 // OpenReader returns an opened reader.
@@ -96,7 +96,7 @@ func NewWriter(addr string) (tl.Writer, error) {
 	if f, ok := writerFactories[driver]; ok {
 		return f(addr)
 	}
-	return nil, fmt.Errorf("no Writer factory for %s", driver)
+	return nil, fmt.Errorf("no writer for %s", driver)
 }
 
 // OpenWriter returns an opened writer.
@@ -121,7 +121,7 @@ func GetExtension(name string, args string) (Extension, error) {
 	if f, ok := extensionFactories[name]; ok {
 		return f(args)
 	}
-	return nil, fmt.Errorf("no Extension factory for %s", name)
+	return nil, fmt.Errorf("no extension for %s", name)
 }
 
 func ParseExtensionArgs(value string) (string, string, error) {

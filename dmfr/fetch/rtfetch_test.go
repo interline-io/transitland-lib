@@ -49,10 +49,10 @@ func TestRTFetch(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer os.RemoveAll(tmpdir) // clean up
-			testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				msg, fr, err := RTFetch(atx, feed, Options{FeedURL: url, Directory: tmpdir})
+				msg, fr, err := RTFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Directory: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err

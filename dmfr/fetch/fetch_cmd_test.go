@@ -59,13 +59,14 @@ func TestCommand(t *testing.T) {
 			}
 			c := Command{adapter: adapter}
 			if err := c.Parse(exp.command); err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
-			err := c.Run()
-			if err != nil {
+			if err := c.Run(); err != nil && exp.errContains != "" {
 				if !strings.Contains(err.Error(), exp.errContains) {
 					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.errContains)
 				}
+			} else if err != nil {
+				t.Fatal(err)
 			}
 			// Test
 			feeds := []tl.Feed{}

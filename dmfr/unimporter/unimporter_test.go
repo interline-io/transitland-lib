@@ -27,7 +27,7 @@ func setupImport(t *testing.T, atx tldb.Adapter) int {
 }
 
 func TestUnimportSchedule(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Note - it's difficult to test feed_version_gtfs_imports.schedule_removed
 		// This test uses ImportFeedVersion because MainImportFeedVersion, which creates feed_version_gtfs_import records,
 		// requires multiple transaction commits to run.
@@ -62,7 +62,7 @@ func TestUnimportSchedule(t *testing.T) {
 }
 
 func TestUnimportFeedVersion(t *testing.T) {
-	err := testdb.WithAdapterRollback(func(atx tldb.Adapter) error {
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		fvid := setupImport(t, atx)
 		// TODO: test ExtraTables option
 		if err := UnimportFeedVersion(atx, fvid, nil); err != nil {

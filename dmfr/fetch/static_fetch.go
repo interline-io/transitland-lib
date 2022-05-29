@@ -18,7 +18,7 @@ import (
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
-func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (tl.FeedVersion, Result, error) {
+func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error) {
 	var fv tl.FeedVersion
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		tmpfilepath := fr.Filename
@@ -44,7 +44,7 @@ func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (tl.FeedVersion, 
 			return vr, nil
 		}
 		fv.URL = opts.FeedURL
-		fv.FeedID = feed.ID
+		fv.FeedID = opts.FeedID
 		fv.FetchedAt = opts.FetchedAt
 		fv.CreatedBy = opts.CreatedBy
 		fv.Name = opts.Name
@@ -91,7 +91,7 @@ func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (tl.FeedVersion, 
 		}
 		return vr, nil
 	}
-	result, err := ffetch(atx, feed, opts, cb)
+	result, err := ffetch(atx, opts, cb)
 	return fv, result, err
 }
 
