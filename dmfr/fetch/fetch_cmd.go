@@ -36,7 +36,7 @@ func (cmd *Command) Parse(args []string) error {
 		log.Print("Usage: fetch [feed_id...]")
 		fl.PrintDefaults()
 	}
-	fl.BoolVar(&cmd.CreateFeed, "create-feed", false, "Create feed records if not found")
+	fl.BoolVar(&cmd.CreateFeed, "create-feed", false, "Create feed record if not found")
 	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
 	fl.StringVar(&fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
 	fl.StringVar(&secretsFile, "secrets", "", "Path to DMFR Secrets file")
@@ -68,6 +68,9 @@ func (cmd *Command) Parse(args []string) error {
 			return err
 		}
 		cmd.Options.Secrets = r.Secrets
+	}
+	if cmd.Options.FetchedAt.IsZero() {
+		cmd.Options.FetchedAt = time.Now()
 	}
 	if cmd.Options.FeedURL != "" && len(cmd.FeedIDs) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
@@ -107,10 +110,8 @@ func (cmd *Command) Run() error {
 		feeds := []tl.Feed{}
 		err = cmd.adapter.Select(&feeds, qstr, qargs...)
 		if err != nil {
-			panic(err)
 			return err
 		}
-		fmt.Println("feeds:", feeds)
 		for _, feed := range feeds {
 			if feed.URLs.StaticCurrent != "" {
 				cmd.FeedIDs = append(cmd.FeedIDs, feed.FeedID)
@@ -141,6 +142,7 @@ func (cmd *Command) Run() error {
 		opts := Options{
 			FeedID:                  feed.ID,
 			FeedURL:                 cmd.Options.FeedURL,
+			FetchedAt:               cmd.Options.FetchedAt,
 			URLType:                 cmd.Options.URLType,
 			Directory:               cmd.Options.Directory,
 			S3:                      cmd.Options.S3,
@@ -148,7 +150,6 @@ func (cmd *Command) Run() error {
 			AllowS3Fetch:            cmd.Options.AllowS3Fetch,
 			AllowFTPFetch:           cmd.Options.AllowFTPFetch,
 			AllowLocalFetch:         cmd.Options.AllowLocalFetch,
-			FetchedAt:               cmd.Options.FetchedAt,
 			Secrets:                 cmd.Options.Secrets,
 		}
 		opts.URLType = "manual"
