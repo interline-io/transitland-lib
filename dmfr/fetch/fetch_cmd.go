@@ -164,24 +164,28 @@ func (cmd *Command) Run() error {
 
 func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options, results chan<- Result, wg *sync.WaitGroup) {
 	for opts := range jobs {
-		// Get FeedID for pretty printing.
+		// Start
 		osid := opts.FeedID
 		log.Infof("Feed %s: start", osid)
 		if DryRun {
 			log.Infof("Feed %s: dry-run", osid)
 			continue
 		}
+
+		// Fetch
 		var fr Result
 		var fv tl.FeedVersion
 		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
-			fv, fr, fe = FeedStateFetch(atx, opts)
+			fv, fr, fe = StaticFetch(atx, opts)
 			return fe
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
-		fid := fv.FeedID
+
+		// Check result
 		furl := fv.URL
+		fid := fv.FeedID
 		if err != nil {
 			fr.Error = err
 			log.Error().Err(err).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
