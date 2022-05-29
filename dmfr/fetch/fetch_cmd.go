@@ -72,6 +72,7 @@ func (cmd *Command) Parse(args []string) error {
 	if cmd.Options.FetchedAt.IsZero() {
 		cmd.Options.FetchedAt = time.Now()
 	}
+	cmd.Options.FetchedAt = cmd.Options.FetchedAt.UTC()
 	if cmd.Options.FeedURL != "" && len(cmd.FeedIDs) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
 	}
