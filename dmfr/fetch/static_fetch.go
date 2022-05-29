@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -18,8 +19,27 @@ import (
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
-func StaticFetch(atx tldb.Adapter, feed tl.Feed, opts Options) (tl.FeedVersion, Result, error) {
+func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error) {
 	var fv tl.FeedVersion
+	var fr Result
+
+	// Get feed, create if not present and FeedCreate is specified
+	feed := tl.Feed{}
+	if err := atx.Get(&feed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, opts.FeedID); err == sql.ErrNoRows && opts.FeedCreate {
+		feed.FeedID = opts.FeedID
+		feed.Spec = "gtfs"
+		if feed.ID, err = atx.Insert(&feed); err != nil {
+			return fv, fr, err
+		}
+	} else if err != nil {
+		return fv, fr, errors.New("feed does not exist")
+	}
+	opts.URLType = "manual"
+	if opts.FeedURL == "" {
+		opts.URLType = "static_current"
+		opts.FeedURL = feed.URLs.StaticCurrent
+	}
+
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		tmpfilepath := fr.Filename
 		vr := validationResponse{}
