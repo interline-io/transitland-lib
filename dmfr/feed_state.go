@@ -8,14 +8,11 @@ import (
 
 // FeedState .
 type FeedState struct {
-	ID                    int
-	FeedID                int
-	FeedVersionID         tl.Int
-	LastFetchError        string
-	LastFetchedAt         tl.Time
-	LastSuccessfulFetchAt tl.Time
-	FeedPriority          tl.Int
-	FeedRealtimeEnabled   bool
+	ID                  int
+	FeedID              int
+	FeedVersionID       tl.Int
+	FeedPriority        tl.Int
+	FeedRealtimeEnabled bool
 	tl.Timestamps
 }
 
