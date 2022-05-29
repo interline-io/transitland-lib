@@ -52,7 +52,7 @@ func TestRTFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				msg, fr, err := RTFetch(atx, feed, Options{FeedURL: url, Directory: tmpdir})
+				msg, fr, err := RTFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Directory: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err

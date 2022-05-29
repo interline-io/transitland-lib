@@ -1,8 +1,10 @@
 package fetch
 
 import (
+	"database/sql"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -15,13 +17,14 @@ import (
 
 // Command fetches feeds defined a DMFR database.
 type Command struct {
-	Options Options
-	Workers int
-	Limit   int
-	DBURL   string
-	DryRun  bool
-	FeedIDs []string
-	adapter tldb.Adapter
+	Options    Options
+	CreateFeed bool
+	Workers    int
+	Limit      int
+	DBURL      string
+	DryRun     bool
+	FeedIDs    []string
+	adapter    tldb.Adapter
 }
 
 // Parse sets options from command line flags.
@@ -33,8 +36,8 @@ func (cmd *Command) Parse(args []string) error {
 		log.Print("Usage: fetch [feed_id...]")
 		fl.PrintDefaults()
 	}
+	fl.BoolVar(&cmd.CreateFeed, "create-feed", false, "Create feed records if not found")
 	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
-	fl.BoolVar(&cmd.Options.FeedCreate, "create-feed", false, "Create feed records if not found")
 	fl.StringVar(&fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
 	fl.StringVar(&secretsFile, "secrets", "", "Path to DMFR Secrets file")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
@@ -72,6 +75,11 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
+type fetchJob struct {
+	OnestopID string
+	Options
+}
+
 // Run executes this command.
 func (cmd *Command) Run() error {
 	// Get feeds
@@ -99,28 +107,39 @@ func (cmd *Command) Run() error {
 		feeds := []tl.Feed{}
 		err = cmd.adapter.Select(&feeds, qstr, qargs...)
 		if err != nil {
+			panic(err)
 			return err
 		}
+		fmt.Println("feeds:", feeds)
 		for _, feed := range feeds {
 			if feed.URLs.StaticCurrent != "" {
 				cmd.FeedIDs = append(cmd.FeedIDs, feed.FeedID)
 			}
 		}
 	}
-	///////////////
-	// Here we go
-	log.Infof("Fetching %d feeds", len(cmd.FeedIDs))
-	var wg sync.WaitGroup
-	jobs := make(chan Options, len(cmd.FeedIDs))
-	results := make(chan Result, len(cmd.FeedIDs))
-	for w := 0; w < cmd.Workers; w++ {
-		wg.Add(1)
-		go fetchWorker(w, cmd.adapter, cmd.DryRun, jobs, results, &wg)
-	}
-	for _, feedid := range cmd.FeedIDs {
+
+	// Check feeds
+	adapter := cmd.adapter
+	var toFetch []fetchJob
+	for _, osid := range cmd.FeedIDs {
+		// Get feed, create if not present and FeedCreate is specified
+		feed := tl.Feed{}
+		if err := adapter.Get(&feed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, osid); err == sql.ErrNoRows && cmd.CreateFeed {
+			feed.FeedID = osid
+			feed.Spec = "gtfs"
+			if feed.ID, err = adapter.Insert(&feed); err != nil {
+				return err
+			}
+		} else if err != nil {
+			return fmt.Errorf("feed %s does not exist", osid)
+		}
+		// Create feed state if not exists
+		if _, err := dmfr.GetFeedState(adapter, feed.ID); err != nil {
+			return err
+		}
+		// Prepare options for this fetch
 		opts := Options{
-			FeedID:                  feedid,
-			FeedCreate:              cmd.Options.FeedCreate,
+			FeedID:                  feed.ID,
 			FeedURL:                 cmd.Options.FeedURL,
 			URLType:                 cmd.Options.URLType,
 			Directory:               cmd.Options.Directory,
@@ -132,6 +151,25 @@ func (cmd *Command) Run() error {
 			FetchedAt:               cmd.Options.FetchedAt,
 			Secrets:                 cmd.Options.Secrets,
 		}
+		opts.URLType = "manual"
+		if opts.FeedURL == "" {
+			opts.URLType = "static_current"
+			opts.FeedURL = feed.URLs.StaticCurrent
+		}
+		toFetch = append(toFetch, fetchJob{OnestopID: feed.FeedID, Options: opts})
+	}
+
+	///////////////
+	// Here we go
+	log.Infof("Fetching %d feeds", len(cmd.FeedIDs))
+	var wg sync.WaitGroup
+	jobs := make(chan fetchJob, len(cmd.FeedIDs))
+	results := make(chan Result, len(cmd.FeedIDs))
+	for w := 0; w < cmd.Workers; w++ {
+		wg.Add(1)
+		go fetchWorker(w, cmd.adapter, cmd.DryRun, jobs, results, &wg)
+	}
+	for _, opts := range toFetch {
 		jobs <- opts
 	}
 	close(jobs)
@@ -162,13 +200,12 @@ func (cmd *Command) Run() error {
 	return nil
 }
 
-func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options, results chan<- Result, wg *sync.WaitGroup) {
-	for opts := range jobs {
+func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- Result, wg *sync.WaitGroup) {
+	for job := range jobs {
 		// Start
-		osid := opts.FeedID
-		log.Infof("Feed %s: start", osid)
+		log.Infof("Feed %s: start", job.OnestopID)
 		if DryRun {
-			log.Infof("Feed %s: dry-run", osid)
+			log.Infof("Feed %s: dry-run", job.OnestopID)
 			continue
 		}
 
@@ -178,23 +215,21 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan Options,
 		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var fe error
-			fv, fr, fe = StaticFetch(atx, opts)
+			fv, fr, fe = StaticFetch(atx, job.Options)
 			return fe
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 
 		// Check result
-		furl := fv.URL
-		fid := fv.FeedID
 		if err != nil {
 			fr.Error = err
-			log.Error().Err(err).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", osid, fid, furl, err.Error(), t2)
+			log.Error().Err(err).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, err.Error(), t2)
 		} else if fr.FetchError != nil {
-			log.Error().Err(fr.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", osid, fid, furl, fr.FetchError.Error(), t2)
+			log.Error().Err(fr.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fr.FetchError.Error(), t2)
 		} else if fr.Found {
-			log.Infof("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fv.SHA1, fv.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
 		} else {
-			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", osid, fid, furl, fv.SHA1, fv.ID, t2)
+			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
 		}
 		results <- fr
 	}

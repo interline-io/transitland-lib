@@ -18,9 +18,8 @@ import (
 
 // Options sets options for a fetch operation.
 type Options struct {
-	FeedCreate              bool
 	FeedURL                 string
-	FeedID                  string
+	FeedID                  int
 	URLType                 string
 	IgnoreDuplicateContents bool
 	Directory               string
@@ -55,8 +54,12 @@ type validationResponse struct {
 type fetchCb func(request.FetchResponse) (validationResponse, error)
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
-func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, error) {
+func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	result := Result{}
+	feed := tl.Feed{}
+	if err := atx.Get(&feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
+		return result, err
+	}
 	if opts.FeedURL == "" {
 		result.FetchError = errors.New("no url provided")
 		return result, nil

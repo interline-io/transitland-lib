@@ -103,7 +103,7 @@ func TestStaticFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fv, fr, err := StaticFetch(atx, Options{FeedID: feed.FeedID, FeedURL: url, Directory: tmpdir})
+				fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Directory: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err
@@ -152,11 +152,11 @@ func TestStaticFetch_Exists(t *testing.T) {
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, url)
 		_ = feed
-		fv, _, err := StaticFetch(atx, Options{FeedID: feed.FeedID, FeedURL: url, Directory: ""})
+		fv, _, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Directory: ""})
 		if err != nil {
 			t.Fatal(err)
 		}
-		fv2, fr2, err2 := StaticFetch(atx, Options{FeedID: feed.FeedID, FeedURL: url, Directory: ""})
+		fv2, fr2, err2 := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Directory: ""})
 		if err2 != nil {
 			t.Error(err2)
 		}
@@ -195,9 +195,13 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 		//
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, ts.URL)
-		fv, fr, err := StaticFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
+		fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
+			return nil
+		}
+		if fr.FetchError != nil {
+			t.Error(fr.FetchError)
 			return nil
 		}
 		if fr.Found {
@@ -240,46 +244,46 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 	})
 }
 
-func TestStaticFetch_CreateFeed(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(ExampleZip.URL)
-		if err != nil {
-			t.Error(err)
-		}
-		w.Write(buf)
-	}))
-	defer ts.Close()
-	testdb.TempSqlite(func(atx tldb.Adapter) error {
-		tmpdir, err := ioutil.TempDir("", "gtfs")
-		if err != nil {
-			t.Error(err)
-			return nil
-		}
-		defer os.RemoveAll(tmpdir) // clean up
-		//
-		url := ts.URL
-		feed := tl.Feed{}
-		feed.FeedID = "caltrain"
-		fv, _, err := StaticFetch(atx, Options{FeedID: "caltrain", FeedURL: ts.URL, FeedCreate: true, Directory: tmpdir})
-		if err != nil {
-			t.Error(err)
-			return nil
-		}
-		// Check Feed
-		tf2 := tl.Feed{}
-		testdb.ShouldGet(t, atx, &tf2, `SELECT * FROM current_feeds WHERE onestop_id = ?`, "caltrain")
-		// Check FV
-		fv2 := tl.FeedVersion{ID: fv.ID}
-		testdb.ShouldFind(t, atx, &fv2)
-		if fv2.URL != url {
-			t.Errorf("got %s expect %s", fv2.URL, url)
-		}
-		if fv2.SHA1 != ExampleZip.SHA1 {
-			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
-		}
-		return nil
-	})
-}
+// func TestStaticFetch_CreateFeed(t *testing.T) {
+// 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		buf, err := ioutil.ReadFile(ExampleZip.URL)
+// 		if err != nil {
+// 			t.Error(err)
+// 		}
+// 		w.Write(buf)
+// 	}))
+// 	defer ts.Close()
+// 	testdb.TempSqlite(func(atx tldb.Adapter) error {
+// 		tmpdir, err := ioutil.TempDir("", "gtfs")
+// 		if err != nil {
+// 			t.Error(err)
+// 			return nil
+// 		}
+// 		defer os.RemoveAll(tmpdir) // clean up
+// 		//
+// 		url := ts.URL
+// 		feed := tl.Feed{}
+// 		feed.FeedID = "caltrain"
+// 		fv, _, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: ts.URL, FeedCreate: true, Directory: tmpdir})
+// 		if err != nil {
+// 			t.Error(err)
+// 			return nil
+// 		}
+// 		// Check Feed
+// 		tf2 := tl.Feed{}
+// 		testdb.ShouldGet(t, atx, &tf2, `SELECT * FROM current_feeds WHERE onestop_id = ?`, "caltrain")
+// 		// Check FV
+// 		fv2 := tl.FeedVersion{ID: fv.ID}
+// 		testdb.ShouldFind(t, atx, &fv2)
+// 		if fv2.URL != url {
+// 			t.Errorf("got %s expect %s", fv2.URL, url)
+// 		}
+// 		if fv2.SHA1 != ExampleZip.SHA1 {
+// 			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
+// 		}
+// 		return nil
+// 	})
+// }
 
 func TestStaticStateFetch_FetchError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -295,7 +299,7 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, _, err = StaticFetch(atx, Options{FeedID: feed.FeedID, Directory: tmpdir})
+		_, _, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Directory: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
