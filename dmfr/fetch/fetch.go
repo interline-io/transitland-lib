@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -53,13 +54,13 @@ type validationResponse struct {
 
 type fetchCb func(request.FetchResponse) (validationResponse, error)
 
+// Fetch and check for serious errors - regular errors are in fr.FetchError
 func ffetch(atx tldb.Adapter, feed tl.Feed, opts Options, cb fetchCb) (Result, error) {
 	result := Result{}
 	if opts.FeedURL == "" {
+		result.FetchError = errors.New("no url provided")
 		return result, nil
 	}
-
-	// Fetch and check for serious errors - regular errors are in fr.FetchError
 	var reqOpts []request.RequestOption
 	if opts.AllowFTPFetch {
 		reqOpts = append(reqOpts, request.WithAllowFTP)
