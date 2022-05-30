@@ -69,16 +69,9 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 func (g *GeomCache) MakeShape(stopids ...string) (tl.Shape, error) {
 	shape := tl.Shape{}
 	stopline := []float64{} // flatcoords
-	prevPoint := Point{}
-	for i, stopid := range stopids {
+	for _, stopid := range stopids {
 		if newPoint, ok := g.stops[stopid]; ok {
-			if i > 0 {
-				if d := Distance2d(prevPoint, newPoint); d > 10.0 {
-					return shape, fmt.Errorf("distance from (%f,%f) to (%f,%f) is %f decimal degrees", prevPoint.Lon, prevPoint.Lat, newPoint.Lon, newPoint.Lat, d)
-				}
-			}
 			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
-			prevPoint = newPoint
 		} else {
 			return shape, fmt.Errorf("stop '%s' not in cache", stopid)
 		}
