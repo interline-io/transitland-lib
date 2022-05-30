@@ -157,3 +157,68 @@ func TestLengthHaversine(t *testing.T) {
 		testApproxEqual(t, line.lengthHaversine, d)
 	}
 }
+
+func TestContains(t *testing.T) {
+	testcases := []struct {
+		name   string
+		a      []Point
+		b      []Point
+		expect bool
+	}{
+		{
+			"basic",
+			[]Point{{0, 1}, {0, 2}},
+			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+			true,
+		},
+		{
+			"one point",
+			[]Point{{0, 1}},
+			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+			true,
+		},
+		{
+			"equal",
+			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+			true,
+		},
+		{
+			"not quite equal",
+			[]Point{{0, 0}, {0, 2}, {0, 2}, {0, 3}},
+			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+			false,
+		},
+		{
+			"longer",
+			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+			[]Point{{0, 0}, {0, 1}, {0, 2}},
+			false,
+		},
+		{
+			"does not contain",
+			[]Point{{0, 1}, {0, 4}},
+			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+			false,
+		},
+		{
+			"false start",
+			[]Point{{0, 1}, {0, 2}},
+			[]Point{{0, 0}, {0, 1}, {0, 0}, {0, 2}, {0, 3}},
+			false,
+		},
+		{
+			"false start 2",
+			[]Point{{0, 1}, {0, 2}},
+			[]Point{{0, 0}, {0, 1}, {0, 0}, {0, 1}, {0, 2}, {0, 3}},
+			true,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			if PointSliceContains(tc.a, tc.b) != tc.expect {
+				t.Errorf("expected %t", tc.expect)
+			}
+		})
+	}
+}

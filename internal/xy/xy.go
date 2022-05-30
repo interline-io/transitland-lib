@@ -140,3 +140,27 @@ func LinePositions(line []Point, points []Point) []float64 {
 	}
 	return positions
 }
+
+func PointSliceContains(a []Point, b []Point) bool {
+	if len(a) > len(b) {
+		return false
+	}
+	for i := range b {
+		if pointSliceStarts(a, b[i:]) {
+			return true
+		}
+	}
+	return false
+}
+
+func pointSliceStarts(a []Point, b []Point) bool {
+	if len(b) < len(a) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}

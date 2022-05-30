@@ -20,10 +20,8 @@ require (
 	github.com/rs/zerolog v1.26.1
 	github.com/sergi/go-diff v1.2.0
 	github.com/snabb/isoweek v1.0.1
-	github.com/stretchr/objx v0.4.0 // indirect
 	github.com/stretchr/testify v1.7.1
 	github.com/twpayne/go-geom v1.4.1
-	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
