@@ -14,6 +14,8 @@ type RouteGeometry struct {
 	Generated        bool
 	Geometry         tl.LineString
 	CombinedGeometry tl.Geometry
+	Length           tl.Float
+	MaxSegmentLength tl.Float
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -46,11 +48,28 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Shape:
+		prevPoint := xy.Point{}
 		pts := []xy.Point{}
-		for _, c := range v.Geometry.Coords() {
-			pts = append(pts, xy.Point{Lon: c[0], Lat: c[1]})
+		maxLength := 0.0
+		length := 0.0
+		for i, c := range v.Geometry.Coords() {
+			pt := xy.Point{Lon: c[0], Lat: c[1]}
+			if i > 0 {
+				d := xy.DistanceHaversine(prevPoint.Lon, prevPoint.Lat, pt.Lon, pt.Lat)
+				length += d
+				if d > maxLength {
+					maxLength = d
+				}
+			}
+			prevPoint = pt
+			pts = append(pts, pt)
 		}
-		pp.shapeInfos[eid] = shapeInfo{Generated: v.Generated, Length: v.Geometry.Length(), Line: pts}
+		pp.shapeInfos[eid] = shapeInfo{
+			Generated:        v.Generated,
+			Length:           length,
+			MaxSegmentLength: maxLength,
+			Line:             pts,
+		}
 	case *tl.Trip:
 		if v.ShapeID.Valid {
 			if _, ok := pp.shapeCounts[v.RouteID]; !ok {
@@ -83,9 +102,11 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 				shapeTripCount[shapeId] += v
 				dirCount += float64(v)
 				// Include the longest, non-generated shape
-				if si, ok := pp.shapeInfos[shapeId]; ok && !si.Generated && si.Length > longestShapeLength {
-					longestShape = shapeId
-					longestShapeLength = si.Length
+				if si, ok := pp.shapeInfos[shapeId]; ok {
+					if !si.Generated && si.Length > longestShapeLength {
+						longestShape = shapeId
+						longestShapeLength = si.Length
+					}
 				}
 			}
 			for shapeId, v := range dirShapes {
@@ -113,20 +134,47 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 		}
 	}
 	// Now build the selected shapes
-	for rid, shapeIds := range selectedShapes {
-		if len(shapeIds) == 0 {
+	for rid, routeSelectedShapes := range selectedShapes {
+		if len(routeSelectedShapes) == 0 {
 			continue
 		}
 		ent := RouteGeometry{RouteID: rid}
-		g := geom.NewMultiLineString(geom.XY)
-		g.SetSRID(4326)
-		for i, shapeId := range shapeIds {
+		matches := [][]xy.Point{}
+		for _, shapeId := range routeSelectedShapes {
 			si, ok := pp.shapeInfos[shapeId]
+			// Check shape is valid
 			if !ok || len(si.Line) < 2 {
 				continue
 			}
+			// Check if we've already included this shape entirely
+			// This would probably work better if sorted from shortest to longest
+			// instead of most frequent to least frequent.
+			// A line will only be skipped if it's contained in a more frequent shape.
+			for _, match := range matches {
+				if xy.PointSliceContains(si.Line, match) {
+					continue
+				}
+			}
+			// Set if any selected shape is generated
+			if si.Generated {
+				ent.Generated = true
+			}
+			// Set to max selected shape length
+			if si.Length > ent.Length.Float {
+				ent.Length = tl.NewFloat(si.Length)
+			}
+			// Set to max selected shape segment length
+			if si.MaxSegmentLength > ent.MaxSegmentLength.Float {
+				ent.MaxSegmentLength = tl.NewFloat(si.MaxSegmentLength)
+			}
+			// OK
+			matches = append(matches, si.Line)
+		}
+		g := geom.NewMultiLineString(geom.XY)
+		g.SetSRID(4326)
+		for i, match := range matches {
 			var pnts []float64
-			for _, c := range si.Line {
+			for _, c := range match {
 				pnts = append(pnts, c.Lon, c.Lat)
 			}
 			sl := geom.NewLineStringFlat(geom.XY, pnts)
@@ -145,6 +193,9 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 		}
 		if g.NumLineStrings() > 0 {
 			ent.CombinedGeometry = tl.Geometry{Geometry: g, Valid: true}
+		} else {
+			// Skip entity
+			continue
 		}
 		_, _, err := copier.CopyEntity(&ent)
 		if err != nil {
@@ -157,9 +208,10 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 ///////
 
 type shapeInfo struct {
-	Line      []xy.Point
-	Length    float64
-	Generated bool
+	Line             []xy.Point
+	Generated        bool
+	Length           float64
+	MaxSegmentLength float64
 }
 
 ///////
