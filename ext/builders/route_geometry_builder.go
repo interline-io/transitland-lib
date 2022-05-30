@@ -64,7 +64,7 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 			pts = append(pts, xy.Point{Lon: c[0], Lat: c[1]})
 		}
 		// If we've already seen this line, re-use shapeInfo to reduce mem usage
-		for x, si := range pp.shapeInfos {
+		for _, si := range pp.shapeInfos {
 			// Match on generated value too
 			if xy.PointSliceEqual(pts, si.Line) && si.Generated == v.Generated {
 				// Add to shape cache
