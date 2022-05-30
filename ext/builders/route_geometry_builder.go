@@ -2,7 +2,6 @@ package builders
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 
 	"github.com/interline-io/transitland-lib/copier"
@@ -69,7 +68,6 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 			// Match on generated value too
 			if xy.PointSliceEqual(pts, si.Line) && si.Generated == v.Generated {
 				// Add to shape cache
-				fmt.Println("already seen identical line for:", eid, ":", x)
 				pp.shapeInfos[eid] = si
 				return nil
 			}
