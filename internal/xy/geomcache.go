@@ -62,6 +62,12 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 	for i, c := range shape.Geometry.Coords() {
 		sl[i] = Point{c[0], c[1]}
 	}
+	// Check if already exists, re-use slice to reduce mem
+	for _, s := range g.shapes {
+		if PointSliceEqual(sl, s) {
+			sl = s
+		}
+	}
 	g.shapes[eid] = sl
 }
 

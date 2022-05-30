@@ -1,10 +1,13 @@
 package builders
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/twpayne/go-geom"
 )
@@ -28,6 +31,15 @@ func (ent *RouteGeometry) TableName() string {
 	return "tl_route_geometries"
 }
 
+///////
+
+type shapeInfo struct {
+	Line             []xy.Point
+	Generated        bool
+	Length           float64
+	MaxSegmentLength float64
+}
+
 ////////
 
 // RouteGeometryBuilder creates default shapes for routes.
@@ -48,12 +60,25 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Shape:
-		prevPoint := xy.Point{}
-		pts := []xy.Point{}
+		pts := make([]xy.Point, v.Geometry.NumCoords())
+		for _, c := range v.Geometry.Coords() {
+			pts = append(pts, xy.Point{Lon: c[0], Lat: c[1]})
+		}
+		// If we've already seen this line, re-use shapeInfo to reduce mem usage
+		for x, si := range pp.shapeInfos {
+			// Match on generated value too
+			if xy.PointSliceEqual(pts, si.Line) && si.Generated == v.Generated {
+				// Add to shape cache
+				fmt.Println("already seen identical line for:", eid, ":", x)
+				pp.shapeInfos[eid] = si
+				return nil
+			}
+		}
+		// Get distances
 		maxLength := 0.0
 		length := 0.0
-		for i, c := range v.Geometry.Coords() {
-			pt := xy.Point{Lon: c[0], Lat: c[1]}
+		prevPoint := xy.Point{}
+		for i, pt := range pts {
 			if i > 0 {
 				d := xy.DistanceHaversine(prevPoint.Lon, prevPoint.Lat, pt.Lon, pt.Lat)
 				length += d
@@ -62,8 +87,8 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 				}
 			}
 			prevPoint = pt
-			pts = append(pts, pt)
 		}
+		// Add to shape cache
 		pp.shapeInfos[eid] = shapeInfo{
 			Generated:        v.Generated,
 			Length:           length,
@@ -71,6 +96,7 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 			Line:             pts,
 		}
 	case *tl.Trip:
+		// shapeCounts is layered by: route id, direction id, shape id
 		if v.ShapeID.Valid {
 			if _, ok := pp.shapeCounts[v.RouteID]; !ok {
 				pp.shapeCounts[v.RouteID] = map[int]map[string]int{}
@@ -86,132 +112,141 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 
 // Collects and assembles the default shapes and writes to the database
 func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
-	// Get the candidate shapes
-	selectedShapes := map[string][]string{}
-	for rid, dirs := range pp.shapeCounts {
-		shapeTripCount := map[string]int{}
-		routeSelectedShapes := map[string]int{}
-		for _, dirShapes := range dirs {
-			// Ensure stable selection of longest shape (most trips wins for equal length)
-			dirShapesSorted := sortMap(dirShapes)
-			dirCount := float64(0)
-			longestShape := ""
-			longestShapeLength := 0.0
-			for _, shapeId := range dirShapesSorted {
-				v := dirShapes[shapeId]
-				shapeTripCount[shapeId] += v
-				dirCount += float64(v)
-				// Include the longest, non-generated shape
-				if si, ok := pp.shapeInfos[shapeId]; ok {
-					if !si.Generated && si.Length > longestShapeLength {
-						longestShape = shapeId
-						longestShapeLength = si.Length
-					}
-				}
-			}
-			for shapeId, v := range dirShapes {
-				if shapeId == longestShape || float64(v)/dirCount > 0.1 {
-					routeSelectedShapes[shapeId] += v
-				}
-			}
-		}
-		// Prefer to use real shapes; only use generated if no real shapes exist.
-		var routeSelectedReal []string
-		var routeSelectedGenerated []string
-		routeSelectedSorted := sortMap(routeSelectedShapes) // sort
-		// fmt.Println("sorted:", routeSelectedSorted)
-		for _, v := range routeSelectedSorted {
-			if pp.shapeInfos[v].Generated {
-				routeSelectedGenerated = append(routeSelectedGenerated, v)
-			} else {
-				routeSelectedReal = append(routeSelectedReal, v)
-			}
-		}
-		if len(routeSelectedReal) > 0 {
-			selectedShapes[rid] = routeSelectedReal
-		} else {
-			selectedShapes[rid] = routeSelectedGenerated
-		}
-	}
-	// Now build the selected shapes
-	for rid, routeSelectedShapes := range selectedShapes {
-		if len(routeSelectedShapes) == 0 {
-			continue
-		}
-		ent := RouteGeometry{RouteID: rid}
-		matches := [][]xy.Point{}
-		for _, shapeId := range routeSelectedShapes {
-			si, ok := pp.shapeInfos[shapeId]
-			// Check shape is valid
-			if !ok || len(si.Line) < 2 {
-				continue
-			}
-			// Check if we've already included this shape entirely
-			// This would probably work better if sorted from shortest to longest
-			// instead of most frequent to least frequent.
-			// A line will only be skipped if it's contained in a more frequent shape.
-			for _, match := range matches {
-				if xy.PointSliceContains(si.Line, match) {
-					continue
-				}
-			}
-			// Set if any selected shape is generated
-			if si.Generated {
-				ent.Generated = true
-			}
-			// Set to max selected shape length
-			if si.Length > ent.Length.Float {
-				ent.Length = tl.NewFloat(si.Length)
-			}
-			// Set to max selected shape segment length
-			if si.MaxSegmentLength > ent.MaxSegmentLength.Float {
-				ent.MaxSegmentLength = tl.NewFloat(si.MaxSegmentLength)
-			}
-			// OK
-			matches = append(matches, si.Line)
-		}
-		g := geom.NewMultiLineString(geom.XY)
-		g.SetSRID(4326)
-		for i, match := range matches {
-			var pnts []float64
-			for _, c := range match {
-				pnts = append(pnts, c.Lon, c.Lat)
-			}
-			sl := geom.NewLineStringFlat(geom.XY, pnts)
-			sl.SetSRID(4326)
-			if sl == nil {
-				continue
-			}
-			// Most frequent shape
-			if i == 0 {
-				ent.Geometry = tl.LineString{LineString: *sl, Valid: true}
-			}
-			// Add to MultiLineString
-			if err := g.Push(sl); err != nil {
-				// log.Debugf("failed to build route geometry:", err)
-			}
-		}
-		if g.NumLineStrings() > 0 {
-			ent.CombinedGeometry = tl.Geometry{Geometry: g, Valid: true}
-		} else {
-			// Skip entity
-			continue
-		}
-		_, _, err := copier.CopyEntity(&ent)
+	// Process shapes for each route
+	for rid, _ := range pp.shapeCounts {
+		ent, err := pp.buildRouteShape(rid)
 		if err != nil {
+			log.Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
+			continue
+		}
+		if _, _, err := copier.CopyEntity(ent); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-///////
+func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, error) {
+	// Trip counts and selected shapes for this route
+	candidateShapes := map[string]int{}
+	// Process shapes for each direction
+	dirs := pp.shapeCounts[rid]
+	for _, dirShapes := range dirs {
+		dirCount := float64(0)
+		longestShape := ""
+		longestShapeLength := 0.0
+		// Sort by trip count to ensure stable selection of longest shape
+		// (most trips wins for equal length).
+		for _, shapeId := range sortMap(dirShapes) {
+			// Check shape info and if this is the longest shape
+			if si, ok := pp.shapeInfos[shapeId]; ok {
+				dirCount += float64(dirShapes[shapeId])
+				if si.Length > longestShapeLength {
+					longestShape = shapeId
+					longestShapeLength = si.Length
+				}
+			}
+		}
+		for shapeId, v := range dirShapes {
+			// Ensure we have full shape info
+			if si, ok := pp.shapeInfos[shapeId]; ok {
+				// Check valid shape
+				if len(si.Line) < 2 {
+					continue
+				}
+				// Include if it is the longest shape
+				// or accounts for at least 10% of trips in this direction
+				if shapeId == longestShape || float64(v)/dirCount > 0.1 {
+					candidateShapes[shapeId] += v
+				}
+			}
+		}
+	}
 
-type shapeInfo struct {
-	Line             []xy.Point
-	Generated        bool
-	Length           float64
-	MaxSegmentLength float64
+	// Split into real and generated shapes
+	// Prefer to use real shapes; only use generated if no real shapes exist.
+	var routeSelectedReal []string
+	var routeSelectedGenerated []string
+	for _, v := range sortMap(candidateShapes) {
+		if pp.shapeInfos[v].Generated {
+			routeSelectedGenerated = append(routeSelectedGenerated, v)
+		} else {
+			routeSelectedReal = append(routeSelectedReal, v)
+		}
+	}
+	var routeSelectedShapes []string
+	if len(routeSelectedReal) > 0 {
+		routeSelectedShapes = routeSelectedReal
+	} else {
+		routeSelectedShapes = routeSelectedGenerated
+	}
+	if len(routeSelectedShapes) == 0 {
+		return nil, errors.New("no shapes selected")
+	}
+
+	// Now build the route geometry from selected shapes
+	ent := RouteGeometry{RouteID: rid}
+	matches := [][]xy.Point{}
+	for _, shapeId := range routeSelectedShapes {
+		si, ok := pp.shapeInfos[shapeId]
+		if !ok {
+			continue
+		}
+		// Check if we've already included this shape entirely
+		// This would probably work better if sorted from shortest to longest
+		// instead of most frequent to least frequent.
+		// A line will only be skipped if it's contained in a more frequent shape.
+		// TODO: TopoJson style only store unique segments.
+		for _, match := range matches {
+			if xy.PointSliceContains(si.Line, match) {
+				continue
+			}
+		}
+		// Set if any selected shape is generated
+		if si.Generated {
+			ent.Generated = true
+		}
+		// Set to max selected shape length
+		if si.Length > ent.Length.Float {
+			ent.Length = tl.NewFloat(si.Length)
+		}
+		// Set to max selected shape segment length
+		if si.MaxSegmentLength > ent.MaxSegmentLength.Float {
+			ent.MaxSegmentLength = tl.NewFloat(si.MaxSegmentLength)
+		}
+		// OK
+		matches = append(matches, si.Line)
+	}
+
+	// Build geom
+	g := geom.NewMultiLineString(geom.XY)
+	g.SetSRID(4326)
+	for i, match := range matches {
+		var pnts []float64
+		for _, c := range match {
+			pnts = append(pnts, c.Lon, c.Lat)
+		}
+		sl := geom.NewLineStringFlat(geom.XY, pnts)
+		sl.SetSRID(4326)
+		if sl == nil {
+			continue
+		}
+		// Most frequent shape
+		if i == 0 {
+			ent.Geometry = tl.LineString{LineString: *sl, Valid: true}
+		}
+		// Add to MultiLineString
+		if err := g.Push(sl); err != nil {
+			// log.Debugf("failed to build route geometry:", err)
+		}
+	}
+	if g.NumLineStrings() > 0 {
+		ent.CombinedGeometry = tl.Geometry{Geometry: g, Valid: true}
+	} else {
+		// Skip entity
+		return nil, errors.New("no geometries")
+	}
+	return &ent, nil
 }
 
 ///////

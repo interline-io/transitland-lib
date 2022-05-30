@@ -9,6 +9,18 @@ import (
 	"github.com/twpayne/go-geom"
 )
 
+func Test_sortMap(t *testing.T) {
+	// Sorted by highest int first, then by key
+	tc := map[string]int{
+		"f": 10,
+		"a": 10,
+		"y": 5,
+		"x": 5,
+		"c": 100,
+	}
+	assert.Equal(t, []string{"c", "a", "f", "x", "y"}, sortMap(tc))
+}
+
 func TestRouteGeometryBuilder(t *testing.T) {
 	type testcase struct {
 		RouteID           string

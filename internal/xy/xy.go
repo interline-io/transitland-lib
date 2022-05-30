@@ -153,6 +153,18 @@ func PointSliceContains(a []Point, b []Point) bool {
 	return false
 }
 
+func PointSliceEqual(a []Point, b []Point) bool {
+	if len(b) != len(a) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func pointSliceStarts(a []Point, b []Point) bool {
 	if len(b) < len(a) {
 		return false
