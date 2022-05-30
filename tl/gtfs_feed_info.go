@@ -32,7 +32,7 @@ func (ent *FeedInfo) Errors() (errs []error) {
 	errs = append(errs, enum.CheckLanguage("default_lang", ent.DefaultLang.String)...)
 	errs = append(errs, enum.CheckEmail("feed_contact_email", ent.FeedContactEmail.String)...)
 	errs = append(errs, enum.CheckURL("feed_contact_url", ent.FeedContactURL.String)...)
-	if ent.FeedStartDate.IsZero() && ent.FeedEndDate.IsZero() {
+	if ent.FeedStartDate.IsZero() || ent.FeedEndDate.IsZero() {
 		// skip
 	} else {
 		if ent.FeedEndDate.Time.Before(ent.FeedStartDate.Time) {
