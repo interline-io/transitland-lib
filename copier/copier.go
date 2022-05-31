@@ -364,6 +364,12 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	// Perform entity level validation; includes any previous errors
 	errs := ent.Errors()
 	warns := ent.Warnings()
+	for _, err := range warns {
+		copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("warning")
+	}
+	for _, err := range errs {
+		copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("error")
+	}
 	copier.ErrorHandler.HandleEntityErrors(ent, errs, warns)
 
 	// Check strictness
