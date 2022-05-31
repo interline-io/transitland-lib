@@ -60,8 +60,8 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 	switch v := ent.(type) {
 	case *tl.Shape:
 		pts := make([]xy.Point, v.Geometry.NumCoords())
-		for _, c := range v.Geometry.Coords() {
-			pts = append(pts, xy.Point{Lon: c[0], Lat: c[1]})
+		for i, c := range v.Geometry.Coords() {
+			pts[i] = xy.Point{Lon: c[0], Lat: c[1]}
 		}
 		// If we've already seen this line, re-use shapeInfo to reduce mem usage
 		for _, si := range pp.shapeInfos {
@@ -73,24 +73,31 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 			}
 		}
 		// Get distances
-		maxLength := 0.0
+		maxSegmentLength := 0.0
 		length := 0.0
 		prevPoint := xy.Point{}
 		for i, pt := range pts {
 			if i > 0 {
 				d := xy.DistanceHaversine(prevPoint.Lon, prevPoint.Lat, pt.Lon, pt.Lat)
 				length += d
-				if d > maxLength {
-					maxLength = d
+				if d > maxSegmentLength {
+					maxSegmentLength = d
 				}
 			}
 			prevPoint = pt
+		}
+		// Check it's not totally broken
+		if len(pts) < 2 {
+			return nil
+		}
+		if length > 5_000_000 || maxSegmentLength > 1_000_000 {
+			return nil
 		}
 		// Add to shape cache
 		pp.shapeInfos[eid] = shapeInfo{
 			Generated:        v.Generated,
 			Length:           length,
-			MaxSegmentLength: maxLength,
+			MaxSegmentLength: maxSegmentLength,
 			Line:             pts,
 		}
 	case *tl.Trip:
@@ -147,11 +154,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		for shapeId, v := range dirShapes {
 			// Ensure we have full shape info
-			if si, ok := pp.shapeInfos[shapeId]; ok {
-				// Check valid shape
-				if len(si.Line) < 2 {
-					continue
-				}
+			if _, ok := pp.shapeInfos[shapeId]; ok {
 				// Include if it is the longest shape
 				// or accounts for at least 10% of trips in this direction
 				if shapeId == longestShape || float64(v)/dirCount > 0.1 {
@@ -205,11 +208,11 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 			ent.Generated = true
 		}
 		// Set to max selected shape length
-		if si.Length > ent.Length.Float {
+		if si.Length >= ent.Length.Float {
 			ent.Length = tl.NewFloat(si.Length)
 		}
 		// Set to max selected shape segment length
-		if si.MaxSegmentLength > ent.MaxSegmentLength.Float {
+		if si.MaxSegmentLength >= ent.MaxSegmentLength.Float {
 			ent.MaxSegmentLength = tl.NewFloat(si.MaxSegmentLength)
 		}
 		// OK
@@ -235,14 +238,14 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// Add to MultiLineString
 		if err := g.Push(sl); err != nil {
-			// log.Debugf("failed to build route geometry:", err)
+			log.Debugf("failed to build route geometry:", err)
 		}
 	}
-	if g.NumLineStrings() > 0 {
-		ent.CombinedGeometry = tl.Geometry{Geometry: g, Valid: true}
-	} else {
+	if g.NumLineStrings() == 0 || len(matches) == 0 {
 		// Skip entity
 		return nil, errors.New("no geometries")
+	} else {
+		ent.CombinedGeometry = tl.Geometry{Geometry: g, Valid: true}
 	}
 	return &ent, nil
 }

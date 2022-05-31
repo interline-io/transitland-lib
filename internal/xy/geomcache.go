@@ -74,16 +74,18 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 // MakeShape returns geometry for the given stops.
 func (g *GeomCache) MakeShape(stopids ...string) (tl.Shape, error) {
 	shape := tl.Shape{}
+	shape.Generated = true
 	stopline := []float64{} // flatcoords
 	for _, stopid := range stopids {
-		if newPoint, ok := g.stops[stopid]; ok {
-			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
-		} else {
+		if newPoint, ok := g.stops[stopid]; !ok {
 			return shape, fmt.Errorf("stop '%s' not in cache", stopid)
+		} else if newPoint.Lon == 0 || newPoint.Lat == 0 {
+			return shape, fmt.Errorf("stop '%s' has zero coordinate", stopid)
+		} else {
+			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
 		}
 	}
 	shape.Geometry = tl.NewLineStringFromFlatCoords(stopline)
-	shape.Generated = true
 	return shape, nil
 }
 
