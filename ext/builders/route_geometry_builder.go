@@ -238,7 +238,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// Add to MultiLineString
 		if err := g.Push(sl); err != nil {
-			log.Debugf("failed to build route geometry:", err)
+			// log.Debugf("failed to build route geometry: %s", err.Error())
 		}
 	}
 	if g.NumLineStrings() == 0 || len(matches) == 0 {
