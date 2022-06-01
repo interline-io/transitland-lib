@@ -138,7 +138,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 	// Process shapes for each direction
 	dirs := pp.shapeCounts[rid]
 	for _, dirShapes := range dirs {
-		dirCount := float64(0)
+		dirCount := 0
 		longestShape := ""
 		longestShapeLength := 0.0
 		// Sort by trip count to ensure stable selection of longest shape
@@ -146,7 +146,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		for _, shapeId := range sortMap(dirShapes) {
 			// Check shape info and if this is the longest shape
 			if si, ok := pp.shapeInfos[shapeId]; ok {
-				dirCount += float64(dirShapes[shapeId])
+				dirCount += dirShapes[shapeId]
 				if si.Length > longestShapeLength {
 					longestShape = shapeId
 					longestShapeLength = si.Length
@@ -175,7 +175,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 			}
 			// Include if it is the longest shape
 			// or accounts for at least 20% of trips in this direction
-			if shapeId == longestShape || float64(v)/dirCount > 0.2 {
+			if shapeId == longestShape || float64(v)/float64(dirCount) > 0.2 {
 				candidateShapes[shapeId] += v
 			}
 		}
@@ -236,7 +236,6 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		if si.MaxSegmentLength >= ent.MaxSegmentLength.Float {
 			ent.MaxSegmentLength = tl.NewFloat(si.MaxSegmentLength)
 		}
-
 		// OK
 		matches = append(matches, si.Line)
 	}
