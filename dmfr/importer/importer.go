@@ -98,7 +98,10 @@ func FindImportableFeeds(adapter tldb.Adapter) ([]int, error) {
 	qstr, qargs, err := adapter.Sqrl().
 		Select("feed_versions.id").
 		From("feed_versions").
+		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
+		Where("current_feeds.deleted_at IS NULL").
+		Where("feed_versions.deleted_at IS NULL").
 		Where("feed_version_gtfs_imports.id IS NULL").
 		ToSql()
 	if err != nil {
