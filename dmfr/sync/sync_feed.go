@@ -42,7 +42,7 @@ func UpdateFeed(atx tldb.Adapter, rfeed tl.Feed) (int, bool, bool, error) {
 // HideUnseedFeeds .
 func HideUnseedFeeds(atx tldb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
-	t := tl.NewTime(time.Now())
+	t := tl.NewTime(time.Now().UTC())
 	r, err := atx.Sqrl().
 		Update("current_feeds").
 		Where(sq.NotEq{"id": found}).

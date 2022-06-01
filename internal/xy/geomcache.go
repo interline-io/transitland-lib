@@ -62,29 +62,30 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 	for i, c := range shape.Geometry.Coords() {
 		sl[i] = Point{c[0], c[1]}
 	}
+	// Check if already exists, re-use slice to reduce mem
+	for _, s := range g.shapes {
+		if PointSliceEqual(sl, s) {
+			sl = s
+		}
+	}
 	g.shapes[eid] = sl
 }
 
 // MakeShape returns geometry for the given stops.
 func (g *GeomCache) MakeShape(stopids ...string) (tl.Shape, error) {
 	shape := tl.Shape{}
+	shape.Generated = true
 	stopline := []float64{} // flatcoords
-	prevPoint := Point{}
-	for i, stopid := range stopids {
-		if newPoint, ok := g.stops[stopid]; ok {
-			if i > 0 {
-				if d := Distance2d(prevPoint, newPoint); d > 10.0 {
-					return shape, fmt.Errorf("distance from (%f,%f) to (%f,%f) is %f decimal degrees", prevPoint.Lon, prevPoint.Lat, newPoint.Lon, newPoint.Lat, d)
-				}
-			}
-			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
-			prevPoint = newPoint
-		} else {
+	for _, stopid := range stopids {
+		if newPoint, ok := g.stops[stopid]; !ok {
 			return shape, fmt.Errorf("stop '%s' not in cache", stopid)
+		} else if newPoint.Lon == 0 || newPoint.Lat == 0 {
+			return shape, fmt.Errorf("stop '%s' has zero coordinate", stopid)
+		} else {
+			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
 		}
 	}
 	shape.Geometry = tl.NewLineStringFromFlatCoords(stopline)
-	shape.Generated = true
 	return shape, nil
 }
 

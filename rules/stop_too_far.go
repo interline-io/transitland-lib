@@ -26,7 +26,7 @@ func (e *StopTooFarError) Error() string {
 
 // StopTooFarCheck checks for StopTooFarErrors.
 type StopTooFarCheck struct {
-	geoms   map[string]*tl.Point // regularize and use copier geomCache?
+	geoms   map[string]*tl.Point // use shared geom cache?
 	maxdist float64
 }
 

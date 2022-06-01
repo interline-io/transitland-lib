@@ -115,7 +115,7 @@ type Timestamps struct {
 
 // UpdateTimestamps initializes or updates CreatedAt / UpdatedAt
 func (ent *Timestamps) UpdateTimestamps() {
-	t := time.Now()
+	t := time.Now().UTC()
 	if ent.CreatedAt.IsZero() {
 		ent.CreatedAt = t
 	}
