@@ -168,7 +168,6 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
-		log.Debugf("error %s '%s': %s", efn, eid, err.Error())
 	}
 	for _, err := range warns {
 		if v, ok := err.(updateContext); ok {
@@ -181,7 +180,6 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
-		log.Debugf("warning %s '%s': %s", efn, eid, err.Error())
 	}
 }
 

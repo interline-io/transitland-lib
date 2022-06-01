@@ -144,21 +144,21 @@ func (cmd *Command) Run() error {
 			if ok1 && ok2 {
 				if hh1 == hh2 && cmd.ShowSame {
 					// fmt.Println("same")
-					ent1.row = append(ent1.row, readerB.Path(), "same")
+					ent1.row = append(ent1.row, readerB.String(), "same")
 					presentBoth = append(presentBoth, ent1)
 				} else if hh1 != hh2 && cmd.ShowDiff {
 					// fmt.Println("diff")
-					ent1.row = append(ent1.row, readerA.Path(), "diff")
-					ent2.row = append(ent2.row, readerB.Path(), "diff")
+					ent1.row = append(ent1.row, readerA.String(), "diff")
+					ent2.row = append(ent2.row, readerB.String(), "diff")
 					presentDiff = append(presentDiff, ent1, ent2)
 				}
 			} else if ok1 && !ok2 && cmd.ShowDeleted {
 				// fmt.Println("deleted")
-				ent1.row = append(ent1.row, readerA.Path(), "deleted")
+				ent1.row = append(ent1.row, readerA.String(), "deleted")
 				deletedRows = append(deletedRows, ent1)
 			} else if ok2 && !ok1 && cmd.ShowAdded {
 				// fmt.Println("added")
-				ent2.row = append(ent2.row, readerB.Path(), "added")
+				ent2.row = append(ent2.row, readerB.String(), "added")
 				addedRows = append(addedRows, ent2)
 			}
 		}
@@ -280,6 +280,7 @@ func newDiffAdapter() *diffAdapter {
 	}
 }
 
+func (adapter *diffAdapter) String() string                         { return "diff" }
 func (adapter *diffAdapter) OpenFile(string, func(io.Reader)) error { return nil }
 func (adapter *diffAdapter) ReadRows(string, func(tlcsv.Row)) error { return nil }
 func (adapter *diffAdapter) Open() error                            { return nil }
