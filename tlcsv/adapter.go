@@ -29,6 +29,7 @@ type Adapter interface {
 	Path() string
 	SHA1() (string, error)
 	DirSHA1() (string, error)
+	String() string
 }
 
 // WriterAdapter provides a writing interface.
@@ -84,6 +85,10 @@ func NewURLAdapter(address string, opts ...request.RequestOption) *URLAdapter {
 	}
 }
 
+func (adapter *URLAdapter) String() string {
+	return adapter.url
+}
+
 // Open the adapter, and download the provided URL to a temporary file.
 func (adapter *URLAdapter) Open() error {
 	if adapter.ZipAdapter.path != "" {
@@ -127,6 +132,10 @@ type ZipAdapter struct {
 // NewZipAdapter returns an initialized zip adapter.
 func NewZipAdapter(path string) *ZipAdapter {
 	return &ZipAdapter{path: strings.TrimPrefix(path, "file://")}
+}
+
+func (adapter *ZipAdapter) String() string {
+	return adapter.path
 }
 
 // Open the adapter. Return an error if the file does not exist.
@@ -340,6 +349,11 @@ func NewDirAdapter(path string) *DirAdapter {
 		path:  strings.TrimPrefix(path, "file://"),
 		files: map[string]*os.File{},
 	}
+}
+
+// String
+func (adapter *DirAdapter) String() string {
+	return adapter.path
 }
 
 // SHA1 returns an error.

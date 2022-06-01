@@ -32,7 +32,7 @@ func NewReader(path string) (*Reader, error) {
 }
 
 func (reader *Reader) String() string {
-	return reader.Adapter.Path()
+	return reader.Adapter.String()
 }
 
 // ReadEntities provides a generic interface for reading entities.

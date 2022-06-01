@@ -26,6 +26,10 @@ func NewOverlayAdapter(paths ...string) OverlayAdapter {
 	return OverlayAdapter{paths: paths}
 }
 
+func (adapter OverlayAdapter) String() string {
+	return "overlay"
+}
+
 func (adapter OverlayAdapter) Files() ([]string, error) {
 	check := map[string]bool{}
 	for _, path := range adapter.paths {
