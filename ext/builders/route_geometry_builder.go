@@ -12,12 +12,13 @@ import (
 )
 
 type RouteGeometry struct {
-	RouteID          string
-	Generated        bool
-	Geometry         tl.LineString
-	CombinedGeometry tl.Geometry
-	Length           tl.Float
-	MaxSegmentLength tl.Float
+	RouteID               string
+	Generated             bool
+	Geometry              tl.LineString
+	CombinedGeometry      tl.Geometry
+	Length                tl.Float
+	MaxSegmentLength      tl.Float
+	FirstPointMaxDistance tl.Float
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -33,10 +34,11 @@ func (ent *RouteGeometry) TableName() string {
 ///////
 
 type shapeInfo struct {
-	Line             []xy.Point
-	Generated        bool
-	Length           float64
-	MaxSegmentLength float64
+	Line                  []xy.Point
+	Generated             bool
+	Length                float64
+	MaxSegmentLength      float64
+	FirstPointMaxDistance float64
 }
 
 ////////
@@ -75,6 +77,8 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 		// Get distances
 		maxSegmentLength := 0.0
 		length := 0.0
+		firstPoint := pts[0]
+		firstPointMaxDistance := 0.0
 		prevPoint := xy.Point{}
 		for i, pt := range pts {
 			if i > 0 {
@@ -83,22 +87,19 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 				if d > maxSegmentLength {
 					maxSegmentLength = d
 				}
+				if d2 := xy.DistanceHaversine(firstPoint.Lon, firstPoint.Lat, pt.Lon, pt.Lat); d2 > firstPointMaxDistance {
+					firstPointMaxDistance = d2
+				}
 			}
 			prevPoint = pt
 		}
-		// Check it's not totally broken
-		if len(pts) < 2 {
-			return nil
-		}
-		if length > 5_000_000 || maxSegmentLength > 1_000_000 {
-			return nil
-		}
 		// Add to shape cache
 		pp.shapeInfos[eid] = shapeInfo{
-			Generated:        v.Generated,
-			Length:           length,
-			MaxSegmentLength: maxSegmentLength,
-			Line:             pts,
+			Generated:             v.Generated,
+			Length:                length,
+			MaxSegmentLength:      maxSegmentLength,
+			FirstPointMaxDistance: firstPointMaxDistance,
+			Line:                  pts,
 		}
 	case *tl.Trip:
 		// shapeCounts is layered by: route id, direction id, shape id
@@ -154,12 +155,28 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		for shapeId, v := range dirShapes {
 			// Ensure we have full shape info
-			if _, ok := pp.shapeInfos[shapeId]; ok {
-				// Include if it is the longest shape
-				// or accounts for at least 10% of trips in this direction
-				if shapeId == longestShape || float64(v)/dirCount > 0.1 {
-					candidateShapes[shapeId] += v
+			si, ok := pp.shapeInfos[shapeId]
+			if !ok {
+				continue
+			}
+			// Ignore if any point is 0,0
+			valid := true
+			for _, pt := range si.Line {
+				if pt.Lon == 0 || pt.Lat == 0 {
+					valid = false
 				}
+			}
+			// Ignore if max segment distance > 1000km
+			if si.MaxSegmentLength > 1000*1000 {
+				valid = false
+			}
+			if !valid {
+				continue
+			}
+			// Include if it is the longest shape
+			// or accounts for at least 20% of trips in this direction
+			if shapeId == longestShape || float64(v)/dirCount > 0.2 {
+				candidateShapes[shapeId] += v
 			}
 		}
 	}
@@ -211,10 +228,15 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		if si.Length >= ent.Length.Float {
 			ent.Length = tl.NewFloat(si.Length)
 		}
+		// Set to max first point max distance
+		if si.FirstPointMaxDistance >= ent.FirstPointMaxDistance.Float {
+			ent.FirstPointMaxDistance = tl.NewFloat(si.FirstPointMaxDistance)
+		}
 		// Set to max selected shape segment length
 		if si.MaxSegmentLength >= ent.MaxSegmentLength.Float {
 			ent.MaxSegmentLength = tl.NewFloat(si.MaxSegmentLength)
 		}
+
 		// OK
 		matches = append(matches, si.Line)
 	}
