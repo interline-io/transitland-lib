@@ -493,6 +493,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_translations" (
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
   "table_name" varchar(255),
   "field_name" varchar(255),
+  "field_value" varchar(255),
   "language" varchar(255),
   "translation" varchar(255),
   "record_id" varchar(255),
