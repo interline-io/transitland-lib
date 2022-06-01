@@ -54,7 +54,7 @@ func UpdateOperator(atx tldb.Adapter, operator tl.Operator) (int, bool, bool, er
 // HideUnseedOperators .
 func HideUnseedOperators(atx tldb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
-	t := tl.NewTime(time.Now())
+	t := tl.NewTime(time.Now().UTC())
 	r, err := atx.Sqrl().
 		Update("current_operators").
 		Where(sq.NotEq{"id": found}).
