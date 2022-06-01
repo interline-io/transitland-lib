@@ -481,6 +481,7 @@ CREATE TABLE IF NOT EXISTS "tl_route_geometries" (
   "direction_id" integer,
   "length" real,
   "max_segment_length" real,
+  "first_point_max_distance" real,  
   "geometry" blob,
   "centroid" blob,
   "combined_geometry" blob

@@ -36,7 +36,7 @@ func TestRouteGeometryBuilder(t *testing.T) {
 			testutil.ExampleFeedCaltrain.URL,
 			[]testcase{
 				{RouteID: "Bu-130", ExpectLength: 75274.982973, ExpectLineStrings: 4},
-				{RouteID: "Lo-130", ExpectLength: 75274.982973, ExpectLineStrings: 5},
+				{RouteID: "Lo-130", ExpectLength: 75274.982973, ExpectLineStrings: 4},
 			},
 		},
 		"BART": {
@@ -53,7 +53,7 @@ func TestRouteGeometryBuilder(t *testing.T) {
 			testutil.RelPath("test/data/external/trimet-2routes.zip"),
 			[]testcase{
 				{RouteID: "193", ExpectLength: 6452.065660, ExpectLineStrings: 4},
-				{RouteID: "200", ExpectLength: 23012.874312, ExpectLineStrings: 6},
+				{RouteID: "200", ExpectLength: 23012.874312, ExpectLineStrings: 5},
 			},
 		},
 	}
@@ -94,7 +94,7 @@ func TestRouteGeometryBuilder(t *testing.T) {
 						t.Errorf("not MultiLineString")
 					} else {
 						// fmt.Printf(`{RouteID:"%s", ExpectLength: %f, ExpectLineStrings: %d},`+"\n", tc.RouteID, length, mls.NumLineStrings())
-						assert.Equal(t, mls.NumLineStrings(), tc.ExpectLineStrings)
+						assert.Equal(t, tc.ExpectLineStrings, mls.NumLineStrings())
 					}
 				})
 			}
