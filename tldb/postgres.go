@@ -14,11 +14,14 @@ import (
 func init() {
 	// Register driver
 	adapters["postgres"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
+	adapters["postgresql"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
 	// Register readers and writers
 	r := func(url string) (tl.Reader, error) { return NewReader(url) }
 	ext.RegisterReader("postgres", r)
+	ext.RegisterReader("postgresql", r)
 	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
 	ext.RegisterWriter("postgres", w)
+	ext.RegisterWriter("postgresql", w)
 }
 
 // PostgresAdapter connects to a Postgres/PostGIS database.
