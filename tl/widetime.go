@@ -123,7 +123,7 @@ func (wt *WideTime) Scan(src interface{}) error {
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
 func (wt *WideTime) UnmarshalGQL(v interface{}) error {
-	return nil
+	return wt.Scan(v)
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
