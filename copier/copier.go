@@ -486,6 +486,7 @@ func (copier *Copier) copyLevels() error {
 			return err
 		}
 	}
+	copier.logCount(&tl.Level{})
 	return nil
 }
 
