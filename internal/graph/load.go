@@ -2,6 +2,39 @@ package graph
 
 import "github.com/interline-io/transitland-lib/tl"
 
+/*
+
+Dependency relations between named entities.
+
+agency
+	route
+		trip / stop_time
+			stop
+
+non-platform stops (inverted)
+	station
+		platform
+			level
+			pathway
+			trip / stop_time
+
+calendar / calendar_dates
+	trip
+
+shape
+	trip
+
+fare_attribute / fare_rule (inverted)
+	farezone (virtual)
+		platform
+
+-------
+
+fare_rule: route present and marked, or at least 1 hit in origin/destination/contains
+feed_info: always included
+
+*/
+
 // we just need EntityID / Filename
 type entity interface {
 	EntityID() string
@@ -19,6 +52,7 @@ func entityNode(ent entity) *Node {
 // BuildGraph .
 func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	eg := NewEntityGraph()
+
 	// Add Agencies and select default Agency
 	var dan *Node
 	for ent := range reader.Agencies() {
@@ -26,6 +60,7 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 		eg.AddNode(en)
 		dan = en
 	}
+
 	// Add nodes for Routes and link to Agencies
 	for ent := range reader.Routes() {
 		en := entityNode(&ent)
@@ -36,6 +71,7 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 			eg.AddEdge(agency, en)
 		}
 	}
+
 	// Add nodes for Calendars and Shapes
 	for ent := range reader.Calendars() {
 		eg.AddNode(entityNode(&ent))
@@ -46,6 +82,7 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	for ent := range reader.Shapes() {
 		eg.AddNode(entityNode(&ent))
 	}
+
 	// Add Trips and link
 	for ent := range reader.Trips() {
 		en, _ := eg.AddNode(entityNode(&ent))
@@ -61,6 +98,12 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 			}
 		}
 	}
+
+	// Add nodes for Levels
+	for ent := range reader.Levels() {
+		eg.AddNode(entityNode(&ent))
+	}
+
 	// Add Stops and link to parent stations
 	ps := map[string]string{}   // parent stations
 	cs := map[string][]string{} // non-platform stops in stations
@@ -75,7 +118,13 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 		if ent.ZoneID != "" {
 			fz[ent.ZoneID] = append(fz[ent.ZoneID], ent.StopID)
 		}
+		// Link levels
+		if ent.LevelID.Valid {
+			ln, _ := eg.Node(NewNode("levels.txt", ent.LevelID.Key))
+			eg.AddEdge(ln, en)
+		}
 	}
+
 	// Add stops to parent stops
 	for sid, parentid := range ps {
 		a, ok1 := eg.Node(NewNode("stops.txt", parentid))
@@ -101,12 +150,27 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 			}
 		}
 	}
-	//
+
+	// Add pathways and link to stops
+	for ent := range reader.Pathways() {
+		pn, _ := eg.AddNode(entityNode(&ent))
+		if fn, ok := eg.Node(NewNode("stops.txt", ent.FromStopID)); ok {
+			eg.AddEdge(fn, pn)
+			eg.AddEdge(pn, fn)
+		}
+		if tn, ok := eg.Node(NewNode("stops.txt", ent.ToStopID)); ok {
+			eg.AddEdge(tn, pn)
+			eg.AddEdge(pn, tn)
+		}
+	}
+
+	// Stop Times
 	for ent := range reader.StopTimes() {
 		t, _ := eg.Node(NewNode("trips.txt", ent.TripID))
 		s, _ := eg.Node(NewNode("stops.txt", ent.StopID))
 		eg.AddEdge(s, t)
 	}
+
 	// Add FareAttributes - FareRules will create child edges from Stops and Routes
 	for ent := range reader.FareAttributes() {
 		eg.AddNode(entityNode(&ent))
@@ -123,5 +187,6 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 			eg.AddEdge(fn, zn)
 		}
 	}
+
 	return eg, nil
 }
