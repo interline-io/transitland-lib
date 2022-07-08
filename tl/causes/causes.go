@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+type CanUpdate interface {
+	Update(*Context)
+}
+
 // Context adds structured context.
 type Context struct {
 	Filename   string
@@ -405,4 +409,33 @@ func NewInvalidTimezoneError(field string, value string) *InvalidTimezoneError {
 			Value: value,
 		},
 	}
+}
+
+///////////
+
+type InvalidCurrencyError struct {
+	bc
+}
+
+func (e *InvalidCurrencyError) Error() string { return "" }
+
+func NewInvalidCurrencyError(field string, value string) error {
+	return &InvalidLanguageError{
+		bc: bc{
+			Field: field,
+			Value: value,
+		},
+	}
+}
+
+//////////
+
+type InvalidLanguageError struct {
+	bc
+}
+
+func (e *InvalidLanguageError) Error() string { return "" }
+
+func NewInvalidLanguageError(field string, value string) error {
+	return &InvalidLanguageError{}
 }

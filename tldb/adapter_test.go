@@ -231,6 +231,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	ent0 := tl.Agency{}
 	ent0.AgencyID = "ok"
 	ent0.FeedVersionID = m.FeedVersionID
+	ent0.AgencyTimezone = tl.NewTimezone("America/Los_Angeles")
 	m.AgencyID, err = adapter.Insert(&ent0)
 	if err != nil {
 		return m, err

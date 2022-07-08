@@ -7,13 +7,13 @@ import (
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
-	FareID           string  `csv:",required"`
-	Price            float64 `csv:",required"`
-	CurrencyType     string  `csv:",required"`
-	PaymentMethod    int     `csv:",required"`
-	Transfers        Int
+	FareID           string
+	Price            Float
+	CurrencyType     Currency
+	PaymentMethod    IntEnum
+	Transfers        IntEnum
+	TransferDuration Int
 	AgencyID         Key
-	TransferDuration int
 	BaseEntity
 }
 
@@ -31,11 +31,12 @@ func (ent *FareAttribute) EntityKey() string {
 func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, enum.CheckPresent("fare_id", ent.FareID)...)
-	errs = append(errs, enum.CheckPresent("currency_type", ent.CurrencyType)...)
-	errs = append(errs, enum.CheckPositive("price", ent.Price)...)
-	errs = append(errs, enum.CheckCurrency("currency_type", ent.CurrencyType)...)
-	errs = append(errs, enum.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
-	errs = append(errs, enum.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
+	errs = CheckError(errs, CheckValidPresent("currency_type", &ent.CurrencyType))
+	errs = CheckError(errs, CheckValidPresent("price", &ent.Price))
+	errs = CheckError(errs, CheckValidPresent("payment_method", &ent.PaymentMethod))
+	errs = append(errs, enum.CheckPositive("price", ent.Price.Float)...)
+	errs = append(errs, enum.CheckInsideRangeInt("payment_method", ent.PaymentMethod.Int, 0, 1)...)
+	errs = append(errs, enum.CheckPositiveInt("transfer_duration", ent.TransferDuration.Int)...)
 	errs = append(errs, enum.CheckInsideRangeInt("transfers", int(ent.Transfers.Int), 0, 2)...)
 	return errs
 }

@@ -113,13 +113,13 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	}
 	for ent := range reader.FareRules() {
 		fn, _ := eg.Node(NewNode("fare_attributes.txt", ent.FareID))
-		if zn, ok := eg.Node(NewNode("farezone", ent.OriginID)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.OriginID.Key)); ok {
 			eg.AddEdge(fn, zn)
 		}
-		if zn, ok := eg.Node(NewNode("farezone", ent.DestinationID)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.DestinationID.Key)); ok {
 			eg.AddEdge(fn, zn)
 		}
-		if zn, ok := eg.Node(NewNode("farezone", ent.ContainsID)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.ContainsID.Key)); ok {
 			eg.AddEdge(fn, zn)
 		}
 	}

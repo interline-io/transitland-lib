@@ -1,9 +1,7 @@
-package tests
+package tltypes
 
 import (
 	"testing"
-
-	"github.com/interline-io/transitland-lib/tl"
 )
 
 func Test_StringToSeconds(t *testing.T) {
@@ -17,7 +15,7 @@ func Test_StringToSeconds(t *testing.T) {
 		"2562047788015215:30:08": -(1 << 63),
 	}
 	for k, v := range expect {
-		s, err := tl.StringToSeconds(k)
+		s, err := StringToSeconds(k)
 		if s != v || err != nil {
 			t.Error("expected seconds", v, "for", k, "got", s, "; error:", err)
 		}
@@ -29,7 +27,7 @@ func Test_StringToSeconds(t *testing.T) {
 		"01:02:03:04": 0,
 	}
 	for k, v := range errs {
-		s, err := tl.StringToSeconds(k)
+		s, err := StringToSeconds(k)
 		if s != v || err == nil {
 			t.Error("expected seconds", v, "for", k, "got", s, "; error:", err)
 		}
@@ -37,10 +35,10 @@ func Test_StringToSeconds(t *testing.T) {
 }
 
 func TestNewWideTime(t *testing.T) {
-	if wt, err := tl.NewWideTime("01:02:03"); wt.Seconds != 3723 || err != nil {
+	if wt, err := NewWideTime("01:02:03"); wt.Seconds != 3723 || err != nil {
 		t.Error(err)
 	}
-	if wt, err := tl.NewWideTime("a:b:c"); wt.Seconds != 0 || err == nil {
+	if wt, err := NewWideTime("a:b:c"); wt.Seconds != 0 || err == nil {
 		t.Error("expected error")
 	}
 }
@@ -53,7 +51,7 @@ func TestWideTime_String(t *testing.T) {
 		"00:00:00": 0,
 	}
 	for k, v := range expect {
-		wt, err := tl.NewWideTime(k)
+		wt, err := NewWideTime(k)
 		if wt.Seconds != v {
 			t.Errorf("expected %d, got %d", v, wt.Seconds)
 		}
@@ -72,12 +70,12 @@ var result int
 
 func Benchmark_StringToSeconds(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		tl.StringToSeconds("12:34:56")
+		StringToSeconds("12:34:56")
 	}
 }
 
 func Benchmark_NewWideTime(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		tl.NewWideTime("12:34:56")
+		NewWideTime("12:34:56")
 	}
 }

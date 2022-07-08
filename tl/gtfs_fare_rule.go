@@ -9,9 +9,9 @@ import (
 type FareRule struct {
 	FareID        string `csv:",required"`
 	RouteID       Key
-	OriginID      string
-	DestinationID string
-	ContainsID    string
+	OriginID      Key
+	DestinationID Key
+	ContainsID    Key
 	BaseEntity
 }
 

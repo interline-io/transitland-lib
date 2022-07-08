@@ -1,4 +1,4 @@
-package tl
+package tltypes
 
 import (
 	"database/sql/driver"

@@ -20,7 +20,7 @@ type Calendar struct {
 	Sunday    int       `csv:",required"`
 	StartDate time.Time `csv:",required"`
 	EndDate   time.Time `csv:",required"`
-	Generated bool      `csv:"-" db:"generated"`
+	Generated bool      `csv:"-"`
 	BaseEntity
 }
 

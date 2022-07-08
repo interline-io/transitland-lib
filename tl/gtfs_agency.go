@@ -7,13 +7,13 @@ import (
 // Agency agency.txt
 type Agency struct {
 	AgencyID       string
-	AgencyName     string `csv:",required"`
-	AgencyURL      string `csv:",required"`
-	AgencyTimezone string `csv:",required"`
-	AgencyLang     string
-	AgencyPhone    string
-	AgencyFareURL  string
-	AgencyEmail    string
+	AgencyName     string
+	AgencyURL      string
+	AgencyTimezone Timezone
+	AgencyLang     Language
+	AgencyPhone    String
+	AgencyFareURL  String
+	AgencyEmail    String
 	BaseEntity
 }
 
@@ -32,12 +32,13 @@ func (ent *Agency) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, enum.CheckPresent("agency_name", ent.AgencyName)...)
 	errs = append(errs, enum.CheckPresent("agency_url", ent.AgencyURL)...)
-	errs = append(errs, enum.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
-	errs = append(errs, enum.CheckTimezone("agency_timezone", ent.AgencyTimezone)...)
+
+	errs = CheckError(errs, CheckValidPresent("agency_timezone", &ent.AgencyTimezone))
+	errs = CheckError(errs, CheckFieldError("agency_lang", ent.AgencyLang.Error()))
+
 	errs = append(errs, enum.CheckURL("agency_url", ent.AgencyURL)...)
-	errs = append(errs, enum.CheckURL("agency_fare_url", ent.AgencyFareURL)...)
-	errs = append(errs, enum.CheckLanguage("agency_lang", ent.AgencyLang)...)
-	errs = append(errs, enum.CheckEmail("agency_email", ent.AgencyEmail)...)
+	errs = append(errs, enum.CheckURL("agency_fare_url", ent.AgencyFareURL.String)...)
+	errs = append(errs, enum.CheckEmail("agency_email", ent.AgencyEmail.String)...)
 	return errs
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tltypes"
 )
 
 // BasicRouteTypeFilter checks for extended route_type's and converts to basic route_types.
@@ -34,14 +35,11 @@ type NormalizeTimezoneFilter struct{}
 func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
-		n, ok := enum.IsValidTimezone(v.AgencyTimezone)
-		if !ok {
-			return causes.NewInvalidTimezoneError("agency_timezone", v.AgencyTimezone)
-		} else {
-			v.AgencyEmail = n
+		if n, ok := tltypes.IsValidTimezone(v.AgencyTimezone.String()); ok {
+			v.AgencyTimezone = tltypes.NewTimezone(n)
 		}
 	case *tl.Stop:
-		n, ok := enum.IsValidTimezone(v.StopTimezone)
+		n, ok := tltypes.IsValidTimezone(v.StopTimezone)
 		if !ok {
 			return causes.NewInvalidTimezoneError("stop_timezone", v.StopTimezone)
 		} else {
@@ -54,7 +52,7 @@ func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity) error {
 // ApplyParentTimezoneFilter sets timezone based on the default agency timezone or parent stop timezone
 // Can be used with NormalizeTimezoneFilter
 type ApplyParentTimezoneFilter struct {
-	defaultAgencyTimezone string
+	defaultAgencyTimezone tl.Timezone
 	parentStopTimezones   map[string]string
 }
 
@@ -62,13 +60,13 @@ func (e *ApplyParentTimezoneFilter) Filter(ent tl.Entity) []error {
 	// Remember filter happens before UpdateKeys or final ID available
 	switch v := ent.(type) {
 	case *tl.Agency:
-		if e.defaultAgencyTimezone == "" {
+		if e.defaultAgencyTimezone.IsValid() {
 			e.defaultAgencyTimezone = v.AgencyTimezone
 		}
 	case *tl.Stop:
 		if v.StopTimezone == "" {
 			// Use default agency timezone, unless a parent station provided a timezone
-			v.StopTimezone = e.defaultAgencyTimezone
+			v.StopTimezone = e.defaultAgencyTimezone.String()
 			if ptz, ok := e.parentStopTimezones[v.ParentStation.Key]; ok {
 				v.StopTimezone = ptz
 			}

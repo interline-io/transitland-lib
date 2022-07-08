@@ -7,6 +7,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tltypes"
 )
 
 // Shape shapes.txt
@@ -67,7 +68,7 @@ func NewShapeFromShapes(shapes []Shape) Shape {
 			ent.SetExtra("expect_error", v)
 		}
 	}
-	ent.Geometry = NewLineStringFromFlatCoords(coords)
+	ent.Geometry = tltypes.NewLineStringFromFlatCoords(coords)
 	return ent
 }
 

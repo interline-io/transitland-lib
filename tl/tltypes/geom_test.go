@@ -1,3 +1,3 @@
-package tests
+package tltypes
 
 // TODO: add geometry tests.

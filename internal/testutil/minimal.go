@@ -5,13 +5,14 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/mock"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tltypes"
 )
 
 // NewMinimalTestFeed returns a minimal mock Reader & ReaderTester values.
 func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 	r := &mock.Reader{
 		AgencyList: []tl.Agency{
-			{AgencyID: "agency1", AgencyName: "Agency 1", AgencyTimezone: "America/Los_Angeles", AgencyURL: "http://example.com"},
+			{AgencyID: "agency1", AgencyName: "Agency 1", AgencyTimezone: tl.NewTimezone("America/Los_Angeles"), AgencyURL: "http://example.com"},
 		},
 		RouteList: []tl.Route{
 			{RouteID: "route1", RouteShortName: "Route 1", RouteType: 1, AgencyID: "agency1"},
@@ -28,7 +29,7 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: tl.NewWideTimeFromSeconds(10), DepartureTime: tl.NewWideTimeFromSeconds(15)},
 		},
 		ShapeList: []tl.Shape{
-			{ShapeID: "shape1", Geometry: tl.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
+			{ShapeID: "shape1", Geometry: tltypes.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
 		},
 		CalendarList: []tl.Calendar{
 			{ServiceID: "service1", StartDate: time.Now(), EndDate: time.Now()},
@@ -43,7 +44,7 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{FareID: "fare1"},
 		},
 		FareAttributeList: []tl.FareAttribute{
-			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: tl.NewInt(1)},
+			{FareID: "fare1", CurrencyType: tl.NewCurrency("USD"), Price: tl.NewFloat(1.0), PaymentMethod: tl.NewIntEnum(1), Transfers: tl.NewIntEnum(1)},
 		},
 		FrequencyList: []tl.Frequency{
 			{TripID: "trip1", HeadwaySecs: 600, StartTime: tl.WideTime{Seconds: 3600}, EndTime: tl.WideTime{Seconds: 7200}},

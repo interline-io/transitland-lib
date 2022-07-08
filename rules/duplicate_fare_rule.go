@@ -39,13 +39,13 @@ func (e *DuplicateFareRuleCheck) Validate(ent tl.Entity) []error {
 	if e.rules == nil {
 		e.rules = map[string]int{}
 	}
-	key := v.RouteID.Key + ":" + v.OriginID + ":" + v.DestinationID + ":" + v.ContainsID
+	key := v.RouteID.Key + ":" + v.OriginID.Key + ":" + v.DestinationID.Key + ":" + v.ContainsID.Key
 	if _, ok := e.rules[key]; ok {
 		return []error{&DuplicateFareRuleError{
 			RouteID:       v.RouteID.Key,
-			OriginID:      v.OriginID,
-			DestinationID: v.DestinationID,
-			ContainsID:    v.ContainsID,
+			OriginID:      v.OriginID.Key,
+			DestinationID: v.DestinationID.Key,
+			ContainsID:    v.ContainsID.Key,
 		}}
 	}
 	e.rules[key]++
