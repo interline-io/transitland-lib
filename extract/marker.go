@@ -7,33 +7,6 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-/*
-
-agency
-	route
-		trip / stop_time
-
-non-platform stops (inverted)
-	station
-		platform
-			trip / stop_time
-
-calendar / calendar_dates
-	trip
-
-shape
-	trip
-
-fare_attribute / fare_rule (inverted)
-	farezone (virtual)
-		platform
-
--------
-
-fare_rule: route present and marked, or at least 1 hit in origin/destination/contains
-
-*/
-
 // TODO: Use found map[graph.Node] bool values, not pointers
 
 // Marker selects entities specified during the Filter method.
