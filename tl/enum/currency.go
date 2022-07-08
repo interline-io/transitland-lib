@@ -1,12 +1,10 @@
-package tltypes
+package enum
 
 import (
 	"database/sql/driver"
 	"encoding/json"
 	"io"
 	"strings"
-
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 func toString(v interface{}) string {
@@ -199,6 +197,20 @@ var currencies = map[string]bool{
 	"zwl": true,
 }
 
+type InvalidCurrencyError struct {
+	bc
+}
+
+func (e *InvalidCurrencyError) Error() string { return "" }
+
+func NewInvalidCurrencyError(value string) error {
+	return &InvalidCurrencyError{
+		bc: bc{
+			Value: value,
+		},
+	}
+}
+
 // IsValidCurrency check is valid currency
 func IsValidCurrency(value string) bool {
 	if len(value) == 0 {
@@ -238,7 +250,7 @@ func (r *Currency) IsValid() bool {
 
 func (r *Currency) Error() error {
 	if r.value != "" && !r.valid {
-		return &causes.InvalidCurrencyError{}
+		return NewInvalidCurrencyError(r.value)
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-package tltypes
+package enum
 
 import (
 	"testing"

@@ -389,53 +389,6 @@ func (e *ValidationWarning) Error() string {
 	return fmt.Sprintf("validation warning: %s", e.Message)
 }
 
-// InvalidTimezoneError reports when a timezone is not valid.
-type InvalidTimezoneError struct{ bc }
-
-func (e *InvalidTimezoneError) Error() string {
-	return fmt.Sprintf(
-		"entity %s field %s: invalid timezone value '%s'",
-		e.EntityID,
-		e.Field,
-		e.Value,
-	)
-}
-
-// NewInvalidTimezoneError returns a new InvalidTimezoneError.
-func NewInvalidTimezoneError(field string, value string) *InvalidTimezoneError {
-	return &InvalidTimezoneError{
-		bc: bc{
-			Field: field,
-			Value: value,
-		},
-	}
-}
-
 ///////////
 
-type InvalidCurrencyError struct {
-	bc
-}
-
-func (e *InvalidCurrencyError) Error() string { return "" }
-
-func NewInvalidCurrencyError(field string, value string) error {
-	return &InvalidLanguageError{
-		bc: bc{
-			Field: field,
-			Value: value,
-		},
-	}
-}
-
 //////////
-
-type InvalidLanguageError struct {
-	bc
-}
-
-func (e *InvalidLanguageError) Error() string { return "" }
-
-func NewInvalidLanguageError(field string, value string) error {
-	return &InvalidLanguageError{}
-}

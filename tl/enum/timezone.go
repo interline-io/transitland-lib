@@ -1,12 +1,11 @@
-package tltypes
+package enum
 
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
-
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // Use lowercase keys for case-insensitivity
@@ -577,10 +576,31 @@ var timezones = map[string]string{
 	"zulu":                             "Etc/UTC",
 }
 
+// InvalidTimezoneError reports when a timezone is not valid.
+type InvalidTimezoneError struct{ bc }
+
+func (e *InvalidTimezoneError) Error() string {
+	return fmt.Sprintf(
+		"entity %s field %s: invalid timezone value '%s'",
+		e.EntityID,
+		e.Field,
+		e.Value,
+	)
+}
+
+// NewInvalidTimezoneError returns a new InvalidTimezoneError.
+func NewInvalidTimezoneError(value string) *InvalidTimezoneError {
+	return &InvalidTimezoneError{
+		bc: bc{
+			Value: value,
+		},
+	}
+}
+
 // CheckTimezone returns an error if the value is not a known timezone
 func CheckTimezone(field string, value string) (errs []error) {
 	if _, ok := IsValidTimezone(value); !ok {
-		errs = append(errs, causes.NewInvalidTimezoneError(field, value))
+		errs = append(errs, NewInvalidTimezoneError(value))
 	}
 	return errs
 }
@@ -625,7 +645,7 @@ func (r *Timezone) String() string {
 
 func (r *Timezone) Error() error {
 	if r.value != "" && !r.valid {
-		return &causes.InvalidTimezoneError{}
+		return &InvalidTimezoneError{}
 	}
 	return nil
 }

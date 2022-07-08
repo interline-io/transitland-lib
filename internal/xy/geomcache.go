@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tltypes"
+	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
 func arePositionsSorted(a []float64) bool {
@@ -86,7 +86,7 @@ func (g *GeomCache) MakeShape(stopids ...string) (tl.Shape, error) {
 			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
 		}
 	}
-	shape.Geometry = tltypes.NewLineStringFromFlatCoords(stopline)
+	shape.Geometry = enum.NewLineStringFromFlatCoords(stopline)
 	return shape, nil
 }
 

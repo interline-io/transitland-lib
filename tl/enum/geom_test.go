@@ -1,3 +1,3 @@
-package tltypes
+package enum
 
 // TODO: add geometry tests.

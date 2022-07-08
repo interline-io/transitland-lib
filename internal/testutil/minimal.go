@@ -5,7 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/mock"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tltypes"
+	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
 // NewMinimalTestFeed returns a minimal mock Reader & ReaderTester values.
@@ -29,7 +29,7 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: tl.NewWideTimeFromSeconds(10), DepartureTime: tl.NewWideTimeFromSeconds(15)},
 		},
 		ShapeList: []tl.Shape{
-			{ShapeID: "shape1", Geometry: tltypes.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
+			{ShapeID: "shape1", Geometry: enum.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
 		},
 		CalendarList: []tl.Calendar{
 			{ServiceID: "service1", StartDate: time.Now(), EndDate: time.Now()},

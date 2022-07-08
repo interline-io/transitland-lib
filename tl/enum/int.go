@@ -1,4 +1,4 @@
-package tltypes
+package enum
 
 import (
 	"database/sql/driver"
@@ -8,17 +8,17 @@ import (
 	"strconv"
 )
 
-type IntEnum struct {
+type Int struct {
 	Valid bool
 	Int   int
 }
 
-func NewIntEnum(v int) IntEnum {
-	return IntEnum{Valid: true, Int: v}
+func NewInt(v int) Int {
+	return Int{Valid: true, Int: v}
 }
 
 // Value returns nil if empty
-func (r IntEnum) Value() (driver.Value, error) {
+func (r Int) Value() (driver.Value, error) {
 	if r.Valid {
 		return int64(r.Int), nil
 	}
@@ -26,7 +26,7 @@ func (r IntEnum) Value() (driver.Value, error) {
 }
 
 // Scan implements sql.Scanner
-func (r *IntEnum) Scan(src interface{}) error {
+func (r *Int) Scan(src interface{}) error {
 	r.Int, r.Valid = 0, false
 	if src == nil {
 		return nil
@@ -39,6 +39,8 @@ func (r *IntEnum) Scan(src interface{}) error {
 		r.Int = v
 	case int64:
 		r.Int = int(v)
+	case float64:
+		r.Int = int(v)
 	default:
 		err = errors.New("cant convert")
 	}
@@ -46,23 +48,12 @@ func (r *IntEnum) Scan(src interface{}) error {
 	return err
 }
 
-func (r *IntEnum) String() string {
-	if !r.Valid {
-		return ""
-	}
+func (r *Int) String() string {
 	return strconv.Itoa(r.Int)
 }
 
-func (r *IntEnum) IsValid() bool {
-	return r.Valid
-}
-
-func (r *IntEnum) Error() error {
-	return nil
-}
-
 // UnmarshalJSON implements the json.marshaler interface.
-func (r *IntEnum) UnmarshalJSON(v []byte) error {
+func (r *Int) UnmarshalJSON(v []byte) error {
 	r.Int, r.Valid = 0, false
 	if len(v) == 0 {
 		return nil
@@ -73,7 +64,7 @@ func (r *IntEnum) UnmarshalJSON(v []byte) error {
 }
 
 // MarshalJSON implements the json.Marshaler interface
-func (r *IntEnum) MarshalJSON() ([]byte, error) {
+func (r *Int) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -81,12 +72,45 @@ func (r *IntEnum) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
-func (r *IntEnum) UnmarshalGQL(v interface{}) error {
+func (r *Int) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }
 
 // MarshalGQL implements the graphql.Marshaler interface
-func (r IntEnum) MarshalGQL(w io.Writer) {
+func (r Int) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
+}
+
+/////////////////
+
+// IntSlice .
+type IntSlice struct {
+	Valid bool
+	Ints  []int
+}
+
+func NewIntSlice(v []int) IntSlice {
+	return IntSlice{Valid: true, Ints: v}
+}
+
+// Value .
+func (a IntSlice) Value() (driver.Value, error) {
+	if !a.Valid {
+		return []byte("null"), nil
+	}
+	return json.Marshal(a.Ints)
+}
+
+// Scan .
+func (a *IntSlice) Scan(value interface{}) error {
+	a.Ints, a.Valid = nil, false
+	if value == nil {
+		return nil
+	}
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	return json.Unmarshal(b, &a.Ints)
 }

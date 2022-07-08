@@ -7,7 +7,6 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/enum"
-	"github.com/interline-io/transitland-lib/tl/tltypes"
 )
 
 // BasicRouteTypeFilter checks for extended route_type's and converts to basic route_types.
@@ -35,13 +34,13 @@ type NormalizeTimezoneFilter struct{}
 func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
-		if n, ok := tltypes.IsValidTimezone(v.AgencyTimezone.String()); ok {
-			v.AgencyTimezone = tltypes.NewTimezone(n)
+		if n, ok := enum.IsValidTimezone(v.AgencyTimezone.String()); ok {
+			v.AgencyTimezone = enum.NewTimezone(n)
 		}
 	case *tl.Stop:
-		n, ok := tltypes.IsValidTimezone(v.StopTimezone)
+		n, ok := enum.IsValidTimezone(v.StopTimezone)
 		if !ok {
-			return causes.NewInvalidTimezoneError("stop_timezone", v.StopTimezone)
+			return enum.NewInvalidTimezoneError(v.StopTimezone)
 		} else {
 			v.StopTimezone = n
 		}

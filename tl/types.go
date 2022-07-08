@@ -4,78 +4,78 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tltypes"
+	"github.com/interline-io/transitland-lib/tl/enum"
 )
 
-type String = tltypes.String
-type Strings = tltypes.Strings
-type Int = tltypes.Int
-type Float = tltypes.Float
-type Key = tltypes.Key
-type Time = tltypes.Time
-type Date = tltypes.Date
-type Tags = tltypes.Tags
-type IntSlice = tltypes.IntSlice
-type IntEnum = tltypes.IntEnum
-type WideTime = tltypes.WideTime
-type Currency = tltypes.Currency
-type Language = tltypes.Language
-type Timezone = tltypes.Timezone
-type Point = tltypes.Point
-type Polygon = tltypes.Polygon
-type Geometry = tltypes.Geometry
-type LineString = tltypes.LineString
+type String = enum.String
+type Strings = enum.Strings
+type Int = enum.Int
+type Float = enum.Float
+type Key = enum.Key
+type Time = enum.Time
+type Date = enum.Date
+type Tags = enum.Tags
+type IntSlice = enum.IntSlice
+type IntEnum = enum.IntEnum
+type WideTime = enum.WideTime
+type Currency = enum.Currency
+type Language = enum.Language
+type Timezone = enum.Timezone
+type Point = enum.Point
+type Polygon = enum.Polygon
+type Geometry = enum.Geometry
+type LineString = enum.LineString
 
 func NewString(v string) String {
-	return tltypes.NewString(v)
+	return enum.NewString(v)
 }
 
 func NewInt(v int) Int {
-	return tltypes.NewInt(v)
+	return enum.NewInt(v)
 }
 
 func NewFloat(v float64) Float {
-	return tltypes.NewFloat(v)
+	return enum.NewFloat(v)
 }
 
 func NewKey(v string) Key {
-	return tltypes.NewKey(v)
+	return enum.NewKey(v)
 }
 
 func NewTime(t time.Time) Time {
-	return tltypes.NewTime(t)
+	return enum.NewTime(t)
 }
 
 func NewDate(t time.Time) Date {
-	return tltypes.NewDate(t)
+	return enum.NewDate(t)
 }
 
 func NewIntSlice(v []int) IntSlice {
-	return tltypes.NewIntSlice(v)
+	return enum.NewIntSlice(v)
 }
 
 func NewTimezone(v string) Timezone {
-	return tltypes.NewTimezone(v)
+	return enum.NewTimezone(v)
 }
 
 func NewWideTimeFromSeconds(v int) WideTime {
-	return tltypes.NewWideTimeFromSeconds(v)
+	return enum.NewWideTimeFromSeconds(v)
 }
 
 func NewWideTime(v string) (WideTime, error) {
-	return tltypes.NewWideTime(v)
+	return enum.NewWideTime(v)
 }
 
 func NewCurrency(v string) Currency {
-	return tltypes.NewCurrency(v)
+	return enum.NewCurrency(v)
 }
 
 func NewIntEnum(v int) IntEnum {
-	return tltypes.NewIntEnum(v)
+	return enum.NewIntEnum(v)
 }
 
 func NewPoint(lon, lat float64) Point {
-	return tltypes.NewPoint(lon, lat)
+	return enum.NewPoint(lon, lat)
 }
 
 /////////
@@ -94,12 +94,6 @@ func CheckFieldError(field string, v error) error {
 	return v
 }
 
-type isEnum interface {
-	String() string
-	Error() error
-	IsValid() bool
-}
-
 func CheckValidPresent(field string, value isEnum) error {
 	err := value.Error()
 	if err != nil {
@@ -113,4 +107,10 @@ func CheckValidPresent(field string, value isEnum) error {
 		c.Update(&causes.Context{Field: field})
 	}
 	return err
+}
+
+type isEnum interface {
+	String() string
+	Error() error
+	IsValid() bool
 }
