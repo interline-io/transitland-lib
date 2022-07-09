@@ -170,7 +170,7 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 	case canString:
 		value = v.String()
 	default:
-		return "", fmt.Errorf("can not convert field '%s' to string", k)
+		return "", fmt.Errorf("can not convert field '%s' to string, type %T", k, v)
 	}
 	return value, nil
 }

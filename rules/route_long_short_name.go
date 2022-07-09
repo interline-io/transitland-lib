@@ -11,7 +11,7 @@ type RouteShortNameTooLongCheck struct{}
 // Validate .
 func (e *RouteShortNameTooLongCheck) Validate(ent tl.Entity) []error {
 	if v, ok := ent.(*tl.Route); ok {
-		if len(v.RouteShortName) > 12 {
+		if len(v.RouteShortName.String) > 12 {
 			return []error{causes.NewValidationWarning("route_short_name", "route_short_name should be no more than 12 characters")}
 		}
 	}

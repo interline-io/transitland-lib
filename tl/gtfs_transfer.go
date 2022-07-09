@@ -21,7 +21,7 @@ func (ent *Transfer) Errors() (errs []error) {
 	errs = append(errs, enum.CheckPresent("from_stop_id", ent.FromStopID)...)
 	errs = append(errs, enum.CheckPresent("to_stop_id", ent.ToStopID)...)
 	errs = append(errs, enum.CheckInsideRangeInt("transfer_type", ent.TransferType, 0, 3)...)
-	errs = append(errs, enum.CheckPositiveInt("min_transfer_time", ent.MinTransferTime.Int)...)
+	errs = append(errs, enum.CheckPositiveInt("min_transfer_time", ent.MinTransferTime.Val)...)
 	return errs
 }
 

@@ -30,12 +30,11 @@ func (ent *Agency) EntityKey() string {
 // Errors for this Entity.
 func (ent *Agency) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = enum.CheckError(errs, enum.CheckFieldPresentError("agency_timezone", &ent.AgencyTimezone))
+	errs = enum.CheckError(errs, enum.CheckFieldError("agency_lang", &ent.AgencyLang))
+
 	errs = append(errs, enum.CheckPresent("agency_name", ent.AgencyName)...)
 	errs = append(errs, enum.CheckPresent("agency_url", ent.AgencyURL)...)
-
-	errs = CheckError(errs, CheckValidPresent("agency_timezone", &ent.AgencyTimezone))
-	errs = CheckError(errs, CheckFieldError("agency_lang", ent.AgencyLang.Error()))
-
 	errs = append(errs, enum.CheckURL("agency_url", ent.AgencyURL)...)
 	errs = append(errs, enum.CheckURL("agency_fare_url", ent.AgencyFareURL.String)...)
 	errs = append(errs, enum.CheckEmail("agency_email", ent.AgencyEmail.String)...)

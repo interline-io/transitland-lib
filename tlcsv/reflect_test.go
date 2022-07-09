@@ -58,8 +58,8 @@ func TestSetString(t *testing.T) {
 		if err := SetString(&ent, "price", "123.456"); err != nil {
 			t.Error(err)
 		}
-		if exp := 123.456; math.Abs(exp-ent.Price.Float) > 0.001 {
-			t.Errorf("got %f expect %f", ent.Price.Float, exp)
+		if exp := 123.456; math.Abs(exp-ent.Price.Val) > 0.001 {
+			t.Errorf("got %f expect %f", ent.Price.Val, exp)
 		}
 	})
 	t.Run("time", func(t *testing.T) {

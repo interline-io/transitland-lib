@@ -1,15 +1,62 @@
 package enum
 
 import (
-	"database/sql/driver"
-	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 )
 
-// Use lowercase keys for case-insensitivity
+type Timezone struct {
+	Option[string]
+}
 
+func NewTimezone(v string) Timezone {
+	a := Timezone{}
+	a.Scan(v)
+	return a
+}
+
+func (r Timezone) String() string {
+	return r.Val
+}
+
+func (r *Timezone) Error() error {
+	_, ok := IsValidTimezone(r.Val)
+	if !ok {
+		return &InvalidTimezoneError{r.Val}
+	}
+	return nil
+}
+
+func (r *Timezone) Simplify() (string, bool) {
+	s, ok := IsValidTimezone(r.Val)
+	if ok {
+		r.Val = s
+	}
+	return s, ok
+}
+
+// Errors, helpers
+
+// InvalidTimezoneError reports when a timezone is not valid.
+type InvalidTimezoneError struct {
+	Value string
+}
+
+func (e *InvalidTimezoneError) Error() string {
+	return fmt.Sprintf("invalid timezone: '%s'", e.Value)
+}
+
+// IsValidTimezone check is valid timezone; normalizes non-standard timezones to standard
+func IsValidTimezone(value string) (string, bool) {
+	if len(value) == 0 {
+		return "", true
+	}
+	nornmalized, ok := timezones[strings.ToLower(value)]
+	return nornmalized, ok
+}
+
+// Timezone list
+// Use lowercase keys for case-insensitivity
 // https://data.iana.org/time-zones/releases/tzdata2018f.tar.gz
 // cat africa antarctica asia australasia europe northamerica southamerica backward | egrep "^Zone" | awk '{print tolower($2) " " $2}' > tmp.txt
 // cat africa antarctica asia australasia europe northamerica southamerica backward | egrep "^Link" | awk '{print tolower($3) " " $2}' >> tmp.txt
@@ -574,114 +621,4 @@ var timezones = map[string]string{
 	"w-su":                             "Europe/Moscow",
 	"wet":                              "WET",
 	"zulu":                             "Etc/UTC",
-}
-
-// InvalidTimezoneError reports when a timezone is not valid.
-type InvalidTimezoneError struct{ bc }
-
-func (e *InvalidTimezoneError) Error() string {
-	return fmt.Sprintf(
-		"entity %s field %s: invalid timezone value '%s'",
-		e.EntityID,
-		e.Field,
-		e.Value,
-	)
-}
-
-// NewInvalidTimezoneError returns a new InvalidTimezoneError.
-func NewInvalidTimezoneError(value string) *InvalidTimezoneError {
-	return &InvalidTimezoneError{
-		bc: bc{
-			Value: value,
-		},
-	}
-}
-
-// CheckTimezone returns an error if the value is not a known timezone
-func CheckTimezone(field string, value string) (errs []error) {
-	if _, ok := IsValidTimezone(value); !ok {
-		errs = append(errs, NewInvalidTimezoneError(value))
-	}
-	return errs
-}
-
-// IsValidTimezone check is valid timezone; normalizes non-standard timezones to standard
-func IsValidTimezone(value string) (string, bool) {
-	if len(value) == 0 {
-		return "", true
-	}
-	nornmalized, ok := timezones[strings.ToLower(value)]
-	return nornmalized, ok
-}
-
-type Timezone struct {
-	value string
-	valid bool
-}
-
-func NewTimezone(v string) Timezone {
-	a := Timezone{}
-	a.Set(v)
-	return a
-}
-
-func (r *Timezone) Set(v string) bool {
-	r.value, r.valid = v, false
-	_, ok := IsValidTimezone(v)
-	if v != "" && ok {
-		r.value = v // dont normalize, do that in filter
-		r.valid = true
-	}
-	return r.valid
-}
-
-func (r *Timezone) IsValid() bool {
-	return r.valid
-}
-
-func (r *Timezone) String() string {
-	return r.value
-}
-
-func (r *Timezone) Error() error {
-	if r.value != "" && !r.valid {
-		return &InvalidTimezoneError{}
-	}
-	return nil
-}
-
-func (r Timezone) Value() (driver.Value, error) {
-	if !r.valid || r.value == "" {
-		return nil, nil
-	}
-	return r.value, nil
-}
-
-func (r *Timezone) Scan(src interface{}) error {
-	r.Set(toString(src))
-	return nil
-}
-
-func (r *Timezone) UnmarshalJSON(v []byte) error {
-	c := ""
-	if err := json.Unmarshal(v, &c); err != nil {
-		return err
-	}
-	return r.Scan(c)
-}
-
-func (r *Timezone) MarshalJSON() ([]byte, error) {
-	if !r.valid {
-		return []byte("null"), nil
-	}
-	return json.Marshal(r.value)
-}
-
-func (r *Timezone) UnmarshalGQL(v interface{}) error {
-	return r.Scan(v)
-}
-
-func (r Timezone) MarshalGQL(w io.Writer) {
-	b, _ := r.MarshalJSON()
-	w.Write(b)
 }

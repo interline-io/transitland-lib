@@ -81,9 +81,9 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 			lat:  v.Geometry.Y(),
 		}
 	case *tl.Route:
-		name := v.RouteShortName
+		name := v.RouteShortName.String
 		if name == "" {
-			name = v.RouteLongName
+			name = v.RouteLongName.String
 		}
 		pp.routeStopGeoms[eid] = &routeStopGeoms{
 			name:      name,

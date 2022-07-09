@@ -37,20 +37,20 @@ func (e *ValidFarezoneCheck) Validate(ent tl.Entity) []error {
 	case *tl.FareRule:
 		// TODO: updating values should be handled in UpdateKeys
 		// probably shouldn't mutate in validators...
-		if fz, ok := e.zones[v.OriginID.Key]; ok {
+		if fz, ok := e.zones[v.OriginID.Val]; ok {
 			v.OriginID = tl.NewKey(fz)
-		} else if v.OriginID.Key != "" {
-			errs = append(errs, NewInvalidFarezoneError("origin_id", v.OriginID.Key))
+		} else if v.OriginID.Val != "" {
+			errs = append(errs, NewInvalidFarezoneError("origin_id", v.OriginID.Val))
 		}
-		if fz, ok := e.zones[v.DestinationID.Key]; ok {
+		if fz, ok := e.zones[v.DestinationID.Val]; ok {
 			v.DestinationID = tl.NewKey(fz)
-		} else if v.DestinationID.Key != "" {
-			errs = append(errs, NewInvalidFarezoneError("destination_id", v.DestinationID.Key))
+		} else if v.DestinationID.Val != "" {
+			errs = append(errs, NewInvalidFarezoneError("destination_id", v.DestinationID.Val))
 		}
-		if fz, ok := e.zones[v.ContainsID.Key]; ok {
+		if fz, ok := e.zones[v.ContainsID.Val]; ok {
 			v.ContainsID = tl.NewKey(fz)
-		} else if v.ContainsID.Key != "" {
-			errs = append(errs, NewInvalidFarezoneError("contains_id", v.ContainsID.Key))
+		} else if v.ContainsID.Val != "" {
+			errs = append(errs, NewInvalidFarezoneError("contains_id", v.ContainsID.Val))
 		}
 	}
 	return errs

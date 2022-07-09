@@ -1,12 +1,53 @@
 package enum
 
 import (
-	"database/sql/driver"
-	"encoding/json"
-	"io"
+	"fmt"
 	"strings"
 )
 
+type Language struct {
+	Option[string]
+}
+
+func NewLanguage(v string) Language {
+	a := Language{}
+	a.Scan(v)
+	return a
+}
+
+func (r Language) String() string {
+	return r.Val
+}
+
+func (r *Language) Error() error {
+	if !IsValidLanguage(r.Val) {
+		return &InvalidLanguageError{r.Val}
+	}
+	return nil
+}
+
+// Errors, helpers
+
+type InvalidLanguageError struct {
+	Value string
+}
+
+func (e *InvalidLanguageError) Error() string {
+	return fmt.Sprintf("invalid language: '%s'", e.Value)
+}
+
+// IsValidLanguage check is valid Language
+func IsValidLanguage(value string) bool {
+	if len(value) == 0 {
+		return true
+	}
+	// Only check the prefix code
+	code := strings.Split(value, "-")
+	_, ok := langs[strings.ToLower(code[0])]
+	return ok
+}
+
+// Languages list
 // http://www.loc.gov/standards/iso639-2/php/code_list.php
 var langs = map[string]bool{
 	"aa": true,
@@ -193,101 +234,4 @@ var langs = map[string]bool{
 	"za": true,
 	"zh": true,
 	"zu": true,
-}
-
-type InvalidLanguageError struct {
-	bc
-}
-
-func (e *InvalidLanguageError) Error() string { return "" }
-
-func NewInvalidLanguageError(value string) error {
-	return &InvalidLanguageError{
-		bc: bc{
-			Value: value,
-		},
-	}
-}
-
-// IsValidLanguage check is valid Language
-func IsValidLanguage(value string) bool {
-	if len(value) == 0 {
-		return true
-	}
-	// Only check the prefix code
-	code := strings.Split(value, "-")
-	_, ok := langs[strings.ToLower(code[0])]
-	return ok
-}
-
-type Language struct {
-	value string
-	valid bool
-}
-
-func NewLanguage(v string) Language {
-	a := Language{}
-	a.Set(v)
-	return a
-}
-
-func (r *Language) Set(v string) bool {
-	r.value, r.valid = v, false
-	ok := IsValidLanguage(v)
-	if v != "" && ok {
-		r.value = v
-		r.valid = true
-	}
-	return r.valid
-}
-
-func (r *Language) IsValid() bool {
-	return r.valid
-}
-
-func (r *Language) String() string {
-	return r.value
-}
-
-func (r *Language) Error() error {
-	if r.value != "" && !r.valid {
-		return NewInvalidLanguageError(r.value)
-	}
-	return nil
-}
-
-func (r Language) Value() (driver.Value, error) {
-	if !r.valid || r.value == "" {
-		return nil, nil
-	}
-	return r.value, nil
-}
-
-func (r *Language) Scan(src interface{}) error {
-	r.Set(toString(src))
-	return nil
-}
-
-func (r *Language) UnmarshalJSON(v []byte) error {
-	c := ""
-	if err := json.Unmarshal(v, &c); err != nil {
-		return err
-	}
-	return r.Scan(c)
-}
-
-func (r *Language) MarshalJSON() ([]byte, error) {
-	if !r.valid {
-		return []byte("null"), nil
-	}
-	return json.Marshal(r.value)
-}
-
-func (r *Language) UnmarshalGQL(v interface{}) error {
-	return r.Scan(v)
-}
-
-func (r Language) MarshalGQL(w io.Writer) {
-	b, _ := r.MarshalJSON()
-	w.Write(b)
 }

@@ -3,6 +3,7 @@ package builders
 import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/enum"
 	"github.com/twpayne/go-geom"
 	geomxy "github.com/twpayne/go-geom/xy"
 )
@@ -106,7 +107,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 			continue
 		}
 		ent := FeedVersionGeometry{
-			Geometry: tl.Polygon{Valid: true, Polygon: *v},
+			Geometry: enum.NewPolygon(v),
 		}
 		if _, _, err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -137,7 +138,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		}
 		ent := AgencyGeometry{
 			AgencyID: tl.NewKey(aid),
-			Geometry: tl.Polygon{Valid: true, Polygon: *v},
+			Geometry: enum.NewPolygon(v),
 		}
 		if _, _, err := copier.CopyEntity(&ent); err != nil {
 			return err

@@ -98,7 +98,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 		return stoptimes, nil
 	}
 	stopline := make([]Point, len(stoptimes))
-	shapeid := trip.ShapeID.Key
+	shapeid := trip.ShapeID.Val
 	k := fmt.Sprintf("%s-%d", shapeid, trip.StopPatternID)
 	for i := 0; i < len(stoptimes); i++ {
 		point, ok := g.stops[stoptimes[i].StopID]

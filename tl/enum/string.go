@@ -8,13 +8,22 @@ import (
 	"strconv"
 )
 
+// String is a nullable string, with additional methods for gql and json.
+// This could be converted to Option[string]
 type String struct {
-	Valid  bool
 	String string
+	Valid  bool
 }
 
 func NewString(v string) String {
-	return String{Valid: true, String: v}
+	return String{Valid: (v != ""), String: v}
+}
+
+func (r *String) Present() bool {
+	if r.String != "" {
+		return true
+	}
+	return false
 }
 
 // Value returns nil if empty
@@ -75,21 +84,4 @@ func (r *String) UnmarshalGQL(v interface{}) error {
 func (r String) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
-}
-
-//////////
-
-// Strings helps read and write []String as JSON
-type Strings []String
-
-func (a Strings) Value() (driver.Value, error) {
-	return json.Marshal(a)
-}
-
-func (a *Strings) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
-	}
-	return json.Unmarshal(b, &a)
 }

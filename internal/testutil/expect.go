@@ -100,6 +100,10 @@ func (e *ExpectError) Equals(other ExpectError) bool {
 	return true
 }
 
+type HasCause interface {
+	Cause() error
+}
+
 // Match checks an array of errors and looks for a match.
 func (e *ExpectError) Match(errs []error) bool {
 	nerrs := []ExpectError{}

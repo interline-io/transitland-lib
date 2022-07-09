@@ -70,12 +70,12 @@ func (ent *Trip) UpdateKeys(emap *EntityMap) error {
 		return causes.NewInvalidReferenceError("route_id", ent.RouteID)
 	}
 	// Adjust ShapeID
-	if len(ent.ShapeID.Key) > 0 {
-		if shapeID, ok := emap.GetEntity(&Shape{ShapeID: ent.ShapeID.Key}); ok {
-			ent.ShapeID.Key = shapeID
+	if len(ent.ShapeID.Val) > 0 {
+		if shapeID, ok := emap.GetEntity(&Shape{ShapeID: ent.ShapeID.Val}); ok {
+			ent.ShapeID.Val = shapeID
 			ent.ShapeID.Valid = true
 		} else {
-			return causes.NewInvalidReferenceError("shape_id", ent.ShapeID.Key)
+			return causes.NewInvalidReferenceError("shape_id", ent.ShapeID.Val)
 		}
 	}
 	return nil

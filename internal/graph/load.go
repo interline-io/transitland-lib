@@ -56,7 +56,7 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 			eg.AddEdge(c, en)
 		}
 		if ent.ShapeID.Valid {
-			if s, ok := eg.Node(NewNode("shapes.txt", ent.ShapeID.Key)); ok {
+			if s, ok := eg.Node(NewNode("shapes.txt", ent.ShapeID.Val)); ok {
 				eg.AddEdge(s, en)
 			}
 		}
@@ -68,9 +68,9 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	for ent := range reader.Stops() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
-		if ent.ParentStation.Key != "" {
-			ps[ent.StopID] = ent.ParentStation.Key
-			cs[ent.ParentStation.Key] = append(cs[ent.ParentStation.Key], ent.StopID)
+		if ent.ParentStation.Val != "" {
+			ps[ent.StopID] = ent.ParentStation.Val
+			cs[ent.ParentStation.Val] = append(cs[ent.ParentStation.Val], ent.StopID)
 		}
 		if ent.ZoneID != "" {
 			fz[ent.ZoneID] = append(fz[ent.ZoneID], ent.StopID)
@@ -113,13 +113,13 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	}
 	for ent := range reader.FareRules() {
 		fn, _ := eg.Node(NewNode("fare_attributes.txt", ent.FareID))
-		if zn, ok := eg.Node(NewNode("farezone", ent.OriginID.Key)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.OriginID.Val)); ok {
 			eg.AddEdge(fn, zn)
 		}
-		if zn, ok := eg.Node(NewNode("farezone", ent.DestinationID.Key)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.DestinationID.Val)); ok {
 			eg.AddEdge(fn, zn)
 		}
-		if zn, ok := eg.Node(NewNode("farezone", ent.ContainsID.Key)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.ContainsID.Val)); ok {
 			eg.AddEdge(fn, zn)
 		}
 	}

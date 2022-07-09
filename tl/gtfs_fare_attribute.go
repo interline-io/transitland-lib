@@ -31,13 +31,13 @@ func (ent *FareAttribute) EntityKey() string {
 func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, enum.CheckPresent("fare_id", ent.FareID)...)
-	errs = CheckError(errs, CheckValidPresent("currency_type", &ent.CurrencyType))
-	errs = CheckError(errs, CheckValidPresent("price", &ent.Price))
-	errs = CheckError(errs, CheckValidPresent("payment_method", &ent.PaymentMethod))
-	errs = append(errs, enum.CheckPositive("price", ent.Price.Float)...)
-	errs = append(errs, enum.CheckInsideRangeInt("payment_method", ent.PaymentMethod.Int, 0, 1)...)
-	errs = append(errs, enum.CheckPositiveInt("transfer_duration", ent.TransferDuration.Int)...)
-	errs = append(errs, enum.CheckInsideRangeInt("transfers", int(ent.Transfers.Int), 0, 2)...)
+	errs = enum.CheckError(errs, enum.CheckFieldPresentError("currency_type", &ent.CurrencyType))
+	errs = enum.CheckError(errs, enum.CheckFieldPresentError("price", &ent.Price))
+	errs = enum.CheckError(errs, enum.CheckFieldPresentError("payment_method", &ent.PaymentMethod))
+	errs = append(errs, enum.CheckPositive("price", ent.Price.Val)...)
+	errs = append(errs, enum.CheckInsideRangeInt("payment_method", ent.PaymentMethod.Val, 0, 1)...)
+	errs = append(errs, enum.CheckPositiveInt("transfer_duration", ent.TransferDuration.Val)...)
+	errs = append(errs, enum.CheckInsideRangeInt("transfers", int(ent.Transfers.Val), 0, 2)...)
 	return errs
 }
 
@@ -54,12 +54,11 @@ func (ent *FareAttribute) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *FareAttribute) UpdateKeys(emap *EntityMap) error {
 	// Adjust AgencyID - optional
-	if len(ent.AgencyID.Key) > 0 {
-		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Key}); ok {
-			ent.AgencyID.Key = agencyID
-			ent.AgencyID.Valid = true
+	if len(ent.AgencyID.Val) > 0 {
+		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Val}); ok {
+			ent.AgencyID = NewKey(agencyID)
 		} else {
-			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Key)
+			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Val)
 		}
 	}
 	return nil

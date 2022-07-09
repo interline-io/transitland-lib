@@ -39,10 +39,9 @@ func (ent *FareRule) UpdateKeys(emap *EntityMap) error {
 	} else {
 		return causes.NewInvalidReferenceError("fare_id", ent.FareID)
 	}
-	if v := ent.RouteID.Key; v != "" {
+	if v := ent.RouteID.Val; v != "" {
 		if routeID, ok := emap.GetEntity(&Route{RouteID: v}); ok {
-			ent.RouteID.Key = routeID
-			ent.RouteID.Valid = true
+			ent.RouteID = NewKey(routeID)
 		} else {
 			return causes.NewInvalidReferenceError("route_id", v)
 		}

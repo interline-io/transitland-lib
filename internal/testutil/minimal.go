@@ -15,7 +15,7 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{AgencyID: "agency1", AgencyName: "Agency 1", AgencyTimezone: tl.NewTimezone("America/Los_Angeles"), AgencyURL: "http://example.com"},
 		},
 		RouteList: []tl.Route{
-			{RouteID: "route1", RouteShortName: "Route 1", RouteType: 1, AgencyID: "agency1"},
+			{RouteID: "route1", RouteShortName: enum.NewString("Route 1"), RouteType: 1, AgencyID: "agency1"},
 		},
 		TripList: []tl.Trip{
 			{TripID: "trip1", RouteID: "route1", ServiceID: "service1"},
@@ -38,7 +38,7 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{ServiceID: "service1", ExceptionType: 1, Date: time.Now()},
 		},
 		FeedInfoList: []tl.FeedInfo{
-			{FeedVersion: "123", FeedPublisherURL: "http://example.com", FeedLang: "en-US", FeedPublisherName: "Example"},
+			{FeedVersion: "123", FeedPublisherURL: "http://example.com", FeedLang: enum.NewLanguage("en-US"), FeedPublisherName: "Example"},
 		},
 		FareRuleList: []tl.FareRule{
 			{FareID: "fare1"},

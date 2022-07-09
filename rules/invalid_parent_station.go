@@ -41,13 +41,13 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 		e.locationTypes = map[string]int{}
 	}
 	e.locationTypes[stop.EntityID()] = stop.LocationType
-	if stop.ParentStation.Key == "" {
+	if stop.ParentStation.Val == "" {
 		return nil
 	}
 	// We need to compare as strings because EntityMap is map[string]string
 	var errs []error
 	stype := stop.LocationType
-	ptype, ok := e.locationTypes[stop.ParentStation.Key]
+	ptype, ok := e.locationTypes[stop.ParentStation.Val]
 	if !ok {
 		// parent station not found; this is checked during UpdateKeys
 	} else if stype == 4 {
@@ -56,7 +56,7 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 			errs = append(errs, &InvalidParentStationError{
 				StopID:            stop.StopID,
 				LocationType:      stop.LocationType,
-				ParentStation:     stop.ParentStation.Key,
+				ParentStation:     stop.ParentStation.Val,
 				ParentStationType: ptype,
 			})
 		}
@@ -65,7 +65,7 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 		errs = append(errs, &InvalidParentStationError{
 			StopID:            stop.StopID,
 			LocationType:      stop.LocationType,
-			ParentStation:     stop.ParentStation.Key,
+			ParentStation:     stop.ParentStation.Val,
 			ParentStationType: ptype,
 		})
 	}

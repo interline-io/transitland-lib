@@ -34,16 +34,9 @@ type NormalizeTimezoneFilter struct{}
 func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
-		if n, ok := enum.IsValidTimezone(v.AgencyTimezone.String()); ok {
-			v.AgencyTimezone = enum.NewTimezone(n)
-		}
+		v.AgencyTimezone.Simplify()
 	case *tl.Stop:
-		n, ok := enum.IsValidTimezone(v.StopTimezone)
-		if !ok {
-			return enum.NewInvalidTimezoneError(v.StopTimezone)
-		} else {
-			v.StopTimezone = n
-		}
+		v.StopTimezone.Simplify()
 	}
 	return nil
 }
@@ -51,28 +44,28 @@ func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity) error {
 // ApplyParentTimezoneFilter sets timezone based on the default agency timezone or parent stop timezone
 // Can be used with NormalizeTimezoneFilter
 type ApplyParentTimezoneFilter struct {
-	defaultAgencyTimezone tl.Timezone
-	parentStopTimezones   map[string]string
+	defaultAgencyTimezone enum.Timezone
+	parentStopTimezones   map[string]enum.Timezone
 }
 
 func (e *ApplyParentTimezoneFilter) Filter(ent tl.Entity) []error {
 	// Remember filter happens before UpdateKeys or final ID available
 	switch v := ent.(type) {
 	case *tl.Agency:
-		if e.defaultAgencyTimezone.IsValid() {
+		if e.defaultAgencyTimezone.Present() && e.defaultAgencyTimezone.Error() == nil {
 			e.defaultAgencyTimezone = v.AgencyTimezone
 		}
 	case *tl.Stop:
-		if v.StopTimezone == "" {
+		if !v.StopTimezone.Valid {
 			// Use default agency timezone, unless a parent station provided a timezone
-			v.StopTimezone = e.defaultAgencyTimezone.String()
-			if ptz, ok := e.parentStopTimezones[v.ParentStation.Key]; ok {
+			v.StopTimezone = e.defaultAgencyTimezone
+			if ptz, ok := e.parentStopTimezones[v.ParentStation.Val]; ok {
 				v.StopTimezone = ptz
 			}
 		}
 		if v.LocationType == 1 {
 			if e.parentStopTimezones == nil {
-				e.parentStopTimezones = map[string]string{}
+				e.parentStopTimezones = map[string]enum.Timezone{}
 			}
 			e.parentStopTimezones[v.StopID] = v.StopTimezone
 		}

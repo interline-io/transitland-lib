@@ -36,17 +36,17 @@ type DuplicateRouteNameCheck struct {
 // Validate .
 func (e *DuplicateRouteNameCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.Route)
-	if !ok || v.RouteLongName == "" {
+	if !ok || !v.RouteLongName.Present() {
 		return nil
 	}
 	if e.names == nil {
 		e.names = map[string]string{}
 	}
-	key := v.AgencyID + ":" + strconv.Itoa(v.RouteType) + ":" + v.RouteLongName // todo: use a real separator
+	key := v.AgencyID + ":" + strconv.Itoa(v.RouteType) + ":" + v.RouteLongName.String // todo: use a real separator
 	if hit, ok := e.names[key]; ok {
 		return []error{&DuplicateRouteNameError{
 			RouteID:       v.RouteID,
-			RouteLongName: v.RouteLongName,
+			RouteLongName: v.RouteLongName.String,
 			RouteType:     v.RouteType,
 			AgencyID:      v.AgencyID,
 			OtherRouteID:  hit,

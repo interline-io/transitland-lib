@@ -178,8 +178,8 @@ func TestUpdateFeed(t *testing.T) {
 			if a, b := dfeed.UpdatedAt, rfeed.UpdatedAt; !a.After(b) {
 				t.Errorf("expected updated_at %s to be greater than %s", a, b)
 			}
-			if !(dfeed.DeletedAt.IsZero() || dfeed.DeletedAt.Valid) {
-				t.Errorf("expected deleted_at to be null, got %s %t", dfeed.DeletedAt.Time, dfeed.DeletedAt.Valid)
+			if !(dfeed.DeletedAt.Val.IsZero() || dfeed.DeletedAt.Valid) {
+				t.Errorf("expected deleted_at to be null, got %s %t", dfeed.DeletedAt.Val, dfeed.DeletedAt.Valid)
 			}
 			return nil
 		})

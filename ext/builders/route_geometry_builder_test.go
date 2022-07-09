@@ -90,7 +90,7 @@ func TestRouteGeometryBuilder(t *testing.T) {
 					}
 					length := xy.LengthHaversine(pts)
 					assert.InEpsilonf(t, length, tc.ExpectLength, 1.0, "got %f expect %f", length, tc.ExpectLength)
-					if mls, ok := rg.CombinedGeometry.Geometry.(*geom.MultiLineString); !ok {
+					if mls, ok := rg.CombinedGeometry.Val.(*geom.MultiLineString); !ok {
 						t.Errorf("not MultiLineString")
 					} else {
 						// fmt.Printf(`{RouteID:"%s", ExpectLength: %f, ExpectLineStrings: %d},`+"\n", tc.RouteID, length, mls.NumLineStrings())

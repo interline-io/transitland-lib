@@ -11,19 +11,19 @@ import (
 type Route struct {
 	RouteID           string `csv:",required"`
 	AgencyID          string
-	RouteShortName    string
-	RouteLongName     string
-	RouteDesc         string
+	RouteShortName    String
+	RouteLongName     String
+	RouteDesc         String
 	RouteType         int `csv:",required"`
-	RouteURL          string
-	RouteColor        string
-	RouteTextColor    string
-	RouteSortOrder    int
+	RouteURL          Url
+	RouteColor        Color
+	RouteTextColor    Color
+	RouteSortOrder    Int
 	ContinuousPickup  Int
 	ContinuousDropOff Int
 	Geometry          Geometry `csv:"-" db:"-"`
-	NetworkID         string   `db:"-"`
-	AsRoute           int      `db:"-"`
+	NetworkID         String   `db:"-"`
+	AsRoute           Int      `db:"-"`
 	BaseEntity
 }
 
@@ -41,13 +41,15 @@ func (ent *Route) EntityKey() string {
 func (ent *Route) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, enum.CheckPresent("route_id", ent.RouteID)...)
-	errs = append(errs, enum.CheckURL("route_url", ent.RouteURL)...)
-	errs = append(errs, enum.CheckColor("route_color", ent.RouteColor)...)
-	errs = append(errs, enum.CheckColor("route_text_color", ent.RouteTextColor)...)
-	errs = append(errs, enum.CheckPositiveInt("route_sort_order", ent.RouteSortOrder)...)
-	errs = append(errs, enum.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Int, 0, 1, 2, 3)...)
-	errs = append(errs, enum.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Int, 0, 1, 2, 3)...)
-	if len(ent.RouteShortName) == 0 && len(ent.RouteLongName) == 0 {
+
+	errs = enum.CheckError(errs, enum.CheckFieldError("route_url", &ent.RouteURL))
+	errs = enum.CheckError(errs, enum.CheckFieldError("route_color", &ent.RouteColor))
+	errs = enum.CheckError(errs, enum.CheckFieldError("route_text_color", &ent.RouteTextColor))
+
+	errs = append(errs, enum.CheckPositiveInt("route_sort_order", ent.RouteSortOrder.Val)...)
+	errs = append(errs, enum.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Val, 0, 1, 2, 3)...)
+	errs = append(errs, enum.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Val, 0, 1, 2, 3)...)
+	if !ent.RouteShortName.Present() && !ent.RouteLongName.Present() {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("route_short_name"))
 	}
 	if _, ok := enum.GetRouteType(ent.RouteType); !ok {

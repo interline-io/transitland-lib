@@ -9,7 +9,7 @@ type Translation struct {
 	// "TableNameValue" because TableName is a required interface method
 	TableNameValue String `db:"table_name" csv:"table_name"`
 	FieldName      String
-	Language       String
+	Language       Language
 	Translation    String
 	RecordID       String
 	RecordSubID    String
@@ -30,8 +30,7 @@ func (ent *Translation) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, enum.CheckPresent("table_name", ent.TableNameValue.String)...)
 	errs = append(errs, enum.CheckPresent("field_name", ent.FieldName.String)...)
-	errs = append(errs, enum.CheckPresent("language", ent.Language.String)...)
-	errs = append(errs, enum.CheckLanguage("language", ent.Language.String)...)
+	errs = enum.CheckError(errs, enum.CheckFieldPresentError("language", &ent.Language))
 	errs = append(errs, enum.CheckPresent("translation", ent.Translation.String)...)
 	errs = append(errs, enum.CheckInArray("table_name", ent.TableNameValue.String, "agency", "routes", "stops", "trips", "stop_times", "pathways", "levels", "feed_info", "attributions")...)
 	// RecordID
