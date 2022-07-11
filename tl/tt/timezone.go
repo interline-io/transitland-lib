@@ -1,7 +1,62 @@
-package enum
+package tt
 
+import (
+	"fmt"
+	"strings"
+)
+
+type Timezone struct {
+	Option[string]
+}
+
+func NewTimezone(v string) Timezone {
+	a := Timezone{}
+	a.Scan(v)
+	return a
+}
+
+func (r Timezone) String() string {
+	return r.Val
+}
+
+func (r *Timezone) Error() error {
+	_, ok := IsValidTimezone(r.Val)
+	if !ok {
+		return &InvalidTimezoneError{r.Val}
+	}
+	return nil
+}
+
+func (r *Timezone) Simplify() (string, bool) {
+	s, ok := IsValidTimezone(r.Val)
+	if ok {
+		r.Val = s
+	}
+	return s, ok
+}
+
+// Errors, helpers
+
+// InvalidTimezoneError reports when a timezone is not valid.
+type InvalidTimezoneError struct {
+	Value string
+}
+
+func (e *InvalidTimezoneError) Error() string {
+	return fmt.Sprintf("invalid timezone: '%s'", e.Value)
+}
+
+// IsValidTimezone check is valid timezone; normalizes non-standard timezones to standard
+func IsValidTimezone(value string) (string, bool) {
+	if len(value) == 0 {
+		return "", true
+	}
+	nornmalized, ok := timezones[strings.ToLower(value)]
+	return nornmalized, ok
+}
+
+// Timezone list
 // Use lowercase keys for case-insensitivity
-
 // https://data.iana.org/time-zones/releases/tzdata2018f.tar.gz
 // cat africa antarctica asia australasia europe northamerica southamerica backward | egrep "^Zone" | awk '{print tolower($2) " " $2}' > tmp.txt
 // cat africa antarctica asia australasia europe northamerica southamerica backward | egrep "^Link" | awk '{print tolower($3) " " $2}' >> tmp.txt

@@ -1,5 +1,53 @@
-package enum
+package tt
 
+import (
+	"fmt"
+	"strings"
+)
+
+type Language struct {
+	Option[string]
+}
+
+func NewLanguage(v string) Language {
+	a := Language{}
+	a.Scan(v)
+	return a
+}
+
+func (r Language) String() string {
+	return r.Val
+}
+
+func (r *Language) Error() error {
+	if !IsValidLanguage(r.Val) {
+		return &InvalidLanguageError{r.Val}
+	}
+	return nil
+}
+
+// Errors, helpers
+
+type InvalidLanguageError struct {
+	Value string
+}
+
+func (e *InvalidLanguageError) Error() string {
+	return fmt.Sprintf("invalid language: '%s'", e.Value)
+}
+
+// IsValidLanguage check is valid Language
+func IsValidLanguage(value string) bool {
+	if len(value) == 0 {
+		return true
+	}
+	// Only check the prefix code
+	code := strings.Split(value, "-")
+	_, ok := langs[strings.ToLower(code[0])]
+	return ok
+}
+
+// Languages list
 // http://www.loc.gov/standards/iso639-2/php/code_list.php
 var langs = map[string]bool{
 	"aa": true,

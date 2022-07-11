@@ -1,5 +1,53 @@
-package enum
+package tt
 
+import (
+	"fmt"
+	"strings"
+)
+
+// Currency is a nullable string describing a currency, plus validation and serialization methods.
+type Currency struct {
+	Option[string]
+}
+
+func NewCurrency(v string) Currency {
+	a := Currency{}
+	a.Scan(v)
+	return a
+}
+
+func (r Currency) String() string {
+	return r.Val
+}
+
+func (r *Currency) Error() error {
+	if !IsValidCurrency(r.Val) {
+		return &InvalidCurrencyError{Value: r.Val}
+	}
+	return nil
+}
+
+// Errors, helpers
+
+// InvalidCurrencyError represents an invalid currency name.
+type InvalidCurrencyError struct {
+	Value string
+}
+
+func (e *InvalidCurrencyError) Error() string {
+	return fmt.Sprintf("invalid currency: '%s'", e.Value)
+}
+
+// IsValidCurrency check is valid currency
+func IsValidCurrency(value string) bool {
+	if len(value) == 0 {
+		return true
+	}
+	_, ok := currencies[strings.ToLower(value)]
+	return ok
+}
+
+// Currency list
 // https://en.wikipedia.org/wiki/iso_4217
 var currencies = map[string]bool{
 	"aed": true,
