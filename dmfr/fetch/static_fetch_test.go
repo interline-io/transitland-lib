@@ -227,7 +227,7 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 		// Check FeedFetch record
 		tlff := dmfr.FeedFetch{}
 		testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
-		assert.Equal(t, fv.SHA1, tlff.ResponseSHA1.String, "did not get expected feed_fetch sha1")
+		assert.Equal(t, fv.SHA1, tlff.ResponseSHA1.Val, "did not get expected feed_fetch sha1")
 		assert.Equal(t, 200, tlff.ResponseCode.Val, "did not get expected feed_fetch response code")
 		assert.Equal(t, true, tlff.Success, "did not get expected feed_fetch success")
 		// Check that we saved the output file

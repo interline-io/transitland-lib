@@ -47,7 +47,9 @@ func (r Option[T]) Value() (driver.Value, error) {
 }
 
 func (r *Option[T]) UnmarshalJSON(v []byte) error {
-	return r.Scan(v)
+	var z T
+	json.Unmarshal(v, &z)
+	return r.Scan(z)
 }
 
 func (r *Option[T]) MarshalJSON() ([]byte, error) {
