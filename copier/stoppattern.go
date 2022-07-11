@@ -26,7 +26,7 @@ func journeyPatternKey(trip *tl.Trip) string {
 		trip.ServiceID,
 		trip.TripHeadsign,
 		trip.TripShortName,
-		trip.ShapeID.Key,
+		trip.ShapeID.Val,
 		trip.DirectionID,
 		trip.WheelchairAccessible,
 		trip.BikesAllowed,
@@ -39,10 +39,10 @@ func journeyPatternKey(trip *tl.Trip) string {
 			st.ArrivalTime.Seconds-a.Seconds,
 			st.DepartureTime.Seconds-b.Seconds,
 			st.StopID,
-			st.StopHeadsign.String,
-			st.PickupType.Int,
-			st.DropOffType.Int,
-			st.Timepoint.Int,
+			st.StopHeadsign.Val,
+			st.PickupType.Val,
+			st.DropOffType.Val,
+			st.Timepoint.Val,
 		)))
 	}
 	return fmt.Sprintf("%x", m.Sum(nil))

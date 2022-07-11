@@ -47,17 +47,17 @@ func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
 	}
 	newp := tl.NewPoint(coords[0], coords[1]) // copy
 	e.geoms[v.StopID] = &newp
-	if v.ParentStation.Key == "" {
+	if v.ParentStation.Val == "" {
 		return nil
 	}
 	// Check if parent stop is >1km
-	if pgeom, ok := e.geoms[v.ParentStation.Key]; ok {
+	if pgeom, ok := e.geoms[v.ParentStation.Val]; ok {
 		// if not ok, then it's a parent error and out of scope for this check
 		d := xy.DistanceHaversinePoint(coords, pgeom.Coords())
 		if d > e.maxdist {
 			errs = append(errs, &StopTooFarError{
 				StopID:        v.StopID,
-				ParentStation: v.ParentStation.Key,
+				ParentStation: v.ParentStation.Val,
 				Distance:      d,
 			})
 		}

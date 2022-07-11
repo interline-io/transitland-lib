@@ -47,7 +47,7 @@ func (e *StopTooCloseCheck) Validate(ent tl.Entity) []error {
 	}
 	v, ok := ent.(*tl.Stop)
 	// This only checks location_type == 0 and no parent
-	if !ok || v.ParentStation.Key != "" || v.LocationType != 0 || !v.Geometry.Valid {
+	if !ok || v.ParentStation.Val != "" || v.LocationType != 0 || !v.Geometry.Valid {
 		return nil
 	}
 	// Use geohash for fast neighbor search; precision = 9 is approx 5m x 5m at the equator.

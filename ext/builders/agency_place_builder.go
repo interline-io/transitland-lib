@@ -159,7 +159,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 		for k, v := range placeWeights {
 			score := float64(v) / float64(agencyTotalWeight)
 			if score > 0.05 {
-				// fmt.Println("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
+				// fmt.Println("\tplace:", k.Name.Val, "/", k.Adm1name.Val, "/", k.Adm0name.Val, "weight:", v, "score:", score)
 				ap := AgencyPlace{}
 				ap.AgencyID = aid
 				ap.Name = k.Name

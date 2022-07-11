@@ -46,7 +46,7 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tl.Entity) []error {
 	if e.checked == nil {
 		e.checked = map[string]map[string]bool{}
 	}
-	shapeid := v.ShapeID.Key
+	shapeid := v.ShapeID.Val
 	if shapeid == "" || len(v.StopTimes) == 0 {
 		return nil
 	}

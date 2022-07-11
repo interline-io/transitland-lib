@@ -3,7 +3,7 @@ package tl
 import (
 	"time"
 
-	tt "github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	geom "github.com/twpayne/go-geom"
 )
 

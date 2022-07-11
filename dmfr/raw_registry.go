@@ -52,23 +52,23 @@ func (r *RawRegistry) Write(w io.Writer) error {
 		sort.Strings(feed.Languages)
 		// Sort nested operators
 		sort.Slice(feed.Operators, func(i, j int) bool {
-			return feed.Operators[i].OnestopID.String < feed.Operators[j].OnestopID.String
+			return feed.Operators[i].OnestopID.Val < feed.Operators[j].OnestopID.Val
 		})
 		// Sort nested operator fields
 		for _, op := range feed.Operators {
 			sort.Slice(op.AssociatedFeeds, func(i, j int) bool {
-				return op.AssociatedFeeds[i].FeedOnestopID.String < op.AssociatedFeeds[j].FeedOnestopID.String
+				return op.AssociatedFeeds[i].FeedOnestopID.Val < op.AssociatedFeeds[j].FeedOnestopID.Val
 			})
 		}
 	}
 	// Sort operators
 	sort.Slice(r.Operators, func(i, j int) bool {
-		return r.Operators[i].OnestopID.String < r.Operators[j].OnestopID.String
+		return r.Operators[i].OnestopID.Val < r.Operators[j].OnestopID.Val
 	})
 	// Sort operator fields
 	for _, op := range r.Operators {
 		sort.Slice(op.AssociatedFeeds, func(i, j int) bool {
-			return op.AssociatedFeeds[i].FeedOnestopID.String < op.AssociatedFeeds[j].FeedOnestopID.String
+			return op.AssociatedFeeds[i].FeedOnestopID.Val < op.AssociatedFeeds[j].FeedOnestopID.Val
 		})
 	}
 	// Convert to JSON, process as MapSlice to remove empty elements, write back as json

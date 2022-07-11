@@ -1,7 +1,7 @@
 package tl
 
 import (
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Agency agency.txt
@@ -30,14 +30,14 @@ func (ent *Agency) EntityKey() string {
 // Errors for this Entity.
 func (ent *Agency) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("agency_name", ent.AgencyName)...)
-	errs = append(errs, enum.CheckPresent("agency_url", ent.AgencyURL)...)
-	errs = append(errs, enum.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
-	errs = append(errs, enum.CheckTimezone("agency_timezone", ent.AgencyTimezone)...)
-	errs = append(errs, enum.CheckURL("agency_url", ent.AgencyURL)...)
-	errs = append(errs, enum.CheckURL("agency_fare_url", ent.AgencyFareURL)...)
-	errs = append(errs, enum.CheckLanguage("agency_lang", ent.AgencyLang)...)
-	errs = append(errs, enum.CheckEmail("agency_email", ent.AgencyEmail)...)
+	errs = append(errs, tt.CheckPresent("agency_name", ent.AgencyName)...)
+	errs = append(errs, tt.CheckPresent("agency_url", ent.AgencyURL)...)
+	errs = append(errs, tt.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
+	errs = append(errs, tt.CheckTimezone("agency_timezone", ent.AgencyTimezone)...)
+	errs = append(errs, tt.CheckURL("agency_url", ent.AgencyURL)...)
+	errs = append(errs, tt.CheckURL("agency_fare_url", ent.AgencyFareURL)...)
+	errs = append(errs, tt.CheckLanguage("agency_lang", ent.AgencyLang)...)
+	errs = append(errs, tt.CheckEmail("agency_email", ent.AgencyEmail)...)
 	return errs
 }
 

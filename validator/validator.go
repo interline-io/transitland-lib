@@ -192,7 +192,7 @@ func (v *Validator) Validate() (*Result, error) {
 		for ent := range reader.Routes() {
 			ent := ent
 			if s, ok := routeShapes[ent.RouteID]; ok {
-				g := tl.Geometry{Geometry: s, Valid: true}
+				g := tl.Geometry{Val: s, Valid: true}
 				ent.Geometry = g
 			}
 			result.Routes = append(result.Routes, ent)

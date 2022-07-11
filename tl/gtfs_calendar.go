@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Calendar calendars.txt
@@ -37,14 +37,14 @@ func (ent *Calendar) EntityKey() string {
 // Errors for this Entity.
 func (ent *Calendar) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("service_id", ent.ServiceID)...)
-	errs = append(errs, enum.CheckInsideRangeInt("monday", ent.Monday, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("tuesday", ent.Tuesday, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("wednesday", ent.Wednesday, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("thursday", ent.Thursday, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("friday", ent.Friday, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("saturday", ent.Saturday, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("sunday", ent.Sunday, 0, 1)...)
+	errs = append(errs, tt.CheckPresent("service_id", ent.ServiceID)...)
+	errs = append(errs, tt.CheckInsideRangeInt("monday", ent.Monday, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("tuesday", ent.Tuesday, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("wednesday", ent.Wednesday, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("thursday", ent.Thursday, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("friday", ent.Friday, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("saturday", ent.Saturday, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("sunday", ent.Sunday, 0, 1)...)
 	if ent.StartDate.IsZero() {
 		errs = append(errs, causes.NewInvalidFieldError("start_date", ent.StartDate.String(), fmt.Errorf("start_date is empty")))
 	}

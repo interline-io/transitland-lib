@@ -2,7 +2,7 @@ package tl
 
 import (
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type Attribution struct {
@@ -31,26 +31,26 @@ func (ent *Attribution) TableName() string {
 // Errors for this Entity.
 func (ent *Attribution) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("organization_name", ent.OrganizationName.String)...)
-	errs = append(errs, enum.CheckURL("attribution_url", ent.AttributionURL.String)...)
-	errs = append(errs, enum.CheckInsideRangeInt("is_producer", ent.IsProducer.Int, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("is_operator", ent.IsOperator.Int, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("is_authority", ent.IsAuthority.Int, 0, 1)...)
-	errs = append(errs, enum.CheckEmail("attribution_email", ent.AttributionEmail.String)...)
+	errs = append(errs, tt.CheckPresent("organization_name", ent.OrganizationName.Val)...)
+	errs = append(errs, tt.CheckURL("attribution_url", ent.AttributionURL.Val)...)
+	errs = append(errs, tt.CheckInsideRangeInt("is_producer", ent.IsProducer.Val, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("is_operator", ent.IsOperator.Val, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("is_authority", ent.IsAuthority.Val, 0, 1)...)
+	errs = append(errs, tt.CheckEmail("attribution_email", ent.AttributionEmail.Val)...)
 	// At least one must be present
-	if ent.IsProducer.Int == 0 && ent.IsOperator.Int == 0 && ent.IsAuthority.Int == 0 {
+	if ent.IsProducer.Val == 0 && ent.IsOperator.Val == 0 && ent.IsAuthority.Val == 0 {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("is_producer"))
 	}
 	// Mutually exclusive fields
-	if ent.AgencyID.Key != "" {
-		if ent.RouteID.Key != "" {
+	if ent.AgencyID.Val != "" {
+		if ent.RouteID.Val != "" {
 			errs = append(errs, causes.NewConditionallyForbiddenFieldError("route_id", "route_id cannot be set if agency_id is present"))
 		}
-		if ent.TripID.Key != "" {
+		if ent.TripID.Val != "" {
 			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", "trip_id cannot be set if agency_id is present"))
 		}
-	} else if ent.RouteID.Key != "" {
-		if ent.TripID.Key != "" {
+	} else if ent.RouteID.Val != "" {
+		if ent.TripID.Val != "" {
 			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", "trip_id cannot be set if route_id is present"))
 		}
 	}
@@ -60,27 +60,27 @@ func (ent *Attribution) Errors() (errs []error) {
 // UpdateKeys updates Entity references.
 func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
 	// Adjust AgencyID
-	if ent.AgencyID.Key != "" {
-		if eid, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Key}); ok {
+	if ent.AgencyID.Val != "" {
+		if eid, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Val}); ok {
 			ent.AgencyID = NewKey(eid)
 		} else {
-			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Key)
+			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Val)
 		}
 	}
 	// Adjust RouteID
-	if ent.RouteID.Key != "" {
-		if eid, ok := emap.GetEntity(&Route{RouteID: ent.RouteID.Key}); ok {
+	if ent.RouteID.Val != "" {
+		if eid, ok := emap.GetEntity(&Route{RouteID: ent.RouteID.Val}); ok {
 			ent.RouteID = NewKey(eid)
 		} else {
-			return causes.NewInvalidReferenceError("route_id", ent.RouteID.Key)
+			return causes.NewInvalidReferenceError("route_id", ent.RouteID.Val)
 		}
 	}
 	// Adjust TripID
-	if ent.TripID.Key != "" {
-		if eid, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Key}); ok {
+	if ent.TripID.Val != "" {
+		if eid, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Val}); ok {
 			ent.TripID = NewKey(eid)
 		} else {
-			return causes.NewInvalidReferenceError("trip_id", ent.TripID.Key)
+			return causes.NewInvalidReferenceError("trip_id", ent.TripID.Val)
 		}
 	}
 	return nil

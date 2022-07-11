@@ -12,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/rs/zerolog"
 	geomxy "github.com/twpayne/go-geom/xy"
 )
@@ -604,7 +605,7 @@ func (copier *Copier) copyShapes() error {
 				pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
 			}
 			pnts = pnts[:len(ii)*stride]
-			ent.Geometry = tl.NewLineStringFromFlatCoords(pnts)
+			ent.Geometry = tt.NewLineStringFromFlatCoords(pnts)
 		}
 		if _, entErr, writeErr := copier.CopyEntity(&ent); writeErr != nil {
 			return writeErr

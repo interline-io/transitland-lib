@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Shape shapes.txt
@@ -67,7 +67,7 @@ func NewShapeFromShapes(shapes []Shape) Shape {
 			ent.SetExtra("expect_error", v)
 		}
 	}
-	ent.Geometry = NewLineStringFromFlatCoords(coords)
+	ent.Geometry = tt.NewLineStringFromFlatCoords(coords)
 	return ent
 }
 
@@ -84,11 +84,11 @@ func (ent *Shape) EntityKey() string {
 // Errors for this Entity.
 func (ent *Shape) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("shape_id", ent.ShapeID)...)
-	errs = append(errs, enum.CheckInsideRange("shape_pt_lat", ent.ShapePtLat, -90.0, 90.0)...)
-	errs = append(errs, enum.CheckInsideRange("shape_pt_lon", ent.ShapePtLon, -180.0, 180.0)...)
-	errs = append(errs, enum.CheckPositiveInt("shape_pt_sequence", ent.ShapePtSequence)...)
-	errs = append(errs, enum.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled)...)
+	errs = append(errs, tt.CheckPresent("shape_id", ent.ShapeID)...)
+	errs = append(errs, tt.CheckInsideRange("shape_pt_lat", ent.ShapePtLat, -90.0, 90.0)...)
+	errs = append(errs, tt.CheckInsideRange("shape_pt_lon", ent.ShapePtLon, -180.0, 180.0)...)
+	errs = append(errs, tt.CheckPositiveInt("shape_pt_sequence", ent.ShapePtSequence)...)
+	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled)...)
 	return errs
 }
 

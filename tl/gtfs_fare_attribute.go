@@ -2,7 +2,7 @@ package tl
 
 import (
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // FareAttribute fare_attributes.txt
@@ -30,13 +30,13 @@ func (ent *FareAttribute) EntityKey() string {
 // Errors for this Entity.
 func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("fare_id", ent.FareID)...)
-	errs = append(errs, enum.CheckPresent("currency_type", ent.CurrencyType)...)
-	errs = append(errs, enum.CheckPositive("price", ent.Price)...)
-	errs = append(errs, enum.CheckCurrency("currency_type", ent.CurrencyType)...)
-	errs = append(errs, enum.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
-	errs = append(errs, enum.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
-	errs = append(errs, enum.CheckInsideRangeInt("transfers", int(ent.Transfers.Int), 0, 2)...)
+	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID)...)
+	errs = append(errs, tt.CheckPresent("currency_type", ent.CurrencyType)...)
+	errs = append(errs, tt.CheckPositive("price", ent.Price)...)
+	errs = append(errs, tt.CheckCurrency("currency_type", ent.CurrencyType)...)
+	errs = append(errs, tt.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
+	errs = append(errs, tt.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
+	errs = append(errs, tt.CheckInsideRangeInt("transfers", int(ent.Transfers.Val), 0, 2)...)
 	return errs
 }
 
@@ -53,12 +53,12 @@ func (ent *FareAttribute) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *FareAttribute) UpdateKeys(emap *EntityMap) error {
 	// Adjust AgencyID - optional
-	if len(ent.AgencyID.Key) > 0 {
-		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Key}); ok {
-			ent.AgencyID.Key = agencyID
+	if len(ent.AgencyID.Val) > 0 {
+		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Val}); ok {
+			ent.AgencyID.Val = agencyID
 			ent.AgencyID.Valid = true
 		} else {
-			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Key)
+			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Val)
 		}
 	}
 	return nil
