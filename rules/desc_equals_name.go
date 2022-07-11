@@ -11,7 +11,7 @@ type DescriptionEqualsName struct{}
 // Validate .
 func (e *DescriptionEqualsName) Validate(ent tl.Entity) []error {
 	if v, ok := ent.(*tl.Route); ok {
-		if v.RouteDesc.Present() && (v.RouteDesc.String == v.RouteLongName.String || v.RouteDesc.String == v.RouteShortName.String) {
+		if v.RouteDesc.Present() && (v.RouteDesc.Val == v.RouteLongName.Val || v.RouteDesc.Val == v.RouteShortName.Val) {
 			return []error{causes.NewValidationWarning("route_desc", "route_desc should not duplicate route_short_name or route_long_name")}
 		}
 	}

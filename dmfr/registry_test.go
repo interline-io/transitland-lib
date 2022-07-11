@@ -36,16 +36,16 @@ func TestParseOperators(t *testing.T) {
 		t.Fatalf("got %d top level operators, expected %d", len(parsedContents.Operators), 1)
 	}
 	o := parsedContents.Operators[0]
-	if o.OnestopID.String != "test" {
-		t.Errorf("got '%s' onestop_id, expected '%s'", o.OnestopID.String, "test")
+	if o.OnestopID.Val != "test" {
+		t.Errorf("got '%s' onestop_id, expected '%s'", o.OnestopID.Val, "test")
 	}
 	if len(o.AssociatedFeeds) != 2 {
 		t.Fatalf("got %d operator associated feeds, expected %d", len(o.AssociatedFeeds), 2)
 	}
 	for _, oif := range o.AssociatedFeeds {
-		if oif.FeedOnestopID.String == "GT" {
-			if oif.GtfsAgencyID.String != "abc" {
-				t.Errorf("got '%s' agency_id, expected '%s'", oif.GtfsAgencyID.String, "abc")
+		if oif.FeedOnestopID.Val == "GT" {
+			if oif.GtfsAgencyID.Val != "abc" {
+				t.Errorf("got '%s' agency_id, expected '%s'", oif.GtfsAgencyID.Val, "abc")
 			}
 		}
 	}
@@ -107,14 +107,14 @@ func TestImplicitOperatorInFeed(t *testing.T) {
 			testMatch := false
 			matchFeeds := map[string][]string{}
 			for _, op := range reg.Operators {
-				if op.OnestopID.String != tc.opname {
+				if op.OnestopID.Val != tc.opname {
 					continue
 				}
 				testMatch = true
 				foundFeeds := []string{}
 				for _, feed := range op.AssociatedFeeds {
-					foundFeeds = append(foundFeeds, feed.FeedOnestopID.String)
-					matchFeeds[feed.FeedOnestopID.String] = append(matchFeeds[feed.FeedOnestopID.String], op.OnestopID.String)
+					foundFeeds = append(foundFeeds, feed.FeedOnestopID.Val)
+					matchFeeds[feed.FeedOnestopID.Val] = append(matchFeeds[feed.FeedOnestopID.Val], op.OnestopID.Val)
 				}
 				assert.ElementsMatchf(t, tc.opFeeds, foundFeeds, "operator %s did not match expected feeds", tc.opname)
 			}

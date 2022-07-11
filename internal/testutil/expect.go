@@ -62,10 +62,11 @@ func CheckErrors(expecterrs []ExpectError, errs []error, t *testing.T) {
 
 // ExpectError represents a single expected error.
 type ExpectError struct {
-	Filename  string
-	EntityID  string
-	Field     string
-	ErrorType string
+	Filename       string
+	EntityID       string
+	Field          string
+	ErrorType      string
+	InnerErrorType string
 }
 
 // NewExpectError returns a new ExpectError.
@@ -88,7 +89,7 @@ func (e *ExpectError) String() string {
 
 // Equals checks if two expect errors are equivalent.
 func (e *ExpectError) Equals(other ExpectError) bool {
-	if len(e.ErrorType) > 0 && e.ErrorType != other.ErrorType {
+	if e.ErrorType != "" && (e.ErrorType != other.ErrorType && e.ErrorType != other.InnerErrorType) {
 		return false
 	} else if len(e.Field) > 0 && e.Field != other.Field {
 		return false
@@ -126,11 +127,21 @@ func (e *ExpectError) Match(errs []error) bool {
 			}
 			expect.Field = ctx.Field
 		}
-		errtype := strings.Replace(fmt.Sprintf("%T", err), "*", "", 1)
-		if len(strings.Split(errtype, ".")) > 1 {
-			errtype = strings.Split(errtype, ".")[1]
+		if err != nil {
+			errtype := strings.Replace(fmt.Sprintf("%T", err), "*", "", 1)
+			if len(strings.Split(errtype, ".")) > 1 {
+				errtype = strings.Split(errtype, ".")[1]
+			}
+			expect.ErrorType = errtype
 		}
-		expect.ErrorType = errtype
+		if inner, ok := err.(HasCause); ok && inner.Cause() != nil {
+			cause := inner.Cause()
+			causetype := strings.Replace(fmt.Sprintf("%T", cause), "*", "", 1)
+			if len(strings.Split(causetype, ".")) > 1 {
+				causetype = strings.Split(causetype, ".")[1]
+			}
+			expect.InnerErrorType = causetype
+		}
 		nerrs = append(nerrs, expect)
 	}
 	for _, e2 := range nerrs {

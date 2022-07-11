@@ -9,36 +9,41 @@ import (
 
 // FeedInfo feed_info.txt
 type FeedInfo struct {
-	FeedPublisherName string   `csv:",required"`
-	FeedPublisherURL  string   `csv:",required"`
-	FeedLang          Language `csv:",required"`
-	FeedVersion       string   `db:"feed_version_name"`
+	FeedPublisherName String
+	FeedPublisherURL  Url
+	FeedVersion       String `db:"feed_version_name"`
+	FeedLang          Language
 	FeedStartDate     Date
 	FeedEndDate       Date
 	DefaultLang       Language
-	FeedContactEmail  String
-	FeedContactURL    String
+	FeedContactEmail  Email
+	FeedContactURL    Url
 	BaseEntity
 }
 
 // Errors for this Entity.
 func (ent *FeedInfo) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("feed_publisher_name", ent.FeedPublisherName)...)
-	errs = append(errs, enum.CheckPresent("feed_publisher_url", ent.FeedPublisherURL)...)
-	errs = enum.CheckError(errs, enum.CheckFieldPresentError("feed_lang", &ent.FeedLang))
-	errs = enum.CheckError(errs, enum.CheckFieldError("default_lang", &ent.DefaultLang))
-
-	errs = append(errs, enum.CheckURL("feed_publisher_url", ent.FeedPublisherURL)...)
-	errs = append(errs, enum.CheckEmail("feed_contact_email", ent.FeedContactEmail.String)...)
-	errs = append(errs, enum.CheckURL("feed_contact_url", ent.FeedContactURL.String)...)
 	if ent.FeedStartDate.Val.IsZero() || ent.FeedEndDate.Val.IsZero() {
 		// skip
 	} else {
 		if ent.FeedEndDate.Val.Before(ent.FeedStartDate.Val) {
-			errs = append(errs, causes.NewInvalidFieldError("feed_end_date", "", fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Val, ent.FeedStartDate.Val)))
+			errs = append(errs,
+				causes.NewInvalidFieldError(
+					"feed_end_date",
+					"",
+					fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Val, ent.FeedStartDate.Val)))
 		}
 	}
+	errs = enum.CheckErrors(
+		errs,
+		enum.CheckFieldPresentError("feed_lang", &ent.FeedLang),
+		enum.CheckFieldPresentError("feed_publisher_url", &ent.FeedPublisherURL),
+		enum.CheckFieldError("default_lang", &ent.DefaultLang),
+		enum.CheckFieldError("feed_contact_email", &ent.FeedContactEmail),
+		enum.CheckFieldError("feed_contact_url", &ent.FeedContactURL),
+		enum.CheckFieldPresent("feed_publisher_name", &ent.FeedPublisherName),
+	)
 	return errs
 }
 

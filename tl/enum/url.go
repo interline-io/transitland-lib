@@ -9,6 +9,10 @@ type Url struct {
 	Option[string]
 }
 
+func NewUrl(v string) Url {
+	return Url{Option[string]{Valid: (v != ""), Val: v}}
+}
+
 func (r Url) String() string {
 	return r.Val
 }

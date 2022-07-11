@@ -17,11 +17,24 @@ type isEnum interface {
 	Present() bool
 }
 
+type isPresent interface {
+	Present() bool
+}
+
 func CheckError(a []error, v error) []error {
 	if v != nil {
 		a = append(a, v)
 	}
 	return a
+}
+
+func CheckErrors(inputErrs []error, checkErrs ...error) []error {
+	for _, err := range checkErrs {
+		if err != nil {
+			inputErrs = append(inputErrs, err)
+		}
+	}
+	return inputErrs
 }
 
 func CheckFieldError(field string, value isEnum) error {
@@ -31,6 +44,13 @@ func CheckFieldError(field string, value isEnum) error {
 	}
 	err = causes.NewInvalidFieldError(field, value.String(), err)
 	return err
+}
+
+func CheckFieldPresent(field string, value isPresent) error {
+	if !value.Present() {
+		return causes.NewRequiredFieldError(field)
+	}
+	return nil
 }
 
 func CheckFieldPresentError(field string, value isEnum) error {

@@ -42,11 +42,11 @@ func (e *DuplicateRouteNameCheck) Validate(ent tl.Entity) []error {
 	if e.names == nil {
 		e.names = map[string]string{}
 	}
-	key := v.AgencyID + ":" + strconv.Itoa(v.RouteType) + ":" + v.RouteLongName.String // todo: use a real separator
+	key := v.AgencyID + ":" + strconv.Itoa(v.RouteType) + ":" + v.RouteLongName.Val // todo: use a real separator
 	if hit, ok := e.names[key]; ok {
 		return []error{&DuplicateRouteNameError{
 			RouteID:       v.RouteID,
-			RouteLongName: v.RouteLongName.String,
+			RouteLongName: v.RouteLongName.Val,
 			RouteType:     v.RouteType,
 			AgencyID:      v.AgencyID,
 			OtherRouteID:  hit,

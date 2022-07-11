@@ -38,7 +38,7 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{ServiceID: "service1", ExceptionType: 1, Date: time.Now()},
 		},
 		FeedInfoList: []tl.FeedInfo{
-			{FeedVersion: "123", FeedPublisherURL: "http://example.com", FeedLang: enum.NewLanguage("en-US"), FeedPublisherName: "Example"},
+			{FeedVersion: enum.NewString("123"), FeedPublisherURL: enum.NewUrl("http://example.com"), FeedLang: enum.NewLanguage("en-US"), FeedPublisherName: enum.NewString("Example")},
 		},
 		FareRuleList: []tl.FareRule{
 			{FareID: "fare1"},
