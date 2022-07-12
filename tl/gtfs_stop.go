@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Stop stops.txt
@@ -62,14 +62,14 @@ func (ent *Stop) Errors() (errs []error) {
 	lat := c[1]
 	lon := c[0]
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("stop_id", ent.StopID)...)
-	errs = append(errs, enum.CheckInsideRange("stop_lat", lat, -90.0, 90.0)...)
-	errs = append(errs, enum.CheckInsideRange("stop_lon", lon, -180.0, 180.0)...)
-	errs = append(errs, enum.CheckURL("stop_url", ent.StopURL)...)
-	errs = append(errs, enum.CheckInsideRangeInt("location_type", ent.LocationType, 0, 4)...)
-	errs = append(errs, enum.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding, 0, 2)...)
+	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
+	errs = append(errs, tt.CheckInsideRange("stop_lat", lat, -90.0, 90.0)...)
+	errs = append(errs, tt.CheckInsideRange("stop_lon", lon, -180.0, 180.0)...)
+	errs = append(errs, tt.CheckURL("stop_url", ent.StopURL)...)
+	errs = append(errs, tt.CheckInsideRangeInt("location_type", ent.LocationType, 0, 4)...)
+	errs = append(errs, tt.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding, 0, 2)...)
 	if ent.StopTimezone != "" {
-		errs = append(errs, enum.CheckTimezone("stop_timezone", ent.StopTimezone)...)
+		errs = append(errs, tt.CheckTimezone("stop_timezone", ent.StopTimezone)...)
 	}
 	// TODO: This should be an enum for exhaustive search
 	lt := ent.LocationType

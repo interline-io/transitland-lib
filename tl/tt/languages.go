@@ -1,4 +1,4 @@
-package enum
+package tt
 
 // http://www.loc.gov/standards/iso639-2/php/code_list.php
 var langs = map[string]bool{

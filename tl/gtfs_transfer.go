@@ -2,7 +2,7 @@ package tl
 
 import (
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Transfer transfers.txt
@@ -18,10 +18,10 @@ type Transfer struct {
 func (ent *Transfer) Errors() (errs []error) {
 	// transfer_type is required but can also be empty, so hard to distinguish
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("from_stop_id", ent.FromStopID)...)
-	errs = append(errs, enum.CheckPresent("to_stop_id", ent.ToStopID)...)
-	errs = append(errs, enum.CheckInsideRangeInt("transfer_type", ent.TransferType, 0, 3)...)
-	errs = append(errs, enum.CheckPositiveInt("min_transfer_time", ent.MinTransferTime.Int)...)
+	errs = append(errs, tt.CheckPresent("from_stop_id", ent.FromStopID)...)
+	errs = append(errs, tt.CheckPresent("to_stop_id", ent.ToStopID)...)
+	errs = append(errs, tt.CheckInsideRangeInt("transfer_type", ent.TransferType, 0, 3)...)
+	errs = append(errs, tt.CheckPositiveInt("min_transfer_time", ent.MinTransferTime.Int)...)
 	return errs
 }
 

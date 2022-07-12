@@ -2,7 +2,7 @@ package tl
 
 import (
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type Translation struct {
@@ -28,12 +28,12 @@ func (ent *Translation) TableName() string {
 // Errors for this Entity.
 func (ent *Translation) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("table_name", ent.TableNameValue.String)...)
-	errs = append(errs, enum.CheckPresent("field_name", ent.FieldName.String)...)
-	errs = append(errs, enum.CheckPresent("language", ent.Language.String)...)
-	errs = append(errs, enum.CheckLanguage("language", ent.Language.String)...)
-	errs = append(errs, enum.CheckPresent("translation", ent.Translation.String)...)
-	errs = append(errs, enum.CheckInArray("table_name", ent.TableNameValue.String, "agency", "routes", "stops", "trips", "stop_times", "pathways", "levels", "feed_info", "attributions")...)
+	errs = append(errs, tt.CheckPresent("table_name", ent.TableNameValue.String)...)
+	errs = append(errs, tt.CheckPresent("field_name", ent.FieldName.String)...)
+	errs = append(errs, tt.CheckPresent("language", ent.Language.String)...)
+	errs = append(errs, tt.CheckLanguage("language", ent.Language.String)...)
+	errs = append(errs, tt.CheckPresent("translation", ent.Translation.String)...)
+	errs = append(errs, tt.CheckInArray("table_name", ent.TableNameValue.String, "agency", "routes", "stops", "trips", "stop_times", "pathways", "levels", "feed_info", "attributions")...)
 	// RecordID
 	if ent.RecordID.String == "" {
 		// Check this way because it's both forbidden and required when table is feed_info

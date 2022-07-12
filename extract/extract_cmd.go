@@ -126,7 +126,7 @@ func (cmd *Command) Run() error {
 	// Create Marker
 	rthits := map[int]bool{}
 	for _, i := range cmd.extractRouteTypes {
-		// TODO: Use enum.GetRouteType
+		// TODO: Use tt.GetRouteType
 		if v, err := strconv.Atoi(i); err == nil {
 			rthits[v] = true
 		} else {

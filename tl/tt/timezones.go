@@ -1,4 +1,4 @@
-package enum
+package tt
 
 // Use lowercase keys for case-insensitivity
 

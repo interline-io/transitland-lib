@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // StopTime stop_times.txt
@@ -68,17 +68,17 @@ func (ent *StopTime) Errors() []error {
 	// No reflection
 	errs := []error{}
 	errs = append(errs, ent.loadErrors...)
-	errs = append(errs, enum.CheckPresent("trip_id", ent.TripID)...)
-	errs = append(errs, enum.CheckPresent("stop_id", ent.StopID)...)
-	errs = append(errs, enum.CheckPositiveInt("stop_sequence", ent.StopSequence)...)
-	errs = append(errs, enum.CheckInsideRangeInt("pickup_type", ent.PickupType.Int, 0, 3)...)
-	errs = append(errs, enum.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Int, 0, 3)...)
-	errs = append(errs, enum.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Float)...)
-	errs = append(errs, enum.CheckInsideRangeInt("timepoint", ent.Timepoint.Int, -1, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Seconds, -1, 1<<31)...)
-	errs = append(errs, enum.CheckInsideRangeInt("departure", ent.DepartureTime.Seconds, -1, 1<<31)...)
-	errs = append(errs, enum.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Int, 0, 1, 2, 3)...)
-	errs = append(errs, enum.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Int, 0, 1, 2, 3)...)
+	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID)...)
+	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
+	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence)...)
+	errs = append(errs, tt.CheckInsideRangeInt("pickup_type", ent.PickupType.Int, 0, 3)...)
+	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Int, 0, 3)...)
+	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Float)...)
+	errs = append(errs, tt.CheckInsideRangeInt("timepoint", ent.Timepoint.Int, -1, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Seconds, -1, 1<<31)...)
+	errs = append(errs, tt.CheckInsideRangeInt("departure", ent.DepartureTime.Seconds, -1, 1<<31)...)
+	errs = append(errs, tt.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Int, 0, 1, 2, 3)...)
+	errs = append(errs, tt.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Int, 0, 1, 2, 3)...)
 	// Other errors
 	at, dt := ent.ArrivalTime.Seconds, ent.DepartureTime.Seconds
 	if at != 0 && dt != 0 && at > dt {

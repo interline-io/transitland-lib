@@ -1,4 +1,4 @@
-package enum
+package tt
 
 // https://en.wikipedia.org/wiki/iso_4217
 var currencies = map[string]bool{

@@ -2,7 +2,7 @@ package tl
 
 import (
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type Attribution struct {
@@ -31,12 +31,12 @@ func (ent *Attribution) TableName() string {
 // Errors for this Entity.
 func (ent *Attribution) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("organization_name", ent.OrganizationName.String)...)
-	errs = append(errs, enum.CheckURL("attribution_url", ent.AttributionURL.String)...)
-	errs = append(errs, enum.CheckInsideRangeInt("is_producer", ent.IsProducer.Int, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("is_operator", ent.IsOperator.Int, 0, 1)...)
-	errs = append(errs, enum.CheckInsideRangeInt("is_authority", ent.IsAuthority.Int, 0, 1)...)
-	errs = append(errs, enum.CheckEmail("attribution_email", ent.AttributionEmail.String)...)
+	errs = append(errs, tt.CheckPresent("organization_name", ent.OrganizationName.String)...)
+	errs = append(errs, tt.CheckURL("attribution_url", ent.AttributionURL.String)...)
+	errs = append(errs, tt.CheckInsideRangeInt("is_producer", ent.IsProducer.Int, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("is_operator", ent.IsOperator.Int, 0, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("is_authority", ent.IsAuthority.Int, 0, 1)...)
+	errs = append(errs, tt.CheckEmail("attribution_email", ent.AttributionEmail.String)...)
 	// At least one must be present
 	if ent.IsProducer.Int == 0 && ent.IsOperator.Int == 0 && ent.IsAuthority.Int == 0 {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("is_producer"))
