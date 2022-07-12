@@ -2,6 +2,7 @@ package tt
 
 import (
 	"encoding/json"
+	"io"
 	"time"
 )
 
@@ -33,4 +34,20 @@ func (r *Date) UnmarshalJSON(v []byte) error {
 		return err
 	}
 	return r.Scan(s)
+}
+
+func (r *Date) UnmarshalGQL(v interface{}) error {
+	return r.Scan(v)
+}
+
+func (r *Date) MarshalJSON() ([]byte, error) {
+	if !r.Valid {
+		return []byte("null"), nil
+	}
+	return json.Marshal(r.Val.Format("2006-01-02"))
+}
+
+func (r Date) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }

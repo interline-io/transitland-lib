@@ -63,7 +63,7 @@ func (r *Option[T]) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }
 
-func (r *Option[T]) MarshalGQL(w io.Writer) {
+func (r Option[T]) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
 }

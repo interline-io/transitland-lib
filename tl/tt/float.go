@@ -2,6 +2,7 @@ package tt
 
 import (
 	"fmt"
+	"io"
 )
 
 // Float is a nullable float
@@ -25,4 +26,14 @@ func (r Float) String() string {
 
 func (r *Float) Float64() float64 {
 	return r.Val
+}
+
+// Needed for gqlgen - issue with generics
+func (r *Float) UnmarshalGQL(v interface{}) error {
+	return r.Scan(v)
+}
+
+func (r Float) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }

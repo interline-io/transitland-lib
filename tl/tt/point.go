@@ -1,6 +1,8 @@
 package tt
 
 import (
+	"io"
+
 	geom "github.com/twpayne/go-geom"
 )
 
@@ -32,4 +34,14 @@ func (g *Point) Y() float64 {
 
 func (g *Point) Coords() geom.Coord {
 	return g.Val.Coords()
+}
+
+// Needed for gqlgen - issue with generics
+func (r *Point) UnmarshalGQL(v interface{}) error {
+	return r.Scan(v)
+}
+
+func (r Point) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }

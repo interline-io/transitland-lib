@@ -1,6 +1,8 @@
 package tt
 
 import (
+	"io"
+
 	geom "github.com/twpayne/go-geom"
 )
 
@@ -42,4 +44,14 @@ func (g *LineString) Coords() []geom.Coord {
 
 func (g *LineString) NumCoords() int {
 	return g.Val.NumCoords()
+}
+
+// Needed for gqlgen - issue with generics
+func (r *LineString) UnmarshalGQL(v interface{}) error {
+	return r.Scan(v)
+}
+
+func (r LineString) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }

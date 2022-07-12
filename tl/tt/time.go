@@ -1,6 +1,7 @@
 package tt
 
 import (
+	"io"
 	"time"
 )
 
@@ -18,4 +19,14 @@ func (r Time) String() string {
 		return ""
 	}
 	return r.Val.Format(time.RFC3339)
+}
+
+// Needed for gqlgen - issue with generics
+func (r *Time) UnmarshalGQL(v interface{}) error {
+	return r.Scan(v)
+}
+
+func (r Time) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }

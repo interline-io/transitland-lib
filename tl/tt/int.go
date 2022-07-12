@@ -2,6 +2,7 @@ package tt
 
 import (
 	"database/sql/driver"
+	"io"
 	"strconv"
 )
 
@@ -23,4 +24,14 @@ func (r Int) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return int64(r.Val), nil
+}
+
+// Needed for gqlgen - issue with generics
+func (r *Int) UnmarshalGQL(v interface{}) error {
+	return r.Scan(v)
+}
+
+func (r Int) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }
