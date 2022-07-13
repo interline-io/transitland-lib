@@ -36,7 +36,7 @@ func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, tt.CheckCurrency("currency_type", ent.CurrencyType)...)
 	errs = append(errs, tt.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
 	errs = append(errs, tt.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
-	errs = append(errs, tt.CheckInsideRangeInt("transfers", int(ent.Transfers.Int), 0, 2)...)
+	errs = append(errs, tt.CheckInsideRangeInt("transfers", int(ent.Transfers.Val), 0, 2)...)
 	return errs
 }
 

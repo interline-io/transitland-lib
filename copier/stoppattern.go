@@ -40,9 +40,9 @@ func journeyPatternKey(trip *tl.Trip) string {
 			st.DepartureTime.Seconds-b.Seconds,
 			st.StopID,
 			st.StopHeadsign.String,
-			st.PickupType.Int,
-			st.DropOffType.Int,
-			st.Timepoint.Int,
+			st.PickupType.Val,
+			st.DropOffType.Val,
+			st.Timepoint.Val,
 		)))
 	}
 	return fmt.Sprintf("%x", m.Sum(nil))

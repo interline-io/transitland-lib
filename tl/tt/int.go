@@ -9,38 +9,38 @@ import (
 )
 
 type Int struct {
+	Val   int
 	Valid bool
-	Int   int
 }
 
 func NewInt(v int) Int {
-	return Int{Valid: true, Int: v}
+	return Int{Valid: true, Val: v}
 }
 
 // Value returns nil if empty
 func (r Int) Value() (driver.Value, error) {
 	if r.Valid {
-		return int64(r.Int), nil
+		return int64(r.Val), nil
 	}
 	return nil, nil
 }
 
 // Scan implements sql.Scanner
 func (r *Int) Scan(src interface{}) error {
-	r.Int, r.Valid = 0, false
+	r.Val, r.Valid = 0, false
 	if src == nil {
 		return nil
 	}
 	var err error
 	switch v := src.(type) {
 	case string:
-		r.Int, err = strconv.Atoi(v)
+		r.Val, err = strconv.Atoi(v)
 	case int:
-		r.Int = v
+		r.Val = v
 	case int64:
-		r.Int = int(v)
+		r.Val = int(v)
 	case float64:
-		r.Int = int(v)
+		r.Val = int(v)
 	default:
 		err = errors.New("cant convert")
 	}
@@ -49,16 +49,16 @@ func (r *Int) Scan(src interface{}) error {
 }
 
 func (r *Int) String() string {
-	return strconv.Itoa(r.Int)
+	return strconv.Itoa(r.Val)
 }
 
 // UnmarshalJSON implements the json.marshaler interface.
 func (r *Int) UnmarshalJSON(v []byte) error {
-	r.Int, r.Valid = 0, false
+	r.Val, r.Valid = 0, false
 	if len(v) == 0 {
 		return nil
 	}
-	err := json.Unmarshal(v, &r.Int)
+	err := json.Unmarshal(v, &r.Val)
 	r.Valid = (err == nil)
 	return err
 }
@@ -68,7 +68,7 @@ func (r *Int) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
-	return json.Marshal(r.Int)
+	return json.Marshal(r.Val)
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface

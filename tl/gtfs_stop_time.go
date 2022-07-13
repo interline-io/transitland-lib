@@ -71,14 +71,14 @@ func (ent *StopTime) Errors() []error {
 	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID)...)
 	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
 	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence)...)
-	errs = append(errs, tt.CheckInsideRangeInt("pickup_type", ent.PickupType.Int, 0, 3)...)
-	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Int, 0, 3)...)
+	errs = append(errs, tt.CheckInsideRangeInt("pickup_type", ent.PickupType.Val, 0, 3)...)
+	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Val, 0, 3)...)
 	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Float)...)
-	errs = append(errs, tt.CheckInsideRangeInt("timepoint", ent.Timepoint.Int, -1, 1)...)
+	errs = append(errs, tt.CheckInsideRangeInt("timepoint", ent.Timepoint.Val, -1, 1)...)
 	errs = append(errs, tt.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Seconds, -1, 1<<31)...)
 	errs = append(errs, tt.CheckInsideRangeInt("departure", ent.DepartureTime.Seconds, -1, 1<<31)...)
-	errs = append(errs, tt.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Int, 0, 1, 2, 3)...)
-	errs = append(errs, tt.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Int, 0, 1, 2, 3)...)
+	errs = append(errs, tt.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Val, 0, 1, 2, 3)...)
+	errs = append(errs, tt.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Val, 0, 1, 2, 3)...)
 	// Other errors
 	at, dt := ent.ArrivalTime.Seconds, ent.DepartureTime.Seconds
 	if at != 0 && dt != 0 && at > dt {
@@ -134,24 +134,24 @@ func (ent *StopTime) GetString(key string) (string, error) {
 	case "stop_sequence":
 		v = strconv.Itoa(ent.StopSequence)
 	case "pickup_type":
-		v = strconv.Itoa(int(ent.PickupType.Int))
+		v = strconv.Itoa(int(ent.PickupType.Val))
 	case "drop_off_type":
-		v = strconv.Itoa(int(ent.DropOffType.Int))
+		v = strconv.Itoa(int(ent.DropOffType.Val))
 	case "shape_dist_traveled":
 		if ent.ShapeDistTraveled.Valid {
 			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled.Float)
 		}
 	case "timepoint":
 		if ent.Timepoint.Valid {
-			v = strconv.Itoa(int(ent.Timepoint.Int))
+			v = strconv.Itoa(int(ent.Timepoint.Val))
 		}
 	case "continuous_pickup":
 		if ent.ContinuousPickup.Valid {
-			v = strconv.Itoa(int(ent.ContinuousPickup.Int))
+			v = strconv.Itoa(int(ent.ContinuousPickup.Val))
 		}
 	case "continuous_drop_off":
 		if ent.ContinuousPickup.Valid {
-			v = strconv.Itoa(int(ent.ContinuousDropOff.Int))
+			v = strconv.Itoa(int(ent.ContinuousDropOff.Val))
 		}
 	default:
 		return v, fmt.Errorf("unknown key: %s", key)

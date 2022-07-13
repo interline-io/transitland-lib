@@ -119,7 +119,7 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 // Collects and assembles the default shapes and writes to the database
 func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 	// Process shapes for each route
-	for rid, _ := range pp.shapeCounts {
+	for rid := range pp.shapeCounts {
 		ent, err := pp.buildRouteShape(rid)
 		if err != nil {
 			log.Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")

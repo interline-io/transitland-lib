@@ -85,7 +85,7 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 					found := false
 					for _, ent := range routeHeadways[tc.RouteID] {
 						// fmt.Printf("\t %#v\n", ent)
-						if ent.DowCategory.Int == tc.DowCat && ent.DirectionID.Int == tc.DirectionID {
+						if ent.DowCategory.Val == tc.DowCat && ent.DirectionID.Val == tc.DirectionID {
 							if found {
 								t.Error("found more than one match")
 							}
@@ -93,7 +93,7 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 							assert.Equal(t, tc.StopID, ent.SelectedStopID)
 							assert.Equal(t, tc.ServiceDate, ent.ServiceDate.Time.Format("2006-01-02"))
 							if tc.HeadwaySecs > 0 {
-								assert.Equal(t, tc.HeadwaySecs, ent.HeadwaySecs.Int)
+								assert.Equal(t, tc.HeadwaySecs, ent.HeadwaySecs.Val)
 							}
 						}
 					}
