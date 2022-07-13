@@ -30,7 +30,7 @@ func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 		if _, ok := shapeCounts[ent.RouteID][ent.DirectionID]; !ok {
 			shapeCounts[ent.RouteID][ent.DirectionID] = map[string]int{}
 		}
-		shapeCounts[ent.RouteID][ent.DirectionID][ent.ShapeID.Key]++
+		shapeCounts[ent.RouteID][ent.DirectionID][ent.ShapeID.Val]++
 	}
 	commonCount := 5
 	selectedShapes := map[string]map[string]bool{}

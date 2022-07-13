@@ -77,10 +77,10 @@ func (ent *Stop) Errors() (errs []error) {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_name"))
 	}
 	// Check for "0" value...
-	if lt == 1 && ent.ParentStation.Key != "" {
+	if lt == 1 && ent.ParentStation.Val != "" {
 		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("station cannot have parent_station")))
 	}
-	if (lt == 2 || lt == 3 || lt == 4) && ent.ParentStation.Key == "" {
+	if (lt == 2 || lt == 3 || lt == 4) && ent.ParentStation.Val == "" {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("parent_station"))
 	}
 	return errs
@@ -99,19 +99,19 @@ func (ent *Stop) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Pathway Level
-	if ent.LevelID.Key != "" {
-		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Key}); ok {
+	if ent.LevelID.Val != "" {
+		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Val}); ok {
 			ent.LevelID = NewKey(v)
 		} else {
-			return causes.NewInvalidReferenceError("level_id", ent.LevelID.Key)
+			return causes.NewInvalidReferenceError("level_id", ent.LevelID.Val)
 		}
 	}
 	// Adjust ParentStation
-	if ent.ParentStation.Key != "" {
-		if parentID, ok := emap.GetEntity(&Stop{StopID: ent.ParentStation.Key}); ok {
+	if ent.ParentStation.Val != "" {
+		if parentID, ok := emap.GetEntity(&Stop{StopID: ent.ParentStation.Val}); ok {
 			ent.ParentStation = NewKey(parentID)
 		} else {
-			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Key)
+			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Val)
 		}
 	}
 	return nil

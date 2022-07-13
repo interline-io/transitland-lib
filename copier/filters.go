@@ -69,7 +69,7 @@ func (e *ApplyParentTimezoneFilter) Filter(ent tl.Entity) []error {
 		if v.StopTimezone == "" {
 			// Use default agency timezone, unless a parent station provided a timezone
 			v.StopTimezone = e.defaultAgencyTimezone
-			if ptz, ok := e.parentStopTimezones[v.ParentStation.Key]; ok {
+			if ptz, ok := e.parentStopTimezones[v.ParentStation.Val]; ok {
 				v.StopTimezone = ptz
 			}
 		}

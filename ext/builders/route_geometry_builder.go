@@ -110,7 +110,7 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 			if _, ok := pp.shapeCounts[v.RouteID][v.DirectionID]; !ok {
 				pp.shapeCounts[v.RouteID][v.DirectionID] = map[string]int{}
 			}
-			pp.shapeCounts[v.RouteID][v.DirectionID][v.ShapeID.Key]++
+			pp.shapeCounts[v.RouteID][v.DirectionID][v.ShapeID.Val]++
 		}
 	}
 	return nil

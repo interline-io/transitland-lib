@@ -26,7 +26,7 @@ func journeyPatternKey(trip *tl.Trip) string {
 		trip.ServiceID,
 		trip.TripHeadsign,
 		trip.TripShortName,
-		trip.ShapeID.Key,
+		trip.ShapeID.Val,
 		trip.DirectionID,
 		trip.WheelchairAccessible,
 		trip.BikesAllowed,

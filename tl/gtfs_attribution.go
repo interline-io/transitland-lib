@@ -42,15 +42,15 @@ func (ent *Attribution) Errors() (errs []error) {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("is_producer"))
 	}
 	// Mutually exclusive fields
-	if ent.AgencyID.Key != "" {
-		if ent.RouteID.Key != "" {
+	if ent.AgencyID.Val != "" {
+		if ent.RouteID.Val != "" {
 			errs = append(errs, causes.NewConditionallyForbiddenFieldError("route_id", "route_id cannot be set if agency_id is present"))
 		}
-		if ent.TripID.Key != "" {
+		if ent.TripID.Val != "" {
 			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", "trip_id cannot be set if agency_id is present"))
 		}
-	} else if ent.RouteID.Key != "" {
-		if ent.TripID.Key != "" {
+	} else if ent.RouteID.Val != "" {
+		if ent.TripID.Val != "" {
 			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", "trip_id cannot be set if route_id is present"))
 		}
 	}
@@ -60,27 +60,27 @@ func (ent *Attribution) Errors() (errs []error) {
 // UpdateKeys updates Entity references.
 func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
 	// Adjust AgencyID
-	if ent.AgencyID.Key != "" {
-		if eid, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Key}); ok {
+	if ent.AgencyID.Val != "" {
+		if eid, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Val}); ok {
 			ent.AgencyID = NewKey(eid)
 		} else {
-			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Key)
+			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Val)
 		}
 	}
 	// Adjust RouteID
-	if ent.RouteID.Key != "" {
-		if eid, ok := emap.GetEntity(&Route{RouteID: ent.RouteID.Key}); ok {
+	if ent.RouteID.Val != "" {
+		if eid, ok := emap.GetEntity(&Route{RouteID: ent.RouteID.Val}); ok {
 			ent.RouteID = NewKey(eid)
 		} else {
-			return causes.NewInvalidReferenceError("route_id", ent.RouteID.Key)
+			return causes.NewInvalidReferenceError("route_id", ent.RouteID.Val)
 		}
 	}
 	// Adjust TripID
-	if ent.TripID.Key != "" {
-		if eid, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Key}); ok {
+	if ent.TripID.Val != "" {
+		if eid, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Val}); ok {
 			ent.TripID = NewKey(eid)
 		} else {
-			return causes.NewInvalidReferenceError("trip_id", ent.TripID.Key)
+			return causes.NewInvalidReferenceError("trip_id", ent.TripID.Val)
 		}
 	}
 	return nil

@@ -93,7 +93,7 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 			eg.AddEdge(c, en)
 		}
 		if ent.ShapeID.Valid {
-			if s, ok := eg.Node(NewNode("shapes.txt", ent.ShapeID.Key)); ok {
+			if s, ok := eg.Node(NewNode("shapes.txt", ent.ShapeID.Val)); ok {
 				eg.AddEdge(s, en)
 			}
 		}
@@ -111,16 +111,16 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	for ent := range reader.Stops() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
-		if ent.ParentStation.Key != "" {
-			ps[ent.StopID] = ent.ParentStation.Key
-			cs[ent.ParentStation.Key] = append(cs[ent.ParentStation.Key], ent.StopID)
+		if ent.ParentStation.Val != "" {
+			ps[ent.StopID] = ent.ParentStation.Val
+			cs[ent.ParentStation.Val] = append(cs[ent.ParentStation.Val], ent.StopID)
 		}
 		if ent.ZoneID != "" {
 			fz[ent.ZoneID] = append(fz[ent.ZoneID], ent.StopID)
 		}
 		// Link levels
 		if ent.LevelID.Valid {
-			ln, _ := eg.Node(NewNode("levels.txt", ent.LevelID.Key))
+			ln, _ := eg.Node(NewNode("levels.txt", ent.LevelID.Val))
 			eg.AddEdge(ln, en)
 		}
 	}
