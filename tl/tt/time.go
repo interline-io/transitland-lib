@@ -30,7 +30,6 @@ func (r *Time) String() string {
 	return r.Val.Format(time.RFC3339)
 }
 
-// Value returns nil if empty
 func (r Time) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
@@ -38,7 +37,6 @@ func (r Time) Value() (driver.Value, error) {
 	return driver.Value(r.Val), nil
 }
 
-// Scan implements sql.Scanner
 func (r *Time) Scan(src interface{}) error {
 	r.Val, r.Valid = time.Time{}, false
 	if src == nil {
@@ -57,7 +55,6 @@ func (r *Time) Scan(src interface{}) error {
 	return err
 }
 
-// MarshalJSON implements the json.Marshaler interface
 func (r *Time) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
@@ -65,12 +62,10 @@ func (r *Time) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.Val.Format(time.RFC3339))
 }
 
-// UnmarshalGQL implements the graphql.Unmarshaler interface
 func (r *Time) UnmarshalGQL(v interface{}) error {
 	return nil
 }
 
-// MarshalGQL implements the graphql.Marshaler interface
 func (r Time) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)

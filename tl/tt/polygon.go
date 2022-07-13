@@ -18,7 +18,6 @@ type Polygon struct {
 	geom.Polygon
 }
 
-// Value implements driver.Value
 func (g Polygon) Value() (driver.Value, error) {
 	if !g.Valid {
 		return nil, nil
@@ -26,7 +25,6 @@ func (g Polygon) Value() (driver.Value, error) {
 	return wkbEncode(&g.Polygon)
 }
 
-// Scan implements Scanner
 func (g *Polygon) Scan(src interface{}) error {
 	if src == nil {
 		return nil
@@ -50,13 +48,11 @@ func (g *Polygon) Scan(src interface{}) error {
 	return nil
 }
 
-// String returns the GeoJSON representation
 func (g Polygon) String() string {
 	a, _ := g.MarshalJSON()
 	return string(a)
 }
 
-// MarshalJSON implements the json.Marshaler interface
 func (g *Polygon) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
 		return []byte("null"), nil
@@ -64,7 +60,6 @@ func (g *Polygon) MarshalJSON() ([]byte, error) {
 	return geojsonEncode(&g.Polygon)
 }
 
-// UnmarshalGQL implements the graphql.Unmarshaler interface
 func (g *Polygon) UnmarshalGQL(v interface{}) error {
 	vb, err := json.Marshal(v)
 	if err != nil {
@@ -81,7 +76,6 @@ func (g *Polygon) UnmarshalGQL(v interface{}) error {
 	return nil
 }
 
-// MarshalGQL implements the graphql.Marshaler interface
 func (g Polygon) MarshalGQL(w io.Writer) {
 	b, _ := g.MarshalJSON()
 	w.Write(b)

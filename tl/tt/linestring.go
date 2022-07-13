@@ -25,7 +25,6 @@ func NewLineStringFromFlatCoords(coords []float64) LineString {
 	return LineString{LineString: *g, Valid: true}
 }
 
-// Value implements driver.Value
 func (g LineString) Value() (driver.Value, error) {
 	if !g.Valid {
 		return nil, nil
@@ -33,7 +32,6 @@ func (g LineString) Value() (driver.Value, error) {
 	return wkbEncode(&g.LineString)
 }
 
-// Scan implements Scanner
 func (g *LineString) Scan(src interface{}) error {
 	if src == nil {
 		return nil
@@ -57,13 +55,11 @@ func (g *LineString) Scan(src interface{}) error {
 	return nil
 }
 
-// String returns the GeoJSON representation
 func (g LineString) String() string {
 	a, _ := g.MarshalJSON()
 	return string(a)
 }
 
-// MarshalJSON implements the json.Marshaler interface
 func (g *LineString) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
 		return []byte("null"), nil
@@ -71,12 +67,10 @@ func (g *LineString) MarshalJSON() ([]byte, error) {
 	return geojsonEncode(&g.LineString)
 }
 
-// UnmarshalGQL implements the graphql.Unmarshaler interface
 func (g *LineString) UnmarshalGQL(v interface{}) error {
 	return nil
 }
 
-// MarshalGQL implements the graphql.Marshaler interface
 func (g LineString) MarshalGQL(w io.Writer) {
 	b, _ := g.MarshalJSON()
 	w.Write(b)

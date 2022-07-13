@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Date is a nullable date, but can scan strings
+// Date is a nullable date
 type Date struct {
 	Val   time.Time
 	Valid bool
@@ -18,7 +18,6 @@ func NewDate(v time.Time) Date {
 	return Date{Valid: true, Val: v}
 }
 
-// IsZero returns if this is a zero value.
 func (r *Date) IsZero() bool {
 	return !r.Valid
 }
@@ -30,7 +29,6 @@ func (r *Date) String() string {
 	return r.Val.Format("20060102")
 }
 
-// Value returns nil if empty
 func (r Date) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
@@ -38,7 +36,6 @@ func (r Date) Value() (driver.Value, error) {
 	return driver.Value(r.Val), nil
 }
 
-// Scan implements sql.Scanner
 func (r *Date) Scan(src interface{}) error {
 	r.Val, r.Valid = time.Time{}, false
 	if src == nil {
@@ -57,7 +54,6 @@ func (r *Date) Scan(src interface{}) error {
 	return err
 }
 
-// UnmarshalJSON implements the json.Marshaler interface
 func (r *Date) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = time.Time{}, false
 	if len(v) == 0 {
@@ -75,7 +71,6 @@ func (r *Date) UnmarshalJSON(v []byte) error {
 	return nil
 }
 
-// MarshalJSON implements the json.Marshaler interface
 func (r *Date) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
@@ -83,7 +78,6 @@ func (r *Date) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.Val.Format("2006-01-02"))
 }
 
-// UnmarshalGQL implements the graphql.Unmarshaler interface
 func (r *Date) UnmarshalGQL(src interface{}) error {
 	r.Valid = false
 	var p error
@@ -103,7 +97,6 @@ func (r *Date) UnmarshalGQL(src interface{}) error {
 	return p
 }
 
-// MarshalGQL implements the graphql.Marshaler interface
 func (r Date) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)

@@ -9,6 +9,7 @@ import (
 	"strconv"
 )
 
+// Float is a nullable float64
 type Float struct {
 	Val   float64
 	Valid bool
@@ -18,7 +19,6 @@ func NewFloat(v float64) Float {
 	return Float{Valid: true, Val: v}
 }
 
-// Value returns nil if empty
 func (r Float) Value() (driver.Value, error) {
 	if r.Valid {
 		return r.Val, nil
@@ -26,7 +26,6 @@ func (r Float) Value() (driver.Value, error) {
 	return nil, nil
 }
 
-// Scan implements sql.Scanner
 func (r *Float) Scan(src interface{}) error {
 	r.Val, r.Valid = 0.0, false
 	if src == nil {
@@ -56,7 +55,6 @@ func (r *Float) String() string {
 	return fmt.Sprintf("%0.5f", r.Val)
 }
 
-// UnmarshalJSON implements the json.marshaler interface.
 func (r *Float) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = 0, false
 	if len(v) == 0 {
@@ -67,7 +65,6 @@ func (r *Float) UnmarshalJSON(v []byte) error {
 	return err
 }
 
-// MarshalJSON implements the json.Marshaler interface
 func (r *Float) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
@@ -75,12 +72,10 @@ func (r *Float) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.Val)
 }
 
-// UnmarshalGQL implements the graphql.Unmarshaler interface
 func (r *Float) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }
 
-// MarshalGQL implements the graphql.Marshaler interface
 func (r Float) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)

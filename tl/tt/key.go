@@ -22,7 +22,6 @@ func (r *Key) String() string {
 	return r.Val
 }
 
-// Value returns nil if empty
 func (r Key) Value() (driver.Value, error) {
 	if !r.Valid || r.Val == "" {
 		return nil, nil
@@ -30,7 +29,6 @@ func (r Key) Value() (driver.Value, error) {
 	return r.Val, nil
 }
 
-// Scan implements sql.Scanner
 func (r *Key) Scan(src interface{}) error {
 	r.Val, r.Valid = "", false
 	if src == nil {
@@ -59,7 +57,6 @@ func (r *Key) Int() int {
 	return a
 }
 
-// UnmarshalJSON implements the json.marshaler interface.
 func (r *Key) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = "", false
 	if len(v) == 0 {
@@ -70,7 +67,6 @@ func (r *Key) UnmarshalJSON(v []byte) error {
 	return err
 }
 
-// MarshalJSON implements the json.Marshaler interface
 func (r *Key) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
@@ -78,12 +74,10 @@ func (r *Key) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.Val)
 }
 
-// UnmarshalGQL implements the graphql.Unmarshaler interface
 func (r *Key) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }
 
-// MarshalGQL implements the graphql.Marshaler interface
 func (r Key) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)

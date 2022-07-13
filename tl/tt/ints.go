@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-// Ints .
+// Ints is a nullable slice of []int
 type Ints struct {
 	Valid bool
 	Val   []int
@@ -16,7 +16,6 @@ func NewInts(v []int) Ints {
 	return Ints{Valid: true, Val: v}
 }
 
-// Value .
 func (a Ints) Value() (driver.Value, error) {
 	if !a.Valid {
 		return []byte("null"), nil
@@ -24,7 +23,6 @@ func (a Ints) Value() (driver.Value, error) {
 	return json.Marshal(a.Val)
 }
 
-// Scan .
 func (a *Ints) Scan(value interface{}) error {
 	a.Val, a.Valid = nil, false
 	if value == nil {

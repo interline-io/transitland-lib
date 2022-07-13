@@ -9,25 +9,81 @@ import (
 	"strings"
 )
 
-func slowStringToSeconds(value string) (int, error) {
-	t := strings.SplitN(value, ":", 3)
-	switch len(t) {
-	case 3: // ok
-	case 2:
-		t = append(t, "0")
-	case 1:
-		t = append(t, "0", "0")
+// WideTime handles seconds since midnight, allows >24 hours.
+type WideTime struct {
+	Seconds int
+	Valid   bool
+}
+
+// NewWideTime converts the csv string to a WideTime.
+func NewWideTime(value string) (wt WideTime, err error) {
+	err = wt.Scan(value)
+	return wt, err
+}
+
+// NewWideTimeFromSeconds creates a valid WideTime from Seconds.
+func NewWideTimeFromSeconds(value int) WideTime {
+	wt := WideTime{}
+	wt.Scan(value)
+	return wt
+}
+
+func (wt *WideTime) String() string {
+	if !wt.Valid {
+		return ""
 	}
-	a, ae := strconv.Atoi(t[0])
-	b, be := strconv.Atoi(t[1])
-	c, ce := strconv.Atoi(t[2])
-	if ae != nil || be != nil || ce != nil {
-		return 0, errors.New("error parsing time")
+	return SecondsToString(wt.Seconds)
+}
+
+func (wt WideTime) Value() (driver.Value, error) {
+	if !wt.Valid {
+		return nil, nil
 	}
-	if b > 60 || c > 60 {
-		return 0, errors.New("hours and mins must be 0 - 60")
+	return int64(wt.Seconds), nil
+}
+
+func (wt *WideTime) Scan(src interface{}) error {
+	wt.Valid = false
+	wt.Seconds = 0
+	var p error
+	switch v := src.(type) {
+	case nil:
+		return nil
+	case string:
+		if v == "" {
+			return nil
+		} else if s, err := StringToSeconds(v); err == nil {
+			wt.Seconds = s
+		} else {
+			p = err
+		}
+	case int:
+		if v < 0 {
+			return nil
+		}
+		wt.Seconds = v
+	case int64:
+		if v < 0 {
+			return nil
+		}
+		wt.Seconds = int(v)
+	default:
+		p = errors.New("could not parse time")
 	}
-	return int(a*3600 + b*60 + c), nil
+	wt.Valid = (p == nil)
+	return p
+}
+
+func (wt *WideTime) UnmarshalGQL(v interface{}) error {
+	return wt.Scan(v)
+}
+
+func (wt WideTime) MarshalGQL(w io.Writer) {
+	if !wt.Valid {
+		w.Write([]byte("null"))
+		return
+	}
+	w.Write([]byte(fmt.Sprintf("\"%s\"", wt.String())))
 }
 
 // SecondsToString takes seconds-since-midnight and returns a GTFS-style time.
@@ -67,83 +123,23 @@ func StringToSeconds(value string) (int, error) {
 	return int(a*3600 + b*60 + c), nil
 }
 
-// WideTime handles seconds since midnight, allows >24 hours.
-type WideTime struct {
-	Seconds int
-	Valid   bool
-}
-
-func (wt *WideTime) String() string {
-	if !wt.Valid {
-		return ""
+func slowStringToSeconds(value string) (int, error) {
+	t := strings.SplitN(value, ":", 3)
+	switch len(t) {
+	case 3: // ok
+	case 2:
+		t = append(t, "0")
+	case 1:
+		t = append(t, "0", "0")
 	}
-	return SecondsToString(wt.Seconds)
-}
-
-// Value implements driver.Value
-func (wt WideTime) Value() (driver.Value, error) {
-	if !wt.Valid {
-		return nil, nil
+	a, ae := strconv.Atoi(t[0])
+	b, be := strconv.Atoi(t[1])
+	c, ce := strconv.Atoi(t[2])
+	if ae != nil || be != nil || ce != nil {
+		return 0, errors.New("error parsing time")
 	}
-	return int64(wt.Seconds), nil
-}
-
-// Scan implements sql.Scanner
-func (wt *WideTime) Scan(src interface{}) error {
-	wt.Valid = false
-	wt.Seconds = 0
-	var p error
-	switch v := src.(type) {
-	case nil:
-		return nil
-	case string:
-		if v == "" {
-			return nil
-		} else if s, err := StringToSeconds(v); err == nil {
-			wt.Seconds = s
-		} else {
-			p = err
-		}
-	case int:
-		if v < 0 {
-			return nil
-		}
-		wt.Seconds = v
-	case int64:
-		if v < 0 {
-			return nil
-		}
-		wt.Seconds = int(v)
-	default:
-		p = errors.New("could not parse time")
+	if b > 60 || c > 60 {
+		return 0, errors.New("hours and mins must be 0 - 60")
 	}
-	wt.Valid = (p == nil)
-	return p
-}
-
-// UnmarshalGQL implements the graphql.Unmarshaler interface
-func (wt *WideTime) UnmarshalGQL(v interface{}) error {
-	return wt.Scan(v)
-}
-
-// MarshalGQL implements the graphql.Marshaler interface
-func (wt WideTime) MarshalGQL(w io.Writer) {
-	if !wt.Valid {
-		w.Write([]byte("null"))
-		return
-	}
-	w.Write([]byte(fmt.Sprintf("\"%s\"", wt.String())))
-}
-
-// NewWideTime converts the csv string to a WideTime.
-func NewWideTime(value string) (wt WideTime, err error) {
-	err = wt.Scan(value)
-	return wt, err
-}
-
-// NewWideTimeFromSeconds creates a valid WideTime from Seconds.
-func NewWideTimeFromSeconds(value int) WideTime {
-	wt := WideTime{}
-	wt.Scan(value)
-	return wt
+	return int(a*3600 + b*60 + c), nil
 }

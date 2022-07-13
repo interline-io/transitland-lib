@@ -18,7 +18,6 @@ type Geometry struct {
 	Geometry geom.T
 }
 
-// Scan implements the Scanner interface
 func (g *Geometry) Scan(src interface{}) error {
 	if src == nil {
 		return nil
@@ -36,7 +35,6 @@ func (g *Geometry) Scan(src interface{}) error {
 	return nil
 }
 
-// Value implements driver.Value
 func (g Geometry) Value() (driver.Value, error) {
 	if g.Geometry == nil || !g.Valid {
 		return nil, nil
@@ -51,7 +49,6 @@ func (g Geometry) String() string {
 	return string(a)
 }
 
-// MarshalJSON implements the json.Marshaler interface
 func (g *Geometry) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
 		return []byte("null"), nil
@@ -59,12 +56,10 @@ func (g *Geometry) MarshalJSON() ([]byte, error) {
 	return geojsonEncode(g.Geometry)
 }
 
-// UnmarshalGQL implements the graphql.Unmarshaler interface
 func (g *Geometry) UnmarshalGQL(v interface{}) error {
 	return nil
 }
 
-// MarshalGQL implements the graphql.Marshaler interface
 func (g Geometry) MarshalGQL(w io.Writer) {
 	b, _ := g.MarshalJSON()
 	w.Write(b)

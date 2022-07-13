@@ -8,6 +8,7 @@ import (
 	"strconv"
 )
 
+// Int is a nullable int
 type Int struct {
 	Val   int
 	Valid bool
@@ -17,7 +18,6 @@ func NewInt(v int) Int {
 	return Int{Valid: true, Val: v}
 }
 
-// Value returns nil if empty
 func (r Int) Value() (driver.Value, error) {
 	if r.Valid {
 		return int64(r.Val), nil
@@ -25,7 +25,6 @@ func (r Int) Value() (driver.Value, error) {
 	return nil, nil
 }
 
-// Scan implements sql.Scanner
 func (r *Int) Scan(src interface{}) error {
 	r.Val, r.Valid = 0, false
 	if src == nil {
@@ -52,7 +51,6 @@ func (r *Int) String() string {
 	return strconv.Itoa(r.Val)
 }
 
-// UnmarshalJSON implements the json.marshaler interface.
 func (r *Int) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = 0, false
 	if len(v) == 0 {
@@ -63,7 +61,6 @@ func (r *Int) UnmarshalJSON(v []byte) error {
 	return err
 }
 
-// MarshalJSON implements the json.Marshaler interface
 func (r *Int) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
@@ -71,12 +68,10 @@ func (r *Int) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.Val)
 }
 
-// UnmarshalGQL implements the graphql.Unmarshaler interface
 func (r *Int) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }
 
-// MarshalGQL implements the graphql.Marshaler interface
 func (r Int) MarshalGQL(w io.Writer) {
 	b, _ := r.MarshalJSON()
 	w.Write(b)
