@@ -73,7 +73,7 @@ func (ent *StopTime) Errors() []error {
 	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence)...)
 	errs = append(errs, tt.CheckInsideRangeInt("pickup_type", ent.PickupType.Val, 0, 3)...)
 	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Val, 0, 3)...)
-	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Float)...)
+	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("timepoint", ent.Timepoint.Val, -1, 1)...)
 	errs = append(errs, tt.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Seconds, -1, 1<<31)...)
 	errs = append(errs, tt.CheckInsideRangeInt("departure", ent.DepartureTime.Seconds, -1, 1<<31)...)
@@ -139,7 +139,7 @@ func (ent *StopTime) GetString(key string) (string, error) {
 		v = strconv.Itoa(int(ent.DropOffType.Val))
 	case "shape_dist_traveled":
 		if ent.ShapeDistTraveled.Valid {
-			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled.Float)
+			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled.Val)
 		}
 	case "timepoint":
 		if ent.Timepoint.Valid {
@@ -276,7 +276,7 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 		} else if st.DepartureTime.Seconds > 0 {
 			lastTime = st.DepartureTime
 		}
-		if st.ShapeDistTraveled.Valid && st.ShapeDistTraveled.Float < lastDist.Float {
+		if st.ShapeDistTraveled.Valid && st.ShapeDistTraveled.Val < lastDist.Val {
 			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", st.ShapeDistTraveled.String()))
 		} else if st.ShapeDistTraveled.Valid {
 			lastDist = st.ShapeDistTraveled
