@@ -9,8 +9,8 @@ import (
 )
 
 type String struct {
-	Valid bool
 	Val   string
+	Valid bool
 }
 
 func NewString(v string) String {
