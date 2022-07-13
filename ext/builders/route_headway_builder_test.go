@@ -91,7 +91,7 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 							}
 							found = true
 							assert.Equal(t, tc.StopID, ent.SelectedStopID)
-							assert.Equal(t, tc.ServiceDate, ent.ServiceDate.Time.Format("2006-01-02"))
+							assert.Equal(t, tc.ServiceDate, ent.ServiceDate.Val.Format("2006-01-02"))
 							if tc.HeadwaySecs > 0 {
 								assert.Equal(t, tc.HeadwaySecs, ent.HeadwaySecs.Val)
 							}

@@ -18,7 +18,7 @@ func init() {
 		}
 		a, _ := opts.SourceDays.Int64()
 		b, _ := opts.TargetDays.Int64()
-		return NewRedateFilter(opts.SourceDate.Time, opts.TargetDate.Time, int(a), int(b))
+		return NewRedateFilter(opts.SourceDate.Val, opts.TargetDate.Val, int(a), int(b))
 	}
 	ext.RegisterExtension("redate", e)
 }
