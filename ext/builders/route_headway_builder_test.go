@@ -11,11 +11,11 @@ import (
 func TestRouteHeadwayBuilder(t *testing.T) {
 	type testcase struct {
 		RouteID       string
-		DowCat        int
-		DirectionID   int
+		DowCat        int64
+		DirectionID   int64
 		StopID        string
 		ServiceDate   string
-		HeadwaySecs   int
+		HeadwaySecs   int64
 		StopTripCount int
 		Departures    []int
 	}
