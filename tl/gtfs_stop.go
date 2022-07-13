@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Stop stops.txt
@@ -31,7 +31,7 @@ type Stop struct {
 
 // SetCoordinates takes a [2]float64 and sets the Stop's lon,lat
 func (ent *Stop) SetCoordinates(p [2]float64) {
-	ent.Geometry = NewPoint(p[0], p[1])
+	ent.Geometry = tt.NewPoint(p[0], p[1])
 }
 
 // Coordinates returns the stop lon,lat as a [2]float64
@@ -62,14 +62,14 @@ func (ent *Stop) Errors() (errs []error) {
 	lat := c[1]
 	lon := c[0]
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("stop_id", ent.StopID)...)
-	errs = append(errs, enum.CheckInsideRange("stop_lat", lat, -90.0, 90.0)...)
-	errs = append(errs, enum.CheckInsideRange("stop_lon", lon, -180.0, 180.0)...)
-	errs = append(errs, enum.CheckURL("stop_url", ent.StopURL)...)
-	errs = append(errs, enum.CheckInsideRangeInt("location_type", ent.LocationType, 0, 4)...)
-	errs = append(errs, enum.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding, 0, 2)...)
+	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
+	errs = append(errs, tt.CheckInsideRange("stop_lat", lat, -90.0, 90.0)...)
+	errs = append(errs, tt.CheckInsideRange("stop_lon", lon, -180.0, 180.0)...)
+	errs = append(errs, tt.CheckURL("stop_url", ent.StopURL)...)
+	errs = append(errs, tt.CheckInsideRangeInt("location_type", ent.LocationType, 0, 4)...)
+	errs = append(errs, tt.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding, 0, 2)...)
 	if ent.StopTimezone != "" {
-		errs = append(errs, enum.CheckTimezone("stop_timezone", ent.StopTimezone)...)
+		errs = append(errs, tt.CheckTimezone("stop_timezone", ent.StopTimezone)...)
 	}
 	// TODO: This should be an enum for exhaustive search
 	lt := ent.LocationType
@@ -77,10 +77,10 @@ func (ent *Stop) Errors() (errs []error) {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_name"))
 	}
 	// Check for "0" value...
-	if lt == 1 && ent.ParentStation.Key != "" {
+	if lt == 1 && ent.ParentStation.Val != "" {
 		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("station cannot have parent_station")))
 	}
-	if (lt == 2 || lt == 3 || lt == 4) && ent.ParentStation.Key == "" {
+	if (lt == 2 || lt == 3 || lt == 4) && ent.ParentStation.Val == "" {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("parent_station"))
 	}
 	return errs
@@ -99,19 +99,19 @@ func (ent *Stop) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Pathway Level
-	if ent.LevelID.Key != "" {
-		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Key}); ok {
-			ent.LevelID = NewKey(v)
+	if ent.LevelID.Val != "" {
+		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Val}); ok {
+			ent.LevelID = tt.NewKey(v)
 		} else {
-			return causes.NewInvalidReferenceError("level_id", ent.LevelID.Key)
+			return causes.NewInvalidReferenceError("level_id", ent.LevelID.Val)
 		}
 	}
 	// Adjust ParentStation
-	if ent.ParentStation.Key != "" {
-		if parentID, ok := emap.GetEntity(&Stop{StopID: ent.ParentStation.Key}); ok {
-			ent.ParentStation = NewKey(parentID)
+	if ent.ParentStation.Val != "" {
+		if parentID, ok := emap.GetEntity(&Stop{StopID: ent.ParentStation.Val}); ok {
+			ent.ParentStation = tt.NewKey(parentID)
 		} else {
-			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Key)
+			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Val)
 		}
 	}
 	return nil

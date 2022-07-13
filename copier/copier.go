@@ -12,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/rs/zerolog"
 	geomxy "github.com/twpayne/go-geom/xy"
 )
@@ -604,7 +605,7 @@ func (copier *Copier) copyShapes() error {
 				pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
 			}
 			pnts = pnts[:len(ii)*stride]
-			ent.Geometry = tl.NewLineStringFromFlatCoords(pnts)
+			ent.Geometry = tt.NewLineStringFromFlatCoords(pnts)
 		}
 		if _, entErr, writeErr := copier.CopyEntity(&ent); writeErr != nil {
 			return writeErr
@@ -821,7 +822,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		if !trip.ShapeID.Valid && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
 			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID]; ok {
-				trip.ShapeID = tl.NewKey(shapeid)
+				trip.ShapeID = tt.NewKey(shapeid)
 			} else {
 				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), trip.StopTimes); err != nil {
 					copier.sublogger.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
@@ -829,7 +830,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 				} else {
 					// Set ShapeID
 					stopPatternShapeIDs[trip.StopPatternID] = shapeid
-					trip.ShapeID = tl.NewKey(shapeid)
+					trip.ShapeID = tt.NewKey(shapeid)
 				}
 			}
 		}

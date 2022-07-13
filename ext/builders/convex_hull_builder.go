@@ -3,6 +3,7 @@ package builders
 import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/twpayne/go-geom"
 	geomxy "github.com/twpayne/go-geom/xy"
 )
@@ -136,7 +137,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 			continue
 		}
 		ent := AgencyGeometry{
-			AgencyID: tl.NewKey(aid),
+			AgencyID: tt.NewKey(aid),
 			Geometry: tl.Polygon{Valid: true, Polygon: *v},
 		}
 		if _, _, err := copier.CopyEntity(&ent); err != nil {

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 func testExpectInt(t *testing.T, result, expect int) {
@@ -24,9 +25,9 @@ func expectTripToStopTime(e []expectStopTime) []tl.StopTime {
 	ret := []tl.StopTime{}
 	for _, i := range e {
 		ret = append(ret, tl.StopTime{
-			ArrivalTime:       tl.NewWideTimeFromSeconds(i.ArrivalTime),
-			DepartureTime:     tl.NewWideTimeFromSeconds(i.DepartureTime),
-			ShapeDistTraveled: tl.NewFloat(i.ShapeDistTraveled),
+			ArrivalTime:       tt.NewWideTimeFromSeconds(i.ArrivalTime),
+			DepartureTime:     tt.NewWideTimeFromSeconds(i.DepartureTime),
+			ShapeDistTraveled: tt.NewFloat(i.ShapeDistTraveled),
 		})
 	}
 	return ret

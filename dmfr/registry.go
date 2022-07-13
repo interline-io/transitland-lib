@@ -12,6 +12,7 @@ import (
 	"github.com/dimchansky/utfbom"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Registry represents a parsed Distributed Mobility Feed Registry (DMFR) file
@@ -46,16 +47,16 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 		for _, operator := range rfeed.Operators {
 			foundParent := false
 			for i, oif := range operator.AssociatedFeeds {
-				if oif.FeedOnestopID.String == "" {
-					oif.FeedOnestopID = tl.NewString(fsid)
+				if oif.FeedOnestopID.Val == "" {
+					oif.FeedOnestopID = tt.NewString(fsid)
 				}
-				if oif.FeedOnestopID.String == fsid {
+				if oif.FeedOnestopID.Val == fsid {
 					foundParent = true
 				}
 				operator.AssociatedFeeds[i] = oif
 			}
 			if !foundParent {
-				operator.AssociatedFeeds = append(operator.AssociatedFeeds, tl.OperatorAssociatedFeed{FeedOnestopID: tl.NewString(fsid)})
+				operator.AssociatedFeeds = append(operator.AssociatedFeeds, tl.OperatorAssociatedFeed{FeedOnestopID: tt.NewString(fsid)})
 			}
 			operators = append(operators, operator)
 		}
@@ -64,17 +65,17 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 	operators = append(operators, reg.Operators...)
 	mergeOperators := map[string]tl.Operator{}
 	for _, operator := range operators {
-		osid := operator.OnestopID.String
+		osid := operator.OnestopID.Val
 		a, ok := mergeOperators[osid]
 		if ok {
 			operator.AssociatedFeeds = append(operator.AssociatedFeeds, a.AssociatedFeeds...)
-			if operator.Name.String == "" {
+			if operator.Name.Val == "" {
 				operator.Name = a.Name
 			}
-			if operator.ShortName.String == "" {
+			if operator.ShortName.Val == "" {
 				operator.ShortName = a.ShortName
 			}
-			if operator.Website.String == "" {
+			if operator.Website.Val == "" {
 				operator.Website = a.Website
 			}
 		}

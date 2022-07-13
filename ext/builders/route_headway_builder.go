@@ -6,6 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type RouteHeadway struct {
@@ -16,7 +17,7 @@ type RouteHeadway struct {
 	DowCategory    tl.Int
 	ServiceDate    tl.Date
 	StopTripCount  tl.Int
-	Departures     tl.IntSlice
+	Departures     tl.Ints
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -163,22 +164,22 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				// log.Debugf("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
 				// log.Debugf("\tdepartures:", departures)
 				// for _, departure := range departures {
-				// 	wt := tl.NewWideTimeFromSeconds(departure)
+				// 	wt := tt.NewWideTimeFromSeconds(departure)
 				// 	log.Debugf("\t", wt.String())
 				// }
 				rh := RouteHeadway{
 					RouteID:        rid,
 					SelectedStopID: mostVisitedStop,
 					HeadwaySecs:    tl.Int{},
-					DowCategory:    tl.NewInt(dowCat),
-					ServiceDate:    tl.NewDate(d),
-					StopTripCount:  tl.NewInt(len(departures)),
-					DirectionID:    tl.NewInt(int(direction)),
-					Departures:     tl.NewIntSlice(departures),
+					DowCategory:    tt.NewInt(dowCat),
+					ServiceDate:    tt.NewDate(d),
+					StopTripCount:  tt.NewInt(len(departures)),
+					DirectionID:    tt.NewInt(int(direction)),
+					Departures:     tt.NewInts(departures),
 				}
 				// HeadwaySecs based on morning rush hour
 				if ws, ok := getStats(departures, 21600, 36000); ok && len(departures) >= 10 {
-					rh.HeadwaySecs = tl.NewInt(ws.mid)
+					rh.HeadwaySecs = tt.NewInt(ws.mid)
 				}
 				if _, _, err := copier.CopyEntity(&rh); err != nil {
 					return err

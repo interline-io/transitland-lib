@@ -6,6 +6,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -42,7 +43,7 @@ func UpdateFeed(atx tldb.Adapter, rfeed tl.Feed) (int, bool, bool, error) {
 // HideUnseedFeeds .
 func HideUnseedFeeds(atx tldb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
-	t := tl.NewTime(time.Now().UTC())
+	t := tt.NewTime(time.Now().UTC())
 	r, err := atx.Sqrl().
 		Update("current_feeds").
 		Where(sq.NotEq{"id": found}).

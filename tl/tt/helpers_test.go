@@ -1,4 +1,4 @@
-package enum
+package tt
 
 import (
 	"testing"
@@ -113,8 +113,8 @@ func Test_IsValidLang(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsValidLang(tt.args.lang); got != tt.want {
-				t.Errorf("IsValidLang() = %v, want %v", got, tt.want)
+			if got := IsValidLanguage(tt.args.lang); got != tt.want {
+				t.Errorf("IsValidLanguage() = %v, want %v", got, tt.want)
 			}
 		})
 	}

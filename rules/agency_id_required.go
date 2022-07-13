@@ -16,7 +16,7 @@ func (e *AgencyIDConditionallyRequiredCheck) Validate(ent tl.Entity) []error {
 	var errs []error
 	switch v := ent.(type) {
 	case *tl.FareAttribute:
-		if v.AgencyID.Key == "" && e.agencyCount > 1 {
+		if v.AgencyID.Val == "" && e.agencyCount > 1 {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
 	case *tl.Route:

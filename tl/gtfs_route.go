@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Route routes.txt
@@ -40,17 +40,17 @@ func (ent *Route) EntityKey() string {
 // Errors for this Entity.
 func (ent *Route) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("route_id", ent.RouteID)...)
-	errs = append(errs, enum.CheckURL("route_url", ent.RouteURL)...)
-	errs = append(errs, enum.CheckColor("route_color", ent.RouteColor)...)
-	errs = append(errs, enum.CheckColor("route_text_color", ent.RouteTextColor)...)
-	errs = append(errs, enum.CheckPositiveInt("route_sort_order", ent.RouteSortOrder)...)
-	errs = append(errs, enum.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Int, 0, 1, 2, 3)...)
-	errs = append(errs, enum.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Int, 0, 1, 2, 3)...)
+	errs = append(errs, tt.CheckPresent("route_id", ent.RouteID)...)
+	errs = append(errs, tt.CheckURL("route_url", ent.RouteURL)...)
+	errs = append(errs, tt.CheckColor("route_color", ent.RouteColor)...)
+	errs = append(errs, tt.CheckColor("route_text_color", ent.RouteTextColor)...)
+	errs = append(errs, tt.CheckPositiveInt("route_sort_order", ent.RouteSortOrder)...)
+	errs = append(errs, tt.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Val, 0, 1, 2, 3)...)
+	errs = append(errs, tt.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Val, 0, 1, 2, 3)...)
 	if len(ent.RouteShortName) == 0 && len(ent.RouteLongName) == 0 {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("route_short_name"))
 	}
-	if _, ok := enum.GetRouteType(ent.RouteType); !ok {
+	if _, ok := tt.GetRouteType(ent.RouteType); !ok {
 		errs = append(errs, causes.NewInvalidFieldError("route_type", strconv.Itoa(ent.RouteType), nil))
 	}
 	return errs

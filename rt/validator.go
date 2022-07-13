@@ -6,6 +6,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type tripInfo struct {
@@ -289,7 +290,7 @@ func (fi *Validator) ValidateTripDescriptor(td *pb.TripDescriptor, current *pb.F
 		}
 	}
 	if td.StartTime != nil {
-		if _, err := tl.NewWideTime(*td.StartTime); err != nil {
+		if _, err := tt.NewWideTime(*td.StartTime); err != nil {
 			errs = append(errs, ne("TripDescriptor could not parse StartTime", 20))
 		}
 	}

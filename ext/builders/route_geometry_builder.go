@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/twpayne/go-geom"
 )
 
@@ -110,7 +111,7 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 			if _, ok := pp.shapeCounts[v.RouteID][v.DirectionID]; !ok {
 				pp.shapeCounts[v.RouteID][v.DirectionID] = map[string]int{}
 			}
-			pp.shapeCounts[v.RouteID][v.DirectionID][v.ShapeID.Key]++
+			pp.shapeCounts[v.RouteID][v.DirectionID][v.ShapeID.Val]++
 		}
 	}
 	return nil
@@ -119,7 +120,7 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 // Collects and assembles the default shapes and writes to the database
 func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 	// Process shapes for each route
-	for rid, _ := range pp.shapeCounts {
+	for rid := range pp.shapeCounts {
 		ent, err := pp.buildRouteShape(rid)
 		if err != nil {
 			log.Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
@@ -225,16 +226,16 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 			ent.Generated = true
 		}
 		// Set to max selected shape length
-		if si.Length >= ent.Length.Float {
-			ent.Length = tl.NewFloat(si.Length)
+		if si.Length >= ent.Length.Val {
+			ent.Length = tt.NewFloat(si.Length)
 		}
 		// Set to max first point max distance
-		if si.FirstPointMaxDistance >= ent.FirstPointMaxDistance.Float {
-			ent.FirstPointMaxDistance = tl.NewFloat(si.FirstPointMaxDistance)
+		if si.FirstPointMaxDistance >= ent.FirstPointMaxDistance.Val {
+			ent.FirstPointMaxDistance = tt.NewFloat(si.FirstPointMaxDistance)
 		}
 		// Set to max selected shape segment length
-		if si.MaxSegmentLength >= ent.MaxSegmentLength.Float {
-			ent.MaxSegmentLength = tl.NewFloat(si.MaxSegmentLength)
+		if si.MaxSegmentLength >= ent.MaxSegmentLength.Val {
+			ent.MaxSegmentLength = tt.NewFloat(si.MaxSegmentLength)
 		}
 		// OK
 		matches = append(matches, si.Line)

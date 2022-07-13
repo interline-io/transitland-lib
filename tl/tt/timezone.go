@@ -1,4 +1,27 @@
-package enum
+package tt
+
+import (
+	"strings"
+
+	"github.com/interline-io/transitland-lib/tl/causes"
+)
+
+// CheckTimezone returns an error if the value is not a known timezone
+func CheckTimezone(field string, value string) (errs []error) {
+	if _, ok := IsValidTimezone(value); !ok {
+		errs = append(errs, causes.NewInvalidTimezoneError(field, value))
+	}
+	return errs
+}
+
+// IsValidTimezone check is valid timezone
+func IsValidTimezone(value string) (string, bool) {
+	if len(value) == 0 {
+		return "", true
+	}
+	nornmalized, ok := timezones[strings.ToLower(value)]
+	return nornmalized, ok
+}
 
 // Use lowercase keys for case-insensitivity
 

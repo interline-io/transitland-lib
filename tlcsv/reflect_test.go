@@ -5,15 +5,16 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 func TestGetString(t *testing.T) {
 	ent := tl.StopTime{
 		TripID:            "123",
 		StopID:            "456",
-		ArrivalTime:       tl.NewWideTimeFromSeconds(3600),
-		DepartureTime:     tl.NewWideTimeFromSeconds(7200),
-		ShapeDistTraveled: tl.NewFloat(123.456),
+		ArrivalTime:       tt.NewWideTimeFromSeconds(3600),
+		DepartureTime:     tt.NewWideTimeFromSeconds(7200),
+		ShapeDistTraveled: tt.NewFloat(123.456),
 	}
 	expect := map[string]string{
 		"trip_id":             "123",

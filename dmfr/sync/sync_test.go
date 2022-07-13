@@ -6,6 +6,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -143,7 +144,7 @@ func TestUpdateFeed(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			rfeed := tl.Feed{}
 			rfeed.FeedID = "caltrain"
-			rfeed.Name = tl.NewString("An Updated Name")
+			rfeed.Name = tt.NewString("An Updated Name")
 			feedid, found, _, err := UpdateFeed(atx, rfeed)
 			if err != nil {
 				t.Error(err)
@@ -179,7 +180,7 @@ func TestUpdateFeed(t *testing.T) {
 				t.Errorf("expected updated_at %s to be greater than %s", a, b)
 			}
 			if !(dfeed.DeletedAt.IsZero() || dfeed.DeletedAt.Valid) {
-				t.Errorf("expected deleted_at to be null, got %s %t", dfeed.DeletedAt.Time, dfeed.DeletedAt.Valid)
+				t.Errorf("expected deleted_at to be null, got %s %t", dfeed.DeletedAt.Val, dfeed.DeletedAt.Valid)
 			}
 			return nil
 		})

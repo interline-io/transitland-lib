@@ -1,4 +1,4 @@
-package enum
+package tt
 
 // RouteType contains details on each possible route_type
 type RouteType struct {

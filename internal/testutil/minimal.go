@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/mock"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // NewMinimalTestFeed returns a minimal mock Reader & ReaderTester values.
@@ -20,15 +21,15 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{TripID: "trip1", RouteID: "route1", ServiceID: "service1"},
 		},
 		StopList: []tl.Stop{
-			{StopID: "stop1", StopName: "Stop 1", Geometry: tl.NewPoint(1, 2)},
-			{StopID: "stop2", StopName: "Stop 2", Geometry: tl.NewPoint(3, 4)},
+			{StopID: "stop1", StopName: "Stop 1", Geometry: tt.NewPoint(1, 2)},
+			{StopID: "stop2", StopName: "Stop 2", Geometry: tt.NewPoint(3, 4)},
 		},
 		StopTimeList: []tl.StopTime{
-			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: tl.NewWideTimeFromSeconds(0), DepartureTime: tl.NewWideTimeFromSeconds(5)},
-			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: tl.NewWideTimeFromSeconds(10), DepartureTime: tl.NewWideTimeFromSeconds(15)},
+			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: tt.NewWideTimeFromSeconds(0), DepartureTime: tt.NewWideTimeFromSeconds(5)},
+			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: tt.NewWideTimeFromSeconds(10), DepartureTime: tt.NewWideTimeFromSeconds(15)},
 		},
 		ShapeList: []tl.Shape{
-			{ShapeID: "shape1", Geometry: tl.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
+			{ShapeID: "shape1", Geometry: tt.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
 		},
 		CalendarList: []tl.Calendar{
 			{ServiceID: "service1", StartDate: time.Now(), EndDate: time.Now()},
@@ -43,7 +44,7 @@ func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
 			{FareID: "fare1"},
 		},
 		FareAttributeList: []tl.FareAttribute{
-			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: tl.NewInt(1)},
+			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: tt.NewInt(1)},
 		},
 		FrequencyList: []tl.Frequency{
 			{TripID: "trip1", HeadwaySecs: 600, StartTime: tl.WideTime{Seconds: 3600}, EndTime: tl.WideTime{Seconds: 7200}},

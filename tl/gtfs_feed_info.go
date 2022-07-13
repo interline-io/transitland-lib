@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/enum"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // FeedInfo feed_info.txt
@@ -24,19 +24,19 @@ type FeedInfo struct {
 // Errors for this Entity.
 func (ent *FeedInfo) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, enum.CheckPresent("feed_publisher_name", ent.FeedPublisherName)...)
-	errs = append(errs, enum.CheckPresent("feed_publisher_url", ent.FeedPublisherURL)...)
-	errs = append(errs, enum.CheckPresent("feed_lang", ent.FeedLang)...)
-	errs = append(errs, enum.CheckURL("feed_publisher_url", ent.FeedPublisherURL)...)
-	errs = append(errs, enum.CheckLanguage("feed_lang", ent.FeedLang)...)
-	errs = append(errs, enum.CheckLanguage("default_lang", ent.DefaultLang.String)...)
-	errs = append(errs, enum.CheckEmail("feed_contact_email", ent.FeedContactEmail.String)...)
-	errs = append(errs, enum.CheckURL("feed_contact_url", ent.FeedContactURL.String)...)
+	errs = append(errs, tt.CheckPresent("feed_publisher_name", ent.FeedPublisherName)...)
+	errs = append(errs, tt.CheckPresent("feed_publisher_url", ent.FeedPublisherURL)...)
+	errs = append(errs, tt.CheckPresent("feed_lang", ent.FeedLang)...)
+	errs = append(errs, tt.CheckURL("feed_publisher_url", ent.FeedPublisherURL)...)
+	errs = append(errs, tt.CheckLanguage("feed_lang", ent.FeedLang)...)
+	errs = append(errs, tt.CheckLanguage("default_lang", ent.DefaultLang.Val)...)
+	errs = append(errs, tt.CheckEmail("feed_contact_email", ent.FeedContactEmail.Val)...)
+	errs = append(errs, tt.CheckURL("feed_contact_url", ent.FeedContactURL.Val)...)
 	if ent.FeedStartDate.IsZero() || ent.FeedEndDate.IsZero() {
 		// skip
 	} else {
-		if ent.FeedEndDate.Time.Before(ent.FeedStartDate.Time) {
-			errs = append(errs, causes.NewInvalidFieldError("feed_end_date", "", fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Time, ent.FeedStartDate.Time)))
+		if ent.FeedEndDate.Val.Before(ent.FeedStartDate.Val) {
+			errs = append(errs, causes.NewInvalidFieldError("feed_end_date", "", fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Val, ent.FeedStartDate.Val)))
 		}
 	}
 	return errs

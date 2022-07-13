@@ -6,6 +6,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -54,7 +55,7 @@ func UpdateOperator(atx tldb.Adapter, operator tl.Operator) (int, bool, bool, er
 // HideUnseedOperators .
 func HideUnseedOperators(atx tldb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
-	t := tl.NewTime(time.Now().UTC())
+	t := tt.NewTime(time.Now().UTC())
 	r, err := atx.Sqrl().
 		Update("current_operators").
 		Where(sq.NotEq{"id": found}).
