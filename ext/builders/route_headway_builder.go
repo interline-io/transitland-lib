@@ -16,7 +16,7 @@ type RouteHeadway struct {
 	DowCategory    tl.Int
 	ServiceDate    tl.Date
 	StopTripCount  tl.Int
-	Departures     tl.IntSlice
+	Departures     tl.Ints
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -174,7 +174,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 					ServiceDate:    tl.NewDate(d),
 					StopTripCount:  tl.NewInt(len(departures)),
 					DirectionID:    tl.NewInt(int(direction)),
-					Departures:     tl.NewIntSlice(departures),
+					Departures:     tl.NewInts(departures),
 				}
 				// HeadwaySecs based on morning rush hour
 				if ws, ok := getStats(departures, 21600, 36000); ok && len(departures) >= 10 {

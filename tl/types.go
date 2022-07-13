@@ -9,7 +9,7 @@ import (
 type String = tt.String
 type Strings = tt.Strings
 type Int = tt.Int
-type IntSlice = tt.IntSlice
+type Ints = tt.Ints
 type Float = tt.Float
 type Tags = tt.Tags
 type Time = tt.Time
@@ -28,7 +28,7 @@ func NewInt(v int) Int                                   { return tt.NewInt(v) }
 func NewTime(v time.Time) Time                           { return tt.NewTime(v) }
 func NewDate(v time.Time) Date                           { return tt.NewDate(v) }
 func NewPoint(lon, lat float64) Point                    { return tt.NewPoint(lon, lat) }
-func NewIntSlice(v []int) IntSlice                       { return tt.NewIntSlice(v) }
+func NewInts(v []int) Ints                               { return tt.NewInts(v) }
 func NewWideTimeFromSeconds(v int) WideTime              { return tt.NewWideTimeFromSeconds(v) }
 func NewWideTime(v string) (WideTime, error)             { return tt.NewWideTime(v) }
 func StringToSeconds(v string) (int, error)              { return tt.StringToSeconds(v) }
