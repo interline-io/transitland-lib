@@ -12,6 +12,7 @@ import (
 	"github.com/dimchansky/utfbom"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Registry represents a parsed Distributed Mobility Feed Registry (DMFR) file
@@ -47,7 +48,7 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 			foundParent := false
 			for i, oif := range operator.AssociatedFeeds {
 				if oif.FeedOnestopID.Val == "" {
-					oif.FeedOnestopID = tl.NewString(fsid)
+					oif.FeedOnestopID = tt.NewString(fsid)
 				}
 				if oif.FeedOnestopID.Val == fsid {
 					foundParent = true
@@ -55,7 +56,7 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 				operator.AssociatedFeeds[i] = oif
 			}
 			if !foundParent {
-				operator.AssociatedFeeds = append(operator.AssociatedFeeds, tl.OperatorAssociatedFeed{FeedOnestopID: tl.NewString(fsid)})
+				operator.AssociatedFeeds = append(operator.AssociatedFeeds, tl.OperatorAssociatedFeed{FeedOnestopID: tt.NewString(fsid)})
 			}
 			operators = append(operators, operator)
 		}

@@ -9,6 +9,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -83,7 +84,7 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 		oif.ResolvedOnestopID = operator.OnestopID
 		oif.ResolvedName = operator.Name
 		oif.ResolvedShortName = operator.ShortName
-		oif.OperatorID = tl.NewInt(operator.ID)
+		oif.OperatorID = tt.NewInt(operator.ID)
 		if err := atx.Get(&oif.FeedID, "select id from current_feeds where onestop_id = ?", oif.FeedOnestopID.Val); err == sql.ErrNoRows {
 			log.Infof("Warning: no feed for '%s'", oif.FeedOnestopID.Val)
 			continue
@@ -98,13 +99,13 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 		agencyID := 0
 		if len(agencies) == 1 {
 			// match regardless of gtfs_agency_id
-			oif.ResolvedGtfsAgencyID = tl.NewString(agencies[0].AgencyID)
+			oif.ResolvedGtfsAgencyID = tt.NewString(agencies[0].AgencyID)
 			agencyID = agencies[0].ID
 		} else if len(agencies) > 1 {
 			// match on gtfs_agency_id
 			for _, agency := range agencies {
 				if agency.AgencyID == oif.GtfsAgencyID.Val {
-					oif.ResolvedGtfsAgencyID = tl.NewString(agency.AgencyID)
+					oif.ResolvedGtfsAgencyID = tt.NewString(agency.AgencyID)
 					agencyID = agency.ID
 				}
 			}
@@ -118,7 +119,7 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 			if places, err := getPlaces(atx, agencyID); err != nil {
 				return false, err
 			} else {
-				oif.ResolvedPlaces = tl.NewString(places)
+				oif.ResolvedPlaces = tt.NewString(places)
 			}
 			if _, err := atx.Insert(&oif); err != nil {
 				return false, err
@@ -180,13 +181,13 @@ func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
 			// Generate OnestopID
 			oif := tl.OperatorAssociatedFeed{
 				FeedID:               feedid,
-				ResolvedGtfsAgencyID: tl.NewString(agency.AgencyID),
-				ResolvedName:         tl.NewString(agency.AgencyName),
+				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID),
+				ResolvedName:         tt.NewString(agency.AgencyName),
 			}
 			if places, err := getPlaces(atx, agency.ID); err != nil {
 				return false, err
 			} else {
-				oif.ResolvedPlaces = tl.NewString(places)
+				oif.ResolvedPlaces = tt.NewString(places)
 			}
 			if agency.OnestopID.Valid {
 				oif.ResolvedOnestopID = agency.OnestopID
@@ -195,7 +196,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
 				if strings.HasPrefix(feed.FeedID, "f-") && len(feed.FeedID) > 2 {
 					fsid = feed.FeedID[2:]
 				}
-				oif.ResolvedOnestopID = tl.NewString(fmt.Sprintf("o-%s-%s", fsid, filterName(agency.AgencyName)))
+				oif.ResolvedOnestopID = tt.NewString(fmt.Sprintf("o-%s-%s", fsid, filterName(agency.AgencyName)))
 			}
 			// Save
 			if _, err := atx.Insert(&oif); err != nil {

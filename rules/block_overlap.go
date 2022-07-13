@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // BlockOverlapError reports when two block_id's with the same service_id overlap in time.
@@ -77,11 +78,11 @@ func (e *BlockOverlapCheck) Validate(ent tl.Entity) []error {
 				TripID:         tf.trip,
 				BlockID:        trip.BlockID,
 				ServiceID:      tf.service,
-				StartTime:      tl.NewWideTimeFromSeconds(tf.start),
-				EndTime:        tl.NewWideTimeFromSeconds(tf.end),
+				StartTime:      tt.NewWideTimeFromSeconds(tf.start),
+				EndTime:        tt.NewWideTimeFromSeconds(tf.end),
 				OtherTripID:    hit.trip,
-				OtherStartTime: tl.NewWideTimeFromSeconds(hit.start),
-				OtherEndTime:   tl.NewWideTimeFromSeconds(hit.end),
+				OtherStartTime: tt.NewWideTimeFromSeconds(hit.start),
+				OtherEndTime:   tt.NewWideTimeFromSeconds(hit.end),
 			})
 		}
 	}

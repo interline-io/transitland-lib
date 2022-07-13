@@ -31,7 +31,7 @@ type Stop struct {
 
 // SetCoordinates takes a [2]float64 and sets the Stop's lon,lat
 func (ent *Stop) SetCoordinates(p [2]float64) {
-	ent.Geometry = NewPoint(p[0], p[1])
+	ent.Geometry = tt.NewPoint(p[0], p[1])
 }
 
 // Coordinates returns the stop lon,lat as a [2]float64
@@ -101,7 +101,7 @@ func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Pathway Level
 	if ent.LevelID.Val != "" {
 		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Val}); ok {
-			ent.LevelID = NewKey(v)
+			ent.LevelID = tt.NewKey(v)
 		} else {
 			return causes.NewInvalidReferenceError("level_id", ent.LevelID.Val)
 		}
@@ -109,7 +109,7 @@ func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Adjust ParentStation
 	if ent.ParentStation.Val != "" {
 		if parentID, ok := emap.GetEntity(&Stop{StopID: ent.ParentStation.Val}); ok {
-			ent.ParentStation = NewKey(parentID)
+			ent.ParentStation = tt.NewKey(parentID)
 		} else {
 			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Val)
 		}

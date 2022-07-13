@@ -62,7 +62,7 @@ func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
 	// Adjust AgencyID
 	if ent.AgencyID.Val != "" {
 		if eid, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Val}); ok {
-			ent.AgencyID = NewKey(eid)
+			ent.AgencyID = tt.NewKey(eid)
 		} else {
 			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Val)
 		}
@@ -70,7 +70,7 @@ func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
 	// Adjust RouteID
 	if ent.RouteID.Val != "" {
 		if eid, ok := emap.GetEntity(&Route{RouteID: ent.RouteID.Val}); ok {
-			ent.RouteID = NewKey(eid)
+			ent.RouteID = tt.NewKey(eid)
 		} else {
 			return causes.NewInvalidReferenceError("route_id", ent.RouteID.Val)
 		}
@@ -78,7 +78,7 @@ func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
 	// Adjust TripID
 	if ent.TripID.Val != "" {
 		if eid, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Val}); ok {
-			ent.TripID = NewKey(eid)
+			ent.TripID = tt.NewKey(eid)
 		} else {
 			return causes.NewInvalidReferenceError("trip_id", ent.TripID.Val)
 		}

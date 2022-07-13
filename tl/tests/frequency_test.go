@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 /////////////////////////
@@ -45,8 +46,8 @@ func TestFrequencyRepeatCount(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(fmt.Sprintf("%s->%s:%d", tc.start, tc.end, tc.hw), func(t *testing.T) {
 			f := tl.Frequency{}
-			f.StartTime, _ = tl.NewWideTime(tc.start)
-			f.EndTime, _ = tl.NewWideTime(tc.end)
+			f.StartTime, _ = tt.NewWideTime(tc.start)
+			f.EndTime, _ = tt.NewWideTime(tc.end)
 			f.HeadwaySecs = tc.hw
 			if e := f.RepeatCount(); e != tc.expect {
 				t.Errorf("got %d repeat count from %s -> %s hw %d, expected %d", e, tc.start, tc.end, tc.hw, tc.expect)

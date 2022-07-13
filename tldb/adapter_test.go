@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 var testAdapters = map[string]func() Adapter{}
@@ -106,15 +107,15 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		st1.StopID = strconv.Itoa(m.StopID1)
 		st1.TripID = strconv.Itoa(m.TripID)
 		st1.StopSequence = 1
-		st1.ArrivalTime = tl.NewWideTimeFromSeconds(0)
-		st1.DepartureTime = tl.NewWideTimeFromSeconds(1)
+		st1.ArrivalTime = tt.NewWideTimeFromSeconds(0)
+		st1.DepartureTime = tt.NewWideTimeFromSeconds(1)
 		st2 := tl.StopTime{}
 		st2.FeedVersionID = m.FeedVersionID
 		st2.StopID = strconv.Itoa(m.StopID2)
 		st2.TripID = strconv.Itoa(m.TripID)
 		st2.StopSequence = 2
-		st2.ArrivalTime = tl.NewWideTimeFromSeconds(2)
-		st2.DepartureTime = tl.NewWideTimeFromSeconds(3)
+		st2.ArrivalTime = tt.NewWideTimeFromSeconds(2)
+		st2.DepartureTime = tt.NewWideTimeFromSeconds(3)
 		sts := make([]interface{}, 0)
 		sts = append(sts, &st1, &st2)
 		if err := adapter.CopyInsert(sts); err != nil {
@@ -201,8 +202,8 @@ func createTestFeedVersion(adapter Adapter) (int, error) {
 	fv := tl.FeedVersion{}
 	fv.SHA1 = t
 	fv.FeedID = feed.ID
-	fv.EarliestCalendarDate = tl.NewDate(time.Now())
-	fv.LatestCalendarDate = tl.NewDate(time.Now())
+	fv.EarliestCalendarDate = tt.NewDate(time.Now())
+	fv.LatestCalendarDate = tt.NewDate(time.Now())
 	m, err = adapter.Insert(&fv)
 	return m, err
 }

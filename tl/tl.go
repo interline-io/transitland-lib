@@ -1,8 +1,6 @@
 package tl
 
 import (
-	"time"
-
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -30,16 +28,3 @@ type Strings = tt.Strings
 type Tags = tt.Tags
 type Time = tt.Time
 type WideTime = tt.WideTime
-
-func NewDate(v time.Time) Date                           { return tt.NewDate(v) }
-func NewFloat(v float64) Float                           { return tt.NewFloat(v) }
-func NewInt(v int) Int                                   { return tt.NewInt(v) }
-func NewInts(v []int) Ints                               { return tt.NewInts(v) }
-func NewKey(v string) Key                                { return tt.NewKey(v) }
-func NewLineStringFromFlatCoords(v []float64) LineString { return tt.NewLineStringFromFlatCoords(v) }
-func NewPoint(lon, lat float64) Point                    { return tt.NewPoint(lon, lat) }
-func NewString(v string) String                          { return tt.NewString(v) }
-func NewTime(v time.Time) Time                           { return tt.NewTime(v) }
-func NewWideTime(v string) (WideTime, error)             { return tt.NewWideTime(v) }
-func NewWideTimeFromSeconds(v int) WideTime              { return tt.NewWideTimeFromSeconds(v) }
-func StringToSeconds(v string) (int, error)              { return tt.StringToSeconds(v) }

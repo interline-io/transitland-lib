@@ -2,6 +2,7 @@ package xy
 
 import (
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // InterpolateStopTimes sets missing ArrivalTime, DestinationTime values.
@@ -49,8 +50,8 @@ func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
 		// 	"\tindex: %d traveled: %f dx: %f dt: %d",
 		// 	i, sts[i].ShapeDistTraveled, dx, dt,
 		// )
-		sts[i].ArrivalTime = tl.NewWideTimeFromSeconds(dt)
-		sts[i].DepartureTime = tl.NewWideTimeFromSeconds(dt)
-		sts[i].Interpolated = tl.NewInt(1)
+		sts[i].ArrivalTime = tt.NewWideTimeFromSeconds(dt)
+		sts[i].DepartureTime = tt.NewWideTimeFromSeconds(dt)
+		sts[i].Interpolated = tt.NewInt(1)
 	}
 }

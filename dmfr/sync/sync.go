@@ -7,6 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -67,7 +68,7 @@ func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
 		}
 		for _, operator := range reg.Operators {
 			osid := operator.OnestopID.Val
-			operator.File = tl.NewString(filepath.Base(fn))
+			operator.File = tt.NewString(filepath.Base(fn))
 			operator.DeletedAt = tl.Time{Valid: false}
 			operatorid, found, updated, err := UpdateOperator(atx, operator)
 			if err != nil {

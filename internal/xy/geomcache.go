@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 func arePositionsSorted(a []float64) bool {
@@ -85,7 +86,7 @@ func (g *GeomCache) MakeShape(stopids ...string) (tl.Shape, error) {
 			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
 		}
 	}
-	shape.Geometry = tl.NewLineStringFromFlatCoords(stopline)
+	shape.Geometry = tt.NewLineStringFromFlatCoords(stopline)
 	return shape, nil
 }
 
@@ -133,7 +134,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	}
 	// Set ShapeDistTraveled
 	for i := 0; i < len(stoptimes); i++ {
-		stoptimes[i].ShapeDistTraveled = tl.NewFloat(positions[i] * length)
+		stoptimes[i].ShapeDistTraveled = tt.NewFloat(positions[i] * length)
 	}
 	return InterpolateStopTimes(stoptimes)
 }

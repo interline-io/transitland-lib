@@ -13,6 +13,7 @@ import (
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -146,17 +147,17 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	tlfetch.FeedID = feed.ID
 	tlfetch.URLType = opts.URLType
 	tlfetch.URL = opts.FeedURL
-	tlfetch.FetchedAt = tl.NewTime(opts.FetchedAt)
+	tlfetch.FetchedAt = tt.NewTime(opts.FetchedAt)
 	if result.ResponseCode > 0 {
-		tlfetch.ResponseCode = tl.NewInt(result.ResponseCode)
-		tlfetch.ResponseSize = tl.NewInt(result.ResponseSize)
-		tlfetch.ResponseSHA1 = tl.NewString(result.ResponseSHA1)
+		tlfetch.ResponseCode = tt.NewInt(result.ResponseCode)
+		tlfetch.ResponseSize = tt.NewInt(result.ResponseSize)
+		tlfetch.ResponseSHA1 = tt.NewString(result.ResponseSHA1)
 	}
 	if result.FetchError == nil {
 		tlfetch.Success = true
 	} else {
 		tlfetch.Success = false
-		tlfetch.FetchError = tl.NewString(result.FetchError.Error())
+		tlfetch.FetchError = tt.NewString(result.FetchError.Error())
 	}
 	tlfetch.UpdateTimestamps()
 	if _, err := atx.Insert(&tlfetch); err != nil {

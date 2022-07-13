@@ -67,7 +67,7 @@ func NewShapeFromShapes(shapes []Shape) Shape {
 			ent.SetExtra("expect_error", v)
 		}
 	}
-	ent.Geometry = NewLineStringFromFlatCoords(coords)
+	ent.Geometry = tt.NewLineStringFromFlatCoords(coords)
 	return ent
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/twpayne/go-geom"
 )
 
@@ -226,15 +227,15 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// Set to max selected shape length
 		if si.Length >= ent.Length.Val {
-			ent.Length = tl.NewFloat(si.Length)
+			ent.Length = tt.NewFloat(si.Length)
 		}
 		// Set to max first point max distance
 		if si.FirstPointMaxDistance >= ent.FirstPointMaxDistance.Val {
-			ent.FirstPointMaxDistance = tl.NewFloat(si.FirstPointMaxDistance)
+			ent.FirstPointMaxDistance = tt.NewFloat(si.FirstPointMaxDistance)
 		}
 		// Set to max selected shape segment length
 		if si.MaxSegmentLength >= ent.MaxSegmentLength.Val {
-			ent.MaxSegmentLength = tl.NewFloat(si.MaxSegmentLength)
+			ent.MaxSegmentLength = tt.NewFloat(si.MaxSegmentLength)
 		}
 		// OK
 		matches = append(matches, si.Line)

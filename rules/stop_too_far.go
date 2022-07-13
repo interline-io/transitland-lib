@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // StopTooFarError reports when two related stops are >1km away.
@@ -45,7 +46,7 @@ func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
 	if coords[0] == 0 && coords[1] == 0 {
 		return nil // 0,0 handled elsewhere
 	}
-	newp := tl.NewPoint(coords[0], coords[1]) // copy
+	newp := tt.NewPoint(coords[0], coords[1]) // copy
 	e.geoms[v.StopID] = &newp
 	if v.ParentStation.Val == "" {
 		return nil

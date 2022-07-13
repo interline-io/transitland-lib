@@ -167,19 +167,19 @@ func (ent *StopTime) SetString(key, value string) error {
 	case "trip_id":
 		ent.TripID = hi
 	case "stop_headsign":
-		ent.StopHeadsign = NewString(hi)
+		ent.StopHeadsign = tt.NewString(hi)
 	case "stop_id":
 		ent.StopID = hi
 	case "arrival_time":
 		if hi == "" {
-		} else if s, err := NewWideTime(hi); err != nil {
+		} else if s, err := tt.NewWideTime(hi); err != nil {
 			perr = causes.NewFieldParseError("arrival_time", hi)
 		} else {
 			ent.ArrivalTime = s
 		}
 	case "departure_time":
 		if hi == "" {
-		} else if s, err := NewWideTime(hi); err != nil {
+		} else if s, err := tt.NewWideTime(hi); err != nil {
 			perr = causes.NewFieldParseError("departure_time", hi)
 		} else {
 			ent.DepartureTime = s
@@ -196,7 +196,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
 		} else {
-			ent.PickupType = NewInt(a)
+			ent.PickupType = tt.NewInt(a)
 		}
 	case "drop_off_type":
 		if len(hi) == 0 {
@@ -204,7 +204,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
 		} else {
-			ent.DropOffType = NewInt(a)
+			ent.DropOffType = tt.NewInt(a)
 		}
 	case "continuous_pickup":
 		if len(hi) == 0 {
@@ -212,7 +212,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_pickup", hi)
 		} else {
-			ent.ContinuousPickup = NewInt(a)
+			ent.ContinuousPickup = tt.NewInt(a)
 		}
 	case "continuous_drop_off":
 		if len(hi) == 0 {
@@ -220,7 +220,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_drop_off", hi)
 		} else {
-			ent.ContinuousDropOff = NewInt(a)
+			ent.ContinuousDropOff = tt.NewInt(a)
 		}
 	case "shape_dist_traveled":
 		if len(hi) == 0 {
@@ -228,7 +228,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
 		} else {
-			ent.ShapeDistTraveled = NewFloat(a)
+			ent.ShapeDistTraveled = tt.NewFloat(a)
 		}
 	case "timepoint":
 		// special use -1 for empty timepoint value
@@ -237,7 +237,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
 		} else {
-			ent.Timepoint = NewInt(a)
+			ent.Timepoint = tt.NewInt(a)
 		}
 	default:
 		ent.SetExtra(key, hi)

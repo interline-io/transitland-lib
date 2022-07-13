@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // FrequencyOverlapError is reported when two frequencies.txt entries for the same trip overlap in time.
@@ -57,8 +58,8 @@ func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
 				TripID:         v.TripID,
 				StartTime:      v.StartTime,
 				EndTime:        v.EndTime,
-				OtherStartTime: tl.NewWideTimeFromSeconds(hit.start),
-				OtherEndTime:   tl.NewWideTimeFromSeconds(hit.end),
+				OtherStartTime: tt.NewWideTimeFromSeconds(hit.start),
+				OtherEndTime:   tt.NewWideTimeFromSeconds(hit.end),
 			})
 		}
 	}

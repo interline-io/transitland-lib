@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type expectStopTime struct {
@@ -27,9 +28,9 @@ func expectTripToStopTime(e expectTrip) []tl.StopTime {
 			TripID:            "1",
 			StopID:            strconv.Itoa(i),
 			StopSequence:      i,
-			ArrivalTime:       tl.NewWideTimeFromSeconds(e.ArrivalTime[i]),
-			DepartureTime:     tl.NewWideTimeFromSeconds(e.DepartureTime[i]),
-			ShapeDistTraveled: tl.NewFloat(e.ShapeDistTraveled[i]),
+			ArrivalTime:       tt.NewWideTimeFromSeconds(e.ArrivalTime[i]),
+			DepartureTime:     tt.NewWideTimeFromSeconds(e.DepartureTime[i]),
+			ShapeDistTraveled: tt.NewFloat(e.ShapeDistTraveled[i]),
 		})
 	}
 	return ret

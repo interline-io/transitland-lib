@@ -3,6 +3,8 @@ package tl
 import (
 	"errors"
 	"time"
+
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type canSHA1 interface {
@@ -69,8 +71,8 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	if err != nil {
 		return fv, err
 	}
-	fv.EarliestCalendarDate = NewDate(start)
-	fv.LatestCalendarDate = NewDate(end)
+	fv.EarliestCalendarDate = tt.NewDate(start)
+	fv.LatestCalendarDate = tt.NewDate(end)
 	// Get path and sha1
 	if s, ok := reader.(canSHA1); ok {
 		if h, err := s.SHA1(); err == nil {

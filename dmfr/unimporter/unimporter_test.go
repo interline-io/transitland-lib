@@ -8,14 +8,15 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
 func setupImport(t *testing.T, atx tldb.Adapter) int {
 	// Create FV
 	fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
-	fv.EarliestCalendarDate = tl.NewDate(time.Now())
-	fv.LatestCalendarDate = tl.NewDate(time.Now())
+	fv.EarliestCalendarDate = tt.NewDate(time.Now())
+	fv.LatestCalendarDate = tt.NewDate(time.Now())
 	fvid := testdb.ShouldInsert(t, atx, &fv)
 	fv.ID = fvid
 	// Import
