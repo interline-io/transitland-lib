@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"time"
 
@@ -52,20 +51,11 @@ func (r *Option[T]) UnmarshalJSON(v []byte) error {
 	return r.Scan(z)
 }
 
-func (r *Option[T]) MarshalJSON() ([]byte, error) {
+func (r Option[T]) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
 	return json.Marshal(r.Val)
-}
-
-func (r *Option[T]) UnmarshalGQL(v interface{}) error {
-	return r.Scan(v)
-}
-
-func (r *Option[T]) MarshalGQL(w io.Writer) {
-	b, _ := r.MarshalJSON()
-	w.Write(b)
 }
 
 func convertAssign(dest any, src any) error {
