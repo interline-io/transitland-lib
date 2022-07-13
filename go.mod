@@ -1,6 +1,6 @@
 module github.com/interline-io/transitland-lib
 
-go 1.16
+go 1.18
 
 require (
 	github.com/Masterminds/squirrel v1.5.3
