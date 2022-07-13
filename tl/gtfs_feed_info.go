@@ -29,9 +29,9 @@ func (ent *FeedInfo) Errors() (errs []error) {
 	errs = append(errs, tt.CheckPresent("feed_lang", ent.FeedLang)...)
 	errs = append(errs, tt.CheckURL("feed_publisher_url", ent.FeedPublisherURL)...)
 	errs = append(errs, tt.CheckLanguage("feed_lang", ent.FeedLang)...)
-	errs = append(errs, tt.CheckLanguage("default_lang", ent.DefaultLang.String)...)
-	errs = append(errs, tt.CheckEmail("feed_contact_email", ent.FeedContactEmail.String)...)
-	errs = append(errs, tt.CheckURL("feed_contact_url", ent.FeedContactURL.String)...)
+	errs = append(errs, tt.CheckLanguage("default_lang", ent.DefaultLang.Val)...)
+	errs = append(errs, tt.CheckEmail("feed_contact_email", ent.FeedContactEmail.Val)...)
+	errs = append(errs, tt.CheckURL("feed_contact_url", ent.FeedContactURL.Val)...)
 	if ent.FeedStartDate.IsZero() || ent.FeedEndDate.IsZero() {
 		// skip
 	} else {

@@ -39,7 +39,7 @@ func journeyPatternKey(trip *tl.Trip) string {
 			st.ArrivalTime.Seconds-a.Seconds,
 			st.DepartureTime.Seconds-b.Seconds,
 			st.StopID,
-			st.StopHeadsign.String,
+			st.StopHeadsign.Val,
 			st.PickupType.Val,
 			st.DropOffType.Val,
 			st.Timepoint.Val,

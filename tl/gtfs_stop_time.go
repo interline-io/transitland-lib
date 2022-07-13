@@ -124,7 +124,7 @@ func (ent *StopTime) GetString(key string) (string, error) {
 	case "trip_id":
 		v = ent.TripID
 	case "stop_headsign":
-		v = ent.StopHeadsign.String
+		v = ent.StopHeadsign.Val
 	case "stop_id":
 		v = ent.StopID
 	case "arrival_time":

@@ -47,13 +47,13 @@ func getPlaces(atx tldb.Adapter, id int) (string, error) {
 	for _, a := range agencyPlaces {
 		suba := []string{}
 		if a.Name.Valid {
-			suba = append(suba, a.Name.String)
+			suba = append(suba, a.Name.Val)
 		}
 		if a.Adm1name.Valid {
-			suba = append(suba, a.Adm1name.String)
+			suba = append(suba, a.Adm1name.Val)
 		}
 		if a.Adm0name.Valid {
-			suba = append(suba, a.Adm0name.String)
+			suba = append(suba, a.Adm0name.Val)
 		}
 		if len(suba) > 0 {
 			uniquePlaces[strings.Join(suba, ", ")] = true
@@ -76,7 +76,7 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 		return false, err
 	}
 	for _, oif := range oifexisting {
-		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.String}] = oif.ID
+		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}] = oif.ID
 	}
 	for _, oif := range operator.AssociatedFeeds {
 		// Get feed id
@@ -84,8 +84,8 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 		oif.ResolvedName = operator.Name
 		oif.ResolvedShortName = operator.ShortName
 		oif.OperatorID = tl.NewInt(operator.ID)
-		if err := atx.Get(&oif.FeedID, "select id from current_feeds where onestop_id = ?", oif.FeedOnestopID.String); err == sql.ErrNoRows {
-			log.Infof("Warning: no feed for '%s'", oif.FeedOnestopID.String)
+		if err := atx.Get(&oif.FeedID, "select id from current_feeds where onestop_id = ?", oif.FeedOnestopID.Val); err == sql.ErrNoRows {
+			log.Infof("Warning: no feed for '%s'", oif.FeedOnestopID.Val)
 			continue
 		} else if err != nil {
 			return false, err
@@ -103,14 +103,14 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 		} else if len(agencies) > 1 {
 			// match on gtfs_agency_id
 			for _, agency := range agencies {
-				if agency.AgencyID == oif.GtfsAgencyID.String {
+				if agency.AgencyID == oif.GtfsAgencyID.Val {
 					oif.ResolvedGtfsAgencyID = tl.NewString(agency.AgencyID)
 					agencyID = agency.ID
 				}
 			}
 		}
 		// Match or insert
-		check := oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.String}
+		check := oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}
 		if match, ok := oiflookup[check]; ok {
 			oifmatches[match] = true
 		} else {
@@ -151,7 +151,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
 		return false, err
 	}
 	for _, oif := range oifexisting {
-		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.String}] = oif.ID
+		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}] = oif.ID
 		if oif.OperatorID.Valid {
 			oifmatches[oif.ID] = true // allow matching on operator associated oifs, but do not delete them
 		}
