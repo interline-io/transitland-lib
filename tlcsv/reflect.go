@@ -20,7 +20,6 @@ var MapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
 // check for SetString interface
 type canSetString interface {
 	SetString(string, string) error
-	AddError(error)
 }
 
 // check for Value
@@ -178,41 +177,52 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 // Loading: fast and reflect paths //
 
 // loadRow selects the fastest method for loading an entity.
-func loadRow(ent tl.Entity, row Row) {
+func loadRow(ent any, row Row) []error {
+	var errs []error
 	// Check for fast path
 	if entfast, ok := ent.(canSetString); ok {
-		loadRowFast(entfast, row)
+		errs = loadRowFast(entfast, row)
 	} else {
-		loadRowReflect(ent, row)
+		errs = loadRowReflect(ent, row)
 	}
+	if len(errs) > 0 {
+		if extEnt, ok := ent.(tl.EntityWithErrors); ok {
+			for _, err := range errs {
+				extEnt.AddError(err)
+			}
+		}
+	}
+	return errs
 }
 
 // LoadRowFast uses a fast path for entities that support SetString and AddError.
-func loadRowFast(ent canSetString, row Row) {
+func loadRowFast(ent canSetString, row Row) []error {
+	var errs []error
 	// Return if there was a row parsing error
 	if row.Err != nil {
-		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
-		return
+		errs = append(errs, causes.NewRowParseError(row.Line, row.Err))
+		return errs
 	}
 	header := row.Header
 	value := row.Row
 	for i := 0; i < len(value) && i < len(header); i++ {
 		if err := ent.SetString(header[i], value[i]); err != nil {
-			ent.AddError(err)
+			errs = append(errs, err)
 		}
 	}
+	return errs
 }
 
 // loadRowReflect is the Reflect path
-func loadRowReflect(ent tl.Entity, row Row) {
+func loadRowReflect(ent interface{}, row Row) []error {
+	var errs []error
 	// Return if there was a row parsing error
 	if row.Err != nil {
-		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
-		return
+		errs = append(errs, causes.NewRowParseError(row.Line, row.Err))
+		return errs
 	}
 	// Get the struct tag map
 	fmap := MapperCache.GetStructTagMap(ent)
-	errs := []error{}
 	// For each struct tag, set the field value
 	val := reflect.ValueOf(ent).Elem()
 	for _, h := range row.Header {
@@ -223,7 +233,9 @@ func loadRowReflect(ent tl.Entity, row Row) {
 		k, ok := fmap[h]
 		// Add to extra fields if there's no struct tag
 		if !ok {
-			ent.SetExtra(h, strv)
+			if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 {
+				extEnt.SetExtra(h, strv)
+			}
 			continue
 		}
 		// Skip if empty and not required
@@ -244,9 +256,7 @@ func loadRowReflect(ent tl.Entity, row Row) {
 			errs = append(errs, causes.NewFieldParseError(k.Name, strv))
 		}
 	}
-	for _, err := range errs {
-		ent.AddError(err)
-	}
+	return errs
 }
 
 // Dumping: fast and reflect paths //

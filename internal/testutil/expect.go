@@ -17,9 +17,12 @@ type HasContext interface {
 
 // GetExpectErrors gets any ExpectError specified by an Entity.
 func GetExpectErrors(ent tl.Entity) []ExpectError {
+	extEnt, ok := ent.(tl.EntityWithExtra)
+	if !ok {
+		return nil
+	}
 	ret := []ExpectError{}
-	ex := ent.Extra()
-	value, ok := ex["expect_error"]
+	value, ok := extEnt.GetExtra("expect_error")
 	if len(value) == 0 || !ok {
 		return ret
 	}
