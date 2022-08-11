@@ -24,38 +24,13 @@ type StopTime struct {
 	Timepoint         Int
 	Interpolated      Int `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
 	FeedVersionID     int `csv:"-"`
-	extra             []string
-	loadErrors        []error
-	loadWarnings      []error
+	ErrorEntity
+	ExtraEntity
 }
 
 // SetFeedVersionID sets the Entity's FeedVersionID.
 func (ent *StopTime) SetFeedVersionID(fvid int) {
 	ent.FeedVersionID = fvid
-}
-
-// AddError adds a loading error to the entity, e.g. from a CSV parse failure
-func (ent *StopTime) AddError(err error) {
-	ent.loadErrors = append(ent.loadErrors, err)
-}
-
-// AddWarning .
-func (ent *StopTime) AddWarning(err error) {
-	ent.loadWarnings = append(ent.loadErrors, err)
-}
-
-// Extra provides any additional fields that were present.
-func (ent *StopTime) Extra() map[string]string {
-	ret := map[string]string{}
-	for i := 0; i < len(ent.extra); i += 2 {
-		ret[ent.extra[i]] = ent.extra[i+1]
-	}
-	return ret
-}
-
-// SetExtra adds a string key, value pair to the entity's extra fields.
-func (ent *StopTime) SetExtra(key string, value string) {
-	ent.extra = append(ent.extra, key, value)
 }
 
 // EntityID returns nothing.
@@ -67,7 +42,7 @@ func (ent *StopTime) EntityID() string {
 func (ent *StopTime) Errors() []error {
 	// No reflection
 	errs := []error{}
-	errs = append(errs, ent.loadErrors...)
+	errs = append(errs, ent.ErrorEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID)...)
 	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
 	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence)...)
@@ -85,11 +60,6 @@ func (ent *StopTime) Errors() []error {
 		errs = append(errs, causes.NewInvalidFieldError("departure_time", "", fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
 	}
 	return errs
-}
-
-// Warnings for this Entity.
-func (ent *StopTime) Warnings() []error {
-	return ent.loadWarnings
 }
 
 // Filename stop_times.txt

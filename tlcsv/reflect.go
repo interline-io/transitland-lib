@@ -178,75 +178,89 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 // Loading: fast and reflect paths //
 
 // loadRow selects the fastest method for loading an entity.
-func loadRow(ent tl.Entity, row Row) {
+func loadRow(ent any, row Row) []error {
+	var errs []error
 	// Check for fast path
 	if entfast, ok := ent.(canSetString); ok {
-		loadRowFast(entfast, row)
+		errs = loadRowFast(entfast, row)
 	} else {
-		loadRowReflect(ent, row)
+		errs = loadRowReflect(ent, row)
 	}
+	return errs
 }
 
-// LoadRowFast uses a fast path for entities that support SetString and AddError.
-func loadRowFast(ent canSetString, row Row) {
+// LoadRowFast uses a fast path for entities that support SetString.
+func loadRowFast(ent canSetString, row Row) []error {
+	var errs []error
 	// Return if there was a row parsing error
 	if row.Err != nil {
-		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
-		return
+		errs = append(errs, causes.NewRowParseError(row.Line, row.Err))
+		return errs
 	}
 	header := row.Header
 	value := row.Row
 	for i := 0; i < len(value) && i < len(header); i++ {
 		if err := ent.SetString(header[i], value[i]); err != nil {
-			ent.AddError(err)
-		}
-	}
-}
-
-// loadRowReflect is the Reflect path
-func loadRowReflect(ent tl.Entity, row Row) {
-	// Return if there was a row parsing error
-	if row.Err != nil {
-		ent.AddError(causes.NewRowParseError(row.Line, row.Err))
-		return
-	}
-	// Get the struct tag map
-	fmap := MapperCache.GetStructTagMap(ent)
-	errs := []error{}
-	// For each struct tag, set the field value
-	val := reflect.ValueOf(ent).Elem()
-	for _, h := range row.Header {
-		strv, ok := row.Get(h)
-		if !ok {
-			strv = ""
-		}
-		k, ok := fmap[h]
-		// Add to extra fields if there's no struct tag
-		if !ok {
-			ent.SetExtra(h, strv)
-			continue
-		}
-		// Skip if empty and not required
-		if len(strv) == 0 {
-			if k.Required {
-				// empty string type shandled in regular validators; avoid double errors
-				switch reflectx.FieldByIndexes(val, k.Index).Interface().(type) {
-				case string:
-				default:
-					errs = append(errs, causes.NewRequiredFieldError(h))
-				}
-			}
-			continue
-		}
-		// Handle different known types
-		valueField := reflectx.FieldByIndexes(val, k.Index)
-		if err := valSetString(valueField, strv); err != nil {
-			errs = append(errs, causes.NewFieldParseError(k.Name, strv))
+			errs = append(errs, err)
 		}
 	}
 	for _, err := range errs {
 		ent.AddError(err)
 	}
+	return errs
+}
+
+// loadRowReflect is the Reflect path
+func loadRowReflect(ent interface{}, row Row) []error {
+	var errs []error
+	// Return if there was a row parsing error
+	if row.Err != nil {
+		errs = append(errs, causes.NewRowParseError(row.Line, row.Err))
+	} else {
+		// Get the struct tag map
+		fmap := MapperCache.GetStructTagMap(ent)
+		// For each struct tag, set the field value
+		val := reflect.ValueOf(ent).Elem()
+		for _, h := range row.Header {
+			strv, ok := row.Get(h)
+			if !ok {
+				strv = ""
+			}
+			k, ok := fmap[h]
+			// Add to extra fields if there's no struct tag
+			if !ok {
+				if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 {
+					extEnt.SetExtra(h, strv)
+				}
+				continue
+			}
+			// Skip if empty and not required
+			if len(strv) == 0 {
+				if k.Required {
+					// empty string type shandled in regular validators; avoid double errors
+					switch reflectx.FieldByIndexes(val, k.Index).Interface().(type) {
+					case string:
+					default:
+						errs = append(errs, causes.NewRequiredFieldError(h))
+					}
+				}
+				continue
+			}
+			// Handle different known types
+			valueField := reflectx.FieldByIndexes(val, k.Index)
+			if err := valSetString(valueField, strv); err != nil {
+				errs = append(errs, causes.NewFieldParseError(k.Name, strv))
+			}
+		}
+	}
+	if len(errs) > 0 {
+		if extEnt, ok := ent.(tl.EntityWithErrors); ok {
+			for _, err := range errs {
+				extEnt.AddError(err)
+			}
+		}
+	}
+	return errs
 }
 
 // Dumping: fast and reflect paths //

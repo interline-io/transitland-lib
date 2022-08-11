@@ -205,7 +205,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 				sid, _ := row.Get("trip_id")
 				if _, ok := set[sid]; ok {
 					ent := tl.StopTime{}
-					loadRowFast(&ent, row)
+					loadRow(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
 				// If we know the file is grouped, send the stoptimes at transition
@@ -342,7 +342,7 @@ func (reader *Reader) StopTimes() (out chan tl.StopTime) {
 		ent := tl.StopTime{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := tl.StopTime{}
-			loadRowFast(&e, row)
+			loadRow(&e, row)
 			out <- e
 		})
 		close(out)

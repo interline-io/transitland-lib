@@ -63,7 +63,7 @@ func NewShapeFromShapes(shapes []Shape) Shape {
 			ent.AddError(err)
 		}
 		// For tests...
-		if v, ok := shape.Extra()["expect_error"]; len(v) > 0 && ok {
+		if v, ok := shape.GetExtra("expect_error"); len(v) > 0 && ok {
 			ent.SetExtra("expect_error", v)
 		}
 	}
