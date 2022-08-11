@@ -20,14 +20,6 @@ func deg2rad(v float64) float64 {
 	return v * math.Pi / 180
 }
 
-// DistanceHaversinePoint .
-func DistanceHaversinePoint(a, b []float64) float64 {
-	if len(a) < 2 || len(b) < 2 {
-		return 0.0
-	}
-	return DistanceHaversine(a[0], a[1], b[0], b[1])
-}
-
 // DistanceHaversine .
 func DistanceHaversine(lon1, lat1, lon2, lat2 float64) float64 {
 	lon1 = deg2rad(lon1)

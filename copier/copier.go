@@ -32,11 +32,6 @@ type Validator interface {
 	Validate(tl.Entity) []error
 }
 
-// AfterValidator is called for each fully validated entity before writing.
-type AfterValidator interface {
-	AfterValidator(tl.Entity, *tl.EntityMap) error
-}
-
 // AfterWrite is called for after writing each entity.
 type AfterWrite interface {
 	AfterWrite(string, tl.Entity, *tl.EntityMap) error
@@ -114,7 +109,6 @@ type Copier struct {
 	filters           []Filter
 	errorValidators   []Validator
 	warningValidators []Validator
-	afterValidators   []AfterValidator
 	afterWriters      []AfterWrite
 	// book keeping
 	geomCache *xy.GeomCache
@@ -228,10 +222,6 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 	}
 	if v, ok := ext.(Validator); ok {
 		copier.AddValidator(v, 0)
-		added = true
-	}
-	if v, ok := ext.(AfterValidator); ok {
-		copier.afterValidators = append(copier.afterValidators, v)
 		added = true
 	}
 	if v, ok := ext.(Extension); ok {
@@ -350,9 +340,9 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		referr = extEnt.UpdateKeys(copier.EntityMap)
 	}
 
+	// Run Entity Validators
 	var errs []error
 	var warns []error
-	// Run Entity Validators
 	for _, v := range copier.errorValidators {
 		for _, err := range v.Validate(ent) {
 			errs = append(errs, err)
@@ -360,7 +350,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	}
 	for _, v := range copier.warningValidators {
 		for _, err := range v.Validate(ent) {
-			warns = append(errs, err)
+			warns = append(warns, err)
 		}
 	}
 	if extEnt, ok := ent.(tl.EntityWithErrors); ok {
@@ -370,6 +360,10 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		for _, err := range warns {
 			extEnt.AddWarning(err)
 		}
+		if referr != nil {
+			extEnt.AddError(referr)
+		}
+		// Update to include the errors from entity validators
 		errs = extEnt.Errors()
 		warns = extEnt.Warnings()
 	}
@@ -386,17 +380,9 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
 	}
-
 	if referr != nil && !copier.AllowReferenceErrors {
 		copier.result.SkipEntityReferenceCount[efn]++
 		return referr
-	}
-
-	// Handle after validators
-	for _, v := range copier.afterValidators {
-		if err := v.AfterValidator(ent, copier.EntityMap); err != nil {
-			return err
-		}
 	}
 	return nil
 }

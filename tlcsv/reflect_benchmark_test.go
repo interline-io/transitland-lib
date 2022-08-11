@@ -84,9 +84,9 @@ func Benchmark_loadRow_Shape(b *testing.B) {
 		loadRow(&e, row)
 	}
 }
-func Benchmark_loadRowFast_Shape(b *testing.B) {
+func Benchmark_loadRowFast_shapePoint(b *testing.B) {
 	row := makeRow("shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled", "a,30.0,30.0,3")
-	e := tl.Shape{}
+	e := shapePoint{}
 	for n := 0; n < b.N; n++ {
 		loadRowFast(&e, row)
 	}

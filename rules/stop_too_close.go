@@ -47,22 +47,19 @@ func (e *StopTooCloseCheck) Validate(ent tl.Entity) []error {
 	}
 	v, ok := ent.(*tl.Stop)
 	// This only checks location_type == 0 and no parent
-	if !ok || v.ParentStation.Val != "" || v.LocationType != 0 || !v.Geometry.Valid {
+	if !ok || v.LocationType != 0 || v.ParentStation.Val != "" {
 		return nil
 	}
 	// Use geohash for fast neighbor search; precision = 9 is approx 5m x 5m at the equator.
-	coords := v.Geometry.Coords()
-	if len(coords) < 2 {
-		return nil
-	}
-	if coords[0] == 0 && coords[1] == 0 {
+	pt := v.Coords()
+	if !pt.Valid || (pt.Lat == 0 && pt.Lon == 0) {
 		return nil // 0,0 is handled elsewhere
 	}
 	var errs []error
-	gh := geohash.EncodeWithPrecision(coords[0], coords[1], 9)
+	gh := geohash.EncodeWithPrecision(pt.Lat, pt.Lon, 9)
 	neighbors := geohash.Neighbors(gh)
 	neighbors = append(neighbors, gh)
-	g := stopPoint{id: v.StopID, lat: coords[0], lon: coords[1]}
+	g := stopPoint{id: v.StopID, lat: pt.Lat, lon: pt.Lon}
 	for _, neighbor := range neighbors {
 		if hits, ok := e.geoms[neighbor]; ok {
 			for _, hit := range hits {

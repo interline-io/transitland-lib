@@ -13,8 +13,6 @@ type Stop struct {
 	StopName           string
 	StopCode           string
 	StopDesc           string
-	StopLat            float64 `db:"-"` // csv load to Geometry
-	StopLon            float64 `db:"-"`
 	ZoneID             string
 	StopURL            string
 	TtsStopName        String
@@ -36,14 +34,12 @@ func (ent *Stop) SetCoordinates(p [2]float64) {
 
 // Coordinates returns the stop lon,lat as a [2]float64
 func (ent *Stop) Coordinates() [2]float64 {
-	ret := [2]float64{0, 0}
-	c := ent.Geometry.FlatCoords()
-	if len(c) != 2 {
-		return ret
-	}
-	ret[0] = c[0]
-	ret[1] = c[1]
-	return ret
+	c := ent.Coords()
+	return [2]float64{c.Lon, c.Lat}
+}
+
+func (ent *Stop) Coords() tt.Coord {
+	return ent.Geometry.Coords()
 }
 
 // EntityID returns the ID or StopID.
@@ -58,13 +54,11 @@ func (ent *Stop) EntityKey() string {
 
 // Errors for this Entity.
 func (ent *Stop) Errors() (errs []error) {
-	c := ent.Coordinates()
-	lat := c[1]
-	lon := c[0]
+	c := ent.Coords()
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
-	errs = append(errs, tt.CheckInsideRange("stop_lat", lat, -90.0, 90.0)...)
-	errs = append(errs, tt.CheckInsideRange("stop_lon", lon, -180.0, 180.0)...)
+	errs = append(errs, tt.CheckInsideRange("stop_lat", c.Lat, -90.0, 90.0)...)
+	errs = append(errs, tt.CheckInsideRange("stop_lon", c.Lon, -180.0, 180.0)...)
 	errs = append(errs, tt.CheckURL("stop_url", ent.StopURL)...)
 	errs = append(errs, tt.CheckInsideRangeInt("location_type", ent.LocationType, 0, 4)...)
 	errs = append(errs, tt.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding, 0, 2)...)

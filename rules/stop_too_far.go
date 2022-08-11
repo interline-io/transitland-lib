@@ -42,11 +42,11 @@ func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
 		return nil
 	}
 	var errs []error
-	coords := v.Geometry.Coords()
-	if coords[0] == 0 && coords[1] == 0 {
+	coords := v.Coords()
+	if !coords.Valid || (coords.Lon == 0 && coords.Lat == 0) {
 		return nil // 0,0 handled elsewhere
 	}
-	newp := tt.NewPoint(coords[0], coords[1]) // copy
+	newp := tt.NewPoint(coords.Lon, coords.Lat) // copy
 	e.geoms[v.StopID] = &newp
 	if v.ParentStation.Val == "" {
 		return nil
@@ -54,7 +54,8 @@ func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
 	// Check if parent stop is >1km
 	if pgeom, ok := e.geoms[v.ParentStation.Val]; ok {
 		// if not ok, then it's a parent error and out of scope for this check
-		d := xy.DistanceHaversinePoint(coords, pgeom.Coords())
+		pcoords := pgeom.Coords()
+		d := xy.DistanceHaversine(coords.Lon, coords.Lat, pcoords.Lon, pcoords.Lat)
 		if d > e.maxdist {
 			errs = append(errs, &StopTooFarError{
 				StopID:        v.StopID,

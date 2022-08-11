@@ -9,6 +9,12 @@ import (
 	"github.com/twpayne/go-geom/encoding/wkbcommon"
 )
 
+type Coord struct {
+	Lon   float64
+	Lat   float64
+	Valid bool
+}
+
 // Point is an EWKB/SL encoded point
 type Point struct {
 	Valid bool
@@ -23,6 +29,15 @@ func NewPoint(lon, lat float64) Point {
 	}
 	g.SetSRID(4326)
 	return Point{Point: *g, Valid: true}
+}
+
+func (g *Point) Coords() Coord {
+	c := Coord{Valid: g.Valid}
+	if g.Valid {
+		c.Lon = g.X()
+		c.Lat = g.Y()
+	}
+	return c
 }
 
 func (g Point) Value() (driver.Value, error) {

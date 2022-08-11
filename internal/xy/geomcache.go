@@ -40,7 +40,7 @@ func NewGeomCache() *GeomCache {
 
 // AddStop adds a Stop to the geometry cache.
 func (g *GeomCache) AddStop(eid string, stop tl.Stop) {
-	c := stop.Geometry.FlatCoords()
+	c := stop.Coordinates()
 	g.stops[eid] = Point{c[0], c[1]}
 }
 

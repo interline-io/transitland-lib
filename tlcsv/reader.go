@@ -236,8 +236,7 @@ func (reader *Reader) Shapes() chan tl.Shape {
 	out := make(chan tl.Shape, bufferSize)
 	go func() {
 		for shapes := range reader.shapesByShapeID() {
-			shape := tl.NewShapeFromShapes(shapes)
-			shape.ShapeID = shapes[0].ShapeID
+			shape := newShapeFromShapePoints(shapes)
 			out <- shape
 		}
 		close(out)
@@ -246,7 +245,7 @@ func (reader *Reader) Shapes() chan tl.Shape {
 }
 
 // shapesByShapeID returns a map with grouped Shapes.
-func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
+func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []shapePoint {
 	var chunks s2D
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
@@ -279,16 +278,16 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
 		chunks = s2D{shapeIDs}
 	}
 	//
-	out := make(chan []tl.Shape, bufferSize)
+	out := make(chan []shapePoint, bufferSize)
 	go func(chunks s2D, grouped bool) {
 		for _, chunk := range chunks {
 			set := stringsToSet(chunk)
-			m := map[string][]tl.Shape{}
+			m := map[string][]shapePoint{}
 			last := ""
 			reader.Adapter.ReadRows("shapes.txt", func(row Row) {
 				sid, _ := row.Get("shape_id")
 				if _, ok := set[sid]; ok {
-					ent := tl.Shape{}
+					ent := shapePoint{}
 					loadRow(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
@@ -321,8 +320,18 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
 
 // Stops sends Stops.
 func (reader *Reader) Stops() (out chan tl.Stop) {
-	return ReadEntities[tl.Stop](reader, getFilename(&tl.Stop{}))
-
+	out = make(chan tl.Stop, bufferSize)
+	go func() {
+		ent := csvStop{}
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			e := csvStop{}
+			loadRow(&e, row)
+			e.SetCoordinates([2]float64{e.StopLon, e.StopLat})
+			out <- e.Stop
+		})
+		close(out)
+	}()
+	return out
 }
 
 // StopTimes sends StopTimes.

@@ -2,6 +2,7 @@ package tlcsv
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 
@@ -63,15 +64,17 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	}
 	ent := ents[0]
 	efn := ents[0].Filename()
-	for _, ent := range ents {
+	for i := 0; i < len(ents); i++ {
 		if efn != ent.Filename() {
 			return eids, errors.New("all entities must be same type")
 		}
 		// Horrible special case bug fix
 		if v, ok := ent.(*tl.Stop); ok {
-			c := v.Coordinates()
-			v.StopLon = c[0]
-			v.StopLat = c[1]
+			c := v.Coords()
+			cStop := csvStop{Stop: *v}
+			cStop.StopLon = c.Lon
+			cStop.StopLat = c.Lat
+			ents[i] = &cStop
 		}
 	}
 	header, ok := writer.headers[efn]
@@ -136,18 +139,19 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	return eids[0], nil
 }
 
-func (writer *Writer) flattenShape(ent tl.Shape) []tl.Shape {
+func (writer *Writer) flattenShape(ent tl.Shape) []shapePoint {
 	coords := ent.Geometry.FlatCoords()
-	shapes := []tl.Shape{}
+	shapes := []shapePoint{}
 	totaldist := 0.0
 	for i := 0; i < len(coords); i += 3 {
-		s := tl.Shape{
+		s := shapePoint{
 			ShapeID:           ent.ShapeID,
 			ShapePtSequence:   i,
 			ShapePtLon:        coords[i],
 			ShapePtLat:        coords[i+1],
 			ShapeDistTraveled: coords[i+2],
 		}
+		fmt.Println("shapeID:", s.ShapeID)
 		totaldist += coords[i+2]
 		shapes = append(shapes, s)
 	}
