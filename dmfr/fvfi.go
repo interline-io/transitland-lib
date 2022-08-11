@@ -57,7 +57,8 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 		return ret, err
 	}
 	for _, fi := range fis {
-		if fi.Name() != strings.ToLower(fi.Name()) {
+		// Only generate stats for files with lowercase names that end with .txt
+		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
 			continue
 		}
 		h := sha1.New()

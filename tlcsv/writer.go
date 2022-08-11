@@ -15,7 +15,7 @@ type hasEntityKey interface {
 // Writer implements a GTFS CSV Writer.
 type Writer struct {
 	WriterAdapter
-	WriteExtraColumns bool
+	writeExtraColumns bool
 	headers           map[string][]string
 	extraHeaders      map[string][]string
 }
@@ -33,6 +33,10 @@ func NewWriter(path string) (*Writer, error) {
 		headers:       map[string][]string{},
 		extraHeaders:  map[string][]string{},
 	}, nil
+}
+
+func (writer *Writer) WriteExtraColumns(val bool) {
+	writer.writeExtraColumns = val
 }
 
 func (writer *Writer) String() string {
@@ -82,7 +86,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 			return eids, err
 		}
 		header = h
-		if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 && writer.WriteExtraColumns {
+		if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 && writer.writeExtraColumns {
 			extraHeader = extEnt.ExtraKeys()
 		}
 		writer.headers[efn] = header

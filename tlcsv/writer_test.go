@@ -37,7 +37,7 @@ func TestWriterExtraColumn(t *testing.T) {
 		t.Error(err)
 	}
 	writer, err := NewWriter(tmpdir)
-	writer.WriteExtraColumns = true
+	writer.WriteExtraColumns(true)
 	if err != nil {
 		t.Error(err)
 	}

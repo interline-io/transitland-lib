@@ -13,6 +13,7 @@ import (
 	_ "github.com/interline-io/transitland-lib/ext/redate"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/log"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -32,6 +33,7 @@ type Command struct {
 	extractRoutes     cli.ArrayFlags
 	extractRouteTypes cli.ArrayFlags
 	extractSet        cli.ArrayFlags
+	writeExtraColumns bool
 	readerPath        string
 	writerPath        string
 }
@@ -56,6 +58,8 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
 	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
 	fl.BoolVar(&cmd.UseBasicRouteTypes, "use-basic-route-types", false, "Collapse extended route_type's into basic GTFS values")
+	fl.BoolVar(&cmd.CopyExtraFiles, "copy-extra-files", false, "Copy additional files found in source to destination")
+	fl.BoolVar(&cmd.writeExtraColumns, "write-extra-columns", false, "Include extra columns in output")
 	// Extract options
 	fl.Var(&cmd.extractAgencies, "extract-agency", "Extract Agency")
 	fl.Var(&cmd.extractStops, "extract-stop", "Extract Stop")
@@ -87,6 +91,13 @@ func (cmd *Command) Run() error {
 	writer, err := ext.OpenWriter(cmd.writerPath, cmd.create)
 	if err != nil {
 		return err
+	}
+	if cmd.writeExtraColumns {
+		if v, ok := writer.(tl.WriterWithExtraColumns); ok {
+			v.WriteExtraColumns(true)
+		} else {
+			return errors.New("writer does not support extra output columns")
+		}
 	}
 	defer writer.Close()
 	// Create fv

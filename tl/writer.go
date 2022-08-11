@@ -11,3 +11,8 @@ type Writer interface {
 	AddEntities([]Entity) ([]string, error)
 	String() string
 }
+
+type WriterWithExtraColumns interface {
+	Writer
+	WriteExtraColumns(bool)
+}

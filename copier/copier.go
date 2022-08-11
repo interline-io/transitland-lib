@@ -3,6 +3,8 @@ package copier
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/rs/zerolog"
 	geomxy "github.com/twpayne/go-geom/xy"
 )
@@ -84,6 +87,8 @@ type Options struct {
 	SimplifyCalendars bool
 	// Convert extended route types to primitives
 	UseBasicRouteTypes bool
+	// Copy extra files (requires CSV input)
+	CopyExtraFiles bool
 	// Simplify shapes
 	SimplifyShapes float64
 	// DeduplicateStopTimes
@@ -94,6 +99,7 @@ type Options struct {
 	JourneyPatternKey func(*tl.Trip) string
 	// Named extensions
 	Extensions []string
+
 	// Sub-logger
 	sublogger zerolog.Logger
 }
@@ -471,12 +477,76 @@ func (copier *Copier) Copy() *Result {
 			return copier.result
 		}
 	}
+
+	if copier.CopyExtraFiles {
+		if err := copier.copyExtraFiles(); err != nil {
+			copier.result.WriteError = err
+			return copier.result
+		}
+	}
 	return copier.result
 }
 
 /////////////////////////////////////////
 ////////// Entity Copy Methods //////////
 /////////////////////////////////////////
+
+func (copier *Copier) copyExtraFiles() error {
+	// TODO: Make more general than CSV-to-CSV
+	// And clean up...
+	type canFileInfos interface {
+		tlcsv.Adapter
+		FileInfos() ([]os.FileInfo, error)
+	}
+	type canAddFile interface {
+		FileInfos() ([]os.FileInfo, error)
+		AddFile(string, io.Reader) error
+	}
+	//
+	csvReader, ok := copier.Reader.(*tlcsv.Reader)
+	if !ok {
+		return errors.New("reader does not support copying extra files")
+	}
+	readerAdapter, ok := csvReader.Adapter.(canFileInfos)
+	if !ok {
+		return errors.New("reader does not support copying extra files")
+	}
+	csvWriter, ok := copier.Writer.(*tlcsv.Writer)
+	if !ok {
+		return errors.New("writer does not support copying extra files")
+	}
+	writerAdapter, ok := csvWriter.WriterAdapter.(canAddFile)
+	if !ok {
+		return errors.New("writer does not support copying extra files")
+	}
+	//
+	readerFiles, _ := readerAdapter.FileInfos()
+	writerFiles, _ := writerAdapter.FileInfos()
+	for _, rf := range readerFiles {
+		found := false
+		for _, wf := range writerFiles {
+			if rf.Name() == wf.Name() {
+				found = true
+			}
+		}
+		if found {
+			continue
+		}
+		copier.sublogger.Info().Str("filename", rf.Name()).Msgf("copying extra file")
+		var err1 error
+		var err2 error
+		err1 = readerAdapter.OpenFile(rf.Name(), func(rio io.Reader) {
+			err2 = writerAdapter.AddFile(rf.Name(), rio)
+		})
+		if err1 != nil {
+			return err1
+		}
+		if err2 != nil {
+			return err2
+		}
+	}
+	return nil
+}
 
 // copyAgencies writes agencies
 func (copier *Copier) copyAgencies() error {
