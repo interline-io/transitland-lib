@@ -344,27 +344,39 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		}
 	}
 
+	// UpdateKeys is handled separately from other validators.
+	var referr error
+	if extEnt, ok := ent.(tl.EntityWithReferences); ok {
+		referr = extEnt.UpdateKeys(copier.EntityMap)
+	}
+
 	// Run Entity Validators
+	var errs []error
+	var warns []error
 	for _, v := range copier.errorValidators {
 		for _, err := range v.Validate(ent) {
-			ent.AddError(err)
+			errs = append(errs, err)
 		}
 	}
 	for _, v := range copier.warningValidators {
 		for _, err := range v.Validate(ent) {
-			ent.AddWarning(err)
+			warns = append(warns, err)
 		}
 	}
-
-	// UpdateKeys is handled separately from other validators.
-	referr := ent.UpdateKeys(copier.EntityMap)
-	if referr != nil {
-		ent.AddError(referr)
+	if extEnt, ok := ent.(tl.EntityWithErrors); ok {
+		for _, err := range errs {
+			extEnt.AddError(err)
+		}
+		for _, err := range warns {
+			extEnt.AddWarning(err)
+		}
+		if referr != nil {
+			extEnt.AddError(referr)
+		}
+		// Update to include the errors from entity validators
+		errs = extEnt.Errors()
+		warns = extEnt.Warnings()
 	}
-
-	// Perform entity level validation; includes any previous errors
-	errs := ent.Errors()
-	warns := ent.Warnings()
 	for _, err := range warns {
 		copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("warning")
 	}
@@ -378,7 +390,6 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
 	}
-
 	if referr != nil && !copier.AllowReferenceErrors {
 		copier.result.SkipEntityReferenceCount[efn]++
 		return referr
