@@ -5,31 +5,33 @@ import (
 	"time"
 )
 
-// EntityError is an interface for GTFS Errors
-type EntityError interface {
-	Error() string
-}
-
 // Entity provides an interface for GTFS entities.
 type Entity interface {
 	EntityID() string
 	Filename() string
+}
+
+type EntityWithReferences interface {
+	UpdateKeys(*EntityMap) error
+}
+
+type EntityWithExtra interface {
+	SetExtra(string, string)
+	GetExtra(string) (string, bool)
+	ExtraKeys() []string
+}
+
+type EntityWithErrors interface {
 	Errors() []error
 	Warnings() []error
 	AddError(error)
 	AddWarning(error)
-	SetExtra(string, string)
-	Extra() map[string]string
-	UpdateKeys(*EntityMap) error
 }
 
 /////////
 
-// MinEntity provides default methods.
+// MinEntity provides minimum set of default methods.
 type MinEntity struct {
-	extra        []string
-	loadErrors   []error
-	loadWarnings []error
 }
 
 // Filename returns the filename for this entity.
@@ -81,29 +83,20 @@ type ErrorEntity struct {
 }
 
 // AddError adds a loading error to the entity, e.g. from a CSV parse failure
-func (ent *MinEntity) AddError(err error) {
+func (ent *ErrorEntity) AddError(err error) {
 	ent.loadErrors = append(ent.loadErrors, err)
 }
 
 // AddWarning .
-func (ent *MinEntity) AddWarning(err error) {
+func (ent *ErrorEntity) AddWarning(err error) {
 	ent.loadWarnings = append(ent.loadWarnings, err)
 }
 
 // Errors returns validation errors.
-func (ent *MinEntity) Errors() []error { return ent.loadErrors }
+func (ent *ErrorEntity) Errors() []error { return ent.loadErrors }
 
 // Errors returns validation errors.
-func (ent *MinEntity) Warnings() []error { return ent.loadWarnings }
-
-// Filename returns the filename for this entity.
-func (ent *MinEntity) Filename() string { return "" }
-
-// EntityID returns the entity ID.
-func (ent *MinEntity) EntityID() string { return "" }
-
-// UpdateKeys updates entity referencespdates foreign keys based on an EntityMap.
-func (ent *MinEntity) UpdateKeys(emap *EntityMap) error { return nil }
+func (ent *ErrorEntity) Warnings() []error { return ent.loadWarnings }
 
 /////////////
 
@@ -160,6 +153,8 @@ func (ent *Timestamps) UpdateTimestamps() {
 
 type BaseEntity struct {
 	MinEntity
+	ExtraEntity
+	ErrorEntity
 	DatabaseEntity
 	FeedVersionEntity
 	Timestamps
