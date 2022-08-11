@@ -17,8 +17,10 @@ func DirectCopy(reader tl.Reader, writer tl.Writer) error {
 	cp := func(ent tl.Entity) {
 		// All other entities
 		sid := ent.EntityID()
-		if err := ent.UpdateKeys(emap); err != nil {
-			errs = append(errs, fmt.Errorf("entity: %#v error: %s", ent, err))
+		if extEnt, ok := ent.(tl.EntityWithReferences); ok {
+			if err := extEnt.UpdateKeys(emap); err != nil {
+				errs = append(errs, fmt.Errorf("entity: %#v error: %s", ent, err))
+			}
 		}
 		eid, err := writer.AddEntity(ent)
 		if err != nil {
