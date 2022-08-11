@@ -274,7 +274,12 @@ func (adapter *ZipAdapter) DirSHA1() (string, error) {
 		if adapter.internalPrefix != "" {
 			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
 		}
-		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+		// Ignore directories, subdirs, dot files
+		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+			continue
+		}
+		// Only generate stats for files with lowercase names that end with .txt
+		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
 			continue
 		}
 		f, err := zf.Open()
@@ -302,7 +307,7 @@ func (adapter *ZipAdapter) FileInfos() ([]os.FileInfo, error) {
 		if adapter.internalPrefix != "" {
 			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
 		}
-		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
 		}
 		ret = append(ret, fi)
@@ -369,6 +374,10 @@ func (adapter *DirAdapter) DirSHA1() (string, error) {
 		return "", err
 	}
 	for _, fi := range fis {
+		// Only generate stats for files with lowercase names that end with .txt
+		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
+			continue
+		}
 		f, err := os.Open(filepath.Join(adapter.path, fi.Name()))
 		if err != nil {
 			return "", err
@@ -395,7 +404,7 @@ func (adapter *DirAdapter) FileInfos() ([]os.FileInfo, error) {
 	// Generate SHA1
 	for _, fi := range fis {
 		fn := fi.Name()
-		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
 		}
 		if err != nil {

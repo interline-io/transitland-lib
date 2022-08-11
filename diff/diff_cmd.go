@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/log"
@@ -223,6 +224,10 @@ func checkDiffRaw(reader tl.Reader) (*diffAdapter, error) {
 	}
 	defer df.Close()
 	for _, fi := range fis {
+		// Only compare files with lowercase names that end with .txt
+		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
+			continue
+		}
 		header := false
 		v.Adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
 			if !header {

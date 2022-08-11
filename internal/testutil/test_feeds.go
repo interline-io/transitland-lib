@@ -27,14 +27,14 @@ var ExampleDir = ReaderTester{
 		"calendar.txt":        {"FULLW", "WE"},
 		"fare_attributes.txt": {"p", "a"},
 	},
-	DirSHA1: "1aa738a7f692c0a32acdd3cf4242c3d9d554e0f9",
+	DirSHA1: "7a5c69b5466746213eb3cb6d907a7004073eca4d",
 }
 
 // ExampleZip .
 var ExampleZip = ReaderTester{
 	URL:     RelPath("test/data/example.zip"),
 	SHA1:    "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
-	DirSHA1: "1aa738a7f692c0a32acdd3cf4242c3d9d554e0f9",
+	DirSHA1: "7a5c69b5466746213eb3cb6d907a7004073eca4d",
 	Size:    4197,
 	Counts: map[string]int{
 		"agency.txt":          1,
