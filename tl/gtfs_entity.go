@@ -32,18 +32,52 @@ type MinEntity struct {
 	loadWarnings []error
 }
 
-// Extra provides any additional fields that were present.
-func (ent *MinEntity) Extra() map[string]string {
-	ret := map[string]string{}
+// Filename returns the filename for this entity.
+func (ent MinEntity) Filename() string { return "" }
+
+// EntityID returns the entity ID.
+func (ent MinEntity) EntityID() string { return "" }
+
+/////////
+
+type ExtraEntity struct {
+	extra []string
+}
+
+// SetExtra adds a string key, value pair to the entity's extra fields.
+func (ent *ExtraEntity) SetExtra(key string, value string) {
+	ent.extra = append(ent.extra, key, value)
+}
+
+func (ent *ExtraEntity) GetExtra(key string) (string, bool) {
 	for i := 0; i < len(ent.extra); i += 2 {
-		ret[ent.extra[i]] = ent.extra[i+1]
+		if ent.extra[i] == key {
+			return ent.extra[i+1], true
+		}
+	}
+	return "", false
+}
+
+func (ent *ExtraEntity) ExtraKeys() []string {
+	var ret []string
+	for i := 0; i < len(ent.extra); i += 2 {
+		ret = append(ret, ent.extra[i])
 	}
 	return ret
 }
 
-// SetExtra adds a string key, value pair to the entity's extra fields.
-func (ent *MinEntity) SetExtra(key string, value string) {
-	ent.extra = append(ent.extra, key, value)
+/////////
+
+type ReferenceEntity struct {
+}
+
+// UpdateKeys updates entity referencespdates foreign keys based on an EntityMap.
+func (ent *MinEntity) UpdateKeys(emap *EntityMap) error { return nil }
+
+/////////
+type ErrorEntity struct {
+	loadErrors   []error
+	loadWarnings []error
 }
 
 // AddError adds a loading error to the entity, e.g. from a CSV parse failure
