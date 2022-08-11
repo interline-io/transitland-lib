@@ -48,6 +48,14 @@ type ExtraEntity struct {
 
 // SetExtra adds a string key, value pair to the entity's extra fields.
 func (ent *ExtraEntity) SetExtra(key string, value string) {
+	if key == "" {
+		return
+	}
+	for i := 0; i < len(ent.extra); i += 2 {
+		if ent.extra[i] == key {
+			return
+		}
+	}
 	ent.extra = append(ent.extra, key, value)
 }
 
