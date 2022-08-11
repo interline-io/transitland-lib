@@ -2,7 +2,6 @@ package tlcsv
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"strings"
 
@@ -151,7 +150,6 @@ func (writer *Writer) flattenShape(ent tl.Shape) []shapePoint {
 			ShapePtLat:        coords[i+1],
 			ShapeDistTraveled: coords[i+2],
 		}
-		fmt.Println("shapeID:", s.ShapeID)
 		totaldist += coords[i+2]
 		shapes = append(shapes, s)
 	}

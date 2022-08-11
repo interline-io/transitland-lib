@@ -1,8 +1,6 @@
 package graph
 
 import (
-	"fmt"
-
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -84,7 +82,6 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 		eg.AddNode(NewNode("calendar.txt", ent.ServiceID))
 	}
 	for ent := range reader.Shapes() {
-		fmt.Println("add node:", ent)
 		eg.AddNode(entityNode(&ent))
 	}
 
