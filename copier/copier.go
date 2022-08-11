@@ -503,17 +503,23 @@ func (copier *Copier) copyExtraFiles() error {
 		AddFile(string, io.Reader) error
 	}
 	//
-	csvReader, ok1 := copier.Reader.(*tlcsv.Reader)
-	csvWriter, ok2 := copier.Writer.(*tlcsv.Writer)
-	if !(ok1 && ok2) {
-		return nil
+	csvReader, ok := copier.Reader.(*tlcsv.Reader)
+	if !ok {
+		return errors.New("reader does not support copying extra files")
+	}
+	readerAdapter, ok := csvReader.Adapter.(canFileInfos)
+	if !ok {
+		return errors.New("reader does not support copying extra files")
+	}
+	csvWriter, ok := copier.Writer.(*tlcsv.Writer)
+	if !ok {
+		return errors.New("writer does not support copying extra files")
+	}
+	writerAdapter, ok := csvWriter.WriterAdapter.(canAddFile)
+	if !ok {
+		return errors.New("writer does not support copying extra files")
 	}
 	//
-	readerAdapter, ok3 := csvReader.Adapter.(canFileInfos)
-	writerAdapter, ok4 := csvWriter.WriterAdapter.(canAddFile)
-	if !(ok3 && ok4) {
-		return nil
-	}
 	readerFiles, _ := readerAdapter.FileInfos()
 	writerFiles, _ := writerAdapter.FileInfos()
 	for _, rf := range readerFiles {
