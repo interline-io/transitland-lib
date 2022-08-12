@@ -302,3 +302,38 @@ func (mr *Reader) Translations() chan tl.Translation {
 	}()
 	return out
 }
+
+func (mr *Reader) Areas() chan tl.Area {
+	out := make(chan tl.Area, bufferSize)
+	return out
+}
+
+func (mr *Reader) StopAreas() chan tl.StopArea {
+	out := make(chan tl.StopArea, bufferSize)
+	return out
+}
+
+func (mr *Reader) FareLegRules() chan tl.FareLegRule {
+	out := make(chan tl.FareLegRule, bufferSize)
+	return out
+}
+
+func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
+	out := make(chan tl.FareTransferRule, bufferSize)
+	return out
+}
+
+func (mr *Reader) FareContainers() chan tl.FareContainer {
+	out := make(chan tl.FareContainer, bufferSize)
+	return out
+}
+
+func (mr *Reader) FareProducts() chan tl.FareProduct {
+	out := make(chan tl.FareProduct, bufferSize)
+	return out
+}
+
+func (mr *Reader) RiderCategories() chan tl.RiderCategory {
+	out := make(chan tl.RiderCategory, bufferSize)
+	return out
+}
