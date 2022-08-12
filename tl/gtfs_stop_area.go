@@ -17,7 +17,7 @@ func (ent *StopArea) Filename() string {
 }
 
 func (ent *StopArea) TableName() string {
-	return "ext_faresv2_stop_areas"
+	return "gtfs_stop_areas"
 }
 
 func (ent *StopArea) UpdateKeys(emap *EntityMap) error {

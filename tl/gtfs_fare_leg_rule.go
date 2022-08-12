@@ -35,7 +35,7 @@ func (ent *FareLegRule) Filename() string {
 }
 
 func (ent *FareLegRule) TableName() string {
-	return "ext_faresv2_fare_leg_rules"
+	return "gtfs_fare_leg_rules"
 }
 
 func (ent *FareLegRule) UpdateKeys(emap *EntityMap) error {

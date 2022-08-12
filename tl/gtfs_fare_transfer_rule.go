@@ -37,7 +37,7 @@ func (ent *FareTransferRule) Filename() string {
 }
 
 func (ent *FareTransferRule) TableName() string {
-	return "ext_faresv2_fare_transfer_rules"
+	return "gtfs_fare_transfer_rules"
 }
 
 func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
