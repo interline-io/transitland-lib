@@ -30,6 +30,10 @@ func (ent *FareLegRule) String() string {
 	)
 }
 
+func (ent *FareLegRule) EntityID() string {
+	return ent.LegGroupID.Val
+}
+
 func (ent *FareLegRule) Filename() string {
 	return "fare_leg_rules.txt"
 }
@@ -40,14 +44,14 @@ func (ent *FareLegRule) TableName() string {
 
 func (ent *FareLegRule) UpdateKeys(emap *EntityMap) error {
 	if ent.FromAreaID.Val != "" {
-		if fkid, ok := emap.Get("areas.txt:area_id", ent.FromAreaID.Val); ok {
+		if fkid, ok := emap.Get("areas.txt", ent.FromAreaID.Val); ok {
 			ent.FromAreaID = tt.NewString(fkid)
 		} else {
 			return causes.NewInvalidReferenceError("from_area_id", ent.FromAreaID.Val)
 		}
 	}
 	if ent.ToAreaID.Val != "" {
-		if fkid, ok := emap.Get("areas.txt:area_id", ent.ToAreaID.Val); ok {
+		if fkid, ok := emap.Get("areas.txt", ent.ToAreaID.Val); ok {
 			ent.ToAreaID = tt.NewString(fkid)
 		} else {
 			return causes.NewInvalidReferenceError("to_area_id", ent.ToAreaID.Val)
@@ -63,7 +67,7 @@ func (ent *FareLegRule) UpdateKeys(emap *EntityMap) error {
 	}
 	// Check fare product
 	if ent.FareProductID.Val != "" {
-		if fkid, ok := emap.Get("fare_products.txt:fare_product_id", ent.FareProductID.Val); ok {
+		if fkid, ok := emap.Get("fare_products.txt", ent.FareProductID.Val); ok {
 			ent.FareProductID = tt.NewString(fkid)
 		} else {
 			return causes.NewInvalidReferenceError("fare_product_id", ent.FareProductID.Val)

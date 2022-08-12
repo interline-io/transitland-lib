@@ -33,6 +33,10 @@ func (ent *FareProduct) String() string {
 	)
 }
 
+func (ent *FareProduct) EntityID() string {
+	return ent.FareProductID.Val
+}
+
 func (ent *FareProduct) Filename() string {
 	return "fare_products.txt"
 }

@@ -80,6 +80,20 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 		mw.Reader.TranslationList = append(mw.Reader.TranslationList, *v)
 	case *tl.Attribution:
 		mw.Reader.AttributionList = append(mw.Reader.AttributionList, *v)
+	case *tl.Area:
+		mw.Reader.AreaList = append(mw.Reader.AreaList, *v)
+	case *tl.StopArea:
+		mw.Reader.StopAreaList = append(mw.Reader.StopAreaList, *v)
+	case *tl.FareLegRule:
+		mw.Reader.FareLegRuleList = append(mw.Reader.FareLegRuleList, *v)
+	case *tl.FareTransferRule:
+		mw.Reader.FareTransferRuleList = append(mw.Reader.FareTransferRuleList, *v)
+	case *tl.FareContainer:
+		mw.Reader.FareContainerList = append(mw.Reader.FareContainerList, *v)
+	case *tl.RiderCategory:
+		mw.Reader.RiderCategoryList = append(mw.Reader.RiderCategoryList, *v)
+	case *tl.FareProduct:
+		mw.Reader.FareProductList = append(mw.Reader.FareProductList, *v)
 	default:
 		mw.Reader.OtherList = append(mw.Reader.OtherList, v)
 	}

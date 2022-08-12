@@ -44,24 +44,24 @@ func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
 	// from_leg_group
 	// to_leg_group
 	if ent.FromLegGroupID.Val != "" {
-		if _, ok := emap.Get("fare_leg_rules.txt:leg_group_id", ent.FromLegGroupID.Val); !ok {
+		if _, ok := emap.Get("fare_leg_rules.txt", ent.FromLegGroupID.Val); !ok {
 			return causes.NewInvalidReferenceError("from_leg_group_id", ent.FromLegGroupID.Val)
 		}
 	}
 	if ent.ToLegGroupID.Val != "" {
-		if _, ok := emap.Get("fare_leg_rules.txt:leg_group_id", ent.ToLegGroupID.Val); !ok {
+		if _, ok := emap.Get("fare_leg_rules.txt", ent.ToLegGroupID.Val); !ok {
 			return causes.NewInvalidReferenceError("to_leg_group_id", ent.ToLegGroupID.Val)
 		}
 	}
 	if ent.FareProductID.Val != "" {
-		if fkid, ok := emap.Get("fare_products.txt:fare_product_id", ent.FareProductID.Val); ok {
+		if fkid, ok := emap.Get("fare_products.txt", ent.FareProductID.Val); ok {
 			ent.FareProductID = tt.NewString(fkid)
 		} else {
 			return causes.NewInvalidReferenceError("fare_product_id", ent.FareProductID.Val)
 		}
 	}
 	if ent.FilterFareProductID.Val != "" {
-		if fkid, ok := emap.Get("fare_products.txt:fare_product_id", ent.FilterFareProductID.Val); ok {
+		if fkid, ok := emap.Get("fare_products.txt", ent.FilterFareProductID.Val); ok {
 			ent.FilterFareProductID = tt.NewString(fkid)
 		} else {
 			return causes.NewInvalidReferenceError("filter_fare_product_id", ent.FilterFareProductID.Val)

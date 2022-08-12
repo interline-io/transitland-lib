@@ -464,6 +464,7 @@ func (copier *Copier) Copy() *Result {
 		copier.copyFeedInfos,
 		copier.copyTranslations,
 		copier.copyAttributions,
+		copier.copyFaresV2,
 	}
 	for i := range fns {
 		if err := fns[i](); err != nil {
@@ -728,6 +729,60 @@ func (copier *Copier) copyTranslations() error {
 		}
 	}
 	copier.logCount(&tl.Translation{})
+	return nil
+}
+
+func (copier *Copier) copyFaresV2() error {
+	for e := range copier.Reader.Areas() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.Area{})
+
+	for e := range copier.Reader.StopAreas() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.StopArea{})
+
+	for e := range copier.Reader.RiderCategories() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.RiderCategory{})
+
+	for e := range copier.Reader.FareContainers() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.FareContainer{})
+
+	for e := range copier.Reader.FareProducts() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.FareContainer{})
+
+	for e := range copier.Reader.FareLegRules() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+
+	}
+	copier.logCount(&tl.FareLegRule{})
+
+	for e := range copier.Reader.FareTransferRules() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.FareTransferRule{})
+
 	return nil
 }
 
