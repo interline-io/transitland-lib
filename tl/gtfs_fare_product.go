@@ -42,19 +42,19 @@ func (ent *FareProduct) Filename() string {
 }
 
 func (ent *FareProduct) TableName() string {
-	return "ext_faresv2_fare_products"
+	return "gtfs_fare_products"
 }
 
 func (ent *FareProduct) UpdateKeys(emap *EntityMap) error {
 	if ent.FareContainerID.Val != "" {
-		if fkid, ok := emap.Get("fare_containers.txt:fare_container_id", ent.FareContainerID.Val); ok {
+		if fkid, ok := emap.Get("fare_containers.txt", ent.FareContainerID.Val); ok {
 			ent.FareContainerID.Val = fkid
 		} else {
 			return causes.NewInvalidReferenceError("fare_container_id", ent.FareContainerID.Val)
 		}
 	}
 	if ent.RiderCategoryID.Val != "" {
-		if fkid, ok := emap.Get("rider_categories.txt:rider_category_id", ent.RiderCategoryID.Val); ok {
+		if fkid, ok := emap.Get("rider_categories.txt", ent.RiderCategoryID.Val); ok {
 			ent.RiderCategoryID.Val = fkid
 			ent.RiderCategoryID.Valid = true
 		} else {
@@ -72,9 +72,10 @@ func (ent *FareProduct) Errors() (errs []error) {
 	if !ent.Amount.Valid {
 		errs = append(errs, causes.NewRequiredFieldError("amount"))
 	}
-	if !ent.Currency.Valid {
-		errs = append(errs, causes.NewRequiredFieldError("currency"))
-	}
+
+	// currency
+	errs = append(errs, tt.CheckPresent("currency", ent.Currency.Val)...)
+	errs = append(errs, tt.CheckCurrency("currency", ent.Currency.Val)...)
 
 	// duration_start, duration_amount, duration_unit, duration_type
 	errs = append(errs, tt.CheckInsideRangeInt("duration_start", ent.DurationStart.Val, 0, 1)...)

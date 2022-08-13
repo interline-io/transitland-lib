@@ -71,24 +71,30 @@ func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
 func (ent *FareTransferRule) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	// transfer_count
-	if ent.FromLegGroupID.Val != "" {
-		if ent.FromLegGroupID.Val == ent.ToLegGroupID.Val && !ent.TransferCount.Valid {
-			errs = append(errs, causes.NewConditionallyRequiredFieldError("transfer_count"))
+	legGroupsValidEqual := ent.FromLegGroupID.Valid && ent.FromLegGroupID.Val == ent.ToLegGroupID.Val
+	if ent.TransferCount.Valid {
+		if !legGroupsValidEqual {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("transfer_count", "requires from_leg_group_id == to_leg_group_id"))
 		}
 		if ent.TransferCount.Val == 0 || ent.TransferCount.Val < -1 {
 			errs = append(errs, causes.NewInvalidFieldError("transfer_count", fmt.Sprintf("%d", ent.TransferCount.Val), fmt.Errorf("must be -1 or greater than 0")))
 		}
-	} else if ent.TransferCount.Valid {
-		errs = append(errs, causes.NewConditionallyForbiddenFieldError("transfer_count", "must only be set when from_leg_group_id == to_leg_group_id"))
+	} else if legGroupsValidEqual {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("transfer_count"))
 	}
 
 	// duration_limit, duration_limit_type
-	errs = append(errs, tt.CheckPositiveInt("duration_limit", ent.DurationLimit.Val)...)
-	errs = append(errs, tt.CheckInsideRangeInt("duration_limit_type", int(ent.DurationLimitType.Val), 0, 2)...)
-	if !ent.DurationLimitType.Valid && ent.DurationLimit.Valid {
-		errs = append(errs, causes.NewConditionallyRequiredFieldError("duration_limit_type"))
+	if ent.DurationLimitType.Valid {
+		if !ent.DurationLimit.Valid {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("duration_limit", "duration_limit_type requires duration_limit to be present"))
+		}
+		errs = append(errs, tt.CheckInsideRangeInt("duration_limit_type", int(ent.DurationLimitType.Val), 0, 3)...)
+	} else if ent.DurationLimit.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("duration_limit"))
 	}
+	errs = append(errs, tt.CheckPositiveInt("duration_limit", ent.DurationLimit.Val)...)
+
 	// fare_transfer_type
-	errs = append(errs, tt.CheckInsideRangeInt("fare_transfer_type", int(ent.FareTransferType.Val), 0, 3)...)
+	errs = append(errs, tt.CheckInsideRangeInt("fare_transfer_type", int(ent.FareTransferType.Val), 0, 2)...)
 	return errs
 }
