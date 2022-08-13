@@ -1,6 +1,8 @@
 package testutil
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"github.com/interline-io/transitland-lib/tl"
+)
 
 // AllEntities iterates through all Reader entities, calling the specified callback.
 func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
