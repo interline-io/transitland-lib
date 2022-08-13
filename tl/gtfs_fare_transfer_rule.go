@@ -41,8 +41,6 @@ func (ent *FareTransferRule) TableName() string {
 }
 
 func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
-	// from_leg_group
-	// to_leg_group
 	if ent.FromLegGroupID.Val != "" {
 		if _, ok := emap.Get("fare_leg_rules.txt", ent.FromLegGroupID.Val); !ok {
 			return causes.NewInvalidReferenceError("from_leg_group_id", ent.FromLegGroupID.Val)
@@ -72,6 +70,18 @@ func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
 
 func (ent *FareTransferRule) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
+	// transfer_count
+	if ent.FromLegGroupID.Val != "" {
+		if ent.FromLegGroupID.Val == ent.ToLegGroupID.Val && !ent.TransferCount.Valid {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("transfer_count"))
+		}
+		if ent.TransferCount.Val == 0 || ent.TransferCount.Val < -1 {
+			errs = append(errs, causes.NewInvalidFieldError("transfer_count", fmt.Sprintf("%d", ent.TransferCount.Val), fmt.Errorf("must be -1 or greater than 0")))
+		}
+	} else if ent.TransferCount.Valid {
+		errs = append(errs, causes.NewConditionallyForbiddenFieldError("transfer_count", "must only be set when from_leg_group_id == to_leg_group_id"))
+	}
+
 	// duration_limit, duration_limit_type
 	errs = append(errs, tt.CheckPositiveInt("duration_limit", ent.DurationLimit.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("duration_limit_type", int(ent.DurationLimitType.Val), 0, 2)...)

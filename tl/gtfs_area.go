@@ -13,6 +13,10 @@ type Area struct {
 	BaseEntity
 }
 
+func (ent *Area) EntityKey() string {
+	return ent.AreaID.Val
+}
+
 func (ent *Area) EntityID() string {
 	return ent.AreaID.Val
 }

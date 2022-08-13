@@ -19,6 +19,10 @@ func (ent *FareContainer) EntityKey() string {
 	return ent.FareContainerID.Val
 }
 
+func (ent *FareContainer) EntityID() string {
+	return ent.FareContainerID.Val
+}
+
 func (ent *FareContainer) Filename() string {
 	return "fare_containers.txt"
 }
@@ -37,7 +41,6 @@ func (ent *FareContainer) Errors() (errs []error) {
 	}
 	if ent.Currency.Val != "" && ent.Amount.Valid && ent.MinimumInitialPurchase.Valid {
 		errs = append(errs, causes.NewConditionallyForbiddenFieldError("currency", ""))
-
 	}
 	return errs
 }
