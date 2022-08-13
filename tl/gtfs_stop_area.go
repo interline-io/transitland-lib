@@ -21,7 +21,7 @@ func (ent *StopArea) TableName() string {
 }
 
 func (ent *StopArea) UpdateKeys(emap *EntityMap) error {
-	if fkid, ok := emap.Get("areas.txt:area_id", ent.AreaID); ok {
+	if fkid, ok := emap.Get("areas.txt", ent.AreaID); ok {
 		ent.AreaID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("area_id", ent.AreaID)

@@ -32,7 +32,6 @@ func TestValidateHeader(t *testing.T) {
 	errs := fi.ValidateHeader(header, msg)
 	for _, err := range errs {
 		_ = err
-		// fmt.Println(err)
 	}
 }
 
@@ -56,7 +55,6 @@ func TestValidateTripUpdate(t *testing.T) {
 	errs := fi.ValidateTripUpdate(trip, msg)
 	for _, err := range errs {
 		_ = err
-		// fmt.Println(err)
 	}
 }
 
