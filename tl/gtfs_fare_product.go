@@ -84,11 +84,11 @@ func (ent *FareProduct) Errors() (errs []error) {
 	if ent.DurationType.Valid {
 		errs = append(errs, tt.CheckInsideRangeInt("duration_type", ent.DurationType.Val, 1, 2)...)
 	}
-	if ent.DurationStart.Valid && ent.DurationType.Val == 1 {
-		errs = append(errs, causes.NewConditionallyForbiddenFieldError("duration_type", ""))
-	}
-	if !ent.DurationUnit.Valid && ent.DurationAmount.Valid {
+	if ent.DurationAmount.Valid && !ent.DurationType.Valid {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("duration_type"))
+	}
+	if ent.DurationType.Valid && !ent.DurationAmount.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("duration_amount"))
 	}
 	return errs
 }
