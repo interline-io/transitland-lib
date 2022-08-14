@@ -1,0 +1,2 @@
+from_leg_group_id,to_leg_group_id,fare_product_id,fare_transfer_type,transfer_count,duration_limit,duration_limit_type,filter_fare_product_id,expect_error
+ok,ok,,,1,,,,RequiredFieldError:fare_product_id

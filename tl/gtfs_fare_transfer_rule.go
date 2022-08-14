@@ -70,6 +70,8 @@ func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
 
 func (ent *FareTransferRule) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, tt.CheckPresent("fare_product_id", ent.FareProductID.Val)...)
+
 	// transfer_count
 	legGroupsValidEqual := ent.FromLegGroupID.Valid && ent.FromLegGroupID.Val == ent.ToLegGroupID.Val
 	if ent.TransferCount.Valid {
