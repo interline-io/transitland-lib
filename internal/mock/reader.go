@@ -10,24 +10,31 @@ var bufferSize = 1000
 
 // Reader is a mocked up Reader used for testing.
 type Reader struct {
-	AgencyList        []tl.Agency
-	RouteList         []tl.Route
-	TripList          []tl.Trip
-	StopList          []tl.Stop
-	StopTimeList      []tl.StopTime
-	ShapeList         []tl.Shape
-	CalendarList      []tl.Calendar
-	CalendarDateList  []tl.CalendarDate
-	FeedInfoList      []tl.FeedInfo
-	FareRuleList      []tl.FareRule
-	FareAttributeList []tl.FareAttribute
-	FrequencyList     []tl.Frequency
-	TransferList      []tl.Transfer
-	LevelList         []tl.Level
-	PathwayList       []tl.Pathway
-	AttributionList   []tl.Attribution
-	TranslationList   []tl.Translation
-	OtherList         []tl.Entity
+	AgencyList           []tl.Agency
+	RouteList            []tl.Route
+	TripList             []tl.Trip
+	StopList             []tl.Stop
+	StopTimeList         []tl.StopTime
+	ShapeList            []tl.Shape
+	CalendarList         []tl.Calendar
+	CalendarDateList     []tl.CalendarDate
+	FeedInfoList         []tl.FeedInfo
+	FareRuleList         []tl.FareRule
+	FareAttributeList    []tl.FareAttribute
+	FrequencyList        []tl.Frequency
+	TransferList         []tl.Transfer
+	LevelList            []tl.Level
+	PathwayList          []tl.Pathway
+	AttributionList      []tl.Attribution
+	TranslationList      []tl.Translation
+	AreaList             []tl.Area
+	StopAreaList         []tl.StopArea
+	FareLegRuleList      []tl.FareLegRule
+	FareTransferRuleList []tl.FareTransferRule
+	FareContainerList    []tl.FareContainer
+	FareProductList      []tl.FareProduct
+	RiderCategoryList    []tl.RiderCategory
+	OtherList            []tl.Entity
 }
 
 // NewReader returns a new Reader.
@@ -296,6 +303,83 @@ func (mr *Reader) Translations() chan tl.Translation {
 	out := make(chan tl.Translation, bufferSize)
 	go func() {
 		for _, ent := range mr.TranslationList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) Areas() chan tl.Area {
+	out := make(chan tl.Area, bufferSize)
+	go func() {
+		for _, ent := range mr.AreaList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) StopAreas() chan tl.StopArea {
+	out := make(chan tl.StopArea, bufferSize)
+	go func() {
+		for _, ent := range mr.StopAreaList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) FareLegRules() chan tl.FareLegRule {
+	out := make(chan tl.FareLegRule, bufferSize)
+	go func() {
+		for _, ent := range mr.FareLegRuleList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
+	out := make(chan tl.FareTransferRule, bufferSize)
+	go func() {
+		for _, ent := range mr.FareTransferRuleList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) FareContainers() chan tl.FareContainer {
+	out := make(chan tl.FareContainer, bufferSize)
+	go func() {
+		for _, ent := range mr.FareContainerList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) FareProducts() chan tl.FareProduct {
+	out := make(chan tl.FareProduct, bufferSize)
+	go func() {
+		for _, ent := range mr.FareProductList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) RiderCategories() chan tl.RiderCategory {
+	out := make(chan tl.RiderCategory, bufferSize)
+	go func() {
+		for _, ent := range mr.RiderCategoryList {
 			out <- ent
 		}
 		close(out)

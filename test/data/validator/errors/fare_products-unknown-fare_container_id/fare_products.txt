@@ -1,0 +1,2 @@
+fare_product_id,fare_product_name,amount,currency,transfer_only,rider_category_id,fare_container_id,expect_error
+missing_container,missing container,0,USD,0,,missing,InvalidReferenceError:fare_container_id

@@ -1,6 +1,8 @@
 package testutil
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"github.com/interline-io/transitland-lib/tl"
+)
 
 // AllEntities iterates through all Reader entities, calling the specified callback.
 func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
@@ -54,6 +56,27 @@ func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
 		cb(&ent)
 	}
 	for ent := range reader.Translations() {
+		cb(&ent)
+	}
+	for ent := range reader.Areas() {
+		cb(&ent)
+	}
+	for ent := range reader.StopAreas() {
+		cb(&ent)
+	}
+	for ent := range reader.FareContainers() {
+		cb(&ent)
+	}
+	for ent := range reader.RiderCategories() {
+		cb(&ent)
+	}
+	for ent := range reader.FareProducts() {
+		cb(&ent)
+	}
+	for ent := range reader.FareLegRules() {
+		cb(&ent)
+	}
+	for ent := range reader.FareTransferRules() {
 		cb(&ent)
 	}
 }

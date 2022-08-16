@@ -1,0 +1,2 @@
+area_id,stop_id,expect_error
+test,missing,InvalidReferenceError:stop_id
