@@ -54,7 +54,7 @@ func (ent *FareProduct) UpdateKeys(emap *EntityMap) error {
 		}
 	}
 	if ent.RiderCategoryID.Val != "" {
-		if fkid, ok := emap.Get("rider_categories.txt", ent.RiderCategoryID.Val); ok {
+		if fkid, ok := emap.Get("rider_categories.txt:rider_category_id", ent.RiderCategoryID.Val); ok {
 			ent.RiderCategoryID.Val = fkid
 			ent.RiderCategoryID.Valid = true
 		} else {

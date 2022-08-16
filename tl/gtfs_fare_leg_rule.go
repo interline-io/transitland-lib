@@ -67,7 +67,7 @@ func (ent *FareLegRule) UpdateKeys(emap *EntityMap) error {
 	}
 	// Check fare product
 	if ent.FareProductID.Val != "" {
-		if fkid, ok := emap.Get("fare_products.txt", ent.FareProductID.Val); ok {
+		if fkid, ok := emap.Get("fare_products.txt:fare_product_id", ent.FareProductID.Val); ok {
 			ent.FareProductID = tt.NewString(fkid)
 		} else {
 			return causes.NewInvalidReferenceError("fare_product_id", ent.FareProductID.Val)

@@ -5,6 +5,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+type hasEntityKey interface {
+	EntityKey() string
+}
+
 // EntityDuplicateCheck determines if a unique entity ID is present more than once in the file.
 type EntityDuplicateCheck struct {
 	duplicates *tl.EntityMap
@@ -15,7 +19,11 @@ func (e *EntityDuplicateCheck) Validate(ent tl.Entity) []error {
 	if e.duplicates == nil {
 		e.duplicates = tl.NewEntityMap()
 	}
-	eid := ent.EntityID()
+	v, ok := ent.(hasEntityKey)
+	if !ok {
+		return nil
+	}
+	eid := v.EntityKey()
 	if eid == "" {
 		return nil
 	}

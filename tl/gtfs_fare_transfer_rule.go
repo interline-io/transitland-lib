@@ -59,7 +59,7 @@ func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
 		}
 	}
 	if ent.FilterFareProductID.Val != "" {
-		if fkid, ok := emap.Get("fare_products.txt", ent.FilterFareProductID.Val); ok {
+		if fkid, ok := emap.Get("fare_products.txt:fare_product_id", ent.FilterFareProductID.Val); ok {
 			ent.FilterFareProductID = tt.NewString(fkid)
 		} else {
 			return causes.NewInvalidReferenceError("filter_fare_product_id", ent.FilterFareProductID.Val)
