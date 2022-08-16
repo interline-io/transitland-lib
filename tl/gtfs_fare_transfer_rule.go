@@ -70,7 +70,8 @@ func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
 
 func (ent *FareTransferRule) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, tt.CheckPresent("fare_product_id", ent.FareProductID.Val)...)
+	// Is optional in final spec
+	// errs = append(errs, tt.CheckPresent("fare_product_id", ent.FareProductID.Val)...)
 
 	// transfer_count
 	legGroupsValidEqual := ent.FromLegGroupID.Valid && ent.FromLegGroupID.Val == ent.ToLegGroupID.Val
@@ -97,6 +98,11 @@ func (ent *FareTransferRule) Errors() (errs []error) {
 	errs = append(errs, tt.CheckPositiveInt("duration_limit", ent.DurationLimit.Val)...)
 
 	// fare_transfer_type
-	errs = append(errs, tt.CheckInsideRangeInt("fare_transfer_type", int(ent.FareTransferType.Val), 0, 2)...)
+	if ent.FareTransferType.Valid {
+		errs = append(errs, tt.CheckInsideRangeInt("fare_transfer_type", int(ent.FareTransferType.Val), 0, 2)...)
+	} else {
+		errs = append(errs, causes.NewRequiredFieldError("fare_transfer_type"))
+	}
+
 	return errs
 }
