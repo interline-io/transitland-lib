@@ -566,7 +566,7 @@ CREATE TABLE gtfs_areas (
     "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
     "area_id" varchar(255) not null,
-    "area_name" varchar(255) not null,
+    "area_name" varchar(255),
 
     --- interline extensions
     "agency_ids" blob,
@@ -595,7 +595,8 @@ CREATE TABLE gtfs_fare_leg_rules (
     "network_id" varchar(255),
     "from_area_id" varchar(255),
     "to_area_id" varchar(255),
-    "fare_product_id" varchar(255)
+    "fare_product_id" varchar(255),
+    "transfer_only" integer
 );
 
 
