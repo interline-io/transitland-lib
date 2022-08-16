@@ -21,9 +21,9 @@ type Route struct {
 	RouteSortOrder    int
 	ContinuousPickup  Int
 	ContinuousDropOff Int
+	NetworkID         String
+	AsRoute           Int
 	Geometry          Geometry `csv:"-" db:"-"`
-	NetworkID         string   `db:"-"`
-	AsRoute           int      `db:"-"`
 	BaseEntity
 }
 

@@ -64,6 +64,10 @@ type canShareGeomCache interface {
 	SetGeomCache(*xy.GeomCache)
 }
 
+type hasEntityKey interface {
+	EntityKey() string
+}
+
 ////////////////////////////
 ////////// Copier //////////
 ////////////////////////////
@@ -464,6 +468,7 @@ func (copier *Copier) Copy() *Result {
 		copier.copyFeedInfos,
 		copier.copyTranslations,
 		copier.copyAttributions,
+		copier.copyFaresV2,
 	}
 	for i := range fns {
 		if err := fns[i](); err != nil {
@@ -641,6 +646,9 @@ func (copier *Copier) copyRoutes() error {
 		if _, _, err := copier.CopyEntity(&e); err != nil {
 			return err
 		}
+		if e.NetworkID.Valid {
+			copier.EntityMap.Set("routes.txt:network_id", e.NetworkID.Val, e.NetworkID.Val)
+		}
 	}
 	copier.logCount(&tl.Route{})
 	return nil
@@ -728,6 +736,65 @@ func (copier *Copier) copyTranslations() error {
 		}
 	}
 	copier.logCount(&tl.Translation{})
+	return nil
+}
+
+func (copier *Copier) copyFaresV2() error {
+	for e := range copier.Reader.Areas() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.Area{})
+
+	for e := range copier.Reader.StopAreas() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.StopArea{})
+
+	for e := range copier.Reader.RiderCategories() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		} else {
+			copier.EntityMap.Set("rider_categories.txt:rider_category_id", e.RiderCategoryID, e.RiderCategoryID)
+		}
+	}
+	copier.logCount(&tl.RiderCategory{})
+
+	for e := range copier.Reader.FareContainers() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.FareContainer{})
+
+	for e := range copier.Reader.FareProducts() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		} else {
+			copier.EntityMap.Set("fare_products.txt:fare_product_id", e.FareProductID.Val, e.FareProductID.Val)
+		}
+
+	}
+	copier.logCount(&tl.FareContainer{})
+
+	for e := range copier.Reader.FareLegRules() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+
+	}
+	copier.logCount(&tl.FareLegRule{})
+
+	for e := range copier.Reader.FareTransferRules() {
+		if _, _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	copier.logCount(&tl.FareTransferRule{})
+
 	return nil
 }
 

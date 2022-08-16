@@ -1,0 +1,19 @@
+fare_product_id,fare_product_name,amount,currency,rider_category_id,fare_container_id,duration_start,duration_amount,duration_unit,duration_type,expect_error
+ok,ok,0,USD,0,,,
+,no fare_product_id,0,USD,,,,,,,RequiredFieldError:fare_product_id
+parse_amount,parse amount,asd,USD,,,,,,,FieldParseError:amount|RequiredFieldError:amount
+missing_amount,missing amount,,USD,,,,,,,RequiredFieldError:amount
+invalid_currency,invalid currency,0,asd,,,,,,,InvalidFieldError:currency
+missing_currency,missing currency,0,,,,,,,,RequiredFieldError:currency
+invalid_duration_start,invalid duration start,0,USD,,,-1,1,3,1,InvalidFieldError:duration_start
+invalid_duration_start2,invalid duration start,0,USD,,,10,1,3,1,InvalidFieldError:duration_start
+duration_type_exclusive,invalid duration start,0,USD,,,1,1,3,,ConditionallyRequiredFieldError:duration_type
+invalid_duration_amount,invalid duration amount,0,USD,,,,-1,3,1,InvalidFieldError:duration_amount
+invalid_duration_unit,invalid duration unit,0,USD,,,,1,-1,1,InvalidFieldError:duration_unit
+invalid_duration_unit2,invalid duration unit,0,USD,,,,1,7,1,InvalidFieldError:duration_unit
+invalid_duration_type,invalid duration type,0,USD,,,,1,3,0,InvalidFieldError:duration_type
+invalid_duration_type2,invalid duration type,0,USD,,,,1,3,3,InvalidFieldError:duration_type
+parse_duration_start,parse duration_start,0,USD,,,asd,1,3,1,FieldParseError:duration_start
+parse_duration_amount,parse amount,asd,USD,0,,,,,,FieldParseError:amount|RequiredFieldError:amount
+parse_duration_unit,parse duration_unit,0,USD,,,,,asd,1,FieldParseError:duration_unit|ConditionallyRequiredFieldError:duration_amount
+parse_duration_type,parse duration_unit,0,USD,,,,,1,asd,FieldParseError:duration_type

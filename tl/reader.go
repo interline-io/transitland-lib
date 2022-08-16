@@ -26,4 +26,11 @@ type Reader interface {
 	Trips() chan Trip
 	Translations() chan Translation
 	Attributions() chan Attribution
+	Areas() chan Area
+	StopAreas() chan StopArea
+	FareLegRules() chan FareLegRule
+	FareTransferRules() chan FareTransferRule
+	FareProducts() chan FareProduct
+	RiderCategories() chan RiderCategory
+	FareContainers() chan FareContainer
 }

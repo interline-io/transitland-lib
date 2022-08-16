@@ -23,19 +23,10 @@ type StopTime struct {
 	ShapeDistTraveled Float
 	Timepoint         Int
 	Interpolated      Int `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
-	FeedVersionID     int `csv:"-"`
+	MinEntity
 	ErrorEntity
 	ExtraEntity
-}
-
-// SetFeedVersionID sets the Entity's FeedVersionID.
-func (ent *StopTime) SetFeedVersionID(fvid int) {
-	ent.FeedVersionID = fvid
-}
-
-// EntityID returns nothing.
-func (ent *StopTime) EntityID() string {
-	return ""
+	FeedVersionEntity
 }
 
 // Errors for this Entity.

@@ -1,0 +1,2 @@
+rider_category_id,rider_category_name,min_age,max_age,eligibility_url
+adult,adult

@@ -60,8 +60,8 @@ func TestRedateFilter(t *testing.T) {
 				t.Fatalf("expected error, got none")
 			}
 			// rf.AllowInactive = true
-			w := mock.Writer{}
-			cp, err := copier.NewCopier(reader, &w, copier.Options{})
+			w := mock.NewWriter()
+			cp, err := copier.NewCopier(reader, w, copier.Options{})
 			if err != nil {
 				t.Fatal(err)
 			}

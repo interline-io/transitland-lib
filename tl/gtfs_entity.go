@@ -15,6 +15,10 @@ type EntityWithReferences interface {
 	UpdateKeys(*EntityMap) error
 }
 
+type EntityWithID interface {
+	GetID() int
+}
+
 type EntityWithExtra interface {
 	SetExtra(string, string)
 	GetExtra(string) (string, bool)
@@ -129,7 +133,7 @@ func (ent *DatabaseEntity) SetID(id int) {
 }
 
 // GetID returns the integer ID.
-func (ent *DatabaseEntity) GetID() int {
+func (ent DatabaseEntity) GetID() int {
 	return ent.ID
 }
 

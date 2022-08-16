@@ -1,0 +1,3 @@
+fare_container_id,fare_container_name,amount,minimal_initial_purchase,currency,expect_error
+ok,ok,0,0,USD,
+,missing fare_container_id,0,0,USD,RequiredFieldError:fare_container_id

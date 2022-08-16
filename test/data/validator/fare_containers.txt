@@ -1,0 +1,3 @@
+fare_container_id,fare_container_name,amount,currency
+clipper,Clipper,3,USD
+cash,Cash,0,USD
