@@ -13,7 +13,6 @@ type FareProduct struct {
 	FareProductName String
 	Amount          Float
 	Currency        String
-	BundleAmount    Int   // proposed extension
 	DurationStart   Int   // proposed extension
 	DurationAmount  Float // proposed extension
 	DurationUnit    Int   // proposed extension

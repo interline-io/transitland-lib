@@ -8,8 +8,8 @@ import (
 type Area struct {
 	AreaID    String
 	AreaName  String
-	AgencyIDs Strings    `csv:"-"` // interline ext
-	Geometry  tt.Polygon `csv:"-"` // interline ext
+	AgencyIDs Strings    `csv:"-" db:"agency_ids"` // interline ext
+	Geometry  tt.Polygon `csv:"-"`                 // interline ext
 	BaseEntity
 }
 

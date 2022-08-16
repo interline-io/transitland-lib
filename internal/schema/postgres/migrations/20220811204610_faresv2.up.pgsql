@@ -7,7 +7,7 @@ CREATE TABLE public.gtfs_areas (
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
 
     area_id text NOT NULL,
-    area_name text NOT NULL,
+    area_name text,
 
     --- interline extensions
     agency_ids jsonb,
@@ -42,7 +42,10 @@ CREATE TABLE public.gtfs_fare_leg_rules (
     network_id text,
     from_area_id text,
     to_area_id text,
-    fare_product_id text
+    fare_product_id text,
+    
+    -- interline extension
+    transfer_only int 
 );
 CREATE INDEX ON gtfs_fare_leg_rules(feed_version_id);
 CREATE UNIQUE INDEX ON gtfs_fare_leg_rules(feed_version_id,network_id,from_area_id,to_area_id,fare_product_id);
@@ -60,7 +63,10 @@ CREATE TABLE public.gtfs_fare_transfer_rules (
     duration_limit integer,
     duration_limit_type integer,
     fare_transfer_type integer,
-    fare_product_id text
+    fare_product_id text,
+
+    -- interline extension
+    filter_fare_product_id text
 );
 CREATE INDEX ON gtfs_fare_transfer_rules(feed_version_id);
 CREATE UNIQUE INDEX ON gtfs_fare_transfer_rules(feed_version_id, from_leg_group_id, to_leg_group_id, fare_product_id, transfer_count, duration_limit);
@@ -119,6 +125,6 @@ CREATE TABLE public.gtfs_rider_categories (
     eligibility_url text
 );
 CREATE INDEX ON gtfs_rider_categories(feed_version_id);
-CREATE UNIQUE INDEX ON gtfs_rider_categories(feed_version_id,rider_category_id);
+-- CREATE UNIQUE INDEX ON gtfs_rider_categories(feed_version_id,rider_category_id);
 
 COMMIT;
