@@ -3,14 +3,14 @@ package testutil
 import (
 	"time"
 
-	"github.com/interline-io/transitland-lib/internal/mock"
+	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // NewMinimalTestFeed returns a minimal mock Reader & ReaderTester values.
-func NewMinimalTestFeed() (*ReaderTester, *mock.Reader) {
-	r := &mock.Reader{
+func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
+	r := &direct.Reader{
 		AgencyList: []tl.Agency{
 			{AgencyID: "agency1", AgencyName: "Agency 1", AgencyTimezone: "America/Los_Angeles", AgencyURL: "http://example.com"},
 		},

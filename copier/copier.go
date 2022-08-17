@@ -258,8 +258,8 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 		added = true
 	}
 	if v, ok := ext.(ExpandFilter); ok {
-		fmt.Println("adding expand filter:", ext)
 		copier.expandFilters = append(copier.expandFilters, v)
+		added = true
 	}
 	if !added {
 		return errors.New("extension does not satisfy any extension interfaces")

@@ -3,19 +3,19 @@ package builders
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/mock"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/stretchr/testify/assert"
 )
 
-func newMockCopier(url string) (*copier.Copier, *mock.Writer, error) {
+func newMockCopier(url string) (*copier.Copier, *direct.Writer, error) {
 	reader, err := tlcsv.NewReader(url)
 	if err != nil {
 		return nil, nil, err
 	}
-	writer := mock.NewWriter()
+	writer := direct.NewWriter()
 	cp, err := copier.NewCopier(reader, writer, copier.Options{})
 	if err != nil {
 		return nil, nil, err

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/mock"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -60,7 +60,7 @@ func TestRedateFilter(t *testing.T) {
 				t.Fatalf("expected error, got none")
 			}
 			// rf.AllowInactive = true
-			w := mock.NewWriter()
+			w := direct.NewWriter()
 			cp, err := copier.NewCopier(reader, w, copier.Options{})
 			if err != nil {
 				t.Fatal(err)
