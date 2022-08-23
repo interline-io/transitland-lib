@@ -414,6 +414,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 			warns = append(warns, err)
 		}
 	}
+
 	if extEnt, ok := ent.(tl.EntityWithErrors); ok {
 		for _, err := range errs {
 			extEnt.AddError(err)
@@ -815,11 +816,10 @@ func (copier *Copier) copyFaresV2() error {
 		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
 		} else {
-			copier.EntityMap.Set("fare_products.txt:fare_product_id", e.FareProductID.Val, e.FareProductID.Val)
+			copier.EntityMap.Set("fare_products.txt", e.FareProductID.Val, e.FareProductID.Val)
 		}
-
 	}
-	copier.logCount(&tl.FareContainer{})
+	copier.logCount(&tl.FareProduct{})
 
 	for e := range copier.Reader.FareLegRules() {
 		if _, err := copier.CopyEntity(&e); err != nil {
