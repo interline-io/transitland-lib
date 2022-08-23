@@ -797,10 +797,10 @@ func (copier *Copier) copyFaresV2() error {
 	copier.logCount(&tl.StopArea{})
 
 	for e := range copier.Reader.RiderCategories() {
-		if _, err := copier.CopyEntity(&e); err != nil {
+		if entErr, err := copier.CopyEntity(&e); err != nil {
 			return err
-		} else {
-			copier.EntityMap.Set("rider_categories.txt:rider_category_id", e.RiderCategoryID, e.RiderCategoryID)
+		} else if entErr == nil {
+			copier.EntityMap.Set("rider_categories.txt", e.RiderCategoryID, e.RiderCategoryID)
 		}
 	}
 	copier.logCount(&tl.RiderCategory{})
@@ -813,19 +813,20 @@ func (copier *Copier) copyFaresV2() error {
 	copier.logCount(&tl.FareContainer{})
 
 	for e := range copier.Reader.FareProducts() {
-		if _, err := copier.CopyEntity(&e); err != nil {
+		if entErr, err := copier.CopyEntity(&e); err != nil {
 			return err
-		} else {
+		} else if entErr == nil {
 			copier.EntityMap.Set("fare_products.txt", e.FareProductID.Val, e.FareProductID.Val)
 		}
 	}
 	copier.logCount(&tl.FareProduct{})
 
 	for e := range copier.Reader.FareLegRules() {
-		if _, err := copier.CopyEntity(&e); err != nil {
+		if entErr, err := copier.CopyEntity(&e); err != nil {
 			return err
+		} else if entErr == nil {
+			copier.EntityMap.Set("fare_leg_rules.txt", e.FareProductID.Val, e.FareProductID.Val)
 		}
-
 	}
 	copier.logCount(&tl.FareLegRule{})
 
