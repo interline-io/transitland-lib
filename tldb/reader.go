@@ -532,31 +532,31 @@ func (reader *Reader) Translations() chan tl.Translation {
 }
 
 func (reader *Reader) Areas() (out chan tl.Area) {
-	return ReadEntities[tl.Area](reader, getFilename(&tl.Area{}))
+	return ReadEntities[tl.Area](reader, getTableName(&tl.Area{}))
 }
 
 func (reader *Reader) StopAreas() (out chan tl.StopArea) {
-	return ReadEntities[tl.StopArea](reader, getFilename(&tl.StopArea{}))
+	return ReadEntities[tl.StopArea](reader, getTableName(&tl.StopArea{}))
 }
 
 func (reader *Reader) FareLegRules() (out chan tl.FareLegRule) {
-	return ReadEntities[tl.FareLegRule](reader, getFilename(&tl.FareLegRule{}))
+	return ReadEntities[tl.FareLegRule](reader, getTableName(&tl.FareLegRule{}))
 }
 
 func (reader *Reader) FareTransferRules() (out chan tl.FareTransferRule) {
-	return ReadEntities[tl.FareTransferRule](reader, getFilename(&tl.FareTransferRule{}))
+	return ReadEntities[tl.FareTransferRule](reader, getTableName(&tl.FareTransferRule{}))
 }
 
 func (reader *Reader) FareProducts() (out chan tl.FareProduct) {
-	return ReadEntities[tl.FareProduct](reader, getFilename(&tl.FareProduct{}))
+	return ReadEntities[tl.FareProduct](reader, getTableName(&tl.FareProduct{}))
 }
 
 func (reader *Reader) FareContainers() (out chan tl.FareContainer) {
-	return ReadEntities[tl.FareContainer](reader, getFilename(&tl.FareContainer{}))
+	return ReadEntities[tl.FareContainer](reader, getTableName(&tl.FareContainer{}))
 }
 
 func (reader *Reader) RiderCategories() (out chan tl.RiderCategory) {
-	return ReadEntities[tl.RiderCategory](reader, getFilename(&tl.RiderCategory{}))
+	return ReadEntities[tl.RiderCategory](reader, getTableName(&tl.RiderCategory{}))
 }
 
 func ReadEntities[T tl.EntityWithID](reader *Reader, table string) chan T {
@@ -579,10 +579,6 @@ func ReadEntities[T tl.EntityWithID](reader *Reader, table string) chan T {
 		close(out)
 	}()
 	return out
-}
-
-func getFilename(ent tl.Entity) string {
-	return ent.Filename()
 }
 
 func chunkStrings(value []string, csize int) [][]string {
