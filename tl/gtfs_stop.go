@@ -24,8 +24,7 @@ type Stop struct {
 	StopTimezone       string
 	WheelchairBoarding int
 	LevelID            Key
-	Geometry           Point  `csv:"-" db:"geometry"`
-	AreaID             string `db:"-"`
+	Geometry           Point `csv:"-" db:"geometry"`
 	BaseEntity
 }
 
