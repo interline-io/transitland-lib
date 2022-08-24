@@ -13,7 +13,7 @@ func NewReader() *Reader {
 }
 
 func (mr *Reader) String() string {
-	return "multireader"
+	return "empty"
 }
 
 func (mr *Reader) Open() error {
