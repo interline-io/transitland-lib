@@ -318,7 +318,7 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (error, error) {
 
 // CopyEntities validates a slice of entities and writes those that pass validation.
 func (copier *Copier) CopyEntities(ents []tl.Entity) error {
-	var okEnts []tl.Entity
+	okEnts := make([]tl.Entity, 0, len(ents))
 	for _, ent := range ents {
 		expanded := false
 		for _, f := range copier.expandFilters {
@@ -329,7 +329,6 @@ func (copier *Copier) CopyEntities(ents []tl.Entity) error {
 				if err := copier.checkEntity(ent); err == nil {
 					okEnts = append(okEnts, exp...)
 				}
-
 			}
 		}
 		if !expanded {
