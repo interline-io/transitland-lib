@@ -373,11 +373,14 @@ func (copier *Copier) checkBatch(ents []tl.Entity, ent tl.Entity, flush bool) ([
 	if ent != nil {
 		ents = append(ents, ent)
 	}
-	if len(ents) < copier.BatchSize && !flush {
-		return ents, nil
+	if len(ents) >= copier.BatchSize {
+		flush = true
 	}
-	err := copier.CopyEntities(ents)
-	return nil, err
+	if flush {
+		err := copier.CopyEntities(ents)
+		return nil, err
+	}
+	return ents, nil
 }
 
 // checkEntity is the main filter and validation check.
