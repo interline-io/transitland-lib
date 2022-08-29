@@ -58,7 +58,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
 	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
 	fl.BoolVar(&cmd.UseBasicRouteTypes, "use-basic-route-types", false, "Collapse extended route_type's into basic GTFS values")
-	fl.BoolVar(&cmd.CopyExtraFiles, "copy-extra-files", false, "Copy additional files found in source to destination")
+	fl.BoolVar(&cmd.CopyExtraFiles, "write-extra-files", false, "Copy additional files found in source to destination")
 	fl.BoolVar(&cmd.writeExtraColumns, "write-extra-columns", false, "Include extra columns in output")
 	// Extract options
 	fl.Var(&cmd.extractAgencies, "extract-agency", "Extract Agency")
