@@ -5,10 +5,10 @@ import (
 )
 
 // VERSION is the current software version.
-var VERSION = "v0.10.3"
+var VERSION = "v0.11.0"
 
 // GTFSVERSION is the commit for the spec reference.md file.
-var GTFSVERSION = "2e6887ea16b689d8ebc70ad334ac8abb2f94a66e"
+var GTFSVERSION = "9d5ebf1277f83178ba041de208f200d2d00cf5e7"
 
 // GTFSRTVERSION is the commit for the gtfs-realtime.proto file.
 var GTFSRTVERSION = "99fdfba627451d2861346c631af84535fa1e02fb"
