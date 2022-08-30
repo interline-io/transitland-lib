@@ -5,7 +5,7 @@ import (
 )
 
 // VERSION is the current software version.
-var VERSION = "v0.11.0"
+var VERSION = "v0.11.1"
 
 // GTFSVERSION is the commit for the spec reference.md file.
 var GTFSVERSION = "9d5ebf1277f83178ba041de208f200d2d00cf5e7"
