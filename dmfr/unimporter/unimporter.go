@@ -80,6 +80,7 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 		"ext_plus_rider_categories",
 		"ext_plus_stop_attributes",
 		"ext_plus_timepoints",
+		"ext_plus_route_attributes",
 	}
 	// derived entities
 	derivedTables := []string{
