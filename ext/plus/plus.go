@@ -54,6 +54,7 @@ func (ext *Ext) Copy(c *copier.Copier) error {
 	copyRealtimeStops(c)
 	copyStopAttributes(c)
 	copyTimepoint(c)
+	copyRouteAttributes(c)
 	return nil
 }
 
@@ -123,6 +124,14 @@ func copyStopAttributes(copier *copier.Copier) {
 
 func copyTimepoint(copier *copier.Copier) {
 	out := make(chan Timepoint, 1000)
+	copier.Reader.ReadEntities(out)
+	for ent := range out {
+		copier.CopyEntity(&ent)
+	}
+}
+
+func copyRouteAttributes(copier *copier.Copier) {
+	out := make(chan RouteAttribute, 1000)
 	copier.Reader.ReadEntities(out)
 	for ent := range out {
 		copier.CopyEntity(&ent)

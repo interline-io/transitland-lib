@@ -6,7 +6,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
-type RouteAttributes struct {
+type RouteAttribute struct {
 	RouteID     tt.Key
 	Category    tt.Int
 	Subcategory tt.Int
@@ -14,16 +14,15 @@ type RouteAttributes struct {
 	tl.BaseEntity
 }
 
-func (ent *RouteAttributes) Filename() string {
+func (ent *RouteAttribute) Filename() string {
 	return "route_attributes.txt"
 }
 
-func (ent *RouteAttributes) TableName() string {
+func (ent *RouteAttribute) TableName() string {
 	return "ext_plus_route_attributes"
 }
 
-// UpdateKeys updates Entity references.
-func (ent *RouteAttributes) UpdateKeys(emap *tl.EntityMap) error {
+func (ent *RouteAttribute) UpdateKeys(emap *tl.EntityMap) error {
 	if routeID, ok := emap.GetEntity(&tl.Route{RouteID: ent.RouteID.Val}); ok {
 		ent.RouteID = tt.NewKey(routeID)
 	} else {
