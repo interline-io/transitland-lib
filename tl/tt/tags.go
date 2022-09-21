@@ -55,7 +55,7 @@ func (r *Tags) Scan(value interface{}) error {
 	return json.Unmarshal(b, &r.tags)
 }
 
-func (r *Tags) MarshalJSON() ([]byte, error) {
+func (r Tags) MarshalJSON() ([]byte, error) {
 	if r.tags == nil {
 		return []byte("null"), nil
 	}

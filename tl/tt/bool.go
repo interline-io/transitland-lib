@@ -35,11 +35,25 @@ func (r *Bool) Scan(src interface{}) error {
 		if v == "" {
 			return nil
 		}
-	// 	r.Val = v
-	// case int:
-	// 	r.Val = strconv.Itoa(v)
-	// case int64:
-	// 	r.Val = strconv.Itoa(int(v))
+		if v == "true" {
+			r.Val = true
+		} else if v == "false" {
+			r.Val = false
+		}
+	case int:
+		if v == 0 {
+			r.Val = false
+		} else if v == 1 {
+			r.Val = true
+		}
+	case int64:
+		if v == 0 {
+			r.Val = false
+		} else if v == 1 {
+			r.Val = true
+		}
+	case bool:
+		r.Val = v
 	default:
 		err = errors.New("cant convert")
 	}
@@ -52,12 +66,12 @@ func (r *Bool) UnmarshalJSON(v []byte) error {
 	if len(v) == 0 {
 		return nil
 	}
-	err := json.Unmarshal(v, &r.Val)
+	err := r.Scan(string(v))
 	r.Valid = (err == nil)
 	return err
 }
 
-func (r *Bool) MarshalJSON() ([]byte, error) {
+func (r Bool) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}

@@ -45,6 +45,9 @@ func (r *Time) Scan(src interface{}) error {
 	var err error
 	switch v := src.(type) {
 	case string:
+		if len(v) == 0 {
+			return nil
+		}
 		r.Val, err = time.Parse(time.RFC3339, v)
 	case time.Time:
 		r.Val = v
@@ -55,7 +58,27 @@ func (r *Time) Scan(src interface{}) error {
 	return err
 }
 
-func (r *Time) MarshalJSON() ([]byte, error) {
+func (r *Time) UnmarshalJSON(v []byte) error {
+	r.Val, r.Valid = time.Time{}, false
+	if len(v) == 0 {
+		return nil
+	}
+	b := ""
+	if err := json.Unmarshal(v, &b); err != nil {
+		return err
+	}
+	if len(b) == 0 {
+		return nil
+	}
+	a, err := time.Parse(time.RFC3339, b)
+	if err != nil {
+		return err
+	}
+	r.Val, r.Valid = a, true
+	return nil
+}
+
+func (r Time) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}

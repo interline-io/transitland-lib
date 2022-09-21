@@ -49,7 +49,7 @@ func (g Geometry) String() string {
 	return string(a)
 }
 
-func (g *Geometry) MarshalJSON() ([]byte, error) {
+func (g Geometry) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
 		return []byte("null"), nil
 	}

@@ -60,7 +60,7 @@ func (g LineString) String() string {
 	return string(a)
 }
 
-func (g *LineString) MarshalJSON() ([]byte, error) {
+func (g LineString) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
 		return []byte("null"), nil
 	}

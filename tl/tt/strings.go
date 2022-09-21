@@ -26,7 +26,7 @@ func (r *Strings) UnmarshalJSON(v []byte) error {
 	return nil
 }
 
-func (r *Strings) MarshalJSON() ([]byte, error) {
+func (r Strings) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		return []byte("null"), nil
 	}

@@ -61,7 +61,7 @@ func (r *Int) UnmarshalJSON(v []byte) error {
 	return err
 }
 
-func (r *Int) MarshalJSON() ([]byte, error) {
+func (r Int) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}

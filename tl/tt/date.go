@@ -63,6 +63,9 @@ func (r *Date) UnmarshalJSON(v []byte) error {
 	if err := json.Unmarshal(v, &b); err != nil {
 		return err
 	}
+	if len(b) == 0 {
+		return nil
+	}
 	a, err := time.Parse("2006-01-02", b)
 	if err != nil {
 		return err
@@ -71,7 +74,7 @@ func (r *Date) UnmarshalJSON(v []byte) error {
 	return nil
 }
 
-func (r *Date) MarshalJSON() ([]byte, error) {
+func (r Date) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
@@ -85,6 +88,9 @@ func (r *Date) UnmarshalGQL(src interface{}) error {
 	case nil:
 		// pass
 	case string:
+		if len(v) == 0 {
+			return nil
+		}
 		r.Val, p = time.Parse("2006-01-02", v)
 	case time.Time:
 		r.Val = v

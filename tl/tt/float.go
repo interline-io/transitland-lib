@@ -65,7 +65,7 @@ func (r *Float) UnmarshalJSON(v []byte) error {
 	return err
 }
 
-func (r *Float) MarshalJSON() ([]byte, error) {
+func (r Float) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
