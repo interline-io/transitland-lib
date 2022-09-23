@@ -212,24 +212,20 @@ func (copier *Copier) SetLogger(g zerolog.Logger) {
 
 // AddValidator adds an additional entity validator.
 func (copier *Copier) AddValidator(ext Validator, level int) error {
-	if v, ok := ext.(canShareGeomCache); ok {
-		v.SetGeomCache(copier.geomCache)
-	}
-	if v, ok := ext.(Prepare); ok {
-		v.Prepare(copier.Reader, copier.EntityMap)
-	}
 	if level == 0 {
-		copier.errorValidators = append(copier.errorValidators, ext)
+		return copier.addExtension(ext, false)
 	} else if level == 1 {
-		copier.warningValidators = append(copier.warningValidators, ext)
-	} else {
-		return errors.New("unknown validation level")
+		return copier.addExtension(ext, true)
 	}
-	return nil
+	return errors.New("unknown validation level")
 }
 
 // AddExtension adds an Extension to the copy process.
 func (copier *Copier) AddExtension(ext interface{}) error {
+	return copier.addExtension(ext, false)
+}
+
+func (copier *Copier) addExtension(ext interface{}, warning bool) error {
 	added := false
 	if v, ok := ext.(canShareGeomCache); ok {
 		v.SetGeomCache(copier.geomCache)
@@ -242,7 +238,11 @@ func (copier *Copier) AddExtension(ext interface{}) error {
 		added = true
 	}
 	if v, ok := ext.(Validator); ok {
-		copier.AddValidator(v, 0)
+		if warning {
+			copier.errorValidators = append(copier.errorValidators, v)
+		} else {
+			copier.warningValidators = append(copier.warningValidators, v)
+		}
 		added = true
 	}
 	if v, ok := ext.(AfterValidator); ok {
