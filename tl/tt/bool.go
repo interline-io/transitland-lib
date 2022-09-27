@@ -26,13 +26,12 @@ func (r Bool) Value() (driver.Value, error) {
 
 func (r *Bool) Scan(src interface{}) error {
 	r.Val, r.Valid = false, false
-	if src == nil {
-		return nil
-	}
 	var err error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
-		if v == "" {
+		if isEmpty(v) {
 			return nil
 		}
 		if v == "true" || v == "1" {

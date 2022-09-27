@@ -27,11 +27,10 @@ func (r String) Value() (driver.Value, error) {
 
 func (r *String) Scan(src interface{}) error {
 	r.Val, r.Valid = "", false
-	if src == nil {
-		return nil
-	}
 	var err error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
 		r.Val = v
 	case int:
@@ -47,7 +46,7 @@ func (r *String) Scan(src interface{}) error {
 
 func (r *String) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = "", false
-	if len(v) == 0 {
+	if isEmpty(string(v)) {
 		return nil
 	}
 	if v[0] != '"' && v[len(v)-1] != '"' {

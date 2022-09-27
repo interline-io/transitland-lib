@@ -43,6 +43,9 @@ func (r *Date) Scan(src interface{}) error {
 	case nil:
 		return nil
 	case string:
+		if isEmpty(v) {
+			return nil
+		}
 		r.Val, err = time.Parse("20060102", v)
 		if err != nil {
 			v2, err2 := time.Parse("2006-01-02", v)

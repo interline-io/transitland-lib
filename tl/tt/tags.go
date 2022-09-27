@@ -69,7 +69,7 @@ func (r Tags) MarshalGQL(w io.Writer) {
 
 func (r *Tags) UnmarshalJSON(v []byte) error {
 	r.tags = nil
-	if len(v) == 0 {
+	if isEmpty(string(v)) {
 		return nil
 	}
 	return json.Unmarshal(v, &r.tags)

@@ -27,12 +27,14 @@ func (r Float) Value() (driver.Value, error) {
 
 func (r *Float) Scan(src interface{}) error {
 	r.Val, r.Valid = 0.0, false
-	if src == nil {
-		return nil
-	}
 	var err error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
+		if isEmpty(v) {
+			return nil
+		}
 		r.Val, err = strconv.ParseFloat(v, 64)
 	case int:
 		r.Val = float64(v)
@@ -56,7 +58,7 @@ func (r *Float) String() string {
 
 func (r *Float) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = 0, false
-	if len(v) == 0 {
+	if isEmpty(string(v)) {
 		return nil
 	}
 	var j json.Number

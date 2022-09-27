@@ -27,12 +27,14 @@ func (r Int) Value() (driver.Value, error) {
 
 func (r *Int) Scan(src interface{}) error {
 	r.Val, r.Valid = 0, false
-	if src == nil {
-		return nil
-	}
 	var err error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
+		if isEmpty(v) {
+			return nil
+		}
 		r.Val, err = strconv.Atoi(v) // strconv.ParseInt(v, 10, 64)
 	case int:
 		r.Val = int(v)
@@ -53,7 +55,7 @@ func (r *Int) String() string {
 
 func (r *Int) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = 0, false
-	if len(v) == 0 {
+	if isEmpty(string(v)) {
 		return nil
 	}
 	var j json.Number
@@ -63,6 +65,9 @@ func (r *Int) UnmarshalJSON(v []byte) error {
 	}
 	rr := int64(0)
 	rr, err = j.Int64()
+	if err != nil {
+		return err
+	}
 	r.Val = int(rr)
 	r.Valid = (err == nil)
 	return err

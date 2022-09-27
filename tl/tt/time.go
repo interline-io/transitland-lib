@@ -39,13 +39,12 @@ func (r Time) Value() (driver.Value, error) {
 
 func (r *Time) Scan(src interface{}) error {
 	r.Val, r.Valid = time.Time{}, false
-	if src == nil {
-		return nil
-	}
 	var err error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
-		if len(v) == 0 {
+		if isEmpty(string(v)) {
 			return nil
 		}
 		r.Val, err = time.Parse(time.RFC3339, v)
