@@ -38,7 +38,7 @@ func (r *String) Scan(src interface{}) error {
 	case int64:
 		r.Val = strconv.Itoa(int(v))
 	default:
-		err = fmt.Errorf("cant convert %T", src)
+		err = fmt.Errorf("cant convert %T to String", src)
 	}
 	r.Valid = (err == nil && r.Val != "")
 	return err
