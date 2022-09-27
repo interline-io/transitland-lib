@@ -62,7 +62,7 @@ func (g LineString) String() string {
 
 func (g LineString) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return geojsonEncode(&g.LineString)
 }

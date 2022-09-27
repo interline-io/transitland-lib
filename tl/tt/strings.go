@@ -28,7 +28,7 @@ func (r *Strings) UnmarshalJSON(v []byte) error {
 
 func (r Strings) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r)
 }

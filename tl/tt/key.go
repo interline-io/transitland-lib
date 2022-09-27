@@ -3,7 +3,7 @@ package tt
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"strconv"
 )
@@ -46,7 +46,7 @@ func (r *Key) Scan(src interface{}) error {
 	case int64:
 		r.Val = strconv.Itoa(int(v))
 	default:
-		err = errors.New("cant convert")
+		err = fmt.Errorf("cant convert %T to Key", src)
 	}
 	r.Valid = (err == nil && r.Val != "")
 	return err
@@ -69,7 +69,7 @@ func (r *Key) UnmarshalJSON(v []byte) error {
 
 func (r Key) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val)
 }

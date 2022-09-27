@@ -3,7 +3,7 @@ package tt
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"strconv"
 )
@@ -30,6 +30,7 @@ func (r *String) Scan(src interface{}) error {
 	if src == nil {
 		return nil
 	}
+	var err error
 	switch v := src.(type) {
 	case string:
 		r.Val = v
@@ -38,18 +39,20 @@ func (r *String) Scan(src interface{}) error {
 	case int64:
 		r.Val = strconv.Itoa(int(v))
 	default:
-		return errors.New("cant convert")
+		err = fmt.Errorf("cant convert %T", src)
 	}
-	if r.Val != "" {
-		r.Valid = true
-	}
-	return nil
+	r.Valid = (err == nil && r.Val != "")
+	return err
 }
 
 func (r *String) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = "", false
 	if len(v) == 0 {
 		return nil
+	}
+	if v[0] != '"' && v[len(v)-1] != '"' {
+		// Handle unquoted values, e.g. number
+		return r.Scan(string(v))
 	}
 	err := json.Unmarshal(v, &r.Val)
 	r.Valid = (err == nil && r.Val != "")
@@ -58,7 +61,7 @@ func (r *String) UnmarshalJSON(v []byte) error {
 
 func (r String) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val)
 }

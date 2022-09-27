@@ -39,7 +39,7 @@ func (wt WideTime) Value() (driver.Value, error) {
 	if !wt.Valid {
 		return nil, nil
 	}
-	return int64(wt.Seconds), nil
+	return int(wt.Seconds), nil
 }
 
 func (wt *WideTime) Scan(src interface{}) error {
@@ -80,7 +80,7 @@ func (wt *WideTime) UnmarshalGQL(v interface{}) error {
 
 func (wt WideTime) MarshalGQL(w io.Writer) {
 	if !wt.Valid {
-		w.Write([]byte("null"))
+		w.Write(jsonNull())
 		return
 	}
 	w.Write([]byte(fmt.Sprintf("\"%s\"", wt.String())))

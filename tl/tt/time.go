@@ -52,35 +52,19 @@ func (r *Time) Scan(src interface{}) error {
 	case time.Time:
 		r.Val = v
 	default:
-		err = fmt.Errorf("cant convert %T", src)
+		err = fmt.Errorf("cant convert %T to Time", src)
 	}
 	r.Valid = (err == nil)
 	return err
 }
 
 func (r *Time) UnmarshalJSON(v []byte) error {
-	r.Val, r.Valid = time.Time{}, false
-	if len(v) == 0 {
-		return nil
-	}
-	b := ""
-	if err := json.Unmarshal(v, &b); err != nil {
-		return err
-	}
-	if len(b) == 0 {
-		return nil
-	}
-	a, err := time.Parse(time.RFC3339, b)
-	if err != nil {
-		return err
-	}
-	r.Val, r.Valid = a, true
-	return nil
+	return r.Scan(string(stripQuotes(v)))
 }
 
 func (r Time) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val.Format(time.RFC3339))
 }

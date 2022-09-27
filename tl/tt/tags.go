@@ -57,7 +57,7 @@ func (r *Tags) Scan(value interface{}) error {
 
 func (r Tags) MarshalJSON() ([]byte, error) {
 	if r.tags == nil {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.tags)
 }

@@ -35,9 +35,9 @@ func (r *Bool) Scan(src interface{}) error {
 		if v == "" {
 			return nil
 		}
-		if v == "true" {
+		if v == "true" || v == "1" {
 			r.Val = true
-		} else if v == "false" {
+		} else if v == "false" || v == "0" {
 			r.Val = false
 		}
 	case int:
@@ -62,18 +62,12 @@ func (r *Bool) Scan(src interface{}) error {
 }
 
 func (r *Bool) UnmarshalJSON(v []byte) error {
-	r.Val, r.Valid = false, false
-	if len(v) == 0 {
-		return nil
-	}
-	err := r.Scan(string(v))
-	r.Valid = (err == nil)
-	return err
+	return r.Scan(string(stripQuotes(v)))
 }
 
-func (r Bool) MarshalJSON() ([]byte, error) {
+func (r *Bool) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val)
 }

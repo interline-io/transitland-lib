@@ -63,7 +63,7 @@ func (g Point) String() string {
 
 func (g Point) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return geojsonEncode(&g.Point)
 }

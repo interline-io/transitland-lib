@@ -51,7 +51,7 @@ func (g Geometry) String() string {
 
 func (g Geometry) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return geojsonEncode(g.Geometry)
 }
@@ -95,7 +95,7 @@ func wkbDecode(b []byte) (geom.T, error) {
 func geojsonEncode(g geom.T) ([]byte, error) {
 	b, err := geojson.Marshal(g)
 	if err != nil {
-		return []byte("null"), err
+		return jsonNull(), err
 	}
 	return b, nil
 }
