@@ -19,10 +19,10 @@ func NewInt(v int) Int {
 }
 
 func (r Int) Value() (driver.Value, error) {
-	if r.Valid {
-		return r.Val, nil
+	if !r.Valid {
+		return nil, nil
 	}
-	return nil, nil
+	return int64(r.Val), nil
 }
 
 func (r *Int) Scan(src interface{}) error {

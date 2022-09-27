@@ -34,7 +34,7 @@ func (r Time) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
 	}
-	return driver.Value(r.Val), nil
+	return r.Val, nil
 }
 
 func (r *Time) Scan(src interface{}) error {

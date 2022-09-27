@@ -33,7 +33,7 @@ func (r Date) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
 	}
-	return driver.Value(r.Val), nil
+	return r.Val, nil
 }
 
 func (r *Date) Scan(src interface{}) error {

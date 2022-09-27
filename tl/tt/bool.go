@@ -21,6 +21,9 @@ func (r *Bool) String() string {
 }
 
 func (r Bool) Value() (driver.Value, error) {
+	if !r.Valid {
+		return nil, nil
+	}
 	return r.Val, nil
 }
 

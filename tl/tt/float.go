@@ -19,10 +19,10 @@ func NewFloat(v float64) Float {
 }
 
 func (r Float) Value() (driver.Value, error) {
-	if r.Valid {
-		return r.Val, nil
+	if !r.Valid {
+		return nil, nil
 	}
-	return nil, nil
+	return r.Val, nil
 }
 
 func (r *Float) Scan(src interface{}) error {

@@ -19,10 +19,10 @@ func NewString(v string) String {
 
 // Value returns nil if empty
 func (r String) Value() (driver.Value, error) {
-	if r.Valid {
-		return r.Val, nil
+	if !r.Valid {
+		return nil, nil
 	}
-	return nil, nil
+	return r.Val, nil
 }
 
 func (r *String) Scan(src interface{}) error {

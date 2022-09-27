@@ -39,7 +39,7 @@ func (wt WideTime) Value() (driver.Value, error) {
 	if !wt.Valid {
 		return nil, nil
 	}
-	return int(wt.Seconds), nil
+	return int64(wt.Seconds), nil
 }
 
 func (wt *WideTime) Scan(src interface{}) error {
