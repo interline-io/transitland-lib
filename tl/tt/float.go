@@ -3,7 +3,6 @@ package tt
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -20,20 +19,22 @@ func NewFloat(v float64) Float {
 }
 
 func (r Float) Value() (driver.Value, error) {
-	if r.Valid {
-		return r.Val, nil
+	if !r.Valid {
+		return nil, nil
 	}
-	return nil, nil
+	return r.Val, nil
 }
 
 func (r *Float) Scan(src interface{}) error {
 	r.Val, r.Valid = 0.0, false
-	if src == nil {
-		return nil
-	}
 	var err error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
+		if isEmpty(v) {
+			return nil
+		}
 		r.Val, err = strconv.ParseFloat(v, 64)
 	case int:
 		r.Val = float64(v)
@@ -42,7 +43,7 @@ func (r *Float) Scan(src interface{}) error {
 	case float64:
 		r.Val = v
 	default:
-		err = errors.New("cant convert")
+		err = fmt.Errorf("cant convert %T to Float", src)
 	}
 	r.Valid = (err == nil)
 	return err
@@ -57,17 +58,22 @@ func (r *Float) String() string {
 
 func (r *Float) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = 0, false
-	if len(v) == 0 {
+	if isEmpty(string(v)) {
 		return nil
 	}
-	err := json.Unmarshal(v, &r.Val)
+	var j json.Number
+	err := json.Unmarshal(v, &j)
+	if err != nil {
+		return err
+	}
+	r.Val, err = j.Float64()
 	r.Valid = (err == nil)
 	return err
 }
 
-func (r *Float) MarshalJSON() ([]byte, error) {
+func (r Float) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val)
 }

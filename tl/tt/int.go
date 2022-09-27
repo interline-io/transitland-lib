@@ -3,7 +3,7 @@ package tt
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"strconv"
 )
@@ -19,51 +19,64 @@ func NewInt(v int) Int {
 }
 
 func (r Int) Value() (driver.Value, error) {
-	if r.Valid {
-		return int64(r.Val), nil
+	if !r.Valid {
+		return nil, nil
 	}
-	return nil, nil
+	return int64(r.Val), nil
 }
 
 func (r *Int) Scan(src interface{}) error {
 	r.Val, r.Valid = 0, false
-	if src == nil {
-		return nil
-	}
 	var err error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
-		r.Val, err = strconv.Atoi(v)
+		if isEmpty(v) {
+			return nil
+		}
+		r.Val, err = strconv.Atoi(v) // strconv.ParseInt(v, 10, 64)
 	case int:
-		r.Val = v
+		r.Val = int(v)
 	case int64:
 		r.Val = int(v)
 	case float64:
 		r.Val = int(v)
 	default:
-		err = errors.New("cant convert")
+		err = fmt.Errorf("cant convert %T to Int", src)
 	}
 	r.Valid = (err == nil)
 	return err
 }
 
 func (r *Int) String() string {
-	return strconv.Itoa(r.Val)
+	return strconv.Itoa(int(r.Val))
 }
 
 func (r *Int) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = 0, false
-	if len(v) == 0 {
+	if isEmpty(string(v)) {
 		return nil
 	}
-	err := json.Unmarshal(v, &r.Val)
+	var j json.Number
+	err := json.Unmarshal(v, &j)
+	if err != nil {
+		return err
+	}
+	rr := int64(0)
+	rr, err = j.Int64()
+	if err != nil {
+		return err
+	}
+	r.Val = int(rr)
 	r.Valid = (err == nil)
 	return err
+
 }
 
-func (r *Int) MarshalJSON() ([]byte, error) {
+func (r Int) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val)
 }

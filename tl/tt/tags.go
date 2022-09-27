@@ -55,9 +55,9 @@ func (r *Tags) Scan(value interface{}) error {
 	return json.Unmarshal(b, &r.tags)
 }
 
-func (r *Tags) MarshalJSON() ([]byte, error) {
+func (r Tags) MarshalJSON() ([]byte, error) {
 	if r.tags == nil {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.tags)
 }
@@ -69,7 +69,7 @@ func (r Tags) MarshalGQL(w io.Writer) {
 
 func (r *Tags) UnmarshalJSON(v []byte) error {
 	r.tags = nil
-	if len(v) == 0 {
+	if isEmpty(string(v)) {
 		return nil
 	}
 	return json.Unmarshal(v, &r.tags)

@@ -72,3 +72,27 @@ func CheckPresent(field string, value string) (errs []error) {
 	}
 	return errs
 }
+
+func stripQuotes(v []byte) []byte {
+	if len(v) < 2 {
+		return v
+	}
+	if v[0] == '"' {
+		v = v[1:]
+	}
+	if v[len(v)-1] == '"' {
+		v = v[:len(v)-1]
+	}
+	return v
+}
+
+func jsonNull() []byte {
+	return []byte("null")
+}
+
+func isEmpty(v string) bool {
+	if len(v) == 0 || v == "" || v == "null" {
+		return true
+	}
+	return false
+}

@@ -3,7 +3,7 @@ package tt
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"strconv"
 )
@@ -19,18 +19,18 @@ func NewString(v string) String {
 
 // Value returns nil if empty
 func (r String) Value() (driver.Value, error) {
-	if r.Valid {
-		return r.Val, nil
+	if !r.Valid {
+		return nil, nil
 	}
-	return nil, nil
+	return r.Val, nil
 }
 
 func (r *String) Scan(src interface{}) error {
 	r.Val, r.Valid = "", false
-	if src == nil {
-		return nil
-	}
+	var err error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
 		r.Val = v
 	case int:
@@ -38,27 +38,29 @@ func (r *String) Scan(src interface{}) error {
 	case int64:
 		r.Val = strconv.Itoa(int(v))
 	default:
-		return errors.New("cant convert")
+		err = fmt.Errorf("cant convert %T to String", src)
 	}
-	if r.Val != "" {
-		r.Valid = true
-	}
-	return nil
+	r.Valid = (err == nil && r.Val != "")
+	return err
 }
 
 func (r *String) UnmarshalJSON(v []byte) error {
 	r.Val, r.Valid = "", false
-	if len(v) == 0 {
+	if isEmpty(string(v)) {
 		return nil
+	}
+	if v[0] != '"' && v[len(v)-1] != '"' {
+		// Handle unquoted values, e.g. number
+		return r.Scan(string(v))
 	}
 	err := json.Unmarshal(v, &r.Val)
 	r.Valid = (err == nil && r.Val != "")
 	return err
 }
 
-func (r *String) MarshalJSON() ([]byte, error) {
+func (r String) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val)
 }
