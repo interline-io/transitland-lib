@@ -1,13 +1,9 @@
 package importer
 
 import (
-	"bufio"
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -36,26 +32,6 @@ type Result struct {
 
 type canContext interface {
 	Context() *causes.Context
-}
-
-func getFileLines(fn string) ([]string, error) {
-	ret := []string{}
-	file, err := os.Open(fn)
-	if err != nil {
-		return ret, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		if t := scanner.Text(); t != "" {
-			ret = append(ret, strings.TrimSpace(t))
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return ret, err
-	}
-	return ret, nil
 }
 
 func copyResultCounts(result copier.Result) dmfr.FeedVersionImport {
@@ -205,7 +181,7 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	if opts.S3 != "" {
 		reqOpts = append(reqOpts, request.WithAllowS3)
 	}
-	adapterUrl := dmfrGetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
+	adapterUrl := dmfr.GetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
 	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))
 	if err != nil {
 		return fvi, err
@@ -254,19 +230,4 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	fvi.SkipEntityFilterCount = counts.SkipEntityFilterCount
 	fvi.SkipEntityMarkedCount = counts.SkipEntityMarkedCount
 	return fvi, nil
-}
-
-// dmfrGetReaderURL helps load a file from an S3 or Directory location
-func dmfrGetReaderURL(s3 string, directory string, url string, sha1 string) string {
-	if s3 != "" && sha1 != "" {
-		url = fmt.Sprintf("%s/%s.zip", s3, sha1)
-	} else if directory != "" {
-		url = filepath.Join(directory, url)
-	}
-	urlsplit := strings.SplitN(url, "#", 2)
-	if len(urlsplit) > 1 && !strings.HasSuffix(url, ".zip") {
-		// Add fragment back only if fragment does not end in ".zip"
-		url = url + "#" + urlsplit[1]
-	}
-	return url
 }
