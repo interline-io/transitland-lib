@@ -196,6 +196,9 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 		if err != nil {
 			return err
 		}
+		if err := reader.Open(); err != nil {
+			return err
+		}
 		if err := createFeedStats(atx, reader, fv.ID); err != nil {
 			return err
 		}
@@ -235,7 +238,7 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 		}
 	}
 	// Batch insert FVSLs
-	bt := make([]interface{}, len(fvsls))
+	bt := make([]any, len(fvsls))
 	for i := range fvsls {
 		fvsls[i].FeedVersionID = fvid
 		bt[i] = &fvsls[i]
