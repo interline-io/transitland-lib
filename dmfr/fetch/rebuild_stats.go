@@ -164,7 +164,6 @@ func rebuildStatsWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan R
 		}
 		log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
-		// result, err := MainImportFeedVersion(adapter, opts)
 		result, err := rebuildStatsMain(adapter, opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
@@ -183,22 +182,22 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 	if err := adapter.Find(&fv); err != nil {
 		return RebuildStatsResult{}, err
 	}
+	// Get Reader
+	var reqOpts []request.RequestOption
+	reqOpts = append(reqOpts, request.WithAllowLocal)
+	if opts.S3 != "" {
+		reqOpts = append(reqOpts, request.WithAllowS3)
+	}
+	adapterUrl := dmfr.GetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
+	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))
+	if err != nil {
+		return RebuildStatsResult{}, err
+	}
+	if err := reader.Open(); err != nil {
+		return RebuildStatsResult{}, err
+	}
 	// Import
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
-		// Get Reader
-		var reqOpts []request.RequestOption
-		reqOpts = append(reqOpts, request.WithAllowLocal)
-		if opts.S3 != "" {
-			reqOpts = append(reqOpts, request.WithAllowS3)
-		}
-		adapterUrl := dmfr.GetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
-		reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))
-		if err != nil {
-			return err
-		}
-		if err := reader.Open(); err != nil {
-			return err
-		}
 		if err := createFeedStats(atx, reader, fv.ID); err != nil {
 			return err
 		}
