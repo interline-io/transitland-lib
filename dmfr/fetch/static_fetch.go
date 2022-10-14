@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
@@ -93,35 +92,4 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 	}
 	result, err := ffetch(atx, opts, cb)
 	return fv, result, err
-}
-
-func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
-	// Get FeedVersionFileInfos
-	fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader)
-	if err != nil {
-		return err
-	}
-	for _, fvfi := range fvfis {
-		fvfi.UpdateTimestamps()
-		fvfi.FeedVersionID = fvid
-		if _, err := atx.Insert(&fvfi); err != nil {
-			return err
-		}
-	}
-	// Get service statistics
-	fvsls, err := dmfr.NewFeedVersionServiceInfosFromReader(reader)
-	if err != nil {
-		return err
-	}
-	// Batch insert
-	bt := make([]interface{}, len(fvsls))
-	for i := range fvsls {
-		fvsls[i].FeedVersionID = fvid
-		bt[i] = &fvsls[i]
-	}
-	if err := atx.CopyInsert(bt); err != nil {
-		return err
-	}
-
-	return nil
 }

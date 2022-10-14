@@ -42,6 +42,7 @@ func main() {
 		log.Print("  validate")
 		log.Print("  extract")
 		log.Print("  fetch")
+		log.Print("  rebuild-stats")
 		log.Print("  import")
 		log.Print("  unimport")
 		log.Print("  sync")
@@ -81,6 +82,8 @@ func main() {
 		r = &diff.Command{}
 	case "fetch":
 		r = &fetch.Command{}
+	case "rebuild-stats":
+		r = &fetch.RebuildStatsCommand{}
 	case "import":
 		r = &importer.Command{}
 	case "unimport":
