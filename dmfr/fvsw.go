@@ -16,13 +16,24 @@ func NewFeedVersionServiceWindowFromReader(reader tl.Reader) (FeedVersionService
 	} else {
 		return fvsw, err
 	}
+	// Recalculate service bounds
+	if start, end, err := tl.FeedVersionServiceBounds(reader); err == nil {
+		if !start.IsZero() && !end.IsZero() {
+			fvsw.EarliestCalendarDate = tt.NewDate(start)
+			fvsw.LatestCalendarDate = tt.NewDate(end)
+		}
+	} else {
+		return fvsw, err
+	}
 	return fvsw, nil
 }
 
 type FeedVersionServiceWindow struct {
-	FeedVersionID int
-	FeedStartDate tl.Date
-	FeedEndDate   tl.Date
+	FeedVersionID        int
+	FeedStartDate        tt.Date
+	FeedEndDate          tt.Date
+	EarliestCalendarDate tt.Date
+	LatestCalendarDate   tt.Date
 	tl.DatabaseEntity
 	tl.Timestamps
 }

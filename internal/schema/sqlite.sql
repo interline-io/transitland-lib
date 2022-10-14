@@ -169,6 +169,20 @@ CREATE TABLE IF NOT EXISTS "feed_version_file_infos" (
 );
 CREATE INDEX idx_feed_version_file_infos_feed_version_id ON "feed_version_file_infos"(feed_version_id);
 
+CREATE TABLE IF NOT EXISTS "feed_version_service_windows" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "feed_start_date" datetime,
+  "feed_end_date" datetime,
+  "earliest_calendar_date" datetime,
+  "latest_calendar_date" datetime,
+  "fallback_week" datetime
+);
+CREATE INDEX feed_version_service_windows_feed_version_id ON "feed_version_service_windows"(feed_version_id);
+
+
 CREATE TABLE IF NOT EXISTS "feed_version_service_levels" (
     "id" integer primary key autoincrement,
     "feed_version_id" integer NOT NULL,

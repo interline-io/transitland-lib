@@ -67,7 +67,7 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 		return fv, errs[0]
 	}
 	// Get service dates
-	if start, end, err := servicePeriod(reader); err == nil {
+	if start, end, err := FeedVersionServiceBounds(reader); err == nil {
 		fv.EarliestCalendarDate = tt.NewDate(start)
 		fv.LatestCalendarDate = tt.NewDate(end)
 	} else {
@@ -90,7 +90,7 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	return fv, nil
 }
 
-func servicePeriod(reader Reader) (time.Time, time.Time, error) {
+func FeedVersionServiceBounds(reader Reader) (time.Time, time.Time, error) {
 	var start time.Time
 	var end time.Time
 	for c := range reader.Calendars() {
