@@ -67,12 +67,12 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 		return fv, errs[0]
 	}
 	// Get service dates
-	start, end, err := servicePeriod(reader)
-	if err != nil {
+	if start, end, err := servicePeriod(reader); err == nil {
+		fv.EarliestCalendarDate = tt.NewDate(start)
+		fv.LatestCalendarDate = tt.NewDate(end)
+	} else {
 		return fv, err
 	}
-	fv.EarliestCalendarDate = tt.NewDate(start)
-	fv.LatestCalendarDate = tt.NewDate(end)
 	// Get path and sha1
 	if s, ok := reader.(canSHA1); ok {
 		if h, err := s.SHA1(); err == nil {
