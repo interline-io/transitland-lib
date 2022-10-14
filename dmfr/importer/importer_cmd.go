@@ -67,7 +67,7 @@ func (cmd *Command) Parse(args []string) error {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
 	if fvidfile != "" {
-		lines, err := getFileLines(fvidfile)
+		lines, err := cli.ReadFileLines(fvidfile)
 		if err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func (cmd *Command) Parse(args []string) error {
 		}
 	}
 	if fvsha1file != "" {
-		lines, err := getFileLines(fvsha1file)
+		lines, err := cli.ReadFileLines(fvsha1file)
 		if err != nil {
 			return err
 		}
