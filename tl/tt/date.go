@@ -14,12 +14,26 @@ type Date struct {
 	Valid bool
 }
 
+func ParseDate(s string) (Date, error) {
+	d := Date{}
+	err := d.Scan(s)
+	return d, err
+}
+
 func NewDate(v time.Time) Date {
 	return Date{Valid: true, Val: v}
 }
 
 func (r *Date) IsZero() bool {
 	return !r.Valid
+}
+
+func (r *Date) Before(other Date) bool {
+	return r.Val.Before(other.Val)
+}
+
+func (r *Date) After(other Date) bool {
+	return r.Val.After(other.Val)
 }
 
 func (r *Date) String() string {

@@ -2,14 +2,28 @@ package dmfr
 
 import (
 	"encoding/json"
+	"math/rand"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/stretchr/testify/assert"
 )
 
 type msi = map[string]int
 type fvsl = FeedVersionServiceLevel
+
+func pd(s string) tt.Date {
+	if s == "" {
+		return tt.Date{}
+	}
+	a, err := tt.ParseDate(s)
+	if err != nil {
+		panic(err)
+	}
+	return a
+}
 
 func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 	tcs := []struct {
@@ -46,7 +60,7 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			results, err := NewFeedVersionServiceInfosFromReader(reader)
+			results, err := NewFeedVersionServiceLevelsFromReader(reader)
 			if err != nil {
 				t.Error(err)
 			}
@@ -74,6 +88,61 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 					t.Errorf("no match for %#v\n", check)
 				}
 			}
+		})
+	}
+}
+
+func TestServiceLevelDefaultWeek(t *testing.T) {
+
+	fvsls := []FeedVersionServiceLevel{
+		{StartDate: pd("2022-01-03"), EndDate: pd("2022-01-09"), Monday: 1000},
+		{StartDate: pd("2022-01-10"), EndDate: pd("2022-01-16"), Monday: 2000},
+		{StartDate: pd("2022-01-17"), EndDate: pd("2022-01-23"), Monday: 2000},
+		{StartDate: pd("2022-01-24"), EndDate: pd("2022-01-30"), Monday: 1500},
+	}
+	tcs := []struct {
+		start  tt.Date
+		end    tt.Date
+		expect tt.Date
+		fvsls  []FeedVersionServiceLevel
+	}{
+		{pd("2022-01-03"), pd("2022-02-01"), pd("2022-01-10"), nil}, // window covers all fvsl
+		{pd("2022-01-01"), pd("2022-12-31"), pd("2022-01-10"), nil}, // window covers all fvsl 2
+		{pd("2022-01-01"), pd("2022-01-05"), pd("2022-01-03"), nil}, // window begin overlap
+		{pd("2022-01-26"), pd("2022-02-10"), pd("2022-01-24"), nil}, // window end overlap
+		{pd("2022-02-10"), pd("2022-02-14"), pd(""), nil},           // window outside all fvsl
+		{pd("2021-02-10"), pd("2021-02-14"), pd(""), nil},           // window before all fvsl
+		{pd("2022-01-04"), pd("2022-01-05"), pd("2022-01-03"), nil}, // window within single fvsl -- ok
+		{pd("2022-01-04"), pd("2022-01-04"), pd("2022-01-03"), nil}, // window within single fvsl -- same day
+		{pd("2022-01-03"), pd("2022-01-03"), pd("2022-01-03"), nil}, // window within single fvsl -- same day as start
+		{pd("2022-01-01"), pd("2022-01-02"), pd(""), nil},           // window outside fvsl -- ends day before
+		{pd("2022-01-31"), pd("2022-02-01"), pd(""), nil},           // window outside fvsl -- starts day after
+		{pd("2022-01-30"), pd("2022-02-01"), pd("2022-01-24"), nil}, // starts last day
+		{pd("2022-01-01"), pd("2022-01-03"), pd("2022-01-03"), nil}, // ends first day
+		{pd("2022-01-03"), pd("2022-01-09"), pd("2022-01-03"), nil}, //
+		{pd("2022-01-03"), pd("2022-01-10"), pd("2022-01-10"), nil}, //
+		{pd("2022-01-03"), pd(""), pd("2022-01-10"), nil},           // open ended end
+		{pd("2022-01-01"), pd(""), pd("2022-01-10"), nil},           // open ended end 2
+		{pd("2022-01-24"), pd(""), pd("2022-01-24"), nil},           // open ended end 3
+		{pd("2022-02-01"), pd(""), pd(""), nil},                     // open ended end - after fvsls
+		{pd(""), pd(""), pd("2022-01-10"), nil},                     // no range
+		{pd(""), pd("2022-02-01"), pd("2022-01-10"), nil},           // open ended start
+		{pd(""), pd("2022-01-02"), pd(""), nil},                     // open ended start 2
+		{pd(""), pd("2022-01-03"), pd("2022-01-03"), nil},           // open ended start 3
+
+	}
+	for _, tc := range tcs {
+		t.Run("", func(t *testing.T) {
+			if len(tc.fvsls) == 0 {
+				tc.fvsls = fvsls[:]
+			}
+			// Shuffle
+			rand.Shuffle(len(tc.fvsls), func(i, j int) { tc.fvsls[i], tc.fvsls[j] = tc.fvsls[j], tc.fvsls[i] })
+			d, err := ServiceLevelDefaultWeek(tc.start, tc.end, tc.fvsls)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.EqualValues(t, tc.expect.String(), d.String())
 		})
 	}
 }

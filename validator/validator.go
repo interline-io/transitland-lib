@@ -162,7 +162,7 @@ func (v *Validator) Validate() (*Result, error) {
 
 	// Service levels
 	if v.Options.IncludeServiceLevels {
-		fvsls, err := dmfr.NewFeedVersionServiceInfosFromReader(reader)
+		fvsls, err := dmfr.NewFeedVersionServiceLevelsFromReader(reader)
 		if err != nil {
 			result.FailureReason = fmt.Sprintf("Could not calculate service levels: %s", err.Error())
 			return result, nil

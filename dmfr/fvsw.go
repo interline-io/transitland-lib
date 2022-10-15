@@ -7,6 +7,24 @@ import (
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
+func NewFeedStatsFromReader(reader tl.Reader) (FeedVersionServiceWindow, []FeedVersionServiceLevel, error) {
+	d := FeedVersionServiceWindow{}
+	fvsls, err := NewFeedVersionServiceLevelsFromReader(reader)
+	if err != nil {
+		return d, nil, err
+	}
+	fvsw, err := NewFeedVersionServiceWindowFromReader(reader)
+	if err != nil {
+		return d, nil, err
+	}
+	dw, err := ServiceLevelDefaultWeek(fvsw.FeedStartDate, fvsw.FeedEndDate, fvsls)
+	if err != nil {
+		return d, nil, err
+	}
+	fvsw.FallbackWeek = dw
+	return fvsw, nil, nil
+}
+
 func NewFeedVersionServiceWindowFromReader(reader tl.Reader) (FeedVersionServiceWindow, error) {
 	fvsw := FeedVersionServiceWindow{}
 	// Get Feed Info dates
@@ -25,6 +43,14 @@ func NewFeedVersionServiceWindowFromReader(reader tl.Reader) (FeedVersionService
 	} else {
 		return fvsw, err
 	}
+	// Get the default timezone.
+	// Spec requires this field and all values to be identical.
+	for ent := range reader.Agencies() {
+		if tz, ok := tt.IsValidTimezone(ent.AgencyTimezone); ok {
+			fvsw.DefaultTimezone = tt.NewString(tz)
+		}
+		break
+	}
 	return fvsw, nil
 }
 
@@ -34,6 +60,8 @@ type FeedVersionServiceWindow struct {
 	FeedEndDate          tt.Date
 	EarliestCalendarDate tt.Date
 	LatestCalendarDate   tt.Date
+	FallbackWeek         tt.Date
+	DefaultTimezone      tt.String
 	tl.DatabaseEntity
 	tl.Timestamps
 }

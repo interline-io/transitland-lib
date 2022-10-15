@@ -212,17 +212,11 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	if err != nil {
 		return err
 	}
-	// Get service statistics
-	fvsls, err := dmfr.NewFeedVersionServiceInfosFromReader(reader)
+	// Get service window and statistics
+	fvsw, fvsls, err := dmfr.NewFeedStatsFromReader(reader)
 	if err != nil {
 		return err
 	}
-	// Get fvsw
-	fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
-	if err != nil {
-		return err
-	}
-	fvsw.FeedVersionID = fvid
 	// Delete any existing records
 	tables := []string{"feed_version_file_infos", "feed_version_service_levels", "feed_version_service_windows"}
 	for _, table := range tables {
@@ -236,13 +230,13 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	}
 	// Insert FVFIs
 	for _, fvfi := range fvfis {
-		fvfi.UpdateTimestamps()
 		fvfi.FeedVersionID = fvid
 		if _, err := atx.Insert(&fvfi); err != nil {
 			return err
 		}
 	}
 	// Insert FVSW
+	fvsw.FeedVersionID = fvid
 	if _, err := atx.Insert(&fvsw); err != nil {
 		return err
 	}

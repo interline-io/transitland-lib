@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS "feed_version_service_windows" (
   "feed_end_date" datetime,
   "earliest_calendar_date" datetime,
   "latest_calendar_date" datetime,
+  "default_timezone" varchar(255),
   "fallback_week" datetime
 );
 CREATE INDEX feed_version_service_windows_feed_version_id ON "feed_version_service_windows"(feed_version_id);

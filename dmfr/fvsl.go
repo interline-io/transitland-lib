@@ -35,8 +35,12 @@ func (FeedVersionServiceLevel) TableName() string {
 	return "feed_version_service_levels"
 }
 
-// NewFeedVersionServiceInfosFromReader .
-func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServiceLevel, error) {
+func (fvsl *FeedVersionServiceLevel) Total() int {
+	return fvsl.Monday + fvsl.Tuesday + fvsl.Wednesday + fvsl.Thursday + fvsl.Friday + fvsl.Saturday + fvsl.Sunday
+}
+
+// NewFeedVersionServiceLevelsFromReader .
+func NewFeedVersionServiceLevelsFromReader(reader tl.Reader) ([]FeedVersionServiceLevel, error) {
 	results := []FeedVersionServiceLevel{}
 	// Cache services
 	// fmt.Println("caching services")
@@ -147,6 +151,51 @@ func NewFeedVersionServiceInfosFromReader(reader tl.Reader) ([]FeedVersionServic
 	}
 	// Done
 	return results, nil
+}
+
+func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []FeedVersionServiceLevel) (tt.Date, error) {
+	// Defaults
+	if start.IsZero() {
+		start = tt.NewDate(time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC))
+	}
+	if end.IsZero() {
+		end = tt.NewDate(time.Date(9999, 0, 0, 0, 0, 0, 0, time.UTC))
+	}
+	d := tt.Date{}
+	// Get FVSLs in window
+	var fvsort []FeedVersionServiceLevel
+	if start.IsZero() || end.Before(start) {
+		fvsort = fvsls[:]
+	} else {
+		for _, fvsl := range fvsls {
+			if fvsl.EndDate.Before(start) {
+				// fmt.Println("fvsl ends before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
+				continue
+			}
+			if fvsl.StartDate.After(end) {
+				// fmt.Println("fvsl starts before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
+				continue
+			}
+			fvsort = append(fvsort, fvsl)
+		}
+	}
+	if len(fvsort) == 0 {
+		return d, nil
+	}
+	sort.Slice(fvsort, func(i, j int) bool {
+		a := fvsort[i].Total()
+		b := fvsort[j].Total()
+		if a == b {
+			return fvsort[i].StartDate.Before(fvsort[j].StartDate)
+		}
+		return a > b
+	})
+	// fmt.Println("window start:", start.String(), "end:", end.String())
+	// for _, fvsl := range fvsort {
+	// 	fmt.Println("start:", fvsl.StartDate.String(), "end:", fvsl.EndDate.String(), "total:", fvsl.Total())
+	// }
+	// fmt.Println("d:", fvsort[0].StartDate.String())
+	return fvsort[0].StartDate, nil
 }
 
 func fromJulian(day int) time.Time {

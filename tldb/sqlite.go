@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 package tldb
@@ -137,11 +138,17 @@ func (adapter *SQLiteAdapter) Select(dest interface{}, qstr string, args ...inte
 
 // Update a single record.
 func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	return update(adapter, ent, columns...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	table := getTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
 	if err != nil {
@@ -187,6 +194,9 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	// if err := adapter.Tx(func(adapter Adapter) error {
 	db := adapter.DBX()
 	for _, d := range ents {
+		if v, ok := d.(canUpdateTimestamps); ok {
+			v.UpdateTimestamps()
+		}
 		vals, err := MapperCache.GetInsert(d, header)
 		if err != nil {
 			return retids, err
