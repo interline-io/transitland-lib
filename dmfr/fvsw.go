@@ -22,7 +22,7 @@ func NewFeedStatsFromReader(reader tl.Reader) (FeedVersionServiceWindow, []FeedV
 		return d, nil, err
 	}
 	fvsw.FallbackWeek = dw
-	return fvsw, nil, nil
+	return fvsw, fvsls, nil
 }
 
 func NewFeedVersionServiceWindowFromReader(reader tl.Reader) (FeedVersionServiceWindow, error) {
