@@ -8,11 +8,12 @@ import (
 
 // DuplicateFareTransferRule reports when multiple FareTransferRules have the same unique values.
 type DuplicateFareTransferRuleError struct {
-	FareProductID  string
-	FromLegGroupID string
-	ToLegGroupID   string
-	TransferCount  int
-	DurationLimit  int
+	FareProductID       string
+	FromLegGroupID      string
+	ToLegGroupID        string
+	FilterFareProductID string
+	TransferCount       int
+	DurationLimit       int
 	bc
 }
 
@@ -32,7 +33,6 @@ type DuplicateFareTransferRuleCheck struct {
 	vals map[string]int
 }
 
-// Validate .
 func (e *DuplicateFareTransferRuleCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.FareTransferRule)
 	if !ok {
@@ -42,13 +42,14 @@ func (e *DuplicateFareTransferRuleCheck) Validate(ent tl.Entity) []error {
 		e.vals = map[string]int{}
 	}
 	err := DuplicateFareTransferRuleError{
-		FareProductID:  v.FareProductID.Val,
-		FromLegGroupID: v.FromLegGroupID.Val,
-		ToLegGroupID:   v.ToLegGroupID.Val,
-		TransferCount:  v.TransferCount.Val,
-		DurationLimit:  v.DurationLimit.Val,
+		FareProductID:       v.FareProductID.Val,
+		FromLegGroupID:      v.FromLegGroupID.Val,
+		ToLegGroupID:        v.ToLegGroupID.Val,
+		TransferCount:       v.TransferCount.Val,
+		DurationLimit:       v.DurationLimit.Val,
+		FilterFareProductID: v.FilterFareProductID.Val,
 	}
-	key := fmt.Sprintf("%s:%s:%s:%d:%d", err.FareProductID, err.FromLegGroupID, err.ToLegGroupID, err.TransferCount, err.DurationLimit)
+	key := fmt.Sprintf("%s:%s:%s:%s:%d:%d", err.FareProductID, err.FromLegGroupID, err.ToLegGroupID, err.FilterFareProductID, err.TransferCount, err.DurationLimit)
 	if _, ok := e.vals[key]; ok {
 		return []error{&err}
 	}

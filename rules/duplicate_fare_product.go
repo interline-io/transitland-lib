@@ -28,7 +28,6 @@ type DuplicateFareProductCheck struct {
 	vals map[string]int
 }
 
-// Validate .
 func (e *DuplicateFareProductCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.FareProduct)
 	if !ok {
