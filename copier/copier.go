@@ -242,9 +242,9 @@ func (copier *Copier) addExtension(ext interface{}, warning bool) error {
 	}
 	if v, ok := ext.(Validator); ok {
 		if warning {
-			copier.errorValidators = append(copier.errorValidators, v)
-		} else {
 			copier.warningValidators = append(copier.warningValidators, v)
+		} else {
+			copier.errorValidators = append(copier.errorValidators, v)
 		}
 		added = true
 	}
