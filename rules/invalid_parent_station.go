@@ -30,17 +30,22 @@ type ParentStationLocationTypeCheck struct {
 	locationTypes map[string]int
 }
 
-// Validate .
+func (e *ParentStationLocationTypeCheck) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+	if e.locationTypes == nil {
+		e.locationTypes = map[string]int{}
+	}
+	if stop, ok := ent.(*tl.Stop); ok {
+		e.locationTypes[eid] = stop.LocationType
+	}
+	return nil
+}
+
 func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 	// Confirm the parent station location_type is acceptable
 	stop, ok := ent.(*tl.Stop)
 	if !ok {
 		return nil
 	}
-	if e.locationTypes == nil {
-		e.locationTypes = map[string]int{}
-	}
-	e.locationTypes[stop.EntityID()] = stop.LocationType
 	if stop.ParentStation.Val == "" {
 		return nil
 	}
