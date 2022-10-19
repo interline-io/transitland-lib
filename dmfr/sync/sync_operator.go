@@ -26,12 +26,10 @@ func UpdateOperator(atx tldb.Adapter, operator tl.Operator) (int, bool, bool, er
 			updated = true
 			operator.CreatedAt = ent.CreatedAt
 			operator.DeletedAt = tl.Time{Valid: false}
-			operator.UpdateTimestamps()
 			errTx = atx.Update(&operator)
 		}
 	} else if err == sql.ErrNoRows {
 		// Insert
-		operator.UpdateTimestamps()
 		operator.ID, errTx = atx.Insert(&operator)
 	} else {
 		// Error

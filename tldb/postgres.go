@@ -133,11 +133,17 @@ func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...in
 
 // Update a single entity.
 func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	return update(adapter, ent, columns...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
+	if v, ok := ent.(canUpdateTimestamps); ok {
+		v.UpdateTimestamps()
+	}
 	table := getTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
 	if err != nil {
@@ -168,6 +174,11 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	retids := []int{}
 	if len(ents) == 0 {
 		return retids, nil
+	}
+	for _, ent := range ents {
+		if v, ok := ent.(canUpdateTimestamps); ok {
+			v.UpdateTimestamps()
+		}
 	}
 	header, err := MapperCache.GetHeader(ents[0])
 	table := getTableName(ents[0])
@@ -206,6 +217,11 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	if len(ents) == 0 {
 		return nil
+	}
+	for _, ent := range ents {
+		if v, ok := ent.(canUpdateTimestamps); ok {
+			v.UpdateTimestamps()
+		}
 	}
 	// Must run in transaction
 	return adapter.Tx(func(atx Adapter) error {

@@ -64,7 +64,6 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 			return vr, err
 		}
 		// Return fv
-		fv.UpdateTimestamps()
 		fv.ID, err = atx.Insert(&fv)
 		if err != nil {
 			return vr, err

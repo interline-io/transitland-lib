@@ -159,7 +159,6 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		tlfetch.Success = false
 		tlfetch.FetchError = tt.NewString(result.FetchError.Error())
 	}
-	tlfetch.UpdateTimestamps()
 	if _, err := atx.Insert(&tlfetch); err != nil {
 		return result, err
 	}
