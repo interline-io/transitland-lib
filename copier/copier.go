@@ -175,6 +175,9 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
 	copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
 	copier.AddValidator(&rules.CalendarDuplicateDates{}, 0)
+	copier.AddValidator(&rules.DuplicateFareLegRuleCheck{}, 0)
+	copier.AddValidator(&rules.DuplicateFareTransferRuleCheck{}, 0)
+	copier.AddValidator(&rules.DuplicateFareProductCheck{}, 0)
 
 	// Default extensions
 	if copier.UseBasicRouteTypes {

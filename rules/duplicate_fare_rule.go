@@ -30,7 +30,6 @@ type DuplicateFareRuleCheck struct {
 	rules map[string]int
 }
 
-// Validate .
 func (e *DuplicateFareRuleCheck) Validate(ent tl.Entity) []error {
 	v, ok := ent.(*tl.FareRule)
 	if !ok {
