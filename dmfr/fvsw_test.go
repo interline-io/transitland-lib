@@ -1,7 +1,6 @@
 package dmfr
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
@@ -63,7 +62,7 @@ func TestNewFeedVersionServiceWindowsFromReader(t *testing.T) {
 			} else {
 				fvsw.FallbackWeek = d
 			}
-			fmt.Println("fvsw:", fvsw.FeedStartDate)
+			// fmt.Println("fvsw:", fvsw.FeedStartDate)
 			assert.EqualValues(t, tc.feedStartDate.String(), fvsw.FeedStartDate.String())
 			assert.EqualValues(t, tc.feedEndDate.String(), fvsw.FeedEndDate.String())
 			assert.EqualValues(t, tc.expectFallbackWeek.String(), fvsw.FallbackWeek.String())
