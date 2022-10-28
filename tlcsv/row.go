@@ -30,7 +30,7 @@ func (row *Row) Get(k string) (string, bool) {
 // ReadRows iterates through csv rows with callback.
 func ReadRows(in io.Reader, cb func(Row)) error {
 	// Handle byte-order-marks.
-	r := csv.NewReader(utfbom.SkipOnly(in))
+	r := csv.NewReader(newEndquoteReader(utfbom.SkipOnly(in)))
 	// Allow variable columns - very common in GTFS
 	r.FieldsPerRecord = -1
 	// Trimming is done elsewhere
