@@ -175,15 +175,16 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
 	var reqOpts []request.RequestOption
-	reqOpts = append(reqOpts, request.WithAllowLocal)
-	var adapterUrl string
+	adapterUrl := ""
 	if opts.S3 != "" {
 		reqOpts = append(reqOpts, request.WithAllowS3)
 		adapterUrl = dmfr.GetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
-	}
-	if opts.Az != "" {
+	} else if opts.Az != "" {
 		reqOpts = append(reqOpts, request.WithAllowAz)
 		adapterUrl = dmfr.GetReaderURL(opts.Az, opts.Directory, fv.File, fv.SHA1)
+	} else {
+		reqOpts = append(reqOpts, request.WithAllowLocal)
+		adapterUrl = dmfr.GetReaderURL("", opts.Directory, fv.File, fv.SHA1)
 	}
 	fmt.Println("adapter url:", adapterUrl)
 	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))
