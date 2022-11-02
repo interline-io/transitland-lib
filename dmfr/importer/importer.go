@@ -21,6 +21,7 @@ type Options struct {
 	FeedVersionID int
 	Directory     string
 	S3            string
+	Az            string
 	Activate      bool
 	copier.Options
 }
@@ -175,10 +176,16 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	// Get Reader
 	var reqOpts []request.RequestOption
 	reqOpts = append(reqOpts, request.WithAllowLocal)
+	var adapterUrl string
 	if opts.S3 != "" {
 		reqOpts = append(reqOpts, request.WithAllowS3)
+		adapterUrl = dmfr.GetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
 	}
-	adapterUrl := dmfr.GetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
+	if opts.Az != "" {
+		reqOpts = append(reqOpts, request.WithAllowAz)
+		adapterUrl = dmfr.GetReaderURL(opts.Az, opts.Directory, fv.File, fv.SHA1)
+	}
+	fmt.Println("adapter url:", adapterUrl)
 	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))
 	if err != nil {
 		return fvi, err

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -25,7 +24,7 @@ type Options struct {
 	IgnoreDuplicateContents bool
 	Directory               string
 	S3                      string
-	AllowS3Fetch            bool
+	Az                      string
 	AllowFTPFetch           bool
 	AllowLocalFetch         bool
 	FetchedAt               time.Time
@@ -71,9 +70,6 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	}
 	if opts.AllowLocalFetch {
 		reqOpts = append(reqOpts, request.WithAllowLocal)
-	}
-	if opts.AllowS3Fetch {
-		reqOpts = append(reqOpts, request.WithAllowS3)
 	}
 	// Get secret and set auth
 	if feed.Authorization.Type != "" {
@@ -122,21 +118,23 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	// Validate OK, upload
 	if newFile && uploadFile != "" {
 		if opts.Directory != "" {
-			outfn := filepath.Join(opts.Directory, uploadDest)
-			log.Debug().Str("src", uploadFile).Str("dst", outfn).Msg("fetch: copying file to gtfs dir")
-			if err := copyFileContents(outfn, uploadFile); err != nil {
+			ustr := filepath.Join(opts.Directory, uploadDest)
+			log.Debug().Str("src", uploadFile).Str("dst", ustr).Msg("fetch: copying file to gtfs dir")
+			if err := upload(request.Local{}, uploadFile, ustr); err != nil {
 				return result, err
 			}
 		}
 		if opts.S3 != "" {
 			ustr := fmt.Sprintf("%s/%s", opts.S3, uploadDest)
 			log.Debug().Str("src", uploadFile).Str("dst", ustr).Msg("fetch: copying file to s3")
-			rp, err := os.Open(uploadFile)
-			if err != nil {
+			if err := upload(request.S3{}, uploadFile, ustr); err != nil {
 				return result, err
 			}
-			defer rp.Close()
-			if err := request.UploadS3(context.Background(), ustr, tl.Secret{}, rp); err != nil {
+		}
+		if opts.Az != "" {
+			ustr := fmt.Sprintf("%s/%s", opts.Az, uploadDest)
+			log.Debug().Str("src", uploadFile).Str("dst", ustr).Msg("fetch: copying file to az")
+			if err := upload(request.Az{}, uploadFile, ustr); err != nil {
 				return result, err
 			}
 		}
@@ -165,25 +163,14 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	return result, nil
 }
 
-func copyFileContents(dst, src string) (err error) {
-	in, err := os.Open(src)
+func upload(uploader request.Uploader, src string, dst string) error {
+	rp, err := os.Open(src)
 	if err != nil {
-		return
+		return err
 	}
-	defer in.Close()
-	out, err := os.Create(dst)
-	if err != nil {
-		return
+	defer rp.Close()
+	if err := uploader.Upload(context.Background(), dst, tl.Secret{}, rp); err != nil {
+		return err
 	}
-	defer func() {
-		cerr := out.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-	if _, err = io.Copy(out, in); err != nil {
-		return
-	}
-	err = out.Sync()
-	return
+	return nil
 }

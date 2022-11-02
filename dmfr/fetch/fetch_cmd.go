@@ -46,10 +46,11 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
-	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
 	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
 	fl.StringVar(&cmd.Options.S3, "s3", "", "Upload GTFS files to S3 bucket/prefix")
+	fl.StringVar(&cmd.Options.Az, "az", "", "Upload GTFS files to Azure container")
+
 	fl.Parse(args)
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
@@ -147,8 +148,8 @@ func (cmd *Command) Run() error {
 			URLType:                 cmd.Options.URLType,
 			Directory:               cmd.Options.Directory,
 			S3:                      cmd.Options.S3,
+			Az:                      cmd.Options.Az,
 			IgnoreDuplicateContents: cmd.Options.IgnoreDuplicateContents,
-			AllowS3Fetch:            cmd.Options.AllowS3Fetch,
 			AllowFTPFetch:           cmd.Options.AllowFTPFetch,
 			AllowLocalFetch:         cmd.Options.AllowLocalFetch,
 			Secrets:                 cmd.Options.Secrets,

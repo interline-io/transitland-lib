@@ -21,6 +21,7 @@ type RebuildStatsOptions struct {
 	FeedVersionID int
 	Directory     string
 	S3            string
+	Az            string
 }
 
 type RebuildStatsResult struct {
@@ -55,6 +56,8 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
 	fl.StringVar(&cmd.Options.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
+	fl.StringVar(&cmd.Options.Az, "az", "", "Get GTFS files from Azure container")
+
 	fl.Parse(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
@@ -132,6 +135,7 @@ func (cmd *RebuildStatsCommand) Run() error {
 			FeedVersionID: fvid,
 			Directory:     cmd.Options.Directory,
 			S3:            cmd.Options.S3,
+			Az:            cmd.Options.Az,
 		}
 	}
 	close(jobs)
@@ -187,6 +191,9 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 	reqOpts = append(reqOpts, request.WithAllowLocal)
 	if opts.S3 != "" {
 		reqOpts = append(reqOpts, request.WithAllowS3)
+	}
+	if opts.Az != "" {
+		reqOpts = append(reqOpts, request.WithAllowAz)
 	}
 	adapterUrl := dmfr.GetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
 	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))

@@ -48,6 +48,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
 	fl.StringVar(&cmd.Options.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
+	fl.StringVar(&cmd.Options.Az, "az", "", "Get GTFS files from Azure blob container")
 	fl.StringVar(&cmd.CoverDate, "date", "", "Service on date")
 	fl.StringVar(&cmd.FetchedSince, "fetched-since", "", "Fetched since")
 	fl.BoolVar(&cmd.Latest, "latest", false, "Only import latest feed version available for each feed")
@@ -160,6 +161,7 @@ func (cmd *Command) Run() error {
 			FeedVersionID: fvid,
 			Directory:     cmd.Options.Directory,
 			S3:            cmd.Options.S3,
+			Az:            cmd.Options.Az,
 			Activate:      cmd.Options.Activate,
 			Options:       cmd.Options.Options,
 		}
