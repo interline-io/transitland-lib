@@ -44,6 +44,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		fv := tl.FeedVersion{}
 		fv.EarliestCalendarDate = tt.NewDate(time.Now())
 		fv.LatestCalendarDate = tt.NewDate(time.Now())
+		fv.SHA1 = filename
 		fv.File = filename
 		return testdb.ShouldInsert(t, atx, &fv)
 	}
@@ -51,7 +52,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid := setup(atx, testutil.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := MainImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid})
+			_, err := MainImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid, Storage: "/"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -85,7 +86,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid = setup(atx, testutil.RelPath("test/data/does-not-exist"))
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := MainImportFeedVersion(&atx2, Options{FeedVersionID: fvid})
+			_, err := MainImportFeedVersion(&atx2, Options{FeedVersionID: fvid, Storage: "/"})
 			if err == nil {
 				t.Errorf("expected an error, got none")
 			}
@@ -111,13 +112,13 @@ func TestMainImportFeedVersion(t *testing.T) {
 func TestImportFeedVersion(t *testing.T) {
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create FV
-		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
+		fv := tl.FeedVersion{File: testutil.ExampleZip.URL, SHA1: testutil.ExampleZip.URL}
 		fv.EarliestCalendarDate = tt.NewDate(time.Now())
 		fv.LatestCalendarDate = tt.NewDate(time.Now())
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		fviresult, err := ImportFeedVersion(atx, fv, Options{})
+		fviresult, err := ImportFeedVersion(atx, fv, Options{Storage: "/"})
 		if err != nil {
 			t.Error(err)
 		}

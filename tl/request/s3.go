@@ -14,14 +14,11 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-type S3 struct{}
+type S3 struct {
+	Container string
+}
 
-func (r S3) Download(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
-	// Parse url
-	s3uri, err := url.Parse(ustr)
-	if err != nil {
-		return nil, 0, errors.New("could not parse url")
-	}
+func (r S3) Download(ctx context.Context, key string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
 	// Create client
 	var client *s3.Client
 	if secret.AWSAccessKeyID != "" && secret.AWSSecretAccessKey != "" {
@@ -40,11 +37,9 @@ func (r S3) Download(ctx context.Context, ustr string, secret tl.Secret, auth tl
 		client = s3.NewFromConfig(cfg)
 	}
 	// Get object
-	s3bucket := s3uri.Host
-	s3key := strings.TrimPrefix(s3uri.Path, "/")
 	s3obj, err := client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(s3bucket),
-		Key:    aws.String(s3key),
+		Bucket: aws.String(r.Container),
+		Key:    aws.String(key),
 	})
 	if err != nil {
 		return nil, 0, err

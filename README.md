@@ -242,14 +242,12 @@ Usage: fetch [feed_id...]
     	Manually fetch a single URL; you must specify exactly one feed_id
   -fetched-at string
     	Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z
-  -gtfsdir string
-    	GTFS Directory (default ".")
+  -storage string
+    	GTFS storage location
   -ignore-duplicate-contents
     	Allow duplicate internal SHA1 contents
   -limit int
     	Maximum number of feeds to fetch
-  -s3 string
-    	Upload GTFS files to S3 bucket/prefix
   -secrets string
     	Path to DMFR Secrets file
   -workers int
@@ -287,8 +285,8 @@ Usage: import [feedids...]
     	Import specific feed version ID
   -fvid-file string
     	Specify feed version IDs in file, one per line; equivalent to multiple --fvid
-  -gtfsdir string
-    	GTFS Directory (default ".")
+  -storage string
+    	GTFS storage location
   -interpolate-stop-times
     	Interpolate missing StopTime arrival/departure values
   -latest
@@ -297,8 +295,6 @@ Usage: import [feedids...]
     	Import at most n feeds
   -normalize-timezones
     	Normalize timezones and apply default stop timezones based on agency and parent stops
-  -s3 string
-    	Get GTFS files from S3 bucket/prefix
   -simplify-calendars
     	Attempt to simplify CalendarDates into regular Calendars
   -simplify-shapes float

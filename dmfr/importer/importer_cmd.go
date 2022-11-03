@@ -46,9 +46,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Import at most n feeds")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
-	fl.StringVar(&cmd.Options.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
-	fl.StringVar(&cmd.Options.Az, "az", "", "Get GTFS files from Azure blob container")
+	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage location; can be s3://... az://... or path to a directory")
 	fl.StringVar(&cmd.CoverDate, "date", "", "Service on date")
 	fl.StringVar(&cmd.FetchedSince, "fetched-since", "", "Fetched since")
 	fl.BoolVar(&cmd.Latest, "latest", false, "Only import latest feed version available for each feed")
@@ -159,9 +157,7 @@ func (cmd *Command) Run() error {
 	for _, fvid := range qrs {
 		jobs <- Options{
 			FeedVersionID: fvid,
-			Directory:     cmd.Options.Directory,
-			S3:            cmd.Options.S3,
-			Az:            cmd.Options.Az,
+			Storage:       cmd.Options.Storage,
 			Activate:      cmd.Options.Activate,
 			Options:       cmd.Options.Options,
 		}

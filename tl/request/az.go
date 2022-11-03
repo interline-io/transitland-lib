@@ -14,7 +14,9 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-type Az struct{}
+type Az struct {
+	Container string
+}
 
 func (r Az) Download(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
 	// Parse url
@@ -51,6 +53,7 @@ func (r Az) Upload(ctx context.Context, ustr string, secret tl.Secret, uploadFil
 	if err != nil {
 		return err
 	}
+
 	// Always use https as scheme because the internal url might be az://
 	accountUrl := fmt.Sprintf("https://%s", blobUri.Host)
 	path := strings.Split(blobUri.Path, "/")

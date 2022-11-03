@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/url"
+	"path/filepath"
 	"time"
 
 	"github.com/interline-io/transitland-lib/log"
@@ -26,23 +27,30 @@ type Uploader interface {
 type Request struct {
 	URL        string
 	AllowFTP   bool
-	AllowS3    bool
-	AllowAz    bool
 	AllowLocal bool
+	AllowS3    bool
 	Secret     tl.Secret
 	Auth       tl.FeedAuthorization
 }
 
 func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
-	rd := 0
-	u, err := url.Parse(req.URL)
-	if err != nil {
-		return nil, rd, errors.New("could not parse url")
-	}
 	// Download
 	log.Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")
+	downloader, key, err := req.newDownloader(req.URL)
+	if err != nil {
+		return nil, 0, err
+	}
+	return downloader.Download(ctx, key, req.Secret, req.Auth)
+}
+
+func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
+	u, err := url.Parse(req.URL)
+	if err != nil {
+		return nil, "", errors.New("could not parse url")
+	}
 	var downloader Downloader
 	var reqErr error
+	reqUrl := req.URL
 	switch u.Scheme {
 	case "http":
 		downloader = Http{}
@@ -56,28 +64,27 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
 		}
 	case "s3":
 		if req.AllowS3 {
-			downloader = S3{}
+			// Setup the S3 downloader
+			reqUrl = u.RawPath
+			downloader = S3{
+				Container: fmt.Sprintf("%s://%s", u.Scheme, u.Host),
+			}
 		} else {
 			reqErr = errors.New("request not configured to allow s3")
 		}
-	case "az":
-		if req.AllowAz {
-			downloader = Az{}
-		} else {
-			reqErr = errors.New("request not configured to allow azure")
-		}
 	default:
-		// file:// handler
 		if req.AllowLocal {
-			downloader = Local{}
+			// Setup the local reader
+			p := filepath.SplitList(reqUrl)
+			reqUrl = p[len(p)-1]
+			downloader = Local{
+				Directory: filepath.Join(p[0 : len(p)-2]...),
+			}
 		} else {
 			reqErr = errors.New("request not configured to allow filesystem access")
 		}
 	}
-	if reqErr != nil {
-		return nil, 0, reqErr
-	}
-	return downloader.Download(ctx, req.URL, req.Secret, req.Auth)
+	return downloader, reqUrl, reqErr
 }
 
 func NewRequest(address string, opts ...RequestOption) *Request {
@@ -94,16 +101,12 @@ func WithAllowFTP(req *Request) {
 	req.AllowFTP = true
 }
 
-func WithAllowS3(req *Request) {
-	req.AllowS3 = true
-}
-
-func WithAllowAz(req *Request) {
-	req.AllowAz = true
-}
-
 func WithAllowLocal(req *Request) {
 	req.AllowLocal = true
+}
+
+func WithAllowS3(req *Request) {
+	req.AllowS3 = true
 }
 
 func WithAuth(secret tl.Secret, auth tl.FeedAuthorization) func(req *Request) {

@@ -51,7 +51,7 @@ func TestFetchCommand(t *testing.T) {
 			}
 			c := Command{adapter: adapter}
 			tmpDir := t.TempDir()
-			withTempDir := []string{"-gtfsdir", tmpDir}
+			withTempDir := []string{"-storage", tmpDir}
 			withTempDir = append(withTempDir, exp.command...)
 			if err := c.Parse(withTempDir); err != nil {
 				t.Fatal(err)

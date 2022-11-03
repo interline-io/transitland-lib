@@ -43,13 +43,12 @@ func (cmd *Command) Parse(args []string) error {
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
+	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
 	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
-	fl.StringVar(&cmd.Options.S3, "s3", "", "Upload GTFS files to S3 bucket/prefix")
-	fl.StringVar(&cmd.Options.Az, "az", "", "Upload GTFS files to Azure container")
+	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
 
 	fl.Parse(args)
 	if cmd.DBURL == "" {
@@ -146,11 +145,10 @@ func (cmd *Command) Run() error {
 			FeedURL:                 cmd.Options.FeedURL,
 			FetchedAt:               cmd.Options.FetchedAt,
 			URLType:                 cmd.Options.URLType,
-			Directory:               cmd.Options.Directory,
-			S3:                      cmd.Options.S3,
-			Az:                      cmd.Options.Az,
+			Storage:                 cmd.Options.Storage,
 			IgnoreDuplicateContents: cmd.Options.IgnoreDuplicateContents,
 			AllowFTPFetch:           cmd.Options.AllowFTPFetch,
+			AllowS3Fetch:            cmd.Options.AllowS3Fetch,
 			AllowLocalFetch:         cmd.Options.AllowLocalFetch,
 			Secrets:                 cmd.Options.Secrets,
 		}
