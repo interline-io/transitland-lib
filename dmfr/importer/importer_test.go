@@ -44,7 +44,6 @@ func TestMainImportFeedVersion(t *testing.T) {
 		fv := tl.FeedVersion{}
 		fv.EarliestCalendarDate = tt.NewDate(time.Now())
 		fv.LatestCalendarDate = tt.NewDate(time.Now())
-		fv.SHA1 = filename
 		fv.File = filename
 		return testdb.ShouldInsert(t, atx, &fv)
 	}
@@ -112,7 +111,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 func TestImportFeedVersion(t *testing.T) {
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create FV
-		fv := tl.FeedVersion{File: testutil.ExampleZip.URL, SHA1: testutil.ExampleZip.URL}
+		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
 		fv.EarliestCalendarDate = tt.NewDate(time.Now())
 		fv.LatestCalendarDate = tt.NewDate(time.Now())
 		fvid := testdb.ShouldInsert(t, atx, &fv)

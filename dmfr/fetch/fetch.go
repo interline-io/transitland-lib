@@ -1,7 +1,6 @@
 package fetch
 
 import (
-	"context"
 	"errors"
 	"os"
 	"time"
@@ -119,7 +118,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	// Validate OK, upload
 	if newFile && uploadFile != "" {
 		log.Debug().Str("src", uploadFile).Str("storage", opts.Storage).Str("storage_key", uploadDest).Msg("fetch: copying to store")
-		if err := upload(opts.Storage, uploadFile, uploadDest); err != nil {
+		if err := store.UploadFile(opts.Storage, uploadFile, uploadDest); err != nil {
 			return result, err
 		}
 	}
@@ -145,20 +144,4 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		return result, err
 	}
 	return result, nil
-}
-
-func upload(storage string, src string, dst string) error {
-	rp, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer rp.Close()
-	st, err := store.GetStore(storage)
-	if err != nil {
-		return err
-	}
-	if err := st.Upload(context.Background(), dst, tl.Secret{}, rp); err != nil {
-		return err
-	}
-	return nil
 }
