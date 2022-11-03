@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/log"
@@ -75,10 +76,10 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 	default:
 		if req.AllowLocal {
 			// Setup the local reader
-			p := filepath.SplitList(reqUrl)
-			reqUrl = p[len(p)-1]
+			reqDir := ""
+			reqDir, reqUrl = filepath.Split(strings.TrimPrefix(req.URL, "file://"))
 			downloader = Local{
-				Directory: filepath.Join(p[0 : len(p)-2]...),
+				Directory: reqDir,
 			}
 		} else {
 			reqErr = errors.New("request not configured to allow filesystem access")

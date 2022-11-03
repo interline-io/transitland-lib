@@ -2,7 +2,6 @@ package request
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -16,7 +15,6 @@ type Local struct {
 }
 
 func (r Local) Download(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
-	fmt.Println("opening:", r.Directory, "-", ustr)
 	rd, err := os.Open(strings.TrimPrefix(filepath.Join(r.Directory, ustr), "file://"))
 	return rd, 0, err
 }
