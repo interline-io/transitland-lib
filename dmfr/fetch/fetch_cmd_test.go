@@ -14,7 +14,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-func TestCommand(t *testing.T) {
+func TestFetchCommand(t *testing.T) {
 	ts200 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadFile(testutil.ExampleZip.URL)
 		if err != nil {
@@ -28,13 +28,6 @@ func TestCommand(t *testing.T) {
 		w.Write([]byte("not found"))
 	}))
 	defer ts404.Close()
-	// tempdir
-	tmpdir, err := ioutil.TempDir("", "gtfs")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	defer os.RemoveAll(tmpdir) // clean up
 	// note - Spec==gtfs is required for fetch
 	f200 := tl.Feed{FeedID: "f--200", Spec: "gtfs", URLs: tl.FeedUrls{StaticCurrent: ts200.URL}}
 	f404 := tl.Feed{FeedID: "f--404", Spec: "gtfs", URLs: tl.FeedUrls{StaticCurrent: ts404.URL}}
@@ -42,13 +35,12 @@ func TestCommand(t *testing.T) {
 		fvcount     int
 		errContains string
 		feeds       []tl.Feed
-		gtfsdir     string
 		command     []string
 	}{
-		{1, "", []tl.Feed{f200}, tmpdir, []string{"-gtfsdir", tmpdir}},
-		{1, "", []tl.Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--200", "f--404"}},
-		{1, "", []tl.Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--200"}},
-		{0, "", []tl.Feed{f200, f404}, tmpdir, []string{"-gtfsdir", tmpdir, "f--404"}},
+		{1, "", []tl.Feed{f200}, []string{}},
+		{1, "", []tl.Feed{f200, f404}, []string{"f--200", "f--404"}},
+		{1, "", []tl.Feed{f200, f404}, []string{"f--200"}},
+		{0, "", []tl.Feed{f200, f404}, []string{"f--404"}},
 	}
 	_ = cases
 	for _, exp := range cases {
@@ -58,7 +50,10 @@ func TestCommand(t *testing.T) {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
 			c := Command{adapter: adapter}
-			if err := c.Parse(exp.command); err != nil {
+			tmpDir := t.TempDir()
+			withTempDir := []string{"-gtfsdir", tmpDir}
+			withTempDir = append(withTempDir, exp.command...)
+			if err := c.Parse(withTempDir); err != nil {
 				t.Fatal(err)
 			}
 			if err := c.Run(); err != nil && exp.errContains != "" {
@@ -79,19 +74,16 @@ func TestCommand(t *testing.T) {
 			if len(fvs) != exp.fvcount {
 				t.Errorf("got %d feed versions, expect %d", len(fvs), exp.fvcount)
 			}
-			if exp.gtfsdir != "" {
-				for _, fv := range fvs {
-					fn := filepath.Join(exp.gtfsdir, fv.File)
-					// fn := fv.File
-					st, err := os.Stat(fn)
-					if err != nil {
-						t.Errorf("got '%s', expected file '%s' to exist", err.Error(), fn)
-
-					} else {
-						// TODO: Check SHA1
-						if st.Size() == 0 {
-							t.Errorf("expected non-empty file")
-						}
+			for _, fv := range fvs {
+				fn := filepath.Join(tmpDir, fv.File)
+				// fn := fv.File
+				st, err := os.Stat(fn)
+				if err != nil {
+					t.Errorf("got '%s', expected file '%s' to exist", err.Error(), fn)
+				} else {
+					// TODO: Check SHA1
+					if st.Size() == 0 {
+						t.Errorf("expected non-empty file")
 					}
 				}
 			}
