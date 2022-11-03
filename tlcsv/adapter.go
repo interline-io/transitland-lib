@@ -128,7 +128,7 @@ func NewTmpZipAdapterFromReader(reader io.Reader, fragment string) (*TmpZipAdapt
 		fragment = ""
 	}
 	// Read stream to a temporary file
-	tmpfile, err := ioutil.TempFile("", ".gtfs.zip")
+	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
 	if err != nil {
 		return nil, err
 	}
