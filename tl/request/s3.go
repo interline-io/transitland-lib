@@ -3,6 +3,7 @@ package request
 import (
 	"context"
 	"io"
+	"net/url"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -11,6 +12,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/interline-io/transitland-lib/tl"
 )
+
+func NewS3FromUrl(ustr string) (*S3, error) {
+	u, err := url.Parse(ustr)
+	if err != nil {
+		return nil, err
+	}
+	s := S3{Bucket: u.Host, KeyPrefix: u.Path}
+	return &s, nil
+}
 
 type S3 struct {
 	Bucket    string

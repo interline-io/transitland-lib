@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
@@ -25,13 +24,13 @@ func GetStore(ustr string) (Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	var storeErr error
 	var s Store
 	switch u.Scheme {
 	case "s3":
-		s = request.S3{Bucket: u.Host, KeyPrefix: u.Path}
+		s, storeErr = request.NewS3FromUrl(ustr)
 	case "az":
-		p := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
-		s = request.Az{Account: u.Host, Container: p[0], KeyPrefix: strings.Join(p[1:], "/")}
+		s, storeErr = request.NewAzFromUrl(ustr)
 	case "file":
 		s = request.Local{Directory: ustr}
 	default:
@@ -41,7 +40,7 @@ func GetStore(ustr string) (Store, error) {
 			s = request.Local{Directory: ustr}
 		}
 	}
-	return s, nil
+	return s, storeErr
 }
 
 // Download is a convenience method for downloading a file from the store.

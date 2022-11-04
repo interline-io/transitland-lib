@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -52,4 +53,14 @@ func getAzBlobClient(account string) (*azblob.Client, error) {
 		return nil, err
 	}
 	return blobClient, nil
+}
+
+func NewAzFromUrl(ustr string) (*Az, error) {
+	u, err := url.Parse(ustr)
+	if err != nil {
+		return nil, err
+	}
+	p := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
+	a := Az{Account: u.Host, Container: p[0], KeyPrefix: strings.Join(p[1:], "/")}
+	return &a, nil
 }

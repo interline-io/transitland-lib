@@ -9,16 +9,16 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-func TestAzRequest(t *testing.T) {
-	azKey := "test-az-upload.txt"
-	azUri := os.Getenv("TL_TEST_AZ_STORAGE")
-	testData := []byte("test azure file upload")
-	if azUri == "" {
-		t.Skip("Set TL_TEST_AZ_STORAGE for this test")
+func TestS3Request(t *testing.T) {
+	s3Key := "test-s3-upload.txt"
+	s3Uri := os.Getenv("TL_TEST_S3_STORAGE")
+	testData := []byte("test s3 file upload")
+	if s3Uri == "" {
+		t.Skip("Set TL_TEST_S3_STORAGE for this test")
 		return
 	}
 	t.Run("upload", func(t *testing.T) {
-		rw, err := os.CreateTemp(t.TempDir(), "test-az-upload.txt")
+		rw, err := os.CreateTemp(t.TempDir(), s3Key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -30,23 +30,23 @@ func TestAzRequest(t *testing.T) {
 		}
 		r, err := os.Open(rw.Name())
 		// Upload file
-		t.Log("uploading to:", azUri)
-		uploader, err := NewAzFromUrl(azUri)
+		t.Log("uploading to:", s3Key)
+		uploader, err := NewS3FromUrl(s3Uri)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := uploader.Upload(context.Background(), azKey, tl.Secret{}, r); err != nil {
+		if err := uploader.Upload(context.Background(), s3Key, tl.Secret{}, r); err != nil {
 			t.Fatal(err)
 		}
 	})
 	t.Run("download", func(t *testing.T) {
 		// Download again
-		t.Log("downloading from:", azUri)
-		downloader, err := NewAzFromUrl(azUri)
+		t.Log("downloading from:", s3Uri)
+		downloader, err := NewS3FromUrl(s3Uri)
 		if err != nil {
 			t.Fatal(err)
 		}
-		downloadReader, _, err := downloader.Download(context.Background(), azKey, tl.Secret{}, tl.FeedAuthorization{})
+		downloadReader, _, err := downloader.Download(context.Background(), s3Key, tl.Secret{}, tl.FeedAuthorization{})
 		if err != nil {
 			t.Fatal(err)
 		}
