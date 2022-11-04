@@ -35,7 +35,7 @@ func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 		return err
 	}
 	// Upload the file to the specified container and blob name
-	fmt.Println("account:", r.Account, "container:", r.Container, "prefix:", r.KeyPrefix, "key:", key)
+	// fmt.Println("account:", r.Account, "container:", r.Container, "prefix:", r.KeyPrefix, "key:", key)
 	azKey := r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
 	_, err = blobClient.UploadStream(ctx, r.Container, azKey, uploadFile, nil)
 	return err

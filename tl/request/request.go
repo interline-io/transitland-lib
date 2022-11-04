@@ -66,7 +66,7 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 	case "s3":
 		if req.AllowS3 {
 			// Setup the S3 downloader
-			reqUrl = u.RawPath
+			reqUrl = u.Path
 			downloader = S3{
 				Bucket: u.Host,
 			}

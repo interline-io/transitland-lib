@@ -26,6 +26,7 @@ func (r S3) Download(ctx context.Context, key string, secret tl.Secret, auth tl.
 	// Get object
 	s3bucket := strings.TrimPrefix(r.Bucket, "s3://")
 	s3key := strings.TrimPrefix(r.KeyPrefix+"/"+strings.TrimPrefix(key, "/"), "/")
+	// fmt.Printf("s3 download: bucket '%s' key: '%s'\n", s3bucket, s3key)
 	s3obj, err := client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s3bucket),
 		Key:    aws.String(s3key),
