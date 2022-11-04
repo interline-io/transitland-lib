@@ -68,7 +68,7 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 			// Setup the S3 downloader
 			reqUrl = u.RawPath
 			downloader = S3{
-				Container: fmt.Sprintf("%s://%s", u.Scheme, u.Host),
+				Bucket: u.Host,
 			}
 		} else {
 			reqErr = errors.New("request not configured to allow s3")

@@ -28,7 +28,7 @@ func GetStore(ustr string) (Store, error) {
 	var s Store
 	switch u.Scheme {
 	case "s3":
-		s = request.S3{Container: u.Host, KeyPrefix: u.Path}
+		s = request.S3{Bucket: u.Host, KeyPrefix: u.Path}
 	case "az":
 		p := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
 		s = request.Az{Account: u.Host, Container: p[0], KeyPrefix: strings.Join(p[1:], "/")}

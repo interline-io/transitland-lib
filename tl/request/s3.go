@@ -13,7 +13,7 @@ import (
 )
 
 type S3 struct {
-	Container string
+	Bucket    string
 	KeyPrefix string
 }
 
@@ -24,7 +24,7 @@ func (r S3) Download(ctx context.Context, key string, secret tl.Secret, auth tl.
 		return nil, 0, err
 	}
 	// Get object
-	s3bucket := strings.TrimPrefix(r.Container, "s3://")
+	s3bucket := strings.TrimPrefix(r.Bucket, "s3://")
 	s3key := strings.TrimPrefix(r.KeyPrefix+"/"+strings.TrimPrefix(key, "/"), "/")
 	s3obj, err := client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s3bucket),
@@ -43,7 +43,7 @@ func (r S3) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 		return err
 	}
 	// Save object
-	s3bucket := strings.TrimPrefix(r.Container, "s3://")
+	s3bucket := strings.TrimPrefix(r.Bucket, "s3://")
 	s3key := strings.TrimPrefix(r.KeyPrefix+"/"+strings.TrimPrefix(key, "/"), "/")
 	result, err := client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s3bucket),
