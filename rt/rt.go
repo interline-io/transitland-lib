@@ -24,7 +24,7 @@ func Read(address string) (*pb.FeedMessage, error) {
 
 // ReadURL opens a message from a url.
 func ReadURL(address string) (*pb.FeedMessage, error) {
-	r, _, err := request.DownloadHTTP(context.Background(), address, tl.Secret{}, tl.FeedAuthorization{})
+	r, _, err := request.Http{}.Download(context.Background(), address, tl.Secret{}, tl.FeedAuthorization{})
 	if err != nil {
 		return nil, err
 	}

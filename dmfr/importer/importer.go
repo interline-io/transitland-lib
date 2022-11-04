@@ -7,11 +7,11 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -19,8 +19,7 @@ import (
 // Options sets various options for importing a feed.
 type Options struct {
 	FeedVersionID int
-	Directory     string
-	S3            string
+	Storage       string
 	Activate      bool
 	copier.Options
 }
@@ -173,13 +172,11 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	var reqOpts []request.RequestOption
-	reqOpts = append(reqOpts, request.WithAllowLocal)
-	if opts.S3 != "" {
-		reqOpts = append(reqOpts, request.WithAllowS3)
+	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.URL)
+	if err != nil {
+		return fvi, err
 	}
-	adapterUrl := dmfr.GetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
-	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))
+	reader, err := tlcsv.NewReaderFromAdapter(tladapter)
 	if err != nil {
 		return fvi, err
 	}

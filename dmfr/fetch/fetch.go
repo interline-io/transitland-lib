@@ -1,15 +1,12 @@
 package fetch
 
 import (
-	"context"
 	"errors"
-	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
@@ -23,11 +20,10 @@ type Options struct {
 	FeedID                  int
 	URLType                 string
 	IgnoreDuplicateContents bool
-	Directory               string
-	S3                      string
-	AllowS3Fetch            bool
+	Storage                 string
 	AllowFTPFetch           bool
 	AllowLocalFetch         bool
+	AllowS3Fetch            bool
 	FetchedAt               time.Time
 	Secrets                 []tl.Secret
 	CreatedBy               tl.String
@@ -121,24 +117,9 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 
 	// Validate OK, upload
 	if newFile && uploadFile != "" {
-		if opts.Directory != "" {
-			outfn := filepath.Join(opts.Directory, uploadDest)
-			log.Debug().Str("src", uploadFile).Str("dst", outfn).Msg("fetch: copying file to gtfs dir")
-			if err := copyFileContents(outfn, uploadFile); err != nil {
-				return result, err
-			}
-		}
-		if opts.S3 != "" {
-			ustr := fmt.Sprintf("%s/%s", opts.S3, uploadDest)
-			log.Debug().Str("src", uploadFile).Str("dst", ustr).Msg("fetch: copying file to s3")
-			rp, err := os.Open(uploadFile)
-			if err != nil {
-				return result, err
-			}
-			defer rp.Close()
-			if err := request.UploadS3(context.Background(), ustr, tl.Secret{}, rp); err != nil {
-				return result, err
-			}
+		log.Debug().Str("src", uploadFile).Str("storage", opts.Storage).Str("storage_key", uploadDest).Msg("fetch: copying to store")
+		if err := store.UploadFile(opts.Storage, uploadFile, uploadDest); err != nil {
+			return result, err
 		}
 	}
 
@@ -163,27 +144,4 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		return result, err
 	}
 	return result, nil
-}
-
-func copyFileContents(dst, src string) (err error) {
-	in, err := os.Open(src)
-	if err != nil {
-		return
-	}
-	defer in.Close()
-	out, err := os.Create(dst)
-	if err != nil {
-		return
-	}
-	defer func() {
-		cerr := out.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-	if _, err = io.Copy(out, in); err != nil {
-		return
-	}
-	err = out.Sync()
-	return
 }

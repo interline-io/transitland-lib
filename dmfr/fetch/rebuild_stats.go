@@ -9,18 +9,17 @@ import (
 	sq "github.com/Masterminds/squirrel"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
 type RebuildStatsOptions struct {
 	FeedVersionID int
-	Directory     string
-	S3            string
+	Storage       string
 }
 
 type RebuildStatsResult struct {
@@ -53,8 +52,8 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.StringVar(&cmd.Options.Directory, "gtfsdir", ".", "GTFS Directory")
-	fl.StringVar(&cmd.Options.S3, "s3", "", "Get GTFS files from S3 bucket/prefix")
+	fl.StringVar(&cmd.Options.Storage, "storage", "", "Storage destination; can be s3://... az://... or path to a directory")
+
 	fl.Parse(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
@@ -130,8 +129,7 @@ func (cmd *RebuildStatsCommand) Run() error {
 	for _, fvid := range qrs {
 		jobs <- RebuildStatsOptions{
 			FeedVersionID: fvid,
-			Directory:     cmd.Options.Directory,
-			S3:            cmd.Options.S3,
+			Storage:       cmd.Options.Storage,
 		}
 	}
 	close(jobs)
@@ -183,13 +181,11 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 		return RebuildStatsResult{}, err
 	}
 	// Get Reader
-	var reqOpts []request.RequestOption
-	reqOpts = append(reqOpts, request.WithAllowLocal)
-	if opts.S3 != "" {
-		reqOpts = append(reqOpts, request.WithAllowS3)
+	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.SHA1, fv.File)
+	if err != nil {
+		return RebuildStatsResult{}, err
 	}
-	adapterUrl := dmfr.GetReaderURL(opts.S3, opts.Directory, fv.File, fv.SHA1)
-	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(adapterUrl, reqOpts...))
+	reader, err := tlcsv.NewReaderFromAdapter(tladapter)
 	if err != nil {
 		return RebuildStatsResult{}, err
 	}

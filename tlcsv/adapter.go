@@ -75,7 +75,7 @@ func NewAdapter(address string) (Adapter, error) {
 type URLAdapter struct {
 	url     string
 	reqOpts []request.RequestOption
-	ZipAdapter
+	TmpZipAdapter
 }
 
 func NewURLAdapter(address string, opts ...request.RequestOption) *URLAdapter {
@@ -108,15 +108,67 @@ func (adapter *URLAdapter) Open() error {
 		return err
 	}
 	// Add internal path prefix back
+	adapter.TmpZipAdapter = TmpZipAdapter{
+		tmpfilepath:    fr.Filename,
+		internalPrefix: fragment,
+	}
+	return adapter.TmpZipAdapter.Open()
+}
+
+///////////////
+
+// Temporary zip adapter
+
+func NewTmpZipAdapterFromReader(reader io.Reader, fragment string) (*TmpZipAdapter, error) {
+	// Remove and keep internal path prefix
+	split := strings.SplitN(fragment, "#", 2)
+	if len(split) > 1 {
+		fragment = split[1]
+	} else {
+		fragment = ""
+	}
+	// Read stream to a temporary file
+	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(tmpfile, reader); err != nil {
+		return nil, err
+	}
+	tfn := tmpfile.Name()
+	if err := tmpfile.Close(); err != nil {
+		return nil, err
+	}
+	// Add internal path prefix back
+	adapter := TmpZipAdapter{
+		tmpfilepath:    tfn, // delete on close
+		internalPrefix: fragment,
+	}
+	return &adapter, nil
+}
+
+// TmpZipAdapter is similar to ZipAdapter, but deletes the file on close.
+type TmpZipAdapter struct {
+	tmpfilepath    string
+	internalPrefix string
+	ZipAdapter
+}
+
+func (adapter *TmpZipAdapter) Open() error {
 	adapter.ZipAdapter = ZipAdapter{
-		path:        fr.Filename + "#" + fragment,
-		tmpfilepath: fr.Filename, // delete on close
+		path:           adapter.tmpfilepath,
+		internalPrefix: adapter.internalPrefix,
 	}
 	return adapter.ZipAdapter.Open()
 }
 
-// Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
-func (adapter *URLAdapter) Close() error {
+func (adapter *TmpZipAdapter) Close() error {
+	if adapter.tmpfilepath != "" {
+		log.Debugf("tmp zip adapter: removing temp file: %s", adapter.tmpfilepath)
+		if err := os.Remove(adapter.tmpfilepath); err != nil {
+			return err
+		}
+	}
 	return adapter.ZipAdapter.Close()
 }
 
@@ -126,7 +178,6 @@ func (adapter *URLAdapter) Close() error {
 type ZipAdapter struct {
 	path           string
 	internalPrefix string
-	tmpfilepath    string
 }
 
 // NewZipAdapter returns an initialized zip adapter.
@@ -174,7 +225,6 @@ func (adapter *ZipAdapter) Open() error {
 			return err
 		}
 		adapter.path = tmpfilepath
-		adapter.tmpfilepath = tmpfilepath
 		adapter.internalPrefix = ""
 	}
 	if adapter.internalPrefix != "" {
@@ -185,12 +235,6 @@ func (adapter *ZipAdapter) Open() error {
 
 // Close the adapter.
 func (adapter *ZipAdapter) Close() error {
-	if adapter.tmpfilepath != "" {
-		log.Debugf("zip adapter: removing temp file: %s", adapter.tmpfilepath)
-		if err := os.Remove(adapter.tmpfilepath); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
