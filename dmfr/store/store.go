@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
@@ -27,9 +28,10 @@ func GetStore(ustr string) (Store, error) {
 	var s Store
 	switch u.Scheme {
 	case "s3":
-		s = request.S3{Container: ustr}
+		s = request.S3{Container: u.Host, KeyPrefix: u.Path}
 	case "az":
-		s = request.Az{Container: ustr}
+		p := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
+		s = request.Az{Account: u.Host, Container: p[0], KeyPrefix: strings.Join(p[1:], "/")}
 	case "file":
 		s = request.Local{Directory: ustr}
 	default:

@@ -2,9 +2,7 @@ package request
 
 import (
 	"context"
-	"errors"
 	"io"
-	"net/url"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -16,30 +14,21 @@ import (
 
 type S3 struct {
 	Container string
+	KeyPrefix string
 }
 
 func (r S3) Download(ctx context.Context, key string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
 	// Create client
-	var client *s3.Client
-	if secret.AWSAccessKeyID != "" && secret.AWSSecretAccessKey != "" {
-		cfg, err := config.LoadDefaultConfig(ctx,
-			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(secret.AWSAccessKeyID, secret.AWSSecretAccessKey, "")),
-		)
-		if err != nil {
-			return nil, 0, err
-		}
-		client = s3.NewFromConfig(cfg)
-	} else {
-		cfg, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
-			return nil, 0, err
-		}
-		client = s3.NewFromConfig(cfg)
+	client, err := awsConfig(ctx, secret)
+	if err != nil {
+		return nil, 0, err
 	}
 	// Get object
+	s3bucket := strings.TrimPrefix(r.Container, "s3://")
+	s3key := strings.TrimPrefix(r.KeyPrefix+"/"+strings.TrimPrefix(key, "/"), "/")
 	s3obj, err := client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(r.Container),
-		Key:    aws.String(key),
+		Bucket: aws.String(s3bucket),
+		Key:    aws.String(s3key),
 	})
 	if err != nil {
 		return nil, 0, err
@@ -47,31 +36,15 @@ func (r S3) Download(ctx context.Context, key string, secret tl.Secret, auth tl.
 	return s3obj.Body, 0, nil
 }
 
-func (r S3) Upload(ctx context.Context, ustr string, secret tl.Secret, uploadFile io.Reader) error {
-	s3uri, err := url.Parse(ustr)
-	if err != nil {
-		return errors.New("could not parse url")
-	}
+func (r S3) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile io.Reader) error {
 	// Create client
-	var client *s3.Client
-	if secret.AWSAccessKeyID != "" && secret.AWSSecretAccessKey != "" {
-		cfg, err := config.LoadDefaultConfig(ctx,
-			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(secret.AWSAccessKeyID, secret.AWSSecretAccessKey, "")),
-		)
-		if err != nil {
-			return err
-		}
-		client = s3.NewFromConfig(cfg)
-	} else {
-		cfg, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
-			return err
-		}
-		client = s3.NewFromConfig(cfg)
+	client, err := awsConfig(ctx, secret)
+	if err != nil {
+		return err
 	}
 	// Save object
-	s3bucket := s3uri.Host
-	s3key := strings.TrimPrefix(s3uri.Path, "/")
+	s3bucket := strings.TrimPrefix(r.Container, "s3://")
+	s3key := strings.TrimPrefix(r.KeyPrefix+"/"+strings.TrimPrefix(key, "/"), "/")
 	result, err := client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s3bucket),
 		Key:    aws.String(s3key),
@@ -79,4 +52,25 @@ func (r S3) Upload(ctx context.Context, ustr string, secret tl.Secret, uploadFil
 	})
 	_ = result
 	return err
+}
+
+func awsConfig(ctx context.Context, secret tl.Secret) (*s3.Client, error) {
+	// Create client
+	var client *s3.Client
+	if secret.AWSAccessKeyID != "" && secret.AWSSecretAccessKey != "" {
+		cfg, err := config.LoadDefaultConfig(ctx,
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(secret.AWSAccessKeyID, secret.AWSSecretAccessKey, "")),
+		)
+		if err != nil {
+			return nil, err
+		}
+		client = s3.NewFromConfig(cfg)
+	} else {
+		cfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			return nil, err
+		}
+		client = s3.NewFromConfig(cfg)
+	}
+	return client, nil
 }
