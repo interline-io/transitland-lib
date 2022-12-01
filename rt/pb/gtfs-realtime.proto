@@ -583,7 +583,7 @@ message Alert {
   // Entities whose users we should notify of this alert.
   repeated EntitySelector informed_entity = 5;
 
-  // Cause of this alert.
+  // Cause of this alert. If cause_detail is included, then Cause must also be included.
   enum Cause {
     UNKNOWN_CAUSE = 1;
     OTHER_CAUSE = 2;        // Not machine-representable.
@@ -600,7 +600,7 @@ message Alert {
   }
   optional Cause cause = 6 [default = UNKNOWN_CAUSE];
 
-  // What is the effect of this problem on the affected entity.
+  // What is the effect of this problem on the affected entity. If effect_detail is included, then Effect must also be included.
   enum Effect {
     NO_SERVICE = 1;
     REDUCED_SERVICE = 2;
@@ -656,6 +656,15 @@ message Alert {
   // or the user can't see the image for accessibility reasons). See the HTML spec for alt image text - https://html.spec.whatwg.org/#alt.
   // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future.
   optional TranslatedString image_alternative_text = 16;
+  
+  
+  // Description of the cause of the alert that allows for agency-specific language; more specific than the Cause. If cause_detail is included, then Cause must also be included.
+  // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future.
+  optional TranslatedString cause_detail = 17;
+  
+  // Description of the effect of the alert that allows for agency-specific language; more specific than the Effect. If effect_detail is included, then Effect must also be included.
+  // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future.
+  optional TranslatedString effect_detail = 18;
 
   // The extensions namespace allows 3rd-party developers to extend the
   // GTFS Realtime Specification in order to add and evaluate new features
@@ -808,8 +817,8 @@ message TripDescriptor {
     // (in calendar.txt or calendar_dates.txt) is operating within the next 30 days. The trip to be duplicated is
     // identified via TripUpdate.TripDescriptor.trip_id. This enumeration does not modify the existing trip referenced by
     // TripUpdate.TripDescriptor.trip_id - if a producer wants to cancel the original trip, it must publish a separate
-    // TripUpdate with the value of CANCELED. Trips defined in GTFS frequencies.txt with exact_times that is empty or
-    // equal to 0 cannot be duplicated. The VehiclePosition.TripDescriptor.trip_id for the new trip must contain
+    // TripUpdate with the value of CANCELED or DELETED. Trips defined in GTFS frequencies.txt with exact_times that is
+    // empty or equal to 0 cannot be duplicated. The VehiclePosition.TripDescriptor.trip_id for the new trip must contain
     // the matching value from TripUpdate.TripProperties.trip_id and VehiclePosition.TripDescriptor.ScheduleRelationship
     // must also be set to DUPLICATED.
     // Existing producers and consumers that were using the ADDED enumeration to represent duplicated trips must follow
@@ -817,6 +826,17 @@ message TripDescriptor {
     // to transition to the DUPLICATED enumeration.
     // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future.
     DUPLICATED = 6;
+
+
+    // A trip that existed in the schedule but was removed and must not be shown to users.
+    // DELETED should be used instead of CANCELED to indicate that a transit provider would like to entirely remove
+    // information about the corresponding trip from consuming applications, so the trip is not shown as cancelled to
+    // riders, e.g. a trip that is entirely being replaced by another trip.
+    // This designation becomes particularly important if several trips are cancelled and replaced with substitute service.
+    // If consumers were to show explicit information about the cancellations it would distract from the more important
+    // real-time predictions.
+    // NOTE: This field is still experimental, and subject to change. It may be formally adopted in the future.
+    DELETED = 7;
   }
   optional ScheduleRelationship schedule_relationship = 4;
 
@@ -842,6 +862,26 @@ message VehicleDescriptor {
 
   // The license plate of the vehicle.
   optional string license_plate = 3;
+
+  enum WheelchairAccessible {
+    // The trip doesn't have information about wheelchair accessibility.
+    // This is the **default** behavior. If the static GTFS contains a
+    // _wheelchair_accessible_ value, it won't be overwritten.
+    NO_VALUE = 0;
+
+    // The trip has no accessibility value present.
+    // This value will overwrite the value from the GTFS.
+    UNKNOWN = 1;
+
+    // The trip is wheelchair accessible.
+    // This value will overwrite the value from the GTFS.
+    WHEELCHAIR_ACCESSIBLE = 2;
+
+    // The trip is **not** wheelchair accessible.
+    // This value will overwrite the value from the GTFS.
+    WHEELCHAIR_INACCESSIBLE = 3;
+  }
+  optional WheelchairAccessible wheelchair_accessible = 4 [default = NO_VALUE];
 
   // The extensions namespace allows 3rd-party developers to extend the
   // GTFS Realtime Specification in order to add and evaluate new features and
@@ -932,7 +972,7 @@ message TranslatedImage {
     // String containing an URL linking to an image
     // The image linked must be less than 2MB. 
     // If an image changes in a significant enough way that an update is required on the consumer side, the producer must update the URL to a new one.
-    // The URL should be a fully qualified URL that includes http:// or https://, and any special characters in the URL must be correctly escaped. See the following http://www.w3.org/Addressing/URL/4_URI_Recommentations.html for a description of how to create fully qualified URL values.
+    // The URL should be a fully qualified URL that includes http:// or https://, and any special characters in the URL must be correctly escaped. See the following http://www.w3.org/Addressing/URL/4_URI_Recommentations.html for a description of how to create fully qualified URL values.
     required string url = 1;
 
     // IANA media type as to specify the type of image to be displayed. 

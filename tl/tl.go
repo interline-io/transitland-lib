@@ -11,7 +11,7 @@ var VERSION = "v0.11.1"
 var GTFSVERSION = "9d5ebf1277f83178ba041de208f200d2d00cf5e7"
 
 // GTFSRTVERSION is the commit for the gtfs-realtime.proto file.
-var GTFSRTVERSION = "99fdfba627451d2861346c631af84535fa1e02fb"
+var GTFSRTVERSION = "6fcc3800b15954227af7335d571791738afb1a67"
 
 // Aliases
 type Date = tt.Date
