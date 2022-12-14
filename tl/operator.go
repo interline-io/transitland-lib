@@ -30,6 +30,9 @@ func (ent *Operator) Equal(other *Operator) bool {
 	a2 := *other
 	a1j, _ := json.Marshal(&a1)
 	a2j, _ := json.Marshal(&a2)
+	if ent.File != other.File {
+		return false
+	}
 	return string(a1j) == string(a2j)
 }
 
