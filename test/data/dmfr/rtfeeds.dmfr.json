@@ -15,7 +15,13 @@
       "spec": "gtfs",
       "urls": {
         "static_current": "https://cdn.mbta.com/MBTA_GTFS.zip"
-      }
+      },
+      "operators": [
+        {
+          "onestop_id": "o-mbta",
+          "name": "MBTA"
+        }
+      ]
     },
     {
       "id": "f-hart~rt",
