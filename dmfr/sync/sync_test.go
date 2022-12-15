@@ -85,6 +85,11 @@ func TestMainSync_Update(t *testing.T) {
 		if tlfeed.FeedID != exposid {
 			t.Errorf("got %s expected %s", tlfeed.FeedID, exposid)
 		}
+		// Check File
+		expFile := "rtfeeds.dmfr.json"
+		if tlfeed.File != expFile {
+			t.Errorf("got '%s' expected '%s'", tlfeed.File, expFile)
+		}
 		return nil
 	})
 	if err != nil {
@@ -93,7 +98,6 @@ func TestMainSync_Update(t *testing.T) {
 }
 
 // Unit tests
-
 func TestUpdateFeed(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
@@ -188,7 +192,6 @@ func TestUpdateFeed(t *testing.T) {
 			t.Error(err)
 		}
 	})
-
 }
 
 func TestHideUnseedFeeds(t *testing.T) {
@@ -224,4 +227,90 @@ func TestHideUnseedFeeds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestUpdateOperator(t *testing.T) {
+	t.Run("New", func(t *testing.T) {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+			// Import
+			regs := []string{
+				testutil.RelPath("test/data/dmfr/rtfeeds.dmfr.json"),
+			}
+			opts := Options{
+				Filenames:  regs,
+				HideUnseen: true,
+			}
+			found, err := MainSync(atx, opts)
+			if err != nil {
+				t.Error(err)
+			}
+			// Check results
+			expect := map[int]bool{}
+			for _, i := range found.OperatorIDs {
+				expect[i] = true
+			}
+			tlops := []tl.Operator{}
+			testdb.ShouldSelect(t, atx, &tlops, "SELECT * FROM current_operators WHERE deleted_at IS NULL")
+			if len(tlops) == 0 {
+				t.Errorf("got no operators")
+			}
+			if len(tlops) != len(expect) {
+				t.Errorf("got %d operators, expect %d", len(tlops), len(expect))
+			}
+			for _, tlop := range tlops {
+				if _, ok := expect[tlop.ID]; !ok {
+					t.Errorf("did not find feed %s", tlop.OnestopID.Val)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("Update", func(t *testing.T) {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+			regs := []string{
+				testutil.RelPath("test/data/dmfr/rtfeeds.dmfr.json"),
+			}
+			opts := Options{Filenames: regs}
+			found, err := MainSync(atx, opts)
+			if err != nil {
+				t.Error(err)
+			}
+			// Manual update so we can test operator updates
+			newFile := "test.dmfr.json"
+			_ = found
+			if _, err := atx.DBX().Exec("update current_operators set file = ? where onestop_id = ?", newFile, "o-mbta"); err != nil {
+				t.Fatal(err)
+			}
+			// Check updated
+			tlops := []tl.Operator{}
+			testdb.ShouldSelect(t, atx, &tlops, "SELECT * FROM current_operators WHERE deleted_at IS NULL")
+			if len(tlops) == 0 {
+				t.Errorf("got no operators")
+			}
+			if tlops[0].File.Val != newFile {
+				t.Errorf("did not get updated file value, got '%s' expected '%s'", tlops[0].File.Val, newFile)
+			}
+			// Resync and check updated file
+			if _, err := MainSync(atx, opts); err != nil {
+				t.Error(err)
+			}
+			newOps := []tl.Operator{}
+			testdb.ShouldSelect(t, atx, &newOps, "SELECT * FROM current_operators WHERE deleted_at IS NULL")
+			if len(newOps) == 0 {
+				t.Errorf("got no operators")
+			}
+			expFile := "rtfeeds.dmfr.json"
+			if newOps[0].File.Val != expFile {
+				t.Errorf("did not get updated file value, got '%s' expected '%s'", newOps[0].File.Val, expFile)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
 }
