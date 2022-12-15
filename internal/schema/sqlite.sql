@@ -286,8 +286,12 @@ CREATE INDEX idx_gtfs_agencies_agency_id ON "gtfs_agencies"(agency_id);
 CREATE INDEX idx_gtfs_agencies_feed_version_id ON "gtfs_agencies"(feed_version_id);
 
 CREATE TABLE IF NOT EXISTS "gtfs_transfers" (
-  "from_stop_id" int NOT NULL, 
-  "to_stop_id" int NOT NULL, 
+  "from_stop_id" int NOT NULL,
+  "to_stop_id" int NOT NULL,
+  "from_route_id" int, 
+  "to_route_id" int, 
+  "from_trip_id" int, 
+  "to_trip_id" int, 
   "transfer_type" integer NOT NULL, 
   "min_transfer_time" integer, 
   "id" integer primary key autoincrement, 
