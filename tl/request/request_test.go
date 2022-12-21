@@ -29,75 +29,108 @@ func TestAuthorizedRequest(t *testing.T) {
 		w.Write(a)
 	}))
 	defer ts.Close()
-	secret := tl.Secret{Key: "abcd", Username: "efgh", Password: "ijkl"}
 	testcases := []struct {
-		name       string
-		url        string
-		auth       tl.FeedAuthorization
-		checkkey   string
-		checkvalue string
-		checksize  int
-		checkcode  int
-		checksha1  string
+		name        string
+		url         string
+		auth        tl.FeedAuthorization
+		checkkey    string
+		checkvalue  string
+		checksize   int
+		checkcode   int
+		checksha1   string
+		expectError bool
+		secret      tl.Secret
 	}{
 		{
-			"basic get",
-			"/get",
-			tl.FeedAuthorization{},
-			"url",
-			"/get",
-			29,
-			200,
-			"66621b979e91314ea163d94be8e7486bdcfe07c9",
+			name:       "basic get",
+			url:        "/get",
+			auth:       tl.FeedAuthorization{},
+			checkkey:   "url",
+			checkvalue: "/get",
+			checksize:  29,
+			checkcode:  200,
+			checksha1:  "66621b979e91314ea163d94be8e7486bdcfe07c9",
 		},
 		{
-			"query_param",
-			"/get",
-			tl.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
-			"url",
-			"/get?api_key=abcd",
-			42,
-			200,
-			"",
+			name:       "query_param",
+			url:        "/get",
+			auth:       tl.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
+			checkkey:   "url",
+			checkvalue: "/get?api_key=abcd",
+			checksize:  42,
+			checkcode:  200,
+			checksha1:  "",
+			secret:     tl.Secret{Key: "abcd"},
 		},
 		{
-			"path_segment",
-			"/anything/{}/ok",
-			tl.FeedAuthorization{Type: "path_segment"},
-			"url",
-			"/anything/abcd/ok",
-			0,
-			200,
-			"",
+			name:       "path_segment",
+			url:        "/anything/{}/ok",
+			auth:       tl.FeedAuthorization{Type: "path_segment"},
+			checkkey:   "url",
+			checkvalue: "/anything/abcd/ok",
+			checksize:  0,
+			checkcode:  200,
+			checksha1:  "",
+			secret:     tl.Secret{Key: "abcd"},
 		},
 		{
-			"header",
-			"/headers",
-			tl.FeedAuthorization{Type: "header", ParamName: "Auth"},
-			"", // TODO: check headers...
-			"",
-			0,
-			200,
-			"",
+			name:       "header",
+			url:        "/headers",
+			auth:       tl.FeedAuthorization{Type: "header", ParamName: "Auth"},
+			checkkey:   "", // TODO: check headers...
+			checkvalue: "",
+			checksize:  0,
+			checkcode:  200,
+			checksha1:  "",
+			secret:     tl.Secret{Key: "abcd"},
 		},
 		{
-			"basic_auth",
-			"/basic-auth/efgh/ijkl",
-			tl.FeedAuthorization{Type: "basic_auth"},
-			"user",
-			secret.Username,
-			0,
-			200,
-			"",
+			name:       "basic_auth",
+			url:        "/basic-auth/efgh/ijkl",
+			auth:       tl.FeedAuthorization{Type: "basic_auth"},
+			checkkey:   "user",
+			checkvalue: "efgh",
+			checksize:  0,
+			checkcode:  200,
+			checksha1:  "",
+			secret:     tl.Secret{Username: "efgh", Password: "ijkl"},
+		},
+		{
+			name:       "replace",
+			url:        "/get",
+			auth:       tl.FeedAuthorization{Type: "replace"},
+			checkkey:   "url",
+			checkvalue: "/anything/test",
+			checksize:  0,
+			checkcode:  200,
+			checksha1:  "",
+			secret:     tl.Secret{Key: ts.URL + "/anything/test"},
+		},
+		{
+			name:        "replace expect error",
+			url:         "/get",
+			auth:        tl.FeedAuthorization{Type: "replace"},
+			expectError: true,
+			secret:      tl.Secret{Key: "/must/be/full/url"},
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			fr, err := AuthenticatedRequest(ts.URL+tc.url, WithAuth(secret, tc.auth))
+			fr, err := AuthenticatedRequest(ts.URL+tc.url, WithAuth(tc.secret, tc.auth))
 			if err != nil {
 				t.Error(err)
 				return
 			}
+			ferr := fr.FetchError
+			if tc.expectError && ferr != nil {
+				// ok
+				return
+			} else if tc.expectError && ferr == nil {
+				t.Error("expected error")
+			} else if !tc.expectError && ferr != nil {
+				t.Error(ferr)
+			}
+
 			var result map[string]interface{}
 			if err := json.Unmarshal(fr.Data, &result); err != nil {
 				t.Error(err)
