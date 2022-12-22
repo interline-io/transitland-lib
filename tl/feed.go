@@ -25,16 +25,29 @@ type Feed struct {
 	Timestamps    `json:"-"`        // internal
 }
 
-func (ent *Feed) MatchSecrets(secrets []Secret) (Secret, error) {
+func (ent *Feed) MatchSecrets(secrets []Secret, urltype string) (Secret, error) {
 	found := Secret{}
 	count := 0
 	for _, secret := range secrets {
+		// Filter on URL type if provided
+		if urltype != "" && secret.URLType != "" && secret.URLType != urltype {
+			continue
+		}
 		if secret.MatchFeed(ent.FeedID) {
 			count += 1
 			found = secret
-		} else if secret.MatchFilename(ent.File) {
-			count += 1
-			found = secret
+		}
+	}
+	// Try matching on filename if no exact feed id matches were found
+	if count == 0 {
+		for _, secret := range secrets {
+			if urltype != "" && secret.URLType != "" && secret.URLType != urltype {
+				continue
+			}
+			if secret.MatchFilename(ent.File) {
+				count += 1
+				found = secret
+			}
 		}
 	}
 	if count == 0 {
@@ -145,7 +158,7 @@ func (a *FeedLicense) Scan(value interface{}) error {
 
 // FeedAuthorization contains details about how to access a Feed.
 type FeedAuthorization struct {
-	Type      string `json:"type,omitempty"` // ["header", "basic_auth", "query_param", "path_segment"]
+	Type      string `json:"type,omitempty"` // ["header", "basic_auth", "query_param", "path_segment", "replace_url"]
 	ParamName string `json:"param_name,omitempty"`
 	InfoURL   string `json:"info_url,omitempty"`
 }

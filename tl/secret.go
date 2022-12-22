@@ -13,6 +13,8 @@ type Secret struct {
 	AWSSecretAccessKey string `json:"aws_secret_access_key"`
 	FeedID             string `json:"feed_id"`
 	Filename           string `json:"filename"`
+	URLType            string `json:"url_type"`
+	ReplaceUrl         string `json:"replace_url"`
 }
 
 // MatchFilename finds secrets associated with a DMFR filename.

@@ -73,7 +73,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	}
 	// Get secret and set auth
 	if feed.Authorization.Type != "" {
-		secret, err := feed.MatchSecrets(opts.Secrets)
+		secret, err := feed.MatchSecrets(opts.Secrets, opts.URLType)
 		if err != nil {
 			result.FetchError = err
 			return result, nil
