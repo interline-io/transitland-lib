@@ -28,8 +28,8 @@ func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth 
 		u.RawQuery = v.Encode()
 	} else if auth.Type == "path_segment" {
 		u.Path = strings.ReplaceAll(u.Path, "{}", secret.Key)
-	} else if auth.Type == "replace" {
-		u, err = url.Parse(secret.Key)
+	} else if auth.Type == "replace_url" {
+		u, err = url.Parse(secret.ReplaceUrl)
 		if err != nil {
 			return nil, 0, errors.New("could not parse replacement query string")
 		}

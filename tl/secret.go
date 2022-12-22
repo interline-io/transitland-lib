@@ -14,6 +14,7 @@ type Secret struct {
 	FeedID             string `json:"feed_id"`
 	Filename           string `json:"filename"`
 	URLType            string `json:"url_type"`
+	ReplaceUrl         string `json:"replace_url"`
 }
 
 // MatchFilename finds secrets associated with a DMFR filename.
