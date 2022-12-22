@@ -98,20 +98,20 @@ func TestAuthorizedRequest(t *testing.T) {
 		{
 			name:       "replace",
 			url:        "/get",
-			auth:       tl.FeedAuthorization{Type: "replace"},
+			auth:       tl.FeedAuthorization{Type: "replace_url"},
 			checkkey:   "url",
 			checkvalue: "/anything/test",
 			checksize:  0,
 			checkcode:  200,
 			checksha1:  "",
-			secret:     tl.Secret{Key: ts.URL + "/anything/test"},
+			secret:     tl.Secret{ReplaceUrl: ts.URL + "/anything/test"},
 		},
 		{
 			name:        "replace expect error",
 			url:         "/get",
-			auth:        tl.FeedAuthorization{Type: "replace"},
+			auth:        tl.FeedAuthorization{Type: "replace_url"},
 			expectError: true,
-			secret:      tl.Secret{Key: "/must/be/full/url"},
+			secret:      tl.Secret{ReplaceUrl: "/must/be/full/url"},
 		},
 	}
 	for _, tc := range testcases {

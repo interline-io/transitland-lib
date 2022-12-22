@@ -158,7 +158,7 @@ func (a *FeedLicense) Scan(value interface{}) error {
 
 // FeedAuthorization contains details about how to access a Feed.
 type FeedAuthorization struct {
-	Type      string `json:"type,omitempty"` // ["header", "basic_auth", "query_param", "path_segment", "replace"]
+	Type      string `json:"type,omitempty"` // ["header", "basic_auth", "query_param", "path_segment", "replace_url"]
 	ParamName string `json:"param_name,omitempty"`
 	InfoURL   string `json:"info_url,omitempty"`
 }
