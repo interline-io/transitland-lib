@@ -36,9 +36,18 @@ func (ent *Feed) MatchSecrets(secrets []Secret, urltype string) (Secret, error) 
 		if secret.MatchFeed(ent.FeedID) {
 			count += 1
 			found = secret
-		} else if secret.MatchFilename(ent.File) {
-			count += 1
-			found = secret
+		}
+	}
+	// Try matching on filename if no exact feed id matches were found
+	if count == 0 {
+		for _, secret := range secrets {
+			if urltype != "" && secret.URLType != "" && secret.URLType != urltype {
+				continue
+			}
+			if secret.MatchFilename(ent.File) {
+				count += 1
+				found = secret
+			}
 		}
 	}
 	if count == 0 {
