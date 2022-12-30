@@ -2,6 +2,7 @@ package request
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -24,6 +25,9 @@ type Az struct {
 }
 
 func (r Az) Download(ctx context.Context, key string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
+	if key == "" {
+		return nil, 0, errors.New("key must not be empty")
+	}
 	// Create request
 	_, blobClient, err := getAzBlobClient(r.Account)
 	if err != nil {
@@ -35,6 +39,9 @@ func (r Az) Download(ctx context.Context, key string, secret tl.Secret, auth tl.
 }
 
 func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile io.Reader) error {
+	if key == "" {
+		return errors.New("key must not be empty")
+	}
 	_, blobClient, err := getAzBlobClient(r.Account)
 	if err != nil {
 		return err
@@ -47,9 +54,9 @@ func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 }
 
 func (r Az) CreateSignedUrl(ctx context.Context, key string, secret tl.Secret) (string, error) {
-	// fmt.Println("account:", r.Account)
-	// fmt.Println("container:", r.Container)
-	// fmt.Println("key:", key)
+	if key == "" {
+		return "", errors.New("key must not be empty")
+	}
 	cred, _, err := getAzBlobClient(r.Account)
 	now := time.Now().In(time.UTC).Add(time.Second * -10)
 	expiry := now.Add(1 * time.Hour)
