@@ -3,6 +3,8 @@ package request
 import (
 	"context"
 	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"testing"
 
@@ -54,6 +56,26 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if string(downloadData) != string(testData) {
+			t.Errorf("got data '%s', expected '%s'", string(downloadData), string(testData))
+		}
+	})
+	t.Run("signed url", func(t *testing.T) {
+		// Download again
+		t.Log("creating signed url:", azUri)
+		downloader, err := NewAzFromUrl(azUri)
+		if err != nil {
+			t.Fatal(err)
+		}
+		signedUrl, err := downloader.CreateSignedUrl(context.Background(), azKey, tl.Secret{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := http.Get(signedUrl)
+		if err != nil {
+			t.Error(err)
+		}
+		downloadData, err := ioutil.ReadAll(resp.Body)
 		if string(downloadData) != string(testData) {
 			t.Errorf("got data '%s', expected '%s'", string(downloadData), string(testData))
 		}

@@ -2,7 +2,10 @@ package request
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"testing"
 
@@ -58,4 +61,26 @@ func TestS3Request(t *testing.T) {
 			t.Errorf("got data '%s', expected '%s'", string(downloadData), string(testData))
 		}
 	})
+	t.Run("signed url", func(t *testing.T) {
+		// Download again
+		t.Log("creating signed url:", s3Uri)
+		downloader, err := NewS3FromUrl(s3Uri)
+		if err != nil {
+			t.Fatal(err)
+		}
+		signedUrl, err := downloader.CreateSignedUrl(context.Background(), s3Key, tl.Secret{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("signed:", signedUrl)
+		resp, err := http.Get(signedUrl)
+		if err != nil {
+			t.Error(err)
+		}
+		downloadData, err := ioutil.ReadAll(resp.Body)
+		if string(downloadData) != string(testData) {
+			t.Errorf("got data '%s', expected '%s'", string(downloadData), string(testData))
+		}
+	})
+
 }
