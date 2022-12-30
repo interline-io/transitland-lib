@@ -25,6 +25,10 @@ type Uploader interface {
 	Upload(context.Context, string, tl.Secret, io.Reader) error
 }
 
+type Presigner interface {
+	CreateSignedUrl(context.Context, string, tl.Secret) (string, error)
+}
+
 type Request struct {
 	URL        string
 	AllowFTP   bool

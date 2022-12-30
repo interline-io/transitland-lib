@@ -6,9 +6,13 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -21,7 +25,7 @@ type Az struct {
 
 func (r Az) Download(ctx context.Context, key string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
 	// Create request
-	blobClient, err := getAzBlobClient(r.Account)
+	_, blobClient, err := getAzBlobClient(r.Account)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -31,7 +35,7 @@ func (r Az) Download(ctx context.Context, key string, secret tl.Secret, auth tl.
 }
 
 func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile io.Reader) error {
-	blobClient, err := getAzBlobClient(r.Account)
+	_, blobClient, err := getAzBlobClient(r.Account)
 	if err != nil {
 		return err
 	}
@@ -42,17 +46,53 @@ func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 	return err
 }
 
-func getAzBlobClient(account string) (*azblob.Client, error) {
+func (r Az) CreateSignedUrl(ctx context.Context, key string, secret tl.Secret) (string, error) {
+	// fmt.Println("account:", r.Account)
+	// fmt.Println("container:", r.Container)
+	// fmt.Println("key:", key)
+	cred, _, err := getAzBlobClient(r.Account)
+	now := time.Now().In(time.UTC).Add(time.Second * -10)
+	expiry := now.Add(1 * time.Hour)
+	svcClient, err := service.NewClient(
+		fmt.Sprintf("https://%s", r.Account),
+		cred,
+		&service.ClientOptions{},
+	)
+	info := service.KeyInfo{
+		Start:  to.Ptr(now.UTC().Format(sas.TimeFormat)),
+		Expiry: to.Ptr(expiry.UTC().Format(sas.TimeFormat)),
+	}
+	udc, err := svcClient.GetUserDelegationCredential(ctx, info, nil)
+	if err != nil {
+		return "", err
+	}
+	// Create Blob Signature Values with desired permissions and sign with user delegation credential
+	sasQueryParams, err := sas.BlobSignatureValues{
+		Protocol:      sas.ProtocolHTTPS,
+		StartTime:     now,
+		ExpiryTime:    expiry,
+		Permissions:   to.Ptr(sas.ContainerPermissions{Read: true}).String(),
+		BlobName:      key,
+		ContainerName: r.Container,
+	}.SignWithUserDelegation(udc)
+	if err != nil {
+		return "", err
+	}
+	sasUrl := fmt.Sprintf("https://%s/%s/%s?%s", r.Account, r.Container, key, sasQueryParams.Encode())
+	return sasUrl, nil
+}
+
+func getAzBlobClient(account string) (*azidentity.DefaultAzureCredential, *azblob.Client, error) {
 	credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	accountUrl := fmt.Sprintf("https://%s", strings.TrimPrefix(account, "az://"))
 	blobClient, err := azblob.NewClient(accountUrl, credential, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return blobClient, nil
+	return credential, blobClient, nil
 }
 
 func NewAzFromUrl(ustr string) (*Az, error) {

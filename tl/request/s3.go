@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -63,6 +64,38 @@ func (r S3) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 	})
 	_ = result
 	return err
+}
+
+// func (presigner Presigner) GetObject(
+// 	bucketName string, objectKey string, lifetimeSecs int64) (*v4.PresignedHTTPRequest, error) {
+// 	request, err := presigner.PresignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
+// 		Bucket: aws.String(bucketName),
+// 		Key:    aws.String(objectKey),
+// 	}, func(opts *s3.PresignOptions) {
+// 		opts.Expires = time.Duration(lifetimeSecs * int64(time.Second))
+// 	})
+// 	if err != nil {
+// 		log.Printf("Couldn't get a presigned request to get %v:%v. Here's why: %v\n",
+// 			bucketName, objectKey, err)
+// 	}
+// 	return request, err
+// }
+
+func (r S3) CreateSignedUrl(ctx context.Context, key string, secret tl.Secret) (string, error) {
+	client, err := awsConfig(ctx, secret)
+	if err != nil {
+		return "", err
+	}
+	s3bucket := strings.TrimPrefix(r.Bucket, "s3://")
+	s3key := strings.TrimPrefix(r.KeyPrefix+"/"+strings.TrimPrefix(key, "/"), "/")
+	presignClient := s3.NewPresignClient(client)
+	request, err := presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(s3bucket),
+		Key:    aws.String(s3key),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = time.Duration(1 * time.Hour)
+	})
+	return request.URL, nil
 }
 
 func awsConfig(ctx context.Context, secret tl.Secret) (*s3.Client, error) {
