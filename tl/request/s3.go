@@ -66,21 +66,6 @@ func (r S3) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 	return err
 }
 
-// func (presigner Presigner) GetObject(
-// 	bucketName string, objectKey string, lifetimeSecs int64) (*v4.PresignedHTTPRequest, error) {
-// 	request, err := presigner.PresignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
-// 		Bucket: aws.String(bucketName),
-// 		Key:    aws.String(objectKey),
-// 	}, func(opts *s3.PresignOptions) {
-// 		opts.Expires = time.Duration(lifetimeSecs * int64(time.Second))
-// 	})
-// 	if err != nil {
-// 		log.Printf("Couldn't get a presigned request to get %v:%v. Here's why: %v\n",
-// 			bucketName, objectKey, err)
-// 	}
-// 	return request, err
-// }
-
 func (r S3) CreateSignedUrl(ctx context.Context, key string, secret tl.Secret) (string, error) {
 	client, err := awsConfig(ctx, secret)
 	if err != nil {
