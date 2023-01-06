@@ -23,7 +23,7 @@ func TestExtract_Filter_BART(t *testing.T) {
 	}
 	fm := map[string][]string{}
 	fm["trips.txt"] = []string{"3792107WKDY"}
-	em.Filter(reader, fm)
+	em.Filter(reader, fm, nil)
 	if !em.IsMarked("stops.txt", "MCAR") {
 		t.Error("expected stop MCAR")
 	}
@@ -102,7 +102,7 @@ func TestExtract_Filter_ExampleFeed(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
 			em := NewMarker()
-			em.Filter(reader, testcase.filter)
+			em.Filter(reader, testcase.filter, nil)
 			if len(em.found) != len(testcase.nodes) {
 				t.Errorf("got %d nodes expect %d nodes", len(em.found), len(testcase.nodes))
 			}

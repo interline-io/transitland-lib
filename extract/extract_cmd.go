@@ -33,6 +33,12 @@ type Command struct {
 	extractRoutes     cli.ArrayFlags
 	extractRouteTypes cli.ArrayFlags
 	extractSet        cli.ArrayFlags
+	excludeAgencies   cli.ArrayFlags
+	excludeStops      cli.ArrayFlags
+	excludeTrips      cli.ArrayFlags
+	excludeCalendars  cli.ArrayFlags
+	excludeRoutes     cli.ArrayFlags
+	excludeRouteTypes cli.ArrayFlags
 	writeExtraColumns bool
 	readerPath        string
 	writerPath        string
@@ -60,6 +66,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.UseBasicRouteTypes, "use-basic-route-types", false, "Collapse extended route_type's into basic GTFS values")
 	fl.BoolVar(&cmd.CopyExtraFiles, "write-extra-files", false, "Copy additional files found in source to destination")
 	fl.BoolVar(&cmd.writeExtraColumns, "write-extra-columns", false, "Include extra columns in output")
+
 	// Extract options
 	fl.Var(&cmd.extractAgencies, "extract-agency", "Extract Agency")
 	fl.Var(&cmd.extractStops, "extract-stop", "Extract Stop")
@@ -67,6 +74,15 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Var(&cmd.extractCalendars, "extract-calendar", "Extract Calendar")
 	fl.Var(&cmd.extractRoutes, "extract-route", "Extract Route")
 	fl.Var(&cmd.extractRouteTypes, "extract-route-type", "Extract Routes matching route_type")
+
+	// Exclude options
+	fl.Var(&cmd.excludeAgencies, "exclude-agency", "Exclude Agency")
+	fl.Var(&cmd.excludeStops, "exclude-stop", "Exclude Stop")
+	fl.Var(&cmd.excludeTrips, "exclude-trip", "Exclude Trip")
+	fl.Var(&cmd.excludeCalendars, "exclude-calendar", "Exclude Calendar")
+	fl.Var(&cmd.excludeRoutes, "exclude-route", "Exclude Route")
+	fl.Var(&cmd.excludeRouteTypes, "exclude-route-type", "Exclude Routes matching route_type")
+
 	fl.Var(&cmd.extractSet, "set", "Set values on output; format is filename,id,key,value")
 	// Entity selection options
 	// fl.BoolVar(&cmd.onlyVisitedEntities, "only-visited-entities", false, "Only copy visited entities")
@@ -156,10 +172,22 @@ func (cmd *Command) Run() error {
 	fm["routes.txt"] = cmd.extractRoutes[:]
 	fm["calendar.txt"] = cmd.extractCalendars[:]
 	fm["stops.txt"] = cmd.extractStops[:]
+
+	ex := map[string][]string{}
+	ex["trips.txt"] = cmd.excludeTrips[:]
+	ex["agency.txt"] = cmd.excludeAgencies[:]
+	ex["routes.txt"] = cmd.excludeRoutes[:]
+	ex["calendar.txt"] = cmd.extractCalendars[:]
+	ex["stops.txt"] = cmd.excludeStops[:]
+
 	count := 0
 	for _, v := range fm {
 		count += len(v)
 	}
+	for _, v := range ex {
+		count += len(v)
+	}
+
 	// Marker
 	if count > 0 {
 		log.Debugf("Extract filter:")
@@ -170,7 +198,7 @@ func (cmd *Command) Run() error {
 		}
 		em := NewMarker()
 		log.Debugf("Loading graph")
-		if err := em.Filter(reader, fm); err != nil {
+		if err := em.Filter(reader, fm, ex); err != nil {
 			return err
 		}
 		cp.Marker = &em
