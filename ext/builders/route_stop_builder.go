@@ -1,6 +1,8 @@
 package builders
 
 import (
+	"fmt"
+
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -40,7 +42,8 @@ func NewRouteStopBuilder() *RouteStopBuilder {
 func (pp *RouteStopBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Route:
-		pp.routeAgencies[eid] = v.AgencyID
+		fmt.Printf("route:%#v\n", v)
+		pp.routeAgencies[v.EntityID()] = v.AgencyID
 	case *tl.Trip:
 		pp.tripRoutes[eid] = v.RouteID
 	case *tl.StopTime:

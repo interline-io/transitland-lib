@@ -68,14 +68,14 @@ func (ent *Route) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *Route) UpdateKeys(emap *EntityMap) error {
-	if ent.AgencyID == "" {
-		// this is a best practice warning, handled elsewhere
-	} else {
-		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID}); ok {
-			ent.AgencyID = agencyID
-		} else {
-			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID)
-		}
-	}
+	// if ent.AgencyID == "" {
+	// 	// this is a best practice warning, handled elsewhere
+	// } else {
+	// 	if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID}); ok {
+	// 		ent.AgencyID = agencyID
+	// 	} else {
+	// 		return causes.NewInvalidReferenceError("agency_id", ent.AgencyID)
+	// 	}
+	// }
 	return nil
 }
