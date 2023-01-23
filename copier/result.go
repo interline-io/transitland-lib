@@ -2,6 +2,7 @@ package copier
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -98,7 +99,10 @@ type Result struct {
 }
 
 // NewResult returns a new Result.
-func NewResult() *Result {
+func NewResult(errorLimit int) *Result {
+	if errorLimit < 0 {
+		errorLimit = math.MaxInt
+	}
 	return &Result{
 		EntityCount:              map[string]int{},
 		GeneratedCount:           map[string]int{},
@@ -108,7 +112,7 @@ func NewResult() *Result {
 		SkipEntityMarkedCount:    map[string]int{},
 		Errors:                   map[string]*ErrorGroup{},
 		Warnings:                 map[string]*ErrorGroup{},
-		ErrorLimit:               1000,
+		ErrorLimit:               errorLimit,
 	}
 }
 
