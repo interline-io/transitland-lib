@@ -179,5 +179,7 @@ func (cmd *Command) Run() error {
 	// Copy
 	result := cp.Copy()
 	result.DisplaySummary()
+	result.DisplayErrors()
+	result.DisplaySummary()
 	return nil
 }

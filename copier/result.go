@@ -201,9 +201,12 @@ func errfmt(err error) string {
 
 // DisplayErrors shows individual errors in log.Info
 func (cr *Result) DisplayErrors() {
-	if len(cr.Errors) == 0 {
+	if cr.WriteError == nil && len(cr.Errors) == 0 {
 		log.Infof("No errors")
 		return
+	}
+	if cr.WriteError != nil {
+		log.Infof("Write error: %s", cr.WriteError.Error())
 	}
 	log.Infof("Errors:")
 	for _, v := range cr.Errors {

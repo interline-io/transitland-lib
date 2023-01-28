@@ -66,7 +66,12 @@ func TestRedateFilter(t *testing.T) {
 				t.Fatal(err)
 			}
 			cp.AddExtension(rf)
-			cp.Copy()
+			cpr := cp.Copy()
+			if cpr == nil {
+				t.Fatal("no result")
+			} else if cpr.WriteError != nil {
+				t.Fatal(cpr.WriteError)
+			}
 			wr, err := w.NewReader()
 			if err != nil {
 				t.Fatal(err)
