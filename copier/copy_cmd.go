@@ -88,5 +88,7 @@ func (cmd *Command) Run() error {
 	}
 	result := cp.Copy()
 	result.DisplaySummary()
+	result.DisplayErrors()
+	result.DisplayWarnings()
 	return nil
 }

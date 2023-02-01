@@ -208,8 +208,7 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	cpresult := cp.Copy()
 	if cpresult == nil {
 		return fvi, errors.New("copy result was nil")
-	}
-	if cpresult.WriteError != nil {
+	} else if cpresult.WriteError != nil {
 		return fvi, cpresult.WriteError
 	}
 

@@ -1059,14 +1059,14 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 
 	// Add any Trips that were not visited/did not have StopTimes
 	for _, trip := range trips {
-		if _, err := copier.CopyEntity(&trip); err == nil {
+		if _, err := copier.CopyEntity(&trip); err != nil {
 			return err
 		}
 	}
 
 	// Add any duplicate trips
 	for _, trip := range duplicateTrips {
-		if _, err := copier.CopyEntity(&trip); err == nil {
+		if _, err := copier.CopyEntity(&trip); err != nil {
 			return err
 		}
 	}
