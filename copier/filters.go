@@ -58,7 +58,7 @@ type ApplyParentTimezoneFilter struct {
 	parentStopTimezones   map[string]string
 }
 
-func (e *ApplyParentTimezoneFilter) Filter(ent tl.Entity) []error {
+func (e *ApplyParentTimezoneFilter) Filter(ent tl.Entity) error {
 	// Remember filter happens before UpdateKeys or final ID available
 	switch v := ent.(type) {
 	case *tl.Agency:
