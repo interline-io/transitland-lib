@@ -10,7 +10,7 @@ var ExampleDir = ReaderTester{
 		"stops.txt":           9,
 		"stop_times.txt":      28,
 		"shapes.txt":          3,
-		"calendar.txt":        2,
+		"calendar.txt":        3, // this will be 3 because the simple DirectCopy copier does not filter out generated entities
 		"calendar_dates.txt":  2,
 		"feed_info.txt":       1,
 		"fare_rules.txt":      4,
