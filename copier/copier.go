@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/rules"
@@ -182,12 +183,12 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	// Default extensions
 	if copier.UseBasicRouteTypes {
 		// Convert extended route types to basic route types
-		copier.AddExtension(&BasicRouteTypeFilter{})
+		copier.AddExtension(&filters.BasicRouteTypeFilter{})
 	}
 	if copier.NormalizeTimezones {
 		// Normalize timezones and apply agency/stop timezones where empty
-		copier.AddExtension(&NormalizeTimezoneFilter{})
-		copier.AddExtension(&ApplyParentTimezoneFilter{})
+		copier.AddExtension(&filters.NormalizeTimezoneFilter{})
+		copier.AddExtension(&filters.ApplyParentTimezoneFilter{})
 	}
 
 	// Add extensions
@@ -598,7 +599,6 @@ func (copier *Copier) copyAgencies() error {
 
 // copyLevels writes levels.
 func (copier *Copier) copyLevels() error {
-	// Levels
 	for e := range copier.Reader.Levels() {
 		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
