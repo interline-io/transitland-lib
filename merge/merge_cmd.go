@@ -3,10 +3,13 @@ package merge
 import (
 	"errors"
 	"flag"
+	"strings"
 
 	"github.com/interline-io/transitland-lib/adapters/multi"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/filters"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -14,6 +17,8 @@ import (
 // Command
 type Command struct {
 	Options           copier.Options
+	PrefixAll         bool
+	PrefixFiles       cli.ArrayFlags
 	readerPaths       []string
 	writerPath        string
 	writeExtraColumns bool
@@ -21,6 +26,8 @@ type Command struct {
 
 func (cmd *Command) Parse(args []string) error {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
+	fl.BoolVar(&cmd.PrefixAll, "prefix-all", false, "Prefix all files")
+	fl.Var(&cmd.PrefixFiles, "prefix-file", "Prefix file")
 	fl.Usage = func() {
 		log.Print("Usage: copy <reader> <writer>")
 		fl.PrintDefaults()
@@ -35,12 +42,37 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
+type splitPath struct {
+	prefix string
+	path   string
+}
+
 func (cmd *Command) Run() error {
+	var splitPaths []splitPath
+	pfx, _ := filters.NewPrefixFilter()
+	for _, p := range cmd.readerPaths {
+		a := strings.Split(p, ":")
+		if len(a) >= 2 {
+			splitPaths = append(splitPaths, splitPath{prefix: a[0], path: a[1]})
+		} else {
+			splitPaths = append(splitPaths, splitPath{prefix: p, path: p})
+		}
+	}
+
+	pfx.PrefixAll = cmd.PrefixAll
+	if cmd.PrefixAll || len(cmd.PrefixFiles) > 0 {
+		for fvid, splitPath := range splitPaths {
+			pfx.SetPrefix(fvid, splitPath.prefix)
+		}
+		for _, fn := range cmd.PrefixFiles {
+			pfx.PrefixFile(fn)
+		}
+	}
 
 	var readers []tl.Reader
-	for _, p := range cmd.readerPaths {
+	for _, p := range splitPaths {
 		// Reader / Writer
-		reader, err := ext.NewReader(p)
+		reader, err := ext.NewReader(p.path)
 		if err != nil {
 			return err
 		}
@@ -57,13 +89,6 @@ func (cmd *Command) Run() error {
 	if err != nil {
 		return err
 	}
-	// if cmd.writeExtraColumns {
-	// 	if v, ok := writer.(tl.WriterWithExtraColumns); ok {
-	// 		v.WriteExtraColumns(true)
-	// 	} else {
-	// 		return errors.New("writer does not support extra output columns")
-	// 	}
-	// }
 	defer writer.Close()
 
 	// Setup copier
@@ -71,6 +96,8 @@ func (cmd *Command) Run() error {
 	if err != nil {
 		return err
 	}
+	cp.AddExtension(pfx)
+
 	result := cp.Copy()
 	result.DisplaySummary()
 	return nil
