@@ -1,8 +1,6 @@
 package multi
 
 import (
-	"fmt"
-
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -52,115 +50,178 @@ func (mr *Reader) ReadEntities(c any) error {
 }
 
 func (mr *Reader) StopTimesByTripID(ids ...string) chan []tl.StopTime {
-	return readNullEntities[[]tl.StopTime](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan []tl.StopTime { return r.StopTimesByTripID() }),
+		nil,
+	)
 }
 
 func (mr *Reader) Stops() chan tl.Stop {
-	return readNullEntities[tl.Stop](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Stop { return r.Stops() }),
+		func(e *tl.Stop, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) StopTimes() chan tl.StopTime {
-	return readNullEntities[tl.StopTime](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.StopTime { return r.StopTimes() }),
+		func(e *tl.StopTime, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Agencies() chan tl.Agency {
-	out := make(chan tl.Agency, bufferSize)
-	go func() {
-		for _, reader := range mr.readers {
-			fmt.Println("agencies:", reader.String())
-			for ent := range reader.Agencies() {
-				fmt.Println("ent", ent)
-				out <- ent
-			}
-		}
-		close(out)
-	}()
-	return out
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Agency { return r.Agencies() }),
+		func(e *tl.Agency, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Calendars() chan tl.Calendar {
-	return readNullEntities[tl.Calendar](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Calendar { return r.Calendars() }),
+		func(e *tl.Calendar, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) CalendarDates() chan tl.CalendarDate {
-	return readNullEntities[tl.CalendarDate](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.CalendarDate { return r.CalendarDates() }),
+		func(e *tl.CalendarDate, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) FareAttributes() chan tl.FareAttribute {
-	return readNullEntities[tl.FareAttribute](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.FareAttribute { return r.FareAttributes() }),
+		func(e *tl.FareAttribute, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) FareRules() chan tl.FareRule {
-	return readNullEntities[tl.FareRule](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.FareRule { return r.FareRules() }),
+		func(e *tl.FareRule, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) FeedInfos() chan tl.FeedInfo {
-	return readNullEntities[tl.FeedInfo](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.FeedInfo { return r.FeedInfos() }),
+		func(e *tl.FeedInfo, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Frequencies() chan tl.Frequency {
-	return readNullEntities[tl.Frequency](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Frequency { return r.Frequencies() }),
+		func(e *tl.Frequency, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Routes() chan tl.Route {
-	fmt.Println("routes")
-	return readNullEntities[tl.Route](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Route { return r.Routes() }),
+		func(e *tl.Route, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Shapes() chan tl.Shape {
-	return readNullEntities[tl.Shape](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Shape { return r.Shapes() }),
+		func(e *tl.Shape, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Transfers() chan tl.Transfer {
-	return readNullEntities[tl.Transfer](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Transfer { return r.Transfers() }),
+		func(e *tl.Transfer, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Pathways() chan tl.Pathway {
-	return readNullEntities[tl.Pathway](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Pathway { return r.Pathways() }),
+		func(e *tl.Pathway, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Levels() chan tl.Level {
-	return readNullEntities[tl.Level](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Level { return r.Levels() }),
+		func(e *tl.Level, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Trips() chan tl.Trip {
-	return readNullEntities[tl.Trip](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Trip { return r.Trips() }),
+		func(e *tl.Trip, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Attributions() chan tl.Attribution {
-	return readNullEntities[tl.Attribution](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Attribution { return r.Attributions() }),
+		func(e *tl.Attribution, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Translations() chan tl.Translation {
-	return readNullEntities[tl.Translation](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Translation { return r.Translations() }),
+		func(e *tl.Translation, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) Areas() chan tl.Area {
-	return readNullEntities[tl.Area](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.Area { return r.Areas() }),
+		func(e *tl.Area, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) StopAreas() chan tl.StopArea {
-	return readNullEntities[tl.StopArea](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.StopArea { return r.StopAreas() }),
+		func(e *tl.StopArea, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) FareLegRules() chan tl.FareLegRule {
-	return readNullEntities[tl.FareLegRule](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.FareLegRule { return r.FareLegRules() }),
+		func(e *tl.FareLegRule, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
-	return readNullEntities[tl.FareTransferRule](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.FareTransferRule { return r.FareTransferRules() }),
+		func(e *tl.FareTransferRule, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) FareContainers() chan tl.FareContainer {
-	return readNullEntities[tl.FareContainer](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.FareContainer { return r.FareContainers() }),
+		func(e *tl.FareContainer, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) FareProducts() chan tl.FareProduct {
-	return readNullEntities[tl.FareProduct](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.FareProduct { return r.FareProducts() }),
+		func(e *tl.FareProduct, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func (mr *Reader) RiderCategories() chan tl.RiderCategory {
-	return readNullEntities[tl.RiderCategory](mr)
+	return readEntities(
+		Map(mr.readers, func(r tl.Reader) chan tl.RiderCategory { return r.RiderCategories() }),
+		func(e *tl.RiderCategory, v int) { e.SetFeedVersionID(v) },
+	)
 }
 
 func readNullEntities[T any](reader *Reader) chan T {
@@ -169,4 +230,28 @@ func readNullEntities[T any](reader *Reader) chan T {
 		close(out)
 	}()
 	return out
+}
+
+func readEntities[T any](inchans []chan T, cb func(*T, int)) chan T {
+	out := make(chan T, bufferSize)
+	go func() {
+		for fvid, inchan := range inchans {
+			for ent := range inchan {
+				if cb != nil {
+					cb(&ent, fvid)
+				}
+				out <- ent
+			}
+		}
+		close(out)
+	}()
+	return out
+}
+
+func Map[T, V any](ts []T, fn func(T) V) []V {
+	result := make([]V, len(ts))
+	for i, t := range ts {
+		result[i] = fn(t)
+	}
+	return result
 }
