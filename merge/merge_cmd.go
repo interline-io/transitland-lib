@@ -3,12 +3,10 @@ package merge
 import (
 	"errors"
 	"flag"
-	"strings"
 
 	"github.com/interline-io/transitland-lib/adapters/multireader"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -24,7 +22,7 @@ type Command struct {
 func (cmd *Command) Parse(args []string) error {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
 	fl.Usage = func() {
-		log.Print("Usage: copy <reader> <writer>")
+		log.Print("Usage: merge <writer> [readers...]")
 		fl.PrintDefaults()
 	}
 	fl.Parse(args)
@@ -37,27 +35,11 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
-type splitPath struct {
-	prefix string
-	path   string
-}
-
 func (cmd *Command) Run() error {
-	var splitPaths []splitPath
-	pfx, _ := filters.NewPrefixFilter()
-	for _, p := range cmd.readerPaths {
-		a := strings.Split(p, ":")
-		if len(a) >= 2 {
-			splitPaths = append(splitPaths, splitPath{prefix: a[0], path: a[1]})
-		} else {
-			splitPaths = append(splitPaths, splitPath{prefix: p, path: p})
-		}
-	}
-
 	var readers []tl.Reader
-	for _, p := range splitPaths {
-		// Reader / Writer
-		reader, err := ext.NewReader(p.path)
+	for _, p := range cmd.readerPaths {
+		// Open reader
+		reader, err := ext.OpenReader(p)
 		if err != nil {
 			return err
 		}
@@ -81,8 +63,6 @@ func (cmd *Command) Run() error {
 	if err != nil {
 		return err
 	}
-	cp.AddExtension(pfx)
-
 	result := cp.Copy()
 	result.DisplaySummary()
 	return nil
