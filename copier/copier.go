@@ -135,7 +135,7 @@ type Copier struct {
 	// book keeping
 	geomCache *xy.GeomCache
 	result    *Result
-	*tl.EntityMap
+	EntityMap *tl.EntityMap
 }
 
 // NewCopier creates and initializes a new Copier.
@@ -886,7 +886,7 @@ func (copier *Copier) copyCalendars() error {
 		cid := svc.EntityID()
 		// Skip main Calendar entity if generated and not normalizing/simplifying service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
+			copier.EntityMap.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
 		} else {
 			if entErr, writeErr := copier.CopyEntity(svc); writeErr != nil {
 				return writeErr
