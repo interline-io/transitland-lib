@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/rules"
@@ -134,7 +135,7 @@ type Copier struct {
 	// book keeping
 	geomCache *xy.GeomCache
 	result    *Result
-	*tl.EntityMap
+	EntityMap *tl.EntityMap
 }
 
 // NewCopier creates and initializes a new Copier.
@@ -182,12 +183,12 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	// Default extensions
 	if copier.UseBasicRouteTypes {
 		// Convert extended route types to basic route types
-		copier.AddExtension(&BasicRouteTypeFilter{})
+		copier.AddExtension(&filters.BasicRouteTypeFilter{})
 	}
 	if copier.NormalizeTimezones {
 		// Normalize timezones and apply agency/stop timezones where empty
-		copier.AddExtension(&NormalizeTimezoneFilter{})
-		copier.AddExtension(&ApplyParentTimezoneFilter{})
+		copier.AddExtension(&filters.NormalizeTimezoneFilter{})
+		copier.AddExtension(&filters.ApplyParentTimezoneFilter{})
 	}
 
 	// Add extensions
@@ -598,7 +599,6 @@ func (copier *Copier) copyAgencies() error {
 
 // copyLevels writes levels.
 func (copier *Copier) copyLevels() error {
-	// Levels
 	for e := range copier.Reader.Levels() {
 		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
@@ -886,7 +886,7 @@ func (copier *Copier) copyCalendars() error {
 		cid := svc.EntityID()
 		// Skip main Calendar entity if generated and not normalizing/simplifying service IDs.
 		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			copier.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
+			copier.EntityMap.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
 		} else {
 			if entErr, writeErr := copier.CopyEntity(svc); writeErr != nil {
 				return writeErr

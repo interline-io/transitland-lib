@@ -2,6 +2,7 @@ service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,e
 ok,1,1,1,1,1,1,1,20100101,21001231,
 weekend,0,0,0,0,0,1,1,20100101,21001231,
 weekday,1,1,1,1,1,1,1,20100101,21001231,
+parse_date,1,1,1,1,1,1,1,20100101,21001231,
 no_monday,,1,1,1,1,1,1,20100101,21001231,RequiredFieldError:monday
 no_tuesday,1,,1,1,1,1,1,20100101,21001231,RequiredFieldError:tuesday
 no_wednesday,1,1,,1,1,1,1,20100101,21001231,RequiredFieldError:wednesday
