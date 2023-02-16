@@ -29,13 +29,16 @@ func TestMerge(t *testing.T) {
 		testutil.AllEntities(outReader, func(ent tl.Entity) {
 			entCount[ent.Filename()] += 1
 		})
+		expectCount := map[string]int{}
+		for k, v := range f1.Counts {
+			expectCount[k] = v + f2.Counts[k]
+		}
+		// Adjustments
+		expectCount["calendar.txt"] = 30
+		delete(expectCount, "fare_attributes.txt")
+		delete(expectCount, "fare_rules.txt")
 		checked := 0
-		for k := range f1.Counts {
-			if k == "fare_attributes.txt" || k == "fare_rules.txt" {
-				// check these sepearately
-				continue
-			}
-			exp := f1.Counts[k] + f2.Counts[k]
+		for k, exp := range expectCount {
 			assert.Equal(t, exp, entCount[k], k)
 			checked += 1
 		}
