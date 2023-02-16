@@ -75,7 +75,8 @@ var ExampleZipNestedZip = ReaderTester{
 // ExampleFeedBART - BART test feed
 var ExampleFeedBART = ReaderTester{
 	URL: RelPath("test/data/external/bart.zip"),
-	Counts: map[string]int{"agency.txt": 1,
+	Counts: map[string]int{
+		"agency.txt":          1,
 		"calendar.txt":        3,
 		"calendar_dates.txt":  12,
 		"fare_attributes.txt": 170,
@@ -131,6 +132,19 @@ var ExampleFeedBART = ReaderTester{
 // ExampleFeedCaltrain - Caltrain test feed
 var ExampleFeedCaltrain = ReaderTester{
 	URL: RelPath("test/data/external/caltrain.zip"),
+	Counts: map[string]int{
+		"agency.txt":          1,
+		"calendar.txt":        3,
+		"calendar_dates.txt":  36,
+		"fare_attributes.txt": 6,
+		"fare_rules.txt":      216,
+		"feed_info.txt":       0,
+		"routes.txt":          6,
+		"shapes.txt":          8,
+		"stop_times.txt":      2853,
+		"stops.txt":           64,
+		"transfers.txt":       0,
+		"trips.txt":           185},
 }
 
 // MBTA
