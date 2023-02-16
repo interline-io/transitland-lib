@@ -56,57 +56,61 @@ func (filter *PrefixFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Stop:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.StopID = fmt.Sprintf("%s:%s", prefix, v.StopID)
+			v.StopID = fmt.Sprintf("%s%s", prefix, v.StopID)
 			if v.ZoneID != "" {
-				v.ZoneID = fmt.Sprintf("%s:%s", prefix, v.ZoneID)
+				v.ZoneID = fmt.Sprintf("%s%s", prefix, v.ZoneID)
 			}
 		}
 	case *tl.Agency:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.AgencyID = fmt.Sprintf("%s:%s", prefix, v.AgencyID)
+			v.AgencyID = fmt.Sprintf("%s%s", prefix, v.AgencyID)
 		}
 	case *tl.Trip:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.TripID = fmt.Sprintf("%s:%s", prefix, v.TripID)
+			v.TripID = fmt.Sprintf("%s%s", prefix, v.TripID)
 			if v.BlockID != "" {
-				v.BlockID = fmt.Sprintf("%s:%s", prefix, v.BlockID)
+				v.BlockID = fmt.Sprintf("%s%s", prefix, v.BlockID)
 			}
 		}
 	case *tl.Route:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.RouteID = fmt.Sprintf("%s:%s", prefix, v.RouteID)
+			v.RouteID = fmt.Sprintf("%s%s", prefix, v.RouteID)
 		}
 	case *tl.Service:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.ServiceID = fmt.Sprintf("%s:%s", prefix, v.ServiceID)
+			v.ServiceID = fmt.Sprintf("%s%s", prefix, v.ServiceID)
+		}
+	case *tl.Calendar:
+		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
+			v.ServiceID = fmt.Sprintf("%s%s", prefix, v.ServiceID)
 		}
 	case *tl.Shape:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.ShapeID = fmt.Sprintf("%s:%s", prefix, v.ShapeID)
+			v.ShapeID = fmt.Sprintf("%s%s", prefix, v.ShapeID)
 		}
 	case *tl.FareAttribute:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.FareID = fmt.Sprintf("%s:%s", prefix, v.FareID)
+			v.FareID = fmt.Sprintf("%s%s", prefix, v.FareID)
 		}
 	case *tl.FareRule:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
 			if v.OriginID != "" {
-				v.OriginID = fmt.Sprintf("%s:%s", prefix, v.OriginID)
+				v.OriginID = fmt.Sprintf("%s%s", prefix, v.OriginID)
 			}
 			if v.DestinationID != "" {
-				v.DestinationID = fmt.Sprintf("%s:%s", prefix, v.DestinationID)
+				v.DestinationID = fmt.Sprintf("%s%s", prefix, v.DestinationID)
 			}
 			if v.ContainsID != "" {
-				v.ContainsID = fmt.Sprintf("%s:%s", prefix, v.ContainsID)
+				v.ContainsID = fmt.Sprintf("%s%s", prefix, v.ContainsID)
 			}
 		}
 	case *tl.Level:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.LevelID = fmt.Sprintf("%s:%s", prefix, v.LevelID)
+			v.LevelID = fmt.Sprintf("%s%s", prefix, v.LevelID)
 		}
 	case *tl.Pathway:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.PathwayID = fmt.Sprintf("%s:%s", prefix, v.PathwayID)
+			v.PathwayID = fmt.Sprintf("%s%s", prefix, v.PathwayID)
 		}
 	default:
 	}
