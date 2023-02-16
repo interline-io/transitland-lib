@@ -5,11 +5,10 @@ import (
 	"flag"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/adapters/multi"
+	"github.com/interline-io/transitland-lib/adapters/multireader"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/filters"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -17,8 +16,6 @@ import (
 // Command
 type Command struct {
 	Options           copier.Options
-	PrefixAll         bool
-	PrefixFiles       cli.ArrayFlags
 	readerPaths       []string
 	writerPath        string
 	writeExtraColumns bool
@@ -26,8 +23,6 @@ type Command struct {
 
 func (cmd *Command) Parse(args []string) error {
 	fl := flag.NewFlagSet("copy", flag.ExitOnError)
-	fl.BoolVar(&cmd.PrefixAll, "prefix-all", false, "Prefix all files")
-	fl.Var(&cmd.PrefixFiles, "prefix-file", "Prefix file")
 	fl.Usage = func() {
 		log.Print("Usage: copy <reader> <writer>")
 		fl.PrintDefaults()
@@ -59,16 +54,6 @@ func (cmd *Command) Run() error {
 		}
 	}
 
-	pfx.PrefixAll = cmd.PrefixAll
-	if cmd.PrefixAll || len(cmd.PrefixFiles) > 0 {
-		for fvid, splitPath := range splitPaths {
-			pfx.SetPrefix(fvid, splitPath.prefix)
-		}
-		for _, fn := range cmd.PrefixFiles {
-			pfx.PrefixFile(fn)
-		}
-	}
-
 	var readers []tl.Reader
 	for _, p := range splitPaths {
 		// Reader / Writer
@@ -79,7 +64,7 @@ func (cmd *Command) Run() error {
 		readers = append(readers, reader)
 	}
 
-	reader := multi.NewReader(readers)
+	reader := multireader.NewReader(readers...)
 	if err := reader.Open(); err != nil {
 		return err
 	}
