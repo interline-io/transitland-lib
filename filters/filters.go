@@ -11,4 +11,5 @@ func init() {
 	ext.RegisterExtension("ApplyParentTimezone", func(string) (ext.Extension, error) { return &ApplyParentTimezoneFilter{}, nil })
 	ext.RegisterExtension("BasicRouteType", func(string) (ext.Extension, error) { return &BasicRouteTypeFilter{}, nil })
 	ext.RegisterExtension("NormalizeTimezone", func(string) (ext.Extension, error) { return &NormalizeTimezoneFilter{}, nil })
+	ext.RegisterExtension("ApplyTimezone", func(args string) (ext.Extension, error) { return newApplyTimezoneFilterFromJson(args) })
 }
