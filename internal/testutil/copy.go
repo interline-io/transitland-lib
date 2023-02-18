@@ -10,32 +10,71 @@ type canCreateFV interface {
 	CreateFeedVersion(reader tl.Reader) (int, error)
 }
 
-// DirectCopy does a direct reader->writer copy, with minimal validation and changes.
-func DirectCopy(reader tl.Reader, writer tl.Writer) error {
+type Filter interface {
+	Filter(tl.Entity, *tl.EntityMap) error
+}
+
+type DirectCopierOptions struct{}
+
+type DirectCopier struct {
+	reader  tl.Reader
+	writer  tl.Writer
+	opts    DirectCopierOptions
+	filters []Filter
+}
+
+func NewDirectCopier(reader tl.Reader, writer tl.Writer, opts DirectCopierOptions) (*DirectCopier, error) {
+	return &DirectCopier{
+		reader: reader,
+		writer: writer,
+		opts:   opts,
+	}, nil
+}
+
+func (dc *DirectCopier) AddFilter(f Filter) error {
+	dc.filters = append(dc.filters, f)
+	return nil
+}
+
+func (dc *DirectCopier) Copy() error {
 	emap := tl.NewEntityMap()
-	errs := []error{}
+	var errs []error
 	cp := func(ent tl.Entity) {
-		// All other entities
 		sid := ent.EntityID()
+		for _, filter := range dc.filters {
+			if err := filter.Filter(ent, emap); err != nil {
+				// these are not real errors, just a marker to skip entity
+				// errs = append(errs, err)
+			}
+		}
 		if extEnt, ok := ent.(tl.EntityWithReferences); ok {
 			if err := extEnt.UpdateKeys(emap); err != nil {
 				errs = append(errs, fmt.Errorf("entity: %#v error: %s", ent, err))
 			}
 		}
-		eid, err := writer.AddEntity(ent)
+		eid, err := dc.writer.AddEntity(ent)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("entity: %#v error: %s", ent, err))
 		}
 		emap.SetEntity(ent, sid, eid)
 	}
 	// Create any FV
-	if w2, ok := writer.(canCreateFV); ok {
-		w2.CreateFeedVersion(reader)
+	if w2, ok := dc.writer.(canCreateFV); ok {
+		w2.CreateFeedVersion(dc.reader)
 	}
 	// Run callback on each entity
-	AllEntities(reader, cp)
+	AllEntities(dc.reader, cp)
 	if len(errs) > 0 {
 		return errs[0]
 	}
 	return nil
+}
+
+// DirectCopy does a direct reader->writer copy, with minimal validation and changes.
+func DirectCopy(reader tl.Reader, writer tl.Writer) error {
+	cp, err := NewDirectCopier(reader, writer, DirectCopierOptions{})
+	if err != nil {
+		return err
+	}
+	return cp.Copy()
 }

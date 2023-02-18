@@ -11,9 +11,10 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/sync"
 	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
-	_ "github.com/interline-io/transitland-lib/ext/redate"
 	"github.com/interline-io/transitland-lib/extract"
+	_ "github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/log"
+	"github.com/interline-io/transitland-lib/merge"
 	"github.com/interline-io/transitland-lib/tl"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
@@ -47,7 +48,6 @@ func main() {
 		log.Print("  unimport")
 		log.Print("  sync")
 		log.Print("  dmfr")
-
 	}
 	flag.Parse()
 	if versionFlag {
@@ -90,6 +90,8 @@ func main() {
 		r = &unimporter.Command{}
 	case "sync":
 		r = &sync.Command{}
+	case "merge":
+		r = &merge.Command{}
 	case "dmfr": // backwards compat
 		r = &dmfrCommand{}
 	default:

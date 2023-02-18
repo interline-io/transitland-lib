@@ -44,7 +44,12 @@ func (mr *Reader) Close() error {
 }
 
 func (mr *Reader) ValidateStructure() []error {
-	return []error{}
+	var ret []error
+	for _, reader := range mr.Readers {
+		errs := reader.ValidateStructure()
+		ret = append(ret, errs...)
+	}
+	return ret
 }
 
 func (mr *Reader) ReadEntities(c any) error {
@@ -57,112 +62,132 @@ func (mr *Reader) ReadEntities(c any) error {
 }
 
 func (mr *Reader) StopTimesByTripID(ids ...string) chan []tl.StopTime {
-	return ReadEntities(mr, func(r tl.Reader) chan []tl.StopTime { return r.StopTimesByTripID(ids...) })
+	return readEntities(mr, func(r tl.Reader) chan []tl.StopTime { return r.StopTimesByTripID(ids...) }, nil)
 }
 
 func (mr *Reader) Stops() chan tl.Stop {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Stop { return r.Stops() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Stop { return r.Stops() }, setFv[*tl.Stop])
 }
 
 func (mr *Reader) StopTimes() chan tl.StopTime {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.StopTime { return r.StopTimes() })
+	return readEntities(mr, func(r tl.Reader) chan tl.StopTime { return r.StopTimes() }, setFv[*tl.StopTime])
 }
 
 func (mr *Reader) Agencies() chan tl.Agency {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Agency { return r.Agencies() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Agency { return r.Agencies() }, setFv[*tl.Agency])
 }
 
 func (mr *Reader) Calendars() chan tl.Calendar {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Calendar { return r.Calendars() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Calendar { return r.Calendars() }, setFv[*tl.Calendar])
 }
 
 func (mr *Reader) CalendarDates() chan tl.CalendarDate {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.CalendarDate { return r.CalendarDates() })
+	return readEntities(mr, func(r tl.Reader) chan tl.CalendarDate { return r.CalendarDates() }, setFv[*tl.CalendarDate])
 }
 
 func (mr *Reader) FareAttributes() chan tl.FareAttribute {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.FareAttribute { return r.FareAttributes() })
+	return readEntities(mr, func(r tl.Reader) chan tl.FareAttribute { return r.FareAttributes() }, setFv[*tl.FareAttribute])
 }
 
 func (mr *Reader) FareRules() chan tl.FareRule {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.FareRule { return r.FareRules() })
+	return readEntities(mr, func(r tl.Reader) chan tl.FareRule { return r.FareRules() }, setFv[*tl.FareRule])
 }
 
 func (mr *Reader) FeedInfos() chan tl.FeedInfo {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.FeedInfo { return r.FeedInfos() })
+	return readEntities(mr, func(r tl.Reader) chan tl.FeedInfo { return r.FeedInfos() }, setFv[*tl.FeedInfo])
 }
 
 func (mr *Reader) Frequencies() chan tl.Frequency {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Frequency { return r.Frequencies() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Frequency { return r.Frequencies() }, setFv[*tl.Frequency])
 }
 
 func (mr *Reader) Routes() chan tl.Route {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Route { return r.Routes() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Route { return r.Routes() }, setFv[*tl.Route])
 }
 
 func (mr *Reader) Shapes() chan tl.Shape {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Shape { return r.Shapes() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Shape { return r.Shapes() }, setFv[*tl.Shape])
 }
 
 func (mr *Reader) Transfers() chan tl.Transfer {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Transfer { return r.Transfers() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Transfer { return r.Transfers() }, setFv[*tl.Transfer])
 }
 
 func (mr *Reader) Pathways() chan tl.Pathway {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Pathway { return r.Pathways() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Pathway { return r.Pathways() }, setFv[*tl.Pathway])
 }
 
 func (mr *Reader) Levels() chan tl.Level {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Level { return r.Levels() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Level { return r.Levels() }, setFv[*tl.Level])
 }
 
 func (mr *Reader) Trips() chan tl.Trip {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Trip { return r.Trips() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Trip { return r.Trips() }, setFv[*tl.Trip])
 }
 
 func (mr *Reader) Attributions() chan tl.Attribution {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Attribution { return r.Attributions() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Attribution { return r.Attributions() }, setFv[*tl.Attribution])
 }
 
 func (mr *Reader) Translations() chan tl.Translation {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Translation { return r.Translations() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Translation { return r.Translations() }, setFv[*tl.Translation])
 }
 
 func (mr *Reader) Areas() chan tl.Area {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.Area { return r.Areas() })
+	return readEntities(mr, func(r tl.Reader) chan tl.Area { return r.Areas() }, setFv[*tl.Area])
 }
 
 func (mr *Reader) StopAreas() chan tl.StopArea {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.StopArea { return r.StopAreas() })
+	return readEntities(mr, func(r tl.Reader) chan tl.StopArea { return r.StopAreas() }, setFv[*tl.StopArea])
 }
 
 func (mr *Reader) FareLegRules() chan tl.FareLegRule {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.FareLegRule { return r.FareLegRules() })
+	return readEntities(mr, func(r tl.Reader) chan tl.FareLegRule { return r.FareLegRules() }, setFv[*tl.FareLegRule])
 }
 
 func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.FareTransferRule { return r.FareTransferRules() })
+	return readEntities(mr, func(r tl.Reader) chan tl.FareTransferRule { return r.FareTransferRules() }, setFv[*tl.FareTransferRule])
 }
 
 func (mr *Reader) FareContainers() chan tl.FareContainer {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.FareContainer { return r.FareContainers() })
+	return readEntities(mr, func(r tl.Reader) chan tl.FareContainer { return r.FareContainers() }, setFv[*tl.FareContainer])
 }
 
 func (mr *Reader) FareProducts() chan tl.FareProduct {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.FareProduct { return r.FareProducts() })
+	return readEntities(mr, func(r tl.Reader) chan tl.FareProduct { return r.FareProducts() }, setFv[*tl.FareProduct])
 }
 
 func (mr *Reader) RiderCategories() chan tl.RiderCategory {
-	return ReadEntities(mr, func(r tl.Reader) chan tl.RiderCategory { return r.RiderCategories() })
+	return readEntities(mr, func(r tl.Reader) chan tl.RiderCategory { return r.RiderCategories() }, setFv[*tl.RiderCategory])
 }
 
-func ReadEntities[T any](reader *Reader, cf func(r tl.Reader) chan T) chan T {
-	out := make(chan T, bufferSize)
+type canSetFV interface {
+	SetFeedVersionID(int)
+}
 
+func setFv[T canSetFV](fvid int, ent T) {
+	ent.SetFeedVersionID(fvid)
+}
+
+// Note this could be slightly simplified...
+// func readEntities[T any, T2 interface {
+//		*T
+//		canSetFV
+// }](reader *Reader, cf func(r tl.Reader) chan T) {
+//		...
+//		var t2 T2
+//  	t2 = &ent
+//  	t2.SetFeedVersionID(i, &ent)
+//	}
+func readEntities[T any](reader *Reader, cf func(r tl.Reader) chan T, cb func(int, *T)) chan T {
+	out := make(chan T, bufferSize)
 	go func() {
-		for _, r := range reader.Readers {
+		for i, r := range reader.Readers {
 			readin := cf(r)
 			for ent := range readin {
+				if cb != nil {
+					cb(i, &ent)
+				}
 				out <- ent
 			}
 		}

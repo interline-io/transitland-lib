@@ -12,31 +12,45 @@ func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
 	for ent := range reader.Routes() {
 		cb(&ent)
 	}
+
+	// stops
 	for ent := range reader.Stops() {
 		if ent.LocationType == 1 {
 			cb(&ent)
 		}
 	}
 	for ent := range reader.Stops() {
-		if ent.LocationType != 1 {
+		if ent.LocationType == 0 || ent.LocationType == 2 || ent.LocationType == 4 {
+			cb(&ent)
+		}
+	}
+	for ent := range reader.Stops() {
+		if ent.LocationType == 4 {
 			cb(&ent)
 		}
 	}
 	for ent := range reader.Shapes() {
 		cb(&ent)
 	}
-	for ent := range reader.Calendars() {
-		cb(&ent)
+
+	// services
+	svcs := tl.NewServicesFromReader(reader)
+	for _, svc := range svcs {
+		cb(svc)
 	}
-	for ent := range reader.CalendarDates() {
-		cb(&ent)
+	for cd := range reader.CalendarDates() {
+		cb(&cd)
 	}
+
+	// trips and stop times
 	for ent := range reader.Trips() {
 		cb(&ent)
 	}
 	for ent := range reader.StopTimes() {
 		cb(&ent)
 	}
+
+	// other entities
 	for ent := range reader.FareAttributes() {
 		cb(&ent)
 	}
