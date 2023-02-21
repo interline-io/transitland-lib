@@ -30,13 +30,13 @@ func (em *Marker) IsMarked(filename, eid string) bool {
 		return true
 	}
 	if n, ok := em.graph.Node(graph.NewNode(filename, eid)); !ok {
-		// fmt.Println("not found:", filename, eid)
+		// fmt.Println("\tismarked: not found:", filename, eid)
 		return false
 	} else if v, ok2 := em.found[n]; ok2 {
-		// fmt.Println("ismarked:", filename, eid, "v:", v, "ok:", ok)
+		// fmt.Println("\tismarked:", filename, eid, "v:", v, "ok:", ok)
 		return v
 	}
-	// fmt.Println("default return false:", filename, eid)
+	// fmt.Println("\tismarked: default return false:", filename, eid)
 	return !em.defaultExclude
 }
 
@@ -98,7 +98,7 @@ func (em *Marker) Filter(reader tl.Reader, fm map[string][]string, ex map[string
 		result[n] = false
 	})
 	// for k, v := range result {
-	// 	fmt.Println(k, v)
+	// 	fmt.Println("extract marker result:", k, v)
 	// }
 
 	em.found = result
