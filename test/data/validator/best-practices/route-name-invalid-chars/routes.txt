@@ -1,0 +1,12 @@
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color,expect_error
+03,BART,,Warm Springs/South Fremont - Richmond,,1,http://www.bart.gov/schedules/bylineresults?route=3,ff9933,
+ampersand_allowed,BART,,One & Two,,1,,,
+brackets_allowed,BART,,One <> Two,,1,,,
+parens_allowed,BART,,One (Two),,1,,,
+dash_allowed,BART,,One - Two,,1,,,
+unicode_alphanum_allowed,BART,,こんにちは,,1,,,
+disallowed_underscore,BART,Green_1,,,1,,,,RouteNamesCharactersError
+disallowed_backslash,BART,Green\1,,,1,,,,RouteNamesCharactersError
+disallowed_percent,BART,Green%1,,,1,,,,RouteNamesCharactersError
+disallowed_hash,BART,Green#1,,,1,,,,RouteNamesCharactersError
+disallowed_at,BART,Green@1,,,1,,,,RouteNamesCharactersError

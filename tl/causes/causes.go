@@ -68,7 +68,7 @@ func (e *Context) Update(v *Context) {
 }
 
 func (e *Context) Error() string {
-	return ""
+	return fmt.Sprintf("field: %s value: '%s'", e.Field, e.Value)
 }
 
 ////////////////////////////
