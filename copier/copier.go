@@ -108,6 +108,8 @@ type Options struct {
 	JourneyPatternKey func(*tl.Trip) string
 	// Named extensions
 	Extensions []string
+	// Error limit
+	ErrorLimit int
 
 	// Sub-logger
 	sublogger zerolog.Logger
@@ -148,7 +150,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	copier.Options.sublogger = log.Logger.With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
 
 	// Result
-	result := NewResult()
+	result := NewResult(opts.ErrorLimit)
 	copier.result = result
 	copier.geomCache = xy.NewGeomCache()
 	copier.ErrorHandler = opts.ErrorHandler

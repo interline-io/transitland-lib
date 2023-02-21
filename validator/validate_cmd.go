@@ -31,6 +31,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.OutputFile, "o", "", "Write validation report as JSON to file")
 	fl.BoolVar(&cmd.Options.BestPractices, "best-practices", false, "Include Best Practices validations")
 	fl.Var(&cmd.rtFiles, "rt", "Include GTFS-RT proto message in validation report")
+	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
 	err := fl.Parse(args)
 	if err != nil || fl.NArg() < 1 {
 		fl.Usage()
