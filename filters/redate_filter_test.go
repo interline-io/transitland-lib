@@ -1,11 +1,10 @@
-package redate
+package filters
 
 import (
 	"testing"
 	"time"
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
-	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -61,12 +60,14 @@ func TestRedateFilter(t *testing.T) {
 			}
 			// rf.AllowInactive = true
 			w := direct.NewWriter()
-			cp, err := copier.NewCopier(reader, w, copier.Options{})
+			cp, err := testutil.NewDirectCopier(reader, w, testutil.DirectCopierOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			cp.AddExtension(rf)
-			cp.Copy()
+			cp.AddFilter(rf)
+			if err := cp.Copy(); err != nil {
+				t.Fatal(err)
+			}
 			wr, err := w.NewReader()
 			if err != nil {
 				t.Fatal(err)

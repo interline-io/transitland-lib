@@ -142,11 +142,12 @@ func (v *Validator) Validate() (*Result, error) {
 	result.LatestCalendarDate = fv.LatestCalendarDate
 
 	// Main validation
-	if r := v.copier.Copy(); r != nil {
-		result.Result = *r
-	} else {
-		result.FailureReason = "Failed to validate feed"
+	cpResult := v.copier.Copy()
+	if cpResult == nil {
+		result.WriteError = errors.New("Failed to validate feed")
 		return result, nil
+	} else {
+		result.Result = *cpResult
 	}
 
 	// Validate realtime messages

@@ -10,7 +10,8 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
-	_ "github.com/interline-io/transitland-lib/ext/redate"
+	"github.com/interline-io/transitland-lib/filters"
+	_ "github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
@@ -26,6 +27,7 @@ type Command struct {
 	create     bool
 	extensions cli.ArrayFlags
 	// extract specific arguments
+	Prefix            string
 	extractAgencies   cli.ArrayFlags
 	extractStops      cli.ArrayFlags
 	extractTrips      cli.ArrayFlags
@@ -69,6 +71,8 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Var(&cmd.extractRoutes, "extract-route", "Extract Route")
 	fl.Var(&cmd.extractRouteTypes, "extract-route-type", "Extract Routes matching route_type")
 	fl.Var(&cmd.extractSet, "set", "Set values on output; format is filename,id,key,value")
+	fl.StringVar(&cmd.Prefix, "prefix", "", "Prefix entities in this feed")
+
 	// Entity selection options
 	// fl.BoolVar(&cmd.onlyVisitedEntities, "only-visited-entities", false, "Only copy visited entities")
 	// fl.BoolVar(&cmd.allEntities, "all-entities", false, "Copy all entities")
@@ -93,6 +97,8 @@ func (cmd *Command) Run() error {
 	if err != nil {
 		return err
 	}
+	defer writer.Close()
+
 	if cmd.writeExtraColumns {
 		if v, ok := writer.(tl.WriterWithExtraColumns); ok {
 			v.WriteExtraColumns(true)
@@ -100,7 +106,7 @@ func (cmd *Command) Run() error {
 			return errors.New("writer does not support extra output columns")
 		}
 	}
-	defer writer.Close()
+
 	// Create fv
 	if dbw, ok := writer.(*tldb.Writer); ok {
 		if cmd.fvid != 0 {
@@ -120,6 +126,14 @@ func (cmd *Command) Run() error {
 	if err != nil {
 		return err
 	}
+
+	if cmd.Prefix != "" {
+		pfx, _ := filters.NewPrefixFilter()
+		pfx.PrefixAll = true
+		pfx.SetPrefix(0, cmd.Prefix)
+		cp.AddExtension(pfx)
+	}
+
 	// Create SetterFilter
 	setvalues := [][]string{}
 	for _, setv := range cmd.extractSet {
@@ -135,6 +149,7 @@ func (cmd *Command) Run() error {
 		}
 		cp.AddExtension(tx)
 	}
+
 	// Create Marker
 	rthits := map[int]bool{}
 	for _, i := range cmd.extractRouteTypes {
@@ -180,5 +195,6 @@ func (cmd *Command) Run() error {
 	// Copy
 	result := cp.Copy()
 	result.DisplaySummary()
+	result.DisplayErrors()
 	return nil
 }

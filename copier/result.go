@@ -205,19 +205,24 @@ func errfmt(err error) string {
 
 // DisplayErrors shows individual errors in log.Info
 func (cr *Result) DisplayErrors() {
-	if len(cr.Errors) == 0 {
+	if cr.WriteError == nil && len(cr.Errors) == 0 {
 		log.Infof("No errors")
 		return
 	}
-	log.Infof("Errors:")
-	for _, v := range cr.Errors {
-		log.Infof("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
-		for _, err := range v.Errors {
-			log.Infof("\t\t%s", errfmt(err))
-		}
-		remain := v.Count - len(v.Errors)
-		if remain > 0 {
-			log.Infof("\t\t... and %d more", remain)
+	if cr.WriteError != nil {
+		log.Infof("Write error: %s", cr.WriteError.Error())
+	}
+	if len(cr.Errors) > 0 {
+		log.Infof("Errors:")
+		for _, v := range cr.Errors {
+			log.Infof("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
+			for _, err := range v.Errors {
+				log.Infof("\t\t%s", errfmt(err))
+			}
+			remain := v.Count - len(v.Errors)
+			if remain > 0 {
+				log.Infof("\t\t... and %d more", remain)
+			}
 		}
 	}
 }
