@@ -20,7 +20,7 @@ type errorWithContext interface {
 	Context() *causes.Context
 }
 
-var defaultMaxEnts = 100000000
+var defaultMaxEnts = 10000
 
 var defaultMaxFileRows = map[string]int64{
 	"agency.txt":     1000,
