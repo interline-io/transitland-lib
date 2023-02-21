@@ -14,6 +14,7 @@ func NewEntityMap() *EntityMap {
 
 // Set directly adds an entry to the set.
 func (emap *EntityMap) Set(efn string, oldid string, newid string) error {
+	// fmt.Printf("emap set: %s oldid '%s' newid '%s'\n", efn, oldid, newid)
 	if i, ok := emap.ids[efn]; ok {
 		i[oldid] = newid
 	} else {
