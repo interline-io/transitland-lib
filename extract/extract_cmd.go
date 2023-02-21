@@ -160,9 +160,22 @@ func (cmd *Command) Run() error {
 			return fmt.Errorf("invalid route_type: %s", i)
 		}
 	}
+	for _, i := range cmd.excludeRouteTypes {
+		if v, err := strconv.Atoi(i); err == nil {
+			rthits[v] = false
+		} else {
+			return fmt.Errorf("invalid route_type: %s", i)
+		}
+	}
 	for ent := range reader.Routes() {
-		if _, ok := rthits[ent.RouteType]; ok {
+		v, ok := rthits[ent.RouteType]
+		if !ok {
+			continue
+		}
+		if v {
 			cmd.extractRoutes = append(cmd.extractRoutes, ent.RouteID)
+		} else {
+			cmd.excludeRoutes = append(cmd.excludeRoutes, ent.RouteID)
 		}
 	}
 	//
@@ -177,7 +190,7 @@ func (cmd *Command) Run() error {
 	ex["trips.txt"] = cmd.excludeTrips[:]
 	ex["agency.txt"] = cmd.excludeAgencies[:]
 	ex["routes.txt"] = cmd.excludeRoutes[:]
-	ex["calendar.txt"] = cmd.extractCalendars[:]
+	ex["calendar.txt"] = cmd.excludeCalendars[:]
 	ex["stops.txt"] = cmd.excludeStops[:]
 
 	count := 0
