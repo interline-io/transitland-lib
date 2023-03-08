@@ -20,7 +20,7 @@ func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
 		}
 	}
 	for ent := range reader.Stops() {
-		if ent.LocationType == 0 || ent.LocationType == 2 || ent.LocationType == 4 {
+		if ent.LocationType == 0 || ent.LocationType == 2 || ent.LocationType == 3 {
 			cb(&ent)
 		}
 	}
@@ -29,6 +29,8 @@ func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
 			cb(&ent)
 		}
 	}
+
+	// shapes
 	for ent := range reader.Shapes() {
 		cb(&ent)
 	}
