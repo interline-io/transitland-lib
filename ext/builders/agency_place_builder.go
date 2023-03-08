@@ -69,11 +69,12 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Ent
 
 var agencyPlaceQuery = `
 select 
-	name, 
-	adm0name, 
-	adm1name, 
+	ne.name, 
+	coalesce(neadmin.name, ne.adm1name) as adm1name,
+	coalesce(neadmin.admin, ne.adm0name) as adm0name,
 	ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance 
 from ne_10m_populated_places ne 
+left join ne_10m_admin_1_states_provinces neadmin on ST_Intersects(ne.geometry, neadmin.geometry)
 where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, 40000) 
 order by distance asc
 limit 1
@@ -167,7 +168,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				ap.Adm1name = k.Adm1name
 				ap.Count = v
 				ap.Rank = score
-				if _, _, err := copier.CopyEntity(&ap); err != nil {
+				if _, err := copier.CopyEntity(&ap); err != nil {
 					return err
 				}
 

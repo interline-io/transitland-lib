@@ -103,7 +103,7 @@ func TestStaticFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Directory: tmpdir})
+				fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err
@@ -152,11 +152,12 @@ func TestStaticFetch_Exists(t *testing.T) {
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, url)
 		_ = feed
-		fv, _, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Directory: ""})
+		tmpdir := t.TempDir()
+		fv, _, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
 		if err != nil {
 			t.Fatal(err)
 		}
-		fv2, fr2, err2 := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Directory: ""})
+		fv2, fr2, err2 := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
 		if err2 != nil {
 			t.Error(err2)
 		}
@@ -195,7 +196,7 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 		//
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, ts.URL)
-		fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Directory: tmpdir})
+		fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -299,7 +300,7 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, _, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Directory: tmpdir})
+		_, _, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil

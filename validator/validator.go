@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/rt"
@@ -60,7 +61,7 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	if options.IncludeEntitiesLimit == 0 {
 		options.IncludeEntitiesLimit = defaultMaxEnts
 	}
-	writer := &tl.NullWriter{}
+	writer := &empty.Writer{}
 	writer.Open()
 	// Prepare copier
 	options.Options.AllowEntityErrors = true
@@ -94,6 +95,8 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 		copier.AddValidator(&rules.NullIslandCheck{}, 1)
 		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
 		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
+		copier.AddValidator(&rules.RouteNamesPrefixCheck{}, 1)
+		copier.AddValidator(&rules.RouteNamesCharactersCheck{}, 1)
 	}
 	// OK
 	return &Validator{
@@ -141,11 +144,12 @@ func (v *Validator) Validate() (*Result, error) {
 	result.LatestCalendarDate = fv.LatestCalendarDate
 
 	// Main validation
-	if r := v.copier.Copy(); r != nil {
-		result.Result = *r
-	} else {
-		result.FailureReason = "Failed to validate feed"
+	cpResult := v.copier.Copy()
+	if cpResult == nil {
+		result.WriteError = errors.New("Failed to validate feed")
 		return result, nil
+	} else {
+		result.Result = *cpResult
 	}
 
 	// Validate realtime messages
@@ -161,7 +165,7 @@ func (v *Validator) Validate() (*Result, error) {
 
 	// Service levels
 	if v.Options.IncludeServiceLevels {
-		fvsls, err := dmfr.NewFeedVersionServiceInfosFromReader(reader)
+		fvsls, err := dmfr.NewFeedVersionServiceLevelsFromReader(reader)
 		if err != nil {
 			result.FailureReason = fmt.Sprintf("Could not calculate service levels: %s", err.Error())
 			return result, nil

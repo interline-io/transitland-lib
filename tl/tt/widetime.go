@@ -80,7 +80,7 @@ func (wt *WideTime) UnmarshalGQL(v interface{}) error {
 
 func (wt WideTime) MarshalGQL(w io.Writer) {
 	if !wt.Valid {
-		w.Write([]byte("null"))
+		w.Write(jsonNull())
 		return
 	}
 	w.Write([]byte(fmt.Sprintf("\"%s\"", wt.String())))

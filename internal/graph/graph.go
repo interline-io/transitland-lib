@@ -62,6 +62,7 @@ func (eg *EntityGraph) Search(queue []*Node, up bool, f func(*Node)) {
 			break
 		}
 		cur := queue[0]
+		visited[cur] = true
 		f(cur)
 		queue = queue[1:]
 		var edges []*Node

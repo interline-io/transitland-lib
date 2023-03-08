@@ -3,13 +3,13 @@ package testutil
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/internal/mock"
+	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
 func TestDirectCopy(t *testing.T) {
 	fe, reader := NewMinimalTestFeed()
-	writer := mock.NewWriter()
+	writer := direct.NewWriter()
 	if err := DirectCopy(reader, writer); err != nil {
 		t.Error(err)
 	}

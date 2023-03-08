@@ -75,7 +75,7 @@ func NewAdapter(address string) (Adapter, error) {
 type URLAdapter struct {
 	url     string
 	reqOpts []request.RequestOption
-	ZipAdapter
+	TmpZipAdapter
 }
 
 func NewURLAdapter(address string, opts ...request.RequestOption) *URLAdapter {
@@ -108,15 +108,67 @@ func (adapter *URLAdapter) Open() error {
 		return err
 	}
 	// Add internal path prefix back
+	adapter.TmpZipAdapter = TmpZipAdapter{
+		tmpfilepath:    fr.Filename,
+		internalPrefix: fragment,
+	}
+	return adapter.TmpZipAdapter.Open()
+}
+
+///////////////
+
+// Temporary zip adapter
+
+func NewTmpZipAdapterFromReader(reader io.Reader, fragment string) (*TmpZipAdapter, error) {
+	// Remove and keep internal path prefix
+	split := strings.SplitN(fragment, "#", 2)
+	if len(split) > 1 {
+		fragment = split[1]
+	} else {
+		fragment = ""
+	}
+	// Read stream to a temporary file
+	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(tmpfile, reader); err != nil {
+		return nil, err
+	}
+	tfn := tmpfile.Name()
+	if err := tmpfile.Close(); err != nil {
+		return nil, err
+	}
+	// Add internal path prefix back
+	adapter := TmpZipAdapter{
+		tmpfilepath:    tfn, // delete on close
+		internalPrefix: fragment,
+	}
+	return &adapter, nil
+}
+
+// TmpZipAdapter is similar to ZipAdapter, but deletes the file on close.
+type TmpZipAdapter struct {
+	tmpfilepath    string
+	internalPrefix string
+	ZipAdapter
+}
+
+func (adapter *TmpZipAdapter) Open() error {
 	adapter.ZipAdapter = ZipAdapter{
-		path:        fr.Filename + "#" + fragment,
-		tmpfilepath: fr.Filename, // delete on close
+		path:           adapter.tmpfilepath,
+		internalPrefix: adapter.internalPrefix,
 	}
 	return adapter.ZipAdapter.Open()
 }
 
-// Close the adapter, and remove the temporary file. An error is returned if the file could not be deleted.
-func (adapter *URLAdapter) Close() error {
+func (adapter *TmpZipAdapter) Close() error {
+	if adapter.tmpfilepath != "" {
+		log.Debugf("tmp zip adapter: removing temp file: %s", adapter.tmpfilepath)
+		if err := os.Remove(adapter.tmpfilepath); err != nil {
+			return err
+		}
+	}
 	return adapter.ZipAdapter.Close()
 }
 
@@ -126,7 +178,6 @@ func (adapter *URLAdapter) Close() error {
 type ZipAdapter struct {
 	path           string
 	internalPrefix string
-	tmpfilepath    string
 }
 
 // NewZipAdapter returns an initialized zip adapter.
@@ -174,7 +225,6 @@ func (adapter *ZipAdapter) Open() error {
 			return err
 		}
 		adapter.path = tmpfilepath
-		adapter.tmpfilepath = tmpfilepath
 		adapter.internalPrefix = ""
 	}
 	if adapter.internalPrefix != "" {
@@ -185,12 +235,6 @@ func (adapter *ZipAdapter) Open() error {
 
 // Close the adapter.
 func (adapter *ZipAdapter) Close() error {
-	if adapter.tmpfilepath != "" {
-		log.Debugf("zip adapter: removing temp file: %s", adapter.tmpfilepath)
-		if err := os.Remove(adapter.tmpfilepath); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -274,7 +318,12 @@ func (adapter *ZipAdapter) DirSHA1() (string, error) {
 		if adapter.internalPrefix != "" {
 			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
 		}
-		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+		// Ignore directories, subdirs, dot files
+		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+			continue
+		}
+		// Only generate stats for files with lowercase names that end with .txt
+		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
 			continue
 		}
 		f, err := zf.Open()
@@ -302,7 +351,7 @@ func (adapter *ZipAdapter) FileInfos() ([]os.FileInfo, error) {
 		if adapter.internalPrefix != "" {
 			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
 		}
-		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
 		}
 		ret = append(ret, fi)
@@ -369,6 +418,10 @@ func (adapter *DirAdapter) DirSHA1() (string, error) {
 		return "", err
 	}
 	for _, fi := range fis {
+		// Only generate stats for files with lowercase names that end with .txt
+		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
+			continue
+		}
 		f, err := os.Open(filepath.Join(adapter.path, fi.Name()))
 		if err != nil {
 			return "", err
@@ -395,7 +448,7 @@ func (adapter *DirAdapter) FileInfos() ([]os.FileInfo, error) {
 	// Generate SHA1
 	for _, fi := range fis {
 		fn := fi.Name()
-		if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
 		}
 		if err != nil {

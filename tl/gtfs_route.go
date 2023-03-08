@@ -21,9 +21,9 @@ type Route struct {
 	RouteSortOrder    int
 	ContinuousPickup  Int
 	ContinuousDropOff Int
+	NetworkID         String
+	AsRoute           Int
 	Geometry          Geometry `csv:"-" db:"-"`
-	NetworkID         string   `db:"-"`
-	AsRoute           int      `db:"-"`
 	BaseEntity
 }
 
@@ -68,14 +68,13 @@ func (ent *Route) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *Route) UpdateKeys(emap *EntityMap) error {
-	if ent.AgencyID == "" {
-		// this is a best practice warning, handled elsewhere
+	aid := ent.AgencyID
+	if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID}); ok {
+		ent.AgencyID = agencyID
+	} else if aid == "" {
+		// best practice warning, handled elsewhere
 	} else {
-		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID}); ok {
-			ent.AgencyID = agencyID
-		} else {
-			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID)
-		}
+		return causes.NewInvalidReferenceError("agency_id", ent.AgencyID)
 	}
 	return nil
 }

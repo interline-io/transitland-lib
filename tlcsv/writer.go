@@ -15,7 +15,9 @@ type hasEntityKey interface {
 // Writer implements a GTFS CSV Writer.
 type Writer struct {
 	WriterAdapter
-	headers map[string][]string
+	writeExtraColumns bool
+	headers           map[string][]string
+	extraHeaders      map[string][]string
 }
 
 // NewWriter returns a new Writer.
@@ -29,7 +31,12 @@ func NewWriter(path string) (*Writer, error) {
 	return &Writer{
 		WriterAdapter: a,
 		headers:       map[string][]string{},
+		extraHeaders:  map[string][]string{},
 	}, nil
+}
+
+func (writer *Writer) WriteExtraColumns(val bool) {
+	writer.writeExtraColumns = val
 }
 
 func (writer *Writer) String() string {
@@ -72,14 +79,21 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		}
 	}
 	header, ok := writer.headers[efn]
+	extraHeader, ok := writer.extraHeaders[efn]
 	if !ok {
 		h, err := dumpHeader(ent)
 		if err != nil {
 			return eids, err
 		}
 		header = h
+		if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 && writer.writeExtraColumns {
+			extraHeader = extEnt.ExtraKeys()
+		}
 		writer.headers[efn] = header
-		writer.WriterAdapter.WriteRows(efn, [][]string{header})
+		writer.extraHeaders[efn] = extraHeader
+		h2 := append([]string{}, header...)
+		h2 = append(h2, extraHeader...)
+		writer.WriterAdapter.WriteRows(efn, [][]string{h2})
 	}
 	rows := [][]string{}
 	for _, ent := range ents {
@@ -90,6 +104,15 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		row, err := dumpRow(ent, header)
 		if err != nil {
 			return eids, err
+		}
+		if len(extraHeader) > 0 {
+			if extEnt, ok := ent.(tl.EntityWithExtra); ok {
+				for _, extraKey := range extraHeader {
+					a, _ := extEnt.GetExtra(extraKey)
+					row = append(row, a)
+				}
+
+			}
 		}
 		rows = append(rows, row)
 		eids = append(eids, sid)

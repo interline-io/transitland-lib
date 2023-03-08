@@ -205,7 +205,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 				sid, _ := row.Get("trip_id")
 				if _, ok := set[sid]; ok {
 					ent := tl.StopTime{}
-					loadRowFast(&ent, row)
+					loadRow(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
 				// If we know the file is grouped, send the stoptimes at transition
@@ -319,7 +319,6 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
 // Entities
 //////////////////////////////
 
-// Stops sends Stops.
 func (reader *Reader) Stops() (out chan tl.Stop) {
 	out = make(chan tl.Stop, bufferSize)
 	go func() {
@@ -335,229 +334,109 @@ func (reader *Reader) Stops() (out chan tl.Stop) {
 	return out
 }
 
-// StopTimes sends StopTimes.
 func (reader *Reader) StopTimes() (out chan tl.StopTime) {
-	out = make(chan tl.StopTime, bufferSize)
-	go func() {
-		ent := tl.StopTime{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.StopTime{}
-			loadRowFast(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.StopTime](reader, getFilename(&tl.StopTime{}))
 }
 
-// Agencies sends Agencies.
 func (reader *Reader) Agencies() (out chan tl.Agency) {
-	out = make(chan tl.Agency, bufferSize)
-	go func() {
-		ent := tl.Agency{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Agency{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.Agency](reader, getFilename(&tl.Agency{}))
 }
 
-// Calendars sends Calendars.
 func (reader *Reader) Calendars() (out chan tl.Calendar) {
-	out = make(chan tl.Calendar, bufferSize)
-	go func() {
-		ent := tl.Calendar{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Calendar{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.Calendar](reader, getFilename(&tl.Calendar{}))
 }
 
-// CalendarDates sends CalendarDates.
 func (reader *Reader) CalendarDates() (out chan tl.CalendarDate) {
-	out = make(chan tl.CalendarDate, bufferSize)
-	go func() {
-		ent := tl.CalendarDate{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.CalendarDate{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.CalendarDate](reader, getFilename(&tl.CalendarDate{}))
 }
 
-// FareAttributes sends FareAttributes.
 func (reader *Reader) FareAttributes() (out chan tl.FareAttribute) {
-	out = make(chan tl.FareAttribute, bufferSize)
-	go func() {
-		ent := tl.FareAttribute{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.FareAttribute{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.FareAttribute](reader, getFilename(&tl.FareAttribute{}))
 }
 
-// FareRules sends FareRules.
 func (reader *Reader) FareRules() (out chan tl.FareRule) {
-	out = make(chan tl.FareRule, bufferSize)
-	go func() {
-		ent := tl.FareRule{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.FareRule{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.FareRule](reader, getFilename(&tl.FareRule{}))
 }
 
-// FeedInfos sends FeedInfos.
 func (reader *Reader) FeedInfos() (out chan tl.FeedInfo) {
-	out = make(chan tl.FeedInfo, bufferSize)
-	go func() {
-		ent := tl.FeedInfo{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.FeedInfo{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.FeedInfo](reader, getFilename(&tl.FeedInfo{}))
 }
 
-// Frequencies sends Frequencies.
 func (reader *Reader) Frequencies() (out chan tl.Frequency) {
-	out = make(chan tl.Frequency, bufferSize)
-	go func() {
-		ent := tl.Frequency{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Frequency{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.Frequency](reader, getFilename(&tl.Frequency{}))
 }
 
-// Routes sends Routes.
 func (reader *Reader) Routes() (out chan tl.Route) {
-	out = make(chan tl.Route, bufferSize)
-	go func() {
-		ent := tl.Route{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Route{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.Route](reader, getFilename(&tl.Route{}))
 }
 
-// Transfers sends Tranfers.
 func (reader *Reader) Transfers() (out chan tl.Transfer) {
-	out = make(chan tl.Transfer, bufferSize)
-	go func() {
-		ent := tl.Transfer{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Transfer{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.Transfer](reader, getFilename(&tl.Transfer{}))
 }
 
-// Trips sends Trips.
 func (reader *Reader) Trips() (out chan tl.Trip) {
-	out = make(chan tl.Trip, bufferSize)
-	go func() {
-		ent := tl.Trip{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Trip{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.Trip](reader, getFilename(&tl.Trip{}))
 }
 
-// Levels sends Levels.
 func (reader *Reader) Levels() (out chan tl.Level) {
-	out = make(chan tl.Level, bufferSize)
-	go func() {
-		ent := tl.Level{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Level{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.Level](reader, getFilename(&tl.Level{}))
 }
 
-// Pathways sends Pathways.
 func (reader *Reader) Pathways() (out chan tl.Pathway) {
-	out = make(chan tl.Pathway, bufferSize)
-	go func() {
-		ent := tl.Pathway{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Pathway{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.Pathway](reader, getFilename(&tl.Pathway{}))
 }
 
-// Attributions sends out Attributions.
 func (reader *Reader) Attributions() (out chan tl.Attribution) {
-	out = make(chan tl.Attribution, bufferSize)
-	go func() {
-		ent := tl.Attribution{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Attribution{}
-			loadRow(&e, row)
-			out <- e
-		})
-		close(out)
-	}()
-	return out
+	return ReadEntities[tl.Attribution](reader, getFilename(&tl.Attribution{}))
 }
 
-// Translations sends out Translations.
 func (reader *Reader) Translations() (out chan tl.Translation) {
-	out = make(chan tl.Translation, bufferSize)
-	go func() {
-		ent := tl.Translation{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Translation{}
+	return ReadEntities[tl.Translation](reader, getFilename(&tl.Translation{}))
+}
+
+func (reader *Reader) Areas() (out chan tl.Area) {
+	return ReadEntities[tl.Area](reader, getFilename(&tl.Area{}))
+}
+
+func (reader *Reader) StopAreas() (out chan tl.StopArea) {
+	return ReadEntities[tl.StopArea](reader, getFilename(&tl.StopArea{}))
+}
+
+func (reader *Reader) FareLegRules() (out chan tl.FareLegRule) {
+	return ReadEntities[tl.FareLegRule](reader, getFilename(&tl.FareLegRule{}))
+}
+
+func (reader *Reader) FareTransferRules() (out chan tl.FareTransferRule) {
+	return ReadEntities[tl.FareTransferRule](reader, getFilename(&tl.FareTransferRule{}))
+}
+
+func (reader *Reader) FareProducts() (out chan tl.FareProduct) {
+	return ReadEntities[tl.FareProduct](reader, getFilename(&tl.FareProduct{}))
+}
+
+func (reader *Reader) FareContainers() (out chan tl.FareContainer) {
+	return ReadEntities[tl.FareContainer](reader, getFilename(&tl.FareContainer{}))
+}
+
+func (reader *Reader) RiderCategories() (out chan tl.RiderCategory) {
+	return ReadEntities[tl.RiderCategory](reader, getFilename(&tl.RiderCategory{}))
+}
+
+func ReadEntities[T any](reader *Reader, efn string) chan T {
+	eout := make(chan T, bufferSize)
+	go func(fn string, c chan T) {
+		reader.Adapter.ReadRows(fn, func(row Row) {
+			var e T
 			loadRow(&e, row)
-			out <- e
+			c <- e
 		})
-		close(out)
-	}()
-	return out
+		close(c)
+	}(efn, eout)
+	return eout
+}
+
+func getFilename(ent tl.Entity) string {
+	return ent.Filename()
 }
 
 // chunkMSI takes a string counter and chunks it into groups of size <= chunkSize

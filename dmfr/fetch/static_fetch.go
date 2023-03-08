@@ -3,10 +3,11 @@ package fetch
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
@@ -65,7 +66,6 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 			return vr, err
 		}
 		// Return fv
-		fv.UpdateTimestamps()
 		fv.ID, err = atx.Insert(&fv)
 		if err != nil {
 			return vr, err
@@ -95,33 +95,25 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 	return fv, result, err
 }
 
-func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
-	// Get FeedVersionFileInfos
-	fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader)
+func copyFileContents(dst, src string) (err error) {
+	in, err := os.Open(src)
 	if err != nil {
-		return err
+		return
 	}
-	for _, fvfi := range fvfis {
-		fvfi.UpdateTimestamps()
-		fvfi.FeedVersionID = fvid
-		if _, err := atx.Insert(&fvfi); err != nil {
-			return err
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return
+	}
+	defer func() {
+		cerr := out.Close()
+		if err == nil {
+			err = cerr
 		}
+	}()
+	if _, err = io.Copy(out, in); err != nil {
+		return
 	}
-	// Get service statistics
-	fvsls, err := dmfr.NewFeedVersionServiceInfosFromReader(reader)
-	if err != nil {
-		return err
-	}
-	// Batch insert
-	bt := make([]interface{}, len(fvsls))
-	for i := range fvsls {
-		fvsls[i].FeedVersionID = fvid
-		bt[i] = &fvsls[i]
-	}
-	if err := atx.CopyInsert(bt); err != nil {
-		return err
-	}
-
-	return nil
+	err = out.Sync()
+	return
 }

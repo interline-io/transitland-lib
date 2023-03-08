@@ -20,7 +20,7 @@ func setupImport(t *testing.T, atx tldb.Adapter) int {
 	fvid := testdb.ShouldInsert(t, atx, &fv)
 	fv.ID = fvid
 	// Import
-	_, err := importer.ImportFeedVersion(atx, fv, importer.Options{FeedVersionID: fvid})
+	_, err := importer.ImportFeedVersion(atx, fv, importer.Options{FeedVersionID: fvid, Storage: "/"})
 	if err != nil {
 		t.Error(err)
 	}

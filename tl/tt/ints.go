@@ -18,7 +18,7 @@ func NewInts(v []int) Ints {
 
 func (a Ints) Value() (driver.Value, error) {
 	if !a.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(a.Val)
 }

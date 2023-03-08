@@ -70,14 +70,6 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 	// Table order is very important
 	// built in extensions
 	extensionTables := []string{
-		"ext_faresv2_areas",
-		"ext_faresv2_fare_capping",
-		"ext_faresv2_fare_containers",
-		"ext_faresv2_fare_leg_rules",
-		"ext_faresv2_fare_products",
-		"ext_faresv2_fare_timeframes",
-		"ext_faresv2_fare_transfer_rules",
-		"ext_faresv2_rider_categories",
 		"ext_plus_calendar_attributes",
 		"ext_plus_directions",
 		"ext_plus_fare_rider_categories",
@@ -88,6 +80,7 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 		"ext_plus_rider_categories",
 		"ext_plus_stop_attributes",
 		"ext_plus_timepoints",
+		"ext_plus_route_attributes",
 	}
 	// derived entities
 	derivedTables := []string{
@@ -112,9 +105,16 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 		"gtfs_fare_rules",
 		"gtfs_attributions",
 		"gtfs_translations",
+		"gtfs_stop_areas",
+		"gtfs_fare_containers",
+		"gtfs_fare_leg_rules",
+		"gtfs_fare_products",
+		"gtfs_fare_transfer_rules",
+		"gtfs_rider_categories",
 	}
 	// named entities
 	namedTables := []string{
+		"gtfs_areas",
 		"gtfs_pathways",
 		"gtfs_fare_attributes",
 		"gtfs_trips",

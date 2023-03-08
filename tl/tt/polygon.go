@@ -53,9 +53,9 @@ func (g Polygon) String() string {
 	return string(a)
 }
 
-func (g *Polygon) MarshalJSON() ([]byte, error) {
+func (g Polygon) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return geojsonEncode(&g.Polygon)
 }

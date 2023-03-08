@@ -34,30 +34,36 @@ func (r Time) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
 	}
-	return driver.Value(r.Val), nil
+	return r.Val, nil
 }
 
 func (r *Time) Scan(src interface{}) error {
 	r.Val, r.Valid = time.Time{}, false
-	if src == nil {
-		return nil
-	}
 	var err error
 	switch v := src.(type) {
+	case nil:
+		return nil
 	case string:
+		if isEmpty(string(v)) {
+			return nil
+		}
 		r.Val, err = time.Parse(time.RFC3339, v)
 	case time.Time:
 		r.Val = v
 	default:
-		err = fmt.Errorf("cant convert %T", src)
+		err = fmt.Errorf("cant convert %T to Time", src)
 	}
 	r.Valid = (err == nil)
 	return err
 }
 
-func (r *Time) MarshalJSON() ([]byte, error) {
+func (r *Time) UnmarshalJSON(v []byte) error {
+	return r.Scan(string(stripQuotes(v)))
+}
+
+func (r Time) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
-		return []byte("null"), nil
+		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val.Format(time.RFC3339))
 }

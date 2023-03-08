@@ -531,7 +531,55 @@ func (reader *Reader) Translations() chan tl.Translation {
 	return out
 }
 
-//
+func (reader *Reader) Areas() (out chan tl.Area) {
+	return ReadEntities[tl.Area](reader, getTableName(&tl.Area{}))
+}
+
+func (reader *Reader) StopAreas() (out chan tl.StopArea) {
+	return ReadEntities[tl.StopArea](reader, getTableName(&tl.StopArea{}))
+}
+
+func (reader *Reader) FareLegRules() (out chan tl.FareLegRule) {
+	return ReadEntities[tl.FareLegRule](reader, getTableName(&tl.FareLegRule{}))
+}
+
+func (reader *Reader) FareTransferRules() (out chan tl.FareTransferRule) {
+	return ReadEntities[tl.FareTransferRule](reader, getTableName(&tl.FareTransferRule{}))
+}
+
+func (reader *Reader) FareProducts() (out chan tl.FareProduct) {
+	return ReadEntities[tl.FareProduct](reader, getTableName(&tl.FareProduct{}))
+}
+
+func (reader *Reader) FareContainers() (out chan tl.FareContainer) {
+	return ReadEntities[tl.FareContainer](reader, getTableName(&tl.FareContainer{}))
+}
+
+func (reader *Reader) RiderCategories() (out chan tl.RiderCategory) {
+	return ReadEntities[tl.RiderCategory](reader, getTableName(&tl.RiderCategory{}))
+}
+
+func ReadEntities[T tl.EntityWithID](reader *Reader, table string) chan T {
+	out := make(chan T, bufferSize)
+	go func() {
+		lastId := 0
+		for {
+			var ents []T
+			qstr, args, err := reader.Where().From(table).Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
+			check(err)
+			check(reader.Adapter.Select(&ents, qstr, args...))
+			for _, ent := range ents {
+				out <- ent
+				lastId = ent.GetID()
+			}
+			if len(ents) < reader.PageSize {
+				break
+			}
+		}
+		close(out)
+	}()
+	return out
+}
 
 func chunkStrings(value []string, csize int) [][]string {
 	var output [][]string

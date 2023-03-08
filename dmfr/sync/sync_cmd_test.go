@@ -9,7 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-func TestCommand(t *testing.T) {
+func TestSyncCommand(t *testing.T) {
 	cases := []struct {
 		count       int
 		errContains string

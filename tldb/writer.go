@@ -98,10 +98,6 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	if z, ok := ent.(canSetFeedVersion); ok {
 		z.SetFeedVersionID(writer.FeedVersionID)
 	}
-	// Update Timestamps
-	if v, ok := ent.(canUpdateTimestamps); ok {
-		v.UpdateTimestamps()
-	}
 	// Save
 	eid, err := writer.Adapter.Insert(ent)
 	// Update ID
@@ -134,9 +130,6 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		// Set FeedVersion, Timestamps
 		if v, ok := ent.(canSetFeedVersion); ok {
 			v.SetFeedVersionID(writer.FeedVersionID)
-		}
-		if v, ok := ent.(canUpdateTimestamps); ok {
-			v.UpdateTimestamps()
 		}
 		ients[i] = ent
 	}

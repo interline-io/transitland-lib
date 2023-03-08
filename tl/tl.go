@@ -5,13 +5,13 @@ import (
 )
 
 // VERSION is the current software version.
-var VERSION = "v0.10.3"
+var VERSION = "v0.12.1"
 
 // GTFSVERSION is the commit for the spec reference.md file.
-var GTFSVERSION = "2e6887ea16b689d8ebc70ad334ac8abb2f94a66e"
+var GTFSVERSION = "f62ca848efa843fdf1e6f9856aaff50627c3ed69"
 
 // GTFSRTVERSION is the commit for the gtfs-realtime.proto file.
-var GTFSRTVERSION = "99fdfba627451d2861346c631af84535fa1e02fb"
+var GTFSRTVERSION = "6fcc3800b15954227af7335d571791738afb1a67"
 
 // Aliases
 type Date = tt.Date

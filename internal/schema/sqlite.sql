@@ -169,6 +169,21 @@ CREATE TABLE IF NOT EXISTS "feed_version_file_infos" (
 );
 CREATE INDEX idx_feed_version_file_infos_feed_version_id ON "feed_version_file_infos"(feed_version_id);
 
+CREATE TABLE IF NOT EXISTS "feed_version_service_windows" (
+  "id" integer primary key autoincrement, 
+  "feed_version_id" integer NOT NULL, 
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+  "feed_start_date" datetime,
+  "feed_end_date" datetime,
+  "earliest_calendar_date" datetime,
+  "latest_calendar_date" datetime,
+  "default_timezone" varchar(255),
+  "fallback_week" datetime
+);
+CREATE INDEX feed_version_service_windows_feed_version_id ON "feed_version_service_windows"(feed_version_id);
+
+
 CREATE TABLE IF NOT EXISTS "feed_version_service_levels" (
     "id" integer primary key autoincrement,
     "feed_version_id" integer NOT NULL,
@@ -271,8 +286,12 @@ CREATE INDEX idx_gtfs_agencies_agency_id ON "gtfs_agencies"(agency_id);
 CREATE INDEX idx_gtfs_agencies_feed_version_id ON "gtfs_agencies"(feed_version_id);
 
 CREATE TABLE IF NOT EXISTS "gtfs_transfers" (
-  "from_stop_id" int NOT NULL, 
-  "to_stop_id" int NOT NULL, 
+  "from_stop_id" int NOT NULL,
+  "to_stop_id" int NOT NULL,
+  "from_route_id" int, 
+  "to_route_id" int, 
+  "from_trip_id" int, 
+  "to_trip_id" int, 
   "transfer_type" integer NOT NULL, 
   "min_transfer_time" integer, 
   "id" integer primary key autoincrement, 
@@ -343,6 +362,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_routes" (
   "continuous_drop_off" integer,
   "id" integer primary key autoincrement, 
   "feed_version_id" integer NOT NULL, 
+  "network_id" varchar(255),
+  "as_route" integer,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -549,3 +570,130 @@ CREATE TABLE feed_fetches (
     "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
     "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+
+
+
+----------------------
+
+
+
+CREATE TABLE gtfs_areas (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    "area_id" varchar(255) not null,
+    "area_name" varchar(255),
+
+    --- interline extensions
+    "agency_ids" blob,
+    "geometry" blob
+);
+
+
+CREATE TABLE gtfs_stop_areas (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    "area_id" int not null,
+    "stop_id" int not null
+);
+
+
+CREATE TABLE gtfs_fare_leg_rules (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    "leg_group_id" varchar(255),
+    "network_id" varchar(255),
+    "from_area_id" varchar(255),
+    "to_area_id" varchar(255),
+    "fare_product_id" varchar(255),
+    "transfer_only" integer
+);
+
+
+CREATE TABLE gtfs_fare_transfer_rules (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    from_leg_group_id varchar(255),
+    to_leg_group_id varchar(255),
+    transfer_count int,
+    duration_limit int,
+    duration_limit_type int,
+    fare_transfer_type int,
+    fare_product_id varchar(255)
+);
+
+
+CREATE TABLE gtfs_fare_products (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    fare_product_id varchar(255),
+    fare_product_name varchar(255),
+    amount real,
+    currency varchar(255),
+
+    --- interline extensions
+    rider_category_id varchar(255),
+    fare_container_id varchar(255),
+    duration_start int,
+    duration_amount real,
+    duration_unit int,
+    duration_type int
+);
+
+
+CREATE TABLE gtfs_fare_containers (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    --- interline extensions
+    fare_container_id varchar(255) NOT NULL,
+    fare_container_name varchar(255),
+    minimum_initial_purchase real,
+    amount real,
+    currency varchar(255)
+);
+
+
+CREATE TABLE gtfs_rider_categories (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    --- interline extensions
+    rider_category_id varchar(255) NOT NULL,
+    rider_category_name varchar(255) NOT NULL,
+    min_age int,
+    max_age int,
+    eligibility_url varchar(255)
+);
+
+
+
+
+
+
+
+
+
+
+
+
+

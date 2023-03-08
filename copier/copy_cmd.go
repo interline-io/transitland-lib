@@ -8,17 +8,19 @@ import (
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/log"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // Command
 type Command struct {
 	Options
-	fvid       int
-	create     bool
-	extensions cli.ArrayFlags
-	readerPath string
-	writerPath string
+	fvid              int
+	create            bool
+	extensions        cli.ArrayFlags
+	readerPath        string
+	writerPath        string
+	writeExtraColumns bool
 }
 
 func (cmd *Command) Parse(args []string) error {
@@ -30,8 +32,11 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
+	fl.BoolVar(&cmd.CopyExtraFiles, "write-extra-files", false, "Copy additional files found in source to destination")
+	fl.BoolVar(&cmd.writeExtraColumns, "write-extra-columns", false, "Include extra columns in output")
 	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
 	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
+	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
 	fl.Parse(args)
 	if fl.NArg() < 2 {
 		fl.Usage()
@@ -53,6 +58,14 @@ func (cmd *Command) Run() error {
 	if err != nil {
 		return err
 	}
+	if cmd.writeExtraColumns {
+		if v, ok := writer.(tl.WriterWithExtraColumns); ok {
+			v.WriteExtraColumns(true)
+		} else {
+			return errors.New("writer does not support extra output columns")
+		}
+	}
+
 	defer writer.Close()
 	// Create feed version
 	if dbw, ok := writer.(*tldb.Writer); ok {
@@ -76,5 +89,7 @@ func (cmd *Command) Run() error {
 	}
 	result := cp.Copy()
 	result.DisplaySummary()
+	result.DisplayErrors()
+	result.DisplayWarnings()
 	return nil
 }

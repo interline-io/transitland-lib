@@ -15,8 +15,6 @@ func Test_chunkStrings(t *testing.T) {
 		a = append(a, strconv.Itoa(i))
 	}
 	c := chunkStrings(a, csize)
-	// fmt.Println(a)
-	// fmt.Println(c)
 	if len(a) != bsize {
 		t.Errorf("got input size %d, expected %d", len(a), bsize)
 	}

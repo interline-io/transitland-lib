@@ -1,4 +1,6 @@
 stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,wheelchair_boarding,stop_code,stop_timezone,parent_station,expect_error
+ok1,Stop 1,A good stop,36.641496,-116.40094,ok_zone,,,,,,,
+ok2,Stop 1,A good stop,36.641496,-116.40094,ok_zone,,,,,,,
 ok_stop,Stop 1,A good stop,36.641496,-116.40094,ok_zone,,,,,,,
 ok_stop2,Stop 2,A good stop,36.641496,-116.40094,ok_zone2,,,,,,,
 ok_station,Station,A good station,36.641496,-116.40094,,,1,,,,,

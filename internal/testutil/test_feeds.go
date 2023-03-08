@@ -10,7 +10,7 @@ var ExampleDir = ReaderTester{
 		"stops.txt":           9,
 		"stop_times.txt":      28,
 		"shapes.txt":          3,
-		"calendar.txt":        2,
+		"calendar.txt":        3, // this will be 3 because the simple DirectCopy copier does not filter out generated entities
 		"calendar_dates.txt":  2,
 		"feed_info.txt":       1,
 		"fare_rules.txt":      4,
@@ -27,14 +27,14 @@ var ExampleDir = ReaderTester{
 		"calendar.txt":        {"FULLW", "WE"},
 		"fare_attributes.txt": {"p", "a"},
 	},
-	DirSHA1: "1aa738a7f692c0a32acdd3cf4242c3d9d554e0f9",
+	DirSHA1: "7a5c69b5466746213eb3cb6d907a7004073eca4d",
 }
 
 // ExampleZip .
 var ExampleZip = ReaderTester{
 	URL:     RelPath("test/data/example.zip"),
 	SHA1:    "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
-	DirSHA1: "1aa738a7f692c0a32acdd3cf4242c3d9d554e0f9",
+	DirSHA1: "7a5c69b5466746213eb3cb6d907a7004073eca4d",
 	Size:    4197,
 	Counts: map[string]int{
 		"agency.txt":          1,
@@ -75,7 +75,8 @@ var ExampleZipNestedZip = ReaderTester{
 // ExampleFeedBART - BART test feed
 var ExampleFeedBART = ReaderTester{
 	URL: RelPath("test/data/external/bart.zip"),
-	Counts: map[string]int{"agency.txt": 1,
+	Counts: map[string]int{
+		"agency.txt":          1,
 		"calendar.txt":        3,
 		"calendar_dates.txt":  12,
 		"fare_attributes.txt": 170,
@@ -131,6 +132,19 @@ var ExampleFeedBART = ReaderTester{
 // ExampleFeedCaltrain - Caltrain test feed
 var ExampleFeedCaltrain = ReaderTester{
 	URL: RelPath("test/data/external/caltrain.zip"),
+	Counts: map[string]int{
+		"agency.txt":          1,
+		"calendar.txt":        3,
+		"calendar_dates.txt":  36,
+		"fare_attributes.txt": 6,
+		"fare_rules.txt":      216,
+		"feed_info.txt":       0,
+		"routes.txt":          6,
+		"shapes.txt":          8,
+		"stop_times.txt":      2853,
+		"stops.txt":           64,
+		"transfers.txt":       0,
+		"trips.txt":           185},
 }
 
 // MBTA
