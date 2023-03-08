@@ -43,7 +43,7 @@ var ExampleZip = ReaderTester{
 		"stops.txt":           9,
 		"stop_times.txt":      28,
 		"shapes.txt":          3,
-		"calendar.txt":        2,
+		"calendar.txt":        3, // 1 generated
 		"calendar_dates.txt":  2,
 		"feed_info.txt":       1,
 		"fare_rules.txt":      4,
@@ -134,7 +134,7 @@ var ExampleFeedCaltrain = ReaderTester{
 	URL: RelPath("test/data/external/caltrain.zip"),
 	Counts: map[string]int{
 		"agency.txt":          1,
-		"calendar.txt":        3,
+		"calendar.txt":        27, // 3 - 24 generated
 		"calendar_dates.txt":  36,
 		"fare_attributes.txt": 6,
 		"fare_rules.txt":      216,

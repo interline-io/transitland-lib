@@ -134,7 +134,7 @@ func CheckReader(t testing.TB, fe ReaderTester, reader tl.Reader) {
 	check := func(fn string, gotids map[string]int) {
 		s := msisum(gotids)
 		if exp, ok := fe.Counts[fn]; ok && s != exp {
-			t.Errorf("got %d expected %d", s, exp)
+			t.Errorf("file '%s' got %d expected %d", fn, s, exp)
 		}
 		for _, k := range fe.EntityIDs[fn] {
 			if _, ok := gotids[k]; !ok {
