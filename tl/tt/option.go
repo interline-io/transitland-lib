@@ -24,8 +24,12 @@ func (r Option[T]) String() string {
 	if !r.Valid {
 		return ""
 	}
-	b, _ := r.MarshalJSON()
-	return string(b)
+	out := ""
+	if err := convertAssign(&out, r.Val); err != nil {
+		b, _ := r.MarshalJSON()
+		return string(b)
+	}
+	return out
 }
 
 func (r *Option[T]) Error() error {
@@ -46,9 +50,9 @@ func (r Option[T]) Value() (driver.Value, error) {
 }
 
 func (r *Option[T]) UnmarshalJSON(v []byte) error {
-	var z T
-	json.Unmarshal(v, &z)
-	return r.Scan(z)
+	err := json.Unmarshal(v, &r.Val)
+	r.Valid = (err == nil)
+	return err
 }
 
 func (r Option[T]) MarshalJSON() ([]byte, error) {
@@ -63,83 +67,92 @@ func convertAssign(dest any, src any) error {
 		return nil
 	}
 	var err error
-	switch s := dest.(type) {
+	switch d := dest.(type) {
 	case *string:
-		switch d := src.(type) {
+		switch s := src.(type) {
 		case string:
-			*s = d
+			*d = s
 		case []byte:
-			*s = string(d)
+			*d = string(s)
 		case int:
-			*s = strconv.Itoa(d)
+			*d = strconv.Itoa(s)
 		case int64:
-			*s = strconv.Itoa(int(d))
-		case float32:
-			*s = fmt.Sprintf("%0.5f", d)
+			*d = strconv.Itoa(int(s))
 		case float64:
-			*s = fmt.Sprintf("%0.5f", d)
+			*d = fmt.Sprintf("%0.5f", s)
+		case time.Time:
+			*d = s.Format(time.RFC3339)
 		default:
 			err = cannotConvert()
 		}
 	case *int:
-		switch d := src.(type) {
+		switch s := src.(type) {
 		case string:
-			*s, err = strconv.Atoi(d)
+			*d, err = strconv.Atoi(s)
 		case []byte:
-			*s, err = strconv.Atoi(string(d))
+			*d, err = strconv.Atoi(string(s))
 		case int:
-			*s = int(d)
+			*d = int(s)
 		case int64:
-			*s = int(d)
-		case float32:
-			*s = int(d)
+			*d = int(s)
 		case float64:
-			*s = int(d)
+			*d = int(s)
 		default:
 			err = cannotConvert()
 		}
 	case *int64:
-		switch d := src.(type) {
+		switch s := src.(type) {
 		case string:
-			*s, err = strconv.ParseInt(d, 10, 64)
+			*d, err = strconv.ParseInt(s, 10, 64)
 		case []byte:
-			*s, err = strconv.ParseInt(string(d), 10, 64)
+			*d, err = strconv.ParseInt(string(s), 10, 64)
 		case int:
-			*s = int64(d)
+			*d = int64(s)
 		case int64:
-			*s = int64(d)
-		case float32:
-			*s = int64(d)
+			*d = int64(s)
 		case float64:
-			*s = int64(d)
+			*d = int64(s)
 		default:
 			err = cannotConvert()
 		}
 	case *float64:
-		switch d := src.(type) {
+		switch s := src.(type) {
 		case string:
-			*s, err = strconv.ParseFloat(d, 64)
+			*d, err = strconv.ParseFloat(s, 64)
 		case []byte:
-			*s, err = strconv.ParseFloat(string(d), 64)
+			*d, err = strconv.ParseFloat(string(s), 64)
 		case int:
-			*s = float64(d)
+			*d = float64(s)
 		case int64:
-			*s = float64(d)
-		case float32:
-			*s = float64(d)
+			*d = float64(s)
 		case float64:
-			*s = float64(d)
+			*d = float64(s)
+		default:
+			err = cannotConvert()
+		}
+	case *bool:
+		switch s := src.(type) {
+		case string:
+			if s == "true" {
+				*d = true
+			} else if s == "false" {
+				*d = false
+			} else {
+				err = cannotConvert()
+			}
+		case bool:
+			*d = s
 		default:
 			err = cannotConvert()
 		}
 	case *time.Time:
-		switch d := src.(type) {
+		switch s := src.(type) {
 		case []byte:
-			*s, err = parseTime(string(d))
+			*d, err = parseTime(string(s))
 		case string:
-			*s, err = parseTime(d)
+			*d, err = parseTime(s)
 		case time.Time:
-			*s = d
+			*d = s
 		default:
 			err = cannotConvert()
 		}
