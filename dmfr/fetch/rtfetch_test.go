@@ -71,7 +71,7 @@ func TestRTFetch(t *testing.T) {
 				//
 				tlff := dmfr.FeedFetch{}
 				testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
-				assert.Equal(t, tc.responseCode, tlff.ResponseCode.Val, "did not get expected feed_fetch response code")
+				assert.Equal(t, tc.responseCode, tlff.ResponseCode.Int(), "did not get expected feed_fetch response code")
 				assert.Equal(t, !tc.responseError, tlff.Success, "did not get expected feed_fetch success")
 				return nil
 			})

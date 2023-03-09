@@ -20,7 +20,7 @@ func CheckInArray(field string, value string, values ...string) []error {
 }
 
 // CheckInArrayInt returns an error if the value is not in the set of provided values.
-func CheckInArrayInt(field string, value int, values ...int) []error {
+func CheckInArrayInt[T int | int64](field string, value T, values ...T) []error {
 	for _, v := range values {
 		if value == v {
 			return nil
@@ -42,7 +42,7 @@ func CheckPositive(field string, value float64) (errs []error) {
 }
 
 // CheckPositiveInt returns an error if the value is non-negative
-func CheckPositiveInt(field string, value int) (errs []error) {
+func CheckPositiveInt[T int | int64](field string, value T) (errs []error) {
 	if value < 0 {
 		errs = append(errs, causes.NewInvalidFieldError(field, fmt.Sprintf("%d", value), fmt.Errorf("must be non-negative")))
 	}
@@ -58,7 +58,7 @@ func CheckInsideRange(field string, value float64, min float64, max float64) (er
 }
 
 // CheckInsideRangeInt returns an error if the value is outside of the specified range
-func CheckInsideRangeInt(field string, value int, min int, max int) (errs []error) {
+func CheckInsideRangeInt[T int | int64](field string, value T, min T, max T) (errs []error) {
 	if value < min || value > max {
 		errs = append(errs, causes.NewInvalidFieldError(field, fmt.Sprintf("%d", value), fmt.Errorf("out of bounds, min %d max %d", min, max)))
 	}

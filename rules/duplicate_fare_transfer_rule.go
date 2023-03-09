@@ -47,8 +47,8 @@ func (e *DuplicateFareTransferRuleCheck) Validate(ent tl.Entity) []error {
 		FromLegGroupID:      v.FromLegGroupID.Val,
 		ToLegGroupID:        v.ToLegGroupID.Val,
 		FilterFareProductID: v.FilterFareProductID.Val,
-		TransferCount:       v.TransferCount.Val,
-		DurationLimit:       v.DurationLimit.Val,
+		TransferCount:       v.TransferCount.Int(),
+		DurationLimit:       v.DurationLimit.Int(),
 	}
 	key := fmt.Sprintf("%s:%s:%s:%s:%d:%d", err.FareProductID, err.FromLegGroupID, err.ToLegGroupID, err.FilterFareProductID, err.TransferCount, err.DurationLimit)
 	if _, ok := e.vals[key]; ok {
