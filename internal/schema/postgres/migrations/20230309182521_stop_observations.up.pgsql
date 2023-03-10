@@ -1,7 +1,7 @@
 CREATE TABLE ext_performance_stop_observations (
     id bigserial primary key,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
     feed_version_id bigint NOT NULL,
     trip_id text,
     route_id text,
