@@ -1,9 +1,9 @@
 package rules
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -16,9 +16,9 @@ type RouteNamesPrefixCheck struct {
 
 func (e *RouteNamesPrefixCheck) Validate(ent tl.Entity) []error {
 	if v, ok := ent.(*tl.Route); ok {
-		fmt.Println("checking:", v.RouteShortName, ":", v.RouteLongName)
+		log.Infof("checking:", v.RouteShortName, ":", v.RouteLongName)
 		if v.RouteShortName != "" && v.RouteLongName != "" && strings.HasPrefix(v.RouteLongName, v.RouteShortName) {
-			fmt.Println("prefixed")
+			log.Infof("prefixed")
 			return []error{&RouteNamesPrefixError{}}
 		}
 	}

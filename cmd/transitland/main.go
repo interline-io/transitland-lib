@@ -13,6 +13,7 @@ import (
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/extract"
 	_ "github.com/interline-io/transitland-lib/filters"
+	"github.com/interline-io/transitland-lib/inspect"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/merge"
 	"github.com/interline-io/transitland-lib/tl"
@@ -48,6 +49,7 @@ func main() {
 		log.Print("  unimport")
 		log.Print("  sync")
 		log.Print("  dmfr")
+		log.Print("  inspect")
 	}
 	flag.Parse()
 	if versionFlag {
@@ -92,6 +94,8 @@ func main() {
 		r = &sync.Command{}
 	case "merge":
 		r = &merge.Command{}
+	case "inspect":
+		r = &inspect.Command{}
 	case "dmfr": // backwards compat
 		r = &dmfrCommand{}
 	default:
