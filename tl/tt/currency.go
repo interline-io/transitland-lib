@@ -15,7 +15,7 @@ func NewCurrencyAmount(v float64) CurrencyAmount {
 	return CurrencyAmount{Option[float64]{Valid: true, Val: v}}
 }
 
-func (r *CurrencyAmount) ToCsv() string {
+func (r CurrencyAmount) ToCsv() string {
 	if r.Valid {
 		return fmt.Sprintf("%0.2f", r.Val)
 	}

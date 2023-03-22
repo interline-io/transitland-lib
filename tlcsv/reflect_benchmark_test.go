@@ -1,6 +1,7 @@
 package tlcsv
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -133,6 +134,30 @@ func Benchmark_dumpRow_StopTime(b *testing.B) {
 	}
 }
 
+func Benchmark_dumpRow_Route(b *testing.B) {
+	ent := tl.Route{
+		RouteID:        "route_id",
+		RouteShortName: "route_short_name",
+		RouteLongName:  "route_long_name",
+		RouteType:      3,
+		RouteDesc:      "route_desc",
+		RouteColor:     "#ff00ff",
+		RouteTextColor: "#000000",
+		NetworkID:      tt.NewString("network_id"),
+		AsRoute:        tt.NewInt(1),
+	}
+	header := strings.Split("route_id,route_short_name,route_long_name,route_type,route_color,route_text_color,route_desc,network_id,as_route", ",")
+	for n := 0; n < b.N; n++ {
+		row, err := dumpRow(&ent, header)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if n == 0 {
+			fmt.Println(row)
+		}
+	}
+}
+
 func Benchmark_dumpRow_FareProduct(b *testing.B) {
 	ent := tl.FareProduct{
 		FareProductID:   tt.NewString("test"),
@@ -147,6 +172,8 @@ func Benchmark_dumpRow_FareProduct(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		_ = row
+		if n == 0 {
+			fmt.Println(row)
+		}
 	}
 }
