@@ -31,7 +31,7 @@ type Reader struct {
 	StopAreaList         []tl.StopArea
 	FareLegRuleList      []tl.FareLegRule
 	FareTransferRuleList []tl.FareTransferRule
-	FareContainerList    []tl.FareContainer
+	FareMediaList        []tl.FareMedia
 	FareProductList      []tl.FareProduct
 	RiderCategoryList    []tl.RiderCategory
 	OtherList            []tl.Entity
@@ -354,10 +354,10 @@ func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
 	return out
 }
 
-func (mr *Reader) FareContainers() chan tl.FareContainer {
-	out := make(chan tl.FareContainer, bufferSize)
+func (mr *Reader) FareMedias() chan tl.FareMedia {
+	out := make(chan tl.FareMedia, bufferSize)
 	go func() {
-		for _, ent := range mr.FareContainerList {
+		for _, ent := range mr.FareMediaList {
 			out <- ent
 		}
 		close(out)

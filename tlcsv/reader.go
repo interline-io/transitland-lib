@@ -414,8 +414,8 @@ func (reader *Reader) FareProducts() (out chan tl.FareProduct) {
 	return ReadEntities[tl.FareProduct](reader, getFilename(&tl.FareProduct{}))
 }
 
-func (reader *Reader) FareContainers() (out chan tl.FareContainer) {
-	return ReadEntities[tl.FareContainer](reader, getFilename(&tl.FareContainer{}))
+func (reader *Reader) FareMedias() (out chan tl.FareMedia) {
+	return ReadEntities[tl.FareMedia](reader, getFilename(&tl.FareMedia{}))
 }
 
 func (reader *Reader) RiderCategories() (out chan tl.RiderCategory) {

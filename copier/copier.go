@@ -796,12 +796,12 @@ func (copier *Copier) copyFaresV2() error {
 	}
 	copier.logCount(&tl.RiderCategory{})
 
-	for e := range copier.Reader.FareContainers() {
+	for e := range copier.Reader.FareMedias() {
 		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
 		}
 	}
-	copier.logCount(&tl.FareContainer{})
+	copier.logCount(&tl.FareMedia{})
 
 	for e := range copier.Reader.FareProducts() {
 		if entErr, err := copier.CopyEntity(&e); err != nil {

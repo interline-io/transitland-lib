@@ -106,7 +106,7 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 		"gtfs_attributions",
 		"gtfs_translations",
 		"gtfs_stop_areas",
-		"gtfs_fare_containers",
+		"gtfs_fare_media",
 		"gtfs_fare_leg_rules",
 		"gtfs_fare_products",
 		"gtfs_fare_transfer_rules",
