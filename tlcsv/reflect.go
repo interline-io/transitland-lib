@@ -132,8 +132,17 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 
 // toCsv default CSV formatting
 func toCsv(rfi any) (string, error) {
+	// Check ToCsv() and Value() first, then primitives, then String()
 	value := ""
 	switch v := rfi.(type) {
+	case canCsvString:
+		value = v.ToCsv()
+	case canValue:
+		a, err := v.Value()
+		if err != nil {
+			return "", err
+		}
+		return toCsv(a)
 	case nil:
 		value = ""
 	case string:
@@ -165,16 +174,8 @@ func toCsv(rfi any) (string, error) {
 		}
 	case []byte:
 		value = string(v)
-	case canCsvString:
-		value = v.ToCsv()
 	case canString:
 		value = v.String()
-	case canValue:
-		a, err := v.Value()
-		if err != nil {
-			return "", err
-		}
-		return toCsv(a)
 	default:
 		return "", fmt.Errorf("can not convert field to string")
 	}
