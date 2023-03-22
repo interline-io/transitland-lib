@@ -120,7 +120,7 @@ func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
 	return readNullEntities[tl.FareTransferRule](mr)
 }
 
-func (mr *Reader) FareMedias() chan tl.FareMedia {
+func (mr *Reader) FareMedia() chan tl.FareMedia {
 	return readNullEntities[tl.FareMedia](mr)
 }
 

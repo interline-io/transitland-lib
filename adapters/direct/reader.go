@@ -354,7 +354,7 @@ func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
 	return out
 }
 
-func (mr *Reader) FareMedias() chan tl.FareMedia {
+func (mr *Reader) FareMedia() chan tl.FareMedia {
 	out := make(chan tl.FareMedia, bufferSize)
 	go func() {
 		for _, ent := range mr.FareMediaList {

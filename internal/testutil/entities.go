@@ -80,7 +80,7 @@ func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
 	for ent := range reader.StopAreas() {
 		cb(&ent)
 	}
-	for ent := range reader.FareMedias() {
+	for ent := range reader.FareMedia() {
 		cb(&ent)
 	}
 	for ent := range reader.RiderCategories() {

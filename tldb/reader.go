@@ -551,7 +551,7 @@ func (reader *Reader) FareProducts() (out chan tl.FareProduct) {
 	return ReadEntities[tl.FareProduct](reader, getTableName(&tl.FareProduct{}))
 }
 
-func (reader *Reader) FareMedias() (out chan tl.FareMedia) {
+func (reader *Reader) FareMedia() (out chan tl.FareMedia) {
 	return ReadEntities[tl.FareMedia](reader, getTableName(&tl.FareMedia{}))
 }
 

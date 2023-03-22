@@ -149,8 +149,8 @@ func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
 	return readEntities(mr, func(r tl.Reader) chan tl.FareTransferRule { return r.FareTransferRules() }, setFv[*tl.FareTransferRule])
 }
 
-func (mr *Reader) FareMedias() chan tl.FareMedia {
-	return readEntities(mr, func(r tl.Reader) chan tl.FareMedia { return r.FareMedias() }, setFv[*tl.FareMedia])
+func (mr *Reader) FareMedia() chan tl.FareMedia {
+	return readEntities(mr, func(r tl.Reader) chan tl.FareMedia { return r.FareMedia() }, setFv[*tl.FareMedia])
 }
 
 func (mr *Reader) FareProducts() chan tl.FareProduct {
