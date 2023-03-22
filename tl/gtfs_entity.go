@@ -22,6 +22,7 @@ type EntityWithID interface {
 type EntityWithExtra interface {
 	SetExtra(string, string)
 	GetExtra(string) (string, bool)
+	ClearExtra()
 	ExtraKeys() []string
 }
 
@@ -78,6 +79,10 @@ func (ent *ExtraEntity) ExtraKeys() []string {
 		ret = append(ret, ent.extra[i])
 	}
 	return ret
+}
+
+func (ent *ExtraEntity) ClearExtra() {
+	ent.extra = nil
 }
 
 /////////
