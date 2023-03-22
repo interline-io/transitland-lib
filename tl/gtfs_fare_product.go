@@ -11,7 +11,7 @@ import (
 type FareProduct struct {
 	FareProductID   String
 	FareProductName String
-	Amount          Float
+	Amount          tt.CurrencyAmount // Experimental formatting
 	Currency        String
 	DurationStart   Int   // proposed extension
 	DurationAmount  Float // proposed extension

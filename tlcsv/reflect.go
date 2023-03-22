@@ -32,6 +32,10 @@ type canString interface {
 	String() string
 }
 
+type canCsvString interface {
+	ToCsv() string
+}
+
 type canScan interface {
 	Scan(src interface{}) error
 }
@@ -123,18 +127,12 @@ func GetString(ent tl.Entity, key string) (string, error) {
 
 // valGetString returns a string representation of the field.
 func valGetString(valueField reflect.Value, k string) (string, error) {
+	return toCsv(valueField.Interface())
+}
+
+// toCsv default CSV formatting
+func toCsv(rfi any) (string, error) {
 	value := ""
-	rfi := valueField.Interface()
-	if v, ok := rfi.(tl.WideTime); ok {
-		return v.String(), nil
-	}
-	if v, ok := rfi.(canValue); ok {
-		var err error
-		rfi, err = v.Value()
-		if err != nil {
-			return "", err
-		}
-	}
 	switch v := rfi.(type) {
 	case nil:
 		value = ""
@@ -167,10 +165,18 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 		}
 	case []byte:
 		value = string(v)
+	case canCsvString:
+		value = v.ToCsv()
 	case canString:
 		value = v.String()
+	case canValue:
+		a, err := v.Value()
+		if err != nil {
+			return "", err
+		}
+		return toCsv(a)
 	default:
-		return "", fmt.Errorf("can not convert field '%s' to string", k)
+		return "", fmt.Errorf("can not convert field to string")
 	}
 	return value, nil
 }

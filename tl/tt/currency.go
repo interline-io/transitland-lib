@@ -7,6 +7,21 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+type CurrencyAmount struct {
+	Option[float64]
+}
+
+func NewCurrencyAmount(v float64) CurrencyAmount {
+	return CurrencyAmount{Option[float64]{Valid: true, Val: v}}
+}
+
+func (r *CurrencyAmount) ToCsv() string {
+	if r.Valid {
+		return fmt.Sprintf("%0.2f", r.Val)
+	}
+	return ""
+}
+
 // CheckCurrency returns an error if the value is not a known currency
 func CheckCurrency(field string, value string) (errs []error) {
 	if !IsValidCurrency(value) {
