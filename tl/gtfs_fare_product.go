@@ -18,16 +18,16 @@ type FareProduct struct {
 	DurationUnit    Int   // proposed extension
 	DurationType    Int   // proposed extension
 	RiderCategoryID Key   // proposed extension
-	FareContainerID Key   // proposed extension
+	FareMediaID     Key   // proposed extension
 	BaseEntity
 }
 
 func (ent *FareProduct) String() string {
 	return fmt.Sprintf(
-		"<fare_product fare_product_id:%s rider_category_id:%s fare_container_id:%s amount:%0.2f>",
+		"<fare_product fare_product_id:%s rider_category_id:%s fare_media_id:%s amount:%0.2f>",
 		ent.FareProductID.Val,
 		ent.RiderCategoryID.Val,
-		ent.FareContainerID.Val,
+		ent.FareMediaID.Val,
 		ent.Amount.Val,
 	)
 }
@@ -45,11 +45,11 @@ func (ent *FareProduct) TableName() string {
 }
 
 func (ent *FareProduct) UpdateKeys(emap *EntityMap) error {
-	if ent.FareContainerID.Val != "" {
-		if fkid, ok := emap.Get("fare_containers.txt", ent.FareContainerID.Val); ok {
-			ent.FareContainerID.Val = fkid
+	if ent.FareMediaID.Val != "" {
+		if fkid, ok := emap.Get("fare_media.txt", ent.FareMediaID.Val); ok {
+			ent.FareMediaID.Val = fkid
 		} else {
-			return causes.NewInvalidReferenceError("fare_container_id", ent.FareContainerID.Val)
+			return causes.NewInvalidReferenceError("fare_media_id", ent.FareMediaID.Val)
 		}
 	}
 	if ent.RiderCategoryID.Val != "" {

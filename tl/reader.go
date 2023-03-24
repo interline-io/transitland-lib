@@ -32,5 +32,5 @@ type Reader interface {
 	FareTransferRules() chan FareTransferRule
 	FareProducts() chan FareProduct
 	RiderCategories() chan RiderCategory
-	FareContainers() chan FareContainer
+	FareMedia() chan FareMedia
 }
