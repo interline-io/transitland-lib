@@ -104,19 +104,34 @@ func (c *Cache) GetHeader(ent interface{}) ([]string, error) {
 	return row, nil
 }
 
+type canGetValue interface {
+	GetValue(string) (any, bool)
+}
+
 // GetInsert returns values in the same order as the header.
-func (c *Cache) GetInsert(ent interface{}, header []string) ([]interface{}, error) {
-	fmap := c.GetStructTagMap(ent)
-	vals := make([]interface{}, 0)
-	val := reflect.ValueOf(ent).Elem()
+func (c *Cache) GetInsert(ent any, header []string) ([]any, error) {
+	var fmap FieldMap
+	cgv, cgvOk := ent.(canGetValue)
+	vals := make([]any, 0, len(header))
 	for _, key := range header {
-		fi, ok := fmap[key]
-		if !ok {
-			// This should not happen.
-			return nil, fmt.Errorf("unknown field: %s", key)
+		var valOk bool
+		var innerVal any
+		if cgvOk {
+			innerVal, valOk = cgv.GetValue(key)
 		}
-		v := reflectx.FieldByIndexesReadOnly(val, fi.Index)
-		vals = append(vals, v.Interface())
+		if !valOk {
+			if fmap == nil {
+				fmap = c.GetStructTagMap(ent)
+			}
+			fi, ok := fmap[key]
+			if !ok {
+				// This should not happen.
+				return nil, fmt.Errorf("unknown field: %s", key)
+			}
+			val := reflect.ValueOf(ent).Elem()
+			innerVal = reflectx.FieldByIndexesReadOnly(val, fi.Index).Interface()
+		}
+		vals = append(vals, innerVal)
 	}
 	return vals, nil
 }
