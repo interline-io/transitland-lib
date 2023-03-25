@@ -130,7 +130,13 @@ func Benchmark_dumpRow_StopTime(b *testing.B) {
 	}
 	header := strings.Split("trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled", ",")
 	for n := 0; n < b.N; n++ {
-		dumpRow(&ent, header)
+		row, err := dumpRow(&ent, header)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if n == 0 {
+			fmt.Println(row)
+		}
 	}
 }
 
@@ -163,6 +169,7 @@ func Benchmark_dumpRow_FareProduct(b *testing.B) {
 		FareProductID:   tt.NewString("test"),
 		FareProductName: tt.NewString("name"),
 		Amount:          tt.NewCurrencyAmount(1.2345),
+		Currency:        tt.NewString("USD"),
 		RiderCategoryID: tt.NewKey("rider_category_id"),
 		FareContainerID: tt.NewKey("fare_container_id"),
 	}

@@ -117,21 +117,16 @@ func GetString(ent tl.Entity, key string) (string, error) {
 	}
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()
-	valueField := reflectx.FieldByIndexesReadOnly(elem, k.Index) // .Field(k.Index)
-	v, err := valGetString(valueField, key)
+	valueField := reflectx.FieldByIndexesReadOnly(elem, k.Index)
+	v, err := toCsv(key, valueField.Interface())
 	if err != nil {
 		return "", err
 	}
 	return v, nil
 }
 
-// valGetString returns a string representation of the field.
-func valGetString(valueField reflect.Value, k string) (string, error) {
-	return toCsv(valueField.Interface())
-}
-
 // toCsv default CSV formatting
-func toCsv(rfi any) (string, error) {
+func toCsv(key string, rfi any) (string, error) {
 	// Check ToCsv() and Value() first, then primitives, then String()
 	value := ""
 	switch v := rfi.(type) {
@@ -173,7 +168,7 @@ func toCsv(rfi any) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return toCsv(a)
+		return toCsv(key, a)
 	case canString:
 		value = v.String()
 	default:
@@ -279,7 +274,7 @@ func dumpHeader(ent tl.Entity) ([]string, error) {
 
 // dumpRow returns a []string for the Entity.
 func dumpRow(ent tl.Entity, header []string) ([]string, error) {
-	row := []string{}
+	row := make([]string, 0, len(header))
 	// Fast path
 	if a, ok := ent.(canGetString); ok {
 		for _, k := range header {
@@ -297,7 +292,7 @@ func dumpRow(ent tl.Entity, header []string) ([]string, error) {
 		return nil, errors.New("failed to get insert values for entity")
 	}
 	for i, v := range rv {
-		value, err := valGetString(reflect.ValueOf(v), header[i])
+		value, err := toCsv(header[i], v)
 		if err != nil {
 			return nil, err
 		}
