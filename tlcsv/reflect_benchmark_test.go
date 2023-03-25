@@ -171,9 +171,9 @@ func Benchmark_dumpRow_FareProduct(b *testing.B) {
 		Amount:          tt.NewCurrencyAmount(1.2345),
 		Currency:        tt.NewString("USD"),
 		RiderCategoryID: tt.NewKey("rider_category_id"),
-		FareContainerID: tt.NewKey("fare_container_id"),
+		FareMediaID:     tt.NewKey("fare_container_id"),
 	}
-	header := strings.Split("fare_product_id,fare_product_name,amount,currency,duration_start,duration_amount,duration_unit,duration_type,rider_category_id,fare_container_id", ",")
+	header := strings.Split("fare_product_id,fare_product_name,amount,currency,duration_start,duration_amount,duration_unit,duration_type,rider_category_id,fare_media_id", ",")
 	for n := 0; n < b.N; n++ {
 		row, err := dumpRow(&ent, header)
 		if err != nil {

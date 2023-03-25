@@ -1,6 +1,7 @@
 package tt
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,11 +25,19 @@ func (r CurrencyAmount) ToCsv() string {
 	return ""
 }
 
-func (r *CurrencyAmount) SetCurrency(value string) {
+func (r *CurrencyAmount) SetCurrency(value string) error {
+	// Empty currency value allowed
+	// Setting an invalid currency does not set Valid = false
 	r.digitsPlusOne = 0
+	if value == "" {
+		return nil
+	}
 	if cur, ok := currencies[strings.ToUpper(value)]; ok {
 		r.digitsPlusOne = cur.digits + 1
+	} else {
+		return errors.New("invalid currency")
 	}
+	return nil
 }
 
 // CheckCurrency returns an error if the value is not a known currency
