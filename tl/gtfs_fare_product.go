@@ -32,6 +32,15 @@ func (ent *FareProduct) String() string {
 	)
 }
 
+func (ent *FareProduct) GetValue(key string) (any, bool) {
+	switch key {
+	case "amount":
+		ent.Amount.SetCurrency(ent.Currency.Val)
+		return ent.Amount, true
+	}
+	return nil, false
+}
+
 func (ent *FareProduct) EntityID() string {
 	return ent.FareProductID.Val
 }
