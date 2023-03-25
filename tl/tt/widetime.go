@@ -35,6 +35,10 @@ func (wt *WideTime) String() string {
 	return SecondsToString(wt.Seconds)
 }
 
+func (wt *WideTime) ToCsv() string {
+	return wt.String()
+}
+
 func (wt WideTime) Value() (driver.Value, error) {
 	if !wt.Valid {
 		return nil, nil

@@ -32,6 +32,10 @@ type canString interface {
 	String() string
 }
 
+type canCsvString interface {
+	ToCsv() string
+}
+
 type canScan interface {
 	Scan(src interface{}) error
 }
@@ -113,28 +117,18 @@ func GetString(ent tl.Entity, key string) (string, error) {
 	}
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()
-	valueField := reflectx.FieldByIndexesReadOnly(elem, k.Index) // .Field(k.Index)
-	v, err := valGetString(valueField, key)
+	valueField := reflectx.FieldByIndexesReadOnly(elem, k.Index)
+	v, err := toCsv(key, valueField.Interface())
 	if err != nil {
 		return "", err
 	}
 	return v, nil
 }
 
-// valGetString returns a string representation of the field.
-func valGetString(valueField reflect.Value, k string) (string, error) {
+// toCsv default CSV formatting
+func toCsv(key string, rfi any) (string, error) {
+	// Check ToCsv() and Value() first, then primitives, then String()
 	value := ""
-	rfi := valueField.Interface()
-	if v, ok := rfi.(tl.WideTime); ok {
-		return v.String(), nil
-	}
-	if v, ok := rfi.(canValue); ok {
-		var err error
-		rfi, err = v.Value()
-		if err != nil {
-			return "", err
-		}
-	}
 	switch v := rfi.(type) {
 	case nil:
 		value = ""
@@ -167,10 +161,18 @@ func valGetString(valueField reflect.Value, k string) (string, error) {
 		}
 	case []byte:
 		value = string(v)
+	case canCsvString:
+		value = v.ToCsv()
+	case canValue:
+		a, err := v.Value()
+		if err != nil {
+			return "", err
+		}
+		return toCsv(key, a)
 	case canString:
 		value = v.String()
 	default:
-		return "", fmt.Errorf("can not convert field '%s' to string", k)
+		return "", fmt.Errorf("can not convert field to string")
 	}
 	return value, nil
 }
@@ -272,7 +274,7 @@ func dumpHeader(ent tl.Entity) ([]string, error) {
 
 // dumpRow returns a []string for the Entity.
 func dumpRow(ent tl.Entity, header []string) ([]string, error) {
-	row := []string{}
+	row := make([]string, 0, len(header))
 	// Fast path
 	if a, ok := ent.(canGetString); ok {
 		for _, k := range header {
@@ -290,7 +292,7 @@ func dumpRow(ent tl.Entity, header []string) ([]string, error) {
 		return nil, errors.New("failed to get insert values for entity")
 	}
 	for i, v := range rv {
-		value, err := valGetString(reflect.ValueOf(v), header[i])
+		value, err := toCsv(header[i], v)
 		if err != nil {
 			return nil, err
 		}

@@ -11,7 +11,7 @@ import (
 type FareProduct struct {
 	FareProductID   String
 	FareProductName String
-	Amount          Float
+	Amount          tt.CurrencyAmount // Experimental formatting
 	Currency        String
 	DurationStart   Int   // proposed extension
 	DurationAmount  Float // proposed extension
@@ -30,6 +30,15 @@ func (ent *FareProduct) String() string {
 		ent.FareMediaID.Val,
 		ent.Amount.Val,
 	)
+}
+
+func (ent *FareProduct) GetValue(key string) (any, bool) {
+	switch key {
+	case "amount":
+		ent.Amount.SetCurrency(ent.Currency.Val)
+		return ent.Amount, true
+	}
+	return nil, false
 }
 
 func (ent *FareProduct) EntityID() string {

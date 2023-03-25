@@ -1,6 +1,7 @@
 package tlcsv
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -129,6 +130,57 @@ func Benchmark_dumpRow_StopTime(b *testing.B) {
 	}
 	header := strings.Split("trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled", ",")
 	for n := 0; n < b.N; n++ {
-		dumpRow(&ent, header)
+		row, err := dumpRow(&ent, header)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if n == 0 {
+			fmt.Println(row)
+		}
+	}
+}
+
+func Benchmark_dumpRow_Route(b *testing.B) {
+	ent := tl.Route{
+		RouteID:        "route_id",
+		RouteShortName: "route_short_name",
+		RouteLongName:  "route_long_name",
+		RouteType:      3,
+		RouteDesc:      "route_desc",
+		RouteColor:     "#ff00ff",
+		RouteTextColor: "#000000",
+		NetworkID:      tt.NewString("network_id"),
+		AsRoute:        tt.NewInt(1),
+	}
+	header := strings.Split("route_id,route_short_name,route_long_name,route_type,route_color,route_text_color,route_desc,network_id,as_route", ",")
+	for n := 0; n < b.N; n++ {
+		row, err := dumpRow(&ent, header)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if n == 0 {
+			fmt.Println(row)
+		}
+	}
+}
+
+func Benchmark_dumpRow_FareProduct(b *testing.B) {
+	ent := tl.FareProduct{
+		FareProductID:   tt.NewString("test"),
+		FareProductName: tt.NewString("name"),
+		Amount:          tt.NewCurrencyAmount(1.2345),
+		Currency:        tt.NewString("USD"),
+		RiderCategoryID: tt.NewKey("rider_category_id"),
+		FareMediaID:     tt.NewKey("fare_container_id"),
+	}
+	header := strings.Split("fare_product_id,fare_product_name,amount,currency,duration_start,duration_amount,duration_unit,duration_type,rider_category_id,fare_media_id", ",")
+	for n := 0; n < b.N; n++ {
+		row, err := dumpRow(&ent, header)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if n == 0 {
+			fmt.Println(row)
+		}
 	}
 }
