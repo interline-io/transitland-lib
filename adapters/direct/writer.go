@@ -88,8 +88,8 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 		mw.Reader.FareLegRuleList = append(mw.Reader.FareLegRuleList, *v)
 	case *tl.FareTransferRule:
 		mw.Reader.FareTransferRuleList = append(mw.Reader.FareTransferRuleList, *v)
-	case *tl.FareContainer:
-		mw.Reader.FareContainerList = append(mw.Reader.FareContainerList, *v)
+	case *tl.FareMedia:
+		mw.Reader.FareMediaList = append(mw.Reader.FareMediaList, *v)
 	case *tl.RiderCategory:
 		mw.Reader.RiderCategoryList = append(mw.Reader.RiderCategoryList, *v)
 	case *tl.FareProduct:

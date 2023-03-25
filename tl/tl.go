@@ -8,7 +8,7 @@ import (
 var VERSION = "v0.13.0"
 
 // GTFSVERSION is the commit for the spec reference.md file.
-var GTFSVERSION = "f62ca848efa843fdf1e6f9856aaff50627c3ed69"
+var GTFSVERSION = "11a49075c1f50d0130b934833b7eeb3fe518961c"
 
 // GTFSRTVERSION is the commit for the gtfs-realtime.proto file.
 var GTFSRTVERSION = "6fcc3800b15954227af7335d571791738afb1a67"

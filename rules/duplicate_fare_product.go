@@ -10,16 +10,16 @@ import (
 type DuplicateFareProductError struct {
 	FareProductID   string
 	RiderCategoryID string
-	FareContainerID string
+	FareMediaID     string
 	bc
 }
 
 func (e *DuplicateFareProductError) Error() string {
 	return fmt.Sprintf(
-		"fare_product_rule with fare_product_id '%s' rider_category_id '%s' and fare_container_id '%s' is duplicated",
+		"fare_product_rule with fare_product_id '%s' rider_category_id '%s' and fare_media_id '%s' is duplicated",
 		e.FareProductID,
 		e.RiderCategoryID,
-		e.FareContainerID,
+		e.FareMediaID,
 	)
 }
 
@@ -39,9 +39,9 @@ func (e *DuplicateFareProductCheck) Validate(ent tl.Entity) []error {
 	err := DuplicateFareProductError{
 		FareProductID:   v.FareProductID.Val,
 		RiderCategoryID: v.RiderCategoryID.Val,
-		FareContainerID: v.FareContainerID.Val,
+		FareMediaID:     v.FareMediaID.Val,
 	}
-	key := fmt.Sprintf("%s:%s:%s", err.FareProductID, err.RiderCategoryID, err.FareContainerID)
+	key := fmt.Sprintf("%s:%s:%s", err.FareProductID, err.RiderCategoryID, err.FareMediaID)
 	if _, ok := e.vals[key]; ok {
 		return []error{&err}
 	}

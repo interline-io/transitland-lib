@@ -648,7 +648,7 @@ CREATE TABLE gtfs_fare_products (
 
     --- interline extensions
     rider_category_id varchar(255),
-    fare_container_id varchar(255),
+    fare_media_id varchar(255),
     duration_start int,
     duration_amount real,
     duration_unit int,
@@ -656,18 +656,16 @@ CREATE TABLE gtfs_fare_products (
 );
 
 
-CREATE TABLE gtfs_fare_containers (
+CREATE TABLE gtfs_fare_media (
     "id" integer primary key autoincrement,
     "feed_version_id" int, 
     "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
     "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
     --- interline extensions
-    fare_container_id varchar(255) NOT NULL,
-    fare_container_name varchar(255),
-    minimum_initial_purchase real,
-    amount real,
-    currency varchar(255)
+    fare_media_id varchar(255) NOT NULL,
+    fare_media_name varchar(255),
+    fare_media_type int
 );
 
 
