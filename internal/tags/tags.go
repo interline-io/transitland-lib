@@ -48,7 +48,7 @@ func NewCache(mapper *reflectx.Mapper) *Cache {
 // GetStructTagMap .
 func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 	c.lock.Lock()
-	t := fmt.Sprintf("%T", ent)
+	t := reflect.TypeOf(ent).String()
 	m, ok := c.typemap[t]
 	if !ok {
 		m = FieldMap{}
