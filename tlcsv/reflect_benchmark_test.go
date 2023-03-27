@@ -1,7 +1,6 @@
 package tlcsv
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -134,7 +133,7 @@ func Benchmark_dumpRow_StopTime(b *testing.B) {
 			b.Fatal(err)
 		}
 		if n == 0 {
-			fmt.Println(row)
+			b.Log(row)
 		}
 	}
 }
@@ -158,7 +157,7 @@ func Benchmark_dumpRow_Route(b *testing.B) {
 			b.Fatal(err)
 		}
 		if n == 0 {
-			fmt.Println(row)
+			b.Log(row)
 		}
 	}
 }
@@ -179,7 +178,7 @@ func Benchmark_dumpRow_FareProduct(b *testing.B) {
 			b.Fatal(err)
 		}
 		if n == 0 {
-			fmt.Println(row)
+			b.Log(row)
 		}
 	}
 }
