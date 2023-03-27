@@ -32,6 +32,10 @@ type canString interface {
 	String() string
 }
 
+type canFromCsvString interface {
+	FromCsv(string) error
+}
+
 type canCsvString interface {
 	ToCsv() string
 }
@@ -64,37 +68,37 @@ func SetString(ent tl.Entity, key string, value string) error {
 // valSetString sets the field from a CSV representation of the value.
 func valSetString(valueField reflect.Value, strv string) error {
 	var p error
-	switch valueField.Interface().(type) {
-	case string:
+	switch vf := valueField.Addr().Interface().(type) {
+	case *string:
 		valueField.SetString(strv)
-	case int, int64:
+	case *int, *int64:
 		v, e := strconv.ParseInt(strv, 0, 0)
 		p = e
 		valueField.SetInt(v)
-	case float64:
+	case *float64:
 		v, e := strconv.ParseFloat(strv, 64)
 		p = e
 		valueField.SetFloat(v)
-	case bool:
+	case *bool:
 		if strv == "true" {
 			valueField.SetBool(true)
 		} else {
 			valueField.SetBool(false)
 		}
-	case time.Time:
+	case *time.Time:
 		v, e := time.Parse("20060102", strv)
 		p = e
 		valueField.Set(reflect.ValueOf(v))
-	default:
-		z := valueField.Addr().Interface()
-		if cs, ok := z.(canScan); ok {
-			p = cs.Scan(strv)
-			if p != nil {
-				cs.Scan(nil) // Reset valid to false
-			}
-		} else {
+	case canFromCsvString:
+		if err := vf.FromCsv(strv); err != nil {
 			p = errors.New("field not scannable")
 		}
+	case canScan:
+		if err := vf.Scan(strv); err != nil {
+			p = errors.New("field not scannable")
+		}
+	default:
+		p = errors.New("field not scannable")
 	}
 	return p
 }
@@ -222,36 +226,37 @@ func loadRowReflect(ent interface{}, row Row) []error {
 		// Get the struct tag map
 		fmap := MapperCache.GetStructTagMap(ent)
 		// For each struct tag, set the field value
-		val := reflect.ValueOf(ent).Elem()
-		for _, h := range row.Header {
-			strv, ok := row.Get(h)
-			if !ok {
-				strv = ""
+		entValue := reflect.ValueOf(ent).Elem()
+		for i := 0; i < len(row.Header); i++ {
+			fieldName := row.Header[i]
+			strv := ""
+			if i < len(row.Row) {
+				strv = row.Row[i]
 			}
-			k, ok := fmap[h]
+			fieldInfo, ok := fmap[fieldName]
 			// Add to extra fields if there's no struct tag
 			if !ok {
 				if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 {
-					extEnt.SetExtra(h, strv)
+					extEnt.SetExtra(fieldName, strv)
 				}
 				continue
 			}
 			// Skip if empty and not required
 			if len(strv) == 0 {
-				if k.Required {
+				if fieldInfo.Required {
 					// empty string type shandled in regular validators; avoid double errors
-					switch reflectx.FieldByIndexes(val, k.Index).Interface().(type) {
+					switch reflectx.FieldByIndexes(entValue, fieldInfo.Index).Interface().(type) {
 					case string:
 					default:
-						errs = append(errs, causes.NewRequiredFieldError(h))
+						errs = append(errs, causes.NewRequiredFieldError(fieldName))
 					}
 				}
 				continue
 			}
 			// Handle different known types
-			valueField := reflectx.FieldByIndexes(val, k.Index)
-			if err := valSetString(valueField, strv); err != nil {
-				errs = append(errs, causes.NewFieldParseError(k.Name, strv))
+			fieldValue := reflectx.FieldByIndexes(entValue, fieldInfo.Index)
+			if err := valSetString(fieldValue, strv); err != nil {
+				errs = append(errs, causes.NewFieldParseError(fieldName, strv))
 			}
 		}
 	}

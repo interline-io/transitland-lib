@@ -35,15 +35,29 @@ func (wt *WideTime) String() string {
 	return SecondsToString(wt.Seconds)
 }
 
-func (wt *WideTime) ToCsv() string {
-	return wt.String()
-}
-
 func (wt WideTime) Value() (driver.Value, error) {
 	if !wt.Valid {
 		return nil, nil
 	}
 	return int64(wt.Seconds), nil
+}
+
+func (wt *WideTime) ToCsv() string {
+	return wt.String()
+}
+
+func (wt *WideTime) FromCsv(v string) error {
+	wt.Valid = false
+	if v == "" {
+		return nil
+	}
+	if s, err := StringToSeconds(v); err != nil {
+		return err
+	} else {
+		wt.Valid = true
+		wt.Seconds = s
+	}
+	return nil
 }
 
 func (wt *WideTime) Scan(src interface{}) error {
@@ -54,13 +68,7 @@ func (wt *WideTime) Scan(src interface{}) error {
 	case nil:
 		return nil
 	case string:
-		if v == "" {
-			return nil
-		} else if s, err := StringToSeconds(v); err == nil {
-			wt.Seconds = s
-		} else {
-			p = err
-		}
+		return wt.FromCsv(v)
 	case int:
 		if v < 0 {
 			return nil
