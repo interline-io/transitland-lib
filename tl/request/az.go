@@ -33,7 +33,10 @@ func (r Az) Download(ctx context.Context, key string, secret tl.Secret, auth tl.
 	if err != nil {
 		return nil, 0, err
 	}
-	azKey := r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
+	azKey := strings.TrimPrefix(key, "/")
+	if r.KeyPrefix != "" {
+		azKey = r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
+	}
 	rs, err := blobClient.DownloadStream(ctx, r.Container, azKey, nil)
 	return rs.Body, 0, err
 }
@@ -47,8 +50,11 @@ func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 		return err
 	}
 	// Upload the file to the specified container and blob name
-	// fmt.Println("account:", r.Account, "container:", r.Container, "prefix:", r.KeyPrefix, "key:", key)
-	azKey := r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
+	azKey := strings.TrimPrefix(key, "/")
+	if r.KeyPrefix != "" {
+		azKey = r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
+	}
+	// fmt.Println("account:", r.Account, "container:", r.Container, "prefix:", r.KeyPrefix, "key:", key, "azKey:", azKey)
 	_, err = blobClient.UploadStream(ctx, r.Container, azKey, uploadFile, nil)
 	return err
 }
@@ -58,6 +64,9 @@ func (r Az) CreateSignedUrl(ctx context.Context, key string, secret tl.Secret) (
 		return "", errors.New("key must not be empty")
 	}
 	cred, _, err := getAzBlobClient(r.Account)
+	if err != nil {
+		return "", err
+	}
 	now := time.Now().In(time.UTC).Add(time.Second * -10)
 	expiry := now.Add(1 * time.Hour)
 	svcClient, err := service.NewClient(
@@ -65,6 +74,9 @@ func (r Az) CreateSignedUrl(ctx context.Context, key string, secret tl.Secret) (
 		cred,
 		&service.ClientOptions{},
 	)
+	if err != nil {
+		return "", err
+	}
 	info := service.KeyInfo{
 		Start:  to.Ptr(now.UTC().Format(sas.TimeFormat)),
 		Expiry: to.Ptr(expiry.UTC().Format(sas.TimeFormat)),
