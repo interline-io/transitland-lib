@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -45,6 +46,7 @@ func GetStore(ustr string) (Store, error) {
 
 // Download is a convenience method for downloading a file from the store.
 func Download(storage string, key string) (io.ReadCloser, error) {
+	log.Debug().Str("src", key).Str("storage", storage).Msg("fetch: download from store")
 	st, err := GetStore(storage)
 	if err != nil {
 		return nil, err
@@ -58,6 +60,7 @@ func Download(storage string, key string) (io.ReadCloser, error) {
 
 // UploadFile is a convenience method for uploading a file to the store.
 func UploadFile(storage string, src string, dst string) error {
+	log.Debug().Str("src", src).Str("storage", storage).Str("storage_key", dst).Msg("fetch: upload to store")
 	rp, err := os.Open(src)
 	if err != nil {
 		return err
@@ -74,12 +77,8 @@ func UploadFile(storage string, src string, dst string) error {
 }
 
 // NewStoreAdapter is a convenience method for getting a GTFS Zip reader from the store.
-func NewStoreAdapter(ustr string, key string, fragment string) (*tlcsv.TmpZipAdapter, error) {
-	st, err := GetStore(ustr)
-	if err != nil {
-		return nil, err
-	}
-	r, _, err := st.Download(context.Background(), key, tl.Secret{}, tl.FeedAuthorization{})
+func NewStoreAdapter(storage string, key string, fragment string) (*tlcsv.TmpZipAdapter, error) {
+	r, err := Download(storage, key)
 	if err != nil {
 		return nil, err
 	}
