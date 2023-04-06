@@ -146,7 +146,8 @@ CREATE TABLE IF NOT EXISTS "feed_versions" (
   "created_by" varchar(255),
   "updated_by" varchar(255),
   "name" varchar(255),
-  "description" varchar(255)
+  "description" varchar(255),
+  "fragment" varchar(255)
 );
 CREATE INDEX idx_feed_versions_sha1 ON "feed_versions"("sha1");
 CREATE INDEX idx_feed_versions_earliest_calendar_date ON "feed_versions"(earliest_calendar_date);

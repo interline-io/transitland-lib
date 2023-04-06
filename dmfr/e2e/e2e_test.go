@@ -30,31 +30,35 @@ func TestE2E(t *testing.T) {
 		unimportSchedOnly bool
 		expectStops       int
 		expectRoutes      int
+		expectStopTimes   int
 	}{
 		{
-			name:         "basic",
-			fn:           "test/data/example.zip",
-			activate:     true,
-			fvcount:      1,
-			expectStops:  9,
-			expectRoutes: 5,
+			name:            "basic",
+			fn:              "test/data/example.zip",
+			activate:        true,
+			fvcount:         1,
+			expectStops:     9,
+			expectRoutes:    5,
+			expectStopTimes: 28,
 		},
 		{
-			name:         "basic no activate",
-			fn:           "test/data/example.zip",
-			activate:     false,
-			fvcount:      1,
-			expectStops:  0,
-			expectRoutes: 0,
+			name:            "basic no activate",
+			fn:              "test/data/example.zip",
+			activate:        false,
+			fvcount:         1,
+			expectStops:     0,
+			expectRoutes:    0,
+			expectStopTimes: 0,
 		},
 		{
-			name:         "basic unimport",
-			fn:           "test/data/example.zip",
-			activate:     true,
-			unimport:     true,
-			fvcount:      1,
-			expectStops:  0,
-			expectRoutes: 0,
+			name:            "basic unimport",
+			fn:              "test/data/example.zip",
+			activate:        true,
+			unimport:        true,
+			fvcount:         1,
+			expectStops:     0,
+			expectRoutes:    0,
+			expectStopTimes: 0,
 		},
 		{
 			name:              "basic unimport sched",
@@ -65,39 +69,44 @@ func TestE2E(t *testing.T) {
 			fvcount:           1,
 			expectStops:       9,
 			expectRoutes:      5,
+			expectStopTimes:   0,
 		},
 		{
-			name:         "basic nested dir",
-			fn:           "test/data/example-nested-dir.zip#example-nested-dir/example",
-			activate:     true,
-			fvcount:      1,
-			expectStops:  9,
-			expectRoutes: 5,
+			name:            "basic nested dir",
+			fn:              "test/data/example-nested-dir.zip#example-nested-dir/example",
+			activate:        true,
+			fvcount:         1,
+			expectStops:     9,
+			expectRoutes:    5,
+			expectStopTimes: 28,
 		},
-		// {
-		// 	name:         "basic nested zip",
-		// 	fn:           "test/data/example-nested-zip.zip#example-nested-zip/example.zip",
-		// 	activate:     true,
-		// 	fvcount:      1,
-		// 	expectStops:  9,
-		// 	expectRoutes: 5,
-		// },
 		{
-			name:         "basic nested two feeds 1",
-			fn:           "test/data/example-nested-two-feeds.zip#example1",
-			activate:     true,
-			fvcount:      1,
-			expectStops:  9,
-			expectRoutes: 1,
+			name:            "basic nested two feeds 1",
+			fn:              "test/data/example-nested-two-feeds.zip#example1",
+			activate:        true,
+			fvcount:         1,
+			expectStops:     9,
+			expectRoutes:    1,
+			expectStopTimes: 4,
 		},
 
 		{
-			name:         "basic nested two feeds 2",
-			fn:           "test/data/example-nested-two-feeds.zip#example2",
-			activate:     true,
-			fvcount:      1,
-			expectStops:  9,
-			expectRoutes: 5,
+			name:            "basic nested two feeds 2",
+			fn:              "test/data/example-nested-two-feeds.zip#example2",
+			activate:        true,
+			fvcount:         1,
+			expectStops:     9,
+			expectRoutes:    5,
+			expectStopTimes: 28,
+		},
+		{
+			name:            "basic nested zip",
+			fn:              "test/data/example-nested-zip.zip#example-nested-zip/example.zip",
+			activate:        true,
+			fvcount:         1,
+			expectStops:     9,
+			expectRoutes:    5,
+			expectStopTimes: 28,
 		},
 	}
 	for _, tc := range tcs {
@@ -111,18 +120,21 @@ func TestE2E(t *testing.T) {
 				w.Write(buf)
 			}))
 			defer ts.Close()
+
 			tmpdir, err := ioutil.TempDir("", "gtfs")
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer os.RemoveAll(tmpdir) // clean up
+
 			atx := testdb.TempSqliteAdapter("sqlite3://:memory:")
+
 			// Fetch
 			feedName := tc.name
 			fetch := fetch.Command{
 				CreateFeed: true,
-				Workers:    1,
 				FeedIDs:    []string{feedName},
+				Workers:    1,
 				Adapter:    atx,
 				Options: fetch.Options{
 					FeedURL:   ts.URL + "/" + tc.fn,
@@ -133,11 +145,12 @@ func TestE2E(t *testing.T) {
 			if err := fetch.Run(); err != nil {
 				t.Fatal(err)
 			}
+
 			// Import
 			impcmd := importer.Command{
+				FeedIDs: []string{feedName},
 				Workers: 1,
 				Adapter: atx,
-				FeedIDs: []string{feedName},
 				Options: importer.Options{
 					Storage:  tmpdir,
 					Activate: tc.activate,
@@ -146,6 +159,7 @@ func TestE2E(t *testing.T) {
 			if err := impcmd.Run(); err != nil {
 				t.Fatal(err)
 			}
+
 			// Unimport
 			fvid := 0
 			testdb.ShouldGet(t, atx, &fvid, "select id from feed_versions order by id desc limit 1")
@@ -160,6 +174,7 @@ func TestE2E(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
+
 			// Test
 			fvcount := 0
 			testdb.ShouldGet(t, atx, &fvcount, "SELECT count(*) FROM feed_versions fv JOIN current_feeds cf on cf.id = fv.feed_id WHERE cf.onestop_id = ?", feedName)
@@ -170,6 +185,10 @@ func TestE2E(t *testing.T) {
 			rcount := 0
 			testdb.ShouldGet(t, atx, &rcount, "SELECT count(*) FROM gtfs_routes JOIN feed_states fs using(feed_version_id)")
 			assert.Equal(t, tc.expectRoutes, rcount, "route count")
+			stcount := 0
+			testdb.ShouldGet(t, atx, &stcount, "SELECT count(*) FROM gtfs_stop_times JOIN feed_states fs using(feed_version_id)")
+			assert.Equal(t, tc.expectStopTimes, stcount, "stop time count")
+
 		})
 	}
 }

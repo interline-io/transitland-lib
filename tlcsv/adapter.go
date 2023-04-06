@@ -119,16 +119,7 @@ func (adapter *URLAdapter) Open() error {
 
 // Temporary zip adapter
 
-func NewTmpZipAdapterFromReader(reader io.Reader, sourceUrl string) (*TmpZipAdapter, error) {
-	// Remove and keep internal path prefix
-	split := strings.SplitN(sourceUrl, "#", 2)
-	fragment := ""
-	if len(split) > 1 {
-		fragment = split[1]
-	} else {
-		fragment = ""
-	}
-	fmt.Println("FRAGMENT:", fragment)
+func NewTmpZipAdapterFromReader(reader io.Reader, fragment string) (*TmpZipAdapter, error) {
 	// Read stream to a temporary file
 	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
 	if err != nil {
@@ -381,7 +372,11 @@ func (adapter *ZipAdapter) findInternalPrefix() (string, error) {
 	if len(prefixes) > 1 {
 		return "", errors.New("more than one valid prefix found")
 	} else if len(prefixes) == 1 {
-		return prefixes[0], nil
+		pfx := prefixes[0]
+		if pfx == "." {
+			pfx = ""
+		}
+		return pfx, nil
 	}
 	return "", nil
 }

@@ -172,7 +172,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.URL)
+	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
 		return fvi, err
 	}

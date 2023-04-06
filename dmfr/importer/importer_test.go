@@ -1,9 +1,6 @@
 package importer
 
 import (
-	"encoding/json"
-	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -139,65 +136,5 @@ func TestImportFeedVersion(t *testing.T) {
 	})
 	if err != nil {
 		t.Error(err)
-	}
-}
-
-func TestImportFeedVersionMore(t *testing.T) {
-	tcs := []struct {
-		tf           testutil.ReaderTester
-		expectRoutes int
-	}{
-		{
-			tf:           testutil.ExampleZip,
-			expectRoutes: 5,
-		},
-		{
-			tf:           testutil.ExampleZipNestedZip,
-			expectRoutes: 5,
-		},
-		{
-			tf:           testutil.ExampleZipNestedTwoFeeds1,
-			expectRoutes: 1,
-		},
-		{
-			tf:           testutil.ExampleZipNestedTwoFeeds2,
-			expectRoutes: 5,
-		},
-	}
-	for _, tc := range tcs {
-		t.Run(tc.tf.URL, func(t *testing.T) {
-			err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-				// Create FV
-				fn := strings.Split(tc.tf.URL, "#")[0]
-				fv := tl.FeedVersion{File: fn, URL: tc.tf.URL}
-				fmt.Println("FV:", fv.File, fv.URL)
-				fv.EarliestCalendarDate = tt.NewDate(time.Now())
-				fv.LatestCalendarDate = tt.NewDate(time.Now())
-				fvid := testdb.ShouldInsert(t, atx, &fv)
-				fv.ID = fvid // TODO: ?? Should be set by canSetID
-				// Import
-				fviresult, err := ImportFeedVersion(atx, fv, Options{Storage: "/"})
-				if err != nil {
-					t.Error(err)
-				}
-				jj, _ := json.Marshal(fviresult)
-				fmt.Println(string(jj))
-				if fviresult.Success == false {
-					t.Errorf("expected success, got %t", fviresult.Success)
-					return nil
-				}
-				_ = fviresult
-				// Check
-				count := 0
-				testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_routes WHERE feed_version_id = ?", fvid)
-				if count != tc.expectRoutes {
-					t.Errorf("expect %d routes, got %d", tc.expectRoutes, count)
-				}
-				return nil
-			})
-			if err != nil {
-				t.Error(err)
-			}
-		})
 	}
 }

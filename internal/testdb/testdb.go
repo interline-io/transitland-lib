@@ -75,7 +75,7 @@ func ShouldUpdate(t *testing.T, atx tldb.Adapter, ent interface{}, columns ...st
 	}
 }
 
-// ShouldFind pasends a test error on failure
+// ShouldFind sends a test error on failure
 func ShouldFind(t *testing.T, atx tldb.Adapter, ent interface{}) {
 	err := atx.Find(ent)
 	if err != nil {
@@ -83,7 +83,7 @@ func ShouldFind(t *testing.T, atx tldb.Adapter, ent interface{}) {
 	}
 }
 
-// ShouldGet pansends a test error on failure
+// ShouldGet sends a test error on failure
 func ShouldGet(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
 	err := atx.Get(ent, qstr, qargs...)
 	if err != nil {

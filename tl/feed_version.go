@@ -31,6 +31,7 @@ type FeedVersion struct {
 	EarliestCalendarDate Date
 	LatestCalendarDate   Date
 	FetchedAt            time.Time
+	Fragment             String
 	Name                 String
 	Description          String
 	CreatedBy            String

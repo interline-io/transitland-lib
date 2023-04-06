@@ -181,7 +181,7 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 		return RebuildStatsResult{}, err
 	}
 	// Get Reader
-	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.URL)
+	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
 		return RebuildStatsResult{}, err
 	}
