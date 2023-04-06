@@ -93,7 +93,7 @@ func TestRouteGeometryBuilder(t *testing.T) {
 					if mls, ok := rg.CombinedGeometry.Geometry.(*geom.MultiLineString); !ok {
 						t.Errorf("not MultiLineString")
 					} else {
-						// fmt.Printf(`{RouteID:"%s", ExpectLength: %f, ExpectLineStrings: %d},`+"\n", tc.RouteID, length, mls.NumLineStrings())
+						// t.Logf(`{RouteID:"%s", ExpectLength: %f, ExpectLineStrings: %d},`+"\n", tc.RouteID, length, mls.NumLineStrings())
 						assert.Equal(t, tc.ExpectLineStrings, mls.NumLineStrings())
 					}
 				})

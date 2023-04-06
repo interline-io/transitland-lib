@@ -36,7 +36,7 @@ func Test_readmsg(t *testing.T) {
 		}
 	})
 	// z, _ := json.Marshal(msg)
-	// fmt.Printf("%s\n", z)
+	// t.Logf("%s\n", z)
 }
 
 func TestReadFileError(t *testing.T) {

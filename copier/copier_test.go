@@ -130,7 +130,6 @@ func testWtfCheck(ent tl.Entity) error {
 }
 
 func testWtfWriteEntities(ents []tl.Entity) {
-	// fmt.Println("writing:", len(ents))
 	b := len(ents)
 	_ = b
 	_ = ents

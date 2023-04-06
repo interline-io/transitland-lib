@@ -2,7 +2,6 @@ package tt
 
 import (
 	"database/sql/driver"
-	"fmt"
 	"testing"
 	"time"
 
@@ -210,7 +209,7 @@ func TestOptionString(t *testing.T) {
 				for k, v := range tc.uj {
 					a := tc.new()
 					if err := a.UnmarshalJSON([]byte(k)); err != nil {
-						fmt.Println("err:", err)
+						t.Log("err:", err)
 					}
 					b, err := a.Value()
 					_ = err

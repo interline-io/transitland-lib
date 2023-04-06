@@ -59,6 +59,11 @@ func Tracef(fmts string, a ...interface{}) {
 	Logger.Trace().Msgf(fmts, a...)
 }
 
+// Traceln - prints to trace
+func Traceln(args ...interface{}) {
+	Logger.Trace().Msg(fmt.Sprintln(args...))
+}
+
 // Helper functions
 
 // Print - simple print, without timestamp, without regard to log level.

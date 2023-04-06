@@ -54,7 +54,6 @@ func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 	if r.KeyPrefix != "" {
 		azKey = r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
 	}
-	// fmt.Println("account:", r.Account, "container:", r.Container, "prefix:", r.KeyPrefix, "key:", key, "azKey:", azKey)
 	_, err = blobClient.UploadStream(ctx, r.Container, azKey, uploadFile, nil)
 	return err
 }
