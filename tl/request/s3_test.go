@@ -2,7 +2,6 @@ package request
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -72,12 +71,15 @@ func TestS3Request(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		fmt.Println("signed:", signedUrl)
+		t.Log("signed:", signedUrl)
 		resp, err := http.Get(signedUrl)
 		if err != nil {
 			t.Error(err)
 		}
 		downloadData, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if string(downloadData) != string(testData) {
 			t.Errorf("got data '%s', expected '%s'", string(downloadData), string(testData))
 		}

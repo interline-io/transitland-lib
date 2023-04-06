@@ -60,12 +60,12 @@ func pointsGeohash(points []point, minc uint, maxc uint) string {
 	}
 	c := centroid(points)
 	g := geohash.EncodeWithPrecision(c.lat, c.lon, maxc)
-	// fmt.Println("centroid:", c, "g:", g, "minc:", minc, "maxc:", maxc)
+	// t.Log("centroid:", c, "g:", g, "minc:", minc, "maxc:", maxc)
 	gs := []string{}
 	for _, p := range points {
 		gs = append(gs, geohash.EncodeWithPrecision(p.lat, p.lon, maxc))
 	}
-	// fmt.Println("points:", gs)
+	// t.Log("points:", gs)
 	for i := maxc; i >= minc; i-- {
 		check := g[0:i]
 		m := map[string]bool{}
@@ -73,7 +73,7 @@ func pointsGeohash(points []point, minc uint, maxc uint) string {
 			m[n] = true
 		}
 		m[check] = true
-		// fmt.Println(i, "checking:", check, "neighbors:", m)
+		// t.Log(i, "checking:", check, "neighbors:", m)
 		allOk := true
 		for _, j := range gs {
 			if _, ok := m[j[0:i]]; !ok {
@@ -81,7 +81,7 @@ func pointsGeohash(points []point, minc uint, maxc uint) string {
 			}
 		}
 		if allOk {
-			// fmt.Println("ok:", check)
+			// t.Log("ok:", check)
 			return check
 		}
 	}

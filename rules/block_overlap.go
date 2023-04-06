@@ -65,7 +65,7 @@ func (e *BlockOverlapCheck) Validate(ent tl.Entity) []error {
 		end:     trip.StopTimes[len(trip.StopTimes)-1].ArrivalTime.Seconds,
 	}
 	for _, hit := range e.blocks[trip.BlockID] {
-		// fmt.Println(
+		// log.Log(
 		// 	"block:", trip.BlockID,
 		// 	"overlap?", tf,
 		// 	"hit:", hit,

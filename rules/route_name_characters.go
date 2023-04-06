@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"fmt"
 	"regexp"
 
 	"github.com/interline-io/transitland-lib/tl"
@@ -20,14 +19,12 @@ func (e *RouteNamesCharactersCheck) Validate(ent tl.Entity) []error {
 			err := RouteNamesCharactersError{}
 			err.Field = "route_short_name"
 			err.Value = v.RouteShortName
-			fmt.Println(err.Error())
 			errs = append(errs, &err)
 		}
 		if !routeNameCheckAllowedChars(v.RouteLongName) {
 			err := RouteNamesCharactersError{}
 			err.Field = "route_long_name"
 			err.Value = v.RouteLongName
-			fmt.Println(err.Error())
 			errs = append(errs, &err)
 		}
 	}

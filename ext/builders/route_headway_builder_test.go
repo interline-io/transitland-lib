@@ -84,7 +84,6 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 				t.Run(fmt.Sprintf("%s-%d-%d", tc.RouteID, tc.DowCat, tc.DirectionID), func(t *testing.T) {
 					found := false
 					for _, ent := range routeHeadways[tc.RouteID] {
-						// fmt.Printf("\t %#v\n", ent)
 						if ent.DowCategory.Val == tc.DowCat && ent.DirectionID.Val == tc.DirectionID {
 							if found {
 								t.Error("found more than one match")
