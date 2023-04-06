@@ -7,7 +7,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -117,7 +116,6 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 
 	// Validate OK, upload
 	if newFile && uploadFile != "" && opts.Storage != "" {
-		log.Debug().Str("src", uploadFile).Str("storage", opts.Storage).Str("storage_key", uploadDest).Msg("fetch: copying to store")
 		if err := store.UploadFile(opts.Storage, uploadFile, uploadDest); err != nil {
 			return result, err
 		}
