@@ -1042,7 +1042,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			return writeErr
 		} else if entErr == nil {
 			if _, dedupOk := tripOffsets[trip.TripID]; dedupOk && copier.DeduplicateJourneyPatterns {
-				// fmt.Println("deduplicating:", trip.TripID)
+				// log.Trace().Msgf("deduplicating: %s", trip.TripID)
 				// skip
 			} else {
 				for i := range trip.StopTimes {

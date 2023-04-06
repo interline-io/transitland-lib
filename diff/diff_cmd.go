@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -50,7 +49,7 @@ func (cmd *Command) Parse(args []string) error {
 		return errors.New("Requires output directory")
 	}
 	if !cmd.ShowAdded && !cmd.ShowDeleted && !cmd.ShowSame && !cmd.ShowDiff {
-		fmt.Println("Using default mode of -same -diff -added -deleted")
+		log.Print("Using default mode of -same -diff -added -deleted")
 		cmd.ShowAdded = true
 		cmd.ShowDeleted = true
 		cmd.ShowSame = true
@@ -137,28 +136,28 @@ func (cmd *Command) Run() error {
 		for k := range combinedKeys {
 			ent1, ok1 := df1.ents[diffKey{fn, k}]
 			ent2, ok2 := df2.ents[diffKey{fn, k}]
-			// fmt.Println("========", fn, "key:", k)
-			// fmt.Println("ent1:", ent1)
-			// fmt.Println("ent2:", ent2)
+			// log.Traceln("========", fn, "key:", k)
+			// log.Traceln("ent1:", ent1)
+			// log.Traceln("ent2:", ent2)
 			hh1 := hashRow(ent1.row)
 			hh2 := hashRow(ent2.row)
 			if ok1 && ok2 {
 				if hh1 == hh2 && cmd.ShowSame {
-					// fmt.Println("same")
+					// log.Traceln("same")
 					ent1.row = append(ent1.row, readerB.String(), "same")
 					presentBoth = append(presentBoth, ent1)
 				} else if hh1 != hh2 && cmd.ShowDiff {
-					// fmt.Println("diff")
+					// log.Traceln("diff")
 					ent1.row = append(ent1.row, readerA.String(), "diff")
 					ent2.row = append(ent2.row, readerB.String(), "diff")
 					presentDiff = append(presentDiff, ent1, ent2)
 				}
 			} else if ok1 && !ok2 && cmd.ShowDeleted {
-				// fmt.Println("deleted")
+				// log.Traceln("deleted")
 				ent1.row = append(ent1.row, readerA.String(), "deleted")
 				deletedRows = append(deletedRows, ent1)
 			} else if ok2 && !ok1 && cmd.ShowAdded {
-				// fmt.Println("added")
+				// log.Traceln("added")
 				ent2.row = append(ent2.row, readerB.String(), "added")
 				addedRows = append(addedRows, ent2)
 			}
@@ -167,7 +166,6 @@ func (cmd *Command) Run() error {
 		if len(presentBoth) == 0 && len(presentDiff) == 0 && len(addedRows) == 0 && len(deletedRows) == 0 {
 			continue
 		}
-		fmt.Println("writing:", fn)
 		header := []string{}
 		h1 := df1.headers[fn]
 		h2 := df2.headers[fn]
@@ -178,9 +176,9 @@ func (cmd *Command) Run() error {
 			h2 = h1
 		}
 		if hashRow(h1.row) != hashRow(h2.row) {
-			fmt.Println("headers are different:")
-			fmt.Println(h1.row)
-			fmt.Println(h2.row)
+			log.Traceln("headers are different:")
+			log.Traceln(h1.row)
+			log.Traceln(h2.row)
 			continue
 		}
 		header = append(header, h1.row...)
@@ -235,7 +233,7 @@ func checkDiffRaw(reader tl.Reader) (*diffAdapter, error) {
 				header = true
 				return
 			}
-			// fmt.Println(fi.Name(), row.Row)
+			// log.Traceln(fi.Name(), row.Row)
 			var row2 []string
 			row2 = append(row2, row.Row...)
 			df.WriteRows(fi.Name(), [][]string{row2})

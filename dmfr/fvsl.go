@@ -43,19 +43,19 @@ func (fvsl *FeedVersionServiceLevel) Total() int {
 func NewFeedVersionServiceLevelsFromReader(reader tl.Reader) ([]FeedVersionServiceLevel, error) {
 	results := []FeedVersionServiceLevel{}
 	// Cache services
-	// fmt.Println("caching services")
+	// log.Traceln("caching services")
 	services := map[string]*tl.Service{}
 	for _, service := range tl.NewServicesFromReader(reader) {
 		services[service.ServiceID] = service
 	}
 	// Cache frequencies; trip repeats
-	// fmt.Println("caching frequencies")
+	// log.Traceln("caching frequencies")
 	freqs := map[string]int{}
 	for freq := range reader.Frequencies() {
 		freqs[freq.TripID] += freq.RepeatCount()
 	}
 	// Calculate trip durations
-	// fmt.Println("calculating trip durations")
+	// log.Traceln("calculating trip durations")
 	tripdurations := map[string]int{}
 	for stoptimes := range reader.StopTimesByTripID() {
 		if len(stoptimes) < 2 {
@@ -65,7 +65,7 @@ func NewFeedVersionServiceLevelsFromReader(reader tl.Reader) ([]FeedVersionServi
 		tripdurations[stoptimes[0].TripID] = d
 	}
 	// Group durations by route,service
-	// fmt.Println("grouping durations")
+	// log.Traceln("grouping durations")
 	routeservices := map[string]map[string]int{}
 	routeservices[""] = map[string]int{} // feed total
 	serviceTotals := map[string]int{}
@@ -73,17 +73,17 @@ func NewFeedVersionServiceLevelsFromReader(reader tl.Reader) ([]FeedVersionServi
 		// Multiply out frequency based trips; they are scheduled or not scheduled together
 		td := tripdurations[trip.TripID]
 		if freq, ok := freqs[trip.TripID]; ok {
-			// fmt.Println("\ttrip:", trip.TripID, "frequency repeat count:", freq)
+			// log.Traceln("\ttrip:", trip.TripID, "frequency repeat count:", freq)
 			td = td * freq
 		}
 		// Add to pattern
 		serviceTotals[trip.ServiceID] += td // Add to total
 	}
 	// Assign durations to week
-	// fmt.Println("assigning durations to week")
-	// fmt.Println("\troute_id:", route)
+	// log.Traceln("assigning durations to week")
+	// log.Traceln("\troute_id:", route)
 	// Calculate the total duration for each day of the service period
-	// fmt.Printf("\t\tchecking service periods (%d)\n", len(v))
+	// log.Printf("\t\tchecking service periods (%d)\n", len(v))
 	smap := map[int][7]int{}
 	for k, seconds := range serviceTotals {
 		service, ok := services[k]
@@ -92,12 +92,12 @@ func NewFeedVersionServiceLevelsFromReader(reader tl.Reader) ([]FeedVersionServi
 		}
 		start, end := service.ServicePeriod()
 		if start.IsZero() {
-			// fmt.Println("\t\t\tstart is zero! skipping", k)
+			// log.Traceln("\t\t\tstart is zero! skipping", k)
 			continue
 		}
 		// Iterate from the first day to the last day,
 		// saving the result to the Julian date index for that week
-		// fmt.Println("\t\t\tservice_id:", k, "start, end", start, end)
+		// log.Traceln("\t\t\tservice_id:", k, "start, end", start, end)
 		for start.Before(end) || start.Equal(end) {
 			if service.IsActive(start) {
 				jd := toJulian(start)
@@ -109,13 +109,13 @@ func NewFeedVersionServiceLevelsFromReader(reader tl.Reader) ([]FeedVersionServi
 		}
 	}
 	// Group weeks by pattern
-	// fmt.Println("\t\tgrouping weeks")
+	// log.Traceln("\t\tgrouping weeks")
 	imap := map[[7]int][]int{}
 	for k, v := range smap {
 		imap[v] = append(imap[v], k)
 	}
 	// Find repeating weeks
-	// fmt.Println("\t\tfinding week repeats")
+	// log.Traceln("\t\tfinding week repeats")
 	for k, v := range imap {
 		if len(v) == 0 {
 			continue
@@ -145,7 +145,7 @@ func NewFeedVersionServiceLevelsFromReader(reader tl.Reader) ([]FeedVersionServi
 				Saturday:  k[5],
 				Sunday:    k[6],
 			}
-			// fmt.Println(a)
+			// log.Traceln(a)
 			results = append(results, a)
 		}
 	}
@@ -169,11 +169,11 @@ func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []FeedVersionServ
 	} else {
 		for _, fvsl := range fvsls {
 			if fvsl.EndDate.Before(start) {
-				// fmt.Println("fvsl ends before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
+				// log.Traceln("fvsl ends before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
 				continue
 			}
 			if fvsl.StartDate.After(end) {
-				// fmt.Println("fvsl starts before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
+				// log.Traceln("fvsl starts before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
 				continue
 			}
 			fvsort = append(fvsort, fvsl)
@@ -190,11 +190,11 @@ func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []FeedVersionServ
 		}
 		return a > b
 	})
-	// fmt.Println("window start:", start.String(), "end:", end.String())
+	// log.Traceln("window start:", start.String(), "end:", end.String())
 	// for _, fvsl := range fvsort {
-	// 	fmt.Println("start:", fvsl.StartDate.String(), "end:", fvsl.EndDate.String(), "total:", fvsl.Total())
+	// 	log.Traceln("start:", fvsl.StartDate.String(), "end:", fvsl.EndDate.String(), "total:", fvsl.Total())
 	// }
-	// fmt.Println("d:", fvsort[0].StartDate.String())
+	// log.Traceln("d:", fvsort[0].StartDate.String())
 	return fvsort[0].StartDate, nil
 }
 

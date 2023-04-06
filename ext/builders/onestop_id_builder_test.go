@@ -104,7 +104,7 @@ func TestOnestopIDBuilder(t *testing.T) {
 				}
 			}
 			// for k, v := range hits {
-			// 	fmt.Printf(`{"%s", hw{"%s":%#v}},`+"\n", k, k, v)
+			// 	t.Logf(`{"%s", hw{"%s":%#v}},`+"\n", k, k, v)
 			// }
 			for _, tc := range testGroup.Cases {
 				t.Run(tc.Name, func(t *testing.T) {

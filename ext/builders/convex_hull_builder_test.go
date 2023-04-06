@@ -79,9 +79,9 @@ func TestConvexHullBuilder(t *testing.T) {
 				switch v := ent.(type) {
 				case *AgencyGeometry:
 					aGeoms[v.AgencyID.Val] = v
-					// fmt.Printf("%s %#v\n", v.AgencyID.Key, v.Geometry.FlatCoords())
+					// t.Logf("%s %#v\n", v.AgencyID.Key, v.Geometry.FlatCoords())
 					// z, _ := geojson.Marshal(&v.Geometry.Polygon)
-					// fmt.Println(string(z))
+					// t.Log(string(z))
 				case *FeedVersionGeometry:
 					fvGeoms = append(fvGeoms, v)
 				}
