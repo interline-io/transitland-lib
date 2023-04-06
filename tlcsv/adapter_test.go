@@ -14,11 +14,12 @@ import (
 
 func getTestAdapters() map[string]func() Adapter {
 	adapters := map[string]func() Adapter{
-		"DirAdapter":          func() Adapter { return NewDirAdapter(testutil.ExampleDir.URL) },
-		"ZipAdapter":          func() Adapter { return NewZipAdapter(testutil.ExampleZip.URL) },
-		"ZipAdapterNestedDir": func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedDir.URL) },
-		"ZipAdapterNestedZip": func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedZip.URL) },
-		"OverlayAdapter":      func() Adapter { return NewOverlayAdapter(testutil.ExampleDir.URL) },
+		"DirAdapter":               func() Adapter { return NewDirAdapter(testutil.ExampleDir.URL) },
+		"ZipAdapter":               func() Adapter { return NewZipAdapter(testutil.ExampleZip.URL) },
+		"ZipAdapterNestedDir":      func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedDir.URL) },
+		"ZipAdapterNestedTwoFeeds": func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedTwoFeeds2.URL) },
+		"ZipAdapterNestedZip":      func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedZip.URL) },
+		"OverlayAdapter":           func() Adapter { return NewOverlayAdapter(testutil.ExampleDir.URL) },
 	}
 	return adapters
 }
@@ -98,6 +99,15 @@ func TestZipAdapterNestedDir(t *testing.T) {
 	testAdapter(t, v())
 }
 
+func TestZipAdapterNestedTwoFeeds(t *testing.T) {
+	v, ok := getTestAdapters()["ZipAdapterNestedTwoFeeds"]
+	if !ok {
+		t.Error("no ZipAdapter with nested file")
+		t.FailNow()
+	}
+	testAdapter(t, v())
+}
+
 func TestZipAdapter_findInternalPrefix(t *testing.T) {
 	t.Run("single", func(t *testing.T) {
 		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-dir.zip")}
@@ -114,20 +124,36 @@ func TestZipAdapter_findInternalPrefix(t *testing.T) {
 			t.Errorf("got '%s' expect '%s'", p, expect)
 		}
 	})
-	t.Run("ambiguous", func(t *testing.T) {
+	t.Run("findInternalPrefix ambiguous", func(t *testing.T) {
 		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-dir-ambiguous.zip")}
-		v.internalPrefix = "example-nested-dir/example" // override for test
-		if err := v.Open(); err != nil {
-			t.Error(err)
-			return
-		}
 		p, err := v.findInternalPrefix()
 		if err == nil {
-			t.Errorf("expected error for ambiguous prefixes")
+			t.Errorf("expected Open error for ambiguous prefixes")
+			return
 		}
 		expect := ""
 		if p != expect {
-			t.Errorf("got '%s' expect '%s'", p, expect)
+			t.Errorf("got '%s' expected prefix '%s'", p, expect)
+		}
+		if err := v.Open(); err == nil {
+			t.Errorf("expected Open to fail")
+			return
+		}
+	})
+	t.Run("findInternalPrefix ambiguous with two complete feeds", func(t *testing.T) {
+		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-two-dirs.zip")}
+		p, err := v.findInternalPrefix()
+		if err == nil {
+			t.Errorf("expected Open error for ambiguous prefixes")
+			return
+		}
+		expect := ""
+		if p != expect {
+			t.Errorf("got '%s' expected prefix '%s'", p, expect)
+		}
+		if err := v.Open(); err == nil {
+			t.Errorf("expected Open to fail")
+			return
 		}
 	})
 }

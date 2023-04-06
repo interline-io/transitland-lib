@@ -71,6 +71,26 @@ func TestStaticFetch(t *testing.T) {
 			"97ae78529b47860f3d5b674f27121c078f7b3402",
 		},
 		{
+			"nested two feeds 1",
+			"test/data/example-nested-two-feeds.zip",
+			"test/data/example-nested-two-feeds.zip#example1",
+			"",
+			200,
+			false,
+			false,
+			"196bc2b5ff85d629e279e3fbfc9e05c520075fba",
+		},
+		{
+			"nested two feeds 2",
+			"test/data/example-nested-two-feeds.zip",
+			"test/data/example-nested-two-feeds.zip#example2",
+			"",
+			200,
+			false,
+			false,
+			"196bc2b5ff85d629e279e3fbfc9e05c520075fba",
+		},
+		{
 			"nested zip",
 			"test/data/example-nested-zip.zip",
 			"test/data/example-nested-zip.zip#example-nested-zip/example.zip",
@@ -240,6 +260,55 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 		expsize := int64(ExampleZip.Size)
 		if info.Size() != expsize {
 			t.Errorf("got %d bytes in file, expected %d", info.Size(), expsize)
+		}
+		return nil
+	})
+}
+
+// Currently we cannot support two "directory" type feeds nested inside the same zip
+// Fetch returns the sha1 of the "whole" zip file unless a nested .zip is extracted
+// So in this case, the second fetch will return Found and the existing FV.
+func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fp := testutil.RelPath("test/data/example-nested-two-feeds.zip")
+		buf, err := ioutil.ReadFile(fp)
+		if err != nil {
+			t.Error(err)
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+	testdb.TempSqlite(func(atx tldb.Adapter) error {
+		tmpdir, err := ioutil.TempDir("", "gtfs")
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer os.RemoveAll(tmpdir) // clean up
+		//
+		tcs := []struct {
+			url   string
+			found bool
+		}{
+			{url: "test.zip#example1", found: false},
+			{url: "test.zip#example2", found: true},
+		}
+		for _, tc := range tcs {
+			_ = tc
+			feed := testdb.CreateTestFeed(atx, ts.URL+"/"+tc.url)
+			fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
+			_ = fv
+			if err != nil {
+				t.Error(err)
+				return nil
+			}
+			if fr.FetchError != nil {
+				t.Error(fr.FetchError)
+				return nil
+			}
+			if fr.Found != tc.found {
+				t.Errorf("expected found to be %t, got %t", tc.found, fr.Found)
+			}
 		}
 		return nil
 	})

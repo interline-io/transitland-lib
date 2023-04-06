@@ -67,6 +67,14 @@ var ExampleZipNestedDir = ReaderTester{
 	URL: RelPath("test/data/example-nested-dir.zip#example-nested-dir/example"),
 }
 
+var ExampleZipNestedTwoFeeds1 = ReaderTester{
+	URL: RelPath("test/data/example-nested-two-feeds.zip#example1"),
+}
+
+var ExampleZipNestedTwoFeeds2 = ReaderTester{
+	URL: RelPath("test/data/example-nested-two-feeds.zip#example2"),
+}
+
 // ExampleZipNestedZip .
 var ExampleZipNestedZip = ReaderTester{
 	URL: RelPath("test/data/example-nested-zip.zip#example-nested-zip/example.zip"),

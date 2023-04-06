@@ -119,14 +119,16 @@ func (adapter *URLAdapter) Open() error {
 
 // Temporary zip adapter
 
-func NewTmpZipAdapterFromReader(reader io.Reader, fragment string) (*TmpZipAdapter, error) {
+func NewTmpZipAdapterFromReader(reader io.Reader, sourceUrl string) (*TmpZipAdapter, error) {
 	// Remove and keep internal path prefix
-	split := strings.SplitN(fragment, "#", 2)
+	split := strings.SplitN(sourceUrl, "#", 2)
+	fragment := ""
 	if len(split) > 1 {
 		fragment = split[1]
 	} else {
 		fragment = ""
 	}
+	fmt.Println("FRAGMENT:", fragment)
 	// Read stream to a temporary file
 	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
 	if err != nil {

@@ -115,6 +115,19 @@ func TempSqlite(cb func(tldb.Adapter) error) error {
 	return writer.Adapter.Tx(cb)
 }
 
+func TempSqliteAdapter(path string) tldb.Adapter {
+	adapter := tldb.SQLiteAdapter{DBURL: path}
+	writer := tldb.Writer{Adapter: &adapter}
+	if err := writer.Open(); err != nil {
+		panic(err)
+	}
+	defer writer.Close()
+	if err := writer.Create(); err != nil {
+		panic(err)
+	}
+	return writer.Adapter
+}
+
 // AdapterIgnoreTx .
 type AdapterIgnoreTx struct {
 	tldb.Adapter

@@ -74,7 +74,7 @@ func UploadFile(storage string, src string, dst string) error {
 }
 
 // NewStoreAdapter is a convenience method for getting a GTFS Zip reader from the store.
-func NewStoreAdapter(ustr string, key string, fragment string) (*tlcsv.TmpZipAdapter, error) {
+func NewStoreAdapter(ustr string, key string, sourceUrl string) (*tlcsv.TmpZipAdapter, error) {
 	st, err := GetStore(ustr)
 	if err != nil {
 		return nil, err
@@ -84,5 +84,5 @@ func NewStoreAdapter(ustr string, key string, fragment string) (*tlcsv.TmpZipAda
 		return nil, err
 	}
 	defer r.Close()
-	return tlcsv.NewTmpZipAdapterFromReader(r, fragment)
+	return tlcsv.NewTmpZipAdapterFromReader(r, sourceUrl)
 }

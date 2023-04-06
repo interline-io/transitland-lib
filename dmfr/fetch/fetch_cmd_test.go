@@ -49,7 +49,7 @@ func TestFetchCommand(t *testing.T) {
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
-			c := Command{adapter: adapter}
+			c := Command{Adapter: adapter}
 			tmpDir := t.TempDir()
 			withTempDir := []string{"-storage", tmpDir}
 			withTempDir = append(withTempDir, exp.command...)

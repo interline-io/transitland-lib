@@ -8,6 +8,7 @@ import (
 
 // ReaderTester contains information about the number and types of identities expected in a Reader.
 type ReaderTester struct {
+	Path      string
 	URL       string
 	SHA1      string
 	DirSHA1   string

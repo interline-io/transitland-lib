@@ -24,7 +24,7 @@ type Command struct {
 	DBURL      string
 	DryRun     bool
 	FeedIDs    []string
-	adapter    tldb.Adapter
+	Adapter    tldb.Adapter
 }
 
 // Parse sets options from command line flags.
@@ -87,16 +87,16 @@ type fetchJob struct {
 // Run executes this command.
 func (cmd *Command) Run() error {
 	// Get feeds
-	if cmd.adapter == nil {
+	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
 			return err
 		}
-		cmd.adapter = writer.Adapter
+		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
 	if len(cmd.FeedIDs) == 0 {
-		q := cmd.adapter.Sqrl().
+		q := cmd.Adapter.Sqrl().
 			Select("*").
 			From("current_feeds").
 			Where("deleted_at IS NULL").
@@ -109,7 +109,7 @@ func (cmd *Command) Run() error {
 			return err
 		}
 		feeds := []tl.Feed{}
-		err = cmd.adapter.Select(&feeds, qstr, qargs...)
+		err = cmd.Adapter.Select(&feeds, qstr, qargs...)
 		if err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func (cmd *Command) Run() error {
 	}
 
 	// Check feeds
-	adapter := cmd.adapter
+	adapter := cmd.Adapter
 	var toFetch []fetchJob
 	for _, osid := range cmd.FeedIDs {
 		// Get feed, create if not present and FeedCreate is specified
@@ -133,7 +133,7 @@ func (cmd *Command) Run() error {
 				return err
 			}
 		} else if err != nil {
-			return fmt.Errorf("feed %s does not exist", osid)
+			return fmt.Errorf("problem with feed '%s': %s", osid, err.Error())
 		}
 		// Create feed state if not exists
 		if _, err := dmfr.GetFeedState(adapter, feed.ID); err != nil {
@@ -168,7 +168,7 @@ func (cmd *Command) Run() error {
 	results := make(chan Result, len(cmd.FeedIDs))
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go fetchWorker(w, cmd.adapter, cmd.DryRun, jobs, results, &wg)
+		go fetchWorker(w, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
 	}
 	for _, opts := range toFetch {
 		jobs <- opts
