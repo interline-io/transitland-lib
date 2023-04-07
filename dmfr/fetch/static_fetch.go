@@ -11,6 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -24,9 +25,12 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		tmpfilepath := fr.Filename
 		vr := validationResponse{}
+
 		// Open reader
+		fragment := ""
 		if a := strings.SplitN(opts.FeedURL, "#", 2); len(a) > 1 {
 			tmpfilepath = tmpfilepath + "#" + a[1]
+			fragment = a[1]
 		}
 		reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewZipAdapter(tmpfilepath))
 		if err != nil {
@@ -38,6 +42,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 			return vr, nil
 		}
 		defer reader.Close()
+
 		// Get initialized FeedVersion
 		fv, err = tl.NewFeedVersionFromReader(reader)
 		if err != nil {
@@ -51,6 +56,8 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 		fv.Name = opts.Name
 		fv.Description = opts.Description
 		fv.File = fmt.Sprintf("%s.zip", fv.SHA1)
+		fv.Fragment = tt.NewString(fragment)
+
 		// Is this SHA1 already present?
 		checkfvid := tl.FeedVersion{}
 		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
@@ -65,19 +72,14 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 			// Serious error
 			return vr, err
 		}
-		// Return fv
-		fv.ID, err = atx.Insert(&fv)
-		if err != nil {
-			return vr, err
-		}
-		// Update stats records
-		if err := createFeedStats(atx, reader, fv.ID); err != nil {
-			return vr, err
-		}
+
 		// If a second tmpfile is created, copy it and overwrite the input tmp file
 		vr.UploadTmpfile = reader.Path()
 		vr.UploadFilename = fv.File
 		if readerPath := reader.Path(); readerPath != fr.Filename {
+			// Set fragment to empty
+			fv.Fragment = tt.NewString("")
+			// Copy file
 			tf2, err := ioutil.TempFile("", "nested")
 			if err != nil {
 				return vr, err
@@ -88,6 +90,17 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 			if err := copyFileContents(vr.UploadTmpfile, readerPath); err != nil {
 				return vr, err
 			}
+		}
+
+		// Create fv record
+		fv.ID, err = atx.Insert(&fv)
+		if err != nil {
+			return vr, err
+		}
+
+		// Update stats records
+		if err := createFeedStats(atx, reader, fv.ID); err != nil {
+			return vr, err
 		}
 		return vr, nil
 	}

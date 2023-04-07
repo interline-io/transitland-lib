@@ -172,7 +172,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
 	// Get Reader
-	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.URL)
+	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
 		return fvi, err
 	}
@@ -203,6 +203,7 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	cp.AddExtension(builders.NewConvexHullBuilder())
 	cp.AddExtension(builders.NewOnestopIDBuilder())
 	cp.AddExtension(builders.NewAgencyPlaceBuilder())
+	fvi.InProgress = false
 
 	// Go
 	cpresult := cp.Copy()
@@ -214,6 +215,7 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 
 	cpresult.DisplaySummary()
 	counts := copyResultCounts(*cpresult)
+	fvi.Success = true
 	fvi.InterpolatedStopTimeCount = counts.InterpolatedStopTimeCount
 	fvi.EntityCount = counts.EntityCount
 	fvi.WarningCount = counts.WarningCount
