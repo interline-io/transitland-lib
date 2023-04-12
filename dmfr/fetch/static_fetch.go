@@ -56,7 +56,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 		fv.Description = opts.Description
 		fv.File = fmt.Sprintf("%s.zip", fv.SHA1)
 		fv.Fragment = tt.NewString(fragment)
-		if !opts.HideFeedURL {
+		if !opts.HideURL {
 			fv.URL = opts.FeedURL
 		}
 

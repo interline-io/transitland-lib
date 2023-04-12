@@ -31,74 +31,74 @@ func TestStaticFetch(t *testing.T) {
 		fvSha1        string
 	}{
 		{
-			"example.zip",
-			"test/data/example.zip",
-			"test/data/example.zip",
-			"ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
-			200,
-			false,
-			false,
-			"ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
+			name:          "example.zip",
+			serveFile:     "test/data/example.zip",
+			requestPath:   "test/data/example.zip",
+			responseSha1:  "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
+			responseCode:  200,
+			responseError: false,
+			fvFound:       false,
+			fvSha1:        "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
 		},
 		{
-			"404",
-			"test/data/example.zip",
-			"404.zip",
-			"",
-			404,
-			true,
-			false,
-			"",
+			name:          "404",
+			serveFile:     "test/data/example.zip",
+			requestPath:   "404.zip",
+			responseSha1:  "",
+			responseCode:  404,
+			responseError: true,
+			fvFound:       false,
+			fvSha1:        "",
 		},
 		{
-			"invalid zip",
-			"test/data/invalid.zip",
-			"test/data/invalid.zip",
-			"",
-			200,
-			true,
-			false,
-			"",
+			name:          "invalid zip",
+			serveFile:     "test/data/invalid.zip",
+			requestPath:   "test/data/invalid.zip",
+			responseSha1:  "",
+			responseCode:  200,
+			responseError: true,
+			fvFound:       false,
+			fvSha1:        "",
 		},
 		{
-			"nested dir",
-			"test/data/example-nested-dir.zip",
-			"test/data/example-nested-dir.zip#example-nested-dir/example",
-			"",
-			200,
-			false,
-			false,
-			"97ae78529b47860f3d5b674f27121c078f7b3402",
+			name:          "nested dir",
+			serveFile:     "test/data/example-nested-dir.zip",
+			requestPath:   "test/data/example-nested-dir.zip#example-nested-dir/example",
+			responseSha1:  "",
+			responseCode:  200,
+			responseError: false,
+			fvFound:       false,
+			fvSha1:        "97ae78529b47860f3d5b674f27121c078f7b3402",
 		},
 		{
-			"nested two feeds 1",
-			"test/data/example-nested-two-feeds.zip",
-			"test/data/example-nested-two-feeds.zip#example1",
-			"",
-			200,
-			false,
-			false,
-			"196bc2b5ff85d629e279e3fbfc9e05c520075fba",
+			name:          "nested two feeds 1",
+			serveFile:     "test/data/example-nested-two-feeds.zip",
+			requestPath:   "test/data/example-nested-two-feeds.zip#example1",
+			responseSha1:  "",
+			responseCode:  200,
+			responseError: false,
+			fvFound:       false,
+			fvSha1:        "196bc2b5ff85d629e279e3fbfc9e05c520075fba",
 		},
 		{
-			"nested two feeds 2",
-			"test/data/example-nested-two-feeds.zip",
-			"test/data/example-nested-two-feeds.zip#example2",
-			"",
-			200,
-			false,
-			false,
-			"196bc2b5ff85d629e279e3fbfc9e05c520075fba",
+			name:          "nested two feeds 2",
+			serveFile:     "test/data/example-nested-two-feeds.zip",
+			requestPath:   "test/data/example-nested-two-feeds.zip#example2",
+			responseSha1:  "",
+			responseCode:  200,
+			responseError: false,
+			fvFound:       false,
+			fvSha1:        "196bc2b5ff85d629e279e3fbfc9e05c520075fba",
 		},
 		{
-			"nested zip",
-			"test/data/example-nested-zip.zip",
-			"test/data/example-nested-zip.zip#example-nested-zip/example.zip",
-			"",
-			200,
-			false,
-			false,
-			"ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
+			name:          "nested zip",
+			serveFile:     "test/data/example-nested-zip.zip",
+			requestPath:   "test/data/example-nested-zip.zip#example-nested-zip/example.zip",
+			responseSha1:  "",
+			responseCode:  200,
+			responseError: false,
+			fvFound:       false,
+			fvSha1:        "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
 		},
 	}
 	for _, tc := range tcs {
@@ -379,6 +379,39 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 		testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
 		assert.Equal(t, 404, tlff.ResponseCode.Int(), "did not get expected feed_fetch response code")
 		assert.Equal(t, false, tlff.Success, "did not get expected feed_fetch success")
+		return nil
+	})
+}
+
+func TestStaticStateFetch_HideURL(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := ioutil.ReadFile(ExampleZip.URL)
+		if err != nil {
+			t.Error(err)
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+	testdb.TempSqlite(func(atx tldb.Adapter) error {
+		tmpdir, err := ioutil.TempDir("", "gtfs")
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer os.RemoveAll(tmpdir) // clean up
+		feed := testdb.CreateTestFeed(atx, ts.URL)
+		// Fetch
+		_, _, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, HideURL: true})
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		// Check FeedFetch record
+		tlff := dmfr.FeedFetch{}
+		testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
+		assert.Equal(t, 200, tlff.ResponseCode.Int(), "did not get expected feed_fetch response code")
+		assert.Equal(t, true, tlff.Success, "did not get expected feed_fetch success")
+		assert.Equal(t, "", tlff.URL, "feed fetch url")
 		return nil
 	})
 }

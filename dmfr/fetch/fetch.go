@@ -23,7 +23,7 @@ type Options struct {
 	AllowFTPFetch           bool
 	AllowLocalFetch         bool
 	AllowS3Fetch            bool
-	HideFeedURL             bool
+	HideURL                 bool
 	FetchedAt               time.Time
 	Secrets                 []tl.Secret
 	CreatedBy               tl.String
@@ -127,7 +127,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	tlfetch.FeedID = feed.ID
 	tlfetch.URLType = opts.URLType
 	tlfetch.FetchedAt = tt.NewTime(opts.FetchedAt)
-	if !opts.HideFeedURL {
+	if !opts.HideURL {
 		tlfetch.URL = opts.FeedURL
 	}
 	if result.ResponseCode > 0 {
