@@ -49,7 +49,6 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 			vr.Error = err
 			return vr, nil
 		}
-		fv.URL = opts.FeedURL
 		fv.FeedID = opts.FeedID
 		fv.FetchedAt = opts.FetchedAt
 		fv.CreatedBy = opts.CreatedBy
@@ -57,6 +56,9 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 		fv.Description = opts.Description
 		fv.File = fmt.Sprintf("%s.zip", fv.SHA1)
 		fv.Fragment = tt.NewString(fragment)
+		if !opts.HideURL {
+			fv.URL = opts.FeedURL
+		}
 
 		// Is this SHA1 already present?
 		checkfvid := tl.FeedVersion{}
