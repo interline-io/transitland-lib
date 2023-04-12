@@ -72,7 +72,10 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	var tx *sqlx.Tx
 	// Special check for wrapped connections
 	commit := false
-	if a, ok := adapter.db.(*QueryLogger); ok {
+	switch a := adapter.db.(type) {
+	case *sqlx.Tx:
+		tx = a
+	case *QueryLogger:
 		if b, ok := a.Ext.(*sqlx.Tx); ok {
 			tx = b
 		}
