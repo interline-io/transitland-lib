@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -49,7 +50,7 @@ func TestRedateFilter(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.Name, func(t *testing.T) {
-			rf, err := NewRedateFilter(ptime(tc.StartDate), ptime(tc.EndDate), tc.StartDays, tc.EndDays)
+			rf, err := NewRedateFilter(ptime(tc.StartDate), ptime(tc.EndDate), tc.StartDays, tc.EndDays, false)
 			if err != nil && tc.ExpectError {
 				// ok
 				return
@@ -93,6 +94,64 @@ func TestRedateFilter(t *testing.T) {
 			if !found {
 				t.Errorf("did not find expected output service %s", v.ServiceID)
 			}
+		})
+	}
+}
+
+func Test_daysBetween(t *testing.T) {
+	tc := []struct {
+		d1     string
+		d2     string
+		expect int
+	}{
+		{
+			d1:     "2023-05-15",
+			d2:     "2023-05-15",
+			expect: 0,
+		},
+		{
+			d1:     "2023-05-15",
+			d2:     "2023-05-16",
+			expect: 1,
+		},
+		{
+			d1:     "2023-05-15",
+			d2:     "2024-05-15",
+			expect: 366,
+		},
+		{
+			d1:     "2023-05-15",
+			d2:     "2030-05-15",
+			expect: 2557,
+		},
+		{
+			d1:     "2023-05-15",
+			d2:     "2023-05-14",
+			expect: -1,
+		},
+		{
+			d1:     "2023-05-15",
+			d2:     "2023-05-01",
+			expect: -14,
+		},
+		{
+			d1:     "1970-01-01",
+			d2:     "2023-05-15",
+			expect: 19492,
+		},
+	}
+	for _, tc := range tc {
+		t.Run(fmt.Sprintf("%s:%s", tc.d1, tc.d2), func(t *testing.T) {
+			t1, err := time.Parse("2006-01-02", tc.d1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t2, err := time.Parse("2006-01-02", tc.d2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			days := daysBetween(t1, t2)
+			assert.Equal(t, tc.expect, days, "days between")
 		})
 	}
 }
