@@ -20,7 +20,7 @@ type Command struct {
 }
 
 func (cmd *Command) Parse(args []string) error {
-	fl := flag.NewFlagSet("copy", flag.ExitOnError)
+	fl := flag.NewFlagSet("merge", flag.ExitOnError)
 	fl.Usage = func() {
 		log.Print("Usage: merge <writer> [readers...]")
 		fl.PrintDefaults()
