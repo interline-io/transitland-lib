@@ -54,7 +54,6 @@ func ReadRows(in io.Reader, cb func(Row)) error {
 	for k, i := range header {
 		hindex[i] = k
 	}
-	line := 2 // lines are 1-indexed, plus header
 	for {
 		row, err := r.Read()
 		if err == nil {
@@ -77,8 +76,8 @@ func ReadRows(in io.Reader, cb func(Row)) error {
 			}
 		}
 		// Pass parse errors to row
+		line, _ := r.FieldPos(0)
 		cb(Row{Row: row, Line: line, Header: header, Hindex: hindex, Err: err})
-		line++
 	}
 	return nil
 }
