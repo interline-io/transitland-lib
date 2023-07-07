@@ -15,6 +15,7 @@ type FeedState struct {
 	FeedVersionID       tl.Int
 	FeedPriority        tl.Int
 	FeedRealtimeEnabled bool
+	Public              bool
 	tl.Timestamps
 }
 
