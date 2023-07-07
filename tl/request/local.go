@@ -29,3 +29,12 @@ func (r Local) Upload(ctx context.Context, key string, secret tl.Secret, uploadF
 	_, err = io.Copy(out, uploadFile)
 	return err
 }
+
+func (r Local) Exists(ctx context.Context, key string) bool {
+	fn := filepath.Join(r.Directory, key)
+	info, err := os.Stat(fn)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
