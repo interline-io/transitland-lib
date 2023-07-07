@@ -5,6 +5,7 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -33,6 +34,10 @@ func UpdateFeed(atx tldb.Adapter, rfeed tl.Feed) (int, bool, bool, error) {
 		feedid, errTx = atx.Insert(&rfeed)
 	} else {
 		// Error
+		errTx = err
+	}
+	// Create feed state if not exists
+	if _, err := dmfr.GetFeedState(atx, feedid); err != nil {
 		errTx = err
 	}
 	return feedid, found, updated, errTx
