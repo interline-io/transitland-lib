@@ -2,9 +2,12 @@ package fetch
 
 import (
 	"errors"
+	"fmt"
+	"math"
 	"os"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/tl"
@@ -145,4 +148,61 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		return result, err
 	}
 	return result, nil
+}
+
+func CheckFetchWait(atx tldb.Adapter, feedId int, fetchWait float64) (bool, error) {
+	fmt.Println("CheckFetchWait:", feedId, "fetchWait:", fetchWait)
+	// Check if minimum fetch time has elapsed
+	now := time.Now()
+	q := atx.Sqrl().
+		Select("feed_fetches.*").
+		From("feed_fetches").
+		Where(sq.Eq{"feed_id": feedId}).
+		OrderBy("fetched_at desc").
+		Limit(10)
+
+	var lastFetches []dmfr.FeedFetch
+	if qstr, qargs, err := q.ToSql(); err != nil {
+		return false, err
+	} else if err := atx.Select(&lastFetches, qstr, qargs...); err != nil {
+		return false, err
+	}
+
+	// Get exponential backoff
+	// Based on failures in the past 24 hours
+	failures := 0
+	lastFetchAgo := 0.0
+	checkFailureWindow := 60.0 * 60.0 * 24
+	for _, fetch := range lastFetches {
+		timeAgo := now.Sub(fetch.FetchedAt.Val).Seconds()
+		fmt.Println("\tfetch:", fetch.ID, fetch.Success, fetch.FetchedAt.String(), "timeAgo:", timeAgo)
+		if lastFetchAgo == 0 {
+			lastFetchAgo = timeAgo
+		}
+		if fetch.Success {
+			fmt.Println("\t\tbreaking on succes")
+			break
+		}
+		if timeAgo > checkFailureWindow {
+			fmt.Println("\t\tbreaking on time")
+			break
+		}
+		failures += 1
+	}
+	fmt.Println("\tlastFetchAgo:", lastFetchAgo)
+
+	failureBackoff := math.Pow(2, float64(failures)*2)
+	fmt.Println("\tfailures:", failures, "failureBackoff:", failureBackoff)
+	if failureBackoff > checkFailureWindow {
+		failureBackoff = checkFailureWindow
+	}
+	if failures > 0 && lastFetchAgo < failureBackoff {
+		fmt.Println("\tskipping, failure backoff:", failureBackoff)
+		return false, nil
+	}
+	if lastFetchAgo < float64(fetchWait) {
+		fmt.Println("\tskipping, fetch wait:", fetchWait)
+		return false, nil
+	}
+	return true, nil
 }

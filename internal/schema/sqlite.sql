@@ -206,6 +206,7 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
     "feed_version_id" integer,
     "feed_realtime_enabled" bool not null,
     "public" bool not null,
+    "fetch_wait" integer not null,
     "feed_priority" integer,
     "tags" BLOB,
     "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
