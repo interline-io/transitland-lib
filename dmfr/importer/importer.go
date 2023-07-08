@@ -61,7 +61,11 @@ func copyResultCounts(result copier.Result) dmfr.FeedVersionImport {
 }
 
 // ActivateFeedVersion .
-func ActivateFeedVersion(atx tldb.Adapter, fvid int) error {
+func ActivateFeedVersion(atx tldb.Adapter, feedId int, fvid int) error {
+	// Check FeedState exists
+	if _, err := dmfr.GetFeedState(atx, feedId); err != nil {
+		return err
+	}
 	// sqlite3 only supports "UPDATE ... FROM" in versions 3.33 and higher
 	_, err := atx.DBX().Exec("UPDATE feed_states SET feed_version_id = $1 WHERE feed_id = (SELECT feed_id FROM feed_versions WHERE id = $2)", fvid, fvid)
 	return err
@@ -134,14 +138,14 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		log.Infof("Finalizing import")
 		if opts.Activate {
 			log.Infof("Activating feed version")
-			if err := ActivateFeedVersion(atx, opts.FeedVersionID); err != nil {
+			if err := ActivateFeedVersion(atx, fv.FeedID, fv.ID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
 		}
 		// Update FVI with results, inside tx
 		fviresult.ID = fvi.ID
 		fviresult.CreatedAt = fvi.CreatedAt
-		fviresult.FeedVersionID = opts.FeedVersionID
+		fviresult.FeedVersionID = fv.ID
 		fviresult.ImportLevel = 4
 		fviresult.Success = true
 		fviresult.InProgress = false
