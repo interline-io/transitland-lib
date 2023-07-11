@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -12,8 +13,9 @@ import (
 type FeedState struct {
 	ID                  int
 	FeedID              int
-	FeedVersionID       tl.Int
-	FeedPriority        tl.Int
+	FeedVersionID       tt.Int
+	FeedPriority        tt.Int
+	FetchWait           tt.Int
 	FeedRealtimeEnabled bool
 	Public              bool
 	tl.Timestamps
