@@ -25,6 +25,8 @@
     {
       "spec": "gtfs",
       "id": "BA",
+      "name": "BART",
+      "description": "Bay Area Rapid Transit",
       "urls": {
         "static_current": "../test/data/external/bart.zip"
       }

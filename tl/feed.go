@@ -14,6 +14,7 @@ type Feed struct {
 	FeedID        string            `json:"id" db:"onestop_id"`
 	SupersedesIDs Strings           `json:"supersedes_ids,omitempty" db:"-"`
 	Name          String            `json:"name,omitempty"`
+	Description   String            `json:"description,omitempty"`
 	Spec          string            `json:"spec,omitempty"`
 	URLs          FeedUrls          `json:"urls,omitempty" db:"urls"`
 	Languages     FeedLanguages     `json:"languages,omitempty"`
