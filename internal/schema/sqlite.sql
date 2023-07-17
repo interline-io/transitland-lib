@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS "current_feeds" (
   "urls" BLOB,
   "languages" BLOB,
   "name" varchar(255),
+  "description" varchar(255),
   "file" varchar(255) NOT NULL,
   "feed_tags" BLOB
 );
