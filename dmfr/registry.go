@@ -38,7 +38,7 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 	reg.Operators = loadReg.Operators
 	reg.Secrets = loadReg.Secrets
 	if reg.Schema == "" {
-		reg.Schema = "https://dmfr.transit.land/json-schema/dmfr.schema-v0.4.0.json"
+		reg.Schema = "https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.0.json"
 	}
 	operators := []tl.Operator{}
 	for _, rfeed := range loadReg.Feeds {
