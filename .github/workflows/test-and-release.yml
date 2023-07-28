@@ -11,15 +11,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-latest]
+        os: [ubuntu-latest, macos-latest]
     steps:
-    - name: Set up Go 1.18
-      uses: actions/setup-go@v1
+    - name: Set up Go 1.20
+      uses: actions/setup-go@v4
       with:
-        go-version: 1.18
+        go-version: '^1.20'
       id: go
     - name: Checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
     - name: Run tests
       run: go test -coverprofile c.out ./...
     - name: Produce coverage report
@@ -32,19 +32,19 @@ jobs:
   build-linux:
     if: ${{ github.event_name == 'release' }}
     needs: test
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
-      - name: Set up Go 1.18
-        uses: actions/setup-go@v1
+        uses: actions/checkout@v3
+      - name: Set up Go 1.20
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.18
+          go-version: '^1.20'
       - name: Build on Linux
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build
       - name: Store Linux binary
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: transitland-linux
           path: ${{ github.workspace }}/cmd/transitland/transitland
@@ -54,11 +54,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
-      - name: Set up Go 1.18
-        uses: actions/setup-go@v1
+        uses: actions/checkout@v3
+      - name: Set up Go 1.20
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.18
+          go-version: '^1.20'
       - name: Build on macOS
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build
@@ -78,17 +78,17 @@ jobs:
         run: |
           gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: transitland-macos
           path: ${{ github.workspace }}/transitland.zip          
   release:
     if: ${{ github.event_name == 'release' }}
     needs: [build-linux, build-macos]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Download Linux binary
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: transitland-linux
       - name: Attach Linux binary to GitHub release
@@ -102,7 +102,7 @@ jobs:
           asset_label: Linux AMD-64 binary
           asset_content_type: application/binary
       - name: Download macOS binary
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: transitland-macos
       - name: Attach macOS binary to GitHub release
@@ -120,10 +120,10 @@ jobs:
     if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: '12.x'
+          node-version: '16.x'
       - run: npm install github-release-notes -g
       - run: gren release --override
         env:
