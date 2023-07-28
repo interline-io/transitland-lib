@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: transitland-macos
-          path: ${{ github.workspace }}/transitland.zip          
+          path: ${{ github.workspace }}/transitland.zip
   release:
     if: ${{ github.event_name == 'release' }}
     needs: [build-linux, build-macos]
@@ -91,6 +91,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: transitland-linux
+          path: transitland-linux
       - name: Attach Linux binary to GitHub release
         uses: actions/upload-release-asset@v1.0.1
         env:
@@ -99,12 +100,12 @@ jobs:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ github.workspace }}/transitland-linux/transitland
           asset_name: transitland-linux
-          asset_label: Linux AMD-64 binary
           asset_content_type: application/binary
       - name: Download macOS binary
         uses: actions/download-artifact@v3
         with:
           name: transitland-macos
+          path: transitland-macos
       - name: Attach macOS binary to GitHub release
         uses: actions/upload-release-asset@v1.0.1
         env:
@@ -113,7 +114,6 @@ jobs:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ github.workspace }}/transitland-macos/transitland.zip
           asset_name: transitland-macos.zip
-          asset_label: macOS AMD-64 binary
           asset_content_type: application/binary
   release-notes:
     needs: release
