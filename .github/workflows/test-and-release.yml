@@ -99,7 +99,6 @@ jobs:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ github.workspace }}/transitland-linux/transitland
           asset_name: transitland-linux
-          asset_label: Linux AMD-64 binary
           asset_content_type: application/binary
       - name: Download macOS binary
         uses: actions/download-artifact@v3
@@ -113,7 +112,6 @@ jobs:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ github.workspace }}/transitland-macos/transitland.zip
           asset_name: transitland-macos.zip
-          asset_label: macOS AMD-64 binary
           asset_content_type: application/binary
   release-notes:
     needs: release
