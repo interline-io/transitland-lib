@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: transitland-macos
-          path: ${{ github.workspace }}/transitland.zip          
+          path: ${{ github.workspace }}/transitland.zip
   release:
     if: ${{ github.event_name == 'release' }}
     needs: [build-linux, build-macos]
