@@ -168,6 +168,9 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 		return 0, err
 	}
 	eid, err := result.LastInsertId()
+	if v, ok := ent.(canSetID); ok {
+		v.SetID(int(eid))
+	}
 	return int(eid), err
 }
 

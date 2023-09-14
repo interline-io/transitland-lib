@@ -687,15 +687,26 @@ CREATE TABLE gtfs_rider_categories (
     eligibility_url varchar(255)
 );
 
+CREATE TABLE tl_validator_reports (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    static_url varchar(255),
+    static_sha1 varchar(255)
+);
 
+CREATE TABLE tl_validator_error_groups (
+    "id" integer primary key autoincrement,
+    "report_id" int, 
+    filename varchar(255),
+    error_type varchar(255),
+    count int
+);
 
-
-
-
-
-
-
-
-
-
+CREATE TABLE tl_validator_errors (
+    "id" integer primary key autoincrement,
+    "error_group_id" int, 
+    error varchar(255)
+);
 

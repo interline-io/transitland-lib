@@ -146,7 +146,7 @@ func (v *Validator) Validate() (*Result, error) {
 	// Main validation
 	cpResult := v.copier.Copy()
 	if cpResult == nil {
-		result.WriteError = errors.New("Failed to validate feed")
+		result.WriteError = errors.New("failed to validate feed")
 		return result, nil
 	} else {
 		result.Result = *cpResult
