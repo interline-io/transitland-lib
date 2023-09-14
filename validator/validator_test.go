@@ -1,10 +1,12 @@
 package validator
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -87,13 +89,41 @@ func TestValidator_Validate(t *testing.T) {
 			// At least one error must be specified per overlay feed, otherwise fail
 			opts := Options{}
 			opts.ErrorHandler = &handler
+			opts.IncludeEntities = true
+			opts.IncludeRouteGeometries = true
 			v, _ := NewValidator(reader, opts)
 			v.AddExtension(&handler)
-			v.Validate()
+			r, err := v.Validate()
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")
 			}
+			if err != nil {
+				t.Error(err)
+			}
+			fmt.Println("r.Routes:", r.Routes)
+			for _, route := range r.Routes {
+				fmt.Println("ROUTE:", route)
+			}
 		})
+	}
+}
+
+func TestResult_WriteResult(t *testing.T) {
+	basepath := testutil.RelPath("test/data/validator")
+	searchpath := testutil.RelPath("test/data/validator/errors")
+	reader := exampleReader(basepath, filepath.Join(searchpath, "stops-duplicate"))
+
+	testdb := testdb.MustOpenWriter("sqlite3://:memory:", true)
+	_ = testdb
+	opts := Options{}
+	opts.IncludeEntities = true
+	v, _ := NewValidator(reader, opts)
+	r, err := v.Validate()
+	if err != nil {
+		t.Error(err)
+	}
+	if err := WriteResult(testdb.Adapter, 1, r); err != nil {
+		t.Fatal(err)
 	}
 }
 

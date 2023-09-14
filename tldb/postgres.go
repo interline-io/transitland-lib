@@ -169,6 +169,9 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if v, ok := ent.(canSetID); ok {
+		v.SetID(int(eid.Int64))
+	}
 	return int(eid.Int64), err
 }
 
