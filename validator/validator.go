@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -8,12 +9,14 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/twpayne/go-geom"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type errorWithContext interface {
@@ -40,6 +43,7 @@ type Options struct {
 	IncludeEntitiesLimit     int
 	IncludeRouteGeometries   bool
 	ValidateRealtimeMessages []string
+	IncludeRealtimeJson      bool
 	copier.Options
 }
 
@@ -153,14 +157,37 @@ func (v *Validator) Validate() (*Result, error) {
 	}
 
 	// Validate realtime messages
+	v.Options.IncludeRealtimeJson = true
 	for _, fn := range v.Options.ValidateRealtimeMessages {
+		var rterrs []error
 		msg, err := rt.Read(fn)
-		if err == nil {
-			rterrs := v.rtValidator.ValidateFeedMessage(msg, nil)
-			result.HandleError(filepath.Base(fn), rterrs)
+		if err != nil {
+			rterrs = append(rterrs, errors.New("could not read url"))
 		} else {
-			result.HandleError(filepath.Base(fn), []error{errors.New("could not read url")})
+			rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
 		}
+		result.HandleError(filepath.Base(fn), rterrs)
+		if len(rterrs) > v.Options.ErrorLimit {
+			rterrs = rterrs[0:v.Options.ErrorLimit]
+		}
+		rtResult := RealtimeResult{
+			Url:    fn,
+			Errors: rterrs,
+		}
+		if v.Options.IncludeRealtimeJson {
+			rtJson, err := protojson.Marshal(msg)
+			if err != nil {
+				log.Error().Err(err).Msg("Could not convert RT message to JSON")
+			}
+			if len(rtJson) > 10_000_000 {
+				log.Error().Msg("JSON output of RT message too large to include in validator output")
+			} else {
+				if err := json.Unmarshal(rtJson, &rtResult.Json); err != nil {
+					log.Error().Err(err).Msg("Could not round-trip RT message back to JSON")
+				}
+			}
+		}
+		result.Realtime = append(result.Realtime, rtResult)
 	}
 
 	// Service levels

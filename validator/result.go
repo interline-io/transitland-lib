@@ -20,4 +20,11 @@ type Result struct {
 	FeedInfos            []tl.FeedInfo                  `json:"feed_infos"`
 	Files                []dmfr.FeedVersionFileInfo     `json:"files"`
 	ServiceLevels        []dmfr.FeedVersionServiceLevel `json:"service_levels"`
+	Realtime             []RealtimeResult               `json:"realtime"`
+}
+
+type RealtimeResult struct {
+	Url    string         `json:"url"`
+	Json   map[string]any `json:"json"`
+	Errors []error
 }
