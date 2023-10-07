@@ -1,12 +1,14 @@
 package tl
 
-import "github.com/interline-io/transitland-lib/tl/tt"
+import (
+	"github.com/interline-io/transitland-lib/tl/tt"
+)
 
 // Agency agency.txt
 type Agency struct {
 	AgencyID       string
 	AgencyName     string `csv:",required"`
-	AgencyURL      string `csv:",required"`
+	AgencyURL      string
 	AgencyTimezone string `csv:",required"`
 	AgencyLang     string
 	AgencyPhone    string
@@ -29,7 +31,6 @@ func (ent *Agency) EntityKey() string {
 func (ent *Agency) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("agency_name", ent.AgencyName)...)
-	errs = append(errs, tt.CheckPresent("agency_url", ent.AgencyURL)...)
 	errs = append(errs, tt.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
 	errs = append(errs, tt.CheckTimezone("agency_timezone", ent.AgencyTimezone)...)
 	errs = append(errs, tt.CheckURL("agency_url", ent.AgencyURL)...)
@@ -37,6 +38,13 @@ func (ent *Agency) Errors() (errs []error) {
 	errs = append(errs, tt.CheckLanguage("agency_lang", ent.AgencyLang)...)
 	errs = append(errs, tt.CheckEmail("agency_email", ent.AgencyEmail)...)
 	return errs
+}
+
+// Warnings for this entity
+func (ent *Agency) Warnings() (warnings []error) {
+	warnings = append(warnings, ent.BaseEntity.Warnings()...)
+	warnings = append(warnings, tt.CheckPresent("agency_url", ent.AgencyURL)...)
+	return warnings
 }
 
 // Filename agency.txt
