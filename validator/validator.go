@@ -14,6 +14,7 @@ import (
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/twpayne/go-geom"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -44,6 +45,7 @@ type Options struct {
 	IncludeRouteGeometries   bool
 	ValidateRealtimeMessages []string
 	IncludeRealtimeJson      bool
+	MaxRTMessageSize         uint64
 	copier.Options
 }
 
@@ -150,19 +152,18 @@ func (v *Validator) Validate() (*Result, error) {
 	// Main validation
 	cpResult := v.copier.Copy()
 	if cpResult == nil {
-		result.WriteError = errors.New("Failed to validate feed")
+		result.WriteError = errors.New("failed to validate feed")
 		return result, nil
 	} else {
 		result.Result = *cpResult
 	}
 
 	// Validate realtime messages
-	v.Options.IncludeRealtimeJson = true
 	for _, fn := range v.Options.ValidateRealtimeMessages {
 		var rterrs []error
-		msg, err := rt.Read(fn)
+		msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize))
 		if err != nil {
-			rterrs = append(rterrs, errors.New("could not read url"))
+			rterrs = append(rterrs, err)
 		} else {
 			rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
 		}
@@ -174,17 +175,13 @@ func (v *Validator) Validate() (*Result, error) {
 			Url:    fn,
 			Errors: rterrs,
 		}
-		if v.Options.IncludeRealtimeJson {
+		if v.Options.IncludeRealtimeJson && msg != nil {
 			rtJson, err := protojson.Marshal(msg)
 			if err != nil {
 				log.Error().Err(err).Msg("Could not convert RT message to JSON")
 			}
-			if len(rtJson) > 10_000_000 {
-				log.Error().Msg("JSON output of RT message too large to include in validator output")
-			} else {
-				if err := json.Unmarshal(rtJson, &rtResult.Json); err != nil {
-					log.Error().Err(err).Msg("Could not round-trip RT message back to JSON")
-				}
+			if err := json.Unmarshal(rtJson, &rtResult.Json); err != nil {
+				log.Error().Err(err).Msg("Could not round-trip RT message back to JSON")
 			}
 		}
 		result.Realtime = append(result.Realtime, rtResult)

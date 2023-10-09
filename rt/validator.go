@@ -250,7 +250,7 @@ func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, cu
 	case pb.TripUpdate_StopTimeUpdate_SKIPPED:
 		// ok
 	}
-	if st.GetArrival().Time != nil && st.GetDeparture().Time != nil && st.GetArrival().GetTime() > st.GetDeparture().GetTime() {
+	if st.GetArrival().GetTime() > st.GetDeparture().GetTime() {
 		errs = append(errs, ne("StopTimeUpdate arrival time is later than departure time", 25))
 	}
 	// ValidateStopTimeEvent .
