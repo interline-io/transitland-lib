@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -8,12 +9,15 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/twpayne/go-geom"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type errorWithContext interface {
@@ -40,6 +44,8 @@ type Options struct {
 	IncludeEntitiesLimit     int
 	IncludeRouteGeometries   bool
 	ValidateRealtimeMessages []string
+	IncludeRealtimeJson      bool
+	MaxRTMessageSize         uint64
 	copier.Options
 }
 
@@ -146,7 +152,7 @@ func (v *Validator) Validate() (*Result, error) {
 	// Main validation
 	cpResult := v.copier.Copy()
 	if cpResult == nil {
-		result.WriteError = errors.New("Failed to validate feed")
+		result.WriteError = errors.New("failed to validate feed")
 		return result, nil
 	} else {
 		result.Result = *cpResult
@@ -154,13 +160,31 @@ func (v *Validator) Validate() (*Result, error) {
 
 	// Validate realtime messages
 	for _, fn := range v.Options.ValidateRealtimeMessages {
-		msg, err := rt.Read(fn)
-		if err == nil {
-			rterrs := v.rtValidator.ValidateFeedMessage(msg, nil)
-			result.HandleError(filepath.Base(fn), rterrs)
+		var rterrs []error
+		msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize))
+		if err != nil {
+			rterrs = append(rterrs, err)
 		} else {
-			result.HandleError(filepath.Base(fn), []error{errors.New("could not read url")})
+			rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
 		}
+		result.HandleError(filepath.Base(fn), rterrs)
+		if len(rterrs) > v.Options.ErrorLimit {
+			rterrs = rterrs[0:v.Options.ErrorLimit]
+		}
+		rtResult := RealtimeResult{
+			Url:    fn,
+			Errors: rterrs,
+		}
+		if v.Options.IncludeRealtimeJson && msg != nil {
+			rtJson, err := protojson.Marshal(msg)
+			if err != nil {
+				log.Error().Err(err).Msg("Could not convert RT message to JSON")
+			}
+			if err := json.Unmarshal(rtJson, &rtResult.Json); err != nil {
+				log.Error().Err(err).Msg("Could not round-trip RT message back to JSON")
+			}
+		}
+		result.Realtime = append(result.Realtime, rtResult)
 	}
 
 	// Service levels

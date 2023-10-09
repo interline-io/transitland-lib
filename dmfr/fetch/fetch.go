@@ -23,6 +23,7 @@ type Options struct {
 	AllowFTPFetch           bool
 	AllowLocalFetch         bool
 	AllowS3Fetch            bool
+	MaxSize                 uint64
 	HideURL                 bool
 	FetchedAt               time.Time
 	Secrets                 []tl.Secret
@@ -70,6 +71,9 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	}
 	if opts.AllowS3Fetch {
 		reqOpts = append(reqOpts, request.WithAllowS3)
+	}
+	if opts.MaxSize > 0 {
+		reqOpts = append(reqOpts, request.WithMaxSize(opts.MaxSize))
 	}
 	// Get secret and set auth
 	if feed.Authorization.Type != "" {

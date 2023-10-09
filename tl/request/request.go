@@ -34,6 +34,7 @@ type Request struct {
 	AllowFTP   bool
 	AllowLocal bool
 	AllowS3    bool
+	MaxSize    uint64
 	Secret     tl.Secret
 	Auth       tl.FeedAuthorization
 }
@@ -112,6 +113,12 @@ func WithAllowS3(req *Request) {
 	req.AllowS3 = true
 }
 
+func WithMaxSize(s uint64) RequestOption {
+	return func(req *Request) {
+		req.MaxSize = s
+	}
+}
+
 func WithAuth(secret tl.Secret, auth tl.FeedAuthorization) func(req *Request) {
 	return func(req *Request) {
 		req.Secret = secret
@@ -148,7 +155,7 @@ func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchR
 	if fr.FetchError != nil {
 		return fr, nil
 	}
-	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(tmpfile, r)
+	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(tmpfile, r, req.MaxSize)
 	if err != nil {
 		return fr, err
 	}
@@ -172,12 +179,12 @@ func AuthenticatedRequest(address string, opts ...RequestOption) (FetchResponse,
 	}
 	defer r.Close()
 	var buf bytes.Buffer
-	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(&buf, r)
+	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(&buf, r, req.MaxSize)
 	fr.Data = buf.Bytes()
 	return fr, err
 }
 
-func copyTo(dst io.Writer, src io.Reader) (int, string, error) {
+func copyTo(dst io.Writer, src io.Reader, maxSize uint64) (int, string, error) {
 	size := 0
 	h := sha1.New()
 	buf := make([]byte, 1024*1024)
@@ -190,6 +197,9 @@ func copyTo(dst io.Writer, src io.Reader) (int, string, error) {
 			break
 		}
 		size += n
+		if maxSize > 0 && size > int(maxSize) {
+			return 0, "", errors.New("exceeded max size")
+		}
 		h.Write(buf[:n])
 		if _, err := dst.Write(buf[:n]); err != nil {
 			return 0, "", err
