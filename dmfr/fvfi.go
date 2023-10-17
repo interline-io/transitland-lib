@@ -12,6 +12,7 @@ import (
 
 	"github.com/dimchansky/utfbom"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
@@ -26,6 +27,8 @@ type FeedVersionFileInfo struct {
 	Header        string
 	CSVLike       bool
 	SHA1          string
+	ValuesUnique  tt.Counts
+	ValuesCount   tt.Counts
 	tl.Timestamps
 }
 
@@ -94,8 +97,29 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 			}
 		})
 		rows := int64(0)
+		valuesCount := tt.Counts{}
+		valuesUnique := map[string]map[string]struct{}{}
 		adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
 			rows++
+			for i, v := range row.Row {
+				if i >= len(row.Header) || v == "" {
+					continue
+				}
+				k := row.Header[i]
+				if len(valuesCount) >= 100 {
+					continue
+				}
+				valuesCount[k] += 1
+				vc, ok := valuesUnique[k]
+				if !ok {
+					vc = map[string]struct{}{}
+					valuesUnique[k] = vc
+				}
+				if len(vc) >= 1_000_000 {
+					continue
+				}
+				vc[v] = struct{}{}
+			}
 		})
 		// Check the header is sane
 		fvfi := FeedVersionFileInfo{}
@@ -107,6 +131,11 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 		fvfi.Size = fi.Size()
 		fvfi.SHA1 = fmt.Sprintf("%x", h.Sum(nil))
 		fvfi.Rows = rows
+		fvfi.ValuesCount = valuesCount
+		fvfi.ValuesUnique = tt.Counts{}
+		for k, v := range valuesUnique {
+			fvfi.ValuesUnique[k] = len(v)
+		}
 		ret = append(ret, fvfi)
 	}
 	return ret, nil

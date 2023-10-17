@@ -167,7 +167,9 @@ CREATE TABLE IF NOT EXISTS "feed_version_file_infos" (
   "columns" int not null,
   "sha1" varchar(255) not null,
   "header" varchar(255) not null,
-  "csv_like" bool not null
+  "csv_like" bool not null,
+  "values_count" blob,
+  "values_unique" blob
 );
 CREATE INDEX idx_feed_version_file_infos_feed_version_id ON "feed_version_file_infos"(feed_version_id);
 

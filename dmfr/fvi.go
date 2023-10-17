@@ -1,12 +1,10 @@
 package dmfr
 
 import (
-	"database/sql/driver"
-	"encoding/json"
-	"errors"
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // FeedVersionImport .
@@ -20,26 +18,26 @@ type FeedVersionImport struct {
 	InProgress                bool // In Progress
 	ScheduleRemoved           bool // Stop times and trips have been uimported
 	InterpolatedStopTimeCount int
-	EntityCount               EntityCounter
-	WarningCount              EntityCounter
-	GeneratedCount            EntityCounter
-	SkipEntityErrorCount      EntityCounter
-	SkipEntityReferenceCount  EntityCounter
-	SkipEntityFilterCount     EntityCounter
-	SkipEntityMarkedCount     EntityCounter
+	EntityCount               tt.Counts
+	WarningCount              tt.Counts
+	GeneratedCount            tt.Counts
+	SkipEntityErrorCount      tt.Counts
+	SkipEntityReferenceCount  tt.Counts
+	SkipEntityFilterCount     tt.Counts
+	SkipEntityMarkedCount     tt.Counts
 	tl.Timestamps
 }
 
 // NewFeedVersionImport returns an initialized FeedVersionImport.
 func NewFeedVersionImport() *FeedVersionImport {
 	fvi := FeedVersionImport{}
-	fvi.EntityCount = EntityCounter{}
-	fvi.WarningCount = EntityCounter{}
-	fvi.GeneratedCount = EntityCounter{}
-	fvi.SkipEntityErrorCount = EntityCounter{}
-	fvi.SkipEntityReferenceCount = EntityCounter{}
-	fvi.SkipEntityFilterCount = EntityCounter{}
-	fvi.SkipEntityMarkedCount = EntityCounter{}
+	fvi.EntityCount = tt.Counts{}
+	fvi.WarningCount = tt.Counts{}
+	fvi.GeneratedCount = tt.Counts{}
+	fvi.SkipEntityErrorCount = tt.Counts{}
+	fvi.SkipEntityReferenceCount = tt.Counts{}
+	fvi.SkipEntityFilterCount = tt.Counts{}
+	fvi.SkipEntityMarkedCount = tt.Counts{}
 	return &fvi
 }
 
@@ -61,21 +59,4 @@ func (fvi *FeedVersionImport) EntityID() string {
 // TableName .
 func (FeedVersionImport) TableName() string {
 	return "feed_version_gtfs_imports"
-}
-
-// EntityCounter .
-type EntityCounter map[string]int
-
-// Value .
-func (a EntityCounter) Value() (driver.Value, error) {
-	return json.Marshal(a)
-}
-
-// Scan .
-func (a *EntityCounter) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
-	}
-	return json.Unmarshal(b, &a)
 }
