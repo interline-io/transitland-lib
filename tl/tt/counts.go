@@ -27,6 +27,6 @@ func (r *Counts) UnmarshalGQL(v interface{}) error {
 }
 
 func (r Counts) MarshalGQL(w io.Writer) {
-	// b, _ := r.MarshalJSON()
-	// w.Write(b)
+	b, _ := json.Marshal(&r)
+	w.Write(b)
 }
