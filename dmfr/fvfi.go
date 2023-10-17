@@ -117,6 +117,10 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 				if len(vc) >= 1_000_000 {
 					continue
 				}
+				// Only use the first 100 bytes
+				if len(v) > 100 {
+					v = v[0:100]
+				}
 				vc[v] = struct{}{}
 			}
 		})
