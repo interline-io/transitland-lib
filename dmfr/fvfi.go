@@ -102,19 +102,18 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 		adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
 			rows++
 			for i, v := range row.Row {
-				if i >= len(row.Header) || v == "" {
+				// Only count the first 100 columns
+				if i >= len(row.Header) || v == "" || i >= 100 {
 					continue
 				}
 				k := row.Header[i]
-				if len(valuesCount) >= 100 {
-					continue
-				}
 				valuesCount[k] += 1
 				vc, ok := valuesUnique[k]
 				if !ok {
 					vc = map[string]struct{}{}
 					valuesUnique[k] = vc
 				}
+				// Store at most 1 million unique values
 				if len(vc) >= 1_000_000 {
 					continue
 				}
