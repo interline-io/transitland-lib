@@ -68,6 +68,7 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 		adapter.OpenFile(fi.Name(), func(r io.Reader) {
 			io.Copy(h, r)
 		})
+
 		// Check if it has a csv-like header
 		csvLike := true
 		header := []string{}
@@ -83,7 +84,7 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 						csvLike = false
 					} else if len(t) > 100 {
 						csvLike = false
-					} else if hsize > 500 {
+					} else if hsize > 1000 {
 						csvLike = false
 					} else if strings.Contains(t, " ") {
 						csvLike = false
@@ -96,10 +97,19 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 				csvLike = false
 			}
 		})
-		rows := int64(0)
-		valuesCount := tt.Counts{}
-		valuesUnique := map[string]map[string]struct{}{}
+
+		// Check the header is sane
+		fvfi := FeedVersionFileInfo{}
+		fvfi.CSVLike = csvLike
+		fvfi.Name = fi.Name()
+		fvfi.Size = fi.Size()
+		fvfi.SHA1 = fmt.Sprintf("%x", h.Sum(nil))
+
+		// Generate statistics if file is csv-like
 		if csvLike {
+			valuesCount := tt.Counts{}
+			valuesUnique := map[string]map[string]struct{}{}
+			rows := int64(0)
 			adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
 				rows++
 				for i, v := range row.Row {
@@ -118,30 +128,23 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 					if len(vc) >= 1_000_000 {
 						continue
 					}
-					// Only use the first 1000 bytes
-					if len(v) > 1000 {
-						v = v[0:1000]
+					// Hash value if over 100 bytes
+					if len(v) > 100 {
+						vh := sha1.New()
+						vh.Write([]byte(v))
+						v = fmt.Sprintf("%x", string(vh.Sum(nil)))
 					}
 					vc[v] = struct{}{}
 				}
 			})
-		}
-		// Check the header is sane
-		fvfi := FeedVersionFileInfo{}
-		fvfi.CSVLike = csvLike
-		if csvLike {
+			fvfi.Rows = rows
 			fvfi.Header = strings.Join(header, ",")
+			fvfi.ValuesCount = valuesCount
+			fvfi.ValuesUnique = tt.Counts{}
+			for k, v := range valuesUnique {
+				fvfi.ValuesUnique[k] = len(v)
+			}
 		}
-		fvfi.Name = fi.Name()
-		fvfi.Size = fi.Size()
-		fvfi.SHA1 = fmt.Sprintf("%x", h.Sum(nil))
-		fvfi.Rows = rows
-		fvfi.ValuesCount = valuesCount
-		fvfi.ValuesUnique = tt.Counts{}
-		for k, v := range valuesUnique {
-			fvfi.ValuesUnique[k] = len(v)
-		}
-		fmt.Printf("%#v\n", fvfi)
 		ret = append(ret, fvfi)
 	}
 	return ret, nil
