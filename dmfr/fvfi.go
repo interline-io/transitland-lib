@@ -99,31 +99,33 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 		rows := int64(0)
 		valuesCount := tt.Counts{}
 		valuesUnique := map[string]map[string]struct{}{}
-		adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
-			rows++
-			for i, v := range row.Row {
-				// Only count the first 100 columns
-				if i >= len(row.Header) || v == "" || i >= 100 {
-					continue
+		if csvLike {
+			adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
+				rows++
+				for i, v := range row.Row {
+					// Only count the first 100 columns
+					if i >= len(row.Header) || v == "" || i >= 100 {
+						continue
+					}
+					k := row.Header[i]
+					valuesCount[k] += 1
+					vc, ok := valuesUnique[k]
+					if !ok {
+						vc = map[string]struct{}{}
+						valuesUnique[k] = vc
+					}
+					// Store at most 1 million unique values
+					if len(vc) >= 1_000_000 {
+						continue
+					}
+					// Only use the first 1000 bytes
+					if len(v) > 1000 {
+						v = v[0:1000]
+					}
+					vc[v] = struct{}{}
 				}
-				k := row.Header[i]
-				valuesCount[k] += 1
-				vc, ok := valuesUnique[k]
-				if !ok {
-					vc = map[string]struct{}{}
-					valuesUnique[k] = vc
-				}
-				// Store at most 1 million unique values
-				if len(vc) >= 1_000_000 {
-					continue
-				}
-				// Only use the first 100 bytes
-				if len(v) > 100 {
-					v = v[0:100]
-				}
-				vc[v] = struct{}{}
-			}
-		})
+			})
+		}
 		// Check the header is sane
 		fvfi := FeedVersionFileInfo{}
 		fvfi.CSVLike = csvLike
@@ -139,6 +141,7 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 		for k, v := range valuesUnique {
 			fvfi.ValuesUnique[k] = len(v)
 		}
+		fmt.Printf("%#v\n", fvfi)
 		ret = append(ret, fvfi)
 	}
 	return ret, nil
