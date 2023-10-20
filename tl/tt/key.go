@@ -11,7 +11,7 @@ func NewKey(v string) Key {
 	return Key{Option[string]{Valid: true, Val: v}}
 }
 
-func (r *Key) Int() int {
+func (r Key) Int() int {
 	a, _ := strconv.Atoi(r.Val)
 	return a
 }

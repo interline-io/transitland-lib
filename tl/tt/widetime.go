@@ -28,7 +28,7 @@ func NewWideTimeFromSeconds(value int) WideTime {
 	return wt
 }
 
-func (wt *WideTime) String() string {
+func (wt WideTime) String() string {
 	if !wt.Valid {
 		return ""
 	}
@@ -42,7 +42,7 @@ func (wt WideTime) Value() (driver.Value, error) {
 	return int64(wt.Seconds), nil
 }
 
-func (wt *WideTime) ToCsv() string {
+func (wt WideTime) ToCsv() string {
 	return wt.String()
 }
 
