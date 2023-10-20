@@ -14,7 +14,7 @@ type Tags struct {
 }
 
 // Keys return the tag keys
-func (r *Tags) Keys() []string {
+func (r Tags) Keys() []string {
 	var ret []string
 	for k := range r.tags {
 		ret = append(ret, k)
@@ -31,7 +31,7 @@ func (r *Tags) Set(k, v string) {
 }
 
 // Get a tag value by key
-func (r *Tags) Get(k string) (string, bool) {
+func (r Tags) Get(k string) (string, bool) {
 	if r.tags == nil {
 		return "", false
 	}
