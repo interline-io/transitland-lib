@@ -557,22 +557,24 @@ func TestNewFeedVersionFileInfosFromReader(t *testing.T) {
 			// 	fmt.Println(strings.ReplaceAll(fmt.Sprintf("%#v,", x), "dmfr.testFvfi", ""))
 			// }
 			for _, check := range tc.expectResult {
-				match := false
-				for _, a := range results {
-					if check.Name == a.Name &&
-						check.Size == a.Size &&
-						check.Rows == a.Rows &&
-						check.Header == a.Header &&
-						check.CSVLike == a.CSVLike &&
-						check.SHA1 == a.SHA1 &&
-						compareCounts(check.ValuesCount, a.ValuesCount) &&
-						compareCounts(check.ValuesUnique, a.ValuesUnique) {
-						match = true
+				t.Run(check.Name, func(t *testing.T) {
+					match := false
+					for _, a := range results {
+						if check.Name == a.Name &&
+							check.Size == a.Size &&
+							check.Rows == a.Rows &&
+							check.Header == a.Header &&
+							check.CSVLike == a.CSVLike &&
+							check.SHA1 == a.SHA1 &&
+							compareCounts(check.ValuesCount, a.ValuesCount) &&
+							compareCounts(check.ValuesUnique, a.ValuesUnique) {
+							match = true
+						}
 					}
-				}
-				if !match {
-					t.Errorf("no match for %#v\n", check)
-				}
+					if !match {
+						t.Errorf("no match for %#v\n", check)
+					}
+				})
 			}
 		})
 	}
