@@ -64,13 +64,21 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
 			continue
 		}
+
+		// First pass to generate SHA1
 		h := sha1.New()
 		adapter.OpenFile(fi.Name(), func(r io.Reader) {
 			io.Copy(h, r)
 		})
 
-		// Check if it has a csv-like header
-		csvLike := true
+		// Prepare result
+		fvfi := FeedVersionFileInfo{}
+		fvfi.Name = fi.Name()
+		fvfi.Size = fi.Size()
+		fvfi.SHA1 = fmt.Sprintf("%x", h.Sum(nil))
+		fvfi.CSVLike = true
+
+		// Check if file has a csv-like header
 		header := []string{}
 		adapter.OpenFile(fi.Name(), func(r io.Reader) {
 			csvr := csv.NewReader(utfbom.SkipOnly(r))
@@ -81,40 +89,37 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]FeedVersionFileI
 					t := strings.TrimSpace(v)
 					hsize += len(t)
 					if !utf8.ValidString(t) {
-						csvLike = false
+						fvfi.CSVLike = false
 					} else if len(t) > 100 {
-						csvLike = false
+						// max column name size
+						fvfi.CSVLike = false
 					} else if hsize > 1000 {
-						csvLike = false
+						// max header row bytes size
+						fvfi.CSVLike = false
 					} else if strings.Contains(t, " ") {
-						csvLike = false
+						// no spaces in column names
+						fvfi.CSVLike = false
 					} else {
 						header = append(header, t)
 					}
 				}
 			}
-			if len(header) == 0 {
-				csvLike = false
+			// Minimum 2 and maximum 100 columns for stats generation
+			if len(header) < 2 || len(header) > 100 {
+				fvfi.CSVLike = false
 			}
 		})
 
-		// Check the header is sane
-		fvfi := FeedVersionFileInfo{}
-		fvfi.CSVLike = csvLike
-		fvfi.Name = fi.Name()
-		fvfi.Size = fi.Size()
-		fvfi.SHA1 = fmt.Sprintf("%x", h.Sum(nil))
-
 		// Generate statistics if file is csv-like
-		if csvLike {
+		if fvfi.CSVLike {
 			valuesCount := tt.Counts{}
 			valuesUnique := map[string]map[string]struct{}{}
 			rows := int64(0)
 			adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
 				rows++
 				for i, v := range row.Row {
-					// Only count the first 100 columns
-					if i >= len(row.Header) || v == "" || i >= 100 {
+					// Skip empty values
+					if i >= len(row.Header) || v == "" {
 						continue
 					}
 					k := row.Header[i]
