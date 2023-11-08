@@ -15,6 +15,7 @@ type Result struct {
 	SHA1                 string                         `json:"sha1"`
 	EarliestCalendarDate tl.Date                        `json:"earliest_calendar_date"`
 	LatestCalendarDate   tl.Date                        `json:"latest_calendar_date"`
+	Timezone             string                         `json:"timezone"`
 	Agencies             []tl.Agency                    `json:"agencies"`
 	Routes               []tl.Route                     `json:"routes"`
 	Stops                []tl.Stop                      `json:"stops"`

@@ -150,6 +150,13 @@ func (v *Validator) Validate() (*Result, error) {
 	result.EarliestCalendarDate = fv.EarliestCalendarDate
 	result.LatestCalendarDate = fv.LatestCalendarDate
 
+	// get service window and timezone
+	fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
+	_ = err
+	result.Timezone = fvsw.DefaultTimezone.Val
+	tz, _ := time.LoadLocation(result.Timezone)
+	now := time.Now().In(tz)
+
 	// Main validation
 	cpResult := v.copier.Copy()
 	if cpResult == nil {
@@ -171,8 +178,6 @@ func (v *Validator) Validate() (*Result, error) {
 		} else {
 			rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
 			rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
-			tz, _ := time.LoadLocation("America/Los_Angeles")
-			now := time.Now().In(tz)
 			tripUpdateStats, err := v.rtValidator.TripUpdateStats(now, msg)
 			if err != nil {
 				rterrs = append(rterrs, err)
