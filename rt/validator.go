@@ -15,6 +15,7 @@ type tripInfo struct {
 	DirectionID   int
 	ServiceID     string
 	ShapeID       string
+	RouteID       string
 	StartTime     tt.WideTime
 	EndTime       tt.WideTime
 }
@@ -24,6 +25,7 @@ type stopInfo struct {
 }
 
 type routeInfo struct {
+	AgencyID  string
 	RouteType int
 }
 
@@ -79,7 +81,10 @@ func (fi *Validator) Validate(ent tl.Entity) []error {
 	case *tl.Stop:
 		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
 	case *tl.Route:
-		fi.routeInfo[v.RouteID] = routeInfo{RouteType: v.RouteType}
+		fi.routeInfo[v.RouteID] = routeInfo{
+			RouteType: v.RouteType,
+			AgencyID:  v.AgencyID,
+		}
 	case *tl.Service:
 		fi.services[v.ServiceID] = v
 	case *tl.Trip:
@@ -87,6 +92,7 @@ func (fi *Validator) Validate(ent tl.Entity) []error {
 			DirectionID: v.DirectionID,
 			ServiceID:   v.ServiceID,
 			ShapeID:     v.ShapeID.String(),
+			RouteID:     v.RouteID,
 		}
 		if len(v.StopTimes) > 0 {
 			ti.StartTime = v.StopTimes[0].DepartureTime
@@ -369,39 +375,47 @@ func (fi *Validator) ActiveTrips(now time.Time) []string {
 }
 
 type TripUpdateStats struct {
+	AgencyID           string    `json:"agency_id"`
+	RouteID            string    `json:"route_id"`
 	TripScheduledCount int       `json:"trip_scheduled_count"`
 	TripMatchCount     int       `json:"trip_match_count"`
 	Date               time.Time `json:"date"`
 }
 
-func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) (TripUpdateStats, error) {
-	schedTrips := fi.ActiveTrips(now)
+func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]TripUpdateStats, error) {
 	tripHasUpdate := map[string]bool{}
-	msgTripIds := map[string]bool{}
 	for _, ent := range msg.Entity {
 		tu := ent.TripUpdate
 		if tu == nil {
 			continue
 		}
-		msgTripIds[tu.GetTrip().GetTripId()] = true
+		tripHasUpdate[tu.GetTrip().GetTripId()] = true
 	}
-	for _, k := range schedTrips {
-		tripHasUpdate[k] = false
-		if msgTripIds[k] {
-			tripHasUpdate[k] = true
+	type statAggKey struct {
+		AgencyID string
+		RouteID  string
+	}
+	statAgg := map[statAggKey]TripUpdateStats{}
+	for _, tripId := range fi.ActiveTrips(now) {
+		trip := fi.tripInfo[tripId]
+		k := statAggKey{
+			RouteID:  trip.RouteID,
+			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
 		}
-	}
-	tuCount := 0
-	for _, v := range tripHasUpdate {
-		if v {
-			tuCount += 1
+		stat := statAgg[k]
+		stat.AgencyID = k.AgencyID
+		stat.RouteID = k.RouteID
+		stat.TripScheduledCount += 1
+		if tripHasUpdate[tripId] {
+			stat.TripMatchCount += 1
 		}
+		statAgg[k] = stat
 	}
-	return TripUpdateStats{
-		TripScheduledCount: len(tripHasUpdate),
-		TripMatchCount:     tuCount,
-		Date:               now,
-	}, nil
+	var ret []TripUpdateStats
+	for _, v := range statAgg {
+		ret = append(ret, v)
+	}
+	return ret, nil
 }
 
 func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []error) {
@@ -409,11 +423,14 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 }
 
 type VehiclePositionStats struct {
+	RouteID            string
+	AgencyID           string
 	TripScheduledCount int
 	TripMatchCount     int
 }
 
-func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) (VehiclePositionStats, error) {
+func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([]VehiclePositionStats, error) {
+	tripHasPosition := map[string]bool{}
 	for _, ent := range msg.Entity {
 		vp := ent.Vehicle
 		if vp == nil {
@@ -421,7 +438,6 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) (V
 		}
 		pos := vp.GetPosition()
 		posPt := xy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
-		tripHasPosition := map[string]bool{}
 		if td := vp.Trip; td != nil && pos != nil {
 			tripId := td.GetTripId()
 			trip, ok := fi.tripInfo[tripId]
@@ -435,10 +451,32 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) (V
 			}
 		}
 	}
-	for _, schedTrip := range fi.ActiveTrips(now) {
-		_ = schedTrip
+	type statAggKey struct {
+		RouteID  string
+		AgencyID string
 	}
-	return VehiclePositionStats{}, nil
+	statAgg := map[statAggKey]VehiclePositionStats{}
+	for _, tripId := range fi.ActiveTrips(now) {
+		trip := fi.tripInfo[tripId]
+		k := statAggKey{
+			RouteID:  trip.RouteID,
+			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
+		}
+		stat := statAgg[k]
+		stat.AgencyID = k.AgencyID
+		stat.RouteID = k.RouteID
+		stat.TripScheduledCount += 1
+		if tripHasPosition[tripId] {
+			stat.TripMatchCount += 1
+		}
+		statAgg[k] = stat
+	}
+	var ret []VehiclePositionStats
+	for _, v := range statAgg {
+		ret = append(ret, v)
+	}
+	return ret, nil
+
 }
 
 type EntityCounts struct {
