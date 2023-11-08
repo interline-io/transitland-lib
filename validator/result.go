@@ -25,8 +25,10 @@ type Result struct {
 }
 
 type RealtimeResult struct {
-	Url             string             `json:"url"`
-	Json            map[string]any     `json:"json"`
-	TripUpdateStats rt.TripUpdateStats `json:"trip_update_stats"`
-	Errors          []error
+	Url                  string                  `json:"url"`
+	Json                 map[string]any          `json:"json"`
+	EntityCounts         rt.EntityCounts         `json:"entity_counts"`
+	TripUpdateStats      rt.TripUpdateStats      `json:"trip_update_stats"`
+	VehiclePositionStats rt.VehiclePositionStats `json:"vehicle_position_stats"`
+	Errors               []error
 }

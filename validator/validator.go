@@ -169,14 +169,23 @@ func (v *Validator) Validate() (*Result, error) {
 		if err != nil {
 			rterrs = append(rterrs, err)
 		} else {
+			rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
 			rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
 			tz, _ := time.LoadLocation("America/Los_Angeles")
-			tripUpdateStats, err := v.rtValidator.TripUpdateStats(time.Now().In(tz), msg)
+			now := time.Now().In(tz)
+			tripUpdateStats, err := v.rtValidator.TripUpdateStats(now, msg)
 			if err != nil {
 				rterrs = append(rterrs, err)
 			} else {
 				rtResult.TripUpdateStats = tripUpdateStats
 			}
+			vehiclePositionStats, err := v.rtValidator.VehiclePositionStats(now, msg)
+			if err != nil {
+				rterrs = append(rterrs, err)
+			} else {
+				rtResult.VehiclePositionStats = vehiclePositionStats
+			}
+
 		}
 		result.HandleError(filepath.Base(fn), rterrs)
 		if len(rterrs) > v.Options.ErrorLimit {

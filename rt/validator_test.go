@@ -1,7 +1,10 @@
 package rt
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
@@ -64,11 +67,34 @@ func TestValidateAlert(t *testing.T) {
 
 }
 
-func TestValidateTripUpdatePercentage(t *testing.T) {
-
+func TestTripUpdateStats(t *testing.T) {
+	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-trip-updates.pb"))
+	if err != nil {
+		t.Error(err)
+	}
+	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ex := NewValidator()
+	cp.AddExtension(ex)
+	result := cp.Copy()
+	_ = result
+	tz, _ := time.LoadLocation("America/Los_Angeles")
+	now := time.Date(2023, 11, 7, 5, 30, 0, 0, tz)
+	stats, err := ex.TripUpdateStats(now, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jj, _ := json.Marshal(stats)
+	fmt.Println(string(jj))
 }
 
-func TestValidateVehiclePositions(t *testing.T) {
+func TestVehiclePositionStats(t *testing.T) {
 	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
@@ -85,5 +111,12 @@ func TestValidateVehiclePositions(t *testing.T) {
 	cp.AddExtension(ex)
 	result := cp.Copy()
 	_ = result
-	ex.ValidateFeedMessage(msg, nil)
+	tz, _ := time.LoadLocation("America/Los_Angeles")
+	now := time.Date(2023, 11, 7, 5, 30, 0, 0, tz)
+	stats, err := ex.VehiclePositionStats(now, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jj, _ := json.Marshal(stats)
+	fmt.Println(string(jj))
 }

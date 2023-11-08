@@ -369,9 +369,9 @@ func (fi *Validator) ActiveTrips(now time.Time) []string {
 }
 
 type TripUpdateStats struct {
-	TripScheduledCount   int       `json:"trip_scheduled_count,omitempty"`
-	TripUpdateMatchCount int       `json:"trip_update_match_count,omitempty"`
-	Date                 time.Time `json:"date,omitempty"`
+	TripScheduledCount int       `json:"trip_scheduled_count"`
+	TripMatchCount     int       `json:"trip_match_count"`
+	Date               time.Time `json:"date"`
 }
 
 func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) (TripUpdateStats, error) {
@@ -379,9 +379,11 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) (TripUp
 	tripHasUpdate := map[string]bool{}
 	msgTripIds := map[string]bool{}
 	for _, ent := range msg.Entity {
-		if tu := ent.TripUpdate; tu != nil {
-			msgTripIds[tu.GetTrip().GetTripId()] = true
+		tu := ent.TripUpdate
+		if tu == nil {
+			continue
 		}
+		msgTripIds[tu.GetTrip().GetTripId()] = true
 	}
 	for _, k := range schedTrips {
 		tripHasUpdate[k] = false
@@ -396,32 +398,69 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) (TripUp
 		}
 	}
 	return TripUpdateStats{
-		TripScheduledCount:   len(tripHasUpdate),
-		TripUpdateMatchCount: tuCount,
-		Date:                 now,
+		TripScheduledCount: len(tripHasUpdate),
+		TripMatchCount:     tuCount,
+		Date:               now,
 	}, nil
 }
 
 func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []error) {
-	pos := ent.GetPosition()
-	posPt := xy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
-	tripHasPosition := map[string]bool{}
-	if td := ent.Trip; td != nil && pos != nil {
-		tripId := td.GetTripId()
-		trip, ok := fi.tripInfo[tripId]
-		shp := fi.geomCache.GetShape(trip.ShapeID)
-		tripHasPosition[tripId] = true
-		if ok && trip.ShapeID != "" && len(shp) > 0 {
-			fmt.Println("Vehicle position:", posPt)
-			nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
-			fmt.Println("\ttrip:", tripId, "shape:", trip.ShapeID)
-			fmt.Println("\tnearestPoint:", nearestPoint, "dist:", xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat))
+	return nil
+}
+
+type VehiclePositionStats struct {
+	TripScheduledCount int
+	TripMatchCount     int
+}
+
+func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) (VehiclePositionStats, error) {
+	for _, ent := range msg.Entity {
+		vp := ent.Vehicle
+		if vp == nil {
+			continue
+		}
+		pos := vp.GetPosition()
+		posPt := xy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
+		tripHasPosition := map[string]bool{}
+		if td := vp.Trip; td != nil && pos != nil {
+			tripId := td.GetTripId()
+			trip, ok := fi.tripInfo[tripId]
+			shp := fi.geomCache.GetShape(trip.ShapeID)
+			tripHasPosition[tripId] = true
+			if ok && trip.ShapeID != "" && len(shp) > 0 {
+				fmt.Println("Vehicle position:", posPt)
+				nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
+				fmt.Println("\ttrip:", tripId, "shape:", trip.ShapeID)
+				fmt.Println("\tnearestPoint:", nearestPoint, "dist:", xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat))
+			}
 		}
 	}
-	for _, schedTrip := range fi.ActiveTrips(time.Now()) {
+	for _, schedTrip := range fi.ActiveTrips(now) {
 		_ = schedTrip
 	}
-	return nil
+	return VehiclePositionStats{}, nil
+}
+
+type EntityCounts struct {
+	Alert      int
+	TripUpdate int
+	Vehicle    int
+}
+
+func (fi *Validator) EntityCounts(msg *pb.FeedMessage) EntityCounts {
+	ret := EntityCounts{}
+	for _, ent := range msg.Entity {
+		if ent.Vehicle != nil {
+			ret.Vehicle += 1
+		}
+		if ent.TripUpdate != nil {
+			ret.TripUpdate += 1
+		}
+		if ent.Alert != nil {
+			ret.Alert += 1
+		}
+	}
+	return ret
 }
 
 func ne(msg string, code int) *RealtimeError {
