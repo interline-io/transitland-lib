@@ -3,6 +3,7 @@ package validator
 import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -24,7 +25,8 @@ type Result struct {
 }
 
 type RealtimeResult struct {
-	Url    string         `json:"url"`
-	Json   map[string]any `json:"json"`
-	Errors []error
+	Url             string             `json:"url"`
+	Json            map[string]any     `json:"json"`
+	TripUpdateStats rt.TripUpdateStats `json:"trip_update_stats"`
+	Errors          []error
 }

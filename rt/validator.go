@@ -1,6 +1,7 @@
 package rt
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/interline-io/transitland-lib/internal/xy"
@@ -12,6 +13,10 @@ import (
 type tripInfo struct {
 	UsesFrequency bool
 	DirectionID   int
+	ServiceID     string
+	ShapeID       string
+	StartTime     tt.WideTime
+	EndTime       tt.WideTime
 }
 
 type stopInfo struct {
@@ -28,6 +33,7 @@ type Validator struct {
 	tripInfo  map[string]tripInfo
 	routeInfo map[string]routeInfo
 	stopInfo  map[string]stopInfo
+	services  map[string]*tl.Service
 	geomCache *xy.GeomCache // shared with copier
 }
 
@@ -37,6 +43,7 @@ func NewValidator() *Validator {
 		tripInfo:  map[string]tripInfo{},
 		routeInfo: map[string]routeInfo{},
 		stopInfo:  map[string]stopInfo{},
+		services:  map[string]*tl.Service{},
 		geomCache: xy.NewGeomCache(),
 	}
 }
@@ -73,8 +80,19 @@ func (fi *Validator) Validate(ent tl.Entity) []error {
 		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
 	case *tl.Route:
 		fi.routeInfo[v.RouteID] = routeInfo{RouteType: v.RouteType}
+	case *tl.Service:
+		fi.services[v.ServiceID] = v
 	case *tl.Trip:
-		fi.tripInfo[v.TripID] = tripInfo{DirectionID: v.DirectionID}
+		ti := tripInfo{
+			DirectionID: v.DirectionID,
+			ServiceID:   v.ServiceID,
+			ShapeID:     v.ShapeID.String(),
+		}
+		if len(v.StopTimes) > 0 {
+			ti.StartTime = v.StopTimes[0].DepartureTime
+			ti.EndTime = v.StopTimes[len(v.StopTimes)-1].ArrivalTime
+		}
+		fi.tripInfo[v.TripID] = ti
 	case *tl.Frequency:
 		a := fi.tripInfo[v.TripID]
 		a.UsesFrequency = true
@@ -143,7 +161,7 @@ func (fi *Validator) ValidateFeedEntity(ent *pb.FeedEntity, current *pb.FeedMess
 		errs = append(errs, fi.ValidateTripUpdate(ent.GetTripUpdate(), current)...)
 	}
 	if ent.Vehicle != nil {
-		// TODO: ValidateVehiclePosition
+		errs = append(errs, fi.ValidateVehiclePosition(ent.GetVehicle())...)
 	}
 	if ent.Alert != nil {
 		// TODO: ValidateAlert
@@ -250,7 +268,7 @@ func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, cu
 	case pb.TripUpdate_StopTimeUpdate_SKIPPED:
 		// ok
 	}
-	if st.GetArrival().GetTime() > st.GetDeparture().GetTime() {
+	if st.GetArrival().GetTime() > 0 && st.GetDeparture().GetTime() > 0 && st.GetArrival().GetTime() > st.GetDeparture().GetTime() {
 		errs = append(errs, ne("StopTimeUpdate arrival time is later than departure time", 25))
 	}
 	// ValidateStopTimeEvent .
@@ -300,6 +318,110 @@ func (fi *Validator) ValidateTripDescriptor(td *pb.TripDescriptor, current *pb.F
 		}
 	}
 	return errs
+}
+
+func (fi *Validator) ActiveTrips(now time.Time) []string {
+	var ret []string
+	nowWt := tt.NewWideTimeFromSeconds(now.Hour()*3600 + now.Minute()*60 + now.Second())
+	nowSvc := map[string]bool{}
+	tripHasUpdate := map[string]bool{}
+	msgTripIds := map[string]bool{}
+	for k, v := range fi.tripInfo {
+		svc, ok := fi.services[v.ServiceID]
+		if !ok {
+			// log.Debug().
+			// 	Str("service", v.ServiceID).
+			// 	Str("trip", k).
+			// 	Msg("no service, skipping")
+			continue
+		}
+		sched, ok := nowSvc[svc.ServiceID]
+		if !ok {
+			sched = svc.IsActive(now)
+			nowSvc[svc.ServiceID] = sched
+		}
+		if !sched {
+			// log.Debug().
+			// 	Str("date", now.Format("2006-02-03")).
+			// 	Str("service", v.ServiceID).
+			// 	Str("trip", k).
+			// 	Msg("not scheduled, skipping")
+			continue
+		}
+		if v.StartTime.Seconds > nowWt.Seconds || v.EndTime.Seconds < nowWt.Seconds {
+			// log.Debug().
+			// 	Str("date", now.Format("2006-02-03")).
+			// 	Str("cur_time", nowWt.String()).
+			// 	Str("trip_start", v.StartTime.String()).
+			// 	Str("trip_end", v.EndTime.String()).
+			// 	Str("service", v.ServiceID).
+			// 	Str("trip", k).
+			// 	Msg("outside time, skipping")
+			continue
+		}
+		ret = append(ret, k)
+		tripHasUpdate[k] = false
+		if msgTripIds[k] {
+			tripHasUpdate[k] = true
+		}
+	}
+	return ret
+}
+
+type TripUpdateStats struct {
+	TripScheduledCount   int       `json:"trip_scheduled_count,omitempty"`
+	TripUpdateMatchCount int       `json:"trip_update_match_count,omitempty"`
+	Date                 time.Time `json:"date,omitempty"`
+}
+
+func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) (TripUpdateStats, error) {
+	schedTrips := fi.ActiveTrips(now)
+	tripHasUpdate := map[string]bool{}
+	msgTripIds := map[string]bool{}
+	for _, ent := range msg.Entity {
+		if tu := ent.TripUpdate; tu != nil {
+			msgTripIds[tu.GetTrip().GetTripId()] = true
+		}
+	}
+	for _, k := range schedTrips {
+		tripHasUpdate[k] = false
+		if msgTripIds[k] {
+			tripHasUpdate[k] = true
+		}
+	}
+	tuCount := 0
+	for _, v := range tripHasUpdate {
+		if v {
+			tuCount += 1
+		}
+	}
+	return TripUpdateStats{
+		TripScheduledCount:   len(tripHasUpdate),
+		TripUpdateMatchCount: tuCount,
+		Date:                 now,
+	}, nil
+}
+
+func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []error) {
+	pos := ent.GetPosition()
+	posPt := xy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
+	tripHasPosition := map[string]bool{}
+	if td := ent.Trip; td != nil && pos != nil {
+		tripId := td.GetTripId()
+		trip, ok := fi.tripInfo[tripId]
+		shp := fi.geomCache.GetShape(trip.ShapeID)
+		tripHasPosition[tripId] = true
+		if ok && trip.ShapeID != "" && len(shp) > 0 {
+			fmt.Println("Vehicle position:", posPt)
+			nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
+			fmt.Println("\ttrip:", tripId, "shape:", trip.ShapeID)
+			fmt.Println("\tnearestPoint:", nearestPoint, "dist:", xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat))
+		}
+	}
+	for _, schedTrip := range fi.ActiveTrips(time.Now()) {
+		_ = schedTrip
+	}
+	return nil
 }
 
 func ne(msg string, code int) *RealtimeError {

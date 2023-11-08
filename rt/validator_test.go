@@ -3,6 +3,8 @@ package rt
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters/empty"
+	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
@@ -58,10 +60,30 @@ func TestValidateTripUpdate(t *testing.T) {
 	}
 }
 
-func TestValidateVehiclePosition(t *testing.T) {
+func TestValidateAlert(t *testing.T) {
 
 }
 
-func TestValidateAlert(t *testing.T) {
+func TestValidateTripUpdatePercentage(t *testing.T) {
 
+}
+
+func TestValidateVehiclePositions(t *testing.T) {
+	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-vehicle-positions.pb"))
+	if err != nil {
+		t.Error(err)
+	}
+	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ex := NewValidator()
+	cp.AddExtension(ex)
+	result := cp.Copy()
+	_ = result
+	ex.ValidateFeedMessage(msg, nil)
 }
