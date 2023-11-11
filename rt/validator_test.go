@@ -141,11 +141,37 @@ func TestValidatorErrors(t *testing.T) {
 
 	tcs := []struct {
 		name          string
+		field         string
 		static        string
 		rt            string
 		expectError   mapset.Set[int]
 		expectWarning mapset.Set[int]
 	}{
+		{
+			name:        "ct-not-posix-1",
+			static:      rp("ct.zip"),
+			rt:          rpe("ct-not-posix-1.json"),
+			expectError: ms(1),
+		},
+		{
+			name:        "ct-not-posix-2",
+			static:      rp("ct.zip"),
+			rt:          rpe("ct-not-posix-2.json"),
+			expectError: ms(1),
+		},
+		{
+			name:        "ct-not-posix-3",
+			static:      rp("ct.zip"),
+			rt:          rpe("ct-not-posix-3.json"),
+			expectError: ms(1),
+		},
+		{
+			name:        "ct-not-posix-4",
+			static:      rp("ct.zip"),
+			rt:          rpe("ct-not-posix-4.json"),
+			expectError: ms(1),
+		},
+
 		{
 			name:        "ct-tu-invalid-stop",
 			static:      rp("ct.zip"),

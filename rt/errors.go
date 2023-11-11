@@ -68,8 +68,9 @@ var (
 
 // RealtimeError is a GTFS RealTime error.
 type RealtimeError struct {
-	Code int
-	msg  string
+	Code  int
+	Field string
+	msg   string
 }
 
 func (err RealtimeError) Error() string {
