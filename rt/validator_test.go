@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -131,16 +133,29 @@ func TestValidatorErrors(t *testing.T) {
 	rpe := func(p string) string {
 		return testutil.RelPath(filepath.Join("test/data/rt/errors", p))
 	}
-	ms := func(vals ...int) mapset.Set[int] {
-		a := mapset.NewSet[int]()
-		for _, v := range vals {
-			a.Add(v)
+	sor := func(a, b string) string {
+		if a != "" {
+			return a
 		}
-		return a
+		return b
+	}
+	// ms := func(vals ...int) mapset.Set[int] {
+	// 	a := mapset.NewSet[int]()
+	// 	for _, v := range vals {
+	// 		a.Add(v)
+	// 	}
+	// 	return a
+	// }
+
+	type match struct {
+		field string
+		err   int
+		warn  int
 	}
 
 	tcs := []struct {
 		name          string
+		matches       []match
 		field         string
 		static        string
 		rt            string
@@ -148,47 +163,50 @@ func TestValidatorErrors(t *testing.T) {
 		expectWarning mapset.Set[int]
 	}{
 		{
-			name:        "ct-not-posix-1",
-			static:      rp("ct.zip"),
-			rt:          rpe("ct-not-posix-1.json"),
-			expectError: ms(1),
+			rt: rpe("1.header-timestamp.json"),
 		},
 		{
-			name:        "ct-not-posix-2",
-			static:      rp("ct.zip"),
-			rt:          rpe("ct-not-posix-2.json"),
-			expectError: ms(1),
+			rt: rpe("1.arrival-time.json"),
 		},
 		{
-			name:        "ct-not-posix-3",
-			static:      rp("ct.zip"),
-			rt:          rpe("ct-not-posix-3.json"),
-			expectError: ms(1),
+			rt: rpe("1.departure-time.json"),
 		},
 		{
-			name:        "ct-not-posix-4",
-			static:      rp("ct.zip"),
-			rt:          rpe("ct-not-posix-4.json"),
-			expectError: ms(1),
+			rt: rpe("1.trip_update-timestamp.json"),
 		},
-
 		{
-			name:        "ct-tu-invalid-stop",
-			static:      rp("ct.zip"),
-			rt:          rpe("ct-tu-invalid-stop.json"),
-			expectError: ms(11),
+			rt: rpe("11.stop_time_update-stop_id.json"),
+		},
+		{
+			rt: rpe("2.trip_update-stop_time_update.json"),
 		},
 	}
 	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(sor(tc.name, tc.rt), func(t *testing.T) {
+			var expMatches []match
+			if fnSplit := strings.Split(filepath.Base(tc.rt), "."); len(fnSplit) > 2 {
+				fnCode, err := strconv.Atoi(fnSplit[0])
+				if err != nil {
+					t.Fatal(err)
+				}
+				expMatches = append(expMatches, match{
+					err:   fnCode,
+					field: strings.ReplaceAll(fnSplit[1], "-", "."),
+				})
+			}
+			expMatches = append(expMatches, tc.matches...)
+
+			// Read RT
 			msg, err := ReadRTJson(tc.rt)
 			if err != nil {
 				t.Fatal(err)
 			}
-			r, err := tlcsv.NewReader(tc.static)
+			// Read static
+			r, err := tlcsv.NewReader(sor(tc.static, rp("ct.zip")))
 			if err != nil {
 				t.Fatal(err)
 			}
+			// Validate
 			cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
 			if err != nil {
 				t.Fatal(err)
@@ -197,25 +215,37 @@ func TestValidatorErrors(t *testing.T) {
 			cp.AddExtension(ex)
 			result := cp.Copy()
 			_ = result
+			// Validate feed message
 			rterrs := ex.ValidateFeedMessage(msg, nil)
-			foundErrs := mapset.NewSet[int]()
-			foundWarns := mapset.NewSet[int]()
+
+			// Check results
+			foundSet := mapset.NewSet[match]()
 			for _, rterr := range rterrs {
 				if a, ok := rterr.(*RealtimeError); ok {
-					foundErrs.Add(a.Code)
+					foundSet.Add(match{
+						field: a.Field,
+						err:   a.Code,
+					})
 				}
 				if a, ok := rterr.(*RealtimeWarning); ok {
-					foundWarns.Add(a.Code)
+					foundSet.Add(match{
+						field: a.Field,
+						warn:  a.Code,
+					})
 				}
 			}
-			if tc.expectError != nil {
-				if d := tc.expectError.SymmetricDifference(foundErrs); d.Cardinality() > 0 {
-					t.Errorf("expected errors %v, got %v", tc.expectError, foundErrs)
+			expSet := mapset.NewSet[match]()
+			for _, m := range expMatches {
+				expSet.Add(m)
+			}
+			for _, exp := range expMatches {
+				if !foundSet.Contains(exp) {
+					t.Errorf("expected to find error %v", exp)
 				}
 			}
-			if tc.expectWarning != nil {
-				if d := tc.expectWarning.SymmetricDifference(foundErrs); d.Cardinality() > 0 {
-					t.Errorf("expected warnings %v, got %v", tc.expectWarning, foundWarns)
+			for got := range foundSet.Iter() {
+				if !expSet.Contains(got) {
+					t.Errorf("got unexpected error %v", got)
 				}
 			}
 		})

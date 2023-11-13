@@ -79,8 +79,9 @@ func (err RealtimeError) Error() string {
 
 // RealtimeWarning is a GTFS RealTime warning.
 type RealtimeWarning struct {
-	Code int
-	msg  string
+	Code  int
+	Field string
+	msg   string
 }
 
 func (err RealtimeWarning) Error() string {

@@ -230,10 +230,10 @@ func (fi *Validator) ValidateTripUpdate(trip *pb.TripUpdate, current *pb.FeedMes
 			seq = s2
 		}
 		if st.Arrival != nil && st.Arrival.Time != nil && !checkTimestamp(uint64(st.GetArrival().GetTime())) {
-			errs = append(errs, ne("Arrival time is out of bounds", "stop_time_update.arrival.time", 1))
+			errs = append(errs, ne("Arrival time is out of bounds", "arrival.time", 1))
 		}
 		if st.Departure != nil && st.Departure.Time != nil && !checkTimestamp(uint64(st.GetDeparture().GetTime())) {
-			errs = append(errs, ne("Departure time is out of bounds", "stop_time_update.departure.time", 1))
+			errs = append(errs, ne("Departure time is out of bounds", "departure.time", 1))
 		}
 		// if st.GetArrival().Time != nil {
 		if st.Arrival != nil && st.Arrival.Time != nil {
@@ -259,12 +259,12 @@ func (fi *Validator) ValidateTripUpdate(trip *pb.TripUpdate, current *pb.FeedMes
 // ValidateStopTimeUpdate .
 func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, current *pb.FeedMessage) (errs []error) {
 	if st.StopId == nil && st.StopSequence == nil {
-		errs = append(errs, ne("StopTimeUpdate must specify stop_sequence or stop_id", "trip_update.stop_time_update.stop_id", 40))
+		errs = append(errs, ne("StopTimeUpdate must specify stop_sequence or stop_id", "stop_time_update.stop_id", 40))
 	}
 	if st.StopId != nil {
 		v, ok := fi.stopInfo[*st.StopId]
 		if !ok {
-			errs = append(errs, ne("StopTimeUpdate references unknown stop_id", "trip_update.stop_time_update.stop_id", 11))
+			errs = append(errs, ne("StopTimeUpdate references unknown stop_id", "stop_time_update.stop_id", 11))
 		}
 		if v.LocationType != 0 {
 			errs = append(errs, ne("StopTimeUpdate cannot reference stop where location_type is not 0", "stop_time_update.stop_id", 15))
