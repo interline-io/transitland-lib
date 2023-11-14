@@ -3,6 +3,7 @@ package rt
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -152,34 +153,21 @@ func TestValidatorErrors(t *testing.T) {
 		err   int
 		warn  int
 	}
+	type testCase struct {
+		name    string
+		matches []match
+		static  string
+		rt      string
+	}
+	tcs := []testCase{}
 
-	tcs := []struct {
-		name          string
-		matches       []match
-		field         string
-		static        string
-		rt            string
-		expectError   mapset.Set[int]
-		expectWarning mapset.Set[int]
-	}{
-		{
-			rt: rpe("1.header-timestamp.json"),
-		},
-		{
-			rt: rpe("1.arrival-time.json"),
-		},
-		{
-			rt: rpe("1.departure-time.json"),
-		},
-		{
-			rt: rpe("1.trip_update-timestamp.json"),
-		},
-		{
-			rt: rpe("11.stop_time_update-stop_id.json"),
-		},
-		{
-			rt: rpe("2.trip_update-stop_time_update.json"),
-		},
+	// Automatic
+	fns, err := os.ReadDir(rpe(""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fn := range fns {
+		tcs = append(tcs, testCase{rt: rpe(fn.Name())})
 	}
 	for _, tc := range tcs {
 		t.Run(sor(tc.name, tc.rt), func(t *testing.T) {

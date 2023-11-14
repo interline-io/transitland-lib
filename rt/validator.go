@@ -230,10 +230,10 @@ func (fi *Validator) ValidateTripUpdate(trip *pb.TripUpdate, current *pb.FeedMes
 			seq = s2
 		}
 		if st.Arrival != nil && st.Arrival.Time != nil && !checkTimestamp(uint64(st.GetArrival().GetTime())) {
-			errs = append(errs, ne("Arrival time is out of bounds", "arrival.time", 1))
+			errs = append(errs, ne("Arrival time is out of bounds", "stop_time_update.arrival.time", 1))
 		}
 		if st.Departure != nil && st.Departure.Time != nil && !checkTimestamp(uint64(st.GetDeparture().GetTime())) {
-			errs = append(errs, ne("Departure time is out of bounds", "departure.time", 1))
+			errs = append(errs, ne("Departure time is out of bounds", "stop_time_update.departure.time", 1))
 		}
 		// if st.GetArrival().Time != nil {
 		if st.Arrival != nil && st.Arrival.Time != nil {
@@ -414,6 +414,7 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 		stat := statAgg[k]
 		stat.AgencyID = k.AgencyID
 		stat.RouteID = k.RouteID
+		stat.Date = now
 		stat.TripScheduledCount += 1
 		if tripHasUpdate[tripId] {
 			stat.TripMatchCount += 1

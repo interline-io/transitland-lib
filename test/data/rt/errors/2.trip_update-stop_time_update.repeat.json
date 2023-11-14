@@ -16,10 +16,23 @@
             "startDate": "20231107",
             "scheduleRelationship": "SCHEDULED"
           },
+          "vehicle": {
+            "id": "124",
+            "label": "",
+            "licensePlate": ""
+          },
           "stopTimeUpdate": [
             {
+              "stopSequence": 20,
+              "stopId": "70232",
+              "departure": {
+                "time": "1699405504"
+              },
+              "scheduleRelationship": "SCHEDULED"
+            },
+            {
               "stopSequence": 21,
-              "stopId": "70242-unknown",
+              "stopId": "70242",
               "arrival": {
                 "time": "1699405801"
               },
@@ -27,10 +40,21 @@
                 "time": "1699405801"
               },
               "scheduleRelationship": "SCHEDULED"
-            }
+            },
+            {
+              "stopSequence": 19,
+              "stopId": "70262",
+              "arrival": {
+                "time": "1699406176"
+              },
+              "departure": {
+                "time": "1699406176"
+              },
+              "scheduleRelationship": "SCHEDULED"
+            }            
           ],
           "timestamp": "1699405520"
         }
-      }
+      }         
     ]
   }
