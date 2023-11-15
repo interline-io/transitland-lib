@@ -82,26 +82,25 @@ func (em *Marker) Filter(reader tl.Reader, fm map[string][]string, ex map[string
 	}
 
 	// Find all children
-	result := map[*graph.Node]bool{}
+	em.found = map[*graph.Node]bool{}
 	em.graph.Search(foundNodes[:], false, func(n *graph.Node) {
-		result[n] = true
+		em.Mark(n.Filename, n.ID, true)
 	})
 
 	// Now find parents of all found children
 	check2 := []*graph.Node{}
-	for k := range result {
+	for k := range em.found {
 		check2 = append(check2, k)
 	}
 	em.graph.Search(check2[:], true, func(n *graph.Node) {
-		result[n] = true
+		em.Mark(n.Filename, n.ID, true)
 	})
 
 	// Now find children of all excluded nodes
 	em.graph.Search(excludeNodes[:], false, func(n *graph.Node) {
-		result[n] = false
+		em.Mark(n.Filename, n.ID, false)
 	})
 
-	em.found = result
 	// log.Debugf("result: %#v\n", result)
 	return nil
 }
