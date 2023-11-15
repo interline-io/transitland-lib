@@ -129,18 +129,33 @@ BART,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6
 The extract command extends the basic copy command with a number of additional options and transformations. It can be used to pull out a single route or trip, interpolate stop times, override a single value on an entity, etc. This is a separate command to keep the basic copy command simple while allowing the extract command to grow and add more features over time.
 
 ```bash
-% transitland extract --help
 Usage: extract <input> <output>
   -allow-entity-errors
     	Allow entities with errors to be copied
   -allow-reference-errors
     	Allow entities with reference errors to be copied
+  -bbox string
+    	Extract bbox as (min lon, min lat, max lon, max lat), e.g. -122.276,37.794,-122.259,37.834
   -create
     	Create a basic database schema if none exists
   -create-missing-shapes
     	Create missing Shapes from Trip stop-to-stop geometries
   -deduplicate-stop-times
     	Deduplicate StopTimes using Journey Patterns
+  -error-limit int
+    	Max number of detailed errors per error group (default 10)
+  -exclude-agency value
+    	Exclude Agency
+  -exclude-calendar value
+    	Exclude Calendar
+  -exclude-route value
+    	Exclude Route
+  -exclude-route-type value
+    	Exclude Routes matching route_type
+  -exclude-stop value
+    	Exclude Stop
+  -exclude-trip value
+    	Exclude Trip
   -ext value
     	Include GTFS Extension
   -extract-agency value
@@ -160,9 +175,11 @@ Usage: extract <input> <output>
   -interpolate-stop-times
     	Interpolate missing StopTime arrival/departure values
   -normalize-service-ids
-    	Create any missing Calendar entities for CalendarDate service_ids
+    	Create any missing Calendar entities for CalendarDate service_id's
   -normalize-timezones
     	Normalize timezones and apply default stop timezones based on agency and parent stops
+  -prefix string
+    	Prefix entities in this feed
   -set value
     	Set values on output; format is filename,id,key,value
   -simplify-calendars
@@ -171,6 +188,10 @@ Usage: extract <input> <output>
     	Simplify shapes with this tolerance (ex. 0.000005)
   -use-basic-route-types
     	Collapse extended route_type's into basic GTFS values
+  -write-extra-columns
+    	Include extra columns in output
+  -write-extra-files
+    	Copy additional files found in source to destination
 ```
 
 Example:
