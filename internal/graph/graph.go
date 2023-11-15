@@ -66,10 +66,10 @@ func (eg *EntityGraph) Search(queue []*Node, up bool, f func(*Node)) {
 		f(cur)
 		queue = queue[1:]
 		var edges []*Node
-		if up == false {
-			edges, _ = eg.findChildren(cur)
-		} else {
+		if up {
 			edges, _ = eg.findParents(cur)
+		} else {
+			edges, _ = eg.findChildren(cur)
 		}
 		for i := 0; i < len(edges); i++ {
 			j := edges[i]

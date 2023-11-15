@@ -21,9 +21,8 @@ func TestExtract_Filter_BART(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fm := map[string][]string{}
-	fm["trips.txt"] = []string{"3792107WKDY"}
-	em.Filter(reader, fm, nil)
+	em.fm["trips.txt"] = []string{"3792107WKDY"}
+	em.Filter(reader)
 	if !em.IsMarked("stops.txt", "MCAR") {
 		t.Error("expected stop MCAR")
 	}
@@ -35,6 +34,34 @@ func TestExtract_Filter_BART(t *testing.T) {
 	}
 	if em.IsMarked("routes.txt", "03") {
 		t.Error("expected no route 03")
+	}
+}
+
+func TestExtract_Bbox(t *testing.T) {
+	em := NewMarker()
+	em.bbox = "-122.276929,37.794923,-122.259099,37.834413"
+	reader, err := tlcsv.NewReader(testutil.ExampleFeedBART.URL)
+	if err != nil {
+		t.Error(err)
+	}
+	em.Filter(reader)
+	if !em.IsMarked("stops.txt", "MCAR") {
+		t.Error("expected stop MCAR")
+	}
+	if !em.IsMarked("stops.txt", "12TH") {
+		t.Error("expected stop 12TH")
+	}
+	if !em.IsMarked("stops.txt", "LAKE") {
+		t.Error("expected stop LAKE")
+	}
+	if em.IsMarked("stops.txt", "FTVL") {
+		t.Error("expected no stop FTVL")
+	}
+	if em.IsMarked("stops.txt", "ROCK") {
+		t.Error("expected no stop ROCK")
+	}
+	if !em.IsMarked("agency.txt", "BART") {
+		t.Error("expected agency BART")
 	}
 }
 
@@ -184,7 +211,9 @@ func TestExtract_Filter_ExampleFeed(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
 			em := NewMarker()
-			em.Filter(reader, testcase.filter, testcase.exclude)
+			em.fm = testcase.filter
+			em.ex = testcase.exclude
+			em.Filter(reader)
 			count := 0
 			for _, v := range em.found {
 				if v {
