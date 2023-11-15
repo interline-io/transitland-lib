@@ -24,6 +24,11 @@ func NewMarker() Marker {
 	}
 }
 
+func (em *Marker) Mark(filename string, eid string, val bool) {
+	n, _ := em.graph.Node(graph.NewNode(filename, eid))
+	em.found[n] = val
+}
+
 // IsMarked returns if an Entity is marked.
 func (em *Marker) IsMarked(filename, eid string) bool {
 	if len(eid) == 0 {
@@ -81,6 +86,7 @@ func (em *Marker) Filter(reader tl.Reader, fm map[string][]string, ex map[string
 	em.graph.Search(foundNodes[:], false, func(n *graph.Node) {
 		result[n] = true
 	})
+
 	// Now find parents of all found children
 	check2 := []*graph.Node{}
 	for k := range result {

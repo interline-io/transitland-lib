@@ -13,6 +13,7 @@ import (
 	"github.com/interline-io/transitland-lib/filters"
 	_ "github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/cli"
+	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -41,6 +42,7 @@ type Command struct {
 	excludeCalendars  cli.ArrayFlags
 	excludeRoutes     cli.ArrayFlags
 	excludeRouteTypes cli.ArrayFlags
+	bbox              string
 	writeExtraColumns bool
 	readerPath        string
 	writerPath        string
@@ -85,6 +87,8 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Var(&cmd.excludeCalendars, "exclude-calendar", "Exclude Calendar")
 	fl.Var(&cmd.excludeRoutes, "exclude-route", "Exclude Route")
 	fl.Var(&cmd.excludeRouteTypes, "exclude-route-type", "Exclude Routes matching route_type")
+
+	fl.StringVar(&cmd.bbox, "bbox", "", "Extract bbox")
 
 	fl.Var(&cmd.extractSet, "set", "Set values on output; format is filename,id,key,value")
 	fl.StringVar(&cmd.Prefix, "prefix", "", "Prefix entities in this feed")
@@ -194,6 +198,26 @@ func (cmd *Command) Run() error {
 			cmd.excludeRoutes = append(cmd.excludeRoutes, ent.RouteID)
 		}
 	}
+
+	var bboxExcludeStops []string
+	if cmd.bbox != "" {
+		bbox, err := xy.ParseBbox(cmd.bbox)
+		if err != nil {
+			return err
+		}
+		for stop := range reader.Stops() {
+			spt := xy.Point{
+				Lon: stop.Geometry.Point.X(),
+				Lat: stop.Geometry.Point.Y(),
+			}
+			if bbox.Contains(spt) {
+				cmd.extractStops = append(cmd.extractStops, stop.StopID)
+			} else {
+				bboxExcludeStops = append(bboxExcludeStops, stop.StopID)
+			}
+		}
+	}
+
 	//
 	fm := map[string][]string{}
 	fm["trips.txt"] = cmd.extractTrips[:]
@@ -230,9 +254,13 @@ func (cmd *Command) Run() error {
 		if err := em.Filter(reader, fm, ex); err != nil {
 			return err
 		}
+		for _, sid := range bboxExcludeStops {
+			em.Mark("stops.txt", sid, false)
+		}
 		cp.Marker = &em
 		log.Debugf("Graph loading complete")
 	}
+
 	// Copy
 	result := cp.Copy()
 	result.DisplaySummary()
