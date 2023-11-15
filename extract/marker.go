@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/internal/graph"
+	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -13,6 +14,9 @@ import (
 type Marker struct {
 	graph          *graph.EntityGraph
 	found          map[*graph.Node]bool
+	fm             map[string][]string
+	ex             map[string][]string
+	bbox           string
 	defaultExclude bool
 }
 
@@ -21,6 +25,8 @@ func NewMarker() Marker {
 	return Marker{
 		graph: graph.NewEntityGraph(),
 		found: map[*graph.Node]bool{},
+		fm:    map[string][]string{},
+		ex:    map[string][]string{},
 	}
 }
 
@@ -48,15 +54,56 @@ func (em *Marker) IsVisited(filename string, eid string) bool {
 	return ok
 }
 
+func (em *Marker) AddExclude(filename string, eid string) {
+	em.ex[filename] = append(em.ex[filename], eid)
+}
+
+func (em *Marker) AddInclude(filename string, eid string) {
+	em.fm[filename] = append(em.fm[filename], eid)
+}
+
+func (em *Marker) Count() int {
+	c := 0
+	if em.bbox != "" {
+		c += 1
+	}
+	for _, v := range em.fm {
+		c += len(v)
+	}
+	for _, v := range em.ex {
+		c += len(v)
+	}
+	return c
+}
+
 // Filter takes a Reader and selects any entities that are children of the specified file/id map.
-func (em *Marker) Filter(reader tl.Reader, fm map[string][]string, ex map[string][]string) error {
+func (em *Marker) Filter(reader tl.Reader) error {
+	var bboxExcludeStops []string
+	if em.bbox != "" {
+		bbox, err := xy.ParseBbox(em.bbox)
+		if err != nil {
+			return err
+		}
+		for stop := range reader.Stops() {
+			spt := xy.Point{
+				Lon: stop.Geometry.Point.X(),
+				Lat: stop.Geometry.Point.Y(),
+			}
+			if bbox.Contains(spt) {
+				em.AddInclude("stops.txt", stop.StopID)
+			} else {
+				bboxExcludeStops = append(bboxExcludeStops, stop.StopID)
+			}
+		}
+	}
+
 	eg, err := graph.BuildGraph(reader)
 	if err != nil {
 		return err
 	}
 	em.graph = eg
 	foundNodes := []*graph.Node{}
-	for k, v := range fm {
+	for k, v := range em.fm {
 		for _, i := range v {
 			if n, ok := em.graph.Node(graph.NewNode(k, i)); ok {
 				foundNodes = append(foundNodes, n)
@@ -71,7 +118,7 @@ func (em *Marker) Filter(reader tl.Reader, fm map[string][]string, ex map[string
 	}
 
 	var excludeNodes []*graph.Node
-	for k, v := range ex {
+	for k, v := range em.ex {
 		for _, i := range v {
 			if n, ok := em.graph.Node(graph.NewNode(k, i)); ok {
 				excludeNodes = append(excludeNodes, n)
@@ -100,6 +147,11 @@ func (em *Marker) Filter(reader tl.Reader, fm map[string][]string, ex map[string
 	em.graph.Search(excludeNodes[:], false, func(n *graph.Node) {
 		em.Mark(n.Filename, n.ID, false)
 	})
+
+	// Exclude any stops outside of provided bbox
+	for _, sid := range bboxExcludeStops {
+		em.Mark("stops.txt", sid, false)
+	}
 
 	// log.Debugf("result: %#v\n", result)
 	return nil
