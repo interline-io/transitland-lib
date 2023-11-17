@@ -41,10 +41,10 @@ func (ent *Agency) Errors() (errs []error) {
 }
 
 // Warnings for this entity
-func (ent *Agency) Warnings() (warnings []error) {
-	warnings = append(warnings, ent.BaseEntity.Warnings()...)
-	warnings = append(warnings, tt.CheckPresent("agency_url", ent.AgencyURL)...)
-	return warnings
+func (ent *Agency) Warnings() (warns []error) {
+	warns = append(warns, ent.BaseEntity.Warnings()...)
+	warns = append(warns, tt.CheckPresent("agency_url", ent.AgencyURL)...)
+	return warns
 }
 
 // Filename agency.txt
