@@ -1,0 +1,65 @@
+{
+    "header": {
+      "gtfsRealtimeVersion": "1.0",
+      "incrementality": "FULL_DATASET",
+      "timestamp": "1699405534"
+    },
+    "entity": [
+      {
+        "id": "124",
+        "tripUpdate": {
+          "trip": {
+            "tripId": "124",
+            "routeId": "L1",
+            "directionId": 1,
+            "startTime": "15:37:00",
+            "startDate": "20231107",
+            "scheduleRelationship": "SCHEDULED"
+          },
+          "vehicle": {
+            "id": "124",
+            "label": "",
+            "licensePlate": ""
+          },
+          "stopTimeUpdate": [
+            {
+              "stopSequence": 20,
+              "stopId": "70232",
+              "scheduleRelationship": "SCHEDULED"
+            },
+            {
+              "stopSequence": 21,
+              "stopId": "70242",
+              "arrival": {
+                "time": "1699405801"
+              },
+              "departure": {
+                "time": "1699405801"
+              },
+              "scheduleRelationship": "SCHEDULED"
+            },
+            {
+              "stopSequence": 22,
+              "stopId": "70262",
+              "arrival": {
+                "time": "1699406176"
+              },
+              "departure": {
+                "time": "1699406176"
+              },
+              "scheduleRelationship": "SCHEDULED"
+            },
+            {
+              "stopSequence": 23,
+              "stopId": "70272",
+              "arrival": {
+                "time": "1699406518"
+              },
+              "scheduleRelationship": "SCHEDULED"
+            }
+          ],
+          "timestamp": "1699405520"
+        }
+      }
+    ]
+  }
