@@ -110,11 +110,11 @@ func (fi *Validator) Validate(ent tl.Entity) []error {
 // ValidateFeedMessage .
 func (fi *Validator) ValidateFeedMessage(current *pb.FeedMessage, previous *pb.FeedMessage) (errs []error) {
 	if current.Header == nil {
-		errs = append(errs, ne("FeedMessage Header is required", "header", 0))
+		errs = append(errs, ne("FeedMessage Header is required", "header"))
 	} else {
 		// Check previous Header timestamp
 		if current.GetHeader().GetTimestamp() < previous.GetHeader().GetTimestamp() {
-			errs = append(errs, ne("FeedMessage Header timestamp is earlier than previous update", "header.timestamp", 18))
+			errs = append(errs, ef(E018, "header.timestamp"))
 		}
 		errs = append(errs, fi.ValidateHeader(current.Header, current)...)
 	}
@@ -136,17 +136,20 @@ func (fi *Validator) ValidateHeader(header *pb.FeedHeader, current *pb.FeedMessa
 	}
 	//
 	if v := header.GetTimestamp(); header.Timestamp == nil || v == 0 {
-		errs = append(errs, ne("FeedHeader timestamp is required", "header.timestamp", 48))
+		errs = append(errs, ef(E048, "header.timestamp"))
 	} else if !checkTimestamp(v) {
-		errs = append(errs, ne("FeedHeader timestamp is out of bounds", "header.timestamp", 1))
+		errs = append(errs, ef(E001, "header.timestamp"))
+
 	} else if !checkFuture(v) {
-		errs = append(errs, ne("FeedHeader timestamp is in the future", "header.timestamp", 50))
+		errs = append(errs, ef(E050, "header.timestamp"))
+
 	}
 	//
 	if header.Incrementality == nil {
-		errs = append(errs, ne("FeedHeader incrementality is required", "header.incrementality", 49))
+		errs = append(errs, ef(E049, "header.incrementality"))
+
 	} else if header.GetIncrementality() == pb.FeedHeader_DIFFERENTIAL {
-		errs = append(errs, ne("FeedHeader DIFFERENTIAL incrementality is not supported", "header.incrementality", 0))
+		errs = append(errs, ne("FeedHeader DIFFERENTIAL incrementality is not supported", "header.incrementality"))
 	}
 	return errs
 }
@@ -155,13 +158,14 @@ func (fi *Validator) ValidateHeader(header *pb.FeedHeader, current *pb.FeedMessa
 func (fi *Validator) ValidateFeedEntity(ent *pb.FeedEntity, current *pb.FeedMessage) (errs []error) {
 	incr := current.GetHeader().GetIncrementality()
 	if ent.Id == nil || ent.GetId() == "" {
-		errs = append(errs, ne("FeedEntity id is required", "entity.id", 0))
+		errs = append(errs, ne("FeedEntity id is required", "entity.id"))
 	}
 	if ent.IsDeleted != nil && incr != pb.FeedHeader_DIFFERENTIAL {
-		errs = append(errs, ne("FeedEntity IsDeleted should only be provided for DIFFERENTIAL incrementality", "entity.is_deleted", 39))
+		errs = append(errs, ef(E039, "entity.is_deleted"))
+
 	}
 	if ent.TripUpdate == nil && ent.Vehicle == nil && ent.Alert == nil {
-		errs = append(errs, ne("FeedEntity must provide one of TripUpdate, VehiclePosition, or Alert", "entity", 0))
+		errs = append(errs, ne("FeedEntity must provide one of TripUpdate, VehiclePosition, or Alert", "entity"))
 	}
 	if ent.TripUpdate != nil {
 		errs = append(errs, fi.ValidateTripUpdate(ent.GetTripUpdate(), current)...)
@@ -180,7 +184,7 @@ func (fi *Validator) ValidateFeedEntity(ent *pb.FeedEntity, current *pb.FeedMess
 func (fi *Validator) ValidateTripUpdate(trip *pb.TripUpdate, current *pb.FeedMessage) (errs []error) {
 	// Validate TripDescriptor
 	if trip.Trip == nil {
-		errs = append(errs, ne("TripDescriptor is required", "trip_update.trip", 0))
+		errs = append(errs, ne("TripDescriptor is required", "trip_update.trip"))
 	} else {
 		errs = append(errs, fi.validateTripDescriptor(trip.Trip)...)
 	}
@@ -188,13 +192,14 @@ func (fi *Validator) ValidateTripUpdate(trip *pb.TripUpdate, current *pb.FeedMes
 		// experimental field
 	}
 	if trip.Timestamp != nil && !checkTimestamp(uint64(trip.GetTimestamp())) {
-		errs = append(errs, ne("Timestamp time is out of bounds", "trip_update.timestamp", 1))
+		errs = append(errs, ef(E001, "trip_update.timestamp"))
+
 	}
 	// Validate StopTimeUpdates
 	srel := trip.GetTrip().GetScheduleRelationship()
 	sts := trip.GetStopTimeUpdate()
 	if len(sts) == 0 && srel != pb.TripDescriptor_CANCELED {
-		errs = append(errs, ne("StopTimeUpdates are required unless the trip is canceled", "trip_update.trip.schedule_relationship", 41))
+		errs = append(errs, ef(E041, "trip_update.trip.schedule_relationship"))
 	}
 	seq := uint32(0)
 	visitedseq := map[uint32]int{}
@@ -211,10 +216,10 @@ func (fi *Validator) ValidateTripUpdate(trip *pb.TripUpdate, current *pb.FeedMes
 			s2 := *stopid
 			visitedstop[s2]++
 			if ss == nil && visitedstop[s2] > 1 {
-				errs = append(errs, ne("StopTimeUpdate must specify stop_sequence when a stop is visited more than once", "trip_update.stop_time_update.stop_sequence", 9))
+				errs = append(errs, ef(E009, "trip_update.stop_time_update.stop_sequence"))
 			}
 			if s2 == prevstop {
-				errs = append(errs, ne("StopTimeUpdates visits the same stop twice in a row", "trip_update.stop_time_update", 37))
+				errs = append(errs, ef(E037, "trip_update.stop_time_update"))
 			}
 			prevstop = s2
 		}
@@ -222,31 +227,34 @@ func (fi *Validator) ValidateTripUpdate(trip *pb.TripUpdate, current *pb.FeedMes
 			s2 := *ss
 			visitedseq[s2]++
 			if visitedseq[s2] > 1 {
-				errs = append(errs, ne("StopTimeUpdates repeats the same stop_sequence", "trip_update.stop_time_update", 36))
+				errs = append(errs, ef(E036, "trip_update.stop_time_update"))
+
 			}
 			if s2 < seq {
-				errs = append(errs, ne("StopTimeUpdates not sorted by stop_sequence", "trip_update.stop_time_update", 2))
+				errs = append(errs, ef(E002, "trip_update.stop_time_update"))
+
 			}
 			seq = s2
 		}
 		if st.Arrival != nil && st.Arrival.Time != nil && !checkTimestamp(uint64(st.GetArrival().GetTime())) {
-			errs = append(errs, ne("Arrival time is out of bounds", "trip_update.stop_time_update.arrival.time", 1))
+			errs = append(errs, ef(E001, "trip_update.stop_time_update.arrival.time"))
+
 		}
 		if st.Departure != nil && st.Departure.Time != nil && !checkTimestamp(uint64(st.GetDeparture().GetTime())) {
-			errs = append(errs, ne("Departure time is out of bounds", "trip_update.stop_time_update.departure.time", 1))
+			errs = append(errs, ef(E001, "trip_update.stop_time_update.departure.time"))
 		}
 		// if st.GetArrival().Time != nil {
 		if st.Arrival != nil && st.Arrival.Time != nil {
 			a := *st.Arrival.Time
 			if a < prevtime {
-				errs = append(errs, ne("StopTimeUpdates are not increasing in time", "trip_update.stop_time_update", 22))
+				errs = append(errs, ef(E022, "trip_update.stop_time_update"))
 			}
 			prevtime = a
 		}
 		if st.Departure != nil && st.Departure.Time != nil {
 			a := *st.Departure.Time
 			if a < prevtime {
-				errs = append(errs, ne("StopTimeUpdates are not increasing in time", "trip_update.stop_time_update", 22))
+				errs = append(errs, ef(E022, "trip_update.stop_time_update"))
 			}
 			prevtime = a
 		}
@@ -259,38 +267,38 @@ func (fi *Validator) ValidateTripUpdate(trip *pb.TripUpdate, current *pb.FeedMes
 // ValidateStopTimeUpdate .
 func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, current *pb.FeedMessage) (errs []error) {
 	if st.StopId == nil && st.StopSequence == nil {
-		errs = append(errs, ne("StopTimeUpdate must specify stop_sequence or stop_id", "trip_update.stop_time_update", 40))
+		errs = append(errs, ef(E040, "trip_update.stop_time_update"))
 	}
 	if st.StopId != nil {
 		v, ok := fi.stopInfo[*st.StopId]
 		if !ok {
-			errs = append(errs, ne("StopTimeUpdate references unknown stop_id", "trip_update.stop_time_update.stop_id", 11))
+			errs = append(errs, ef(E011, "trip_update.stop_time_update.stop_id"))
 		}
 		if v.LocationType != 0 {
-			errs = append(errs, ne("StopTimeUpdate cannot reference stop where location_type is not 0", "trip_update.stop_time_update.stop_id", 15))
+			errs = append(errs, ef(E015, "trip_update.stop_time_update.stop_id"))
 		}
 	}
 	// Arrival, Departure
 	switch st.GetScheduleRelationship() {
 	case pb.TripUpdate_StopTimeUpdate_SCHEDULED:
 		if st.Arrival == nil && st.Departure == nil {
-			errs = append(errs, ne("StopTimeUpdate must specify either arrival or departure when schedule_relationship is scheduled", "trip_update.schedule_relationship", 43))
+			errs = append(errs, ef(E043, "trip_update.schedule_relationship"))
 		}
 		if a := st.Arrival; a != nil && (a.Time == nil && a.Delay == nil) {
-			errs = append(errs, ne("StopTimeUpdate must provide either time or delay", "trip_update.schedule_relationship", 44))
+			errs = append(errs, ef(E044, "trip_update.schedule_relationship"))
 		}
 		if a := st.Departure; a != nil && (a.Time == nil && a.Delay == nil) {
-			errs = append(errs, ne("StopTimeUpdate must provide either time or delay", "trip_update.schedule_relationship", 44))
+			errs = append(errs, ef(E044, "trip_update.schedule_relationship"))
 		}
 	case pb.TripUpdate_StopTimeUpdate_NO_DATA:
 		if st.Arrival != nil || st.Departure != nil {
-			errs = append(errs, ne("StopTimeUpdate cannot specify arrival or departure when schedule_relationship is NO_DATA", "trip_update.schedule_relationship", 42))
+			errs = append(errs, ef(E042, "trip_update.schedule_relationship"))
 		}
 	case pb.TripUpdate_StopTimeUpdate_SKIPPED:
 		// ok
 	}
 	if st.GetArrival().GetTime() > 0 && st.GetDeparture().GetTime() > 0 && st.GetArrival().GetTime() > st.GetDeparture().GetTime() {
-		errs = append(errs, ne("StopTimeUpdate arrival time is later than departure time", "trip_update.stop_time_update.arrival.time", 25))
+		errs = append(errs, ef(E025, "trip_update.stop_time_update.arrival.time"))
 	}
 	// ValidateStopTimeEvent .
 	// TODO
@@ -302,41 +310,41 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor) (errs []error
 		tripid := *td.TripId
 		v, ok := fi.tripInfo[tripid]
 		if !ok {
-			errs = append(errs, ne("TripDescriptor references unknown trip_id", "trip_update.trip.trip_id", 3))
+			errs = append(errs, ef(E003, "trip_update.trip.trip_id"))
 		}
 		if td.DirectionId != nil && td.GetDirectionId() != uint32(v.DirectionID) {
-			errs = append(errs, ne("TripDescriptor trip does not match GTFS direction", "trip_update.trip.trip_id", 24))
+			errs = append(errs, ef(E024, "trip_update.trip.trip_id"))
 		}
 		freq := false
 		if freq {
 			if td.StartTime == nil || td.StartDate == nil {
-				errs = append(errs, ne("TripDescriptor must provide start_date and start_time for frequency based trips", "trip_update.trip.start_time", 0))
+				errs = append(errs, ne("TripDescriptor must provide start_date and start_time for frequency based trips", "trip_update.trip.start_time"))
 			}
 			// TODO: Additional frequency based trip checks
 		}
 	} else {
 		if td.RouteId == nil || td.DirectionId == nil || td.StartDate == nil || td.StartTime == nil {
-			errs = append(errs, ne("TripDescriptor must provided a trip_id or all of route_id, direction_id, start_date, and start_time", "trip_update.trip.trip_id", 0))
+			errs = append(errs, ne("TripDescriptor must provided a trip_id or all of route_id, direction_id, start_date, and start_time", "trip_update.trip.trip_id"))
 		}
 		if td.GetScheduleRelationship() != pb.TripDescriptor_SCHEDULED {
-			errs = append(errs, ne("TripDescriptor must be SCHEDULED if no trip_id is provided", "trip_update.trip.trip_id", 0))
+			errs = append(errs, ne("TripDescriptor must be SCHEDULED if no trip_id is provided", "trip_update.trip.trip_id"))
 		}
 	}
 	if td.RouteId != nil {
 		if _, ok := fi.routeInfo[*td.RouteId]; !ok {
-			errs = append(errs, ne("TripDescriptor references unknown route_id", "trip_update.trip.route_id", 4))
+			errs = append(errs, ef(E004, "trip_update.trip.route_id"))
 		}
 	}
 	if td.StartTime != nil {
 		if st, err := tt.NewWideTime(*td.StartTime); err != nil {
-			errs = append(errs, ne("TripDescriptor could not parse StartTime", "trip_update.trip.start_time", 20))
+			errs = append(errs, ef(E020, "trip_update.trip.start_time"))
 		} else if st.Seconds > (7 * 24 * 60 * 60) {
-			errs = append(errs, ne("StartTime > 1 week", "trip_update.trip.start_time", 20))
+			errs = append(errs, ef(E020, "trip_update.trip.start_time"))
 		}
 	}
 	if td.StartDate != nil {
 		if _, err := time.Parse("20060102", *td.StartDate); err != nil {
-			errs = append(errs, ne("TripDescriptor could not parse StartDate", "trip_update.trip.start_date", 21))
+			errs = append(errs, ef(E021, "trip_update.trip.start_date"))
 		}
 	}
 	return errs
@@ -347,7 +355,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 	if ent.StopId != nil {
 		_, ok := fi.stopInfo[*ent.StopId]
 		if !ok {
-			errs = append(errs, ne("VehiclePosition references unknown stop_id", "vehicle_position.stop_id", 11))
+			errs = append(errs, ef(E011, "vehicle_position.stop_id"))
 		}
 	}
 
@@ -362,14 +370,14 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 			trip, tripOk := fi.tripInfo[td.GetTripId()]
 			shp := fi.geomCache.GetShape(trip.ShapeID)
 			if !tripOk {
-				errs = append(errs, ne("Invalid trip_id", "vehicle_position.trip.trip_id", 3))
+				errs = append(errs, ef(E003, "vehicle_position.trip.trip_id"))
 			} else if len(shp) == 0 {
-				errs = append(errs, ne("Invalid shape_id", "trip_descriptor", 0))
+				errs = append(errs, ne("Invalid shape_id", "trip_descriptor"))
 			} else {
 				nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
 				nearestPointDist := xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat)
 				if nearestPointDist > 100.0 {
-					errs = append(errs, ne("Vehicle position too far from trip shape", "vehicle_position.position", 29))
+					errs = append(errs, ef(E029, "vehicle_position.position"))
 				}
 			}
 		}
@@ -379,22 +387,22 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 
 func (fi *Validator) validatePosition(pos *pb.Position) (errs []error) {
 	if pos == nil {
-		errs = append(errs, ne("Position required", "vehicle_position.position", 0))
+		errs = append(errs, ne("Position required", "vehicle_position.position"))
 		return errs
 	}
 	if lon := pos.GetLongitude(); pos.Longitude == nil {
-		errs = append(errs, ne("Longitude required", "vehicle_position.position.longitude", 26))
+		errs = append(errs, ef(E026, "vehicle_position.position.longitude"))
 	} else if lon < -180 || lon > 180 {
-		errs = append(errs, ne("Longitude must be within -180,180", "vehicle_position.position.longitude", 26))
+		errs = append(errs, ef(E026, "vehicle_position.position.longitude"))
 	} else if lon == 0 {
-		errs = append(errs, ne("Longitude should not be 0", "vehicle_position.position.longitude", 26))
+		errs = append(errs, ef(E026, "vehicle_position.position.longitude"))
 	}
 	if lat := pos.GetLatitude(); pos.Latitude == nil {
-		errs = append(errs, ne("Latitude required", "vehicle_position.position.latitude", 26))
+		errs = append(errs, ef(E026, "vehicle_position.position.latitude"))
 	} else if lat < -90 || lat > 90 {
-		errs = append(errs, ne("Latitude must be within -90,90", "vehicle_position.position.latitude", 26))
+		errs = append(errs, ef(E026, "vehicle_position.position.latitude"))
 	} else if lat == 0 {
-		errs = append(errs, ne("Latitude should not be 0", "vehicle_position.position.latitude", 26))
+		errs = append(errs, ef(E026, "vehicle_position.position.latitude"))
 	}
 	return errs
 }
@@ -569,14 +577,6 @@ func (fi *Validator) EntityCounts(msg *pb.FeedMessage) EntityCounts {
 		}
 	}
 	return ret
-}
-
-func ne(msg string, field string, code int) *RealtimeError {
-	return &RealtimeError{
-		Code:  code,
-		Field: field,
-		msg:   msg,
-	}
 }
 
 func checkTimestamp(ts uint64) bool {

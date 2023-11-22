@@ -24,10 +24,10 @@ var (
 	// E023 = RealtimeError{msg: "trip start_time does not match first GTFS arrival_time", Code: 23}
 	E024 = RealtimeError{msg: "trip direction_id does not match GTFS data", Code: 24}
 	E025 = RealtimeError{msg: "stop_time_update departure time is before arrival time", Code: 25}
-	// E026 = RealtimeError{msg: "Invalid vehicle position", Code: 26}
+	E026 = RealtimeError{msg: "Invalid vehicle position", Code: 26}
 	// E027 = RealtimeError{msg: "Invalid vehicle bearing", Code: 27}
 	// E028 = RealtimeError{msg: "Vehicle position outside agency coverage area", Code: 28}
-	// E029 = RealtimeError{msg: "Vehicle position far from trip shape", Code: 29}
+	E029 = RealtimeError{msg: "Vehicle position far from trip shape", Code: 29}
 	// E030 = RealtimeError{msg: "GTFS-rt alert trip_id does not belong to GTFS-rt alert route_id  in GTFS trips.txt", Code: 30}
 	// E031 = RealtimeError{msg: "Alert informed_entity.route_id does not match informed_entity.trip.route_id", Code: 31}
 	// E032 = RealtimeError{msg: "Alert does not have an informed_entity", Code: 32}
@@ -39,10 +39,10 @@ var (
 	E038 = RealtimeError{msg: "Invalid header.gtfs_realtime_version", Code: 38}
 	E039 = RealtimeError{msg: "FULL_DATASET feeds should not include entity.is_deleted", Code: 39}
 	E040 = RealtimeError{msg: "stop_time_update doesn't contain stop_id or stop_sequence", Code: 40}
-	E041 = RealtimeError{msg: "trip doesn't have any stop_time_updates", Code: 41}
+	E041 = RealtimeError{msg: "StopTimeUpdates are required unless the trip is canceled", Code: 41}
 	E042 = RealtimeError{msg: "arrival or departure provided for NO_DATA stop_time_update", Code: 42}
 	E043 = RealtimeError{msg: "stop_time_update doesn't have arrival or departure", Code: 43}
-	// E044 = RealtimeError{msg: "stop_time_update arrival/departure doesn't have delay or time", Code: 44}
+	E044 = RealtimeError{msg: "stop_time_update arrival/departure doesn't have delay or time", Code: 44}
 	// E045 = RealtimeError{msg: "GTFS-rt stop_time_update stop_sequence and stop_id do not match GTFS", Code: 45}
 	// E046 = RealtimeError{msg: "GTFS-rt stop_time_update without time doesn't have arrival/departure time in GTFS", Code: 46}
 	// E047 = RealtimeError{msg: "VehiclePosition and TripUpdate ID pairing mismatch", Code: 47}
@@ -65,6 +65,19 @@ var (
 // W008 = RealtimeWarning{msg: "Header timestamp is older than 65 seconds", Code: 8}
 // W009 = RealtimeWarning{msg: "schedule_relationship not populated", Code: 9}
 )
+
+func ne(msg string, field string) *RealtimeError {
+	return &RealtimeError{
+		Field: field,
+		msg:   msg,
+	}
+}
+
+func ef(e RealtimeError, field string) *RealtimeError {
+	e2 := e
+	e2.Field = field
+	return &e2
+}
 
 // RealtimeError is a GTFS RealTime error.
 type RealtimeError struct {
