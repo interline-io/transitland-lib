@@ -3,6 +3,7 @@ package validator
 import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -14,6 +15,7 @@ type Result struct {
 	SHA1                 string                         `json:"sha1"`
 	EarliestCalendarDate tl.Date                        `json:"earliest_calendar_date"`
 	LatestCalendarDate   tl.Date                        `json:"latest_calendar_date"`
+	Timezone             string                         `json:"timezone"`
 	Agencies             []tl.Agency                    `json:"agencies"`
 	Routes               []tl.Route                     `json:"routes"`
 	Stops                []tl.Stop                      `json:"stops"`
@@ -24,7 +26,10 @@ type Result struct {
 }
 
 type RealtimeResult struct {
-	Url    string         `json:"url"`
-	Json   map[string]any `json:"json"`
-	Errors []error
+	Url                  string                    `json:"url"`
+	Json                 map[string]any            `json:"json"`
+	EntityCounts         rt.EntityCounts           `json:"entity_counts"`
+	TripUpdateStats      []rt.TripUpdateStats      `json:"trip_update_stats"`
+	VehiclePositionStats []rt.VehiclePositionStats `json:"vehicle_position_stats"`
+	Errors               []error
 }

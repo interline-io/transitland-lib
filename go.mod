@@ -11,6 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.15.9
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.10
+	github.com/deckarep/golang-set/v2 v2.3.1
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/iancoleman/orderedmap v0.2.0
 	github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af

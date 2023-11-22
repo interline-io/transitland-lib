@@ -1,0 +1,289 @@
+{
+  "header": {
+    "gtfsRealtimeVersion": "1.0",
+    "incrementality": "FULL_DATASET",
+    "timestamp": "1699405559"
+  },
+  "entity": [
+    {
+      "id": "124",
+      "vehicle": {
+        "trip": {
+          "tripId": "124",
+          "routeId": "L1",
+          "directionId": 1
+        },
+        "vehicle": {
+          "id": "124",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.37046,
+          "longitude": -121.99604
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "125",
+      "vehicle": {
+        "trip": {
+          "tripId": "125",
+          "routeId": "L1",
+          "directionId": 0
+        },
+        "vehicle": {
+          "id": "125",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.59981,
+          "longitude": -122.38666
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "126",
+      "vehicle": {
+        "trip": {
+          "tripId": "126",
+          "routeId": "L1",
+          "directionId": 1
+        },
+        "vehicle": {
+          "id": "126",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.65395,
+          "longitude": -122.40698
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "127",
+      "vehicle": {
+        "trip": {
+          "tripId": "127",
+          "routeId": "L1",
+          "directionId": 0
+        },
+        "vehicle": {
+          "id": "127",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.37051,
+          "longitude": -121.97878
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "308",
+      "vehicle": {
+        "trip": {
+          "tripId": "308",
+          "routeId": "L3",
+          "directionId": 1
+        },
+        "vehicle": {
+          "id": "308",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.27179,
+          "longitude": -121.82864
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "310",
+      "vehicle": {
+        "trip": {
+          "tripId": "310",
+          "routeId": "L3",
+          "directionId": 1
+        },
+        "vehicle": {
+          "id": "310",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.57993,
+          "longitude": -122.34451
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "311",
+      "vehicle": {
+        "trip": {
+          "tripId": "311",
+          "routeId": "L3",
+          "directionId": 0
+        },
+        "vehicle": {
+          "id": "311",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.32748,
+          "longitude": -121.90316
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "312",
+      "vehicle": {
+        "trip": {
+          "tripId": "312",
+          "routeId": "L3",
+          "directionId": 1
+        },
+        "vehicle": {
+          "id": "312",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.77559,
+          "longitude": -122.39594
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "410",
+      "vehicle": {
+        "trip": {
+          "tripId": "410",
+          "routeId": "L4",
+          "directionId": 1
+        },
+        "vehicle": {
+          "id": "410",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.42001,
+          "longitude": -122.12725
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "411",
+      "vehicle": {
+        "trip": {
+          "tripId": "411",
+          "routeId": "L4",
+          "directionId": 0
+        },
+        "vehicle": {
+          "id": "411",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.41629,
+          "longitude": -122.12123
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "412",
+      "vehicle": {
+        "trip": {
+          "tripId": "412",
+          "routeId": "L4",
+          "directionId": 1
+        },
+        "vehicle": {
+          "id": "412",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.7755,
+          "longitude": -122.39584
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "414",
+      "vehicle": {
+        "trip": {
+          "tripId": "414",
+          "routeId": "L4",
+          "directionId": 1
+        },
+        "vehicle": {
+          "id": "414",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.7757,
+          "longitude": -122.3961
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "709",
+      "vehicle": {
+        "trip": {
+          "tripId": "709",
+          "routeId": "B7",
+          "directionId": 0
+        },
+        "vehicle": {
+          "id": "709",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.34836,
+          "longitude": -121.92643
+        },
+        "timestamp": "1699405549"
+      }
+    },
+    {
+      "id": "710",
+      "vehicle": {
+        "trip": {
+          "tripId": "710",
+          "routeId": "B7",
+          "directionId": 1
+        },
+        "vehicle": {
+          "id": "710",
+          "label": "",
+          "licensePlate": ""
+        },
+        "position": {
+          "latitude": 37.77516,
+          "longitude": -122.39648
+        },
+        "timestamp": "1699405549"
+      }
+    }
+  ]
+}

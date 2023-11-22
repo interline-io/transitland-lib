@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
@@ -149,6 +150,13 @@ func (v *Validator) Validate() (*Result, error) {
 	result.EarliestCalendarDate = fv.EarliestCalendarDate
 	result.LatestCalendarDate = fv.LatestCalendarDate
 
+	// get service window and timezone
+	fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
+	_ = err
+	result.Timezone = fvsw.DefaultTimezone.Val
+	tz, _ := time.LoadLocation(result.Timezone)
+	now := time.Now().In(tz)
+
 	// Main validation
 	cpResult := v.copier.Copy()
 	if cpResult == nil {
@@ -160,21 +168,35 @@ func (v *Validator) Validate() (*Result, error) {
 
 	// Validate realtime messages
 	for _, fn := range v.Options.ValidateRealtimeMessages {
+		rtResult := RealtimeResult{
+			Url: fn,
+		}
 		var rterrs []error
 		msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize))
 		if err != nil {
 			rterrs = append(rterrs, err)
 		} else {
+			rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
 			rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
+			tripUpdateStats, err := v.rtValidator.TripUpdateStats(now, msg)
+			if err != nil {
+				rterrs = append(rterrs, err)
+			} else {
+				rtResult.TripUpdateStats = tripUpdateStats
+			}
+			vehiclePositionStats, err := v.rtValidator.VehiclePositionStats(now, msg)
+			if err != nil {
+				rterrs = append(rterrs, err)
+			} else {
+				rtResult.VehiclePositionStats = vehiclePositionStats
+			}
+
 		}
 		result.HandleError(filepath.Base(fn), rterrs)
 		if len(rterrs) > v.Options.ErrorLimit {
 			rterrs = rterrs[0:v.Options.ErrorLimit]
 		}
-		rtResult := RealtimeResult{
-			Url:    fn,
-			Errors: rterrs,
-		}
+		rtResult.Errors = rterrs
 		if v.Options.IncludeRealtimeJson && msg != nil {
 			rtJson, err := protojson.Marshal(msg)
 			if err != nil {

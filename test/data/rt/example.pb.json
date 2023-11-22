@@ -1,0 +1,4441 @@
+{
+  "header": {
+    "gtfsRealtimeVersion": "1.0",
+    "incrementality": "FULL_DATASET",
+    "timestamp": "1559008978"
+  },
+  "entity": [
+    {
+      "id": "2211905WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2211905WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 9,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 6,
+              "time": "1559008883",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 6,
+              "time": "1559009114",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009268",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009286",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009496",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009514",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009682",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009712",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009940",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009958",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010162",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010192",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "HAYW",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010414",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010432",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "SHAY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010660",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010678",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "UCTY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010954",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010972",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "FRMT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011248",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011266",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2231920WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2231920WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 4,
+            "stopId": "NBRK",
+            "arrival": {
+              "delay": 11,
+              "time": "1559009086",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 11,
+              "time": "1559009104",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 5,
+            "stopId": "DBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009220",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009250",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 6,
+            "stopId": "ASHB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009370",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009388",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009562",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009712",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009880",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010000",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010078",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010318",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010468",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010486",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010696",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010714",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010882",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010912",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011140",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011158",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011362",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011392",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "HAYW",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011614",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011632",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "SHAY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011860",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011878",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "UCTY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012154",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012172",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "FRMT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012448",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012466",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2251812WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2251812WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 18,
+            "stopId": "DELN",
+            "arrival": {
+              "delay": 164,
+              "time": "1559008987",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 164,
+              "time": "1559009005",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2251935WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2251935WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 1,
+            "stopId": "RICH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009562",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009567",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 2,
+            "stopId": "DELN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009904",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009922",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 3,
+            "stopId": "PLZA",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010078",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010096",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 4,
+            "stopId": "NBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010276",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010294",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 5,
+            "stopId": "DBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010420",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010450",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 6,
+            "stopId": "ASHB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010570",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010588",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010762",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010912",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 88,
+              "time": "1559011168",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 88,
+              "time": "1559011288",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011278",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011518",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011668",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011686",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011896",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011914",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012082",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012112",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012340",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012358",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012562",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012592",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "HAYW",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012814",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012832",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "SHAY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013060",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013078",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "UCTY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013354",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013372",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "FRMT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013648",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013666",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2271827WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2271827WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 12,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 90,
+              "time": "1559008973",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 90,
+              "time": "1559009022",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 90,
+              "time": "1559009279",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 90,
+              "time": "1559009297",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "ASHB",
+            "arrival": {
+              "delay": 85,
+              "time": "1559009466",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 85,
+              "time": "1559009481",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "DBRK",
+            "arrival": {
+              "delay": 82,
+              "time": "1559009602",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 82,
+              "time": "1559009625",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "NBRK",
+            "arrival": {
+              "delay": 86,
+              "time": "1559009750",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 86,
+              "time": "1559009768",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "PLZA",
+            "arrival": {
+              "delay": 96,
+              "time": "1559009946",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 96,
+              "time": "1559009964",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "DELN",
+            "arrival": {
+              "delay": 89,
+              "time": "1559010113",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 89,
+              "time": "1559010131",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2271954WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2271954WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 1,
+            "stopId": "RICH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010846",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010851",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 2,
+            "stopId": "DELN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011188",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011206",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 3,
+            "stopId": "PLZA",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011362",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011380",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 4,
+            "stopId": "NBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011560",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011578",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 5,
+            "stopId": "DBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011704",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011734",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 6,
+            "stopId": "ASHB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011854",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011872",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012046",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012196",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 4,
+              "time": "1559012368",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 4,
+              "time": "1559012488",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012562",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012798",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012952",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012970",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013180",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013198",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013366",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013396",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013624",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013642",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013846",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013876",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "HAYW",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014098",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014116",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "SHAY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014344",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014362",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "UCTY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014638",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014656",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "FRMT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014932",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014950",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2291842WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2291842WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 7,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 33,
+              "time": "1559009144",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 33,
+              "time": "1559009162",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009358",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009383",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009562",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009580",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009820",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009838",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009994",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010024",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010084",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010204",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010390",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010408",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "ASHB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010582",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010600",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "DBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010720",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010744",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "NBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010864",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010882",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "PLZA",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011050",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011068",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "DELN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011224",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011242",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2311857WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2311857WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 2,
+            "stopId": "FRMT",
+            "arrival": {
+              "delay": 22,
+              "time": "1559009050",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 22,
+              "time": "1559009068",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 3,
+            "stopId": "UCTY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009310",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009328",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 4,
+            "stopId": "SHAY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009604",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009622",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 5,
+            "stopId": "HAYW",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009844",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009862",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 6,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010078",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010108",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010312",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010330",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010558",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010588",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010762",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010780",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011020",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011038",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011194",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011224",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011284",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011404",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011590",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011608",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "ASHB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011782",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011800",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "DBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011920",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011944",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "NBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012064",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012082",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "PLZA",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012250",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012268",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "DELN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012424",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012442",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2331912WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2331912WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 1,
+            "stopId": "WARM",
+            "arrival": {
+              "delay": 36,
+              "time": "1559009304",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 36,
+              "time": "1559009388",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 2,
+            "stopId": "FRMT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010528",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010546",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 3,
+            "stopId": "UCTY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010810",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010828",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 4,
+            "stopId": "SHAY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011104",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011122",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 5,
+            "stopId": "HAYW",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011344",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011362",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 6,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011578",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011608",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011812",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011830",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012058",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012088",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012262",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012280",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012520",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012538",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012694",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012724",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012784",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012904",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013090",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013108",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "ASHB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013282",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013300",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "DBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013420",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013444",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "NBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013564",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013582",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "PLZA",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013750",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013768",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "DELN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013924",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013942",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2351805WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2351805WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 14,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 12,
+              "time": "1559008973",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 12,
+              "time": "1559008999",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "HAYW",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009214",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009232",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "SHAY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009460",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009478",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "UCTY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009754",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009772",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "FRMT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010048",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010066",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "2351927WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "2351927WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 1,
+            "stopId": "WARM",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010468",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011380",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 2,
+            "stopId": "FRMT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011728",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011746",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 3,
+            "stopId": "UCTY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012010",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012028",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 4,
+            "stopId": "SHAY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012304",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012322",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 5,
+            "stopId": "HAYW",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012544",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012562",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 6,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012778",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012808",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013012",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013030",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013258",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013288",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013462",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013480",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013720",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013738",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013894",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013924",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013984",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014104",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014290",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014308",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "ASHB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014482",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014500",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "DBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014620",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014644",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "NBRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014764",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014782",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "PLZA",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014950",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014968",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "DELN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559015124",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559015142",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3611927WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3611927WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 1,
+            "stopId": "SFIA",
+            "arrival": {
+              "delay": 189,
+              "time": "1559009169",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 189,
+              "time": "1559009187",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 2,
+            "stopId": "SBRN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010330",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010360",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 3,
+            "stopId": "SSAN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010534",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010552",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 4,
+            "stopId": "COLM",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010720",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010738",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 5,
+            "stopId": "DALY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010912",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010954",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 6,
+            "stopId": "BALB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011158",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011182",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "GLEN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011302",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011320",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "24TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011464",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011482",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "16TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011584",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011602",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "CIVC",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011722",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011746",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "POWL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011818",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011854",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "MONT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011920",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011944",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "EMBR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012010",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012040",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "WOAK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012430",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012448",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012688",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012718",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012778",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012898",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013084",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013102",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "ROCK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013240",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013258",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 19,
+            "stopId": "ORIN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013558",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013576",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 20,
+            "stopId": "LAFY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013840",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013858",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 21,
+            "stopId": "WCRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014110",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014128",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3631803WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3631803WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 20,
+            "stopId": "24TH",
+            "arrival": {
+              "delay": 209,
+              "time": "1559008960",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 209,
+              "time": "1559008978",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 21,
+            "stopId": "GLEN",
+            "arrival": {
+              "delay": 180,
+              "time": "1559009099",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 180,
+              "time": "1559009117",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 22,
+            "stopId": "BALB",
+            "arrival": {
+              "delay": 174,
+              "time": "1559009231",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 174,
+              "time": "1559009249",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 23,
+            "stopId": "DALY",
+            "arrival": {
+              "delay": 154,
+              "time": "1559009439",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 154,
+              "time": "1559009457",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 24,
+            "stopId": "COLM",
+            "arrival": {
+              "delay": 163,
+              "time": "1559009682",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 163,
+              "time": "1559009700",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 25,
+            "stopId": "SSAN",
+            "arrival": {
+              "delay": 133,
+              "time": "1559009832",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 133,
+              "time": "1559009850",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 26,
+            "stopId": "SBRN",
+            "arrival": {
+              "delay": 128,
+              "time": "1559010019",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 128,
+              "time": "1559010037",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3651818WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3651818WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 14,
+            "stopId": "WOAK",
+            "arrival": {
+              "delay": 19,
+              "time": "1559009004",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 19,
+              "time": "1559009022",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "EMBR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009388",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009418",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "MONT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009484",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009508",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "POWL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009580",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009616",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "CIVC",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009688",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009712",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 19,
+            "stopId": "16TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009832",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009850",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 20,
+            "stopId": "24TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009952",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009970",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 21,
+            "stopId": "GLEN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010120",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010138",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 22,
+            "stopId": "BALB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010258",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010276",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 23,
+            "stopId": "DALY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010486",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010504",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 24,
+            "stopId": "COLM",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010720",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010738",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 25,
+            "stopId": "SSAN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010900",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010918",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 26,
+            "stopId": "SBRN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011092",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011110",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3671833WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3671833WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 9,
+            "stopId": "ORIN",
+            "arrival": {
+              "delay": 20,
+              "time": "1559009017",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 20,
+              "time": "1559009035",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "ROCK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009340",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009388",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009550",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009640",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009808",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009838",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009916",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009946",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "WOAK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010186",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010204",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "EMBR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010588",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010618",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "MONT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010684",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010708",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "POWL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010780",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010816",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "CIVC",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010888",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010912",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 19,
+            "stopId": "16TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011032",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011050",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 20,
+            "stopId": "24TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011152",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011170",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 21,
+            "stopId": "GLEN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011320",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011338",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 22,
+            "stopId": "BALB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011458",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011476",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 23,
+            "stopId": "DALY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011686",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011704",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 24,
+            "stopId": "COLM",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011920",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011938",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 25,
+            "stopId": "SSAN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012100",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012118",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 26,
+            "stopId": "SBRN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012292",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012310",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3691848WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3691848WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 6,
+            "stopId": "PHIL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009538",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009543",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "WCRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009700",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009718",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "LAFY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009970",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009988",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "ORIN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010258",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010276",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "ROCK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010600",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010648",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010810",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010900",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011068",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011098",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011176",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011206",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "WOAK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011446",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011464",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "EMBR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011848",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011878",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "MONT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011944",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011968",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "POWL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012040",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012076",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "CIVC",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012148",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012172",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 19,
+            "stopId": "16TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012292",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012310",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 20,
+            "stopId": "24TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012412",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012430",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 21,
+            "stopId": "GLEN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012580",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012598",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 22,
+            "stopId": "BALB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012718",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012736",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 23,
+            "stopId": "DALY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012946",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012964",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 24,
+            "stopId": "COLM",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013180",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013198",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 25,
+            "stopId": "SSAN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013360",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013378",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 26,
+            "stopId": "SBRN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013552",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013570",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3711903WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3711903WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 6,
+            "stopId": "PHIL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010738",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010743",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "WCRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010900",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010918",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "LAFY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011170",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011188",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "ORIN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011458",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011476",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "ROCK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011800",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011848",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012010",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012100",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012268",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012298",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012376",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012406",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "WOAK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012646",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012664",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "EMBR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013048",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013078",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "MONT",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013144",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013168",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "POWL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013240",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013276",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "CIVC",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013348",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013372",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 19,
+            "stopId": "16TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013492",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013510",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 20,
+            "stopId": "24TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013612",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013630",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 21,
+            "stopId": "GLEN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013780",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013798",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 22,
+            "stopId": "BALB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559013918",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559013936",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 23,
+            "stopId": "DALY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014146",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014164",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 24,
+            "stopId": "COLM",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014380",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014398",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 25,
+            "stopId": "SSAN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014560",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014578",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 26,
+            "stopId": "SBRN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559014752",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559014770",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3731741WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3731741WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 21,
+            "stopId": "WCRK",
+            "arrival": {
+              "delay": 154,
+              "time": "1559009163",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 154,
+              "time": "1559009176",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3751756WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3751756WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 16,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559008860",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559008980",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009184",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009202",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "ROCK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009340",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009358",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 19,
+            "stopId": "ORIN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009658",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009676",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 20,
+            "stopId": "LAFY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009940",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009958",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 21,
+            "stopId": "WCRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010210",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010228",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3771811WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3771811WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 10,
+            "stopId": "CIVC",
+            "arrival": {
+              "delay": 64,
+              "time": "1559009085",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 64,
+              "time": "1559009109",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "POWL",
+            "arrival": {
+              "delay": 61,
+              "time": "1559009178",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 61,
+              "time": "1559009214",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "MONT",
+            "arrival": {
+              "delay": 60,
+              "time": "1559009279",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 60,
+              "time": "1559009303",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "EMBR",
+            "arrival": {
+              "delay": 54,
+              "time": "1559009363",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 54,
+              "time": "1559009393",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "WOAK",
+            "arrival": {
+              "delay": 41,
+              "time": "1559009770",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 41,
+              "time": "1559009788",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009988",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010018",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010078",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010198",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010384",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010402",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "ROCK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010540",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010558",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 19,
+            "stopId": "ORIN",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010858",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010876",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 20,
+            "stopId": "LAFY",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011140",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011158",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 21,
+            "stopId": "WCRK",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011410",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011428",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3772145WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3772145WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 3,
+            "stopId": "SBRN",
+            "arrival": {
+              "delay": 273,
+              "time": "1559009103",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 273,
+              "time": "1559009122",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "3791826WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "3791826WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 3,
+            "stopId": "SSAN",
+            "arrival": {
+              "delay": 230,
+              "time": "1559009264",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 230,
+              "time": "1559009282",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 4,
+            "stopId": "COLM",
+            "arrival": {
+              "delay": 222,
+              "time": "1559009442",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 222,
+              "time": "1559009460",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 5,
+            "stopId": "DALY",
+            "arrival": {
+              "delay": 224,
+              "time": "1559009636",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 224,
+              "time": "1559009658",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 6,
+            "stopId": "BALB",
+            "arrival": {
+              "delay": 204,
+              "time": "1559009862",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 204,
+              "time": "1559009881",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "GLEN",
+            "arrival": {
+              "delay": 197,
+              "time": "1559009998",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 197,
+              "time": "1559010016",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 8,
+            "stopId": "24TH",
+            "arrival": {
+              "delay": 196,
+              "time": "1559010159",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 196,
+              "time": "1559010177",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 9,
+            "stopId": "16TH",
+            "arrival": {
+              "delay": 165,
+              "time": "1559010249",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 165,
+              "time": "1559010267",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 10,
+            "stopId": "CIVC",
+            "arrival": {
+              "delay": 160,
+              "time": "1559010382",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 160,
+              "time": "1559010406",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 11,
+            "stopId": "POWL",
+            "arrival": {
+              "delay": 157,
+              "time": "1559010475",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 157,
+              "time": "1559010511",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "MONT",
+            "arrival": {
+              "delay": 156,
+              "time": "1559010576",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 156,
+              "time": "1559010600",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "EMBR",
+            "arrival": {
+              "delay": 176,
+              "time": "1559010685",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 176,
+              "time": "1559010715",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "WOAK",
+            "arrival": {
+              "delay": 163,
+              "time": "1559011092",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 163,
+              "time": "1559011110",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "12TH",
+            "arrival": {
+              "delay": 97,
+              "time": "1559011285",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 97,
+              "time": "1559011315",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "19TH",
+            "arrival": {
+              "delay": 110,
+              "time": "1559011387",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 110,
+              "time": "1559011481",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "MCAR",
+            "arrival": {
+              "delay": 70,
+              "time": "1559011654",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 70,
+              "time": "1559011672",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 18,
+            "stopId": "ROCK",
+            "arrival": {
+              "delay": 66,
+              "time": "1559011806",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 66,
+              "time": "1559011824",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 19,
+            "stopId": "ORIN",
+            "arrival": {
+              "delay": 31,
+              "time": "1559012088",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 31,
+              "time": "1559012106",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 20,
+            "stopId": "LAFY",
+            "arrival": {
+              "delay": 33,
+              "time": "1559012372",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 33,
+              "time": "1559012390",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 21,
+            "stopId": "WCRK",
+            "arrival": {
+              "delay": 41,
+              "time": "1559012651",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 41,
+              "time": "1559012664",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "5011837WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "5011837WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 17,
+            "stopId": "WDUB",
+            "arrival": {
+              "delay": 151,
+              "time": "1559009052",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 151,
+              "time": "1559009070",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "5031852WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "5031852WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 14,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 55,
+              "time": "1559009064",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 55,
+              "time": "1559009082",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 56,
+              "time": "1559009287",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 56,
+              "time": "1559009313",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "CAST",
+            "arrival": {
+              "delay": 30,
+              "time": "1559009538",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 30,
+              "time": "1559009556",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "WDUB",
+            "arrival": {
+              "delay": 31,
+              "time": "1559010133",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 31,
+              "time": "1559010151",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "5051908WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "5051908WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 11,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009538",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009556",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009766",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009784",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559009952",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559009982",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010210",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010228",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010432",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010462",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "CAST",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010708",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010726",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "WDUB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011302",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011320",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "5071928WKDY",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "5071928WKDY"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 11,
+            "stopId": "LAKE",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010738",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010756",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 12,
+            "stopId": "FTVL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559010966",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559010984",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 13,
+            "stopId": "COLS",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011152",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011182",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 14,
+            "stopId": "SANL",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011410",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011428",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 15,
+            "stopId": "BAYF",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011632",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011662",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 16,
+            "stopId": "CAST",
+            "arrival": {
+              "delay": 0,
+              "time": "1559011908",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559011926",
+              "uncertainty": 30
+            }
+          },
+          {
+            "stopSequence": 17,
+            "stopId": "WDUB",
+            "arrival": {
+              "delay": 0,
+              "time": "1559012502",
+              "uncertainty": 30
+            },
+            "departure": {
+              "delay": 0,
+              "time": "1559012520",
+              "uncertainty": 30
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
