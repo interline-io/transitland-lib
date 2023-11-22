@@ -211,14 +211,14 @@ func TestValidatorErrors(t *testing.T) {
 			for _, rterr := range rterrs {
 				if a, ok := rterr.(*RealtimeError); ok {
 					foundSet.Add(match{
-						field: a.Field,
-						err:   a.Code,
+						field: a.field,
+						err:   a.code,
 					})
 				}
 				if a, ok := rterr.(*RealtimeWarning); ok {
 					foundSet.Add(match{
-						field: a.Field,
-						warn:  a.Code,
+						field: a.field,
+						warn:  a.code,
 					})
 				}
 			}

@@ -377,7 +377,16 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 				nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
 				nearestPointDist := xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat)
 				if nearestPointDist > 100.0 {
-					errs = append(errs, ef(E029, "vehicle_position.position"))
+					shpErr := ef(E029, "vehicle_position.position")
+					var coords []float64
+					for _, p := range shp {
+						coords = append(coords, p.Lon, p.Lat)
+					}
+					shpLine := tt.NewLineStringFromFlatCoords(coords)
+					shpPoint := tt.NewPoint(posPt.Lon, posPt.Lat)
+					shpErr.geoms = append(shpErr.geoms, tt.Geometry{Geometry: &shpLine, Valid: true}, tt.Geometry{Geometry: &shpPoint, Valid: true})
+					// fmt.Printf("GEOMS: %#v\n", shpErr.geoms)
+					errs = append(errs, shpErr)
 				}
 			}
 		}
