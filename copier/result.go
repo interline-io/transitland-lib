@@ -9,10 +9,22 @@ import (
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type ctx = causes.Context
 
+type hasCode interface {
+	Code() int
+}
+
+type hasField interface {
+	Field() string
+}
+
+type hasGeometry interface {
+	Geometry() []tt.Geometry
+}
 type updateContext interface {
 	Update(*causes.Context)
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -150,8 +149,8 @@ func TestValidatorErrors(t *testing.T) {
 
 	type match struct {
 		field string
-		err   int
-		warn  int
+		err   string
+		warn  string
 	}
 	type testCase struct {
 		name    string
@@ -173,10 +172,7 @@ func TestValidatorErrors(t *testing.T) {
 		t.Run(sor(tc.name, tc.rt), func(t *testing.T) {
 			var expMatches []match
 			if fnSplit := strings.Split(filepath.Base(tc.rt), "."); len(fnSplit) > 2 {
-				fnCode, err := strconv.Atoi(fnSplit[0])
-				if err != nil {
-					t.Fatal(err)
-				}
+				fnCode := fnSplit[0]
 				expMatches = append(expMatches, match{
 					err:   fnCode,
 					field: strings.ReplaceAll(fnSplit[1], "-", "."),
@@ -211,14 +207,14 @@ func TestValidatorErrors(t *testing.T) {
 			for _, rterr := range rterrs {
 				if a, ok := rterr.(*RealtimeError); ok {
 					foundSet.Add(match{
-						field: a.field,
-						err:   a.code,
+						field: a.Context.Field,
+						err:   a.Context.Code,
 					})
 				}
 				if a, ok := rterr.(*RealtimeWarning); ok {
 					foundSet.Add(match{
-						field: a.field,
-						warn:  a.code,
+						field: a.Context.Field,
+						warn:  a.Context.Code,
 					})
 				}
 			}

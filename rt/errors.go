@@ -1,58 +1,61 @@
 package rt
 
-import "github.com/interline-io/transitland-lib/tl/tt"
+import (
+	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
+)
 
 // Errors
 // https://github.com/CUTR-at-USF/gtfs-realtime-validator/blob/master/RULES.md
 var (
-	E001 = RealtimeError{msg: "Not in POSIX time", code: 1}
-	E002 = RealtimeError{msg: "stop_time_updates not strictly sorted", code: 2}
-	E003 = RealtimeError{msg: "GTFS-rt trip_id does not exist in GTFS data", code: 3}
-	E004 = RealtimeError{msg: "GTFS-rt route_id does not exist in GTFS data", code: 4}
-	// E006 = RealtimeError{msg: "Missing required trip field for frequency-based exact_times = 0", code: 6}
-	E009 = RealtimeError{msg: "GTFS-rt stop_sequence isn't provided for trip that visits same stop_id more than once", code: 9}
-	// E010 = RealtimeError{msg: "location_type not 0 in stops.txt (Note that this is implemented but not executed because it's specific to GTFS - see issue #126)", code: 10}
-	E011 = RealtimeError{msg: "GTFS-rt stop_id does not exist in GTFS data", code: 11}
-	// E012 = RealtimeError{msg: "Header timestamp should be greater than or equal to all other timestamps", code: 12}
-	// E013 = RealtimeError{msg: "Frequency type 0 trip schedule_relationship should be UNSCHEDULED or empty", code: 13}
-	E015 = RealtimeError{msg: "All stop_ids referenced in GTFS-rt feeds must have the location_type = 0", code: 15}
-	// E016 = RealtimeError{msg: "trip_ids with schedule_relationship ADDED must not be in GTFS data", code: 16}
-	// E017 = RealtimeError{msg: "GTFS-rt content changed but has the same header timestamp", code: 17}
-	E018 = RealtimeError{msg: "GTFS-rt header timestamp decreased between two sequential iterations", code: 18} // same as E012?
-	// E019 = RealtimeError{msg: "GTFS-rt frequency type 1 trip start_time must be a multiple of GTFS headway_secs later than GTFS start_time", code: 19}
-	E020 = RealtimeError{msg: "Invalid start_time format", code: 20}
-	E021 = RealtimeError{msg: "Invalid start_date format", code: 21}
-	E022 = RealtimeError{msg: "Sequential stop_time_update times are not increasing", code: 22}
-	// E023 = RealtimeError{msg: "trip start_time does not match first GTFS arrival_time", code: 23}
-	E024 = RealtimeError{msg: "trip direction_id does not match GTFS data", code: 24}
-	E025 = RealtimeError{msg: "stop_time_update departure time is before arrival time", code: 25}
-	E026 = RealtimeError{msg: "Invalid vehicle position", code: 26}
-	// E027 = RealtimeError{msg: "Invalid vehicle bearing", code: 27}
-	// E028 = RealtimeError{msg: "Vehicle position outside agency coverage area", code: 28}
-	E029 = RealtimeError{msg: "Vehicle position far from trip shape", code: 29}
-	// E030 = RealtimeError{msg: "GTFS-rt alert trip_id does not belong to GTFS-rt alert route_id  in GTFS trips.txt", code: 30}
-	// E031 = RealtimeError{msg: "Alert informed_entity.route_id does not match informed_entity.trip.route_id", code: 31}
-	// E032 = RealtimeError{msg: "Alert does not have an informed_entity", code: 32}
-	// E033 = RealtimeError{msg: "Alert informed_entity does not have any specifiers", code: 33}
-	// E034 = RealtimeError{msg: "GTFS-rt agency_id does not exist in GTFS data", code: 34}
-	// E035 = RealtimeError{msg: "GTFS-rt trip.trip_id does not belong to GTFS-rt trip.route_id in GTFS trips.txt", code: 35}
-	E036 = RealtimeError{msg: "Sequential stop_time_updates have the same stop_sequence", code: 36}
-	E037 = RealtimeError{msg: "Sequential stop_time_updates have the same stop_id", code: 37}
-	E038 = RealtimeError{msg: "Invalid header.gtfs_realtime_version", code: 38}
-	E039 = RealtimeError{msg: "FULL_DATASET feeds should not include entity.is_deleted", code: 39}
-	E040 = RealtimeError{msg: "stop_time_update doesn't contain stop_id or stop_sequence", code: 40}
-	E041 = RealtimeError{msg: "StopTimeUpdates are required unless the trip is canceled", code: 41}
-	E042 = RealtimeError{msg: "arrival or departure provided for NO_DATA stop_time_update", code: 42}
-	E043 = RealtimeError{msg: "stop_time_update doesn't have arrival or departure", code: 43}
-	E044 = RealtimeError{msg: "stop_time_update arrival/departure doesn't have delay or time", code: 44}
-	// E045 = RealtimeError{msg: "GTFS-rt stop_time_update stop_sequence and stop_id do not match GTFS", code: 45}
-	// E046 = RealtimeError{msg: "GTFS-rt stop_time_update without time doesn't have arrival/departure time in GTFS", code: 46}
-	// E047 = RealtimeError{msg: "VehiclePosition and TripUpdate ID pairing mismatch", code: 47}
-	E048 = RealtimeError{msg: "header timestamp not populated (GTFS-rt v2.0 and higher)", code: 48}
-	E049 = RealtimeError{msg: "header incrementality not populated (GTFS-rt v2.0 and higher)", code: 49}
-	E050 = RealtimeError{msg: "timestamp is in the future", code: 50}
-	// E051 = RealtimeError{msg: "GTFS-rt stop_sequence not found in GTFS data", code: 51}
-	// E052 = RealtimeError{msg: "vehicle.id is not unique", code: 52}
+	E001 = nec("Not in POSIX time", "E001")
+	E002 = nec("stop_time_updates not strictly sorted", "E002")
+	E003 = nec("GTFS-rt trip_id does not exist in GTFS data", "E003")
+	E004 = nec("GTFS-rt route_id does not exist in GTFS data", "E004")
+	// E006 = nec("Missing required trip field for frequency-based exact_times = 0", "E006")
+	E009 = nec("GTFS-rt stop_sequence isn't provided for trip that visits same stop_id more than once", "E009")
+	// E010 = nec("location_type not 0 in stops.txt (Note that this is implemented but not executed because it's specific to GTFS - see issue #1"E026")", "E010")
+	E011 = nec("GTFS-rt stop_id does not exist in GTFS data", "E011")
+	// E012 = nec("Header timestamp should be greater than or equal to all other timestamps", "E012")
+	// E013 = nec("Frequency type 0 trip schedule_relationship should be UNSCHEDULED or empty", "E013")
+	E015 = nec("All stop_ids referenced in GTFS-rt feeds must have the location_type = 0", "E015")
+	// E016 = nec("trip_ids with schedule_relationship ADDED must not be in GTFS data", "E016")
+	// E017 = nec("GTFS-rt content changed but has the same header timestamp", "E017")
+	E018 = nec("GTFS-rt header timestamp decreased between two sequential iterations", "E018") // same as E012?
+	// E019 = nec("GTFS-rt frequency type 1 trip start_time must be a multiple of GTFS headway_secs later than GTFS start_time", "E019")
+	E020 = nec("Invalid start_time format", "E020")
+	E021 = nec("Invalid start_date format", "E021")
+	E022 = nec("Sequential stop_time_update times are not increasing", "E022")
+	// E023 = nec("trip start_time does not match first GTFS arrival_time", "E023")
+	E024 = nec("trip direction_id does not match GTFS data", "E024")
+	E025 = nec("stop_time_update departure time is before arrival time", "E025")
+	E026 = nec("Invalid vehicle position", "E026")
+	// E027 = nec("Invalid vehicle bearing", "E027")
+	// E028 = nec("Vehicle position outside agency coverage area", "E028")
+	E029 = nec("Vehicle position far from trip shape", "E029")
+	// E030 = nec("GTFS-rt alert trip_id does not belong to GTFS-rt alert route_id  in GTFS trips.txt", "E030")
+	// E031 = nec("Alert informed_entity.route_id does not match informed_entity.trip.route_id", "E031")
+	// E032 = nec("Alert does not have an informed_entity", "E032")
+	// E033 = nec("Alert informed_entity does not have any specifiers", "E033")
+	// E034 = nec("GTFS-rt agency_id does not exist in GTFS data", "E034")
+	// E035 = nec("GTFS-rt trip.trip_id does not belong to GTFS-rt trip.route_id in GTFS trips.txt", "E035")
+	E036 = nec("Sequential stop_time_updates have the same stop_sequence", "E036")
+	E037 = nec("Sequential stop_time_updates have the same stop_id", "E037")
+	E038 = nec("Invalid header.gtfs_realtime_version", "E038")
+	E039 = nec("FULL_DATASET feeds should not include entity.is_deleted", "E039")
+	E040 = nec("stop_time_update doesn't contain stop_id or stop_sequence", "E040")
+	E041 = nec("StopTimeUpdates are required unless the trip is canceled", "E041")
+	E042 = nec("arrival or departure provided for NO_DATA stop_time_update", "E042")
+	E043 = nec("stop_time_update doesn't have arrival or departure", "E043")
+	E044 = nec("stop_time_update arrival/departure doesn't have delay or time", "E044")
+	// E045 = nec("GTFS-rt stop_time_update stop_sequence and stop_id do not match GTFS", "E045")
+	// E046 = nec("GTFS-rt stop_time_update without time doesn't have arrival/departure time in GTFS", "E046")
+	// E047 = nec("VehiclePosition and TripUpdate ID pairing mismatch", "E047")
+	E048 = nec("header timestamp not populated (GTFS-rt v2.0 and higher)", "E048")
+	E049 = nec("header incrementality not populated (GTFS-rt v2.0 and higher)", "E049")
+	E050 = nec("timestamp is in the future", "E050")
+	// E051 = nec("GTFS-rt stop_sequence not found in GTFS data", "E051")
+	// E052 = nec("vehicle.id is not unique", "E052")
 )
 
 // Warnings
@@ -68,37 +71,34 @@ var (
 // W009 = RealtimeWarning{msg: "schedule_relationship not populated", code: 9}
 )
 
-func ne(msg string, field string) *RealtimeError {
-	return &RealtimeError{
-		field: field,
-		msg:   msg,
+func nec(msg string, code string) RealtimeError {
+	return RealtimeError{
+		Context: causes.Context{
+			Value: msg,
+			Code:  code,
+		},
 	}
 }
 
-func ef(e RealtimeError, field string) *RealtimeError {
+func newError(msg string, field string) *RealtimeError {
+	return &RealtimeError{
+		Context: causes.Context{
+			Field: field,
+			Value: msg,
+		},
+	}
+}
+
+func withField(e RealtimeError, field string) *RealtimeError {
 	e2 := e
-	e2.field = field
+	e2.Field = field
 	return &e2
 }
 
 // RealtimeError is a GTFS RealTime error.
 type RealtimeError struct {
-	code  int
-	field string
+	causes.Context
 	geoms []tt.Geometry
-	msg   string
-}
-
-func (e RealtimeError) Error() string {
-	return e.msg
-}
-
-func (e RealtimeError) Code() int {
-	return e.code
-}
-
-func (e RealtimeError) Field() string {
-	return e.field
 }
 
 func (e RealtimeError) Geometries() []tt.Geometry {

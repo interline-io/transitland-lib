@@ -10,6 +10,7 @@ import (
 type Context struct {
 	Filename   string
 	Line       int
+	Code       string
 	EntityID   string
 	Field      string
 	Value      string
