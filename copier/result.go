@@ -9,80 +9,41 @@ import (
 	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type ctx = causes.Context
-
-type hasCode interface {
-	Code() int
-}
-
-type hasField interface {
-	Field() string
-}
-
-type hasGeometry interface {
-	Geometry() []tt.Geometry
-}
-type updateContext interface {
-	Update(*causes.Context)
-}
 
 type hasContext interface {
 	Context() *causes.Context
 }
 
-func getErrorType(err error) string {
-	errtype := strings.Replace(fmt.Sprintf("%T", err), "*", "", 1)
-	if len(strings.Split(errtype, ".")) > 1 {
-		errtype = strings.Split(errtype, ".")[1]
-	}
-	return errtype
-}
-
-func getErrorFilename(err error) string {
-	if v, ok := err.(hasContext); ok {
-		return v.Context().Filename
-	}
-	return ""
-}
-
-func getErrorKey(err error) string {
-	return getErrorFilename(err) + ":" + getErrorType(err)
-}
-
-func msiSum(m map[string]int) int {
-	ret := 0
-	for _, v := range m {
-		ret += v
-	}
-	return ret
-}
-
-func sortedKeys(m map[string]int) []string {
-	keys := []string{}
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
+type updateContext interface {
+	Update(*causes.Context)
 }
 
 // ErrorGroup helps group errors together with a maximum limit on the number stored.
 type ErrorGroup struct {
 	Filename  string
+	Field     string
+	Message   string
 	ErrorType string
+	ErrorCode string
 	Count     int
 	Limit     int
 	Errors    []error
 }
 
-// NewErrorGroup returns a new ErrorGroup.
-func NewErrorGroup(filename string, etype string, limit int) *ErrorGroup {
+func NewErrorGroup(err error, limit int) *ErrorGroup {
+	c := &causes.Context{}
+	if v, ok := err.(hasContext); ok {
+		c = v.Context()
+	}
 	return &ErrorGroup{
-		Filename:  filename,
-		ErrorType: etype,
+		Filename:  c.Filename,
+		Field:     c.Field,
+		Message:   c.Value,
+		ErrorCode: c.Code,
+		ErrorType: getErrorType(err),
 		Limit:     limit,
 	}
 }
@@ -137,7 +98,7 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
+			v = NewErrorGroup(err, cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -149,7 +110,7 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {
-			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
+			v = NewErrorGroup(err, cr.ErrorLimit)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
@@ -162,7 +123,7 @@ func (cr *Result) HandleError(fn string, errs []error) {
 		key := fn + ":" + getErrorType(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = NewErrorGroup(fn, getErrorType(err), cr.ErrorLimit)
+			v = NewErrorGroup(err, cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -180,7 +141,7 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
+			v = NewErrorGroup(err, cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -192,27 +153,11 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {
-			v = NewErrorGroup(getErrorFilename(err), getErrorType(err), cr.ErrorLimit)
+			v = NewErrorGroup(err, cr.ErrorLimit)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
 	}
-}
-
-func errfmt(err error) string {
-	errc, ok := err.(hasContext)
-	if !ok {
-		return err.Error()
-	}
-	c := errc.Context()
-	s := err.Error()
-	if c.EntityID != "" {
-		s = fmt.Sprintf("entity '%s': %s", c.EntityID, s)
-	}
-	if cc := c.Cause(); cc != nil {
-		s = s + ": " + cc.Error()
-	}
-	return s
 }
 
 // DisplayErrors shows individual errors in log.Info
@@ -297,4 +242,50 @@ func (cr *Result) DisplaySummary() {
 			log.Infof("\t%s: %d", k, cr.SkipEntityMarkedCount[k])
 		}
 	}
+}
+
+func msiSum(m map[string]int) int {
+	ret := 0
+	for _, v := range m {
+		ret += v
+	}
+	return ret
+}
+
+func sortedKeys(m map[string]int) []string {
+	keys := []string{}
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func getErrorKey(err error) string {
+	eg := NewErrorGroup(err, 0)
+	return eg.Filename + ":" + eg.Field + ":" + eg.ErrorType
+}
+
+func getErrorType(err error) string {
+	errtype := strings.Replace(fmt.Sprintf("%T", err), "*", "", 1)
+	if len(strings.Split(errtype, ".")) > 1 {
+		errtype = strings.Split(errtype, ".")[1]
+	}
+	return errtype
+}
+
+func errfmt(err error) string {
+	errc, ok := err.(hasContext)
+	if !ok {
+		return err.Error()
+	}
+	c := errc.Context()
+	s := err.Error()
+	if c.EntityID != "" {
+		s = fmt.Sprintf("entity '%s': %s", c.EntityID, s)
+	}
+	if cc := c.Cause(); cc != nil {
+		s = s + ": " + cc.Error()
+	}
+	return s
 }

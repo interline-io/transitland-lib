@@ -54,6 +54,9 @@ func (e *Context) Update(v *Context) {
 	if v.EntityID != "" {
 		e.EntityID = v.EntityID
 	}
+	if v.Code != "" {
+		e.Code = v.Code
+	}
 	if v.Field != "" {
 		e.Field = v.Field
 	}
