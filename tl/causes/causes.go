@@ -10,6 +10,7 @@ import (
 type Context struct {
 	Filename   string
 	Line       int
+	Code       string
 	EntityID   string
 	Field      string
 	Value      string
@@ -52,6 +53,9 @@ func (e *Context) Update(v *Context) {
 	}
 	if v.EntityID != "" {
 		e.EntityID = v.EntityID
+	}
+	if v.Code != "" {
+		e.Code = v.Code
 	}
 	if v.Field != "" {
 		e.Field = v.Field

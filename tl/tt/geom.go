@@ -93,9 +93,16 @@ func wkbDecode(b []byte) (geom.T, error) {
 
 // geojsonEncode encodes a geometry into geojson.
 func geojsonEncode(g geom.T) ([]byte, error) {
+	if v, ok := g.(canEncodeGeojson); ok {
+		return v.MarshalJSON()
+	}
 	b, err := geojson.Marshal(g)
 	if err != nil {
 		return jsonNull(), err
 	}
 	return b, nil
+}
+
+type canEncodeGeojson interface {
+	MarshalJSON() ([]byte, error)
 }
