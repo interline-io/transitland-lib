@@ -98,7 +98,6 @@ func geojsonEncode(g geom.T) ([]byte, error) {
 	}
 	b, err := geojson.Marshal(g)
 	if err != nil {
-		panic(err)
 		return jsonNull(), err
 	}
 	return b, nil
