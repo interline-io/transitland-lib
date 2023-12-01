@@ -71,9 +71,11 @@ var (
 // W009 = RealtimeWarning{msg: "schedule_relationship not populated", code: 9}
 )
 
+type bc = causes.Context
+
 func nec(msg string, code string) RealtimeError {
 	return RealtimeError{
-		Context: causes.Context{
+		bc: causes.Context{
 			Value: msg,
 			Code:  code,
 		},
@@ -82,7 +84,7 @@ func nec(msg string, code string) RealtimeError {
 
 func newError(msg string, field string) *RealtimeError {
 	return &RealtimeError{
-		Context: causes.Context{
+		bc: causes.Context{
 			Field: field,
 			Value: msg,
 		},
@@ -97,7 +99,7 @@ func withField(e RealtimeError, field string) *RealtimeError {
 
 // RealtimeError is a GTFS RealTime error.
 type RealtimeError struct {
-	causes.Context
+	bc
 	geoms []tt.Geometry
 }
 
