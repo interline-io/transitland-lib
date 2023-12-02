@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func flexDecode(data []byte, msg protoreflect.ProtoMessage) error {
+func FlexDecode(data []byte, msg protoreflect.ProtoMessage) error {
 	err := proto.Unmarshal(data, msg)
 	if err == nil {
 		return nil
@@ -31,7 +31,7 @@ func ReadURL(address string, opts ...request.RequestOption) (*pb.FeedMessage, er
 	}
 	msg := pb.FeedMessage{}
 	data := fr.Data
-	if err := flexDecode(data, &msg); err != nil {
+	if err := FlexDecode(data, &msg); err != nil {
 		return nil, err
 	}
 	return &msg, nil
@@ -44,7 +44,7 @@ func ReadFile(filename string) (*pb.FeedMessage, error) {
 	if err != nil {
 		return &msg, err
 	}
-	if err := flexDecode(data, &msg); err != nil {
+	if err := FlexDecode(data, &msg); err != nil {
 		return nil, err
 	}
 	return &msg, nil
