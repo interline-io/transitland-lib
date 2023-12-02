@@ -44,6 +44,7 @@ type Options struct {
 	IncludeEntities          bool
 	IncludeEntitiesLimit     int
 	IncludeRouteGeometries   bool
+	EvaluateAt               time.Time
 	ValidateRealtimeMessages []string
 	IncludeRealtimeJson      bool
 	MaxRTMessageSize         uint64
@@ -154,8 +155,13 @@ func (v *Validator) Validate() (*Result, error) {
 	fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
 	_ = err
 	result.Timezone = fvsw.DefaultTimezone.Val
-	tz, _ := time.LoadLocation(result.Timezone)
-	now := time.Now().In(tz)
+	tz, err := time.LoadLocation(result.Timezone)
+	_ = err
+	now := v.Options.EvaluateAt
+	if now.IsZero() {
+		now = time.Now()
+	}
+	now = now.In(tz)
 
 	// Main validation
 	cpResult := v.copier.Copy()
