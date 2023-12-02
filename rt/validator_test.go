@@ -181,7 +181,7 @@ func TestValidatorErrors(t *testing.T) {
 			expMatches = append(expMatches, tc.matches...)
 
 			// Read RT
-			msg, err := ReadRTJson(tc.rt)
+			msg, err := ReadFile(tc.rt)
 			if err != nil {
 				t.Fatal(err)
 			}

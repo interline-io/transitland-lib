@@ -52,18 +52,6 @@ func TestReadFileError(t *testing.T) {
 	}
 }
 
-func ReadRTJson(fn string) (*pb.FeedMessage, error) {
-	var msg pb.FeedMessage
-	jdata, err := os.ReadFile(fn)
-	if err != nil {
-		return nil, err
-	}
-	if err := protojson.Unmarshal(jdata, &msg); err != nil {
-		return nil, err
-	}
-	return &msg, nil
-}
-
 func RTAsJson(msg *pb.FeedMessage) ([]byte, error) {
 	m := protojson.MarshalOptions{Indent: "  "}
 	jdata, err := m.Marshal(msg)
