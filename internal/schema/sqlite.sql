@@ -692,6 +692,25 @@ CREATE TABLE gtfs_rider_categories (
 
 
 
+CREATE TABLE tl_validation_reports (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "reported_at" datetime NOT NULL
+);
+
+CREATE TABLE tl_validation_trip_update_stats (
+    "id" integer primary key autoincrement,
+    "feed_version_id" int, 
+    "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "validation_report_id" int NOT NULL,
+    "agency_id" varchar(255) NOT NULL,
+    "route_id" varchar(255) NOT NULL,
+    "trip_scheduled_count" int NOT NULL,
+    "trip_match_count" int NOT NULL
+);
 
 
 

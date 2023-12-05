@@ -93,7 +93,7 @@ type ReferenceEntity struct {
 // UpdateKeys updates entity referencespdates foreign keys based on an EntityMap.
 func (ent *MinEntity) UpdateKeys(emap *EntityMap) error { return nil }
 
-/////////
+// ///////
 type ErrorEntity struct {
 	loadErrors   []error
 	loadWarnings []error

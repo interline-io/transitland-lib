@@ -29,6 +29,9 @@ func ReadURL(address string, opts ...request.RequestOption) (*pb.FeedMessage, er
 	if err != nil {
 		return nil, err
 	}
+	if fr.FetchError != nil {
+		return nil, err
+	}
 	msg := pb.FeedMessage{}
 	data := fr.Data
 	if err := FlexDecode(data, &msg); err != nil {
