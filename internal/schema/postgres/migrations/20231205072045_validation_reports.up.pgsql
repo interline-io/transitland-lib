@@ -1,8 +1,5 @@
 BEGIN;
 
-DROP TABLE IF EXISTS tl_validation_trip_update_stats cascade;
-DROP TABLE IF EXISTS tl_validation_reports cascade;
-
 CREATE TABLE tl_validation_reports (
     id bigserial primary key NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
