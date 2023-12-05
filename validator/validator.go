@@ -154,16 +154,15 @@ func (v *Validator) Validate() (*Result, error) {
 	result.LatestCalendarDate = fv.LatestCalendarDate
 
 	// get service window and timezone
-	fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
-	_ = err
-	result.Timezone = fvsw.DefaultTimezone.Val
-	tz, err := time.LoadLocation(result.Timezone)
-	_ = err
-	now := v.Options.EvaluateAt
-	if now.IsZero() {
-		now = time.Now()
+	evaluateAt := v.Options.EvaluateAt
+	if !evaluateAt.IsZero() {
+		fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
+		_ = err
+		result.Timezone = fvsw.DefaultTimezone.Val
+		tz, err := time.LoadLocation(result.Timezone)
+		_ = err
+		evaluateAt = evaluateAt.In(tz)
 	}
-	now = now.In(tz)
 
 	// Main validation
 	cpResult := v.copier.Copy()
@@ -186,19 +185,18 @@ func (v *Validator) Validate() (*Result, error) {
 		} else {
 			rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
 			rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
-			tripUpdateStats, err := v.rtValidator.TripUpdateStats(now, msg)
+			tripUpdateStats, err := v.rtValidator.TripUpdateStats(evaluateAt, msg)
 			if err != nil {
 				rterrs = append(rterrs, err)
 			} else {
 				rtResult.TripUpdateStats = tripUpdateStats
 			}
-			vehiclePositionStats, err := v.rtValidator.VehiclePositionStats(now, msg)
+			vehiclePositionStats, err := v.rtValidator.VehiclePositionStats(evaluateAt, msg)
 			if err != nil {
 				rterrs = append(rterrs, err)
 			} else {
 				rtResult.VehiclePositionStats = vehiclePositionStats
 			}
-
 		}
 		result.HandleError(filepath.Base(fn), rterrs)
 		if len(rterrs) > v.Options.ErrorLimit {
@@ -272,6 +270,5 @@ func (v *Validator) Validate() (*Result, error) {
 		}
 	}
 	result.Success = true
-
 	return result, nil
 }
