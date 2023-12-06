@@ -418,6 +418,7 @@ func (fi *Validator) validatePosition(pos *pb.Position) (errs []error) {
 type VehiclePositionStats struct {
 	RouteID            string
 	AgencyID           string
+	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
 	TripScheduledCount int
 	TripMatchCount     int
 	MatchedAt          time.Time
@@ -455,6 +456,7 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([
 		stat.AgencyID = k.AgencyID
 		stat.RouteID = k.RouteID
 		stat.MatchedAt = now
+		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
 		stat.TripScheduledCount += 1
 		if tripHasPosition[tripId] {
 			stat.TripMatchCount += 1
@@ -520,6 +522,7 @@ func (fi *Validator) ActiveTrips(now time.Time) []string {
 type TripUpdateStats struct {
 	AgencyID           string    `json:"agency_id"`
 	RouteID            string    `json:"route_id"`
+	TripScheduledIDs   []string  `json:"trip_scheduled_ids"`
 	TripScheduledCount int       `json:"trip_scheduled_count"`
 	TripMatchCount     int       `json:"trip_match_count"`
 	MatchedAt          time.Time `json:"date"`
@@ -553,6 +556,7 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 		stat.AgencyID = k.AgencyID
 		stat.RouteID = k.RouteID
 		stat.MatchedAt = now
+		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
 		stat.TripScheduledCount += 1
 		if tripHasUpdate[tripId] {
 			stat.TripMatchCount += 1

@@ -56,7 +56,8 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, saveStatic
 					RouteID:            s.RouteID,
 					TripScheduledCount: s.TripScheduledCount,
 					TripMatchCount:     s.TripMatchCount,
-					MatchedAt:          tt.NewTime(s.MatchedAt),
+					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+					// MatchedAt:          tt.NewTime(s.MatchedAt),
 				}
 				if _, err := atx.Insert(&tripReport); err != nil {
 					return err
@@ -70,7 +71,8 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, saveStatic
 					RouteID:            s.RouteID,
 					TripScheduledCount: s.TripScheduledCount,
 					TripMatchCount:     s.TripMatchCount,
-					MatchedAt:          tt.NewTime(s.MatchedAt),
+					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+					// MatchedAt:          tt.NewTime(s.MatchedAt),
 				}
 				if _, err := atx.Insert(&vpReport); err != nil {
 					return err
@@ -97,8 +99,9 @@ type ValidationReportTripUpdateStat struct {
 	RouteID            string
 	TripScheduledCount int
 	TripMatchCount     int
-	MatchedAt          tt.Time
-	tl.BaseEntity
+	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	// MatchedAt          tt.Time
+	tl.DatabaseEntity
 }
 
 func (e *ValidationReportTripUpdateStat) TableName() string {
@@ -111,8 +114,9 @@ type ValidationReportVehiclePositionStat struct {
 	RouteID            string
 	TripScheduledCount int
 	TripMatchCount     int
-	MatchedAt          tt.Time
-	tl.BaseEntity
+	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	// MatchedAt          tt.Time
+	tl.DatabaseEntity
 }
 
 func (e *ValidationReportVehiclePositionStat) TableName() string {
