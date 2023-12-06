@@ -212,6 +212,7 @@ func (v *Validator) Validate() (*Result, error) {
 				log.Error().Err(err).Msg("Could not round-trip RT message back to JSON")
 			}
 		}
+
 		result.Realtime = append(result.Realtime, rtResult)
 	}
 
