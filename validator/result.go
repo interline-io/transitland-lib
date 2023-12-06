@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
@@ -39,11 +38,11 @@ type RealtimeResult struct {
 	Errors               []error
 }
 
-func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, saveStatic bool, saveRealtimeStats bool) error {
+func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time, fvid int, saveStatic bool, saveRealtimeStats bool) error {
 	// Save validation reports
 	validationReport := ValidationReport{}
 	validationReport.FeedVersionID = fvid
-	validationReport.ReportedAt = tt.NewTime(time.Now())
+	validationReport.ReportedAt = tt.NewTime(reportedAt)
 	if _, err := atx.Insert(&validationReport); err != nil {
 		return err
 	}
@@ -62,7 +61,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, saveStatic
 				if _, err := atx.Insert(&tripReport); err != nil {
 					return err
 				}
-				fmt.Printf("tp: %#v\n", tripReport)
+				// fmt.Printf("tp: %#v\n", tripReport)
 			}
 			for _, s := range r.VehiclePositionStats {
 				vpReport := ValidationReportTripUpdateStat{
@@ -77,7 +76,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, saveStatic
 				if _, err := atx.Insert(&vpReport); err != nil {
 					return err
 				}
-				fmt.Printf("vp: %#v\n", vpReport)
+				// fmt.Printf("vp: %#v\n", vpReport)
 			}
 		}
 	}

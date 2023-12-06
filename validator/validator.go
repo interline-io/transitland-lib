@@ -81,9 +81,8 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 		return nil, err
 	}
 	rtv := rt.NewValidator()
-	if len(options.ValidateRealtimeMessages) > 0 {
-		copier.AddValidator(rtv, 1)
-	}
+	copier.AddValidator(rtv, 1)
+
 	// Best practices extension
 	if options.BestPractices {
 		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
@@ -153,16 +152,6 @@ func (v *Validator) Validate() (*Result, error) {
 	result.EarliestCalendarDate = fv.EarliestCalendarDate
 	result.LatestCalendarDate = fv.LatestCalendarDate
 
-	// get service window and timezone
-	evaluateAt := v.Options.EvaluateAt
-	if !evaluateAt.IsZero() {
-		fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
-		_ = err
-		result.Timezone = fvsw.DefaultTimezone.Val
-		tz, _ := time.LoadLocation(result.Timezone)
-		evaluateAt = time.Now().In(tz)
-	}
-
 	// Main validation
 	cpResult := v.copier.Copy()
 	if cpResult == nil {
@@ -170,49 +159,6 @@ func (v *Validator) Validate() (*Result, error) {
 		return result, nil
 	} else {
 		result.Result = *cpResult
-	}
-
-	// Validate realtime messages
-	for _, fn := range v.Options.ValidateRealtimeMessages {
-		rtResult := RealtimeResult{
-			Url: fn,
-		}
-		var rterrs []error
-		msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize))
-		if err != nil {
-			rterrs = append(rterrs, err)
-		} else {
-			rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
-			rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
-			tripUpdateStats, err := v.rtValidator.TripUpdateStats(evaluateAt, msg)
-			if err != nil {
-				rterrs = append(rterrs, err)
-			} else {
-				rtResult.TripUpdateStats = tripUpdateStats
-			}
-			vehiclePositionStats, err := v.rtValidator.VehiclePositionStats(evaluateAt, msg)
-			if err != nil {
-				rterrs = append(rterrs, err)
-			} else {
-				rtResult.VehiclePositionStats = vehiclePositionStats
-			}
-
-		}
-		result.HandleError(filepath.Base(fn), rterrs)
-		if len(rterrs) > v.Options.ErrorLimit {
-			rterrs = rterrs[0:v.Options.ErrorLimit]
-		}
-		rtResult.Errors = rterrs
-		if v.Options.IncludeRealtimeJson && msg != nil {
-			rtJson, err := protojson.Marshal(msg)
-			if err != nil {
-				log.Error().Err(err).Msg("Could not convert RT message to JSON")
-			}
-			if err := json.Unmarshal(rtJson, &rtResult.Json); err != nil {
-				log.Error().Err(err).Msg("Could not round-trip RT message back to JSON")
-			}
-		}
-		result.Realtime = append(result.Realtime, rtResult)
 	}
 
 	// Service levels
@@ -269,6 +215,67 @@ func (v *Validator) Validate() (*Result, error) {
 			}
 		}
 	}
+
+	// get service window and timezone
+	evaluateAt := v.Options.EvaluateAt
+	if !evaluateAt.IsZero() {
+		fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
+		_ = err
+		result.Timezone = fvsw.DefaultTimezone.Val
+		tz, _ := time.LoadLocation(result.Timezone)
+		evaluateAt = time.Now().In(tz)
+	}
+	for _, fn := range v.Options.ValidateRealtimeMessages {
+		rtResult, err := v.ValidateRT(fn, evaluateAt)
+		if err != nil {
+			return result, err
+		}
+		result.HandleError(filepath.Base(fn), rtResult.Errors)
+		if len(rtResult.Errors) > v.Options.ErrorLimit {
+			rtResult.Errors = rtResult.Errors[0:v.Options.ErrorLimit]
+		}
+		result.Realtime = append(result.Realtime, rtResult)
+	}
+
+	// Return
 	result.Success = true
 	return result, nil
+}
+
+// Validate realtime messages
+func (v *Validator) ValidateRT(fn string, evaluateAt time.Time) (RealtimeResult, error) {
+	rtResult := RealtimeResult{
+		Url: fn,
+	}
+	var rterrs []error
+	msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize))
+	if err != nil {
+		rterrs = append(rterrs, err)
+	} else {
+		rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
+		rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
+		tripUpdateStats, err := v.rtValidator.TripUpdateStats(evaluateAt, msg)
+		if err != nil {
+			rterrs = append(rterrs, err)
+		} else {
+			rtResult.TripUpdateStats = tripUpdateStats
+		}
+		vehiclePositionStats, err := v.rtValidator.VehiclePositionStats(evaluateAt, msg)
+		if err != nil {
+			rterrs = append(rterrs, err)
+		} else {
+			rtResult.VehiclePositionStats = vehiclePositionStats
+		}
+	}
+	if v.Options.IncludeRealtimeJson && msg != nil {
+		rtJson, err := protojson.Marshal(msg)
+		if err != nil {
+			log.Error().Err(err).Msg("Could not convert RT message to JSON")
+		}
+		if err := json.Unmarshal(rtJson, &rtResult.Json); err != nil {
+			log.Error().Err(err).Msg("Could not round-trip RT message back to JSON")
+		}
+	}
+	rtResult.Errors = rterrs
+	return rtResult, nil
 }

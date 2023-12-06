@@ -691,9 +691,6 @@ CREATE TABLE gtfs_rider_categories (
 
 
 
-
-
-
 CREATE TABLE tl_validation_reports (
 "id" integer primary key autoincrement,
 "feed_version_id" int,

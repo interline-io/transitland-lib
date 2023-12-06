@@ -97,7 +97,7 @@ func (cmd *Command) Run() error {
 		}
 		atx := writer.Adapter
 		defer atx.Close()
-		if err := SaveValidationReport(atx, result, cmd.FVID, true, true); err != nil {
+		if err := SaveValidationReport(atx, result, time.Now(), cmd.FVID, true, true); err != nil {
 			return err
 		}
 	}
