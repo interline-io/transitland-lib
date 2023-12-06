@@ -10,6 +10,14 @@ import (
 // Strings helps read and write []String as JSON
 type Strings []String
 
+func NewStrings(v []string) Strings {
+	s := Strings{}
+	for _, a := range v {
+		s = append(s, NewString(a))
+	}
+	return s
+}
+
 func (r Strings) Value() (driver.Value, error) {
 	return json.Marshal(r)
 }

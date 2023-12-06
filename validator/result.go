@@ -1,10 +1,15 @@
 package validator
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // Result contains a validation report result,
@@ -32,4 +37,88 @@ type RealtimeResult struct {
 	TripUpdateStats      []rt.TripUpdateStats      `json:"trip_update_stats"`
 	VehiclePositionStats []rt.VehiclePositionStats `json:"vehicle_position_stats"`
 	Errors               []error
+}
+
+func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, saveStatic bool, saveRealtimeStats bool) error {
+	// Save validation reports
+	validationReport := ValidationReport{}
+	validationReport.FeedVersionID = fvid
+	validationReport.ReportedAt = tt.NewTime(time.Now())
+	if _, err := atx.Insert(&validationReport); err != nil {
+		return err
+	}
+	if saveRealtimeStats {
+		for _, r := range result.Realtime {
+			for _, s := range r.TripUpdateStats {
+				tripReport := ValidationReportTripUpdateStat{
+					ValidationReportID: validationReport.ID,
+					AgencyID:           s.AgencyID,
+					RouteID:            s.RouteID,
+					TripScheduledCount: s.TripScheduledCount,
+					TripMatchCount:     s.TripMatchCount,
+					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+					// MatchedAt: tt.NewTime(s.MatchedAt),
+				}
+				if _, err := atx.Insert(&tripReport); err != nil {
+					return err
+				}
+				fmt.Printf("tp: %#v\n", tripReport)
+			}
+			for _, s := range r.VehiclePositionStats {
+				vpReport := ValidationReportTripUpdateStat{
+					ValidationReportID: validationReport.ID,
+					AgencyID:           s.AgencyID,
+					RouteID:            s.RouteID,
+					TripScheduledCount: s.TripScheduledCount,
+					TripMatchCount:     s.TripMatchCount,
+					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+					// MatchedAt: tt.NewTime(s.MatchedAt),
+				}
+				if _, err := atx.Insert(&vpReport); err != nil {
+					return err
+				}
+				fmt.Printf("vp: %#v\n", vpReport)
+			}
+		}
+	}
+	return nil
+}
+
+type ValidationReport struct {
+	ReportedAt tt.Time
+	tl.BaseEntity
+}
+
+func (e *ValidationReport) TableName() string {
+	return "tl_validation_reports"
+}
+
+type ValidationReportTripUpdateStat struct {
+	ValidationReportID int
+	AgencyID           string
+	RouteID            string
+	TripScheduledCount int
+	TripMatchCount     int
+	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	// MatchedAt tt.Time
+	tl.DatabaseEntity
+}
+
+func (e *ValidationReportTripUpdateStat) TableName() string {
+	return "tl_validation_trip_update_stats"
+}
+
+type ValidationReportVehiclePositionStat struct {
+	ValidationReportID int
+	AgencyID           string
+	RouteID            string
+	TripScheduledCount int
+	TripMatchCount     int
+	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	// MatchedAt tt.Time
+	tl.DatabaseEntity
+}
+
+func (e *ValidationReportVehiclePositionStat) TableName() string {
+	return "tl_validation_vehicle_position_stats"
 }

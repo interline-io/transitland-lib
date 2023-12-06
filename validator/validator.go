@@ -38,15 +38,18 @@ var defaultMaxFileRows = map[string]int64{
 
 // Options defines options for the Validator.
 type Options struct {
-	BestPractices            bool
-	CheckFileLimits          bool
-	IncludeServiceLevels     bool
-	IncludeEntities          bool
-	IncludeEntitiesLimit     int
-	IncludeRouteGeometries   bool
-	ValidateRealtimeMessages []string
-	IncludeRealtimeJson      bool
-	MaxRTMessageSize         uint64
+	BestPractices                bool
+	CheckFileLimits              bool
+	IncludeServiceLevels         bool
+	IncludeEntities              bool
+	IncludeEntitiesLimit         int
+	IncludeRouteGeometries       bool
+	ValidateRealtimeMessages     []string
+	IncludeRealtimeJson          bool
+	MaxRTMessageSize             uint64
+	EvaluateAt                   time.Time
+	SaveStaticValidationReport   bool
+	SaveRealtimeValidationReport bool
 	copier.Options
 }
 
@@ -151,11 +154,14 @@ func (v *Validator) Validate() (*Result, error) {
 	result.LatestCalendarDate = fv.LatestCalendarDate
 
 	// get service window and timezone
-	fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
-	_ = err
-	result.Timezone = fvsw.DefaultTimezone.Val
-	tz, _ := time.LoadLocation(result.Timezone)
-	now := time.Now().In(tz)
+	evaluateAt := v.Options.EvaluateAt
+	if !evaluateAt.IsZero() {
+		fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
+		_ = err
+		result.Timezone = fvsw.DefaultTimezone.Val
+		tz, _ := time.LoadLocation(result.Timezone)
+		evaluateAt = time.Now().In(tz)
+	}
 
 	// Main validation
 	cpResult := v.copier.Copy()
