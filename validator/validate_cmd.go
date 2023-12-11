@@ -6,10 +6,10 @@ import (
 	"flag"
 	"os"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/snakejson"
-	"github.com/interline-io/transitland-lib/log"
 )
 
 // Command
