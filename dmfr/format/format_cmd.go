@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/log"
 )
 
 // Command formats a DMFR file.
