@@ -416,11 +416,11 @@ func (fi *Validator) validatePosition(pos *pb.Position) (errs []error) {
 }
 
 type VehiclePositionStats struct {
-	RouteID            string
-	AgencyID           string
+	RouteID            string   `json:"route_id"`
+	AgencyID           string   `json:"agency_id"`
 	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
-	TripScheduledCount int
-	TripMatchCount     int
+	TripScheduledCount int      `json:"trip_scheduled_count"`
+	TripMatchCount     int      `json:"trip_match_count"`
 }
 
 func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([]VehiclePositionStats, error) {
