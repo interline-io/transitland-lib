@@ -56,12 +56,10 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 					TripScheduledCount: s.TripScheduledCount,
 					TripMatchCount:     s.TripMatchCount,
 					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
-					// MatchedAt: tt.NewTime(s.MatchedAt),
 				}
 				if _, err := atx.Insert(&tripReport); err != nil {
 					return err
 				}
-				// fmt.Printf("tp: %#v\n", tripReport)
 			}
 			for _, s := range r.VehiclePositionStats {
 				vpReport := ValidationReportTripUpdateStat{
@@ -71,12 +69,10 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 					TripScheduledCount: s.TripScheduledCount,
 					TripMatchCount:     s.TripMatchCount,
 					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
-					// MatchedAt: tt.NewTime(s.MatchedAt),
 				}
 				if _, err := atx.Insert(&vpReport); err != nil {
 					return err
 				}
-				// fmt.Printf("vp: %#v\n", vpReport)
 			}
 		}
 	}
@@ -99,7 +95,6 @@ type ValidationReportTripUpdateStat struct {
 	TripScheduledCount int
 	TripMatchCount     int
 	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
-	// MatchedAt tt.Time
 	tl.DatabaseEntity
 }
 
@@ -114,7 +109,6 @@ type ValidationReportVehiclePositionStat struct {
 	TripScheduledCount int
 	TripMatchCount     int
 	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
-	// MatchedAt tt.Time
 	tl.DatabaseEntity
 }
 
