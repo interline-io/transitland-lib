@@ -25,7 +25,7 @@ jobs:
     - name: Produce coverage report
       run: go tool cover -html=c.out -o coverage.html
     - name: Save coverage report as artifact
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage.html
