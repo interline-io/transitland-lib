@@ -1,10 +1,19 @@
 package validator
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // Result contains a validation report result,
@@ -32,4 +41,108 @@ type RealtimeResult struct {
 	TripUpdateStats      []rt.TripUpdateStats      `json:"trip_update_stats"`
 	VehiclePositionStats []rt.VehiclePositionStats `json:"vehicle_position_stats"`
 	Errors               []error
+}
+
+func (r *Result) Key() string {
+	return fmt.Sprintf("report-%s-%d.json", r.SHA1, time.Now().In(time.UTC).Unix())
+}
+
+func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time, fvid int, saveStatic bool, saveRealtimeStats bool, reportStorage string) error {
+	// Save validation reports
+	validationReport := ValidationReport{}
+	validationReport.FeedVersionID = fvid
+	validationReport.ReportedAt = tt.NewTime(reportedAt)
+
+	// Save JSON
+	if reportStorage != "" {
+		validationReport.File = tt.NewString(result.Key())
+		store, err := store.GetStore(reportStorage)
+		if err != nil {
+			return err
+		}
+		jj, err := json.Marshal(result)
+		if err != nil {
+			return err
+		}
+		jb := bytes.NewReader(jj)
+		if err := store.Upload(context.Background(), validationReport.File.Val, tl.Secret{}, jb); err != nil {
+			return err
+		}
+	}
+
+	// Save record
+	if _, err := atx.Insert(&validationReport); err != nil {
+		return err
+	}
+
+	// Save additional stats
+	if saveRealtimeStats {
+		for _, r := range result.Realtime {
+			for _, s := range r.TripUpdateStats {
+				tripReport := ValidationReportTripUpdateStat{
+					ValidationReportID: validationReport.ID,
+					AgencyID:           s.AgencyID,
+					RouteID:            s.RouteID,
+					TripScheduledCount: s.TripScheduledCount,
+					TripMatchCount:     s.TripMatchCount,
+					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+				}
+				if _, err := atx.Insert(&tripReport); err != nil {
+					return err
+				}
+			}
+			for _, s := range r.VehiclePositionStats {
+				vpReport := ValidationReportTripUpdateStat{
+					ValidationReportID: validationReport.ID,
+					AgencyID:           s.AgencyID,
+					RouteID:            s.RouteID,
+					TripScheduledCount: s.TripScheduledCount,
+					TripMatchCount:     s.TripMatchCount,
+					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+				}
+				if _, err := atx.Insert(&vpReport); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+type ValidationReport struct {
+	ReportedAt tt.Time
+	File       tt.String
+	tl.BaseEntity
+}
+
+func (e *ValidationReport) TableName() string {
+	return "tl_validation_reports"
+}
+
+type ValidationReportTripUpdateStat struct {
+	ValidationReportID int
+	AgencyID           string
+	RouteID            string
+	TripScheduledCount int
+	TripMatchCount     int
+	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	tl.DatabaseEntity
+}
+
+func (e *ValidationReportTripUpdateStat) TableName() string {
+	return "tl_validation_trip_update_stats"
+}
+
+type ValidationReportVehiclePositionStat struct {
+	ValidationReportID int
+	AgencyID           string
+	RouteID            string
+	TripScheduledCount int
+	TripMatchCount     int
+	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	tl.DatabaseEntity
+}
+
+func (e *ValidationReportVehiclePositionStat) TableName() string {
+	return "tl_validation_vehicle_position_stats"
 }

@@ -416,10 +416,11 @@ func (fi *Validator) validatePosition(pos *pb.Position) (errs []error) {
 }
 
 type VehiclePositionStats struct {
-	RouteID            string
-	AgencyID           string
-	TripScheduledCount int
-	TripMatchCount     int
+	RouteID            string   `json:"route_id"`
+	AgencyID           string   `json:"agency_id"`
+	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
+	TripScheduledCount int      `json:"trip_scheduled_count"`
+	TripMatchCount     int      `json:"trip_match_count"`
 }
 
 func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([]VehiclePositionStats, error) {
@@ -430,20 +431,14 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([
 			continue
 		}
 		pos := vp.GetPosition()
-		posPt := xy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
 		if td := vp.Trip; td != nil && pos != nil {
 			tripId := td.GetTripId()
-			trip, ok := fi.tripInfo[tripId]
-			shp := fi.geomCache.GetShape(trip.ShapeID)
 			tripHasPosition[tripId] = true
-			if ok && trip.ShapeID != "" && len(shp) > 0 {
-				// fmt.Println("Vehicle position:", posPt)
-				nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
-				_ = nearestPoint
-				// fmt.Println("\ttrip:", tripId, "shape:", trip.ShapeID)
-				// fmt.Println("\tnearestPoint:", nearestPoint, "dist:", xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat))
-			}
 		}
+	}
+	// Return early if no VehiclePositions
+	if len(tripHasPosition) == 0 {
+		return nil, nil
 	}
 	type statAggKey struct {
 		RouteID  string
@@ -459,6 +454,7 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([
 		stat := statAgg[k]
 		stat.AgencyID = k.AgencyID
 		stat.RouteID = k.RouteID
+		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
 		stat.TripScheduledCount += 1
 		if tripHasPosition[tripId] {
 			stat.TripMatchCount += 1
@@ -522,11 +518,11 @@ func (fi *Validator) ActiveTrips(now time.Time) []string {
 }
 
 type TripUpdateStats struct {
-	AgencyID           string    `json:"agency_id"`
-	RouteID            string    `json:"route_id"`
-	TripScheduledCount int       `json:"trip_scheduled_count"`
-	TripMatchCount     int       `json:"trip_match_count"`
-	Date               time.Time `json:"date"`
+	AgencyID           string   `json:"agency_id"`
+	RouteID            string   `json:"route_id"`
+	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
+	TripScheduledCount int      `json:"trip_scheduled_count"`
+	TripMatchCount     int      `json:"trip_match_count"`
 }
 
 func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]TripUpdateStats, error) {
@@ -537,6 +533,10 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 			continue
 		}
 		tripHasUpdate[tu.GetTrip().GetTripId()] = true
+	}
+	// Return early if no TripUpdates
+	if len(tripHasUpdate) == 0 {
+		return nil, nil
 	}
 	type statAggKey struct {
 		AgencyID string
@@ -552,7 +552,7 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 		stat := statAgg[k]
 		stat.AgencyID = k.AgencyID
 		stat.RouteID = k.RouteID
-		stat.Date = now
+		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
 		stat.TripScheduledCount += 1
 		if tripHasUpdate[tripId] {
 			stat.TripMatchCount += 1
