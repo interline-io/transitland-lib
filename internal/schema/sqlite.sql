@@ -696,7 +696,8 @@ CREATE TABLE tl_validation_reports (
 "feed_version_id" int,
 "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
-"reported_at" datetime NOT NULL
+"reported_at" datetime NOT NULL,
+"file" varchar(255)
 );
 
 CREATE TABLE tl_validation_trip_update_stats (

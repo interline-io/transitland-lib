@@ -38,18 +38,16 @@ var defaultMaxFileRows = map[string]int64{
 
 // Options defines options for the Validator.
 type Options struct {
-	BestPractices                bool
-	CheckFileLimits              bool
-	IncludeServiceLevels         bool
-	IncludeEntities              bool
-	IncludeEntitiesLimit         int
-	IncludeRouteGeometries       bool
-	ValidateRealtimeMessages     []string
-	IncludeRealtimeJson          bool
-	MaxRTMessageSize             uint64
-	EvaluateAt                   time.Time
-	SaveStaticValidationReport   bool
-	SaveRealtimeValidationReport bool
+	BestPractices            bool
+	CheckFileLimits          bool
+	IncludeServiceLevels     bool
+	IncludeEntities          bool
+	IncludeEntitiesLimit     int
+	IncludeRouteGeometries   bool
+	ValidateRealtimeMessages []string
+	IncludeRealtimeJson      bool
+	MaxRTMessageSize         uint64
+	EvaluateAt               time.Time
 	copier.Options
 }
 

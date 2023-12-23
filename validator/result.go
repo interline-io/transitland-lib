@@ -1,10 +1,15 @@
 package validator
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -38,14 +43,39 @@ type RealtimeResult struct {
 	Errors               []error
 }
 
-func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time, fvid int, saveStatic bool, saveRealtimeStats bool) error {
+func (r *Result) Key() string {
+	return fmt.Sprintf("report-%s-%d.json", r.SHA1, time.Now().In(time.UTC).Unix())
+}
+
+func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time, fvid int, saveStatic bool, saveRealtimeStats bool, reportStorage string) error {
 	// Save validation reports
 	validationReport := ValidationReport{}
 	validationReport.FeedVersionID = fvid
 	validationReport.ReportedAt = tt.NewTime(reportedAt)
+
+	// Save JSON
+	if reportStorage != "" {
+		validationReport.File = tt.NewString(result.Key())
+		store, err := store.GetStore(reportStorage)
+		if err != nil {
+			return err
+		}
+		jj, err := json.Marshal(result)
+		if err != nil {
+			return err
+		}
+		jb := bytes.NewReader(jj)
+		if err := store.Upload(context.Background(), validationReport.File.Val, tl.Secret{}, jb); err != nil {
+			return err
+		}
+	}
+
+	// Save record
 	if _, err := atx.Insert(&validationReport); err != nil {
 		return err
 	}
+
+	// Save additional stats
 	if saveRealtimeStats {
 		for _, r := range result.Realtime {
 			for _, s := range r.TripUpdateStats {
@@ -81,6 +111,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 
 type ValidationReport struct {
 	ReportedAt tt.Time
+	File       tt.String
 	tl.BaseEntity
 }
 

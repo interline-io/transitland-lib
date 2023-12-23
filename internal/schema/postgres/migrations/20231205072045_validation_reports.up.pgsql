@@ -5,7 +5,8 @@ CREATE TABLE tl_validation_reports (
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     reported_at timestamp without time zone NOT NULL,
-    feed_version_id bigint REFERENCES feed_versions(id) NOT NULL
+    feed_version_id bigint REFERENCES feed_versions(id) NOT NULL,
+    file text
 );
 CREATE INDEX ON tl_validation_reports(feed_version_id);
 
