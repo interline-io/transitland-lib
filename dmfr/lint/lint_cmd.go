@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
