@@ -7,6 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/twpayne/go-geom"
 )
 
 type tripInfo struct {
@@ -381,9 +382,15 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 					for _, p := range shp {
 						coords = append(coords, p.Lon, p.Lat)
 					}
-					shpLine := tt.NewLineStringFromFlatCoords(coords)
-					shpPoint := tt.NewPoint(posPt.Lon, posPt.Lat)
-					shpErr.geoms = append(shpErr.geoms, tt.Geometry{Geometry: &shpLine, Valid: true}, tt.Geometry{Geometry: &shpPoint, Valid: true})
+					// Create geometry manually because we want XY not XYM
+					shpLineGeom := geom.NewLineStringFlat(geom.XY, coords)
+					shpLineGeom.SetSRID(4326)
+					shpPointGeom := tt.NewPoint(posPt.Lon, posPt.Lat)
+					shpErr.geoms = append(
+						shpErr.geoms,
+						tt.Geometry{Geometry: shpLineGeom, Valid: true},
+						tt.Geometry{Geometry: &shpPointGeom, Valid: true},
+					)
 					// fmt.Printf("GEOMS: %#v\n", shpErr.geoms)
 					errs = append(errs, shpErr)
 				}
