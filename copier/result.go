@@ -22,6 +22,10 @@ type updateContext interface {
 	Update(*causes.Context)
 }
 
+type hasGeometries interface {
+	Geometries() []tt.Geometry
+}
+
 // ErrorGroup helps group errors together with a maximum limit on the number stored.
 type ErrorGroup struct {
 	Filename  string
@@ -64,9 +68,13 @@ func (e ValidationError) Error() string {
 // Add an error to the error group.
 func (e *ErrorGroup) Add(err error) {
 	if e.Count < e.Limit || e.Limit == 0 {
-		e.Errors = append(e.Errors, ValidationError{
+		ee := ValidationError{
 			Message: err.Error(),
-		})
+		}
+		if v, ok := err.(hasGeometries); ok {
+			ee.Geometries = v.Geometries()
+		}
+		e.Errors = append(e.Errors, ee)
 	}
 	e.Count++
 }
