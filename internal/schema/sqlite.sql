@@ -722,7 +722,25 @@ CREATE TABLE tl_validation_vehicle_position_stats (
 );
 
 
+CREATE TABLE tl_validation_error_groups (
+    "id" integer primary key autoincrement,
+    "validation_report_id" int NOT NULL,
+    "filename" varchar(255) not null,
+    "field" varchar(255) not null,
+    "message" varchar(255) not null,
+    "error_type" varchar(255) not null,
+    "error_code" varchar(255) not null,
+    "count" int not null
+);
 
+CREATE TABLE tl_validation_error_exemplars (
+    "id" integer primary key autoincrement,
+    "validation_error_group_id" int not null,
+    "entity_id" varchar(255) not null,
+    "value" varchar(255) not null,
+    "message" varchar(255) not null,
+    "geometries" blob
+);
 
 
 

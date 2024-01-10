@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type ctx = causes.Context
@@ -29,8 +30,9 @@ type ErrorGroup struct {
 	ErrorType string
 	ErrorCode string
 	Count     int
-	Limit     int
-	Errors    []error
+	Limit     int `db:"-"`
+	// Errors           []error           `db:"-"`
+	Errors []ValidationError `db:"-"`
 }
 
 func NewErrorGroup(err error, limit int) *ErrorGroup {
@@ -48,10 +50,23 @@ func NewErrorGroup(err error, limit int) *ErrorGroup {
 	}
 }
 
+type ValidationError struct {
+	Message    string
+	EntityID   string
+	Value      string
+	Geometries []tt.Geometry
+}
+
+func (e ValidationError) Error() string {
+	return e.Message
+}
+
 // Add an error to the error group.
 func (e *ErrorGroup) Add(err error) {
 	if e.Count < e.Limit || e.Limit == 0 {
-		e.Errors = append(e.Errors, err)
+		e.Errors = append(e.Errors, ValidationError{
+			Message: err.Error(),
+		})
 	}
 	e.Count++
 }
