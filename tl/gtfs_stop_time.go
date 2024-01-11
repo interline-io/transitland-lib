@@ -152,7 +152,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.StopSequence = a
 		}
 	case "pickup_type":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.PickupType = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
@@ -160,7 +160,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.PickupType = tt.NewInt(a)
 		}
 	case "drop_off_type":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.DropOffType = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
@@ -168,7 +168,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.DropOffType = tt.NewInt(a)
 		}
 	case "continuous_pickup":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.ContinuousPickup = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_pickup", hi)
@@ -176,7 +176,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.ContinuousPickup = tt.NewInt(a)
 		}
 	case "continuous_drop_off":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.ContinuousDropOff = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_drop_off", hi)
@@ -184,7 +184,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.ContinuousDropOff = tt.NewInt(a)
 		}
 	case "shape_dist_traveled":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.ShapeDistTraveled = Float{}
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
@@ -192,8 +192,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.ShapeDistTraveled = tt.NewFloat(a)
 		}
 	case "timepoint":
-		// special use -1 for empty timepoint value
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.Timepoint = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
