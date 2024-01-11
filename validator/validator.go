@@ -252,14 +252,12 @@ func (v *Validator) ValidateRT(fn string, evaluateAt time.Time) (RealtimeResult,
 	} else {
 		rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
 		rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
-		tripUpdateStats, err := v.rtValidator.TripUpdateStats(evaluateAt, msg)
-		if err != nil {
+		if tripUpdateStats, err := v.rtValidator.TripUpdateStats(evaluateAt, msg); err != nil {
 			rterrs = append(rterrs, err)
 		} else {
 			rtResult.TripUpdateStats = tripUpdateStats
 		}
-		vehiclePositionStats, err := v.rtValidator.VehiclePositionStats(evaluateAt, msg)
-		if err != nil {
+		if vehiclePositionStats, err := v.rtValidator.VehiclePositionStats(evaluateAt, msg); err != nil {
 			rterrs = append(rterrs, err)
 		} else {
 			rtResult.VehiclePositionStats = vehiclePositionStats

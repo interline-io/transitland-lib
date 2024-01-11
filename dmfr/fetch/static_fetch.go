@@ -100,10 +100,18 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 			return vr, err
 		}
 
+		// Update validation report
+		if opts.SaveValidationReport {
+			if err := createFeedValidationReport(atx, reader, fv.ID, opts.FetchedAt, opts.ValidationReportStorage); err != nil {
+				return vr, err
+			}
+		}
+
 		// Update stats records
 		if err := createFeedStats(atx, reader, fv.ID); err != nil {
 			return vr, err
 		}
+
 		return vr, nil
 	}
 	result, err := ffetch(atx, opts, cb)

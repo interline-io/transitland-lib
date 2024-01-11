@@ -30,6 +30,8 @@ type Options struct {
 	CreatedBy               tl.String
 	Name                    tl.String
 	Description             tl.String
+	SaveValidationReport    bool
+	ValidationReportStorage string
 }
 
 // Result contains results of a fetch operation.

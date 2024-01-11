@@ -34,9 +34,8 @@ type ErrorGroup struct {
 	ErrorType string
 	ErrorCode string
 	Count     int
-	Limit     int `db:"-"`
-	// Errors           []error           `db:"-"`
-	Errors []ValidationError `db:"-"`
+	Limit     int               `db:"-"`
+	Errors    []ValidationError `db:"-"`
 }
 
 func NewErrorGroup(err error, limit int) *ErrorGroup {

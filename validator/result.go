@@ -75,6 +75,31 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 		return err
 	}
 
+	// Save error groups
+	for _, eg := range result.Errors {
+		egEnt := ValidationReportErrorGroup{
+			ValidationReportID: validationReport.ID,
+			Filename:           eg.Filename,
+			Field:              eg.Field,
+			ErrorType:          eg.ErrorType,
+			ErrorCode:          eg.ErrorCode,
+			Count:              eg.Count,
+		}
+		if _, err := atx.Insert(&egEnt); err != nil {
+			return err
+		}
+		for _, egErr := range eg.Errors {
+			if _, err := atx.Insert(&ValidationReportErrorExemplar{
+				ValidationReportErrorGroupID: egEnt.ID,
+				Message:                      egErr.Message,
+				EntityID:                     egErr.EntityID,
+				Value:                        egErr.Value,
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Save additional stats
 	if saveRealtimeStats {
 		for _, r := range result.Realtime {
@@ -109,6 +134,8 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 	return nil
 }
 
+//////
+
 type ValidationReport struct {
 	ReportedAt tt.Time
 	File       tt.String
@@ -118,6 +145,39 @@ type ValidationReport struct {
 func (e *ValidationReport) TableName() string {
 	return "tl_validation_reports"
 }
+
+//////
+
+type ValidationReportErrorGroup struct {
+	ValidationReportID int
+	Filename           string
+	Field              string
+	ErrorType          string
+	ErrorCode          string
+	Count              int
+	tl.DatabaseEntity
+}
+
+func (e *ValidationReportErrorGroup) TableName() string {
+	return "tl_validation_report_error_groups"
+}
+
+//////
+
+type ValidationReportErrorExemplar struct {
+	ValidationReportErrorGroupID int
+	Message                      string
+	EntityID                     string
+	Value                        string
+	// Geometries                   []tt.Geometry
+	tl.DatabaseEntity
+}
+
+func (e *ValidationReportErrorExemplar) TableName() string {
+	return "tl_validation_report_error_exemplars"
+}
+
+//////
 
 type ValidationReportTripUpdateStat struct {
 	ValidationReportID int
@@ -132,6 +192,8 @@ type ValidationReportTripUpdateStat struct {
 func (e *ValidationReportTripUpdateStat) TableName() string {
 	return "tl_validation_trip_update_stats"
 }
+
+//////
 
 type ValidationReportVehiclePositionStat struct {
 	ValidationReportID int
