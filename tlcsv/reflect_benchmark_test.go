@@ -24,16 +24,6 @@ func makehindex(header []string) map[string]int {
 	return hindex
 }
 
-func Benchmark_StopTime_Memory(b *testing.B) {
-	count := 1000
-	b.ReportAllocs()
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		stoptimes := make([]tl.StopTime, 0, count)
-		_ = stoptimes
-	}
-}
-
 // Benchmark StopTime memory usage
 func Benchmark_StopTime_Memory_Read1000(b *testing.B) {
 	p := testutil.RelPath("test/data/external/bart.zip")

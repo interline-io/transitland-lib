@@ -1,7 +1,6 @@
 package tlcsv
 
 import (
-	"database/sql/driver"
 	"errors"
 	"reflect"
 
@@ -18,27 +17,6 @@ var MapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
 type canSetString interface {
 	SetString(string, string) error
 	AddError(error)
-}
-
-// check for Value
-type canValue interface {
-	Value() (driver.Value, error)
-}
-
-type canString interface {
-	String() string
-}
-
-type canFromCsvString interface {
-	FromCsv(string) error
-}
-
-type canCsvString interface {
-	ToCsv() string
-}
-
-type canScan interface {
-	Scan(src interface{}) error
 }
 
 type canSetLine interface {
