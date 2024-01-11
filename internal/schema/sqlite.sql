@@ -734,6 +734,7 @@ CREATE TABLE tl_validation_report_error_groups (
 CREATE TABLE tl_validation_report_error_exemplars (
     "id" integer primary key autoincrement,
     "validation_report_error_group_id" int not null,
+    "line" int not null,
     "entity_id" varchar(255) not null,
     "value" varchar(255) not null,
     "message" varchar(255) not null,
