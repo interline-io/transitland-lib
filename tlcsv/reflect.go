@@ -3,15 +3,12 @@ package tlcsv
 import (
 	"database/sql/driver"
 	"errors"
-	"fmt"
-	"math"
 	"reflect"
-	"strconv"
-	"time"
 
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
@@ -62,49 +59,11 @@ func SetString(ent tl.Entity, key string, value string) error {
 	}
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()
-	valueField := reflectx.FieldByIndexes(elem, k.Index) // elem.Field(k.Index)
-	if err := valSetString(valueField, value); err != nil {
+	fieldValue := reflectx.FieldByIndexes(elem, k.Index).Addr().Interface()
+	if err := tt.FromCsv(fieldValue, value); err != nil {
 		return err
 	}
 	return nil
-}
-
-// valSetString sets the field from a CSV representation of the value.
-func valSetString(valueField reflect.Value, strv string) error {
-	var p error
-	switch vf := valueField.Addr().Interface().(type) {
-	case *string:
-		valueField.SetString(strv)
-	case *int, *int64:
-		v, e := strconv.ParseInt(strv, 0, 0)
-		p = e
-		valueField.SetInt(v)
-	case *float64:
-		v, e := strconv.ParseFloat(strv, 64)
-		p = e
-		valueField.SetFloat(v)
-	case *bool:
-		if strv == "true" {
-			valueField.SetBool(true)
-		} else {
-			valueField.SetBool(false)
-		}
-	case *time.Time:
-		v, e := time.Parse("20060102", strv)
-		p = e
-		valueField.Set(reflect.ValueOf(v))
-	case canFromCsvString:
-		if err := vf.FromCsv(strv); err != nil {
-			p = errors.New("field not scannable")
-		}
-	case canScan:
-		if err := vf.Scan(strv); err != nil {
-			p = errors.New("field not scannable")
-		}
-	default:
-		p = errors.New("field not scannable")
-	}
-	return p
 }
 
 // GetString //
@@ -126,63 +85,11 @@ func GetString(ent tl.Entity, key string) (string, error) {
 	// Already known valid field
 	elem := reflect.ValueOf(ent).Elem()
 	valueField := reflectx.FieldByIndexesReadOnly(elem, k.Index)
-	v, err := toCsv(key, valueField.Interface())
+	v, err := tt.ToCsv(valueField.Interface())
 	if err != nil {
 		return "", err
 	}
 	return v, nil
-}
-
-// toCsv default CSV formatting
-func toCsv(key string, rfi any) (string, error) {
-	// Check ToCsv() and Value() first, then primitives, then String()
-	value := ""
-	switch v := rfi.(type) {
-	case nil:
-		value = ""
-	case string:
-		value = v
-	case int:
-		value = strconv.Itoa(v)
-	case int64:
-		value = strconv.Itoa(int(v))
-	case bool:
-		if v {
-			value = "true"
-		} else {
-			value = "false"
-		}
-	case float64:
-		if math.IsNaN(v) {
-			value = ""
-		} else if v > -100_000 && v < 100_000 {
-			// use pretty %g formatting but avoid exponents
-			value = fmt.Sprintf("%g", v)
-		} else {
-			value = fmt.Sprintf("%0.5f", v)
-		}
-	case time.Time:
-		if v.IsZero() {
-			value = ""
-		} else {
-			value = v.Format("20060102")
-		}
-	case []byte:
-		value = string(v)
-	case canCsvString:
-		value = v.ToCsv()
-	case canValue:
-		a, err := v.Value()
-		if err != nil {
-			return "", err
-		}
-		return toCsv(key, a)
-	case canString:
-		value = v.String()
-	default:
-		return "", fmt.Errorf("can not convert field to string")
-	}
-	return value, nil
 }
 
 // Loading: fast and reflect paths //
@@ -261,8 +168,8 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				continue
 			}
 			// Handle different known types
-			fieldValue := reflectx.FieldByIndexes(entValue, fieldInfo.Index)
-			if err := valSetString(fieldValue, strv); err != nil {
+			fieldValue := reflectx.FieldByIndexes(entValue, fieldInfo.Index).Addr().Interface()
+			if err := tt.FromCsv(fieldValue, strv); err != nil {
 				errs = append(errs, causes.NewFieldParseError(fieldName, strv))
 			}
 		}
@@ -303,8 +210,8 @@ func dumpRow(ent tl.Entity, header []string) ([]string, error) {
 	if err != nil || len(rv) != len(header) {
 		return nil, errors.New("failed to get insert values for entity")
 	}
-	for i, v := range rv {
-		value, err := toCsv(header[i], v)
+	for _, v := range rv {
+		value, err := tt.ToCsv(v)
 		if err != nil {
 			return nil, err
 		}

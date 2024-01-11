@@ -44,14 +44,14 @@ func (ent *Attribution) Errors() (errs []error) {
 	// Mutually exclusive fields
 	if ent.AgencyID.Val != "" {
 		if ent.RouteID.Val != "" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("route_id", "route_id cannot be set if agency_id is present"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("route_id", ent.RouteID.Val, "route_id cannot be set if agency_id is present"))
 		}
 		if ent.TripID.Val != "" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", "trip_id cannot be set if agency_id is present"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", ent.TripID.Val, "trip_id cannot be set if agency_id is present"))
 		}
 	} else if ent.RouteID.Val != "" {
 		if ent.TripID.Val != "" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", "trip_id cannot be set if route_id is present"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("trip_id", ent.RouteID.Val, "trip_id cannot be set if route_id is present"))
 		}
 	}
 	return errs

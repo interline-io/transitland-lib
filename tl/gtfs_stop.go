@@ -77,7 +77,7 @@ func (ent *Stop) Errors() (errs []error) {
 	}
 	// Check for "0" value...
 	if lt == 1 && ent.ParentStation.Val != "" {
-		errs = append(errs, causes.NewInvalidFieldError("parent_station", "", fmt.Errorf("station cannot have parent_station")))
+		errs = append(errs, causes.NewInvalidFieldError("parent_station", ent.ParentStation.Val, fmt.Errorf("station cannot have parent_station")))
 	}
 	if (lt == 2 || lt == 3 || lt == 4) && ent.ParentStation.Val == "" {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("parent_station"))

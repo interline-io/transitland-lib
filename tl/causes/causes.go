@@ -287,8 +287,8 @@ type ConditionallyForbiddenFieldError struct {
 	bc
 }
 
-func NewConditionallyForbiddenFieldError(field string, msg string) *ConditionallyForbiddenFieldError {
-	return &ConditionallyForbiddenFieldError{bc: bc{Field: field, Message: msg}}
+func NewConditionallyForbiddenFieldError(field string, value string, msg string) *ConditionallyForbiddenFieldError {
+	return &ConditionallyForbiddenFieldError{bc: bc{Field: field, Value: value, Message: msg}}
 }
 
 func (e *ConditionallyForbiddenFieldError) Error() string {

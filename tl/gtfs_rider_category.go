@@ -2,7 +2,6 @@ package tl
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -34,7 +33,7 @@ func (ent *RiderCategory) Errors() (errs []error) {
 	errs = append(errs, tt.CheckPositiveInt("max_age", ent.MaxAge.Val)...)
 	errs = append(errs, tt.CheckURL("eligibility_url", ent.EligibilityURL.Val)...)
 	if ent.MinAge.Valid && ent.MaxAge.Valid && ent.MaxAge.Val < ent.MinAge.Val {
-		errs = append(errs, causes.NewInvalidFieldError("max_age", strconv.Itoa(ent.MaxAge.Int()), fmt.Errorf("max_age is less than min_age")))
+		errs = append(errs, causes.NewInvalidFieldError("max_age", tt.TryCsv(ent.MaxAge), fmt.Errorf("max_age is less than min_age")))
 	}
 	// todo: min_age < max_age
 	return errs

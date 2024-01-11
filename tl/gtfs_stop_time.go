@@ -48,7 +48,7 @@ func (ent *StopTime) Errors() []error {
 	// Other errors
 	at, dt := ent.ArrivalTime.Seconds, ent.DepartureTime.Seconds
 	if at != 0 && dt != 0 && at > dt {
-		errs = append(errs, causes.NewInvalidFieldError("departure_time", "", fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
+		errs = append(errs, causes.NewInvalidFieldError("departure_time", ent.DepartureTime.String(), fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
 	}
 	return errs
 }
@@ -225,7 +225,7 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 	for _, st := range stoptimes[1:] {
 		// Ensure we do not have duplicate StopSequennce
 		if st.StopSequence == lastSequence {
-			errs = append(errs, causes.NewSequenceError("stop_sequence", strconv.Itoa(st.StopSequence)))
+			errs = append(errs, causes.NewSequenceError("stop_sequence", tt.TryCsv(st.StopSequence)))
 		} else {
 			lastSequence = st.StopSequence
 		}

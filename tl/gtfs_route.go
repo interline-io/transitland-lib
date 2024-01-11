@@ -1,8 +1,6 @@
 package tl
 
 import (
-	"strconv"
-
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
@@ -51,7 +49,7 @@ func (ent *Route) Errors() (errs []error) {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("route_short_name"))
 	}
 	if _, ok := tt.GetRouteType(ent.RouteType); !ok {
-		errs = append(errs, causes.NewInvalidFieldError("route_type", strconv.Itoa(ent.RouteType), nil))
+		errs = append(errs, causes.NewInvalidFieldError("route_type", tt.TryCsv(ent.RouteType), nil))
 	}
 	return errs
 }

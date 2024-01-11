@@ -45,7 +45,7 @@ func (ent *Translation) Errors() (errs []error) {
 		}
 	} else {
 		if ent.TableNameValue.Val == "feed_info" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("record_id", "forbidden if table_name is 'feed_info'"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("record_id", ent.TableNameValue.Val, "forbidden if table_name is 'feed_info'"))
 		}
 		// exclusive with FieldValue checked below
 	}
@@ -56,20 +56,20 @@ func (ent *Translation) Errors() (errs []error) {
 		}
 	} else {
 		if ent.RecordID.Val == "" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("record_sub_id", "forbidden if record_id is empty"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("record_sub_id", ent.RecordID.Val, "forbidden if record_id is empty"))
 		}
 		if ent.TableNameValue.Val == "feed_info" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("record_sub_id", "forbidden if table_name is 'feed_info'"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("record_sub_id", ent.TableNameValue.Val, "forbidden if table_name is 'feed_info'"))
 		}
 		// exclusive with FieldValue checked below
 	}
 	// FieldValue
 	if ent.FieldValue.Val != "" {
 		if ent.TableNameValue.Val == "feed_info" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("field_value", "forbidden if table_name is 'feed_info'"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("field_value", ent.TableNameValue.Val, "forbidden if table_name is 'feed_info'"))
 		}
 		if ent.RecordID.Val != "" {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("field_value", "forbidden if record_id is present"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("field_value", ent.RecordID.Val, "forbidden if record_id is present"))
 		}
 	}
 	return errs
