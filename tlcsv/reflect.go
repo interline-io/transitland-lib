@@ -44,6 +44,10 @@ type canScan interface {
 	Scan(src interface{}) error
 }
 
+type canSetLine interface {
+	SetLine(int)
+}
+
 // SetString //
 
 // SetString convenience method; checks for SetString method.
@@ -185,12 +189,15 @@ func toCsv(key string, rfi any) (string, error) {
 
 // loadRow selects the fastest method for loading an entity.
 func loadRow(ent any, row Row) []error {
-	var errs []error
 	// Check for fast path
+	var errs []error
 	if entfast, ok := ent.(canSetString); ok {
 		errs = loadRowFast(entfast, row)
 	} else {
 		errs = loadRowReflect(ent, row)
+	}
+	if v, ok := ent.(canSetLine); ok {
+		v.SetLine(row.Line)
 	}
 	return errs
 }

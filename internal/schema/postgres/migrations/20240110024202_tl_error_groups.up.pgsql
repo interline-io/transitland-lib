@@ -14,6 +14,7 @@ CREATE INDEX ON tl_validation_report_error_groups(validation_report_id);
 CREATE TABLE tl_validation_report_error_exemplars (
     id bigserial primary key NOT NULL,
     validation_report_error_group_id bigint REFERENCES tl_validation_report_error_groups(id) not null,
+    line int not null,
     entity_id text not null,
     value text not null,
     message text not null,

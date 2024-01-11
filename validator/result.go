@@ -91,6 +91,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 		for _, egErr := range eg.Errors {
 			if _, err := atx.Insert(&ValidationReportErrorExemplar{
 				ValidationReportErrorGroupID: egEnt.ID,
+				Line:                         egErr.Line,
 				Message:                      egErr.Message,
 				EntityID:                     egErr.EntityID,
 				Value:                        egErr.Value,
@@ -164,6 +165,7 @@ func (e *ValidationReportErrorGroup) TableName() string {
 
 type ValidationReportErrorExemplar struct {
 	ValidationReportErrorGroupID int
+	Line                         int
 	Message                      string
 	EntityID                     string
 	Value                        string

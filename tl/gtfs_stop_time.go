@@ -216,8 +216,8 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 	if len(stoptimes) < 2 {
 		errs = append(errs, causes.NewEmptyTripError(len(stoptimes)))
 	}
-	if stoptimes[len(stoptimes)-1].ArrivalTime.Seconds <= 0 {
-		errs = append(errs, causes.NewSequenceError("arrival_time", ""))
+	if lastSt := stoptimes[len(stoptimes)-1]; lastSt.ArrivalTime.Seconds <= 0 {
+		errs = append(errs, causes.NewSequenceError("arrival_time", lastSt.ArrivalTime.String()))
 	}
 	lastDist := stoptimes[0].ShapeDistTraveled
 	lastTime := stoptimes[0].DepartureTime

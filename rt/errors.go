@@ -73,11 +73,11 @@ var (
 
 type bc = causes.Context
 
-func nec(msg string, code string) RealtimeError {
+func nec(msg string, errorCode string) RealtimeError {
 	return RealtimeError{
 		bc: causes.Context{
-			Value: msg,
-			Code:  code,
+			Value:     msg,
+			ErrorCode: errorCode,
 		},
 	}
 }
