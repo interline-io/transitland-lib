@@ -47,7 +47,7 @@ func (r *Result) Key() string {
 	return fmt.Sprintf("report-%s-%d.json", r.SHA1, time.Now().In(time.UTC).Unix())
 }
 
-func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time, fvid int, saveStatic bool, saveRealtimeStats bool, reportStorage string) error {
+func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time, fvid int, reportStorage string) error {
 	// Save validation reports
 	validationReport := ValidationReport{}
 	validationReport.FeedVersionID = fvid
@@ -101,33 +101,31 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 	}
 
 	// Save additional stats
-	if saveRealtimeStats {
-		for _, r := range result.Realtime {
-			for _, s := range r.TripUpdateStats {
-				tripReport := ValidationReportTripUpdateStat{
-					ValidationReportID: validationReport.ID,
-					AgencyID:           s.AgencyID,
-					RouteID:            s.RouteID,
-					TripScheduledCount: s.TripScheduledCount,
-					TripMatchCount:     s.TripMatchCount,
-					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
-				}
-				if _, err := atx.Insert(&tripReport); err != nil {
-					return err
-				}
+	for _, r := range result.Realtime {
+		for _, s := range r.TripUpdateStats {
+			tripReport := ValidationReportTripUpdateStat{
+				ValidationReportID: validationReport.ID,
+				AgencyID:           s.AgencyID,
+				RouteID:            s.RouteID,
+				TripScheduledCount: s.TripScheduledCount,
+				TripMatchCount:     s.TripMatchCount,
+				TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
 			}
-			for _, s := range r.VehiclePositionStats {
-				vpReport := ValidationReportTripUpdateStat{
-					ValidationReportID: validationReport.ID,
-					AgencyID:           s.AgencyID,
-					RouteID:            s.RouteID,
-					TripScheduledCount: s.TripScheduledCount,
-					TripMatchCount:     s.TripMatchCount,
-					TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
-				}
-				if _, err := atx.Insert(&vpReport); err != nil {
-					return err
-				}
+			if _, err := atx.Insert(&tripReport); err != nil {
+				return err
+			}
+		}
+		for _, s := range r.VehiclePositionStats {
+			vpReport := ValidationReportTripUpdateStat{
+				ValidationReportID: validationReport.ID,
+				AgencyID:           s.AgencyID,
+				RouteID:            s.RouteID,
+				TripScheduledCount: s.TripScheduledCount,
+				TripMatchCount:     s.TripMatchCount,
+				TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+			}
+			if _, err := atx.Insert(&vpReport); err != nil {
+				return err
 			}
 		}
 	}

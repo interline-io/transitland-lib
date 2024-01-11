@@ -204,8 +204,10 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 		if err := createFeedStats(atx, reader, fv.ID); err != nil {
 			return err
 		}
-		if err := createFeedValidationReport(atx, reader, fv.ID, fv.FetchedAt, opts.ValidationReportStorage); err != nil {
-			return err
+		if opts.SaveValidationReport {
+			if err := createFeedValidationReport(atx, reader, fv.ID, fv.FetchedAt, opts.ValidationReportStorage); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -294,7 +296,7 @@ func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int
 	if err != nil {
 		return err
 	}
-	if err := validator.SaveValidationReport(atx, validationResult, fetchedAt, fvid, true, true, storage); err != nil {
+	if err := validator.SaveValidationReport(atx, validationResult, fetchedAt, fvid, storage); err != nil {
 		return err
 	}
 	return nil

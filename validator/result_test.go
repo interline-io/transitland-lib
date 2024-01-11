@@ -44,7 +44,7 @@ func TestSaveValidationReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	testdb.TempSqlite(func(atx tldb.Adapter) error {
-		if err := SaveValidationReport(atx, result, now, 1, true, true, ""); err != nil {
+		if err := SaveValidationReport(atx, result, now, 1, ""); err != nil {
 			t.Fatal(err)
 		}
 		return nil
