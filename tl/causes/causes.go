@@ -10,7 +10,7 @@ import (
 type Context struct {
 	Filename   string
 	Line       int
-	Code       string
+	ErrorCode  string
 	EntityID   string
 	Field      string
 	Value      string
@@ -54,8 +54,8 @@ func (e *Context) Update(v *Context) {
 	if v.EntityID != "" {
 		e.EntityID = v.EntityID
 	}
-	if v.Code != "" {
-		e.Code = v.Code
+	if v.ErrorCode != "" {
+		e.ErrorCode = v.ErrorCode
 	}
 	if v.Field != "" {
 		e.Field = v.Field
@@ -198,7 +198,7 @@ type DuplicateIDError struct {
 
 // NewDuplicateIDError returns a new DuplicateIDErrror
 func NewDuplicateIDError(eid string) *DuplicateIDError {
-	return &DuplicateIDError{bc: bc{EntityID: eid}}
+	return &DuplicateIDError{bc: bc{EntityID: eid, Value: eid}}
 }
 
 func (e *DuplicateIDError) Error() string {
@@ -287,8 +287,8 @@ type ConditionallyForbiddenFieldError struct {
 	bc
 }
 
-func NewConditionallyForbiddenFieldError(field string, msg string) *ConditionallyForbiddenFieldError {
-	return &ConditionallyForbiddenFieldError{bc: bc{Field: field, Message: msg}}
+func NewConditionallyForbiddenFieldError(field string, value string, msg string) *ConditionallyForbiddenFieldError {
+	return &ConditionallyForbiddenFieldError{bc: bc{Field: field, Value: value, Message: msg}}
 }
 
 func (e *ConditionallyForbiddenFieldError) Error() string {

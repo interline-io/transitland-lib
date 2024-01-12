@@ -69,8 +69,8 @@ type canShareGeomCache interface {
 	SetGeomCache(*xy.GeomCache)
 }
 
-type hasEntityKey interface {
-	EntityKey() string
+type hasLine interface {
+	Line() int
 }
 
 ////////////////////////////
@@ -417,14 +417,10 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 	var errs []error
 	var warns []error
 	for _, v := range copier.errorValidators {
-		for _, err := range v.Validate(ent) {
-			errs = append(errs, err)
-		}
+		errs = append(errs, v.Validate(ent)...)
 	}
 	for _, v := range copier.warningValidators {
-		for _, err := range v.Validate(ent) {
-			warns = append(warns, err)
-		}
+		warns = append(warns, v.Validate(ent)...)
 	}
 
 	if extEnt, ok := ent.(tl.EntityWithErrors); ok {
@@ -441,6 +437,8 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		errs = extEnt.Errors()
 		warns = extEnt.Warnings()
 	}
+
+	// Log and set line context
 	for _, err := range warns {
 		copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("warning")
 	}

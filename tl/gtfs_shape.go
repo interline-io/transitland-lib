@@ -1,7 +1,6 @@
 package tl
 
 import (
-	"fmt"
 	"sort"
 	"strconv"
 
@@ -29,11 +28,11 @@ func ValidateShapes(shapes []Shape) []error {
 	for _, shape := range shapes {
 		// Check for duplicate ID errors
 		if shape.ShapePtSequence == last {
-			errs = append(errs, causes.NewSequenceError("shape_pt_sequence", strconv.Itoa(last)))
+			errs = append(errs, causes.NewSequenceError("shape_pt_sequence", tt.TryCsv(last)))
 		}
 		last = shape.ShapePtSequence
 		if shape.ShapeDistTraveled < dist {
-			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", fmt.Sprintf("%f", shape.ShapeDistTraveled)))
+			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", tt.TryCsv(shape.ShapeDistTraveled)))
 		} else if shape.ShapeDistTraveled > 0 {
 			dist = shape.ShapeDistTraveled
 		}

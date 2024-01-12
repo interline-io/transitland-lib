@@ -73,11 +73,11 @@ var (
 
 type bc = causes.Context
 
-func nec(msg string, code string) RealtimeError {
+func nec(msg string, errorCode string) RealtimeError {
 	return RealtimeError{
 		bc: causes.Context{
-			Value: msg,
-			Code:  code,
+			Value:     msg,
+			ErrorCode: errorCode,
 		},
 	}
 }
@@ -100,11 +100,11 @@ func withField(e RealtimeError, field string) *RealtimeError {
 // RealtimeError is a GTFS RealTime error.
 type RealtimeError struct {
 	bc
-	geoms []tt.Geometry
+	geom tt.Geometry
 }
 
-func (e RealtimeError) Geometries() []tt.Geometry {
-	return e.geoms
+func (e RealtimeError) Geometry() tt.Geometry {
+	return e.geom
 }
 
 // RealtimeWarning is a GTFS RealTime warning.

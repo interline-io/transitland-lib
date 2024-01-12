@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type ctx = causes.Context
@@ -21,39 +22,85 @@ type updateContext interface {
 	Update(*causes.Context)
 }
 
-// ErrorGroup helps group errors together with a maximum limit on the number stored.
-type ErrorGroup struct {
+type hasGeometry interface {
+	Geometry() tt.Geometry
+}
+
+// ValidationErrorGroup helps group errors together with a maximum limit on the number stored.
+type ValidationErrorGroup struct {
 	Filename  string
 	Field     string
-	Message   string
 	ErrorType string
 	ErrorCode string
 	Count     int
-	Limit     int
-	Errors    []error
+	Limit     int               `db:"-"`
+	Errors    []ValidationError `db:"-"`
 }
 
-func NewErrorGroup(err error, limit int) *ErrorGroup {
-	c := &causes.Context{}
-	if v, ok := err.(hasContext); ok {
-		c = v.Context()
+func NewValidationErrorGroup(err error, limit int) *ValidationErrorGroup {
+	errtype := strings.Replace(fmt.Sprintf("%T", err), "*", "", 1)
+	if len(strings.Split(errtype, ".")) > 1 {
+		errtype = strings.Split(errtype, ".")[1]
 	}
-	return &ErrorGroup{
-		Filename:  c.Filename,
-		Field:     c.Field,
-		Message:   c.Value,
-		ErrorCode: c.Code,
-		ErrorType: getErrorType(err),
+	ve := newValidationError(err)
+	return &ValidationErrorGroup{
+		Filename:  ve.Filename,
+		Field:     ve.Field,
+		ErrorCode: ve.ErrorCode,
+		ErrorType: errtype,
 		Limit:     limit,
 	}
 }
 
+func (eg *ValidationErrorGroup) Key() string {
+	return eg.Filename + ":" + eg.Field + ":" + eg.ErrorType
+}
+
 // Add an error to the error group.
-func (e *ErrorGroup) Add(err error) {
+func (e *ValidationErrorGroup) Add(err error) {
 	if e.Count < e.Limit || e.Limit == 0 {
-		e.Errors = append(e.Errors, err)
+		e.Errors = append(e.Errors, newValidationError(err))
 	}
 	e.Count++
+}
+
+func getErrorKey(err error) string {
+	eg := NewValidationErrorGroup(err, 0)
+	return eg.Key()
+}
+
+type ValidationError struct {
+	Filename  string `db:"-"`
+	Field     string `db:"-"`
+	ErrorCode string `db:"-"`
+	Line      int
+	Message   string
+	EntityID  string
+	Value     string
+	Geometry  tt.Geometry
+}
+
+func (e ValidationError) Error() string {
+	return e.Message
+}
+
+func newValidationError(err error) ValidationError {
+	ee := ValidationError{
+		Message: err.Error(),
+	}
+	if v, ok := err.(hasContext); ok {
+		vctx := v.Context()
+		ee.Line = vctx.Line
+		ee.Field = vctx.Field
+		ee.Filename = vctx.Filename
+		ee.EntityID = vctx.EntityID
+		ee.Value = vctx.Value
+		ee.ErrorCode = vctx.ErrorCode
+	}
+	if v, ok := err.(hasGeometry); ok {
+		ee.Geometry = v.Geometry()
+	}
+	return ee
 }
 
 // Result stores Copier results and statistics.
@@ -66,8 +113,8 @@ type Result struct {
 	SkipEntityReferenceCount  map[string]int
 	SkipEntityFilterCount     map[string]int
 	SkipEntityMarkedCount     map[string]int
-	Errors                    map[string]*ErrorGroup
-	Warnings                  map[string]*ErrorGroup
+	Errors                    map[string]*ValidationErrorGroup
+	Warnings                  map[string]*ValidationErrorGroup
 	ErrorLimit                int
 }
 
@@ -83,8 +130,8 @@ func NewResult(errorLimit int) *Result {
 		SkipEntityReferenceCount: map[string]int{},
 		SkipEntityFilterCount:    map[string]int{},
 		SkipEntityMarkedCount:    map[string]int{},
-		Errors:                   map[string]*ErrorGroup{},
-		Warnings:                 map[string]*ErrorGroup{},
+		Errors:                   map[string]*ValidationErrorGroup{},
+		Warnings:                 map[string]*ValidationErrorGroup{},
 		ErrorLimit:               errorLimit,
 	}
 }
@@ -98,7 +145,7 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = NewErrorGroup(err, cr.ErrorLimit)
+			v = NewValidationErrorGroup(err, cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -110,7 +157,7 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {
-			v = NewErrorGroup(err, cr.ErrorLimit)
+			v = NewValidationErrorGroup(err, cr.ErrorLimit)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
@@ -120,10 +167,10 @@ func (cr *Result) HandleSourceErrors(fn string, errs []error, warns []error) {
 // HandleError .
 func (cr *Result) HandleError(fn string, errs []error) {
 	for _, err := range errs {
-		key := fn + ":" + getErrorType(err)
+		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = NewErrorGroup(err, cr.ErrorLimit)
+			v = NewValidationErrorGroup(err, cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -132,28 +179,34 @@ func (cr *Result) HandleError(fn string, errs []error) {
 
 // HandleEntityErrors .
 func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
+	// Get entity line, if available
 	efn := ent.Filename()
 	eid := ent.EntityID()
+	eln := 0
+	if v, ok := ent.(hasLine); ok {
+		eln = v.Line()
+	}
+
 	for _, err := range errs {
 		if v, ok := err.(updateContext); ok {
-			v.Update(&ctx{Filename: efn, EntityID: eid})
+			v.Update(&ctx{Filename: efn, EntityID: eid, Line: eln})
 		}
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
-			v = NewErrorGroup(err, cr.ErrorLimit)
+			v = NewValidationErrorGroup(err, cr.ErrorLimit)
 			cr.Errors[key] = v
 		}
 		v.Add(err)
 	}
 	for _, err := range warns {
 		if v, ok := err.(updateContext); ok {
-			v.Update(&ctx{Filename: efn, EntityID: eid})
+			v.Update(&ctx{Filename: efn, EntityID: eid, Line: eln})
 		}
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {
-			v = NewErrorGroup(err, cr.ErrorLimit)
+			v = NewValidationErrorGroup(err, cr.ErrorLimit)
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
@@ -259,19 +312,6 @@ func sortedKeys(m map[string]int) []string {
 	}
 	sort.Strings(keys)
 	return keys
-}
-
-func getErrorKey(err error) string {
-	eg := NewErrorGroup(err, 0)
-	return eg.Filename + ":" + eg.Field + ":" + eg.ErrorType
-}
-
-func getErrorType(err error) string {
-	errtype := strings.Replace(fmt.Sprintf("%T", err), "*", "", 1)
-	if len(strings.Split(errtype, ".")) > 1 {
-		errtype = strings.Split(errtype, ".")[1]
-	}
-	return errtype
 }
 
 func errfmt(err error) string {

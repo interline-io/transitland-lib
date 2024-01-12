@@ -77,7 +77,7 @@ func (ent *FareTransferRule) Errors() (errs []error) {
 	legGroupsValidEqual := ent.FromLegGroupID.Valid && ent.FromLegGroupID.Val == ent.ToLegGroupID.Val
 	if ent.TransferCount.Valid {
 		if !legGroupsValidEqual {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("transfer_count", "requires from_leg_group_id == to_leg_group_id"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("transfer_count", fmt.Sprintf("%d", ent.TransferCount.Val), "requires from_leg_group_id == to_leg_group_id"))
 		}
 		if ent.TransferCount.Val == 0 || ent.TransferCount.Val < -1 {
 			errs = append(errs, causes.NewInvalidFieldError("transfer_count", fmt.Sprintf("%d", ent.TransferCount.Val), fmt.Errorf("must be -1 or greater than 0")))
@@ -89,7 +89,7 @@ func (ent *FareTransferRule) Errors() (errs []error) {
 	// duration_limit, duration_limit_type
 	if ent.DurationLimitType.Valid {
 		if !ent.DurationLimit.Valid {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("duration_limit", "duration_limit_type requires duration_limit to be present"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("duration_limit", tt.TryCsv(ent.DurationLimitType), "duration_limit_type requires duration_limit to be present"))
 		}
 		errs = append(errs, tt.CheckInsideRangeInt("duration_limit_type", int(ent.DurationLimitType.Val), 0, 3)...)
 	} else if ent.DurationLimit.Valid {

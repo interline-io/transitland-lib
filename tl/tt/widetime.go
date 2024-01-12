@@ -17,7 +17,7 @@ type WideTime struct {
 
 // NewWideTime converts the csv string to a WideTime.
 func NewWideTime(value string) (wt WideTime, err error) {
-	err = wt.Scan(value)
+	err = wt.FromCsv(value)
 	return wt, err
 }
 

@@ -2,7 +2,6 @@ package filters
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -22,7 +21,7 @@ func (e *BasicRouteTypeFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 	if rt, ok := tt.GetBasicRouteType(v.RouteType); ok {
 		v.RouteType = rt.Code
 	} else {
-		return causes.NewInvalidFieldError("route_type", strconv.Itoa(v.RouteType), fmt.Errorf("cannot convert route_type %d to basic route type", v.RouteType))
+		return causes.NewInvalidFieldError("route_type", tt.TryCsv(v.RouteType), fmt.Errorf("cannot convert route_type %d to basic route type", v.RouteType))
 	}
 	return nil
 }

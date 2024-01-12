@@ -39,13 +39,13 @@ func (ent *Frequency) Errors() (errs []error) {
 	}
 	st, et := ent.StartTime.Seconds, ent.EndTime.Seconds
 	if ent.HeadwaySecs < 1 {
-		errs = append(errs, causes.NewInvalidFieldError("headway_secs", "", fmt.Errorf("headway_secs must be a positive integer")))
+		errs = append(errs, causes.NewInvalidFieldError("headway_secs", fmt.Sprintf("%d", ent.HeadwaySecs), fmt.Errorf("headway_secs must be a positive integer")))
 	}
 	if st != 0 && et != 0 && st > et {
-		errs = append(errs, causes.NewInvalidFieldError("end_time", "", fmt.Errorf("end_time '%d' must come after start_time '%d'", et, st)))
+		errs = append(errs, causes.NewInvalidFieldError("end_time", fmt.Sprintf("%d", et), fmt.Errorf("end_time '%d' must come after start_time '%d'", et, st)))
 	}
 	if !(ent.ExactTimes == 0 || ent.ExactTimes == 1) {
-		errs = append(errs, causes.NewInvalidFieldError("exact_times", "", fmt.Errorf("exact_times must be 0 or 1")))
+		errs = append(errs, causes.NewInvalidFieldError("exact_times", fmt.Sprintf("%d", ent.ExactTimes), fmt.Errorf("exact_times must be 0 or 1")))
 	}
 	return errs
 }

@@ -16,16 +16,15 @@ import (
 
 // Command
 type Command struct {
-	Options                      Options
-	rtFiles                      cli.ArrayFlags
-	OutputFile                   string
-	DBURL                        string
-	FVID                         int
-	extensions                   cli.ArrayFlags
-	SaveStaticValidationReport   bool
-	SaveRealtimeValidationReport bool
-	SaveStorage                  string
-	readerPath                   string
+	Options                 Options
+	rtFiles                 cli.ArrayFlags
+	OutputFile              string
+	DBURL                   string
+	FVID                    int
+	extensions              cli.ArrayFlags
+	SaveValidationReport    bool
+	ValidationReportStorage string
+	readerPath              string
 }
 
 func (cmd *Command) Parse(args []string) error {
@@ -38,9 +37,8 @@ func (cmd *Command) Parse(args []string) error {
 	fl.StringVar(&cmd.OutputFile, "o", "", "Write validation report as JSON to file")
 	fl.BoolVar(&cmd.Options.BestPractices, "best-practices", false, "Include Best Practices validations")
 	fl.BoolVar(&cmd.Options.IncludeRealtimeJson, "rt-json", false, "Include GTFS-RT proto messages as JSON in validation report")
-	fl.BoolVar(&cmd.SaveStaticValidationReport, "save-static-report", false, "Save static validation report in database")
-	fl.BoolVar(&cmd.SaveRealtimeValidationReport, "save-rt-report", false, "Save RT validation report in database")
-	fl.StringVar(&cmd.SaveStorage, "save-storage", "", "Storage path for saving validation report JSON")
+	fl.BoolVar(&cmd.SaveValidationReport, "validation-report", false, "Save static validation report in database")
+	fl.StringVar(&cmd.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
 	fl.IntVar(&cmd.FVID, "save-fvid", 0, "Save report to feed version ID")
 	fl.Var(&cmd.rtFiles, "rt", "Include GTFS-RT proto message in validation report")
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
@@ -93,7 +91,7 @@ func (cmd *Command) Run() error {
 	}
 
 	// Save to database
-	if cmd.SaveRealtimeValidationReport || cmd.SaveStaticValidationReport {
+	if cmd.SaveValidationReport {
 		log.Infof("Saving validation report to feed version: %d", cmd.FVID)
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -101,7 +99,7 @@ func (cmd *Command) Run() error {
 		}
 		atx := writer.Adapter
 		defer atx.Close()
-		if err := SaveValidationReport(atx, result, time.Now(), cmd.FVID, cmd.SaveStaticValidationReport, cmd.SaveRealtimeValidationReport, cmd.SaveStorage); err != nil {
+		if err := SaveValidationReport(atx, result, time.Now(), cmd.FVID, cmd.ValidationReportStorage); err != nil {
 			return err
 		}
 	}

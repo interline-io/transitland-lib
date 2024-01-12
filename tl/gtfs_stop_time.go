@@ -48,7 +48,7 @@ func (ent *StopTime) Errors() []error {
 	// Other errors
 	at, dt := ent.ArrivalTime.Seconds, ent.DepartureTime.Seconds
 	if at != 0 && dt != 0 && at > dt {
-		errs = append(errs, causes.NewInvalidFieldError("departure_time", "", fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
+		errs = append(errs, causes.NewInvalidFieldError("departure_time", ent.DepartureTime.String(), fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
 	}
 	return errs
 }
@@ -152,7 +152,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.StopSequence = a
 		}
 	case "pickup_type":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.PickupType = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
@@ -160,7 +160,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.PickupType = tt.NewInt(a)
 		}
 	case "drop_off_type":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.DropOffType = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
@@ -168,7 +168,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.DropOffType = tt.NewInt(a)
 		}
 	case "continuous_pickup":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.ContinuousPickup = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_pickup", hi)
@@ -176,7 +176,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.ContinuousPickup = tt.NewInt(a)
 		}
 	case "continuous_drop_off":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.ContinuousDropOff = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_drop_off", hi)
@@ -184,7 +184,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.ContinuousDropOff = tt.NewInt(a)
 		}
 	case "shape_dist_traveled":
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.ShapeDistTraveled = Float{}
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
@@ -192,8 +192,7 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.ShapeDistTraveled = tt.NewFloat(a)
 		}
 	case "timepoint":
-		// special use -1 for empty timepoint value
-		if len(hi) == 0 {
+		if hi == "" {
 			ent.Timepoint = Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
@@ -216,8 +215,8 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 	if len(stoptimes) < 2 {
 		errs = append(errs, causes.NewEmptyTripError(len(stoptimes)))
 	}
-	if stoptimes[len(stoptimes)-1].ArrivalTime.Seconds <= 0 {
-		errs = append(errs, causes.NewSequenceError("arrival_time", ""))
+	if lastSt := stoptimes[len(stoptimes)-1]; lastSt.ArrivalTime.Seconds <= 0 {
+		errs = append(errs, causes.NewSequenceError("arrival_time", lastSt.ArrivalTime.String()))
 	}
 	lastDist := stoptimes[0].ShapeDistTraveled
 	lastTime := stoptimes[0].DepartureTime
@@ -225,7 +224,7 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 	for _, st := range stoptimes[1:] {
 		// Ensure we do not have duplicate StopSequennce
 		if st.StopSequence == lastSequence {
-			errs = append(errs, causes.NewSequenceError("stop_sequence", strconv.Itoa(st.StopSequence)))
+			errs = append(errs, causes.NewSequenceError("stop_sequence", tt.TryCsv(st.StopSequence)))
 		} else {
 			lastSequence = st.StopSequence
 		}

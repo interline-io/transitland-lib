@@ -48,6 +48,8 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
 	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
 	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
+	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
+	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
 
 	fl.Parse(args)
@@ -151,6 +153,8 @@ func (cmd *Command) Run() error {
 			AllowS3Fetch:            cmd.Options.AllowS3Fetch,
 			AllowLocalFetch:         cmd.Options.AllowLocalFetch,
 			Secrets:                 cmd.Options.Secrets,
+			SaveValidationReport:    cmd.Options.SaveValidationReport,
+			ValidationReportStorage: cmd.Options.ValidationReportStorage,
 		}
 		opts.URLType = "manual"
 		if opts.FeedURL == "" {

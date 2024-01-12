@@ -15,11 +15,14 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/validator"
 )
 
 type RebuildStatsOptions struct {
-	FeedVersionID int
-	Storage       string
+	FeedVersionID           int
+	Storage                 string
+	ValidationReportStorage string
+	SaveValidationReport    bool
 }
 
 type RebuildStatsResult struct {
@@ -53,6 +56,8 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", "", "Storage destination; can be s3://... az://... or path to a directory")
+	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
+	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
 
 	fl.Parse(args)
 	cmd.FeedIDs = fl.Args()
@@ -128,8 +133,10 @@ func (cmd *RebuildStatsCommand) Run() error {
 	results := make(chan RebuildStatsResult, len(qrs))
 	for _, fvid := range qrs {
 		jobs <- RebuildStatsOptions{
-			FeedVersionID: fvid,
-			Storage:       cmd.Options.Storage,
+			FeedVersionID:           fvid,
+			Storage:                 cmd.Options.Storage,
+			ValidationReportStorage: cmd.Options.ValidationReportStorage,
+			SaveValidationReport:    cmd.Options.SaveValidationReport,
 		}
 	}
 	close(jobs)
@@ -192,10 +199,15 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 	if err := reader.Open(); err != nil {
 		return RebuildStatsResult{}, err
 	}
-	// Import
+	// Save
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
 		if err := createFeedStats(atx, reader, fv.ID); err != nil {
 			return err
+		}
+		if opts.SaveValidationReport {
+			if err := createFeedValidationReport(atx, reader, fv.ID, fv.FetchedAt, opts.ValidationReportStorage); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -243,6 +255,48 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 		bt[i] = &fvsls[i]
 	}
 	if err := atx.CopyInsert(bt); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) error {
+	// Delete any existing records
+	// tables := []string{
+	// 	"tl_validation_report_error_exemplars",
+	// 	"tl_validation_report_error_groups",
+	// 	"tl_validation_trip_update_stats",
+	// 	"tl_validation_vehicle_position_stats",
+	// }
+	// for _, table := range tables {
+	// 	q, args, err := atx.Sqrl().Delete(table).From("tl_validation_reports").Where(sq.Eq{"tl_validation_reports.feed_version_id": fvid}).ToSql()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if _, err := atx.DBX().Exec(q, args...); err != nil {
+	// 		return err
+	// 	}
+	// }
+	// q, args, err := atx.Sqrl().Delete("tl_validation_reports").Where(sq.Eq{"feed_version_id": fvid}).ToSql()
+	// if err != nil {
+	// 	return err
+	// }
+	// if _, err := atx.DBX().Exec(q, args...); err != nil {
+	// 	return err
+	// }
+
+	// Create new report
+	opts := validator.Options{}
+	opts.ErrorLimit = 10
+	v, err := validator.NewValidator(reader, opts)
+	if err != nil {
+		return err
+	}
+	validationResult, err := v.Validate()
+	if err != nil {
+		return err
+	}
+	if err := validator.SaveValidationReport(atx, validationResult, fetchedAt, fvid, storage); err != nil {
 		return err
 	}
 	return nil

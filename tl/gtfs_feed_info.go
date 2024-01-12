@@ -36,7 +36,7 @@ func (ent *FeedInfo) Errors() (errs []error) {
 		// skip
 	} else {
 		if ent.FeedEndDate.Val.Before(ent.FeedStartDate.Val) {
-			errs = append(errs, causes.NewInvalidFieldError("feed_end_date", "", fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Val, ent.FeedStartDate.Val)))
+			errs = append(errs, causes.NewInvalidFieldError("feed_end_date", ent.FeedStartDate.Val.String(), fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Val, ent.FeedStartDate.Val)))
 		}
 	}
 	return errs

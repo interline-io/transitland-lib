@@ -47,6 +47,18 @@ func (ent MinEntity) EntityID() string { return "" }
 
 /////////
 
+type LineEntity struct {
+	line int
+}
+
+func (ent *LineEntity) SetLine(line int) {
+	ent.line = line
+}
+
+func (ent LineEntity) Line() int { return ent.line }
+
+/////////
+
 type ExtraEntity struct {
 	extra []string
 }
@@ -93,7 +105,7 @@ type ReferenceEntity struct {
 // UpdateKeys updates entity referencespdates foreign keys based on an EntityMap.
 func (ent *MinEntity) UpdateKeys(emap *EntityMap) error { return nil }
 
-/////////
+// ///////
 type ErrorEntity struct {
 	loadErrors   []error
 	loadWarnings []error
@@ -170,6 +182,7 @@ func (ent *Timestamps) UpdateTimestamps() {
 
 type BaseEntity struct {
 	MinEntity
+	LineEntity
 	ExtraEntity
 	ErrorEntity
 	DatabaseEntity
