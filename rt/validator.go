@@ -385,12 +385,14 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 					// Create geometry manually because we want XY not XYM
 					shpLineGeom := geom.NewLineStringFlat(geom.XY, coords)
 					shpLineGeom.SetSRID(4326)
-					shpPointGeom := tt.NewPoint(posPt.Lon, posPt.Lat)
-					shpErr.geoms = append(
-						shpErr.geoms,
-						tt.Geometry{Geometry: shpLineGeom, Valid: true},
-						tt.Geometry{Geometry: &shpPointGeom, Valid: true},
-					)
+					shpPointGeom := geom.NewPointFlat(geom.XY, []float64{posPt.Lon, posPt.Lat})
+					shpPointGeom.SetSRID(4326)
+
+					// Create geom collection
+					shpGeomCollection := geom.NewGeometryCollection()
+					shpGeomCollection.Push(shpLineGeom)
+					shpGeomCollection.Push(shpPointGeom)
+					shpErr.geom = tt.Geometry{Geometry: shpGeomCollection, Valid: true}
 					// fmt.Printf("GEOMS: %#v\n", shpErr.geoms)
 					errs = append(errs, shpErr)
 				}

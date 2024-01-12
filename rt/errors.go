@@ -100,11 +100,11 @@ func withField(e RealtimeError, field string) *RealtimeError {
 // RealtimeError is a GTFS RealTime error.
 type RealtimeError struct {
 	bc
-	geoms []tt.Geometry
+	geom tt.Geometry
 }
 
-func (e RealtimeError) Geometries() []tt.Geometry {
-	return e.geoms
+func (e RealtimeError) Geometry() tt.Geometry {
+	return e.geom
 }
 
 // RealtimeWarning is a GTFS RealTime warning.

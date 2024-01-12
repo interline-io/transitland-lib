@@ -18,7 +18,7 @@ CREATE TABLE tl_validation_report_error_exemplars (
     entity_id text not null,
     value text not null,
     message text not null,
-    geometries geography
+    geometry geography
 );
 CREATE INDEX ON tl_validation_report_error_exemplars(validation_report_error_group_id);
 

@@ -22,8 +22,8 @@ type updateContext interface {
 	Update(*causes.Context)
 }
 
-type hasGeometries interface {
-	Geometries() []tt.Geometry
+type hasGeometry interface {
+	Geometry() tt.Geometry
 }
 
 // ValidationErrorGroup helps group errors together with a maximum limit on the number stored.
@@ -70,14 +70,14 @@ func getErrorKey(err error) string {
 }
 
 type ValidationError struct {
-	Filename   string `db:"-"`
-	Field      string `db:"-"`
-	ErrorCode  string `db:"-"`
-	Line       int
-	Message    string
-	EntityID   string
-	Value      string
-	Geometries []tt.Geometry
+	Filename  string `db:"-"`
+	Field     string `db:"-"`
+	ErrorCode string `db:"-"`
+	Line      int
+	Message   string
+	EntityID  string
+	Value     string
+	Geometry  tt.Geometry
 }
 
 func (e ValidationError) Error() string {
@@ -97,8 +97,8 @@ func newValidationError(err error) ValidationError {
 		ee.Value = vctx.Value
 		ee.ErrorCode = vctx.ErrorCode
 	}
-	if v, ok := err.(hasGeometries); ok {
-		ee.Geometries = v.Geometries()
+	if v, ok := err.(hasGeometry); ok {
+		ee.Geometry = v.Geometry()
 	}
 	return ee
 }

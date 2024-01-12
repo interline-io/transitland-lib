@@ -738,7 +738,7 @@ CREATE TABLE tl_validation_report_error_exemplars (
     "entity_id" varchar(255) not null,
     "value" varchar(255) not null,
     "message" varchar(255) not null,
-    "geometries" blob
+    "geometry" blob
 );
 
 

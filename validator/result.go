@@ -95,6 +95,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 				Message:                      egErr.Message,
 				EntityID:                     egErr.EntityID,
 				Value:                        egErr.Value,
+				Geometry:                     egErr.Geometry,
 			}); err != nil {
 				return err
 			}
@@ -169,7 +170,7 @@ type ValidationReportErrorExemplar struct {
 	Message                      string
 	EntityID                     string
 	Value                        string
-	// Geometries                   []tt.Geometry
+	Geometry                     tt.Geometry
 	tl.DatabaseEntity
 }
 
