@@ -1,0 +1,224 @@
+syntax = "proto3";
+
+message Date {
+    int64 year = 1;
+    int64 month = 2;
+    int64 day = 3;
+}
+
+message Time {
+    int64 seconds = 1;
+}
+
+enum WheelchairAccess {
+    WheelchairUnknown = 0;
+    WheelchairAllowed = 1;
+    WheelchairDisallowed = 2;
+}
+
+enum BikeAccess {
+    BikeUnknown = 0;
+    BikeAllowed = 1;
+    BikeDisallowed = 2;
+}
+
+enum BoardAccess {
+    BoardUnknown = 0;
+    BoardDisallowed = 1;
+    BoardAllowed = 2;
+    BoardCoordinate = 3;
+}
+
+enum PickupAccess {
+    PickupContinuous = 0;
+    PickupDisallowed = 1;
+    PickupMustPhone = 2;
+    PickupAskDriver = 3;
+}
+
+enum LocationType {
+    LocationPlatform = 0;
+    LocationStation = 1;
+    LocationEntrance = 2;
+    LocationNode = 3;
+    LocationBoardingArea = 4;
+}
+
+enum RouteType {
+    VehicleTram = 0;
+    VehicleSubway = 1;
+    VehicleRail = 2;
+    VehicleBus = 3;
+    VehicleFerry = 4;
+    VehicleCablecar = 5;
+    VehicleGondola = 6;
+    VehicleFunicular = 7;
+    VehicleTrollebus = 11;
+    VehicleMonorail = 12;
+}    
+
+enum Direction {
+    DirectionOutbound = 0;
+    DirectionInbound = 1;
+} 
+
+enum Timepoint {
+    Approximate = 0;
+    Exact = 1;
+}
+
+enum CalendarExceptionType {
+    CalendarUnknown = 0;
+    CalendarAdded = 1;
+    CalendarRemoved = 2;
+}
+
+message EntityID {
+    string id = 1;
+}
+
+message Timezone {
+    string timezone = 1;
+}
+
+message Reference {
+    string entity_id = 1;
+}
+
+message Url {
+    string url = 1;
+}
+
+message Color {
+    string color = 1;
+}
+
+/////////////
+
+message FeedEntity {
+    Agency agency = 1;
+    Stop stop = 2;
+    Route route = 3;
+    Trip trip = 4;
+    StopTime stop_time = 5;
+    Shape shape = 6;
+    Service service = 7;
+}
+
+message Agency {
+    EntityID agency_id = 1;
+    string agency_name = 2;
+    string agency_url = 3;
+    Timezone agency_timezone = 4;
+    string agency_lang = 5;
+    string agency_phone = 6;
+    Url agency_fare_url = 7;
+    string agency_email = 8;
+}
+
+message Stop {
+    EntityID stop_id = 1;
+    string stop_code = 2;
+    string stop_name = 3;
+    string tts_stop_name = 4;
+    string stop_desc = 5;
+    double stop_lat = 6;
+    double stop_lon = 7;
+    string zone_id = 8;
+    Url stop_url = 9;
+    LocationType location_type = 10;
+    Reference parent_station = 11;
+    Timezone stop_timezone = 12;
+    WheelchairAccess wheelchair_boarding = 13;
+    Reference level_id = 14;
+    string platform_code = 15;
+}
+
+message Route {
+    EntityID route_id = 1;
+    Reference agency_id = 2;
+    string route_short_name = 3;
+    string route_long_name = 4;
+    string route_desc = 5;
+    RouteType route_type = 6;
+    Url route_url = 7;
+    Color route_color = 8;
+    Color route_text_color = 9;
+    int64 route_sort_order = 10;
+    PickupAccess continuous_pickup = 11;
+    PickupAccess continuous_drop_off = 12;
+    string network_id = 13;
+}
+
+message Trip {
+    Reference route_id = 1;
+    Reference service_id = 2;
+    EntityID trip_id = 3;
+    string trip_headsign = 4;
+    string trip_short_name = 5;
+    Direction direction_id = 6;
+    string block_id = 7;
+    Reference shape_id = 8;
+    WheelchairAccess wheelchair_accessible = 9;
+    BikeAccess bikes_allowed = 10;
+}
+
+message StopTime {
+    Reference trip_id = 1;
+    Time arrival_time = 2;
+    Time departure_time = 3;
+    Reference stop_id = 4;
+    int64 stop_sequence = 5;
+    string stop_headsign = 6;
+    PickupAccess continuous_pickup = 7;
+    PickupAccess continuous_drop_off = 8;
+    double shape_dist_traveled = 9;
+    Timepoint timepoint = 10;
+}
+
+message Service {
+    EntityID service_id = 1;
+    Date start_date = 2;
+    Date end_date = 3;
+    repeated Date added = 4;
+    repeated Date removed = 5;
+    bool monday = 6;
+    bool tuesday = 7;
+    bool wednesday = 8;
+    bool thursday = 9;
+    bool friday = 10;
+    bool saturday = 11;
+    bool sunday = 12;
+}
+
+message Calendar {
+    EntityID service_id = 1;
+    Date start_date = 2;
+    Date end_date = 3;
+    bool monday = 4;
+    bool tuesday = 5;
+    bool wednesday = 6;
+    bool thursday = 7;
+    bool friday = 8;
+    bool saturday = 9;
+    bool sunday = 10;
+}
+
+message CalendarDate {
+    Reference service_id = 1;
+    Date date = 2;
+    CalendarExceptionType exception_type = 3;
+}
+
+message Shape {
+    EntityID shape_id = 1;
+    bytes geometry = 2;
+}
+
+message ShapePoint {
+    EntityID shape_id = 1;
+    double shape_pt_lat = 2;
+    double shape_pt_lon = 3;
+    int64 shape_pt_sequence = 4;
+    double shape_dist_traveled = 5;
+}
