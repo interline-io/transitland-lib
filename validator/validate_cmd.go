@@ -72,9 +72,9 @@ func (cmd *Command) Run() error {
 	if err != nil {
 		return err
 	}
-	result.DisplayErrors()
-	result.DisplayWarnings()
-	result.DisplaySummary()
+	// result.DisplayErrors()
+	// result.DisplayWarnings()
+	// result.DisplaySummary()
 
 	// Write output
 	if cmd.OutputFile != "" {

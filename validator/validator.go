@@ -118,6 +118,7 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 func (v *Validator) Validate() (*Result, error) {
 	reader := v.Reader
 	result := &Result{}
+	details := ResultDetails{}
 
 	// Check file infos first, so we exit early if a file exceeds the row limit.
 	if reader2, ok := reader.(*tlcsv.Reader); ok {
@@ -126,7 +127,7 @@ func (v *Validator) Validate() (*Result, error) {
 			result.FailureReason = fmt.Sprintf("Could not read basic CSV data from file: %s", err.Error())
 			return result, nil
 		}
-		result.Files = fvfis
+		details.Files = fvfis
 		// Maximum file limits
 		if v.Options.CheckFileLimits {
 			for _, fvfi := range fvfis {
@@ -146,17 +147,17 @@ func (v *Validator) Validate() (*Result, error) {
 	// get sha1 and service period; continue even if errors
 	fv, err := tl.NewFeedVersionFromReader(reader)
 	_ = err
-	result.SHA1 = fv.SHA1
-	result.EarliestCalendarDate = fv.EarliestCalendarDate
-	result.LatestCalendarDate = fv.LatestCalendarDate
+	details.SHA1 = fv.SHA1
+	details.EarliestCalendarDate = fv.EarliestCalendarDate
+	details.LatestCalendarDate = fv.LatestCalendarDate
 
 	// Main validation
 	cpResult := v.copier.Copy()
 	if cpResult == nil {
-		result.WriteError = errors.New("failed to validate feed")
+		result.FailureReason = errors.New("failed to validate feed").Error()
 		return result, nil
 	} else {
-		result.Result = *cpResult
+		// result.Result = *cpResult
 	}
 
 	// Service levels
@@ -170,7 +171,7 @@ func (v *Validator) Validate() (*Result, error) {
 			if i > v.Options.IncludeEntitiesLimit {
 				break
 			}
-			result.ServiceLevels = append(result.ServiceLevels, fvsl)
+			details.ServiceLevels = append(details.ServiceLevels, fvsl)
 		}
 	}
 
@@ -184,8 +185,8 @@ func (v *Validator) Validate() (*Result, error) {
 	if v.Options.IncludeEntities {
 		// Add basic entities
 		for ent := range reader.Agencies() {
-			result.Agencies = append(result.Agencies, ent)
-			if len(result.Agencies) >= v.Options.IncludeEntitiesLimit {
+			details.Agencies = append(details.Agencies, ent)
+			if len(details.Agencies) >= v.Options.IncludeEntitiesLimit {
 				break
 			}
 		}
@@ -195,20 +196,20 @@ func (v *Validator) Validate() (*Result, error) {
 				g := tl.Geometry{Geometry: s, Valid: true}
 				ent.Geometry = g
 			}
-			result.Routes = append(result.Routes, ent)
-			if len(result.Routes) >= v.Options.IncludeEntitiesLimit {
+			details.Routes = append(details.Routes, ent)
+			if len(details.Routes) >= v.Options.IncludeEntitiesLimit {
 				break
 			}
 		}
 		for ent := range reader.Stops() {
-			result.Stops = append(result.Stops, ent)
-			if len(result.Stops) >= v.Options.IncludeEntitiesLimit {
+			details.Stops = append(details.Stops, ent)
+			if len(details.Stops) >= v.Options.IncludeEntitiesLimit {
 				break
 			}
 		}
 		for ent := range reader.FeedInfos() {
-			result.FeedInfos = append(result.FeedInfos, ent)
-			if len(result.FeedInfos) >= v.Options.IncludeEntitiesLimit {
+			details.FeedInfos = append(details.FeedInfos, ent)
+			if len(details.FeedInfos) >= v.Options.IncludeEntitiesLimit {
 				break
 			}
 		}
@@ -219,24 +220,27 @@ func (v *Validator) Validate() (*Result, error) {
 	if !evaluateAt.IsZero() {
 		fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(reader)
 		_ = err
-		result.Timezone = fvsw.DefaultTimezone.Val
-		tz, _ := time.LoadLocation(result.Timezone)
+		details.Timezone = fvsw.DefaultTimezone.Val
+		tz, _ := time.LoadLocation(details.Timezone)
 		evaluateAt = time.Now().In(tz)
 	}
+
+	// Validate realtime
 	for _, fn := range v.Options.ValidateRealtimeMessages {
 		rtResult, err := v.ValidateRT(fn, evaluateAt)
 		if err != nil {
 			return result, err
 		}
-		result.HandleError(filepath.Base(fn), rtResult.Errors)
+		cpResult.HandleError(filepath.Base(fn), rtResult.Errors)
 		if len(rtResult.Errors) > v.Options.ErrorLimit {
 			rtResult.Errors = rtResult.Errors[0:v.Options.ErrorLimit]
 		}
-		result.Realtime = append(result.Realtime, rtResult)
+		details.Realtime = append(details.Realtime, rtResult)
 	}
 
 	// Return
 	result.Success = true
+	result.Details = details
 	return result, nil
 }
 

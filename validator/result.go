@@ -18,9 +18,14 @@ import (
 
 // Result contains a validation report result,
 type Result struct {
-	copier.Result                                       // add to copier result:
-	Success              bool                           `json:"success"`
-	FailureReason        string                         `json:"failure_reason"`
+	Errors        map[string]*copier.ValidationErrorGroup
+	Warnings      map[string]*copier.ValidationErrorGroup
+	Success       bool          `json:"success"`
+	FailureReason string        `json:"failure_reason"`
+	Details       ResultDetails `json:"details"`
+}
+
+type ResultDetails struct {
 	SHA1                 string                         `json:"sha1"`
 	EarliestCalendarDate tl.Date                        `json:"earliest_calendar_date"`
 	LatestCalendarDate   tl.Date                        `json:"latest_calendar_date"`
@@ -44,7 +49,7 @@ type RealtimeResult struct {
 }
 
 func (r *Result) Key() string {
-	return fmt.Sprintf("report-%s-%d.json", r.SHA1, time.Now().In(time.UTC).Unix())
+	return fmt.Sprintf("report-%s-%d.json", r.Details.SHA1, time.Now().In(time.UTC).Unix())
 }
 
 func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time, fvid int, reportStorage string) error {
@@ -52,6 +57,10 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 	validationReport := ValidationReport{}
 	validationReport.FeedVersionID = fvid
 	validationReport.ReportedAt = tt.NewTime(reportedAt)
+	validationReport.Validator = tt.NewString("transitland-lib")
+	validationReport.ValidatorVersion = tt.NewString(tl.VERSION)
+	validationReport.Success = tt.NewBool(result.Success)
+	validationReport.FailureReason = tt.NewString(result.FailureReason)
 
 	// Save JSON
 	if reportStorage != "" {
@@ -103,7 +112,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 	}
 
 	// Save additional stats
-	for _, r := range result.Realtime {
+	for _, r := range result.Details.Realtime {
 		for _, s := range r.TripUpdateStats {
 			tripReport := ValidationReportTripUpdateStat{
 				ValidationReportID: validationReport.ID,
@@ -137,8 +146,12 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 //////
 
 type ValidationReport struct {
-	ReportedAt tt.Time
-	File       tt.String
+	Validator        tt.String
+	ValidatorVersion tt.String
+	Success          tt.Bool
+	FailureReason    tt.String
+	ReportedAt       tt.Time
+	File             tt.String
 	tl.BaseEntity
 }
 
