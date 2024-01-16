@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
@@ -81,6 +82,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 
 	// Save record
 	if _, err := atx.Insert(&validationReport); err != nil {
+		log.Error().Err(err).Msg("failed to save validation report")
 		return err
 	}
 
@@ -95,6 +97,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 			Count:              eg.Count,
 		}
 		if _, err := atx.Insert(&egEnt); err != nil {
+			log.Error().Err(err).Msg("failed to save validation report error group")
 			return err
 		}
 		for _, egErr := range eg.Errors {
@@ -106,6 +109,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 				Value:                        egErr.Value,
 				Geometry:                     egErr.Geometry,
 			}); err != nil {
+				log.Error().Err(err).Msg("failed to save validation report error exemplar")
 				return err
 			}
 		}
@@ -123,6 +127,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 				TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
 			}
 			if _, err := atx.Insert(&tripReport); err != nil {
+				log.Error().Err(err).Msg("failed to save trip update stat")
 				return err
 			}
 		}
@@ -136,6 +141,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 				TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
 			}
 			if _, err := atx.Insert(&vpReport); err != nil {
+				log.Error().Err(err).Msg("failed to save vehicle position stat")
 				return err
 			}
 		}
