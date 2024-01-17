@@ -132,7 +132,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 			}
 		}
 		for _, s := range r.VehiclePositionStats {
-			vpReport := ValidationReportTripUpdateStat{
+			vpReport := ValidationReportVehiclePositionStat{
 				ValidationReportID: validationReport.ID,
 				AgencyID:           s.AgencyID,
 				RouteID:            s.RouteID,
