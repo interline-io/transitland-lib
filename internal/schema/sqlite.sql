@@ -696,7 +696,11 @@ CREATE TABLE tl_validation_reports (
 "feed_version_id" int,
 "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
-"reported_at" datetime NOT NULL,
+"reported_at" datetime,
+"success" bool,
+"validator" varchar(255),
+"validator_version" VARCHAR(255),
+"failure_reason" VARCHAR(255),
 "file" varchar(255)
 );
 
