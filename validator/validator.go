@@ -156,8 +156,6 @@ func (v *Validator) Validate() (*Result, error) {
 	if cpResult == nil {
 		result.FailureReason = errors.New("failed to validate feed").Error()
 		return result, nil
-	} else {
-		// result.Result = *cpResult
 	}
 
 	// Service levels
@@ -236,6 +234,14 @@ func (v *Validator) Validate() (*Result, error) {
 			rtResult.Errors = rtResult.Errors[0:v.Options.ErrorLimit]
 		}
 		details.Realtime = append(details.Realtime, rtResult)
+	}
+
+	// Copy out errors and warnings
+	for k, v := range cpResult.Errors {
+		result.Errors[k] = v
+	}
+	for k, v := range cpResult.Warnings {
+		result.Warnings[k] = v
 	}
 
 	// Return
