@@ -88,8 +88,8 @@ github.com/huandu/xstrings v1.3.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq
 github.com/iancoleman/orderedmap v0.2.0 h1:sq1N/TFpYH++aViPcaKjys3bDClUEU7s5B+z6jq8pNA=
 github.com/iancoleman/orderedmap v0.2.0/go.mod h1:N0Wam8K1arqPXNWjMo21EXnBPOPp36vB07FNRdD2geA=
 github.com/imdario/mergo v0.3.9/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
-github.com/interline-io/log v0.0.0-20240125004252-e943425b44f5 h1:yVINV1lUdAvq9GRgZpniQp4TqQnnQLpNuBHPFOad07c=
-github.com/interline-io/log v0.0.0-20240125004252-e943425b44f5/go.mod h1:chJaM8SKcHI6ivoeFuZ8M8axTjSV4TPmuQ+sAyAHa34=
+github.com/interline-io/log v0.0.0-20240126000327-05bb90e4de4f h1:yZuyLK/XJqVOHxAhk50hEK8VeBJPvHCZIdEvCExGl7E=
+github.com/interline-io/log v0.0.0-20240126000327-05bb90e4de4f/go.mod h1:chJaM8SKcHI6ivoeFuZ8M8axTjSV4TPmuQ+sAyAHa34=
 github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af h1:sh8vAWJ+vr9izhkDAMS3JRGDIjj0tNVwxfwd+2U2xMo=
 github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af/go.mod h1:oZaomI+9/et52UBjvNU9LCIqmgt816+7ljXCx0EIPzo=
 github.com/jmespath/go-jmespath v0.4.0/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=

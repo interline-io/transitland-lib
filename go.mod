@@ -14,7 +14,7 @@ require (
 	github.com/deckarep/golang-set/v2 v2.3.1
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/iancoleman/orderedmap v0.2.0
-	github.com/interline-io/log v0.0.0-20240125004252-e943425b44f5
+	github.com/interline-io/log v0.0.0-20240126000327-05bb90e4de4f
 	github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.6
