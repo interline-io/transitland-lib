@@ -698,6 +698,8 @@ CREATE TABLE tl_validation_reports (
 "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 "reported_at" datetime,
 "success" bool,
+"includes_static" bool,
+"includes_rt" bool,
 "validator" varchar(255),
 "validator_version" VARCHAR(255),
 "failure_reason" VARCHAR(255),
@@ -732,7 +734,8 @@ CREATE TABLE tl_validation_report_error_groups (
     "field" varchar(255) not null,
     "error_type" varchar(255) not null,
     "error_code" varchar(255) not null,
-    "count" int not null
+    "count" int not null,
+    "level" int not null
 );
 
 CREATE TABLE tl_validation_report_error_exemplars (
