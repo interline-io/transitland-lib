@@ -101,12 +101,13 @@ type Validator struct {
 	Reader          tl.Reader
 	Options         Options
 	rtValidator     *rt.Validator
-	copier          *copier.Copier
 	defaultTimezone string
+	copierExts      []any
 }
 
-func (v *Validator) AddExtension(ext interface{}) error {
-	return v.copier.AddExtension(ext)
+func (v *Validator) AddExtension(ext any) error {
+	v.copierExts = append(v.copierExts, ext)
+	return nil
 }
 
 // NewValidator returns a new Validator.
@@ -115,48 +116,10 @@ func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
 	if options.IncludeEntitiesLimit == 0 {
 		options.IncludeEntitiesLimit = defaultMaxEnts
 	}
-	writer := &empty.Writer{}
-	writer.Open()
-	// Prepare copier
-	options.Options.AllowEntityErrors = true
-	options.Options.AllowReferenceErrors = true
-	copier, err := copier.NewCopier(reader, writer, options.Options)
-	if err != nil {
-		return nil, err
-	}
-	rtv := rt.NewValidator()
-	copier.AddValidator(rtv, 1)
-
-	// Best practices extension
-	if options.BestPractices {
-		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
-		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
-		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
-		copier.AddValidator(&rules.DuplicateRouteNameCheck{}, 1)
-		copier.AddValidator(&rules.DuplicateFareRuleCheck{}, 1)
-		copier.AddValidator(&rules.FrequencyOverlapCheck{}, 1)
-		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
-		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
-		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
-		copier.AddValidator(&rules.AgencyIDRecommendedCheck{}, 1)
-		copier.AddValidator(&rules.DescriptionEqualsName{}, 1)
-		copier.AddValidator(&rules.RouteExtendedTypesCheck{}, 1)
-		copier.AddValidator(&rules.InsufficientColorContrastCheck{}, 1)
-		copier.AddValidator(&rules.RouteShortNameTooLongCheck{}, 1)
-		copier.AddValidator(&rules.ShortServiceCheck{}, 1)
-		copier.AddValidator(&rules.ServiceAllDaysEmptyCheck{}, 1)
-		copier.AddValidator(&rules.NullIslandCheck{}, 1)
-		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
-		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
-		copier.AddValidator(&rules.RouteNamesPrefixCheck{}, 1)
-		copier.AddValidator(&rules.RouteNamesCharactersCheck{}, 1)
-	}
-	// OK
 	return &Validator{
 		Reader:      reader,
 		Options:     options,
-		copier:      copier,
-		rtValidator: rtv,
+		rtValidator: rt.NewValidator(),
 	}, nil
 }
 
@@ -205,6 +168,12 @@ func (v *Validator) Validate() (*Result, error) {
 }
 
 func (v *Validator) ValidateStatic(reader tl.Reader) (*Result, error) {
+	v.rtValidator = rt.NewValidator()
+	copier, err := v.setupCopier(reader, v.copierExts)
+	if err != nil {
+		return nil, err
+	}
+
 	result := NewResult()
 	result.IncludesStatic = true
 	details := ResultDetails{}
@@ -240,7 +209,7 @@ func (v *Validator) ValidateStatic(reader tl.Reader) (*Result, error) {
 	details.LatestCalendarDate = fv.LatestCalendarDate
 
 	// Main validation
-	cpResult := v.copier.Copy()
+	cpResult := copier.Copy()
 	if cpResult == nil {
 		result.FailureReason = errors.New("failed to validate feed").Error()
 		return result, nil
@@ -392,6 +361,52 @@ func (v *Validator) ValidateRT(fn string, evaluateAt time.Time) (RealtimeResult,
 	return rtResult, nil
 }
 
+func (v *Validator) setupCopier(reader tl.Reader, exts []any) (*copier.Copier, error) {
+	writer := &empty.Writer{}
+	writer.Open()
+	// Prepare copier
+	cpOpts := v.Options.Options
+	cpOpts.AllowEntityErrors = true
+	cpOpts.AllowReferenceErrors = true
+	copier, err := copier.NewCopier(reader, writer, cpOpts)
+	if err != nil {
+		return nil, err
+	}
+	copier.AddValidator(v.rtValidator, 1)
+
+	// Best practices extension
+	if v.Options.BestPractices {
+		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
+		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
+		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
+		copier.AddValidator(&rules.DuplicateRouteNameCheck{}, 1)
+		copier.AddValidator(&rules.DuplicateFareRuleCheck{}, 1)
+		copier.AddValidator(&rules.FrequencyOverlapCheck{}, 1)
+		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
+		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
+		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
+		copier.AddValidator(&rules.AgencyIDRecommendedCheck{}, 1)
+		copier.AddValidator(&rules.DescriptionEqualsName{}, 1)
+		copier.AddValidator(&rules.RouteExtendedTypesCheck{}, 1)
+		copier.AddValidator(&rules.InsufficientColorContrastCheck{}, 1)
+		copier.AddValidator(&rules.RouteShortNameTooLongCheck{}, 1)
+		copier.AddValidator(&rules.ShortServiceCheck{}, 1)
+		copier.AddValidator(&rules.ServiceAllDaysEmptyCheck{}, 1)
+		copier.AddValidator(&rules.NullIslandCheck{}, 1)
+		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
+		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
+		copier.AddValidator(&rules.RouteNamesPrefixCheck{}, 1)
+		copier.AddValidator(&rules.RouteNamesCharactersCheck{}, 1)
+	}
+
+	for _, ext := range exts {
+		if err := copier.AddExtension(ext); err != nil {
+			return nil, err
+		}
+	}
+	return copier, nil
+}
+
 //////
 
 type ValidationReport struct {
@@ -511,7 +526,14 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, reportedAt time.Time
 	}
 
 	// Save error groups
+	var combinedErrors []*copier.ValidationErrorGroup
 	for _, eg := range result.Errors {
+		combinedErrors = append(combinedErrors, eg)
+	}
+	for _, eg := range result.Warnings {
+		combinedErrors = append(combinedErrors, eg)
+	}
+	for _, eg := range combinedErrors {
 		egEnt := ValidationReportErrorGroup{
 			ValidationReportID: validationReport.ID,
 			Filename:           eg.Filename,
