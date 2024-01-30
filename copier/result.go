@@ -32,6 +32,7 @@ type ValidationErrorGroup struct {
 	Field     string
 	ErrorType string
 	ErrorCode string
+	Level     int
 	Count     int
 	Limit     int               `db:"-"`
 	Errors    []ValidationError `db:"-"`
@@ -195,6 +196,7 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		v, ok := cr.Errors[key]
 		if !ok {
 			v = NewValidationErrorGroup(err, cr.ErrorLimit)
+			v.Level = 0
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -207,6 +209,7 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		v, ok := cr.Warnings[key]
 		if !ok {
 			v = NewValidationErrorGroup(err, cr.ErrorLimit)
+			v.Level = 1
 			cr.Warnings[key] = v
 		}
 		v.Add(err)
