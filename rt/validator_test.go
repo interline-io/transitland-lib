@@ -10,6 +10,7 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
@@ -94,6 +95,19 @@ func TestTripUpdateStats(t *testing.T) {
 	stats, err := ex.TripUpdateStats(now, msg)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, stat := range stats {
+		if stat.RouteID == "L1" {
+			assert.ElementsMatch(t, []string{"101", "102", "103"}, stat.TripScheduledIDs)
+			assert.Equal(t, 3, stat.TripScheduledCount)
+			assert.Equal(t, 0, stat.TripMatchCount)
+		}
+		if stat.RouteID == "L5" {
+			assert.ElementsMatch(t, []string{"501", "502"}, stat.TripScheduledIDs)
+			assert.Equal(t, 2, stat.TripScheduledCount)
+			assert.Equal(t, 0, stat.TripMatchCount)
+		}
+
 	}
 	jj, _ := json.Marshal(stats)
 	fmt.Println(string(jj))

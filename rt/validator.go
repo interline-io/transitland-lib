@@ -478,49 +478,61 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([
 
 }
 
+type dayOffset struct {
+	day int
+	sec int
+}
+
 func (fi *Validator) ActiveTrips(now time.Time) []string {
 	var ret []string
-	nowWt := tt.NewWideTimeFromSeconds(now.Hour()*3600 + now.Minute()*60 + now.Second())
 	nowSvc := map[string]bool{}
 	tripHasUpdate := map[string]bool{}
 	msgTripIds := map[string]bool{}
-	for k, v := range fi.tripInfo {
-		svc, ok := fi.services[v.ServiceID]
-		if !ok {
-			// log.Debug().
-			// 	Str("service", v.ServiceID).
-			// 	Str("trip", k).
-			// 	Msg("no service, skipping")
-			continue
-		}
-		sched, ok := nowSvc[svc.ServiceID]
-		if !ok {
-			sched = svc.IsActive(now)
-			nowSvc[svc.ServiceID] = sched
-		}
-		if !sched {
-			// log.Debug().
-			// 	Str("date", now.Format("2006-02-03")).
-			// 	Str("service", v.ServiceID).
-			// 	Str("trip", k).
-			// 	Msg("not scheduled, skipping")
-			continue
-		}
-		if v.StartTime.Seconds > nowWt.Seconds || v.EndTime.Seconds < nowWt.Seconds {
-			// log.Debug().
-			// 	Str("date", now.Format("2006-02-03")).
-			// 	Str("cur_time", nowWt.String()).
-			// 	Str("trip_start", v.StartTime.String()).
-			// 	Str("trip_end", v.EndTime.String()).
-			// 	Str("service", v.ServiceID).
-			// 	Str("trip", k).
-			// 	Msg("outside time, skipping")
-			continue
-		}
-		ret = append(ret, k)
-		tripHasUpdate[k] = false
-		if msgTripIds[k] {
-			tripHasUpdate[k] = true
+	dayOffsets := []dayOffset{
+		{day: -1, sec: 86400},
+		{day: 0, sec: 0},
+	}
+	for _, d := range dayOffsets {
+		nowOffset := now.AddDate(0, 0, d.day)
+		nowWt := tt.NewWideTimeFromSeconds(nowOffset.Hour()*3600 + nowOffset.Minute()*60 + nowOffset.Second() + d.sec)
+		for k, v := range fi.tripInfo {
+			svc, ok := fi.services[v.ServiceID]
+			if !ok {
+				// log.Debug().
+				// 	Str("service", v.ServiceID).
+				// 	Str("trip", k).
+				// 	Msg("no service, skipping")
+				continue
+			}
+			sched, ok := nowSvc[svc.ServiceID]
+			if !ok {
+				sched = svc.IsActive(nowOffset)
+				nowSvc[svc.ServiceID] = sched
+			}
+			if !sched {
+				// log.Debug().
+				// 	Str("date", now.Format("2006-02-03")).
+				// 	Str("service", v.ServiceID).
+				// 	Str("trip", k).
+				// 	Msg("not scheduled, skipping")
+				continue
+			}
+			if v.StartTime.Seconds > nowWt.Seconds || v.EndTime.Seconds < nowWt.Seconds {
+				// log.Debug().
+				// 	Str("date", now.Format("2006-02-03")).
+				// 	Str("cur_time", nowWt.String()).
+				// 	Str("trip_start", v.StartTime.String()).
+				// 	Str("trip_end", v.EndTime.String()).
+				// 	Str("service", v.ServiceID).
+				// 	Str("trip", k).
+				// 	Msg("outside time, skipping")
+				continue
+			}
+			ret = append(ret, k)
+			tripHasUpdate[k] = false
+			if msgTripIds[k] {
+				tripHasUpdate[k] = true
+			}
 		}
 	}
 	return ret
