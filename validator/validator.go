@@ -62,11 +62,11 @@ func NewResult(evaluateAt time.Time, evaluateAtLocal time.Time) *Result {
 		Validator:               tt.NewString("transitland-lib"),
 		ValidatorVersion:        tt.NewString(tl.VERSION),
 		ReportedAt:              tt.NewTime(evaluateAt),
-		ReportedAtLocal:         tt.NewTime(evaluateAt),
+		ReportedAtLocal:         tt.NewTime(evaluateAtLocal),
+		ReportedAtLocalTimezone: tt.NewString(evaluateAtLocal.Location().String()),
 		IncludesStatic:          tt.NewBool(false),
 		IncludesRT:              tt.NewBool(false),
 		Success:                 tt.NewBool(false),
-		ReportedAtLocalTimezone: tt.NewString(evaluateAt.Location().String()),
 		Errors:                  map[string]*ValidationReportErrorGroup{},
 		Warnings:                map[string]*ValidationReportErrorGroup{},
 	}
