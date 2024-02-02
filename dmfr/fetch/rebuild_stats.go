@@ -296,7 +296,7 @@ func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int
 	if err != nil {
 		return err
 	}
-	if err := validator.SaveValidationReport(atx, validationResult, fetchedAt, fvid, storage); err != nil {
+	if err := validator.SaveValidationReport(atx, validationResult, fvid, storage); err != nil {
 		return err
 	}
 	return nil
