@@ -697,6 +697,8 @@ CREATE TABLE tl_validation_reports (
 "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 "reported_at" datetime,
+"reported_at_local" datetime,
+"reported_at_local_timezone" varchar(255),
 "success" bool,
 "includes_static" bool,
 "includes_rt" bool,

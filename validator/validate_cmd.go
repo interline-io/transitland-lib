@@ -53,7 +53,7 @@ func (cmd *Command) Parse(args []string) error {
 	cmd.readerPath = fl.Arg(0)
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles
 	cmd.Options.Extensions = cmd.extensions
-	cmd.Options.EvaluateAt = time.Now()
+	cmd.Options.EvaluateAt = time.Now().In(time.UTC)
 	return nil
 }
 
@@ -99,7 +99,7 @@ func (cmd *Command) Run() error {
 		}
 		atx := writer.Adapter
 		defer atx.Close()
-		if err := SaveValidationReport(atx, result, time.Now(), cmd.FVID, cmd.ValidationReportStorage); err != nil {
+		if err := SaveValidationReport(atx, result, cmd.FVID, cmd.ValidationReportStorage); err != nil {
 			return err
 		}
 	}
