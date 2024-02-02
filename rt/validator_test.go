@@ -90,27 +90,75 @@ func TestTripUpdateStats(t *testing.T) {
 	cp.AddExtension(ex)
 	result := cp.Copy()
 	_ = result
-	tz, _ := time.LoadLocation("America/Los_Angeles")
-	now := time.Date(2023, 11, 7, 5, 30, 0, 0, tz)
-	stats, err := ex.TripUpdateStats(now, msg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, stat := range stats {
-		if stat.RouteID == "L1" {
-			assert.ElementsMatch(t, []string{"101", "102", "103"}, stat.TripScheduledIDs)
-			assert.Equal(t, 3, stat.TripScheduledCount)
-			assert.Equal(t, 0, stat.TripMatchCount)
-		}
-		if stat.RouteID == "L5" {
-			assert.ElementsMatch(t, []string{"501", "502"}, stat.TripScheduledIDs)
-			assert.Equal(t, 2, stat.TripScheduledCount)
-			assert.Equal(t, 0, stat.TripMatchCount)
-		}
 
-	}
-	jj, _ := json.Marshal(stats)
-	fmt.Println(string(jj))
+	t.Run("midday", func(t *testing.T) {
+		// Tuesday, Nov 7 2023 17:30:00
+		tz, _ := time.LoadLocation("America/Los_Angeles")
+		now := time.Date(2023, 11, 7, 17, 30, 0, 0, tz)
+		stats, err := ex.TripUpdateStats(now, msg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, 4, len(stats))
+		for _, stat := range stats {
+			if stat.RouteID == "L1" {
+				assert.ElementsMatch(t, []string{"127", "126", "125"}, stat.TripScheduledIDs)
+				assert.Equal(t, 3, stat.TripScheduledCount)
+				assert.Equal(t, 3, stat.TripMatchCount)
+			} else if stat.RouteID == "L4" {
+				assert.ElementsMatch(t, []string{"411", "410", "412"}, stat.TripScheduledIDs)
+				assert.Equal(t, 3, stat.TripScheduledCount)
+				assert.Equal(t, 3, stat.TripMatchCount)
+			} else if stat.RouteID == "L3" {
+				assert.ElementsMatch(t, []string{"308", "311", "309", "312", "310"}, stat.TripScheduledIDs)
+				assert.Equal(t, 5, stat.TripScheduledCount)
+				assert.Equal(t, 4, stat.TripMatchCount)
+			} else if stat.RouteID == "B7" {
+				assert.ElementsMatch(t, []string{"710", "709"}, stat.TripScheduledIDs)
+				assert.Equal(t, 2, stat.TripScheduledCount)
+				assert.Equal(t, 2, stat.TripMatchCount)
+			} else {
+				t.Errorf("route %s not scheduled", stat.RouteID)
+			}
+		}
+	})
+	t.Run("saturday overnight", func(t *testing.T) {
+		// Saturday, Nov 11 2023 00:30:00
+		tz, _ := time.LoadLocation("America/Los_Angeles")
+		now := time.Date(2023, 11, 11, 0, 30, 0, 0, tz)
+		stats, err := ex.TripUpdateStats(now, msg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, 1, len(stats))
+		for _, stat := range stats {
+			if stat.RouteID == "L1" {
+				assert.ElementsMatch(t, []string{"145", "146"}, stat.TripScheduledIDs)
+				assert.Equal(t, 2, stat.TripScheduledCount)
+			} else {
+				t.Errorf("route %s not scheduled", stat.RouteID)
+			}
+		}
+	})
+	t.Run("sunday overnight", func(t *testing.T) {
+		// Sunday, Nov 12 2023 00:30:00
+		tz, _ := time.LoadLocation("America/Los_Angeles")
+		now := time.Date(2023, 11, 12, 0, 30, 0, 0, tz)
+		stats, err := ex.TripUpdateStats(now, msg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, 1, len(stats))
+		for _, stat := range stats {
+			if stat.RouteID == "L2" {
+				assert.ElementsMatch(t, []string{"280", "284", "281"}, stat.TripScheduledIDs)
+				assert.Equal(t, 3, stat.TripScheduledCount)
+			} else {
+				t.Errorf("route %s not scheduled", stat.RouteID)
+			}
+		}
+	})
+
 }
 
 func TestVehiclePositionStats(t *testing.T) {
