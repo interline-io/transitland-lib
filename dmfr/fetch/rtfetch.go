@@ -14,17 +14,18 @@ type RTFetchResult struct {
 	Result
 }
 
-func RTFetch(atx tldb.Adapter, opts Options) (*pb.FeedMessage, Result, error) {
-	var msg *pb.FeedMessage
+func RTFetch(atx tldb.Adapter, opts Options) (RTFetchResult, error) {
+	ret := RTFetchResult{}
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		// Validate
 		v := validationResponse{}
 		v.UploadTmpfile = fr.Filename
 		v.UploadFilename = fmt.Sprintf("%s.pb", fr.ResponseSHA1)
 		v.Found = false
-		msg, v.Error = rt.ReadFile(fr.Filename)
+		ret.Message, v.Error = rt.ReadFile(fr.Filename)
 		return v, nil
 	}
 	result, err := ffetch(atx, opts, cb)
-	return msg, result, err
+	ret.Result = result
+	return ret, err
 }

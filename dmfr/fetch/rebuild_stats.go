@@ -205,7 +205,7 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 			return err
 		}
 		if opts.SaveValidationReport {
-			if err := createFeedValidationReport(atx, reader, fv.ID, fv.FetchedAt, opts.ValidationReportStorage); err != nil {
+			if _, err := createFeedValidationReport(atx, reader, fv.ID, fv.FetchedAt, opts.ValidationReportStorage); err != nil {
 				return err
 			}
 		}
@@ -260,44 +260,20 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	return nil
 }
 
-func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) error {
-	// Delete any existing records
-	// tables := []string{
-	// 	"tl_validation_report_error_exemplars",
-	// 	"tl_validation_report_error_groups",
-	// 	"tl_validation_trip_update_stats",
-	// 	"tl_validation_vehicle_position_stats",
-	// }
-	// for _, table := range tables {
-	// 	q, args, err := atx.Sqrl().Delete(table).From("tl_validation_reports").Where(sq.Eq{"tl_validation_reports.feed_version_id": fvid}).ToSql()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	if _, err := atx.DBX().Exec(q, args...); err != nil {
-	// 		return err
-	// 	}
-	// }
-	// q, args, err := atx.Sqrl().Delete("tl_validation_reports").Where(sq.Eq{"feed_version_id": fvid}).ToSql()
-	// if err != nil {
-	// 	return err
-	// }
-	// if _, err := atx.DBX().Exec(q, args...); err != nil {
-	// 	return err
-	// }
-
+func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
 	// Create new report
 	opts := validator.Options{}
 	opts.ErrorLimit = 10
 	v, err := validator.NewValidator(reader, opts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	validationResult, err := v.Validate()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := validator.SaveValidationReport(atx, validationResult, fvid, storage); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return validationResult, nil
 }
