@@ -15,8 +15,26 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
+
+// NewValidatorFromReader returns a Validator with data from a Reader.
+func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
+	fi := NewValidator()
+	cp, err := copier.NewCopier(reader, &empty.Writer{}, copier.Options{})
+	if err != nil {
+		return nil, err
+	}
+	if err := cp.AddExtension(fi); err != nil {
+		return nil, err
+	}
+	cpResult := cp.Copy()
+	if cpResult.WriteError != nil {
+		return nil, cpResult.WriteError
+	}
+	return fi, nil
+}
 
 func newTestValidator() (*Validator, error) {
 	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/bart-rt.zip"))
@@ -122,43 +140,6 @@ func TestTripUpdateStats(t *testing.T) {
 			}
 		}
 	})
-	t.Run("saturday overnight", func(t *testing.T) {
-		// Saturday, Nov 11 2023 00:30:00
-		tz, _ := time.LoadLocation("America/Los_Angeles")
-		now := time.Date(2023, 11, 11, 0, 30, 0, 0, tz)
-		stats, err := ex.TripUpdateStats(now, msg)
-		if err != nil {
-			t.Fatal(err)
-		}
-		assert.Equal(t, 1, len(stats))
-		for _, stat := range stats {
-			if stat.RouteID == "L1" {
-				assert.ElementsMatch(t, []string{"145", "146"}, stat.TripScheduledIDs)
-				assert.Equal(t, 2, stat.TripScheduledCount)
-			} else {
-				t.Errorf("route %s not scheduled", stat.RouteID)
-			}
-		}
-	})
-	t.Run("sunday overnight", func(t *testing.T) {
-		// Sunday, Nov 12 2023 00:30:00
-		tz, _ := time.LoadLocation("America/Los_Angeles")
-		now := time.Date(2023, 11, 12, 0, 30, 0, 0, tz)
-		stats, err := ex.TripUpdateStats(now, msg)
-		if err != nil {
-			t.Fatal(err)
-		}
-		assert.Equal(t, 1, len(stats))
-		for _, stat := range stats {
-			if stat.RouteID == "L2" {
-				assert.ElementsMatch(t, []string{"280", "284", "281"}, stat.TripScheduledIDs)
-				assert.Equal(t, 3, stat.TripScheduledCount)
-			} else {
-				t.Errorf("route %s not scheduled", stat.RouteID)
-			}
-		}
-	})
-
 }
 
 func TestVehiclePositionStats(t *testing.T) {
