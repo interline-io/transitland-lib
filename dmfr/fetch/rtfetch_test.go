@@ -52,11 +52,12 @@ func TestRTFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				msg, fr, err := RTFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
+				fr, err := RTFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err
 				}
+				msg := fr.Message
 				if msg != nil {
 					assert.Equal(t, tc.entityCount, len(msg.Entity), "did not get expected rt feed entity count")
 				}

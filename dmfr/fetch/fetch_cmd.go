@@ -25,6 +25,7 @@ type Command struct {
 	DryRun     bool
 	FeedIDs    []string
 	Adapter    tldb.Adapter
+	Results    []StaticFetchResult
 }
 
 // Parse sets options from command line flags.
@@ -78,16 +79,6 @@ func (cmd *Command) Parse(args []string) error {
 	if cmd.Options.FeedURL != "" && len(cmd.FeedIDs) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
 	}
-	return nil
-}
-
-type fetchJob struct {
-	OnestopID string
-	Options
-}
-
-// Run executes this command.
-func (cmd *Command) Run() error {
 	// Get feeds
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
@@ -121,7 +112,11 @@ func (cmd *Command) Run() error {
 			}
 		}
 	}
+	return nil
+}
 
+// Run executes this command.
+func (cmd *Command) Run() error {
 	// Check feeds
 	adapter := cmd.Adapter
 	var toFetch []fetchJob
@@ -169,7 +164,7 @@ func (cmd *Command) Run() error {
 	log.Infof("Fetching %d feeds", len(cmd.FeedIDs))
 	var wg sync.WaitGroup
 	jobs := make(chan fetchJob, len(cmd.FeedIDs))
-	results := make(chan Result, len(cmd.FeedIDs))
+	results := make(chan StaticFetchResult, len(cmd.FeedIDs))
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
 		go fetchWorker(w, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
@@ -186,12 +181,13 @@ func (cmd *Command) Run() error {
 	fetchFound := 0
 	fetchErrs := 0
 	for fr := range results {
-		if fr.Error != nil {
+		cmd.Results = append(cmd.Results, fr)
+		if fr.Result.Error != nil {
 			fetchFatalErrors++
-			fatalError = fr.Error
-		} else if fr.FetchError != nil {
+			fatalError = fr.Result.Error
+		} else if fr.Result.FetchError != nil {
 			fetchErrs++
-		} else if fr.Found {
+		} else if fr.Result.Found {
 			fetchFound++
 		} else {
 			fetchNew++
@@ -205,7 +201,12 @@ func (cmd *Command) Run() error {
 	return nil
 }
 
-func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- Result, wg *sync.WaitGroup) {
+type fetchJob struct {
+	OnestopID string
+	Options
+}
+
+func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- StaticFetchResult, wg *sync.WaitGroup) {
 	for job := range jobs {
 		// Start
 		log.Infof("Feed %s: start", job.OnestopID)
@@ -215,28 +216,29 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob
 		}
 
 		// Fetch
-		var fr Result
-		var fv tl.FeedVersion
+		var result StaticFetchResult
 		t := time.Now()
-		err := adapter.Tx(func(atx tldb.Adapter) error {
-			var fe error
-			fv, fr, fe = StaticFetch(atx, job.Options)
-			return fe
+		fetchError := adapter.Tx(func(atx tldb.Adapter) error {
+			var fetchError error
+			result, fetchError = StaticFetch(atx, job.Options)
+			return fetchError
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 
-		// Check result
-		if err != nil {
-			fr.Error = err
-			log.Error().Err(err).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, err.Error(), t2)
-		} else if fr.FetchError != nil {
-			log.Error().Err(fr.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fr.FetchError.Error(), t2)
-		} else if fr.Found {
+		// Log result
+		fv := result.FeedVersion
+		if fetchError != nil {
+			log.Error().Err(fetchError).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, fetchError.Error(), t2)
+		} else if result.FetchError != nil {
+			log.Error().Err(result.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, result.FetchError.Error(), t2)
+		} else if fv != nil && result.Found {
 			log.Infof("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
-		} else {
+		} else if fv != nil {
 			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
+		} else {
+			log.Infof("Feed %s (id:%d): url: %s invalid result (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, t2)
 		}
-		results <- fr
+		results <- result
 	}
 	wg.Done()
 }

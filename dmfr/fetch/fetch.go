@@ -38,6 +38,7 @@ type Options struct {
 type Result struct {
 	Found        bool
 	Error        error
+	URL          string
 	ResponseSize int
 	ResponseCode int
 	ResponseSHA1 string
@@ -55,7 +56,7 @@ type fetchCb func(request.FetchResponse) (validationResponse, error)
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
 func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
-	result := Result{}
+	result := Result{URL: opts.FeedURL}
 	feed := tl.Feed{}
 	if err := atx.Get(&feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
 		return result, err
