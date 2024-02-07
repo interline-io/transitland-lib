@@ -3,6 +3,7 @@ package rt
 import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // Errors
@@ -97,14 +98,27 @@ func withField(e RealtimeError, field string) *RealtimeError {
 	return &e2
 }
 
+func withFieldAndJson(e RealtimeError, field string, ent protoreflect.ProtoMessage) *RealtimeError {
+	e2 := e
+	e2.Field = field
+	e2.entityJson = pbEntityToMap(ent)
+	return &e2
+}
+
 // RealtimeError is a GTFS RealTime error.
 type RealtimeError struct {
 	bc
-	geom tt.Geometry
+	geom       tt.Geometry
+	entityJson tt.Map
 }
 
 func (e RealtimeError) Geometry() tt.Geometry {
 	return e.geom
+}
+
+// Return as tt.Map, not map[string]any
+func (e RealtimeError) EntityJson() tt.Map {
+	return e.entityJson
 }
 
 // RealtimeWarning is a GTFS RealTime warning.

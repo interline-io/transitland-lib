@@ -1,6 +1,7 @@
 package rt
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext/sched"
@@ -9,6 +10,8 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/twpayne/go-geom"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type tripInfo struct {
@@ -271,7 +274,7 @@ func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, cu
 		// ok
 	}
 	if st.GetArrival().GetTime() > 0 && st.GetDeparture().GetTime() > 0 && st.GetArrival().GetTime() > st.GetDeparture().GetTime() {
-		errs = append(errs, withField(E025, "trip_update.stop_time_update.arrival.time"))
+		errs = append(errs, withFieldAndJson(E025, "trip_update.stop_time_update.arrival.time", st))
 	}
 	// ValidateStopTimeEvent .
 	// TODO
@@ -323,6 +326,15 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor) (errs []error
 	return errs
 }
 
+func pbEntityToMap(ent protoreflect.ProtoMessage) tt.Map {
+	entityJsonBytes, _ := protojson.Marshal(ent)
+	entityJson := map[string]any{}
+	if err := json.Unmarshal(entityJsonBytes, &entityJson); err != nil {
+		panic(err)
+	}
+	return tt.NewMap(entityJson)
+}
+
 func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []error) {
 	// Validate stop
 	if ent.StopId != nil {
@@ -366,6 +378,8 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 					shpGeomCollection.Push(shpLineGeom)
 					shpGeomCollection.Push(shpPointGeom)
 					shpErr.geom = tt.Geometry{Geometry: shpGeomCollection, Valid: true}
+					shpErr.entityJson = pbEntityToMap(ent)
+
 					// fmt.Printf("GEOMS: %#v\n", shpErr.geoms)
 					errs = append(errs, shpErr)
 				}
@@ -381,18 +395,18 @@ func (fi *Validator) validatePosition(pos *pb.Position) (errs []error) {
 		return errs
 	}
 	if lon := pos.GetLongitude(); pos.Longitude == nil {
-		errs = append(errs, withField(E026, "vehicle_position.position.longitude"))
+		errs = append(errs, withFieldAndJson(E026, "vehicle_position.position.longitude", pos))
 	} else if lon < -180 || lon > 180 {
-		errs = append(errs, withField(E026, "vehicle_position.position.longitude"))
+		errs = append(errs, withFieldAndJson(E026, "vehicle_position.position.longitude", pos))
 	} else if lon == 0 {
-		errs = append(errs, withField(E026, "vehicle_position.position.longitude"))
+		errs = append(errs, withFieldAndJson(E026, "vehicle_position.position.longitude", pos))
 	}
 	if lat := pos.GetLatitude(); pos.Latitude == nil {
-		errs = append(errs, withField(E026, "vehicle_position.position.latitude"))
+		errs = append(errs, withFieldAndJson(E026, "vehicle_position.position.latitude", pos))
 	} else if lat < -90 || lat > 90 {
-		errs = append(errs, withField(E026, "vehicle_position.position.latitude"))
+		errs = append(errs, withFieldAndJson(E026, "vehicle_position.position.latitude", pos))
 	} else if lat == 0 {
-		errs = append(errs, withField(E026, "vehicle_position.position.latitude"))
+		errs = append(errs, withFieldAndJson(E026, "vehicle_position.position.latitude", pos))
 	}
 	return errs
 }
