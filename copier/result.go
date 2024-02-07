@@ -26,6 +26,15 @@ type hasGeometry interface {
 	Geometry() tt.Geometry
 }
 
+type hasEntityJson interface {
+	EntityJson() map[string]any
+}
+
+type hasSetEntityJson interface {
+	EntityJson() map[string]any
+	SetEntityJson(map[string]any)
+}
+
 // ValidationErrorGroup helps group errors together with a maximum limit on the number stored.
 type ValidationErrorGroup struct {
 	Filename  string
@@ -71,14 +80,15 @@ func getErrorKey(err error) string {
 }
 
 type ValidationError struct {
-	Filename  string `db:"-"`
-	Field     string `db:"-"`
-	ErrorCode string `db:"-"`
-	Line      int
-	Message   string
-	EntityID  string
-	Value     string
-	Geometry  tt.Geometry
+	Filename   string `db:"-"`
+	Field      string `db:"-"`
+	ErrorCode  string `db:"-"`
+	Line       int
+	Message    string
+	EntityID   string
+	Value      string
+	Geometry   tt.Geometry
+	EntityJson tt.Map
 }
 
 func (e ValidationError) Error() string {
@@ -100,6 +110,9 @@ func newValidationError(err error) ValidationError {
 	}
 	if v, ok := err.(hasGeometry); ok {
 		ee.Geometry = v.Geometry()
+	}
+	if v, ok := err.(hasEntityJson); ok {
+		ee.EntityJson = tt.NewMap(v.EntityJson())
 	}
 	return ee
 }
@@ -178,6 +191,18 @@ func (cr *Result) HandleError(fn string, errs []error) {
 	}
 }
 
+// func entityAsJson(ent tl.Entity) map[string]any {
+// 	ret := map[string]any{}
+// 	entBytes, err := json.Marshal(ent)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	if err := json.Unmarshal(entBytes, &ret); err != nil {
+// 		panic(err)
+// 	}
+// 	return ret
+// }
+
 // HandleEntityErrors .
 func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
 	// Get entity line, if available
@@ -192,6 +217,9 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		if v, ok := err.(updateContext); ok {
 			v.Update(&ctx{Filename: efn, EntityID: eid, Line: eln})
 		}
+		// if v, ok := err.(hasSetEntityJson); ok {
+		// 	v.SetEntityJson(entityAsJson(ent))
+		// }
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
@@ -205,6 +233,9 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		if v, ok := err.(updateContext); ok {
 			v.Update(&ctx{Filename: efn, EntityID: eid, Line: eln})
 		}
+		// if v, ok := err.(hasSetEntityJson); ok {
+		// 	v.SetEntityJson(entityAsJson(ent))
+		// }
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {

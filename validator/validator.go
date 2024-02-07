@@ -124,6 +124,7 @@ type ValidationReportErrorExemplar struct {
 	EntityID                     string
 	Value                        string
 	Geometry                     tt.Geometry
+	EntityJson                   tt.Map
 	tl.DatabaseEntity
 }
 
@@ -530,11 +531,12 @@ func copierEgToValidationEg(eg *copier.ValidationErrorGroup) *ValidationReportEr
 	}
 	for _, egErr := range eg.Errors {
 		ret.Errors = append(ret.Errors, ValidationReportErrorExemplar{
-			Line:     egErr.Line,
-			Message:  egErr.Message,
-			EntityID: egErr.EntityID,
-			Value:    egErr.Value,
-			Geometry: egErr.Geometry,
+			Line:       egErr.Line,
+			Message:    egErr.Message,
+			EntityID:   egErr.EntityID,
+			Value:      egErr.Value,
+			Geometry:   egErr.Geometry,
+			EntityJson: egErr.EntityJson,
 		})
 	}
 	return &ret
