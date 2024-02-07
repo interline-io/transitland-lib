@@ -1,7 +1,6 @@
 package rt
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext/sched"
@@ -10,8 +9,6 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/twpayne/go-geom"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type tripInfo struct {
@@ -326,15 +323,6 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor) (errs []error
 	return errs
 }
 
-func pbEntityToMap(ent protoreflect.ProtoMessage) tt.Map {
-	entityJsonBytes, _ := protojson.Marshal(ent)
-	entityJson := map[string]any{}
-	if err := json.Unmarshal(entityJsonBytes, &entityJson); err != nil {
-		panic(err)
-	}
-	return tt.NewMap(entityJson)
-}
-
 func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []error) {
 	// Validate stop
 	if ent.StopId != nil {
@@ -362,7 +350,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 				nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
 				nearestPointDist := xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat)
 				if nearestPointDist > 100.0 {
-					shpErr := withField(E029, "vehicle_position.position")
+					shpErr := withFieldAndJson(E029, "vehicle_position.position", ent)
 					var coords []float64
 					for _, p := range shp {
 						coords = append(coords, p.Lon, p.Lat)
@@ -378,7 +366,6 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 					shpGeomCollection.Push(shpLineGeom)
 					shpGeomCollection.Push(shpPointGeom)
 					shpErr.geom = tt.Geometry{Geometry: shpGeomCollection, Valid: true}
-					shpErr.entityJson = pbEntityToMap(ent)
 
 					// fmt.Printf("GEOMS: %#v\n", shpErr.geoms)
 					errs = append(errs, shpErr)

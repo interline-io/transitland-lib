@@ -1,8 +1,11 @@
 package rt
 
 import (
+	"encoding/json"
+
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -103,6 +106,15 @@ func withFieldAndJson(e RealtimeError, field string, ent protoreflect.ProtoMessa
 	e2.Field = field
 	e2.entityJson = pbEntityToMap(ent)
 	return &e2
+}
+
+func pbEntityToMap(ent protoreflect.ProtoMessage) tt.Map {
+	entityJsonBytes, _ := protojson.Marshal(ent)
+	entityJson := map[string]any{}
+	if err := json.Unmarshal(entityJsonBytes, &entityJson); err != nil {
+		panic(err)
+	}
+	return tt.NewMap(entityJson)
 }
 
 // RealtimeError is a GTFS RealTime error.

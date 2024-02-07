@@ -1,7 +1,6 @@
 package copier
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -114,8 +113,6 @@ func newValidationError(err error) ValidationError {
 	}
 	if v, ok := err.(hasEntityJson); ok {
 		ee.EntityJson = tt.NewMap(v.EntityJson())
-	} else {
-		ee.EntityJson = tt.NewMap(map[string]any{"test": 123})
 	}
 	return ee
 }
@@ -194,17 +191,17 @@ func (cr *Result) HandleError(fn string, errs []error) {
 	}
 }
 
-func entityAsJson(ent tl.Entity) map[string]any {
-	ret := map[string]any{}
-	entBytes, err := json.Marshal(ent)
-	if err != nil {
-		panic(err)
-	}
-	if err := json.Unmarshal(entBytes, &ret); err != nil {
-		panic(err)
-	}
-	return ret
-}
+// func entityAsJson(ent tl.Entity) map[string]any {
+// 	ret := map[string]any{}
+// 	entBytes, err := json.Marshal(ent)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	if err := json.Unmarshal(entBytes, &ret); err != nil {
+// 		panic(err)
+// 	}
+// 	return ret
+// }
 
 // HandleEntityErrors .
 func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
