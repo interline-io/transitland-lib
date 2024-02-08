@@ -15,7 +15,7 @@ type Context struct {
 	Field      string
 	Value      string
 	Message    string
-	entityJson map[string]any
+	EntityJson map[string]any
 	errorLevel int
 	cause      error
 }
@@ -39,14 +39,6 @@ func (e *Context) ErrorLevel() int {
 // Cause returns the underlying error and implements the Causer interface.
 func (e *Context) Cause() error {
 	return e.cause
-}
-
-func (e *Context) EntityJson() map[string]any {
-	return e.entityJson
-}
-
-func (e *Context) SetEntityJson(entityJson map[string]any) {
-	e.entityJson = entityJson
 }
 
 // Update sets new values, if present
@@ -77,6 +69,9 @@ func (e *Context) Update(v *Context) {
 	}
 	if v.cause != nil {
 		e.cause = v.cause
+	}
+	if v.EntityJson != nil {
+		e.EntityJson = v.EntityJson
 	}
 }
 

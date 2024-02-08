@@ -2,6 +2,7 @@ package rt
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -109,7 +110,9 @@ func withFieldAndJson(e RealtimeError, field string, ent protoreflect.ProtoMessa
 }
 
 func pbEntityToMap(ent protoreflect.ProtoMessage) tt.Map {
-	entityJsonBytes, _ := protojson.Marshal(ent)
+	mOpts := protojson.MarshalOptions{UseProtoNames: true}
+	entityJsonBytes, _ := mOpts.Marshal(ent)
+	fmt.Println("ent json:", string(entityJsonBytes))
 	entityJson := map[string]any{}
 	if err := json.Unmarshal(entityJsonBytes, &entityJson); err != nil {
 		panic(err)

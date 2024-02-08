@@ -429,7 +429,8 @@ func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal 
 		}
 	}
 	if v.Options.IncludeRealtimeJson && msg != nil {
-		rtJson, err := protojson.Marshal(msg)
+		mOpts := protojson.MarshalOptions{UseProtoNames: true}
+		rtJson, err := mOpts.Marshal(msg)
 		if err != nil {
 			log.Error().Err(err).Msg("Could not convert RT message to JSON")
 		}
