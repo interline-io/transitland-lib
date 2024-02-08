@@ -2,7 +2,9 @@ package rt
 
 import (
 	"encoding/json"
+	"fmt"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -80,7 +82,7 @@ type bc = causes.Context
 func nec(msg string, errorCode string) RealtimeError {
 	return RealtimeError{
 		bc: causes.Context{
-			Value:     msg,
+			Message:   msg,
 			ErrorCode: errorCode,
 		},
 	}
@@ -89,8 +91,8 @@ func nec(msg string, errorCode string) RealtimeError {
 func newError(msg string, field string) *RealtimeError {
 	return &RealtimeError{
 		bc: causes.Context{
-			Field: field,
-			Value: msg,
+			Field:   field,
+			Message: msg,
 		},
 	}
 }
@@ -101,15 +103,26 @@ func withField(e RealtimeError, field string) *RealtimeError {
 	return &e2
 }
 
-func withFieldAndJson(e RealtimeError, field string, ent protoreflect.ProtoMessage) *RealtimeError {
+func withFieldAndJson(e RealtimeError, field string, value any, ent protoreflect.ProtoMessage, msg string, msgArgs ...any) *RealtimeError {
 	e2 := e
 	e2.Field = field
+	if value != nil {
+		var err error
+		e2.Value, err = tt.ToCsv(value)
+		if err != nil {
+			log.Error().Err(err).Msgf("could not convert value of type %T to string", value)
+		}
+	}
+	if msg != "" {
+		e2.Message = fmt.Sprintf(msg, msgArgs...)
+	}
 	e2.entityJson = pbEntityToMap(ent)
 	return &e2
 }
 
 func pbEntityToMap(ent protoreflect.ProtoMessage) tt.Map {
-	entityJsonBytes, _ := protojson.Marshal(ent)
+	mOpts := protojson.MarshalOptions{UseProtoNames: true}
+	entityJsonBytes, _ := mOpts.Marshal(ent)
 	entityJson := map[string]any{}
 	if err := json.Unmarshal(entityJsonBytes, &entityJson); err != nil {
 		panic(err)

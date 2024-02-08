@@ -27,12 +27,7 @@ type hasGeometry interface {
 }
 
 type hasEntityJson interface {
-	EntityJson() map[string]any
-}
-
-type hasSetEntityJson interface {
-	EntityJson() map[string]any
-	SetEntityJson(map[string]any)
+	EntityJson() tt.Map
 }
 
 // ValidationErrorGroup helps group errors together with a maximum limit on the number stored.
@@ -107,12 +102,13 @@ func newValidationError(err error) ValidationError {
 		ee.EntityID = vctx.EntityID
 		ee.Value = vctx.Value
 		ee.ErrorCode = vctx.ErrorCode
+		ee.EntityJson = tt.NewMap(vctx.EntityJson)
 	}
 	if v, ok := err.(hasGeometry); ok {
 		ee.Geometry = v.Geometry()
 	}
 	if v, ok := err.(hasEntityJson); ok {
-		ee.EntityJson = tt.NewMap(v.EntityJson())
+		ee.EntityJson = v.EntityJson()
 	}
 	return ee
 }
