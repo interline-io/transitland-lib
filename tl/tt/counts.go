@@ -15,6 +15,9 @@ func (r Counts) Value() (driver.Value, error) {
 }
 
 func (r *Counts) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
 	b, ok := value.([]byte)
 	if !ok {
 		return errors.New("type assertion to []byte failed")

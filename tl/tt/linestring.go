@@ -33,6 +33,7 @@ func (g LineString) Value() (driver.Value, error) {
 }
 
 func (g *LineString) Scan(src interface{}) error {
+	g.Valid = false
 	if src == nil {
 		return nil
 	}

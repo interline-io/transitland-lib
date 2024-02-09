@@ -19,6 +19,7 @@ type Geometry struct {
 }
 
 func (g *Geometry) Scan(src interface{}) error {
+	g.Geometry, g.Valid = nil, false
 	if src == nil {
 		return nil
 	}

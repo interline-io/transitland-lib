@@ -33,6 +33,7 @@ func (g Point) Value() (driver.Value, error) {
 }
 
 func (g *Point) Scan(src interface{}) error {
+	g.Valid = false
 	if src == nil {
 		return nil
 	}
