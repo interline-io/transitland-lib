@@ -26,6 +26,7 @@ func (g Polygon) Value() (driver.Value, error) {
 }
 
 func (g *Polygon) Scan(src interface{}) error {
+	g.Valid = false
 	if src == nil {
 		return nil
 	}

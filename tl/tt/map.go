@@ -29,6 +29,10 @@ func (r Map) Value() (driver.Value, error) {
 }
 
 func (r *Map) Scan(value interface{}) error {
+	r.Val, r.Valid = map[string]any{}, false
+	if value == nil {
+		return nil
+	}
 	b, ok := value.([]byte)
 	if !ok {
 		return errors.New("type assertion to []byte failed")
