@@ -34,7 +34,7 @@ var (
 	E022 = nec("Sequential stop_time_update times are not increasing", "E022")
 	// E023 = nec("trip start_time does not match first GTFS arrival_time", "E023")
 	E024 = nec("trip direction_id does not match GTFS data", "E024")
-	E025 = nec("stop_time_update departure time is before arrival time", "E025")
+	E025 = nec("stop_time_update arrival time is after departure time", "E025")
 	E026 = nec("Invalid vehicle position", "E026")
 	// E027 = nec("Invalid vehicle bearing", "E027")
 	// E028 = nec("Vehicle position outside agency coverage area", "E028")

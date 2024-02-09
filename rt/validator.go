@@ -357,7 +357,7 @@ func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, tr
 			"trip_update.stop_time_update.arrival.time",
 			a,
 			tripUpdate,
-			"TripUpdate contains a StopTimeUpdate with departure time '%d' before arrival time '%d'",
+			"TripUpdate contains a StopTimeUpdate with arrival time '%d' after departure time '%d'",
 			a,
 			b,
 		))
