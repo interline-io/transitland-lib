@@ -105,6 +105,7 @@ type ValidationReportErrorGroup struct {
 	Field              string
 	ErrorType          string
 	ErrorCode          string
+	GroupKey           string
 	Level              int
 	Count              int
 	Errors             []ValidationReportErrorExemplar `db:"-"`
@@ -527,6 +528,7 @@ func copierEgToValidationEg(eg *copier.ValidationErrorGroup) *ValidationReportEr
 		Field:     eg.Field,
 		ErrorType: eg.ErrorType,
 		ErrorCode: eg.ErrorCode,
+		GroupKey:  eg.GroupKey,
 		Count:     eg.Count,
 		Level:     eg.Level,
 	}

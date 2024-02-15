@@ -8,6 +8,7 @@ import (
 
 // Context adds structured context.
 type Context struct {
+	GroupKey   string
 	Filename   string
 	Line       int
 	ErrorCode  string
@@ -72,6 +73,9 @@ func (e *Context) Update(v *Context) {
 	}
 	if v.EntityJson != nil {
 		e.EntityJson = v.EntityJson
+	}
+	if v.GroupKey != "" {
+		e.GroupKey = v.GroupKey
 	}
 }
 
