@@ -22,6 +22,7 @@ import (
 // NewValidatorFromReader returns a Validator with data from a Reader.
 func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
 	fi := NewValidator()
+	fi.MaxDistanceFromTrip = 100.0
 	cp, err := copier.NewCopier(reader, &empty.Writer{}, copier.Options{})
 	if err != nil {
 		return nil, err
@@ -239,6 +240,7 @@ func TestValidatorErrors(t *testing.T) {
 				t.Fatal(err)
 			}
 			ex := NewValidator()
+			ex.MaxDistanceFromTrip = 100.0
 			cp.AddExtension(ex)
 			result := cp.Copy()
 			_ = result

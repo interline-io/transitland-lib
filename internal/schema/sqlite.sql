@@ -736,6 +736,7 @@ CREATE TABLE tl_validation_report_error_groups (
     "field" varchar(255) not null,
     "error_type" varchar(255) not null,
     "error_code" varchar(255) not null,
+    "group_key" varchar(255) not null,
     "count" int not null,
     "level" int not null
 );

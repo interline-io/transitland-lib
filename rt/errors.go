@@ -97,15 +97,10 @@ func newError(msg string, field string) *RealtimeError {
 	}
 }
 
-func withField(e RealtimeError, field string) *RealtimeError {
+func withFieldAndJson(e RealtimeError, field string, groupKey string, value any, ent protoreflect.ProtoMessage, msg string, msgArgs ...any) *RealtimeError {
 	e2 := e
 	e2.Field = field
-	return &e2
-}
-
-func withFieldAndJson(e RealtimeError, field string, value any, ent protoreflect.ProtoMessage, msg string, msgArgs ...any) *RealtimeError {
-	e2 := e
-	e2.Field = field
+	e2.GroupKey = groupKey
 	if value != nil {
 		var err error
 		e2.Value, err = tt.ToCsv(value)

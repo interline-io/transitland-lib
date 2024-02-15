@@ -36,6 +36,7 @@ type ValidationErrorGroup struct {
 	Field     string
 	ErrorType string
 	ErrorCode string
+	GroupKey  string
 	Level     int
 	Count     int
 	Limit     int               `db:"-"`
@@ -51,6 +52,7 @@ func NewValidationErrorGroup(err error, limit int) *ValidationErrorGroup {
 	return &ValidationErrorGroup{
 		Filename:  ve.Filename,
 		Field:     ve.Field,
+		GroupKey:  ve.GroupKey,
 		ErrorCode: ve.ErrorCode,
 		ErrorType: errtype,
 		Limit:     limit,
@@ -58,7 +60,7 @@ func NewValidationErrorGroup(err error, limit int) *ValidationErrorGroup {
 }
 
 func (eg *ValidationErrorGroup) Key() string {
-	return eg.Filename + ":" + eg.Field + ":" + eg.ErrorType
+	return fmt.Sprintf("%s:%s:%s:%s:%s", eg.Filename, eg.Field, eg.ErrorType, eg.ErrorType, eg.GroupKey)
 }
 
 // Add an error to the error group.
@@ -79,6 +81,7 @@ type ValidationError struct {
 	Field      string `db:"-"`
 	ErrorCode  string `db:"-"`
 	Line       int
+	GroupKey   string
 	Message    string
 	EntityID   string
 	Value      string
@@ -103,6 +106,7 @@ func newValidationError(err error) ValidationError {
 		ee.Value = vctx.Value
 		ee.ErrorCode = vctx.ErrorCode
 		ee.EntityJson = tt.NewMap(vctx.EntityJson)
+		ee.GroupKey = vctx.GroupKey
 	}
 	if v, ok := err.(hasGeometry); ok {
 		ee.Geometry = v.Geometry()
