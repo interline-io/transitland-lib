@@ -42,7 +42,7 @@ type Validator struct {
 // NewValidator returns an initialized validator.
 func NewValidator() *Validator {
 	return &Validator{
-		MaxDistanceFromTrip: 1000.0,
+		MaxDistanceFromTrip: 100.0,
 		tripInfo:            map[string]tripInfo{},
 		routeInfo:           map[string]routeInfo{},
 		stopInfo:            map[string]stopInfo{},
