@@ -51,10 +51,11 @@ func NewRedateFilter(sourceDate, targetDate time.Time, SourceDays, targetDays in
 func newRedateFilterFromJson(args string) (*RedateFilter, error) {
 	type redateOptions struct {
 		SourceDate    tt.Date
+		SourceEndDate tt.Date
 		SourceDays    json.Number
 		TargetDate    tt.Date
-		TargetDays    json.Number
 		TargetEndDate tt.Date
+		TargetDays    json.Number
 		DOWAlign      tt.Bool
 		AllowInactive bool
 	}
@@ -63,6 +64,9 @@ func newRedateFilterFromJson(args string) (*RedateFilter, error) {
 		return nil, err
 	}
 	a, _ := opts.SourceDays.Int64()
+	if opts.SourceEndDate.Valid {
+		a = int64(daysBetween(opts.SourceDate.Val, opts.SourceEndDate.Val) + 1)
+	}
 	b, _ := opts.TargetDays.Int64()
 	if opts.TargetEndDate.Valid {
 		b = int64(daysBetween(opts.TargetDate.Val, opts.TargetEndDate.Val) + 1)
