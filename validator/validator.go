@@ -412,7 +412,7 @@ func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal 
 		Url: fn,
 	}
 	var rterrs []error
-	msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize))
+	msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal)
 	if err != nil {
 		rterrs = append(rterrs, err)
 	} else {
