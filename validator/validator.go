@@ -173,6 +173,7 @@ type Options struct {
 	IncludeEntities          bool
 	IncludeEntitiesLimit     int
 	IncludeRouteGeometries   bool
+	UseHeaderTimestamp       bool
 	ValidateRealtimeMessages []string
 	IncludeRealtimeJson      bool
 	MaxRTMessageSize         uint64
@@ -408,6 +409,7 @@ func (v *Validator) ValidateRTs(rtUrls []string, evaluateAt time.Time, evaluateA
 
 // Validate realtime messages
 func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal time.Time) (RealtimeResult, error) {
+	log.Info().Str("url", fn).Msg("Validating GTFS-RT")
 	rtResult := RealtimeResult{
 		Url: fn,
 	}
@@ -416,6 +418,13 @@ func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal 
 	if err != nil {
 		rterrs = append(rterrs, err)
 	} else {
+		if v.Options.UseHeaderTimestamp {
+			evaluateAt = time.Unix(int64(msg.GetHeader().GetTimestamp()), 0)
+			evaluateAtLocal = evaluateAt.In(evaluateAtLocal.Location())
+			log.Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using header timestamps for evaluation time")
+		} else {
+			log.Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using provided timestamp for evaluation time")
+		}
 		rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
 		rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
 		if tripUpdateStats, err := v.rtValidator.TripUpdateStats(evaluateAtLocal, msg); err != nil {
@@ -429,6 +438,7 @@ func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal 
 			rtResult.VehiclePositionStats = vehiclePositionStats
 		}
 	}
+
 	if v.Options.IncludeRealtimeJson && msg != nil {
 		mOpts := protojson.MarshalOptions{UseProtoNames: true}
 		rtJson, err := mOpts.Marshal(msg)
