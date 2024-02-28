@@ -1,6 +1,8 @@
 package rt
 
 import (
+	"fmt"
+	"sort"
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext/sched"
@@ -803,11 +805,14 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([
 }
 
 type TripUpdateStats struct {
-	AgencyID           string   `json:"agency_id"`
-	RouteID            string   `json:"route_id"`
-	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
-	TripScheduledCount int      `json:"trip_scheduled_count"`
-	TripMatchCount     int      `json:"trip_match_count"`
+	AgencyID                string   `json:"agency_id"`
+	RouteID                 string   `json:"route_id"`
+	TripScheduledIDs        []string `json:"trip_scheduled_ids"`
+	TripScheduledCount      int      `json:"trip_scheduled_count"`
+	TripScheduledNotMatched []string `json:"trip_scheduled_not_matched"`
+	TripMatchIDs            []string `json:"trip_match_ids"`
+	TripMatchCount          int      `json:"trip_match_count"`
+	TripUpdateNotMatched    []string `json:"trip_match_not_present"`
 }
 
 func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]TripUpdateStats, error) {
@@ -817,7 +822,12 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 		if tu == nil {
 			continue
 		}
-		tripHasUpdate[tu.GetTrip().GetTripId()] = true
+		tripId := tu.GetTrip().GetTripId()
+		_, ok := fi.tripInfo[tripId]
+		if !ok {
+			continue
+		}
+		tripHasUpdate[tripId] = true
 	}
 	// Return early if no TripUpdates
 	if len(tripHasUpdate) == 0 {
@@ -827,9 +837,13 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 		AgencyID string
 		RouteID  string
 	}
+	allMatched := map[string]bool{}
 	statAgg := map[statAggKey]TripUpdateStats{}
 	for _, tripId := range fi.sched.ActiveTrips(now) {
-		trip := fi.tripInfo[tripId]
+		trip, ok := fi.tripInfo[tripId]
+		if !ok {
+			continue
+		}
 		k := statAggKey{
 			RouteID:  trip.RouteID,
 			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
@@ -841,8 +855,63 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 		stat.TripScheduledCount += 1
 		if tripHasUpdate[tripId] {
 			stat.TripMatchCount += 1
+			stat.TripMatchIDs = append(stat.TripMatchIDs, tripId)
+			allMatched[tripId] = true
+		} else {
+			stat.TripScheduledNotMatched = append(stat.TripScheduledNotMatched, tripId)
 		}
 		statAgg[k] = stat
+	}
+	for _, ent := range msg.Entity {
+		tu := ent.TripUpdate
+		if tu == nil {
+			continue
+		}
+		tripId := tu.GetTrip().GetTripId()
+		if allMatched[tripId] {
+			continue
+		}
+		trip, ok := fi.tripInfo[tripId]
+		if !ok {
+			continue
+		}
+		k := statAggKey{
+			RouteID:  trip.RouteID,
+			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
+		}
+		stat := statAgg[k]
+		stat.TripUpdateNotMatched = append(stat.TripUpdateNotMatched, tripId)
+		statAgg[k] = stat
+	}
+
+	var statAggSortedKeys []statAggKey
+	for k := range statAgg {
+		statAggSortedKeys = append(statAggSortedKeys, k)
+	}
+	sort.Slice(statAggSortedKeys, func(i, j int) bool {
+		a, b := statAggSortedKeys[i], statAggSortedKeys[j]
+		return fmt.Sprintf("%s:%s", a.AgencyID, a.RouteID) < fmt.Sprintf("%s:%s", b.AgencyID, b.RouteID)
+	})
+
+	// Sort slices
+	for k, v := range statAgg {
+		sort.Strings(v.TripScheduledIDs)
+		sort.Strings(v.TripMatchIDs)
+		sort.Strings(v.TripScheduledNotMatched)
+		sort.Strings(v.TripUpdateNotMatched)
+		statAgg[k] = v
+	}
+
+	for _, k := range statAggSortedKeys {
+		v := statAgg[k]
+		fmt.Printf("\tagency '%s' route '%s'\n", k.AgencyID, k.RouteID)
+		if (v.TripMatchCount == v.TripScheduledCount) && len(v.TripScheduledNotMatched) == 0 {
+			continue
+		}
+		fmt.Printf("\t\tsched %d %v\n", len(v.TripScheduledIDs), v.TripScheduledIDs)
+		fmt.Printf("\t\tmatch %d %v\n", len(v.TripMatchIDs), v.TripMatchIDs)
+		fmt.Printf("\t\tsched not matched %d %v\n", len(v.TripScheduledNotMatched), v.TripScheduledNotMatched)
+		fmt.Printf("\t\ttu not matched %d %v\n", len(v.TripUpdateNotMatched), v.TripUpdateNotMatched)
 	}
 	var ret []TripUpdateStats
 	for _, v := range statAgg {
