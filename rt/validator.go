@@ -625,7 +625,10 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 			tripId := td.GetTripId()
 			trip, tripOk := fi.tripInfo[tripId]
 			shp := fi.geomCache.GetShape(trip.ShapeID)
-			if !tripOk {
+			// Check trip exists
+			if !tripOk && td.GetScheduleRelationship() == pb.TripDescriptor_ADDED {
+				// ADDED trip - allowed
+			} else if !tripOk {
 				errs = append(errs, withFieldAndJson(
 					E003,
 					"vehicle_position.trip.trip_id",
