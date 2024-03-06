@@ -2,6 +2,7 @@ package tt
 
 import (
 	"database/sql/driver"
+	"fmt"
 	"io"
 
 	geom "github.com/twpayne/go-geom"
@@ -70,7 +71,11 @@ func (g Point) MarshalJSON() ([]byte, error) {
 }
 
 func (g *Point) UnmarshalGQL(v interface{}) error {
-	return nil
+	var err error
+	g.Point, err = geojsonDecode[geom.Point](v)
+	g.Valid = (err == nil)
+	fmt.Println("UnmarshalGQL result:", g.Point, g.Valid)
+	return err
 }
 
 func (g Point) MarshalGQL(w io.Writer) {
