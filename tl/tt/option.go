@@ -55,3 +55,10 @@ func (r Option[T]) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(r.Val)
 }
+
+func (r Option[T]) Ptr() *T {
+	if r.Valid {
+		return &r.Val
+	}
+	return nil
+}

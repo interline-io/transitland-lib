@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
+	"encoding/json"
 	"io"
 
 	geom "github.com/twpayne/go-geom"
@@ -106,4 +107,29 @@ func geojsonEncode(g geom.T) ([]byte, error) {
 
 type canEncodeGeojson interface {
 	MarshalJSON() ([]byte, error)
+}
+
+// geojsonEncode decodes geojson into a geometry.
+func geojsonDecode[T any, PT *T](v any) (T, error) {
+	var ret T
+	var data []byte
+	if a, ok := v.([]byte); ok {
+		data = a
+	} else if a, ok := v.(string); ok {
+		data = []byte(a)
+	} else {
+		var err error
+		data, err = json.Marshal(v)
+		if err != nil {
+			return ret, err
+		}
+	}
+	var gg geom.T
+	if err := geojson.Unmarshal(data, &gg); err != nil {
+		return ret, nil
+	}
+	if a, ok := gg.(PT); ok && a != nil {
+		ret = *a
+	}
+	return ret, nil
 }
