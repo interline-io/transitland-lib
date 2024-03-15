@@ -25,7 +25,7 @@ require (
 	github.com/snabb/isoweek v1.0.1
 	github.com/stretchr/testify v1.7.1
 	github.com/twpayne/go-geom v1.4.1
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/protobuf v1.33.0
 )
 
 require (
