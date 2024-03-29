@@ -613,7 +613,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 				AgencyID:           s.AgencyID,
 				RouteID:            s.RouteID,
 				TripScheduledCount: s.TripScheduledCount,
-				TripMatchCount:     s.TripMatchCount,
+				TripMatchCount:     s.TripScheduledMatched,
 				TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
 			}
 			if _, err := atx.Insert(&tripReport); err != nil {

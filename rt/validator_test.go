@@ -122,19 +122,19 @@ func TestTripUpdateStats(t *testing.T) {
 			if stat.RouteID == "L1" {
 				assert.ElementsMatch(t, []string{"127", "126", "125"}, stat.TripScheduledIDs)
 				assert.Equal(t, 3, stat.TripScheduledCount)
-				assert.Equal(t, 3, stat.TripMatchCount)
+				assert.Equal(t, 3, stat.TripScheduledMatched)
 			} else if stat.RouteID == "L4" {
 				assert.ElementsMatch(t, []string{"411", "410", "412"}, stat.TripScheduledIDs)
 				assert.Equal(t, 3, stat.TripScheduledCount)
-				assert.Equal(t, 3, stat.TripMatchCount)
+				assert.Equal(t, 3, stat.TripScheduledMatched)
 			} else if stat.RouteID == "L3" {
 				assert.ElementsMatch(t, []string{"308", "311", "309", "312", "310"}, stat.TripScheduledIDs)
 				assert.Equal(t, 5, stat.TripScheduledCount)
-				assert.Equal(t, 4, stat.TripMatchCount)
+				assert.Equal(t, 4, stat.TripScheduledMatched)
 			} else if stat.RouteID == "B7" {
 				assert.ElementsMatch(t, []string{"710", "709"}, stat.TripScheduledIDs)
 				assert.Equal(t, 2, stat.TripScheduledCount)
-				assert.Equal(t, 2, stat.TripMatchCount)
+				assert.Equal(t, 2, stat.TripScheduledMatched)
 			} else {
 				t.Errorf("route %s not scheduled", stat.RouteID)
 			}
