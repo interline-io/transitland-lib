@@ -768,11 +768,11 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([
 	scheduledTrips := fi.sched.ActiveTrips(now)
 	var rtTrips []string
 	for _, ent := range msg.Entity {
-		tu := ent.Vehicle
-		if tu == nil {
+		rtEnt := ent.Vehicle
+		if rtEnt == nil {
 			continue
 		}
-		tripId := tu.GetTrip().GetTripId()
+		tripId := rtEnt.GetTrip().GetTripId()
 		rtTrips = append(rtTrips, tripId)
 	}
 	stats, err := fi.compareTripSets(scheduledTrips, rtTrips)
@@ -787,7 +787,6 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([
 	return ret, nil
 }
 
-// Note: db for TripScheduledMatched
 type TripUpdateStats struct {
 	AgencyID                string
 	RouteID                 string
@@ -805,11 +804,11 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 	scheduledTrips := fi.sched.ActiveTrips(now)
 	var rtTrips []string
 	for _, ent := range msg.Entity {
-		tu := ent.TripUpdate
-		if tu == nil {
+		rtEnt := ent.TripUpdate
+		if rtEnt == nil {
 			continue
 		}
-		tripId := tu.GetTrip().GetTripId()
+		tripId := rtEnt.GetTrip().GetTripId()
 		rtTrips = append(rtTrips, tripId)
 	}
 	stats, err := fi.compareTripSets(scheduledTrips, rtTrips)
@@ -837,11 +836,12 @@ type rtTripStat struct {
 	TripRtNotMatched        int
 }
 
+type statAggKey struct {
+	AgencyID string
+	RouteID  string
+}
+
 func (fi *Validator) compareTripSets(scheduledTrips []string, rtTrips []string) ([]rtTripStat, error) {
-	type statAggKey struct {
-		AgencyID string
-		RouteID  string
-	}
 	statAgg := map[statAggKey]rtTripStat{}
 
 	// Process scheduled trips

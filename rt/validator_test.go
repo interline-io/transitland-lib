@@ -1,7 +1,6 @@
 package rt
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -109,37 +108,78 @@ func TestTripUpdateStats(t *testing.T) {
 	result := cp.Copy()
 	_ = result
 
-	t.Run("midday", func(t *testing.T) {
-		// Tuesday, Nov 7 2023 17:30:00
-		tz, _ := time.LoadLocation("America/Los_Angeles")
-		now := time.Date(2023, 11, 7, 17, 30, 0, 0, tz)
-		stats, err := ex.TripUpdateStats(now, msg)
-		if err != nil {
-			t.Fatal(err)
-		}
-		assert.Equal(t, 4, len(stats))
-		for _, stat := range stats {
-			if stat.RouteID == "L1" {
-				assert.ElementsMatch(t, []string{"127", "126", "125"}, stat.TripScheduledIDs)
-				assert.Equal(t, 3, stat.TripScheduledCount)
-				assert.Equal(t, 3, stat.TripScheduledMatched)
-			} else if stat.RouteID == "L4" {
-				assert.ElementsMatch(t, []string{"411", "410", "412"}, stat.TripScheduledIDs)
-				assert.Equal(t, 3, stat.TripScheduledCount)
-				assert.Equal(t, 3, stat.TripScheduledMatched)
-			} else if stat.RouteID == "L3" {
-				assert.ElementsMatch(t, []string{"308", "311", "309", "312", "310"}, stat.TripScheduledIDs)
-				assert.Equal(t, 5, stat.TripScheduledCount)
-				assert.Equal(t, 4, stat.TripScheduledMatched)
-			} else if stat.RouteID == "B7" {
-				assert.ElementsMatch(t, []string{"710", "709"}, stat.TripScheduledIDs)
-				assert.Equal(t, 2, stat.TripScheduledCount)
-				assert.Equal(t, 2, stat.TripScheduledMatched)
-			} else {
-				t.Errorf("route %s not scheduled", stat.RouteID)
+	// Tuesday, Nov 7 2023 17:30:00
+	tz, _ := time.LoadLocation("America/Los_Angeles")
+	now := time.Date(2023, 11, 7, 17, 30, 0, 0, tz)
+	stats, err := ex.TripUpdateStats(now, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, 4, len(stats))
+	byRoute := map[statAggKey][]TripUpdateStats{}
+	for _, stat := range stats {
+		k := statAggKey{RouteID: stat.RouteID, AgencyID: stat.AgencyID}
+		byRoute[k] = append(byRoute[k], stat)
+	}
+	expectStats := map[statAggKey]TripUpdateStats{
+		{AgencyID: "CT", RouteID: "L1"}: {
+			TripScheduledIDs:        []string{"127", "126", "125"},
+			TripScheduledCount:      3,
+			TripScheduledMatched:    3,
+			TripScheduledNotMatched: 0,
+			TripRtIDs:               []string{"124", "125", "126", "127", "128", "129"},
+			TripRtCount:             6,
+			TripRtMatched:           3,
+			TripRtNotMatched:        3,
+		},
+		{AgencyID: "CT", RouteID: "L4"}: {
+			TripScheduledIDs:        []string{"411", "410", "412"},
+			TripScheduledCount:      3,
+			TripScheduledMatched:    3,
+			TripScheduledNotMatched: 0,
+			TripRtIDs:               []string{"410", "411", "412", "413", "414"},
+			TripRtCount:             5,
+			TripRtMatched:           3,
+			TripRtNotMatched:        2,
+		},
+		{AgencyID: "CT", RouteID: "L3"}: {
+			TripScheduledIDs:        []string{"308", "311", "309", "312", "310"},
+			TripScheduledCount:      5,
+			TripScheduledMatched:    4,
+			TripScheduledNotMatched: 1,
+			TripRtIDs:               []string{"310", "311", "312", "308"},
+			TripRtCount:             4,
+			TripRtMatched:           4,
+			TripRtNotMatched:        0,
+		},
+		{AgencyID: "CT", RouteID: "B7"}: {
+			TripScheduledIDs:        []string{"710", "709"},
+			TripScheduledCount:      2,
+			TripScheduledMatched:    2,
+			TripScheduledNotMatched: 0,
+			TripRtIDs:               []string{"709", "710", "711", "712"},
+			TripRtCount:             4,
+			TripRtMatched:           2,
+			TripRtNotMatched:        2,
+		},
+	}
+	for k, expect := range expectStats {
+		t.Run(fmt.Sprintf("%s:%s", k.AgencyID, k.RouteID), func(t *testing.T) {
+			rstats := byRoute[k]
+			if len(rstats) != 1 {
+				t.Fatal("expected 1 stat")
 			}
-		}
-	})
+			stat := rstats[0]
+			assert.ElementsMatch(t, expect.TripScheduledIDs, stat.TripScheduledIDs, "TripScheduledIDs")
+			assert.Equal(t, expect.TripScheduledCount, stat.TripScheduledCount, "TripScheduledCount")
+			assert.Equal(t, expect.TripScheduledMatched, stat.TripScheduledMatched, "TripScheduledMatched")
+			assert.Equal(t, expect.TripScheduledNotMatched, stat.TripScheduledNotMatched, "TripScheduledNotMatched")
+			assert.ElementsMatch(t, expect.TripRtIDs, stat.TripRtIDs, "TripRtIDs")
+			assert.Equal(t, expect.TripRtCount, stat.TripRtCount, "TripRtCount")
+			assert.Equal(t, expect.TripRtMatched, stat.TripRtMatched, "TripRtMatched")
+			assert.Equal(t, expect.TripRtNotMatched, stat.TripRtNotMatched, "TripRtNotMatched")
+		})
+	}
 }
 
 func TestVehiclePositionStats(t *testing.T) {
@@ -159,14 +199,79 @@ func TestVehiclePositionStats(t *testing.T) {
 	cp.AddExtension(ex)
 	result := cp.Copy()
 	_ = result
+
+	// Tuesday, Nov 7 2023 17:30:00
 	tz, _ := time.LoadLocation("America/Los_Angeles")
-	now := time.Date(2023, 11, 7, 5, 30, 0, 0, tz)
+	now := time.Date(2023, 11, 7, 17, 30, 0, 0, tz)
 	stats, err := ex.VehiclePositionStats(now, msg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	jj, _ := json.Marshal(stats)
-	fmt.Println(string(jj))
+	assert.Equal(t, 4, len(stats))
+	byRoute := map[statAggKey][]VehiclePositionStats{}
+	for _, stat := range stats {
+		k := statAggKey{RouteID: stat.RouteID, AgencyID: stat.AgencyID}
+		byRoute[k] = append(byRoute[k], stat)
+	}
+	expectStats := map[statAggKey]VehiclePositionStats{
+		{AgencyID: "CT", RouteID: "L1"}: {
+			TripScheduledIDs:        []string{"125", "126", "127"},
+			TripScheduledCount:      3,
+			TripScheduledMatched:    3,
+			TripScheduledNotMatched: 0,
+			TripRtIDs:               []string{"124", "125", "126", "127"},
+			TripRtCount:             4,
+			TripRtMatched:           3,
+			TripRtNotMatched:        1,
+		},
+		{AgencyID: "CT", RouteID: "L4"}: {
+			TripScheduledIDs:        []string{"411", "410", "412"},
+			TripScheduledCount:      3,
+			TripScheduledMatched:    3,
+			TripScheduledNotMatched: 0,
+			TripRtIDs:               []string{"410", "411", "412", "414"},
+			TripRtCount:             4,
+			TripRtMatched:           3,
+			TripRtNotMatched:        1,
+		},
+		{AgencyID: "CT", RouteID: "L3"}: {
+			TripScheduledIDs:        []string{"308", "311", "309", "312", "310"},
+			TripScheduledCount:      5,
+			TripScheduledMatched:    4,
+			TripScheduledNotMatched: 1,
+			TripRtIDs:               []string{"310", "311", "312", "308"},
+			TripRtCount:             4,
+			TripRtMatched:           4,
+			TripRtNotMatched:        0,
+		},
+		{AgencyID: "CT", RouteID: "B7"}: {
+			TripScheduledIDs:        []string{"710", "709"},
+			TripScheduledCount:      2,
+			TripScheduledMatched:    2,
+			TripScheduledNotMatched: 0,
+			TripRtIDs:               []string{"709", "710"},
+			TripRtCount:             2,
+			TripRtMatched:           2,
+			TripRtNotMatched:        0,
+		},
+	}
+	for k, expect := range expectStats {
+		t.Run(fmt.Sprintf("%s:%s", k.AgencyID, k.RouteID), func(t *testing.T) {
+			rstats := byRoute[k]
+			if len(rstats) != 1 {
+				t.Fatal("expected 1 stat")
+			}
+			stat := rstats[0]
+			assert.ElementsMatch(t, expect.TripScheduledIDs, stat.TripScheduledIDs, "TripScheduledIDs")
+			assert.Equal(t, expect.TripScheduledCount, stat.TripScheduledCount, "TripScheduledCount")
+			assert.Equal(t, expect.TripScheduledMatched, stat.TripScheduledMatched, "TripScheduledMatched")
+			assert.Equal(t, expect.TripScheduledNotMatched, stat.TripScheduledNotMatched, "TripScheduledNotMatched")
+			assert.ElementsMatch(t, expect.TripRtIDs, stat.TripRtIDs, "TripRtIDs")
+			assert.Equal(t, expect.TripRtCount, stat.TripRtCount, "TripRtCount")
+			assert.Equal(t, expect.TripRtMatched, stat.TripRtMatched, "TripRtMatched")
+			assert.Equal(t, expect.TripRtNotMatched, stat.TripRtNotMatched, "TripRtNotMatched")
+		})
+	}
 }
 
 func TestValidatorErrors(t *testing.T) {
