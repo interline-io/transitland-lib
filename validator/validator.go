@@ -142,8 +142,8 @@ type ValidationReportTripUpdateStat struct {
 	TripScheduledIDs        tt.Strings `db:"trip_scheduled_ids"`
 	TripRtIDs               tt.Strings `db:"trip_rt_ids"`
 	TripScheduledCount      int
-	TripScheduledMatched    int
-	TripScheduledNotMatched int `db:"trip_match_count"`
+	TripScheduledMatched    int `db:"trip_match_count"`
+	TripScheduledNotMatched int
 	TripRtCount             int
 	TripRtMatched           int
 	TripRtNotMatched        int
@@ -163,8 +163,8 @@ type ValidationReportVehiclePositionStat struct {
 	TripScheduledIDs        tt.Strings `db:"trip_scheduled_ids"`
 	TripRtIDs               tt.Strings `db:"trip_rt_ids"`
 	TripScheduledCount      int
-	TripScheduledMatched    int
-	TripScheduledNotMatched int `db:"trip_match_count"`
+	TripScheduledMatched    int `db:"trip_match_count"`
+	TripScheduledNotMatched int
 	TripRtCount             int
 	TripRtMatched           int
 	TripRtNotMatched        int
