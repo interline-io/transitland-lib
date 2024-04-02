@@ -136,12 +136,17 @@ func (e *ValidationReportErrorExemplar) TableName() string {
 //////
 
 type ValidationReportTripUpdateStat struct {
-	ValidationReportID int
-	AgencyID           string
-	RouteID            string
-	TripScheduledCount int
-	TripMatchCount     int
-	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	ValidationReportID      int
+	AgencyID                string
+	RouteID                 string
+	TripScheduledIDs        tt.Strings `db:"trip_scheduled_ids"`
+	TripRtIDs               tt.Strings `db:"trip_rt_ids"`
+	TripScheduledCount      int
+	TripScheduledMatched    int
+	TripScheduledNotMatched int `db:"trip_match_count"`
+	TripRtCount             int
+	TripRtMatched           int
+	TripRtNotMatched        int
 	tl.DatabaseEntity
 }
 
@@ -152,12 +157,17 @@ func (e *ValidationReportTripUpdateStat) TableName() string {
 //////
 
 type ValidationReportVehiclePositionStat struct {
-	ValidationReportID int
-	AgencyID           string
-	RouteID            string
-	TripScheduledCount int
-	TripMatchCount     int
-	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	ValidationReportID      int
+	AgencyID                string
+	RouteID                 string
+	TripScheduledIDs        tt.Strings `db:"trip_scheduled_ids"`
+	TripRtIDs               tt.Strings `db:"trip_rt_ids"`
+	TripScheduledCount      int
+	TripScheduledMatched    int
+	TripScheduledNotMatched int `db:"trip_match_count"`
+	TripRtCount             int
+	TripRtMatched           int
+	TripRtNotMatched        int
 	tl.DatabaseEntity
 }
 
@@ -609,12 +619,17 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 	for _, r := range result.Details.Realtime {
 		for _, s := range r.TripUpdateStats {
 			tripReport := ValidationReportTripUpdateStat{
-				ValidationReportID: result.ID,
-				AgencyID:           s.AgencyID,
-				RouteID:            s.RouteID,
-				TripScheduledCount: s.TripScheduledCount,
-				TripMatchCount:     s.TripScheduledMatched,
-				TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+				ValidationReportID:      result.ID,
+				AgencyID:                s.AgencyID,
+				RouteID:                 s.RouteID,
+				TripScheduledIDs:        tt.NewStrings(s.TripScheduledIDs),
+				TripScheduledCount:      s.TripScheduledCount,
+				TripScheduledMatched:    s.TripScheduledMatched,
+				TripScheduledNotMatched: s.TripScheduledNotMatched,
+				TripRtIDs:               tt.NewStrings(s.TripRtIDs),
+				TripRtCount:             s.TripRtCount,
+				TripRtMatched:           s.TripRtMatched,
+				TripRtNotMatched:        s.TripRtNotMatched,
 			}
 			if _, err := atx.Insert(&tripReport); err != nil {
 				log.Error().Err(err).Msg("failed to save trip update stat")
@@ -623,12 +638,17 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 		}
 		for _, s := range r.VehiclePositionStats {
 			vpReport := ValidationReportVehiclePositionStat{
-				ValidationReportID: result.ID,
-				AgencyID:           s.AgencyID,
-				RouteID:            s.RouteID,
-				TripScheduledCount: s.TripScheduledCount,
-				TripMatchCount:     s.TripMatchCount,
-				TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+				ValidationReportID:      result.ID,
+				AgencyID:                s.AgencyID,
+				RouteID:                 s.RouteID,
+				TripScheduledIDs:        tt.NewStrings(s.TripScheduledIDs),
+				TripScheduledCount:      s.TripScheduledCount,
+				TripScheduledMatched:    s.TripScheduledMatched,
+				TripScheduledNotMatched: s.TripScheduledNotMatched,
+				TripRtIDs:               tt.NewStrings(s.TripRtIDs),
+				TripRtCount:             s.TripRtCount,
+				TripRtMatched:           s.TripRtMatched,
+				TripRtNotMatched:        s.TripRtNotMatched,
 			}
 			if _, err := atx.Insert(&vpReport); err != nil {
 				log.Error().Err(err).Msg("failed to save vehicle position stat")

@@ -713,9 +713,14 @@ CREATE TABLE tl_validation_trip_update_stats (
 "validation_report_id" int NOT NULL,
 "agency_id" varchar(255) NOT NULL,
 "route_id" varchar(255) NOT NULL,
-"trip_scheduled_ids" varchar(255),
+"trip_scheduled_ids" blob,
 "trip_scheduled_count" int NOT NULL,
-"trip_match_count" int NOT NULL
+"trip_match_count" int NOT NULL,
+"trip_scheduled_not_matched" int not null,
+"trip_rt_ids" blob,
+"trip_rt_count" int not null,
+"trip_rt_matched" int not null,
+"trip_rt_not_matched" int not null
 );
 
 
@@ -724,9 +729,14 @@ CREATE TABLE tl_validation_vehicle_position_stats (
 "validation_report_id" int NOT NULL,
 "agency_id" varchar(255) NOT NULL,
 "route_id" varchar(255) NOT NULL,
-"trip_scheduled_ids" varchar(255),
+"trip_scheduled_ids" blob,
 "trip_scheduled_count" int NOT NULL,
-"trip_match_count" int NOT NULL
+"trip_match_count" int NOT NULL,
+"trip_scheduled_not_matched" int not null,
+"trip_rt_ids" blob,
+"trip_rt_count" int not null,
+"trip_rt_matched" int not null,
+"trip_rt_not_matched" int not null
 );
 
 CREATE TABLE tl_validation_report_error_groups (
