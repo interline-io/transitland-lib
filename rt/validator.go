@@ -879,12 +879,12 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 		updateSet := mapset.NewSet[string](v.TripScheduledIDs...)
 		v.TripScheduledIDs = scheduledSet.ToSlice()
 		v.TripScheduledCount = scheduledSet.Cardinality()
-		v.TripScheduledMatched = scheduledSet.Union(updateSet).Cardinality()
+		v.TripScheduledMatched = scheduledSet.Intersect(updateSet).Cardinality()
 		v.TripScheduledNotMatched = scheduledSet.Difference(updateSet).Cardinality()
 
 		v.TripUpdateIDs = updateSet.ToSlice()
 		v.TripUpdateCount = updateSet.Cardinality()
-		v.TripUpdateMatched = updateSet.Union(scheduledSet).Cardinality()
+		v.TripUpdateMatched = updateSet.Intersect(scheduledSet).Cardinality()
 		v.TripUpdateNotMatched = updateSet.Difference(scheduledSet).Cardinality()
 		statAgg[k] = v
 		fmt.Printf("\tagency '%s' route '%s'\n", k.AgencyID, k.RouteID)
