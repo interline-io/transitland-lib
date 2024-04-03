@@ -136,12 +136,17 @@ func (e *ValidationReportErrorExemplar) TableName() string {
 //////
 
 type ValidationReportTripUpdateStat struct {
-	ValidationReportID int
-	AgencyID           string
-	RouteID            string
-	TripScheduledCount int
-	TripMatchCount     int
-	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	ValidationReportID      int
+	AgencyID                string
+	RouteID                 string
+	TripScheduledIDs        tt.Strings `db:"trip_scheduled_ids"`
+	TripRtIDs               tt.Strings `db:"trip_rt_ids"`
+	TripScheduledCount      int
+	TripScheduledMatched    int `db:"trip_match_count"`
+	TripScheduledNotMatched int
+	TripRtCount             int
+	TripRtMatched           int
+	TripRtNotMatched        int
 	tl.DatabaseEntity
 }
 
@@ -152,12 +157,17 @@ func (e *ValidationReportTripUpdateStat) TableName() string {
 //////
 
 type ValidationReportVehiclePositionStat struct {
-	ValidationReportID int
-	AgencyID           string
-	RouteID            string
-	TripScheduledCount int
-	TripMatchCount     int
-	TripScheduledIDs   tt.Strings `db:"trip_scheduled_ids"`
+	ValidationReportID      int
+	AgencyID                string
+	RouteID                 string
+	TripScheduledIDs        tt.Strings `db:"trip_scheduled_ids"`
+	TripRtIDs               tt.Strings `db:"trip_rt_ids"`
+	TripScheduledCount      int
+	TripScheduledMatched    int `db:"trip_match_count"`
+	TripScheduledNotMatched int
+	TripRtCount             int
+	TripRtMatched           int
+	TripRtNotMatched        int
 	tl.DatabaseEntity
 }
 
@@ -173,6 +183,7 @@ type Options struct {
 	IncludeEntities          bool
 	IncludeEntitiesLimit     int
 	IncludeRouteGeometries   bool
+	UseHeaderTimestamp       bool
 	ValidateRealtimeMessages []string
 	IncludeRealtimeJson      bool
 	MaxRTMessageSize         uint64
@@ -408,14 +419,22 @@ func (v *Validator) ValidateRTs(rtUrls []string, evaluateAt time.Time, evaluateA
 
 // Validate realtime messages
 func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal time.Time) (RealtimeResult, error) {
+	log.Info().Str("url", fn).Msg("Validating GTFS-RT")
 	rtResult := RealtimeResult{
 		Url: fn,
 	}
 	var rterrs []error
-	msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize))
+	msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal)
 	if err != nil {
 		rterrs = append(rterrs, err)
 	} else {
+		if v.Options.UseHeaderTimestamp {
+			evaluateAt = time.Unix(int64(msg.GetHeader().GetTimestamp()), 0)
+			evaluateAtLocal = evaluateAt.In(evaluateAtLocal.Location())
+			log.Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using header timestamps for evaluation time")
+		} else {
+			log.Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using provided timestamp for evaluation time")
+		}
 		rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
 		rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
 		if tripUpdateStats, err := v.rtValidator.TripUpdateStats(evaluateAtLocal, msg); err != nil {
@@ -429,6 +448,7 @@ func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal 
 			rtResult.VehiclePositionStats = vehiclePositionStats
 		}
 	}
+
 	if v.Options.IncludeRealtimeJson && msg != nil {
 		mOpts := protojson.MarshalOptions{UseProtoNames: true}
 		rtJson, err := mOpts.Marshal(msg)
@@ -599,12 +619,17 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 	for _, r := range result.Details.Realtime {
 		for _, s := range r.TripUpdateStats {
 			tripReport := ValidationReportTripUpdateStat{
-				ValidationReportID: result.ID,
-				AgencyID:           s.AgencyID,
-				RouteID:            s.RouteID,
-				TripScheduledCount: s.TripScheduledCount,
-				TripMatchCount:     s.TripMatchCount,
-				TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+				ValidationReportID:      result.ID,
+				AgencyID:                s.AgencyID,
+				RouteID:                 s.RouteID,
+				TripScheduledIDs:        tt.NewStrings(s.TripScheduledIDs),
+				TripScheduledCount:      s.TripScheduledCount,
+				TripScheduledMatched:    s.TripScheduledMatched,
+				TripScheduledNotMatched: s.TripScheduledNotMatched,
+				TripRtIDs:               tt.NewStrings(s.TripRtIDs),
+				TripRtCount:             s.TripRtCount,
+				TripRtMatched:           s.TripRtMatched,
+				TripRtNotMatched:        s.TripRtNotMatched,
 			}
 			if _, err := atx.Insert(&tripReport); err != nil {
 				log.Error().Err(err).Msg("failed to save trip update stat")
@@ -613,12 +638,17 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 		}
 		for _, s := range r.VehiclePositionStats {
 			vpReport := ValidationReportVehiclePositionStat{
-				ValidationReportID: result.ID,
-				AgencyID:           s.AgencyID,
-				RouteID:            s.RouteID,
-				TripScheduledCount: s.TripScheduledCount,
-				TripMatchCount:     s.TripMatchCount,
-				TripScheduledIDs:   tt.NewStrings(s.TripScheduledIDs),
+				ValidationReportID:      result.ID,
+				AgencyID:                s.AgencyID,
+				RouteID:                 s.RouteID,
+				TripScheduledIDs:        tt.NewStrings(s.TripScheduledIDs),
+				TripScheduledCount:      s.TripScheduledCount,
+				TripScheduledMatched:    s.TripScheduledMatched,
+				TripScheduledNotMatched: s.TripScheduledNotMatched,
+				TripRtIDs:               tt.NewStrings(s.TripRtIDs),
+				TripRtCount:             s.TripRtCount,
+				TripRtMatched:           s.TripRtMatched,
+				TripRtNotMatched:        s.TripRtNotMatched,
 			}
 			if _, err := atx.Insert(&vpReport); err != nil {
 				log.Error().Err(err).Msg("failed to save vehicle position stat")

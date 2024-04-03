@@ -1,8 +1,11 @@
 package rt
 
 import (
+	"fmt"
+	"sort"
 	"time"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/interline-io/transitland-lib/ext/sched"
 	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/rt/pb"
@@ -625,10 +628,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 			tripId := td.GetTripId()
 			trip, tripOk := fi.tripInfo[tripId]
 			shp := fi.geomCache.GetShape(trip.ShapeID)
-			// Check trip exists
-			if !tripOk && td.GetScheduleRelationship() == pb.TripDescriptor_ADDED {
-				// ADDED trip - allowed
-			} else if !tripOk {
+			if !tripOk {
 				errs = append(errs, withFieldAndJson(
 					E003,
 					"vehicle_position.trip.trip_id",
@@ -752,87 +752,104 @@ func (fi *Validator) validatePosition(pos *pb.Position, vehiclePosition *pb.Vehi
 }
 
 type VehiclePositionStats struct {
-	RouteID            string   `json:"route_id"`
-	AgencyID           string   `json:"agency_id"`
-	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
-	TripScheduledCount int      `json:"trip_scheduled_count"`
-	TripMatchCount     int      `json:"trip_match_count"`
+	AgencyID                string
+	RouteID                 string
+	TripScheduledIDs        []string
+	TripRtIDs               []string
+	TripScheduledCount      int
+	TripScheduledMatched    int
+	TripScheduledNotMatched int
+	TripRtCount             int
+	TripRtMatched           int
+	TripRtNotMatched        int
 }
 
 func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([]VehiclePositionStats, error) {
-	tripHasPosition := map[string]bool{}
+	scheduledTrips := fi.sched.ActiveTrips(now)
+	var rtTrips []string
 	for _, ent := range msg.Entity {
-		vp := ent.Vehicle
-		if vp == nil {
+		rtEnt := ent.Vehicle
+		if rtEnt == nil {
 			continue
 		}
-		pos := vp.GetPosition()
-		if td := vp.Trip; td != nil && pos != nil {
-			tripId := td.GetTripId()
-			tripHasPosition[tripId] = true
-		}
+		tripId := rtEnt.GetTrip().GetTripId()
+		rtTrips = append(rtTrips, tripId)
 	}
-	// Return early if no VehiclePositions
-	if len(tripHasPosition) == 0 {
-		return nil, nil
+	stats, err := fi.compareTripSets(scheduledTrips, rtTrips)
+	if err != nil {
+		return nil, err
 	}
-	type statAggKey struct {
-		RouteID  string
-		AgencyID string
-	}
-	statAgg := map[statAggKey]VehiclePositionStats{}
-	for _, tripId := range fi.sched.ActiveTrips(now) {
-		trip := fi.tripInfo[tripId]
-		k := statAggKey{
-			RouteID:  trip.RouteID,
-			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
-		}
-		stat := statAgg[k]
-		stat.AgencyID = k.AgencyID
-		stat.RouteID = k.RouteID
-		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
-		stat.TripScheduledCount += 1
-		if tripHasPosition[tripId] {
-			stat.TripMatchCount += 1
-		}
-		statAgg[k] = stat
-	}
+	// Use direct conversion
 	var ret []VehiclePositionStats
-	for _, v := range statAgg {
-		ret = append(ret, v)
+	for _, s := range stats {
+		ret = append(ret, VehiclePositionStats(s))
 	}
 	return ret, nil
-
 }
 
 type TripUpdateStats struct {
-	AgencyID           string   `json:"agency_id"`
-	RouteID            string   `json:"route_id"`
-	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
-	TripScheduledCount int      `json:"trip_scheduled_count"`
-	TripMatchCount     int      `json:"trip_match_count"`
+	AgencyID                string
+	RouteID                 string
+	TripScheduledIDs        []string
+	TripRtIDs               []string
+	TripScheduledCount      int
+	TripScheduledMatched    int
+	TripScheduledNotMatched int
+	TripRtCount             int
+	TripRtMatched           int
+	TripRtNotMatched        int
 }
 
 func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]TripUpdateStats, error) {
-	tripHasUpdate := map[string]bool{}
+	scheduledTrips := fi.sched.ActiveTrips(now)
+	var rtTrips []string
 	for _, ent := range msg.Entity {
-		tu := ent.TripUpdate
-		if tu == nil {
+		rtEnt := ent.TripUpdate
+		if rtEnt == nil {
 			continue
 		}
-		tripHasUpdate[tu.GetTrip().GetTripId()] = true
+		tripId := rtEnt.GetTrip().GetTripId()
+		rtTrips = append(rtTrips, tripId)
 	}
-	// Return early if no TripUpdates
-	if len(tripHasUpdate) == 0 {
-		return nil, nil
+	stats, err := fi.compareTripSets(scheduledTrips, rtTrips)
+	if err != nil {
+		return nil, err
 	}
-	type statAggKey struct {
-		AgencyID string
-		RouteID  string
+	// Use direct conversion
+	var ret []TripUpdateStats
+	for _, s := range stats {
+		ret = append(ret, TripUpdateStats(s))
 	}
-	statAgg := map[statAggKey]TripUpdateStats{}
-	for _, tripId := range fi.sched.ActiveTrips(now) {
-		trip := fi.tripInfo[tripId]
+	return ret, nil
+}
+
+type rtTripStat struct {
+	AgencyID                string
+	RouteID                 string
+	TripScheduledIDs        []string
+	TripRtIDs               []string
+	TripScheduledCount      int
+	TripScheduledMatched    int
+	TripScheduledNotMatched int
+	TripRtCount             int
+	TripRtMatched           int
+	TripRtNotMatched        int
+}
+
+type statAggKey struct {
+	AgencyID string
+	RouteID  string
+}
+
+func (fi *Validator) compareTripSets(scheduledTrips []string, rtTrips []string) ([]rtTripStat, error) {
+	statAgg := map[statAggKey]rtTripStat{}
+
+	// Process scheduled trips
+	for _, tripId := range scheduledTrips {
+		trip, ok := fi.tripInfo[tripId]
+		if !ok {
+			continue
+		}
 		k := statAggKey{
 			RouteID:  trip.RouteID,
 			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
@@ -840,15 +857,61 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 		stat := statAgg[k]
 		stat.AgencyID = k.AgencyID
 		stat.RouteID = k.RouteID
+		// fmt.Println("found sched:", k, tripId)
 		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
-		stat.TripScheduledCount += 1
-		if tripHasUpdate[tripId] {
-			stat.TripMatchCount += 1
-		}
 		statAgg[k] = stat
 	}
-	var ret []TripUpdateStats
-	for _, v := range statAgg {
+
+	// Process RT entities
+	for _, tripId := range rtTrips {
+		trip, ok := fi.tripInfo[tripId]
+		if !ok {
+			continue
+		}
+		k := statAggKey{
+			RouteID:  trip.RouteID,
+			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
+		}
+		// fmt.Println("found rt:", k, tripId)
+		stat := statAgg[k]
+		stat.TripRtIDs = append(stat.TripRtIDs, tripId)
+		statAgg[k] = stat
+	}
+
+	var statAggSortedKeys []statAggKey
+	for k := range statAgg {
+		statAggSortedKeys = append(statAggSortedKeys, k)
+	}
+	sort.Slice(statAggSortedKeys, func(i, j int) bool {
+		a, b := statAggSortedKeys[i], statAggSortedKeys[j]
+		return fmt.Sprintf("%s:%s", a.AgencyID, a.RouteID) < fmt.Sprintf("%s:%s", b.AgencyID, b.RouteID)
+	})
+	var ret []rtTripStat
+	for _, k := range statAggSortedKeys {
+		v := statAgg[k]
+		scheduledSet := mapset.NewSet[string](v.TripScheduledIDs...)
+		updateSet := mapset.NewSet[string](v.TripRtIDs...)
+		tripScheduledMatched := scheduledSet.Intersect(updateSet)
+		tripScheduledNotMatched := scheduledSet.Difference(updateSet)
+		tripRtMatched := updateSet.Intersect(scheduledSet)
+		tripRtNotMatched := updateSet.Difference(scheduledSet)
+		v.TripScheduledIDs = scheduledSet.ToSlice()
+		v.TripScheduledCount = scheduledSet.Cardinality()
+		v.TripScheduledMatched = tripScheduledMatched.Cardinality()
+		v.TripScheduledNotMatched = tripScheduledNotMatched.Cardinality()
+		v.TripRtIDs = updateSet.ToSlice()
+		v.TripRtCount = updateSet.Cardinality()
+		v.TripRtMatched = tripRtMatched.Cardinality()
+		v.TripRtNotMatched = tripRtNotMatched.Cardinality()
+		statAgg[k] = v
+		// fmt.Printf("\tagency '%s' route '%s'\n", k.AgencyID, k.RouteID)
+		// fmt.Printf("\t\tsched %d %v\n", len(v.TripScheduledIDs), v.TripScheduledIDs)
+		// fmt.Printf("\t\t\tsched matched: %d %v\n", tripScheduledMatched.Cardinality(), tripScheduledMatched.ToSlice())
+		// fmt.Printf("\t\t\tsched not matched: %d %v\n", tripScheduledNotMatched.Cardinality(), tripScheduledNotMatched.ToSlice())
+		// fmt.Printf("\t\tt %d %v\n", len(v.TripRtIDs), v.TripRtIDs)
+		// fmt.Printf("\t\t\trt matched: %d %v\n", tripRtMatched.Cardinality(), tripRtMatched.ToSlice())
+		// fmt.Printf("\t\t\trt not matched: %d %v\n", tripRtNotMatched.Cardinality(), tripRtNotMatched.ToSlice())
+		// fmt.Printf("\tout: %#v\n", v)
 		ret = append(ret, v)
 	}
 	return ret, nil
