@@ -775,6 +775,9 @@ func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([
 		tripId := rtEnt.GetTrip().GetTripId()
 		rtTrips = append(rtTrips, tripId)
 	}
+	if len(rtTrips) == 0 {
+		return nil, nil
+	}
 	stats, err := fi.compareTripSets(scheduledTrips, rtTrips)
 	if err != nil {
 		return nil, err
@@ -811,6 +814,9 @@ func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]Trip
 		tripId := rtEnt.GetTrip().GetTripId()
 		rtTrips = append(rtTrips, tripId)
 	}
+	if len(rtTrips) == 0 {
+		return nil, nil
+	}
 	stats, err := fi.compareTripSets(scheduledTrips, rtTrips)
 	if err != nil {
 		return nil, err
@@ -843,7 +849,6 @@ type statAggKey struct {
 
 func (fi *Validator) compareTripSets(scheduledTrips []string, rtTrips []string) ([]rtTripStat, error) {
 	statAgg := map[statAggKey]rtTripStat{}
-
 	// Process scheduled trips
 	for _, tripId := range scheduledTrips {
 		trip, ok := fi.tripInfo[tripId]
