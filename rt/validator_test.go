@@ -95,7 +95,7 @@ func TestTripUpdateStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-trip-updates.pb"))
+	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-trip-stats.json"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -115,13 +115,17 @@ func TestTripUpdateStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, 4, len(stats))
-	byRoute := map[statAggKey][]TripUpdateStats{}
+	assert.Equal(t, 10, len(stats), "stat count")
+	byRoute := map[statAggKey][]RTTripStat{}
 	for _, stat := range stats {
 		k := statAggKey{RouteID: stat.RouteID, AgencyID: stat.AgencyID}
 		byRoute[k] = append(byRoute[k], stat)
 	}
-	expectStats := map[statAggKey]TripUpdateStats{
+	expectStats := map[statAggKey]RTTripStat{
+		{AgencyID: "", RouteID: ""}: {
+			TripRtNotFoundIDs:   []string{"notfound-noroute"},
+			TripRtNotFoundCount: 1,
+		},
 		{AgencyID: "CT", RouteID: "L1"}: {
 			TripScheduledIDs:        []string{"127", "126", "125"},
 			TripScheduledCount:      3,
@@ -131,6 +135,10 @@ func TestTripUpdateStats(t *testing.T) {
 			TripRtCount:             6,
 			TripRtMatched:           3,
 			TripRtNotMatched:        3,
+			TripRtAddedIDs:          []string{"124added"},
+			TripRtAddedCount:        1,
+			TripRtNotFoundIDs:       []string{"notfound"},
+			TripRtNotFoundCount:     1,
 		},
 		{AgencyID: "CT", RouteID: "L4"}: {
 			TripScheduledIDs:        []string{"411", "410", "412"},
@@ -175,9 +183,13 @@ func TestTripUpdateStats(t *testing.T) {
 			assert.Equal(t, expect.TripScheduledMatched, stat.TripScheduledMatched, "TripScheduledMatched")
 			assert.Equal(t, expect.TripScheduledNotMatched, stat.TripScheduledNotMatched, "TripScheduledNotMatched")
 			assert.ElementsMatch(t, expect.TripRtIDs, stat.TripRtIDs, "TripRtIDs")
+			assert.ElementsMatch(t, expect.TripRtAddedIDs, stat.TripRtAddedIDs, "TripRtIDs")
+			assert.ElementsMatch(t, expect.TripRtNotFoundIDs, stat.TripRtNotFoundIDs, "TripRtNotFoundIDs")
 			assert.Equal(t, expect.TripRtCount, stat.TripRtCount, "TripRtCount")
 			assert.Equal(t, expect.TripRtMatched, stat.TripRtMatched, "TripRtMatched")
 			assert.Equal(t, expect.TripRtNotMatched, stat.TripRtNotMatched, "TripRtNotMatched")
+			assert.Equal(t, expect.TripRtAddedCount, stat.TripRtAddedCount, "TripRtAddedCount")
+			assert.Equal(t, expect.TripRtNotFoundCount, stat.TripRtNotFoundCount, "TripRtNotFoundCount")
 		})
 	}
 }
@@ -187,7 +199,7 @@ func TestVehiclePositionStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-vehicle-positions.pb"))
+	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-vehicle-stats.json"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -207,13 +219,17 @@ func TestVehiclePositionStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, 4, len(stats))
-	byRoute := map[statAggKey][]VehiclePositionStats{}
+	assert.Equal(t, 10, len(stats))
+	byRoute := map[statAggKey][]RTTripStat{}
 	for _, stat := range stats {
 		k := statAggKey{RouteID: stat.RouteID, AgencyID: stat.AgencyID}
 		byRoute[k] = append(byRoute[k], stat)
 	}
-	expectStats := map[statAggKey]VehiclePositionStats{
+	expectStats := map[statAggKey]RTTripStat{
+		{AgencyID: "", RouteID: ""}: {
+			TripRtNotFoundIDs:   []string{"notfound-noroute"},
+			TripRtNotFoundCount: 1,
+		},
 		{AgencyID: "CT", RouteID: "L1"}: {
 			TripScheduledIDs:        []string{"125", "126", "127"},
 			TripScheduledCount:      3,
@@ -223,6 +239,10 @@ func TestVehiclePositionStats(t *testing.T) {
 			TripRtCount:             4,
 			TripRtMatched:           3,
 			TripRtNotMatched:        1,
+			TripRtAddedIDs:          []string{"124added"},
+			TripRtAddedCount:        1,
+			TripRtNotFoundIDs:       []string{"notfound"},
+			TripRtNotFoundCount:     1,
 		},
 		{AgencyID: "CT", RouteID: "L4"}: {
 			TripScheduledIDs:        []string{"411", "410", "412"},
@@ -267,9 +287,13 @@ func TestVehiclePositionStats(t *testing.T) {
 			assert.Equal(t, expect.TripScheduledMatched, stat.TripScheduledMatched, "TripScheduledMatched")
 			assert.Equal(t, expect.TripScheduledNotMatched, stat.TripScheduledNotMatched, "TripScheduledNotMatched")
 			assert.ElementsMatch(t, expect.TripRtIDs, stat.TripRtIDs, "TripRtIDs")
+			assert.ElementsMatch(t, expect.TripRtAddedIDs, stat.TripRtAddedIDs, "TripRtIDs")
+			assert.ElementsMatch(t, expect.TripRtNotFoundIDs, stat.TripRtNotFoundIDs, "TripRtNotFoundIDs")
 			assert.Equal(t, expect.TripRtCount, stat.TripRtCount, "TripRtCount")
 			assert.Equal(t, expect.TripRtMatched, stat.TripRtMatched, "TripRtMatched")
 			assert.Equal(t, expect.TripRtNotMatched, stat.TripRtNotMatched, "TripRtNotMatched")
+			assert.Equal(t, expect.TripRtAddedCount, stat.TripRtAddedCount, "TripRtAddedCount")
+			assert.Equal(t, expect.TripRtNotFoundCount, stat.TripRtNotFoundCount, "TripRtNotFoundCount")
 		})
 	}
 }
