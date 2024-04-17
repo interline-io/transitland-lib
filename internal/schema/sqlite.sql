@@ -720,7 +720,11 @@ CREATE TABLE tl_validation_trip_update_stats (
 "trip_rt_ids" blob,
 "trip_rt_count" int not null,
 "trip_rt_matched" int not null,
-"trip_rt_not_matched" int not null
+"trip_rt_not_matched" int not null,
+"trip_rt_not_found_ids" blob,
+"trip_rt_added_ids" blob,
+"trip_rt_not_found_count" int not null,
+"trip_rt_added_count" int not null
 );
 
 
@@ -736,7 +740,11 @@ CREATE TABLE tl_validation_vehicle_position_stats (
 "trip_rt_ids" blob,
 "trip_rt_count" int not null,
 "trip_rt_matched" int not null,
-"trip_rt_not_matched" int not null
+"trip_rt_not_matched" int not null,
+"trip_rt_not_found_ids" blob,
+"trip_rt_added_ids" blob,
+"trip_rt_not_found_count" int not null,
+"trip_rt_added_count" int not null
 );
 
 CREATE TABLE tl_validation_report_error_groups (

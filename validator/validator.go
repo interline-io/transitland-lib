@@ -87,11 +87,11 @@ type ResultDetails struct {
 }
 
 type RealtimeResult struct {
-	Url                  string                    `json:"url"`
-	Json                 map[string]any            `json:"json"`
-	EntityCounts         rt.EntityCounts           `json:"entity_counts"`
-	TripUpdateStats      []rt.TripUpdateStats      `json:"trip_update_stats"`
-	VehiclePositionStats []rt.VehiclePositionStats `json:"vehicle_position_stats"`
+	Url                  string          `json:"url"`
+	Json                 map[string]any  `json:"json"`
+	EntityCounts         rt.EntityCounts `json:"entity_counts"`
+	TripUpdateStats      []rt.RTTripStat `json:"trip_update_stats"`
+	VehiclePositionStats []rt.RTTripStat `json:"vehicle_position_stats"`
 	Errors               []error
 }
 
@@ -147,6 +147,10 @@ type ValidationReportTripUpdateStat struct {
 	TripRtCount             int
 	TripRtMatched           int
 	TripRtNotMatched        int
+	TripRtAddedIDs          tt.Strings `db:"trip_rt_added_ids"`
+	TripRtAddedCount        int
+	TripRtNotFoundIDs       tt.Strings `db:"trip_rt_not_found_ids"`
+	TripRtNotFoundCount     int
 	tl.DatabaseEntity
 }
 
@@ -168,6 +172,10 @@ type ValidationReportVehiclePositionStat struct {
 	TripRtCount             int
 	TripRtMatched           int
 	TripRtNotMatched        int
+	TripRtAddedIDs          tt.Strings `db:"trip_rt_added_ids"`
+	TripRtAddedCount        int
+	TripRtNotFoundIDs       tt.Strings `db:"trip_rt_not_found_ids"`
+	TripRtNotFoundCount     int
 	tl.DatabaseEntity
 }
 
@@ -630,6 +638,10 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 				TripRtCount:             s.TripRtCount,
 				TripRtMatched:           s.TripRtMatched,
 				TripRtNotMatched:        s.TripRtNotMatched,
+				TripRtNotFoundIDs:       tt.NewStrings(s.TripRtNotFoundIDs),
+				TripRtAddedIDs:          tt.NewStrings(s.TripRtAddedIDs),
+				TripRtNotFoundCount:     s.TripRtNotFoundCount,
+				TripRtAddedCount:        s.TripRtAddedCount,
 			}
 			if _, err := atx.Insert(&tripReport); err != nil {
 				log.Error().Err(err).Msg("failed to save trip update stat")
@@ -649,6 +661,10 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 				TripRtCount:             s.TripRtCount,
 				TripRtMatched:           s.TripRtMatched,
 				TripRtNotMatched:        s.TripRtNotMatched,
+				TripRtNotFoundIDs:       tt.NewStrings(s.TripRtNotFoundIDs),
+				TripRtAddedIDs:          tt.NewStrings(s.TripRtAddedIDs),
+				TripRtNotFoundCount:     s.TripRtNotFoundCount,
+				TripRtAddedCount:        s.TripRtAddedCount,
 			}
 			if _, err := atx.Insert(&vpReport); err != nil {
 				log.Error().Err(err).Msg("failed to save vehicle position stat")
