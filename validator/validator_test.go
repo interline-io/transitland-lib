@@ -168,8 +168,8 @@ func TestSaveValidationReport(t *testing.T) {
 		IncludeRealtimeJson: true,
 		EvaluateAt:          now,
 		ValidateRealtimeMessages: []string{
-			ts.URL + "/ct-trip-updates.pb.json",
-			ts.URL + "/ct-vehicle-positions.pb.json",
+			ts.URL + "/ct-trip-stats.json",
+			ts.URL + "/ct-vehicle-stats.json",
 		},
 	}
 
