@@ -153,6 +153,7 @@ func (fi *Validator) compareTripSets(scheduledTrips []string, rtTrips []rtTripKe
 		v.TripRtNotMatched = tripRtNotMatched.Cardinality()
 		v.TripRtNotFoundIDs = updateNotFoundSet.ToSlice()
 		v.TripRtNotFoundCount = updateNotFoundSet.Cardinality()
+		v.TripRtAddedIDs = updateAddedSet.ToSlice()
 		v.TripRtAddedCount = updateAddedSet.Cardinality()
 		statAgg[k] = v
 		// fmt.Printf("\tagency '%s' route '%s'\n", k.AgencyID, k.RouteID)
