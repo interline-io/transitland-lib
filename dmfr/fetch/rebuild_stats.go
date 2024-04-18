@@ -214,6 +214,10 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 	return RebuildStatsResult{}, errImport
 }
 
+func generateOnestopIDs(reader *tlcsv.Reader) ([]tl.Entity, error) {
+	return nil, nil
+}
+
 func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	// Get FeedVersionFileInfos
 	fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader)
@@ -225,6 +229,13 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	if err != nil {
 		return err
 	}
+	// Get OnestopIDs
+	osids, err := generateOnestopIDs(reader)
+	if err != nil {
+		return err
+	}
+	_ = osids
+
 	// Delete any existing records
 	tables := []string{"feed_version_file_infos", "feed_version_service_levels", "feed_version_service_windows"}
 	for _, table := range tables {
@@ -248,6 +259,8 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	if _, err := atx.Insert(&fvsw); err != nil {
 		return err
 	}
+	// Insert OSIDs
+
 	// Batch insert FVSLs
 	bt := make([]any, len(fvsls))
 	for i := range fvsls {

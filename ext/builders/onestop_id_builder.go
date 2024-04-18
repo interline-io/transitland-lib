@@ -52,7 +52,7 @@ func (ent *AgencyOnestopID) TableName() string {
 	return "tl_agency_onestop_ids"
 }
 
-//////////
+// Classic OnestopID Builder
 
 type OnestopIDBuilder struct {
 	agencyNames    map[string]string
@@ -108,35 +108,8 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 	return nil
 }
 
-func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
-	// generate stop onestop id's
-	for stopid, sg := range pp.stops {
-		if gh := geohash.EncodeWithPrecision(sg.lat, sg.lon, 10); len(gh) > 0 {
-			ent := StopOnestopID{
-				StopID:    stopid,
-				OnestopID: fmt.Sprintf("s-%s-%s", gh, filterName(sg.name)),
-			}
-			if _, err := copier.CopyEntity(&ent); err != nil {
-				return err
-			}
-		}
-	}
-	// generate route onstop id's
-	for rid, rsg := range pp.routeStopGeoms {
-		pts := []point{}
-		for _, sg := range rsg.stopGeoms {
-			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
-		}
-		if gh := pointsGeohash(pts, 1, 6); len(gh) > 0 {
-			ent := RouteOnestopID{
-				RouteID:   rid,
-				OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
-			}
-			if _, err := copier.CopyEntity(&ent); err != nil {
-				return err
-			}
-		}
-	}
+func (pp *OnestopIDBuilder) AgencyOnestopIDs() []AgencyOnestopID {
+	var ret []AgencyOnestopID
 	// group stops by agency
 	agencyStops := map[string]map[string]*stopGeom{}
 	for _, rsg := range pp.routeStopGeoms {
@@ -164,10 +137,70 @@ func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 				AgencyID:  aid,
 				OnestopID: fmt.Sprintf("o-%s-%s", gh, filterName(name)),
 			}
-			if _, err := copier.CopyEntity(&ent); err != nil {
-				return err
-			}
+			ret = append(ret, ent)
 		}
 	}
+	return ret
+}
+
+func (pp *OnestopIDBuilder) StopOnestopIDs() []StopOnestopID {
+	var ret []StopOnestopID
+	// generate stop onestop id's
+	for stopid, sg := range pp.stops {
+		if gh := geohash.EncodeWithPrecision(sg.lat, sg.lon, 10); len(gh) > 0 {
+			ent := StopOnestopID{
+				StopID:    stopid,
+				OnestopID: fmt.Sprintf("s-%s-%s", gh, filterName(sg.name)),
+			}
+			ret = append(ret, ent)
+		}
+	}
+	return ret
+}
+
+func (pp *OnestopIDBuilder) RouteOnestopIDs() []RouteOnestopID {
+	var ret []RouteOnestopID
+	for rid, rsg := range pp.routeStopGeoms {
+		pts := []point{}
+		for _, sg := range rsg.stopGeoms {
+			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
+		}
+		if gh := pointsGeohash(pts, 1, 6); len(gh) > 0 {
+			ent := RouteOnestopID{
+				RouteID:   rid,
+				OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
+			}
+			ret = append(ret, ent)
+		}
+	}
+	return ret
+}
+
+func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
+	for _, ent := range pp.StopOnestopIDs() {
+		if _, err := copier.CopyEntity(&ent); err != nil {
+			return err
+		}
+	}
+	for _, ent := range pp.RouteOnestopIDs() {
+		if _, err := copier.CopyEntity(&ent); err != nil {
+			return err
+		}
+	}
+	for _, ent := range pp.AgencyOnestopIDs() {
+		if _, err := copier.CopyEntity(&ent); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// New style OnestopID Builder
+
+type FeedVersionEntityOnestopIDBuilder struct {
+	OnestopIDBuilder
+}
+
+func (eb *FeedVersionEntityOnestopIDBuilder) Copy(cp *copier.Copier) error {
 	return nil
 }
