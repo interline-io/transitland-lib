@@ -126,7 +126,6 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 			// Fatal err
 			return vr, err
 		}
-
 		return vr, nil
 	}
 	result, err := ffetch(atx, opts, cb)

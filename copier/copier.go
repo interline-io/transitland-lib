@@ -534,6 +534,8 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 func (copier *Copier) Copy() *Result {
 	// Handle source errors and warnings
 	sourceErrors := map[string][]error{}
+
+	copier.sublogger.Trace().Msg("Validating structure")
 	for _, err := range copier.Reader.ValidateStructure() {
 		fn := ""
 		if v, ok := err.(errorWithContext); ok {
@@ -544,7 +546,9 @@ func (copier *Copier) Copy() *Result {
 	for fn, errs := range sourceErrors {
 		copier.ErrorHandler.HandleSourceErrors(fn, errs, nil)
 	}
+
 	// Note that order is important!!
+	copier.sublogger.Trace().Msg("Begin processing feed")
 	fns := []func() error{
 		copier.copyAgencies,
 		copier.copyRoutes,
@@ -568,7 +572,9 @@ func (copier *Copier) Copy() *Result {
 			return copier.result
 		}
 	}
+
 	for _, e := range copier.extensions {
+		copier.sublogger.Trace().Msgf("Running extension Copy(): %T", e)
 		if err := e.Copy(copier); err != nil {
 			copier.result.WriteError = err
 			return copier.result
@@ -576,11 +582,14 @@ func (copier *Copier) Copy() *Result {
 	}
 
 	if copier.CopyExtraFiles {
+		copier.sublogger.Trace().Msg("Copying extra files")
 		if err := copier.copyExtraFiles(); err != nil {
 			copier.result.WriteError = err
 			return copier.result
 		}
 	}
+
+	copier.sublogger.Trace().Msg("Done")
 	return copier.result
 }
 
@@ -992,10 +1001,10 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	// Cache all trips in memory
 	trips := map[string]tl.Trip{}
 	duplicateTrips := []tl.Trip{}
-	allTripIds := map[string]int{}
+	allTripIds := map[string]struct{}{}
 	for trip := range copier.Reader.Trips() {
 		eid := trip.EntityID()
-		allTripIds[eid]++
+		allTripIds[eid] = struct{}{}
 		// Skip unmarked trips to save work
 		if !copier.isMarked(&trip) {
 			copier.result.SkipEntityMarkedCount["trips.txt"]++
@@ -1009,6 +1018,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		trips[eid] = trip
 	}
+	log.Trace().Msgf("Loaded %d trips", len(allTripIds))
 
 	// Process each set of Trip/StopTimes
 	stopPatterns := map[string]int{}
