@@ -22,7 +22,7 @@ func TestFindImportableFeeds(t *testing.T) {
 		}
 		expfvids := allfvids[:5]
 		for _, fvid := range allfvids[5:] {
-			testEnt := &dmfr.FeedVersionImport{}
+			testEnt := dmfr.FeedVersionImport{}
 			testEnt.FeedVersionID = fvid
 			testdb.ShouldInsert(t, atx, &testEnt)
 		}
