@@ -1,7 +1,6 @@
 package builders
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/copier"
@@ -172,9 +171,6 @@ func (pp *OnestopIDBuilder) RouteOnestopIDs() []RouteOnestopID {
 				OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
 			}
 			ret = append(ret, ent)
-			jj, _ := json.Marshal(ent)
-			fmt.Println(string(jj))
-
 		}
 	}
 	return ret

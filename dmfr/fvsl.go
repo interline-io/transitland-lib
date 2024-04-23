@@ -1,7 +1,6 @@
 package dmfr
 
 import (
-	"fmt"
 	"sort"
 	"strconv"
 	"time"
@@ -56,7 +55,6 @@ func NewFeedVersionServiceLevelsFromReader(reader tl.Reader) ([]FeedVersionServi
 }
 
 func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []FeedVersionServiceLevel) (tt.Date, error) {
-	fmt.Println("START:", start, "END:", end)
 	// Defaults
 	if start.IsZero() {
 		start = tt.NewDate(time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC))
