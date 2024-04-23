@@ -51,6 +51,8 @@ func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth 
 
 	// Make HTTP request
 	req = req.WithContext(ctx)
+	req.Header.Set("User-Agent", fmt.Sprintf("transitland/%s", tl.VERSION))
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

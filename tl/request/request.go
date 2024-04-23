@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -142,7 +142,7 @@ func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchR
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
 	defer cancel()
 	// Create temp file
-	tmpfile, err := ioutil.TempFile("", "fetch")
+	tmpfile, err := os.CreateTemp("", "fetch")
 	if err != nil {
 		return fr, errors.New("could not create temporary file")
 	}
