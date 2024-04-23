@@ -97,20 +97,22 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	if len(stoptimes) == 0 {
 		return stoptimes, nil
 	}
-	stopline := make([]Point, len(stoptimes))
+	// Check cache
 	shapeid := trip.ShapeID.Val
 	k := fmt.Sprintf("%s-%d", shapeid, trip.StopPatternID)
-	for i := 0; i < len(stoptimes); i++ {
-		point, ok := g.stops[stoptimes[i].StopID]
-		if !ok {
-			return stoptimes, fmt.Errorf("stop '%s' not in cache", stoptimes[i].StopID)
-		}
-		stopline[i] = point
-	}
 	shapeline := g.shapes[shapeid]
-	// Check cache
 	positions, ok := g.positions[k]
 	if !ok {
+		// Generate the stop-to-stop geometry as fallback
+		stopline := make([]Point, len(stoptimes))
+		for i := 0; i < len(stoptimes); i++ {
+			point, ok := g.stops[stoptimes[i].StopID]
+			if !ok {
+				return stoptimes, fmt.Errorf("stop '%s' not in cache", stoptimes[i].StopID)
+			}
+			stopline[i] = point
+		}
+		// Calculate positions
 		positions = LinePositions(shapeline, stopline)
 		length := LengthHaversine(shapeline)
 		// Check for simple or fallback positions
