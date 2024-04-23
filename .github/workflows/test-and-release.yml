@@ -25,7 +25,7 @@ jobs:
     - name: Produce coverage report
       run: go tool cover -html=c.out -o coverage.html
     - name: Save coverage report as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage
         path: coverage.html
@@ -44,7 +44,7 @@ jobs:
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build
       - name: Store Linux binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: transitland-linux
           path: ${{ github.workspace }}/cmd/transitland/transitland
@@ -78,7 +78,7 @@ jobs:
         run: |
           gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: transitland-macos-intel
           path: ${{ github.workspace }}/transitland.zip
@@ -112,7 +112,7 @@ jobs:
         run: |
           gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: transitland-macos-apple
           path: ${{ github.workspace }}/transitland.zip
@@ -122,12 +122,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Linux binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: transitland-linux
           path: transitland-linux
       - name: Attach Linux binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -136,12 +136,12 @@ jobs:
           asset_name: transitland-linux
           asset_content_type: application/binary
       - name: Download macOS Intel binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: transitland-macos-intel
           path: transitland-macos-intel
       - name: Attach macOS Intel binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -150,12 +150,12 @@ jobs:
           asset_name: transitland-macos-intel.zip
           asset_content_type: application/binary
       - name: Download macOS Apple Silicon binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: transitland-macos-apple
           path: transitland-macos-apple
       - name: Attach macOS Apple Silicon binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
