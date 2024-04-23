@@ -10,20 +10,20 @@ import (
 
 // Feed listed in a parsed DMFR file
 type Feed struct {
-	ID            int               `json:"-"`
-	FeedID        string            `json:"id" db:"onestop_id"`
-	SupersedesIDs Strings           `json:"supersedes_ids,omitempty" db:"-"`
-	Name          String            `json:"name,omitempty"`
-	Description   String            `json:"description,omitempty"`
-	Spec          string            `json:"spec,omitempty"`
-	URLs          FeedUrls          `json:"urls,omitempty" db:"urls"`
-	Languages     FeedLanguages     `json:"languages,omitempty"`
-	License       FeedLicense       `json:"license,omitempty"`
-	Authorization FeedAuthorization `json:"authorization,omitempty" db:"auth"`
-	Tags          Tags              `json:"tags,omitempty" db:"feed_tags" `
-	File          string            `json:"-"` // internal
-	DeletedAt     Time              `json:"-"` // internal
-	Timestamps    `json:"-"`        // internal
+	FeedID         string            `json:"id" db:"onestop_id"`
+	SupersedesIDs  Strings           `json:"supersedes_ids,omitempty" db:"-"`
+	Name           String            `json:"name,omitempty"`
+	Description    String            `json:"description,omitempty"`
+	Spec           string            `json:"spec,omitempty"`
+	URLs           FeedUrls          `json:"urls,omitempty" db:"urls"`
+	Languages      FeedLanguages     `json:"languages,omitempty"`
+	License        FeedLicense       `json:"license,omitempty"`
+	Authorization  FeedAuthorization `json:"authorization,omitempty" db:"auth"`
+	Tags           Tags              `json:"tags,omitempty" db:"feed_tags" `
+	File           string            `json:"-"` // internal
+	DeletedAt      Time              `json:"-"` // internal
+	DatabaseEntity `json:"-"`        // internal
+	Timestamps     `json:"-"`        // internal
 }
 
 func (ent *Feed) MatchSecrets(secrets []Secret, urltype string) (Secret, error) {

@@ -14,17 +14,17 @@ import (
 
 // FeedVersionServiceLevel .
 type FeedVersionServiceLevel struct {
-	ID            int
-	FeedVersionID int
-	StartDate     tl.Date
-	EndDate       tl.Date
-	Monday        int
-	Tuesday       int
-	Wednesday     int
-	Thursday      int
-	Friday        int
-	Saturday      int
-	Sunday        int
+	StartDate tl.Date
+	EndDate   tl.Date
+	Monday    int
+	Tuesday   int
+	Wednesday int
+	Thursday  int
+	Friday    int
+	Saturday  int
+	Sunday    int
+	tl.FeedVersionEntity
+	tl.DatabaseEntity
 }
 
 // EntityID .

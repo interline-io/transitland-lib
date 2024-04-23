@@ -21,7 +21,6 @@ type canPath interface {
 
 // FeedVersion represents a single GTFS data source.
 type FeedVersion struct {
-	ID                   int
 	FeedID               int
 	FeedType             string
 	SHA1                 string
@@ -36,6 +35,7 @@ type FeedVersion struct {
 	Description          String
 	CreatedBy            String
 	UpdatedBy            String
+	DatabaseEntity
 	Timestamps
 }
 

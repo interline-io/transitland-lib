@@ -183,7 +183,8 @@ func rebuildStatsWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan R
 
 func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildStatsResult, error) {
 	// Get FV
-	fv := tl.FeedVersion{ID: opts.FeedVersionID}
+	fv := tl.FeedVersion{}
+	fv.ID = opts.FeedVersionID
 	if err := adapter.Find(&fv); err != nil {
 		return RebuildStatsResult{}, err
 	}
@@ -230,6 +231,8 @@ func setFvid(input []any, fvid int) []any {
 	for i := 0; i < len(input); i++ {
 		if v, ok := input[i].(canSetFeedVersion); ok {
 			v.SetFeedVersionID(fvid)
+		} else {
+			log.Error().Msgf("could not set feed version id for type %T", input[i])
 		}
 	}
 	return input

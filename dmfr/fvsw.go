@@ -23,13 +23,13 @@ func NewFeedVersionServiceWindowFromReader(reader tl.Reader) (FeedVersionService
 }
 
 type FeedVersionServiceWindow struct {
-	FeedVersionID        int
 	FeedStartDate        tt.Date
 	FeedEndDate          tt.Date
 	EarliestCalendarDate tt.Date
 	LatestCalendarDate   tt.Date
 	FallbackWeek         tt.Date
 	DefaultTimezone      tt.String
+	tl.FeedVersionEntity
 	tl.DatabaseEntity
 	tl.Timestamps
 }

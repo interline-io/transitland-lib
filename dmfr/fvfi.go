@@ -18,17 +18,17 @@ import (
 
 // FeedVersionFileInfo .
 type FeedVersionFileInfo struct {
-	ID            int
-	FeedVersionID int
-	Name          string
-	Size          int64
-	Rows          int64
-	Columns       int
-	Header        string
-	CSVLike       bool
-	SHA1          string
-	ValuesUnique  tt.Counts
-	ValuesCount   tt.Counts
+	Name         string
+	Size         int64
+	Rows         int64
+	Columns      int
+	Header       string
+	CSVLike      bool
+	SHA1         string
+	ValuesUnique tt.Counts
+	ValuesCount  tt.Counts
+	tl.FeedVersionEntity
+	tl.DatabaseEntity
 	tl.Timestamps
 }
 
