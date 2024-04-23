@@ -82,6 +82,10 @@ type hasLine interface {
 type Options struct {
 	// Batch size
 	BatchSize int
+	// Skip most validation filters
+	NoValidators bool
+	// Skip shape cache
+	NoShapeCache bool
 	// Attempt to save an entity that returns validation errors
 	AllowEntityErrors    bool
 	AllowReferenceErrors bool
@@ -220,16 +224,18 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	}
 
 	// Default set of validators
-	copier.AddValidator(&rules.EntityDuplicateCheck{}, 0)
-	copier.AddValidator(&rules.ValidFarezoneCheck{}, 0)
-	copier.AddValidator(&rules.AgencyIDConditionallyRequiredCheck{}, 0)
-	copier.AddValidator(&rules.StopTimeSequenceCheck{}, 0)
-	copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
-	copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
-	copier.AddValidator(&rules.CalendarDuplicateDates{}, 0)
-	copier.AddValidator(&rules.DuplicateFareLegRuleCheck{}, 0)
-	copier.AddValidator(&rules.DuplicateFareTransferRuleCheck{}, 0)
-	copier.AddValidator(&rules.DuplicateFareProductCheck{}, 0)
+	if !opts.NoValidators {
+		copier.AddValidator(&rules.EntityDuplicateCheck{}, 0)
+		copier.AddValidator(&rules.ValidFarezoneCheck{}, 0)
+		copier.AddValidator(&rules.AgencyIDConditionallyRequiredCheck{}, 0)
+		copier.AddValidator(&rules.StopTimeSequenceCheck{}, 0)
+		copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
+		copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
+		copier.AddValidator(&rules.CalendarDuplicateDates{}, 0)
+		copier.AddValidator(&rules.DuplicateFareLegRuleCheck{}, 0)
+		copier.AddValidator(&rules.DuplicateFareTransferRuleCheck{}, 0)
+		copier.AddValidator(&rules.DuplicateFareProductCheck{}, 0)
+	}
 
 	// Default extensions
 	if copier.UseBasicRouteTypes {
@@ -783,7 +789,7 @@ func (copier *Copier) copyShapes() error {
 		}
 		if entErr, writeErr := copier.CopyEntity(&ent); writeErr != nil {
 			return writeErr
-		} else if entErr == nil {
+		} else if entErr == nil && !copier.Options.NoShapeCache {
 			copier.geomCache.AddShape(sid, ent)
 		}
 	}

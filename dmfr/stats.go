@@ -33,6 +33,8 @@ func NewFeedStatsFromReader(reader tl.Reader) (FeedVersionStats, error) {
 	fvswBuilder := NewFeedVersionServiceWindowBuilder()
 	osidBuilder := NewFeedVersionOnestopIDBuilder()
 	if err := copier.QuietCopy(reader, &empty.Writer{}, func(o *copier.Options) {
+		o.NoShapeCache = true
+		o.NoValidators = true
 		o.AddExtension(fvslBuilder)
 		o.AddExtension(fvswBuilder)
 		o.AddExtension(osidBuilder)
