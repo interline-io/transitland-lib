@@ -27,7 +27,7 @@ jobs:
     - name: Save coverage report as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: coverage-${{ matrix.os }}
         path: coverage.html
   build-linux:
     if: ${{ github.event_name == 'release' }}
