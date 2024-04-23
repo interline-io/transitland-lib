@@ -1,6 +1,7 @@
 package builders
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/copier"
@@ -52,7 +53,7 @@ func (ent *AgencyOnestopID) TableName() string {
 	return "tl_agency_onestop_ids"
 }
 
-// Classic OnestopID Builder
+// OnestopID Builder
 
 type OnestopIDBuilder struct {
 	agencyNames    map[string]string
@@ -109,8 +110,8 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 }
 
 func (pp *OnestopIDBuilder) AgencyOnestopIDs() []AgencyOnestopID {
-	var ret []AgencyOnestopID
 	// group stops by agency
+	var ret []AgencyOnestopID
 	agencyStops := map[string]map[string]*stopGeom{}
 	for _, rsg := range pp.routeStopGeoms {
 		r, ok := agencyStops[rsg.agency]
@@ -144,8 +145,8 @@ func (pp *OnestopIDBuilder) AgencyOnestopIDs() []AgencyOnestopID {
 }
 
 func (pp *OnestopIDBuilder) StopOnestopIDs() []StopOnestopID {
-	var ret []StopOnestopID
 	// generate stop onestop id's
+	var ret []StopOnestopID
 	for stopid, sg := range pp.stops {
 		if gh := geohash.EncodeWithPrecision(sg.lat, sg.lon, 10); len(gh) > 0 {
 			ent := StopOnestopID{
@@ -171,36 +172,32 @@ func (pp *OnestopIDBuilder) RouteOnestopIDs() []RouteOnestopID {
 				OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
 			}
 			ret = append(ret, ent)
+			jj, _ := json.Marshal(ent)
+			fmt.Println(string(jj))
+
 		}
 	}
 	return ret
 }
 
 func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
-	for _, ent := range pp.StopOnestopIDs() {
+	for _, ent := range pp.AgencyOnestopIDs() {
+		ent := ent
 		if _, err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
 	for _, ent := range pp.RouteOnestopIDs() {
+		ent := ent
 		if _, err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
-	for _, ent := range pp.AgencyOnestopIDs() {
+	for _, ent := range pp.StopOnestopIDs() {
+		ent := ent
 		if _, err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
-	return nil
-}
-
-// New style OnestopID Builder
-
-type FeedVersionEntityOnestopIDBuilder struct {
-	OnestopIDBuilder
-}
-
-func (eb *FeedVersionEntityOnestopIDBuilder) Copy(cp *copier.Copier) error {
 	return nil
 }
