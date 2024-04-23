@@ -280,8 +280,9 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	}
 	log.Info().Msg("end insert onestop_ids")
 
-	// Batch insert FVFIs
-	if err := atx.CopyInsert(setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
+	// Insert FVFIs
+	// TODO: This doesn't work with CopyInsert
+	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
 		return err
 	}
 
