@@ -63,7 +63,7 @@ jobs:
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build
       - name: Import Code-Signing Certificates
-        uses: Apple-Actions/import-codesign-certs@v1
+        uses: Apple-Actions/import-codesign-certs@v2
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
@@ -97,7 +97,7 @@ jobs:
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build
       - name: Import Code-Signing Certificates
-        uses: Apple-Actions/import-codesign-certs@v1
+        uses: Apple-Actions/import-codesign-certs@v2
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
