@@ -1,27 +1,51 @@
 package dmfr
 
 import (
-	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-type EntityOnestopID struct {
-	Filename  string
+type FeedVersionAgencyOnestopID struct {
 	EntityID  string
 	OnestopID string
+	tl.FeedVersionEntity
 }
 
-func NewOnestopIDsFromReader(reader tl.Reader) ([]EntityOnestopID, error) {
-	cp, err := copier.NewCopier(reader, &empty.Writer{}, copier.Options{})
-	if err != nil {
-		return nil, err
-	}
-	cpResult := cp.Copy()
-	if cpResult.WriteError != nil {
-		return nil, cpResult.WriteError
-	}
-	_ = cpResult
+func (ent FeedVersionAgencyOnestopID) TableName() string {
+	return "feed_version_agency_onestop_ids"
+}
 
-	return nil, nil
+type FeedVersionRouteOnestopID struct {
+	EntityID  string
+	OnestopID string
+	tl.FeedVersionEntity
+}
+
+func (ent FeedVersionRouteOnestopID) TableName() string {
+	return "feed_version_route_onestop_ids"
+}
+
+type FeedVersionStopOnestopID struct {
+	EntityID  string
+	OnestopID string
+	tl.FeedVersionEntity
+}
+
+func (ent FeedVersionStopOnestopID) TableName() string {
+	return "feed_version_stop_onestop_ids"
+}
+
+type FeedVersionOnestopIDBuilder struct {
+	*builders.OnestopIDBuilder
+}
+
+func (ext *FeedVersionOnestopIDBuilder) Copy(*copier.Copier) error {
+	return nil
+}
+
+func NewFeedVersionOnestopIDBuilder() *FeedVersionOnestopIDBuilder {
+	return &FeedVersionOnestopIDBuilder{
+		OnestopIDBuilder: builders.NewOnestopIDBuilder(),
+	}
 }

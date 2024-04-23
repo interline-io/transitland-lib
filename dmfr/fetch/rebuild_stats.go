@@ -214,30 +214,42 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 	return RebuildStatsResult{}, errImport
 }
 
-func generateOnestopIDs(reader *tlcsv.Reader) ([]tl.Entity, error) {
-	return nil, nil
+func convertToAny[T any](input []T) []any {
+	var ret []any
+	for i := 0; i < len(input); i++ {
+		ret = append(ret, &input[i])
+	}
+	return ret
+}
+
+type canSetFeedVersion interface {
+	SetFeedVersionID(int)
+}
+
+func setFvid(input []any, fvid int) []any {
+	for i := 0; i < len(input); i++ {
+		if v, ok := input[i].(canSetFeedVersion); ok {
+			v.SetFeedVersionID(fvid)
+		}
+	}
+	return input
 }
 
 func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
-	// Get FeedVersionFileInfos
-	fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader)
+	stats, err := dmfr.NewFeedStatsFromReader(reader)
 	if err != nil {
 		return err
 	}
-	// Get service window and statistics
-	fvsw, fvsls, err := dmfr.NewFeedStatsFromReader(reader)
-	if err != nil {
-		return err
-	}
-	// Get OnestopIDs
-	osids, err := generateOnestopIDs(reader)
-	if err != nil {
-		return err
-	}
-	_ = osids
 
 	// Delete any existing records
-	tables := []string{"feed_version_file_infos", "feed_version_service_levels", "feed_version_service_windows"}
+	tables := []string{
+		"feed_version_file_infos",
+		"feed_version_service_levels",
+		"feed_version_service_windows",
+		"feed_version_agency_onestop_ids",
+		"feed_version_route_onestop_ids",
+		"feed_version_stop_onestop_ids",
+	}
 	for _, table := range tables {
 		q, args, err := atx.Sqrl().Delete(table).Where(sq.Eq{"feed_version_id": fvid}).ToSql()
 		if err != nil {
@@ -247,27 +259,34 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 			return err
 		}
 	}
-	// Insert FVFIs
-	for _, fvfi := range fvfis {
-		fvfi.FeedVersionID = fvid
-		if _, err := atx.Insert(&fvfi); err != nil {
-			return err
-		}
-	}
+
 	// Insert FVSW
+	fvsw := stats.ServiceWindow
 	fvsw.FeedVersionID = fvid
 	if _, err := atx.Insert(&fvsw); err != nil {
 		return err
 	}
-	// Insert OSIDs
+
+	// Batch insert OSIDs
+	log.Info().Msg("start insert onestop_ids")
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
+		return err
+	}
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
+		return err
+	}
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
+		return err
+	}
+	log.Info().Msg("end insert onestop_ids")
+
+	// Batch insert FVFIs
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
+		return err
+	}
 
 	// Batch insert FVSLs
-	bt := make([]any, len(fvsls))
-	for i := range fvsls {
-		fvsls[i].FeedVersionID = fvid
-		bt[i] = &fvsls[i]
-	}
-	if err := atx.CopyInsert(bt); err != nil {
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
 		return err
 	}
 	return nil

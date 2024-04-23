@@ -1,6 +1,8 @@
 package dmfr
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
@@ -57,6 +59,9 @@ func TestNewFeedVersionServiceWindowsFromReader(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+			jj, _ := json.Marshal(fvsw)
+			fmt.Println("FVSW:", string(jj))
+
 			if d, err := ServiceLevelDefaultWeek(fvsw.FeedStartDate, fvsw.FeedEndDate, fvsls); err != nil {
 				t.Error(err)
 			} else {
