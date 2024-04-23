@@ -142,6 +142,14 @@ func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tl.Entity, 
 	switch v := ent.(type) {
 	case *tl.Service:
 		pp.services[v.ServiceID] = v
+	case *tl.CalendarDate:
+		svc, ok := pp.services[v.ServiceID]
+		if !ok {
+			svc = &tl.Service{}
+			svc.Calendar = tl.Calendar{ServiceID: v.ServiceID}
+			pp.services[v.ServiceID] = svc
+		}
+		svc.AddCalendarDate(*v)
 	case *tl.Frequency:
 		pp.freqs[v.TripID] += v.RepeatCount()
 	case *tl.Trip:
