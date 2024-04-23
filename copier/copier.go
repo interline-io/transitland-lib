@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/xy"
@@ -108,11 +109,18 @@ type Options struct {
 	JourneyPatternKey func(*tl.Trip) string
 	// Named extensions
 	Extensions []string
+	// Initialized extensions
+	extensions []Extension
 	// Error limit
 	ErrorLimit int
 
 	// Sub-logger
+	Quiet     bool
 	sublogger zerolog.Logger
+}
+
+func (opts *Options) AddExtension(ext Extension) {
+	opts.extensions = append(opts.extensions, ext)
 }
 
 // Copier copies from Reader to Writer
@@ -140,14 +148,55 @@ type Copier struct {
 	EntityMap *tl.EntityMap
 }
 
+// Quiet copy
+func QuietCopy(reader tl.Reader, writer tl.Writer, optfns ...func(*Options)) error {
+	opts := Options{
+		ErrorLimit: -1,
+		Quiet:      true,
+	}
+	for _, f := range optfns {
+		f(&opts)
+	}
+	cp, err := NewCopier(reader, &empty.Writer{}, opts)
+	if err != nil {
+		return nil
+	}
+	if cpResult := cp.Copy(); cpResult.WriteError != nil {
+		return err
+	}
+	return nil
+
+}
+
+// Copy with options builder
+func Copy(reader tl.Reader, writer tl.Writer, optfns ...func(*Options)) error {
+	opts := Options{}
+	for _, f := range optfns {
+		f(&opts)
+	}
+	cp, err := NewCopier(reader, &empty.Writer{}, opts)
+	if err != nil {
+		return nil
+	}
+	if cpResult := cp.Copy(); cpResult.WriteError != nil {
+		return err
+	}
+	return nil
+}
+
 // NewCopier creates and initializes a new Copier.
 func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error) {
 	copier := &Copier{}
 	copier.Options = opts
 	copier.Reader = reader
 	copier.Writer = writer
+
 	// Logging
-	copier.Options.sublogger = log.Logger.With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+	if opts.Quiet {
+		copier.Options.sublogger = log.Logger.Level(zerolog.ErrorLevel).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+	} else {
+		copier.Options.sublogger = log.Logger.With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+	}
 
 	// Result
 	result := NewResult(opts.ErrorLimit)
@@ -194,6 +243,11 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	}
 
 	// Add extensions
+	for _, ext := range opts.extensions {
+		if err := copier.AddExtension(ext); err != nil {
+			return nil, fmt.Errorf("failed to add extension: %s", err.Error())
+		}
+	}
 	for _, extName := range opts.Extensions {
 		extName, extArgs, err := ext.ParseExtensionArgs(extName)
 		if err != nil {
@@ -213,7 +267,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 }
 
 func (copier *Copier) SetLogger(g zerolog.Logger) {
-	copier.sublogger = log.Logger.With().Str("reader", "test").Str("writer", "test").Logger()
+	copier.sublogger = g
 }
 
 // AddValidator adds an additional entity validator.
