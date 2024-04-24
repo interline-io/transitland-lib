@@ -174,7 +174,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 			// Only check trip_id
 			sid, _ := row.Get("trip_id")
 			// If ID transition, have we seen this ID
-			if sid != last && grouped == true && last != "" {
+			if grouped && sid != last && last != "" {
 				if _, ok := counter[sid]; ok {
 					grouped = false
 				}
@@ -194,6 +194,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 	} else {
 		chunks = s2D{tripIDs}
 	}
+
 	//
 	out := make(chan []tl.StopTime, bufferSize)
 	go func(chunks s2D, grouped bool) {

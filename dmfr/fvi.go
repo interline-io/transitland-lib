@@ -9,8 +9,6 @@ import (
 
 // FeedVersionImport .
 type FeedVersionImport struct {
-	ID                        int
-	FeedVersionID             int
 	ImportLog                 string
 	ExceptionLog              string
 	ImportLevel               int  // deprecated
@@ -25,6 +23,8 @@ type FeedVersionImport struct {
 	SkipEntityReferenceCount  tt.Counts
 	SkipEntityFilterCount     tt.Counts
 	SkipEntityMarkedCount     tt.Counts
+	tl.DatabaseEntity
+	tl.FeedVersionEntity
 	tl.Timestamps
 }
 

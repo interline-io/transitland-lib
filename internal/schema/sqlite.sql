@@ -770,3 +770,22 @@ CREATE TABLE tl_validation_report_error_exemplars (
     "entity_json" blob
 );
 
+
+CREATE TABLE feed_version_agency_onestop_ids (
+  "feed_version_id" int not null,
+  "entity_id" varchar(255) not null,
+  "onestop_id" varchar(255) not null
+);
+
+CREATE TABLE feed_version_route_onestop_ids (
+  "feed_version_id" int not null,
+  "entity_id" varchar(255) not null,
+  "onestop_id" varchar(255) not null
+);
+
+CREATE TABLE feed_version_stop_onestop_ids (
+  "feed_version_id" int not null,
+  "entity_id" varchar(255) not null,
+  "onestop_id" varchar(255) not null
+);
+

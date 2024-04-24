@@ -149,7 +149,8 @@ func TestStaticFetch(t *testing.T) {
 				assert.Equal(t, !tc.responseError, tlff.Success, "did not get expected feed_fetch success")
 				//
 				if !tc.responseError {
-					fv2 := tl.FeedVersion{ID: fv.ID}
+					fv2 := tl.FeedVersion{}
+					fv2.ID = fv.ID
 					testdb.ShouldFind(t, atx, &fv2)
 					assert.Equal(t, url, fv2.URL, "did not get expected feed version url")
 					assert.Equal(t, tc.fvSha1, fv.SHA1, "did not get expected feed version sha1")
@@ -239,7 +240,8 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 			t.Errorf("got %s expect %s", fv.SHA1, ExampleZip.SHA1)
 			return nil
 		}
-		fv2 := tl.FeedVersion{ID: fv.ID}
+		fv2 := tl.FeedVersion{}
+		fv2.ID = fv.ID
 		testdb.ShouldFind(t, atx, &fv2)
 		if fv2.URL != url {
 			t.Errorf("got %s expect %s", fv2.URL, url)
