@@ -271,7 +271,6 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	}
 
 	// Batch insert OSIDs
-	log.Info().Msg("start insert onestop_ids")
 	if err := atx.CopyInsert(setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
 		return err
 	}
@@ -281,7 +280,6 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	if err := atx.CopyInsert(setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
 		return err
 	}
-	log.Info().Msg("end insert onestop_ids")
 
 	// Insert FVFIs
 	// TODO: This doesn't work with CopyInsert
