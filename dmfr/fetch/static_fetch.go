@@ -129,6 +129,9 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		return vr, nil
 	}
 	result, err := ffetch(atx, opts, cb)
+	if err != nil {
+		log.Error().Err(err).Msg("fatal error during static fetch")
+	}
 	ret.Result = result
 	ret.Error = err
 	return ret, err
