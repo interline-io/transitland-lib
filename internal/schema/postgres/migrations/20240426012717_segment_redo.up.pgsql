@@ -10,6 +10,7 @@ CREATE INDEX ON tl_segments(feed_version_id);
 
 CREATE TABLE tl_segment_patterns (
     id bigserial primary key not null,
+    feed_version_id bigint references feed_versions(id) not null,
     segment_id bigint references tl_segments(id) not null,
     route_id bigint references gtfs_routes(id) not null,    
     shape_id bigint references gtfs_shapes(id) not null,
