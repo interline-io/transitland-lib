@@ -12,6 +12,7 @@ type FeedFetch struct {
 	ResponseSize  tl.Int
 	ResponseCode  tl.Int
 	ResponseSHA1  tl.String
+	ResponseETag  tl.String
 	FeedVersionID tl.Int // optional field, don't use tl.FeedVersionEntity
 	tl.Timestamps
 	tl.DatabaseEntity

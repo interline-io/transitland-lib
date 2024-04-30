@@ -15,14 +15,19 @@ import (
 type Http struct{}
 
 func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
+	rc, code, _, err := r.ETagDownload(ctx, ustr, "", secret, auth)
+	return rc, code, err
+}
+
+func (r Http) ETagDownload(ctx context.Context, ustr string, etag string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, string, error) {
 	u, err := url.Parse(ustr)
 	if err != nil {
-		return nil, 0, errors.New("could not parse url")
+		return nil, 0, "", errors.New("could not parse url")
 	}
 	if auth.Type == "query_param" {
 		v, err := url.ParseQuery(u.RawQuery)
 		if err != nil {
-			return nil, 0, errors.New("could not parse query string")
+			return nil, 0, "", errors.New("could not parse query string")
 		}
 		v.Set(auth.ParamName, secret.Key)
 		u.RawQuery = v.Encode()
@@ -31,7 +36,7 @@ func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth 
 	} else if auth.Type == "replace_url" {
 		u, err = url.Parse(secret.ReplaceUrl)
 		if err != nil {
-			return nil, 0, errors.New("could not parse replacement query string")
+			return nil, 0, "", errors.New("could not parse replacement query string")
 		}
 	}
 	ustr = u.String()
@@ -39,7 +44,7 @@ func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth 
 	// Prepare HTTP request
 	req, err := http.NewRequestWithContext(ctx, "GET", ustr, nil)
 	if err != nil {
-		return nil, 0, errors.New("invalid request")
+		return nil, 0, "", errors.New("invalid request")
 	}
 
 	// Set basic auth, if used
@@ -56,11 +61,11 @@ func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth 
 	resp, err := client.Do(req)
 	if err != nil {
 		// return error directly
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 	if resp.StatusCode >= 400 {
 		resp.Body.Close()
-		return nil, resp.StatusCode, fmt.Errorf("response status code: %d", resp.StatusCode)
+		return nil, resp.StatusCode, "", fmt.Errorf("response status code: %d", resp.StatusCode)
 	}
-	return resp.Body, resp.StatusCode, nil
+	return resp.Body, resp.StatusCode, resp.Header.Get("ETag"), nil
 }
