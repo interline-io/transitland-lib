@@ -13,19 +13,28 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/validator"
 )
+
+type FetchCommandResult struct {
+	Result           Result
+	FeedVersion      *tl.FeedVersion
+	ValidationResult *validator.Result
+	FatalError       error
+}
 
 // Command fetches feeds defined a DMFR database.
 type Command struct {
 	Options    Options
 	CreateFeed bool
 	Workers    int
+	Fail       bool
 	Limit      int
 	DBURL      string
 	DryRun     bool
 	FeedIDs    []string
-	Adapter    tldb.Adapter
-	Results    []StaticFetchResult
+	Results    []FetchCommandResult
+	Adapter    tldb.Adapter // allow for mocks
 }
 
 // Parse sets options from command line flags.
@@ -44,6 +53,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
+	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
@@ -162,32 +172,37 @@ func (cmd *Command) Run() error {
 	///////////////
 	// Here we go
 	log.Infof("Fetching %d feeds", len(cmd.FeedIDs))
-	var wg sync.WaitGroup
 	jobs := make(chan fetchJob, len(cmd.FeedIDs))
-	results := make(chan StaticFetchResult, len(cmd.FeedIDs))
-	for w := 0; w < cmd.Workers; w++ {
-		wg.Add(1)
-		go fetchWorker(w, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
-	}
+	results := make(chan FetchCommandResult, len(cmd.FeedIDs))
 	for _, opts := range toFetch {
 		jobs <- opts
 	}
 	close(jobs)
+
+	// Start workers
+	var wg sync.WaitGroup
+	for w := 0; w < cmd.Workers; w++ {
+		wg.Add(1)
+		go fetchWorker(cmd.Adapter, cmd.DryRun, jobs, results, &wg)
+	}
 	wg.Wait()
 	close(results)
+
+	// Check results
 	var fatalError error
-	fetchFatalErrors := 0
 	fetchNew := 0
 	fetchFound := 0
 	fetchErrs := 0
-	for fr := range results {
-		cmd.Results = append(cmd.Results, fr)
-		if fr.Result.Error != nil {
-			fetchFatalErrors++
-			fatalError = fr.Result.Error
-		} else if fr.Result.FetchError != nil {
+	for result := range results {
+		cmd.Results = append(cmd.Results, result)
+		if result.FatalError != nil {
+			fatalError = result.FatalError
+		} else if result.Result.FetchError != nil {
 			fetchErrs++
-		} else if fr.Result.Found {
+			if cmd.Fail {
+				fatalError = result.Result.FetchError
+			}
+		} else if result.Result.Found {
 			fetchFound++
 		} else {
 			fetchNew++
@@ -195,7 +210,7 @@ func (cmd *Command) Run() error {
 	}
 	log.Infof("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
 	if fatalError != nil {
-		log.Infof("Exiting with error because at least one feed had fatal error: %s", fatalError.Error())
+		log.Infof("Exiting with error because at least one fetch had fatal error: %s", fatalError.Error())
 		return fatalError
 	}
 	return nil
@@ -206,7 +221,7 @@ type fetchJob struct {
 	Options
 }
 
-func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- StaticFetchResult, wg *sync.WaitGroup) {
+func fetchWorker(adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- FetchCommandResult, wg *sync.WaitGroup) {
 	for job := range jobs {
 		// Start
 		log.Infof("Feed %s: start", job.OnestopID)
@@ -238,7 +253,12 @@ func fetchWorker(id int, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob
 		} else {
 			log.Infof("Feed %s (id:%d): url: %s invalid result (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, t2)
 		}
-		results <- result
+		results <- FetchCommandResult{
+			Result:           result.Result,
+			FeedVersion:      result.FeedVersion,
+			ValidationResult: result.ValidationResult,
+			FatalError:       fetchError,
+		}
 	}
 	wg.Done()
 }
