@@ -132,7 +132,6 @@ CREATE INDEX idx_gtfs_shapes_feed_version_id ON "gtfs_shapes"(feed_version_id);
 
 CREATE TABLE IF NOT EXISTS "feed_versions" (
   "feed_id" integer, 
-  "feed_type" varchar(255) NOT NULL, 
   "sha1" varchar(255) NOT NULL, 
   "sha1_dir" varchar(255) NOT NULL, 
   "file" varchar(255) NOT NULL, 
@@ -154,7 +153,6 @@ CREATE INDEX idx_feed_versions_sha1 ON "feed_versions"("sha1");
 CREATE INDEX idx_feed_versions_earliest_calendar_date ON "feed_versions"(earliest_calendar_date);
 CREATE INDEX idx_feed_versions_latest_calendar_date ON "feed_versions"(latest_calendar_date);
 CREATE INDEX idx_feed_versions_feed_id ON "feed_versions"(feed_id);
-CREATE INDEX idx_feed_versions_feed_type ON "feed_versions"(feed_type);
 
 CREATE TABLE IF NOT EXISTS "feed_version_file_infos" (
   "id" integer primary key autoincrement, 
@@ -167,7 +165,9 @@ CREATE TABLE IF NOT EXISTS "feed_version_file_infos" (
   "columns" int not null,
   "sha1" varchar(255) not null,
   "header" varchar(255) not null,
-  "csv_like" bool not null
+  "csv_like" bool not null,
+  "values_count" blob,
+  "values_unique" blob
 );
 CREATE INDEX idx_feed_version_file_infos_feed_version_id ON "feed_version_file_infos"(feed_version_id);
 
@@ -201,6 +201,7 @@ CREATE TABLE IF NOT EXISTS "feed_version_service_levels" (
 );
 CREATE INDEX idx_feed_version_service_levels_feed_version_id ON "feed_version_service_levels"(feed_version_id);
 
+
 CREATE TABLE IF NOT EXISTS "feed_states" (
     "id" integer primary key autoincrement, 
     "feed_id" integer NOT NULL,
@@ -209,11 +210,10 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
     "public" bool not null,
     "feed_priority" integer,
     "fetch_wait" integer,
-    "tags" BLOB,
     "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "geometry" BLOB
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
 
 CREATE TABLE IF NOT EXISTS "gtfs_feed_infos" (
   "feed_publisher_name" varchar(255) NOT NULL, 
@@ -689,13 +689,101 @@ CREATE TABLE gtfs_rider_categories (
 
 
 
+CREATE TABLE tl_validation_reports (
+"id" integer primary key autoincrement,
+"feed_version_id" int,
+"created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+"updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+"reported_at" datetime,
+"reported_at_local" datetime,
+"reported_at_local_timezone" varchar(255),
+"success" bool,
+"includes_static" bool,
+"includes_rt" bool,
+"validator" varchar(255),
+"validator_version" VARCHAR(255),
+"failure_reason" VARCHAR(255),
+"file" varchar(255)
+);
+
+CREATE TABLE tl_validation_trip_update_stats (
+"id" integer primary key autoincrement,
+"validation_report_id" int NOT NULL,
+"agency_id" varchar(255) NOT NULL,
+"route_id" varchar(255) NOT NULL,
+"trip_scheduled_ids" blob,
+"trip_scheduled_count" int NOT NULL,
+"trip_match_count" int NOT NULL,
+"trip_scheduled_not_matched" int not null,
+"trip_rt_ids" blob,
+"trip_rt_count" int not null,
+"trip_rt_matched" int not null,
+"trip_rt_not_matched" int not null,
+"trip_rt_not_found_ids" blob,
+"trip_rt_added_ids" blob,
+"trip_rt_not_found_count" int not null,
+"trip_rt_added_count" int not null
+);
 
 
+CREATE TABLE tl_validation_vehicle_position_stats (
+"id" integer primary key autoincrement,
+"validation_report_id" int NOT NULL,
+"agency_id" varchar(255) NOT NULL,
+"route_id" varchar(255) NOT NULL,
+"trip_scheduled_ids" blob,
+"trip_scheduled_count" int NOT NULL,
+"trip_match_count" int NOT NULL,
+"trip_scheduled_not_matched" int not null,
+"trip_rt_ids" blob,
+"trip_rt_count" int not null,
+"trip_rt_matched" int not null,
+"trip_rt_not_matched" int not null,
+"trip_rt_not_found_ids" blob,
+"trip_rt_added_ids" blob,
+"trip_rt_not_found_count" int not null,
+"trip_rt_added_count" int not null
+);
+
+CREATE TABLE tl_validation_report_error_groups (
+    "id" integer primary key autoincrement,
+    "validation_report_id" int NOT NULL,
+    "filename" varchar(255) not null,
+    "field" varchar(255) not null,
+    "error_type" varchar(255) not null,
+    "error_code" varchar(255) not null,
+    "group_key" varchar(255) not null,
+    "count" int not null,
+    "level" int not null
+);
+
+CREATE TABLE tl_validation_report_error_exemplars (
+    "id" integer primary key autoincrement,
+    "validation_report_error_group_id" int not null,
+    "line" int not null,
+    "entity_id" varchar(255) not null,
+    "value" varchar(255) not null,
+    "message" varchar(255) not null,
+    "geometry" blob,
+    "entity_json" blob
+);
 
 
+CREATE TABLE feed_version_agency_onestop_ids (
+  "feed_version_id" int not null,
+  "entity_id" varchar(255) not null,
+  "onestop_id" varchar(255) not null
+);
 
+CREATE TABLE feed_version_route_onestop_ids (
+  "feed_version_id" int not null,
+  "entity_id" varchar(255) not null,
+  "onestop_id" varchar(255) not null
+);
 
-
-
-
+CREATE TABLE feed_version_stop_onestop_ids (
+  "feed_version_id" int not null,
+  "entity_id" varchar(255) not null,
+  "onestop_id" varchar(255) not null
+);
 

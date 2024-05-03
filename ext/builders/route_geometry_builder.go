@@ -4,9 +4,9 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/xy"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/twpayne/go-geom"

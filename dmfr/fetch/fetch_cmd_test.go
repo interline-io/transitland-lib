@@ -32,15 +32,36 @@ func TestFetchCommand(t *testing.T) {
 	f200 := tl.Feed{FeedID: "f--200", Spec: "gtfs", URLs: tl.FeedUrls{StaticCurrent: ts200.URL}}
 	f404 := tl.Feed{FeedID: "f--404", Spec: "gtfs", URLs: tl.FeedUrls{StaticCurrent: ts404.URL}}
 	cases := []struct {
-		fvcount     int
-		errContains string
-		feeds       []tl.Feed
-		command     []string
+		fvcount            int
+		fatalErrorContains string
+		feeds              []tl.Feed
+		command            []string
 	}{
-		{1, "", []tl.Feed{f200}, []string{}},
-		{1, "", []tl.Feed{f200, f404}, []string{"f--200", "f--404"}},
-		{1, "", []tl.Feed{f200, f404}, []string{"f--200"}},
-		{0, "", []tl.Feed{f200, f404}, []string{"f--404"}},
+		{
+			fvcount: 1,
+			feeds:   []tl.Feed{f200},
+		},
+		{
+			fvcount: 1,
+			feeds:   []tl.Feed{f200, f404},
+			command: []string{"f--200", "f--404"},
+		},
+		{
+			fvcount: 1,
+			feeds:   []tl.Feed{f200, f404},
+			command: []string{"f--200"},
+		},
+		{
+			fvcount: 0,
+			feeds:   []tl.Feed{f200, f404},
+			command: []string{"f--404"},
+		},
+		{
+			fvcount:            0,
+			feeds:              []tl.Feed{f200, f404},
+			command:            []string{"--fail", "f--404"},
+			fatalErrorContains: "file does not exist or invalid data",
+		},
 	}
 	_ = cases
 	for _, exp := range cases {
@@ -56,12 +77,14 @@ func TestFetchCommand(t *testing.T) {
 			if err := c.Parse(withTempDir); err != nil {
 				t.Fatal(err)
 			}
-			if err := c.Run(); err != nil && exp.errContains != "" {
-				if !strings.Contains(err.Error(), exp.errContains) {
-					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.errContains)
+			if err := c.Run(); err != nil && exp.fatalErrorContains != "" {
+				if !strings.Contains(err.Error(), exp.fatalErrorContains) {
+					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.fatalErrorContains)
 				}
 			} else if err != nil {
 				t.Fatal(err)
+			} else if exp.fatalErrorContains != "" {
+				t.Fatalf("Did not get expected error match: %s", exp.fatalErrorContains)
 			}
 			// Test
 			feeds := []tl.Feed{}

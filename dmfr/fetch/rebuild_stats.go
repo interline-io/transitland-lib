@@ -8,18 +8,21 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/internal/cli"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/validator"
 )
 
 type RebuildStatsOptions struct {
-	FeedVersionID int
-	Storage       string
+	FeedVersionID           int
+	Storage                 string
+	ValidationReportStorage string
+	SaveValidationReport    bool
 }
 
 type RebuildStatsResult struct {
@@ -53,6 +56,8 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", "", "Storage destination; can be s3://... az://... or path to a directory")
+	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
+	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
 
 	fl.Parse(args)
 	cmd.FeedIDs = fl.Args()
@@ -128,8 +133,10 @@ func (cmd *RebuildStatsCommand) Run() error {
 	results := make(chan RebuildStatsResult, len(qrs))
 	for _, fvid := range qrs {
 		jobs <- RebuildStatsOptions{
-			FeedVersionID: fvid,
-			Storage:       cmd.Options.Storage,
+			FeedVersionID:           fvid,
+			Storage:                 cmd.Options.Storage,
+			ValidationReportStorage: cmd.Options.ValidationReportStorage,
+			SaveValidationReport:    cmd.Options.SaveValidationReport,
 		}
 	}
 	close(jobs)
@@ -176,7 +183,8 @@ func rebuildStatsWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan R
 
 func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildStatsResult, error) {
 	// Get FV
-	fv := tl.FeedVersion{ID: opts.FeedVersionID}
+	fv := tl.FeedVersion{}
+	fv.ID = opts.FeedVersionID
 	if err := adapter.Find(&fv); err != nil {
 		return RebuildStatsResult{}, err
 	}
@@ -192,29 +200,59 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 	if err := reader.Open(); err != nil {
 		return RebuildStatsResult{}, err
 	}
-	// Import
+	// Save
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
 		if err := createFeedStats(atx, reader, fv.ID); err != nil {
 			return err
+		}
+		if opts.SaveValidationReport {
+			if _, err := createFeedValidationReport(atx, reader, fv.ID, fv.FetchedAt, opts.ValidationReportStorage); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
 	return RebuildStatsResult{}, errImport
 }
 
+func convertToAny[T any](input []T) []any {
+	var ret []any
+	for i := 0; i < len(input); i++ {
+		ret = append(ret, &input[i])
+	}
+	return ret
+}
+
+type canSetFeedVersion interface {
+	SetFeedVersionID(int)
+}
+
+func setFvid(input []any, fvid int) []any {
+	for i := 0; i < len(input); i++ {
+		if v, ok := input[i].(canSetFeedVersion); ok {
+			v.SetFeedVersionID(fvid)
+		} else {
+			log.Error().Msgf("could not set feed version id for type %T", input[i])
+		}
+	}
+	return input
+}
+
 func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
-	// Get FeedVersionFileInfos
-	fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader)
+	stats, err := dmfr.NewFeedStatsFromReader(reader)
 	if err != nil {
 		return err
 	}
-	// Get service window and statistics
-	fvsw, fvsls, err := dmfr.NewFeedStatsFromReader(reader)
-	if err != nil {
-		return err
-	}
+
 	// Delete any existing records
-	tables := []string{"feed_version_file_infos", "feed_version_service_levels", "feed_version_service_windows"}
+	tables := []string{
+		"feed_version_file_infos",
+		"feed_version_service_levels",
+		"feed_version_service_windows",
+		"feed_version_agency_onestop_ids",
+		"feed_version_route_onestop_ids",
+		"feed_version_stop_onestop_ids",
+	}
 	for _, table := range tables {
 		q, args, err := atx.Sqrl().Delete(table).Where(sq.Eq{"feed_version_id": fvid}).ToSql()
 		if err != nil {
@@ -224,26 +262,52 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 			return err
 		}
 	}
-	// Insert FVFIs
-	for _, fvfi := range fvfis {
-		fvfi.FeedVersionID = fvid
-		if _, err := atx.Insert(&fvfi); err != nil {
-			return err
-		}
-	}
+
 	// Insert FVSW
+	fvsw := stats.ServiceWindow
 	fvsw.FeedVersionID = fvid
 	if _, err := atx.Insert(&fvsw); err != nil {
 		return err
 	}
-	// Batch insert FVSLs
-	bt := make([]any, len(fvsls))
-	for i := range fvsls {
-		fvsls[i].FeedVersionID = fvid
-		bt[i] = &fvsls[i]
+
+	// Batch insert OSIDs
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
+		return err
 	}
-	if err := atx.CopyInsert(bt); err != nil {
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
+		return err
+	}
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
+		return err
+	}
+
+	// Insert FVFIs
+	// TODO: This doesn't work with CopyInsert
+	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
+		return err
+	}
+
+	// Batch insert FVSLs
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
 		return err
 	}
 	return nil
+}
+
+func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
+	// Create new report
+	opts := validator.Options{}
+	opts.ErrorLimit = 10
+	v, err := validator.NewValidator(reader, opts)
+	if err != nil {
+		return nil, err
+	}
+	validationResult, err := v.Validate()
+	if err != nil {
+		return nil, err
+	}
+	if err := validator.SaveValidationReport(atx, validationResult, fvid, storage); err != nil {
+		return nil, err
+	}
+	return validationResult, nil
 }

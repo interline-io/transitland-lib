@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/diff"
 	"github.com/interline-io/transitland-lib/dmfr/fetch"
@@ -13,7 +14,6 @@ import (
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/extract"
 	_ "github.com/interline-io/transitland-lib/filters"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/merge"
 	"github.com/interline-io/transitland-lib/tl"
 	_ "github.com/interline-io/transitland-lib/tlcsv"

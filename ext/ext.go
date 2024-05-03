@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/log"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/tl"
 )
 

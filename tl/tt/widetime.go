@@ -17,7 +17,7 @@ type WideTime struct {
 
 // NewWideTime converts the csv string to a WideTime.
 func NewWideTime(value string) (wt WideTime, err error) {
-	err = wt.Scan(value)
+	err = wt.FromCsv(value)
 	return wt, err
 }
 
@@ -28,7 +28,7 @@ func NewWideTimeFromSeconds(value int) WideTime {
 	return wt
 }
 
-func (wt *WideTime) String() string {
+func (wt WideTime) String() string {
 	if !wt.Valid {
 		return ""
 	}
@@ -42,7 +42,7 @@ func (wt WideTime) Value() (driver.Value, error) {
 	return int64(wt.Seconds), nil
 }
 
-func (wt *WideTime) ToCsv() string {
+func (wt WideTime) ToCsv() string {
 	return wt.String()
 }
 

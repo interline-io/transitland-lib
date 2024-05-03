@@ -19,11 +19,11 @@ func NewTime(v time.Time) Time {
 }
 
 // IsZero returns if this is a zero value.
-func (r *Time) IsZero() bool {
+func (r Time) IsZero() bool {
 	return !r.Valid
 }
 
-func (r *Time) String() string {
+func (r Time) String() string {
 	if !r.Valid {
 		return ""
 	}

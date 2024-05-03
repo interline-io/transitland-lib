@@ -1,0 +1,29 @@
+{
+    "header": {
+      "gtfsRealtimeVersion": "1.0",
+      "incrementality": "FULL_DATASET",
+      "timestamp": "1699405559"
+    },
+    "entity": [
+      {
+        "id": "124",
+        "vehicle": {
+          "trip": {
+            "tripId": "124",
+            "routeId": "L1",
+            "directionId": 1
+          },
+          "vehicle": {
+            "id": "124",
+            "label": "",
+            "licensePlate": ""
+          },
+          "position": {
+            "latitude": 33.00,
+            "longitude": -121.00
+          },
+          "timestamp": "1699405549"
+        }
+      }
+    ]
+  }

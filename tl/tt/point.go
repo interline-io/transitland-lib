@@ -33,6 +33,7 @@ func (g Point) Value() (driver.Value, error) {
 }
 
 func (g *Point) Scan(src interface{}) error {
+	g.Valid = false
 	if src == nil {
 		return nil
 	}
@@ -69,7 +70,10 @@ func (g Point) MarshalJSON() ([]byte, error) {
 }
 
 func (g *Point) UnmarshalGQL(v interface{}) error {
-	return nil
+	var err error
+	g.Point, err = geojsonDecode[geom.Point](v)
+	g.Valid = (err == nil)
+	return err
 }
 
 func (g Point) MarshalGQL(w io.Writer) {

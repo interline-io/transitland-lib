@@ -1,0 +1,37 @@
+{
+  "header": {
+    "gtfsRealtimeVersion": "1.0",
+    "incrementality": "FULL_DATASET",
+    "timestamp": "1565199942"
+  },
+  "entity": [
+    {
+      "id": "BSA_187874",
+      "alert": {
+        "informedEntity": [
+          {
+            "agencyId": "BART"
+          }
+        ],
+        "cause": "MEDICAL_EMERGENCY",
+        "effect": "SIGNIFICANT_DELAYS",
+        "url": {
+          "translation": [
+            {
+              "text": "http://www.bart.gov/schedules/advisories",
+              "language": "en-US"
+            }
+          ]
+        },
+        "headerText": {
+          "translation": [
+            {
+              "text": "There is a major delay at Montgomery St. on the San Francisco Line in the SFO, Millbrae, Daly City and East Bay directions due to a major medical emergency. Montgomery station is currently closed.  Trains are not stopping at Montgomery station. ",
+              "language": "en-US"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

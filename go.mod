@@ -11,19 +11,21 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.15.9
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.10
+	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/iancoleman/orderedmap v0.2.0
+	github.com/interline-io/log v0.0.0-20240126000327-05bb90e4de4f
 	github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.6
 	github.com/mattn/go-sqlite3 v1.14.13
 	github.com/mmcloughlin/geohash v0.10.0
-	github.com/rs/zerolog v1.26.1
+	github.com/rs/zerolog v1.32.0
 	github.com/sergi/go-diff v1.2.0
 	github.com/snabb/isoweek v1.0.1
 	github.com/stretchr/testify v1.7.1
 	github.com/twpayne/go-geom v1.4.1
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/protobuf v1.33.0
 )
 
 require (
@@ -50,11 +52,13 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pkg/browser v0.0.0-20210115035449-ce105d075bb4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

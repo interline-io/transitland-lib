@@ -2,21 +2,28 @@ package importer
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"sync"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/cli"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tldb"
 )
+
+type ImportCommandResult struct {
+	Result     Result
+	FatalError error
+}
 
 // Command imports FeedVersions into a database.
 type Command struct {
 	Options      Options
 	Workers      int
 	Limit        int
+	Fail         bool
 	DBURL        string
 	CoverDate    string
 	FetchedSince string
@@ -25,6 +32,7 @@ type Command struct {
 	FeedIDs      []string
 	FVIDs        cli.ArrayFlags
 	FVSHA1       cli.ArrayFlags
+	Results      []ImportCommandResult
 	Adapter      tldb.Adapter // allow for mocks
 }
 
@@ -45,6 +53,7 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Import at most n feeds")
+	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage location; can be s3://... az://... or path to a directory")
 	fl.StringVar(&cmd.CoverDate, "date", "", "Service on date")
@@ -149,11 +158,12 @@ func (cmd *Command) Run() error {
 	if err != nil {
 		return err
 	}
+
 	///////////////
 	// Here we go
 	log.Infof("Importing %d feed versions", len(qrs))
 	jobs := make(chan Options, len(qrs))
-	results := make(chan Result, len(qrs))
+	results := make(chan ImportCommandResult, len(qrs))
 	for _, fvid := range qrs {
 		jobs <- Options{
 			FeedVersionID: fvid,
@@ -163,17 +173,36 @@ func (cmd *Command) Run() error {
 		}
 	}
 	close(jobs)
+
 	// Start workers
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go dmfrImportWorker(w, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
+		go dmfrImportWorker(cmd.Adapter, cmd.DryRun, jobs, results, &wg)
 	}
 	wg.Wait()
+	close(results)
+
+	// Check results
+	var fatalError error
+	for result := range results {
+		cmd.Results = append(cmd.Results, result)
+		if result.FatalError != nil {
+			fatalError = result.FatalError
+		} else if fvi := result.Result.FeedVersionImport; !fvi.Success {
+			if cmd.Fail {
+				fatalError = fmt.Errorf("import failed: %s", fvi.ExceptionLog)
+			}
+		}
+	}
+	if fatalError != nil {
+		log.Infof("Exiting with error because at least one import had fatal error: %s", fatalError.Error())
+		return fatalError
+	}
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan Options, results chan<- Result, wg *sync.WaitGroup) {
+func dmfrImportWorker(adapter tldb.Adapter, dryrun bool, jobs <-chan Options, results chan<- ImportCommandResult, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -201,7 +230,10 @@ func dmfrImportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan Opt
 		} else {
 			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s, (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
 		}
-		results <- result
+		results <- ImportCommandResult{
+			Result:     result,
+			FatalError: err,
+		}
 	}
 	wg.Done()
 }

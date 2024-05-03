@@ -16,7 +16,7 @@ func NewBool(v bool) Bool {
 	return Bool{Valid: true, Val: v}
 }
 
-func (r *Bool) String() string {
+func (r Bool) String() string {
 	return ""
 }
 
@@ -67,7 +67,7 @@ func (r *Bool) UnmarshalJSON(v []byte) error {
 	return r.Scan(string(stripQuotes(v)))
 }
 
-func (r *Bool) MarshalJSON() ([]byte, error) {
+func (r Bool) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return jsonNull(), nil
 	}

@@ -4,10 +4,10 @@ import (
 	"errors"
 	"flag"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters/multireader"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 )
 

@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/filters"
 	_ "github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/cli"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -41,6 +41,7 @@ type Command struct {
 	excludeCalendars  cli.ArrayFlags
 	excludeRoutes     cli.ArrayFlags
 	excludeRouteTypes cli.ArrayFlags
+	bbox              string
 	writeExtraColumns bool
 	readerPath        string
 	writerPath        string
@@ -58,7 +59,7 @@ func (cmd *Command) Parse(args []string) error {
 	// Copy options
 	fl.Float64Var(&cmd.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance (ex. 0.000005)")
 	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
-	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
+	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 10, "Max number of detailed errors per error group")
 	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
 	fl.BoolVar(&cmd.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
 	fl.BoolVar(&cmd.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
@@ -85,6 +86,8 @@ func (cmd *Command) Parse(args []string) error {
 	fl.Var(&cmd.excludeCalendars, "exclude-calendar", "Exclude Calendar")
 	fl.Var(&cmd.excludeRoutes, "exclude-route", "Exclude Route")
 	fl.Var(&cmd.excludeRouteTypes, "exclude-route-type", "Exclude Routes matching route_type")
+
+	fl.StringVar(&cmd.bbox, "bbox", "", "Extract bbox as (min lon, min lat, max lon, max lat), e.g. -122.276,37.794,-122.259,37.834")
 
 	fl.Var(&cmd.extractSet, "set", "Set values on output; format is filename,id,key,value")
 	fl.StringVar(&cmd.Prefix, "prefix", "", "Prefix entities in this feed")
@@ -194,45 +197,52 @@ func (cmd *Command) Run() error {
 			cmd.excludeRoutes = append(cmd.excludeRoutes, ent.RouteID)
 		}
 	}
-	//
-	fm := map[string][]string{}
-	fm["trips.txt"] = cmd.extractTrips[:]
-	fm["agency.txt"] = cmd.extractAgencies[:]
-	fm["routes.txt"] = cmd.extractRoutes[:]
-	fm["calendar.txt"] = cmd.extractCalendars[:]
-	fm["stops.txt"] = cmd.extractStops[:]
 
-	ex := map[string][]string{}
-	ex["trips.txt"] = cmd.excludeTrips[:]
-	ex["agency.txt"] = cmd.excludeAgencies[:]
-	ex["routes.txt"] = cmd.excludeRoutes[:]
-	ex["calendar.txt"] = cmd.excludeCalendars[:]
-	ex["stops.txt"] = cmd.excludeStops[:]
-
-	count := 0
-	for _, v := range fm {
-		count += len(v)
+	em := NewMarker()
+	// Includes
+	em.bbox = cmd.bbox
+	for _, eid := range cmd.extractTrips {
+		em.AddInclude("trips.txt", eid)
 	}
-	for _, v := range ex {
-		count += len(v)
+	for _, eid := range cmd.extractAgencies {
+		em.AddInclude("agency.txt", eid)
+	}
+	for _, eid := range cmd.extractRoutes {
+		em.AddInclude("routes.txt", eid)
+	}
+	for _, eid := range cmd.extractCalendars {
+		em.AddInclude("calendar.txt", eid)
+	}
+	for _, eid := range cmd.extractStops {
+		em.AddInclude("stops.txt", eid)
+	}
+	// Excludes
+	for _, eid := range cmd.excludeTrips {
+		em.AddExclude("trips.txt", eid)
+	}
+	for _, eid := range cmd.excludeAgencies {
+		em.AddExclude("agency.txt", eid)
+	}
+	for _, eid := range cmd.excludeRoutes {
+		em.AddExclude("routes.txt", eid)
+	}
+	for _, eid := range cmd.excludeCalendars {
+		em.AddExclude("calendar.txt", eid)
+	}
+	for _, eid := range cmd.excludeStops {
+		em.AddExclude("stops.txt", eid)
 	}
 
 	// Marker
-	if count > 0 {
-		log.Debugf("Extract filter:")
-		for k, v := range fm {
-			for _, i := range v {
-				log.Debugf("\t%s: %s", k, i)
-			}
-		}
-		em := NewMarker()
-		log.Debugf("Loading graph")
-		if err := em.Filter(reader, fm, ex); err != nil {
+	if em.Count() > 0 {
+		log.Debugf("Extract filter: loading graph")
+		if err := em.Filter(reader); err != nil {
 			return err
 		}
 		cp.Marker = &em
 		log.Debugf("Graph loading complete")
 	}
+
 	// Copy
 	result := cp.Copy()
 	result.DisplaySummary()

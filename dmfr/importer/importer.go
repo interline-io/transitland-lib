@@ -5,12 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/ext/builders"
-	"github.com/interline-io/transitland-lib/filters"
-	"github.com/interline-io/transitland-lib/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -96,8 +95,10 @@ func FindImportableFeeds(adapter tldb.Adapter) ([]int, error) {
 // MainImportFeedVersion create FVI and run Copier inside a Tx.
 func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV
-	fvi := dmfr.FeedVersionImport{FeedVersionID: opts.FeedVersionID, InProgress: true}
-	fv := tl.FeedVersion{ID: opts.FeedVersionID}
+	fvi := dmfr.FeedVersionImport{InProgress: true}
+	fvi.FeedVersionID = opts.FeedVersionID
+	fv := tl.FeedVersion{}
+	fv.ID = opts.FeedVersionID
 	if err := adapter.Find(&fv); err != nil {
 		return Result{FeedVersionImport: fvi}, err
 	}
@@ -175,7 +176,8 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 
 // ImportFeedVersion .
 func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
-	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
+	fvi := dmfr.FeedVersionImport{}
+	fvi.FeedVersionID = fv.ID
 	// Get Reader
 	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
@@ -202,11 +204,6 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	if err != nil {
 		return fvi, err
 	}
-
-	// Avoid foreign key errors when writing to database
-	cp.AddExtension(&filters.ApplyDefaultAgencyFilter{})
-
-	// Builder extensions
 	cp.AddExtension(builders.NewRouteGeometryBuilder())
 	cp.AddExtension(builders.NewRouteStopBuilder())
 	cp.AddExtension(builders.NewRouteHeadwayBuilder())

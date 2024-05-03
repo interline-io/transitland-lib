@@ -10,11 +10,22 @@ import (
 // Strings helps read and write []String as JSON
 type Strings []String
 
+func NewStrings(v []string) Strings {
+	s := Strings{}
+	for _, a := range v {
+		s = append(s, NewString(a))
+	}
+	return s
+}
+
 func (r Strings) Value() (driver.Value, error) {
 	return json.Marshal(r)
 }
 
 func (r *Strings) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
 	b, ok := value.([]byte)
 	if !ok {
 		return errors.New("type assertion to []byte failed")

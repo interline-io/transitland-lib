@@ -49,7 +49,7 @@ func (r *Float) Scan(src interface{}) error {
 	return err
 }
 
-func (r *Float) String() string {
+func (r Float) String() string {
 	if r.Val > -100_000 && r.Val < 100_000 {
 		return fmt.Sprintf("%g", r.Val)
 	}

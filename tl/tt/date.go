@@ -24,19 +24,19 @@ func NewDate(v time.Time) Date {
 	return Date{Valid: true, Val: v}
 }
 
-func (r *Date) IsZero() bool {
+func (r Date) IsZero() bool {
 	return !r.Valid
 }
 
-func (r *Date) Before(other Date) bool {
+func (r Date) Before(other Date) bool {
 	return r.Val.Before(other.Val)
 }
 
-func (r *Date) After(other Date) bool {
+func (r Date) After(other Date) bool {
 	return r.Val.After(other.Val)
 }
 
-func (r *Date) String() string {
+func (r Date) String() string {
 	if !r.Valid {
 		return ""
 	}

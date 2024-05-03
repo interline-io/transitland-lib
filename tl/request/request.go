@@ -7,13 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/interline-io/transitland-lib/log"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -136,52 +136,73 @@ type FetchResponse struct {
 }
 
 // AuthenticatedRequestDownload is similar to AuthenticatedRequest but writes to a temporary file.
+// Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
 func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchResponse, error) {
-	fr := FetchResponse{}
+	// Create temp file
+	tmpfile, err := os.CreateTemp("", "fetch")
+	if err != nil {
+		return FetchResponse{}, errors.New("could not create temporary file")
+	}
+	defer tmpfile.Close()
+
+	// Download
+	fr, err := authenticatedRequest(tmpfile, address, opts...)
+	if err != nil {
+		return fr, err
+	}
+
+	// Collect data
+	fr.Filename = tmpfile.Name()
+	return fr, nil
+}
+
+// AuthenticatedRequest fetches a url using a secret and auth description. Returns []byte, sha1, size, response code.
+// Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
+func AuthenticatedRequest(address string, opts ...RequestOption) (FetchResponse, error) {
+	// Create buffer
+	var buf bytes.Buffer
+
+	// Download
+	fr, err := authenticatedRequest(&buf, address, opts...)
+	if err != nil {
+		return fr, err
+	}
+
+	// Collect bytes
+	fr.Data = buf.Bytes()
+	return fr, nil
+}
+
+func authenticatedRequest(out io.Writer, address string, opts ...RequestOption) (FetchResponse, error) {
 	// 10 minute timeout
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
 	defer cancel()
-	// Create temp file
-	tmpfile, err := ioutil.TempFile("", "fetch")
-	if err != nil {
-		return fr, errors.New("could not create temporary file")
-	}
-	fr.Filename = tmpfile.Name()
-	defer tmpfile.Close()
+
 	// Download
+	fr := FetchResponse{}
 	req := NewRequest(address, opts...)
 	var r io.ReadCloser
 	r, fr.ResponseCode, fr.FetchError = req.Request(ctx)
 	if fr.FetchError != nil {
 		return fr, nil
 	}
-	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(tmpfile, r, req.MaxSize)
-	if err != nil {
+	defer r.Close()
+
+	// Write response
+	var err error
+	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(out, r, req.MaxSize)
+
+	// Check for canceled
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		// Return a non fatal error
+		fr.FetchError = ctxErr
+		return fr, nil
+	} else if err != nil {
+		// Return a fatal error
+		fr.FetchError = err
 		return fr, err
-	}
-	if r != nil {
-		r.Close()
 	}
 	return fr, nil
-}
-
-// AuthenticatedRequest fetches a url using a secret and auth description. Returns []byte, sha1, size, response code.
-func AuthenticatedRequest(address string, opts ...RequestOption) (FetchResponse, error) {
-	fr := FetchResponse{}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
-	defer cancel()
-	req := NewRequest(address, opts...)
-	var err error
-	var r io.ReadCloser
-	r, fr.ResponseCode, fr.FetchError = req.Request(ctx)
-	if fr.FetchError != nil {
-		return fr, err
-	}
-	defer r.Close()
-	var buf bytes.Buffer
-	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(&buf, r, req.MaxSize)
-	fr.Data = buf.Bytes()
-	return fr, err
 }
 
 func copyTo(dst io.Writer, src io.Reader, maxSize uint64) (int, string, error) {

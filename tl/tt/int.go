@@ -10,6 +10,6 @@ func NewInt(v int) Int {
 }
 
 // Int is a convenience function for int(v)
-func (r *Int) Int() int {
+func (r Int) Int() int {
 	return int(r.Val)
 }
