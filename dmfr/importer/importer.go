@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/ext/builders"
+	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -204,6 +205,11 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	if err != nil {
 		return fvi, err
 	}
+
+	// Avoid foreign key errors when writing to database
+	cp.AddExtension(&filters.ApplyDefaultAgencyFilter{})
+
+	// Builders
 	cp.AddExtension(builders.NewRouteGeometryBuilder())
 	cp.AddExtension(builders.NewRouteStopBuilder())
 	cp.AddExtension(builders.NewRouteHeadwayBuilder())
