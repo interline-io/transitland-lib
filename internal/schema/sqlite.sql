@@ -132,7 +132,6 @@ CREATE INDEX idx_gtfs_shapes_feed_version_id ON "gtfs_shapes"(feed_version_id);
 
 CREATE TABLE IF NOT EXISTS "feed_versions" (
   "feed_id" integer, 
-  "feed_type" varchar(255) NOT NULL, 
   "sha1" varchar(255) NOT NULL, 
   "sha1_dir" varchar(255) NOT NULL, 
   "file" varchar(255) NOT NULL, 
@@ -207,14 +206,10 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
     "id" integer primary key autoincrement, 
     "feed_id" integer NOT NULL,
     "feed_version_id" integer,
-    "feed_realtime_enabled" bool not null,
     "public" bool not null,
-    "feed_priority" integer,
     "fetch_wait" integer,
-    "tags" BLOB,
     "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
     "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "geometry" BLOB
 );
 
 CREATE TABLE IF NOT EXISTS "gtfs_feed_infos" (
