@@ -20,7 +20,6 @@ import (
 type StaticFetchResult struct {
 	FeedVersion      *tl.FeedVersion
 	ValidationResult *validator.Result
-	Error            error
 	Result
 }
 
@@ -79,7 +78,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 			return vr, nil
 		} else if err == sql.ErrNoRows {
 			// Not present, create below
-		} else if err != nil {
+		} else {
 			// Serious error
 			return vr, err
 		}
@@ -129,6 +128,9 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		return vr, nil
 	}
 	result, err := ffetch(atx, opts, cb)
+	if err != nil {
+		log.Error().Err(err).Msg("fatal error during static fetch")
+	}
 	ret.Result = result
 	ret.Error = err
 	return ret, err

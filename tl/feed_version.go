@@ -22,7 +22,6 @@ type canPath interface {
 // FeedVersion represents a single GTFS data source.
 type FeedVersion struct {
 	FeedID               int
-	FeedType             string
 	SHA1                 string
 	SHA1Dir              string
 	File                 string
@@ -62,7 +61,6 @@ func (ent *FeedVersion) TableName() string {
 // NewFeedVersionFromReader returns a FeedVersion from a Reader.
 func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	fv := FeedVersion{}
-	fv.FeedType = "Feed" // tlv1 compat
 	// Perform basic GTFS validity checks
 	if errs := reader.ValidateStructure(); len(errs) > 0 {
 		return fv, errs[0]
