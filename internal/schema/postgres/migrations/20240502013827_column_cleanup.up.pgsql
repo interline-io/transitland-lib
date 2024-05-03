@@ -40,6 +40,6 @@ alter table feed_versions drop column file_raw;
 -- alter table feed_states drop column feed_priority;
 -- alter table feed_states drop column created_at;
 -- alter table feed_states drop column updated_at;
-
+-- alter table feed_versions drop column feed_type;
 
 COMMIT;
