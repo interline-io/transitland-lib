@@ -54,12 +54,11 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 			}
 			b.ResetTimer()
 			ent := tl.FeedVersion{FeedID: feedid}
-			q := adapter.DBX().Rebind(`INSERT INTO feed_versions(feed_id, feed_type, file, earliest_calendar_date, latest_calendar_date, sha1, sha1_dir,fetched_at, created_at, updated_at, url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+			q := adapter.DBX().Rebind(`INSERT INTO feed_versions(feed_id, file, earliest_calendar_date, latest_calendar_date, sha1, sha1_dir,fetched_at, created_at, updated_at, url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
 			for i := 0; i < b.N; i++ {
 				_, err := adapter.DBX().Exec(
 					q,
 					ent.FeedID,
-					ent.FeedType,
 					ent.File,
 					ent.EarliestCalendarDate,
 					ent.LatestCalendarDate,

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/xy"
@@ -81,6 +82,10 @@ type hasLine interface {
 type Options struct {
 	// Batch size
 	BatchSize int
+	// Skip most validation filters
+	NoValidators bool
+	// Skip shape cache
+	NoShapeCache bool
 	// Attempt to save an entity that returns validation errors
 	AllowEntityErrors    bool
 	AllowReferenceErrors bool
@@ -108,11 +113,18 @@ type Options struct {
 	JourneyPatternKey func(*tl.Trip) string
 	// Named extensions
 	Extensions []string
+	// Initialized extensions
+	extensions []Extension
 	// Error limit
 	ErrorLimit int
 
 	// Sub-logger
+	Quiet     bool
 	sublogger zerolog.Logger
+}
+
+func (opts *Options) AddExtension(ext Extension) {
+	opts.extensions = append(opts.extensions, ext)
 }
 
 // Copier copies from Reader to Writer
@@ -140,14 +152,55 @@ type Copier struct {
 	EntityMap *tl.EntityMap
 }
 
+// Quiet copy
+func QuietCopy(reader tl.Reader, writer tl.Writer, optfns ...func(*Options)) error {
+	opts := Options{
+		ErrorLimit: -1,
+		Quiet:      true,
+	}
+	for _, f := range optfns {
+		f(&opts)
+	}
+	cp, err := NewCopier(reader, &empty.Writer{}, opts)
+	if err != nil {
+		return nil
+	}
+	if cpResult := cp.Copy(); cpResult.WriteError != nil {
+		return err
+	}
+	return nil
+
+}
+
+// Copy with options builder
+func Copy(reader tl.Reader, writer tl.Writer, optfns ...func(*Options)) error {
+	opts := Options{}
+	for _, f := range optfns {
+		f(&opts)
+	}
+	cp, err := NewCopier(reader, &empty.Writer{}, opts)
+	if err != nil {
+		return nil
+	}
+	if cpResult := cp.Copy(); cpResult.WriteError != nil {
+		return err
+	}
+	return nil
+}
+
 // NewCopier creates and initializes a new Copier.
 func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error) {
 	copier := &Copier{}
 	copier.Options = opts
 	copier.Reader = reader
 	copier.Writer = writer
+
 	// Logging
-	copier.Options.sublogger = log.Logger.With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+	if opts.Quiet {
+		copier.Options.sublogger = log.Logger.Level(zerolog.ErrorLevel).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+	} else {
+		copier.Options.sublogger = log.Logger.With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+	}
 
 	// Result
 	result := NewResult(opts.ErrorLimit)
@@ -171,16 +224,18 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	}
 
 	// Default set of validators
-	copier.AddValidator(&rules.EntityDuplicateCheck{}, 0)
-	copier.AddValidator(&rules.ValidFarezoneCheck{}, 0)
-	copier.AddValidator(&rules.AgencyIDConditionallyRequiredCheck{}, 0)
-	copier.AddValidator(&rules.StopTimeSequenceCheck{}, 0)
-	copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
-	copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
-	copier.AddValidator(&rules.CalendarDuplicateDates{}, 0)
-	copier.AddValidator(&rules.DuplicateFareLegRuleCheck{}, 0)
-	copier.AddValidator(&rules.DuplicateFareTransferRuleCheck{}, 0)
-	copier.AddValidator(&rules.DuplicateFareProductCheck{}, 0)
+	if !opts.NoValidators {
+		copier.AddValidator(&rules.EntityDuplicateCheck{}, 0)
+		copier.AddValidator(&rules.ValidFarezoneCheck{}, 0)
+		copier.AddValidator(&rules.AgencyIDConditionallyRequiredCheck{}, 0)
+		copier.AddValidator(&rules.StopTimeSequenceCheck{}, 0)
+		copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
+		copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
+		copier.AddValidator(&rules.CalendarDuplicateDates{}, 0)
+		copier.AddValidator(&rules.DuplicateFareLegRuleCheck{}, 0)
+		copier.AddValidator(&rules.DuplicateFareTransferRuleCheck{}, 0)
+		copier.AddValidator(&rules.DuplicateFareProductCheck{}, 0)
+	}
 
 	// Default extensions
 	if copier.UseBasicRouteTypes {
@@ -194,6 +249,11 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	}
 
 	// Add extensions
+	for _, ext := range opts.extensions {
+		if err := copier.AddExtension(ext); err != nil {
+			return nil, fmt.Errorf("failed to add extension: %s", err.Error())
+		}
+	}
 	for _, extName := range opts.Extensions {
 		extName, extArgs, err := ext.ParseExtensionArgs(extName)
 		if err != nil {
@@ -213,7 +273,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 }
 
 func (copier *Copier) SetLogger(g zerolog.Logger) {
-	copier.sublogger = log.Logger.With().Str("reader", "test").Str("writer", "test").Logger()
+	copier.sublogger = g
 }
 
 // AddValidator adds an additional entity validator.
@@ -474,6 +534,8 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 func (copier *Copier) Copy() *Result {
 	// Handle source errors and warnings
 	sourceErrors := map[string][]error{}
+
+	copier.sublogger.Trace().Msg("Validating structure")
 	for _, err := range copier.Reader.ValidateStructure() {
 		fn := ""
 		if v, ok := err.(errorWithContext); ok {
@@ -484,7 +546,9 @@ func (copier *Copier) Copy() *Result {
 	for fn, errs := range sourceErrors {
 		copier.ErrorHandler.HandleSourceErrors(fn, errs, nil)
 	}
+
 	// Note that order is important!!
+	copier.sublogger.Trace().Msg("Begin processing feed")
 	fns := []func() error{
 		copier.copyAgencies,
 		copier.copyRoutes,
@@ -508,7 +572,9 @@ func (copier *Copier) Copy() *Result {
 			return copier.result
 		}
 	}
+
 	for _, e := range copier.extensions {
+		copier.sublogger.Trace().Msgf("Running extension Copy(): %T", e)
 		if err := e.Copy(copier); err != nil {
 			copier.result.WriteError = err
 			return copier.result
@@ -516,11 +582,14 @@ func (copier *Copier) Copy() *Result {
 	}
 
 	if copier.CopyExtraFiles {
+		copier.sublogger.Trace().Msg("Copying extra files")
 		if err := copier.copyExtraFiles(); err != nil {
 			copier.result.WriteError = err
 			return copier.result
 		}
 	}
+
+	copier.sublogger.Trace().Msg("Done")
 	return copier.result
 }
 
@@ -729,7 +798,7 @@ func (copier *Copier) copyShapes() error {
 		}
 		if entErr, writeErr := copier.CopyEntity(&ent); writeErr != nil {
 			return writeErr
-		} else if entErr == nil {
+		} else if entErr == nil && !copier.Options.NoShapeCache {
 			copier.geomCache.AddShape(sid, ent)
 		}
 	}
@@ -932,10 +1001,10 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	// Cache all trips in memory
 	trips := map[string]tl.Trip{}
 	duplicateTrips := []tl.Trip{}
-	allTripIds := map[string]int{}
+	allTripIds := map[string]struct{}{}
 	for trip := range copier.Reader.Trips() {
 		eid := trip.EntityID()
-		allTripIds[eid]++
+		allTripIds[eid] = struct{}{}
 		// Skip unmarked trips to save work
 		if !copier.isMarked(&trip) {
 			copier.result.SkipEntityMarkedCount["trips.txt"]++
@@ -949,6 +1018,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		trips[eid] = trip
 	}
+	log.Trace().Msgf("Loaded %d trips", len(allTripIds))
 
 	// Process each set of Trip/StopTimes
 	stopPatterns := map[string]int{}

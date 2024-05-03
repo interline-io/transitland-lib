@@ -3,7 +3,6 @@ package dmfr
 import "github.com/interline-io/transitland-lib/tl"
 
 type FeedFetch struct {
-	ID            int
 	FeedID        int
 	URLType       string
 	URL           string
@@ -13,7 +12,7 @@ type FeedFetch struct {
 	ResponseSize  tl.Int
 	ResponseCode  tl.Int
 	ResponseSHA1  tl.String
-	FeedVersionID tl.Int
+	FeedVersionID tl.Int // optional field, don't use tl.FeedVersionEntity
 	tl.Timestamps
 	tl.DatabaseEntity
 }
