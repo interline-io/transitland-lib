@@ -15,11 +15,7 @@ drop index gtfs_stop_areas_area_id_idx;
 alter table feed_states drop column last_fetched_at;
 alter table feed_states drop column last_successful_fetch_at;
 alter table feed_states drop column last_fetch_error;
-alter table feed_states drop column feed_realtime_enabled;
 alter table feed_states drop column tags;
--- alter table feed_states drop column feed_priority;
--- alter table feed_states drop column created_at;
--- alter table feed_states drop column updated_at;
 
 alter table current_feeds drop column last_fetch_error;
 alter table current_feeds drop column last_successful_fetch_at;
@@ -38,5 +34,12 @@ alter table feed_versions drop column md5;
 alter table feed_versions drop column md5_raw;
 alter table feed_versions drop column sha1_raw;
 alter table feed_versions drop column file_raw;
+
+-- TO DROP IN FUTURE VERSIONS:
+-- alter table feed_states drop column feed_realtime_enabled;
+-- alter table feed_states drop column feed_priority;
+-- alter table feed_states drop column created_at;
+-- alter table feed_states drop column updated_at;
+
 
 COMMIT;

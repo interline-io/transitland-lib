@@ -11,11 +11,12 @@ import (
 
 // FeedState stores the pointer to the active FeedVersion.
 type FeedState struct {
-	FeedID        int
-	FeedVersionID tt.Int
-	FeedPriority  tt.Int
-	FetchWait     tt.Int
-	Public        bool
+	FeedID              int
+	FeedVersionID       tt.Int
+	FeedPriority        tt.Int
+	FetchWait           tt.Int
+	FeedRealtimeEnabled bool
+	Public              bool
 	tl.DatabaseEntity
 	tl.Timestamps
 }

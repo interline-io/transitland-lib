@@ -153,7 +153,6 @@ CREATE INDEX idx_feed_versions_sha1 ON "feed_versions"("sha1");
 CREATE INDEX idx_feed_versions_earliest_calendar_date ON "feed_versions"(earliest_calendar_date);
 CREATE INDEX idx_feed_versions_latest_calendar_date ON "feed_versions"(latest_calendar_date);
 CREATE INDEX idx_feed_versions_feed_id ON "feed_versions"(feed_id);
-CREATE INDEX idx_feed_versions_feed_type ON "feed_versions"(feed_type);
 
 CREATE TABLE IF NOT EXISTS "feed_version_file_infos" (
   "id" integer primary key autoincrement, 
@@ -202,15 +201,19 @@ CREATE TABLE IF NOT EXISTS "feed_version_service_levels" (
 );
 CREATE INDEX idx_feed_version_service_levels_feed_version_id ON "feed_version_service_levels"(feed_version_id);
 
+
 CREATE TABLE IF NOT EXISTS "feed_states" (
     "id" integer primary key autoincrement, 
     "feed_id" integer NOT NULL,
     "feed_version_id" integer,
+    "feed_realtime_enabled" bool not null,
     "public" bool not null,
+    "feed_priority" integer,
     "fetch_wait" integer,
     "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
 
 CREATE TABLE IF NOT EXISTS "gtfs_feed_infos" (
   "feed_publisher_name" varchar(255) NOT NULL, 
