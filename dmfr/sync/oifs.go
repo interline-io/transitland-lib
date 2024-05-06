@@ -159,11 +159,11 @@ func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
 	}
 	agencies := []agencyOnestop{}
 	agencyQuery := atx.Sqrl().
-		Select("gtfs_agencies.*", "tl_agency_onestop_ids.onestop_id as onestop_id").
+		Select("gtfs_agencies.*", "feed_version_agency_onestop_ids.onestop_id as onestop_id").
 		From("gtfs_agencies").
 		Join("feed_states using(feed_version_id)").
 		Join("current_feeds on current_feeds.id = feed_states.feed_id").
-		JoinClause("left join tl_agency_onestop_ids on tl_agency_onestop_ids.agency_id = gtfs_agencies.id").
+		JoinClause("left join feed_version_agency_onestop_ids on feed_version_agency_onestop_ids.entity_id = gtfs_agencies.agency_id and feed_version_agency_onestop_ids.feed_version_id = gtfs_agencies.feed_version_id").
 		Where(sq.Eq{"current_feeds.id": feedid})
 	qstr, qargs, err := agencyQuery.ToSql()
 	if err != nil {
