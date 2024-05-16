@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -84,6 +85,9 @@ func (cmd *Command) Parse(args []string) error {
 				cmd.FVIDs = append(cmd.FVIDs, line)
 			}
 		}
+		if len(cmd.FVIDs) == 0 {
+			return errors.New("--fvid-file specified but no lines were read")
+		}
 	}
 	if fvsha1file != "" {
 		lines, err := cli.ReadFileLines(fvsha1file)
@@ -94,6 +98,9 @@ func (cmd *Command) Parse(args []string) error {
 			if line != "" {
 				cmd.FVSHA1 = append(cmd.FVSHA1, line)
 			}
+		}
+		if len(cmd.FVSHA1) == 0 {
+			return errors.New("--fv-sha1-file specified but no lines were read")
 		}
 	}
 	return nil
