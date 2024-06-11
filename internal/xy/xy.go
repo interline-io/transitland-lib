@@ -22,12 +22,19 @@ func deg2rad(v float64) float64 {
 	return v * math.Pi / 180
 }
 
-// DistanceHaversinePoint .
-func DistanceHaversinePoint(a, b []float64) float64 {
-	if len(a) < 2 || len(b) < 2 {
-		return 0.0
+func segPos(apt Point, bpt Point, apos float64, bpos float64, dist float64) Point {
+	segrel := (dist - apos) / (bpos - apos)
+	segx := bpt.Lon - apt.Lon
+	segy := bpt.Lat - apt.Lat
+	return Point{
+		Lon: apt.Lon + segrel*segx,
+		Lat: apt.Lat + segrel*segy,
 	}
-	return DistanceHaversine(a[0], a[1], b[0], b[1])
+}
+
+// DistanceHaversinePoint .
+func DistanceHaversinePoint(a, b Point) float64 {
+	return DistanceHaversine(a.Lon, a.Lat, b.Lon, b.Lat)
 }
 
 // DistanceHaversine .
@@ -91,13 +98,19 @@ func SegmentClosestPoint(a, b, p Point) (Point, float64) {
 	return ret, Distance2d(ret, p)
 }
 
-// LineClosestPoint returns the point (and position) on line closest to point.
-// Based on go-geom DistanceFromPointToLineString
 func LineClosestPoint(line []Point, point Point) (Point, float64) {
+	minp, _, pos := LineClosestPointIdx(line, point)
+	return minp, pos
+}
+
+// LineClosestPointIdx returns the point (and position) on line closest to point.
+// Based on go-geom DistanceFromPointToLineString
+func LineClosestPointIdx(line []Point, point Point) (Point, int, float64) {
+	minidx := 0
 	position := 0.0
 	length := Length2d(line)
 	if length == 0 {
-		return point, position
+		return point, minidx, position
 	}
 	segpos := 0.0
 	mind := math.MaxFloat64
@@ -107,6 +120,7 @@ func LineClosestPoint(line []Point, point Point) (Point, float64) {
 		end := line[i]
 		segp, segd := SegmentClosestPoint(start, end, point)
 		if segd < mind {
+			minidx = i
 			mind = segd
 			minp = segp
 			position = segpos + Distance2d(start, minp)
@@ -117,7 +131,114 @@ func LineClosestPoint(line []Point, point Point) (Point, float64) {
 		segpos += Distance2d(start, end)
 		start = end
 	}
-	return minp, position / length
+	return minp, minidx, position / length
+}
+
+func LineSlicePoints(line []Point, startPoint Point, endPoint Point) []Point {
+	spt, sidx, _ := LineClosestPointIdx(line, startPoint)
+	ept, eidx, _ := LineClosestPointIdx(line, endPoint)
+	if eidx < sidx {
+		return nil
+	}
+	if DistanceHaversinePoint(startPoint, spt) > 1000 || DistanceHaversinePoint(endPoint, ept) > 1000 {
+		return nil
+	}
+	var ret []Point
+	ret = append(ret, spt)
+	ret = append(ret, line[sidx:eidx]...)
+	ret = append(ret, ept)
+	return ret
+}
+
+func LineSliceShapeDistTraveled(line []Point, dists []float64, startDist float64, endDist float64, extraPts ...Point) []Point {
+	var ret []Point
+	for i := 0; i < len(dists)-1; i++ {
+		if startDist >= dists[i] && startDist <= dists[i+1] {
+			// fmt.Println("idist:", dists[i], dists[i+1], "pt:", line[i], line[i+1], "startDist:", startDist)
+			for j := i; j < len(dists)-1; j++ {
+				// fmt.Println("\tjdist:", dists[j], dists[j+1], "pt:", line[j], line[j+1], "endDist:", endDist)
+				if endDist >= dists[j] && endDist <= dists[j+1] {
+					spt := segPos(line[i], line[i+1], dists[i], dists[i+1], startDist)
+					ept := segPos(line[j], line[j+1], dists[j], dists[j+1], endDist)
+					ret = append(ret, spt)
+					ret = append(ret, line[i:j]...)
+					ret = append(ret, ept)
+					// var fs []*geojson.Feature
+					// var baseLine []float64
+					// for _, pt := range ret {
+					// 	baseLine = append(baseLine, pt.Lon, pt.Lat)
+					// }
+					// var rawLine []float64
+					// for _, pt := range line {
+					// 	rawLine = append(rawLine, pt.Lon, pt.Lat)
+					// }
+					// fs = append(fs, &geojson.Feature{
+					// 	Properties: map[string]any{"stroke": "#000000", "stroke-width": 1},
+					// 	Geometry:   geom.NewLineStringFlat(geom.XY, rawLine),
+					// })
+					// fs = append(fs, &geojson.Feature{
+					// 	Properties: map[string]any{"stroke": "#aaaaaa", "stroke-width": 20, "stroke-opacity": 0.5},
+					// 	Geometry:   geom.NewLineStringFlat(geom.XY, baseLine),
+					// })
+					// for _, extraPt := range extraPts {
+					// 	fs = append(fs, &geojson.Feature{
+					// 		Properties: map[string]any{"marker-color": "#999999"},
+					// 		Geometry:   geom.NewPointFlat(geom.XY, []float64{extraPt.Lon, extraPt.Lat}),
+					// 	})
+					// }
+					// fs = append(fs, &geojson.Feature{
+					// 	Properties: map[string]any{"stroke": "#000000", "stroke-width": 10, "stroke-opacity": 0.5},
+					// 	Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+					// 		line[i].Lon, line[i].Lat,
+					// 		line[i+1].Lon, line[i+1].Lat,
+					// 	}),
+					// })
+					// fs = append(fs, &geojson.Feature{
+					// 	Properties: map[string]any{"stroke": "#000000", "stroke-width": 10, "stroke-opacity": 0.5},
+					// 	Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+					// 		line[j].Lon, line[j].Lat,
+					// 		line[j+1].Lon, line[j+1].Lat,
+					// 	}),
+					// })
+					// fs = append(fs, &geojson.Feature{
+					// 	Properties: map[string]any{"marker-color": "#00ff00"},
+					// 	Geometry:   geom.NewPointFlat(geom.XY, []float64{spt.Lon, spt.Lat}),
+					// })
+					// fs = append(fs, &geojson.Feature{
+					// 	Properties: map[string]any{"stroke": "#00ff00"},
+					// 	Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+					// 		spt.Lon, spt.Lat,
+					// 		line[i+1].Lon, line[i+1].Lat,
+					// 	}),
+					// })
+					// fs = append(fs, &geojson.Feature{
+					// 	Properties: map[string]any{"marker-color": "#ff0000"},
+					// 	Geometry:   geom.NewPointFlat(geom.XY, []float64{ept.Lon, ept.Lat}),
+					// })
+					// fs = append(fs, &geojson.Feature{
+					// 	Properties: map[string]any{"stroke": "#ff0000"},
+					// 	Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+					// 		line[j-2].Lon, line[j-2].Lat,
+					// 		ept.Lon, ept.Lat,
+					// 	}),
+					// })
+					// var fsLine []float64
+					// for _, p := range line[i+1 : j] {
+					// 	fsLine = append(fsLine, p.Lon, p.Lat)
+					// }
+					// fs = append(fs, &geojson.Feature{
+					// 	Properties: map[string]any{"stroke": "#0000ff"},
+					// 	Geometry:   geom.NewLineStringFlat(geom.XY, fsLine),
+					// })
+					// fc := geojson.FeatureCollection{Features: fs}
+					// d, _ := fc.MarshalJSON()
+					// fmt.Println(string(d))
+					return ret
+				}
+			}
+		}
+	}
+	return ret
 }
 
 // LinePositionsFallback returns the relative position along the line for each point.

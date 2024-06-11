@@ -41,7 +41,7 @@ func TestGeomCache(t *testing.T) {
 		}
 	}
 	// check that we had cache hits
-	if x := len(cache.positions); x < 9 {
+	if x := len(cache.stopPositions); x < 9 {
 		t.Errorf("expected at least %d cached trip journeys, got %d", 9, x)
 	}
 }

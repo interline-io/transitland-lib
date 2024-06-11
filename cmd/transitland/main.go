@@ -12,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/sync"
 	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
+	"github.com/interline-io/transitland-lib/ext/segments"
 	"github.com/interline-io/transitland-lib/extract"
 	_ "github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/merge"
@@ -94,6 +95,8 @@ func main() {
 		r = &merge.Command{}
 	case "dmfr": // backwards compat
 		r = &dmfrCommand{}
+	case "segment_debug":
+		r = &segments.SegmentBuilderCommand{}
 	default:
 		log.Errorf("%q is not valid command.", subc)
 		os.Exit(1)

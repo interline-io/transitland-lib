@@ -20,28 +20,37 @@ func arePositionsSorted(a []float64) bool {
 	return true
 }
 
+type ShapeInfo struct {
+	Line       []Point
+	Dists      []float64
+	DistLength float64
+	Length     float64
+}
+
 // GeomCache helps speed up StopTime interpolating by caching various results
 type GeomCache struct {
-	positions map[string][]float64
-	stops     map[string]Point
-	shapes    map[string][]Point
-	lengths   map[string]float64
+	stopPositions map[string][]float64
+	stops         map[string]Point
+	shapes        map[string]ShapeInfo
 }
 
 // NewGeomCache returns an initialized geomCache
 func NewGeomCache() *GeomCache {
 	return &GeomCache{
-		positions: map[string][]float64{},
-		stops:     map[string]Point{},
-		shapes:    map[string][]Point{},
-		lengths:   map[string]float64{},
+		stopPositions: map[string][]float64{},
+		stops:         map[string]Point{},
+		shapes:        map[string]ShapeInfo{},
 	}
 }
 
 // AddStop adds a Stop to the geometry cache.
 func (g *GeomCache) AddStop(eid string, stop tl.Stop) {
 	c := stop.Geometry.FlatCoords()
-	g.stops[eid] = Point{c[0], c[1]}
+	g.AddStopGeom(eid, Point{c[0], c[1]})
+}
+
+func (g *GeomCache) AddStopGeom(eid string, pt Point) {
+	g.stops[eid] = pt
 }
 
 // GetStop returns the coordinates for the cached stop.
@@ -51,6 +60,10 @@ func (g *GeomCache) GetStop(eid string) Point {
 
 // GetShape returns the coordinates for the cached shape.
 func (g *GeomCache) GetShape(eid string) []Point {
+	return g.shapes[eid].Line
+}
+
+func (g *GeomCache) GetShapeInfo(eid string) ShapeInfo {
 	return g.shapes[eid]
 }
 
@@ -60,83 +73,137 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 		return
 	}
 	sl := make([]Point, shape.Geometry.NumCoords())
+	dists := make([]float64, shape.Geometry.NumCoords())
 	for i, c := range shape.Geometry.Coords() {
 		sl[i] = Point{c[0], c[1]}
+		dists[i] = c[2]
 	}
+	g.AddShapeGeom(eid, sl, dists)
+}
+
+func (g *GeomCache) AddShapeGeom(eid string, line []Point, dists []float64) {
 	// Check if already exists, re-use slice to reduce mem
 	for _, s := range g.shapes {
-		if PointSliceEqual(sl, s) {
-			sl = s
+		if PointSliceEqual(line, s.Line) {
+			line = s.Line
+			dists = s.Dists
 		}
 	}
-	g.shapes[eid] = sl
+	// Create shapeInfo
+	si := ShapeInfo{
+		Line:   line,
+		Length: LengthHaversine(line),
+	}
+	// Validate ShapeDistTraveled values
+	if len(dists) > 0 && len(dists) == len(line) && dists[len(dists)-1]-dists[0] > 0 {
+		// Use supplied ShapeDistTraveled values
+		si.Dists = dists
+		si.DistLength = dists[len(dists)-1]
+	} else {
+		// Calculate our own ShapeDistTraveled values
+		si.Dists = make([]float64, len(line))
+		for i := 1; i < len(line); i++ {
+			si.Dists[i] = si.Dists[i-1] + DistanceHaversinePoint(line[i-1], line[i])
+		}
+		si.DistLength = dists[len(dists)-1]
+	}
+	g.shapes[eid] = si
 }
 
 // MakeShape returns geometry for the given stops.
-func (g *GeomCache) MakeShape(stopids ...string) (tl.Shape, error) {
-	shape := tl.Shape{}
-	shape.Generated = true
-	stopline := []float64{} // flatcoords
+func (g *GeomCache) MakeShape(stopids ...string) ([]Point, []float64, error) {
+	var line []Point
+	var dists []float64
 	for _, stopid := range stopids {
-		if newPoint, ok := g.stops[stopid]; !ok {
-			return shape, fmt.Errorf("stop '%s' not in cache", stopid)
+		newPoint, ok := g.stops[stopid]
+		if !ok {
+			return line, dists, fmt.Errorf("stop '%s' not in cache", stopid)
 		} else if newPoint.Lon == 0 || newPoint.Lat == 0 {
-			return shape, fmt.Errorf("stop '%s' has zero coordinate", stopid)
-		} else {
-			stopline = append(stopline, newPoint.Lon, newPoint.Lat, 0.0)
+			return line, dists, fmt.Errorf("stop '%s' has zero coordinate", stopid)
 		}
+		line = append(line, newPoint)
 	}
-	shape.Geometry = tt.NewLineStringFromFlatCoords(stopline)
-	return shape, nil
+	// Calculate our own ShapeDistTraveled values
+	dists = make([]float64, len(line))
+	for i := 1; i < len(line); i++ {
+		dists[i] = dists[i-1] + DistanceHaversinePoint(line[i-1], line[i])
+	}
+	return line, dists, nil
 }
 
 // InterpolateStopTimes uses the cached geometries to interpolate StopTimes.
 func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
-	// Check cache; make stopline
-	stoptimes := trip.StopTimes
-	if len(stoptimes) == 0 {
-		return stoptimes, nil
+	sts := trip.StopTimes
+	if len(sts) == 0 {
+		return sts, nil
 	}
+
+	// Do we have valid ShapeDistTraveled values?
+	validDists := true
+	if sts[len(sts)-1].ShapeDistTraveled.Val-sts[0].ShapeDistTraveled.Val <= 0 {
+		validDists = false
+	}
+	for i := 0; i < len(sts)-1; i++ {
+		if sts[i+1].ShapeDistTraveled.Val < sts[i].ShapeDistTraveled.Val {
+			validDists = false
+		}
+	}
+
+	// We need to assign valid ShapeDistTraveled Values
+	if !validDists {
+		if err := g.setStopTimeDists(trip.ShapeID.Val, trip.StopPatternID, sts); err != nil {
+			return sts, err
+		}
+	}
+
+	// Interpolate stops using the given or assigned ShapeDistTraveled values
+	return InterpolateStopTimes(sts)
+}
+
+func (g *GeomCache) setStopTimeDists(shapeId string, patternId int, sts []tl.StopTime) error {
 	// Check cache
-	shapeid := trip.ShapeID.Val
-	k := fmt.Sprintf("%s-%d", shapeid, trip.StopPatternID)
-	shapeline := g.shapes[shapeid]
-	positions, ok := g.positions[k]
+	length := 0.0
+	stopPositionsKey := fmt.Sprintf("%s-%d", shapeId, patternId)
+	stopPositions, ok := g.stopPositions[stopPositionsKey]
 	if !ok {
 		// Generate the stop-to-stop geometry as fallback
-		stopline := make([]Point, len(stoptimes))
-		for i := 0; i < len(stoptimes); i++ {
-			point, ok := g.stops[stoptimes[i].StopID]
+		stopLine := make([]Point, len(sts))
+		for i := 0; i < len(sts); i++ {
+			point, ok := g.stops[sts[i].StopID]
 			if !ok {
-				return stoptimes, fmt.Errorf("stop '%s' not in cache", stoptimes[i].StopID)
+				return fmt.Errorf("stop '%s' not in cache", sts[i].StopID)
 			}
-			stopline[i] = point
+			stopLine[i] = point
 		}
+
+		var shapeLine []Point
+		if si, ok := g.shapes[shapeId]; ok {
+			shapeLine = si.Line
+			length = si.DistLength
+		} else {
+			shapeLine = stopLine
+			length = LengthHaversine(stopLine)
+		}
+
 		// Calculate positions
-		positions = LinePositions(shapeline, stopline)
-		length := LengthHaversine(shapeline)
+		stopPositions = LinePositions(shapeLine, stopLine)
+
 		// Check for simple or fallback positions
-		if !arePositionsSorted(positions) || len(shapeline) == 0 {
-			// log.Debugf("positions %f not increasing, falling back to stop positions; shapeline %f stopline %f", positions, shapeline, stopline)
-			positions = LinePositionsFallback(stopline)
-			if !arePositionsSorted(positions) {
-				return stoptimes, errors.New("fallback positions not sorted")
+		if !arePositionsSorted(stopPositions) || len(stopLine) == 0 {
+			// log.Debugf("positions %f not increasing, falling back to stop positions; shapeline %f stopLine %f", positions, shapeline, stopLine)
+			stopPositions = LinePositionsFallback(stopLine)
+			if !arePositionsSorted(stopPositions) {
+				return errors.New("fallback positions not sorted")
 			}
-			length = LengthHaversine(stopline)
 		}
-		g.positions[k] = positions
-		g.lengths[k] = length
+		g.stopPositions[stopPositionsKey] = stopPositions
 	}
-	length, ok := g.lengths[k]
-	if !ok {
-		return stoptimes, errors.New("could not get length from cache")
+	if len(sts) != len(stopPositions) {
+		return errors.New("unequal stoptimes and positions")
 	}
-	if len(stoptimes) != len(positions) {
-		return stoptimes, errors.New("unequal stoptimes and positions")
+	// Set ShapeDistTraveled values
+	for i := 0; i < len(sts); i++ {
+		sts[i].ShapeDistTraveled = tt.NewFloat(stopPositions[i] * length)
 	}
-	// Set ShapeDistTraveled
-	for i := 0; i < len(stoptimes); i++ {
-		stoptimes[i].ShapeDistTraveled = tt.NewFloat(positions[i] * length)
-	}
-	return InterpolateStopTimes(stoptimes)
+	return nil
 }

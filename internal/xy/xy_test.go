@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
@@ -67,14 +68,6 @@ func unflattenCoordinates(coords []float64) []Point {
 		ret = append(ret, Point{coords[i], coords[i+1]})
 	}
 	return ret
-}
-
-func makeTestLine(gj string) ([]Point, error) {
-	var line geom.T
-	if err := geojson.Unmarshal([]byte(gj), &line); err != nil {
-		return nil, err
-	}
-	return unflattenCoordinates(line.FlatCoords()), nil
 }
 
 func TestDistance2d(t *testing.T) {
@@ -218,6 +211,108 @@ func TestContains(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if PointSliceContains(tc.a, tc.b) != tc.expect {
 				t.Errorf("expected %t", tc.expect)
+			}
+		})
+	}
+}
+
+func TestLineSliceShapeDistTraveled(t *testing.T) {
+	simpleLine := []Point{{0, 0}, {1, 0}, {2, 0}, {3, 0}}
+	simpleDist := []float64{0, 1, 2, 3}
+	diagLine := []Point{{0, 0}, {2, 1}, {4, 2}, {6, 3}}
+	diagDist := []float64{0, 2.23606797749979, 4.47213595499958, 6.708203932499369}
+	testcases := []struct {
+		name   string
+		line   []Point
+		dists  []float64
+		a      float64
+		b      float64
+		expect []Point
+	}{
+		{
+			name:   "basic",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.5,
+			b:      2.5,
+			expect: []Point{{0.5, 0}, {1, 0}, {2, 0}, {2.5, 0}},
+		},
+		{
+			name:   "oob 1",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      -1.0,
+			b:      -0.5,
+			expect: nil,
+		},
+		{
+			name:   "oob 2",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      5.0,
+			b:      6.0,
+			expect: nil,
+		},
+		{
+			name:   "oob 3",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      -0.5,
+			b:      2.0,
+			expect: nil,
+		},
+		{
+			name:   "oob 4",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.5,
+			b:      3.5,
+			expect: nil,
+		},
+		{
+			name:   "eq 1",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.0,
+			b:      2.5,
+			expect: []Point{{0, 0}, {1, 0}, {2, 0}, {2.5, 0}},
+		},
+		{
+			name:   "eq 0",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.0,
+			b:      3.0,
+			expect: []Point{{0, 0}, {1, 0}, {2, 0}, {3.0, 0}},
+		},
+		{
+			name:   "eq 2",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.5,
+			b:      3.0,
+			expect: []Point{{0.5, 0}, {1, 0}, {2, 0}, {3.0, 0}},
+		},
+		{
+			name:   "diag 1",
+			line:   diagLine,
+			dists:  diagDist,
+			a:      1,
+			b:      4,
+			expect: []Point{{0.8944271909999159, 0.4472135954999579}, {Lon: 2, Lat: 1}, {3.5777087639996634, 1.7888543819998317}},
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			ret := LineSliceShapeDistTraveled(tc.line, tc.dists, tc.a, tc.b)
+			// assert.Equal(t, tc.expect, ret)
+			if len(ret) != len(tc.expect) {
+				t.Error("expected len", len(tc.expect), "got len", len(ret))
+			} else {
+				for i := 0; i < len(tc.expect); i++ {
+					assert.InDelta(t, 0, ret[i].Lon-tc.expect[i].Lon, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lon, tc.expect[i].Lon)
+					assert.InDelta(t, 0, ret[i].Lat-tc.expect[i].Lat, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lat, tc.expect[i].Lat)
+				}
 			}
 		})
 	}
