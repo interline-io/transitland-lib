@@ -1189,11 +1189,18 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []tl.StopTime
 	for _, st := range stoptimes {
 		stopids = append(stopids, st.StopID)
 	}
-	shape, err := copier.geomCache.MakeShape(stopids...)
+	line, dists, err := copier.geomCache.MakeShape(stopids...)
 	if err != nil {
 		return "", err
 	}
+	var flatCoords []float64
+	for i := 0; i < len(line); i++ {
+		flatCoords = append(flatCoords, line[i].Lon, line[i].Lat, dists[i])
+	}
+	shape := tl.Shape{}
+	shape.Generated = true
 	shape.ShapeID = shapeID
+	shape.Geometry = tt.NewLineStringFromFlatCoords(flatCoords)
 	if entErr, writeErr := copier.CopyEntity(&shape); writeErr != nil {
 		return "", writeErr
 	} else if entErr == nil {

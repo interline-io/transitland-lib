@@ -48,7 +48,7 @@ func BenchmarkLinePositions(b *testing.B) {
 	}
 	var r []float64
 	for n := 0; n < b.N; n++ {
-		r = LinePositions(lc, pp)
+		r = LineRelativePositions(lc, pp)
 	}
 	_ = r
 }
@@ -64,7 +64,7 @@ func BenchmarkLinePositionsFallback(b *testing.B) {
 	}
 	var r []float64
 	for n := 0; n < b.N; n++ {
-		r = LinePositionsFallback(pp)
+		r = LineRelativePositionsFallback(pp)
 	}
 	_ = r
 }

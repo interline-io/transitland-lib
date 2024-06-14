@@ -1,9 +1,11 @@
 package xy
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
@@ -39,7 +41,27 @@ var testPositions = []struct {
 	Positions         []float64
 	FallbackPositions []float64
 }{
-	{`{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[-122.2665023803711,37.87431138542283],[-122.26581573486328,37.853712122567565],[-122.26444244384766,37.83961457275219],[-122.26821899414061,37.82551432799189],[-122.26341247558594,37.819548028632376],[-122.27130889892578,37.803273851858656],[-122.26959228515624,37.80001858607365],[-122.24555969238281,37.788352705583755],[-122.22564697265625,37.77641361883315],[-122.19577789306639,37.75225820732335],[-122.16487884521483,37.72673718477409]]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.27062225341797,37.8724143256462]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.26289749145506,37.84354589127591]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.26427078247069,37.81507298760665]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.27027893066405,37.80544394934271]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.2258186340332,37.77695634643178]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.19697952270508,37.75347973770911]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.16487884521483,37.72782336496339]}}]}`, []float64{0.008487181237797688, 0.1496538990811318, 0.2964636787237469, 0.3509258016789892, 0.6191751524042424, 0.7983912644738984, 0.9966620810270027}, []float64{0, 0.14880713711146062, 0.2907521492606507, 0.3472678477073867, 0.6102041614615478, 0.7953741712658748, 1.0}},
+	{
+		`{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[-122.2665023803711,37.87431138542283],[-122.26581573486328,37.853712122567565],[-122.26444244384766,37.83961457275219],[-122.26821899414061,37.82551432799189],[-122.26341247558594,37.819548028632376],[-122.27130889892578,37.803273851858656],[-122.26959228515624,37.80001858607365],[-122.24555969238281,37.788352705583755],[-122.22564697265625,37.77641361883315],[-122.19577789306639,37.75225820732335],[-122.16487884521483,37.72673718477409]]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.27062225341797,37.8724143256462]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.26289749145506,37.84354589127591]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.26427078247069,37.81507298760665]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.27027893066405,37.80544394934271]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.2258186340332,37.77695634643178]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.19697952270508,37.75347973770911]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-122.16487884521483,37.72782336496339]}}]}`,
+		[]float64{
+			0.009336,
+			0.164540,
+			0.321070,
+			0.378808,
+			0.631119,
+			0.804450,
+			0.996762,
+		},
+		[]float64{
+			0,
+			0.161424,
+			0.317310,
+			0.376043,
+			0.623508,
+			0.802542,
+			1.0,
+		},
+	},
 }
 
 func decodeGeojson(data string) (*geom.LineString, []*geom.Point, error) {
@@ -69,14 +91,6 @@ func unflattenCoordinates(coords []float64) []Point {
 	return ret
 }
 
-func makeTestLine(gj string) ([]Point, error) {
-	var line geom.T
-	if err := geojson.Unmarshal([]byte(gj), &line); err != nil {
-		return nil, err
-	}
-	return unflattenCoordinates(line.FlatCoords()), nil
-}
-
 func TestDistance2d(t *testing.T) {
 	for _, dp := range testDistancePoints {
 		d := Distance2d(dp.orig, dp.dest)
@@ -91,7 +105,7 @@ func TestDistanceHaversine(t *testing.T) {
 	}
 }
 
-func TestLinePositions(t *testing.T) {
+func TestLineRelativePositions(t *testing.T) {
 	for _, dp := range testPositions {
 		line, points, err := decodeGeojson(dp.Geojson)
 		if err != nil {
@@ -102,7 +116,7 @@ func TestLinePositions(t *testing.T) {
 		for _, p := range points {
 			pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
 		}
-		pos := LinePositions(lc, pp)
+		pos := LineRelativePositions(lc, pp)
 		if len(pos) != len(dp.Positions) {
 			t.Errorf("expect %d positions, got %d", len(dp.Positions), len(pos))
 			continue
@@ -113,7 +127,7 @@ func TestLinePositions(t *testing.T) {
 	}
 }
 
-func TestLinePositionsFallback(t *testing.T) {
+func TestLineRelativePositionsFallback(t *testing.T) {
 	for _, dp := range testPositions {
 		_, points, err := decodeGeojson(dp.Geojson)
 		if err != nil {
@@ -123,7 +137,7 @@ func TestLinePositionsFallback(t *testing.T) {
 		for _, p := range points {
 			pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
 		}
-		pos := LinePositionsFallback(pp)
+		pos := LineRelativePositionsFallback(pp)
 		if len(pos) != len(dp.FallbackPositions) {
 			t.Errorf("expect %d positions, got %d", len(dp.FallbackPositions), len(pos))
 			continue
@@ -218,6 +232,141 @@ func TestContains(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if PointSliceContains(tc.a, tc.b) != tc.expect {
 				t.Errorf("expected %t", tc.expect)
+			}
+		})
+	}
+}
+
+func TestLineSliceShapeDistTraveled(t *testing.T) {
+	simpleLine := []Point{{0, 0}, {1, 0}, {2, 0}, {3, 0}}
+	simpleDist := []float64{0, 1, 2, 3}
+	diagLine := []Point{{0, 0}, {2, 1}, {4, 2}, {6, 3}}
+	diagDist := []float64{0, 2.23606797749979, 4.47213595499958, 6.708203932499369}
+	type lineTestCase struct {
+		name        string
+		line        []Point
+		extraPoints []Point
+		dists       []float64
+		a           float64
+		b           float64
+		expect      []Point
+	}
+	testcases := []lineTestCase{
+		{
+			name:   "basic",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.5,
+			b:      2.5,
+			expect: []Point{{0.5, 0}, {1, 0}, {2, 0}, {2.5, 0}},
+		},
+		{
+			name:   "oob 1",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      -1.0,
+			b:      -0.5,
+			expect: nil,
+		},
+		{
+			name:   "oob 2",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      5.0,
+			b:      6.0,
+			expect: nil,
+		},
+		{
+			name:   "oob 3",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      -0.5,
+			b:      2.0,
+			expect: nil,
+		},
+		{
+			name:   "oob 4",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.5,
+			b:      3.5,
+			expect: nil,
+		},
+		{
+			name:   "eq 1",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.0,
+			b:      2.5,
+			expect: []Point{{0, 0}, {1, 0}, {2, 0}, {2.5, 0}},
+		},
+		{
+			name:   "eq 0",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.0,
+			b:      3.0,
+			expect: []Point{{0, 0}, {1, 0}, {2, 0}, {3.0, 0}},
+		},
+		{
+			name:   "eq 2",
+			line:   simpleLine,
+			dists:  simpleDist,
+			a:      0.5,
+			b:      3.0,
+			expect: []Point{{0.5, 0}, {1, 0}, {2, 0}, {3.0, 0}},
+		},
+		{
+			name:   "diag 1",
+			line:   diagLine,
+			dists:  diagDist,
+			a:      1,
+			b:      4,
+			expect: []Point{{0.8944271909999159, 0.4472135954999579}, {Lon: 2, Lat: 1}, {3.5777087639996634, 1.7888543819998317}},
+		},
+	}
+
+	// for _, dp := range testPositions {
+	// 	line, dcPoints, err := decodeGeojson(dp.Geojson)
+	// 	if err != nil {
+	// 		t.Fatal(err)
+	// 	}
+	// 	lc := unflattenCoordinates(line.FlatCoords())
+	// 	lcDists := []float64{0.0}
+	// 	for i := 1; i < len(lc); i++ {
+	// 		d := DistanceHaversinePoint(lc[i-1], lc[i])
+	// 		lcDists = append(lcDists, lcDists[i-1]+d)
+	// 	}
+	// 	var points []Point
+	// 	for _, dcPoint := range dcPoints {
+	// 		points = append(points, Point{Lon: dcPoint.Coords()[0], Lat: dcPoint.Coords()[1]})
+	// 	}
+	// 	positions := LineRelativePositions(lc, points)
+	// 	lcLength := lcDists[len(lcDists)-1]
+	// 	for i := 1; i < len(dp.Positions); i++ {
+	// 		testcases = append(testcases, lineTestCase{
+	// 			name:        fmt.Sprintf("testPosition-%d", i),
+	// 			line:        lc,
+	// 			dists:       lcDists,
+	// 			extraPoints: []Point{points[i-1], points[i]},
+	// 			a:           positions[i-1] * lcLength,
+	// 			b:           positions[i] * lcLength,
+	// 		})
+	// 	}
+	// }
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			ret := LineBetweenPositions(tc.line, tc.dists, tc.a, tc.b, tc.extraPoints...)
+			fmt.Printf("\nret: %#v\n", ret)
+			// assert.Equal(t, tc.expect, ret)
+			if len(ret) != len(tc.expect) {
+				t.Error("expected len", len(tc.expect), "got len", len(ret))
+			} else {
+				for i := 0; i < len(tc.expect); i++ {
+					assert.InDelta(t, 0, ret[i].Lon-tc.expect[i].Lon, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lon, tc.expect[i].Lon)
+					assert.InDelta(t, 0, ret[i].Lat-tc.expect[i].Lat, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lat, tc.expect[i].Lat)
+				}
 			}
 		})
 	}
