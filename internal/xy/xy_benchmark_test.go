@@ -11,7 +11,7 @@ func BenchmarkSegmentClosestPoint(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	q := unflattenCoordinates(l.FlatCoords())
+	q := unflattenCoordinates(l.Stride(), l.FlatCoords())
 	// get the midpoint
 	sa := q[0]
 	sb := q[1]
@@ -26,7 +26,7 @@ func BenchmarkLineClosestPoint(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	q := unflattenCoordinates(l.FlatCoords())
+	q := unflattenCoordinates(l.Stride(), l.FlatCoords())
 	// get the midpoint of the two middle points
 	sa := q[len(q)/2]
 	sb := q[len(q)/2+1]
@@ -41,7 +41,7 @@ func BenchmarkLinePositions(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	lc := unflattenCoordinates(line.FlatCoords())
+	lc := unflattenCoordinates(line.Stride(), line.FlatCoords())
 	pp := []Point{}
 	for _, p := range points {
 		pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
@@ -92,7 +92,7 @@ func BenchmarkLength2d(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	line := unflattenCoordinates(l.FlatCoords())
+	line := unflattenCoordinates(l.Stride(), l.FlatCoords())
 	var r float64
 	for n := 0; n < b.N; n++ {
 		r = Length2d(line)
@@ -105,7 +105,7 @@ func BenchmarkLengthHaversine(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	line := unflattenCoordinates(l.FlatCoords())
+	line := unflattenCoordinates(l.Stride(), l.FlatCoords())
 	var r float64
 	for n := 0; n < b.N; n++ {
 		r = LengthHaversine(line)

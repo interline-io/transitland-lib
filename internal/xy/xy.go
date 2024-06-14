@@ -1,11 +1,11 @@
 package xy
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
 
+	"github.com/interline-io/log"
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
@@ -176,9 +176,9 @@ func LineBetweenPositions(line []Point, dists []float64, startDist float64, endD
 	var ret []Point
 	for i := 0; i < len(dists)-1; i++ {
 		if startDist >= dists[i] && startDist <= dists[i+1] {
-			fmt.Println("idist:", dists[i], dists[i+1], "pt:", line[i], line[i+1], "startDist:", startDist)
+			// fmt.Println("idist:", dists[i], dists[i+1], "pt:", line[i], line[i+1], "startDist:", startDist)
 			for j := i; j < len(dists)-1; j++ {
-				fmt.Println("\tjdist:", dists[j], dists[j+1], "pt:", line[j], line[j+1], "endDist:", endDist)
+				// fmt.Println("\tjdist:", dists[j], dists[j+1], "pt:", line[j], line[j+1], "endDist:", endDist)
 				if endDist >= dists[j] && endDist <= dists[j+1] {
 					spt := segPos(line[i], line[i+1], dists[i], dists[i+1], startDist)
 					ept := segPos(line[j], line[j+1], dists[j], dists[j+1], endDist)
@@ -186,77 +186,71 @@ func LineBetweenPositions(line []Point, dists []float64, startDist float64, endD
 					ret = append(ret, line[i+1:j+1]...)
 					ret = append(ret, ept)
 
-					var fs []*geojson.Feature
-					var baseLine []float64
-					for _, pt := range ret {
-						baseLine = append(baseLine, pt.Lon, pt.Lat)
-					}
-					var rawLine []float64
-					for _, pt := range line {
-						rawLine = append(rawLine, pt.Lon, pt.Lat)
-					}
-					fs = append(fs, &geojson.Feature{
-						Properties: map[string]any{"name": "input line", "stroke": "#ff00ff", "stroke-width": 1, "stroke-opacity": 0.5},
-						Geometry:   geom.NewLineStringFlat(geom.XY, rawLine),
-					})
-					fs = append(fs, &geojson.Feature{
-						Properties: map[string]any{"name": "return line", "stroke": "#aaaaaa", "stroke-width": 20, "stroke-opacity": 0.5},
-						Geometry:   geom.NewLineStringFlat(geom.XY, baseLine),
-					})
-					for _, extraPt := range extraPts {
+					// DEBUG - Trace log a geojson feature with visualization of result
+					if len(extraPts) > 0 {
+						var fs []*geojson.Feature
+						var baseLine []float64
+						for _, pt := range ret {
+							baseLine = append(baseLine, pt.Lon, pt.Lat)
+						}
+						var rawLine []float64
+						for _, pt := range line {
+							rawLine = append(rawLine, pt.Lon, pt.Lat)
+						}
 						fs = append(fs, &geojson.Feature{
-							Properties: map[string]any{"name": "extraPt", "marker-color": "#999999"},
-							Geometry:   geom.NewPointFlat(geom.XY, []float64{extraPt.Lon, extraPt.Lat}),
+							Properties: map[string]any{"name": "input line", "stroke": "#ff00ff", "stroke-width": 1, "stroke-opacity": 0.5},
+							Geometry:   geom.NewLineStringFlat(geom.XY, rawLine),
 						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "return line", "stroke": "#aaaaaa", "stroke-width": 20, "stroke-opacity": 0.5},
+							Geometry:   geom.NewLineStringFlat(geom.XY, baseLine),
+						})
+						for _, extraPt := range extraPts {
+							fs = append(fs, &geojson.Feature{
+								Properties: map[string]any{"name": "extraPt", "marker-color": "#999999"},
+								Geometry:   geom.NewPointFlat(geom.XY, []float64{extraPt.Lon, extraPt.Lat}),
+							})
+						}
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "lineSeg1", "stroke": "#00ffff", "stroke-width": 20, "stroke-opacity": 0.2},
+							Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+								line[i].Lon, line[i].Lat,
+								line[i+1].Lon, line[i+1].Lat,
+							}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "lineSeg2", "stroke": "#ff00ff", "stroke-width": 20, "stroke-opacity": 0.2},
+							Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+								line[j].Lon, line[j].Lat,
+								line[j+1].Lon, line[j+1].Lat,
+							}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "spt", "marker-color": "#00ff00"},
+							Geometry:   geom.NewPointFlat(geom.XY, []float64{spt.Lon, spt.Lat}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "sptSeg", "stroke": "#00ff00"},
+							Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+								spt.Lon, spt.Lat,
+								line[i+1].Lon, line[i+1].Lat,
+							}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "ept", "marker-color": "#ff0000"},
+							Geometry:   geom.NewPointFlat(geom.XY, []float64{ept.Lon, ept.Lat}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "eptSeg", "stroke": "#ff0000"},
+							Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+								line[j].Lon, line[j].Lat,
+								ept.Lon, ept.Lat,
+							}),
+						})
+						fc := geojson.FeatureCollection{Features: fs}
+						d, _ := fc.MarshalJSON()
+						log.Trace().Str("geojson", string(d)).Msg("LineBetweenPositions")
 					}
-					fs = append(fs, &geojson.Feature{
-						Properties: map[string]any{"name": "lineSeg1", "stroke": "#00ffff", "stroke-width": 20, "stroke-opacity": 0.2},
-						Geometry: geom.NewLineStringFlat(geom.XY, []float64{
-							line[i].Lon, line[i].Lat,
-							line[i+1].Lon, line[i+1].Lat,
-						}),
-					})
-					fs = append(fs, &geojson.Feature{
-						Properties: map[string]any{"name": "lineSeg2", "stroke": "#ff00ff", "stroke-width": 20, "stroke-opacity": 0.2},
-						Geometry: geom.NewLineStringFlat(geom.XY, []float64{
-							line[j].Lon, line[j].Lat,
-							line[j+1].Lon, line[j+1].Lat,
-						}),
-					})
-					fs = append(fs, &geojson.Feature{
-						Properties: map[string]any{"name": "spt", "marker-color": "#00ff00"},
-						Geometry:   geom.NewPointFlat(geom.XY, []float64{spt.Lon, spt.Lat}),
-					})
-					fs = append(fs, &geojson.Feature{
-						Properties: map[string]any{"name": "sptSeg", "stroke": "#00ff00"},
-						Geometry: geom.NewLineStringFlat(geom.XY, []float64{
-							spt.Lon, spt.Lat,
-							line[i+1].Lon, line[i+1].Lat,
-						}),
-					})
-					fs = append(fs, &geojson.Feature{
-						Properties: map[string]any{"name": "ept", "marker-color": "#ff0000"},
-						Geometry:   geom.NewPointFlat(geom.XY, []float64{ept.Lon, ept.Lat}),
-					})
-					fs = append(fs, &geojson.Feature{
-						Properties: map[string]any{"name": "eptSeg", "stroke": "#ff0000"},
-						Geometry: geom.NewLineStringFlat(geom.XY, []float64{
-							line[j].Lon, line[j].Lat,
-							ept.Lon, ept.Lat,
-						}),
-					})
-					// var fsLine []float64
-					// for _, p := range line[i:j] {
-					// 	fsLine = append(fsLine, p.Lon, p.Lat)
-					// }
-					// fs = append(fs, &geojson.Feature{
-					// 	Properties: map[string]any{"name": "fsLine", "stroke": "#0000ff"},
-					// 	Geometry:   geom.NewLineStringFlat(geom.XY, fsLine),
-					// })
-					fc := geojson.FeatureCollection{Features: fs}
-					d, _ := fc.MarshalJSON()
-					fmt.Println(string(d))
-					// fmt.Println("ret:", ret)
 					return ret
 				}
 			}
