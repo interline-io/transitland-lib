@@ -26,7 +26,7 @@ type Uploader interface {
 }
 
 type Presigner interface {
-	CreateSignedUrl(context.Context, string, tl.Secret) (string, error)
+	CreateSignedUrl(context.Context, string, string, tl.Secret) (string, error)
 }
 
 type Request struct {

@@ -67,7 +67,7 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		signedUrl, err := downloader.CreateSignedUrl(context.Background(), azKey, tl.Secret{})
+		signedUrl, err := downloader.CreateSignedUrl(context.Background(), azKey, "download.zip", tl.Secret{})
 		if err != nil {
 			t.Fatal(err)
 		}
