@@ -84,9 +84,10 @@ func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 	if err != nil {
 		return "", err
 	}
+
 	// Create Blob Signature Values with desired permissions and sign with user delegation credential
 	sasQueryParams, err := sas.BlobSignatureValues{
-		ContentDisposition: contentDisposition,
+		ContentDisposition: fmt.Sprintf(`attachment; filename="%s"`, url.PathEscape(contentDisposition)),
 		Protocol:           sas.ProtocolHTTPS,
 		StartTime:          now,
 		ExpiryTime:         expiry,
