@@ -130,7 +130,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		if err != nil {
 			return err
 		}
-		required := []string{"agency.txt", "routes.txt", "stops.txt", "trips.txt", "stop_times.txt"}
+		required := []string{"agency.txt", "routes.txt", "stops.txt"}
 		for _, fn := range required {
 			if c := fviresult.EntityCount[fn]; c == 0 {
 				return fmt.Errorf("failed to import any entities from required file '%s'", fn)
