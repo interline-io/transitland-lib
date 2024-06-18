@@ -127,38 +127,47 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
 		var err error
 		fviresult, err = ImportFeedVersion(atx, fv, opts)
+
+		// Bail if fatal error
 		if err != nil {
 			return err
 		}
+
+		// Update FVI with results, inside tx
+		fviresult.ID = fvi.ID
+		fviresult.Success = true
+		fviresult.InProgress = false
+		fviresult.CreatedAt = fvi.CreatedAt
+		fviresult.FeedVersionID = fv.ID
+		fviresult.ImportLevel = 4
+		fviresult.ExceptionLog = ""
+
+		// Check for required files, set non-fatal error
 		required := []string{"agency.txt", "routes.txt", "stops.txt", "trips.txt", "stop_times.txt"}
 		for _, fn := range required {
 			if c := fviresult.EntityCount[fn]; c == 0 {
-				return fmt.Errorf("failed to import any entities from required file '%s'", fn)
+				fviresult.Success = false
+				fvi.ExceptionLog = fmt.Errorf("failed to import any entities from required file '%s'", fn).Error()
 			}
 		}
-		// Update route_stops, agency_geometries, etc...
-		log.Infof("Finalizing import")
-		if opts.Activate {
+
+		// Activate if successful
+		if fvi.Success && opts.Activate {
 			log.Infof("Activating feed version")
 			if err := ActivateFeedVersion(atx, fv.FeedID, fv.ID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
 		}
-		// Update FVI with results, inside tx
-		fviresult.ID = fvi.ID
-		fviresult.CreatedAt = fvi.CreatedAt
-		fviresult.FeedVersionID = fv.ID
-		fviresult.ImportLevel = 4
-		fviresult.Success = true
-		fviresult.InProgress = false
-		fviresult.ExceptionLog = ""
+
+		// Save
 		if err := atx.Update(&fviresult); err != nil {
-			// Serious error
+			// Fatal error
 			log.Errorf("Error saving FeedVersionImport: %s", err.Error())
 			return err
 		}
-		return err
+		return nil
 	})
+
 	// FVI error handling has to be outside of above tx, which will have aborted
 	if errImport != nil {
 		fvi.Success = false
