@@ -208,7 +208,6 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	cp.AddExtension(builders.NewRouteStopBuilder())
 	cp.AddExtension(builders.NewRouteHeadwayBuilder())
 	cp.AddExtension(builders.NewConvexHullBuilder())
-	cp.AddExtension(builders.NewOnestopIDBuilder())
 	cp.AddExtension(builders.NewAgencyPlaceBuilder())
 	fvi.InProgress = false
 
