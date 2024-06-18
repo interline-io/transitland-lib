@@ -1,6 +1,7 @@
 package xy
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -132,6 +133,63 @@ func LineClosestPoint(line []Point, point Point) (Point, int, float64) {
 	return minp, minidx, position / length
 }
 
+func pointsToFlatCoords(a []Point) []float64 {
+	var ret []float64
+	for _, pt := range a {
+		ret = append(ret, pt.Lon, pt.Lat)
+	}
+	return ret
+}
+
+func LineSimilarity(a []Point, b []Point) (float64, error) {
+	var features []*geojson.Feature
+	distances := make([]float64, len(a))
+	for i, p := range a {
+		minpt, _, _ := LineClosestPoint(b, p)
+		d := DistanceHaversinePoint(p, minpt)
+		distances[i] = d
+		fmt.Println("p:", p, "projected:", minpt, "d:", d)
+		features = append(features, &geojson.Feature{
+			Properties: map[string]any{"name": "connect", "stroke": "#0000ff", "stroke-width": 1},
+			Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+				p.Lon, p.Lat,
+				minpt.Lon, minpt.Lat,
+			}),
+		})
+	}
+	features = append(features, &geojson.Feature{
+		Properties: map[string]any{"name": "a", "stroke": "#00ff00", "stroke-width": 1},
+		Geometry:   geom.NewLineStringFlat(geom.XY, pointsToFlatCoords(a)),
+	})
+	features = append(features, &geojson.Feature{
+		Properties: map[string]any{"name": "b", "stroke": "#ff0000", "stroke-width": 1},
+		Geometry:   geom.NewLineStringFlat(geom.XY, pointsToFlatCoords(b)),
+	})
+
+	fc := geojson.FeatureCollection{Features: features}
+	d, _ := fc.MarshalJSON()
+	fmt.Println(string(d))
+
+	// Calculate RMSD like value
+	distanceSum := 0.0
+	for _, v := range distances {
+		distanceSum += v
+	}
+	rmsd := math.Sqrt((1 / float64(len(distances)) * distanceSum))
+	fmt.Println("rmsd", rmsd)
+	return rmsd, nil
+}
+
+// LineRelativePositions finds the relative position of the closest point along the line for each point.
+func LineRelativePositions(line []Point, points []Point) []float64 {
+	positions := make([]float64, len(points))
+	for i, p := range points {
+		_, _, d := LineClosestPoint(line, p)
+		positions[i] = d
+	}
+	return positions
+}
+
 // LineRelativePositionsFallback returns the relative position along the line for each point.
 func LineRelativePositionsFallback(line []Point) []float64 {
 	ret := make([]float64, len(line))
@@ -143,16 +201,6 @@ func LineRelativePositionsFallback(line []Point) []float64 {
 		ret[i] = position / length
 	}
 	return ret
-}
-
-// LineRelativePositions finds the relative position of the closest point along the line for each point.
-func LineRelativePositions(line []Point, points []Point) []float64 {
-	positions := make([]float64, len(points))
-	for i, p := range points {
-		_, _, d := LineClosestPoint(line, p)
-		positions[i] = d
-	}
-	return positions
 }
 
 func LineBetweenPoints(line []Point, startPoint Point, endPoint Point) []Point {
