@@ -152,7 +152,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		}
 
 		// Activate if successful
-		if fvi.Success && opts.Activate {
+		if fviresult.Success && opts.Activate {
 			log.Infof("Activating feed version")
 			if err := ActivateFeedVersion(atx, fv.FeedID, fv.ID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
