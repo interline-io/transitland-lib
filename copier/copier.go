@@ -12,7 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/filters"
-	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
@@ -67,7 +67,7 @@ type errorWithContext interface {
 }
 
 type canShareGeomCache interface {
-	SetGeomCache(*xy.GeomCache)
+	SetGeomCache(*geomcache.GeomCache)
 }
 
 type hasLine interface {
@@ -147,7 +147,7 @@ type Copier struct {
 	afterWriters      []AfterWrite
 	expandFilters     []ExpandFilter
 	// book keeping
-	geomCache *xy.GeomCache
+	geomCache *geomcache.GeomCache
 	result    *Result
 	EntityMap *tl.EntityMap
 }
@@ -205,7 +205,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	// Result
 	result := NewResult(opts.ErrorLimit)
 	copier.result = result
-	copier.geomCache = xy.NewGeomCache()
+	copier.geomCache = geomcache.NewGeomCache()
 	copier.ErrorHandler = opts.ErrorHandler
 	if copier.ErrorHandler == nil {
 		copier.ErrorHandler = result

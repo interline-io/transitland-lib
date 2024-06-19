@@ -3,8 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/mmcloughlin/geohash"
 )
 
@@ -66,7 +66,7 @@ func (e *StopTooCloseCheck) Validate(ent tl.Entity) []error {
 	for _, neighbor := range neighbors {
 		if hits, ok := e.geoms[neighbor]; ok {
 			for _, hit := range hits {
-				d := xy.DistanceHaversine(g.lon, g.lat, hit.lon, hit.lat)
+				d := tlxy.DistanceHaversine(g.lon, g.lat, hit.lon, hit.lat)
 				if d < e.maxdist {
 					errs = append(errs, &StopTooCloseError{
 						StopID:      v.StopID,
