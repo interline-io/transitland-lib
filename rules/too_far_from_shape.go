@@ -3,8 +3,9 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlxy"
 )
 
 // StopTooFarFromShapeError reports when a stop is too far from a shape.
@@ -23,12 +24,12 @@ func (e *StopTooFarFromShapeError) Error() string {
 // StopTooFarFromShapeCheck checks for StopTooFarFromShapeErrors.
 type StopTooFarFromShapeCheck struct {
 	maxdist   float64
-	geomCache *xy.GeomCache // share stop/shape geometry cache with copier
+	geomCache *geomcache.GeomCache // share stop/shape geometry cache with copier
 	checked   map[string]map[string]bool
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (e *StopTooFarFromShapeCheck) SetGeomCache(g *xy.GeomCache) {
+func (e *StopTooFarFromShapeCheck) SetGeomCache(g *geomcache.GeomCache) {
 	e.geomCache = g
 }
 
@@ -62,8 +63,8 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tl.Entity) []error {
 		e.checked[shapeid][st.StopID] = true
 		g := e.geomCache.GetStop(st.StopID)
 		sgeom := e.geomCache.GetShape(shapeid)
-		nearest, _ := xy.LineClosestPoint(sgeom, g)
-		distance := xy.DistanceHaversine(g.Lon, g.Lat, nearest.Lon, nearest.Lat)
+		nearest, _ := tlxy.LineClosestPoint(sgeom, g)
+		distance := tlxy.DistanceHaversine(g.Lon, g.Lat, nearest.Lon, nearest.Lat)
 		if distance > e.maxdist {
 			errs = append(errs, &StopTooFarFromShapeError{
 				TripID:   v.TripID,

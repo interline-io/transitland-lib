@@ -1,4 +1,4 @@
-package xy
+package geomcache
 
 import (
 	"errors"
@@ -6,7 +6,10 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tlxy"
 )
+
+type Point = tlxy.Point
 
 func arePositionsSorted(a []float64) bool {
 	if len(a) < 2 {
@@ -65,7 +68,7 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 	}
 	// Check if already exists, re-use slice to reduce mem
 	for _, s := range g.shapes {
-		if PointSliceEqual(sl, s) {
+		if tlxy.PointSliceEqual(sl, s) {
 			sl = s
 		}
 	}
@@ -113,16 +116,16 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 			stopline[i] = point
 		}
 		// Calculate positions
-		positions = LinePositions(shapeline, stopline)
-		length := LengthHaversine(shapeline)
+		positions = tlxy.LinePositions(shapeline, stopline)
+		length := tlxy.LengthHaversine(shapeline)
 		// Check for simple or fallback positions
 		if !arePositionsSorted(positions) || len(shapeline) == 0 {
 			// log.Debugf("positions %f not increasing, falling back to stop positions; shapeline %f stopline %f", positions, shapeline, stopline)
-			positions = LinePositionsFallback(stopline)
+			positions = tlxy.LinePositionsFallback(stopline)
 			if !arePositionsSorted(positions) {
 				return stoptimes, errors.New("fallback positions not sorted")
 			}
-			length = LengthHaversine(stopline)
+			length = tlxy.LengthHaversine(stopline)
 		}
 		g.positions[k] = positions
 		g.lengths[k] = length
