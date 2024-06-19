@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tlxy"
 )
 
 // Stop stops.txt
@@ -43,6 +44,14 @@ func (ent *Stop) Coordinates() [2]float64 {
 	ret[0] = c[0]
 	ret[1] = c[1]
 	return ret
+}
+
+func (ent *Stop) Point() tlxy.Point {
+	c := ent.Geometry.FlatCoords()
+	if len(c) != 2 {
+		return tlxy.Point{}
+	}
+	return tlxy.Point{Lon: c[0], Lat: c[1]}
 }
 
 // EntityID returns the ID or StopID.

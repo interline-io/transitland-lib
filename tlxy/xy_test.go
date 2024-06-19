@@ -1,9 +1,11 @@
 package tlxy
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
@@ -69,14 +71,6 @@ func unflattenCoordinates(coords []float64) []Point {
 	return ret
 }
 
-func makeTestLine(gj string) ([]Point, error) {
-	var line geom.T
-	if err := geojson.Unmarshal([]byte(gj), &line); err != nil {
-		return nil, err
-	}
-	return unflattenCoordinates(line.FlatCoords()), nil
-}
-
 func TestDistance2d(t *testing.T) {
 	for _, dp := range testDistancePoints {
 		d := Distance2d(dp.orig, dp.dest)
@@ -86,51 +80,44 @@ func TestDistance2d(t *testing.T) {
 
 func TestDistanceHaversine(t *testing.T) {
 	for _, dp := range testDistancePoints {
-		d := DistanceHaversine(dp.orig.Lon, dp.orig.Lat, dp.dest.Lon, dp.dest.Lat)
+		d := DistanceHaversine(dp.orig, dp.dest)
 		testApproxEqual(t, dp.distanceHaversine, d)
 	}
 }
 
-func TestLinePositions(t *testing.T) {
-	for _, dp := range testPositions {
-		line, points, err := decodeGeojson(dp.Geojson)
-		if err != nil {
-			t.Fatal(err)
-		}
-		lc := unflattenCoordinates(line.FlatCoords())
-		pp := []Point{}
-		for _, p := range points {
-			pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
-		}
-		pos := LinePositions(lc, pp)
-		if len(pos) != len(dp.Positions) {
-			t.Errorf("expect %d positions, got %d", len(dp.Positions), len(pos))
-			continue
-		}
-		for i := 0; i < len(pos); i++ {
-			testApproxEqual(t, pos[i], dp.Positions[i])
-		}
+func TestApproxDistance(t *testing.T) {
+	testcases := []struct {
+		start  Point
+		end    Point
+		expect float64
+	}{
+		{Point{Lon: -122.393403, Lat: 37.794694}, Point{Lon: -122.478913, Lat: 37.742943}, 9466.09280},
+	}
+	for _, tc := range testcases {
+		t.Run(fmt.Sprintf("%s-%s", tc.start.String(), tc.end.String()), func(t *testing.T) {
+			d := DistanceHaversine(tc.start, tc.end)
+			assert.InDeltaf(t, tc.expect, d, 0.001, "got %0.5f expect %0.5f", d, tc.expect)
+		})
 	}
 }
 
-func TestLinePositionsFallback(t *testing.T) {
-	for _, dp := range testPositions {
-		_, points, err := decodeGeojson(dp.Geojson)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pp := []Point{}
-		for _, p := range points {
-			pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
-		}
-		pos := LinePositionsFallback(pp)
-		if len(pos) != len(dp.FallbackPositions) {
-			t.Errorf("expect %d positions, got %d", len(dp.FallbackPositions), len(pos))
-			continue
-		}
-		for i := 0; i < len(pos); i++ {
-			testApproxEqual(t, pos[i], dp.FallbackPositions[i])
-		}
+func TestHaversine(t *testing.T) {
+	testcases := []struct {
+		start Point
+		end   Point
+		delta float64
+	}{
+		{Point{Lon: -122.393403, Lat: 37.794694}, Point{Lon: -122.478913, Lat: 37.742943}, 3},
+		{Point{Lon: -122.26407766342165, Lat: 37.81559847996622}, Point{Lon: -122.27115869522093, Lat: 37.8043080468941}, 0.1},
+	}
+	for _, tc := range testcases {
+		t.Run(fmt.Sprintf("%s-%s", tc.start.String(), tc.end.String()), func(t *testing.T) {
+			lonCheck := ApproxLonMeters(tc.start)
+			d := ApproxDistance(lonCheck, tc.start, tc.end)
+			dh := DistanceHaversine(tc.start, tc.end)
+			t.Log("approx d:", d, "haversine:", dh, "delta:", dh-d)
+			assert.InDeltaf(t, dh, d, tc.delta, "got %0.5f expect within %0.2f of haversine %0.5f", d, tc.delta, dh)
+		})
 	}
 }
 
@@ -158,67 +145,56 @@ func TestLengthHaversine(t *testing.T) {
 	}
 }
 
-func TestContains(t *testing.T) {
-	testcases := []struct {
-		name   string
-		a      []Point
-		b      []Point
-		expect bool
-	}{
-		{
-			"basic",
-			[]Point{{0, 1}, {0, 2}},
-			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-			true,
-		},
-		{
-			"one point",
-			[]Point{{0, 1}},
-			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-			true,
-		},
-		{
-			"equal",
-			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-			true,
-		},
-		{
-			"not quite equal",
-			[]Point{{0, 0}, {0, 2}, {0, 2}, {0, 3}},
-			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-			false,
-		},
-		{
-			"longer",
-			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-			[]Point{{0, 0}, {0, 1}, {0, 2}},
-			false,
-		},
-		{
-			"does not contain",
-			[]Point{{0, 1}, {0, 4}},
-			[]Point{{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-			false,
-		},
-		{
-			"false start",
-			[]Point{{0, 1}, {0, 2}},
-			[]Point{{0, 0}, {0, 1}, {0, 0}, {0, 2}, {0, 3}},
-			false,
-		},
-		{
-			"false start 2",
-			[]Point{{0, 1}, {0, 2}},
-			[]Point{{0, 0}, {0, 1}, {0, 0}, {0, 1}, {0, 2}, {0, 3}},
-			true,
-		},
+func BenchmarkDistance2d(b *testing.B) {
+	dp := testDistancePoints[0]
+	var r float64
+	for n := 0; n < b.N; n++ {
+		r = Distance2d(dp.orig, dp.dest)
 	}
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			if PointSliceContains(tc.a, tc.b) != tc.expect {
-				t.Errorf("expected %t", tc.expect)
-			}
-		})
+	_ = r
+}
+
+func BenchmarkDistanceHaversine(b *testing.B) {
+	dp := testDistancePoints[0]
+	var r float64
+	for n := 0; n < b.N; n++ {
+		r = DistanceHaversine(dp.orig, dp.dest)
+	}
+	_ = r
+}
+
+func BenchmarkLength2d(b *testing.B) {
+	l, _, err := decodeGeojson(testLines[0].Geojson)
+	if err != nil {
+		b.Fatal(err)
+	}
+	line := unflattenCoordinates(l.FlatCoords())
+	var r float64
+	for n := 0; n < b.N; n++ {
+		r = Length2d(line)
+	}
+	_ = r
+}
+
+func BenchmarkLengthHaversine(b *testing.B) {
+	l, _, err := decodeGeojson(testLines[0].Geojson)
+	if err != nil {
+		b.Fatal(err)
+	}
+	line := unflattenCoordinates(l.FlatCoords())
+	var r float64
+	for n := 0; n < b.N; n++ {
+		r = LengthHaversine(line)
+	}
+	_ = r
+}
+
+func BenchmarkApproxDistance(b *testing.B) {
+	start := Point{Lon: -122.393403, Lat: 37.794694}
+	end := Point{Lon: -122.478913, Lat: 37.742943}
+	lonCheck := ApproxLonMeters(start)
+	for i := 0; i < b.N; i++ {
+		d := ApproxDistance(lonCheck, start, end)
+		_ = d
 	}
 }

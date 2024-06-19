@@ -83,12 +83,12 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 		prevPoint := tlxy.Point{}
 		for i, pt := range pts {
 			if i > 0 {
-				d := tlxy.DistanceHaversine(prevPoint.Lon, prevPoint.Lat, pt.Lon, pt.Lat)
+				d := tlxy.DistanceHaversine(prevPoint, pt)
 				length += d
 				if d > maxSegmentLength {
 					maxSegmentLength = d
 				}
-				if d2 := tlxy.DistanceHaversine(firstPoint.Lon, firstPoint.Lat, pt.Lon, pt.Lat); d2 > firstPointMaxDistance {
+				if d2 := tlxy.DistanceHaversine(firstPoint, pt); d2 > firstPointMaxDistance {
 					firstPointMaxDistance = d2
 				}
 			}

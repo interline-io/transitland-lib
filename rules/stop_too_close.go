@@ -28,9 +28,8 @@ func (e *StopTooCloseError) Error() string {
 }
 
 type stopPoint struct {
-	id  string
-	lat float64
-	lon float64
+	id string
+	pt tlxy.Point
 }
 
 // StopTooCloseCheck checks for StopTooCloseErrors.
@@ -62,11 +61,14 @@ func (e *StopTooCloseCheck) Validate(ent tl.Entity) []error {
 	gh := geohash.EncodeWithPrecision(coords[0], coords[1], 9)
 	neighbors := geohash.Neighbors(gh)
 	neighbors = append(neighbors, gh)
-	g := stopPoint{id: v.StopID, lat: coords[0], lon: coords[1]}
+	g := stopPoint{
+		id: v.StopID,
+		pt: tlxy.Point{Lon: coords[1], Lat: coords[1]},
+	}
 	for _, neighbor := range neighbors {
 		if hits, ok := e.geoms[neighbor]; ok {
 			for _, hit := range hits {
-				d := tlxy.DistanceHaversine(g.lon, g.lat, hit.lon, hit.lat)
+				d := tlxy.DistanceHaversine(g.pt, hit.pt)
 				if d < e.maxdist {
 					errs = append(errs, &StopTooCloseError{
 						StopID:      v.StopID,
