@@ -4,15 +4,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/mmcloughlin/geohash"
 )
 
 // Support methods and types
 
-type point struct {
-	lon float64
-	lat float64
-}
+type point = tlxy.Point
 
 type stopGeom struct {
 	name string
@@ -24,7 +22,6 @@ type stopGeom struct {
 type routeStopGeoms struct {
 	agency    string
 	name      string
-	fvid      int
 	stopGeoms map[string]*stopGeom
 }
 
@@ -42,12 +39,12 @@ func centroid(points []point) point {
 	sumx := 0.0
 	sumy := 0.0
 	for _, p := range points {
-		sumx += p.lon
-		sumy += p.lat
+		sumx += p.Lon
+		sumy += p.Lat
 	}
 	return point{
-		lon: sumx / float64(len(points)),
-		lat: sumy / float64(len(points)),
+		Lon: sumx / float64(len(points)),
+		Lat: sumy / float64(len(points)),
 	}
 }
 
@@ -59,11 +56,11 @@ func pointsGeohash(points []point, minc uint, maxc uint) string {
 		minc = maxc
 	}
 	c := centroid(points)
-	g := geohash.EncodeWithPrecision(c.lat, c.lon, maxc)
+	g := geohash.EncodeWithPrecision(c.Lat, c.Lon, maxc)
 	// t.Log("centroid:", c, "g:", g, "minc:", minc, "maxc:", maxc)
 	gs := []string{}
 	for _, p := range points {
-		gs = append(gs, geohash.EncodeWithPrecision(p.lat, p.lon, maxc))
+		gs = append(gs, geohash.EncodeWithPrecision(p.Lat, p.Lon, maxc))
 	}
 	// t.Log("points:", gs)
 	for i := maxc; i >= minc; i-- {

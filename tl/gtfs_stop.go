@@ -46,12 +46,8 @@ func (ent *Stop) Coordinates() [2]float64 {
 	return ret
 }
 
-func (ent *Stop) Point() tlxy.Point {
-	c := ent.Geometry.FlatCoords()
-	if len(c) != 2 {
-		return tlxy.Point{}
-	}
-	return tlxy.Point{Lon: c[0], Lat: c[1]}
+func (ent *Stop) ToPoint() tlxy.Point {
+	return ent.Geometry.ToPoint()
 }
 
 // EntityID returns the ID or StopID.

@@ -41,7 +41,7 @@ func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
 		return nil
 	}
 	var errs []error
-	spoint := v.Point()
+	spoint := v.ToPoint()
 	if spoint.Lon == 0 && spoint.Lat == 0 {
 		return nil // 0,0 handled elsewhere
 	}
