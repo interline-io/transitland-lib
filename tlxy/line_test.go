@@ -107,7 +107,7 @@ func TestContains(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			if PointSliceContains(tc.a, tc.b) != tc.expect {
+			if LineContains(tc.a, tc.b) != tc.expect {
 				t.Errorf("expected %t", tc.expect)
 			}
 		})

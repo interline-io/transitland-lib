@@ -53,7 +53,7 @@ func LinePositions(line []Point, points []Point) []float64 {
 	return positions
 }
 
-func PointSliceContains(a []Point, b []Point) bool {
+func LineContains(a []Point, b []Point) bool {
 	if len(a) > len(b) {
 		return false
 	}
@@ -65,7 +65,7 @@ func PointSliceContains(a []Point, b []Point) bool {
 	return false
 }
 
-func PointSliceEqual(a []Point, b []Point) bool {
+func LineEquals(a []Point, b []Point) bool {
 	if len(b) != len(a) {
 		return false
 	}

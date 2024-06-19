@@ -69,7 +69,7 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 		// If we've already seen this line, re-use shapeInfo to reduce mem usage
 		for _, si := range pp.shapeInfos {
 			// Match on generated value too
-			if tlxy.PointSliceEqual(pts, si.Line) && si.Generated == v.Generated {
+			if tlxy.LineEquals(pts, si.Line) && si.Generated == v.Generated {
 				// Add to shape cache
 				pp.shapeInfos[eid] = si
 				return nil
@@ -217,7 +217,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		// A line will only be skipped if it's contained in a more frequent shape.
 		// TODO: TopoJson style only store unique segments.
 		for _, match := range matches {
-			if tlxy.PointSliceContains(si.Line, match) {
+			if tlxy.LineContains(si.Line, match) {
 				continue
 			}
 		}
