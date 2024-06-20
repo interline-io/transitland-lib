@@ -33,6 +33,35 @@ func TestSegmentClosestPoint(t *testing.T) {
 	}
 }
 
+func testCutPositionsDebug(t *testing.T, tc lineTestCase) {
+	ret := cutBetweenPositionsDebug(tc.line, tc.dists, tc.a, tc.b, tc.extraPoints...)
+	if tc.debugOnly {
+		return
+	}
+	if len(ret) != len(tc.expect) {
+		t.Error("expected len", len(tc.expect), "got len", len(ret))
+	} else {
+		for i := 0; i < len(tc.expect); i++ {
+			assert.InDelta(t, 0, ret[i].Lon-tc.expect[i].Lon, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lon, tc.expect[i].Lon)
+			assert.InDelta(t, 0, ret[i].Lat-tc.expect[i].Lat, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lat, tc.expect[i].Lat)
+		}
+	}
+}
+
+func testCutDecode(drawShapeText string) ([]Point, []Point, []float64, []float64) {
+	drawLine, drawPoints, _ := decodeGeojsonToLine(drawShapeText)
+	drawLineDists := make([]float64, len(drawLine))
+	for i := 1; i < len(drawLine); i++ {
+		drawLineDists[i] = drawLineDists[i-1] + DistanceHaversine(drawLine[i-1], drawLine[i])
+	}
+	drawLineLength := drawLineDists[len(drawLineDists)-1]
+	drawPositions := LineRelativePositions(drawLine, drawPoints)
+	for i := 0; i < len(drawPositions); i++ {
+		drawPositions[i] = drawPositions[i] * drawLineLength
+	}
+	return drawLine, drawPoints, drawLineDists, drawPositions
+}
+
 type lineTestCase struct {
 	name        string
 	line        []Point
@@ -130,35 +159,6 @@ func TestCutBetweenPositions_Simple(t *testing.T) {
 			testCutPositionsDebug(t, tc)
 		})
 	}
-}
-
-func testCutPositionsDebug(t *testing.T, tc lineTestCase) {
-	ret := cutBetweenPositionsDebug(tc.line, tc.dists, tc.a, tc.b, tc.extraPoints...)
-	if tc.debugOnly {
-		return
-	}
-	if len(ret) != len(tc.expect) {
-		t.Error("expected len", len(tc.expect), "got len", len(ret))
-	} else {
-		for i := 0; i < len(tc.expect); i++ {
-			assert.InDelta(t, 0, ret[i].Lon-tc.expect[i].Lon, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lon, tc.expect[i].Lon)
-			assert.InDelta(t, 0, ret[i].Lat-tc.expect[i].Lat, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lat, tc.expect[i].Lat)
-		}
-	}
-}
-
-func testCutDecode(drawShapeText string) ([]Point, []Point, []float64, []float64) {
-	drawLine, drawPoints, _ := decodeGeojsonToLine(drawShapeText)
-	drawLineDists := make([]float64, len(drawLine))
-	for i := 1; i < len(drawLine); i++ {
-		drawLineDists[i] = drawLineDists[i-1] + DistanceHaversine(drawLine[i-1], drawLine[i])
-	}
-	drawLineLength := drawLineDists[len(drawLineDists)-1]
-	drawPositions := LineRelativePositions(drawLine, drawPoints)
-	for i := 0; i < len(drawPositions); i++ {
-		drawPositions[i] = drawPositions[i] * drawLineLength
-	}
-	return drawLine, drawPoints, drawLineDists, drawPositions
 }
 
 func TestCutBetweenPositions_Complex(t *testing.T) {
