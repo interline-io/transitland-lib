@@ -107,7 +107,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 			dx = 0
 			// Only consider this edge if valid geoms.
 			if (g1.Lon != 0 && g1.Lat != 0) && (g2.Lon != 0 && g2.Lat != 0) {
-				dx = tlxy.DistanceHaversine(g1.Lon, g1.Lat, g2.Lon, g2.Lat)
+				dx = tlxy.DistanceHaversine(g1, g2)
 			}
 			e.stopDist[key] = dx
 			e.stopDist[s2+":"+s1] = dx

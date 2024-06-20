@@ -68,7 +68,7 @@ func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
 	}
 	// Check if already exists, re-use slice to reduce mem
 	for _, s := range g.shapes {
-		if tlxy.PointSliceEqual(sl, s) {
+		if tlxy.LineEquals(sl, s) {
 			sl = s
 		}
 	}

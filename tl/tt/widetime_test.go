@@ -66,8 +66,6 @@ func TestWideTime_String(t *testing.T) {
 	}
 }
 
-var result int
-
 func Benchmark_StringToSeconds(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		StringToSeconds("12:34:56")

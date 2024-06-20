@@ -19,7 +19,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/rs/zerolog"
-	geomxy "github.com/twpayne/go-geom/xy"
+	"github.com/twpayne/go-geom/xy"
 )
 
 // Prepare is called before general copying begins.
@@ -786,7 +786,7 @@ func (copier *Copier) copyShapes() error {
 			pnts := ent.Geometry.FlatCoords()
 			// before := len(pnts)
 			stride := ent.Geometry.Stride()
-			ii := geomxy.SimplifyFlatCoords(pnts, simplifyValue, stride)
+			ii := xy.SimplifyFlatCoords(pnts, simplifyValue, stride)
 			for i, j := range ii {
 				if i == j*stride {
 					continue
