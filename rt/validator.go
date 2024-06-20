@@ -652,7 +652,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 			} else if len(shp) == 0 {
 				errs = append(errs, newError("Invalid shape_id", "trip_descriptor"))
 			} else {
-				nearestPoint, _ := tlxy.LineClosestPoint(shp, posPt)
+				nearestPoint, _, _ := tlxy.LineClosestPoint(shp, posPt)
 				nearestPointDist := tlxy.DistanceHaversine(nearestPoint, posPt)
 				if nearestPointDist > fi.MaxDistanceFromTrip {
 					shpErr := withFieldAndJson(
