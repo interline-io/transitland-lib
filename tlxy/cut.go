@@ -1,6 +1,12 @@
 package tlxy
 
-import "math"
+import (
+	"math"
+
+	"github.com/interline-io/log"
+	"github.com/twpayne/go-geom"
+	"github.com/twpayne/go-geom/encoding/geojson"
+)
 
 func Cut(from Point, to Point, line []Point) []Point {
 	startPoint := Point{}
@@ -62,22 +68,24 @@ func SegmentClosestPoint(a, b, p Point) (Point, float64) {
 
 // LineClosestPoint returns the point (and position) on line closest to point.
 // Based on go-geom DistanceFromPointToLineString
-func LineClosestPoint(line []Point, point Point) (Point, float64) {
+func LineClosestPoint(line []Point, point Point) (Point, int, float64) {
 	position := 0.0
 	length := Length2d(line)
 	if length == 0 {
-		return point, position
+		return point, 0, position
 	}
 	segpos := 0.0
+	minidx := 0
 	mind := math.MaxFloat64
 	minp := Point{}
-	start := line[0]
 	for i := 1; i < len(line); i++ {
+		start := line[i-1]
 		end := line[i]
 		segp, segd := SegmentClosestPoint(start, end, point)
 		if segd < mind {
 			mind = segd
 			minp = segp
+			minidx = i
 			position = segpos + Distance2d(start, minp)
 			if segd == 0 {
 				break
@@ -86,5 +94,121 @@ func LineClosestPoint(line []Point, point Point) (Point, float64) {
 		segpos += Distance2d(start, end)
 		start = end
 	}
-	return minp, position / length
+	return minp, minidx, position / length
+}
+
+// LineBetweenPoints attempts to cut a line based on the
+// relative positions of two nearby points projected onto the line.
+func LineBetweenPoints(line []Point, startPoint Point, endPoint Point) []Point {
+	spt, sidx, _ := LineClosestPoint(line, startPoint)
+	ept, eidx, _ := LineClosestPoint(line, endPoint)
+	if eidx < sidx {
+		return nil
+	}
+	if DistanceHaversine(startPoint, spt) > 1000 || DistanceHaversine(endPoint, ept) > 1000 {
+		return nil
+	}
+	var ret []Point
+	ret = append(ret, spt)
+	ret = append(ret, line[sidx:eidx]...)
+	ret = append(ret, ept)
+	return ret
+}
+
+// LineBetweenPositions is similar to LineBetweenPoints but takes absolute positions.
+func LineBetweenPositions(line []Point, dists []float64, startDist float64, endDist float64, extraPts ...Point) []Point {
+	var ret []Point
+	for i := 0; i < len(dists)-1; i++ {
+		if startDist >= dists[i] && startDist <= dists[i+1] {
+			// fmt.Println("idist:", dists[i], dists[i+1], "pt:", line[i], line[i+1], "startDist:", startDist)
+			for j := i; j < len(dists)-1; j++ {
+				// fmt.Println("\tjdist:", dists[j], dists[j+1], "pt:", line[j], line[j+1], "endDist:", endDist)
+				if endDist >= dists[j] && endDist <= dists[j+1] {
+					spt := segPos(line[i], line[i+1], dists[i], dists[i+1], startDist)
+					ept := segPos(line[j], line[j+1], dists[j], dists[j+1], endDist)
+					ret = append(ret, spt)
+					ret = append(ret, line[i+1:j+1]...)
+					ret = append(ret, ept)
+
+					// DEBUG - Trace log a geojson feature with visualization of result
+					if len(extraPts) > 0 {
+						var fs []*geojson.Feature
+						var baseLine []float64
+						for _, pt := range ret {
+							baseLine = append(baseLine, pt.Lon, pt.Lat)
+						}
+						var rawLine []float64
+						for _, pt := range line {
+							rawLine = append(rawLine, pt.Lon, pt.Lat)
+						}
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "input line", "stroke": "#ff00ff", "stroke-width": 1, "stroke-opacity": 0.5},
+							Geometry:   geom.NewLineStringFlat(geom.XY, rawLine),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "return line", "stroke": "#aaaaaa", "stroke-width": 20, "stroke-opacity": 0.5},
+							Geometry:   geom.NewLineStringFlat(geom.XY, baseLine),
+						})
+						for _, extraPt := range extraPts {
+							fs = append(fs, &geojson.Feature{
+								Properties: map[string]any{"name": "extraPt", "marker-color": "#999999"},
+								Geometry:   geom.NewPointFlat(geom.XY, []float64{extraPt.Lon, extraPt.Lat}),
+							})
+						}
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "lineSeg1", "stroke": "#00ffff", "stroke-width": 20, "stroke-opacity": 0.2},
+							Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+								line[i].Lon, line[i].Lat,
+								line[i+1].Lon, line[i+1].Lat,
+							}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "lineSeg2", "stroke": "#ff00ff", "stroke-width": 20, "stroke-opacity": 0.2},
+							Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+								line[j].Lon, line[j].Lat,
+								line[j+1].Lon, line[j+1].Lat,
+							}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "spt", "marker-color": "#00ff00"},
+							Geometry:   geom.NewPointFlat(geom.XY, []float64{spt.Lon, spt.Lat}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "sptSeg", "stroke": "#00ff00"},
+							Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+								spt.Lon, spt.Lat,
+								line[i+1].Lon, line[i+1].Lat,
+							}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "ept", "marker-color": "#ff0000"},
+							Geometry:   geom.NewPointFlat(geom.XY, []float64{ept.Lon, ept.Lat}),
+						})
+						fs = append(fs, &geojson.Feature{
+							Properties: map[string]any{"name": "eptSeg", "stroke": "#ff0000"},
+							Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+								line[j].Lon, line[j].Lat,
+								ept.Lon, ept.Lat,
+							}),
+						})
+						fc := geojson.FeatureCollection{Features: fs}
+						d, _ := fc.MarshalJSON()
+						log.Trace().Str("geojson", string(d)).Msg("LineBetweenPositions")
+					}
+					return ret
+				}
+			}
+		}
+	}
+	return ret
+}
+
+func segPos(apt Point, bpt Point, apos float64, bpos float64, dist float64) Point {
+	segrel := (dist - apos) / (bpos - apos)
+	segx := bpt.Lon - apt.Lon
+	segy := bpt.Lat - apt.Lat
+	return Point{
+		Lon: apt.Lon + segrel*segx,
+		Lat: apt.Lat + segrel*segy,
+	}
 }

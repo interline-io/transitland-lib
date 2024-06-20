@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLinePositions(t *testing.T) {
+func TestLineRelativePositions(t *testing.T) {
 	for _, dp := range testPositions {
 		line, points, err := decodeGeojson(dp.Geojson)
 		if err != nil {
@@ -17,7 +17,7 @@ func TestLinePositions(t *testing.T) {
 		for _, p := range points {
 			pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
 		}
-		pos := LinePositions(lc, pp)
+		pos := LineRelativePositions(lc, pp)
 		if len(pos) != len(dp.Positions) {
 			t.Errorf("expect %d positions, got %d", len(dp.Positions), len(pos))
 			continue
@@ -28,7 +28,7 @@ func TestLinePositions(t *testing.T) {
 	}
 }
 
-func TestLinePositionsFallback(t *testing.T) {
+func TestLineRelativePositionsFallback(t *testing.T) {
 	for _, dp := range testPositions {
 		_, points, err := decodeGeojson(dp.Geojson)
 		if err != nil {
@@ -38,7 +38,7 @@ func TestLinePositionsFallback(t *testing.T) {
 		for _, p := range points {
 			pp = append(pp, Point{p.FlatCoords()[0], p.FlatCoords()[1]})
 		}
-		pos := LinePositionsFallback(pp)
+		pos := LineRelativePositionsFallback(pp)
 		if len(pos) != len(dp.FallbackPositions) {
 			t.Errorf("expect %d positions, got %d", len(dp.FallbackPositions), len(pos))
 			continue
@@ -173,7 +173,7 @@ func BenchmarkLinePositions(b *testing.B) {
 	}
 	var r []float64
 	for n := 0; n < b.N; n++ {
-		r = LinePositions(lc, pp)
+		r = LineRelativePositions(lc, pp)
 	}
 	_ = r
 }
@@ -189,7 +189,7 @@ func BenchmarkLinePositionsFallback(b *testing.B) {
 	}
 	var r []float64
 	for n := 0; n < b.N; n++ {
-		r = LinePositionsFallback(pp)
+		r = LineRelativePositionsFallback(pp)
 	}
 	_ = r
 }
