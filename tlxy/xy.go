@@ -51,14 +51,28 @@ func ApproxDistance(lonCheck float64, p Point, s Point) float64 {
 }
 
 type Approx struct {
-	lonCheck float64
+	lonMeter float64
+}
+
+func NewApprox(p Point) Approx {
+	return Approx{
+		lonMeter: ApproxLonMeters(p),
+	}
+}
+
+func (a *Approx) LonMeters() float64 {
+	return a.lonMeter
+}
+
+func (a *Approx) LatMeters() float64 {
+	return latMeter
 }
 
 func (a *Approx) ApproxDistance(p Point, s Point) float64 {
-	if a.lonCheck == 0 {
-		a.lonCheck = ApproxLonMeters(p)
+	if a.lonMeter == 0 {
+		a.lonMeter = ApproxLonMeters(p)
 	}
-	dx := (p.Lon - s.Lon) * (a.lonCheck)
+	dx := (p.Lon - s.Lon) * (a.lonMeter)
 	dy := (p.Lat - s.Lat) * (latMeter)
 	return math.Sqrt((dx * dx) + (dy * dy))
 }

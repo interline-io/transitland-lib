@@ -4,6 +4,8 @@ import (
 	"github.com/twpayne/go-polyline"
 )
 
+type Line = []Point
+
 type LineM struct {
 	Coords []Point
 	Data   []float64
@@ -39,6 +41,14 @@ func LinePositionsFallback(line []Point) []float64 {
 	for i := 1; i < len(line); i++ {
 		position += Distance2d(line[i], line[i-1])
 		ret[i] = position / length
+	}
+	return ret
+}
+
+func LineFlatCoords(line []Point) []float64 {
+	var ret []float64
+	for _, c := range line {
+		ret = append(ret, c.Lon, c.Lat)
 	}
 	return ret
 }
