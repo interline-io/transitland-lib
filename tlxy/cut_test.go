@@ -34,17 +34,29 @@ func TestSegmentClosestPoint(t *testing.T) {
 }
 
 func testCutPositionsDebug(t *testing.T, tc lineTestCase) {
-	ret := cutBetweenPositionsDebug(tc.line, tc.dists, tc.a, tc.b, tc.extraPoints...)
+	var extraPoints []Point
+	tcDist := 0.0
+	if tc.from.Lon != 0.0 && tc.to.Lon != 0.0 {
+		extraPoints = append(extraPoints, tc.from)
+		extraPoints = append(extraPoints, tc.to)
+		tcDist = DistanceHaversine(tc.from, tc.to)
+	}
+	ret := cutBetweenPositionsDebug(tc.line, tc.dists, tc.a, tc.b, extraPoints...)
 	if tc.debugOnly {
 		return
 	}
-	if len(ret) != len(tc.expect) {
+	if len(tc.expect) > 0 && len(ret) != len(tc.expect) {
 		t.Error("expected len", len(tc.expect), "got len", len(ret))
-	} else {
-		for i := 0; i < len(tc.expect); i++ {
-			assert.InDelta(t, 0, ret[i].Lon-tc.expect[i].Lon, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lon, tc.expect[i].Lon)
-			assert.InDelta(t, 0, ret[i].Lat-tc.expect[i].Lat, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lat, tc.expect[i].Lat)
-		}
+		return
+	}
+	for i := 0; i < len(tc.expect); i++ {
+		assert.InDelta(t, 0, ret[i].Lon-tc.expect[i].Lon, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lon, tc.expect[i].Lon)
+		assert.InDelta(t, 0, ret[i].Lat-tc.expect[i].Lat, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lat, tc.expect[i].Lat)
+	}
+	fmt.Println("tcDist:", tcDist)
+	if tcDist > 0 {
+		retLength := LengthHaversine(ret)
+		assert.LessOrEqual(t, retLength, tcDist*3, "expected shape length %f to be less than 3 times the stop to stop dist %f", retLength, tcDist)
 	}
 }
 
@@ -63,14 +75,15 @@ func testCutDecode(drawShapeText string) ([]Point, []Point, []float64, []float64
 }
 
 type lineTestCase struct {
-	name        string
-	line        []Point
-	extraPoints []Point
-	dists       []float64
-	a           float64
-	b           float64
-	expect      []Point
-	debugOnly   bool
+	name      string
+	line      []Point
+	dists     []float64
+	from      Point
+	to        Point
+	a         float64
+	b         float64
+	expect    []Point
+	debugOnly bool
 }
 
 func TestCutBetweenPositions_Simple(t *testing.T) {
@@ -168,13 +181,13 @@ func TestCutBetweenPositions_Complex(t *testing.T) {
 	var testcases []lineTestCase
 	for i := 1; i < len(drawPoints); i++ {
 		testcases = append(testcases, lineTestCase{
-			name:        "",
-			line:        drawLine,
-			dists:       drawLineDists,
-			a:           drawPositions[i-1],
-			b:           drawPositions[i],
-			extraPoints: []Point{drawPoints[i-1], drawPoints[i]},
-			debugOnly:   true,
+			name:  "",
+			line:  drawLine,
+			dists: drawLineDists,
+			from:  drawPoints[i-1],
+			to:    drawPoints[i],
+			a:     drawPositions[i-1],
+			b:     drawPositions[i],
 		})
 	}
 	for _, tc := range testcases {
@@ -191,13 +204,40 @@ func TestCutBetweenPositions_Loop(t *testing.T) {
 	var testcases []lineTestCase
 	for i := 1; i < len(drawPoints); i++ {
 		testcases = append(testcases, lineTestCase{
-			name:        "",
-			line:        drawLine,
-			dists:       drawLineDists,
-			a:           drawPositions[i-1],
-			b:           drawPositions[i],
-			extraPoints: []Point{drawPoints[i-1], drawPoints[i]},
-			debugOnly:   true,
+			name:  "",
+			line:  drawLine,
+			dists: drawLineDists,
+			from:  drawPoints[i-1],
+			to:    drawPoints[i],
+			a:     drawPositions[i-1],
+			b:     drawPositions[i],
+		})
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			testCutPositionsDebug(t, tc)
+		})
+	}
+}
+
+func TestCutBetweenPositions_IgnoreDists(t *testing.T) {
+	// Ignore included shape_dist_traveled values
+	data, err := os.ReadFile(testpath.RelPath("test/data/tlxy/ac.geojson"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	drawShapeText := string(data)
+	drawLine, drawPoints, drawLineDists, drawPositions := testCutDecode(drawShapeText)
+	var testcases []lineTestCase
+	for i := 1; i < len(drawPoints); i++ {
+		testcases = append(testcases, lineTestCase{
+			name:  "",
+			line:  drawLine,
+			dists: drawLineDists,
+			from:  drawPoints[i-1],
+			to:    drawPoints[i],
+			a:     drawPositions[i-1],
+			b:     drawPositions[i],
 		})
 	}
 	for _, tc := range testcases {
@@ -239,13 +279,14 @@ func TestCutBetweenPositions_RealShape(t *testing.T) {
 	lcLength := lcDists[len(lcDists)-1]
 	for i := 1; i < len(acPositions); i++ {
 		testcases = append(testcases, lineTestCase{
-			name:        fmt.Sprintf("testPosition-%d", i),
-			line:        lcPoints,
-			dists:       lcDists,
-			extraPoints: []Point{stopPoints[i-1], stopPoints[i]},
-			a:           positions[i-1] * lcLength,
-			b:           positions[i] * lcLength,
-			debugOnly:   true,
+			name:      fmt.Sprintf("testPosition-%d", i),
+			line:      lcPoints,
+			dists:     lcDists,
+			from:      stopPoints[i-1],
+			to:        stopPoints[i],
+			a:         positions[i-1] * lcLength,
+			b:         positions[i] * lcLength,
+			debugOnly: true,
 		})
 	}
 
