@@ -46,11 +46,7 @@ func NewGeomCache() *GeomCache {
 	}
 }
 
-// AddStop adds a Stop to the geometry cache.
-func (g *GeomCache) AddStop(eid string, stop tl.Stop) {
-	g.AddStopGeom(eid, stop.ToPoint())
-}
-
+// AddStopGeom adds a Stop to the geometry cache.
 func (g *GeomCache) AddStopGeom(eid string, pt Point) {
 	g.stops[eid] = pt
 }
@@ -67,20 +63,6 @@ func (g *GeomCache) GetShape(eid string) []Point {
 
 func (g *GeomCache) GetShapeInfo(eid string) ShapeInfo {
 	return g.shapes[eid]
-}
-
-// AddShape adds a Shape to the geometry cache.
-func (g *GeomCache) AddShape(eid string, shape tl.Shape) {
-	if !shape.Geometry.Valid {
-		return
-	}
-	sl := make([]Point, shape.Geometry.NumCoords())
-	dists := make([]float64, shape.Geometry.NumCoords())
-	for i, c := range shape.Geometry.Coords() {
-		sl[i] = Point{Lon: c[0], Lat: c[1]}
-		dists[i] = c[2]
-	}
-	g.AddShapeGeom(eid, sl, dists)
 }
 
 func (g *GeomCache) AddShapeGeom(eid string, line []Point, dists []float64) {
@@ -134,6 +116,7 @@ func (g *GeomCache) MakeShape(stopids ...string) ([]Point, []float64, error) {
 }
 
 // InterpolateStopTimes uses the cached geometries to interpolate StopTimes.
+// TODO: move to somewhere else
 func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	sts := trip.StopTimes
 	if len(sts) == 0 {
@@ -162,6 +145,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 	return InterpolateStopTimes(sts)
 }
 
+// TODO: move to somewhere else
 func (g *GeomCache) setStopTimeDists(shapeId string, patternId int, sts []tl.StopTime) error {
 	// Check cache
 	length := 0.0

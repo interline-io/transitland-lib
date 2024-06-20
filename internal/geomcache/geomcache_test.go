@@ -24,10 +24,11 @@ func TestGeomCache(t *testing.T) {
 	}
 	cache := NewGeomCache()
 	for e := range r.Shapes() {
-		cache.AddShape(e.ShapeID, e)
+		lm := e.Geometry.ToLineM()
+		cache.AddShapeGeom(e.ShapeID, lm.Coords, lm.Data)
 	}
 	for e := range r.Stops() {
-		cache.AddStop(e.StopID, e)
+		cache.AddStopGeom(e.StopID, e.ToPoint())
 	}
 	for stoptimes := range r.StopTimesByTripID() {
 		trip := trips[stoptimes[0].TripID]

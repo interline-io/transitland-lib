@@ -34,6 +34,24 @@ func (g LineString) ToPoints() []tlxy.Point {
 	return ret
 }
 
+func (g LineString) ToLineM() tlxy.LineM {
+	var ret []tlxy.Point
+	var ms []float64
+	for _, c := range g.LineString.Coords() {
+		ret = append(ret, tlxy.Point{Lon: c[0], Lat: c[1]})
+		if len(c) > 2 {
+			ms = append(ms, c[2])
+		} else {
+			ms = append(ms, 0)
+		}
+	}
+	return tlxy.LineM{
+		Coords: ret,
+		Data:   ms,
+	}
+
+}
+
 func (g LineString) Value() (driver.Value, error) {
 	if !g.Valid {
 		return nil, nil
