@@ -20,14 +20,24 @@ import (
 	_ "github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
 	"github.com/rs/zerolog"
+	"github.com/spf13/cobra"
 )
+
+func main() {
+	var rootCmd = &cobra.Command{Use: "transitland"}
+	rootCmd.AddCommand(
+		fetch.CobraCommand,
+		sync.CobraCommand,
+	)
+	rootCmd.Execute()
+}
 
 type runner interface {
 	Parse([]string) error
 	Run() error
 }
 
-func main() {
+func main2() {
 	quietFlag := false
 	debugFlag := false
 	traceFlag := false
@@ -80,16 +90,16 @@ func main() {
 		r = &extract.Command{}
 	case "diff":
 		r = &diff.Command{}
-	case "fetch":
-		r = &fetch.Command{}
+	// case "fetch":
+	// 	r = &fetch.Command{}
 	case "rebuild-stats":
 		r = &fetch.RebuildStatsCommand{}
 	case "import":
 		r = &importer.Command{}
 	case "unimport":
 		r = &unimporter.Command{}
-	case "sync":
-		r = &sync.Command{}
+	// case "sync":
+	// 	r = &sync.Command{}
 	case "merge":
 		r = &merge.Command{}
 	case "dmfr": // backwards compat

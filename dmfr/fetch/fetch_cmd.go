@@ -3,7 +3,6 @@ package fetch
 import (
 	"database/sql"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"sync"
@@ -11,10 +10,44 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
+	"github.com/spf13/cobra"
 )
+
+// Cobra setup
+
+var pcmd = Command{}
+
+var CobraCommand = &cobra.Command{
+	Use:   "fetch [flags] <feeds...>",
+	Short: "fetch command",
+	RunE:  cli.CobraHelper(&pcmd),
+}
+
+func init() {
+	fl := CobraCommand.Flags()
+	fl.BoolVar(&pcmd.CreateFeed, "create-feed", false, "Create feed record if not found")
+	fl.StringVar(&pcmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
+	fl.StringVar(&pcmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
+	fl.StringVar(&pcmd.secretsFile, "secrets", "", "Path to DMFR Secrets file")
+	fl.IntVar(&pcmd.Workers, "workers", 1, "Worker threads")
+	fl.IntVar(&pcmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
+	fl.StringVar(&pcmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
+	fl.BoolVar(&pcmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
+	fl.BoolVar(&pcmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
+	fl.BoolVar(&pcmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
+	fl.BoolVar(&pcmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
+	fl.BoolVar(&pcmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
+	fl.BoolVar(&pcmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
+	fl.BoolVar(&pcmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
+	fl.StringVar(&pcmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
+	fl.StringVar(&pcmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
+}
+
+///////////////
 
 type FetchCommandResult struct {
 	Result           Result
@@ -25,58 +58,34 @@ type FetchCommandResult struct {
 
 // Command fetches feeds defined a DMFR database.
 type Command struct {
-	Options    Options
-	CreateFeed bool
-	Workers    int
-	Fail       bool
-	Limit      int
-	DBURL      string
-	DryRun     bool
-	FeedIDs    []string
-	Results    []FetchCommandResult
-	Adapter    tldb.Adapter // allow for mocks
+	Options     Options
+	CreateFeed  bool
+	Workers     int
+	Fail        bool
+	Limit       int
+	DBURL       string
+	DryRun      bool
+	FeedIDs     []string
+	Results     []FetchCommandResult
+	Adapter     tldb.Adapter // allow for mocks
+	fetchedAt   string
+	secretsFile string
 }
 
-// Parse sets options from command line flags.
-func (cmd *Command) Parse(args []string) error {
-	secretsFile := ""
-	fetchedAt := ""
-	fl := flag.NewFlagSet("fetch", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: fetch [feed_id...]")
-		fl.PrintDefaults()
-	}
-	fl.BoolVar(&cmd.CreateFeed, "create-feed", false, "Create feed record if not found")
-	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
-	fl.StringVar(&fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
-	fl.StringVar(&secretsFile, "secrets", "", "Path to DMFR Secrets file")
-	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
-	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
-	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
-	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
-	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
-	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
-	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
-	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
-	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
-	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
-	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
-
-	fl.Parse(args)
+func (cmd *Command) PreRunE(args []string) error {
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	cmd.FeedIDs = fl.Args()
-	if fetchedAt != "" {
-		t, err := time.Parse(time.RFC3339Nano, fetchedAt)
+	cmd.FeedIDs = args
+	if cmd.fetchedAt != "" {
+		t, err := time.Parse(time.RFC3339Nano, cmd.fetchedAt)
 		if err != nil {
 			return err
 		}
 		cmd.Options.FetchedAt = t
 	}
-	if secretsFile != "" {
-		r, err := dmfr.LoadAndParseRegistry(secretsFile)
+	if cmd.secretsFile != "" {
+		r, err := dmfr.LoadAndParseRegistry(cmd.secretsFile)
 		if err != nil {
 			return err
 		}
