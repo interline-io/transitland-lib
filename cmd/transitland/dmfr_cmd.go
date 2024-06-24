@@ -6,12 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/interline-io/transitland-lib/dmfr/fetch"
 	"github.com/interline-io/transitland-lib/dmfr/format"
-	"github.com/interline-io/transitland-lib/dmfr/importer"
 	"github.com/interline-io/transitland-lib/dmfr/lint"
-	"github.com/interline-io/transitland-lib/dmfr/sync"
-	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 )
 
 // dmfrCommand is the main entry point to the DMFR command
@@ -40,15 +36,15 @@ func (cmd *dmfrCommand) Parse(args []string) error {
 		cmd.subcommand = &format.Command{}
 	case "lint":
 		cmd.subcommand = &lint.Command{}
-	// Backwards compat
-	case "sync":
-		cmd.subcommand = &sync.Command{}
-	case "import":
-		cmd.subcommand = &importer.Command{}
-	case "unimport":
-		cmd.subcommand = &unimporter.Command{}
-	case "fetch":
-		cmd.subcommand = &fetch.Command{}
+	// // Backwards compat
+	// case "sync":
+	// 	cmd.subcommand = &sync.Command{}
+	// case "import":
+	// 	cmd.subcommand = &importer.Command{}
+	// case "unimport":
+	// 	cmd.subcommand = &unimporter.Command{}
+	// case "fetch":
+	// 	cmd.subcommand = &fetch.Command{}
 	default:
 		return fmt.Errorf("invalid command: %q", subc)
 	}
