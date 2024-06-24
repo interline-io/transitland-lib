@@ -73,6 +73,9 @@ type Command struct {
 }
 
 func (cmd *Command) PreRunE(args []string) error {
+	if cmd.Workers < 1 {
+		cmd.Workers = 1
+	}
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}

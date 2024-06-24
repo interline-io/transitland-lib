@@ -72,7 +72,7 @@ func TestFetchCommand(t *testing.T) {
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
-			c := pcmd // copy command defaults
+			c := Command{}
 			c.Adapter = adapter
 			tmpDir := t.TempDir()
 			c.Options.Storage = tmpDir
