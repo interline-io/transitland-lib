@@ -23,6 +23,7 @@ type Command struct {
 	ShowSame    bool
 	ShowAdded   bool
 	ShowDeleted bool
+	CheckFiles  []string
 	readerPathA string
 	readerPathB string
 }
@@ -80,11 +81,11 @@ func (cmd *Command) Run() error {
 	var df2 *diffAdapter
 	if cmd.RawDiff {
 		var err error
-		df1, err = checkDiffRaw(readerA)
+		df1, err = checkDiffRaw(readerA, cmd.CheckFiles)
 		if err != nil {
 			return err
 		}
-		df2, err = checkDiffRaw(readerB)
+		df2, err = checkDiffRaw(readerB, cmd.CheckFiles)
 		if err != nil {
 			return err
 		}
@@ -205,7 +206,7 @@ type canFileInfos interface {
 	FileInfos() ([]os.FileInfo, error)
 }
 
-func checkDiffRaw(reader tl.Reader) (*diffAdapter, error) {
+func checkDiffRaw(reader tl.Reader, checkFiles []string) (*diffAdapter, error) {
 	v, ok := reader.(*tlcsv.Reader)
 	if !ok {
 		return nil, errors.New("must be csv input")
@@ -221,11 +222,21 @@ func checkDiffRaw(reader tl.Reader) (*diffAdapter, error) {
 		return nil, err
 	}
 	defer df.Close()
+
+	cfMap := map[string]bool{}
+	for _, k := range checkFiles {
+		cfMap[k] = true
+	}
+
 	for _, fi := range fis {
 		// Only compare files with lowercase names that end with .txt
 		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
 			continue
 		}
+		if len(cfMap) > 0 && !cfMap[fi.Name()] {
+			continue
+		}
+
 		header := false
 		v.Adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
 			if !header {
