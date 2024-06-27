@@ -236,13 +236,11 @@ func checkDiffRaw(reader tl.Reader, checkFiles []string) (*diffAdapter, error) {
 		if len(cfMap) > 0 && !cfMap[fi.Name()] {
 			continue
 		}
-
 		header := false
 		v.Adapter.ReadRows(fi.Name(), func(row tlcsv.Row) {
 			if !header {
 				df.WriteRows(fi.Name(), [][]string{row.Header})
 				header = true
-				return
 			}
 			// log.Traceln(fi.Name(), row.Row)
 			var row2 []string
