@@ -11,7 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/tl"
-	xy "github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/geojson"
 	"golang.org/x/exp/maps"
@@ -377,9 +377,9 @@ func (pp *SegmentBuilder) SetGeomCache(g *geomcache.GeomCache) {
 	pp.geomCache = g
 }
 
-func (pp *SegmentBuilder) makeShapeSlices() map[stopStopKey][]xy.Point {
+func (pp *SegmentBuilder) makeShapeSlices() map[stopStopKey][]tlxy.Point {
 	// Slice shapes
-	shapeSlices := map[stopStopKey][]xy.Point{}
+	shapeSlices := map[stopStopKey][]tlxy.Point{}
 	for _, pat := range pp.stopPatterns {
 		shapeId := mapMax(pat.ShapeCounts)
 		lgPat := log.Logger.With().Int("pat", pat.ID).Str("shape", shapeId).Logger()
@@ -403,9 +403,9 @@ func (pp *SegmentBuilder) makeShapeSlices() map[stopStopKey][]xy.Point {
 			spt := pp.geomCache.GetStop(key.FromStopID)
 			ept := pp.geomCache.GetStop(key.ToStopID)
 
-			var sliceLine []xy.Point
+			var sliceLine []tlxy.Point
 			if len(shapeInfo.Line) > 0 {
-				// sliceLine = xy.LineSliceShapeDistTraveled(
+				// sliceLine = tlxy.LineSliceShapeDistTraveled(
 				// 	shapeInfo.Line,
 				// 	shapeInfo.Dists,
 				// 	patDists[i],
@@ -413,10 +413,10 @@ func (pp *SegmentBuilder) makeShapeSlices() map[stopStopKey][]xy.Point {
 				// 	pp.geomCache.GetStop(key.FromStopID),
 				// 	pp.geomCache.GetStop(key.ToStopID),
 				// )
-				sliceLine = xy.CutBetweenPoints(shapeInfo.Line, spt, ept)
+				sliceLine = tlxy.CutBetweenPoints(shapeInfo.Line, spt, ept)
 			}
 			// fmt.Println(debugLine(sliceLine, spt, ept))
-			if sliceLineDist, ptDist := xy.LengthHaversine(sliceLine), xy.DistanceHaversine(spt, ept); sliceLineDist < ptDist {
+			if sliceLineDist, ptDist := tlxy.LengthHaversine(sliceLine), tlxy.DistanceHaversine(spt, ept); sliceLineDist < ptDist {
 				// fmt.Println(debugLine(shapeInfo.Line))
 				lgPat.Error().Msgf("\t\tshape slice length %f less than straight line dist %f", sliceLineDist, ptDist)
 				continue
@@ -459,7 +459,7 @@ func (pp *SegmentBuilder) makeStopToStops() map[string]map[string][]string {
 	return stopToStops
 }
 
-func debugLine(line []xy.Point, pts ...xy.Point) string {
+func debugLine(line []tlxy.Point, pts ...tlxy.Point) string {
 	var features []*geojson.Feature
 	features = append(features, &geojson.Feature{
 		Geometry: geom.NewLineStringFlat(geom.XY, lineFlat(line)),
@@ -478,7 +478,7 @@ func debugLine(line []xy.Point, pts ...xy.Point) string {
 
 }
 
-func lineFlat(line []xy.Point) []float64 {
+func lineFlat(line []tlxy.Point) []float64 {
 	var ret []float64
 	for _, c := range line {
 		ret = append(ret, c.Lon, c.Lat)
@@ -503,12 +503,12 @@ func runSplit[T any](v []T, splitFn func(prev, cur T) bool) [][]T {
 	return ret
 }
 
-func checkReverse(line []xy.Point, end xy.Point) bool {
+func checkReverse(line []tlxy.Point, end tlxy.Point) bool {
 	if len(line) == 0 {
 		return false
 	}
-	d1 := xy.Distance2d(end, line[0])
-	d2 := xy.Distance2d(end, line[len(line)-1])
+	d1 := tlxy.Distance2d(end, line[0])
+	d2 := tlxy.Distance2d(end, line[len(line)-1])
 	return d2 > d1
 }
 
