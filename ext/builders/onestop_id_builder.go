@@ -130,7 +130,7 @@ func (pp *OnestopIDBuilder) AgencyOnestopIDs() []AgencyOnestopID {
 		}
 		pts := []point{}
 		for _, sg := range sgs {
-			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
+			pts = append(pts, point{Lon: sg.lon, Lat: sg.lat})
 		}
 		if gh := pointsGeohash(pts, 1, 6); len(gh) > 0 {
 			ent := AgencyOnestopID{
@@ -163,7 +163,7 @@ func (pp *OnestopIDBuilder) RouteOnestopIDs() []RouteOnestopID {
 	for rid, rsg := range pp.routeStopGeoms {
 		pts := []point{}
 		for _, sg := range rsg.stopGeoms {
-			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
+			pts = append(pts, point{Lon: sg.lon, Lat: sg.lat})
 		}
 		if gh := pointsGeohash(pts, 1, 6); len(gh) > 0 {
 			ent := RouteOnestopID{

@@ -12,14 +12,14 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/filters"
-	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/rs/zerolog"
-	geomxy "github.com/twpayne/go-geom/xy"
+	"github.com/twpayne/go-geom/xy"
 )
 
 // Prepare is called before general copying begins.
@@ -67,7 +67,7 @@ type errorWithContext interface {
 }
 
 type canShareGeomCache interface {
-	SetGeomCache(*xy.GeomCache)
+	SetGeomCache(*geomcache.GeomCache)
 }
 
 type hasLine interface {
@@ -147,7 +147,7 @@ type Copier struct {
 	afterWriters      []AfterWrite
 	expandFilters     []ExpandFilter
 	// book keeping
-	geomCache *xy.GeomCache
+	geomCache *geomcache.GeomCache
 	result    *Result
 	EntityMap *tl.EntityMap
 }
@@ -205,7 +205,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	// Result
 	result := NewResult(opts.ErrorLimit)
 	copier.result = result
-	copier.geomCache = xy.NewGeomCache()
+	copier.geomCache = geomcache.NewGeomCache()
 	copier.ErrorHandler = opts.ErrorHandler
 	if copier.ErrorHandler == nil {
 		copier.ErrorHandler = result
@@ -681,7 +681,7 @@ func (copier *Copier) copyStops() error {
 	// First pass for stations
 	for ent := range copier.Reader.Stops() {
 		if ent.LocationType == 1 {
-			copier.geomCache.AddStop(ent.EntityID(), ent)
+			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
@@ -690,7 +690,7 @@ func (copier *Copier) copyStops() error {
 	// Second pass for platforms, exits, and generic nodes
 	for ent := range copier.Reader.Stops() {
 		if ent.LocationType == 0 || ent.LocationType == 2 || ent.LocationType == 3 {
-			copier.geomCache.AddStop(ent.EntityID(), ent)
+			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
@@ -699,7 +699,7 @@ func (copier *Copier) copyStops() error {
 	// Third pass for boarding areas
 	for ent := range copier.Reader.Stops() {
 		if ent.LocationType == 4 {
-			copier.geomCache.AddStop(ent.EntityID(), ent)
+			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
@@ -786,7 +786,7 @@ func (copier *Copier) copyShapes() error {
 			pnts := ent.Geometry.FlatCoords()
 			// before := len(pnts)
 			stride := ent.Geometry.Stride()
-			ii := geomxy.SimplifyFlatCoords(pnts, simplifyValue, stride)
+			ii := xy.SimplifyFlatCoords(pnts, simplifyValue, stride)
 			for i, j := range ii {
 				if i == j*stride {
 					continue
@@ -799,7 +799,8 @@ func (copier *Copier) copyShapes() error {
 		if entErr, writeErr := copier.CopyEntity(&ent); writeErr != nil {
 			return writeErr
 		} else if entErr == nil && !copier.Options.NoShapeCache {
-			copier.geomCache.AddShape(sid, ent)
+			lm := ent.Geometry.ToLineM()
+			copier.geomCache.AddShapeGeom(sid, lm.Coords, lm.Data)
 		}
 	}
 	copier.logCount(&tl.Shape{})

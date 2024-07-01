@@ -7,8 +7,6 @@ import (
 	"math"
 	"strconv"
 	"time"
-
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 type canString interface {
@@ -242,10 +240,6 @@ func convertAssign(dest any, src any) error {
 
 func cannotConvert() error {
 	return errors.New("cannot convert")
-}
-
-func bcString(v string) causes.Context {
-	return causes.Context{Value: v}
 }
 
 func parseTime(d string) (time.Time, error) {

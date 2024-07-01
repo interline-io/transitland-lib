@@ -4,10 +4,11 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext/sched"
-	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/twpayne/go-geom"
 )
 
@@ -43,7 +44,7 @@ type Validator struct {
 	tripInfo            map[string]tripInfo
 	routeInfo           map[string]routeInfo
 	stopInfo            map[string]stopInfo
-	geomCache           *xy.GeomCache // shared with copier
+	geomCache           *geomcache.GeomCache // shared with copier
 	sched               *sched.ScheduleChecker
 }
 
@@ -55,12 +56,12 @@ func NewValidator() *Validator {
 		routeInfo:           map[string]routeInfo{},
 		stopInfo:            map[string]stopInfo{},
 		sched:               sched.NewScheduleChecker(),
-		geomCache:           xy.NewGeomCache(),
+		geomCache:           geomcache.NewGeomCache(),
 	}
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (fi *Validator) SetGeomCache(g *xy.GeomCache) {
+func (fi *Validator) SetGeomCache(g *geomcache.GeomCache) {
 	fi.geomCache = g
 }
 
@@ -633,7 +634,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 	errs = append(errs, posValid...)
 	if len(posValid) == 0 {
 		// Check distance from shape
-		posPt := xy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
+		posPt := tlxy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
 		if td := ent.Trip; td != nil && td.TripId != nil {
 			tripId := td.GetTripId()
 			trip, tripOk := fi.tripInfo[tripId]
@@ -651,8 +652,8 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 			} else if len(shp) == 0 {
 				errs = append(errs, newError("Invalid shape_id", "trip_descriptor"))
 			} else {
-				nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
-				nearestPointDist := xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat)
+				nearestPoint, _, _ := tlxy.LineClosestPoint(shp, posPt)
+				nearestPointDist := tlxy.DistanceHaversine(nearestPoint, posPt)
 				if nearestPointDist > fi.MaxDistanceFromTrip {
 					shpErr := withFieldAndJson(
 						E029,

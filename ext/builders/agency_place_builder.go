@@ -51,7 +51,8 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.Ent
 	case *tl.Agency:
 		pp.agencyStops[eid] = map[string]int{}
 	case *tl.Stop:
-		pp.stops[eid] = geohash.EncodeWithPrecision(v.Geometry.Y(), v.Geometry.X(), 6) // note reversed coords
+		spt := v.ToPoint()
+		pp.stops[eid] = geohash.EncodeWithPrecision(spt.Lat, spt.Lon, 6) // Note reversed coords
 	case *tl.Route:
 		pp.routeAgency[eid] = v.AgencyID
 	case *tl.Trip:

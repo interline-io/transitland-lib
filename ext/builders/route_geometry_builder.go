@@ -6,9 +6,9 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/twpayne/go-geom"
 )
 
@@ -35,7 +35,7 @@ func (ent *RouteGeometry) TableName() string {
 ///////
 
 type shapeInfo struct {
-	Line                  []xy.Point
+	Line                  []tlxy.Point
 	Generated             bool
 	Length                float64
 	MaxSegmentLength      float64
@@ -62,14 +62,14 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Shape:
-		pts := make([]xy.Point, v.Geometry.NumCoords())
+		pts := make([]tlxy.Point, v.Geometry.NumCoords())
 		for i, c := range v.Geometry.Coords() {
-			pts[i] = xy.Point{Lon: c[0], Lat: c[1]}
+			pts[i] = tlxy.Point{Lon: c[0], Lat: c[1]}
 		}
 		// If we've already seen this line, re-use shapeInfo to reduce mem usage
 		for _, si := range pp.shapeInfos {
 			// Match on generated value too
-			if xy.PointSliceEqual(pts, si.Line) && si.Generated == v.Generated {
+			if tlxy.LineEquals(pts, si.Line) && si.Generated == v.Generated {
 				// Add to shape cache
 				pp.shapeInfos[eid] = si
 				return nil
@@ -80,15 +80,15 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 		length := 0.0
 		firstPoint := pts[0]
 		firstPointMaxDistance := 0.0
-		prevPoint := xy.Point{}
+		prevPoint := tlxy.Point{}
 		for i, pt := range pts {
 			if i > 0 {
-				d := xy.DistanceHaversine(prevPoint.Lon, prevPoint.Lat, pt.Lon, pt.Lat)
+				d := tlxy.DistanceHaversine(prevPoint, pt)
 				length += d
 				if d > maxSegmentLength {
 					maxSegmentLength = d
 				}
-				if d2 := xy.DistanceHaversine(firstPoint.Lon, firstPoint.Lat, pt.Lon, pt.Lat); d2 > firstPointMaxDistance {
+				if d2 := tlxy.DistanceHaversine(firstPoint, pt); d2 > firstPointMaxDistance {
 					firstPointMaxDistance = d2
 				}
 			}
@@ -205,7 +205,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 
 	// Now build the route geometry from selected shapes
 	ent := RouteGeometry{RouteID: rid}
-	matches := [][]xy.Point{}
+	matches := [][]tlxy.Point{}
 	for _, shapeId := range routeSelectedShapes {
 		si, ok := pp.shapeInfos[shapeId]
 		if !ok {
@@ -217,7 +217,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		// A line will only be skipped if it's contained in a more frequent shape.
 		// TODO: TopoJson style only store unique segments.
 		for _, match := range matches {
-			if xy.PointSliceContains(si.Line, match) {
+			if tlxy.LineContains(si.Line, match) {
 				continue
 			}
 		}

@@ -14,17 +14,18 @@ require (
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/iancoleman/orderedmap v0.2.0
-	github.com/interline-io/log v0.0.0-20240126000327-05bb90e4de4f
+	github.com/interline-io/log v0.0.0-20240613202707-4e3adcc06d2d
 	github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.6
 	github.com/mattn/go-sqlite3 v1.14.13
 	github.com/mmcloughlin/geohash v0.10.0
-	github.com/rs/zerolog v1.32.0
+	github.com/rs/zerolog v1.33.0
 	github.com/sergi/go-diff v1.2.0
 	github.com/snabb/isoweek v1.0.1
 	github.com/stretchr/testify v1.7.1
 	github.com/twpayne/go-geom v1.4.1
+	github.com/twpayne/go-polyline v1.1.1
 	google.golang.org/protobuf v1.33.0
 )
 
@@ -59,7 +60,7 @@ require (
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8 // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

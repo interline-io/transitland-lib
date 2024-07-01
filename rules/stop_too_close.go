@@ -3,8 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/mmcloughlin/geohash"
 )
 
@@ -28,9 +28,8 @@ func (e *StopTooCloseError) Error() string {
 }
 
 type stopPoint struct {
-	id  string
-	lat float64
-	lon float64
+	id string
+	pt tlxy.Point
 }
 
 // StopTooCloseCheck checks for StopTooCloseErrors.
@@ -51,22 +50,22 @@ func (e *StopTooCloseCheck) Validate(ent tl.Entity) []error {
 		return nil
 	}
 	// Use geohash for fast neighbor search; precision = 9 is approx 5m x 5m at the equator.
-	coords := v.Geometry.Coords()
-	if len(coords) < 2 {
-		return nil
-	}
-	if coords[0] == 0 && coords[1] == 0 {
+	spt := v.ToPoint()
+	if spt.Lon == 0 && spt.Lat == 0 {
 		return nil // 0,0 is handled elsewhere
 	}
 	var errs []error
-	gh := geohash.EncodeWithPrecision(coords[0], coords[1], 9)
+	gh := geohash.EncodeWithPrecision(spt.Lat, spt.Lon, 9) // Note reversed order
 	neighbors := geohash.Neighbors(gh)
 	neighbors = append(neighbors, gh)
-	g := stopPoint{id: v.StopID, lat: coords[0], lon: coords[1]}
+	g := stopPoint{
+		id: v.StopID,
+		pt: spt,
+	}
 	for _, neighbor := range neighbors {
 		if hits, ok := e.geoms[neighbor]; ok {
 			for _, hit := range hits {
-				d := xy.DistanceHaversine(g.lon, g.lat, hit.lon, hit.lat)
+				d := tlxy.DistanceHaversine(g.pt, hit.pt)
 				if d < e.maxdist {
 					errs = append(errs, &StopTooCloseError{
 						StopID:      v.StopID,
