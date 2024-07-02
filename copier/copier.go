@@ -18,9 +18,15 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/rs/zerolog"
 	"github.com/twpayne/go-geom/xy"
 )
+
+type GeomCache interface {
+	GetStop(string) tlxy.Point
+	GetShape(eid string) []tlxy.Point
+}
 
 // Prepare is called before general copying begins.
 type Prepare interface {
@@ -67,7 +73,7 @@ type errorWithContext interface {
 }
 
 type canShareGeomCache interface {
-	SetGeomCache(*geomcache.GeomCache)
+	SetGeomCache(GeomCache)
 }
 
 type hasLine interface {
