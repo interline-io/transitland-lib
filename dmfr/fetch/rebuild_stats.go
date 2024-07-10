@@ -9,10 +9,10 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"

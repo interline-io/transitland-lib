@@ -1,3 +1,4 @@
+// Package rules provides a number of GTFS validation rules and examples.
 package rules
 
 import (

@@ -11,6 +11,10 @@ type hasHelpDesc interface {
 	HelpDesc() (string, string)
 }
 
+type hasHelpExample interface {
+	HelpExample() string
+}
+
 type hasHelpArgs interface {
 	HelpArgs() string
 }
@@ -52,7 +56,12 @@ func CobraHelper(r Runner, subc string) *cobra.Command {
 		cobraCommand.Use = fmt.Sprintf("%s %s", subc, v.HelpArgs())
 	}
 	if v, ok := r.(hasHelpDesc); ok {
-		cobraCommand.Short, cobraCommand.Long = v.HelpDesc()
+		short, long := v.HelpDesc()
+		cobraCommand.Short = short
+		cobraCommand.Long = fmt.Sprintf("%s\n\n%s", short, long)
+	}
+	if v, ok := r.(hasHelpExample); ok {
+		cobraCommand.Example = v.HelpExample()
 	}
 	cobraCommand.PreRunE = func(cmd *cobra.Command, args []string) error {
 		return r.Parse(args)

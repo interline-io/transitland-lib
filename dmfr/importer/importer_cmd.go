@@ -9,7 +9,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
@@ -41,7 +41,7 @@ type Command struct {
 }
 
 func (cmd *Command) HelpDesc() (string, string) {
-	return "Import feed versions", ""
+	return "Import feed versions", "Use after the `fetch` command"
 }
 
 func (cmd *Command) HelpArgs() string {

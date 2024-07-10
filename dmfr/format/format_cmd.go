@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/spf13/pflag"
 )
 

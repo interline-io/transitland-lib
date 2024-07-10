@@ -4,7 +4,6 @@ import (
 	_ "embed"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/diff"
 	"github.com/interline-io/transitland-lib/dmfr/fetch"
@@ -16,6 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/extract"
 	"github.com/interline-io/transitland-lib/merge"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/validator"
 
 	_ "github.com/interline-io/transitland-lib/ext/plus"
@@ -70,6 +70,7 @@ func init() {
 		tlcli.CobraHelper(&versionCommand{}, "version"),
 		tlcli.CobraHelper(&lint.Command{}, "dmfr-format"),
 		tlcli.CobraHelper(&format.Command{}, "dmfr-lint"),
+		tlcli.CobraHelper(&tlcli.GenDocCommand{Command: rootCmd}, "gendoc"),
 		dmfrCommand,
 	)
 }

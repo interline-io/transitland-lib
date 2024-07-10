@@ -40,7 +40,7 @@ type Command struct {
 }
 
 func (cmd *Command) HelpDesc() (string, string) {
-	return "Fetch GTFS data and create feed versions", ""
+	return "Fetch GTFS data and create feed versions", "Use after the `sync` command."
 }
 
 func (cmd *Command) HelpArgs() string {

@@ -1,3 +1,4 @@
+// Package extract provides tools and utilities for extracting subsets of GTFS feeds.
 package extract
 
 import (
@@ -7,13 +8,13 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/filters"
 	_ "github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
@@ -48,7 +49,40 @@ type Command struct {
 }
 
 func (cmd *Command) HelpDesc() (string, string) {
-	return "Extract a subset of a GTFS feed", ""
+	a := "Extract a subset of a GTFS feed"
+	b := `The extract command extends the basic copy command with a number of additional options and transformations. It can be used to pull out a single route or trip, interpolate stop times, override a single value on an entity, etc. This is a separate command to keep the basic copy command simple while allowing the extract command to grow and add more features over time.`
+	return a, b
+}
+
+func (cmd *Command) HelpExample() string {
+	return `
+# Extract a single trip from the BART GTFS, and rename the agency to "test".
+% {COMMAND} --extract-trip "3050453" --set "agency.txt,BART,agency_id,test" "https://www.bart.gov/dev/schedules/google_transit.zip" output2.zip
+
+# Note renamed agency
+% unzip -p output2.zip agency.txt
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
+test,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6000,,
+
+# Only entities related to the specified trip are included in the output.
+% unzip -p output2.zip trips.txt
+route_id,service_id,trip_id,trip_headsign,trip_short_name,direction_id,block_id,shape_id,wheelchair_accessible,bikes_allowed
+1,2020_09_14-DX-MVS-Weekday-15,3050453,San Francisco International Airport,,1,,01_shp,0,0
+
+$ unzip -p output2.zip routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color,route_sort_order
+1,test,YL-S,Antioch to SFIA/Millbrae,,1,http://www.bart.gov/schedules/bylineresults?route=1,FFFF33,,0
+
+% unzip -p output2.zip stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,timepoint
+3050453,04:53:00,04:53:00,CONC,0,,0,0,0.00000,0
+3050453,04:58:00,04:58:00,PHIL,2,,0,0,4.06000,0
+3050453,05:01:00,05:02:00,WCRK,3,,0,0,5.77000,0
+3050453,05:06:00,05:07:00,LAFY,4,,0,0,9.23000,0
+3050453,05:11:00,05:12:00,ORIN,5,,0,0,12.99000,0
+3050453,05:17:00,05:18:00,ROCK,6,,0,0,17.38000,0
+...
+`
 }
 
 func (cmd *Command) HelpArgs() string {

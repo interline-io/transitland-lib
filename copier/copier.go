@@ -1,3 +1,4 @@
+// Package copier provides tools and utilities for copying and modifying GTFS feeds.
 package copier
 
 import (

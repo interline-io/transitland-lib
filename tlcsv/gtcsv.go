@@ -1,3 +1,4 @@
+// Package tlcsv provides adapters to read and write GTFS from CSV format files.
 package tlcsv
 
 import (

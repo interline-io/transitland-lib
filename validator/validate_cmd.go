@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/snakejson"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
@@ -28,7 +28,11 @@ type Command struct {
 }
 
 func (cmd *Command) HelpDesc() (string, string) {
-	return "Validate a GTFS feed", ""
+	return "Validate a GTFS feed", "The validate command performs a basic validation on a data source and writes the results to standard out."
+}
+
+func (cmd *Command) HelpExample() string {
+	return `% transitland validate "https://www.bart.gov/dev/schedules/google_transit.zip"`
 }
 
 func (cmd *Command) HelpArgs() string {

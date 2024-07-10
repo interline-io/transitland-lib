@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/pflag"
 )

@@ -1,19 +1,19 @@
+// Package diff provides tools and utilities for comparing GTFS feeds.
 package diff
 
 import (
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/spf13/pflag"
 )
@@ -33,7 +33,7 @@ type Command struct {
 func (cmd *Command) HelpDesc() (string, string) {
 	a := "Calculate difference between two feeds, writing output in a GTFS-like format"
 	b := "This command is experimental; it may provide incorrect results or crash on large feeds."
-	return a, fmt.Sprintf("%s\n%s", a, b)
+	return a, b
 }
 
 func (cmd *Command) HelpArgs() string {

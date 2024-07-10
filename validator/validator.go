@@ -1,3 +1,4 @@
+// Package validator provides GTFS and GTFS-RT validation utilities.
 package validator
 
 import (

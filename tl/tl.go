@@ -1,3 +1,4 @@
+// Package tl provides the core types and utility functions for transitland-lib.
 package tl
 
 import (

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
@@ -23,7 +23,19 @@ type Command struct {
 }
 
 func (cmd *Command) HelpDesc() (string, string) {
-	return "Copy feed", ""
+	a := "Copy performs a basic copy from a reader to a writer."
+	b := "By default, any entity with errors will be skipped and not written to output. This can be ignored with `--allow-entity-errors` to ignore simple errors and `--allow-reference-errors` to ignore entity relationship errors, such as a reference to a non-existent stop."
+	return a, b
+}
+
+func (cmd *Command) HelpExample() string {
+	return `
+% {COMMAND} --allow-entity-errors "https://www.bart.gov/dev/schedules/google_transit.zip" output.zip
+
+% unzip -p output.zip agency.txt
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
+BART,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6000,,
+`
 }
 
 func (cmd *Command) HelpArgs() string {

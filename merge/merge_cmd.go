@@ -1,13 +1,14 @@
+// Package merge provides utilities and commands for merging GTFS feeds.
 package merge
 
 import (
 	"errors"
 
 	"github.com/interline-io/transitland-lib/adapters/multireader"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/spf13/pflag"
 )
 

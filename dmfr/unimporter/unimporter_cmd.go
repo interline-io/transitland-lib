@@ -8,7 +8,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/cmd/tlcli"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
@@ -31,7 +31,7 @@ type Command struct {
 }
 
 func (cmd *Command) HelpDesc() (string, string) {
-	return "Unimport feed versions", ""
+	return "Unimport feed versions", "The `unimport` command deletes previously imported data from feed versions. The feed version record itself is not deleted. You may optionally specify removal of only schedule data, leaving routes, stops, etc. in place."
 }
 
 func (cmd *Command) HelpArgs() string {
