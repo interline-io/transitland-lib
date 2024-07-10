@@ -3,12 +3,13 @@ package format
 import (
 	"bytes"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/cli"
+	"github.com/spf13/pflag"
 )
 
 // Command formats a DMFR file.
@@ -17,19 +18,13 @@ type Command struct {
 	Save     bool
 }
 
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+	fl.BoolVar(&cmd.Save, "save", false, "Save the formatted output back to the file")
+}
+
 // Parse command line options.
 func (cmd *Command) Parse(args []string) error {
-	fl := flag.NewFlagSet("format", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: format <local filename>")
-		fl.PrintDefaults()
-	}
-	fl.BoolVar(&cmd.Save, "save", false, "Save the formatted output back to the file")
-	fl.Parse(args)
-	if fl.NArg() == 0 {
-		fl.Usage()
-		return nil
-	}
+	fl := cli.NewNArgs(args)
 	cmd.Filename = fl.Arg(0)
 	return nil
 }

@@ -10,44 +10,11 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
-	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
-
-// Cobra setup
-
-var pcmd = Command{}
-
-var CobraCommand = &cobra.Command{
-	Use:   "fetch [flags] <feeds...>",
-	Short: "fetch command",
-	RunE:  cli.CobraHelper(&pcmd),
-}
-
-func init() {
-	fl := CobraCommand.Flags()
-	fl.BoolVar(&pcmd.CreateFeed, "create-feed", false, "Create feed record if not found")
-	fl.StringVar(&pcmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
-	fl.StringVar(&pcmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
-	fl.StringVar(&pcmd.secretsFile, "secrets", "", "Path to DMFR Secrets file")
-	fl.IntVar(&pcmd.Workers, "workers", 1, "Worker threads")
-	fl.IntVar(&pcmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
-	fl.StringVar(&pcmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&pcmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
-	fl.BoolVar(&pcmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
-	fl.BoolVar(&pcmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
-	fl.BoolVar(&pcmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
-	fl.BoolVar(&pcmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
-	fl.BoolVar(&pcmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
-	fl.BoolVar(&pcmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
-	fl.StringVar(&pcmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
-	fl.StringVar(&pcmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
-}
-
-///////////////
 
 type FetchCommandResult struct {
 	Result           Result
@@ -72,7 +39,26 @@ type Command struct {
 	secretsFile string
 }
 
-func (cmd *Command) PreRunE(args []string) error {
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+	fl.BoolVar(&cmd.CreateFeed, "create-feed", false, "Create feed record if not found")
+	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
+	fl.StringVar(&cmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
+	fl.StringVar(&cmd.secretsFile, "secrets", "", "Path to DMFR Secrets file")
+	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
+	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
+	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
+	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
+	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
+	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
+	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
+	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
+	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
+	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
+	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
+}
+
+func (cmd *Command) Parse(args []string) error {
 	if cmd.Workers < 1 {
 		cmd.Workers = 1
 	}

@@ -77,7 +77,7 @@ func TestFetchCommand(t *testing.T) {
 			tmpDir := t.TempDir()
 			c.Options.Storage = tmpDir
 			c.Fail = exp.fail
-			if err := c.PreRunE(exp.command); err != nil {
+			if err := c.Parse(exp.command); err != nil {
 				t.Fatal(err)
 			}
 			if err := c.Run(); err != nil && exp.fatalErrorContains != "" {

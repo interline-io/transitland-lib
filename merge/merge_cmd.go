@@ -2,13 +2,14 @@ package merge
 
 import (
 	"errors"
-	"flag"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters/multireader"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/spf13/pflag"
 )
 
 // Command
@@ -19,15 +20,16 @@ type Command struct {
 	writeExtraColumns bool
 }
 
-func (cmd *Command) Parse(args []string) error {
-	fl := flag.NewFlagSet("merge", flag.ExitOnError)
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.Usage = func() {
 		log.Print("Usage: merge <writer> [readers...]")
 		fl.PrintDefaults()
 	}
-	fl.Parse(args)
+}
+
+func (cmd *Command) Parse(args []string) error {
+	fl := cli.NewNArgs(args)
 	if fl.NArg() < 2 {
-		fl.Usage()
 		return errors.New("requires output writer and at least one reader")
 	}
 	cmd.writerPath = fl.Arg(0)

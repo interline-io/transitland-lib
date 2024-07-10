@@ -2,14 +2,13 @@ package copier
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/spf13/pflag"
 )
 
 // Command
@@ -17,19 +16,14 @@ type Command struct {
 	Options
 	fvid              int
 	create            bool
-	extensions        cli.ArrayFlags
+	extensions        []string
 	readerPath        string
 	writerPath        string
 	writeExtraColumns bool
 }
 
-func (cmd *Command) Parse(args []string) error {
-	fl := flag.NewFlagSet("copy", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: copy <reader> <writer>")
-		fl.PrintDefaults()
-	}
-	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+	fl.StringSliceVar(&cmd.extensions, "ext", nil, "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
 	fl.BoolVar(&cmd.CopyExtraFiles, "write-extra-files", false, "Copy additional files found in source to destination")
@@ -37,9 +31,11 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
 	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
-	fl.Parse(args)
+}
+
+func (cmd *Command) Parse(args []string) error {
+	fl := cli.NewNArgs(args)
 	if fl.NArg() < 2 {
-		fl.Usage()
 		return errors.New("requires input reader and output writer")
 	}
 	cmd.readerPath = fl.Arg(0)

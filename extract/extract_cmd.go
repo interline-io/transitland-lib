@@ -2,7 +2,6 @@ package extract
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/spf13/pflag"
 )
 
 // Command
@@ -25,35 +25,30 @@ type Command struct {
 	// Typical DMFR options
 	fvid       int
 	create     bool
-	extensions cli.ArrayFlags
+	extensions []string
 	// extract specific arguments
 	Prefix            string
-	extractAgencies   cli.ArrayFlags
-	extractStops      cli.ArrayFlags
-	extractTrips      cli.ArrayFlags
-	extractCalendars  cli.ArrayFlags
-	extractRoutes     cli.ArrayFlags
-	extractRouteTypes cli.ArrayFlags
-	extractSet        cli.ArrayFlags
-	excludeAgencies   cli.ArrayFlags
-	excludeStops      cli.ArrayFlags
-	excludeTrips      cli.ArrayFlags
-	excludeCalendars  cli.ArrayFlags
-	excludeRoutes     cli.ArrayFlags
-	excludeRouteTypes cli.ArrayFlags
+	extractAgencies   []string
+	extractStops      []string
+	extractTrips      []string
+	extractCalendars  []string
+	extractRoutes     []string
+	extractRouteTypes []string
+	extractSet        []string
+	excludeAgencies   []string
+	excludeStops      []string
+	excludeTrips      []string
+	excludeCalendars  []string
+	excludeRoutes     []string
+	excludeRouteTypes []string
 	bbox              string
 	writeExtraColumns bool
 	readerPath        string
 	writerPath        string
 }
 
-func (cmd *Command) Parse(args []string) error {
-	fl := flag.NewFlagSet("extract", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: extract <input> <output>")
-		fl.PrintDefaults()
-	}
-	fl.Var(&cmd.extensions, "ext", "Include GTFS Extension")
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+	fl.StringArrayVar(&cmd.extensions, "ext", nil, "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
 	// Copy options
@@ -72,32 +67,31 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.writeExtraColumns, "write-extra-columns", false, "Include extra columns in output")
 
 	// Extract options
-	fl.Var(&cmd.extractAgencies, "extract-agency", "Extract Agency")
-	fl.Var(&cmd.extractStops, "extract-stop", "Extract Stop")
-	fl.Var(&cmd.extractTrips, "extract-trip", "Extract Trip")
-	fl.Var(&cmd.extractCalendars, "extract-calendar", "Extract Calendar")
-	fl.Var(&cmd.extractRoutes, "extract-route", "Extract Route")
-	fl.Var(&cmd.extractRouteTypes, "extract-route-type", "Extract Routes matching route_type")
+	fl.StringArrayVar(&cmd.extractAgencies, "extract-agency", nil, "Extract Agency")
+	fl.StringArrayVar(&cmd.extractStops, "extract-stop", nil, "Extract Stop")
+	fl.StringArrayVar(&cmd.extractTrips, "extract-trip", nil, "Extract Trip")
+	fl.StringArrayVar(&cmd.extractCalendars, "extract-calendar", nil, "Extract Calendar")
+	fl.StringArrayVar(&cmd.extractRoutes, "extract-route", nil, "Extract Route")
+	fl.StringArrayVar(&cmd.extractRouteTypes, "extract-route-type", nil, "Extract Routes matching route_type")
 
 	// Exclude options
-	fl.Var(&cmd.excludeAgencies, "exclude-agency", "Exclude Agency")
-	fl.Var(&cmd.excludeStops, "exclude-stop", "Exclude Stop")
-	fl.Var(&cmd.excludeTrips, "exclude-trip", "Exclude Trip")
-	fl.Var(&cmd.excludeCalendars, "exclude-calendar", "Exclude Calendar")
-	fl.Var(&cmd.excludeRoutes, "exclude-route", "Exclude Route")
-	fl.Var(&cmd.excludeRouteTypes, "exclude-route-type", "Exclude Routes matching route_type")
+	fl.StringArrayVar(&cmd.excludeAgencies, "exclude-agency", nil, "Exclude Agency")
+	fl.StringArrayVar(&cmd.excludeStops, "exclude-stop", nil, "Exclude Stop")
+	fl.StringArrayVar(&cmd.excludeTrips, "exclude-trip", nil, "Exclude Trip")
+	fl.StringArrayVar(&cmd.excludeCalendars, "exclude-calendar", nil, "Exclude Calendar")
+	fl.StringArrayVar(&cmd.excludeRoutes, "exclude-route", nil, "Exclude Route")
+	fl.StringArrayVar(&cmd.excludeRouteTypes, "exclude-route-type", nil, "Exclude Routes matching route_type")
 
 	fl.StringVar(&cmd.bbox, "bbox", "", "Extract bbox as (min lon, min lat, max lon, max lat), e.g. -122.276,37.794,-122.259,37.834")
 
-	fl.Var(&cmd.extractSet, "set", "Set values on output; format is filename,id,key,value")
+	fl.StringArrayVar(&cmd.extractSet, "set", nil, "Set values on output; format is filename,id,key,value")
 	fl.StringVar(&cmd.Prefix, "prefix", "", "Prefix entities in this feed")
 
-	// Entity selection options
-	// fl.BoolVar(&cmd.onlyVisitedEntities, "only-visited-entities", false, "Only copy visited entities")
-	// fl.BoolVar(&cmd.allEntities, "all-entities", false, "Copy all entities")
-	fl.Parse(args)
+}
+
+func (cmd *Command) Parse(args []string) error {
+	fl := cli.NewNArgs(args)
 	if fl.NArg() < 2 {
-		fl.Usage()
 		return errors.New("requires input reader and output writer")
 	}
 	cmd.readerPath = fl.Arg(0)

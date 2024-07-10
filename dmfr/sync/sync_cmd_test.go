@@ -24,7 +24,7 @@ func TestSyncCommand(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			w := testdb.MustOpenWriter("sqlite3://:memory:", true)
 			c := Command{Adapter: w.Adapter}
-			if err := c.PreRunE(exp.command); err != nil {
+			if err := c.Parse(exp.command); err != nil {
 				t.Error(err)
 			}
 			err := c.Run()

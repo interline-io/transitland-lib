@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
-	"flag"
 	"io"
 	"os"
 	"sort"
@@ -12,8 +11,10 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/spf13/pflag"
 )
 
 type Command struct {
@@ -28,8 +29,7 @@ type Command struct {
 	readerPathB string
 }
 
-func (cmd *Command) Parse(args []string) error {
-	fl := flag.NewFlagSet("diff", flag.ExitOnError)
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.Usage = func() {
 		log.Print("Usage: diff <input1> <input2> <output>")
 		log.Print("This command is experimental; it may provide incorrect results or crash on large feeds.")
@@ -40,14 +40,15 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.ShowAdded, "added", false, "Show entities added in second file")
 	fl.BoolVar(&cmd.ShowDeleted, "deleted", false, "Show entities deleted from first file")
 	fl.BoolVar(&cmd.RawDiff, "raw", false, "Diff based on raw CSV contents")
-	fl.Parse(args)
+}
+
+func (cmd *Command) Parse(args []string) error {
+	fl := cli.NewNArgs(args)
 	if fl.NArg() < 2 {
-		fl.Usage()
-		return errors.New("Requires two input readers")
+		return errors.New("requires two input readers")
 	}
 	if fl.NArg() < 3 {
-		fl.Usage()
-		return errors.New("Requires output directory")
+		return errors.New("requires output directory")
 	}
 	if !cmd.ShowAdded && !cmd.ShowDeleted && !cmd.ShowSame && !cmd.ShowDiff {
 		log.Print("Using default mode of -same -diff -added -deleted")

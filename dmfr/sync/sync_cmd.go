@@ -3,35 +3,9 @@ package sync
 import (
 	"os"
 
-	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
-
-// Cobra setup
-
-var pcmd = Command{}
-
-var CobraCommand = &cobra.Command{
-	Use:   "sync [flags] <filenames...>",
-	Args:  cobra.MinimumNArgs(1),
-	Short: "sync command",
-	RunE:  cli.CobraHelper(&pcmd),
-}
-
-func init() {
-	fl := CobraCommand.Flags()
-	fl.Usage = func() {
-		log.Print("Usage: sync <Filenames...>")
-		fl.PrintDefaults()
-	}
-	fl.StringVar(&pcmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&pcmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")
-	fl.BoolVar(&pcmd.HideUnseenOperators, "hide-unseen-operators", false, "Hide unseen operators")
-}
-
-///////////////
 
 // Command syncs a DMFR to a database.
 type Command struct {
@@ -40,8 +14,14 @@ type Command struct {
 	Options
 }
 
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
+	fl.BoolVar(&cmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")
+	fl.BoolVar(&cmd.HideUnseenOperators, "hide-unseen-operators", false, "Hide unseen operators")
+}
+
 // Parse command line options.
-func (cmd *Command) PreRunE(args []string) error {
+func (cmd *Command) Parse(args []string) error {
 	cmd.Filenames = args
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
