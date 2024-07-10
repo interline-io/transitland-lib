@@ -198,7 +198,7 @@ Example:
 
 ```bash
 # Extract a single trip from the BART GTFS, and rename the agency to "test".
-% transitland extract -extract-trip "3050453" -set "agency.txt,BART,agency_id,test" "https://www.bart.gov/dev/schedules/google_transit.zip" output2.zip
+% transitland extract --extract-trip "3050453" --set "agency.txt,BART,agency_id,test" "https://www.bart.gov/dev/schedules/google_transit.zip" output2.zip
 
 # Note renamed agency
 % unzip -p output2.zip agency.txt
@@ -500,12 +500,6 @@ For more information about how these web services are used within the overall ar
 ### `transitland_server` command
 
 See [transitland-server](https://github.com/interline-io/transitland-server) documentation.
-
-### Hasura
-
-[Hasura](https://hasura.io/) is a web service that can provide an "instant" GraphQL API based on a postgres database and its schema. We combine Hasura with `transitland-lib` for projects that involve creating new or complex queries (since Hasura can be more flexible than the queries provided by `transitland server`) and projects that involve an API with full read and write access (for example, editing GTFS data, which is also not provided by `transitland server`). Note that Hasura's automatically generated database queries are not guaranteed to be efficient (on the other hand, `transitland server` is tuned to provide better performance).
-
-To use Hasura with `transitland-lib` you can either import feeds into an existing postgres database (using the `transitland dmfr` command) and configure Hasura to recognize all the tables and the foreign key relationships between them.
 
 ## Included Readers and Writers
 
