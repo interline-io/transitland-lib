@@ -39,6 +39,14 @@ type Command struct {
 	secretsFile string
 }
 
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Fetch GTFS data and create feed versions", ""
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] [feeds...]"
+}
+
 func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.CreateFeed, "create-feed", false, "Create feed record if not found")
 	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")

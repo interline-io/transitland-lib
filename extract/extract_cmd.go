@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/filters"
 	_ "github.com/interline-io/transitland-lib/filters"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
@@ -45,6 +45,14 @@ type Command struct {
 	writeExtraColumns bool
 	readerPath        string
 	writerPath        string
+}
+
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Extract a subset of a GTFS feed", ""
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <reader> <writer>"
 }
 
 func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
@@ -90,7 +98,7 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 }
 
 func (cmd *Command) Parse(args []string) error {
-	fl := cli.NewNArgs(args)
+	fl := tlcli.NewNArgs(args)
 	if fl.NArg() < 2 {
 		return errors.New("requires input reader and output writer")
 	}

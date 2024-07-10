@@ -14,6 +14,14 @@ type Command struct {
 	Options
 }
 
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Sync DMFR files to database", ""
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <filenames...>"
+}
+
 func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")

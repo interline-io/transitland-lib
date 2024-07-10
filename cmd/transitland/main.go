@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/diff"
 	"github.com/interline-io/transitland-lib/dmfr/fetch"
@@ -11,7 +12,6 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr/sync"
 	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	"github.com/interline-io/transitland-lib/extract"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/merge"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/validator"
@@ -29,6 +29,10 @@ type versionCommand struct{}
 
 func (cmd *versionCommand) AddFlags(fl *pflag.FlagSet) {}
 
+func (cmd *versionCommand) HelpDesc() (string, string) {
+	return "Program version and supported GTFS and GTFS-RT versions", ""
+}
+
 func (cmd *versionCommand) Parse(args []string) error {
 	return nil
 }
@@ -43,26 +47,26 @@ func (cmd *versionCommand) Run() error {
 var rootCmd = &cobra.Command{Use: "transitland"}
 
 func init() {
-	dmfrCommand := &cobra.Command{Use: "dmfr"}
+	dmfrCommand := &cobra.Command{Use: "dmfr", Short: "DMFR subcommands", Long: "DMFR Subcommands. Deprecated. Use dmfr-format, dmfr-lint, etc. instead."}
 	dmfrCommand.AddCommand(
-		cli.CobraHelper(&lint.Command{}, "format"),
-		cli.CobraHelper(&format.Command{}, "lint"),
+		tlcli.CobraHelper(&lint.Command{}, "format"),
+		tlcli.CobraHelper(&format.Command{}, "lint"),
 	)
 
 	rootCmd.AddCommand(
-		cli.CobraHelper(&fetch.Command{}, "fetch"),
-		cli.CobraHelper(&sync.Command{}, "sync"),
-		cli.CobraHelper(&copier.Command{}, "copy"),
-		cli.CobraHelper(&validator.Command{}, "validate"),
-		cli.CobraHelper(&extract.Command{}, "extract"),
-		cli.CobraHelper(&diff.Command{}, "diff"),
-		cli.CobraHelper(&fetch.RebuildStatsCommand{}, "rebuild-stats"),
-		cli.CobraHelper(&importer.Command{}, "import"),
-		cli.CobraHelper(&unimporter.Command{}, "unimport"),
-		cli.CobraHelper(&merge.Command{}, "merge"),
-		cli.CobraHelper(&versionCommand{}, "version"),
-		cli.CobraHelper(&lint.Command{}, "dmfr-format"),
-		cli.CobraHelper(&format.Command{}, "dmfr-lint"),
+		tlcli.CobraHelper(&fetch.Command{}, "fetch"),
+		tlcli.CobraHelper(&sync.Command{}, "sync"),
+		tlcli.CobraHelper(&copier.Command{}, "copy"),
+		tlcli.CobraHelper(&validator.Command{}, "validate"),
+		tlcli.CobraHelper(&extract.Command{}, "extract"),
+		tlcli.CobraHelper(&diff.Command{}, "diff"),
+		tlcli.CobraHelper(&fetch.RebuildStatsCommand{}, "rebuild-stats"),
+		tlcli.CobraHelper(&importer.Command{}, "import"),
+		tlcli.CobraHelper(&unimporter.Command{}, "unimport"),
+		tlcli.CobraHelper(&merge.Command{}, "merge"),
+		tlcli.CobraHelper(&versionCommand{}, "version"),
+		tlcli.CobraHelper(&lint.Command{}, "dmfr-format"),
+		tlcli.CobraHelper(&format.Command{}, "dmfr-lint"),
 		dmfrCommand,
 	)
 }

@@ -1,9 +1,19 @@
-package cli
+package tlcli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
+
+type hasHelpDesc interface {
+	HelpDesc() (string, string)
+}
+
+type hasHelpArgs interface {
+	HelpArgs() string
+}
 
 type Runner interface {
 	AddFlags(*pflag.FlagSet)
@@ -37,6 +47,12 @@ func NewNArgs(v []string) *NArgs {
 func CobraHelper(r Runner, subc string) *cobra.Command {
 	cobraCommand := &cobra.Command{
 		Use: subc,
+	}
+	if v, ok := r.(hasHelpArgs); ok {
+		cobraCommand.Use = fmt.Sprintf("%s %s", subc, v.HelpArgs())
+	}
+	if v, ok := r.(hasHelpDesc); ok {
+		cobraCommand.Short, cobraCommand.Long = v.HelpDesc()
 	}
 	cobraCommand.PreRunE = func(cmd *cobra.Command, args []string) error {
 		return r.Parse(args)

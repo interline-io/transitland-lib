@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/spf13/pflag"
 )
 
@@ -18,13 +18,21 @@ type Command struct {
 	Save     bool
 }
 
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Format a DMFR file", ""
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <filename>"
+}
+
 func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Save, "save", false, "Save the formatted output back to the file")
 }
 
 // Parse command line options.
 func (cmd *Command) Parse(args []string) error {
-	fl := cli.NewNArgs(args)
+	fl := tlcli.NewNArgs(args)
 	cmd.Filename = fl.Arg(0)
 	return nil
 }

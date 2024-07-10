@@ -9,7 +9,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/internal/cli"
+	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
@@ -40,6 +40,14 @@ type Command struct {
 	fvsha1file string
 }
 
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Import feed versions", ""
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] [feeds...]"
+}
+
 func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.Options.Extensions, "ext", nil, "Include GTFS Extension")
 	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Import specific feed version ID")
@@ -67,13 +75,13 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 
 // Parse command line flags
 func (cmd *Command) Parse(args []string) error {
-	fl := cli.NewNArgs(args)
+	fl := tlcli.NewNArgs(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
 	if cmd.fvidfile != "" {
-		lines, err := cli.ReadFileLines(cmd.fvidfile)
+		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
 		if err != nil {
 			return err
 		}
@@ -87,7 +95,7 @@ func (cmd *Command) Parse(args []string) error {
 		}
 	}
 	if cmd.fvsha1file != "" {
-		lines, err := cli.ReadFileLines(cmd.fvsha1file)
+		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
 		if err != nil {
 			return err
 		}

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/internal/snakejson"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
@@ -27,6 +27,14 @@ type Command struct {
 	readerPath              string
 }
 
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Validate a GTFS feed", ""
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <reader>"
+}
+
 func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.extensions, "ext", nil, "Include GTFS Extension")
 	fl.StringVar(&cmd.OutputFile, "o", "", "Write validation report as JSON to file")
@@ -40,7 +48,7 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 }
 
 func (cmd *Command) Parse(args []string) error {
-	fl := cli.NewNArgs(args)
+	fl := tlcli.NewNArgs(args)
 	if fl.NArg() < 1 {
 		return errors.New("requires input reader")
 	}

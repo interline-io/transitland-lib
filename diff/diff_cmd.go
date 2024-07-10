@@ -4,14 +4,15 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/spf13/pflag"
@@ -29,12 +30,17 @@ type Command struct {
 	readerPathB string
 }
 
+func (cmd *Command) HelpDesc() (string, string) {
+	a := "Calculate difference between two feeds, writing output in a GTFS-like format"
+	b := "This command is experimental; it may provide incorrect results or crash on large feeds."
+	return a, fmt.Sprintf("%s\n%s", a, b)
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <feed1> <feed2> <output>"
+}
+
 func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
-	fl.Usage = func() {
-		log.Print("Usage: diff <input1> <input2> <output>")
-		log.Print("This command is experimental; it may provide incorrect results or crash on large feeds.")
-		fl.PrintDefaults()
-	}
 	fl.BoolVar(&cmd.ShowSame, "same", false, "Show entities present in both files and identical")
 	fl.BoolVar(&cmd.ShowDiff, "diff", false, "Show entities present in both files but different")
 	fl.BoolVar(&cmd.ShowAdded, "added", false, "Show entities added in second file")
@@ -43,7 +49,7 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 }
 
 func (cmd *Command) Parse(args []string) error {
-	fl := cli.NewNArgs(args)
+	fl := tlcli.NewNArgs(args)
 	if fl.NArg() < 2 {
 		return errors.New("requires two input readers")
 	}

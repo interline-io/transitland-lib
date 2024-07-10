@@ -9,9 +9,9 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -43,6 +43,14 @@ type RebuildStatsCommand struct {
 	fvsha1file string
 }
 
+func (cmd *RebuildStatsCommand) HelpDesc() (string, string) {
+	return "Rebuild statistics for feeds or specific feed versions", ""
+}
+
+func (cmd *RebuildStatsCommand) HelpArgs() string {
+	return "[flags] [feeds...]"
+}
+
 func (cmd *RebuildStatsCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Rebuild stats for specific feed version ID")
 	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
@@ -57,13 +65,13 @@ func (cmd *RebuildStatsCommand) AddFlags(fl *pflag.FlagSet) {
 
 // Parse command line flags
 func (cmd *RebuildStatsCommand) Parse(args []string) error {
-	fl := cli.NewNArgs(args)
+	fl := tlcli.NewNArgs(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
 	if cmd.fvidfile != "" {
-		lines, err := cli.ReadFileLines(cmd.fvidfile)
+		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
 		if err != nil {
 			return err
 		}
@@ -74,7 +82,7 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 		}
 	}
 	if cmd.fvsha1file != "" {
-		lines, err := cli.ReadFileLines(cmd.fvsha1file)
+		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
 		if err != nil {
 			return err
 		}

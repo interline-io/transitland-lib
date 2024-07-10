@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/pflag"
 )
@@ -19,15 +19,22 @@ type Command struct {
 	Filenames []string
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Lint DMFR files", ""
+}
 
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <filenames...>"
+}
+
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 }
 
 // Parse command line options.
 func (cmd *Command) Parse(args []string) error {
-	fl := cli.NewNArgs(args)
+	fl := tlcli.NewNArgs(args)
 	if fl.NArg() == 0 {
-		return errors.New("At least one file required")
+		return errors.New("at least one file required")
 	}
 	cmd.Filenames = fl.Args()
 	return nil
