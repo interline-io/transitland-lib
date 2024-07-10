@@ -63,3 +63,9 @@ func CobraHelper(r Runner, subc string) *cobra.Command {
 	r.AddFlags(cobraCommand.Flags())
 	return cobraCommand
 }
+
+func RunWithArgs(r Runner, args []string) error {
+	c := CobraHelper(r, "")
+	c.SetArgs(args)
+	return c.Execute()
+}
