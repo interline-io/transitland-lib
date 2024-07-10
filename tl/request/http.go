@@ -50,7 +50,7 @@ func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth 
 	}
 
 	// Make HTTP request
-	req.Header.Set("User-Agent", fmt.Sprintf("transitland/%s", tl.VERSION))
+	req.Header.Set("User-Agent", fmt.Sprintf("transitland/%s", tl.Version.Tag))
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

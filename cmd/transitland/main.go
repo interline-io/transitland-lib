@@ -1,6 +1,8 @@
 package main
 
 import (
+	_ "embed"
+
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/cmd/tlcli"
 	"github.com/interline-io/transitland-lib/copier"
@@ -38,7 +40,8 @@ func (cmd *versionCommand) Parse(args []string) error {
 }
 
 func (cmd *versionCommand) Run() error {
-	log.Print("transitland-lib version: %s", tl.VERSION)
+	log.Print("transitland-lib version: %s", tl.Version.Tag)
+	log.Print("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)", tl.Version.Commit, tl.Version.CommitTime)
 	log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
 	log.Print("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto", tl.GTFSRTVERSION)
 	return nil
