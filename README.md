@@ -11,6 +11,7 @@
 	- [Install using homebrew](#install-using-homebrew)
 	- [Install binary from source](#install-binary-from-source)
 - [Usage as a CLI tool](#usage-as-a-cli-tool)
+	- [Breaking changes](#breaking-changes)
 - [Usage as a library](#usage-as-a-library)
 - [Database migrations](#database-migrations)
 - [Usage as a Web Service](#usage-as-a-web-service)
@@ -63,6 +64,10 @@ The main subcommands are:
 * [transitland unimport](doc/cli/transitland_unimport.md)	 - Unimport feed versions
 * [transitland validate](doc/cli/transitland_validate.md)	 - Validate a GTFS feed
 
+### Breaking changes
+
+Note: as of v0.17, we moved from Go standard library `flags` to Cobra's `pflags`; this is a breaking change in that single-dash (`-flag`) command flags are no longer supported, only double-dash (`--flag`).
+
 ## Usage as a library
 
 See [library examples](doc/library-example.md).
@@ -99,8 +104,9 @@ Releases follow [Semantic Versioning](https://semver.org/) conventions.
 
 To cut a new release:
 
-1. Create a GitHub release. This will create a tag and GitHub Actions will create &amp; attach code-signed binaries.
-2. Download the files from the release, and update the [homebrew formula](https://github.com/interline-io/homebrew-transitland-lib/blob/master/transitland-lib.rb) with the updated sha256 hashes and version tag.
+1. Run `go generate ./...` to update auto-generated documentation.
+2. Create a GitHub release. This will create a tag and GitHub Actions will create &amp; attach code-signed binaries.
+3. Download the files from the release, and update the [homebrew formula](https://github.com/interline-io/homebrew-transitland-lib/blob/master/transitland-lib.rb) with the updated sha256 hashes and version tag.
 
 ## Licenses
 
