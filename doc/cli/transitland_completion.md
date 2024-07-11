@@ -16,7 +16,7 @@ See each sub-command's help for details on how to use the generated script.
 
 ### SEE ALSO
 
-* [transitland](transitland.md)	 - 
+* [transitland](transitland.md)	 - transitland-lib utilities
 * [transitland completion bash](transitland_completion_bash.md)	 - Generate the autocompletion script for bash
 * [transitland completion fish](transitland_completion_fish.md)	 - Generate the autocompletion script for fish
 * [transitland completion powershell](transitland_completion_powershell.md)	 - Generate the autocompletion script for powershell

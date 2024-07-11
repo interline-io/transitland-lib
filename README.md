@@ -65,7 +65,7 @@ The main subcommands are:
 
 ## Usage as a library
 
-See [library examples](doc/api.md).
+See [library examples](doc/library-example.md).
 
 ## Database migrations
 

@@ -1,6 +1,6 @@
 ## transitland
 
-
+transitland-lib utilities
 
 ### Options
 
@@ -13,12 +13,10 @@
 * [transitland completion](transitland_completion.md)	 - Generate the autocompletion script for the specified shell
 * [transitland copy](transitland_copy.md)	 - Copy performs a basic copy from a reader to a writer.
 * [transitland diff](transitland_diff.md)	 - Calculate difference between two feeds, writing output in a GTFS-like format
-* [transitland dmfr](transitland_dmfr.md)	 - DMFR subcommands
 * [transitland dmfr-format](transitland_dmfr-format.md)	 - Lint DMFR files
 * [transitland dmfr-lint](transitland_dmfr-lint.md)	 - Format a DMFR file
 * [transitland extract](transitland_extract.md)	 - Extract a subset of a GTFS feed
 * [transitland fetch](transitland_fetch.md)	 - Fetch GTFS data and create feed versions
-* [transitland gendoc](transitland_gendoc.md)	 - Generate markdown documentation
 * [transitland import](transitland_import.md)	 - Import feed versions
 * [transitland merge](transitland_merge.md)	 - Merge multiple GTFS feeds
 * [transitland rebuild-stats](transitland_rebuild-stats.md)	 - Rebuild statistics for feeds or specific feed versions
