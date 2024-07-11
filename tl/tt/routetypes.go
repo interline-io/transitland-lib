@@ -2,10 +2,10 @@ package tt
 
 // RouteType contains details on each possible route_type
 type RouteType struct {
-	Code     int
-	Name     string
-	Category string
-	Parent   int
+	Code     int    `json:"code"`
+	Name     string `json:"name"`
+	Category string `json:"category"`
+	Parent   int    `json:"parent"`
 }
 
 // routeTypes is the list of all known extended route_types.
@@ -13,16 +13,16 @@ type RouteType struct {
 // All types are mapped back to a basic GTFS primitive.
 // Those that don't fit well are mapped to bus for compatibility.
 var routeTypes = []RouteType{
-	{Code: 0, Name: "Tram"},
-	{Code: 1, Name: "Metro"},
-	{Code: 2, Name: "Rail"},
-	{Code: 3, Name: "Bus"},
-	{Code: 4, Name: "Ferry"},
-	{Code: 5, Name: "Cablecar"},
-	{Code: 6, Name: "Gondola"},
-	{Code: 7, Name: "Funicular"},
-	{Code: 11, Name: "Trolleybus"},
-	{Code: 12, Name: "Monorail"},
+	{Code: 0, Name: "Tram", Parent: -1},
+	{Code: 1, Name: "Metro", Parent: -1},
+	{Code: 2, Name: "Rail", Parent: -1},
+	{Code: 3, Name: "Bus", Parent: -1},
+	{Code: 4, Name: "Ferry", Parent: -1},
+	{Code: 5, Name: "Cablecar", Parent: -1},
+	{Code: 6, Name: "Gondola", Parent: -1},
+	{Code: 7, Name: "Funicular", Parent: -1},
+	{Code: 11, Name: "Trolleybus", Parent: -1},
+	{Code: 12, Name: "Monorail", Parent: -1},
 
 	{Code: 100, Name: "Railway Service", Parent: 2},
 	{Code: 101, Name: "High Speed Rail Service", Parent: 2},
