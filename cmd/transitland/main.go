@@ -47,32 +47,45 @@ func (cmd *versionCommand) Run() error {
 	return nil
 }
 
-var rootCmd = &cobra.Command{Use: "transitland"}
+var rootCmd = &cobra.Command{
+	Use:   "transitland",
+	Short: "transitland-lib utilities",
+}
 
 func init() {
-	dmfrCommand := &cobra.Command{Use: "dmfr", Short: "DMFR subcommands", Long: "DMFR Subcommands. Deprecated. Use dmfr-format, dmfr-lint, etc. instead."}
+	pc := "transitland"
+	dmfrCommand := &cobra.Command{
+		Use:    "dmfr",
+		Short:  "DMFR subcommands",
+		Long:   "DMFR Subcommands. Deprecated. Use dmfr-format, dmfr-lint, etc. instead.",
+		Hidden: true,
+	}
 	dmfrCommand.AddCommand(
-		tlcli.CobraHelper(&lint.Command{}, "format"),
-		tlcli.CobraHelper(&format.Command{}, "lint"),
+		tlcli.CobraHelper(&lint.Command{}, pc, "format"),
+		tlcli.CobraHelper(&format.Command{}, pc, "lint"),
 	)
 
+	genDocCommand := tlcli.CobraHelper(&tlcli.GenDocCommand{Command: rootCmd}, pc, "gendoc")
+	genDocCommand.Hidden = true
+
 	rootCmd.AddCommand(
-		tlcli.CobraHelper(&fetch.Command{}, "fetch"),
-		tlcli.CobraHelper(&sync.Command{}, "sync"),
-		tlcli.CobraHelper(&copier.Command{}, "copy"),
-		tlcli.CobraHelper(&validator.Command{}, "validate"),
-		tlcli.CobraHelper(&extract.Command{}, "extract"),
-		tlcli.CobraHelper(&diff.Command{}, "diff"),
-		tlcli.CobraHelper(&fetch.RebuildStatsCommand{}, "rebuild-stats"),
-		tlcli.CobraHelper(&importer.Command{}, "import"),
-		tlcli.CobraHelper(&unimporter.Command{}, "unimport"),
-		tlcli.CobraHelper(&merge.Command{}, "merge"),
-		tlcli.CobraHelper(&versionCommand{}, "version"),
-		tlcli.CobraHelper(&lint.Command{}, "dmfr-format"),
-		tlcli.CobraHelper(&format.Command{}, "dmfr-lint"),
-		tlcli.CobraHelper(&tlcli.GenDocCommand{Command: rootCmd}, "gendoc"),
+		tlcli.CobraHelper(&fetch.Command{}, pc, "fetch"),
+		tlcli.CobraHelper(&sync.Command{}, pc, "sync"),
+		tlcli.CobraHelper(&copier.Command{}, pc, "copy"),
+		tlcli.CobraHelper(&validator.Command{}, pc, "validate"),
+		tlcli.CobraHelper(&extract.Command{}, pc, "extract"),
+		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
+		tlcli.CobraHelper(&fetch.RebuildStatsCommand{}, pc, "rebuild-stats"),
+		tlcli.CobraHelper(&importer.Command{}, pc, "import"),
+		tlcli.CobraHelper(&unimporter.Command{}, pc, "unimport"),
+		tlcli.CobraHelper(&merge.Command{}, pc, "merge"),
+		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
+		tlcli.CobraHelper(&lint.Command{}, pc, "dmfr-format"),
+		tlcli.CobraHelper(&format.Command{}, pc, "dmfr-lint"),
+		genDocCommand,
 		dmfrCommand,
 	)
+
 }
 
 func main() {

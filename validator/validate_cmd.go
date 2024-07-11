@@ -32,7 +32,7 @@ func (cmd *Command) HelpDesc() (string, string) {
 }
 
 func (cmd *Command) HelpExample() string {
-	return `% transitland validate "https://www.bart.gov/dev/schedules/google_transit.zip"`
+	return `% {{.ParentCommand}} {{.Command}} "https://www.bart.gov/dev/schedules/google_transit.zip"`
 }
 
 func (cmd *Command) HelpArgs() string {

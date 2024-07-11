@@ -30,7 +30,7 @@ func (cmd *Command) HelpDesc() (string, string) {
 
 func (cmd *Command) HelpExample() string {
 	return `
-% {COMMAND} --allow-entity-errors "https://www.bart.gov/dev/schedules/google_transit.zip" output.zip
+% {{.ParentCommand}} {{.Command}} --allow-entity-errors "https://www.bart.gov/dev/schedules/google_transit.zip" output.zip
 
 % unzip -p output.zip agency.txt
 agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email

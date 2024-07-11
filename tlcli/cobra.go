@@ -1,7 +1,9 @@
 package tlcli
 
 import (
+	"bytes"
 	"fmt"
+	"text/template"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -48,7 +50,7 @@ func NewNArgs(v []string) *NArgs {
 	return &NArgs{v: v}
 }
 
-func CobraHelper(r Runner, subc string) *cobra.Command {
+func CobraHelper(r Runner, pc string, subc string) *cobra.Command {
 	cobraCommand := &cobra.Command{
 		Use: subc,
 	}
@@ -61,7 +63,16 @@ func CobraHelper(r Runner, subc string) *cobra.Command {
 		cobraCommand.Long = fmt.Sprintf("%s\n\n%s", short, long)
 	}
 	if v, ok := r.(hasHelpExample); ok {
-		cobraCommand.Example = v.HelpExample()
+		calledAs := subc
+		type helpValues struct {
+			ParentCommand string
+			Command       string
+		}
+		w := bytes.NewBuffer(nil)
+		helpTemplate := v.HelpExample()
+		t := template.Must(template.New(subc).Parse(helpTemplate))
+		t.Execute(w, helpValues{Command: calledAs, ParentCommand: pc})
+		cobraCommand.Example = w.String()
 	}
 	cobraCommand.PreRunE = func(cmd *cobra.Command, args []string) error {
 		return r.Parse(args)
@@ -74,7 +85,7 @@ func CobraHelper(r Runner, subc string) *cobra.Command {
 }
 
 func RunWithArgs(r Runner, args []string) error {
-	c := CobraHelper(r, "")
+	c := CobraHelper(r, "", "")
 	c.SetArgs(args)
 	return c.Execute()
 }

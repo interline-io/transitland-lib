@@ -12,7 +12,6 @@ import (
 	"github.com/interline-io/transitland-lib/ext"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/filters"
-	_ "github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -57,7 +56,7 @@ func (cmd *Command) HelpDesc() (string, string) {
 func (cmd *Command) HelpExample() string {
 	return `
 # Extract a single trip from the BART GTFS, and rename the agency to "test".
-% {COMMAND} --extract-trip "3050453" --set "agency.txt,BART,agency_id,test" "https://www.bart.gov/dev/schedules/google_transit.zip" output2.zip
+% {{.ParentCommand}} {{.Command}} --extract-trip "3050453" --set "agency.txt,BART,agency_id,test" "https://www.bart.gov/dev/schedules/google_transit.zip" output2.zip
 
 # Note renamed agency
 % unzip -p output2.zip agency.txt
