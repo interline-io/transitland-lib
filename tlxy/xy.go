@@ -1,10 +1,9 @@
+// Package tlxy provides simple XY geometry helper functions; these are approximate and designed for our specific use cases.
 package tlxy
 
 import (
 	"math"
 )
-
-// Simple XY geometry helper functions.
 
 const latMeter = 111195.0662709627
 const epsilon = 1e-6

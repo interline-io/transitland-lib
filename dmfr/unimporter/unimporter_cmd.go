@@ -2,15 +2,15 @@ package unimporter
 
 import (
 	"errors"
-	"flag"
 	"os"
 	"sync"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/internal/cli"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/spf13/pflag"
 )
 
 // Command imports FeedVersions into a database.
@@ -19,39 +19,47 @@ type Command struct {
 	ExtraTables  []string
 	DryRun       bool
 	FVIDs        []string
-	FVSHA1       cli.ArrayFlags
-	Extensions   cli.ArrayFlags
-	FeedIDs      cli.ArrayFlags
+	FVSHA1       []string
+	Extensions   []string
+	FeedIDs      []string
 	DBURL        string
 	Workers      int
 	Adapter      tldb.Adapter // allow for mocks
+	// internal
+	fvidfile   string
+	fvsha1file string
+}
+
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Unimport feed versions", "The `unimport` command deletes previously imported data from feed versions. The feed version record itself is not deleted. You may optionally specify removal of only schedule data, leaving routes, stops, etc. in place."
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <fvids...>"
+}
+
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+	// fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension") // TODO
+	fl.StringSliceVar(&cmd.FeedIDs, "feed", nil, "Feed ID")
+	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
+	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
+	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
+	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
+	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport stop times, trips, transfers, shapes, and frequencies")
+
 }
 
 // Parse command line flags
 func (cmd *Command) Parse(args []string) error {
-	fvidfile := ""
-	fvsha1file := ""
-	fl := flag.NewFlagSet("import", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: unimport [fvids]")
-		fl.PrintDefaults()
-	}
-	// fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension") // TODO
-	fl.Var(&cmd.FeedIDs, "feed", "Feed ID")
-	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
-	fl.StringVar(&fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
-	fl.StringVar(&fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
-	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
-	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport stop times, trips, transfers, shapes, and frequencies")
-	fl.Parse(args)
+	fl := tlcli.NewNArgs(args)
 	cmd.Workers = 1
 	cmd.FVIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	if fvidfile != "" {
-		lines, err := cli.ReadFileLines(fvidfile)
+	if cmd.fvidfile != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
 		if err != nil {
 			return err
 		}
@@ -61,8 +69,8 @@ func (cmd *Command) Parse(args []string) error {
 			}
 		}
 	}
-	if fvsha1file != "" {
-		lines, err := cli.ReadFileLines(fvsha1file)
+	if cmd.fvsha1file != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
 		if err != nil {
 			return err
 		}

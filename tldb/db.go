@@ -1,3 +1,4 @@
+// Package tldb provides adapters to read and write GTFS data from PostgreSQL and SQLite databases.
 package tldb
 
 import (

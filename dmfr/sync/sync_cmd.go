@@ -1,11 +1,10 @@
 package sync
 
 import (
-	"flag"
 	"os"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/spf13/pflag"
 )
 
 // Command syncs a DMFR to a database.
@@ -15,18 +14,23 @@ type Command struct {
 	Options
 }
 
-// Parse command line options.
-func (cmd *Command) Parse(args []string) error {
-	fl := flag.NewFlagSet("sync", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: sync <Filenames...>")
-		fl.PrintDefaults()
-	}
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Sync DMFR files to database", ""
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <filenames...>"
+}
+
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")
 	fl.BoolVar(&cmd.HideUnseenOperators, "hide-unseen-operators", false, "Hide unseen operators")
-	fl.Parse(args)
-	cmd.Filenames = fl.Args()
+}
+
+// Parse command line options.
+func (cmd *Command) Parse(args []string) error {
+	cmd.Filenames = args
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}

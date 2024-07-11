@@ -1,3 +1,4 @@
+// Package filters provides tools for modifying and transforming streams of GTFS entities. Used with copier.
 package filters
 
 import (

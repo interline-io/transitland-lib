@@ -1,18 +1,18 @@
 package fetch
 
 import (
-	"flag"
 	"os"
 	"sync"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/spf13/pflag"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
@@ -35,37 +35,43 @@ type RebuildStatsCommand struct {
 	Workers int
 	DBURL   string
 	FeedIDs []string
-	FVIDs   cli.ArrayFlags
-	FVSHA1  cli.ArrayFlags
+	FVIDs   []string
+	FVSHA1  []string
 	Adapter tldb.Adapter // allow for mocks
+	// internal
+	fvidfile   string
+	fvsha1file string
 }
 
-// Parse command line flags
-func (cmd *RebuildStatsCommand) Parse(args []string) error {
-	fvidfile := ""
-	fvsha1file := ""
-	fl := flag.NewFlagSet("rebuild-stats", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: rebuild-stats [feedids...]")
-		fl.PrintDefaults()
-	}
-	fl.Var(&cmd.FVIDs, "fvid", "Rebuild stats for specific feed version ID")
-	fl.StringVar(&fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
-	fl.StringVar(&fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
-	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
+func (cmd *RebuildStatsCommand) HelpDesc() (string, string) {
+	return "Rebuild statistics for feeds or specific feed versions", ""
+}
+
+func (cmd *RebuildStatsCommand) HelpArgs() string {
+	return "[flags] [feeds...]"
+}
+
+func (cmd *RebuildStatsCommand) AddFlags(fl *pflag.FlagSet) {
+	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Rebuild stats for specific feed version ID")
+	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
+	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
+	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", "", "Storage destination; can be s3://... az://... or path to a directory")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
 	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
+}
 
-	fl.Parse(args)
+// Parse command line flags
+func (cmd *RebuildStatsCommand) Parse(args []string) error {
+	fl := tlcli.NewNArgs(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	if fvidfile != "" {
-		lines, err := cli.ReadFileLines(fvidfile)
+	if cmd.fvidfile != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
 		if err != nil {
 			return err
 		}
@@ -75,8 +81,8 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 			}
 		}
 	}
-	if fvsha1file != "" {
-		lines, err := cli.ReadFileLines(fvsha1file)
+	if cmd.fvsha1file != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
 		if err != nil {
 			return err
 		}
