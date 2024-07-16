@@ -62,11 +62,8 @@ func TestMainSync_Update(t *testing.T) {
 		tlfeed := tl.Feed{}
 		tlfeed.URLs.StaticCurrent = "http://example.com"
 		tlfeed.FeedID = exposid
-		var err error
 		tlfeed.ID = testdb.ShouldInsert(t, atx, &tlfeed)
-		if err != nil {
-			t.Error(err)
-		}
+		var err error
 		// Import
 		regs := []string{testutil.RelPath("test/data/dmfr/rtfeeds.dmfr.json")}
 		opts := Options{

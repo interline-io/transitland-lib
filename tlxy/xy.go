@@ -1,3 +1,4 @@
+// Package tlxy provides simple XY geometry helper functions; these are approximate and designed for our specific use cases.
 package tlxy
 
 import (

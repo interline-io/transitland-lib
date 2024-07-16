@@ -36,6 +36,7 @@ func TestFetchCommand(t *testing.T) {
 		fatalErrorContains string
 		feeds              []tl.Feed
 		command            []string
+		fail               bool
 	}{
 		{
 			fvcount: 1,
@@ -59,7 +60,8 @@ func TestFetchCommand(t *testing.T) {
 		{
 			fvcount:            0,
 			feeds:              []tl.Feed{f200, f404},
-			command:            []string{"--fail", "f--404"},
+			command:            []string{"f--404"},
+			fail:               true,
 			fatalErrorContains: "file does not exist or invalid data",
 		},
 	}
@@ -70,11 +72,12 @@ func TestFetchCommand(t *testing.T) {
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
-			c := Command{Adapter: adapter}
+			c := Command{}
+			c.Adapter = adapter
 			tmpDir := t.TempDir()
-			withTempDir := []string{"-storage", tmpDir}
-			withTempDir = append(withTempDir, exp.command...)
-			if err := c.Parse(withTempDir); err != nil {
+			c.Options.Storage = tmpDir
+			c.Fail = exp.fail
+			if err := c.Parse(exp.command); err != nil {
 				t.Fatal(err)
 			}
 			if err := c.Run(); err != nil && exp.fatalErrorContains != "" {

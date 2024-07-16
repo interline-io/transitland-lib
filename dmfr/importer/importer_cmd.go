@@ -2,7 +2,6 @@ package importer
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"sync"
@@ -10,8 +9,9 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/internal/cli"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/spf13/pflag"
 )
 
 type ImportCommandResult struct {
@@ -31,27 +31,29 @@ type Command struct {
 	Latest       bool
 	DryRun       bool
 	FeedIDs      []string
-	FVIDs        cli.ArrayFlags
-	FVSHA1       cli.ArrayFlags
+	FVIDs        []string
+	FVSHA1       []string
 	Results      []ImportCommandResult
 	Adapter      tldb.Adapter // allow for mocks
+	// internal
+	fvidfile   string
+	fvsha1file string
 }
 
-// Parse command line flags
-func (cmd *Command) Parse(args []string) error {
-	extflags := cli.ArrayFlags{}
-	fvidfile := ""
-	fvsha1file := ""
-	fl := flag.NewFlagSet("import", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: import [feedids...]")
-		fl.PrintDefaults()
-	}
-	fl.Var(&extflags, "ext", "Include GTFS Extension")
-	fl.Var(&cmd.FVIDs, "fvid", "Import specific feed version ID")
-	fl.StringVar(&fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
-	fl.StringVar(&fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
-	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Import feed versions", "Use after the `fetch` command"
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] [feeds...]"
+}
+
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+	fl.StringSliceVar(&cmd.Options.Extensions, "ext", nil, "Include GTFS Extension")
+	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Import specific feed version ID")
+	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
+	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
+	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Import at most n feeds")
 	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
@@ -69,14 +71,17 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.Options.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
 	fl.BoolVar(&cmd.Options.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
 	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
-	fl.Parse(args)
-	cmd.Options.Extensions = extflags
+}
+
+// Parse command line flags
+func (cmd *Command) Parse(args []string) error {
+	fl := tlcli.NewNArgs(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	if fvidfile != "" {
-		lines, err := cli.ReadFileLines(fvidfile)
+	if cmd.fvidfile != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
 		if err != nil {
 			return err
 		}
@@ -89,8 +94,8 @@ func (cmd *Command) Parse(args []string) error {
 			return errors.New("--fvid-file specified but no lines were read")
 		}
 	}
-	if fvsha1file != "" {
-		lines, err := cli.ReadFileLines(fvsha1file)
+	if cmd.fvsha1file != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
 		if err != nil {
 			return err
 		}

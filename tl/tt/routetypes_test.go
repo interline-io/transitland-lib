@@ -1,6 +1,7 @@
 package tt
 
 import (
+	"encoding/json"
 	"sort"
 	"testing"
 )
@@ -44,6 +45,16 @@ func TestGetBasicRouteType(t *testing.T) {
 			t.Errorf("code %d: got %d expect %d", i.code, result, i.primitive)
 		}
 	}
+}
+
+func Test_RouteTypeJson(t *testing.T) {
+	// This test exists only to dump the route type list to json
+	// for use in other applications.
+	jj, err := json.Marshal(routeTypes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(string(jj))
 }
 
 func TestGetRouteType(t *testing.T) {
