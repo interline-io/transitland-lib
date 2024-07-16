@@ -21,6 +21,10 @@ type Downloader interface {
 	Download(context.Context, string, tl.Secret, tl.FeedAuthorization) (io.ReadCloser, int, error)
 }
 
+type ETagDownloader interface {
+	ETagDownload(context.Context, string, string, tl.Secret, tl.FeedAuthorization) (io.ReadCloser, int, string, error)
+}
+
 type Uploader interface {
 	Upload(context.Context, string, tl.Secret, io.Reader) error
 }
@@ -29,11 +33,22 @@ type Presigner interface {
 	CreateSignedUrl(context.Context, string, string, tl.Secret) (string, error)
 }
 
+type FetchResponse struct {
+	Filename     string
+	Data         []byte
+	ResponseSize int
+	ResponseCode int
+	ResponseSHA1 string
+	ResponseETag string
+	FetchError   error
+}
+
 type Request struct {
 	URL        string
 	AllowFTP   bool
 	AllowLocal bool
 	AllowS3    bool
+	CheckETag  string
 	MaxSize    uint64
 	Secret     tl.Secret
 	Auth       tl.FeedAuthorization
@@ -126,15 +141,6 @@ func WithAuth(secret tl.Secret, auth tl.FeedAuthorization) func(req *Request) {
 	}
 }
 
-type FetchResponse struct {
-	Filename     string
-	Data         []byte
-	ResponseSize int
-	ResponseCode int
-	ResponseSHA1 string
-	FetchError   error
-}
-
 // AuthenticatedRequestDownload is similar to AuthenticatedRequest but writes to a temporary file.
 // Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
 func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchResponse, error) {
@@ -182,7 +188,7 @@ func authenticatedRequest(out io.Writer, address string, opts ...RequestOption) 
 	fr := FetchResponse{}
 	req := NewRequest(address, opts...)
 	var r io.ReadCloser
-	r, fr.ResponseCode, fr.FetchError = req.Request(ctx)
+	r, fr.ResponseCode, fr.ResponseETag, fr.FetchError = req.Request(ctx)
 	if fr.FetchError != nil {
 		return fr, nil
 	}

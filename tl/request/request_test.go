@@ -1,6 +1,8 @@
 package request
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -25,6 +27,10 @@ func TestAuthorizedRequest(t *testing.T) {
 			http.Error(w, err.Error(), 400)
 			return
 		}
+		h := md5.New() // So it's distinct from checksha1
+		h.Write(a)
+		etag := hex.EncodeToString(h.Sum(nil))
+		w.Header().Add("ETag", etag)
 		w.Header().Add("Status-Code", "200")
 		w.Write(a)
 	}))
@@ -38,6 +44,7 @@ func TestAuthorizedRequest(t *testing.T) {
 		checksize   int
 		checkcode   int
 		checksha1   string
+		checketag   string
 		expectError bool
 		secret      tl.Secret
 	}{
@@ -50,6 +57,7 @@ func TestAuthorizedRequest(t *testing.T) {
 			checksize:  29,
 			checkcode:  200,
 			checksha1:  "66621b979e91314ea163d94be8e7486bdcfe07c9",
+			checketag:  "f72666cd1f7a71508c6e81ac007c90bb",
 		},
 		{
 			name:       "query_param",
@@ -70,7 +78,8 @@ func TestAuthorizedRequest(t *testing.T) {
 			checkvalue: "/anything/abcd/ok",
 			checksize:  0,
 			checkcode:  200,
-			checksha1:  "",
+			checksha1:  "22c2326192e08c5659ce99dcee454c86ed3fa09e",
+			checketag:  "b820d771af0771269aae463658d4992a",
 			secret:     tl.Secret{Key: "abcd"},
 		},
 		{
@@ -144,6 +153,9 @@ func TestAuthorizedRequest(t *testing.T) {
 			}
 			if tc.checksha1 != "" {
 				assert.Equal(t, tc.checksha1, fr.ResponseSHA1, "did not match expected sha1")
+			}
+			if tc.checketag != "" {
+				assert.Equal(t, tc.checketag, fr.ResponseETag, "did not match expected etag")
 			}
 			if tc.checkkey != "" {
 				a, ok := result[tc.checkkey].(string)
