@@ -23,11 +23,6 @@ import (
 	"github.com/twpayne/go-geom/xy"
 )
 
-type GeomCache interface {
-	GetStop(string) tlxy.Point
-	GetShape(eid string) []tlxy.Point
-}
-
 // Prepare is called before general copying begins.
 type Prepare interface {
 	Prepare(tl.Reader, *tl.EntityMap) error
@@ -73,7 +68,7 @@ type errorWithContext interface {
 }
 
 type canShareGeomCache interface {
-	SetGeomCache(GeomCache)
+	SetGeomCache(tlxy.GeomCache)
 }
 
 type hasLine interface {

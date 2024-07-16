@@ -3,7 +3,6 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlxy"
 )
@@ -24,12 +23,12 @@ func (e *StopTooFarFromShapeError) Error() string {
 // StopTooFarFromShapeCheck checks for StopTooFarFromShapeErrors.
 type StopTooFarFromShapeCheck struct {
 	maxdist   float64
-	geomCache *geomcache.GeomCache // share stop/shape geometry cache with copier
+	geomCache tlxy.GeomCache // share stop/shape geometry cache with copier
 	checked   map[string]map[string]bool
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (e *StopTooFarFromShapeCheck) SetGeomCache(g *geomcache.GeomCache) {
+func (e *StopTooFarFromShapeCheck) SetGeomCache(g tlxy.GeomCache) {
 	e.geomCache = g
 }
 

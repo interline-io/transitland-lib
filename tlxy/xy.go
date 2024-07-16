@@ -4,6 +4,11 @@ import (
 	"math"
 )
 
+type GeomCache interface {
+	GetStop(string) Point
+	GetShape(eid string) []Point
+}
+
 // Simple XY geometry helper functions.
 
 const latMeter = 111195.0662709627
