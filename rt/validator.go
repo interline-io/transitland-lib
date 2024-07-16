@@ -44,7 +44,7 @@ type Validator struct {
 	tripInfo            map[string]tripInfo
 	routeInfo           map[string]routeInfo
 	stopInfo            map[string]stopInfo
-	geomCache           *geomcache.GeomCache // shared with copier
+	geomCache           tlxy.GeomCache // shared with copier
 	sched               *sched.ScheduleChecker
 }
 
@@ -61,7 +61,7 @@ func NewValidator() *Validator {
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (fi *Validator) SetGeomCache(g *geomcache.GeomCache) {
+func (fi *Validator) SetGeomCache(g tlxy.GeomCache) {
 	fi.geomCache = g
 }
 

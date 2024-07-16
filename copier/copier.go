@@ -19,6 +19,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/rs/zerolog"
 	"github.com/twpayne/go-geom/xy"
 )
@@ -68,7 +69,7 @@ type errorWithContext interface {
 }
 
 type canShareGeomCache interface {
-	SetGeomCache(*geomcache.GeomCache)
+	SetGeomCache(tlxy.GeomCache)
 }
 
 type hasLine interface {

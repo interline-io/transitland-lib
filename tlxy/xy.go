@@ -5,6 +5,13 @@ import (
 	"math"
 )
 
+type GeomCache interface {
+	GetStop(string) Point
+	GetShape(eid string) []Point
+}
+
+// Simple XY geometry helper functions.
+
 const latMeter = 111195.0662709627
 const epsilon = 1e-6
 const earthRadiusMetres float64 = 6371008

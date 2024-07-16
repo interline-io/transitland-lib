@@ -3,7 +3,6 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlxy"
 )
@@ -62,13 +61,13 @@ var maxSpeeds = map[int]float64{
 
 // StopTimeFastTravelCheck checks for FastTravelErrors.
 type StopTimeFastTravelCheck struct {
-	routeTypes map[string]int       // keep track of route_types
-	stopDist   map[string]float64   // cache stop-to-stop distances
-	geomCache  *geomcache.GeomCache // share with copier
+	routeTypes map[string]int     // keep track of route_types
+	stopDist   map[string]float64 // cache stop-to-stop distances
+	geomCache  tlxy.GeomCache     // share with copier
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (e *StopTimeFastTravelCheck) SetGeomCache(g *geomcache.GeomCache) {
+func (e *StopTimeFastTravelCheck) SetGeomCache(g tlxy.GeomCache) {
 	e.geomCache = g
 }
 
