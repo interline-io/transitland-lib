@@ -26,11 +26,16 @@ func TestTimeAt(t *testing.T) {
 		fallbackWeek string
 		useFallback  bool
 		expect       string
+		expectError  bool
 	}{
 		{
 			name:   "empty (now)",
 			date:   "",
 			tz:     "UTC",
+			expect: "2024-07-16T01:30:00Z",
+		},
+		{
+			name:   "empty (now, default UTC)",
 			expect: "2024-07-16T01:30:00Z",
 		},
 		{
@@ -62,20 +67,6 @@ func TestTimeAt(t *testing.T) {
 			tz:     "America/Los_Angeles",
 			expect: "2024-07-15T18:30:00-07:00",
 		},
-		//{
-		// 	name:   "today",
-		// 	date:   "today",
-		// 	wt:     "",
-		// 	tz:     "America/Los_Angeles",
-		// 	expect: "2024-07-15T00:00:00-07:00",
-		// },
-		// {
-		// 	name:   "today with wt",
-		// 	date:   "today",
-		// 	wt:     "10:00:00",
-		// 	tz:     "America/Los_Angeles",
-		// 	expect: "2024-07-15T10:00:00-07:00",
-		// },
 		{
 			name:   "next-friday with now",
 			date:   "next-friday",
@@ -268,12 +259,62 @@ func TestTimeAt(t *testing.T) {
 			useFallback:  true,
 			expect:       "2021-06-14T10:00:00-07:00",
 		},
+		// Check errors
+		{
+			name:        "check error date",
+			date:        "asd",
+			expectError: true,
+		},
+		{
+			name:        "check error tz",
+			date:        "now",
+			tz:          "asd",
+			expectError: true,
+		},
+		{
+			name:        "check error time",
+			date:        "now",
+			wt:          "abc",
+			expectError: true,
+		},
+		{
+			name:         "check error start date",
+			date:         "now",
+			startDate:    "asd",
+			endDate:      "2021-06-30",
+			fallbackWeek: "2021-06-13",
+			useFallback:  true,
+			expectError:  true,
+		},
+		{
+			name:         "check error end date",
+			date:         "now",
+			startDate:    "2020-01-01",
+			endDate:      "asd",
+			fallbackWeek: "2021-06-13",
+			useFallback:  true,
+			expectError:  true,
+		},
+		{
+			name:         "check error fallback date",
+			date:         "now",
+			startDate:    "2020-01-01",
+			endDate:      "2021-06-30",
+			fallbackWeek: "asd",
+			useFallback:  true,
+			expectError:  true,
+		},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			v, err := timeAtClock(tc.date, tc.wt, tc.tz, tc.startDate, tc.endDate, tc.fallbackWeek, tc.useFallback, cl)
-			if err != nil {
+			if err != nil && tc.expectError {
+				// OK
+				return
+			} else if err != nil && !tc.expectError {
 				t.Fatal(err)
+			} else if err == nil && tc.expectError {
+				t.Fatal("expected error, got none")
 			}
 			vf := v.Format(time.RFC3339)
 			assert.Equal(t, tc.expect, vf)

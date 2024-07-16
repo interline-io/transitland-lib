@@ -84,7 +84,7 @@ func timeAtClock(date string, wt string, tz string, startDate string, endDate st
 		// Update to parsed YYYY-MM-DD
 		t, err := time.Parse("2006-01-02", date)
 		if err != nil {
-			return baseTime, err
+			return baseTime, errors.New("could not parse date")
 		}
 		clYear = t.Year()
 		clMonth = t.Month()
