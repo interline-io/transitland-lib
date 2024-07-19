@@ -26,42 +26,21 @@ func (dc MockClock) Now() time.Time {
 	return dc.T
 }
 
-func TimeAt(date string, wt string, tz string, startDate string, endDate string, fallbackWeek string, useFallback bool) (time.Time, error) {
-	return timeAtClock(date, wt, tz, startDate, endDate, fallbackWeek, useFallback, RealClock{})
-}
-
-func timeAtClock(date string, wt string, tz string, startDate string, endDate string, fallbackWeek string, useFallback bool, cl Clock) (time.Time, error) {
-	// Get timezone
-	baseTime := time.Time{}
-	loc, err := time.LoadLocation(tz)
-	if err != nil {
-		return baseTime, err
-	}
-
+// RelativeDate gets a date reltive to the provided time; currentTime should have timezone set.
+func RelativeDate(currentTime time.Time, relativeDateLabel string) (time.Time, error) {
 	// Current date
-	clNow := cl.Now().In(loc)
+	clNow := currentTime
 	clDay := clNow.Day()
 	clYear := clNow.Year()
 	clMonth := clNow.Month()
-	wtHour := clNow.Hour()
-	wtMin := clNow.Minute()
-	wtSec := clNow.Second()
-
-	// Get local HMS
-	if wt != "" {
-		t, err := NewWideTime(wt)
-		if err != nil {
-			return baseTime, err
-		}
-		seconds := t.Seconds
-		wtHour = seconds / 3600
-		wtMin = (seconds % 3600) / 60
-		wtSec = (seconds % 60)
-	}
+	clHour := clNow.Hour()
+	clMin := clNow.Minute()
+	clSec := clNow.Second()
+	clLoc := clNow.Location()
 
 	// Parse date or use special label
 	dowOffset := -1
-	switch date {
+	switch relativeDateLabel {
 	case "now":
 		// default
 	case "":
@@ -82,9 +61,9 @@ func timeAtClock(date string, wt string, tz string, startDate string, endDate st
 		dowOffset = 6
 	default:
 		// Update to parsed YYYY-MM-DD
-		t, err := time.Parse("2006-01-02", date)
+		t, err := time.Parse("2006-01-02", relativeDateLabel)
 		if err != nil {
-			return baseTime, errors.New("could not parse date")
+			return time.Time{}, errors.New("could not parse date")
 		}
 		clYear = t.Year()
 		clMonth = t.Month()
@@ -92,7 +71,7 @@ func timeAtClock(date string, wt string, tz string, startDate string, endDate st
 	}
 
 	// Construct time from parsed components
-	baseTime = time.Date(clYear, clMonth, clDay, wtHour, wtMin, wtSec, 0, loc)
+	baseTime := time.Date(clYear, clMonth, clDay, clHour, clMin, clSec, 0, clLoc)
 
 	// Check the next 7 days to get the correct weekday
 	if dowOffset >= 0 {
@@ -106,39 +85,29 @@ func timeAtClock(date string, wt string, tz string, startDate string, endDate st
 			dowTime = dowTime.AddDate(0, 0, 1)
 		}
 	}
+	return baseTime, nil
+}
 
-	// Check bounds
-	if useFallback {
-		startTime, err := time.Parse("2006-01-02", startDate)
-		if err != nil {
-			return baseTime, errors.New("could not parse start time")
-		}
-		endTime, err := time.Parse("2006-01-02", endDate)
-		if err != nil {
-			return baseTime, errors.New("could not parse end time")
-		}
-		fallbackTime, err := time.Parse("2006-01-02", fallbackWeek)
-		if err != nil {
-			return baseTime, errors.New("could not parse fallback week")
-		}
-		startTime = midnight(startTime, loc)
-		endTime = midnight(endTime, loc).AddDate(0, 0, 1)
-		if endTime.Before(startTime) {
-			return baseTime, errors.New("end time before start time")
-		}
-		if baseTime.Before(startTime) || baseTime.After(endTime) {
-			// fmt.Println("using fallback: ", fallbackTime, "date:", baseTime, "bounds:", startTime, endTime)
-			ft := midnight(fallbackTime, loc)
-			for i := 0; i < 7; i++ {
-				if ft.Weekday() == baseTime.Weekday() {
-					baseTime = time.Date(ft.Year(), ft.Month(), ft.Day(), baseTime.Hour(), baseTime.Minute(), baseTime.Second(), 0, loc)
-					break
-				}
-				ft = ft.AddDate(0, 0, 1)
+// FallbackDate gets an equivalent day-of-week within fallbackWeek if currentTime is not with startTime/endTime bounds
+func FallbackDate(currentTime time.Time, startTime time.Time, endTime time.Time, fallbackWeek time.Time) (time.Time, bool, error) {
+	loc := currentTime.Location()
+	startTime = midnight(startTime, loc)
+	endTime = midnight(endTime, loc).AddDate(0, 0, 1)
+	if endTime.Before(startTime) {
+		return currentTime, false, errors.New("end time before start time")
+	}
+	if currentTime.Before(startTime) || currentTime.After(endTime) {
+		// fmt.Println("using fallback: ", fallbackTime, "date:", baseTime, "bounds:", startTime, endTime)
+		ft := midnight(fallbackWeek, currentTime.Location())
+		for i := 0; i < 7; i++ {
+			if ft.Weekday() == currentTime.Weekday() {
+				currentTime = time.Date(ft.Year(), ft.Month(), ft.Day(), currentTime.Hour(), currentTime.Minute(), currentTime.Second(), 0, loc)
+				return currentTime, true, nil
 			}
+			ft = ft.AddDate(0, 0, 1)
 		}
 	}
-	return baseTime, nil
+	return currentTime, false, nil
 }
 
 func midnight(t time.Time, loc *time.Location) time.Time {
