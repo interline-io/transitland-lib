@@ -40,25 +40,47 @@ func RelativeDate(currentTime time.Time, relativeDateLabel string) (time.Time, e
 
 	// Parse date or use special label
 	dowOffset := -1
+	nextFlag := false
 	switch relativeDateLabel {
 	case "now":
 		// default
 	case "":
 		// equiv to "now"
+	case "sunday":
+		dowOffset = 0
+	case "monday":
+		dowOffset = 1
+	case "tuesday":
+		dowOffset = 2
+	case "wednesday":
+		dowOffset = 3
+	case "thursday":
+		dowOffset = 4
+	case "friday":
+		dowOffset = 5
+	case "saturday":
+		dowOffset = 6
 	case "next-sunday":
 		dowOffset = 0
+		nextFlag = true
 	case "next-monday":
 		dowOffset = 1
+		nextFlag = true
 	case "next-tuesday":
 		dowOffset = 2
+		nextFlag = true
 	case "next-wednesday":
 		dowOffset = 3
+		nextFlag = true
 	case "next-thursday":
 		dowOffset = 4
+		nextFlag = true
 	case "next-friday":
 		dowOffset = 5
+		nextFlag = true
 	case "next-saturday":
 		dowOffset = 6
+		nextFlag = true
 	default:
 		// Update to parsed YYYY-MM-DD
 		t, err := time.Parse("2006-01-02", relativeDateLabel)
@@ -75,14 +97,17 @@ func RelativeDate(currentTime time.Time, relativeDateLabel string) (time.Time, e
 
 	// Check the next 7 days to get the correct weekday
 	if dowOffset >= 0 {
-		dowTime := baseTime
-		for i := 0; i < 7; i++ {
+		i := 0
+		if nextFlag {
+			i = 1
+		}
+		for ; i < 8; i++ {
+			dowTime := baseTime.AddDate(0, 0, i)
 			curDow := dowTime.Weekday()
 			if int(curDow) == dowOffset {
-				baseTime = dowTime
-				break
+				// Update and
+				return dowTime, nil
 			}
-			dowTime = dowTime.AddDate(0, 0, 1)
 		}
 	}
 	return baseTime, nil

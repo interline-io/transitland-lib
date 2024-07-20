@@ -10,7 +10,7 @@ import (
 
 func TestRelativeDate(t *testing.T) {
 	defaultUtc := "2024-07-16T01:30:00 UTC"
-	defaultLocal := "2024-07-15T18:30:00 America/Los_Angeles"
+	defaultLocal := "2024-07-15T10:00:00 America/Los_Angeles"
 	tcs := []struct {
 		name        string
 		dateLabel   string
@@ -19,12 +19,14 @@ func TestRelativeDate(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:   "empty (now, default UTC)",
-			expect: "2024-07-16T01:30:00Z",
+			name:      "empty (now, default UTC)",
+			whenLocal: defaultUtc,
+			expect:    "2024-07-16T01:30:00Z",
 		},
 		{
 			name:      "date specified",
 			dateLabel: "2024-07-10",
+			whenLocal: defaultUtc,
 			expect:    "2024-07-10T01:30:00Z",
 		},
 		{
@@ -36,71 +38,125 @@ func TestRelativeDate(t *testing.T) {
 		{
 			name:      "date with tz",
 			dateLabel: "2024-07-16",
-			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
+			whenLocal: defaultLocal,
 			expect:    "2024-07-16T10:00:00-07:00",
 		},
 		{
 			name:      "now with tz",
 			dateLabel: "now",
 			whenLocal: defaultLocal,
-			expect:    "2024-07-15T18:30:00-07:00",
+			expect:    "2024-07-15T10:00:00-07:00",
+		},
+		// same dow allowed
+		{
+			name:      "monday",
+			dateLabel: "monday",
+			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-15T10:00:00-07:00",
+		},
+		{
+			name:      "friday",
+			dateLabel: "friday",
+			whenLocal: "2024-07-19T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-19T10:00:00-07:00",
+		},
+		// one day before
+		{
+			name:      "next-sunday",
+			dateLabel: "next-sunday",
+			whenLocal: "2024-07-20T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-21T10:00:00-07:00",
+		},
+		{
+			name:      "next-monday",
+			dateLabel: "next-monday",
+			whenLocal: "2024-07-21T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-22T10:00:00-07:00",
+		},
+		{
+			name:      "next-tuesday",
+			dateLabel: "next-tuesday",
+			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-16T10:00:00-07:00",
+		},
+		{
+			name:      "next-wednesday",
+			dateLabel: "next-wednesday",
+			whenLocal: "2024-07-16T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-17T10:00:00-07:00",
+		},
+		{
+			name:      "next-thursday",
+			dateLabel: "next-thursday",
+			whenLocal: "2024-07-17T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-18T10:00:00-07:00",
 		},
 		{
 			name:      "next-friday",
 			dateLabel: "next-friday",
-			whenLocal: defaultLocal,
-			expect:    "2024-07-19T18:30:00-07:00",
+			whenLocal: "2024-07-18T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-19T10:00:00-07:00",
 		},
 		{
-			name:      "next-sunday with wt",
+			name:      "next-saturday",
+			dateLabel: "next-saturday",
+			whenLocal: "2024-07-19T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-20T10:00:00-07:00",
+		},
+		// same day of week
+		{
+			name:      "next-sunday same dow",
 			dateLabel: "next-sunday",
-			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
+			whenLocal: "2024-07-14T10:00:00 America/Los_Angeles",
 			expect:    "2024-07-21T10:00:00-07:00",
 		},
 		{
-			name:      "next-monday with wt",
+			name:      "next-monday same dow",
 			dateLabel: "next-monday",
 			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
-			expect:    "2024-07-15T10:00:00-07:00",
-		}, {
-			name:      "next-tuesday with wt",
+			expect:    "2024-07-22T10:00:00-07:00",
+		},
+		{
+			name:      "next-tuesday same dow",
 			dateLabel: "next-tuesday",
-			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
-			expect:    "2024-07-16T10:00:00-07:00",
-		}, {
-			name:      "next-wednesday with wt",
+			whenLocal: "2024-07-16T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-23T10:00:00-07:00",
+		},
+		{
+			name:      "next-wednesday same dow",
 			dateLabel: "next-wednesday",
-			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
-			expect:    "2024-07-17T10:00:00-07:00",
-		}, {
-			name:      "next-thursday with wt",
+			whenLocal: "2024-07-17T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-24T10:00:00-07:00",
+		},
+		{
+			name:      "next-thursday same dow",
 			dateLabel: "next-thursday",
-			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
-			expect:    "2024-07-18T10:00:00-07:00",
-		}, {
-			name:      "next-friday with wt",
+			whenLocal: "2024-07-18T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-25T10:00:00-07:00",
+		},
+		{
+			name:      "next-friday same dow",
 			dateLabel: "next-friday",
-			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
-			expect:    "2024-07-19T10:00:00-07:00",
-		}, {
-			name:      "next-saturday with wt",
+			whenLocal: "2024-07-19T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-26T10:00:00-07:00",
+		},
+		{
+			name:      "next-saturday same dow",
 			dateLabel: "next-saturday",
-			whenLocal: "2024-07-15T10:00:00 America/Los_Angeles",
-			expect:    "2024-07-20T10:00:00-07:00",
+			whenLocal: "2024-07-20T10:00:00 America/Los_Angeles",
+			expect:    "2024-07-27T10:00:00-07:00",
 		},
 		// Errors
 		{
 			name:        "check error date",
 			dateLabel:   "asd",
+			whenLocal:   defaultLocal,
 			expectError: true,
 		},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			w := defaultUtc
-			if tc.whenLocal != "" {
-				w = tc.whenLocal
-			}
+			w := tc.whenLocal
 			ws := strings.Split(w, " ")
 			wd, err := time.Parse("2006-01-02T15:04:05", ws[0])
 			if err != nil {
