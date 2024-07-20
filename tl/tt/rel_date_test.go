@@ -19,7 +19,7 @@ func TestRelativeDate(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:      "empty (now, default UTC)",
+			name:      "empty (today, default UTC)",
 			whenLocal: defaultUtc,
 			expect:    "2024-07-16T01:30:00Z",
 		},
@@ -42,8 +42,8 @@ func TestRelativeDate(t *testing.T) {
 			expect:    "2024-07-16T10:00:00-07:00",
 		},
 		{
-			name:      "now with tz",
-			dateLabel: "now",
+			name:      "today with tz",
+			dateLabel: "today",
 			whenLocal: defaultLocal,
 			expect:    "2024-07-15T10:00:00-07:00",
 		},

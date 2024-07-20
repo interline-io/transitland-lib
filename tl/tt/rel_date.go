@@ -42,10 +42,10 @@ func RelativeDate(currentTime time.Time, relativeDateLabel string) (time.Time, e
 	dowOffset := -1
 	nextFlag := false
 	switch relativeDateLabel {
-	case "now":
+	case "today":
 		// default
 	case "":
-		// equiv to "now"
+		// equiv to "today"
 	case "sunday":
 		dowOffset = 0
 	case "monday":
