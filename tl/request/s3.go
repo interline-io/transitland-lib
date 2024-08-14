@@ -65,7 +65,7 @@ func (r S3) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 	return err
 }
 
-func (r S3) CreateSignedUrl(ctx context.Context, key string, secret tl.Secret) (string, error) {
+func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition string, secret tl.Secret) (string, error) {
 	client, err := awsConfig(ctx, secret)
 	if err != nil {
 		return "", err

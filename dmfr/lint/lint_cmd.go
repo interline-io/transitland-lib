@@ -2,14 +2,16 @@ package lint
 
 import (
 	"bytes"
-	"flag"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/spf13/pflag"
 )
 
 // Command lints a DMFR file.
@@ -17,17 +19,22 @@ type Command struct {
 	Filenames []string
 }
 
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Lint DMFR files", ""
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <filenames...>"
+}
+
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+}
+
 // Parse command line options.
 func (cmd *Command) Parse(args []string) error {
-	fl := flag.NewFlagSet("format", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: lint <one or more filenames...>")
-		fl.PrintDefaults()
-	}
-	fl.Parse(args)
+	fl := tlcli.NewNArgs(args)
 	if fl.NArg() == 0 {
-		fl.Usage()
-		return nil
+		return errors.New("at least one file required")
 	}
 	cmd.Filenames = fl.Args()
 	return nil

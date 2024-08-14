@@ -58,7 +58,7 @@ func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 	return err
 }
 
-func (r Az) CreateSignedUrl(ctx context.Context, key string, secret tl.Secret) (string, error) {
+func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition string, secret tl.Secret) (string, error) {
 	if key == "" {
 		return "", errors.New("key must not be empty")
 	}
@@ -84,14 +84,16 @@ func (r Az) CreateSignedUrl(ctx context.Context, key string, secret tl.Secret) (
 	if err != nil {
 		return "", err
 	}
+
 	// Create Blob Signature Values with desired permissions and sign with user delegation credential
 	sasQueryParams, err := sas.BlobSignatureValues{
-		Protocol:      sas.ProtocolHTTPS,
-		StartTime:     now,
-		ExpiryTime:    expiry,
-		Permissions:   to.Ptr(sas.ContainerPermissions{Read: true}).String(),
-		BlobName:      key,
-		ContainerName: r.Container,
+		ContentDisposition: fmt.Sprintf(`attachment; filename="%s"`, url.PathEscape(contentDisposition)),
+		Protocol:           sas.ProtocolHTTPS,
+		StartTime:          now,
+		ExpiryTime:         expiry,
+		Permissions:        to.Ptr(sas.ContainerPermissions{Read: true}).String(),
+		BlobName:           key,
+		ContainerName:      r.Container,
 	}.SignWithUserDelegation(udc)
 	if err != nil {
 		return "", err

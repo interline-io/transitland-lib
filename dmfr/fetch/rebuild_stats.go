@@ -1,18 +1,18 @@
 package fetch
 
 import (
-	"flag"
 	"os"
 	"sync"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/spf13/pflag"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/dmfr/store"
-	"github.com/interline-io/transitland-lib/internal/cli"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
@@ -35,37 +35,43 @@ type RebuildStatsCommand struct {
 	Workers int
 	DBURL   string
 	FeedIDs []string
-	FVIDs   cli.ArrayFlags
-	FVSHA1  cli.ArrayFlags
+	FVIDs   []string
+	FVSHA1  []string
 	Adapter tldb.Adapter // allow for mocks
+	// internal
+	fvidfile   string
+	fvsha1file string
 }
 
-// Parse command line flags
-func (cmd *RebuildStatsCommand) Parse(args []string) error {
-	fvidfile := ""
-	fvsha1file := ""
-	fl := flag.NewFlagSet("rebuild-stats", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: rebuild-stats [feedids...]")
-		fl.PrintDefaults()
-	}
-	fl.Var(&cmd.FVIDs, "fvid", "Rebuild stats for specific feed version ID")
-	fl.StringVar(&fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
-	fl.StringVar(&fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
-	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
+func (cmd *RebuildStatsCommand) HelpDesc() (string, string) {
+	return "Rebuild statistics for feeds or specific feed versions", ""
+}
+
+func (cmd *RebuildStatsCommand) HelpArgs() string {
+	return "[flags] [feeds...]"
+}
+
+func (cmd *RebuildStatsCommand) AddFlags(fl *pflag.FlagSet) {
+	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Rebuild stats for specific feed version ID")
+	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
+	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
+	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", "", "Storage destination; can be s3://... az://... or path to a directory")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
 	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
+}
 
-	fl.Parse(args)
+// Parse command line flags
+func (cmd *RebuildStatsCommand) Parse(args []string) error {
+	fl := tlcli.NewNArgs(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	if fvidfile != "" {
-		lines, err := cli.ReadFileLines(fvidfile)
+	if cmd.fvidfile != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
 		if err != nil {
 			return err
 		}
@@ -75,8 +81,8 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 			}
 		}
 	}
-	if fvsha1file != "" {
-		lines, err := cli.ReadFileLines(fvsha1file)
+	if cmd.fvsha1file != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
 		if err != nil {
 			return err
 		}
@@ -183,7 +189,8 @@ func rebuildStatsWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan R
 
 func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildStatsResult, error) {
 	// Get FV
-	fv := tl.FeedVersion{ID: opts.FeedVersionID}
+	fv := tl.FeedVersion{}
+	fv.ID = opts.FeedVersionID
 	if err := adapter.Find(&fv); err != nil {
 		return RebuildStatsResult{}, err
 	}
@@ -214,19 +221,44 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 	return RebuildStatsResult{}, errImport
 }
 
+func convertToAny[T any](input []T) []any {
+	var ret []any
+	for i := 0; i < len(input); i++ {
+		ret = append(ret, &input[i])
+	}
+	return ret
+}
+
+type canSetFeedVersion interface {
+	SetFeedVersionID(int)
+}
+
+func setFvid(input []any, fvid int) []any {
+	for i := 0; i < len(input); i++ {
+		if v, ok := input[i].(canSetFeedVersion); ok {
+			v.SetFeedVersionID(fvid)
+		} else {
+			log.Error().Msgf("could not set feed version id for type %T", input[i])
+		}
+	}
+	return input
+}
+
 func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
-	// Get FeedVersionFileInfos
-	fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader)
+	stats, err := dmfr.NewFeedStatsFromReader(reader)
 	if err != nil {
 		return err
 	}
-	// Get service window and statistics
-	fvsw, fvsls, err := dmfr.NewFeedStatsFromReader(reader)
-	if err != nil {
-		return err
-	}
+
 	// Delete any existing records
-	tables := []string{"feed_version_file_infos", "feed_version_service_levels", "feed_version_service_windows"}
+	tables := []string{
+		"feed_version_file_infos",
+		"feed_version_service_levels",
+		"feed_version_service_windows",
+		"feed_version_agency_onestop_ids",
+		"feed_version_route_onestop_ids",
+		"feed_version_stop_onestop_ids",
+	}
 	for _, table := range tables {
 		q, args, err := atx.Sqrl().Delete(table).Where(sq.Eq{"feed_version_id": fvid}).ToSql()
 		if err != nil {
@@ -236,25 +268,33 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 			return err
 		}
 	}
-	// Insert FVFIs
-	for _, fvfi := range fvfis {
-		fvfi.FeedVersionID = fvid
-		if _, err := atx.Insert(&fvfi); err != nil {
-			return err
-		}
-	}
+
 	// Insert FVSW
+	fvsw := stats.ServiceWindow
 	fvsw.FeedVersionID = fvid
 	if _, err := atx.Insert(&fvsw); err != nil {
 		return err
 	}
-	// Batch insert FVSLs
-	bt := make([]any, len(fvsls))
-	for i := range fvsls {
-		fvsls[i].FeedVersionID = fvid
-		bt[i] = &fvsls[i]
+
+	// Batch insert OSIDs
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
+		return err
 	}
-	if err := atx.CopyInsert(bt); err != nil {
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
+		return err
+	}
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
+		return err
+	}
+
+	// Insert FVFIs
+	// TODO: This doesn't work with CopyInsert
+	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
+		return err
+	}
+
+	// Batch insert FVSLs
+	if err := atx.CopyInsert(setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
 		return err
 	}
 	return nil

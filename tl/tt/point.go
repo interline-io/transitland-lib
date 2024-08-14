@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"io"
 
+	"github.com/interline-io/transitland-lib/tlxy"
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/wkb"
 	"github.com/twpayne/go-geom/encoding/wkbcommon"
@@ -13,6 +14,15 @@ import (
 type Point struct {
 	Valid bool
 	geom.Point
+}
+
+func (g *Point) ToPoint() tlxy.Point {
+	c := g.Point.Coords()
+	if len(c) != 2 {
+		return tlxy.Point{}
+	}
+	return tlxy.Point{Lon: c[0], Lat: c[1]}
+
 }
 
 // NewPoint returns a Point from lon, lat

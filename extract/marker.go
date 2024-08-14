@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/internal/graph"
-	"github.com/interline-io/transitland-lib/internal/xy"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlxy"
 )
 
 // TODO: Use found map[graph.Node] bool values, not pointers
@@ -80,12 +80,12 @@ func (em *Marker) Count() int {
 func (em *Marker) Filter(reader tl.Reader) error {
 	var bboxExcludeStops []string
 	if em.bbox != "" {
-		bbox, err := xy.ParseBbox(em.bbox)
+		bbox, err := tlxy.ParseBbox(em.bbox)
 		if err != nil {
 			return err
 		}
 		for stop := range reader.Stops() {
-			spt := xy.Point{
+			spt := tlxy.Point{
 				Lon: stop.Geometry.Point.X(),
 				Lat: stop.Geometry.Point.Y(),
 			}

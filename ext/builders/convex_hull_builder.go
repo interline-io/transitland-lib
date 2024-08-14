@@ -5,7 +5,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/twpayne/go-geom"
-	geomxy "github.com/twpayne/go-geom/xy"
+	"github.com/twpayne/go-geom/xy"
 )
 
 //////////
@@ -100,7 +100,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		for _, coord := range v {
 			coords = append(coords, coord.lon, coord.lat)
 		}
-		ch := geomxy.ConvexHullFlat(geom.XY, coords)
+		ch := xy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
 			// log.Debugf("feed version convex hull is not polygon:", fvid)
@@ -130,7 +130,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		for _, sg := range v {
 			coords = append(coords, sg.lon, sg.lat)
 		}
-		ch := geomxy.ConvexHullFlat(geom.XY, coords)
+		ch := xy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
 			// log.Debugf("agency convex hull is not polygon:", aid)

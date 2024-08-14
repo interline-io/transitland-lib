@@ -12,7 +12,6 @@ import (
 )
 
 type msi = map[string]int
-type fvsl = FeedVersionServiceLevel
 
 func pd(s string) tt.Date {
 	if s == "" {

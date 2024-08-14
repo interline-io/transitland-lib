@@ -1,3 +1,4 @@
+// Package validator provides GTFS and GTFS-RT validation utilities.
 package validator
 
 import (
@@ -60,7 +61,7 @@ func (e *Result) TableName() string {
 func NewResult(evaluateAt time.Time, evaluateAtLocal time.Time) *Result {
 	return &Result{
 		Validator:               tt.NewString("transitland-lib"),
-		ValidatorVersion:        tt.NewString(tl.VERSION),
+		ValidatorVersion:        tt.NewString(tl.Version.Tag),
 		ReportedAt:              tt.NewTime(evaluateAt),
 		ReportedAtLocal:         tt.NewTime(evaluateAtLocal),
 		ReportedAtLocalTimezone: tt.NewString(evaluateAtLocal.Location().String()),

@@ -67,7 +67,7 @@ func TestS3Request(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		signedUrl, err := downloader.CreateSignedUrl(context.Background(), s3Key, tl.Secret{})
+		signedUrl, err := downloader.CreateSignedUrl(context.Background(), s3Key, "download.zip", tl.Secret{})
 		if err != nil {
 			t.Fatal(err)
 		}

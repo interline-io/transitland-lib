@@ -1,4 +1,4 @@
-package xy
+package geomcache
 
 import (
 	"testing"
@@ -24,10 +24,11 @@ func TestGeomCache(t *testing.T) {
 	}
 	cache := NewGeomCache()
 	for e := range r.Shapes() {
-		cache.AddShape(e.ShapeID, e)
+		lm := e.Geometry.ToLineM()
+		cache.AddShapeGeom(e.ShapeID, lm.Coords, lm.Data)
 	}
 	for e := range r.Stops() {
-		cache.AddStop(e.StopID, e)
+		cache.AddStopGeom(e.StopID, e.ToPoint())
 	}
 	for stoptimes := range r.StopTimesByTripID() {
 		trip := trips[stoptimes[0].TripID]
@@ -41,7 +42,7 @@ func TestGeomCache(t *testing.T) {
 		}
 	}
 	// check that we had cache hits
-	if x := len(cache.positions); x < 9 {
+	if x := len(cache.stopPositions); x < 9 {
 		t.Errorf("expected at least %d cached trip journeys, got %d", 9, x)
 	}
 }

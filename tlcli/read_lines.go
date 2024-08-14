@@ -1,4 +1,4 @@
-package cli
+package tlcli
 
 import (
 	"bufio"

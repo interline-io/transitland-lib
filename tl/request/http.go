@@ -37,7 +37,7 @@ func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth 
 	ustr = u.String()
 
 	// Prepare HTTP request
-	req, err := http.NewRequest("GET", ustr, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", ustr, nil)
 	if err != nil {
 		return nil, 0, errors.New("invalid request")
 	}
@@ -50,7 +50,8 @@ func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth 
 	}
 
 	// Make HTTP request
-	req = req.WithContext(ctx)
+	req.Header.Set("User-Agent", fmt.Sprintf("transitland/%s", tl.Version.Tag))
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
