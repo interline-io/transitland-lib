@@ -1,14 +1,20 @@
 package tldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 )
 
 func init() {
@@ -26,8 +32,9 @@ func init() {
 
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
-	DBURL string
-	db    sqlx.Ext
+	pgxpool *pgxpool.Pool
+	DBURL   string
+	db      sqlx.Ext
 }
 
 func NewPostgresAdapterFromDBX(db sqlx.Ext) *PostgresAdapter {
@@ -39,12 +46,14 @@ func (adapter *PostgresAdapter) Open() error {
 	if adapter.db != nil {
 		return nil
 	}
-	db, err := sqlx.Open("postgres", adapter.DBURL)
+	pool, err := pgxpool.New(context.Background(), adapter.DBURL)
 	if err != nil {
 		return err
 	}
+	db := sqlx.NewDb(stdlib.OpenDBFromPool(pool), "pgx")
 	db.Mapper = MapperCache.Mapper
 	adapter.db = &QueryLogger{Ext: db.Unsafe()}
+	adapter.pgxpool = pool
 	return nil
 }
 
@@ -229,36 +238,50 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 			v.UpdateTimestamps()
 		}
 	}
+	// Create a temporary table
+	table := getTableName(ents[0])
+	tableTmp := fmt.Sprintf("tmp_%s_%d", table, time.Now().UnixNano())
+	header, err := MapperCache.GetHeader(ents[0])
+	if err != nil {
+		return err
+	}
+	// Create rows
+	valRows := make([][]any, len(ents))
+	for i, d := range ents {
+		vals, err := MapperCache.GetInsert(d, header)
+		if err != nil {
+			return err
+		}
+		valRows[i] = vals
+	}
+
+	// Prepare txn
+	ctx := context.Background()
+	pgxtx, err := adapter.pgxpool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	// Create temp table
+	pgxtx.Exec(ctx, fmt.Sprintf("CREATE TEMPORARY TABLE %s AS TABLE %s", tableTmp, table))
+
+	// Copy into temp table
+	fmt.Println("copying into:", tableTmp)
+	fmt.Println("valRows:", valRows)
+	rowCount, err := pgxtx.CopyFrom(ctx, pgx.Identifier{tableTmp}, header, pgx.CopyFromRows(valRows))
+	if err != nil {
+		return err
+	}
+	fmt.Println("rowCount:", rowCount)
+	if err := pgxtx.Commit(ctx); err != nil {
+		return err
+	}
+	fmt.Println("ok")
+
 	// Must run in transaction
 	return adapter.Tx(func(atx Adapter) error {
-		a, ok := atx.DBX().(sqlx.Preparer)
-		if !ok {
-			return errors.New("not Preparer")
-		}
-		header, err := MapperCache.GetHeader(ents[0])
-		if err != nil {
-			return err
-		}
-		table := getTableName(ents[0])
-		stmt, err := a.Prepare(pq.CopyIn(table, header...))
-		if err != nil {
-			return err
-		}
-		defer stmt.Close()
-		for _, d := range ents {
-			vals, err := MapperCache.GetInsert(d, header)
-			if err != nil {
-				return err
-			}
-			_, err = stmt.Exec(vals...)
-			if err != nil {
-				return err
-			}
-		}
-		_, err = stmt.Exec()
-		if err != nil {
-			return err
-		}
+		// Insert temp table into main table
+		atx.DBX().Exec(fmt.Sprintf("INSERT INTO %s SELECT * FROM %s", table, tableTmp))
 		return nil
 	})
 }
