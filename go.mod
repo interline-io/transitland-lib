@@ -20,7 +20,6 @@ require (
 	github.com/jackc/pgx/v5 v5.7.0
 	github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af
 	github.com/jmoiron/sqlx v1.3.5
-	github.com/lib/pq v1.10.6
 	github.com/mattn/go-sqlite3 v1.14.13
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/rs/zerolog v1.33.0
