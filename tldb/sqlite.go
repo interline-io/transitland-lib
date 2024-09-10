@@ -100,8 +100,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}
-	if errTx := cb(adapter2); errTx != nil {
+	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3
 		}

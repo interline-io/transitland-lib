@@ -28,9 +28,8 @@ func init() {
 
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
-	pgxpool *pgxpool.Pool
-	DBURL   string
-	db      sqlx.Ext
+	DBURL string
+	db    sqlx.Ext
 }
 
 func NewPostgresAdapterFromDBX(db sqlx.Ext) *PostgresAdapter {
@@ -49,7 +48,6 @@ func (adapter *PostgresAdapter) Open() error {
 	db := sqlx.NewDb(stdlib.OpenDBFromPool(pool), "pgx")
 	db.Mapper = MapperCache.Mapper
 	adapter.db = &QueryLogger{Ext: db.Unsafe()}
-	adapter.pgxpool = pool
 	return nil
 }
 
@@ -93,14 +91,13 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, pgxpool: adapter.pgxpool, db: &QueryLogger{Ext: tx}}
-	if err2 := cb(adapter2); err2 != nil {
+	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); err != nil {
 		if commit {
 			if errTx := tx.Rollback(); errTx != nil {
 				return errTx
 			}
 		}
-		return err2
+		return err
 	}
 	if commit {
 		return tx.Commit()

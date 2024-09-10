@@ -79,7 +79,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 
 // Tests multiple insert performance
 // There is a lot of setup in this test because we need a FeedVersion, Trip, and Stop
-func Benchmark_Adapter_BatchInsert(b *testing.B) {
+func Benchmark_Adapter_MultiInsert(b *testing.B) {
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()

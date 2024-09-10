@@ -28,9 +28,7 @@ type Ext interface {
 }
 
 func init() {
-	var a Ext
-	a = &QueryLogger{}
-	_ = a
+	var _ Ext = &QueryLogger{}
 }
 
 // QueryLogger wraps sql/sqlx methods with loggers.
