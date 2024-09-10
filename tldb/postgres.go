@@ -219,6 +219,15 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 			}
 		} else {
 			_, err = q.Exec()
+			for range batch {
+				retids = append(retids, 0)
+			}
+		}
+	}
+	for i := 0; i < len(ents); i++ {
+		ent := ents[i]
+		if v, ok := ent.(canSetID); ok {
+			v.SetID(retids[i])
 		}
 	}
 	return retids, err
