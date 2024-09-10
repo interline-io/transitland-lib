@@ -267,7 +267,7 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 
 	// Create temp table
 	fmt.Println("CREATE TABLE")
-	if _, err := pgxtx.Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s)", tableTmp, table)); err != nil {
+	if _, err := pgxtx.Exec(ctx, fmt.Sprintf("CREATE UNLOGGED TABLE %s (LIKE %s)", tableTmp, table)); err != nil {
 		return err
 	}
 

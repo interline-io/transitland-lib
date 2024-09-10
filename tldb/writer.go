@@ -138,6 +138,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		ients[i] = ent
 	}
 	if useCopy {
+		fmt.Println("USE COPY")
 		if err := writer.Adapter.CopyInsert(ients); err != nil {
 			return eids, err
 		}
