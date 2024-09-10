@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jackc/pgx/v5"
@@ -238,14 +240,16 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 			v.UpdateTimestamps()
 		}
 	}
+
 	// Create a temporary table
 	table := getTableName(ents[0])
-	tableTmp := fmt.Sprintf("tmp_%s_%d", table, time.Now().UnixNano())
+	tableTmp := fmt.Sprintf("tmp_%s_t%d_r%d", table, time.Now().Unix(), rand.Int31())
 	header, err := MapperCache.GetHeader(ents[0])
 	if err != nil {
 		return err
 	}
-	// Create rows
+
+	// Convert to rows
 	valRows := make([][]any, len(ents))
 	for i, d := range ents {
 		vals, err := MapperCache.GetInsert(d, header)
@@ -263,25 +267,31 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	}
 
 	// Create temp table
-	pgxtx.Exec(ctx, fmt.Sprintf("CREATE TEMPORARY TABLE %s AS TABLE %s", tableTmp, table))
+	if _, err := pgxtx.Exec(ctx, fmt.Sprintf("CREATE UNLOGGED TABLE %s (LIKE %s)", tableTmp, table)); err != nil {
+		return err
+	}
 
 	// Copy into temp table
-	fmt.Println("copying into:", tableTmp)
-	fmt.Println("valRows:", valRows)
 	rowCount, err := pgxtx.CopyFrom(ctx, pgx.Identifier{tableTmp}, header, pgx.CopyFromRows(valRows))
 	if err != nil {
 		return err
 	}
-	fmt.Println("rowCount:", rowCount)
+	log.Trace().Int64("count", rowCount).Str("table", tableTmp).Msg("copied rows into temp table")
 	if err := pgxtx.Commit(ctx); err != nil {
 		return err
 	}
 	fmt.Println("ok")
 
 	// Must run in transaction
-	return adapter.Tx(func(atx Adapter) error {
+	execErr := adapter.Tx(func(atx Adapter) error {
 		// Insert temp table into main table
-		atx.DBX().Exec(fmt.Sprintf("INSERT INTO %s SELECT * FROM %s", table, tableTmp))
-		return nil
+		_, copyErr := atx.DBX().Exec(fmt.Sprintf("INSERT INTO %s SELECT * FROM %s", table, tableTmp))
+		return copyErr
 	})
+
+	// Drop temporary table regardless of outcome
+	adapter.pgxpool.Exec(ctx, fmt.Sprintf("DROP TABLE %s", tableTmp))
+
+	// Return error from main INSERT
+	return execErr
 }
