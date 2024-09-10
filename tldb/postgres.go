@@ -4,15 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"math/rand"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -231,68 +226,60 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 
 // CopyInsert inserts data using COPY.
 func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
-	if len(ents) == 0 {
-		return nil
-	}
-	for _, ent := range ents {
-		if v, ok := ent.(canUpdateTimestamps); ok {
-			v.UpdateTimestamps()
-		}
-	}
+	_, err := adapter.MultiInsert(ents)
+	return err
+	// if len(ents) == 0 {
+	// 	return nil
+	// }
+	// for _, ent := range ents {
+	// 	if v, ok := ent.(canUpdateTimestamps); ok {
+	// 		v.UpdateTimestamps()
+	// 	}
+	// }
 
-	// Create a temporary table
-	table := pgx.Identifier{getTableName(ents[0])}
-	tableTmp := pgx.Identifier{fmt.Sprintf("tmp_%s_t%d_r%d", table, time.Now().Unix(), rand.Int31())}
-	header, err := MapperCache.GetHeader(ents[0])
-	if err != nil {
-		return err
-	}
+	// // Create a temporary table
+	// table := pgx.Identifier{getTableName(ents[0])}
+	// tableKey := fmt.Sprintf("tmp_%s_t%d_r%d", getTableName(ents[0]), time.Now().Unix(), rand.Int31())
+	// tableTmp := pgx.Identifier{tableKey}
+	// header, err := MapperCache.GetHeader(ents[0])
+	// if err != nil {
+	// 	return err
+	// }
 
-	// Convert to rows
-	valRows := make([][]any, len(ents))
-	for i, d := range ents {
-		vals, err := MapperCache.GetInsert(d, header)
-		if err != nil {
-			return err
-		}
-		valRows[i] = vals
-	}
+	// // Prepare txn
+	// ctx := context.Background()
+	// pgxtx, err := adapter.pgxpool.BeginTx(ctx, pgx.TxOptions{})
+	// if err != nil {
+	// 	return err
+	// }
 
-	// Prepare txn
-	ctx := context.Background()
-	pgxtx, err := adapter.pgxpool.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return err
-	}
+	// // Create temp table
+	// if _, err := pgxtx.Exec(ctx, fmt.Sprintf("CREATE UNLOGGED TABLE %s (LIKE %s)", tableTmp.Sanitize(), table.Sanitize())); err != nil {
+	// 	return err
+	// }
 
-	// Create temp table
-	if _, err := pgxtx.Exec(ctx, fmt.Sprintf("CREATE UNLOGGED TABLE %s (LIKE %s)", tableTmp.Sanitize(), table.Sanitize())); err != nil {
-		return err
-	}
+	// // Convert to rows
+	// for chunk := range slices.Chunk(ents, 1000) {
+	// 	valRows := make([][]any, len(chunk))
+	// 	for i, d := range chunk {
+	// 		vals, err := MapperCache.GetInsert(d, header)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		valRows[i] = vals
+	// 	}
 
-	// Copy into temp table
-	rowCount, err := pgxtx.CopyFrom(ctx, tableTmp, header, pgx.CopyFromRows(valRows))
-	if err != nil {
-		return err
-	}
-	log.Trace().Int64("count", rowCount).Str("table", tableTmp.Sanitize()).Msg("copied rows into temp table")
+	// 	rowCount, err := pgxtx.CopyFrom(ctx, tableTmp, header, pgx.CopyFromRows(valRows))
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	log.Trace().Int64("count", rowCount).Str("table", tableTmp.Sanitize()).Msg("copied rows into temp table")
+	// }
 
-	if err := pgxtx.Commit(ctx); err != nil {
-		return err
-	}
+	// if err := pgxtx.Commit(ctx); err != nil {
+	// 	return err
+	// }
 
-	// Must run in transaction
-	execErr := adapter.Tx(func(atx Adapter) error {
-		// Insert temp table into main table
-		_, copyErr := atx.DBX().Exec(fmt.Sprintf("INSERT INTO %s SELECT * FROM %s", table.Sanitize(), tableTmp.Sanitize()))
-		return copyErr
-	})
-
-	// Drop temporary table regardless of outcome
-	if _, err := adapter.pgxpool.Exec(ctx, fmt.Sprintf("DROP TABLE %s", tableTmp.Sanitize())); err != nil {
-		return err
-	}
-
-	// Return error from main INSERT
-	return execErr
+	// _, copyErr := adapter.db.Exec(fmt.Sprintf("INSERT INTO %s SELECT * FROM %s", table.Sanitize(), tableKey))
+	// return copyErr
 }

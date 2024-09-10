@@ -143,25 +143,29 @@ func logt1(rid int, qstr string, a ...interface{}) time.Time {
 
 // QueryStart logs database query beginnings; requires TRACE.
 func queryStart(rid int, qstr string, a ...interface{}) {
-	sts := []string{}
-	for i, val := range a {
-		q := qval{strconv.Itoa(i + 1), val}
-		sts = append(sts, q.String())
-	}
-	qstr = qstrRex.ReplaceAllString(qstr, " ")
-	log.Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Msg("query: begin")
+	log.TraceCheck(func() {
+		sts := []string{}
+		for i, val := range a {
+			q := qval{strconv.Itoa(i + 1), val}
+			sts = append(sts, q.String())
+		}
+		qstr = qstrRex.ReplaceAllString(qstr, " ")
+		log.Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Msg("query: begin")
+	})
 }
 
 // QueryTime logs database queries and time relative to start; requires LogQuery or TRACE.
 func queryTime(rid int, t time.Time, qstr string, a ...interface{}) {
-	t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e6
-	sts := []string{}
-	for i, val := range a {
-		q := qval{strconv.Itoa(i + 1), val}
-		sts = append(sts, q.String())
-	}
-	qstr = qstrRex.ReplaceAllString(qstr, " ")
-	log.Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Float64("queryTime", t2).Msg("query: complete")
+	log.TraceCheck(func() {
+		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e6
+		sts := []string{}
+		for i, val := range a {
+			q := qval{strconv.Itoa(i + 1), val}
+			sts = append(sts, q.String())
+		}
+		qstr = qstrRex.ReplaceAllString(qstr, " ")
+		log.Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Float64("queryTime", t2).Msg("query: complete")
+	})
 }
 
 // Some helpers
