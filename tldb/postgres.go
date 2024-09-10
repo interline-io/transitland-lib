@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -99,7 +98,7 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}
+	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, pgxpool: adapter.pgxpool, db: &QueryLogger{Ext: tx}}
 	if err2 := cb(adapter2); err2 != nil {
 		if commit {
 			if errTx := tx.Rollback(); errTx != nil {
@@ -267,22 +266,26 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	}
 
 	// Create temp table
-	if _, err := pgxtx.Exec(ctx, fmt.Sprintf("CREATE UNLOGGED TABLE %s (LIKE %s)", tableTmp, table)); err != nil {
+	fmt.Println("CREATE TABLE")
+	if _, err := pgxtx.Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s)", tableTmp, table)); err != nil {
 		return err
 	}
 
 	// Copy into temp table
+	fmt.Println("COPY FROM")
 	rowCount, err := pgxtx.CopyFrom(ctx, pgx.Identifier{tableTmp}, header, pgx.CopyFromRows(valRows))
 	if err != nil {
 		return err
 	}
 	log.Trace().Int64("count", rowCount).Str("table", tableTmp).Msg("copied rows into temp table")
+
+	fmt.Println("COMMIT")
 	if err := pgxtx.Commit(ctx); err != nil {
 		return err
 	}
-	fmt.Println("ok")
 
 	// Must run in transaction
+	fmt.Println("MAIN INSERT")
 	execErr := adapter.Tx(func(atx Adapter) error {
 		// Insert temp table into main table
 		_, copyErr := atx.DBX().Exec(fmt.Sprintf("INSERT INTO %s SELECT * FROM %s", table, tableTmp))
@@ -290,8 +293,12 @@ func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
 	})
 
 	// Drop temporary table regardless of outcome
-	adapter.pgxpool.Exec(ctx, fmt.Sprintf("DROP TABLE %s", tableTmp))
+	// fmt.Println("DROP TABLE")
+	// if _, err := adapter.pgxpool.Exec(ctx, fmt.Sprintf("DROP TABLE %s", tableTmp)); err != nil {
+	// 	return err
+	// }
 
 	// Return error from main INSERT
+	fmt.Println("EXEC ERR:", execErr)
 	return execErr
 }
