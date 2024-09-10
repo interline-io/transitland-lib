@@ -219,9 +219,3 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	// }
 	return retids, nil
 }
-
-// CopyInsert uses MultiInsert.
-func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
-	_, err := adapter.MultiInsert(ents)
-	return err
-}

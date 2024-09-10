@@ -111,10 +111,6 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 	return strconv.Itoa(eid), err
 }
 
-type hasId interface {
-	GetID() int
-}
-
 // AddEntities writes entities to the database.
 func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	if len(ents) == 0 {
@@ -122,11 +118,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	}
 	eids := []string{}
 	ients := make([]interface{}, len(ents))
-	useCopy := true
 	for i, ent := range ents {
-		if _, ok := ent.(hasId); ok {
-			useCopy = false
-		}
 		// Routes may need a default AgencyID set before writing to database.
 		if v, ok := ent.(*tl.Route); ok && v.AgencyID == "" {
 			v.AgencyID = strconv.Itoa(writer.defaultAgencyID)
@@ -136,15 +128,6 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 			v.SetFeedVersionID(writer.FeedVersionID)
 		}
 		ients[i] = ent
-	}
-	if useCopy {
-		if err := writer.Adapter.CopyInsert(ients); err != nil {
-			return eids, err
-		}
-		for range ents {
-			eids = append(eids, "")
-		}
-		return eids, nil
 	}
 	retids, err := writer.Adapter.MultiInsert(ients)
 	if err != nil {

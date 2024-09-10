@@ -129,7 +129,7 @@ func Benchmark_Adapter_BatchInsert(b *testing.B) {
 					ent.FeedVersionID = fvid
 					ents = append(ents, &ent)
 				}
-				if err := adapter.CopyInsert(ents); err != nil {
+				if _, err := adapter.MultiInsert(ents); err != nil {
 					b.Error(err)
 				}
 			}

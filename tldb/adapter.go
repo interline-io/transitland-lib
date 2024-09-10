@@ -44,5 +44,4 @@ type Adapter interface {
 	Get(interface{}, string, ...interface{}) error
 	Select(interface{}, string, ...interface{}) error
 	MultiInsert([]interface{}) ([]int, error)
-	CopyInsert([]interface{}) error
 }
