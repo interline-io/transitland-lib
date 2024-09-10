@@ -39,7 +39,8 @@ func (g Point) Value() (driver.Value, error) {
 	if !g.Valid {
 		return nil, nil
 	}
-	return wkbEncode(&g.Point)
+	a, b := wkbEncode(&g.Point)
+	return string(a), b
 }
 
 func (g *Point) Scan(src interface{}) error {
@@ -47,7 +48,7 @@ func (g *Point) Scan(src interface{}) error {
 	if src == nil {
 		return nil
 	}
-	b, ok := src.([]byte)
+	b, ok := src.(string)
 	if !ok {
 		return wkb.ErrExpectedByteSlice{Value: src}
 	}

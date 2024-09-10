@@ -9,7 +9,6 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 )
 
 var bufferSize = 1000

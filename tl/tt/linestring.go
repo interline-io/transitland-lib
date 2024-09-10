@@ -64,7 +64,7 @@ func (g *LineString) Scan(src interface{}) error {
 	if src == nil {
 		return nil
 	}
-	b, ok := src.([]byte)
+	b, ok := src.(string)
 	if !ok {
 		return wkb.ErrExpectedByteSlice{Value: src}
 	}

@@ -277,24 +277,23 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	}
 
 	// Batch insert OSIDs
-	if err := atx.CopyInsert(setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
 		return err
 	}
-	if err := atx.CopyInsert(setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
 		return err
 	}
-	if err := atx.CopyInsert(setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
 		return err
 	}
 
 	// Insert FVFIs
-	// TODO: This doesn't work with CopyInsert
 	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
 		return err
 	}
 
 	// Batch insert FVSLs
-	if err := atx.CopyInsert(setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
+	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
 		return err
 	}
 	return nil

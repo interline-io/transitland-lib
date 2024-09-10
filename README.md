@@ -46,7 +46,7 @@ Main dependencies:
 - `twpayne/go-geom`
 - `jmoiron/sqlx`
 - `Masterminds/squirrel`
-- `lib/pq`
+- `jackc/pgx`
 - `mattn/go-sqlite3` (requires CGO)
 
 ## Usage as a CLI tool
