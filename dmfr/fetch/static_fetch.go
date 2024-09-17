@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -70,11 +69,12 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 
 		// Is this SHA1 already present?
 		checkfvid := tl.FeedVersion{}
-		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
+		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", fv.SHA1, fv.SHA1Dir)
 		if err == nil {
 			// Already present
 			fv = checkfvid
 			vr.Found = true
+			vr.FeedVersionID = tt.NewInt(fv.ID)
 			return vr, nil
 		} else if err == sql.ErrNoRows {
 			// Not present, create below
@@ -90,7 +90,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 			// Set fragment to empty
 			fv.Fragment = tt.NewString("")
 			// Copy file
-			tf2, err := ioutil.TempFile("", "nested")
+			tf2, err := os.CreateTemp("", "nested")
 			if err != nil {
 				return vr, err
 			}
@@ -109,6 +109,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 			// Fatal err
 			return vr, err
 		}
+		vr.FeedVersionID = tt.NewInt(fv.ID)
 
 		// Update validation report
 		if opts.SaveValidationReport {
