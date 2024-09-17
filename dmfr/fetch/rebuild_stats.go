@@ -157,6 +157,7 @@ func (cmd *RebuildStatsCommand) Run() error {
 }
 
 func rebuildStatsWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan RebuildStatsOptions, results chan<- RebuildStatsResult, wg *sync.WaitGroup) {
+	_ = id
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -301,6 +302,7 @@ func createFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 
 func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
 	// Create new report
+	_ = fetchedAt
 	opts := validator.Options{}
 	opts.ErrorLimit = 10
 	v, err := validator.NewValidator(reader, opts)

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -91,7 +90,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 			// Set fragment to empty
 			fv.Fragment = tt.NewString("")
 			// Copy file
-			tf2, err := ioutil.TempFile("", "nested")
+			tf2, err := os.CreateTemp("", "nested")
 			if err != nil {
 				return vr, err
 			}
@@ -110,6 +109,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 			// Fatal err
 			return vr, err
 		}
+		vr.FeedVersionID = tt.NewInt(fv.ID)
 
 		// Update validation report
 		if opts.SaveValidationReport {

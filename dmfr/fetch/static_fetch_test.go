@@ -197,6 +197,9 @@ func TestStaticFetch_Exists(t *testing.T) {
 		if fv1.ID != fv2.ID {
 			t.Errorf("got %d expected %d", fv1.ID, fv2.ID)
 		}
+		if fr2.FeedVersionID.Int() != fv1.ID {
+			t.Errorf("got %d expected %d as feed version id in result", fr2.FeedVersionID.Int(), fv1.ID)
+		}
 		return nil
 	})
 }
