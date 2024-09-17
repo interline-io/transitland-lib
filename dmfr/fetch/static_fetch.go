@@ -70,11 +70,12 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 
 		// Is this SHA1 already present?
 		checkfvid := tl.FeedVersion{}
-		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
+		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", fv.SHA1, fv.SHA1Dir)
 		if err == nil {
 			// Already present
 			fv = checkfvid
 			vr.Found = true
+			vr.FeedVersionID = tt.NewInt(fv.ID)
 			return vr, nil
 		} else if err == sql.ErrNoRows {
 			// Not present, create below

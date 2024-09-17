@@ -36,13 +36,14 @@ type Options struct {
 
 // Result contains results of a fetch operation.
 type Result struct {
-	Found        bool
-	Error        error
-	URL          string
-	ResponseSize int
-	ResponseCode int
-	ResponseSHA1 string
-	FetchError   error
+	Found         bool
+	Error         error
+	URL           string
+	ResponseSize  int
+	ResponseCode  int
+	ResponseSHA1  string
+	FetchError    error
+	FeedVersionID tt.Int
 }
 
 type validationResponse struct {
@@ -50,6 +51,7 @@ type validationResponse struct {
 	UploadFilename string
 	Error          error
 	Found          bool
+	FeedVersionID  tt.Int
 }
 
 type fetchCb func(request.FetchResponse) (validationResponse, error)
@@ -112,6 +114,9 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 			uploadFile = vr.UploadTmpfile
 			uploadDest = vr.UploadFilename
 		}
+		if vr.FeedVersionID.Valid {
+			result.FeedVersionID = tt.NewInt(vr.FeedVersionID.Int())
+		}
 	}
 
 	// Cleanup any temporary files
@@ -134,6 +139,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	tlfetch.FeedID = feed.ID
 	tlfetch.URLType = opts.URLType
 	tlfetch.FetchedAt = tt.NewTime(opts.FetchedAt)
+	// tlfetch.FeedVersionID =
 	if !opts.HideURL {
 		tlfetch.URL = opts.FeedURL
 	}
@@ -141,6 +147,9 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		tlfetch.ResponseCode = tt.NewInt(result.ResponseCode)
 		tlfetch.ResponseSize = tt.NewInt(result.ResponseSize)
 		tlfetch.ResponseSHA1 = tt.NewString(result.ResponseSHA1)
+	}
+	if result.FeedVersionID.Valid {
+		tlfetch.FeedVersionID = tt.NewInt(result.FeedVersionID.Int())
 	}
 	if result.FetchError == nil {
 		tlfetch.Success = true
