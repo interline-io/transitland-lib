@@ -1,6 +1,7 @@
 package dmfr
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"time"
@@ -62,41 +63,30 @@ func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []FeedVersionServ
 	if end.IsZero() {
 		end = tt.NewDate(time.Date(9999, 0, 0, 0, 0, 0, 0, time.UTC))
 	}
-	d := tt.Date{}
+
 	// Get FVSLs in window
 	var fvsort []FeedVersionServiceLevel
-	if start.IsZero() || end.Before(start) {
-		fvsort = fvsls[:]
-	} else {
-		for _, fvsl := range fvsls {
-			if fvsl.EndDate.Before(start) {
-				// log.Traceln("fvsl ends before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
-				continue
-			}
-			if fvsl.StartDate.After(end) {
-				// log.Traceln("fvsl starts before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
-				continue
-			}
-			fvsort = append(fvsort, fvsl)
-		}
-	}
-	if len(fvsort) == 0 {
-		return d, nil
-	}
+	fvsort = append(fvsort, fvsls...)
 	sort.Slice(fvsort, func(i, j int) bool {
-		a := fvsort[i].Total()
-		b := fvsort[j].Total()
-		if a == b {
-			return fvsort[i].StartDate.Before(fvsort[j].StartDate)
-		}
-		return a > b
+		a, b := fvsort[i], fvsort[j]
+		return a.StartDate.Before(b.StartDate)
 	})
-	// log.Traceln("window start:", start.String(), "end:", end.String())
-	// for _, fvsl := range fvsort {
-	// 	log.Traceln("start:", fvsl.StartDate.String(), "end:", fvsl.EndDate.String(), "total:", fvsl.Total())
-	// }
-	// log.Traceln("d:", fvsort[0].StartDate.String())
-	return fvsort[0].StartDate, nil
+	fvDate := tt.Date{}
+	fvMax := 0
+	for _, fvsl := range fvsort {
+		fmt.Println(fvsl.StartDate, fvsl.EndDate, fvsl.Total())
+		if fvsl.StartDate.After(end) {
+			continue
+		}
+		if fvsl.EndDate.Before(start) {
+			continue
+		}
+		if tot := fvsl.Total(); tot > fvMax {
+			fvMax = tot
+			fvDate = fvsl.StartDate
+		}
+	}
+	return fvDate, nil
 }
 
 func fromJulian(day int) time.Time {
