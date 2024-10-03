@@ -1,12 +1,16 @@
 syntax = "proto3";
 
 message Date {
-    int64 year = 1;
-    int64 month = 2;
-    int64 day = 3;
+    int32 year = 1;
+    int32 month = 2;
+    int32 day = 3;
 }
 
 message Time {
+    int64 seconds = 1;
+}
+
+message Seconds {
     int64 seconds = 1;
 }
 
@@ -144,7 +148,7 @@ message Route {
     Url route_url = 7;
     Color route_color = 8;
     Color route_text_color = 9;
-    int64 route_sort_order = 10;
+    int32 route_sort_order = 10;
     PickupAccess continuous_pickup = 11;
     PickupAccess continuous_drop_off = 12;
     string network_id = 13;
@@ -165,10 +169,10 @@ message Trip {
 
 message StopTime {
     Reference trip_id = 1;
-    Time arrival_time = 2;
-    Time departure_time = 3;
+    Seconds arrival_time = 2;
+    Seconds departure_time = 3;
     Reference stop_id = 4;
-    int64 stop_sequence = 5;
+    int32 stop_sequence = 5;
     string stop_headsign = 6;
     PickupAccess continuous_pickup = 7;
     PickupAccess continuous_drop_off = 8;
@@ -210,15 +214,25 @@ message CalendarDate {
     CalendarExceptionType exception_type = 3;
 }
 
-message Shape {
-    EntityID shape_id = 1;
-    bytes geometry = 2;
-}
-
 message ShapePoint {
     EntityID shape_id = 1;
     double shape_pt_lat = 2;
     double shape_pt_lon = 3;
-    int64 shape_pt_sequence = 4;
+    int32 shape_pt_sequence = 4;
     double shape_dist_traveled = 5;
+}
+
+message Shape {
+    EntityID shape_id = 1;
+    LineString shape = 2;
+}
+
+message Point {
+    float lon = 1;
+    float lat = 2;
+}
+
+message LineString {
+    int32 stride = 1;
+    repeated double coordinates = 2;
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -68,7 +69,15 @@ func FromCsv(val any, strv string) error {
 			p = errors.New("field not scannable")
 		}
 	default:
-		p = errors.New("field not scannable")
+		// Handle protobuf enums
+		k := reflect.ValueOf(val)
+		if k.Elem().CanInt() {
+			v, e := strconv.ParseInt(strv, 0, 0)
+			p = e
+			k.Elem().SetInt(v)
+		} else {
+			p = errors.New("field not scannable")
+		}
 	}
 	return p
 }

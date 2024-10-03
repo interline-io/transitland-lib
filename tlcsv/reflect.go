@@ -71,6 +71,9 @@ func GetString(ent tl.Entity, key string) (string, error) {
 }
 
 // Loading: fast and reflect paths //
+func LoadRow(ent any, row Row) []error {
+	return loadRow(ent, row)
+}
 
 // loadRow selects the fastest method for loading an entity.
 func loadRow(ent any, row Row) []error {
@@ -146,7 +149,12 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				continue
 			}
 			// Handle different known types
-			fieldValue := reflectx.FieldByIndexes(entValue, fieldInfo.Index).Addr().Interface()
+			var fieldValue any
+			if k := reflectx.FieldByIndexes(entValue, fieldInfo.Index); k.Kind() == reflect.Pointer {
+				fieldValue = k.Interface()
+			} else {
+				fieldValue = k.Addr().Interface()
+			}
 			if err := tt.FromCsv(fieldValue, strv); err != nil {
 				errs = append(errs, causes.NewFieldParseError(fieldName, strv))
 			}
