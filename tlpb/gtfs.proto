@@ -457,12 +457,12 @@ message Phone {
 // This must be a message so we can check for nil
 // "0" and "" have different semantics in GTFS
 message FareAttributeTransfer {
-    FareAttributeTransferType transfer_type = 1;
+    FareAttributeTransferType val = 1;
 }
 
 // "0" and "" have different semantics
 message TransferCount {
-    int32 transfer_count = 1;
+    int32 val = 1;
 }
 
 /////////////
