@@ -129,6 +129,8 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				strv = row.Row[i]
 			}
 			fieldInfo, ok := fmap[fieldName]
+			// fmt.Printf("FIELD: %s\n", fieldName)
+
 			// Add to extra fields if there's no struct tag
 			if !ok {
 				if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 {
@@ -148,13 +150,9 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				}
 				continue
 			}
+
 			// Handle different known types
-			var fieldValue any
-			if k := reflectx.FieldByIndexes(entValue, fieldInfo.Index); k.Kind() == reflect.Pointer {
-				fieldValue = k.Interface()
-			} else {
-				fieldValue = k.Addr().Interface()
-			}
+			fieldValue := reflectx.FieldByIndexes(entValue, fieldInfo.Index).Addr().Interface()
 			if err := tt.FromCsv(fieldValue, strv); err != nil {
 				errs = append(errs, causes.NewFieldParseError(fieldName, strv))
 			}
@@ -167,6 +165,7 @@ func loadRowReflect(ent interface{}, row Row) []error {
 			}
 		}
 	}
+	// fmt.Printf("ENT DONE: %T %#v\n", ent, ent)
 	return errs
 }
 

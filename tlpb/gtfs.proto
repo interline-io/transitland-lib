@@ -14,10 +14,9 @@ message FeedEntity {
 }
 
 message Agency {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID agency_id = 3;
-    string agency_name = 4;
+    DatabaseEntity id = 1;
+    Key agency_id = 3;
+    String agency_name = 4;
     Url agency_url = 5;
     Timezone agency_timezone = 6;
     Language agency_lang = 7;
@@ -27,70 +26,66 @@ message Agency {
 }
 
 message Stop {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID stop_id = 3;
-    string stop_code = 4;
-    string stop_name = 5;
-    string tts_stop_name = 6;
-    string stop_desc = 7;
-    double stop_lat = 8;
-    double stop_lon = 9;
-    string zone_id = 10;
+    DatabaseEntity id = 1;
+    Key stop_id = 3;
+    String stop_code = 4;
+    String stop_name = 5;
+    String tts_stop_name = 6;
+    String stop_desc = 7;
+    Float stop_lat = 8;
+    Float stop_lon = 9;
+    String zone_id = 10;
     Url stop_url = 11;
     StopLocationType location_type = 12;
     Reference parent_station = 13;
     Timezone stop_timezone = 14;
     WheelchairAccess wheelchair_boarding = 15;
     Reference level_id = 16;
-    string platform_code = 17;
+    String platform_code = 17;
 }
 
 message Route {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID route_id = 3;
+    DatabaseEntity id = 1;
+    Key route_id = 3;
     Reference agency_id = 4;
-    string route_short_name = 5;
-    string route_long_name = 6;
-    string route_desc = 7;
+    String route_short_name = 5;
+    String route_long_name = 6;
+    String route_desc = 7;
     RouteType route_type = 8;
     Url route_url = 9;
     Color route_color = 10;
     Color route_text_color = 11;
-    int32 route_sort_order = 12;
+    Int route_sort_order = 12;
     PickupAccess continuous_pickup = 13;
     PickupAccess continuous_drop_off = 14;
-    string network_id = 15;
+    String network_id = 15;
 }
 
 message Trip {
-    int64 id = 1;
-    int64 feed_version_id = 2;
+    DatabaseEntity id = 1;
     Reference route_id = 3;
     Reference service_id = 4;
-    EntityID trip_id = 5;
-    string trip_headsign = 6;
-    string trip_short_name = 7;
+    Key trip_id = 5;
+    String trip_headsign = 6;
+    String trip_short_name = 7;
     TripDirection direction_id = 8;
-    string block_id = 9;
+    String block_id = 9;
     Reference shape_id = 10;
     WheelchairAccess wheelchair_accessible = 11;
     BikeAccess bikes_allowed = 12;
 }
 
 message StopTime {
-    int64 id = 1;
-    int64 feed_version_id = 2;
+    DatabaseEntity id = 1;
     Reference trip_id = 3;
     Seconds arrival_time = 4;
     Seconds departure_time = 5;
     Reference stop_id = 6;
-    int32 stop_sequence = 7;
-    string stop_headsign = 8;
+    Int stop_sequence = 7;
+    String stop_headsign = 8;
     PickupAccess continuous_pickup = 9;
     PickupAccess continuous_drop_off = 10;
-    double shape_dist_traveled = 11;
+    Float shape_dist_traveled = 11;
     StopTimepoint timepoint = 12;
     Reference location_id = 13;
     Reference location_group_id = 14;
@@ -103,44 +98,40 @@ message StopTime {
 }
 
 message Calendar {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID service_id = 3;
+    DatabaseEntity id = 1;
+    Key service_id = 3;
     Date start_date = 4;
     Date end_date = 5;
-    bool monday = 6;
-    bool tuesday = 7;
-    bool wednesday = 8;
-    bool thursday = 9;
-    bool friday = 10;
-    bool saturday = 11;
-    bool sunday = 12;
+    Bool monday = 6;
+    Bool tuesday = 7;
+    Bool wednesday = 8;
+    Bool thursday = 9;
+    Bool friday = 10;
+    Bool saturday = 11;
+    Bool sunday = 12;
 }
 
 message CalendarDate {
-    int64 id = 1;
-    int64 feed_version_id = 2;
+    DatabaseEntity id = 1;
     Reference service_id = 3;
     Date date = 4;
     CalendarExceptionType exception_type = 5;
 }
 
 message FareAttribute {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID fare_id = 3;
+    DatabaseEntity id = 1;
+    Key fare_id = 3;
     Money price = 4;
     Currency currency_type = 5;
     PaymentMethod payment_method = 6;
     FareAttributeTransferType transfers = 7;
     Reference agency_id = 8;
-    int32 transfer_duration = 9;
+    Int transfer_duration = 9;
 }
 
 message FareRule {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID fare_id = 3;
+    DatabaseEntity id = 1;
+    Key fare_id = 3;
     Reference route_id = 4;
     Reference origin_id = 5;
     Reference destination_id = 6;
@@ -148,97 +139,86 @@ message FareRule {
 }
 
 message Timeframe {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID timeframe_group_id = 3;
+    DatabaseEntity id = 1;
+    Key timeframe_group_id = 3;
     Seconds start_time = 4;
     Seconds end_time = 5;
     Reference service_id = 6;
 }
 
 message FareMedia {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID fare_media_id = 3;
-    string fare_media_name = 4;
+    DatabaseEntity id = 1;
+    Key fare_media_id = 3;
+    String fare_media_name = 4;
     FareMediaType fare_media_type = 5;
 }
 
 message FareProduct {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID fare_product_id = 3;
-    string fare_product_name = 4;
+    DatabaseEntity id = 1;
+    Key fare_product_id = 3;
+    String fare_product_name = 4;
     Reference fare_media_id = 5;
     Money amount = 6;
     Currency currency = 7;
 }
 
 message FareLegRule {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID leg_group_id = 3;
+    DatabaseEntity id = 1;
+    Key leg_group_id = 3;
     Reference network_id = 4;
     Reference from_area_id = 5;
     Reference to_area_id = 6;
     Reference from_timeframe_group_id = 7;
     Reference to_timeframe_group_id = 8;
     Reference fare_product_id = 9;
-    int32 rule_proirity = 10;
+    Int rule_proirity = 10;
 }
 
 message FareTransferRule {
-    int64 id = 1;
-    int64 feed_version_id = 2;
+    DatabaseEntity id = 1;
     Reference from_leg_group_id = 3;
     Reference to_leg_group_id = 4;
-    TransferCount transfer_count = 5;
+    Int transfer_count = 5;
     DurationLimitType duration_limit_type = 6;
     FareTransferType fare_transfer_type = 7;
     Reference fare_product_id = 8;
 }
 
 message Area {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID area_id = 3;
-    string area_name = 4;
+    DatabaseEntity id = 1;
+    Key area_id = 3;
+    String area_name = 4;
 }
 
 message StopArea {
-    int64 id = 1;
-    int64 feed_version_id = 2;
+    DatabaseEntity id = 1;
     Reference area_id = 3;
     Reference stop_id = 4;
 }
 
 message Network {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID network_id = 3;
-    string network_name = 4;
+    DatabaseEntity id = 1;
+    Key network_id = 3;
+    String network_name = 4;
 }
 
 message RouteNetwork {
-    int64 id = 1;
-    int64 feed_version_id = 2;
+    DatabaseEntity id = 1;
     Reference network_id = 3;
     Reference route_id = 4;
 }
 
 message Frequency {
-    int64 id = 1;
-    int64 feed_version_id = 2;
+    DatabaseEntity id = 1;
     Reference trip_id = 3;
     Seconds start_time = 4;
     Seconds end_time = 5;
-    int32 headway_secs = 6;
+    Int headway_secs = 6;
     FrequencyExactTime exact_time = 7;
 }
 
 message Transfer {
-    int64 id = 1;
-    int64 feed_version_id = 2;
+    DatabaseEntity id = 1;
     Reference from_stop_id = 3;
     Reference to_stop_id = 4;
     Reference from_route_id = 5;
@@ -246,84 +226,77 @@ message Transfer {
     Reference from_trip_id = 7;
     Reference to_trip_id = 8;
     TransferType transfer_type = 9;
-    int32 min_transfer_time = 10;
+    Int min_transfer_time = 10;
 }
 
 message Pathway {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID pathway_id = 3;
+    DatabaseEntity id = 1;
+    Key pathway_id = 3;
     Reference from_stop_id = 4;
     Reference to_stop_id = 5;
     PathwayMode pathway_mode = 6;
     PathwayDirectionality is_bidirectional = 7;
-    double length = 8;
-    int32 traversal_time = 9;
-    int32 stair_count = 10;
-    double max_slope = 11;
-    double min_width = 12;
-    string signposted_as = 13;
-    string reverse_signposted_as = 14;
+    Float length = 8;
+    Int traversal_time = 9;
+    Int stair_count = 10;
+    Float max_slope = 11;
+    Float min_width = 12;
+    String signposted_as = 13;
+    String reverse_signposted_as = 14;
 }
 
 message Level {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID level_id = 3;
-    double level_index = 4;
-    string level_name = 5;
+    DatabaseEntity id = 1;
+    Key level_id = 3;
+    Float level_index = 4;
+    String level_name = 5;
 }
 
 message LocationGroup {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID location_group_id = 3;
-    string location_group_name = 4;
+    DatabaseEntity id = 1;
+    Key location_group_id = 3;
+    String location_group_name = 4;
 }
 
 message LocationGroupStop {
-    int64 id = 1;
-    int64 feed_version_id = 2;
+    DatabaseEntity id = 1;
     Reference location_group_id = 3;
     Reference stop_id = 4;
 }
 
 message BookingRule {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID booking_rule_id = 3;
+    DatabaseEntity id = 1;
+    Key booking_rule_id = 3;
     BookingRuleType booking_type = 4;
-    int32 prior_notice_duration_min = 5;
-    int32 prior_notice_duration_max = 6;
-    int32 prior_notice_last_day = 7;
+    Int prior_notice_duration_min = 5;
+    Int prior_notice_duration_max = 6;
+    Int prior_notice_last_day = 7;
     Seconds prior_notice_last_time = 8;
-    int32 prior_notice_start_day = 9;
+    Int prior_notice_start_day = 9;
     Seconds prior_notice_start_time = 10;
     Reference prior_notice_service_id = 11;
-    string message = 12;
-    string pickup_message = 13;
-    string drop_off_message = 14;
-    string phone_number = 15;
+    String message = 12;
+    String pickup_message = 13;
+    String drop_off_message = 14;
+    String phone_number = 15;
     Url info_url = 16;
     Url booking_url = 17;
 }
 
 message Translation {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    string table_name = 3; // a string enum, not supported in protobuf
-    string field_name = 4;
+    DatabaseEntity id = 1;
+    String table_name = 3; // a String enum, not supported in protobuf
+    String field_name = 4;
     Language language = 5;
-    string translation = 6;
-    string record_id = 7; // technically a reference, but must be resolved manually
-    string record_sub_id = 8;
-    string field_value = 9;
+    String translation = 6;
+    String record_id = 7; // technically a reference, but must be resolved manually
+    String record_sub_id = 8;
+    String field_value = 9;
 }
 
 message FeedInfo {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    string feed_publisher_name = 3;
+    DatabaseEntity id = 1;
+    String feed_publisher_name = 3;
     Url feed_publisher_url = 4;
     Language feed_lang = 5;
     Language default_lang = 6;
@@ -334,13 +307,12 @@ message FeedInfo {
 }
 
 message Attribution {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID attribution_id = 3;
+    DatabaseEntity id = 1;
+    Key attribution_id = 3;
     Reference agency_id = 4;
     Reference route_id = 5;
     Reference trip_id = 6;
-    string organization_name = 7;
+    String organization_name = 7;
     AttributionRole is_producer = 8;
     AttributionRole is_operator = 9;
     AttributionRole is_authority = 10;
@@ -349,42 +321,41 @@ message Attribution {
     Phone attribution_phone = 13;
 }
 
-//////////
-// Helper types
-
-message Service {
-    int64 id = 1;
-    int64 feed_version_id = 2;
-    EntityID service_id = 3;
-    Date start_date = 4;
-    Date end_date = 5;
-    repeated Date added = 6;
-    repeated Date removed = 7;
-    bool monday = 8;
-    bool tuesday = 9;
-    bool wednesday = 10;
-    bool thursday = 11;
-    bool friday = 12;
-    bool saturday = 13;
-    bool sunday = 14;
-}
-
-///////////
-// Shapes and geometries
-
-
 message ShapePoint {
-    EntityID shape_id = 1;
+    Key shape_id = 1;
     double shape_pt_lat = 2;
     double shape_pt_lon = 3;
     int32 shape_pt_sequence = 4;
     double shape_dist_traveled = 5;
 }
 
-message Shape {
-    EntityID shape_id = 1;
-    LineString shape = 2;
+//////////
+// Helper types
+
+message Service {
+    DatabaseEntity id = 1;
+    Key service_id = 3;
+    Date start_date = 4;
+    Date end_date = 5;
+    repeated Date added = 6;
+    repeated Date removed = 7;
+    Bool monday = 8;
+    Bool tuesday = 9;
+    Bool wednesday = 10;
+    Bool thursday = 11;
+    Bool friday = 12;
+    Bool saturday = 13;
+    Bool sunday = 14;
 }
+
+message Shape {
+    DatabaseEntity id = 1;
+    Key shape_id = 2;
+    LineString geometry = 3;
+}
+
+///////////
+// Shapes and geometries
 
 message Point {
     double lon = 1;
@@ -399,13 +370,18 @@ message LineString {
 /////////////
 // Base messages
 
+message DatabaseEntity {
+    int64 id = 1;
+    int64 feed_version_id = 2;
+}
+
 message Date {
     int32 year = 1;
     int32 month = 2;
     int32 day = 3;
 }
 
-message Time {
+message Timestamp {
     int64 val = 1;
 }
 
@@ -413,7 +389,7 @@ message Seconds {
     int64 val = 1;
 }
 
-message EntityID {
+message Key {
     string val = 1;
 }
 
@@ -454,47 +430,72 @@ message Phone {
     string val = 1;
 }
 
-// This must be a message so we can check for nil
-// "0" and "" have different semantics in GTFS
-message FareAttributeTransfer {
-    FareAttributeTransferType val = 1;
+message Float {
+    double val = 1;
 }
 
-// "0" and "" have different semantics
-message TransferCount {
-    int32 val = 1;
+message String {
+    string val = 1;
+}
+
+message Int {
+    int64 val = 1;
+}
+
+message Bool {
+    bool val = 1;
 }
 
 /////////////
 // Base enums
 
-enum WheelchairAccess {
+message WheelchairAccess {
+    WheelchairAccessEnum val = 1;
+}
+
+enum WheelchairAccessEnum {
     WheelchairUnknown = 0;
     WheelchairAllowed = 1;
     WheelchairDisallowed = 2;
 }
 
-enum BikeAccess {
+message BikeAccess {
+    BikeAccessEnum val = 1;
+}
+
+enum BikeAccessEnum {
     BikeUnknown = 0;
     BikeAllowed = 1;
     BikeDisallowed = 2;
 }
 
-enum BoardAccess {
+message BoardAccess {
+    BoardAccessEnum val = 1;
+}
+
+enum BoardAccessEnum {
     BoardUnknown = 0;
     BoardDisallowed = 1;
     BoardAllowed = 2;
     BoardCoordinate = 3;
 }
 
-enum PickupAccess {
+message PickupAccess {
+    PickupAccessEnum val = 1;
+}
+
+enum PickupAccessEnum {
     PickupContinuous = 0;
     PickupDisallowed = 1;
     PickupMustPhone = 2;
     PickupAskDriver = 3;
 }
 
-enum StopLocationType {
+message StopLocationType {
+    StopLocationTypeEnum val = 1;
+}
+
+enum StopLocationTypeEnum {
     LocationPlatform = 0;
     LocationStation = 1;
     LocationEntrance = 2;
@@ -502,7 +503,11 @@ enum StopLocationType {
     LocationBoardingArea = 4;
 }
 
-enum RouteType {
+message RouteType {
+    RouteTypeEnum val = 1;
+}
+
+enum RouteTypeEnum {
     VehicleTram = 0;
     VehicleSubway = 1;
     VehicleRail = 2;
@@ -515,28 +520,48 @@ enum RouteType {
     VehicleMonorail = 12;
 }    
 
-enum TripDirection {
+message TripDirection {
+    TripDirectionEnum val = 1;
+}
+
+enum TripDirectionEnum {
     TripDirectionOutbound = 0;
     TripDirectionInbound = 1;
 } 
 
-enum StopTimepoint {
+message StopTimepoint {
+    StopTimepointEnum val = 1;
+}
+
+enum StopTimepointEnum {
     Approximate = 0;
     StopTimepointExact = 1;
 }
 
-enum CalendarExceptionType {
+message CalendarExceptionType {
+    CalendarExceptionTypeEnum val = 1;
+}
+
+enum CalendarExceptionTypeEnum {
     CalendarUnknown = 0;
     CalendarAdded = 1;
     CalendarRemoved = 2;
 }
 
-enum FrequencyExactTime {
+message FrequencyExactTime {
+    FrequencyExactTimeEnum val = 1;
+}
+
+enum FrequencyExactTimeEnum {
     FrequencyExactTimeFrequency = 0;
     FrequencyExactTimeScheduled = 1;
 }
 
-enum TransferType {
+message TransferType {
+    TransferTypeEnum val = 1;
+}
+
+enum TransferTypeEnum {
     TransferTypeRecommended = 0;
     TransferTypeTimed = 1;
     TransferTypeMinTime = 2;
@@ -545,12 +570,20 @@ enum TransferType {
     TransferTypeMustExit = 5;
 }
 
-enum PathwayDirectionality {
+message PathwayDirectionality {
+    PathwayDirectionalityEnum val = 1;
+}
+
+enum PathwayDirectionalityEnum {
     PathwayUnidirectional = 0;
     PathwayBidirectional = 1;
 }
 
-enum PathwayMode {
+message PathwayMode {
+    PathwayModeEnum val = 1;
+}
+
+enum PathwayModeEnum {
     PathwayModeUnknown = 0;
     PathwayModeWalkway = 1;
     PathwayModeStairs = 2;
@@ -561,13 +594,21 @@ enum PathwayMode {
     PathwayModeExitGate = 7;
 }
 
-enum BookingRuleType {
+message BookingRuleType {
+    BookingRuleTypeEnum val = 1;
+}
+
+enum BookingRuleTypeEnum {
     BookingRuleTypeRealtime = 0;
     BookingRuleTypeSameday = 1;
     BookingRuleTypePriorday = 2;
 }
 
-enum FareMediaType {
+message FareMediaType {
+    FareMediaTypeEnum val = 1;
+}
+
+enum FareMediaTypeEnum {
     FareMediaNone = 0;
     FareMediaPaper = 1;
     FareMediaCard = 2;
@@ -575,31 +616,51 @@ enum FareMediaType {
     FareMediaApp = 4;
 }
 
-enum FareTransferType {
+message FareTransferType {
+    FareTransferTypeEnum val = 1;
+}
+
+enum FareTransferTypeEnum {
     FareTransfer0 = 0;
     FareTransfer1 = 1;
     FareTransfer2 = 2;
 }
 
-enum DurationLimitType {
+message DurationLimitType {
+    DurationLimitTypeEnum val = 1;
+}
+
+enum DurationLimitTypeEnum {
     DurationLimit0 = 0;
     DurationLimit1 = 1;
     DurationLimit2 = 2;
     DurationLimit3 = 3;
 }
 
-enum FareAttributeTransferType {
+message FareAttributeTransferType {
+    FareAttributeTransferTypeEnum val = 1;
+}
+
+enum FareAttributeTransferTypeEnum {
     FareAttributeTransferTypeDisallowed = 0;
     FareAttributeTransferTypeOnce = 1;
     FareAttributeTransferTypeTwice = 2;
 }
 
-enum PaymentMethod {
+message PaymentMethod {
+    PaymentMethodEnum val = 1;
+}
+
+enum PaymentMethodEnum {
     PaymentMethodOnboard = 0;
     PaymentMethodOffboard = 1;
 }
 
-enum AttributionRole {
+message AttributionRole {
+    AttributionRoleEnum val = 1;
+}
+
+enum AttributionRoleEnum {
     AttributionRoleNotAssigned = 0;
     AttributionRoleAssigned = 1;
 }
