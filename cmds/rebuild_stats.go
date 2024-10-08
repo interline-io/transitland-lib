@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/dmfr/stats"
-	"github.com/interline-io/transitland-lib/dmfr/store"
+	"github.com/interline-io/transitland-lib/stats"
+	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
