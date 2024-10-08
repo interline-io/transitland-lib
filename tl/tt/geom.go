@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
+	"encoding/json"
 	"io"
 
 	geom "github.com/twpayne/go-geom"
@@ -19,10 +20,11 @@ type Geometry struct {
 }
 
 func (g *Geometry) Scan(src interface{}) error {
+	g.Geometry, g.Valid = nil, false
 	if src == nil {
 		return nil
 	}
-	b, ok := src.([]byte)
+	b, ok := src.(string)
 	if !ok {
 		return nil
 	}
@@ -68,23 +70,23 @@ func (g Geometry) MarshalGQL(w io.Writer) {
 // Errors, helpers
 
 // wkbEncode encodes a geometry into EWKB.
-func wkbEncode(g geom.T) ([]byte, error) {
+func wkbEncode(g geom.T) (string, error) {
 	b := &bytes.Buffer{}
 	if err := ewkb.Write(b, wkb.NDR, g); err != nil {
-		return nil, err
+		return "", err
 	}
 	bb := b.Bytes()
 	data := make([]byte, len(bb)*2)
 	hex.Encode(data, bb)
-	return data, nil
+	return string(data), nil
 }
 
 // wkbDecode tries to guess the encoding returned from the driver.
 // When not wrapped in anything, postgis returns EWKB, and spatialite returns its internal blob format.
-func wkbDecode(b []byte) (geom.T, error) {
-	data := make([]byte, len(b)/2)
-	hex.Decode(data, b)
-	got, err := ewkb.Unmarshal(data)
+func wkbDecode(data string) (geom.T, error) {
+	b := make([]byte, len(data)/2)
+	hex.Decode(b, []byte(data))
+	got, err := ewkb.Unmarshal(b)
 	if err != nil {
 		return nil, err
 	}
@@ -105,4 +107,29 @@ func geojsonEncode(g geom.T) ([]byte, error) {
 
 type canEncodeGeojson interface {
 	MarshalJSON() ([]byte, error)
+}
+
+// geojsonEncode decodes geojson into a geometry.
+func geojsonDecode[T any, PT *T](v any) (T, error) {
+	var ret T
+	var data []byte
+	if a, ok := v.([]byte); ok {
+		data = a
+	} else if a, ok := v.(string); ok {
+		data = []byte(a)
+	} else {
+		var err error
+		data, err = json.Marshal(v)
+		if err != nil {
+			return ret, err
+		}
+	}
+	var gg geom.T
+	if err := geojson.Unmarshal(data, &gg); err != nil {
+		return ret, nil
+	}
+	if a, ok := gg.(PT); ok && a != nil {
+		ret = *a
+	}
+	return ret, nil
 }

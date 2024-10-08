@@ -123,11 +123,12 @@ func TestStaticFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
+				fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err
 				}
+				fv := fr.FeedVersion
 				assert.Equal(t, tc.fvFound, fr.Found, "did not get expected found value")
 				assert.Equal(t, tc.responseCode, fr.ResponseCode, "did not get expected response code")
 				assert.Equal(t, tc.responseError, fr.FetchError != nil, "did not get expected value for fetch error")
@@ -148,7 +149,8 @@ func TestStaticFetch(t *testing.T) {
 				assert.Equal(t, !tc.responseError, tlff.Success, "did not get expected feed_fetch success")
 				//
 				if !tc.responseError {
-					fv2 := tl.FeedVersion{ID: fv.ID}
+					fv2 := tl.FeedVersion{}
+					fv2.ID = fv.ID
 					testdb.ShouldFind(t, atx, &fv2)
 					assert.Equal(t, url, fv2.URL, "did not get expected feed version url")
 					assert.Equal(t, tc.fvSha1, fv.SHA1, "did not get expected feed version sha1")
@@ -173,25 +175,30 @@ func TestStaticFetch_Exists(t *testing.T) {
 		feed := testdb.CreateTestFeed(atx, url)
 		_ = feed
 		tmpdir := t.TempDir()
-		fv, _, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
+		fr1, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
 		if err != nil {
 			t.Fatal(err)
 		}
-		fv2, fr2, err2 := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
+		fr2, err2 := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
 		if err2 != nil {
 			t.Error(err2)
 		}
 		if !(fr2.Found) {
 			t.Error("expected found feed")
 		}
+		fv1 := fr1.FeedVersion
+		fv2 := fr2.FeedVersion
 		if fv2.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
 		}
 		if fv2.ID == 0 {
 			t.Error("expected non-zero value")
 		}
-		if fv.ID != fv2.ID {
-			t.Errorf("got %d expected %d", fv.ID, fv2.ID)
+		if fv1.ID != fv2.ID {
+			t.Errorf("got %d expected %d", fv1.ID, fv2.ID)
+		}
+		if fr2.FeedVersionID.Int() != fv1.ID {
+			t.Errorf("got %d expected %d as feed version id in result", fr2.FeedVersionID.Int(), fv1.ID)
 		}
 		return nil
 	})
@@ -216,7 +223,7 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 		//
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, ts.URL)
-		fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
+		fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -229,12 +236,15 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 			t.Errorf("expected new fv")
 			return nil
 		}
+
+		// Check FV
+		fv := fr.FeedVersion
 		if fv.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fv.SHA1, ExampleZip.SHA1)
 			return nil
 		}
-		// Check FV
-		fv2 := tl.FeedVersion{ID: fv.ID}
+		fv2 := tl.FeedVersion{}
+		fv2.ID = fv.ID
 		testdb.ShouldFind(t, atx, &fv2)
 		if fv2.URL != url {
 			t.Errorf("got %s expect %s", fv2.URL, url)
@@ -245,12 +255,14 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 		if fv2.SHA1 != ExampleZip.SHA1 {
 			t.Errorf("got %s expect %s", fv2.SHA1, ExampleZip.SHA1)
 		}
+
 		// Check FeedFetch record
 		tlff := dmfr.FeedFetch{}
 		testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
 		assert.Equal(t, fv.SHA1, tlff.ResponseSHA1.Val, "did not get expected feed_fetch sha1")
 		assert.Equal(t, 200, tlff.ResponseCode.Int(), "did not get expected feed_fetch response code")
 		assert.Equal(t, true, tlff.Success, "did not get expected feed_fetch success")
+
 		// Check that we saved the output file
 		outfn := filepath.Join(tmpdir, fv.SHA1+".zip")
 		info, err := os.Stat(outfn)
@@ -296,8 +308,7 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 		for _, tc := range tcs {
 			_ = tc
 			feed := testdb.CreateTestFeed(atx, ts.URL+"/"+tc.url)
-			fv, fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
-			_ = fv
+			fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
 			if err != nil {
 				t.Error(err)
 				return nil
@@ -369,7 +380,7 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, _, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
+		_, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -401,7 +412,7 @@ func TestStaticStateFetch_HideURL(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, _, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, HideURL: true})
+		_, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, HideURL: true})
 		if err != nil {
 			t.Error(err)
 			return nil

@@ -1,50 +1,62 @@
 package importer
 
 import (
-	"flag"
+	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/internal/cli"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/spf13/pflag"
 )
+
+type ImportCommandResult struct {
+	Result     Result
+	FatalError error
+}
 
 // Command imports FeedVersions into a database.
 type Command struct {
 	Options      Options
 	Workers      int
 	Limit        int
+	Fail         bool
 	DBURL        string
 	CoverDate    string
 	FetchedSince string
 	Latest       bool
 	DryRun       bool
 	FeedIDs      []string
-	FVIDs        cli.ArrayFlags
-	FVSHA1       cli.ArrayFlags
+	FVIDs        []string
+	FVSHA1       []string
+	Results      []ImportCommandResult
 	Adapter      tldb.Adapter // allow for mocks
+	// internal
+	fvidfile   string
+	fvsha1file string
 }
 
-// Parse command line flags
-func (cmd *Command) Parse(args []string) error {
-	extflags := cli.ArrayFlags{}
-	fvidfile := ""
-	fvsha1file := ""
-	fl := flag.NewFlagSet("import", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: import [feedids...]")
-		fl.PrintDefaults()
-	}
-	fl.Var(&extflags, "ext", "Include GTFS Extension")
-	fl.Var(&cmd.FVIDs, "fvid", "Import specific feed version ID")
-	fl.StringVar(&fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
-	fl.StringVar(&fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
-	fl.Var(&cmd.FVSHA1, "fv-sha1", "Feed version SHA1")
+func (cmd *Command) HelpDesc() (string, string) {
+	return "Import feed versions", "Use after the `fetch` command"
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] [feeds...]"
+}
+
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+	fl.StringSliceVar(&cmd.Options.Extensions, "ext", nil, "Include GTFS Extension")
+	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Import specific feed version ID")
+	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
+	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
+	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Import at most n feeds")
+	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage location; can be s3://... az://... or path to a directory")
 	fl.StringVar(&cmd.CoverDate, "date", "", "Service on date")
@@ -59,14 +71,17 @@ func (cmd *Command) Parse(args []string) error {
 	fl.BoolVar(&cmd.Options.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
 	fl.BoolVar(&cmd.Options.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
 	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
-	fl.Parse(args)
-	cmd.Options.Extensions = extflags
+}
+
+// Parse command line flags
+func (cmd *Command) Parse(args []string) error {
+	fl := tlcli.NewNArgs(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	if fvidfile != "" {
-		lines, err := cli.ReadFileLines(fvidfile)
+	if cmd.fvidfile != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
 		if err != nil {
 			return err
 		}
@@ -75,9 +90,12 @@ func (cmd *Command) Parse(args []string) error {
 				cmd.FVIDs = append(cmd.FVIDs, line)
 			}
 		}
+		if len(cmd.FVIDs) == 0 {
+			return errors.New("--fvid-file specified but no lines were read")
+		}
 	}
-	if fvsha1file != "" {
-		lines, err := cli.ReadFileLines(fvsha1file)
+	if cmd.fvsha1file != "" {
+		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
 		if err != nil {
 			return err
 		}
@@ -85,6 +103,9 @@ func (cmd *Command) Parse(args []string) error {
 			if line != "" {
 				cmd.FVSHA1 = append(cmd.FVSHA1, line)
 			}
+		}
+		if len(cmd.FVSHA1) == 0 {
+			return errors.New("--fv-sha1-file specified but no lines were read")
 		}
 	}
 	return nil
@@ -149,11 +170,12 @@ func (cmd *Command) Run() error {
 	if err != nil {
 		return err
 	}
+
 	///////////////
 	// Here we go
 	log.Infof("Importing %d feed versions", len(qrs))
 	jobs := make(chan Options, len(qrs))
-	results := make(chan Result, len(qrs))
+	results := make(chan ImportCommandResult, len(qrs))
 	for _, fvid := range qrs {
 		jobs <- Options{
 			FeedVersionID: fvid,
@@ -163,17 +185,36 @@ func (cmd *Command) Run() error {
 		}
 	}
 	close(jobs)
+
 	// Start workers
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go dmfrImportWorker(w, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
+		go dmfrImportWorker(cmd.Adapter, cmd.DryRun, jobs, results, &wg)
 	}
 	wg.Wait()
+	close(results)
+
+	// Check results
+	var fatalError error
+	for result := range results {
+		cmd.Results = append(cmd.Results, result)
+		if result.FatalError != nil {
+			fatalError = result.FatalError
+		} else if fvi := result.Result.FeedVersionImport; !fvi.Success {
+			if cmd.Fail {
+				fatalError = fmt.Errorf("import failed: %s", fvi.ExceptionLog)
+			}
+		}
+	}
+	if fatalError != nil {
+		log.Infof("Exiting with error because at least one import had fatal error: %s", fatalError.Error())
+		return fatalError
+	}
 	return nil
 }
 
-func dmfrImportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan Options, results chan<- Result, wg *sync.WaitGroup) {
+func dmfrImportWorker(adapter tldb.Adapter, dryrun bool, jobs <-chan Options, results chan<- ImportCommandResult, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -201,7 +242,10 @@ func dmfrImportWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan Opt
 		} else {
 			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s, (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
 		}
-		results <- result
+		results <- ImportCommandResult{
+			Result:     result,
+			FatalError: err,
+		}
 	}
 	wg.Done()
 }

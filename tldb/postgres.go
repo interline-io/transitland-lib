@@ -1,14 +1,16 @@
 package tldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 )
 
 func init() {
@@ -39,10 +41,11 @@ func (adapter *PostgresAdapter) Open() error {
 	if adapter.db != nil {
 		return nil
 	}
-	db, err := sqlx.Open("postgres", adapter.DBURL)
+	pool, err := pgxpool.New(context.Background(), adapter.DBURL)
 	if err != nil {
 		return err
 	}
+	db := sqlx.NewDb(stdlib.OpenDBFromPool(pool), "pgx")
 	db.Mapper = MapperCache.Mapper
 	adapter.db = &QueryLogger{Ext: db.Unsafe()}
 	return nil
@@ -88,14 +91,13 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}
-	if err2 := cb(adapter2); err2 != nil {
+	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); err != nil {
 		if commit {
 			if errTx := tx.Rollback(); errTx != nil {
 				return errTx
 			}
 		}
-		return err2
+		return err
 	}
 	if commit {
 		return tx.Commit()
@@ -214,51 +216,16 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 			}
 		} else {
 			_, err = q.Exec()
+			for range batch {
+				retids = append(retids, 0)
+			}
+		}
+	}
+	for i := 0; i < len(ents); i++ {
+		ent := ents[i]
+		if v, ok := ent.(canSetID); ok {
+			v.SetID(retids[i])
 		}
 	}
 	return retids, err
-}
-
-// CopyInsert inserts data using COPY.
-func (adapter *PostgresAdapter) CopyInsert(ents []interface{}) error {
-	if len(ents) == 0 {
-		return nil
-	}
-	for _, ent := range ents {
-		if v, ok := ent.(canUpdateTimestamps); ok {
-			v.UpdateTimestamps()
-		}
-	}
-	// Must run in transaction
-	return adapter.Tx(func(atx Adapter) error {
-		a, ok := atx.DBX().(sqlx.Preparer)
-		if !ok {
-			return errors.New("not Preparer")
-		}
-		header, err := MapperCache.GetHeader(ents[0])
-		if err != nil {
-			return err
-		}
-		table := getTableName(ents[0])
-		stmt, err := a.Prepare(pq.CopyIn(table, header...))
-		if err != nil {
-			return err
-		}
-		defer stmt.Close()
-		for _, d := range ents {
-			vals, err := MapperCache.GetInsert(d, header)
-			if err != nil {
-				return err
-			}
-			_, err = stmt.Exec(vals...)
-			if err != nil {
-				return err
-			}
-		}
-		_, err = stmt.Exec()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
 }

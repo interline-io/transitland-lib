@@ -26,10 +26,11 @@ func (g Polygon) Value() (driver.Value, error) {
 }
 
 func (g *Polygon) Scan(src interface{}) error {
+	g.Valid = false
 	if src == nil {
 		return nil
 	}
-	b, ok := src.([]byte)
+	b, ok := src.(string)
 	if !ok {
 		return wkb.ErrExpectedByteSlice{Value: src}
 	}

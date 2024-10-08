@@ -26,12 +26,18 @@ type hasGeometry interface {
 	Geometry() tt.Geometry
 }
 
+type hasEntityJson interface {
+	EntityJson() tt.Map
+}
+
 // ValidationErrorGroup helps group errors together with a maximum limit on the number stored.
 type ValidationErrorGroup struct {
 	Filename  string
 	Field     string
 	ErrorType string
 	ErrorCode string
+	GroupKey  string
+	Level     int
 	Count     int
 	Limit     int               `db:"-"`
 	Errors    []ValidationError `db:"-"`
@@ -46,6 +52,7 @@ func NewValidationErrorGroup(err error, limit int) *ValidationErrorGroup {
 	return &ValidationErrorGroup{
 		Filename:  ve.Filename,
 		Field:     ve.Field,
+		GroupKey:  ve.GroupKey,
 		ErrorCode: ve.ErrorCode,
 		ErrorType: errtype,
 		Limit:     limit,
@@ -53,7 +60,7 @@ func NewValidationErrorGroup(err error, limit int) *ValidationErrorGroup {
 }
 
 func (eg *ValidationErrorGroup) Key() string {
-	return eg.Filename + ":" + eg.Field + ":" + eg.ErrorType
+	return fmt.Sprintf("%s:%s:%s:%s:%s", eg.Filename, eg.Field, eg.ErrorType, eg.ErrorType, eg.GroupKey)
 }
 
 // Add an error to the error group.
@@ -70,14 +77,16 @@ func getErrorKey(err error) string {
 }
 
 type ValidationError struct {
-	Filename  string `db:"-"`
-	Field     string `db:"-"`
-	ErrorCode string `db:"-"`
-	Line      int
-	Message   string
-	EntityID  string
-	Value     string
-	Geometry  tt.Geometry
+	Filename   string `db:"-"`
+	Field      string `db:"-"`
+	ErrorCode  string `db:"-"`
+	Line       int
+	GroupKey   string
+	Message    string
+	EntityID   string
+	Value      string
+	Geometry   tt.Geometry
+	EntityJson tt.Map
 }
 
 func (e ValidationError) Error() string {
@@ -96,9 +105,14 @@ func newValidationError(err error) ValidationError {
 		ee.EntityID = vctx.EntityID
 		ee.Value = vctx.Value
 		ee.ErrorCode = vctx.ErrorCode
+		ee.EntityJson = tt.NewMap(vctx.EntityJson)
+		ee.GroupKey = vctx.GroupKey
 	}
 	if v, ok := err.(hasGeometry); ok {
 		ee.Geometry = v.Geometry()
+	}
+	if v, ok := err.(hasEntityJson); ok {
+		ee.EntityJson = v.EntityJson()
 	}
 	return ee
 }
@@ -177,6 +191,18 @@ func (cr *Result) HandleError(fn string, errs []error) {
 	}
 }
 
+// func entityAsJson(ent tl.Entity) map[string]any {
+// 	ret := map[string]any{}
+// 	entBytes, err := json.Marshal(ent)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	if err := json.Unmarshal(entBytes, &ret); err != nil {
+// 		panic(err)
+// 	}
+// 	return ret
+// }
+
 // HandleEntityErrors .
 func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
 	// Get entity line, if available
@@ -191,10 +217,14 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		if v, ok := err.(updateContext); ok {
 			v.Update(&ctx{Filename: efn, EntityID: eid, Line: eln})
 		}
+		// if v, ok := err.(hasSetEntityJson); ok {
+		// 	v.SetEntityJson(entityAsJson(ent))
+		// }
 		key := getErrorKey(err)
 		v, ok := cr.Errors[key]
 		if !ok {
 			v = NewValidationErrorGroup(err, cr.ErrorLimit)
+			v.Level = 0
 			cr.Errors[key] = v
 		}
 		v.Add(err)
@@ -203,10 +233,14 @@ func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error)
 		if v, ok := err.(updateContext); ok {
 			v.Update(&ctx{Filename: efn, EntityID: eid, Line: eln})
 		}
+		// if v, ok := err.(hasSetEntityJson); ok {
+		// 	v.SetEntityJson(entityAsJson(ent))
+		// }
 		key := getErrorKey(err)
 		v, ok := cr.Warnings[key]
 		if !ok {
 			v = NewValidationErrorGroup(err, cr.ErrorLimit)
+			v.Level = 1
 			cr.Warnings[key] = v
 		}
 		v.Add(err)

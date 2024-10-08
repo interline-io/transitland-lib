@@ -8,7 +8,6 @@ import (
 )
 
 type Operator struct {
-	ID              int                     `json:"-"`
 	OnestopID       String                  `json:"onestop_id"`
 	SupersedesIDs   Strings                 `json:"supersedes_ids,omitempty" db:"-"`
 	Name            String                  `json:"name,omitempty"`
@@ -18,6 +17,7 @@ type Operator struct {
 	Tags            Tags                    `json:"tags,omitempty" db:"operator_tags"`
 	File            String                  `json:"-"` // internal
 	DeletedAt       Time                    `json:"-"` // internal
+	DatabaseEntity  `json:"-"`
 	Timestamps      `json:"-"`
 }
 
@@ -54,16 +54,16 @@ func (ent *Operator) GetID() int {
 ////////////
 
 type OperatorAssociatedFeed struct {
-	GtfsAgencyID         String `json:"gtfs_agency_id,omitempty" db:"gtfs_agency_id"`
-	FeedOnestopID        String `json:"feed_onestop_id,omitempty" db:"-"`
-	ResolvedOnestopID    String `json:"-"` // internal
-	ResolvedGtfsAgencyID String `json:"-"` // internal
-	ResolvedName         String `json:"-"` // internal
-	ResolvedShortName    String `json:"-"` // internal
-	ResolvedPlaces       String `json:"-"` // internal
-	OperatorID           Int    `json:"-"` // internal
-	ID                   int    `json:"-"` // internal
-	FeedID               int    `json:"-"` // internal
+	GtfsAgencyID         String     `json:"gtfs_agency_id,omitempty" db:"gtfs_agency_id"`
+	FeedOnestopID        String     `json:"feed_onestop_id,omitempty" db:"-"`
+	ResolvedOnestopID    String     `json:"-"` // internal
+	ResolvedGtfsAgencyID String     `json:"-"` // internal
+	ResolvedName         String     `json:"-"` // internal
+	ResolvedShortName    String     `json:"-"` // internal
+	ResolvedPlaces       String     `json:"-"` // internal
+	OperatorID           Int        `json:"-"` // internal
+	FeedID               int        `json:"-"` // internal
+	DatabaseEntity       `json:"-"` // internal
 }
 
 func (o OperatorAssociatedFeed) TableName() string {

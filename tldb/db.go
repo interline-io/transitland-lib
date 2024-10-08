@@ -1,3 +1,4 @@
+// Package tldb provides adapters to read and write GTFS data from PostgreSQL and SQLite databases.
 package tldb
 
 import (
@@ -8,7 +9,6 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 )
 
 var bufferSize = 1000

@@ -2,6 +2,7 @@ package tt
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,17 @@ func NewWideTimeFromSeconds(value int) WideTime {
 	wt := WideTime{}
 	wt.Scan(value)
 	return wt
+}
+
+func (wt WideTime) HMS() (int, int, int) {
+	secs := wt.Seconds
+	if secs < 0 {
+		secs = 0
+	}
+	hours := secs / 3600
+	minutes := (secs % 3600) / 60
+	seconds := (secs % 3600) % 60
+	return hours, minutes, seconds
 }
 
 func (wt WideTime) String() string {
@@ -79,7 +91,11 @@ func (wt *WideTime) Scan(src interface{}) error {
 			return nil
 		}
 		wt.Seconds = int(v)
+	case json.Number:
+		a, _ := v.Int64()
+		wt.Seconds = int(a)
 	default:
+		fmt.Printf("%T\n", v)
 		p = errors.New("could not parse time")
 	}
 	wt.Valid = (p == nil)

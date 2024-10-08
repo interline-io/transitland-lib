@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/twpayne/go-geom"
 )
@@ -84,11 +84,11 @@ func TestRouteGeometryBuilder(t *testing.T) {
 						return
 					}
 
-					pts := []xy.Point{}
+					pts := []tlxy.Point{}
 					for _, c := range rg.Geometry.Coords() {
-						pts = append(pts, xy.Point{Lon: c[0], Lat: c[1]})
+						pts = append(pts, tlxy.Point{Lon: c[0], Lat: c[1]})
 					}
-					length := xy.LengthHaversine(pts)
+					length := tlxy.LengthHaversine(pts)
 					assert.InEpsilonf(t, length, tc.ExpectLength, 1.0, "got %f expect %f", length, tc.ExpectLength)
 					if mls, ok := rg.CombinedGeometry.Geometry.(*geom.MultiLineString); !ok {
 						t.Errorf("not MultiLineString")

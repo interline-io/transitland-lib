@@ -95,8 +95,10 @@ func FindImportableFeeds(adapter tldb.Adapter) ([]int, error) {
 // MainImportFeedVersion create FVI and run Copier inside a Tx.
 func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV
-	fvi := dmfr.FeedVersionImport{FeedVersionID: opts.FeedVersionID, InProgress: true}
-	fv := tl.FeedVersion{ID: opts.FeedVersionID}
+	fvi := dmfr.FeedVersionImport{InProgress: true}
+	fvi.FeedVersionID = opts.FeedVersionID
+	fv := tl.FeedVersion{}
+	fv.ID = opts.FeedVersionID
 	if err := adapter.Find(&fv); err != nil {
 		return Result{FeedVersionImport: fvi}, err
 	}
@@ -128,7 +130,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		if err != nil {
 			return err
 		}
-		required := []string{"agency.txt", "routes.txt", "stops.txt", "trips.txt", "stop_times.txt"}
+		required := []string{"agency.txt", "routes.txt", "stops.txt"}
 		for _, fn := range required {
 			if c := fviresult.EntityCount[fn]; c == 0 {
 				return fmt.Errorf("failed to import any entities from required file '%s'", fn)
@@ -174,7 +176,8 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 
 // ImportFeedVersion .
 func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
-	fvi := dmfr.FeedVersionImport{FeedVersionID: fv.ID}
+	fvi := dmfr.FeedVersionImport{}
+	fvi.FeedVersionID = fv.ID
 	// Get Reader
 	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
@@ -205,7 +208,6 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	cp.AddExtension(builders.NewRouteStopBuilder())
 	cp.AddExtension(builders.NewRouteHeadwayBuilder())
 	cp.AddExtension(builders.NewConvexHullBuilder())
-	cp.AddExtension(builders.NewOnestopIDBuilder())
 	cp.AddExtension(builders.NewAgencyPlaceBuilder())
 	fvi.InProgress = false
 

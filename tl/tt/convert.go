@@ -7,8 +7,6 @@ import (
 	"math"
 	"strconv"
 	"time"
-
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 type canString interface {
@@ -73,6 +71,19 @@ func FromCsv(val any, strv string) error {
 	return p
 }
 
+func formatFloat(v float64) string {
+	value := ""
+	if math.IsNaN(v) {
+		value = ""
+	} else if v > -100_000 && v < 100_000 {
+		// use pretty %g formatting but avoid exponents
+		value = fmt.Sprintf("%g", v)
+	} else {
+		value = fmt.Sprintf("%0.5f", v)
+	}
+	return value
+}
+
 // ToCsv converts any value to a CSV string representation
 func ToCsv(val any) (string, error) {
 	value := ""
@@ -92,14 +103,9 @@ func ToCsv(val any) (string, error) {
 			value = "false"
 		}
 	case float64:
-		if math.IsNaN(v) {
-			value = ""
-		} else if v > -100_000 && v < 100_000 {
-			// use pretty %g formatting but avoid exponents
-			value = fmt.Sprintf("%g", v)
-		} else {
-			value = fmt.Sprintf("%0.5f", v)
-		}
+		value = formatFloat(v)
+	case float32:
+		value = formatFloat(float64(v))
 	case time.Time:
 		if v.IsZero() {
 			value = ""
@@ -118,6 +124,8 @@ func ToCsv(val any) (string, error) {
 		return ToCsv(a)
 	case canString:
 		value = v.String()
+	case int8, int16, int32, uint, uint8, uint16, uint32, uint64:
+		value = fmt.Sprintf("%d", v)
 	default:
 		return "", fmt.Errorf("can not convert field to string")
 	}
@@ -232,10 +240,6 @@ func convertAssign(dest any, src any) error {
 
 func cannotConvert() error {
 	return errors.New("cannot convert")
-}
-
-func bcString(v string) causes.Context {
-	return causes.Context{Value: v}
 }
 
 func parseTime(d string) (time.Time, error) {

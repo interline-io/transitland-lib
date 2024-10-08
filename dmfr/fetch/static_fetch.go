@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -14,14 +13,21 @@ import (
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/validator"
 )
+
+type StaticFetchResult struct {
+	FeedVersion      *tl.FeedVersion
+	ValidationResult *validator.Result
+	Result
+}
 
 // StaticFetch from a URL. Creates FeedVersion and FeedFetch records.
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
-func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error) {
-	var fv tl.FeedVersion
+func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
+	var ret StaticFetchResult
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		tmpfilepath := fr.Filename
 		vr := validationResponse{}
@@ -44,11 +50,12 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 		defer reader.Close()
 
 		// Get initialized FeedVersion
-		fv, err = tl.NewFeedVersionFromReader(reader)
+		fv, err := tl.NewFeedVersionFromReader(reader)
 		if err != nil {
 			vr.Error = err
 			return vr, nil
 		}
+		ret.FeedVersion = &fv
 		fv.FeedID = opts.FeedID
 		fv.FetchedAt = opts.FetchedAt
 		fv.CreatedBy = opts.CreatedBy
@@ -62,15 +69,16 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 
 		// Is this SHA1 already present?
 		checkfvid := tl.FeedVersion{}
-		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ?", fv.SHA1, fv.SHA1Dir)
+		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", fv.SHA1, fv.SHA1Dir)
 		if err == nil {
 			// Already present
 			fv = checkfvid
 			vr.Found = true
+			vr.FeedVersionID = tt.NewInt(fv.ID)
 			return vr, nil
 		} else if err == sql.ErrNoRows {
 			// Not present, create below
-		} else if err != nil {
+		} else {
 			// Serious error
 			return vr, err
 		}
@@ -82,7 +90,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 			// Set fragment to empty
 			fv.Fragment = tt.NewString("")
 			// Copy file
-			tf2, err := ioutil.TempFile("", "nested")
+			tf2, err := os.CreateTemp("", "nested")
 			if err != nil {
 				return vr, err
 			}
@@ -90,6 +98,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 			tf2.Close()
 			log.Info().Str("dst", vr.UploadTmpfile).Str("src", readerPath).Msg("fetch: copying extracted nested zip file for upload")
 			if err := copyFileContents(vr.UploadTmpfile, readerPath); err != nil {
+				// Fatal err
 				return vr, err
 			}
 		}
@@ -97,25 +106,35 @@ func StaticFetch(atx tldb.Adapter, opts Options) (tl.FeedVersion, Result, error)
 		// Create fv record
 		fv.ID, err = atx.Insert(&fv)
 		if err != nil {
+			// Fatal err
 			return vr, err
 		}
+		vr.FeedVersionID = tt.NewInt(fv.ID)
 
 		// Update validation report
 		if opts.SaveValidationReport {
-			if err := createFeedValidationReport(atx, reader, fv.ID, opts.FetchedAt, opts.ValidationReportStorage); err != nil {
+			validationResult, err := createFeedValidationReport(atx, reader, fv.ID, opts.FetchedAt, opts.ValidationReportStorage)
+			if err != nil {
+				// Fatal err
 				return vr, err
 			}
+			ret.ValidationResult = validationResult
 		}
 
 		// Update stats records
 		if err := createFeedStats(atx, reader, fv.ID); err != nil {
+			// Fatal err
 			return vr, err
 		}
-
 		return vr, nil
 	}
 	result, err := ffetch(atx, opts, cb)
-	return fv, result, err
+	if err != nil {
+		log.Error().Err(err).Msg("fatal error during static fetch")
+	}
+	ret.Result = result
+	ret.Error = err
+	return ret, err
 }
 
 func copyFileContents(dst, src string) (err error) {

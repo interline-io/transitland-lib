@@ -1,8 +1,14 @@
 package rt
 
 import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // Errors
@@ -28,7 +34,7 @@ var (
 	E022 = nec("Sequential stop_time_update times are not increasing", "E022")
 	// E023 = nec("trip start_time does not match first GTFS arrival_time", "E023")
 	E024 = nec("trip direction_id does not match GTFS data", "E024")
-	E025 = nec("stop_time_update departure time is before arrival time", "E025")
+	E025 = nec("stop_time_update arrival time is after departure time", "E025")
 	E026 = nec("Invalid vehicle position", "E026")
 	// E027 = nec("Invalid vehicle bearing", "E027")
 	// E028 = nec("Vehicle position outside agency coverage area", "E028")
@@ -76,7 +82,7 @@ type bc = causes.Context
 func nec(msg string, errorCode string) RealtimeError {
 	return RealtimeError{
 		bc: causes.Context{
-			Value:     msg,
+			Message:   msg,
 			ErrorCode: errorCode,
 		},
 	}
@@ -85,26 +91,54 @@ func nec(msg string, errorCode string) RealtimeError {
 func newError(msg string, field string) *RealtimeError {
 	return &RealtimeError{
 		bc: causes.Context{
-			Field: field,
-			Value: msg,
+			Field:   field,
+			Message: msg,
 		},
 	}
 }
 
-func withField(e RealtimeError, field string) *RealtimeError {
+func withFieldAndJson(e RealtimeError, field string, groupKey string, value any, ent protoreflect.ProtoMessage, msg string, msgArgs ...any) *RealtimeError {
 	e2 := e
 	e2.Field = field
+	e2.GroupKey = groupKey
+	if value != nil {
+		var err error
+		e2.Value, err = tt.ToCsv(value)
+		if err != nil {
+			log.Error().Err(err).Msgf("could not convert value of type %T to string", value)
+		}
+	}
+	if msg != "" {
+		e2.Message = fmt.Sprintf(msg, msgArgs...)
+	}
+	e2.entityJson = pbEntityToMap(ent)
 	return &e2
+}
+
+func pbEntityToMap(ent protoreflect.ProtoMessage) tt.Map {
+	mOpts := protojson.MarshalOptions{UseProtoNames: true}
+	entityJsonBytes, _ := mOpts.Marshal(ent)
+	entityJson := map[string]any{}
+	if err := json.Unmarshal(entityJsonBytes, &entityJson); err != nil {
+		panic(err)
+	}
+	return tt.NewMap(entityJson)
 }
 
 // RealtimeError is a GTFS RealTime error.
 type RealtimeError struct {
 	bc
-	geom tt.Geometry
+	geom       tt.Geometry
+	entityJson tt.Map
 }
 
 func (e RealtimeError) Geometry() tt.Geometry {
 	return e.geom
+}
+
+// Return as tt.Map, not map[string]any
+func (e RealtimeError) EntityJson() tt.Map {
+	return e.entityJson
 }
 
 // RealtimeWarning is a GTFS RealTime warning.

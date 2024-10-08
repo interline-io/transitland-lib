@@ -101,7 +101,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		}
 
 	})
-	t.Run("CopyInsert", func(t *testing.T) {
+	t.Run("MultiInsert", func(t *testing.T) {
 		st1 := tl.StopTime{}
 		st1.FeedVersionID = m.FeedVersionID
 		st1.StopID = strconv.Itoa(m.StopID1)
@@ -118,7 +118,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		st2.DepartureTime = tt.NewWideTimeFromSeconds(3)
 		sts := make([]interface{}, 0)
 		sts = append(sts, &st1, &st2)
-		if err := adapter.CopyInsert(sts); err != nil {
+		if _, err := adapter.MultiInsert(sts); err != nil {
 			t.Error(err)
 		}
 		sts2 := []tl.StopTime{}

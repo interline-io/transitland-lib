@@ -3,21 +3,20 @@ package rt
 import (
 	"time"
 
-	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/ext/sched"
+	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/twpayne/go-geom"
 )
 
 type tripInfo struct {
-	UsesFrequency bool
 	DirectionID   int
-	ServiceID     string
+	UsesFrequency bool
 	ShapeID       string
 	RouteID       string
-	StartTime     tt.WideTime
-	EndTime       tt.WideTime
 }
 
 type stopInfo struct {
@@ -29,55 +28,48 @@ type routeInfo struct {
 	RouteType int
 }
 
+type rtTripKey struct {
+	AgencyID string
+	RouteID  string
+	TripID   string
+	Found    bool
+	Added    bool
+}
+
 // Validator validates RT messages based on data from a static feed.
 // It can be initialized through NewValidatorFromReader or through the Copier Validator interface.
 type Validator struct {
-	tripInfo  map[string]tripInfo
-	routeInfo map[string]routeInfo
-	stopInfo  map[string]stopInfo
-	services  map[string]*tl.Service
-	geomCache *xy.GeomCache // shared with copier
+	Timezone            string
+	MaxDistanceFromTrip float64
+	tripInfo            map[string]tripInfo
+	routeInfo           map[string]routeInfo
+	stopInfo            map[string]stopInfo
+	geomCache           tlxy.GeomCache // shared with copier
+	sched               *sched.ScheduleChecker
 }
 
 // NewValidator returns an initialized validator.
 func NewValidator() *Validator {
 	return &Validator{
-		tripInfo:  map[string]tripInfo{},
-		routeInfo: map[string]routeInfo{},
-		stopInfo:  map[string]stopInfo{},
-		services:  map[string]*tl.Service{},
-		geomCache: xy.NewGeomCache(),
+		MaxDistanceFromTrip: 100.0,
+		tripInfo:            map[string]tripInfo{},
+		routeInfo:           map[string]routeInfo{},
+		stopInfo:            map[string]stopInfo{},
+		sched:               sched.NewScheduleChecker(),
+		geomCache:           geomcache.NewGeomCache(),
 	}
-}
-
-// NewValidatorFromReader returns a Validator with data from a Reader.
-func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
-	fi := NewValidator()
-	for v := range reader.Stops() {
-		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
-	}
-	for v := range reader.Routes() {
-		fi.routeInfo[v.RouteID] = routeInfo{RouteType: v.RouteType}
-	}
-	for v := range reader.Trips() {
-		fi.tripInfo[v.TripID] = tripInfo{DirectionID: v.DirectionID}
-	}
-	for v := range reader.Frequencies() {
-		a := fi.tripInfo[v.TripID]
-		a.UsesFrequency = true
-		fi.tripInfo[v.TripID] = a
-	}
-	return fi, nil
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (fi *Validator) SetGeomCache(g *xy.GeomCache) {
+func (fi *Validator) SetGeomCache(g tlxy.GeomCache) {
 	fi.geomCache = g
 }
 
 // Validate gets a stream of entities from Copier to build up the cache.
 func (fi *Validator) Validate(ent tl.Entity) []error {
 	switch v := ent.(type) {
+	case *tl.Agency:
+		fi.Timezone = v.AgencyTimezone
 	case *tl.Stop:
 		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
 	case *tl.Route:
@@ -85,24 +77,21 @@ func (fi *Validator) Validate(ent tl.Entity) []error {
 			RouteType: v.RouteType,
 			AgencyID:  v.AgencyID,
 		}
-	case *tl.Service:
-		fi.services[v.ServiceID] = v
 	case *tl.Trip:
-		ti := tripInfo{
+		fi.tripInfo[v.TripID] = tripInfo{
 			DirectionID: v.DirectionID,
-			ServiceID:   v.ServiceID,
 			ShapeID:     v.ShapeID.String(),
 			RouteID:     v.RouteID,
 		}
-		if len(v.StopTimes) > 0 {
-			ti.StartTime = v.StopTimes[0].DepartureTime
-			ti.EndTime = v.StopTimes[len(v.StopTimes)-1].ArrivalTime
-		}
-		fi.tripInfo[v.TripID] = ti
 	case *tl.Frequency:
 		a := fi.tripInfo[v.TripID]
 		a.UsesFrequency = true
 		fi.tripInfo[v.TripID] = a
+	}
+
+	// Validate with schedule checker
+	if err := fi.sched.Validate(ent); err != nil {
+		return err
 	}
 	return nil
 }
@@ -113,8 +102,19 @@ func (fi *Validator) ValidateFeedMessage(current *pb.FeedMessage, previous *pb.F
 		errs = append(errs, newError("FeedMessage Header is required", "header"))
 	} else {
 		// Check previous Header timestamp
-		if current.GetHeader().GetTimestamp() < previous.GetHeader().GetTimestamp() {
-			errs = append(errs, withField(E018, "header.timestamp"))
+		if currentTimestamp, previousTimestamp := current.GetHeader().GetTimestamp(), previous.GetHeader().GetTimestamp(); currentTimestamp < previousTimestamp {
+			errs = append(errs, withFieldAndJson(
+				E018,
+				"header.timestamp",
+				"",
+				currentTimestamp,
+				current.Header,
+				"Header timestamp %d (local: %s) is before previous header timestamp %d (local: %s)",
+				currentTimestamp,
+				toLocalTime(int64(currentTimestamp), fi.Timezone),
+				previousTimestamp,
+				toLocalTime(int64(previousTimestamp), fi.Timezone),
+			))
 		}
 		errs = append(errs, fi.ValidateHeader(current.Header, current)...)
 	}
@@ -127,28 +127,64 @@ func (fi *Validator) ValidateFeedMessage(current *pb.FeedMessage, previous *pb.F
 
 // ValidateHeader .
 func (fi *Validator) ValidateHeader(header *pb.FeedHeader, current *pb.FeedMessage) (errs []error) {
-	if v := header.GetGtfsRealtimeVersion(); v == "3.0" || v == "2.0" {
+	if gtfsRealtimeVersion := header.GetGtfsRealtimeVersion(); gtfsRealtimeVersion == "3.0" || gtfsRealtimeVersion == "2.0" {
 		// TODO: additional version specific checks
-	} else if v == "1.0" {
+	} else if gtfsRealtimeVersion == "1.0" {
 		//ok
 	} else {
-		errs = append(errs, withField(E038, ""))
+		errs = append(errs, withFieldAndJson(
+			E038,
+			"header.gtfs_realtime_version",
+			"",
+			gtfsRealtimeVersion,
+			header,
+			"Invalid realtime version: %s",
+			gtfsRealtimeVersion,
+		))
 	}
 	//
-	if v := header.GetTimestamp(); header.Timestamp == nil || v == 0 {
-		errs = append(errs, withField(E048, "header.timestamp"))
-	} else if !checkTimestamp(v) {
-		errs = append(errs, withField(E001, "header.timestamp"))
-
-	} else if !checkFuture(v) {
-		errs = append(errs, withField(E050, "header.timestamp"))
-
+	if headerTimestamp := int64(header.GetTimestamp()); header.Timestamp == nil || headerTimestamp == 0 {
+		errs = append(errs, withFieldAndJson(
+			E048,
+			"header.timestamp",
+			"",
+			headerTimestamp,
+			header,
+			"",
+		))
+	} else if !checkTimestamp(headerTimestamp) {
+		errs = append(errs, withFieldAndJson(
+			E001,
+			"header.timestamp",
+			"",
+			headerTimestamp,
+			header,
+			"Not in POSIX time: %d",
+			headerTimestamp,
+		))
+	} else if !checkFuture(headerTimestamp) {
+		errs = append(errs, withFieldAndJson(
+			E050,
+			"header.timestamp",
+			"",
+			headerTimestamp,
+			header,
+			"Timestamp is in the future: %d (local: %s)",
+			headerTimestamp,
+			toLocalTime(headerTimestamp, fi.Timezone),
+		))
 	}
 	//
-	if header.Incrementality == nil {
-		errs = append(errs, withField(E049, "header.incrementality"))
-
-	} else if header.GetIncrementality() == pb.FeedHeader_DIFFERENTIAL {
+	if headerIncrementality := header.GetIncrementality(); header.Incrementality == nil {
+		errs = append(errs, withFieldAndJson(
+			E049,
+			"header.incrementality",
+			"",
+			headerIncrementality,
+			header,
+			"",
+		))
+	} else if headerIncrementality == pb.FeedHeader_DIFFERENTIAL {
 		errs = append(errs, newError("FeedHeader DIFFERENTIAL incrementality is not supported", "header.incrementality"))
 	}
 	return errs
@@ -156,24 +192,30 @@ func (fi *Validator) ValidateHeader(header *pb.FeedHeader, current *pb.FeedMessa
 
 // // ValidateFeedEntity .
 func (fi *Validator) ValidateFeedEntity(ent *pb.FeedEntity, current *pb.FeedMessage) (errs []error) {
-	incr := current.GetHeader().GetIncrementality()
+	headerIncrementality := current.GetHeader().GetIncrementality()
 	if ent.Id == nil || ent.GetId() == "" {
 		errs = append(errs, newError("FeedEntity id is required", "entity.id"))
 	}
-	if ent.IsDeleted != nil && incr != pb.FeedHeader_DIFFERENTIAL {
-		errs = append(errs, withField(E039, "entity.is_deleted"))
-
+	if ent.IsDeleted != nil && headerIncrementality != pb.FeedHeader_DIFFERENTIAL {
+		errs = append(errs, withFieldAndJson(
+			E039,
+			"entity.is_deleted",
+			"",
+			ent.IsDeleted,
+			ent,
+			"",
+		))
 	}
 	if ent.TripUpdate == nil && ent.Vehicle == nil && ent.Alert == nil {
 		errs = append(errs, newError("FeedEntity must provide one of TripUpdate, VehiclePosition, or Alert", "entity"))
 	}
-	if ent.TripUpdate != nil {
-		errs = append(errs, fi.ValidateTripUpdate(ent.GetTripUpdate(), current)...)
+	if tripUpdate := ent.GetTripUpdate(); tripUpdate != nil {
+		errs = append(errs, fi.ValidateTripUpdate(tripUpdate, current)...)
 	}
-	if ent.Vehicle != nil {
-		errs = append(errs, fi.ValidateVehiclePosition(ent.GetVehicle())...)
+	if vehicle := ent.GetVehicle(); vehicle != nil {
+		errs = append(errs, fi.ValidateVehiclePosition(vehicle)...)
 	}
-	if ent.Alert != nil {
+	if alert := ent.GetAlert(); alert != nil {
 		// TODO: ValidateAlert
 		// TODO: Check that route_id is not set in a TripDescriptor
 	}
@@ -181,142 +223,328 @@ func (fi *Validator) ValidateFeedEntity(ent *pb.FeedEntity, current *pb.FeedMess
 }
 
 // ValidateTripUpdate .
-func (fi *Validator) ValidateTripUpdate(trip *pb.TripUpdate, current *pb.FeedMessage) (errs []error) {
+func (fi *Validator) ValidateTripUpdate(tripUpdate *pb.TripUpdate, current *pb.FeedMessage) (errs []error) {
+	tripDescriptor := tripUpdate.GetTrip()
+	rtKey := fi.getRtTripKey(tripDescriptor)
+	agencyId := rtKey.AgencyID
+
 	// Validate TripDescriptor
-	if trip.Trip == nil {
+	if tripDescriptor == nil {
 		errs = append(errs, newError("TripDescriptor is required", "trip_update.trip"))
 	} else {
-		errs = append(errs, fi.validateTripDescriptor(trip.Trip)...)
+		errs = append(errs, fi.validateTripDescriptor(tripDescriptor, tripUpdate)...)
 	}
-	if trip.Delay != nil {
-		// experimental field
-	}
-	if trip.Timestamp != nil && !checkTimestamp(uint64(trip.GetTimestamp())) {
-		errs = append(errs, withField(E001, "trip_update.timestamp"))
+	// experimental field
+	// 	if tripUpdate.Delay != nil {
+	// }
 
+	if tripUpdateTimestamp := int64(tripUpdate.GetTimestamp()); tripUpdate.Timestamp != nil && !checkTimestamp(tripUpdateTimestamp) {
+		errs = append(errs, withFieldAndJson(
+			E001,
+			"trip_update.timestamp",
+			agencyId,
+			tripUpdateTimestamp,
+			tripUpdate,
+			"TripUpdate timestamp %d is missing or not in POSIX time",
+			tripUpdateTimestamp,
+		))
 	}
+
 	// Validate StopTimeUpdates
-	srel := trip.GetTrip().GetScheduleRelationship()
-	sts := trip.GetStopTimeUpdate()
-	if len(sts) == 0 && srel != pb.TripDescriptor_CANCELED {
-		errs = append(errs, withField(E041, "trip_update.trip.schedule_relationship"))
+	scheduleRelationship := tripDescriptor.GetScheduleRelationship()
+	stopTimeUpdates := tripUpdate.GetStopTimeUpdate()
+	if len(stopTimeUpdates) == 0 && scheduleRelationship != pb.TripDescriptor_CANCELED {
+		errs = append(errs, withFieldAndJson(
+			E041,
+			"trip_update.trip.schedule_relationship",
+			agencyId,
+			scheduleRelationship,
+			tripUpdate,
+			"",
+		))
 	}
-	seq := uint32(0)
-	visitedseq := map[uint32]int{}
-	visitedstop := map[string]int{}
-	prevstop := ""
-	prevtime := int64(0)
-	for _, st := range sts {
-		if st == nil {
+
+	// Validate sequence
+	seqVisited := map[uint32]int{}
+	stopVisited := map[string]int{}
+	prevStopSequence := uint32(0)
+	prevStopId := ""
+	prevTime := int64(0)
+	for _, stopTimeUpdate := range stopTimeUpdates {
+		if stopTimeUpdate == nil {
 			continue
 		}
-		ss := st.StopSequence
-		stopid := st.StopId
-		if stopid != nil {
-			s2 := *stopid
-			visitedstop[s2]++
-			if ss == nil && visitedstop[s2] > 1 {
-				errs = append(errs, withField(E009, "trip_update.stop_time_update.stop_sequence"))
+
+		// Check if this stop has been visited more than once
+		if stopId := stopTimeUpdate.GetStopId(); stopId != "" {
+			stopVisited[stopId]++
+			if stopTimeUpdate.StopSequence == nil && stopVisited[stopId] > 1 {
+				errs = append(errs, withFieldAndJson(
+					E009,
+					"trip_update.stop_time_update.stop_sequence",
+					agencyId,
+					"",
+					tripUpdate,
+					"",
+				))
 			}
-			if s2 == prevstop {
-				errs = append(errs, withField(E037, "trip_update.stop_time_update"))
+			if stopId == prevStopId {
+				errs = append(errs, withFieldAndJson(
+					E037,
+					"trip_update.stop_time_update.stop_sequence",
+					agencyId,
+					"",
+					tripUpdate,
+					"",
+				))
 			}
-			prevstop = s2
+			prevStopId = stopId
 		}
-		if ss != nil {
-			s2 := *ss
-			visitedseq[s2]++
-			if visitedseq[s2] > 1 {
-				errs = append(errs, withField(E036, "trip_update.stop_time_update"))
+
+		// Check if this stop sequence has been visited more than once
+		if stopSequence := stopTimeUpdate.GetStopSequence(); stopTimeUpdate.StopSequence != nil {
+			seqVisited[stopSequence]++
+			if seqVisited[stopSequence] > 1 {
+				errs = append(errs, withFieldAndJson(
+					E036,
+					"trip_update.stop_time_update",
+					agencyId,
+					stopSequence,
+					tripUpdate,
+					"TripUpdate contains a StopTimeUpdate with a stop sequence value of %d that is the same as a previous stop sequence",
+					stopSequence,
+				))
 
 			}
-			if s2 < seq {
-				errs = append(errs, withField(E002, "trip_update.stop_time_update"))
+			if stopSequence < prevStopSequence {
+				errs = append(errs, withFieldAndJson(
+					E002,
+					"trip_update.stop_time_update",
+					agencyId,
+					stopSequence,
+					tripUpdate,
+					"TripUpdate contains a StopTimeUpdate with a stop sequence value of %d that is less than previous stop sequence %d",
+					stopSequence,
+					prevStopSequence,
+				))
 
 			}
-			seq = s2
+			prevStopSequence = stopSequence
 		}
-		if st.Arrival != nil && st.Arrival.Time != nil && !checkTimestamp(uint64(st.GetArrival().GetTime())) {
-			errs = append(errs, withField(E001, "trip_update.stop_time_update.arrival.time"))
 
+		// Check Arrival Time
+		if arrivalTime := stopTimeUpdate.GetArrival().GetTime(); stopTimeUpdate.Arrival != nil && stopTimeUpdate.Arrival.Time != nil && !checkTimestamp(arrivalTime) {
+			errs = append(errs, withFieldAndJson(
+				E001,
+				"trip_update.stop_time_update.arrival.time",
+				agencyId,
+				arrivalTime,
+				tripUpdate,
+				"Not in POSIX time: %d",
+				arrivalTime,
+			))
 		}
-		if st.Departure != nil && st.Departure.Time != nil && !checkTimestamp(uint64(st.GetDeparture().GetTime())) {
-			errs = append(errs, withField(E001, "trip_update.stop_time_update.departure.time"))
+
+		// Check Departure Time
+		if departureTime := stopTimeUpdate.GetDeparture().GetTime(); stopTimeUpdate.Departure != nil && stopTimeUpdate.Departure.Time != nil && !checkTimestamp(departureTime) {
+			errs = append(errs, withFieldAndJson(
+				E001,
+				"trip_update.stop_time_update.departure.time",
+				agencyId,
+				departureTime,
+				tripUpdate,
+				"Not in POSIX time: %d",
+				departureTime,
+			))
 		}
-		// if st.GetArrival().Time != nil {
-		if st.Arrival != nil && st.Arrival.Time != nil {
-			a := *st.Arrival.Time
-			if a < prevtime {
-				errs = append(errs, withField(E022, "trip_update.stop_time_update"))
+
+		// Check vs. previous time
+		if arrivalTime := stopTimeUpdate.GetArrival().GetTime(); stopTimeUpdate.Arrival != nil && stopTimeUpdate.Arrival.Time != nil {
+			if arrivalTime < prevTime {
+				errs = append(errs, withFieldAndJson(
+					E022,
+					"trip_update.stop_time_update",
+					agencyId,
+					arrivalTime,
+					tripUpdate,
+					"TripUpdate contains a StopTimeUpdate where arrival time %d (local: %s) was before previous time %d (local: %s)",
+					arrivalTime,
+					toLocalTime(arrivalTime, fi.Timezone),
+					prevTime,
+					toLocalTime(prevTime, fi.Timezone),
+				))
 			}
-			prevtime = a
+			prevTime = arrivalTime
 		}
-		if st.Departure != nil && st.Departure.Time != nil {
-			a := *st.Departure.Time
-			if a < prevtime {
-				errs = append(errs, withField(E022, "trip_update.stop_time_update"))
+
+		// Check vs. previous time
+		if departureTime := stopTimeUpdate.GetDeparture().GetTime(); stopTimeUpdate.Departure != nil && stopTimeUpdate.Departure.Time != nil {
+			if departureTime < prevTime {
+				errs = append(errs, withFieldAndJson(
+					E022,
+					"trip_update.stop_time_update",
+					agencyId,
+					departureTime,
+					tripUpdate,
+					"TripUpdate contains a StopTimeUpdate where departure time %d (local: %s) was before previous time %d (local: %s)",
+					departureTime,
+					toLocalTime(departureTime, fi.Timezone),
+					prevTime,
+					toLocalTime(prevTime, fi.Timezone),
+				))
 			}
-			prevtime = a
+			prevTime = departureTime
 		}
+
 		// Check individual values
-		errs = append(errs, fi.ValidateStopTimeUpdate(st, current)...)
+		errs = append(errs, fi.ValidateStopTimeUpdate(stopTimeUpdate, tripUpdate, current)...)
 	}
 	return errs
 }
 
 // ValidateStopTimeUpdate .
-func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, current *pb.FeedMessage) (errs []error) {
+func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, tripUpdate *pb.TripUpdate, current *pb.FeedMessage) (errs []error) {
+	tripDescriptor := tripUpdate.GetTrip()
+	rtKey := fi.getRtTripKey(tripDescriptor)
+	agencyId := rtKey.AgencyID
+
 	if st.StopId == nil && st.StopSequence == nil {
-		errs = append(errs, withField(E040, "trip_update.stop_time_update"))
+		errs = append(errs, withFieldAndJson(
+			E040,
+			"trip_update.stop_time_update",
+			agencyId,
+			"",
+			tripUpdate,
+			"",
+		))
 	}
-	if st.StopId != nil {
-		v, ok := fi.stopInfo[*st.StopId]
+	if stopId := st.GetStopId(); stopId != "" {
+		v, ok := fi.stopInfo[stopId]
 		if !ok {
-			errs = append(errs, withField(E011, "trip_update.stop_time_update.stop_id"))
+			errs = append(errs, withFieldAndJson(
+				E011,
+				"trip_update.stop_time_update.stop_id",
+				agencyId,
+				stopId,
+				tripUpdate,
+				"TripUpdate has a StopTimeUpdate that references stop '%s' that does not exist in static GTFS data",
+				st.GetStopId(),
+			))
 		}
 		if v.LocationType != 0 {
-			errs = append(errs, withField(E015, "trip_update.stop_time_update.stop_id"))
+			errs = append(errs, withFieldAndJson(
+				E015,
+				"trip_update.stop_time_update.stop_id",
+				agencyId,
+				stopId,
+				tripUpdate,
+				"TripUpdate has a StopTimeUpdate that references stop '%s' which has location_type '%d' but must be 0",
+				stopId,
+				v.LocationType,
+			))
 		}
 	}
+
 	// Arrival, Departure
 	switch st.GetScheduleRelationship() {
 	case pb.TripUpdate_StopTimeUpdate_SCHEDULED:
 		if st.Arrival == nil && st.Departure == nil {
-			errs = append(errs, withField(E043, "trip_update.schedule_relationship"))
+			errs = append(errs, withFieldAndJson(
+				E043,
+				"trip_update.schedule_relationship",
+				agencyId,
+				"",
+				tripUpdate,
+				"",
+			))
 		}
-		if a := st.Arrival; a != nil && (a.Time == nil && a.Delay == nil) {
-			errs = append(errs, withField(E044, "trip_update.schedule_relationship"))
+		if arrival := st.Arrival; arrival != nil && (arrival.Time == nil && arrival.Delay == nil) {
+			errs = append(errs, withFieldAndJson(
+				E044,
+				"trip_update.schedule_relationship",
+				agencyId,
+				"",
+				tripUpdate,
+				"",
+			))
 		}
-		if a := st.Departure; a != nil && (a.Time == nil && a.Delay == nil) {
-			errs = append(errs, withField(E044, "trip_update.schedule_relationship"))
+		if departure := st.Departure; departure != nil && (departure.Time == nil && departure.Delay == nil) {
+			errs = append(errs, withFieldAndJson(
+				E044,
+				"trip_update.schedule_relationship",
+				agencyId,
+				"",
+				tripUpdate,
+				"",
+			))
 		}
 	case pb.TripUpdate_StopTimeUpdate_NO_DATA:
 		if st.Arrival != nil || st.Departure != nil {
-			errs = append(errs, withField(E042, "trip_update.schedule_relationship"))
+			errs = append(errs, withFieldAndJson(
+				E042,
+				"trip_update.schedule_relationship",
+				agencyId,
+				"",
+				tripUpdate,
+				"",
+			))
 		}
 	case pb.TripUpdate_StopTimeUpdate_SKIPPED:
 		// ok
 	}
-	if st.GetArrival().GetTime() > 0 && st.GetDeparture().GetTime() > 0 && st.GetArrival().GetTime() > st.GetDeparture().GetTime() {
-		errs = append(errs, withField(E025, "trip_update.stop_time_update.arrival.time"))
+
+	if arrivalTime, departureTime := st.GetArrival().GetTime(), st.GetDeparture().GetTime(); arrivalTime > 0 && departureTime > 0 && arrivalTime > departureTime {
+		errs = append(errs, withFieldAndJson(
+			E025,
+			"trip_update.stop_time_update.arrival.time",
+			agencyId,
+			arrivalTime,
+			tripUpdate,
+			"TripUpdate contains a StopTimeUpdate with arrival time %d (local: %s) after departure time %d (local: %s)",
+			arrivalTime,
+			toLocalTime(arrivalTime, fi.Timezone),
+			departureTime,
+			toLocalTime(departureTime, fi.Timezone),
+		))
 	}
+
 	// ValidateStopTimeEvent .
 	// TODO
 	return errs
 }
 
-func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor) (errs []error) {
-	if td.TripId != nil {
-		tripid := *td.TripId
-		v, ok := fi.tripInfo[tripid]
-		if !ok {
-			errs = append(errs, withField(E003, "trip_update.trip.trip_id"))
+func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *pb.TripUpdate) (errs []error) {
+	rtKey := fi.getRtTripKey(td)
+	agencyId := rtKey.AgencyID
+
+	if tripId := td.GetTripId(); tripId != "" {
+		tripInfo, ok := fi.tripInfo[tripId]
+		// Check trip exists
+		if !ok && td.GetScheduleRelationship() == pb.TripDescriptor_ADDED {
+			// ADDED trip - allowed
+		} else if !ok {
+			errs = append(errs, withFieldAndJson(
+				E003,
+				"trip_update.trip.trip_id",
+				agencyId,
+				tripId,
+				tripUpdate,
+				"TripUpdate TripDescriptor references trip '%s' that does not exist in static GTFS data",
+				tripId,
+			))
 		}
-		if td.DirectionId != nil && td.GetDirectionId() != uint32(v.DirectionID) {
-			errs = append(errs, withField(E024, "trip_update.trip.trip_id"))
+		// Check direction
+		if directionId := td.GetDirectionId(); td.DirectionId != nil && int(directionId) != tripInfo.DirectionID {
+			errs = append(errs, withFieldAndJson(
+				E024,
+				"trip_update.trip.trip_id",
+				agencyId,
+				tripId,
+				tripUpdate,
+				"",
+			))
 		}
-		freq := false
-		if freq {
+		if tripInfo.UsesFrequency {
 			if td.StartTime == nil || td.StartDate == nil {
 				errs = append(errs, newError("TripDescriptor must provide start_date and start_time for frequency based trips", "trip_update.trip.start_time"))
 			}
@@ -330,54 +558,116 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor) (errs []error
 			errs = append(errs, newError("TripDescriptor must be SCHEDULED if no trip_id is provided", "trip_update.trip.trip_id"))
 		}
 	}
-	if td.RouteId != nil {
-		if _, ok := fi.routeInfo[*td.RouteId]; !ok {
-			errs = append(errs, withField(E004, "trip_update.trip.route_id"))
+	if routeId := td.GetRouteId(); routeId != "" {
+		if _, ok := fi.routeInfo[routeId]; !ok {
+			errs = append(errs, withFieldAndJson(
+				E004,
+				"trip_update.trip.route_id",
+				agencyId,
+				routeId,
+				tripUpdate,
+				"TripUpdate TripDescriptor references route '%s' that does not exist in static GTFS data",
+				routeId,
+			))
 		}
 	}
-	if td.StartTime != nil {
-		if st, err := tt.NewWideTime(*td.StartTime); err != nil {
-			errs = append(errs, withField(E020, "trip_update.trip.start_time"))
-		} else if st.Seconds > (7 * 24 * 60 * 60) {
-			errs = append(errs, withField(E020, "trip_update.trip.start_time"))
+	if startTime := td.GetStartTime(); startTime != "" {
+		if wt, err := tt.NewWideTime(startTime); err != nil {
+			errs = append(errs, withFieldAndJson(
+				E020,
+				"trip_update.trip.start_time",
+				agencyId,
+				startTime,
+				tripUpdate,
+				"",
+			))
+		} else if wt.Seconds > (7 * 24 * 60 * 60) {
+			errs = append(errs, withFieldAndJson(
+				E020,
+				"trip_update.trip.start_time",
+				agencyId,
+				startTime,
+				tripUpdate,
+				"",
+			))
 		}
 	}
-	if td.StartDate != nil {
-		if _, err := time.Parse("20060102", *td.StartDate); err != nil {
-			errs = append(errs, withField(E021, "trip_update.trip.start_date"))
+	if startDate := td.GetStartDate(); startDate != "" {
+		if _, err := time.Parse("20060102", startDate); err != nil {
+			errs = append(errs, withFieldAndJson(
+				E021,
+				"trip_update.trip.start_date",
+				agencyId,
+				"",
+				tripUpdate,
+				"",
+			))
 		}
 	}
 	return errs
 }
 
 func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []error) {
+	tripDescriptor := ent.GetTrip()
+	rtKey := fi.getRtTripKey(tripDescriptor)
+	agencyId := rtKey.AgencyID
+
 	// Validate stop
-	if ent.StopId != nil {
-		_, ok := fi.stopInfo[*ent.StopId]
+	if stopId := ent.GetStopId(); stopId != "" {
+		_, ok := fi.stopInfo[stopId]
 		if !ok {
-			errs = append(errs, withField(E011, "vehicle_position.stop_id"))
+			errs = append(errs, withFieldAndJson(
+				E011,
+				"vehicle_position.stop_id",
+				agencyId,
+				stopId,
+				ent,
+				"VehiclePosition references stop '%s' that does not exist in static GTFS data",
+				stopId,
+			))
 		}
 	}
 
 	// Validate position
 	pos := ent.GetPosition()
-	posValid := fi.validatePosition(ent.Position)
+	posValid := fi.validatePosition(ent.Position, ent)
 	errs = append(errs, posValid...)
 	if len(posValid) == 0 {
 		// Check distance from shape
-		posPt := xy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
+		posPt := tlxy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
 		if td := ent.Trip; td != nil && td.TripId != nil {
-			trip, tripOk := fi.tripInfo[td.GetTripId()]
+			tripId := td.GetTripId()
+			trip, tripOk := fi.tripInfo[tripId]
 			shp := fi.geomCache.GetShape(trip.ShapeID)
 			if !tripOk {
-				errs = append(errs, withField(E003, "vehicle_position.trip.trip_id"))
+				errs = append(errs, withFieldAndJson(
+					E003,
+					"vehicle_position.trip.trip_id",
+					agencyId,
+					tripId,
+					ent,
+					"VehiclePosition TripDescriptor references trip '%s' that does not exist in static GTFS data",
+					tripId,
+				))
 			} else if len(shp) == 0 {
 				errs = append(errs, newError("Invalid shape_id", "trip_descriptor"))
 			} else {
-				nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
-				nearestPointDist := xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat)
-				if nearestPointDist > 100.0 {
-					shpErr := withField(E029, "vehicle_position.position")
+				nearestPoint, _, _ := tlxy.LineClosestPoint(shp, posPt)
+				nearestPointDist := tlxy.DistanceHaversine(nearestPoint, posPt)
+				if nearestPointDist > fi.MaxDistanceFromTrip {
+					shpErr := withFieldAndJson(
+						E029,
+						"vehicle_position.position",
+						agencyId,
+						"",
+						ent,
+						"Vehicle position (%f,%f) is %0.2f meters from trip '%s' with shape_id '%s'",
+						posPt.Lon,
+						posPt.Lat,
+						nearestPointDist,
+						td.GetTripId(),
+						trip.ShapeID,
+					)
 					var coords []float64
 					for _, p := range shp {
 						coords = append(coords, p.Lon, p.Lat)
@@ -393,7 +683,6 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 					shpGeomCollection.Push(shpLineGeom)
 					shpGeomCollection.Push(shpPointGeom)
 					shpErr.geom = tt.Geometry{Geometry: shpGeomCollection, Valid: true}
-					// fmt.Printf("GEOMS: %#v\n", shpErr.geoms)
 					errs = append(errs, shpErr)
 				}
 			}
@@ -402,177 +691,96 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 	return errs
 }
 
-func (fi *Validator) validatePosition(pos *pb.Position) (errs []error) {
+func (fi *Validator) validatePosition(pos *pb.Position, vehiclePosition *pb.VehiclePosition) (errs []error) {
+	tripDescriptor := vehiclePosition.GetTrip()
+	rtKey := fi.getRtTripKey(tripDescriptor)
+	agencyId := rtKey.AgencyID
+
 	if pos == nil {
 		errs = append(errs, newError("Position required", "vehicle_position.position"))
 		return errs
 	}
-	if lon := pos.GetLongitude(); pos.Longitude == nil {
-		errs = append(errs, withField(E026, "vehicle_position.position.longitude"))
-	} else if lon < -180 || lon > 180 {
-		errs = append(errs, withField(E026, "vehicle_position.position.longitude"))
-	} else if lon == 0 {
-		errs = append(errs, withField(E026, "vehicle_position.position.longitude"))
+	if longitude := pos.GetLongitude(); pos.Longitude == nil {
+		errs = append(errs, withFieldAndJson(
+			E026,
+			"vehicle_position.position.longitude",
+			agencyId,
+			longitude,
+			vehiclePosition,
+			"Invalid longitude: null",
+		))
+	} else if longitude < -180 || longitude > 180 {
+		errs = append(errs, withFieldAndJson(
+			E026,
+			"vehicle_position.position.longitude",
+			agencyId,
+			longitude,
+			vehiclePosition,
+			"Invalid longitude: %f",
+			longitude,
+		))
+	} else if longitude == 0 {
+		errs = append(errs, withFieldAndJson(
+			E026,
+			"vehicle_position.position.longitude",
+			agencyId,
+			longitude,
+			vehiclePosition,
+			"Invalid longitude: %f",
+			longitude,
+		))
 	}
-	if lat := pos.GetLatitude(); pos.Latitude == nil {
-		errs = append(errs, withField(E026, "vehicle_position.position.latitude"))
-	} else if lat < -90 || lat > 90 {
-		errs = append(errs, withField(E026, "vehicle_position.position.latitude"))
-	} else if lat == 0 {
-		errs = append(errs, withField(E026, "vehicle_position.position.latitude"))
+	if latitude := pos.GetLatitude(); pos.Latitude == nil {
+		errs = append(errs, withFieldAndJson(
+			E026,
+			"vehicle_position.position.latitude",
+			agencyId,
+			latitude,
+			vehiclePosition,
+			"Invalid latitude: null",
+		))
+	} else if latitude < -90 || latitude > 90 {
+		errs = append(errs, withFieldAndJson(
+			E026,
+			"vehicle_position.position.latitude",
+			agencyId,
+			latitude,
+			vehiclePosition,
+			"Invalid latitude: %f",
+			latitude,
+		))
+	} else if latitude == 0 {
+		errs = append(errs, withFieldAndJson(
+			E026,
+			"vehicle_position.position.latitude",
+			agencyId,
+			latitude,
+			vehiclePosition,
+			"Invalid latitude: %f",
+			latitude,
+		))
 	}
 	return errs
 }
 
-type VehiclePositionStats struct {
-	RouteID            string   `json:"route_id"`
-	AgencyID           string   `json:"agency_id"`
-	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
-	TripScheduledCount int      `json:"trip_scheduled_count"`
-	TripMatchCount     int      `json:"trip_match_count"`
-}
-
-func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([]VehiclePositionStats, error) {
-	tripHasPosition := map[string]bool{}
-	for _, ent := range msg.Entity {
-		vp := ent.Vehicle
-		if vp == nil {
-			continue
-		}
-		pos := vp.GetPosition()
-		if td := vp.Trip; td != nil && pos != nil {
-			tripId := td.GetTripId()
-			tripHasPosition[tripId] = true
-		}
+func (fi *Validator) getRtTripKey(trip *pb.TripDescriptor) rtTripKey {
+	tripId := trip.GetTripId()
+	ret := rtTripKey{
+		TripID: tripId,
 	}
-	// Return early if no VehiclePositions
-	if len(tripHasPosition) == 0 {
-		return nil, nil
+	if trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED {
+		ret.Added = true
 	}
-	type statAggKey struct {
-		RouteID  string
-		AgencyID string
+	if a, ok := fi.tripInfo[tripId]; ok {
+		ret.RouteID = a.RouteID
+		ret.Found = true
+	} else if b := trip.GetRouteId(); b != "" {
+		ret.RouteID = b
 	}
-	statAgg := map[statAggKey]VehiclePositionStats{}
-	for _, tripId := range fi.ActiveTrips(now) {
-		trip := fi.tripInfo[tripId]
-		k := statAggKey{
-			RouteID:  trip.RouteID,
-			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
-		}
-		stat := statAgg[k]
-		stat.AgencyID = k.AgencyID
-		stat.RouteID = k.RouteID
-		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
-		stat.TripScheduledCount += 1
-		if tripHasPosition[tripId] {
-			stat.TripMatchCount += 1
-		}
-		statAgg[k] = stat
-	}
-	var ret []VehiclePositionStats
-	for _, v := range statAgg {
-		ret = append(ret, v)
-	}
-	return ret, nil
-
-}
-
-func (fi *Validator) ActiveTrips(now time.Time) []string {
-	var ret []string
-	nowWt := tt.NewWideTimeFromSeconds(now.Hour()*3600 + now.Minute()*60 + now.Second())
-	nowSvc := map[string]bool{}
-	tripHasUpdate := map[string]bool{}
-	msgTripIds := map[string]bool{}
-	for k, v := range fi.tripInfo {
-		svc, ok := fi.services[v.ServiceID]
-		if !ok {
-			// log.Debug().
-			// 	Str("service", v.ServiceID).
-			// 	Str("trip", k).
-			// 	Msg("no service, skipping")
-			continue
-		}
-		sched, ok := nowSvc[svc.ServiceID]
-		if !ok {
-			sched = svc.IsActive(now)
-			nowSvc[svc.ServiceID] = sched
-		}
-		if !sched {
-			// log.Debug().
-			// 	Str("date", now.Format("2006-02-03")).
-			// 	Str("service", v.ServiceID).
-			// 	Str("trip", k).
-			// 	Msg("not scheduled, skipping")
-			continue
-		}
-		if v.StartTime.Seconds > nowWt.Seconds || v.EndTime.Seconds < nowWt.Seconds {
-			// log.Debug().
-			// 	Str("date", now.Format("2006-02-03")).
-			// 	Str("cur_time", nowWt.String()).
-			// 	Str("trip_start", v.StartTime.String()).
-			// 	Str("trip_end", v.EndTime.String()).
-			// 	Str("service", v.ServiceID).
-			// 	Str("trip", k).
-			// 	Msg("outside time, skipping")
-			continue
-		}
-		ret = append(ret, k)
-		tripHasUpdate[k] = false
-		if msgTripIds[k] {
-			tripHasUpdate[k] = true
-		}
+	if a, ok := fi.routeInfo[ret.RouteID]; ok {
+		ret.AgencyID = a.AgencyID
 	}
 	return ret
-}
-
-type TripUpdateStats struct {
-	AgencyID           string   `json:"agency_id"`
-	RouteID            string   `json:"route_id"`
-	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
-	TripScheduledCount int      `json:"trip_scheduled_count"`
-	TripMatchCount     int      `json:"trip_match_count"`
-}
-
-func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]TripUpdateStats, error) {
-	tripHasUpdate := map[string]bool{}
-	for _, ent := range msg.Entity {
-		tu := ent.TripUpdate
-		if tu == nil {
-			continue
-		}
-		tripHasUpdate[tu.GetTrip().GetTripId()] = true
-	}
-	// Return early if no TripUpdates
-	if len(tripHasUpdate) == 0 {
-		return nil, nil
-	}
-	type statAggKey struct {
-		AgencyID string
-		RouteID  string
-	}
-	statAgg := map[statAggKey]TripUpdateStats{}
-	for _, tripId := range fi.ActiveTrips(now) {
-		trip := fi.tripInfo[tripId]
-		k := statAggKey{
-			RouteID:  trip.RouteID,
-			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
-		}
-		stat := statAgg[k]
-		stat.AgencyID = k.AgencyID
-		stat.RouteID = k.RouteID
-		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
-		stat.TripScheduledCount += 1
-		if tripHasUpdate[tripId] {
-			stat.TripMatchCount += 1
-		}
-		statAgg[k] = stat
-	}
-	var ret []TripUpdateStats
-	for _, v := range statAgg {
-		ret = append(ret, v)
-	}
-	return ret, nil
 }
 
 type EntityCounts struct {
@@ -597,7 +805,7 @@ func (fi *Validator) EntityCounts(msg *pb.FeedMessage) EntityCounts {
 	return ret
 }
 
-func checkTimestamp(ts uint64) bool {
+func checkTimestamp(ts int64) bool {
 	// 1/1/1990 -> year 2038
 	if ts < 631152000 || ts > (1<<31-1) {
 		return false
@@ -605,10 +813,20 @@ func checkTimestamp(ts uint64) bool {
 	return true
 }
 
-func checkFuture(ts uint64) bool {
+func checkFuture(ts int64) bool {
 	// Is timestamp more than 1 minute in the future
-	if ts > uint64(time.Now().Unix()+60) {
+	if ts > int64(time.Now().Unix()+60) {
 		return false
 	}
 	return true
+}
+
+func toLocalTime(v int64, tzName string) string {
+	utcTime := time.Unix(int64(v), 0)
+	tz, err := time.LoadLocation(tzName)
+	if err != nil {
+		return ""
+	}
+	localTime := utcTime.In(tz)
+	return localTime.Format("15:04:05")
 }

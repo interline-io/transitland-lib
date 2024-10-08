@@ -8,6 +8,7 @@ import (
 
 // Context adds structured context.
 type Context struct {
+	GroupKey   string
 	Filename   string
 	Line       int
 	ErrorCode  string
@@ -15,6 +16,7 @@ type Context struct {
 	Field      string
 	Value      string
 	Message    string
+	EntityJson map[string]any
 	errorLevel int
 	cause      error
 }
@@ -69,9 +71,18 @@ func (e *Context) Update(v *Context) {
 	if v.cause != nil {
 		e.cause = v.cause
 	}
+	if v.EntityJson != nil {
+		e.EntityJson = v.EntityJson
+	}
+	if v.GroupKey != "" {
+		e.GroupKey = v.GroupKey
+	}
 }
 
 func (e *Context) Error() string {
+	if e.Message != "" {
+		return e.Message
+	}
 	return fmt.Sprintf("field: %s value: '%s'", e.Field, e.Value)
 }
 

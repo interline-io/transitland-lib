@@ -138,6 +138,11 @@ func (ent *FeedVersionEntity) SetFeedVersionID(fvid int) {
 	ent.FeedVersionID = fvid
 }
 
+// GetFeedVersionID returns the Entity's FeedVersionID.
+func (ent *FeedVersionEntity) GetFeedVersionID() int {
+	return ent.FeedVersionID
+}
+
 /////////////
 
 type DatabaseEntity struct {

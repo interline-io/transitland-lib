@@ -1,21 +1,36 @@
 package rt
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
 
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
+
+// NewValidatorFromReader returns a Validator with data from a Reader.
+func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
+	fi := NewValidator()
+	cp, err := copier.NewCopier(reader, &empty.Writer{}, copier.Options{})
+	if err != nil {
+		return nil, err
+	}
+	if err := cp.AddExtension(fi); err != nil {
+		return nil, err
+	}
+	cpResult := cp.Copy()
+	if cpResult.WriteError != nil {
+		return nil, cpResult.WriteError
+	}
+	return fi, nil
+}
 
 func newTestValidator() (*Validator, error) {
 	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/bart-rt.zip"))
@@ -70,60 +85,6 @@ func TestValidateTripUpdate(t *testing.T) {
 
 func TestValidateAlert(t *testing.T) {
 
-}
-
-func TestTripUpdateStats(t *testing.T) {
-	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-trip-updates.pb"))
-	if err != nil {
-		t.Error(err)
-	}
-	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	ex := NewValidator()
-	cp.AddExtension(ex)
-	result := cp.Copy()
-	_ = result
-	tz, _ := time.LoadLocation("America/Los_Angeles")
-	now := time.Date(2023, 11, 7, 5, 30, 0, 0, tz)
-	stats, err := ex.TripUpdateStats(now, msg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	jj, _ := json.Marshal(stats)
-	fmt.Println(string(jj))
-}
-
-func TestVehiclePositionStats(t *testing.T) {
-	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-vehicle-positions.pb"))
-	if err != nil {
-		t.Error(err)
-	}
-	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	ex := NewValidator()
-	cp.AddExtension(ex)
-	result := cp.Copy()
-	_ = result
-	tz, _ := time.LoadLocation("America/Los_Angeles")
-	now := time.Date(2023, 11, 7, 5, 30, 0, 0, tz)
-	stats, err := ex.VehiclePositionStats(now, msg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	jj, _ := json.Marshal(stats)
-	fmt.Println(string(jj))
 }
 
 func TestValidatorErrors(t *testing.T) {
