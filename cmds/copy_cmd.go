@@ -1,9 +1,10 @@
-package copier
+package cmds
 
 import (
 	"errors"
 	"fmt"
 
+	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
@@ -11,9 +12,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Command
-type Command struct {
-	Options
+// CopyCommand
+type CopyCommand struct {
+	copier.Options
 	fvid              int
 	create            bool
 	extensions        []string
@@ -22,13 +23,13 @@ type Command struct {
 	writeExtraColumns bool
 }
 
-func (cmd *Command) HelpDesc() (string, string) {
+func (cmd *CopyCommand) HelpDesc() (string, string) {
 	a := "Copy performs a basic copy from a reader to a writer."
 	b := "By default, any entity with errors will be skipped and not written to output. This can be ignored with `--allow-entity-errors` to ignore simple errors and `--allow-reference-errors` to ignore entity relationship errors, such as a reference to a non-existent stop."
 	return a, b
 }
 
-func (cmd *Command) HelpExample() string {
+func (cmd *CopyCommand) HelpExample() string {
 	return `
 % {{.ParentCommand}} {{.Command}} --allow-entity-errors "https://www.bart.gov/dev/schedules/google_transit.zip" output.zip
 
@@ -38,11 +39,11 @@ BART,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6
 `
 }
 
-func (cmd *Command) HelpArgs() string {
+func (cmd *CopyCommand) HelpArgs() string {
 	return "[flags] <reader> <writer>"
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *CopyCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.extensions, "ext", nil, "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
@@ -53,7 +54,7 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
 }
 
-func (cmd *Command) Parse(args []string) error {
+func (cmd *CopyCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	if fl.NArg() < 2 {
 		return errors.New("requires input reader and output writer")
@@ -63,7 +64,7 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *Command) Run() error {
+func (cmd *CopyCommand) Run() error {
 	// Reader / Writer
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {
@@ -99,7 +100,7 @@ func (cmd *Command) Run() error {
 	}
 	// Setup copier
 	cmd.Options.Extensions = cmd.extensions
-	cp, err := NewCopier(reader, writer, cmd.Options)
+	cp, err := copier.NewCopier(reader, writer, cmd.Options)
 	if err != nil {
 		return err
 	}

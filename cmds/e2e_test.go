@@ -163,7 +163,7 @@ func TestE2E(t *testing.T) {
 			fvid := 0
 			testdb.ShouldGet(t, atx, &fvid, "select id from feed_versions order by id desc limit 1")
 			if tc.unimport {
-				unimpcmd := UnimporterCommand{
+				unimpcmd := UnimportCommand{
 					FVIDs:        []string{strconv.Itoa(fvid)},
 					ScheduleOnly: tc.unimportSchedOnly,
 					Workers:      1,

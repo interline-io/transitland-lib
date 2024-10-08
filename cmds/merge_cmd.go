@@ -1,5 +1,4 @@
-// Package merge provides utilities and commands for merging GTFS feeds.
-package merge
+package cmds
 
 import (
 	"errors"
@@ -12,26 +11,26 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Command
-type Command struct {
+// MergeCommand
+type MergeCommand struct {
 	Options           copier.Options
 	readerPaths       []string
 	writerPath        string
 	writeExtraColumns bool
 }
 
-func (cmd *Command) HelpDesc() (string, string) {
+func (cmd *MergeCommand) HelpDesc() (string, string) {
 	return "Merge multiple GTFS feeds", ""
 }
 
-func (cmd *Command) HelpArgs() string {
+func (cmd *MergeCommand) HelpArgs() string {
 	return "[flags] <writer> <readers...>"
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *MergeCommand) AddFlags(fl *pflag.FlagSet) {
 }
 
-func (cmd *Command) Parse(args []string) error {
+func (cmd *MergeCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	if fl.NArg() < 2 {
 		return errors.New("requires output writer and at least one reader")
@@ -41,7 +40,7 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *Command) Run() error {
+func (cmd *MergeCommand) Run() error {
 	var readers []tl.Reader
 	for _, p := range cmd.readerPaths {
 		// Open reader

@@ -1,5 +1,4 @@
-// Package extract provides tools and utilities for extracting subsets of GTFS feeds.
-package extract
+package cmds
 
 import (
 	"errors"
@@ -11,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
+	"github.com/interline-io/transitland-lib/extract"
 	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
@@ -18,8 +18,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Command
-type Command struct {
+// ExtractCommand
+type ExtractCommand struct {
 	// Default options
 	copier.Options
 	// Typical DMFR options
@@ -47,13 +47,13 @@ type Command struct {
 	writerPath        string
 }
 
-func (cmd *Command) HelpDesc() (string, string) {
+func (cmd *ExtractCommand) HelpDesc() (string, string) {
 	a := "Extract a subset of a GTFS feed"
 	b := `The extract command extends the basic copy command with a number of additional options and transformations. It can be used to pull out a single route or trip, interpolate stop times, override a single value on an entity, etc. This is a separate command to keep the basic copy command simple while allowing the extract command to grow and add more features over time.`
 	return a, b
 }
 
-func (cmd *Command) HelpExample() string {
+func (cmd *ExtractCommand) HelpExample() string {
 	return `
 # Extract a single trip from the BART GTFS, and rename the agency to "test".
 % {{.ParentCommand}} {{.Command}} --extract-trip "3050453" --set "agency.txt,BART,agency_id,test" "https://www.bart.gov/dev/schedules/google_transit.zip" output2.zip
@@ -84,11 +84,11 @@ trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_t
 `
 }
 
-func (cmd *Command) HelpArgs() string {
+func (cmd *ExtractCommand) HelpArgs() string {
 	return "[flags] <reader> <writer>"
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *ExtractCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringArrayVar(&cmd.extensions, "ext", nil, "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
@@ -130,7 +130,7 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 
 }
 
-func (cmd *Command) Parse(args []string) error {
+func (cmd *ExtractCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	if fl.NArg() < 2 {
 		return errors.New("requires input reader and output writer")
@@ -140,7 +140,7 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *Command) Run() error {
+func (cmd *ExtractCommand) Run() error {
 	// Reader / Writer
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {
@@ -194,7 +194,7 @@ func (cmd *Command) Run() error {
 		setvalues = append(setvalues, strings.Split(setv, ","))
 	}
 	if len(setvalues) > 0 {
-		tx := NewSetterFilter()
+		tx := extract.NewSetterFilter()
 		for _, setv := range setvalues {
 			if len(setv) != 4 {
 				return errors.New("invalid set argument")
@@ -233,9 +233,9 @@ func (cmd *Command) Run() error {
 		}
 	}
 
-	em := NewMarker()
+	em := extract.NewMarker()
 	// Includes
-	em.bbox = cmd.bbox
+	em.SetBbox(cmd.bbox)
 	for _, eid := range cmd.extractTrips {
 		em.AddInclude("trips.txt", eid)
 	}
