@@ -8,14 +8,14 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/unimporter"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/unimporter"
 	"github.com/spf13/pflag"
 )
 
-// UnimporterCommand imports FeedVersions into a database.
-type UnimporterCommand struct {
+// UnimportCommand imports FeedVersions into a database.
+type UnimportCommand struct {
 	ScheduleOnly bool
 	ExtraTables  []string
 	DryRun       bool
@@ -31,15 +31,15 @@ type UnimporterCommand struct {
 	fvsha1file string
 }
 
-func (cmd *UnimporterCommand) HelpDesc() (string, string) {
+func (cmd *UnimportCommand) HelpDesc() (string, string) {
 	return "Unimport feed versions", "The `unimport` command deletes previously imported data from feed versions. The feed version record itself is not deleted. You may optionally specify removal of only schedule data, leaving routes, stops, etc. in place."
 }
 
-func (cmd *UnimporterCommand) HelpArgs() string {
+func (cmd *UnimportCommand) HelpArgs() string {
 	return "[flags] <fvids...>"
 }
 
-func (cmd *UnimporterCommand) AddFlags(fl *pflag.FlagSet) {
+func (cmd *UnimportCommand) AddFlags(fl *pflag.FlagSet) {
 	// fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension") // TODO
 	fl.StringSliceVar(&cmd.FeedIDs, "feed", nil, "Feed ID")
 	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
@@ -52,7 +52,7 @@ func (cmd *UnimporterCommand) AddFlags(fl *pflag.FlagSet) {
 }
 
 // Parse command line flags
-func (cmd *UnimporterCommand) Parse(args []string) error {
+func (cmd *UnimportCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	cmd.Workers = 1
 	cmd.FVIDs = fl.Args()
@@ -95,7 +95,7 @@ type jobOptions struct {
 }
 
 // Run this command
-func (cmd *UnimporterCommand) Run() error {
+func (cmd *UnimportCommand) Run() error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {

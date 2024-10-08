@@ -5,10 +5,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/cmds"
-	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/diff"
-	"github.com/interline-io/transitland-lib/extract"
-	"github.com/interline-io/transitland-lib/merge"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
 
@@ -63,18 +60,18 @@ func init() {
 	genDocCommand.Hidden = true
 
 	rootCmd.AddCommand(
+		tlcli.CobraHelper(&cmds.CopyCommand{}, pc, "copy"),
+		tlcli.CobraHelper(&cmds.ExtractCommand{}, pc, "extract"),
 		tlcli.CobraHelper(&cmds.FetchCommand{}, pc, "fetch"),
 		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "dmfr-lint"),
 		tlcli.CobraHelper(&cmds.ImportCommand{}, pc, "import"),
 		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "dmfr-format"),
+		tlcli.CobraHelper(&cmds.MergeCommand{}, pc, "merge"),
 		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
 		tlcli.CobraHelper(&cmds.SyncCommand{}, pc, "sync"),
-		tlcli.CobraHelper(&cmds.UnimporterCommand{}, pc, "unimport"),
+		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
 		tlcli.CobraHelper(&cmds.ValidatorCommand{}, pc, "validate"),
-		tlcli.CobraHelper(&copier.Command{}, pc, "copy"),
 		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
-		tlcli.CobraHelper(&extract.Command{}, pc, "extract"),
-		tlcli.CobraHelper(&merge.Command{}, pc, "merge"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		genDocCommand,
 		dmfrCommand,
