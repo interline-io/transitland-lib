@@ -13,11 +13,11 @@ import (
 )
 
 func TestTripUpdateStats(t *testing.T) {
-	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
+	r, err := tlcsv.NewReader(testutil.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-trip-stats.json"))
+	msg, err := ReadFile(testutil.RelPath("testdata/rt/ct-trip-stats.json"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -117,11 +117,11 @@ func TestTripUpdateStats(t *testing.T) {
 }
 
 func TestVehiclePositionStats(t *testing.T) {
-	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
+	r, err := tlcsv.NewReader(testutil.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-vehicle-stats.json"))
+	msg, err := ReadFile(testutil.RelPath("testdata/rt/ct-vehicle-stats.json"))
 	if err != nil {
 		t.Error(err)
 	}

@@ -17,8 +17,8 @@ func TestMainSync(t *testing.T) {
 		testdb.CreateTestFeed(atx, "caltrain")
 		// Import
 		regs := []string{
-			testutil.RelPath("test/data/dmfr/rtfeeds.dmfr.json"),
-			testutil.RelPath("test/data/dmfr/bayarea-local.dmfr.json"),
+			testutil.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
+			testutil.RelPath("testdata/dmfr/bayarea-local.dmfr.json"),
 		}
 		opts := Options{
 			Filenames:  regs,
@@ -65,7 +65,7 @@ func TestMainSync_Update(t *testing.T) {
 		tlfeed.ID = testdb.ShouldInsert(t, atx, &tlfeed)
 		var err error
 		// Import
-		regs := []string{testutil.RelPath("test/data/dmfr/rtfeeds.dmfr.json")}
+		regs := []string{testutil.RelPath("testdata/dmfr/rtfeeds.dmfr.json")}
 		opts := Options{
 			Filenames: regs,
 		}
@@ -231,7 +231,7 @@ func TestUpdateOperator(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			// Import
 			regs := []string{
-				testutil.RelPath("test/data/dmfr/rtfeeds.dmfr.json"),
+				testutil.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
 			}
 			opts := Options{
 				Filenames:  regs,
@@ -268,7 +268,7 @@ func TestUpdateOperator(t *testing.T) {
 	t.Run("Update", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			regs := []string{
-				testutil.RelPath("test/data/dmfr/rtfeeds.dmfr.json"),
+				testutil.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
 			}
 			opts := Options{Filenames: regs}
 			found, err := MainSync(atx, opts)

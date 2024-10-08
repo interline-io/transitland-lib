@@ -36,7 +36,7 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-var URL = "https://github.com/interline-io/transitland-lib/raw/master/test/data/external/bart.zip"
+var URL = "https://github.com/interline-io/transitland-lib/raw/master/testdata/external/bart.zip"
 
 func TestExample1(t *testing.T) {
 	// Read stops from a GTFS url

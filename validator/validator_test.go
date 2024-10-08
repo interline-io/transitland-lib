@@ -61,8 +61,8 @@ func (cr *testErrorHandler) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 //////////////
 
 func TestValidator_Validate(t *testing.T) {
-	basepath := testutil.RelPath("test/data/validator")
-	searchpath := testutil.RelPath("test/data/validator/errors")
+	basepath := testutil.RelPath("testdata/validator")
+	searchpath := testutil.RelPath("testdata/validator/errors")
 	files, err := ioutil.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)
@@ -105,8 +105,8 @@ func TestValidator_Validate(t *testing.T) {
 
 func TestValidator_BestPractices(t *testing.T) {
 	// TODO: Combine with above... test best practice rules.
-	basepath := testutil.RelPath("test/data/validator")
-	searchpath := testutil.RelPath("test/data/validator/best-practices")
+	basepath := testutil.RelPath("testdata/validator")
+	searchpath := testutil.RelPath("testdata/validator/best-practices")
 	files, err := ioutil.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)
@@ -150,12 +150,12 @@ func TestValidator_BestPractices(t *testing.T) {
 }
 
 func TestSaveValidationReport(t *testing.T) {
-	reader, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
+	reader, err := tlcsv.NewReader(testutil.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := os.ReadFile(testutil.RelPath(filepath.Join("test/data/rt", r.URL.Path)))
+		buf, err := os.ReadFile(testutil.RelPath(filepath.Join("testdata/rt", r.URL.Path)))
 		if err != nil {
 			t.Error(err)
 		}
