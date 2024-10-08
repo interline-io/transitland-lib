@@ -9,7 +9,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/internal/schema"
+	"github.com/interline-io/transitland-lib/schema/sqlite"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/jmoiron/sqlx"
@@ -76,7 +76,7 @@ func (adapter *SQLiteAdapter) Create() error {
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
-	_, err := adb.Exec(schema.SqliteSchema)
+	_, err := adb.Exec(sqlite.SqliteSchema)
 	return err
 }
 
