@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 	"time"
 )
@@ -59,11 +60,11 @@ func FromCsv(val any, strv string) error {
 		*vf = v
 	case canFromCsvString:
 		if err := vf.FromCsv(strv); err != nil {
-			p = errors.New("field not scannable")
+			p = errors.New("field not scannable, FromCsv failed")
 		}
 	case canScan:
 		if err := vf.Scan(strv); err != nil {
-			p = errors.New("field not scannable")
+			p = errors.New("field not scannable, Scan failed")
 		}
 	default:
 		p = errors.New("field not scannable")
@@ -137,8 +138,8 @@ func TryCsv(val any) string {
 	a, _ := ToCsv(val)
 	return a
 }
-
 func convertAssign(dest any, src any) error {
+	// fmt.Printf("convertAssign %T '%v' into %T\n", src, src, dest)
 	if src == nil {
 		return nil
 	}
@@ -191,6 +192,21 @@ func convertAssign(dest any, src any) error {
 		default:
 			err = cannotConvert()
 		}
+	case *int32:
+		switch s := src.(type) {
+		case string:
+			*d, err = parseInt32(s)
+		case []byte:
+			*d, err = parseInt32(string(s))
+		case int:
+			*d = int32(s)
+		case int64:
+			*d = int32(s)
+		case float64:
+			*d = int32(s)
+		default:
+			err = cannotConvert()
+		}
 	case *float64:
 		switch s := src.(type) {
 		case string:
@@ -233,9 +249,22 @@ func convertAssign(dest any, src any) error {
 			err = cannotConvert()
 		}
 	default:
-		err = cannotConvert()
+		// Handle type aliases
+		k := reflect.ValueOf(dest).Elem()
+		if k.CanInt() {
+			xi := int64(0)
+			err = convertAssign(&xi, src)
+			k.SetInt(xi)
+		} else {
+			err = cannotConvert()
+		}
 	}
 	return err
+}
+
+func parseInt32(s string) (int32, error) {
+	d, err := strconv.ParseInt(s, 10, 32)
+	return int32(d), err
 }
 
 func cannotConvert() error {

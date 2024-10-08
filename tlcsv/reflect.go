@@ -71,6 +71,9 @@ func GetString(ent tl.Entity, key string) (string, error) {
 }
 
 // Loading: fast and reflect paths //
+func LoadRow(ent any, row Row) []error {
+	return loadRow(ent, row)
+}
 
 // loadRow selects the fastest method for loading an entity.
 func loadRow(ent any, row Row) []error {
@@ -126,6 +129,8 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				strv = row.Row[i]
 			}
 			fieldInfo, ok := fmap[fieldName]
+			// fmt.Printf("FIELD: %s\n", fieldName)
+
 			// Add to extra fields if there's no struct tag
 			if !ok {
 				if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 {
@@ -145,6 +150,7 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				}
 				continue
 			}
+
 			// Handle different known types
 			fieldValue := reflectx.FieldByIndexes(entValue, fieldInfo.Index).Addr().Interface()
 			if err := tt.FromCsv(fieldValue, strv); err != nil {
@@ -159,6 +165,7 @@ func loadRowReflect(ent interface{}, row Row) []error {
 			}
 		}
 	}
+	// fmt.Printf("ENT DONE: %T %#v\n", ent, ent)
 	return errs
 }
 
