@@ -4,9 +4,9 @@ import (
 	_ "embed"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/cmds"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/diff"
-	"github.com/interline-io/transitland-lib/dmfr/cmds"
 	"github.com/interline-io/transitland-lib/extract"
 	"github.com/interline-io/transitland-lib/merge"
 	"github.com/interline-io/transitland-lib/tl"
