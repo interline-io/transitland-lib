@@ -25,8 +25,9 @@ func TestCodegen(t *testing.T) {
 	}
 	defer outf.Close()
 
-	outf.WriteString("package gtfs\n\n")
-	outf.WriteString("type EnumValue int32\n\n")
+	outf.WriteString(`package gtfs` + "\n\n")
+	outf.WriteString(`import ( "github.com/interline-io/transitland-lib/tl/tt" )` + "\n\n")
+	outf.WriteString(`type EnumValue int32` + "\n\n")
 
 	for _, lf := range files {
 		// fmt.Printf("file %#v\n", file)
