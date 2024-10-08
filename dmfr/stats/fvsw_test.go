@@ -1,4 +1,4 @@
-package dmfr
+package stats
 
 import (
 	"testing"

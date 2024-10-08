@@ -1,4 +1,4 @@
-package sync
+package cmds
 
 import (
 	"strings"
@@ -23,7 +23,7 @@ func TestSyncCommand(t *testing.T) {
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
 			w := testdb.MustOpenWriter("sqlite3://:memory:", true)
-			c := Command{Adapter: w.Adapter}
+			c := SyncCommand{Adapter: w.Adapter}
 			if err := c.Parse(exp.command); err != nil {
 				t.Error(err)
 			}

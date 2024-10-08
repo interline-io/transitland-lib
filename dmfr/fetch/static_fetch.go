@@ -6,8 +6,10 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr/stats"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -122,7 +124,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		}
 
 		// Update stats records
-		if err := createFeedStats(atx, reader, fv.ID); err != nil {
+		if err := stats.CreateFeedStats(atx, reader, fv.ID); err != nil {
 			// Fatal err
 			return vr, err
 		}
@@ -158,4 +160,24 @@ func copyFileContents(dst, src string) (err error) {
 	}
 	err = out.Sync()
 	return
+}
+
+// Duplicated
+func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
+	// Create new report
+	_ = fetchedAt
+	opts := validator.Options{}
+	opts.ErrorLimit = 10
+	v, err := validator.NewValidator(reader, opts)
+	if err != nil {
+		return nil, err
+	}
+	validationResult, err := v.Validate()
+	if err != nil {
+		return nil, err
+	}
+	if err := validator.SaveValidationReport(atx, validationResult, fvid, storage); err != nil {
+		return nil, err
+	}
+	return validationResult, nil
 }

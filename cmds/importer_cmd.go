@@ -1,4 +1,4 @@
-package importer
+package cmds
 
 import (
 	"errors"
@@ -9,19 +9,20 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr/importer"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
 
 type ImportCommandResult struct {
-	Result     Result
+	Result     importer.Result
 	FatalError error
 }
 
-// Command imports FeedVersions into a database.
-type Command struct {
-	Options      Options
+// ImportCommand imports FeedVersions into a database.
+type ImportCommand struct {
+	Options      importer.Options
 	Workers      int
 	Limit        int
 	Fail         bool
@@ -40,15 +41,15 @@ type Command struct {
 	fvsha1file string
 }
 
-func (cmd *Command) HelpDesc() (string, string) {
+func (cmd *ImportCommand) HelpDesc() (string, string) {
 	return "Import feed versions", "Use after the `fetch` command"
 }
 
-func (cmd *Command) HelpArgs() string {
+func (cmd *ImportCommand) HelpArgs() string {
 	return "[flags] [feeds...]"
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.Options.Extensions, "ext", nil, "Include GTFS Extension")
 	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Import specific feed version ID")
 	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
@@ -74,7 +75,7 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 }
 
 // Parse command line flags
-func (cmd *Command) Parse(args []string) error {
+func (cmd *ImportCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
@@ -112,7 +113,7 @@ func (cmd *Command) Parse(args []string) error {
 }
 
 // Run this command
-func (cmd *Command) Run() error {
+func (cmd *ImportCommand) Run() error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -174,10 +175,10 @@ func (cmd *Command) Run() error {
 	///////////////
 	// Here we go
 	log.Infof("Importing %d feed versions", len(qrs))
-	jobs := make(chan Options, len(qrs))
+	jobs := make(chan importer.Options, len(qrs))
 	results := make(chan ImportCommandResult, len(qrs))
 	for _, fvid := range qrs {
-		jobs <- Options{
+		jobs <- importer.Options{
 			FeedVersionID: fvid,
 			Storage:       cmd.Options.Storage,
 			Activate:      cmd.Options.Activate,
@@ -214,7 +215,7 @@ func (cmd *Command) Run() error {
 	return nil
 }
 
-func dmfrImportWorker(adapter tldb.Adapter, dryrun bool, jobs <-chan Options, results chan<- ImportCommandResult, wg *sync.WaitGroup) {
+func dmfrImportWorker(adapter tldb.Adapter, dryrun bool, jobs <-chan importer.Options, results chan<- ImportCommandResult, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -233,7 +234,7 @@ func dmfrImportWorker(adapter tldb.Adapter, dryrun bool, jobs <-chan Options, re
 		}
 		log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
-		result, err := MainImportFeedVersion(adapter, opts)
+		result, err := importer.MainImportFeedVersion(adapter, opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
 			log.Errorf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)

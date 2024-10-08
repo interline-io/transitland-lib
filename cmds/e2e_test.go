@@ -1,4 +1,4 @@
-package e2e
+package cmds
 
 // End to end tests for sync, fetch, and import
 
@@ -14,7 +14,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr/fetch"
 	"github.com/interline-io/transitland-lib/dmfr/importer"
-	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -131,7 +130,7 @@ func TestE2E(t *testing.T) {
 
 			// Fetch
 			feedName := tc.name
-			fetch := fetch.Command{
+			fetch := FetchCommand{
 				CreateFeed: true,
 				FeedIDs:    []string{feedName},
 				Workers:    1,
@@ -147,7 +146,7 @@ func TestE2E(t *testing.T) {
 			}
 
 			// Import
-			impcmd := importer.Command{
+			impcmd := ImportCommand{
 				FeedIDs: []string{feedName},
 				Workers: 1,
 				Adapter: atx,
@@ -164,7 +163,7 @@ func TestE2E(t *testing.T) {
 			fvid := 0
 			testdb.ShouldGet(t, atx, &fvid, "select id from feed_versions order by id desc limit 1")
 			if tc.unimport {
-				unimpcmd := unimporter.Command{
+				unimpcmd := UnimporterCommand{
 					FVIDs:        []string{strconv.Itoa(fvid)},
 					ScheduleOnly: tc.unimportSchedOnly,
 					Workers:      1,

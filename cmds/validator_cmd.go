@@ -1,4 +1,4 @@
-package validator
+package cmds
 
 import (
 	"encoding/json"
@@ -11,12 +11,13 @@ import (
 	"github.com/interline-io/transitland-lib/internal/snakejson"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/validator"
 	"github.com/spf13/pflag"
 )
 
-// Command
-type Command struct {
-	Options                 Options
+// ValidatorCommand
+type ValidatorCommand struct {
+	Options                 validator.Options
 	rtFiles                 []string
 	OutputFile              string
 	DBURL                   string
@@ -27,19 +28,19 @@ type Command struct {
 	readerPath              string
 }
 
-func (cmd *Command) HelpDesc() (string, string) {
+func (cmd *ValidatorCommand) HelpDesc() (string, string) {
 	return "Validate a GTFS feed", "The validate command performs a basic validation on a data source and writes the results to standard out."
 }
 
-func (cmd *Command) HelpExample() string {
+func (cmd *ValidatorCommand) HelpExample() string {
 	return `% {{.ParentCommand}} {{.Command}} "https://www.bart.gov/dev/schedules/google_transit.zip"`
 }
 
-func (cmd *Command) HelpArgs() string {
+func (cmd *ValidatorCommand) HelpArgs() string {
 	return "[flags] <reader>"
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *ValidatorCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.extensions, "ext", nil, "Include GTFS Extension")
 	fl.StringVar(&cmd.OutputFile, "o", "", "Write validation report as JSON to file")
 	fl.BoolVar(&cmd.Options.BestPractices, "best-practices", false, "Include Best Practices validations")
@@ -51,7 +52,7 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
 }
 
-func (cmd *Command) Parse(args []string) error {
+func (cmd *ValidatorCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	if fl.NArg() < 1 {
 		return errors.New("requires input reader")
@@ -66,14 +67,14 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *Command) Run() error {
+func (cmd *ValidatorCommand) Run() error {
 	log.Infof("Validating: %s", cmd.readerPath)
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
-	v, err := NewValidator(reader, cmd.Options)
+	v, err := validator.NewValidator(reader, cmd.Options)
 	if err != nil {
 		return err
 	}
@@ -108,7 +109,7 @@ func (cmd *Command) Run() error {
 		}
 		atx := writer.Adapter
 		defer atx.Close()
-		if err := SaveValidationReport(atx, result, cmd.FVID, cmd.ValidationReportStorage); err != nil {
+		if err := validator.SaveValidationReport(atx, result, cmd.FVID, cmd.ValidationReportStorage); err != nil {
 			return err
 		}
 	}

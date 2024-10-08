@@ -1,19 +1,21 @@
-package dmfr
+package stats
 
 import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 type FeedVersionStats struct {
-	ServiceWindow    FeedVersionServiceWindow
-	ServiceLevels    []FeedVersionServiceLevel
-	AgencyOnestopIDs []FeedVersionAgencyOnestopID
-	RouteOnestopIDs  []FeedVersionRouteOnestopID
-	StopOnestopIDs   []FeedVersionStopOnestopID
-	FileInfos        []FeedVersionFileInfo
+	ServiceWindow    dmfr.FeedVersionServiceWindow
+	ServiceLevels    []dmfr.FeedVersionServiceLevel
+	AgencyOnestopIDs []dmfr.FeedVersionAgencyOnestopID
+	RouteOnestopIDs  []dmfr.FeedVersionRouteOnestopID
+	StopOnestopIDs   []dmfr.FeedVersionStopOnestopID
+	FileInfos        []dmfr.FeedVersionFileInfo
 }
 
 func NewFeedStatsFromReader(reader tl.Reader) (FeedVersionStats, error) {
@@ -63,22 +65,42 @@ func NewFeedStatsFromReader(reader tl.Reader) (FeedVersionStats, error) {
 
 	// OnestopIDs
 	for _, osid := range osidBuilder.AgencyOnestopIDs() {
-		ret.AgencyOnestopIDs = append(ret.AgencyOnestopIDs, FeedVersionAgencyOnestopID{
+		ret.AgencyOnestopIDs = append(ret.AgencyOnestopIDs, dmfr.FeedVersionAgencyOnestopID{
 			EntityID:  osid.AgencyID,
 			OnestopID: osid.OnestopID,
 		})
 	}
 	for _, osid := range osidBuilder.RouteOnestopIDs() {
-		ret.RouteOnestopIDs = append(ret.RouteOnestopIDs, FeedVersionRouteOnestopID{
+		ret.RouteOnestopIDs = append(ret.RouteOnestopIDs, dmfr.FeedVersionRouteOnestopID{
 			EntityID:  osid.RouteID,
 			OnestopID: osid.OnestopID,
 		})
 	}
 	for _, osid := range osidBuilder.StopOnestopIDs() {
-		ret.StopOnestopIDs = append(ret.StopOnestopIDs, FeedVersionStopOnestopID{
+		ret.StopOnestopIDs = append(ret.StopOnestopIDs, dmfr.FeedVersionStopOnestopID{
 			EntityID:  osid.StopID,
 			OnestopID: osid.OnestopID,
 		})
 	}
 	return ret, nil
 }
+
+///////
+
+type FeedVersionOnestopIDBuilder struct {
+	*builders.OnestopIDBuilder
+}
+
+func (ext *FeedVersionOnestopIDBuilder) Copy(*copier.Copier) error {
+	return nil
+}
+
+func NewFeedVersionOnestopIDBuilder() *FeedVersionOnestopIDBuilder {
+	return &FeedVersionOnestopIDBuilder{
+		OnestopIDBuilder: builders.NewOnestopIDBuilder(),
+	}
+}
+
+///////
+
+//////////

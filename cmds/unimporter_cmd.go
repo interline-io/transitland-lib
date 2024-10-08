@@ -1,4 +1,4 @@
-package unimporter
+package cmds
 
 import (
 	"errors"
@@ -8,13 +8,14 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr/unimporter"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
 
-// Command imports FeedVersions into a database.
-type Command struct {
+// UnimporterCommand imports FeedVersions into a database.
+type UnimporterCommand struct {
 	ScheduleOnly bool
 	ExtraTables  []string
 	DryRun       bool
@@ -30,15 +31,15 @@ type Command struct {
 	fvsha1file string
 }
 
-func (cmd *Command) HelpDesc() (string, string) {
+func (cmd *UnimporterCommand) HelpDesc() (string, string) {
 	return "Unimport feed versions", "The `unimport` command deletes previously imported data from feed versions. The feed version record itself is not deleted. You may optionally specify removal of only schedule data, leaving routes, stops, etc. in place."
 }
 
-func (cmd *Command) HelpArgs() string {
+func (cmd *UnimporterCommand) HelpArgs() string {
 	return "[flags] <fvids...>"
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *UnimporterCommand) AddFlags(fl *pflag.FlagSet) {
 	// fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension") // TODO
 	fl.StringSliceVar(&cmd.FeedIDs, "feed", nil, "Feed ID")
 	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
@@ -51,7 +52,7 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 }
 
 // Parse command line flags
-func (cmd *Command) Parse(args []string) error {
+func (cmd *UnimporterCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	cmd.Workers = 1
 	cmd.FVIDs = fl.Args()
@@ -94,7 +95,7 @@ type jobOptions struct {
 }
 
 // Run this command
-func (cmd *Command) Run() error {
+func (cmd *UnimporterCommand) Run() error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -189,9 +190,9 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var err error
 			if opts.ScheduleOnly {
-				err = UnimportSchedule(atx, opts.FeedVersionID)
+				err = unimporter.UnimportSchedule(atx, opts.FeedVersionID)
 			} else {
-				err = UnimportFeedVersion(atx, opts.FeedVersionID, opts.ExtraTables)
+				err = unimporter.UnimportFeedVersion(atx, opts.FeedVersionID, opts.ExtraTables)
 			}
 			return err
 		})
