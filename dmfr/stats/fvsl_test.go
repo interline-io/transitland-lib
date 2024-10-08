@@ -1,10 +1,11 @@
-package dmfr
+package stats
 
 import (
 	"encoding/json"
 	"math/rand"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -65,7 +66,7 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 			}
 			// Check for matches; uses json marshal/unmarshal for comparison and loading.
 			for _, check := range tc.expectResult {
-				checksl := FeedVersionServiceLevel{}
+				checksl := dmfr.FeedVersionServiceLevel{}
 				if err := json.Unmarshal([]byte(check), &checksl); err != nil {
 					t.Error(err)
 				}
@@ -93,7 +94,7 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 
 func TestServiceLevelDefaultWeek(t *testing.T) {
 
-	fvsls := []FeedVersionServiceLevel{
+	fvsls := []dmfr.FeedVersionServiceLevel{
 		{StartDate: pd("2022-01-03"), EndDate: pd("2022-01-09"), Monday: 1000},
 		{StartDate: pd("2022-01-10"), EndDate: pd("2022-01-16"), Monday: 2000},
 		{StartDate: pd("2022-01-17"), EndDate: pd("2022-01-23"), Monday: 2000},
@@ -103,7 +104,7 @@ func TestServiceLevelDefaultWeek(t *testing.T) {
 		start  tt.Date
 		end    tt.Date
 		expect tt.Date
-		fvsls  []FeedVersionServiceLevel
+		fvsls  []dmfr.FeedVersionServiceLevel
 	}{
 		{pd("2022-01-03"), pd("2022-02-01"), pd("2022-01-10"), nil}, // window covers all fvsl
 		{pd("2022-01-01"), pd("2022-12-31"), pd("2022-01-10"), nil}, // window covers all fvsl 2

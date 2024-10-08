@@ -1,4 +1,4 @@
-package lint
+package cmds
 
 import (
 	"bytes"
@@ -14,24 +14,24 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Command lints a DMFR file.
-type Command struct {
+// LintCommand lints a DMFR file.
+type LintCommand struct {
 	Filenames []string
 }
 
-func (cmd *Command) HelpDesc() (string, string) {
+func (cmd *LintCommand) HelpDesc() (string, string) {
 	return "Lint DMFR files", ""
 }
 
-func (cmd *Command) HelpArgs() string {
+func (cmd *LintCommand) HelpArgs() string {
 	return "[flags] <filenames...>"
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *LintCommand) AddFlags(fl *pflag.FlagSet) {
 }
 
 // Parse command line options.
-func (cmd *Command) Parse(args []string) error {
+func (cmd *LintCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	if fl.NArg() == 0 {
 		return errors.New("at least one file required")
@@ -41,7 +41,7 @@ func (cmd *Command) Parse(args []string) error {
 }
 
 // Run this command.
-func (cmd *Command) Run() error {
+func (cmd *LintCommand) Run() error {
 	var fileErrors []string
 	for _, filename := range cmd.Filenames {
 		// first validate DMFR

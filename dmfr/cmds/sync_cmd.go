@@ -1,35 +1,36 @@
-package sync
+package cmds
 
 import (
 	"os"
 
+	"github.com/interline-io/transitland-lib/dmfr/sync"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
 
-// Command syncs a DMFR to a database.
-type Command struct {
+// SyncCommand syncs a DMFR to a database.
+type SyncCommand struct {
 	DBURL   string
 	Adapter tldb.Adapter
-	Options
+	sync.Options
 }
 
-func (cmd *Command) HelpDesc() (string, string) {
+func (cmd *SyncCommand) HelpDesc() (string, string) {
 	return "Sync DMFR files to database", ""
 }
 
-func (cmd *Command) HelpArgs() string {
+func (cmd *SyncCommand) HelpArgs() string {
 	return "[flags] <filenames...>"
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *SyncCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")
 	fl.BoolVar(&cmd.HideUnseenOperators, "hide-unseen-operators", false, "Hide unseen operators")
 }
 
 // Parse command line options.
-func (cmd *Command) Parse(args []string) error {
+func (cmd *SyncCommand) Parse(args []string) error {
 	cmd.Filenames = args
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
@@ -38,7 +39,7 @@ func (cmd *Command) Parse(args []string) error {
 }
 
 // Run this command.
-func (cmd *Command) Run() error {
+func (cmd *SyncCommand) Run() error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -48,7 +49,7 @@ func (cmd *Command) Run() error {
 		defer cmd.Adapter.Close()
 	}
 	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-		_, err := MainSync(atx, cmd.Options)
+		_, err := sync.MainSync(atx, cmd.Options)
 		return err
 	})
 }

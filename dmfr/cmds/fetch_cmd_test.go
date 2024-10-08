@@ -1,4 +1,4 @@
-package fetch
+package cmds
 
 import (
 	"io/ioutil"
@@ -72,7 +72,7 @@ func TestFetchCommand(t *testing.T) {
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
-			c := Command{}
+			c := FetchCommand{}
 			c.Adapter = adapter
 			tmpDir := t.TempDir()
 			c.Options.Storage = tmpDir

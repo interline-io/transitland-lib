@@ -1,8 +1,9 @@
-package dmfr
+package stats
 
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -12,12 +13,12 @@ func TestNewFeedVersionFileInfosFromReader(t *testing.T) {
 	tcs := []struct {
 		name         string
 		url          string
-		expectResult []FeedVersionFileInfo
+		expectResult []dmfr.FeedVersionFileInfo
 	}{
 		{
 			"example",
 			testutil.ExampleZip.URL,
-			[]FeedVersionFileInfo{
+			[]dmfr.FeedVersionFileInfo{
 				{
 					Name:    "agency.txt",
 					Size:    114,
@@ -266,7 +267,7 @@ func TestNewFeedVersionFileInfosFromReader(t *testing.T) {
 		{
 			"bart",
 			testutil.ExampleFeedBART.URL,
-			[]FeedVersionFileInfo{
+			[]dmfr.FeedVersionFileInfo{
 				{
 					Name:    "agency.txt",
 					Size:    134,

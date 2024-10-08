@@ -1,4 +1,4 @@
-package fetch
+package cmds
 
 import (
 	"database/sql"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/dmfr/fetch"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
@@ -17,15 +18,15 @@ import (
 )
 
 type FetchCommandResult struct {
-	Result           Result
+	Result           fetch.Result
 	FeedVersion      *tl.FeedVersion
 	ValidationResult *validator.Result
 	FatalError       error
 }
 
-// Command fetches feeds defined a DMFR database.
-type Command struct {
-	Options     Options
+// FetchCommand fetches feeds defined a DMFR database.
+type FetchCommand struct {
+	Options     fetch.Options
 	CreateFeed  bool
 	Workers     int
 	Fail        bool
@@ -39,15 +40,15 @@ type Command struct {
 	secretsFile string
 }
 
-func (cmd *Command) HelpDesc() (string, string) {
+func (cmd *FetchCommand) HelpDesc() (string, string) {
 	return "Fetch GTFS data and create feed versions", "Use after the `sync` command."
 }
 
-func (cmd *Command) HelpArgs() string {
+func (cmd *FetchCommand) HelpArgs() string {
 	return "[flags] [feeds...]"
 }
 
-func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
+func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.CreateFeed, "create-feed", false, "Create feed record if not found")
 	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
 	fl.StringVar(&cmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
@@ -66,7 +67,7 @@ func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
 }
 
-func (cmd *Command) Parse(args []string) error {
+func (cmd *FetchCommand) Parse(args []string) error {
 	if cmd.Workers < 1 {
 		cmd.Workers = 1
 	}
@@ -132,7 +133,7 @@ func (cmd *Command) Parse(args []string) error {
 }
 
 // Run executes this command.
-func (cmd *Command) Run() error {
+func (cmd *FetchCommand) Run() error {
 	// Check feeds
 	adapter := cmd.Adapter
 	var toFetch []fetchJob
@@ -153,7 +154,7 @@ func (cmd *Command) Run() error {
 			return err
 		}
 		// Prepare options for this fetch
-		opts := Options{
+		opts := fetch.Options{
 			FeedID:                  feed.ID,
 			FeedURL:                 cmd.Options.FeedURL,
 			FetchedAt:               cmd.Options.FetchedAt,
@@ -224,7 +225,7 @@ func (cmd *Command) Run() error {
 
 type fetchJob struct {
 	OnestopID string
-	Options
+	fetch.Options
 }
 
 func fetchWorker(adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- FetchCommandResult, wg *sync.WaitGroup) {
@@ -237,11 +238,11 @@ func fetchWorker(adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, result
 		}
 
 		// Fetch
-		var result StaticFetchResult
+		var result fetch.StaticFetchResult
 		t := time.Now()
 		fetchError := adapter.Tx(func(atx tldb.Adapter) error {
 			var fetchError error
-			result, fetchError = StaticFetch(atx, job.Options)
+			result, fetchError = fetch.StaticFetch(atx, job.Options)
 			return fetchError
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0

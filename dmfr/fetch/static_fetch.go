@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr/stats"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -112,17 +113,17 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		vr.FeedVersionID = tt.NewInt(fv.ID)
 
 		// Update validation report
-		if opts.SaveValidationReport {
-			validationResult, err := createFeedValidationReport(atx, reader, fv.ID, opts.FetchedAt, opts.ValidationReportStorage)
-			if err != nil {
-				// Fatal err
-				return vr, err
-			}
-			ret.ValidationResult = validationResult
-		}
+		// if opts.SaveValidationReport {
+		// 	validationResult, err := createFeedValidationReport(atx, reader, fv.ID, opts.FetchedAt, opts.ValidationReportStorage)
+		// 	if err != nil {
+		// 		// Fatal err
+		// 		return vr, err
+		// 	}
+		// 	ret.ValidationResult = validationResult
+		// }
 
 		// Update stats records
-		if err := createFeedStats(atx, reader, fv.ID); err != nil {
+		if err := stats.CreateFeedStats(atx, reader, fv.ID); err != nil {
 			// Fatal err
 			return vr, err
 		}
