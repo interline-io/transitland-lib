@@ -3,7 +3,7 @@ package cmds
 import (
 	"os"
 
-	"github.com/interline-io/transitland-lib/dmfr/sync"
+	"github.com/interline-io/transitland-lib/sync"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )

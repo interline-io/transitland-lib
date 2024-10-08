@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/interline-io/transitland-lib/dmfr/importer"
+	"github.com/interline-io/transitland-lib/importer"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"

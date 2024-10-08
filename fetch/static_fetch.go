@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/dmfr/stats"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tl/tt"
