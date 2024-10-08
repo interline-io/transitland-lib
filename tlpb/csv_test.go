@@ -58,11 +58,11 @@ func TestReadPB(t *testing.T) {
 	// }
 }
 
-func BenchmarkReadPB(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		ReadPB(TESTFILE)
-	}
-}
+// func BenchmarkReadPB(b *testing.B) {
+// 	for n := 0; n < b.N; n++ {
+// 		ReadPB(TESTFILE)
+// 	}
+// }
 
 func ReadPB(fn string) ([]any, error) {
 	a := tlcsv.NewZipAdapter(fn)
@@ -93,7 +93,8 @@ func TestReadTT(t *testing.T) {
 func BenchmarkReadTT(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		a, _ := ReadTT(TESTFILE)
-		printFirst(a)
+		_ = a
+		// printFirst(a)
 	}
 }
 
@@ -126,7 +127,8 @@ func TestReadG(t *testing.T) {
 func BenchmarkReadG(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		a, _ := ReadG(TESTFILE)
-		printFirst(a)
+		_ = a
+		// printFirst(a)
 	}
 }
 

@@ -30,6 +30,13 @@ func (r *Option[T]) Error() error {
 	return nil
 }
 
+func (r *Option[T]) FromCsv(src string) error {
+	// Empty string considered valid
+	err := convertAssign(&r.Val, src)
+	r.Valid = (err == nil)
+	return err
+}
+
 func (r *Option[T]) Scan(src interface{}) error {
 	err := convertAssign(&r.Val, src)
 	r.Valid = (src != nil && err == nil)
