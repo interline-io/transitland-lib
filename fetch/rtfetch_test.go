@@ -15,7 +15,7 @@ import (
 )
 
 func TestRTFetch(t *testing.T) {
-	basedir := "test/data/rt"
+	basedir := "testdata/rt"
 	tcs := []struct {
 		name          string
 		serveFile     string

@@ -9,11 +9,11 @@ import (
 )
 
 func TestMultireader(t *testing.T) {
-	reader1, err := tlcsv.NewReader(testutil.RelPath("test/data/external/bart.zip"))
+	reader1, err := tlcsv.NewReader(testutil.RelPath("testdata/external/bart.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	reader2, err := tlcsv.NewReader(testutil.RelPath("test/data/external/caltrain.zip"))
+	reader2, err := tlcsv.NewReader(testutil.RelPath("testdata/external/caltrain.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}

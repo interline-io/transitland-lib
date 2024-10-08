@@ -7,7 +7,7 @@
       "name": "Caltrain",
       "languages": ["en-US"],
       "urls": {
-        "static_current": "../test/data/external/caltrain.zip",
+        "static_current": "../testdata/external/caltrain.zip",
         "static_historic": ["https://caltrain.com/old_feed.zip"]
       },
       "license": {
@@ -28,7 +28,7 @@
       "name": "BART",
       "description": "Bay Area Rapid Transit",
       "urls": {
-        "static_current": "../test/data/external/bart.zip"
+        "static_current": "../testdata/external/bart.zip"
       }
     },
     {

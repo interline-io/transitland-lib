@@ -222,7 +222,7 @@ func TestCutBetweenPositions_Loop(t *testing.T) {
 
 func TestCutBetweenPositions_IgnoreDists(t *testing.T) {
 	// Ignore included shape_dist_traveled values
-	data, err := os.ReadFile(testpath.RelPath("test/data/tlxy/ac.geojson"))
+	data, err := os.ReadFile(testpath.RelPath("testdata/tlxy/ac.geojson"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ func TestCutBetweenPositions_RealShape(t *testing.T) {
 	// You can enable trace logging to see this example from AC Transit.
 	testcases := []lineTestCase{}
 	// AC Transit test shape and stops
-	acData, err := os.ReadFile(testpath.RelPath("test/data/tlxy/ac.geojson"))
+	acData, err := os.ReadFile(testpath.RelPath("testdata/tlxy/ac.geojson"))
 	if err != nil {
 		t.Fatal(err)
 	}

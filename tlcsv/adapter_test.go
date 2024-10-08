@@ -110,7 +110,7 @@ func TestZipAdapterNestedTwoFeeds(t *testing.T) {
 
 func TestZipAdapter_findInternalPrefix(t *testing.T) {
 	t.Run("single", func(t *testing.T) {
-		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-dir.zip")}
+		v := ZipAdapter{path: testutil.RelPath("testdata/example-nested-dir.zip")}
 		if err := v.Open(); err != nil {
 			t.Error(err)
 			return
@@ -125,7 +125,7 @@ func TestZipAdapter_findInternalPrefix(t *testing.T) {
 		}
 	})
 	t.Run("findInternalPrefix ambiguous", func(t *testing.T) {
-		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-dir-ambiguous.zip")}
+		v := ZipAdapter{path: testutil.RelPath("testdata/example-nested-dir-ambiguous.zip")}
 		p, err := v.findInternalPrefix()
 		if err == nil {
 			t.Errorf("expected Open error for ambiguous prefixes")
@@ -141,7 +141,7 @@ func TestZipAdapter_findInternalPrefix(t *testing.T) {
 		}
 	})
 	t.Run("findInternalPrefix ambiguous with two complete feeds", func(t *testing.T) {
-		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-two-dirs.zip")}
+		v := ZipAdapter{path: testutil.RelPath("testdata/example-nested-two-dirs.zip")}
 		p, err := v.findInternalPrefix()
 		if err == nil {
 			t.Errorf("expected Open error for ambiguous prefixes")
