@@ -1,4 +1,4 @@
-package schema
+package sqlite
 
 import _ "embed"
 
