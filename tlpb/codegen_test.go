@@ -41,7 +41,7 @@ func TestCodegen(t *testing.T) {
 			fields := msg.Fields()
 			if fields.Len() == 1 && fields.Get(0).Name() == "val" {
 				field := fields.Get(0)
-				outf.WriteString(fmt.Sprintf("type %s struct { Option[%s] }\n\n", msg.Name(), mapKind(field)))
+				outf.WriteString(fmt.Sprintf("type %s struct { tt.Option[%s] }\n\n", msg.Name(), mapKind(field)))
 				continue
 			}
 

@@ -411,78 +411,78 @@ type Date struct {
 	Day int32
 }
 
-type Timestamp struct { Option[int64] }
+type Timestamp struct { tt.Option[int64] }
 
-type Seconds struct { Option[int64] }
+type Seconds struct { tt.Option[int64] }
 
-type Key struct { Option[string] }
+type Key struct { tt.Option[string] }
 
-type Timezone struct { Option[string] }
+type Timezone struct { tt.Option[string] }
 
-type Reference struct { Option[string] }
+type Reference struct { tt.Option[string] }
 
-type Url struct { Option[string] }
+type Url struct { tt.Option[string] }
 
-type Email struct { Option[string] }
+type Email struct { tt.Option[string] }
 
-type Color struct { Option[string] }
+type Color struct { tt.Option[string] }
 
 type Money struct {
 	Units int64
 	Nanos int64
 }
 
-type Currency struct { Option[string] }
+type Currency struct { tt.Option[string] }
 
-type Language struct { Option[string] }
+type Language struct { tt.Option[string] }
 
-type Phone struct { Option[string] }
+type Phone struct { tt.Option[string] }
 
-type Float struct { Option[float64] }
+type Float struct { tt.Option[float64] }
 
-type String struct { Option[string] }
+type String struct { tt.Option[string] }
 
-type Int struct { Option[int64] }
+type Int struct { tt.Option[int64] }
 
-type Bool struct { Option[bool] }
+type Bool struct { tt.Option[bool] }
 
-type WheelchairAccess struct { Option[WheelchairAccessEnum] }
+type WheelchairAccess struct { tt.Option[WheelchairAccessEnum] }
 
-type BikeAccess struct { Option[BikeAccessEnum] }
+type BikeAccess struct { tt.Option[BikeAccessEnum] }
 
-type BoardAccess struct { Option[BoardAccessEnum] }
+type BoardAccess struct { tt.Option[BoardAccessEnum] }
 
-type PickupAccess struct { Option[PickupAccessEnum] }
+type PickupAccess struct { tt.Option[PickupAccessEnum] }
 
-type StopLocationType struct { Option[StopLocationTypeEnum] }
+type StopLocationType struct { tt.Option[StopLocationTypeEnum] }
 
-type RouteType struct { Option[RouteTypeEnum] }
+type RouteType struct { tt.Option[RouteTypeEnum] }
 
-type TripDirection struct { Option[TripDirectionEnum] }
+type TripDirection struct { tt.Option[TripDirectionEnum] }
 
-type StopTimepoint struct { Option[StopTimepointEnum] }
+type StopTimepoint struct { tt.Option[StopTimepointEnum] }
 
-type CalendarExceptionType struct { Option[CalendarExceptionTypeEnum] }
+type CalendarExceptionType struct { tt.Option[CalendarExceptionTypeEnum] }
 
-type FrequencyExactTime struct { Option[FrequencyExactTimeEnum] }
+type FrequencyExactTime struct { tt.Option[FrequencyExactTimeEnum] }
 
-type TransferType struct { Option[TransferTypeEnum] }
+type TransferType struct { tt.Option[TransferTypeEnum] }
 
-type PathwayDirectionality struct { Option[PathwayDirectionalityEnum] }
+type PathwayDirectionality struct { tt.Option[PathwayDirectionalityEnum] }
 
-type PathwayMode struct { Option[PathwayModeEnum] }
+type PathwayMode struct { tt.Option[PathwayModeEnum] }
 
-type BookingRuleType struct { Option[BookingRuleTypeEnum] }
+type BookingRuleType struct { tt.Option[BookingRuleTypeEnum] }
 
-type FareMediaType struct { Option[FareMediaTypeEnum] }
+type FareMediaType struct { tt.Option[FareMediaTypeEnum] }
 
-type FareTransferType struct { Option[FareTransferTypeEnum] }
+type FareTransferType struct { tt.Option[FareTransferTypeEnum] }
 
-type DurationLimitType struct { Option[DurationLimitTypeEnum] }
+type DurationLimitType struct { tt.Option[DurationLimitTypeEnum] }
 
-type FareAttributeTransferType struct { Option[FareAttributeTransferTypeEnum] }
+type FareAttributeTransferType struct { tt.Option[FareAttributeTransferTypeEnum] }
 
-type PaymentMethod struct { Option[PaymentMethodEnum] }
+type PaymentMethod struct { tt.Option[PaymentMethodEnum] }
 
-type AttributionRole struct { Option[AttributionRoleEnum] }
+type AttributionRole struct { tt.Option[AttributionRoleEnum] }
 
