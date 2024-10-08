@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/tlpb/gtfs"
+	"github.com/interline-io/transitland-lib/internal/tlpb/pb"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/interline-io/transitland-lib/tlpb/gtfs"
-	"github.com/interline-io/transitland-lib/tlpb/pb"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
