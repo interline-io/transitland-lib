@@ -2,11 +2,14 @@ package tt
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"time"
+
+	geom "github.com/twpayne/go-geom"
 )
 
 type canString interface {
@@ -208,6 +211,15 @@ func convertAssign(dest any, src any) error {
 		}
 	case *bool:
 		switch s := src.(type) {
+		case []byte:
+			ss := string(s)
+			if ss == "true" {
+				*d = true
+			} else if ss == "false" {
+				*d = false
+			} else {
+				err = cannotConvert()
+			}
 		case string:
 			if s == "true" {
 				*d = true
@@ -253,4 +265,12 @@ func parseTime(d string) (time.Time, error) {
 		s, err = time.Parse(time.RFC3339, d)
 	}
 	return s, err
+}
+
+func toJson(v any) ([]byte, error) {
+	switch s := v.(type) {
+	case geom.T:
+		return geojsonEncode(s)
+	}
+	return json.Marshal(v)
 }

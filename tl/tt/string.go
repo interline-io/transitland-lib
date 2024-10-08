@@ -5,5 +5,5 @@ type String struct {
 }
 
 func NewString(v string) String {
-	return String{Option[string]{Valid: true, Val: v}}
+	return String{Option: NewOption(v)}
 }

@@ -7,6 +7,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+type Color struct {
+	Option[string]
+}
+
 // CheckColor returns an error if the value is not a valid hex color
 func CheckColor(field string, value string) (errs []error) {
 	if !IsValidColor(value) {
