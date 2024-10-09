@@ -249,6 +249,10 @@ func convertAssign(dest any, src any) error {
 		case []byte:
 			// Try to Marshal as JSON
 			err = json.Unmarshal(s, dest)
+		case map[string]any:
+			// Final JSON fallback
+			srcJson, _ := json.Marshal(src)
+			err = json.Unmarshal(srcJson, dest)
 		default:
 			err = cannotConvert(dest, src)
 		}
@@ -257,7 +261,7 @@ func convertAssign(dest any, src any) error {
 }
 
 func cannotConvert(dest any, src any) error {
-	return fmt.Errorf("could not convert type %T into %T", src, dest)
+	return fmt.Errorf("could not convert type '%T' into '%T'", src, dest)
 }
 
 func parseTime(d string) (time.Time, error) {
