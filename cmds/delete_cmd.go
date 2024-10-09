@@ -32,6 +32,7 @@ func (cmd *DeleteCommand) HelpArgs() string {
 }
 
 func (cmd *DeleteCommand) AddFlags(fl *pflag.FlagSet) {
+	fl.StringSliceVar(&cmd.ExtraTables, "extra-table", nil, "Extra tables to delete feed_version_id")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 }
@@ -84,7 +85,7 @@ func (cmd *DeleteCommand) Run() error {
 	} else {
 		log.Info().Msgf("Deleting feed version: %d", cmd.FVID)
 		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-			return unimporter.DeleteFeedVersion(cmd.Adapter, cmd.FVID, nil)
+			return unimporter.DeleteFeedVersion(cmd.Adapter, cmd.FVID, cmd.ExtraTables)
 		})
 		if err != nil {
 			return err

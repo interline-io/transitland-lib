@@ -41,6 +41,7 @@ func (cmd *UnimportCommand) HelpArgs() string {
 
 func (cmd *UnimportCommand) AddFlags(fl *pflag.FlagSet) {
 	// fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension") // TODO
+	fl.StringSliceVar(&cmd.ExtraTables, "extra-table", nil, "Extra tables to delete feed_version_id")
 	fl.StringSliceVar(&cmd.FeedIDs, "feed", nil, "Feed ID")
 	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
 	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
