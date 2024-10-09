@@ -18,12 +18,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(t *testing.T) {
+func TestMain(m *testing.M) {
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
 	if dburl == "" {
-		t.Skip("TL_TEST_DATABASE_URL is not set")
+		fmt.Println("TL_TEST_DATABASE_URL is not set, skipping")
 		return
 	}
+	os.Exit(m.Run())
 }
 
 func setupImport(t *testing.T, atx tldb.Adapter) int {
