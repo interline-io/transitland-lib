@@ -12,8 +12,8 @@ func TestGetString(t *testing.T) {
 	ent := tl.StopTime{
 		TripID:            "123",
 		StopID:            "456",
-		ArrivalTime:       tt.NewWideTimeFromSeconds(3600),
-		DepartureTime:     tt.NewWideTimeFromSeconds(7200),
+		ArrivalTime:       tt.NewSeconds(3600),
+		DepartureTime:     tt.NewSeconds(7200),
 		ShapeDistTraveled: tt.NewFloat(123.456),
 	}
 	expect := map[string]string{
@@ -82,8 +82,8 @@ func TestSetString(t *testing.T) {
 		if err := SetString(&ent, "start_time", "01:00:00"); err != nil {
 			t.Error(err)
 		}
-		if exp := 3600; exp != ent.StartTime.Seconds {
-			t.Errorf("got %d expect %d", ent.StartTime.Seconds, exp)
+		if exp := 3600; exp != ent.StartTime.Seconds() {
+			t.Errorf("got %d expect %d", ent.StartTime.Seconds(), exp)
 		}
 	})
 }

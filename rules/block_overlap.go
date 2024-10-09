@@ -61,8 +61,8 @@ func (e *BlockOverlapCheck) Validate(ent tl.Entity) []error {
 	tf := tripBlockInfo{
 		trip:    trip.TripID,
 		service: trip.ServiceID,
-		start:   trip.StopTimes[0].DepartureTime.Seconds,
-		end:     trip.StopTimes[len(trip.StopTimes)-1].ArrivalTime.Seconds,
+		start:   trip.StopTimes[0].DepartureTime.Seconds(),
+		end:     trip.StopTimes[len(trip.StopTimes)-1].ArrivalTime.Seconds(),
 	}
 	for _, hit := range e.blocks[trip.BlockID] {
 		// log.Log(
@@ -78,11 +78,11 @@ func (e *BlockOverlapCheck) Validate(ent tl.Entity) []error {
 				TripID:         tf.trip,
 				BlockID:        trip.BlockID,
 				ServiceID:      tf.service,
-				StartTime:      tt.NewWideTimeFromSeconds(tf.start),
-				EndTime:        tt.NewWideTimeFromSeconds(tf.end),
+				StartTime:      tt.NewSeconds(tf.start),
+				EndTime:        tt.NewSeconds(tf.end),
 				OtherTripID:    hit.trip,
-				OtherStartTime: tt.NewWideTimeFromSeconds(hit.start),
-				OtherEndTime:   tt.NewWideTimeFromSeconds(hit.end),
+				OtherStartTime: tt.NewSeconds(hit.start),
+				OtherEndTime:   tt.NewSeconds(hit.end),
 			})
 		}
 	}

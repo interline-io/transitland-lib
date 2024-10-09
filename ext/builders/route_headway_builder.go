@@ -89,7 +89,7 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 				StopID:    stopId,
 			}
 			if rd, ok := pp.routeDepartures[v.RouteID]; ok && st.DepartureTime.Valid {
-				rd[rkey] = append(rd[rkey], st.DepartureTime.Seconds)
+				rd[rkey] = append(rd[rkey], st.DepartureTime.Seconds())
 			}
 		}
 	}
@@ -164,7 +164,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				// log.Debugf("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
 				// log.Debugf("\tdepartures:", departures)
 				// for _, departure := range departures {
-				// 	wt := tt.NewWideTimeFromSeconds(departure)
+				// 	wt := tt.NewSeconds(departure)
 				// 	log.Debugf("\t", wt.String())
 				// }
 				rh := RouteHeadway{

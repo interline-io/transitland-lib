@@ -25,8 +25,8 @@ func expectTripToStopTime(e []expectStopTime) []tl.StopTime {
 	ret := []tl.StopTime{}
 	for _, i := range e {
 		ret = append(ret, tl.StopTime{
-			ArrivalTime:       tt.NewWideTimeFromSeconds(i.ArrivalTime),
-			DepartureTime:     tt.NewWideTimeFromSeconds(i.DepartureTime),
+			ArrivalTime:       tt.NewSeconds(i.ArrivalTime),
+			DepartureTime:     tt.NewSeconds(i.DepartureTime),
 			ShapeDistTraveled: tt.NewFloat(i.ShapeDistTraveled),
 		})
 	}
@@ -66,10 +66,10 @@ func TestInterpolateStopTimes(t *testing.T) {
 		}
 		for j, st := range stoptimes2 {
 			if e[j].ExpectArrivalTime > 0 {
-				testExpectInt(t, st.ArrivalTime.Seconds, e[j].ExpectArrivalTime)
+				testExpectInt(t, st.ArrivalTime.Seconds(), e[j].ExpectArrivalTime)
 			}
 			if e[j].ExpectDepartureTime > 0 {
-				testExpectInt(t, st.DepartureTime.Seconds, e[j].ExpectDepartureTime)
+				testExpectInt(t, st.DepartureTime.Seconds(), e[j].ExpectDepartureTime)
 			}
 		}
 	}

@@ -22,7 +22,7 @@ func (ent *Frequency) RepeatCount() int {
 		return 0
 	}
 	count := 0
-	for t := ent.StartTime.Seconds; t <= ent.EndTime.Seconds; t += ent.HeadwaySecs {
+	for t := ent.StartTime.Seconds(); t <= ent.EndTime.Seconds(); t += ent.HeadwaySecs {
 		count++
 	}
 	return count
@@ -37,7 +37,7 @@ func (ent *Frequency) Errors() (errs []error) {
 	if !ent.EndTime.Valid {
 		errs = append(errs, causes.NewRequiredFieldError("end_time"))
 	}
-	st, et := ent.StartTime.Seconds, ent.EndTime.Seconds
+	st, et := ent.StartTime.Seconds(), ent.EndTime.Seconds()
 	if ent.HeadwaySecs < 1 {
 		errs = append(errs, causes.NewInvalidFieldError("headway_secs", fmt.Sprintf("%d", ent.HeadwaySecs), fmt.Errorf("headway_secs must be a positive integer")))
 	}

@@ -2,6 +2,7 @@ package tt
 
 import (
 	"database/sql/driver"
+	"io"
 )
 
 type Option[T any] struct {
@@ -59,6 +60,15 @@ func (r Option[T]) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 	return toJson(r.Val)
+}
+
+func (r *Option[T]) UnmarshalGQL(v interface{}) error {
+	return r.Scan(v)
+}
+
+func (r Option[T]) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }
 
 func (r Option[T]) Ptr() *T {

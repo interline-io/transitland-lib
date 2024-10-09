@@ -162,7 +162,7 @@ func convertAssign(dest any, src any) error {
 		case time.Time:
 			*d = s.Format(time.RFC3339)
 		default:
-			err = cannotConvert()
+			err = cannotConvert(dest, src)
 		}
 	case *int:
 		switch s := src.(type) {
@@ -177,7 +177,7 @@ func convertAssign(dest any, src any) error {
 		case float64:
 			*d = int(s)
 		default:
-			err = cannotConvert()
+			err = cannotConvert(dest, src)
 		}
 	case *int64:
 		switch s := src.(type) {
@@ -192,7 +192,7 @@ func convertAssign(dest any, src any) error {
 		case float64:
 			*d = int64(s)
 		default:
-			err = cannotConvert()
+			err = cannotConvert(dest, src)
 		}
 	case *float64:
 		switch s := src.(type) {
@@ -207,31 +207,31 @@ func convertAssign(dest any, src any) error {
 		case float64:
 			*d = float64(s)
 		default:
-			err = cannotConvert()
+			err = cannotConvert(dest, src)
 		}
 	case *bool:
 		switch s := src.(type) {
 		case []byte:
 			ss := string(s)
-			if ss == "true" {
+			if ss == "true" || ss == "1" {
 				*d = true
-			} else if ss == "false" {
+			} else if ss == "false" || ss == "0" {
 				*d = false
 			} else {
-				err = cannotConvert()
+				err = cannotConvert(dest, src)
 			}
 		case string:
-			if s == "true" {
+			if s == "true" || s == "1" {
 				*d = true
-			} else if s == "false" {
+			} else if s == "false" || s == "0" {
 				*d = false
 			} else {
-				err = cannotConvert()
+				err = cannotConvert(dest, src)
 			}
 		case bool:
 			*d = s
 		default:
-			err = cannotConvert()
+			err = cannotConvert(dest, src)
 		}
 	case *time.Time:
 		switch s := src.(type) {
@@ -242,16 +242,16 @@ func convertAssign(dest any, src any) error {
 		case time.Time:
 			*d = s
 		default:
-			err = cannotConvert()
+			err = cannotConvert(dest, src)
 		}
 	default:
-		err = cannotConvert()
+		err = cannotConvert(dest, src)
 	}
 	return err
 }
 
-func cannotConvert() error {
-	return errors.New("cannot convert")
+func cannotConvert(dest any, src any) error {
+	return fmt.Errorf("could not convert type %T into %T", src, dest)
 }
 
 func parseTime(d string) (time.Time, error) {

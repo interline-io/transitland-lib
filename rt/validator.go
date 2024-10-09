@@ -572,7 +572,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 		}
 	}
 	if startTime := td.GetStartTime(); startTime != "" {
-		if wt, err := tt.NewWideTime(startTime); err != nil {
+		if wt, err := tt.NewSecondsFromString(startTime); err != nil {
 			errs = append(errs, withFieldAndJson(
 				E020,
 				"trip_update.trip.start_time",
@@ -581,7 +581,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 				tripUpdate,
 				"",
 			))
-		} else if wt.Seconds > (7 * 24 * 60 * 60) {
+		} else if wt.Seconds() > (7 * 24 * 60 * 60) {
 			errs = append(errs, withFieldAndJson(
 				E020,
 				"trip_update.trip.start_time",

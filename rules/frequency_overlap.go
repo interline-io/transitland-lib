@@ -49,8 +49,8 @@ func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
 	}
 	var errs []error
 	tf := freqValue{
-		start: v.StartTime.Seconds,
-		end:   v.EndTime.Seconds,
+		start: v.StartTime.Seconds(),
+		end:   v.EndTime.Seconds(),
 	}
 	for _, hit := range e.freqs[v.TripID] {
 		if !(tf.start >= hit.end || tf.end <= hit.start) {
@@ -58,8 +58,8 @@ func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
 				TripID:         v.TripID,
 				StartTime:      v.StartTime,
 				EndTime:        v.EndTime,
-				OtherStartTime: tt.NewWideTimeFromSeconds(hit.start),
-				OtherEndTime:   tt.NewWideTimeFromSeconds(hit.end),
+				OtherStartTime: tt.NewSeconds(hit.start),
+				OtherEndTime:   tt.NewSeconds(hit.end),
 			})
 		}
 	}

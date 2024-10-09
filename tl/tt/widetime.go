@@ -10,27 +10,26 @@ import (
 	"strings"
 )
 
-// WideTime handles seconds since midnight, allows >24 hours.
-type WideTime struct {
-	Seconds int
-	Valid   bool
+type WideTime = Seconds
+
+type Seconds struct {
+	Option[int64]
 }
 
-// NewWideTime converts the csv string to a WideTime.
-func NewWideTime(value string) (wt WideTime, err error) {
-	err = wt.FromCsv(value)
-	return wt, err
+func NewSecondsFromString(s string) (Seconds, error) {
+	val, err := StringToSeconds(s)
+	if err != nil {
+		return Seconds{}, err
+	}
+	return Seconds{Option: NewOption(int64(val))}, nil
 }
 
-// NewWideTimeFromSeconds creates a valid WideTime from Seconds.
-func NewWideTimeFromSeconds(value int) WideTime {
-	wt := WideTime{}
-	wt.Scan(value)
-	return wt
+func NewSeconds(s int) Seconds {
+	return Seconds{Option: NewOption(int64(s))}
 }
 
-func (wt WideTime) HMS() (int, int, int) {
-	secs := wt.Seconds
+func (wt Seconds) HMS() (int, int, int) {
+	secs := int(wt.Val)
 	if secs < 0 {
 		secs = 0
 	}
@@ -40,25 +39,25 @@ func (wt WideTime) HMS() (int, int, int) {
 	return hours, minutes, seconds
 }
 
-func (wt WideTime) String() string {
+func (wt Seconds) String() string {
 	if !wt.Valid {
 		return ""
 	}
-	return SecondsToString(wt.Seconds)
+	return SecondsToString(int(wt.Val))
 }
 
-func (wt WideTime) Value() (driver.Value, error) {
+func (wt Seconds) Value() (driver.Value, error) {
 	if !wt.Valid {
 		return nil, nil
 	}
-	return int64(wt.Seconds), nil
+	return wt.Val, nil
 }
 
-func (wt WideTime) ToCsv() string {
+func (wt Seconds) ToCsv() string {
 	return wt.String()
 }
 
-func (wt *WideTime) FromCsv(v string) error {
+func (wt *Seconds) FromCsv(v string) error {
 	wt.Valid = false
 	if v == "" {
 		return nil
@@ -67,14 +66,14 @@ func (wt *WideTime) FromCsv(v string) error {
 		return err
 	} else {
 		wt.Valid = true
-		wt.Seconds = s
+		wt.Val = int64(s)
 	}
 	return nil
 }
 
-func (wt *WideTime) Scan(src interface{}) error {
+func (wt *Seconds) Scan(src interface{}) error {
 	wt.Valid = false
-	wt.Seconds = 0
+	wt.Val = 0
 	var p error
 	switch v := src.(type) {
 	case nil:
@@ -85,34 +84,38 @@ func (wt *WideTime) Scan(src interface{}) error {
 		if v < 0 {
 			return nil
 		}
-		wt.Seconds = v
+		wt.Val = int64(v)
 	case int64:
 		if v < 0 {
 			return nil
 		}
-		wt.Seconds = int(v)
+		wt.Val = v
 	case json.Number:
-		a, _ := v.Int64()
-		wt.Seconds = int(a)
+		wt.Val, _ = v.Int64()
 	default:
-		fmt.Printf("%T\n", v)
 		p = errors.New("could not parse time")
 	}
 	wt.Valid = (p == nil)
 	return p
 }
 
-func (wt *WideTime) UnmarshalGQL(v interface{}) error {
+func (wt *Seconds) UnmarshalGQL(v interface{}) error {
 	return wt.Scan(v)
 }
 
-func (wt WideTime) MarshalGQL(w io.Writer) {
+func (wt Seconds) MarshalGQL(w io.Writer) {
 	if !wt.Valid {
 		w.Write(jsonNull())
 		return
 	}
 	w.Write([]byte(fmt.Sprintf("\"%s\"", wt.String())))
 }
+
+func (wt Seconds) Seconds() int {
+	return int(wt.Val)
+}
+
+/////////////
 
 // SecondsToString takes seconds-since-midnight and returns a GTFS-style time.
 func SecondsToString(secs int) string {
