@@ -101,6 +101,22 @@ func ShouldSelect(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, 
 
 ////////////
 
+func TempPostgres(dburl string, cb func(tldb.Adapter) error) error {
+	adapter := tldb.PostgresAdapter{DBURL: dburl}
+	if err := adapter.Open(); err != nil {
+		panic(err)
+	}
+	writer := tldb.Writer{Adapter: &adapter}
+	if err := writer.Open(); err != nil {
+		panic(err)
+	}
+	defer writer.Close()
+	if err := writer.Create(); err != nil {
+		panic(err)
+	}
+	return writer.Adapter.Tx(cb)
+}
+
 // TempSqlite creates a temporary in-memory database and runs the callback inside a tx.
 func TempSqlite(cb func(tldb.Adapter) error) error {
 	adapter := tldb.SQLiteAdapter{DBURL: "sqlite3://:memory:"}

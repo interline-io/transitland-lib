@@ -70,6 +70,7 @@ func init() {
 		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
 		tlcli.CobraHelper(&cmds.SyncCommand{}, pc, "sync"),
 		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
+		tlcli.CobraHelper(&cmds.DeleteCommand{}, pc, "delete"),
 		tlcli.CobraHelper(&cmds.ValidatorCommand{}, pc, "validate"),
 		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),

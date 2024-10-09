@@ -12,35 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-func TestFindImportableFeeds(t *testing.T) {
-	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-		f := testdb.CreateTestFeed(atx, "test")
-		allfvids := []int{}
-		for i := 0; i < 10; i++ {
-			fv1 := testdb.ShouldInsert(t, atx, &tl.FeedVersion{FeedID: f.ID, EarliestCalendarDate: tt.NewDate(time.Now()), LatestCalendarDate: tt.NewDate(time.Now())})
-			allfvids = append(allfvids, fv1)
-		}
-		expfvids := allfvids[:5]
-		for _, fvid := range allfvids[5:] {
-			testEnt := dmfr.FeedVersionImport{}
-			testEnt.FeedVersionID = fvid
-			testdb.ShouldInsert(t, atx, &testEnt)
-		}
-		foundfvids, err := FindImportableFeeds(atx)
-		if err != nil {
-			t.Error(err)
-		}
-		if !testutil.CompareSliceInt(foundfvids, expfvids) {
-			t.Errorf("%v != %v", foundfvids, expfvids)
-		}
-		return nil
-	})
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func TestMainImportFeedVersion(t *testing.T) {
+func TestImportFeedVersion(t *testing.T) {
 	setup := func(atx tldb.Adapter, filename string) int {
 		// Create FV
 		fv := tl.FeedVersion{}
@@ -53,7 +25,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid := setup(atx, testutil.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := MainImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid, Storage: "/"})
+			_, err := ImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid, Storage: "/"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -87,7 +59,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid = setup(atx, testutil.RelPath("testdata/does-not-exist"))
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := MainImportFeedVersion(&atx2, Options{FeedVersionID: fvid, Storage: "/"})
+			_, err := ImportFeedVersion(&atx2, Options{FeedVersionID: fvid, Storage: "/"})
 			if err == nil {
 				t.Errorf("expected an error, got none")
 			}
@@ -110,7 +82,7 @@ func TestMainImportFeedVersion(t *testing.T) {
 	})
 }
 
-func TestImportFeedVersion(t *testing.T) {
+func Test_iImportFeedVersionTx(t *testing.T) {
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create FV
 		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
@@ -119,7 +91,7 @@ func TestImportFeedVersion(t *testing.T) {
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		fviresult, err := ImportFeedVersion(atx, fv, Options{Storage: "/"})
+		fviresult, err := importFeedVersionTx(atx, fv, Options{Storage: "/"})
 		if err != nil {
 			t.Error(err)
 		}

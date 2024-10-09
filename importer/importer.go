@@ -8,10 +8,9 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/ext/builders"
+	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -29,37 +28,6 @@ type Result struct {
 	FeedVersionImport dmfr.FeedVersionImport
 }
 
-type canContext interface {
-	Context() *causes.Context
-}
-
-func copyResultCounts(result copier.Result) dmfr.FeedVersionImport {
-	fvi := dmfr.NewFeedVersionImport()
-	fvi.InterpolatedStopTimeCount = result.InterpolatedStopTimeCount
-	for k, v := range result.EntityCount {
-		fvi.EntityCount[k] = v
-	}
-	for k, v := range result.GeneratedCount {
-		fvi.GeneratedCount[k] = v
-	}
-	for k, v := range result.SkipEntityErrorCount {
-		fvi.SkipEntityErrorCount[k] = v
-	}
-	for k, v := range result.SkipEntityReferenceCount {
-		fvi.SkipEntityReferenceCount[k] = v
-	}
-	for k, v := range result.SkipEntityFilterCount {
-		fvi.SkipEntityFilterCount[k] = v
-	}
-	for k, v := range result.SkipEntityMarkedCount {
-		fvi.SkipEntityMarkedCount[k] = v
-	}
-	for _, e := range result.Warnings {
-		fvi.WarningCount[e.Filename] += e.Count
-	}
-	return *fvi
-}
-
 // ActivateFeedVersion .
 func ActivateFeedVersion(atx tldb.Adapter, feedId int, fvid int) error {
 	// Check FeedState exists
@@ -71,29 +39,12 @@ func ActivateFeedVersion(atx tldb.Adapter, feedId int, fvid int) error {
 	return err
 }
 
-// FindImportableFeeds .
-func FindImportableFeeds(adapter tldb.Adapter) ([]int, error) {
-	fvids := []int{}
-	qstr, qargs, err := adapter.Sqrl().
-		Select("feed_versions.id").
-		From("feed_versions").
-		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
-		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
-		Where("current_feeds.deleted_at IS NULL").
-		Where("feed_versions.deleted_at IS NULL").
-		Where("feed_version_gtfs_imports.id IS NULL").
-		ToSql()
-	if err != nil {
-		return fvids, err
-	}
-	if err = adapter.Select(&fvids, qstr, qargs...); err != nil {
-		return fvids, err
-	}
-	return fvids, nil
+func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
+	return ImportFeedVersion(adapter, opts)
 }
 
-// MainImportFeedVersion create FVI and run Copier inside a Tx.
-func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
+// ImportFeedVersion create FVI and run Copier inside a Tx.
+func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV
 	fvi := dmfr.FeedVersionImport{InProgress: true}
 	fvi.FeedVersionID = opts.FeedVersionID
@@ -126,7 +77,7 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	fviresult := dmfr.FeedVersionImport{} // keep result
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
 		var err error
-		fviresult, err = ImportFeedVersion(atx, fv, opts)
+		fviresult, err = importFeedVersionTx(atx, fv, opts)
 		if err != nil {
 			return err
 		}
@@ -174,8 +125,8 @@ func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	return Result{FeedVersionImport: fviresult}, nil
 }
 
-// ImportFeedVersion .
-func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+// importFeedVersion .
+func importFeedVersionTx(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader
@@ -231,4 +182,31 @@ func ImportFeedVersion(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.
 	fvi.SkipEntityFilterCount = counts.SkipEntityFilterCount
 	fvi.SkipEntityMarkedCount = counts.SkipEntityMarkedCount
 	return fvi, nil
+}
+
+func copyResultCounts(result copier.Result) dmfr.FeedVersionImport {
+	fvi := dmfr.NewFeedVersionImport()
+	fvi.InterpolatedStopTimeCount = result.InterpolatedStopTimeCount
+	for k, v := range result.EntityCount {
+		fvi.EntityCount[k] = v
+	}
+	for k, v := range result.GeneratedCount {
+		fvi.GeneratedCount[k] = v
+	}
+	for k, v := range result.SkipEntityErrorCount {
+		fvi.SkipEntityErrorCount[k] = v
+	}
+	for k, v := range result.SkipEntityReferenceCount {
+		fvi.SkipEntityReferenceCount[k] = v
+	}
+	for k, v := range result.SkipEntityFilterCount {
+		fvi.SkipEntityFilterCount[k] = v
+	}
+	for k, v := range result.SkipEntityMarkedCount {
+		fvi.SkipEntityMarkedCount[k] = v
+	}
+	for _, e := range result.Warnings {
+		fvi.WarningCount[e.Filename] += e.Count
+	}
+	return *fvi
 }

@@ -49,7 +49,7 @@ func (cmd *SyncCommand) Run() error {
 		defer cmd.Adapter.Close()
 	}
 	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-		_, err := sync.MainSync(atx, cmd.Options)
+		_, err := sync.Sync(atx, cmd.Options)
 		return err
 	})
 }

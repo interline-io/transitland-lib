@@ -27,8 +27,11 @@ type Result struct {
 	HiddenOperators int
 }
 
-// MainSync .
 func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
+	return Sync(atx, opts)
+}
+
+func Sync(atx tldb.Adapter, opts Options) (Result, error) {
 	sr := Result{}
 	// Load Feeds
 	for _, fn := range opts.Filenames {
