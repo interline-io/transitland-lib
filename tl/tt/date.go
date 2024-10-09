@@ -2,7 +2,6 @@ package tt
 
 import (
 	"encoding/json"
-	"io"
 	"time"
 )
 
@@ -48,9 +47,4 @@ func (r Date) MarshalJSON() ([]byte, error) {
 		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val.Format("2006-01-02"))
-}
-
-func (r Date) MarshalGQL(w io.Writer) {
-	b, _ := r.MarshalJSON()
-	w.Write(b)
 }
