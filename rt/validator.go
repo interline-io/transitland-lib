@@ -581,7 +581,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 				tripUpdate,
 				"",
 			))
-		} else if wt.Seconds() > (7 * 24 * 60 * 60) {
+		} else if wt.Int() > (7 * 24 * 60 * 60) {
 			errs = append(errs, withFieldAndJson(
 				E020,
 				"trip_update.trip.start_time",

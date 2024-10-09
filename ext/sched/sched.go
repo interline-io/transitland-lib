@@ -42,7 +42,7 @@ func (fi *ScheduleChecker) Validate(ent tl.Entity) []error {
 		fi.tripInfo[v.TripID] = ti
 	case *tl.Frequency:
 		a := fi.tripInfo[v.TripID]
-		for s := v.StartTime.Seconds(); s < v.EndTime.Seconds(); s += v.HeadwaySecs {
+		for s := v.StartTime.Int(); s < v.EndTime.Int(); s += v.HeadwaySecs {
 			a.FrequencyStarts = append(a.FrequencyStarts, s)
 		}
 		fi.tripInfo[v.TripID] = a
@@ -92,7 +92,7 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 
 			// Might be scheduled
 			found := false
-			if len(v.FrequencyStarts) == 0 && nowWt.Seconds() >= v.StartTime.Seconds() && nowWt.Seconds() <= v.EndTime.Seconds() {
+			if len(v.FrequencyStarts) == 0 && nowWt.Int() >= v.StartTime.Int() && nowWt.Int() <= v.EndTime.Int() {
 				// Check non-frequency based trips
 				// log.Debug().
 				// 	Str("date", now.Format("2006-02-03")).
@@ -106,11 +106,11 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 			}
 
 			// Check frequency based trips
-			tripDuration := v.EndTime.Seconds() - v.StartTime.Seconds()
+			tripDuration := v.EndTime.Int() - v.StartTime.Int()
 			for _, s := range v.FrequencyStarts {
 				freqStart := s
 				freqEnd := freqStart + tripDuration
-				if nowWt.Seconds() >= freqStart && nowWt.Seconds() <= freqEnd {
+				if nowWt.Int() >= freqStart && nowWt.Int() <= freqEnd {
 					found = true
 					break
 				}

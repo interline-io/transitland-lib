@@ -82,8 +82,8 @@ func TestSetString(t *testing.T) {
 		if err := SetString(&ent, "start_time", "01:00:00"); err != nil {
 			t.Error(err)
 		}
-		if exp := 3600; exp != ent.StartTime.Seconds() {
-			t.Errorf("got %d expect %d", ent.StartTime.Seconds(), exp)
+		if exp := 3600; exp != ent.StartTime.Int() {
+			t.Errorf("got %d expect %d", ent.StartTime.Int(), exp)
 		}
 	})
 }

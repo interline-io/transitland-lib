@@ -41,12 +41,12 @@ func (ent *StopTime) Errors() []error {
 	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Val, 0, 3)...)
 	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("timepoint", ent.Timepoint.Val, -1, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Seconds(), -1, 1<<31)...)
-	errs = append(errs, tt.CheckInsideRangeInt("departure", ent.DepartureTime.Seconds(), -1, 1<<31)...)
+	errs = append(errs, tt.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Int(), -1, 1<<31)...)
+	errs = append(errs, tt.CheckInsideRangeInt("departure", ent.DepartureTime.Int(), -1, 1<<31)...)
 	errs = append(errs, tt.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Val, 0, 1, 2, 3)...)
 	errs = append(errs, tt.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Val, 0, 1, 2, 3)...)
 	// Other errors
-	at, dt := ent.ArrivalTime.Seconds(), ent.DepartureTime.Seconds()
+	at, dt := ent.ArrivalTime.Int(), ent.DepartureTime.Int()
 	if at != 0 && dt != 0 && at > dt {
 		errs = append(errs, causes.NewInvalidFieldError("departure_time", ent.DepartureTime.String(), fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
 	}
@@ -215,7 +215,7 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 	if len(stoptimes) < 2 {
 		errs = append(errs, causes.NewEmptyTripError(len(stoptimes)))
 	}
-	if lastSt := stoptimes[len(stoptimes)-1]; lastSt.ArrivalTime.Seconds() <= 0 {
+	if lastSt := stoptimes[len(stoptimes)-1]; lastSt.ArrivalTime.Int() <= 0 {
 		errs = append(errs, causes.NewSequenceError("arrival_time", lastSt.ArrivalTime.String()))
 	}
 	lastDist := stoptimes[0].ShapeDistTraveled
@@ -229,11 +229,11 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 			lastSequence = st.StopSequence
 		}
 		// Ensure the arrows of time are pointing towards the future.
-		if st.ArrivalTime.Seconds() > 0 && st.ArrivalTime.Seconds() < lastTime.Seconds() {
+		if st.ArrivalTime.Int() > 0 && st.ArrivalTime.Int() < lastTime.Int() {
 			errs = append(errs, causes.NewSequenceError("arrival_time", st.ArrivalTime.String()))
-		} else if st.DepartureTime.Seconds() > 0 && st.DepartureTime.Seconds() < st.ArrivalTime.Seconds() {
+		} else if st.DepartureTime.Int() > 0 && st.DepartureTime.Int() < st.ArrivalTime.Int() {
 			errs = append(errs, causes.NewSequenceError("departure_time", st.DepartureTime.String()))
-		} else if st.DepartureTime.Seconds() > 0 {
+		} else if st.DepartureTime.Int() > 0 {
 			lastTime = st.DepartureTime
 		}
 		if st.ShapeDistTraveled.Valid && st.ShapeDistTraveled.Val < lastDist.Val {

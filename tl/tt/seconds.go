@@ -105,7 +105,7 @@ func (r Seconds) MarshalGQL(w io.Writer) {
 	w.Write(b)
 }
 
-func (r Seconds) Seconds() int {
+func (r Seconds) Int() int {
 	return int(r.Val)
 }
 

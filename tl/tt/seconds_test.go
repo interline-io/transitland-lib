@@ -35,10 +35,10 @@ func Test_StringToSeconds(t *testing.T) {
 }
 
 func TestNewWideTime(t *testing.T) {
-	if wt, err := NewSecondsFromString("01:02:03"); wt.Seconds() != 3723 || err != nil {
+	if wt, err := NewSecondsFromString("01:02:03"); wt.Int() != 3723 || err != nil {
 		t.Error(err)
 	}
-	if wt, err := NewSecondsFromString("a:b:c"); wt.Seconds() != 0 || err == nil {
+	if wt, err := NewSecondsFromString("a:b:c"); wt.Int() != 0 || err == nil {
 		t.Error("expected error")
 	}
 }

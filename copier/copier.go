@@ -1100,12 +1100,12 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		jkey := copier.JourneyPatternKey(&trip)
 		if jpat, ok := journeyPatterns[jkey]; ok {
 			trip.JourneyPatternID = jpat.key
-			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime.Seconds() - jpat.firstArrival
+			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival
 			tripOffsets[trip.TripID] = trip.JourneyPatternOffset // do not write stop times for this trip
 		} else {
 			trip.JourneyPatternID = trip.TripID
 			trip.JourneyPatternOffset = 0
-			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Seconds(), key: trip.JourneyPatternID}
+			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID}
 		}
 
 		// Validate trip entity

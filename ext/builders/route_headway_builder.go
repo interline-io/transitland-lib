@@ -89,7 +89,7 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 				StopID:    stopId,
 			}
 			if rd, ok := pp.routeDepartures[v.RouteID]; ok && st.DepartureTime.Valid {
-				rd[rkey] = append(rd[rkey], st.DepartureTime.Seconds())
+				rd[rkey] = append(rd[rkey], st.DepartureTime.Int())
 			}
 		}
 	}
