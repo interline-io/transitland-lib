@@ -1,3 +1,4 @@
+// Package extract provides tools and utilities for extracting subsets of GTFS feeds.
 package extract
 
 import (
@@ -28,6 +29,15 @@ func NewMarker() Marker {
 		fm:    map[string][]string{},
 		ex:    map[string][]string{},
 	}
+}
+
+func (em *Marker) SetBbox(bbox string) error {
+	_, err := tlxy.ParseBbox(bbox)
+	if err != nil {
+		return err
+	}
+	em.bbox = bbox
+	return nil
 }
 
 func (em *Marker) Mark(filename string, eid string, val bool) {

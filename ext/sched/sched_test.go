@@ -30,7 +30,7 @@ func newTestScheduleSchecker(path string) (*ScheduleChecker, error) {
 }
 
 func TestScheduleChecker(t *testing.T) {
-	ex, err := newTestScheduleSchecker(testutil.RelPath("test/data/rt/ct.zip"))
+	ex, err := newTestScheduleSchecker(testutil.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestScheduleChecker(t *testing.T) {
 			assert.ElementsMatch(t, tc.exp, stats)
 		})
 	}
-	freqEx, err := newTestScheduleSchecker(testutil.RelPath("test/data/example.zip"))
+	freqEx, err := newTestScheduleSchecker(testutil.RelPath("testdata/example.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}

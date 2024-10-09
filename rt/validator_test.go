@@ -33,7 +33,7 @@ func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
 }
 
 func newTestValidator() (*Validator, error) {
-	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/bart-rt.zip"))
+	r, err := tlcsv.NewReader(testutil.RelPath("testdata/rt/bart-rt.zip"))
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func TestValidateHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
+	msg, err := ReadFile(testutil.RelPath("testdata/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -65,7 +65,7 @@ func TestValidateTripUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
+	msg, err := ReadFile(testutil.RelPath("testdata/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -89,10 +89,10 @@ func TestValidateAlert(t *testing.T) {
 
 func TestValidatorErrors(t *testing.T) {
 	rp := func(p string) string {
-		return testutil.RelPath(filepath.Join("test/data/rt/", p))
+		return testutil.RelPath(filepath.Join("testdata/rt/", p))
 	}
 	rpe := func(p string) string {
-		return testutil.RelPath(filepath.Join("test/data/rt/errors", p))
+		return testutil.RelPath(filepath.Join("testdata/rt/errors", p))
 	}
 	sor := func(a, b string) string {
 		if a != "" {

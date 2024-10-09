@@ -2,7 +2,7 @@ package testutil
 
 // ExampleDir .
 var ExampleDir = ReaderTester{
-	URL: RelPath("test/data/example"),
+	URL: RelPath("testdata/example"),
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"routes.txt":          5,
@@ -32,7 +32,7 @@ var ExampleDir = ReaderTester{
 
 // ExampleZip .
 var ExampleZip = ReaderTester{
-	URL:     RelPath("test/data/example.zip"),
+	URL:     RelPath("testdata/example.zip"),
 	SHA1:    "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
 	DirSHA1: "7a5c69b5466746213eb3cb6d907a7004073eca4d",
 	Size:    4197,
@@ -64,25 +64,25 @@ var ExampleZip = ReaderTester{
 
 // ExampleZipNestedDir .
 var ExampleZipNestedDir = ReaderTester{
-	URL: RelPath("test/data/example-nested-dir.zip#example-nested-dir/example"),
+	URL: RelPath("testdata/example-nested-dir.zip#example-nested-dir/example"),
 }
 
 var ExampleZipNestedTwoFeeds1 = ReaderTester{
-	URL: RelPath("test/data/example-nested-two-feeds.zip#example1"),
+	URL: RelPath("testdata/example-nested-two-feeds.zip#example1"),
 }
 
 var ExampleZipNestedTwoFeeds2 = ReaderTester{
-	URL: RelPath("test/data/example-nested-two-feeds.zip#example2"),
+	URL: RelPath("testdata/example-nested-two-feeds.zip#example2"),
 }
 
 // ExampleZipNestedZip .
 var ExampleZipNestedZip = ReaderTester{
-	URL: RelPath("test/data/example-nested-zip.zip#example-nested-zip/example.zip"),
+	URL: RelPath("testdata/example-nested-zip.zip#example-nested-zip/example.zip"),
 }
 
 // ExampleFeedBART - BART test feed
 var ExampleFeedBART = ReaderTester{
-	URL: RelPath("test/data/external/bart.zip"),
+	URL: RelPath("testdata/external/bart.zip"),
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"calendar.txt":        3,
@@ -139,7 +139,7 @@ var ExampleFeedBART = ReaderTester{
 
 // ExampleFeedCaltrain - Caltrain test feed
 var ExampleFeedCaltrain = ReaderTester{
-	URL: RelPath("test/data/external/caltrain.zip"),
+	URL: RelPath("testdata/external/caltrain.zip"),
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"calendar.txt":        27, // 3 - 24 generated
@@ -157,7 +157,7 @@ var ExampleFeedCaltrain = ReaderTester{
 
 // MBTA
 var ExampleFeedMBTA = ReaderTester{
-	URL: RelPath("test/data/external/mbta.zip"),
+	URL: RelPath("testdata/external/mbta.zip"),
 	Counts: map[string]int{
 		"agency.txt":         2,
 		"calendar.txt":       122,
@@ -232,7 +232,7 @@ var ExampleFeedMBTA = ReaderTester{
 }
 
 var ExampleFeedCDMX = ReaderTester{
-	URL: RelPath("test/data/external/cdmx.zip"),
+	URL: RelPath("testdata/external/cdmx.zip"),
 	Counts: map[string]int{
 		"agency.txt":      8,
 		"calendar.txt":    99,

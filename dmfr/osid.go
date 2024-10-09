@@ -1,8 +1,6 @@
 package dmfr
 
 import (
-	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -34,18 +32,4 @@ type FeedVersionStopOnestopID struct {
 
 func (ent FeedVersionStopOnestopID) TableName() string {
 	return "feed_version_stop_onestop_ids"
-}
-
-type FeedVersionOnestopIDBuilder struct {
-	*builders.OnestopIDBuilder
-}
-
-func (ext *FeedVersionOnestopIDBuilder) Copy(*copier.Copier) error {
-	return nil
-}
-
-func NewFeedVersionOnestopIDBuilder() *FeedVersionOnestopIDBuilder {
-	return &FeedVersionOnestopIDBuilder{
-		OnestopIDBuilder: builders.NewOnestopIDBuilder(),
-	}
 }

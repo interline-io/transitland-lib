@@ -13,7 +13,8 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/dmfr/store"
+	"github.com/interline-io/transitland-lib/stats"
+	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
@@ -292,7 +293,7 @@ func (v *Validator) ValidateStatic(reader tl.Reader, evaluateAt time.Time, evalu
 	details := ResultDetails{}
 	if reader2, ok := reader.(*tlcsv.Reader); ok {
 		result.IncludesStatic = tt.NewBool(true)
-		fvfis, err := dmfr.NewFeedVersionFileInfosFromReader(reader2)
+		fvfis, err := stats.NewFeedVersionFileInfosFromReader(reader2)
 		if err != nil {
 			result.FailureReason = tt.NewString(fmt.Sprintf("Could not read basic CSV data from file: %s", err.Error()))
 			return result, nil
@@ -330,7 +331,7 @@ func (v *Validator) ValidateStatic(reader tl.Reader, evaluateAt time.Time, evalu
 
 	// Service levels
 	if v.Options.IncludeServiceLevels {
-		fvsls, err := dmfr.NewFeedVersionServiceLevelsFromReader(reader)
+		fvsls, err := stats.NewFeedVersionServiceLevelsFromReader(reader)
 		if err != nil {
 			result.FailureReason = tt.NewString(fmt.Sprintf("Could not calculate service levels: %s", err.Error()))
 			return result, nil
@@ -479,7 +480,7 @@ func (v *Validator) setDefaultTimezone(tzName string) (string, error) {
 	}
 	if v.Reader != nil && tzName == "" {
 		// Get service window and timezone
-		fvsw, err := dmfr.NewFeedVersionServiceWindowFromReader(v.Reader)
+		fvsw, err := stats.NewFeedVersionServiceWindowFromReader(v.Reader)
 		if err != nil {
 			return "", err
 		}

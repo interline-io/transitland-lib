@@ -50,7 +50,7 @@ func TestRouteGeometryBuilder(t *testing.T) {
 			},
 		},
 		"TriMet-2Routes": {
-			testutil.RelPath("test/data/external/trimet-2routes.zip"),
+			testutil.RelPath("testdata/external/trimet-2routes.zip"),
 			[]testcase{
 				{RouteID: "193", ExpectLength: 6452.065660, ExpectLineStrings: 4},
 				{RouteID: "200", ExpectLength: 23012.874312, ExpectLineStrings: 5},

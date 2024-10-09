@@ -66,7 +66,7 @@ func TestExtract_Bbox(t *testing.T) {
 }
 
 func TestExtract_Filter_ExampleFeed(t *testing.T) {
-	reader, err := tlcsv.NewReader(testutil.RelPath("test/data/extract-examples"))
+	reader, err := tlcsv.NewReader(testutil.RelPath("testdata/extract-examples"))
 	if err != nil {
 		t.Error(err)
 	}
