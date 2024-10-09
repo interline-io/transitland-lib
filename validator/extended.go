@@ -16,7 +16,7 @@ func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 			continue
 		}
 		// cartesian units are fine for relative lengths
-		shapeLengths[ent.ShapeID] = ent.Geometry.Length()
+		shapeLengths[ent.ShapeID] = ent.Geometry.Val.Length()
 	}
 
 	shapeCounts := map[string]map[int]map[string]int{}
@@ -75,7 +75,7 @@ func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 		if _, ok := loadShapes[ent.ShapeID]; ok {
 			// Transitland uses M coord for distance; must force 2D
 			coords := []float64{}
-			for _, coord := range ent.Geometry.LineString.Coords() {
+			for _, coord := range ent.Geometry.Val.Coords() {
 				coords = append(coords, coord[0], coord[1])
 			}
 			loadShapes[ent.ShapeID] = geom.NewLineStringFlat(geom.XY, coords)

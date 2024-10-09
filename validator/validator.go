@@ -13,10 +13,10 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/stats"
-	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rules"
+	"github.com/interline-io/transitland-lib/stats"
+	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -362,7 +362,7 @@ func (v *Validator) ValidateStatic(reader tl.Reader, evaluateAt time.Time, evalu
 		for ent := range reader.Routes() {
 			ent := ent
 			if s, ok := routeShapes[ent.RouteID]; ok {
-				g := tl.Geometry{Geometry: s, Valid: true}
+				g := tt.NewGeometry(s)
 				ent.Geometry = g
 			}
 			details.Routes = append(details.Routes, ent)

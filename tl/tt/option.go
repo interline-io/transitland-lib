@@ -3,6 +3,7 @@ package tt
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"io"
 )
 
 type Option[T any] struct {
@@ -10,8 +11,16 @@ type Option[T any] struct {
 	Valid bool
 }
 
+func NewOption[T any](v T) Option[T] {
+	return Option[T]{Val: v, Valid: true}
+}
+
 func (r *Option[T]) Present() bool {
 	return r.Valid
+}
+
+func (r *Option[T]) IsZero() bool {
+	return !r.Valid
 }
 
 func (r Option[T]) String() string {
@@ -40,20 +49,30 @@ func (r Option[T]) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
 	}
-	return r.Val, nil
+	if driver.IsValue(r.Val) {
+		return r.Val, nil
+	}
+	return json.Marshal(r.Val)
 }
 
 func (r *Option[T]) UnmarshalJSON(v []byte) error {
-	err := json.Unmarshal(v, &r.Val)
-	r.Valid = (err == nil)
-	return err
+	return r.Scan(stripQuotes(v))
 }
 
 func (r Option[T]) MarshalJSON() ([]byte, error) {
 	if !r.Valid {
 		return []byte("null"), nil
 	}
-	return json.Marshal(r.Val)
+	return toJson(r.Val)
+}
+
+func (r *Option[T]) UnmarshalGQL(v interface{}) error {
+	return r.Scan(v)
+}
+
+func (r Option[T]) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }
 
 func (r Option[T]) Ptr() *T {

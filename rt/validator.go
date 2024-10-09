@@ -572,7 +572,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 		}
 	}
 	if startTime := td.GetStartTime(); startTime != "" {
-		if wt, err := tt.NewWideTime(startTime); err != nil {
+		if wt, err := tt.NewSecondsFromString(startTime); err != nil {
 			errs = append(errs, withFieldAndJson(
 				E020,
 				"trip_update.trip.start_time",
@@ -581,7 +581,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 				tripUpdate,
 				"",
 			))
-		} else if wt.Seconds > (7 * 24 * 60 * 60) {
+		} else if wt.Int() > (7 * 24 * 60 * 60) {
 			errs = append(errs, withFieldAndJson(
 				E020,
 				"trip_update.trip.start_time",
@@ -682,7 +682,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 					shpGeomCollection := geom.NewGeometryCollection()
 					shpGeomCollection.Push(shpLineGeom)
 					shpGeomCollection.Push(shpPointGeom)
-					shpErr.geom = tt.Geometry{Geometry: shpGeomCollection, Valid: true}
+					shpErr.geom = tt.NewGeometry(shpGeomCollection)
 					errs = append(errs, shpErr)
 				}
 			}

@@ -5,7 +5,7 @@ import (
 )
 
 func Test_StringToSeconds(t *testing.T) {
-	expect := map[string]int{
+	expect := map[string]int64{
 		"00:00:00":               0,
 		"01:02:03":               3723,
 		"01:02":                  3720,
@@ -21,7 +21,7 @@ func Test_StringToSeconds(t *testing.T) {
 		}
 	}
 	// Errors
-	errs := map[string]int{
+	errs := map[string]int64{
 		"01:61:00":    0,
 		"a:b:c":       0,
 		"01:02:03:04": 0,
@@ -35,25 +35,25 @@ func Test_StringToSeconds(t *testing.T) {
 }
 
 func TestNewWideTime(t *testing.T) {
-	if wt, err := NewWideTime("01:02:03"); wt.Seconds != 3723 || err != nil {
+	if wt, err := NewSecondsFromString("01:02:03"); wt.Int() != 3723 || err != nil {
 		t.Error(err)
 	}
-	if wt, err := NewWideTime("a:b:c"); wt.Seconds != 0 || err == nil {
+	if wt, err := NewSecondsFromString("a:b:c"); wt.Int() != 0 || err == nil {
 		t.Error("expected error")
 	}
 }
 
 func TestWideTime_String(t *testing.T) {
-	expect := map[string]int{
+	expect := map[string]int64{
 		"01:02:03": 3723,
 		"01:02:00": 3720,
 		"01:00:00": 3600,
 		"00:00:00": 0,
 	}
 	for k, v := range expect {
-		wt, err := NewWideTime(k)
-		if wt.Seconds != v {
-			t.Errorf("expected %d, got %d", v, wt.Seconds)
+		wt, err := NewSecondsFromString(k)
+		if wt.Val != v {
+			t.Errorf("expected %d, got %d", v, wt.Val)
 		}
 		if err != nil {
 			t.Error(err)
@@ -74,6 +74,6 @@ func Benchmark_StringToSeconds(b *testing.B) {
 
 func Benchmark_NewWideTime(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		NewWideTime("12:34:56")
+		NewSecondsFromString("12:34:56")
 	}
 }

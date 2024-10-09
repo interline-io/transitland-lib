@@ -448,9 +448,6 @@ func (adapter *DirAdapter) FileInfos() ([]os.FileInfo, error) {
 		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
 		}
-		if err != nil {
-			return ret, err
-		}
 		ret = append(ret, fi)
 	}
 	return ret, nil

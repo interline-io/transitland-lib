@@ -112,8 +112,8 @@ func Benchmark_dumpRow_StopTime(b *testing.B) {
 		StopID:            "abc",
 		StopHeadsign:      tt.NewString("hello"),
 		StopSequence:      123,
-		ArrivalTime:       tt.NewWideTimeFromSeconds(3600),
-		DepartureTime:     tt.NewWideTimeFromSeconds(7200),
+		ArrivalTime:       tt.NewSeconds(3600),
+		DepartureTime:     tt.NewSeconds(7200),
 		ShapeDistTraveled: tt.NewFloat(123.456),
 	}
 	header := strings.Split("trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled", ",")

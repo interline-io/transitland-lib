@@ -28,7 +28,7 @@ func (e *NullIslandCheck) Validate(ent tl.Entity) []error {
 			return []error{&ZeroCoordinateError{bc: bc{Field: "stop_lat", EntityID: v.StopID, Message: "stop has (0,0) coordinates"}}}
 		}
 	case *tl.Shape:
-		for _, coords := range v.Geometry.Coords() {
+		for _, coords := range v.Geometry.Val.Coords() {
 			if coords[0] == 0 && coords[1] == 0 {
 				return []error{&ZeroCoordinateError{bc: bc{Field: "shape_pt_lon", EntityID: v.ShapeID, Message: "shape has (0,0) coordinates"}}}
 			}

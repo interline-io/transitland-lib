@@ -8,7 +8,7 @@ type Key struct {
 }
 
 func NewKey(v string) Key {
-	return Key{Option[string]{Valid: true, Val: v}}
+	return Key{Option: NewOption(v)}
 }
 
 func (r Key) Int() int {

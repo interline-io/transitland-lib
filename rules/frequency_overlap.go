@@ -9,10 +9,10 @@ import (
 
 // FrequencyOverlapError is reported when two frequencies.txt entries for the same trip overlap in time.
 type FrequencyOverlapError struct {
-	StartTime      tl.WideTime
-	EndTime        tl.WideTime
-	OtherStartTime tl.WideTime
-	OtherEndTime   tl.WideTime
+	StartTime      tt.Seconds
+	EndTime        tt.Seconds
+	OtherStartTime tt.Seconds
+	OtherEndTime   tt.Seconds
 	TripID         string
 	bc
 }
@@ -49,8 +49,8 @@ func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
 	}
 	var errs []error
 	tf := freqValue{
-		start: v.StartTime.Seconds,
-		end:   v.EndTime.Seconds,
+		start: v.StartTime.Int(),
+		end:   v.EndTime.Int(),
 	}
 	for _, hit := range e.freqs[v.TripID] {
 		if !(tf.start >= hit.end || tf.end <= hit.start) {
@@ -58,8 +58,8 @@ func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
 				TripID:         v.TripID,
 				StartTime:      v.StartTime,
 				EndTime:        v.EndTime,
-				OtherStartTime: tt.NewWideTimeFromSeconds(hit.start),
-				OtherEndTime:   tt.NewWideTimeFromSeconds(hit.end),
+				OtherStartTime: tt.NewSeconds(hit.start),
+				OtherEndTime:   tt.NewSeconds(hit.end),
 			})
 		}
 	}

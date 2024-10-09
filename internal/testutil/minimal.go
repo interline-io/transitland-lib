@@ -25,8 +25,8 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{StopID: "stop2", StopName: "Stop 2", Geometry: tt.NewPoint(3, 4)},
 		},
 		StopTimeList: []tl.StopTime{
-			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: tt.NewWideTimeFromSeconds(0), DepartureTime: tt.NewWideTimeFromSeconds(5)},
-			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: tt.NewWideTimeFromSeconds(10), DepartureTime: tt.NewWideTimeFromSeconds(15)},
+			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: tt.NewSeconds(0), DepartureTime: tt.NewSeconds(5)},
+			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: tt.NewSeconds(10), DepartureTime: tt.NewSeconds(15)},
 		},
 		ShapeList: []tl.Shape{
 			{ShapeID: "shape1", Geometry: tt.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
@@ -47,7 +47,7 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: tt.NewInt(1)},
 		},
 		FrequencyList: []tl.Frequency{
-			{TripID: "trip1", HeadwaySecs: 600, StartTime: tl.WideTime{Seconds: 3600}, EndTime: tl.WideTime{Seconds: 7200}},
+			{TripID: "trip1", HeadwaySecs: 600, StartTime: tt.NewSeconds(3600), EndTime: tt.NewSeconds(7200)},
 		},
 		TransferList: []tl.Transfer{
 			{FromStopID: "stop1", ToStopID: "stop2", TransferType: 1},

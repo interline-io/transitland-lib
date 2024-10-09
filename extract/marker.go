@@ -96,8 +96,8 @@ func (em *Marker) Filter(reader tl.Reader) error {
 		}
 		for stop := range reader.Stops() {
 			spt := tlxy.Point{
-				Lon: stop.Geometry.Point.X(),
-				Lat: stop.Geometry.Point.Y(),
+				Lon: stop.Geometry.X(),
+				Lat: stop.Geometry.Y(),
 			}
 			if bbox.Contains(spt) {
 				em.AddInclude("stops.txt", stop.StopID)

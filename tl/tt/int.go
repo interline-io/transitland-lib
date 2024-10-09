@@ -6,7 +6,7 @@ type Int struct {
 }
 
 func NewInt(v int) Int {
-	return Int{Option[int64]{Valid: true, Val: int64(v)}}
+	return Int{Option: NewOption(int64(v))}
 }
 
 // Int is a convenience function for int(v)
