@@ -1,8 +1,11 @@
 package unimporter
 
 import (
+	"time"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -76,13 +79,14 @@ func DeleteFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 		}
 	}
 
-	// Unset feed fetches
-	where := sq.Eq{"feed_version_id": id}
-	if _, err := atx.Sqrl().Update("feed_fetches").Set("feed_version_id", nil).Where(where).Exec(); err != nil {
-		return err
-	}
-	// Delete feed version
-	if _, err := atx.Sqrl().Delete("feed_versions").Where(sq.Eq{"id": id}).Exec(); err != nil {
+	// Soft delete feed version
+	_, err := atx.Sqrl().
+		Update("feed_versions").
+		Where(sq.Eq{"id": id}).
+		Where(sq.Eq{"deleted_at": nil}).
+		Set("deleted_at", tt.NewTime(time.Now().UTC())).
+		Exec()
+	if err != nil {
 		return err
 	}
 	return nil

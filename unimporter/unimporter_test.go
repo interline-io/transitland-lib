@@ -207,10 +207,10 @@ func TestDeleteFeedVersion(t *testing.T) {
 				}
 				assert.Equal(t, tc.expect, count, tc.table)
 				fvCount := 0
-				if err := atx.Sqrl().Select("count(*)").From("feed_versions").Where(sq.Eq{"id": fvid}).Scan(&fvCount); err != nil {
+				if err := atx.Sqrl().Select("count(*)").From("feed_versions").Where(sq.Eq{"id": fvid}).Where(sq.NotEq{"deleted_at": nil}).Scan(&fvCount); err != nil {
 					t.Fatal(err)
 				}
-				assert.Equal(t, 0, fvCount, "feed versions")
+				assert.Equal(t, 1, fvCount, "feed versions")
 			})
 		}
 		return nil
