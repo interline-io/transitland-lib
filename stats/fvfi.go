@@ -15,12 +15,6 @@ import (
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
-type canFileInfo interface {
-	FileInfos() ([]os.FileInfo, error)
-	OpenFile(string, func(io.Reader)) error
-	ReadRows(string, func(tlcsv.Row)) error
-}
-
 // NewFeedVersionFileInfosFromReader calculates statistics about the contents of a feed version
 func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]dmfr.FeedVersionFileInfo, error) {
 	ret := []dmfr.FeedVersionFileInfo{}
@@ -126,4 +120,10 @@ func NewFeedVersionFileInfosFromReader(reader *tlcsv.Reader) ([]dmfr.FeedVersion
 		ret = append(ret, fvfi)
 	}
 	return ret, nil
+}
+
+type canFileInfo interface {
+	FileInfos() ([]os.FileInfo, error)
+	OpenFile(string, func(io.Reader)) error
+	ReadRows(string, func(tlcsv.Row)) error
 }
