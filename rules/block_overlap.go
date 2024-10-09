@@ -12,11 +12,11 @@ type BlockOverlapError struct {
 	BlockID        string
 	ServiceID      string
 	TripID         string
-	StartTime      tl.WideTime
-	EndTime        tl.WideTime
+	StartTime      tt.Seconds
+	EndTime        tt.Seconds
 	OtherTripID    string
-	OtherStartTime tl.WideTime
-	OtherEndTime   tl.WideTime
+	OtherStartTime tt.Seconds
+	OtherEndTime   tt.Seconds
 	bc
 }
 

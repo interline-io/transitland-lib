@@ -9,10 +9,10 @@ import (
 
 // FrequencyOverlapError is reported when two frequencies.txt entries for the same trip overlap in time.
 type FrequencyOverlapError struct {
-	StartTime      tl.WideTime
-	EndTime        tl.WideTime
-	OtherStartTime tl.WideTime
-	OtherEndTime   tl.WideTime
+	StartTime      tt.Seconds
+	EndTime        tt.Seconds
+	OtherStartTime tt.Seconds
+	OtherEndTime   tt.Seconds
 	TripID         string
 	bc
 }

@@ -245,7 +245,13 @@ func convertAssign(dest any, src any) error {
 			err = cannotConvert(dest, src)
 		}
 	default:
-		err = cannotConvert(dest, src)
+		switch s := src.(type) {
+		case []byte:
+			// Try to Marshal as JSON
+			err = json.Unmarshal(s, dest)
+		default:
+			err = cannotConvert(dest, src)
+		}
 	}
 	return err
 }

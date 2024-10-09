@@ -5,7 +5,7 @@ import (
 )
 
 func Test_StringToSeconds(t *testing.T) {
-	expect := map[string]int{
+	expect := map[string]int64{
 		"00:00:00":               0,
 		"01:02:03":               3723,
 		"01:02":                  3720,
@@ -21,7 +21,7 @@ func Test_StringToSeconds(t *testing.T) {
 		}
 	}
 	// Errors
-	errs := map[string]int{
+	errs := map[string]int64{
 		"01:61:00":    0,
 		"a:b:c":       0,
 		"01:02:03:04": 0,
@@ -44,7 +44,7 @@ func TestNewWideTime(t *testing.T) {
 }
 
 func TestWideTime_String(t *testing.T) {
-	expect := map[string]int{
+	expect := map[string]int64{
 		"01:02:03": 3723,
 		"01:02:00": 3720,
 		"01:00:00": 3600,
@@ -52,8 +52,8 @@ func TestWideTime_String(t *testing.T) {
 	}
 	for k, v := range expect {
 		wt, err := NewSecondsFromString(k)
-		if wt.Seconds() != v {
-			t.Errorf("expected %d, got %d", v, wt.Seconds())
+		if wt.Val != v {
+			t.Errorf("expected %d, got %d", v, wt.Val)
 		}
 		if err != nil {
 			t.Error(err)

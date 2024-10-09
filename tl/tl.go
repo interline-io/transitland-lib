@@ -63,4 +63,3 @@ type String = tt.String
 type Strings = tt.Strings
 type Tags = tt.Tags
 type Time = tt.Time
-type WideTime = tt.WideTime

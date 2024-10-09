@@ -10,8 +10,8 @@ import (
 type tripInfo struct {
 	FrequencyStarts []int
 	ServiceID       string
-	StartTime       tt.WideTime
-	EndTime         tt.WideTime
+	StartTime       tt.Seconds
+	EndTime         tt.Seconds
 }
 
 type ScheduleChecker struct {

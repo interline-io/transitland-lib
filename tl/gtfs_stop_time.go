@@ -14,8 +14,8 @@ type StopTime struct {
 	StopID            string `csv:",required" required:"true"`
 	StopSequence      int    `csv:",required" required:"true"`
 	StopHeadsign      String
-	ArrivalTime       WideTime
-	DepartureTime     WideTime
+	ArrivalTime       tt.Seconds
+	DepartureTime     tt.Seconds
 	PickupType        Int
 	DropOffType       Int
 	ContinuousPickup  Int

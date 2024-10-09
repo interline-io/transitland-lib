@@ -2,6 +2,7 @@ package tt
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"io"
 )
 
@@ -48,7 +49,10 @@ func (r Option[T]) Value() (driver.Value, error) {
 	if !r.Valid {
 		return nil, nil
 	}
-	return r.Val, nil
+	if driver.IsValue(r.Val) {
+		return r.Val, nil
+	}
+	return json.Marshal(r.Val)
 }
 
 func (r *Option[T]) UnmarshalJSON(v []byte) error {

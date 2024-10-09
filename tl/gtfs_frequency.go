@@ -4,14 +4,15 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Frequency frequencies.txt
 type Frequency struct {
 	TripID      string `csv:",required"`
 	HeadwaySecs int    `csv:",required"`
-	StartTime   WideTime
-	EndTime     WideTime
+	StartTime   tt.Seconds
+	EndTime     tt.Seconds
 	ExactTimes  int
 	BaseEntity
 }
