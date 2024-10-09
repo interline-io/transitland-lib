@@ -12,7 +12,7 @@ func TestDecodeGeojson(t *testing.T) {
 		lon, lat := -122.40798, 37.78458
 		pt := Point{}
 		data := fmt.Sprintf(`{"type":"Point","coordinates":[%0.5f,%0.5f]}`, lon, lat)
-		if err := pt.UnmarshalGQL(data); err != nil {
+		if err := pt.UnmarshalJSON([]byte(data)); err != nil {
 			t.Error(err)
 		}
 		assert.Equal(t, pt.X(), lon, "lon")

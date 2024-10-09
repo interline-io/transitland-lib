@@ -62,8 +62,8 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Shape:
-		pts := make([]tlxy.Point, v.Geometry.NumCoords())
-		for i, c := range v.Geometry.Coords() {
+		pts := make([]tlxy.Point, v.Geometry.Val.NumCoords())
+		for i, c := range v.Geometry.Val.Coords() {
 			pts[i] = tlxy.Point{Lon: c[0], Lat: c[1]}
 		}
 		// If we've already seen this line, re-use shapeInfo to reduce mem usage
@@ -256,7 +256,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// Most frequent shape
 		if i == 0 {
-			ent.Geometry = tl.LineString{LineString: *sl, Valid: true}
+			ent.Geometry = tt.NewLineString(sl)
 		}
 		// Add to MultiLineString
 		if err := g.Push(sl); err != nil {
@@ -267,7 +267,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		// Skip entity
 		return nil, errors.New("no geometries")
 	} else {
-		ent.CombinedGeometry = tl.Geometry{Geometry: g, Valid: true}
+		ent.CombinedGeometry = tt.NewGeometry(g)
 	}
 	return &ent, nil
 }

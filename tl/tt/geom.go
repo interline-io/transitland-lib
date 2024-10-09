@@ -2,69 +2,23 @@ package tt
 
 import (
 	"bytes"
-	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
-	"io"
+	"fmt"
 
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/ewkb"
 	"github.com/twpayne/go-geom/encoding/geojson"
 	"github.com/twpayne/go-geom/encoding/wkb"
+	"github.com/twpayne/go-geom/encoding/wkbcommon"
 )
 
-// Geometry is an EWKB/GeoJSON wrapper for arbitary geometry.
 type Geometry struct {
-	Valid    bool
-	Geometry geom.T
+	GeometryOption[geom.T]
 }
 
-func (g *Geometry) Scan(src interface{}) error {
-	g.Geometry, g.Valid = nil, false
-	if src == nil {
-		return nil
-	}
-	b, ok := src.(string)
-	if !ok {
-		return nil
-	}
-	got, err := wkbDecode(b)
-	if err != nil {
-		return err
-	}
-	g.Geometry = got
-	g.Valid = true
-	return nil
-}
-
-func (g Geometry) Value() (driver.Value, error) {
-	if g.Geometry == nil || !g.Valid {
-		return nil, nil
-	}
-	a, err := wkbEncode(g.Geometry)
-	return a, err
-}
-
-// String returns the GeoJSON representation
-func (g Geometry) String() string {
-	a, _ := g.MarshalJSON()
-	return string(a)
-}
-
-func (g Geometry) MarshalJSON() ([]byte, error) {
-	if !g.Valid {
-		return jsonNull(), nil
-	}
-	return geojsonEncode(g.Geometry)
-}
-
-func (g *Geometry) UnmarshalGQL(v interface{}) error {
-	return nil
-}
-
-func (g Geometry) MarshalGQL(w io.Writer) {
-	b, _ := g.MarshalJSON()
-	w.Write(b)
+func NewGeometry(v geom.T) Geometry {
+	return Geometry{GeometryOption: NewGeometryOption(v)}
 }
 
 // Errors, helpers
@@ -93,6 +47,21 @@ func wkbDecode(data string) (geom.T, error) {
 	return got, nil
 }
 
+func wkbDecodeG[T any, PT *T](data string) (T, error) {
+	var ret T
+	b := make([]byte, len(data)/2)
+	hex.Decode(b, []byte(data))
+	got, err := ewkb.Unmarshal(b)
+	if err != nil {
+		return ret, err
+	}
+	ret, ok := got.(T)
+	if !ok {
+		return ret, wkbcommon.ErrUnexpectedType{Got: got, Want: ret}
+	}
+	return ret, nil
+}
+
 // geojsonEncode encodes a geometry into geojson.
 func geojsonEncode(g geom.T) ([]byte, error) {
 	if v, ok := g.(canEncodeGeojson); ok {
@@ -110,7 +79,7 @@ type canEncodeGeojson interface {
 }
 
 // geojsonEncode decodes geojson into a geometry.
-func geojsonDecode[T any, PT *T](v any) (T, error) {
+func geojsonDecode[T geom.T](v any) (T, error) {
 	var ret T
 	var data []byte
 	if a, ok := v.([]byte); ok {
@@ -126,10 +95,16 @@ func geojsonDecode[T any, PT *T](v any) (T, error) {
 	}
 	var gg geom.T
 	if err := geojson.Unmarshal(data, &gg); err != nil {
+		fmt.Println("??", err)
 		return ret, nil
 	}
-	if a, ok := gg.(PT); ok && a != nil {
-		ret = *a
+	if a, ok := gg.(T); ok {
+		return a, nil
 	}
 	return ret, nil
+	// fmt.Printf("GG: %T PT: %T", gg, x)
+	// if a, ok := gg.(T); ok && a != nil {
+	// 	ret = *a
+	// }
+	// return ret, nil
 }

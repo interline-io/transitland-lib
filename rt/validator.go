@@ -682,7 +682,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 					shpGeomCollection := geom.NewGeometryCollection()
 					shpGeomCollection.Push(shpLineGeom)
 					shpGeomCollection.Push(shpPointGeom)
-					shpErr.geom = tt.Geometry{Geometry: shpGeomCollection, Valid: true}
+					shpErr.geom = tt.NewGeometry(shpGeomCollection)
 					errs = append(errs, shpErr)
 				}
 			}
