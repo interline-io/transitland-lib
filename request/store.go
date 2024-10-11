@@ -1,4 +1,4 @@
-package store
+package request
 
 import (
 	"context"
@@ -9,14 +9,12 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/request"
-	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 // Store provides data storage methods.
 type Store interface {
-	request.Uploader
-	request.Downloader
+	Uploader
+	Downloader
 }
 
 // GetStore returns a configured store based on the provided url.
@@ -29,16 +27,16 @@ func GetStore(ustr string) (Store, error) {
 	var s Store
 	switch u.Scheme {
 	case "s3":
-		s, storeErr = request.NewS3FromUrl(ustr)
+		s, storeErr = NewS3FromUrl(ustr)
 	case "az":
-		s, storeErr = request.NewAzFromUrl(ustr)
+		s, storeErr = NewAzFromUrl(ustr)
 	case "file":
-		s = request.Local{Directory: ustr}
+		s = Local{Directory: ustr}
 	default:
 		if ustr == "" {
 			return nil, errors.New("no storage specified")
 		} else {
-			s = request.Local{Directory: ustr}
+			s = Local{Directory: ustr}
 		}
 	}
 	return s, storeErr
@@ -74,14 +72,4 @@ func UploadFile(storage string, src string, dst string) error {
 		return err
 	}
 	return nil
-}
-
-// NewStoreAdapter is a convenience method for getting a GTFS Zip reader from the store.
-func NewStoreAdapter(storage string, key string, fragment string) (*tlcsv.TmpZipAdapter, error) {
-	r, err := Download(storage, key)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	return tlcsv.NewTmpZipAdapterFromReader(r, fragment)
 }

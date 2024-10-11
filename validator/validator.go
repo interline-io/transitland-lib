@@ -20,7 +20,6 @@ import (
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/stats"
-	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
@@ -584,7 +583,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 	// Save JSON
 	if reportStorage != "" {
 		result.File = tt.NewString(result.Key())
-		store, err := store.GetStore(reportStorage)
+		store, err := request.GetStore(reportStorage)
 		if err != nil {
 			return err
 		}
