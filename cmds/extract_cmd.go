@@ -14,7 +14,6 @@ import (
 	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
 
@@ -161,19 +160,6 @@ func (cmd *ExtractCommand) Run() error {
 		}
 	}
 
-	// Create fv
-	if dbw, ok := writer.(*tldb.Writer); ok {
-		if cmd.fvid != 0 {
-			dbw.FeedVersionID = cmd.fvid
-		} else {
-			fvid, err := dbw.CreateFeedVersion(reader)
-			if err != nil {
-				return fmt.Errorf("error creating feed version: %s", err.Error())
-			}
-			dbw.FeedVersionID = fvid
-		}
-		cmd.Options.NormalizeServiceIDs = true
-	}
 	// Setup copier
 	cmd.Options.Extensions = cmd.extensions
 	cp, err := copier.NewCopier(reader, writer, cmd.Options)

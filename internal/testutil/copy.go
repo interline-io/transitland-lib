@@ -6,10 +6,6 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 )
 
-type canCreateFV interface {
-	CreateFeedVersion(reader tl.Reader) (int, error)
-}
-
 type Filter interface {
 	Filter(tl.Entity, *tl.EntityMap) error
 }
@@ -57,10 +53,6 @@ func (dc *DirectCopier) Copy() error {
 			errs = append(errs, fmt.Errorf("entity: %#v error: %s", ent, err))
 		}
 		emap.SetEntity(ent, sid, eid)
-	}
-	// Create any FV
-	if w2, ok := dc.writer.(canCreateFV); ok {
-		w2.CreateFeedVersion(dc.reader)
 	}
 	// Run callback on each entity
 	AllEntities(dc.reader, cp)
