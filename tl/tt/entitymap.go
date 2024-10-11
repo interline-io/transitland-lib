@@ -22,12 +22,6 @@ func (emap *EntityMap) Set(efn string, oldid string, newid string) error {
 	return nil
 }
 
-// Entity provides an interface for GTFS entities.
-type Entity interface {
-	EntityID() string
-	Filename() string
-}
-
 // SetEntity sets the old and new ID for an Entity.
 func (emap *EntityMap) SetEntity(ent Entity, oldid string, newid string) error {
 	return emap.Set(ent.Filename(), oldid, newid)
