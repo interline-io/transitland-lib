@@ -7,8 +7,6 @@ import (
 	"github.com/interline-io/transitland-lib/causes"
 )
 
-// Error wrapping helpers
-
 // CheckInArray returns an error if the value is not in the set of provided values.
 func CheckInArray(field string, value string, values ...string) []error {
 	for _, v := range values {

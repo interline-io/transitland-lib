@@ -15,6 +15,14 @@ func NewOption[T any](v T) Option[T] {
 	return Option[T]{Val: v, Valid: true}
 }
 
+func (r Option[T]) IsValid() bool {
+	return r.Valid
+}
+
+func (r Option[T]) Check() error {
+	return nil
+}
+
 func (r *Option[T]) Present() bool {
 	return r.Valid
 }

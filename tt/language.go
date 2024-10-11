@@ -1,6 +1,7 @@
 package tt
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,6 +10,13 @@ import (
 
 type Language struct {
 	Option[string]
+}
+
+func (r Language) Check() error {
+	if r.Valid && !IsValidLanguage(r.Val) {
+		return errors.New("invalid language")
+	}
+	return nil
 }
 
 // IsValidLang check is valid language

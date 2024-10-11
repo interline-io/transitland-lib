@@ -1,6 +1,7 @@
 package tt
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/causes"
@@ -8,6 +9,16 @@ import (
 
 type Timezone struct {
 	Option[string]
+}
+
+func (r Timezone) Check() error {
+	if !r.Valid {
+		return nil
+	}
+	if _, ok := IsValidTimezone(r.Val); !ok {
+		return errors.New("invalid timezone")
+	}
+	return nil
 }
 
 // CheckTimezone returns an error if the value is not a known timezone

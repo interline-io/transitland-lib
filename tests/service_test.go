@@ -1,11 +1,15 @@
 package tests
 
 import (
+	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 func newTestService() *service.Service {
@@ -66,22 +70,22 @@ func TestService_Simplify(t *testing.T) {
 		{"TestService", newTestService()},
 	}
 	// get more examples from feeds
-	// feedchecks := []string{}
-	// for _, v := range testutil.ExternalTestFeeds {
-	// 	feedchecks = append(feedchecks, v.URL)
-	// }
-	// for _, path := range feedchecks {
-	// 	reader, err := tlcsv.NewReader(path)
-	// 	if err != nil {
-	// 		t.Fatal(err)
-	// 	}
-	// 	if err := reader.Open(); err != nil {
-	// 		t.Fatal(err)
-	// 	}
-	// 	for _, svc := range NewServicesFromReader(reader) {
-	// 		testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", filepath.Base(path), svc.ServiceID), svc})
-	// 	}
-	// }
+	feedchecks := []string{}
+	for _, v := range testutil.ExternalTestFeeds {
+		feedchecks = append(feedchecks, v.URL)
+	}
+	for _, path := range feedchecks {
+		reader, err := tlcsv.NewReader(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := reader.Open(); err != nil {
+			t.Fatal(err)
+		}
+		for _, svc := range service.NewServicesFromReader(reader) {
+			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", filepath.Base(path), svc.ServiceID), svc})
+		}
+	}
 	for _, tc := range testcases {
 		if len(tc.service.CalendarDates()) == 0 {
 			// No need to test services without exceptions...

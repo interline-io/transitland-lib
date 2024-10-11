@@ -110,6 +110,10 @@ type ErrorEntity struct {
 	loadWarnings []error
 }
 
+func (ent *ErrorEntity) LoadErrors() []error {
+	return ent.loadErrors
+}
+
 // AddError adds a loading error to the entity, e.g. from a CSV parse failure
 func (ent *ErrorEntity) AddError(err error) {
 	ent.loadErrors = append(ent.loadErrors, err)

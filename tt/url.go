@@ -1,6 +1,7 @@
 package tt
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,6 +10,13 @@ import (
 
 type Url struct {
 	Option[string]
+}
+
+func (r Url) Check() error {
+	if r.Valid && !IsValidURL(r.Val) {
+		return errors.New("invalid url")
+	}
+	return nil
 }
 
 // CheckURL returns an error if the value is not a reasonably valid url
