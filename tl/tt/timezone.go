@@ -6,6 +6,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+type Timezone struct {
+	Option[string]
+}
+
 // CheckTimezone returns an error if the value is not a known timezone
 func CheckTimezone(field string, value string) (errs []error) {
 	if _, ok := IsValidTimezone(value); !ok {

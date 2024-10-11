@@ -7,6 +7,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+type Language struct {
+	Option[string]
+}
+
 // IsValidLang check is valid language
 func IsValidLanguage(value string) bool {
 	if len(value) == 0 {

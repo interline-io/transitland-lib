@@ -7,6 +7,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+type Email struct {
+	Option[string]
+}
+
 // CheckEmail returns an error if the value is not a reasonably valid email address
 func CheckEmail(field string, value string) (errs []error) {
 	if !IsValidEmail(value) {

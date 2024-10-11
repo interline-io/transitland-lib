@@ -27,10 +27,16 @@ func NewGeometryOption[T geom.T](v T) GeometryOption[T] {
 }
 
 func (g GeometryOption[T]) FlatCoords() []float64 {
+	if !g.Valid {
+		return nil
+	}
 	return g.Val.FlatCoords()
 }
 
 func (g GeometryOption[T]) Stride() int {
+	if !g.Valid {
+		return 0
+	}
 	return g.Val.Stride()
 }
 
@@ -61,13 +67,13 @@ func (g *GeometryOption[T]) Scan(src interface{}) error {
 }
 
 func (g *GeometryOption[T]) UnmarshalJSON(data []byte) error {
+	g.Valid = false
 	var x geom.T = g.Val
 	if err := geojson.Unmarshal(data, &x); err != nil {
 		return err
 	}
-	var ok bool
-	g.Val, ok = x.(T)
-	if !ok {
+	g.Val, g.Valid = x.(T)
+	if !g.Valid {
 		return errors.New("could not convert geometry")
 	}
 	return nil
@@ -81,6 +87,7 @@ func (g GeometryOption[T]) MarshalJSON() ([]byte, error) {
 }
 
 func (g *GeometryOption[T]) UnmarshalGQL(v interface{}) error {
+	g.Valid = false
 	jj, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -95,10 +102,12 @@ func (g GeometryOption[T]) MarshalGQL(w io.Writer) {
 
 //////////
 
-type Geometry GeometryOption[geom.T]
+type Geometry struct {
+	GeometryOption[geom.T]
+}
 
 func NewGeometry(v geom.T) Geometry {
-	return Geometry(NewGeometryOption(v))
+	return Geometry{GeometryOption: NewGeometryOption(v)}
 }
 
 //////////
@@ -109,6 +118,9 @@ type Point struct {
 }
 
 func (g *Point) ToPoint() tlxy.Point {
+	if !g.Valid {
+		return tlxy.Point{}
+	}
 	c := g.Val.Coords()
 	if len(c) != 2 {
 		return tlxy.Point{}
@@ -117,14 +129,14 @@ func (g *Point) ToPoint() tlxy.Point {
 }
 
 func (g *Point) X() float64 {
-	if g.Val == nil {
+	if !g.Valid {
 		return 0
 	}
 	return g.Val.X()
 }
 
 func (g *Point) Y() float64 {
-	if g.Val == nil {
+	if !g.Valid {
 		return 0
 	}
 	return g.Val.Y()
@@ -163,6 +175,9 @@ func NewLineStringFromFlatCoords(coords []float64) LineString {
 
 func (g LineString) ToPoints() []tlxy.Point {
 	var ret []tlxy.Point
+	if !g.Valid {
+		return ret
+	}
 	for _, c := range g.Val.Coords() {
 		ret = append(ret, tlxy.Point{Lon: c[0], Lat: c[1]})
 	}
@@ -171,6 +186,9 @@ func (g LineString) ToPoints() []tlxy.Point {
 
 func (g LineString) ToLineM() tlxy.LineM {
 	var ret []tlxy.Point
+	if !g.Valid {
+		return tlxy.LineM{}
+	}
 	var ms []float64
 	for _, c := range g.Val.Coords() {
 		ret = append(ret, tlxy.Point{Lon: c[0], Lat: c[1]})
@@ -235,8 +253,4 @@ func geojsonEncode(g geom.T) ([]byte, error) {
 		return jsonNull(), err
 	}
 	return b, nil
-}
-
-type canEncodeGeojson interface {
-	MarshalJSON() ([]byte, error)
 }
