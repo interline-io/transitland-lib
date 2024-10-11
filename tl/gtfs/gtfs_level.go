@@ -1,4 +1,4 @@
-package tl
+package gtfs
 
 // Level levels.txt
 type Level struct {

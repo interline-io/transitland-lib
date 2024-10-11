@@ -2,8 +2,10 @@ package tl
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
+	"github.com/interline-io/transitland-lib/tl/gtfs"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -34,8 +36,8 @@ type FeedVersion struct {
 	Description          tt.String
 	CreatedBy            tt.String
 	UpdatedBy            tt.String
-	DatabaseEntity
-	Timestamps
+	gtfs.DatabaseEntity
+	gtfs.Timestamps
 }
 
 // SetID .
@@ -50,7 +52,7 @@ func (ent *FeedVersion) GetID() int {
 
 // EntityID .
 func (ent *FeedVersion) EntityID() string {
-	return entID(ent.ID, "0")
+	return strconv.Itoa(ent.ID)
 }
 
 // TableName sets the table name prefix.
