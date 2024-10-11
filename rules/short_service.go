@@ -1,8 +1,8 @@
 package rules
 
 import (
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // ShortServiceCheck checks that a calendar.txt entry has (start_date,end_date) of more than 1 day.

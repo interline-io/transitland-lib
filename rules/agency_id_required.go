@@ -1,8 +1,8 @@
 package rules
 
 import (
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // AgencyIDConditionallyRequiredCheck checks if agency_id is missing when more than one agency is present.

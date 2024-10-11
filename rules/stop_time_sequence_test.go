@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type expectStopTime struct {

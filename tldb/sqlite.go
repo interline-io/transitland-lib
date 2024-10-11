@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/schema/sqlite"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/jmoiron/sqlx"
 
 	// sqlite3

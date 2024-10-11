@@ -2,7 +2,7 @@
 package rules
 
 import (
-	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/causes"
 )
 
 ///////////////

@@ -3,7 +3,7 @@ package tt
 import (
 	"strings"
 
-	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/causes"
 )
 
 type Timezone struct {

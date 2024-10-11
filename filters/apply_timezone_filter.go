@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func NewApplyTimezoneFilter(timezone string) (*ApplyTimezoneFilter, error) {

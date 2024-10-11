@@ -11,7 +11,7 @@ import (
 
 	"github.com/dimchansky/utfbom"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Registry represents a parsed Distributed Mobility Feed Registry (DMFR) file

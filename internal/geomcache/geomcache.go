@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func arePositionsSorted(a []float64) bool {

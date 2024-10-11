@@ -2,7 +2,7 @@ package geomcache
 
 import (
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // InterpolateStopTimes sets missing ArrivalTime, DestinationTime values.

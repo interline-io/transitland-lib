@@ -5,8 +5,8 @@ import (
 	"reflect"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // Reader reads from a database.

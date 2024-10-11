@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // BlockOverlapError reports when two block_id's with the same service_id overlap in time.

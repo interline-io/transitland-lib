@@ -11,16 +11,16 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters/empty"
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/rs/zerolog"
 	"github.com/twpayne/go-geom/xy"
 )
