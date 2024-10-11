@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/interline-io/transitland-lib/tl/gtfs"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -36,8 +35,8 @@ type FeedVersion struct {
 	Description          tt.String
 	CreatedBy            tt.String
 	UpdatedBy            tt.String
-	gtfs.DatabaseEntity
-	gtfs.Timestamps
+	tt.DatabaseEntity
+	tt.Timestamps
 }
 
 // SetID .

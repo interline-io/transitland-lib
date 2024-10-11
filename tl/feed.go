@@ -7,26 +7,25 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/tl/gtfs"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Feed listed in a parsed DMFR file
 type Feed struct {
-	FeedID              string            `json:"id" db:"onestop_id"`
-	SupersedesIDs       tt.Strings        `json:"supersedes_ids,omitempty" db:"-"`
-	Name                tt.String         `json:"name,omitempty"`
-	Description         tt.String         `json:"description,omitempty"`
-	Spec                string            `json:"spec,omitempty"`
-	URLs                FeedUrls          `json:"urls,omitempty" db:"urls"`
-	Languages           FeedLanguages     `json:"languages,omitempty"`
-	License             FeedLicense       `json:"license,omitempty"`
-	Authorization       FeedAuthorization `json:"authorization,omitempty" db:"auth"`
-	Tags                tt.Tags           `json:"tags,omitempty" db:"feed_tags" `
-	File                string            `json:"-"` // internal
-	DeletedAt           tt.Time           `json:"-"` // internal
-	gtfs.DatabaseEntity `json:"-"`        // internal
-	gtfs.Timestamps     `json:"-"`        // internal
+	FeedID            string            `json:"id" db:"onestop_id"`
+	SupersedesIDs     tt.Strings        `json:"supersedes_ids,omitempty" db:"-"`
+	Name              tt.String         `json:"name,omitempty"`
+	Description       tt.String         `json:"description,omitempty"`
+	Spec              string            `json:"spec,omitempty"`
+	URLs              FeedUrls          `json:"urls,omitempty" db:"urls"`
+	Languages         FeedLanguages     `json:"languages,omitempty"`
+	License           FeedLicense       `json:"license,omitempty"`
+	Authorization     FeedAuthorization `json:"authorization,omitempty" db:"auth"`
+	Tags              tt.Tags           `json:"tags,omitempty" db:"feed_tags" `
+	File              string            `json:"-"` // internal
+	DeletedAt         tt.Time           `json:"-"` // internal
+	tt.DatabaseEntity `json:"-"`        // internal
+	tt.Timestamps     `json:"-"`        // internal
 }
 
 func (ent *Feed) MatchSecrets(secrets []Secret, urltype string) (Secret, error) {

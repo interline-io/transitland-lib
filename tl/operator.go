@@ -6,22 +6,21 @@ import (
 	"errors"
 	"io"
 
-	"github.com/interline-io/transitland-lib/tl/gtfs"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type Operator struct {
-	OnestopID           tt.String               `json:"onestop_id"`
-	SupersedesIDs       tt.Strings              `json:"supersedes_ids,omitempty" db:"-"`
-	Name                tt.String               `json:"name,omitempty"`
-	ShortName           tt.String               `json:"short_name,omitempty"`
-	Website             tt.String               `json:"website,omitempty"`
-	AssociatedFeeds     OperatorAssociatedFeeds `json:"associated_feeds,omitempty"`
-	Tags                tt.Tags                 `json:"tags,omitempty" db:"operator_tags"`
-	File                tt.String               `json:"-"` // internal
-	DeletedAt           tt.Time                 `json:"-"` // internal
-	gtfs.DatabaseEntity `json:"-"`
-	gtfs.Timestamps     `json:"-"`
+	OnestopID         tt.String               `json:"onestop_id"`
+	SupersedesIDs     tt.Strings              `json:"supersedes_ids,omitempty" db:"-"`
+	Name              tt.String               `json:"name,omitempty"`
+	ShortName         tt.String               `json:"short_name,omitempty"`
+	Website           tt.String               `json:"website,omitempty"`
+	AssociatedFeeds   OperatorAssociatedFeeds `json:"associated_feeds,omitempty"`
+	Tags              tt.Tags                 `json:"tags,omitempty" db:"operator_tags"`
+	File              tt.String               `json:"-"` // internal
+	DeletedAt         tt.Time                 `json:"-"` // internal
+	tt.DatabaseEntity `json:"-"`
+	tt.Timestamps     `json:"-"`
 }
 
 // Equal compares the JSON representation of two operators.

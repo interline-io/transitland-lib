@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/interline-io/transitland-lib/tl/gtfs"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Read version from compiled in git details
@@ -74,21 +75,21 @@ type FareRule = gtfs.FareRule
 type Translation = gtfs.Translation
 type Transfer = gtfs.Transfer
 
-type Entity = gtfs.Entity
-type EntityWithErrors = gtfs.EntityWithErrors
-type DatabaseEntity = gtfs.DatabaseEntity
-type Timestamps = gtfs.Timestamps
-type FeedVersionEntity = gtfs.FeedVersionEntity
-type MinEntity = gtfs.MinEntity
-type BaseEntity = gtfs.BaseEntity
-type EntityWithReferences = gtfs.EntityWithReferences
-type EntityWithExtra = gtfs.EntityWithExtra
-type EntityWithID = gtfs.EntityWithID
+type EntityMap = tt.EntityMap
+type Entity = tt.Entity
 
-type EntityMap = gtfs.EntityMap
+type EntityWithErrors = tt.EntityWithErrors
+type DatabaseEntity = tt.DatabaseEntity
+type Timestamps = tt.Timestamps
+type FeedVersionEntity = tt.FeedVersionEntity
+type MinEntity = tt.MinEntity
+type BaseEntity = tt.BaseEntity
+type EntityWithReferences = tt.EntityWithReferences
+type EntityWithExtra = tt.EntityWithExtra
+type EntityWithID = tt.EntityWithID
 
 func NewEntityMap() *EntityMap {
-	return gtfs.NewEntityMap()
+	return tt.NewEntityMap()
 }
 
 func NewShapeFromShapes(shapes []Shape) Shape {
