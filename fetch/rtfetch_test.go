@@ -9,7 +9,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/stretchr/testify/assert"
 )
@@ -37,7 +37,7 @@ func TestRTFetch(t *testing.T) {
 					http.Error(w, "404", 404)
 					return
 				}
-				buf, err := ioutil.ReadFile(testutil.RelPath(basedir + "/" + tc.serveFile))
+				buf, err := ioutil.ReadFile(testpath.RelPath(basedir + "/" + tc.serveFile))
 				if err != nil {
 					t.Error(err)
 				}

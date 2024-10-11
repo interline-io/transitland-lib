@@ -6,6 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -57,7 +58,7 @@ func TestImportFeedVersion(t *testing.T) {
 	t.Run("Failed", func(t *testing.T) {
 		fvid := 0
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-			fvid = setup(atx, testutil.RelPath("testdata/does-not-exist"))
+			fvid = setup(atx, testpath.RelPath("testdata/does-not-exist"))
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := ImportFeedVersion(&atx2, Options{FeedVersionID: fvid, Storage: "/"})
 			if err == nil {

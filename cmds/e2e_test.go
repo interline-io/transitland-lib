@@ -15,7 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/importer"
 	"github.com/interline-io/transitland-lib/internal/testdb"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -112,7 +112,7 @@ func TestE2E(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				p := strings.Split(tc.fn, "#")
-				buf, err := ioutil.ReadFile(testutil.RelPath(p[0]))
+				buf, err := ioutil.ReadFile(testpath.RelPath(p[0]))
 				if err != nil {
 					t.Error(err)
 				}

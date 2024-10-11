@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
@@ -26,7 +26,7 @@ func makehindex(header []string) map[string]int {
 
 // Benchmark StopTime memory usage
 func Benchmark_StopTime_Memory_Read1000(b *testing.B) {
-	p := testutil.RelPath("testdata/external/bart.zip")
+	p := testpath.RelPath("testdata/external/bart.zip")
 	reader, err := NewReader(p)
 	if err != nil {
 		b.Error(err)

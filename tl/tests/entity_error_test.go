@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 func TestEntityErrors(t *testing.T) {
-	reader, err := tlcsv.NewReader(testutil.RelPath("testdata/bad-entities"))
+	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/bad-entities"))
 	if err != nil {
 		t.Error(err)
 	}

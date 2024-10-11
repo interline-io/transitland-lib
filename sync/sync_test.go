@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -17,8 +18,8 @@ func TestSync(t *testing.T) {
 		testdb.CreateTestFeed(atx, "caltrain")
 		// Import
 		regs := []string{
-			testutil.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
-			testutil.RelPath("testdata/dmfr/bayarea-local.dmfr.json"),
+			testpath.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
+			testpath.RelPath("testdata/dmfr/bayarea-local.dmfr.json"),
 		}
 		opts := Options{
 			Filenames:  regs,
@@ -65,7 +66,7 @@ func TestSync_Update(t *testing.T) {
 		tlfeed.ID = testdb.ShouldInsert(t, atx, &tlfeed)
 		var err error
 		// Import
-		regs := []string{testutil.RelPath("testdata/dmfr/rtfeeds.dmfr.json")}
+		regs := []string{testpath.RelPath("testdata/dmfr/rtfeeds.dmfr.json")}
 		opts := Options{
 			Filenames: regs,
 		}
@@ -231,7 +232,7 @@ func TestUpdateOperator(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			// Import
 			regs := []string{
-				testutil.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
+				testpath.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
 			}
 			opts := Options{
 				Filenames:  regs,
@@ -268,7 +269,7 @@ func TestUpdateOperator(t *testing.T) {
 	t.Run("Update", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			regs := []string{
-				testutil.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
+				testpath.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
 			}
 			opts := Options{Filenames: regs}
 			found, err := Sync(atx, opts)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
@@ -54,7 +55,7 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 			},
 		},
 		"TriMet-2Routes": {
-			testutil.RelPath("testdata/external/trimet-2routes.zip"),
+			testpath.RelPath("testdata/external/trimet-2routes.zip"),
 			[]testcase{
 				{RouteID: "193", DowCat: 1, DirectionID: 0, StopID: "10776", ServiceDate: "2021-10-18", HeadwaySecs: 960},
 				{RouteID: "200", DowCat: 1, DirectionID: 0, StopID: "10293", ServiceDate: "2021-10-25", HeadwaySecs: 900},
