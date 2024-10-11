@@ -1,7 +1,6 @@
 package tt
 
 import (
-	"strconv"
 	"time"
 )
 
@@ -157,13 +156,6 @@ func (ent *DatabaseEntity) SetID(id int) {
 // GetID returns the integer ID.
 func (ent DatabaseEntity) GetID() int {
 	return ent.ID
-}
-
-func entID(id int, gtfsid string) string {
-	if id > 0 {
-		return strconv.Itoa(id)
-	}
-	return gtfsid
 }
 
 /////////////
