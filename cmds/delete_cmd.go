@@ -9,9 +9,9 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/importer"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/unimporter"
 	"github.com/spf13/pflag"
 )
 
@@ -85,7 +85,7 @@ func (cmd *DeleteCommand) Run() error {
 	} else {
 		log.Info().Msgf("Deleting feed version: %d", cmd.FVID)
 		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-			return unimporter.DeleteFeedVersion(cmd.Adapter, cmd.FVID, cmd.ExtraTables)
+			return importer.DeleteFeedVersion(cmd.Adapter, cmd.FVID, cmd.ExtraTables)
 		})
 		if err != nil {
 			return err
