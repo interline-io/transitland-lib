@@ -7,7 +7,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/dmfr"
-	gtfs "github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	gtfs "github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/gtfs"
 )
 
 type CalendarDate = gtfs.CalendarDate

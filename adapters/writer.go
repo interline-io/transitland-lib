@@ -2,8 +2,6 @@ package adapters
 
 import "github.com/interline-io/transitland-lib/tl/tt"
 
-type Entity = tt.Entity
-
 // Writer writes a GTFS feed.
 type Writer interface {
 	Open() error
@@ -11,8 +9,8 @@ type Writer interface {
 	Create() error
 	Delete() error
 	NewReader() (Reader, error)
-	AddEntity(Entity) (string, error)
-	AddEntities([]Entity) ([]string, error)
+	AddEntity(tt.Entity) (string, error)
+	AddEntities([]tt.Entity) ([]string, error)
 	String() string
 }
 

@@ -1,4 +1,4 @@
-package tl
+package gtfs
 
 import (
 	"strconv"
