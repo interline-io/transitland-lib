@@ -1,4 +1,4 @@
-package tl
+package adapters
 
 import "github.com/interline-io/transitland-lib/tl/tt"
 

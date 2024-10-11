@@ -21,6 +21,29 @@ type canPath interface {
 	Path() string
 }
 
+// NewServicesFromReader returns the reader's Calendar and CalendarDate entities as a Service
+func NewServicesFromReader(reader Reader) []*Service {
+	ret := []*Service{}
+	cds := map[string][]CalendarDate{}
+	for cd := range reader.CalendarDates() {
+		sid := cd.ServiceID
+		cds[sid] = append(cds[sid], cd)
+	}
+	for c := range reader.Calendars() {
+		sid := c.ServiceID
+		s := NewService(c, cds[sid]...)
+		ret = append(ret, s)
+		delete(cds, sid)
+	}
+	for k, v := range cds {
+		s := NewService(Calendar{ServiceID: k}, v...)
+		s.Generated = true
+		s.StartDate, s.EndDate = s.ServicePeriod()
+		ret = append(ret, s)
+	}
+	return ret
+}
+
 // NewFeedVersionFromReader returns a FeedVersion from a Reader.
 func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	fv := FeedVersion{}
