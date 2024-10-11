@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tldbutil"
 )
 
 type FeedVersionStats struct {
@@ -116,7 +117,7 @@ func CreateFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	// Delete any existing records
 	tables := fvt.FetchStatDerivedTables
 	for _, table := range tables {
-		if err := dmfr.FeedVersionTableDelete(atx, table, fvid, false); err != nil {
+		if err := tldbutil.FeedVersionTableDelete(atx, table, fvid, false); err != nil {
 			return err
 		}
 	}
