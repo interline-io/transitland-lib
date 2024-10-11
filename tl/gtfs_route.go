@@ -17,11 +17,11 @@ type Route struct {
 	RouteColor        string
 	RouteTextColor    string
 	RouteSortOrder    int
-	ContinuousPickup  Int
-	ContinuousDropOff Int
-	NetworkID         String
-	AsRoute           Int
-	Geometry          Geometry `csv:"-" db:"-"`
+	ContinuousPickup  tt.Int
+	ContinuousDropOff tt.Int
+	NetworkID         tt.String
+	AsRoute           tt.Int
+	Geometry          tt.Geometry `csv:"-" db:"-"`
 	BaseEntity
 }
 

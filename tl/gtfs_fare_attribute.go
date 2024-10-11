@@ -11,8 +11,8 @@ type FareAttribute struct {
 	Price            float64 `csv:",required"`
 	CurrencyType     string  `csv:",required"`
 	PaymentMethod    int     `csv:",required"`
-	Transfers        Int
-	AgencyID         Key
+	Transfers        tt.Int
+	AgencyID         tt.Key
 	TransferDuration int
 	BaseEntity
 }

@@ -27,7 +27,7 @@ func UpdateFeed(atx tldb.Adapter, rfeed tl.Feed) (int, bool, bool, error) {
 		if !dbfeed.Equal(&rfeed) {
 			updated = true
 			rfeed.CreatedAt = dbfeed.CreatedAt
-			rfeed.DeletedAt = tl.Time{}
+			rfeed.DeletedAt = tt.Time{}
 			errTx = atx.Update(&rfeed)
 		}
 	} else if err == sql.ErrNoRows {

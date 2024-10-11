@@ -12,12 +12,12 @@ import (
 type RouteHeadway struct {
 	RouteID        string
 	SelectedStopID string
-	DirectionID    tl.Int
-	HeadwaySecs    tl.Int
-	DowCategory    tl.Int
-	ServiceDate    tl.Date
-	StopTripCount  tl.Int
-	Departures     tl.Ints
+	DirectionID    tt.Int
+	HeadwaySecs    tt.Int
+	DowCategory    tt.Int
+	ServiceDate    tt.Date
+	StopTripCount  tt.Int
+	Departures     tt.Ints
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -170,7 +170,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				rh := RouteHeadway{
 					RouteID:        rid,
 					SelectedStopID: mostVisitedStop,
-					HeadwaySecs:    tl.Int{},
+					HeadwaySecs:    tt.Int{},
 					DowCategory:    tt.NewInt(dowCat),
 					ServiceDate:    tt.NewDate(d),
 					StopTripCount:  tt.NewInt(len(departures)),

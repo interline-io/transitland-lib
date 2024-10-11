@@ -5,15 +5,16 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/mmcloughlin/geohash"
 )
 
 type AgencyPlace struct {
 	AgencyID string
-	Name     tl.String
-	Adm1name tl.String
-	Adm0name tl.String
+	Name     tt.String
+	Adm1name tt.String
+	Adm0name tt.String
 	Count    int
 	Rank     float64
 	tl.MinEntity
@@ -107,9 +108,9 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	}
 	// For each geohash, check nearby populated places and inside admin boundaries
 	type foundPlace struct {
-		Name     tl.String
-		Adm1name tl.String
-		Adm0name tl.String
+		Name     tt.String
+		Adm1name tt.String
+		Adm0name tt.String
 	}
 	pointPlaces := map[string]foundPlace{}
 	pointAdmins := map[string]foundPlace{}

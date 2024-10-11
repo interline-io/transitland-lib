@@ -14,7 +14,7 @@ type Trip struct {
 	TripShortName        string
 	DirectionID          int
 	BlockID              string
-	ShapeID              Key
+	ShapeID              tt.Key
 	WheelchairAccessible int
 	BikesAllowed         int
 	StopTimes            []StopTime `csv:"-" db:"-"` // for validation methods

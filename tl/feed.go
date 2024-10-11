@@ -6,22 +6,24 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Feed listed in a parsed DMFR file
 type Feed struct {
 	FeedID         string            `json:"id" db:"onestop_id"`
-	SupersedesIDs  Strings           `json:"supersedes_ids,omitempty" db:"-"`
-	Name           String            `json:"name,omitempty"`
-	Description    String            `json:"description,omitempty"`
+	SupersedesIDs  tt.Strings        `json:"supersedes_ids,omitempty" db:"-"`
+	Name           tt.String         `json:"name,omitempty"`
+	Description    tt.String         `json:"description,omitempty"`
 	Spec           string            `json:"spec,omitempty"`
 	URLs           FeedUrls          `json:"urls,omitempty" db:"urls"`
 	Languages      FeedLanguages     `json:"languages,omitempty"`
 	License        FeedLicense       `json:"license,omitempty"`
 	Authorization  FeedAuthorization `json:"authorization,omitempty" db:"auth"`
-	Tags           Tags              `json:"tags,omitempty" db:"feed_tags" `
+	Tags           tt.Tags           `json:"tags,omitempty" db:"feed_tags" `
 	File           string            `json:"-"` // internal
-	DeletedAt      Time              `json:"-"` // internal
+	DeletedAt      tt.Time           `json:"-"` // internal
 	DatabaseEntity `json:"-"`        // internal
 	Timestamps     `json:"-"`        // internal
 }

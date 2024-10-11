@@ -25,7 +25,7 @@ func UpdateOperator(atx tldb.Adapter, operator tl.Operator) (int, bool, bool, er
 		if !ent.Equal(&operator) {
 			updated = true
 			operator.CreatedAt = ent.CreatedAt
-			operator.DeletedAt = tl.Time{}
+			operator.DeletedAt = tt.Time{}
 			errTx = atx.Update(&operator)
 		}
 	} else if err == sql.ErrNoRows {

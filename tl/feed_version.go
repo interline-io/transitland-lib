@@ -26,14 +26,14 @@ type FeedVersion struct {
 	SHA1Dir              string
 	File                 string
 	URL                  string
-	EarliestCalendarDate Date
-	LatestCalendarDate   Date
+	EarliestCalendarDate tt.Date
+	LatestCalendarDate   tt.Date
 	FetchedAt            time.Time
-	Fragment             String
-	Name                 String
-	Description          String
-	CreatedBy            String
-	UpdatedBy            String
+	Fragment             tt.String
+	Name                 tt.String
+	Description          tt.String
+	CreatedBy            tt.String
+	UpdatedBy            tt.String
 	DatabaseEntity
 	Timestamps
 }

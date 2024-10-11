@@ -15,11 +15,11 @@ import (
 type RouteGeometry struct {
 	RouteID               string
 	Generated             bool
-	Geometry              tl.LineString
-	CombinedGeometry      tl.Geometry
-	Length                tl.Float
-	MaxSegmentLength      tl.Float
-	FirstPointMaxDistance tl.Float
+	Geometry              tt.LineString
+	CombinedGeometry      tt.Geometry
+	Length                tt.Float
+	MaxSegmentLength      tt.Float
+	FirstPointMaxDistance tt.Float
 	tl.MinEntity
 	tl.FeedVersionEntity
 }

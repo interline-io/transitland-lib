@@ -6,9 +6,9 @@ import (
 
 // Area fare_areas.txt
 type Area struct {
-	AreaID    String
-	AreaName  String
-	AgencyIDs Strings    `csv:"-" db:"agency_ids"` // interline ext
+	AreaID    tt.String
+	AreaName  tt.String
+	AgencyIDs tt.Strings `csv:"-" db:"agency_ids"` // interline ext
 	Geometry  tt.Polygon `csv:"-"`                 // interline ext
 	BaseEntity
 }

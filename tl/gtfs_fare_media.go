@@ -6,9 +6,9 @@ import (
 
 // FareMedia fare_media.txt
 type FareMedia struct {
-	FareMediaID   String
-	FareMediaName String
-	FareMediaType Int
+	FareMediaID   tt.String
+	FareMediaName tt.String
+	FareMediaType tt.Int
 	BaseEntity
 }
 

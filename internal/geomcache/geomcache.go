@@ -9,8 +9,6 @@ import (
 	"github.com/interline-io/transitland-lib/tlxy"
 )
 
-type Point = tlxy.Point
-
 func arePositionsSorted(a []float64) bool {
 	if len(a) < 2 {
 		return true
@@ -24,7 +22,7 @@ func arePositionsSorted(a []float64) bool {
 }
 
 type ShapeInfo struct {
-	Line       []Point
+	Line       []tlxy.Point
 	Dists      []float64
 	DistLength float64
 	Length     float64
@@ -33,7 +31,7 @@ type ShapeInfo struct {
 // GeomCache helps speed up StopTime interpolating by caching various results
 type GeomCache struct {
 	stopPositions map[string][]float64
-	stops         map[string]Point
+	stops         map[string]tlxy.Point
 	shapes        map[string]ShapeInfo
 }
 
@@ -41,23 +39,23 @@ type GeomCache struct {
 func NewGeomCache() *GeomCache {
 	return &GeomCache{
 		stopPositions: map[string][]float64{},
-		stops:         map[string]Point{},
+		stops:         map[string]tlxy.Point{},
 		shapes:        map[string]ShapeInfo{},
 	}
 }
 
 // AddStopGeom adds a Stop to the geometry cache.
-func (g *GeomCache) AddStopGeom(eid string, pt Point) {
+func (g *GeomCache) AddStopGeom(eid string, pt tlxy.Point) {
 	g.stops[eid] = pt
 }
 
 // GetStop returns the coordinates for the cached stop.
-func (g *GeomCache) GetStop(eid string) Point {
+func (g *GeomCache) GetStop(eid string) tlxy.Point {
 	return g.stops[eid]
 }
 
 // GetShape returns the coordinates for the cached shape.
-func (g *GeomCache) GetShape(eid string) []Point {
+func (g *GeomCache) GetShape(eid string) []tlxy.Point {
 	return g.shapes[eid].Line
 }
 
@@ -65,7 +63,7 @@ func (g *GeomCache) GetShapeInfo(eid string) ShapeInfo {
 	return g.shapes[eid]
 }
 
-func (g *GeomCache) AddShapeGeom(eid string, line []Point, dists []float64) {
+func (g *GeomCache) AddShapeGeom(eid string, line []tlxy.Point, dists []float64) {
 	// Check if already exists, re-use slice to reduce mem
 	for _, s := range g.shapes {
 		if tlxy.LineEquals(line, s.Line) {
@@ -95,8 +93,8 @@ func (g *GeomCache) AddShapeGeom(eid string, line []Point, dists []float64) {
 }
 
 // MakeShape returns geometry for the given stops.
-func (g *GeomCache) MakeShape(stopids ...string) ([]Point, []float64, error) {
-	var line []Point
+func (g *GeomCache) MakeShape(stopids ...string) ([]tlxy.Point, []float64, error) {
+	var line []tlxy.Point
 	var dists []float64
 	for _, stopid := range stopids {
 		newPoint, ok := g.stops[stopid]
@@ -153,7 +151,7 @@ func (g *GeomCache) setStopTimeDists(shapeId string, patternId int, sts []tl.Sto
 	stopPositions, ok := g.stopPositions[stopPositionsKey]
 	if !ok {
 		// Generate the stop-to-stop geometry as fallback
-		stopLine := make([]Point, len(sts))
+		stopLine := make([]tlxy.Point, len(sts))
 		for i := 0; i < len(sts); i++ {
 			point, ok := g.stops[sts[i].StopID]
 			if !ok {
@@ -162,7 +160,7 @@ func (g *GeomCache) setStopTimeDists(shapeId string, patternId int, sts []tl.Sto
 			stopLine[i] = point
 		}
 
-		var shapeLine []Point
+		var shapeLine []tlxy.Point
 		if si, ok := g.shapes[shapeId]; ok {
 			shapeLine = si.Line
 			length = si.DistLength

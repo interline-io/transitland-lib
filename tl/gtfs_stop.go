@@ -18,14 +18,14 @@ type Stop struct {
 	StopLon            float64 `db:"-"`
 	ZoneID             string
 	StopURL            string
-	TtsStopName        String
-	PlatformCode       String
+	TtsStopName        tt.String
+	PlatformCode       tt.String
 	LocationType       int
-	ParentStation      Key
+	ParentStation      tt.Key
 	StopTimezone       string
 	WheelchairBoarding int
-	LevelID            Key
-	Geometry           Point `csv:"-" db:"geometry"`
+	LevelID            tt.Key
+	Geometry           tt.Point `csv:"-" db:"geometry"`
 	BaseEntity
 }
 

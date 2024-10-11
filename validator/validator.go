@@ -77,8 +77,8 @@ func NewResult(evaluateAt time.Time, evaluateAtLocal time.Time) *Result {
 type ResultDetails struct {
 	SHA1                 tt.String                      `json:"sha1"`
 	Timezone             tt.String                      `json:"timezone"`
-	EarliestCalendarDate tl.Date                        `json:"earliest_calendar_date"`
-	LatestCalendarDate   tl.Date                        `json:"latest_calendar_date"`
+	EarliestCalendarDate tt.Date                        `json:"earliest_calendar_date"`
+	LatestCalendarDate   tt.Date                        `json:"latest_calendar_date"`
 	Agencies             []tl.Agency                    `json:"agencies"`
 	Routes               []tl.Route                     `json:"routes"`
 	Stops                []tl.Stop                      `json:"stops"`

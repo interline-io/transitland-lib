@@ -28,7 +28,7 @@ type FieldInfo struct {
 }
 
 // FieldMap contains all the parsed tags for a struct.
-type FieldMap = map[string]*FieldInfo
+type FieldMap map[string]*FieldInfo
 
 // Cache caches the result of field/tag parsing for each type.
 type Cache struct {

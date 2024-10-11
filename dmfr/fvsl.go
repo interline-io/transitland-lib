@@ -4,12 +4,13 @@ import (
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // FeedVersionServiceLevel .
 type FeedVersionServiceLevel struct {
-	StartDate tl.Date
-	EndDate   tl.Date
+	StartDate tt.Date
+	EndDate   tt.Date
 	Monday    int
 	Tuesday   int
 	Wednesday int

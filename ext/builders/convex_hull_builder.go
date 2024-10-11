@@ -11,8 +11,8 @@ import (
 //////////
 
 type AgencyGeometry struct {
-	AgencyID tl.Key
-	Geometry tl.Polygon
+	AgencyID tt.Key
+	Geometry tt.Polygon
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -28,7 +28,7 @@ func (ent *AgencyGeometry) TableName() string {
 //////////
 
 type FeedVersionGeometry struct {
-	Geometry tl.Polygon
+	Geometry tt.Polygon
 	tl.MinEntity
 	tl.FeedVersionEntity
 }

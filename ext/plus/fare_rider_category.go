@@ -3,6 +3,7 @@ package plus
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // FareRiderCategory fare_rider_categories.txt
@@ -10,8 +11,8 @@ type FareRiderCategory struct {
 	FareID           string  `csv:"fare_id"`
 	RiderCategoryID  int     `csv:"rider_category_id"`
 	Price            float64 `csv:"price"`
-	ExpirationDate   tl.Date `csv:"expiration_date"`
-	CommencementDate tl.Date `csv:"commencement_date"`
+	ExpirationDate   tt.Date `csv:"expiration_date"`
+	CommencementDate tt.Date `csv:"commencement_date"`
 	tl.BaseEntity
 }
 

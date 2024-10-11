@@ -1,18 +1,21 @@
 package dmfr
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
+)
 
 type FeedFetch struct {
 	FeedID        int
 	URLType       string
 	URL           string
 	Success       bool
-	FetchedAt     tl.Time
-	FetchError    tl.String
-	ResponseSize  tl.Int
-	ResponseCode  tl.Int
-	ResponseSHA1  tl.String
-	FeedVersionID tl.Int // optional field, don't use tl.FeedVersionEntity
+	FetchedAt     tt.Time
+	FetchError    tt.String
+	ResponseSize  tt.Int
+	ResponseCode  tt.Int
+	ResponseSHA1  tt.String
+	FeedVersionID tt.Int // optional field, don't use tl.FeedVersionEntity
 	tl.Timestamps
 	tl.DatabaseEntity
 }
