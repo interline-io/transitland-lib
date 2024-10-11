@@ -13,7 +13,7 @@ type CalendarDate struct {
 	ServiceID     string    `csv:",required"`
 	Date          time.Time `csv:",required"`
 	ExceptionType int       `csv:",required"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // Errors for this Entity.

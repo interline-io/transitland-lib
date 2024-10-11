@@ -10,7 +10,7 @@ type Area struct {
 	AreaName  tt.String
 	AgencyIDs tt.Strings `csv:"-" db:"agency_ids"` // interline ext
 	Geometry  tt.Polygon `csv:"-"`                 // interline ext
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *Area) EntityKey() string {

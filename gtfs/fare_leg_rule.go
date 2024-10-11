@@ -15,7 +15,7 @@ type FareLegRule struct {
 	NetworkID     tt.String
 	FareProductID tt.String
 	TransferOnly  tt.Int // interline ext
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *FareLegRule) String() string {

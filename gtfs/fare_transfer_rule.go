@@ -17,7 +17,7 @@ type FareTransferRule struct {
 	FareTransferType    tt.Int
 	FareProductID       tt.String
 	FilterFareProductID tt.String // proposed extension
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *FareTransferRule) String() string {

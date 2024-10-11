@@ -9,7 +9,7 @@ type FareMedia struct {
 	FareMediaID   tt.String
 	FareMediaName tt.String
 	FareMediaType tt.Int
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *FareMedia) EntityKey() string {

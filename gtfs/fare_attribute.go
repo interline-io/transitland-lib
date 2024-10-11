@@ -14,7 +14,7 @@ type FareAttribute struct {
 	Transfers        tt.Int
 	AgencyID         tt.Key
 	TransferDuration int
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns the ID or FareID.

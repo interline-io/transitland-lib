@@ -26,7 +26,7 @@ type Stop struct {
 	WheelchairBoarding int
 	LevelID            tt.Key
 	Geometry           tt.Point `csv:"-" db:"geometry"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // SetCoordinates takes a [2]float64 and sets the Stop's lon,lat

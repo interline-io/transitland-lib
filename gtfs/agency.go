@@ -12,7 +12,7 @@ type Agency struct {
 	AgencyPhone    string
 	AgencyFareURL  string
 	AgencyEmail    string
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns the ID or AgencyID.

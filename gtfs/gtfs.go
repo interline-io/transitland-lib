@@ -7,7 +7,6 @@ import (
 )
 
 type EntityMap = tt.EntityMap
-type BaseEntity = tt.BaseEntity
 
 func entID(id int, gtfsid string) string {
 	if id > 0 {

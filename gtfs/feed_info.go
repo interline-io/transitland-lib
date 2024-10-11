@@ -18,7 +18,7 @@ type FeedInfo struct {
 	DefaultLang       tt.String
 	FeedContactEmail  tt.String
 	FeedContactURL    tt.String
-	BaseEntity
+	tt.BaseEntity
 }
 
 // Errors for this Entity.

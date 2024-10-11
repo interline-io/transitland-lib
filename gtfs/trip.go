@@ -21,7 +21,7 @@ type Trip struct {
 	StopPatternID        int        `csv:"-"`
 	JourneyPatternID     string     `csv:"-"`
 	JourneyPatternOffset int        `csv:"-"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns the ID or TripID.

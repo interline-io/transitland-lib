@@ -19,7 +19,7 @@ type FareProduct struct {
 	DurationType    tt.Int   // proposed extension
 	RiderCategoryID tt.Key   // proposed extension
 	FareMediaID     tt.Key   // proposed extension
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *FareProduct) String() string {

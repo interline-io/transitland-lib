@@ -14,7 +14,7 @@ type Translation struct {
 	RecordID       tt.String
 	RecordSubID    tt.String
 	FieldValue     tt.String
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *Translation) Filename() string {

@@ -22,7 +22,7 @@ type Route struct {
 	NetworkID         tt.String
 	AsRoute           tt.Int
 	Geometry          tt.Geometry `csv:"-" db:"-"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns ID or RouteID.

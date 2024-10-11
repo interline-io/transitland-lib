@@ -17,7 +17,7 @@ type Attribution struct {
 	AttributionURL   tt.String
 	AttributionEmail tt.String
 	AttributionPhone tt.String
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *Attribution) Filename() string {

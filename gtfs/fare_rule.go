@@ -12,7 +12,7 @@ type FareRule struct {
 	OriginID      string
 	DestinationID string
 	ContainsID    string
-	BaseEntity
+	tt.BaseEntity
 }
 
 // Errors for this Entity.

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Pathway pathways.txt
@@ -22,7 +23,7 @@ type Pathway struct {
 	MinWidth            float64 `csv:"min_width"`
 	SignpostedAs        string  `csv:"signposted_as"`
 	ReverseSignpostedAs string  `csv:"reversed_signposted_as"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns the ID or StopID.

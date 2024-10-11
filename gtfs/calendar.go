@@ -21,7 +21,7 @@ type Calendar struct {
 	StartDate time.Time `csv:",required"`
 	EndDate   time.Time `csv:",required"`
 	Generated bool      `csv:"-" db:"generated"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns the ID or ServiceID.

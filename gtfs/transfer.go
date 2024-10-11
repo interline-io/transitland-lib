@@ -15,7 +15,7 @@ type Transfer struct {
 	ToTripID        tt.Key
 	TransferType    int
 	MinTransferTime tt.Int
-	BaseEntity
+	tt.BaseEntity
 }
 
 // Errors for this Entity.

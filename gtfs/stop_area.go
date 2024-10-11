@@ -9,7 +9,7 @@ import (
 type StopArea struct {
 	AreaID string
 	StopID string
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *StopArea) Filename() string {

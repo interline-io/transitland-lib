@@ -16,7 +16,7 @@ type Shape struct {
 	ShapeDistTraveled float64       `db:"-"`
 	Geometry          tt.LineString `db:"geometry" csv:"-"`
 	Generated         bool          `db:"generated" csv:"-"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns the ID or ShapeID.

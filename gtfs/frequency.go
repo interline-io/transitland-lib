@@ -14,7 +14,7 @@ type Frequency struct {
 	StartTime   tt.Seconds
 	EndTime     tt.Seconds
 	ExactTimes  int
-	BaseEntity
+	tt.BaseEntity
 }
 
 // RepeatCount returns the number of times this trip will be repeated.
