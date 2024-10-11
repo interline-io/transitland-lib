@@ -15,7 +15,7 @@ type FareLegRule struct {
 	NetworkID     tt.String
 	FareProductID tt.String
 	TransferOnly  tt.Int // interline ext
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *FareLegRule) String() string {
@@ -42,7 +42,7 @@ func (ent *FareLegRule) TableName() string {
 	return "gtfs_fare_leg_rules"
 }
 
-func (ent *FareLegRule) UpdateKeys(emap *EntityMap) error {
+func (ent *FareLegRule) UpdateKeys(emap *tt.EntityMap) error {
 	if ent.FromAreaID.Val != "" {
 		if fkid, ok := emap.Get("areas.txt", ent.FromAreaID.Val); ok {
 			ent.FromAreaID = tt.NewString(fkid)

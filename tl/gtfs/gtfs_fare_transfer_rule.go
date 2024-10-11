@@ -17,7 +17,7 @@ type FareTransferRule struct {
 	FareTransferType    tt.Int
 	FareProductID       tt.String
 	FilterFareProductID tt.String // proposed extension
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *FareTransferRule) String() string {
@@ -40,7 +40,7 @@ func (ent *FareTransferRule) TableName() string {
 	return "gtfs_fare_transfer_rules"
 }
 
-func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
+func (ent *FareTransferRule) UpdateKeys(emap *tt.EntityMap) error {
 	if ent.FromLegGroupID.Val != "" {
 		if _, ok := emap.Get("fare_leg_rules.txt", ent.FromLegGroupID.Val); !ok {
 			return causes.NewInvalidReferenceError("from_leg_group_id", ent.FromLegGroupID.Val)

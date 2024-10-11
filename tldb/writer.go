@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 )
 
 // OpenWriter opens & creates a db writer
@@ -152,14 +154,14 @@ func (writer *Writer) CreateFeedVersion(reader tl.Reader) (int, error) {
 		return 0, errors.New("reader required")
 	}
 	var err error
-	feed := tl.Feed{}
+	feed := dmfr.Feed{}
 	feed.FeedID = fmt.Sprintf("%d", time.Now().UnixNano())
 	feed.ID, err = writer.Adapter.Insert(&feed)
 	if err != nil {
 		return 0, err
 	}
 	fvid := 0
-	fv, err := tl.NewFeedVersionFromReader(reader)
+	fv, err := tlutil.NewFeedVersionFromReader(reader)
 	if err != nil {
 		return 0, err
 	}

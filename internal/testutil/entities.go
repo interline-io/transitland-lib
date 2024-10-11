@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 )
 
 // AllEntities iterates through all Reader entities, calling the specified callback.
@@ -36,7 +37,7 @@ func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
 	}
 
 	// services
-	svcs := tl.NewServicesFromReader(reader)
+	svcs := tlutil.NewServicesFromReader(reader)
 	for _, svc := range svcs {
 		cb(svc)
 	}

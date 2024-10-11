@@ -20,8 +20,8 @@ type RouteGeometry struct {
 	Length                tt.Float
 	MaxSegmentLength      tt.Float
 	FirstPointMaxDistance tt.Float
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *RouteGeometry) Filename() string {
@@ -59,7 +59,7 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 }
 
 // Counts the number of times a shape is used for each route,direction_id
-func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Shape:
 		pts := make([]tlxy.Point, v.Geometry.Val.NumCoords())

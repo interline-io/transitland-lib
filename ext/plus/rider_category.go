@@ -3,6 +3,7 @@ package plus
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // PlusRiderCategory rider_categories.txt
@@ -10,7 +11,7 @@ type PlusRiderCategory struct {
 	AgencyID                 string `csv:"agency_id"`
 	RiderCategoryID          int    `csv:"rider_category_id"`
 	RiderCategoryDescription string `csv:"rider_category_description"`
-	tl.BaseEntity
+	tt.BaseEntity
 }
 
 // Filename rider_categories.txt
@@ -24,7 +25,7 @@ func (ent *PlusRiderCategory) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *PlusRiderCategory) UpdateKeys(emap *tl.EntityMap) error {
+func (ent *PlusRiderCategory) UpdateKeys(emap *tt.EntityMap) error {
 	if len(ent.AgencyID) > 0 {
 		if fkey, ok := emap.GetEntity(&tl.Agency{AgencyID: ent.AgencyID}); ok {
 			ent.AgencyID = fkey

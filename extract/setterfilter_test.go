@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 func TestSetterFilter_Filter(t *testing.T) {
 	stop := &tl.Stop{StopID: "abc"}
 	route := &tl.Route{RouteID: "foo"}
-	emap := tl.NewEntityMap()
+	emap := tt.NewEntityMap()
 	tx := NewSetterFilter()
 	tx.AddValue(stop.Filename(), stop.EntityID(), "stop_name", "test")
 	tx.AddValue(route.Filename(), route.EntityID(), "route_type", "1000")

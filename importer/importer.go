@@ -10,7 +10,6 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/store"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -31,7 +30,7 @@ type Result struct {
 // ActivateFeedVersion .
 func ActivateFeedVersion(atx tldb.Adapter, feedId int, fvid int) error {
 	// Check FeedState exists
-	if _, err := dmfr.GetFeedState(atx, feedId); err != nil {
+	if _, err := tldb.GetFeedState(atx, feedId); err != nil {
 		return err
 	}
 	// sqlite3 only supports "UPDATE ... FROM" in versions 3.33 and higher
@@ -48,7 +47,7 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV
 	fvi := dmfr.FeedVersionImport{InProgress: true}
 	fvi.FeedVersionID = opts.FeedVersionID
-	fv := tl.FeedVersion{}
+	fv := dmfr.FeedVersion{}
 	fv.ID = opts.FeedVersionID
 	if err := adapter.Find(&fv); err != nil {
 		return Result{FeedVersionImport: fvi}, err
@@ -126,7 +125,7 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 }
 
 // importFeedVersion .
-func importFeedVersionTx(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+func importFeedVersionTx(atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader

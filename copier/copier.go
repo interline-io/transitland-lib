@@ -17,6 +17,7 @@ import (
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -26,16 +27,16 @@ import (
 
 // Prepare is called before general copying begins.
 type Prepare interface {
-	Prepare(tl.Reader, *tl.EntityMap) error
+	Prepare(tl.Reader, *tt.EntityMap) error
 }
 
 // Filter is called before validation.
 type Filter interface {
-	Filter(tl.Entity, *tl.EntityMap) error
+	Filter(tl.Entity, *tt.EntityMap) error
 }
 
 type ExpandFilter interface {
-	Expand(tl.Entity, *tl.EntityMap) ([]tl.Entity, bool, error)
+	Expand(tl.Entity, *tt.EntityMap) ([]tl.Entity, bool, error)
 }
 
 // Validator is called for each entity.
@@ -45,12 +46,12 @@ type Validator interface {
 
 // AfterValidator is called for each fully validated entity before writing.
 type AfterValidator interface {
-	AfterValidator(tl.Entity, *tl.EntityMap) error
+	AfterValidator(tl.Entity, *tt.EntityMap) error
 }
 
 // AfterWrite is called for after writing each entity.
 type AfterWrite interface {
-	AfterWrite(string, tl.Entity, *tl.EntityMap) error
+	AfterWrite(string, tl.Entity, *tt.EntityMap) error
 }
 
 // Extension is run after normal copying has completed.
@@ -151,7 +152,7 @@ type Copier struct {
 	// book keeping
 	geomCache *geomcache.GeomCache
 	result    *Result
-	EntityMap *tl.EntityMap
+	EntityMap *tt.EntityMap
 }
 
 // Quiet copy
@@ -215,7 +216,7 @@ func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error
 	// Default Markers
 	copier.Marker = newYesMarker()
 	// Default EntityMap
-	copier.EntityMap = tl.NewEntityMap()
+	copier.EntityMap = tt.NewEntityMap()
 	// Set the default BatchSize
 	if copier.BatchSize == 0 {
 		copier.BatchSize = 1_000_000
@@ -471,7 +472,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 
 	// UpdateKeys is handled separately from other validators.
 	var referr error
-	if extEnt, ok := ent.(tl.EntityWithReferences); ok {
+	if extEnt, ok := ent.(tt.EntityWithReferences); ok {
 		referr = extEnt.UpdateKeys(copier.EntityMap)
 	}
 
@@ -905,7 +906,7 @@ func (copier *Copier) copyFaresV2() error {
 func (copier *Copier) copyCalendars() error {
 	// Get Calendars as Services
 	duplicateServices := []*tl.Calendar{}
-	svcs := map[string]*tl.Service{}
+	svcs := map[string]*tlutil.Service{}
 	for ent := range copier.Reader.Calendars() {
 		if !copier.isMarked(&tl.Calendar{}) {
 			continue
@@ -916,7 +917,7 @@ func (copier *Copier) copyCalendars() error {
 			duplicateServices = append(duplicateServices, &ent)
 			continue
 		}
-		svcs[ent.EntityID()] = tl.NewService(ent)
+		svcs[ent.EntityID()] = tlutil.NewService(ent)
 	}
 
 	// Add the CalendarDates to Services
@@ -930,7 +931,7 @@ func (copier *Copier) copyCalendars() error {
 		}
 		svc, ok := svcs[ent.ServiceID]
 		if !ok {
-			svc = tl.NewService(cal)
+			svc = tlutil.NewService(cal)
 			svcs[ent.ServiceID] = svc
 		}
 		svc.AddCalendarDate(ent)

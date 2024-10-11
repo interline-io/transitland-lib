@@ -21,7 +21,7 @@ type Trip struct {
 	StopPatternID        int        `csv:"-"`
 	JourneyPatternID     string     `csv:"-"`
 	JourneyPatternOffset int        `csv:"-"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns the ID or TripID.
@@ -57,7 +57,7 @@ func (ent *Trip) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *Trip) UpdateKeys(emap *EntityMap) error {
+func (ent *Trip) UpdateKeys(emap *tt.EntityMap) error {
 	if serviceID, ok := emap.GetEntity(&Calendar{ServiceID: ent.ServiceID}); ok {
 		ent.ServiceID = serviceID
 	} else {

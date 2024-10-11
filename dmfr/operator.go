@@ -1,4 +1,4 @@
-package tl
+package dmfr
 
 import (
 	"database/sql/driver"
@@ -65,7 +65,7 @@ type OperatorAssociatedFeed struct {
 	ResolvedPlaces       tt.String  `json:"-"` // internal
 	OperatorID           tt.Int     `json:"-"` // internal
 	FeedID               int        `json:"-"` // internal
-	DatabaseEntity       `json:"-"` // internal
+	tt.DatabaseEntity    `json:"-"` // internal
 }
 
 func (o OperatorAssociatedFeed) TableName() string {

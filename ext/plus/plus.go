@@ -4,6 +4,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 func init() {
@@ -31,7 +32,7 @@ func (ext Ext) Entities() []tl.Entity {
 	}
 }
 
-func (ext *Ext) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (ext *Ext) Filter(ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		ext.defaultAgency = v.AgencyID

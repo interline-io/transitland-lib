@@ -3,6 +3,7 @@ package plus
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // StopAttribute stop_attributes.txt
@@ -12,7 +13,7 @@ type StopAttribute struct {
 	CardinalDirection string `csv:"cardinal_direction"`
 	RelativePosition  string `csv:"relative_position"`
 	StopCity          string `csv:"stop_city"`
-	tl.BaseEntity
+	tt.BaseEntity
 }
 
 // Filename stop_attributes.txt
@@ -26,7 +27,7 @@ func (ent *StopAttribute) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *StopAttribute) UpdateKeys(emap *tl.EntityMap) error {
+func (ent *StopAttribute) UpdateKeys(emap *tt.EntityMap) error {
 	if fkid, ok := emap.GetEntity(&tl.Stop{StopID: ent.StopID}); ok {
 		ent.StopID = fkid
 	} else {

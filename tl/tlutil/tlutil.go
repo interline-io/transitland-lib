@@ -1,12 +1,24 @@
-package tl
+package tlutil
 
 import (
 	"errors"
-	"strconv"
 	"time"
 
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/gtfs"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
+
+func NewShapeFromShapes(shapes []gtfs.Shape) gtfs.Shape {
+	return gtfs.NewShapeFromShapes(shapes)
+}
+
+func ValidateStopTimes(stoptimes []gtfs.StopTime) []error {
+	return gtfs.ValidateStopTimes(stoptimes)
+}
+
+/////////
 
 type canSHA1 interface {
 	SHA1() (string, error)
@@ -20,48 +32,9 @@ type canPath interface {
 	Path() string
 }
 
-// FeedVersion represents a single GTFS data source.
-type FeedVersion struct {
-	FeedID               int
-	SHA1                 string
-	SHA1Dir              string
-	File                 string
-	URL                  string
-	EarliestCalendarDate tt.Date
-	LatestCalendarDate   tt.Date
-	FetchedAt            time.Time
-	Fragment             tt.String
-	Name                 tt.String
-	Description          tt.String
-	CreatedBy            tt.String
-	UpdatedBy            tt.String
-	tt.DatabaseEntity
-	tt.Timestamps
-}
-
-// SetID .
-func (ent *FeedVersion) SetID(id int) {
-	ent.ID = id
-}
-
-// GetID .
-func (ent *FeedVersion) GetID() int {
-	return ent.ID
-}
-
-// EntityID .
-func (ent *FeedVersion) EntityID() string {
-	return strconv.Itoa(ent.ID)
-}
-
-// TableName sets the table name prefix.
-func (ent *FeedVersion) TableName() string {
-	return "feed_versions"
-}
-
 // NewFeedVersionFromReader returns a FeedVersion from a Reader.
-func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
-	fv := FeedVersion{}
+func NewFeedVersionFromReader(reader tl.Reader) (dmfr.FeedVersion, error) {
+	fv := dmfr.FeedVersion{}
 	// Perform basic GTFS validity checks
 	if errs := reader.ValidateStructure(); len(errs) > 0 {
 		return fv, errs[0]
@@ -90,7 +63,7 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	return fv, nil
 }
 
-func FeedVersionServiceBounds(reader Reader) (time.Time, time.Time, error) {
+func FeedVersionServiceBounds(reader tl.Reader) (time.Time, time.Time, error) {
 	var start time.Time
 	var end time.Time
 	for c := range reader.Calendars() {

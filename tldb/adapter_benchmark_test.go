@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 )
@@ -21,12 +22,12 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
-			feedid, err := adapter.Insert(&tl.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			feedid, err := adapter.Insert(&dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
 			if err != nil {
 				b.Error(err)
 			}
 			b.ResetTimer()
-			ent := tl.FeedVersion{FeedID: feedid}
+			ent := dmfr.FeedVersion{FeedID: feedid}
 			for i := 0; i < b.N; i++ {
 				_, err := adapter.Insert(&ent)
 				if err != nil {
@@ -48,12 +49,12 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
-			feedid, err := adapter.Insert(&tl.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			feedid, err := adapter.Insert(&dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
 			if err != nil {
 				b.Error(err)
 			}
 			b.ResetTimer()
-			ent := tl.FeedVersion{FeedID: feedid}
+			ent := dmfr.FeedVersion{FeedID: feedid}
 			q := adapter.DBX().Rebind(`INSERT INTO feed_versions(feed_id, file, earliest_calendar_date, latest_calendar_date, sha1, sha1_dir,fetched_at, created_at, updated_at, url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
 			for i := 0; i < b.N; i++ {
 				_, err := adapter.DBX().Exec(

@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,22 +28,22 @@ func TestRedateFilter(t *testing.T) {
 		StartDays   int
 		EndDays     int
 		ExpectError bool
-		ExpectSvc   tl.Service
+		ExpectSvc   tlutil.Service
 	}{
-		{"7/7 days", "2018-06-03", "2022-01-02", 7, 7, false, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-08"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/28 days", "2018-06-03", "2022-01-02", 7, 28, false, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/28 days sunday", "2018-06-03", "2022-01-02", 7, 28, false, tl.Service{Calendar: tl.Calendar{ServiceID: "SUN", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Sunday: 1}}},
-		{"7/28 days monday holiday", "2018-05-27", "2022-01-02", 7, 28, false, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Monday: 0, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/365 days", "2018-06-03", "2022-01-02", 7, 365, false, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/365 days monday holiday", "2018-05-27", "2022-01-02", 7, 365, false, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: 0, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/1 days monday start", "2018-06-04", "2022-01-03", 7, 1, false, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: 1}}},
-		{"1/1 days monday start", "2018-06-04", "2022-01-03", 1, 1, false, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: 1}}},
-		{"1/7 days monday start", "2018-06-04", "2022-01-03", 1, 7, false, tl.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-09"), Sunday: 1, Saturday: 1, Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"no start date", "", "2022-01-02", 7, 7, true, tl.Service{}},
-		{"no end date", "2018-06-04", "", 7, 7, true, tl.Service{}},
-		{"no source days", "2018-06-04", "2022-01-03", 0, 7, true, tl.Service{}},
-		{"no target days", "2018-06-04", "2022-01-03", 7, 0, true, tl.Service{}},
-		{"different weekday", "2018-06-04", "2022-01-04", 7, 7, true, tl.Service{}},
+		{"7/7 days", "2018-06-03", "2022-01-02", 7, 7, false, tlutil.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-08"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
+		{"7/28 days", "2018-06-03", "2022-01-02", 7, 28, false, tlutil.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
+		{"7/28 days sunday", "2018-06-03", "2022-01-02", 7, 28, false, tlutil.Service{Calendar: tl.Calendar{ServiceID: "SUN", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Sunday: 1}}},
+		{"7/28 days monday holiday", "2018-05-27", "2022-01-02", 7, 28, false, tlutil.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Monday: 0, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
+		{"7/365 days", "2018-06-03", "2022-01-02", 7, 365, false, tlutil.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
+		{"7/365 days monday holiday", "2018-05-27", "2022-01-02", 7, 365, false, tlutil.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: 0, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
+		{"7/1 days monday start", "2018-06-04", "2022-01-03", 7, 1, false, tlutil.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: 1}}},
+		{"1/1 days monday start", "2018-06-04", "2022-01-03", 1, 1, false, tlutil.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: 1}}},
+		{"1/7 days monday start", "2018-06-04", "2022-01-03", 1, 7, false, tlutil.Service{Calendar: tl.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-09"), Sunday: 1, Saturday: 1, Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
+		{"no start date", "", "2022-01-02", 7, 7, true, tlutil.Service{}},
+		{"no end date", "2018-06-04", "", 7, 7, true, tlutil.Service{}},
+		{"no source days", "2018-06-04", "2022-01-03", 0, 7, true, tlutil.Service{}},
+		{"no target days", "2018-06-04", "2022-01-03", 7, 0, true, tlutil.Service{}},
+		{"different weekday", "2018-06-04", "2022-01-04", 7, 7, true, tlutil.Service{}},
 	}
 	reader, err := tlcsv.NewReader(testutil.ExampleFeedBART.URL)
 	if err != nil {
@@ -73,7 +74,7 @@ func TestRedateFilter(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			svcs := tl.NewServicesFromReader(wr)
+			svcs := tlutil.NewServicesFromReader(wr)
 			found := false
 			v := tc.ExpectSvc
 			for _, svc := range svcs {

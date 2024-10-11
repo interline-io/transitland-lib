@@ -4,34 +4,6 @@ import (
 	"time"
 )
 
-// Entity provides an interface for GTFS entities.
-type Entity interface {
-	EntityID() string
-	Filename() string
-}
-
-type EntityWithReferences interface {
-	UpdateKeys(*EntityMap) error
-}
-
-type EntityWithID interface {
-	GetID() int
-}
-
-type EntityWithExtra interface {
-	SetExtra(string, string)
-	GetExtra(string) (string, bool)
-	ClearExtra()
-	ExtraKeys() []string
-}
-
-type EntityWithErrors interface {
-	Errors() []error
-	Warnings() []error
-	AddError(error)
-	AddWarning(error)
-}
-
 /////////
 
 // MinEntity provides minimum set of default methods.

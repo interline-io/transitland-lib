@@ -8,6 +8,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 )
 
 // s2D is two dimensional string slice
@@ -237,7 +238,7 @@ func (reader *Reader) Shapes() chan tl.Shape {
 	out := make(chan tl.Shape, bufferSize)
 	go func() {
 		for shapes := range reader.shapesByShapeID() {
-			shape := tl.NewShapeFromShapes(shapes)
+			shape := tlutil.NewShapeFromShapes(shapes)
 			shape.ShapeID = shapes[0].ShapeID
 			out <- shape
 		}

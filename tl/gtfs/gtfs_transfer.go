@@ -15,7 +15,7 @@ type Transfer struct {
 	ToTripID        tt.Key
 	TransferType    int
 	MinTransferTime tt.Int
-	BaseEntity
+	tt.BaseEntity
 }
 
 // Errors for this Entity.
@@ -46,7 +46,7 @@ func (ent *Transfer) TableName() string {
 }
 
 // UpdateKeys updates entity references.
-func (ent *Transfer) UpdateKeys(emap *EntityMap) error {
+func (ent *Transfer) UpdateKeys(emap *tt.EntityMap) error {
 	// Adjust StopIDs
 	if ent.FromStopID != "" {
 		if fromStopID, ok := emap.GetEntity(&Stop{StopID: ent.FromStopID}); ok {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type canCreateFV interface {
@@ -11,7 +12,7 @@ type canCreateFV interface {
 }
 
 type Filter interface {
-	Filter(tl.Entity, *tl.EntityMap) error
+	Filter(tl.Entity, *tt.EntityMap) error
 }
 
 type DirectCopierOptions struct{}
@@ -37,7 +38,7 @@ func (dc *DirectCopier) AddFilter(f Filter) error {
 }
 
 func (dc *DirectCopier) Copy() error {
-	emap := tl.NewEntityMap()
+	emap := tt.NewEntityMap()
 	var errs []error
 	cp := func(ent tl.Entity) {
 		sid := ent.EntityID()
@@ -47,7 +48,7 @@ func (dc *DirectCopier) Copy() error {
 				// errs = append(errs, err)
 			}
 		}
-		if extEnt, ok := ent.(tl.EntityWithReferences); ok {
+		if extEnt, ok := ent.(tt.EntityWithReferences); ok {
 			if err := extEnt.UpdateKeys(emap); err != nil {
 				errs = append(errs, fmt.Errorf("entity: %#v error: %s", ent, err))
 			}

@@ -3,7 +3,6 @@ package dmfr
 import (
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -18,9 +17,9 @@ type FeedVersionFileInfo struct {
 	SHA1         string
 	ValuesUnique tt.Counts
 	ValuesCount  tt.Counts
-	tl.FeedVersionEntity
-	tl.DatabaseEntity
-	tl.Timestamps
+	tt.FeedVersionEntity
+	tt.DatabaseEntity
+	tt.Timestamps
 }
 
 // EntityID .

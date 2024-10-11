@@ -1,6 +1,8 @@
 package empty
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"github.com/interline-io/transitland-lib/tl"
+)
 
 // Writer is a no-op writer.
 type Writer struct {

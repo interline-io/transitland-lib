@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -16,20 +17,20 @@ type tripInfo struct {
 
 type ScheduleChecker struct {
 	tripInfo map[string]tripInfo
-	services map[string]*tl.Service
+	services map[string]*tlutil.Service
 }
 
 func NewScheduleChecker() *ScheduleChecker {
 	return &ScheduleChecker{
 		tripInfo: map[string]tripInfo{},
-		services: map[string]*tl.Service{},
+		services: map[string]*tlutil.Service{},
 	}
 }
 
 // Validate gets a stream of entities from Copier to build up the cache.
 func (fi *ScheduleChecker) Validate(ent tl.Entity) []error {
 	switch v := ent.(type) {
-	case *tl.Service:
+	case *tlutil.Service:
 		fi.services[v.ServiceID] = v
 	case *tl.Trip:
 		ti := tripInfo{

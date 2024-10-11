@@ -12,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -45,7 +46,7 @@ func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []
 func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
 }
 
-func (cr *testErrorHandler) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (cr *testErrorHandler) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
 	var errs []error
 	if extEnt, ok := ent.(tl.EntityWithErrors); ok {
 		errs = append(errs, extEnt.Errors()...)

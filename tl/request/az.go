@@ -15,7 +15,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 )
 
 type Az struct {
@@ -24,7 +24,7 @@ type Az struct {
 	KeyPrefix string
 }
 
-func (r Az) Download(ctx context.Context, key string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
+func (r Az) Download(ctx context.Context, key string, secret dmfr.Secret, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
 	if key == "" {
 		return nil, 0, errors.New("key must not be empty")
 	}
@@ -41,7 +41,7 @@ func (r Az) Download(ctx context.Context, key string, secret tl.Secret, auth tl.
 	return rs.Body, 0, err
 }
 
-func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile io.Reader) error {
+func (r Az) Upload(ctx context.Context, key string, secret dmfr.Secret, uploadFile io.Reader) error {
 	if key == "" {
 		return errors.New("key must not be empty")
 	}
@@ -58,7 +58,7 @@ func (r Az) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 	return err
 }
 
-func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition string, secret tl.Secret) (string, error) {
+func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition string, secret dmfr.Secret) (string, error) {
 	if key == "" {
 		return "", errors.New("key must not be empty")
 	}

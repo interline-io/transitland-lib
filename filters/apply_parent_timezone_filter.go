@@ -1,6 +1,9 @@
 package filters
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
+)
 
 // ApplyParentTimezoneFilter sets timezone based on the default agency timezone or parent stop timezone
 // Can be used with NormalizeTimezoneFilter
@@ -9,7 +12,7 @@ type ApplyParentTimezoneFilter struct {
 	parentStopTimezones   map[string]string
 }
 
-func (e *ApplyParentTimezoneFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (e *ApplyParentTimezoneFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
 	// Remember filter happens before UpdateKeys or final ID available
 	switch v := ent.(type) {
 	case *tl.Agency:

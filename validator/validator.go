@@ -19,6 +19,7 @@ import (
 	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -52,7 +53,7 @@ type Result struct {
 	Details                 ResultDetails                          `json:"details" db:"-"`
 	Errors                  map[string]*ValidationReportErrorGroup `json:"errors" db:"-"`
 	Warnings                map[string]*ValidationReportErrorGroup `json:"warnings" db:"-"`
-	tl.BaseEntity
+	tt.BaseEntity
 }
 
 func (e *Result) TableName() string {
@@ -111,7 +112,7 @@ type ValidationReportErrorGroup struct {
 	Level              int
 	Count              int
 	Errors             []ValidationReportErrorExemplar `db:"-"`
-	tl.DatabaseEntity
+	tt.DatabaseEntity
 }
 
 func (e *ValidationReportErrorGroup) TableName() string {
@@ -128,7 +129,7 @@ type ValidationReportErrorExemplar struct {
 	Value                        string
 	Geometry                     tt.Geometry
 	EntityJson                   tt.Map
-	tl.DatabaseEntity
+	tt.DatabaseEntity
 }
 
 func (e *ValidationReportErrorExemplar) TableName() string {
@@ -153,7 +154,7 @@ type ValidationReportTripUpdateStat struct {
 	TripRtAddedCount        int
 	TripRtNotFoundIDs       tt.Strings `db:"trip_rt_not_found_ids"`
 	TripRtNotFoundCount     int
-	tl.DatabaseEntity
+	tt.DatabaseEntity
 }
 
 func (e *ValidationReportTripUpdateStat) TableName() string {
@@ -178,7 +179,7 @@ type ValidationReportVehiclePositionStat struct {
 	TripRtAddedCount        int
 	TripRtNotFoundIDs       tt.Strings `db:"trip_rt_not_found_ids"`
 	TripRtNotFoundCount     int
-	tl.DatabaseEntity
+	tt.DatabaseEntity
 }
 
 func (e *ValidationReportVehiclePositionStat) TableName() string {
@@ -316,7 +317,7 @@ func (v *Validator) ValidateStatic(reader tl.Reader, evaluateAt time.Time, evalu
 	}
 
 	// get sha1 and service period; continue even if errors
-	fv, err := tl.NewFeedVersionFromReader(reader)
+	fv, err := tlutil.NewFeedVersionFromReader(reader)
 	_ = err
 	details.SHA1 = tt.NewString(fv.SHA1)
 	details.EarliestCalendarDate = fv.EarliestCalendarDate
@@ -591,7 +592,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 			return err
 		}
 		jb := bytes.NewReader(jj)
-		if err := store.Upload(context.Background(), result.File.Val, tl.Secret{}, jb); err != nil {
+		if err := store.Upload(context.Background(), result.File.Val, dmfr.Secret{}, jb); err != nil {
 			return err
 		}
 	}

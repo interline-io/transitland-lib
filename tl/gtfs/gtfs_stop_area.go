@@ -9,7 +9,7 @@ import (
 type StopArea struct {
 	AreaID string
 	StopID string
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *StopArea) Filename() string {
@@ -20,7 +20,7 @@ func (ent *StopArea) TableName() string {
 	return "gtfs_stop_areas"
 }
 
-func (ent *StopArea) UpdateKeys(emap *EntityMap) error {
+func (ent *StopArea) UpdateKeys(emap *tt.EntityMap) error {
 	if fkid, ok := emap.Get("areas.txt", ent.AreaID); ok {
 		ent.AreaID = fkid
 	} else {

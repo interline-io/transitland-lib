@@ -7,13 +7,13 @@ import (
 	"io"
 	"net/url"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/jlaffaye/ftp"
 )
 
 type Ftp struct{}
 
-func (Ftp) Download(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
+func (Ftp) Download(ctx context.Context, ustr string, secret dmfr.Secret, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
 	// Download FTP
 	u, err := url.Parse(ustr)
 	if err != nil {

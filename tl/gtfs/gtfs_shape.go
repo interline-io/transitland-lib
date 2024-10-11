@@ -17,7 +17,7 @@ type Shape struct {
 	ShapeDistTraveled float64       `db:"-"`
 	Geometry          tt.LineString `db:"geometry" csv:"-"`
 	Generated         bool          `db:"generated" csv:"-"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // ValidateShapes returns errors for an array of shapes.

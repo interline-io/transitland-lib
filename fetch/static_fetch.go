@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/stats"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -19,7 +20,7 @@ import (
 )
 
 type StaticFetchResult struct {
-	FeedVersion      *tl.FeedVersion
+	FeedVersion      *dmfr.FeedVersion
 	ValidationResult *validator.Result
 	Result
 }
@@ -52,7 +53,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		defer reader.Close()
 
 		// Get initialized FeedVersion
-		fv, err := tl.NewFeedVersionFromReader(reader)
+		fv, err := tlutil.NewFeedVersionFromReader(reader)
 		if err != nil {
 			vr.Error = err
 			return vr, nil
@@ -70,7 +71,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		}
 
 		// Is this SHA1 already present?
-		checkfvid := tl.FeedVersion{}
+		checkfvid := dmfr.FeedVersion{}
 		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", fv.SHA1, fv.SHA1Dir)
 		if err == nil {
 			// Already present

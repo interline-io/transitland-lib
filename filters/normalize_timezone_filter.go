@@ -10,7 +10,7 @@ import (
 type NormalizeTimezoneFilter struct{}
 
 // Validate .
-func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		n, ok := tt.IsValidTimezone(v.AgencyTimezone)

@@ -13,8 +13,8 @@ import (
 type AgencyGeometry struct {
 	AgencyID tt.Key
 	Geometry tt.Polygon
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *AgencyGeometry) Filename() string {
@@ -29,8 +29,8 @@ func (ent *AgencyGeometry) TableName() string {
 
 type FeedVersionGeometry struct {
 	Geometry tt.Polygon
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *FeedVersionGeometry) Filename() string {
@@ -58,7 +58,7 @@ func NewConvexHullBuilder() *ConvexHullBuilder {
 }
 
 // AfterWrite keeps track of which routes/agencies visit which stops
-func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Stop:
 		pp.stops[eid] = &stopGeom{

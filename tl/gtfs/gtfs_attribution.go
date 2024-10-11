@@ -17,7 +17,7 @@ type Attribution struct {
 	AttributionURL   tt.String
 	AttributionEmail tt.String
 	AttributionPhone tt.String
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *Attribution) Filename() string {
@@ -58,7 +58,7 @@ func (ent *Attribution) Errors() (errs []error) {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
+func (ent *Attribution) UpdateKeys(emap *tt.EntityMap) error {
 	// Adjust AgencyID
 	if ent.AgencyID.Val != "" {
 		if eid, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Val}); ok {

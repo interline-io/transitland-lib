@@ -3,7 +3,6 @@ package dmfr
 import (
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -14,9 +13,9 @@ type FeedVersionServiceWindow struct {
 	LatestCalendarDate   tt.Date
 	FallbackWeek         tt.Date
 	DefaultTimezone      tt.String
-	tl.FeedVersionEntity
-	tl.DatabaseEntity
-	tl.Timestamps
+	tt.FeedVersionEntity
+	tt.DatabaseEntity
+	tt.Timestamps
 }
 
 func (fvi *FeedVersionServiceWindow) EntityID() string {

@@ -14,7 +14,7 @@ type Frequency struct {
 	StartTime   tt.Seconds
 	EndTime     tt.Seconds
 	ExactTimes  int
-	BaseEntity
+	tt.BaseEntity
 }
 
 // RepeatCount returns the number of times this trip will be repeated.
@@ -62,7 +62,7 @@ func (ent *Frequency) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *Frequency) UpdateKeys(emap *EntityMap) error {
+func (ent *Frequency) UpdateKeys(emap *tt.EntityMap) error {
 	// Adjust TripID
 	if tripID, ok := emap.GetEntity(&Trip{TripID: ent.TripID}); ok {
 		ent.TripID = tripID

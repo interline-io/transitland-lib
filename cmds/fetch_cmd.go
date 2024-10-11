@@ -11,7 +11,6 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/fetch"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
 	"github.com/spf13/pflag"
@@ -19,7 +18,7 @@ import (
 
 type FetchCommandResult struct {
 	Result           fetch.Result
-	FeedVersion      *tl.FeedVersion
+	FeedVersion      *dmfr.FeedVersion
 	ValidationResult *validator.Result
 	FatalError       error
 }
@@ -118,7 +117,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 		if err != nil {
 			return err
 		}
-		feeds := []tl.Feed{}
+		feeds := []dmfr.Feed{}
 		err = cmd.Adapter.Select(&feeds, qstr, qargs...)
 		if err != nil {
 			return err
@@ -139,7 +138,7 @@ func (cmd *FetchCommand) Run() error {
 	var toFetch []fetchJob
 	for _, osid := range cmd.FeedIDs {
 		// Get feed, create if not present and FeedCreate is specified
-		feed := tl.Feed{}
+		feed := dmfr.Feed{}
 		if err := adapter.Get(&feed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, osid); err == sql.ErrNoRows && cmd.CreateFeed {
 			feed.FeedID = osid
 			feed.Spec = "gtfs"
@@ -150,7 +149,7 @@ func (cmd *FetchCommand) Run() error {
 			return fmt.Errorf("problem with feed '%s': %s", osid, err.Error())
 		}
 		// Create feed state if not exists
-		if _, err := dmfr.GetFeedState(adapter, feed.ID); err != nil {
+		if _, err := tldb.GetFeedState(adapter, feed.ID); err != nil {
 			return err
 		}
 		// Prepare options for this fetch

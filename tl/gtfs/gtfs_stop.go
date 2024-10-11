@@ -26,7 +26,7 @@ type Stop struct {
 	WheelchairBoarding int
 	LevelID            tt.Key
 	Geometry           tt.Point `csv:"-" db:"geometry"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // SetCoordinates takes a [2]float64 and sets the Stop's lon,lat
@@ -104,7 +104,7 @@ func (ent *Stop) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *Stop) UpdateKeys(emap *EntityMap) error {
+func (ent *Stop) UpdateKeys(emap *tt.EntityMap) error {
 	// Pathway Level
 	if ent.LevelID.Val != "" {
 		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Val}); ok {

@@ -23,10 +23,10 @@ type StopTime struct {
 	ShapeDistTraveled tt.Float
 	Timepoint         tt.Int
 	Interpolated      tt.Int `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
-	MinEntity
-	ErrorEntity
-	ExtraEntity
-	FeedVersionEntity
+	tt.MinEntity
+	tt.ErrorEntity
+	tt.ExtraEntity
+	tt.FeedVersionEntity
 }
 
 // Errors for this Entity.
@@ -64,7 +64,7 @@ func (ent *StopTime) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *StopTime) UpdateKeys(emap *EntityMap) error {
+func (ent *StopTime) UpdateKeys(emap *tt.EntityMap) error {
 	if tripID, ok := emap.GetEntity(&Trip{TripID: ent.TripID}); ok {
 		ent.TripID = tripID
 	} else {

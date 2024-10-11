@@ -8,6 +8,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -74,7 +75,7 @@ func newRedateFilterFromJson(args string) (*RedateFilter, error) {
 	return NewRedateFilter(opts.SourceDate.Val, opts.TargetDate.Val, int(a), int(b), opts.DOWAlign.Val)
 }
 
-func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (tf *RedateFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Trip:
 		if tf.excluded[v.ServiceID] {
@@ -84,7 +85,7 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 		if tf.excluded[v.ServiceID] {
 			return fmt.Errorf("calendar date service_id not in redate window")
 		}
-	case *tl.Service:
+	case *tlutil.Service:
 		// Copy active service days in window into new calendar
 		active := false
 		sourceDate := tf.SourceDate
@@ -111,7 +112,7 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 			}
 		}
 
-		newSvc := tl.NewService(tl.Calendar{ServiceID: v.ServiceID, StartDate: targetDate})
+		newSvc := tlutil.NewService(tl.Calendar{ServiceID: v.ServiceID, StartDate: targetDate})
 		newSvc.ID = v.ID
 		for i := 1; i <= tf.TargetDays; i++ {
 			if v.IsActive(sourceDate) {

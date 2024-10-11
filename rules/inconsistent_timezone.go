@@ -1,6 +1,8 @@
 package rules
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"github.com/interline-io/transitland-lib/tl"
+)
 
 // InconsistentTimezoneError reports when agency.txt has more than 1 unique timezone present.
 type InconsistentTimezoneError struct {

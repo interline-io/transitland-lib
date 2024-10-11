@@ -2,6 +2,7 @@ package filters
 
 import (
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // ApplDefaultAgencyFilter sets a default agency_id value in relevant fields when the value is empty, e.g. routes.txt agency_id.
@@ -11,7 +12,7 @@ type ApplyDefaultAgencyFilter struct {
 	agencyCount     int
 }
 
-func (e *ApplyDefaultAgencyFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (e *ApplyDefaultAgencyFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		if e.defaultAgencyId == "" {

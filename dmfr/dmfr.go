@@ -1,11 +1,6 @@
 // Package dmfr provides tool and utilities for working with DMFR files and database representations of feeds and feed versions.
 package dmfr
 
-import (
-	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/tldb"
-)
-
 // feed_states
 // feed_fetches
 // feed_version_gtfs_imports
@@ -120,23 +115,4 @@ func GetFeedVersionTables() FeedVersionTables {
 			"tl_validation_reports",
 		},
 	}
-}
-
-func FeedVersionTableDelete(atx tldb.Adapter, table string, fvid int, ifExists bool) error {
-	// check if table exists before proceeding
-	if ifExists {
-		ok, err := atx.TableExists(table)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return nil
-		}
-	}
-	where := sq.Eq{"feed_version_id": fvid}
-	_, err := atx.Sqrl().Delete(table).Where(where).Exec()
-	if err != nil {
-		return err
-	}
-	return nil
 }

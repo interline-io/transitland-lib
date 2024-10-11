@@ -1,11 +1,13 @@
 package gtfs
 
+import "github.com/interline-io/transitland-lib/tl/tt"
+
 // Level levels.txt
 type Level struct {
 	LevelID    string  `csv:",required"`
 	LevelIndex float64 `csv:",required"`
 	LevelName  string  `csv:"level_name"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns the ID or StopID.

@@ -13,7 +13,7 @@ type CalendarDate struct {
 	ServiceID     string    `csv:",required"`
 	Date          time.Time `csv:",required"`
 	ExceptionType int       `csv:",required"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // Errors for this Entity.
@@ -38,7 +38,7 @@ func (ent *CalendarDate) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *CalendarDate) UpdateKeys(emap *EntityMap) error {
+func (ent *CalendarDate) UpdateKeys(emap *tt.EntityMap) error {
 	if serviceID, ok := emap.GetEntity(&Calendar{ServiceID: ent.ServiceID}); ok {
 		ent.ServiceID = serviceID
 	} else {

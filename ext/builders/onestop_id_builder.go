@@ -5,14 +5,15 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/mmcloughlin/geohash"
 )
 
 type StopOnestopID struct {
 	StopID    string
 	OnestopID string
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *StopOnestopID) Filename() string {
@@ -26,8 +27,8 @@ func (ent *StopOnestopID) TableName() string {
 type RouteOnestopID struct {
 	RouteID   string
 	OnestopID string
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *RouteOnestopID) Filename() string {
@@ -40,8 +41,8 @@ func (ent *RouteOnestopID) TableName() string {
 type AgencyOnestopID struct {
 	AgencyID  string
 	OnestopID string
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *AgencyOnestopID) Filename() string {
@@ -70,7 +71,7 @@ func NewOnestopIDBuilder() *OnestopIDBuilder {
 	}
 }
 
-func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		pp.agencyNames[eid] = v.AgencyName

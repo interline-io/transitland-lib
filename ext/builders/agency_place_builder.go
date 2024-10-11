@@ -17,8 +17,8 @@ type AgencyPlace struct {
 	Adm0name tt.String
 	Count    int
 	Rank     float64
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (rs *AgencyPlace) TableName() string {
@@ -47,7 +47,7 @@ func NewAgencyPlaceBuilder() *AgencyPlaceBuilder {
 	}
 }
 
-func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		pp.agencyStops[eid] = map[string]int{}

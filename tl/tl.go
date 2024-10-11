@@ -3,52 +3,9 @@ package tl
 
 import (
 	_ "embed"
-	"runtime/debug"
-	"strings"
 
 	"github.com/interline-io/transitland-lib/tl/gtfs"
-	"github.com/interline-io/transitland-lib/tl/tt"
 )
-
-// Read version from compiled in git details
-var Version VersionInfo
-
-func init() {
-	Version = getVersion()
-}
-
-type VersionInfo struct {
-	Tag        string
-	Commit     string
-	CommitTime string
-}
-
-func getVersion() VersionInfo {
-	ret := VersionInfo{}
-	info, _ := debug.ReadBuildInfo()
-	tagPrefix := "main.tag="
-	for _, kv := range info.Settings {
-		switch kv.Key {
-		case "vcs.revision":
-			ret.Commit = kv.Value
-		case "vcs.time":
-			ret.CommitTime = kv.Value
-		case "-ldflags":
-			for _, ss := range strings.Split(kv.Value, " ") {
-				if strings.HasPrefix(ss, tagPrefix) {
-					ret.Tag = strings.TrimPrefix(ss, tagPrefix)
-				}
-			}
-		}
-	}
-	return ret
-}
-
-// GTFSVERSION is the commit for the spec reference.md file.
-var GTFSVERSION = "11a49075c1f50d0130b934833b7eeb3fe518961c"
-
-// GTFSRTVERSION is the commit for the gtfs-realtime.proto file.
-var GTFSRTVERSION = "6fcc3800b15954227af7335d571791738afb1a67"
 
 type Agency = gtfs.Agency
 type Area = gtfs.Area
@@ -75,27 +32,82 @@ type FareRule = gtfs.FareRule
 type Translation = gtfs.Translation
 type Transfer = gtfs.Transfer
 
-type EntityMap = tt.EntityMap
-type Entity = tt.Entity
+//////////
 
-type EntityWithErrors = tt.EntityWithErrors
-type DatabaseEntity = tt.DatabaseEntity
-type Timestamps = tt.Timestamps
-type FeedVersionEntity = tt.FeedVersionEntity
-type MinEntity = tt.MinEntity
-type BaseEntity = tt.BaseEntity
-type EntityWithReferences = tt.EntityWithReferences
-type EntityWithExtra = tt.EntityWithExtra
-type EntityWithID = tt.EntityWithID
-
-func NewEntityMap() *EntityMap {
-	return tt.NewEntityMap()
+// Reader defines an interface for reading entities from a GTFS feed.
+type Reader interface {
+	Open() error
+	Close() error
+	ValidateStructure() []error
+	StopTimesByTripID(...string) chan []StopTime
+	String() string
+	// Entities
+	ReadEntities(c interface{}) error
+	Stops() chan Stop
+	StopTimes() chan StopTime
+	Agencies() chan Agency
+	Calendars() chan Calendar
+	CalendarDates() chan CalendarDate
+	FareAttributes() chan FareAttribute
+	FareRules() chan FareRule
+	FeedInfos() chan FeedInfo
+	Frequencies() chan Frequency
+	Routes() chan Route
+	Shapes() chan Shape
+	Transfers() chan Transfer
+	Pathways() chan Pathway
+	Levels() chan Level
+	Trips() chan Trip
+	Translations() chan Translation
+	Attributions() chan Attribution
+	Areas() chan Area
+	StopAreas() chan StopArea
+	FareLegRules() chan FareLegRule
+	FareTransferRules() chan FareTransferRule
+	FareProducts() chan FareProduct
+	RiderCategories() chan RiderCategory
+	FareMedia() chan FareMedia
 }
 
-func NewShapeFromShapes(shapes []Shape) Shape {
-	return gtfs.NewShapeFromShapes(shapes)
+// Writer writes a GTFS feed.
+type Writer interface {
+	Open() error
+	Close() error
+	Create() error
+	Delete() error
+	NewReader() (Reader, error)
+	AddEntity(Entity) (string, error)
+	AddEntities([]Entity) ([]string, error)
+	String() string
 }
 
-func ValidateStopTimes(stoptimes []StopTime) []error {
-	return gtfs.ValidateStopTimes(stoptimes)
+type WriterWithExtraColumns interface {
+	Writer
+	WriteExtraColumns(bool)
+}
+
+// Entity Types
+
+// Entity provides an interface for GTFS entities.
+type Entity interface {
+	EntityID() string
+	Filename() string
+}
+
+type EntityWithID interface {
+	GetID() int
+}
+
+type EntityWithExtra interface {
+	SetExtra(string, string)
+	GetExtra(string) (string, bool)
+	ClearExtra()
+	ExtraKeys() []string
+}
+
+type EntityWithErrors interface {
+	Errors() []error
+	Warnings() []error
+	AddError(error)
+	AddWarning(error)
 }

@@ -1,9 +1,12 @@
-package tl
+package tlutil
 
 import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/gtfs"
 )
 
 type calDate struct {
@@ -46,11 +49,11 @@ func (d *ymd) String() string {
 // Service is a Calendar / CalendarDate union.
 type Service struct {
 	dates []calDate
-	Calendar
+	gtfs.Calendar
 }
 
 // NewService returns a new Service.
-func NewService(c Calendar, cds ...CalendarDate) *Service {
+func NewService(c gtfs.Calendar, cds ...gtfs.CalendarDate) *Service {
 	s := Service{Calendar: c}
 	for _, cd := range cds {
 		s.AddCalendarDate(cd)
@@ -59,9 +62,9 @@ func NewService(c Calendar, cds ...CalendarDate) *Service {
 }
 
 // NewServicesFromReader returns the reader's Calendar and CalendarDate entities as a Service
-func NewServicesFromReader(reader Reader) []*Service {
+func NewServicesFromReader(reader tl.Reader) []*Service {
 	ret := []*Service{}
-	cds := map[string][]CalendarDate{}
+	cds := map[string][]tl.CalendarDate{}
 	for cd := range reader.CalendarDates() {
 		sid := cd.ServiceID
 		cds[sid] = append(cds[sid], cd)
@@ -73,7 +76,7 @@ func NewServicesFromReader(reader Reader) []*Service {
 		delete(cds, sid)
 	}
 	for k, v := range cds {
-		s := NewService(Calendar{ServiceID: k}, v...)
+		s := NewService(tl.Calendar{ServiceID: k}, v...)
 		s.Generated = true
 		s.StartDate, s.EndDate = s.ServicePeriod()
 		ret = append(ret, s)
@@ -84,22 +87,22 @@ func NewServicesFromReader(reader Reader) []*Service {
 // Reset resets calendars, except ServiceID
 func (s *Service) Reset() {
 	sid := s.ServiceID
-	s.Calendar = Calendar{ServiceID: sid}
+	s.Calendar = gtfs.Calendar{ServiceID: sid}
 	s.dates = nil
 }
 
 // AddCalendarDate adds a service exception.
-func (s *Service) AddCalendarDate(cd CalendarDate) error {
+func (s *Service) AddCalendarDate(cd gtfs.CalendarDate) error {
 	d := newYMD(cd.Date)
 	s.dates = append(s.dates, calDate{date: d, exceptionType: cd.ExceptionType})
 	return nil
 }
 
 // CalendarDates returns CalendarDates for this service.
-func (s *Service) CalendarDates() []CalendarDate {
-	ret := []CalendarDate{}
+func (s *Service) CalendarDates() []gtfs.CalendarDate {
+	ret := []gtfs.CalendarDate{}
 	for _, cd := range s.dates {
-		ret = append(ret, CalendarDate{
+		ret = append(ret, gtfs.CalendarDate{
 			ServiceID:     s.EntityID(),
 			Date:          cd.date.Time(),
 			ExceptionType: cd.exceptionType,
@@ -267,7 +270,7 @@ func (s *Service) Simplify() (*Service, error) {
 	}
 
 	// Set weekdays based on dow counts
-	ret := NewService(Calendar{ServiceID: s.ServiceID, Generated: s.Generated, StartDate: inputServiceStart, EndDate: inputServiceEnd})
+	ret := NewService(gtfs.Calendar{ServiceID: s.ServiceID, Generated: s.Generated, StartDate: inputServiceStart, EndDate: inputServiceEnd})
 	ret.ID = s.ID
 	for dow, total := range totalCount {
 		if total == 0 {
@@ -290,10 +293,10 @@ func (s *Service) Simplify() (*Service, error) {
 			// both are active
 		} else if a && !b {
 			// existing is active, new is not active
-			ret.AddCalendarDate(CalendarDate{Date: start, ExceptionType: 1})
+			ret.AddCalendarDate(gtfs.CalendarDate{Date: start, ExceptionType: 1})
 		} else if !a && b {
 			// existing is inactive, new is active
-			ret.AddCalendarDate(CalendarDate{Date: start, ExceptionType: 2})
+			ret.AddCalendarDate(gtfs.CalendarDate{Date: start, ExceptionType: 2})
 		}
 		start = start.AddDate(0, 0, 1)
 	}

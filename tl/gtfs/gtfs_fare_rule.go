@@ -12,7 +12,7 @@ type FareRule struct {
 	OriginID      string
 	DestinationID string
 	ContainsID    string
-	BaseEntity
+	tt.BaseEntity
 }
 
 // Errors for this Entity.
@@ -33,7 +33,7 @@ func (ent *FareRule) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *FareRule) UpdateKeys(emap *EntityMap) error {
+func (ent *FareRule) UpdateKeys(emap *tt.EntityMap) error {
 	if fareID, ok := emap.GetEntity(&FareAttribute{FareID: ent.FareID}); ok {
 		ent.FareID = fareID
 	} else {

@@ -3,13 +3,14 @@ package plus
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // RealtimeRoute realtime_routes.txt
 type RealtimeRoute struct {
 	RouteID         string `csv:"route_id"`
 	RealtimeEnabled int    `csv:"realtime_enabled"`
-	tl.BaseEntity
+	tt.BaseEntity
 }
 
 // Filename realtime_routes.txt
@@ -23,7 +24,7 @@ func (ent *RealtimeRoute) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *RealtimeRoute) UpdateKeys(emap *tl.EntityMap) error {
+func (ent *RealtimeRoute) UpdateKeys(emap *tt.EntityMap) error {
 	if fkid, ok := emap.GetEntity(&tl.Route{RouteID: ent.RouteID}); ok {
 		ent.RouteID = fkid
 	} else {

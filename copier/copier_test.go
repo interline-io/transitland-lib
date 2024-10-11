@@ -6,12 +6,13 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/stretchr/testify/assert"
 )
 
 type testCopierExpand struct{}
 
-func (ext *testCopierExpand) Expand(ent tl.Entity, emap *tl.EntityMap) ([]tl.Entity, bool, error) {
+func (ext *testCopierExpand) Expand(ent tl.Entity, emap *tt.EntityMap) ([]tl.Entity, bool, error) {
 	var ret []tl.Entity
 	v, ok := ent.(*tl.Agency)
 	if !ok {

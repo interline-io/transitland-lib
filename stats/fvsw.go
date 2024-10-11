@@ -5,6 +5,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -29,7 +30,7 @@ func NewFeedVersionServiceWindowBuilder() *FeedVersionServiceWindowBuilder {
 	return &FeedVersionServiceWindowBuilder{}
 }
 
-func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		if tz, ok := tt.IsValidTimezone(v.AgencyTimezone); ok {
@@ -38,7 +39,7 @@ func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tl.Entity,
 	case *tl.FeedInfo:
 		pp.fvsw.FeedStartDate = v.FeedStartDate
 		pp.fvsw.FeedEndDate = v.FeedEndDate
-	case *tl.Service:
+	case *tlutil.Service:
 		cStart, cEnd := v.ServicePeriod()
 		retStart, retEnd := pp.fvsw.EarliestCalendarDate.Val, pp.fvsw.LatestCalendarDate.Val
 		if retStart.IsZero() || cStart.Before(retStart) {

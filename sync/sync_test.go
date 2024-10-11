@@ -3,9 +3,9 @@ package sync
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -33,7 +33,7 @@ func TestSync(t *testing.T) {
 		for _, i := range found.FeedIDs {
 			expect[i] = true
 		}
-		tlfeeds := []tl.Feed{}
+		tlfeeds := []dmfr.Feed{}
 		testdb.ShouldSelect(t, atx, &tlfeeds, "SELECT * FROM current_feeds WHERE deleted_at IS NULL")
 		if len(tlfeeds) != len(expect) {
 			t.Errorf("got %d feeds, expect %d", len(tlfeeds), len(expect))
@@ -43,7 +43,7 @@ func TestSync(t *testing.T) {
 				t.Errorf("did not find feed %s", tlfeed.FeedID)
 			}
 		}
-		hf := tl.Feed{}
+		hf := dmfr.Feed{}
 		testdb.ShouldGet(t, atx, &hf, "SELECT * FROM current_feeds WHERE onestop_id = ?", "caltrain")
 		if !hf.DeletedAt.Valid {
 			t.Errorf("expected DeletedAt to be non-nil")
@@ -59,7 +59,7 @@ func TestSync_Update(t *testing.T) {
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create existing feed
 		exposid := "f-c20-trimet"
-		tlfeed := tl.Feed{}
+		tlfeed := dmfr.Feed{}
 		tlfeed.URLs.StaticCurrent = "http://example.com"
 		tlfeed.FeedID = exposid
 		tlfeed.ID = testdb.ShouldInsert(t, atx, &tlfeed)
@@ -98,13 +98,13 @@ func TestSync_Update(t *testing.T) {
 func TestUpdateFeed(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-			rfeed := tl.Feed{}
+			rfeed := dmfr.Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Spec = "gtfs"
 			rfeed.URLs.StaticCurrent = "http://example.com/caltrain.zip"
 			rfeed.License.UseWithoutAttribution = "yes"
 			rfeed.Authorization.ParamName = "test"
-			rfeed.Languages = tl.FeedLanguages{"en"}
+			rfeed.Languages = dmfr.FeedLanguages{"en"}
 			feedid, found, _, err := UpdateFeed(atx, rfeed)
 			if err != nil {
 				t.Error(err)
@@ -113,7 +113,7 @@ func TestUpdateFeed(t *testing.T) {
 				t.Errorf("expected new feed")
 			}
 			//
-			dfeed := tl.Feed{}
+			dfeed := dmfr.Feed{}
 			testdb.ShouldGet(t, atx, &dfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid)
 			if a, b := dfeed.FeedID, rfeed.FeedID; a != b {
 				t.Errorf("got %s expect %s", a, b)
@@ -143,7 +143,7 @@ func TestUpdateFeed(t *testing.T) {
 	})
 	t.Run("Update", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-			rfeed := tl.Feed{}
+			rfeed := dmfr.Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Name = tt.NewString("An Updated Name")
 			feedid, found, _, err := UpdateFeed(atx, rfeed)
@@ -156,7 +156,7 @@ func TestUpdateFeed(t *testing.T) {
 			// Reload
 			testdb.ShouldGet(t, atx, &rfeed, "SELECT * FROM current_feeds WHERE id = ?", feedid)
 			//
-			dfeed := tl.Feed{}
+			dfeed := dmfr.Feed{}
 			dfeed.FeedID = "caltrain"
 			feedid2, found2, _, err2 := UpdateFeed(atx, dfeed)
 			if err2 != nil {
@@ -246,7 +246,7 @@ func TestUpdateOperator(t *testing.T) {
 			for _, i := range found.OperatorIDs {
 				expect[i] = true
 			}
-			tlops := []tl.Operator{}
+			tlops := []dmfr.Operator{}
 			testdb.ShouldSelect(t, atx, &tlops, "SELECT * FROM current_operators WHERE deleted_at IS NULL")
 			if len(tlops) == 0 {
 				t.Errorf("got no operators")
@@ -282,7 +282,7 @@ func TestUpdateOperator(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Check updated
-			tlops := []tl.Operator{}
+			tlops := []dmfr.Operator{}
 			testdb.ShouldSelect(t, atx, &tlops, "SELECT * FROM current_operators WHERE deleted_at IS NULL")
 			if len(tlops) == 0 {
 				t.Errorf("got no operators")
@@ -294,7 +294,7 @@ func TestUpdateOperator(t *testing.T) {
 			if _, err := Sync(atx, opts); err != nil {
 				t.Error(err)
 			}
-			newOps := []tl.Operator{}
+			newOps := []dmfr.Operator{}
 			testdb.ShouldSelect(t, atx, &newOps, "SELECT * FROM current_operators WHERE deleted_at IS NULL")
 			if len(newOps) == 0 {
 				t.Errorf("got no operators")

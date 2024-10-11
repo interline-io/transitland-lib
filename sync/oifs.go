@@ -8,6 +8,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -67,12 +68,12 @@ func getPlaces(atx tldb.Adapter, id int) (string, error) {
 	return strings.Join(places, " / "), nil
 }
 
-func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
+func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 	// Update OIFs that belong to this operator
 	updated := false
 	oiflookup := map[oifmatch]int{}
 	oifmatches := map[int]bool{}
-	oifexisting := []tl.OperatorAssociatedFeed{}
+	oifexisting := []dmfr.OperatorAssociatedFeed{}
 	if err := atx.Select(&oifexisting, "select * from current_operators_in_feed where operator_id = ?", operator.ID); err != nil {
 		return false, err
 	}
@@ -141,13 +142,13 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 	return updated, nil
 }
 
-func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
+func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 	// Update OIFs that do not have an operator
 	updated := false
 	feedid := feed.ID
 	oiflookup := map[oifmatch]int{}
 	oifmatches := map[int]bool{}
-	oifexisting := []tl.OperatorAssociatedFeed{}
+	oifexisting := []dmfr.OperatorAssociatedFeed{}
 	if err := atx.Select(&oifexisting, "select * from current_operators_in_feed where feed_id = ?", feedid); err != nil {
 		return false, err
 	}
@@ -179,7 +180,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
 		} else {
 			updated = true
 			// Generate OnestopID
-			oif := tl.OperatorAssociatedFeed{
+			oif := dmfr.OperatorAssociatedFeed{
 				FeedID:               feedid,
 				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID),
 				ResolvedName:         tt.NewString(agency.AgencyName),

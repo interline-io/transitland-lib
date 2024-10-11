@@ -14,7 +14,7 @@ type FareAttribute struct {
 	Transfers        tt.Int
 	AgencyID         tt.Key
 	TransferDuration int
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns the ID or FareID.
@@ -51,7 +51,7 @@ func (ent *FareAttribute) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *FareAttribute) UpdateKeys(emap *EntityMap) error {
+func (ent *FareAttribute) UpdateKeys(emap *tt.EntityMap) error {
 	// Adjust AgencyID - optional
 	if len(ent.AgencyID.Val) > 0 {
 		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Val}); ok {

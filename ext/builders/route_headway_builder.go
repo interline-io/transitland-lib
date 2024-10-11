@@ -6,6 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -18,8 +19,8 @@ type RouteHeadway struct {
 	ServiceDate    tt.Date
 	StopTripCount  tt.Int
 	Departures     tt.Ints
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *RouteHeadway) Filename() string {
@@ -60,10 +61,10 @@ func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
 	}
 }
 
-func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
 	// Keep track of all services and departures
 	switch v := ent.(type) {
-	case *tl.Service:
+	case *tlutil.Service:
 		// Use only the first 30 days of service
 		startDate := v.StartDate
 		for i := 0; i < 31; i++ {

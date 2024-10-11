@@ -1,5 +1,15 @@
 package tt
 
+type EntityWithReferences interface {
+	UpdateKeys(*EntityMap) error
+}
+
+// Entity provides an interface for GTFS entities.
+type Entity interface {
+	EntityID() string
+	Filename() string
+}
+
 // EntityMap stores correspondances between Entity IDs, e.g. StopID -> Stop's integer ID in a database.
 type EntityMap struct {
 	ids map[string]map[string]string

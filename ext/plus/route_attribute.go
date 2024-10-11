@@ -11,7 +11,7 @@ type RouteAttribute struct {
 	Category    tt.Int
 	Subcategory tt.Int
 	RunningWay  tt.Int
-	tl.BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *RouteAttribute) Filename() string {
@@ -22,7 +22,7 @@ func (ent *RouteAttribute) TableName() string {
 	return "ext_plus_route_attributes"
 }
 
-func (ent *RouteAttribute) UpdateKeys(emap *tl.EntityMap) error {
+func (ent *RouteAttribute) UpdateKeys(emap *tt.EntityMap) error {
 	if routeID, ok := emap.GetEntity(&tl.Route{RouteID: ent.RouteID.Val}); ok {
 		ent.RouteID = tt.NewKey(routeID)
 	} else {

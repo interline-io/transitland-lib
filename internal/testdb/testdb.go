@@ -3,7 +3,7 @@ package testdb
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -155,9 +155,9 @@ func (atx *AdapterIgnoreTx) Tx(cb func(tldb.Adapter) error) error {
 }
 
 // CreateTestFeed returns a simple feed inserted into a database.
-func CreateTestFeed(atx tldb.Adapter, url string) tl.Feed {
+func CreateTestFeed(atx tldb.Adapter, url string) dmfr.Feed {
 	// Create dummy feed
-	tlfeed := tl.Feed{}
+	tlfeed := dmfr.Feed{}
 	tlfeed.FeedID = url
 	tlfeed.URLs.StaticCurrent = url
 	tlfeed.ID = MustInsert(atx, &tlfeed)

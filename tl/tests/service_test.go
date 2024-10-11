@@ -8,15 +8,16 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
-func newTestService() *tl.Service {
+func newTestService() *tlutil.Service {
 	start, _ := time.Parse("20060102", "20190101")
 	end, _ := time.Parse("20060102", "20190131")
 	except, _ := time.Parse("20060102", "20190102")
 	added, _ := time.Parse("20060102", "20190105")
-	s := tl.NewService(
+	s := tlutil.NewService(
 		tl.Calendar{
 			StartDate: start,
 			EndDate:   end,
@@ -63,7 +64,7 @@ func TestService_IsActive(t *testing.T) {
 func TestService_Simplify(t *testing.T) {
 	type testcase struct {
 		name    string
-		service *tl.Service
+		service *tlutil.Service
 	}
 	testcases := []testcase{
 		{"TestService", newTestService()},
@@ -81,7 +82,7 @@ func TestService_Simplify(t *testing.T) {
 		if err := reader.Open(); err != nil {
 			t.Fatal(err)
 		}
-		for _, svc := range tl.NewServicesFromReader(reader) {
+		for _, svc := range tlutil.NewServicesFromReader(reader) {
 			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", filepath.Base(path), svc.ServiceID), svc})
 		}
 	}

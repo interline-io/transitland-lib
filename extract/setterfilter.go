@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/graph"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
@@ -53,7 +54,7 @@ type hasEntityKey interface {
 }
 
 // Filter overrides values on entities.
-func (tx *SetterFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (tx *SetterFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
 	if v, ok := ent.(hasEntityKey); ok {
 		if entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), v.EntityKey())]; ok {
 			for k, v := range entv {

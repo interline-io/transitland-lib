@@ -19,7 +19,7 @@ type FareProduct struct {
 	DurationType    tt.Int   // proposed extension
 	RiderCategoryID tt.Key   // proposed extension
 	FareMediaID     tt.Key   // proposed extension
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *FareProduct) String() string {
@@ -53,7 +53,7 @@ func (ent *FareProduct) TableName() string {
 	return "gtfs_fare_products"
 }
 
-func (ent *FareProduct) UpdateKeys(emap *EntityMap) error {
+func (ent *FareProduct) UpdateKeys(emap *tt.EntityMap) error {
 	if ent.FareMediaID.Val != "" {
 		if fkid, ok := emap.Get("fare_media.txt", ent.FareMediaID.Val); ok {
 			ent.FareMediaID.Val = fkid

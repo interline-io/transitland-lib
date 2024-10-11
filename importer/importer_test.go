@@ -7,7 +7,6 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -15,7 +14,7 @@ import (
 func TestImportFeedVersion(t *testing.T) {
 	setup := func(atx tldb.Adapter, filename string) int {
 		// Create FV
-		fv := tl.FeedVersion{}
+		fv := dmfr.FeedVersion{}
 		fv.EarliestCalendarDate = tt.NewDate(time.Now())
 		fv.LatestCalendarDate = tt.NewDate(time.Now())
 		fv.File = filename
@@ -85,7 +84,7 @@ func TestImportFeedVersion(t *testing.T) {
 func Test_iImportFeedVersionTx(t *testing.T) {
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create FV
-		fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
+		fv := dmfr.FeedVersion{File: testutil.ExampleZip.URL}
 		fv.EarliestCalendarDate = tt.NewDate(time.Now())
 		fv.LatestCalendarDate = tt.NewDate(time.Now())
 		fvid := testdb.ShouldInsert(t, atx, &fv)

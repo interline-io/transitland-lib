@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tlutil"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/snabb/isoweek"
 )
@@ -94,27 +95,27 @@ type fvslTripInfo struct {
 }
 
 type FeedVersionServiceLevelBuilder struct {
-	services      map[string]*tl.Service
+	services      map[string]*tlutil.Service
 	freqs         map[string]int
 	tripdurations map[string]fvslTripInfo
 }
 
 func NewFeedVersionServiceLevelBuilder() *FeedVersionServiceLevelBuilder {
 	return &FeedVersionServiceLevelBuilder{
-		services:      map[string]*tl.Service{},
+		services:      map[string]*tlutil.Service{},
 		freqs:         map[string]int{},
 		tripdurations: map[string]fvslTripInfo{},
 	}
 }
 
-func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Service:
+	case *tlutil.Service:
 		pp.services[v.ServiceID] = v
 	case *tl.CalendarDate:
 		svc, ok := pp.services[v.ServiceID]
 		if !ok {
-			svc = &tl.Service{}
+			svc = &tlutil.Service{}
 			svc.Calendar = tl.Calendar{ServiceID: v.ServiceID}
 			pp.services[v.ServiceID] = svc
 		}

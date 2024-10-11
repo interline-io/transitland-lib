@@ -36,7 +36,7 @@ type ApplyTimezoneFilter struct {
 	timezone string
 }
 
-func (e *ApplyTimezoneFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (e *ApplyTimezoneFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		v.AgencyTimezone = e.timezone

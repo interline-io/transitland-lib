@@ -22,7 +22,7 @@ type Route struct {
 	NetworkID         tt.String
 	AsRoute           tt.Int
 	Geometry          tt.Geometry `csv:"-" db:"-"`
-	BaseEntity
+	tt.BaseEntity
 }
 
 // EntityID returns ID or RouteID.
@@ -65,7 +65,7 @@ func (ent *Route) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *Route) UpdateKeys(emap *EntityMap) error {
+func (ent *Route) UpdateKeys(emap *tt.EntityMap) error {
 	aid := ent.AgencyID
 	if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID}); ok {
 		ent.AgencyID = agencyID

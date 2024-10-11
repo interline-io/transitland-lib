@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
@@ -192,14 +193,14 @@ func createTestFeedVersion(adapter Adapter) (int, error) {
 	// Create Feed, FeedVersion
 	m := 0
 	t := fmt.Sprintf("%d", time.Now().UnixNano())
-	feed := tl.Feed{}
+	feed := dmfr.Feed{}
 	feed.FeedID = t
 	feedid, err := adapter.Insert(&feed)
 	if err != nil {
 		return m, err
 	}
 	feed.ID = feedid
-	fv := tl.FeedVersion{}
+	fv := dmfr.FeedVersion{}
 	fv.SHA1 = t
 	fv.FeedID = feed.ID
 	fv.EarliestCalendarDate = tt.NewDate(time.Now())

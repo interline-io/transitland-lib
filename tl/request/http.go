@@ -9,12 +9,13 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
 type Http struct{}
 
-func (r Http) Download(ctx context.Context, ustr string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
+func (r Http) Download(ctx context.Context, ustr string, secret dmfr.Secret, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
 	u, err := url.Parse(ustr)
 	if err != nil {
 		return nil, 0, errors.New("could not parse url")

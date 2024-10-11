@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 )
 
 func TestSyncCommand(t *testing.T) {
@@ -34,7 +34,7 @@ func TestSyncCommand(t *testing.T) {
 				}
 			}
 			// Test
-			feeds := []tl.Feed{}
+			feeds := []dmfr.Feed{}
 			w.Adapter.Select(&feeds, "SELECT * FROM current_feeds")
 			if len(feeds) != exp.count {
 				t.Errorf("got %d feeds, expect %d", len(feeds), exp.count)

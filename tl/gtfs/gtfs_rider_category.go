@@ -14,7 +14,7 @@ type RiderCategory struct {
 	MinAge            tt.Int
 	MaxAge            tt.Int
 	EligibilityURL    tt.String
-	BaseEntity
+	tt.BaseEntity
 }
 
 func (ent *RiderCategory) Filename() string {

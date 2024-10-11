@@ -3,14 +3,15 @@ package builders
 import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type RouteStop struct {
 	RouteID  string
 	AgencyID string
 	StopID   string
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (rs *RouteStop) TableName() string {
@@ -37,7 +38,7 @@ func NewRouteStopBuilder() *RouteStopBuilder {
 	}
 }
 
-func (pp *RouteStopBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteStopBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Route:
 		pp.routeAgencies[eid] = v.AgencyID
