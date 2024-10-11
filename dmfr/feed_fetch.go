@@ -1,7 +1,6 @@
 package dmfr
 
 import (
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -16,8 +15,8 @@ type FeedFetch struct {
 	ResponseCode  tt.Int
 	ResponseSHA1  tt.String
 	FeedVersionID tt.Int // optional field, don't use tl.FeedVersionEntity
-	tl.Timestamps
-	tl.DatabaseEntity
+	tt.Timestamps
+	tt.DatabaseEntity
 }
 
 func (ent *FeedFetch) TableName() string {

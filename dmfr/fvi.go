@@ -3,7 +3,6 @@ package dmfr
 import (
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -23,9 +22,9 @@ type FeedVersionImport struct {
 	SkipEntityReferenceCount  tt.Counts
 	SkipEntityFilterCount     tt.Counts
 	SkipEntityMarkedCount     tt.Counts
-	tl.DatabaseEntity
-	tl.FeedVersionEntity
-	tl.Timestamps
+	tt.DatabaseEntity
+	tt.FeedVersionEntity
+	tt.Timestamps
 }
 
 // NewFeedVersionImport returns an initialized FeedVersionImport.

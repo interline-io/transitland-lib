@@ -3,7 +3,6 @@ package dmfr
 import (
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -18,8 +17,8 @@ type FeedVersionServiceLevel struct {
 	Friday    int
 	Saturday  int
 	Sunday    int
-	tl.FeedVersionEntity
-	tl.DatabaseEntity
+	tt.FeedVersionEntity
+	tt.DatabaseEntity
 }
 
 // EntityID .

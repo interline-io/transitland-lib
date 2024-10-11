@@ -1,13 +1,11 @@
 package dmfr
 
-import (
-	"github.com/interline-io/transitland-lib/tl"
-)
+import "github.com/interline-io/transitland-lib/tl/tt"
 
 type FeedVersionAgencyOnestopID struct {
 	EntityID  string
 	OnestopID string
-	tl.FeedVersionEntity
+	tt.FeedVersionEntity
 }
 
 func (ent FeedVersionAgencyOnestopID) TableName() string {
@@ -17,7 +15,7 @@ func (ent FeedVersionAgencyOnestopID) TableName() string {
 type FeedVersionRouteOnestopID struct {
 	EntityID  string
 	OnestopID string
-	tl.FeedVersionEntity
+	tt.FeedVersionEntity
 }
 
 func (ent FeedVersionRouteOnestopID) TableName() string {
@@ -27,7 +25,7 @@ func (ent FeedVersionRouteOnestopID) TableName() string {
 type FeedVersionStopOnestopID struct {
 	EntityID  string
 	OnestopID string
-	tl.FeedVersionEntity
+	tt.FeedVersionEntity
 }
 
 func (ent FeedVersionStopOnestopID) TableName() string {

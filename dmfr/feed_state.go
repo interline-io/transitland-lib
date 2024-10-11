@@ -3,7 +3,6 @@ package dmfr
 import (
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -15,8 +14,8 @@ type FeedState struct {
 	FetchWait           tt.Int
 	FeedRealtimeEnabled bool
 	Public              bool
-	tl.DatabaseEntity
-	tl.Timestamps
+	tt.DatabaseEntity
+	tt.Timestamps
 }
 
 // EntityID .
