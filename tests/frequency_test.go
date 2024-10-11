@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
@@ -45,7 +45,7 @@ func TestFrequencyRepeatCount(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(fmt.Sprintf("%s->%s:%d", tc.start, tc.end, tc.hw), func(t *testing.T) {
-			f := tl.Frequency{}
+			f := gtfs.Frequency{}
 			f.StartTime, _ = tt.NewSecondsFromString(tc.start)
 			f.EndTime, _ = tt.NewSecondsFromString(tc.end)
 			f.HeadwaySecs = tc.hw

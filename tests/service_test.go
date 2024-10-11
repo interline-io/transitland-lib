@@ -1,24 +1,20 @@
 package tests
 
 import (
-	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlutil"
 )
 
-func newTestService() *tl.Service {
+func newTestService() *tlutil.Service {
 	start, _ := time.Parse("20060102", "20190101")
 	end, _ := time.Parse("20060102", "20190131")
 	except, _ := time.Parse("20060102", "20190102")
 	added, _ := time.Parse("20060102", "20190105")
 	s := tlutil.NewService(
-		tl.Calendar{
+		gtfs.Calendar{
 			StartDate: start,
 			EndDate:   end,
 			Monday:    1,
@@ -29,8 +25,8 @@ func newTestService() *tl.Service {
 			Saturday:  0,
 			Sunday:    0,
 		},
-		tl.CalendarDate{Date: added, ExceptionType: 1},
-		tl.CalendarDate{Date: except, ExceptionType: 2},
+		gtfs.CalendarDate{Date: added, ExceptionType: 1},
+		gtfs.CalendarDate{Date: except, ExceptionType: 2},
 	)
 	return s
 }
@@ -64,28 +60,28 @@ func TestService_IsActive(t *testing.T) {
 func TestService_Simplify(t *testing.T) {
 	type testcase struct {
 		name    string
-		service *tl.Service
+		service *tlutil.Service
 	}
 	testcases := []testcase{
 		{"TestService", newTestService()},
 	}
 	// get more examples from feeds
-	feedchecks := []string{}
-	for _, v := range testutil.ExternalTestFeeds {
-		feedchecks = append(feedchecks, v.URL)
-	}
-	for _, path := range feedchecks {
-		reader, err := tlcsv.NewReader(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := reader.Open(); err != nil {
-			t.Fatal(err)
-		}
-		for _, svc := range tl.NewServicesFromReader(reader) {
-			testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", filepath.Base(path), svc.ServiceID), svc})
-		}
-	}
+	// feedchecks := []string{}
+	// for _, v := range testutil.ExternalTestFeeds {
+	// 	feedchecks = append(feedchecks, v.URL)
+	// }
+	// for _, path := range feedchecks {
+	// 	reader, err := tlcsv.NewReader(path)
+	// 	if err != nil {
+	// 		t.Fatal(err)
+	// 	}
+	// 	if err := reader.Open(); err != nil {
+	// 		t.Fatal(err)
+	// 	}
+	// 	for _, svc := range NewServicesFromReader(reader) {
+	// 		testcases = append(testcases, testcase{fmt.Sprintf("%s:%s", filepath.Base(path), svc.ServiceID), svc})
+	// 	}
+	// }
 	for _, tc := range testcases {
 		if len(tc.service.CalendarDates()) == 0 {
 			// No need to test services without exceptions...

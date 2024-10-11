@@ -6,7 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
@@ -18,10 +18,10 @@ func TestEntityErrors(t *testing.T) {
 	if err := reader.Open(); err != nil {
 		t.Error(err)
 	}
-	testutil.AllEntities(reader, func(ent tl.Entity) {
+	testutil.AllEntities(reader, func(ent tt.Entity) {
 		t.Run(fmt.Sprintf("%s:%s", ent.Filename(), ent.EntityID()), func(t *testing.T) {
 			var errs []error
-			if extEnt, ok := ent.(tl.EntityWithErrors); ok {
+			if extEnt, ok := ent.(tt.EntityWithErrors); ok {
 				errs = extEnt.Errors()
 			}
 			expecterrs := testutil.GetExpectErrors(ent)

@@ -1,12 +1,11 @@
-package tests
+package tlutil
 
 import (
 	"strconv"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tl/tt"
-	"github.com/interline-io/transitland-lib/tlutil"
 )
 
 type expectStopTime struct {
@@ -22,10 +21,10 @@ type expectTrip struct {
 	ShapeDistTraveled []float64
 }
 
-func expectTripToStopTime(e expectTrip) []tl.StopTime {
-	ret := []tl.StopTime{}
+func expectTripToStopTime(e expectTrip) []gtfs.StopTime {
+	ret := []gtfs.StopTime{}
 	for i := range e.ArrivalTime {
-		ret = append(ret, tl.StopTime{
+		ret = append(ret, gtfs.StopTime{
 			TripID:            "1",
 			StopID:            strconv.Itoa(i),
 			StopSequence:      i,
@@ -50,7 +49,7 @@ func TestValidateStopTimes(t *testing.T) {
 	for _, et := range trips {
 		t.Run(et.ExpectError, func(t *testing.T) {
 			stoptimes := expectTripToStopTime(et)
-			if errs := tlutil.ValidateStopTimes(stoptimes); len(errs) > 0 {
+			if errs := ValidateStopTimes(stoptimes); len(errs) > 0 {
 				t.Errorf("got %d errors, expected %d: %s", len(errs), 0, errs)
 			}
 		})
@@ -65,7 +64,7 @@ func TestValidateStopTimes(t *testing.T) {
 	for _, et := range errortrips {
 		t.Run(et.ExpectError, func(t *testing.T) {
 			stoptimes := expectTripToStopTime(et)
-			if errs := tlutil.ValidateStopTimes(stoptimes); len(errs) != 1 {
+			if errs := ValidateStopTimes(stoptimes); len(errs) != 1 {
 				t.Errorf("expected 1 error, got 0")
 			}
 		})
@@ -77,7 +76,7 @@ func TestValidateStopTimes(t *testing.T) {
 		stoptimes[0].StopSequence = 1
 		stoptimes[1].StopSequence = 2
 		stoptimes[2].StopSequence = 2
-		if errs := tlutil.ValidateStopTimes(stoptimes); len(errs) != 1 {
+		if errs := ValidateStopTimes(stoptimes); len(errs) != 1 {
 			t.Errorf("expected 1 error, got 0")
 		}
 	})
@@ -88,6 +87,6 @@ func BenchmarkValidateStopTime(b *testing.B) {
 	stoptimes := expectTripToStopTime(trip)
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		tlutil.ValidateStopTimes(stoptimes)
+		ValidateStopTimes(stoptimes)
 	}
 }
