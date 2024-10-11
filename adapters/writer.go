@@ -1,10 +1,8 @@
 package tl
 
-// Entity provides an interface for GTFS entities.
-type Entity interface {
-	EntityID() string
-	Filename() string
-}
+import "github.com/interline-io/transitland-lib/tl/tt"
+
+type Entity = tt.Entity
 
 // Writer writes a GTFS feed.
 type Writer interface {
