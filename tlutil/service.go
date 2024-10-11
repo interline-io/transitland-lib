@@ -1,10 +1,15 @@
-package tl
+package tlutil
 
 import (
 	"errors"
 	"fmt"
 	"time"
+
+	gtfs "github.com/interline-io/transitland-lib/gtfs"
 )
+
+type CalendarDate = gtfs.CalendarDate
+type Calendar = gtfs.Calendar
 
 type calDate struct {
 	date          ymd

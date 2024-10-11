@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlutil"
 )
 
 // OpenWriter opens & creates a db writer
@@ -159,7 +160,7 @@ func (writer *Writer) CreateFeedVersion(reader tl.Reader) (int, error) {
 		return 0, err
 	}
 	fvid := 0
-	fv, err := tl.NewFeedVersionFromReader(reader)
+	fv, err := tlutil.NewFeedVersionFromReader(reader)
 	if err != nil {
 		return 0, err
 	}

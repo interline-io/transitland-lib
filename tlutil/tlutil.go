@@ -1,25 +1,21 @@
-package tl
+package tlutil
 
 import (
 	"errors"
 	"sort"
 	"time"
 
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/dmfr"
+	gtfs "github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
-type canSHA1 interface {
-	SHA1() (string, error)
-}
-
-type canDirSHA1 interface {
-	DirSHA1() (string, error)
-}
-
-type canPath interface {
-	Path() string
-}
+type Reader = adapters.Reader
+type FeedVersion = dmfr.FeedVersion
+type Shape = gtfs.Shape
+type StopTime = gtfs.StopTime
 
 // NewServicesFromReader returns the reader's Calendar and CalendarDate entities as a Service
 func NewServicesFromReader(reader Reader) []*Service {
@@ -194,4 +190,16 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 		}
 	}
 	return errs
+}
+
+type canSHA1 interface {
+	SHA1() (string, error)
+}
+
+type canDirSHA1 interface {
+	DirSHA1() (string, error)
+}
+
+type canPath interface {
+	Path() string
 }

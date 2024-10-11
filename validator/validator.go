@@ -22,6 +22,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tlutil"
 	"github.com/twpayne/go-geom"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -316,7 +317,7 @@ func (v *Validator) ValidateStatic(reader tl.Reader, evaluateAt time.Time, evalu
 	}
 
 	// get sha1 and service period; continue even if errors
-	fv, err := tl.NewFeedVersionFromReader(reader)
+	fv, err := tlutil.NewFeedVersionFromReader(reader)
 	_ = err
 	details.SHA1 = tt.NewString(fv.SHA1)
 	details.EarliestCalendarDate = fv.EarliestCalendarDate

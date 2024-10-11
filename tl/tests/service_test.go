@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tlutil"
 )
 
 func newTestService() *tl.Service {
@@ -16,7 +17,7 @@ func newTestService() *tl.Service {
 	end, _ := time.Parse("20060102", "20190131")
 	except, _ := time.Parse("20060102", "20190102")
 	added, _ := time.Parse("20060102", "20190105")
-	s := tl.NewService(
+	s := tlutil.NewService(
 		tl.Calendar{
 			StartDate: start,
 			EndDate:   end,

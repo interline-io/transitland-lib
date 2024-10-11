@@ -1,6 +1,9 @@
 package rules
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlutil"
+)
 
 // StopTimeSequenceCheck checks that all sequences stop_time sequences in a trip are valid.
 // This should be split into multiple validators.
@@ -13,6 +16,6 @@ func (e *StopTimeSequenceCheck) Validate(ent tl.Entity) []error {
 		return nil
 	}
 	// Use existing validator.
-	var errs = tl.ValidateStopTimes(trip.StopTimes)
+	var errs = tlutil.ValidateStopTimes(trip.StopTimes)
 	return errs
 }

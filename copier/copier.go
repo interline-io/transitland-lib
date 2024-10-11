@@ -19,6 +19,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tlutil"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/rs/zerolog"
 	"github.com/twpayne/go-geom/xy"
@@ -916,7 +917,7 @@ func (copier *Copier) copyCalendars() error {
 			duplicateServices = append(duplicateServices, &ent)
 			continue
 		}
-		svcs[ent.EntityID()] = tl.NewService(ent)
+		svcs[ent.EntityID()] = tlutil.NewService(ent)
 	}
 
 	// Add the CalendarDates to Services
@@ -930,7 +931,7 @@ func (copier *Copier) copyCalendars() error {
 		}
 		svc, ok := svcs[ent.ServiceID]
 		if !ok {
-			svc = tl.NewService(cal)
+			svc = tlutil.NewService(cal)
 			svcs[ent.ServiceID] = svc
 		}
 		svc.AddCalendarDate(ent)
