@@ -9,7 +9,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type RedateFilter struct {

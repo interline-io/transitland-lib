@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 var testAdapters = map[string]func() Adapter{}

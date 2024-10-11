@@ -3,7 +3,7 @@ package gtfs
 import (
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type EntityMap = tt.EntityMap

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func testExpectInt(t *testing.T, result, expect int) {

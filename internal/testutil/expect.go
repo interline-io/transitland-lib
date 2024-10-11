@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 type HasContext interface {
@@ -142,7 +142,8 @@ func (e *ExpectError) Match(errs []error) bool {
 
 // ParseExpectError .
 // e.g.:
-//     InvalidFieldError:agency_name:agency.txt:bad_agency
+//
+//	InvalidFieldError:agency_name:agency.txt:bad_agency
 func ParseExpectError(value string) ExpectError {
 	v := strings.Split(value, ":")
 	// pad out

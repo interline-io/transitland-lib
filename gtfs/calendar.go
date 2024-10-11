@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Calendar calendars.txt

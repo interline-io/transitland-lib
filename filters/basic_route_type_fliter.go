@@ -3,9 +3,9 @@ package filters
 import (
 	"fmt"
 
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // BasicRouteTypeFilter checks for extended route_type's and converts to basic route_types.

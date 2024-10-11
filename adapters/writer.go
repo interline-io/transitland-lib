@@ -1,6 +1,6 @@
 package adapters
 
-import "github.com/interline-io/transitland-lib/tl/tt"
+import "github.com/interline-io/transitland-lib/tt"
 
 // Writer writes a GTFS feed.
 type Writer interface {

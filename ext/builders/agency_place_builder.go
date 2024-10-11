@@ -5,8 +5,8 @@ import (
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
 )
 

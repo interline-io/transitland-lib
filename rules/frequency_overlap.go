@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FrequencyOverlapError is reported when two frequencies.txt entries for the same trip overlap in time.

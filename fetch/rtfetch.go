@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 

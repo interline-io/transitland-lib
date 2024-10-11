@@ -7,8 +7,8 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Full tests

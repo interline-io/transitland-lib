@@ -4,10 +4,10 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/jmoiron/sqlx/reflectx"
 )
 

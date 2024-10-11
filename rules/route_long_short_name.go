@@ -1,8 +1,8 @@
 package rules
 
 import (
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // RouteShortNameTooLongCheck checks if route_short_name is, well, too long.

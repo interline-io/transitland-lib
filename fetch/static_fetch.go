@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/request"
-	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tlutil"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/interline-io/transitland-lib/validator"
 )
 

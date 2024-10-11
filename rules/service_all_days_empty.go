@@ -1,8 +1,8 @@
 package rules
 
 import (
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // ServiceAllDaysEmptyCheck checks if a calendar.txt entry, non-generated, has at least one day of week marked as 1.

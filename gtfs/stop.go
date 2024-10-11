@@ -3,9 +3,9 @@ package gtfs
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Stop stops.txt

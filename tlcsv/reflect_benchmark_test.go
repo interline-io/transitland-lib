@@ -6,7 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func makeRow(header, value string) Row {

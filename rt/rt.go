@@ -4,8 +4,8 @@ package rt
 import (
 	"os"
 
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/tl/request"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"

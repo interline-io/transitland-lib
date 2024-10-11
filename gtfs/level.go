@@ -1,6 +1,6 @@
 package gtfs
 
-import "github.com/interline-io/transitland-lib/tl/tt"
+import "github.com/interline-io/transitland-lib/tt"
 
 // Level levels.txt
 type Level struct {

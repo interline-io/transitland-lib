@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FeedVersion represents a single GTFS data source.

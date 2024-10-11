@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/request"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/request"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.

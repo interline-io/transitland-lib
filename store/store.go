@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 

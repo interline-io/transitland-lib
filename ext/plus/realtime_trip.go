@@ -1,8 +1,8 @@
 package plus
 
 import (
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // RealtimeTrip realtime_trips.txt

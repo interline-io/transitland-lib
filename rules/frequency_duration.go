@@ -1,8 +1,8 @@
 package rules
 
 import (
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
 // FrequencyDurationCheck reports when a frequencies.txt entry has (start_time,end_time) less than a full headway.

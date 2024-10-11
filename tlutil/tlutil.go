@@ -6,7 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func FeedVersionServiceBounds(reader adapters.Reader) (time.Time, time.Time, error) {
