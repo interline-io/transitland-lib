@@ -1,10 +1,10 @@
-// Package dmfr provides tool and utilities for working with DMFR files and database representations of feeds and feed versions.
-package tldbutil
+package stats
 
 import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
+
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"
 )

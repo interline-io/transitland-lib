@@ -1,9 +1,6 @@
 package stats
 
 import (
-	"errors"
-	"time"
-
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
@@ -12,7 +9,6 @@ import (
 	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldbutil"
 )
 
 type FeedVersionStats struct {
@@ -120,7 +116,7 @@ func CreateFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	// Delete any existing records
 	tables := fvt.FetchStatDerivedTables
 	for _, table := range tables {
-		if err := tldbutil.FeedVersionTableDelete(atx, table, fvid, false); err != nil {
+		if err := FeedVersionTableDelete(atx, table, fvid, false); err != nil {
 			return err
 		}
 	}
@@ -176,37 +172,4 @@ func setFvid(input []any, fvid int) []any {
 		}
 	}
 	return input
-}
-
-///////////
-
-func FeedVersionServiceBounds(reader adapters.Reader) (time.Time, time.Time, error) {
-	var start time.Time
-	var end time.Time
-	for c := range reader.Calendars() {
-		if start.IsZero() || c.StartDate.Before(start) {
-			start = c.StartDate
-		}
-		if end.IsZero() || c.EndDate.After(end) {
-			end = c.EndDate
-		}
-	}
-	for cd := range reader.CalendarDates() {
-		if cd.ExceptionType != 1 {
-			continue
-		}
-		if start.IsZero() || cd.Date.Before(start) {
-			start = cd.Date
-		}
-		if end.IsZero() || cd.Date.After(end) {
-			end = cd.Date
-		}
-	}
-	if start.IsZero() || end.IsZero() {
-		return start, end, errors.New("start or end dates were empty")
-	}
-	if end.Before(start) {
-		return start, end, errors.New("end before start")
-	}
-	return start, end, nil
 }

@@ -6,8 +6,8 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldbutil"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -37,7 +37,7 @@ func UpdateFeed(atx tldb.Adapter, rfeed dmfr.Feed) (int, bool, bool, error) {
 		errTx = err
 	}
 	// Create feed state if not exists
-	if _, err := tldbutil.GetFeedState(atx, feedid); err != nil {
+	if _, err := stats.GetFeedState(atx, feedid); err != nil {
 		errTx = err
 	}
 	return feedid, found, updated, errTx

@@ -9,10 +9,10 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldbutil"
 )
 
 // Options sets various options for importing a feed.
@@ -31,7 +31,7 @@ type Result struct {
 // ActivateFeedVersion .
 func ActivateFeedVersion(atx tldb.Adapter, feedId int, fvid int) error {
 	// Check FeedState exists
-	if _, err := tldbutil.GetFeedState(atx, feedId); err != nil {
+	if _, err := stats.GetFeedState(atx, feedId); err != nil {
 		return err
 	}
 	// sqlite3 only supports "UPDATE ... FROM" in versions 3.33 and higher

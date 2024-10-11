@@ -11,8 +11,8 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/fetch"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldbutil"
 	"github.com/interline-io/transitland-lib/validator"
 	"github.com/spf13/pflag"
 )
@@ -150,7 +150,7 @@ func (cmd *FetchCommand) Run() error {
 			return fmt.Errorf("problem with feed '%s': %s", osid, err.Error())
 		}
 		// Create feed state if not exists
-		if _, err := tldbutil.GetFeedState(adapter, feed.ID); err != nil {
+		if _, err := stats.GetFeedState(adapter, feed.ID); err != nil {
 			return err
 		}
 		// Prepare options for this fetch
