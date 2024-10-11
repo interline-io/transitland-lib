@@ -3,23 +3,24 @@ package testutil
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type Filter interface {
-	Filter(tl.Entity, *tl.EntityMap) error
+	Filter(tt.Entity, *tt.EntityMap) error
 }
 
 type DirectCopierOptions struct{}
 
 type DirectCopier struct {
-	reader  tl.Reader
-	writer  tl.Writer
+	reader  adapters.Reader
+	writer  adapters.Writer
 	opts    DirectCopierOptions
 	filters []Filter
 }
 
-func NewDirectCopier(reader tl.Reader, writer tl.Writer, opts DirectCopierOptions) (*DirectCopier, error) {
+func NewDirectCopier(reader adapters.Reader, writer adapters.Writer, opts DirectCopierOptions) (*DirectCopier, error) {
 	return &DirectCopier{
 		reader: reader,
 		writer: writer,
@@ -33,9 +34,9 @@ func (dc *DirectCopier) AddFilter(f Filter) error {
 }
 
 func (dc *DirectCopier) Copy() error {
-	emap := tl.NewEntityMap()
+	emap := tt.NewEntityMap()
 	var errs []error
-	cp := func(ent tl.Entity) {
+	cp := func(ent tt.Entity) {
 		sid := ent.EntityID()
 		for _, filter := range dc.filters {
 			if err := filter.Filter(ent, emap); err != nil {
@@ -43,7 +44,7 @@ func (dc *DirectCopier) Copy() error {
 				// errs = append(errs, err)
 			}
 		}
-		if extEnt, ok := ent.(tl.EntityWithReferences); ok {
+		if extEnt, ok := ent.(tt.EntityWithReferences); ok {
 			if err := extEnt.UpdateKeys(emap); err != nil {
 				errs = append(errs, fmt.Errorf("entity: %#v error: %s", ent, err))
 			}
@@ -63,7 +64,7 @@ func (dc *DirectCopier) Copy() error {
 }
 
 // DirectCopy does a direct reader->writer copy, with minimal validation and changes.
-func DirectCopy(reader tl.Reader, writer tl.Writer) error {
+func DirectCopy(reader adapters.Reader, writer adapters.Writer) error {
 	cp, err := NewDirectCopier(reader, writer, DirectCopierOptions{})
 	if err != nil {
 		return err

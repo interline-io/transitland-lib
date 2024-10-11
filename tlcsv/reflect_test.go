@@ -4,12 +4,12 @@ import (
 	"math"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
 func TestGetString(t *testing.T) {
-	ent := tl.StopTime{
+	ent := gtfs.StopTime{
 		TripID:            "123",
 		StopID:            "456",
 		ArrivalTime:       tt.NewSeconds(3600),
@@ -37,7 +37,7 @@ func TestGetString(t *testing.T) {
 
 func TestSetString(t *testing.T) {
 	t.Run("int", func(t *testing.T) {
-		ent := tl.Frequency{}
+		ent := gtfs.Frequency{}
 		if err := SetString(&ent, "headway_secs", "123"); err != nil {
 			t.Error(err)
 		}
@@ -46,7 +46,7 @@ func TestSetString(t *testing.T) {
 		}
 	})
 	t.Run("string", func(t *testing.T) {
-		ent := tl.Frequency{}
+		ent := gtfs.Frequency{}
 		if err := SetString(&ent, "trip_id", "123"); err != nil {
 			t.Error(err)
 		}
@@ -55,7 +55,7 @@ func TestSetString(t *testing.T) {
 		}
 	})
 	t.Run("float", func(t *testing.T) {
-		ent := tl.FareAttribute{}
+		ent := gtfs.FareAttribute{}
 		if err := SetString(&ent, "price", "123.456"); err != nil {
 			t.Error(err)
 		}
@@ -64,7 +64,7 @@ func TestSetString(t *testing.T) {
 		}
 	})
 	t.Run("time", func(t *testing.T) {
-		ent := tl.Calendar{}
+		ent := gtfs.Calendar{}
 		if err := SetString(&ent, "start_date", "20190802"); err != nil {
 			t.Error(err)
 		}
@@ -78,7 +78,7 @@ func TestSetString(t *testing.T) {
 
 	})
 	t.Run("widetime", func(t *testing.T) {
-		ent := tl.Frequency{}
+		ent := gtfs.Frequency{}
 		if err := SetString(&ent, "start_time", "01:00:00"); err != nil {
 			t.Error(err)
 		}

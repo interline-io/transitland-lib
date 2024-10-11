@@ -58,7 +58,7 @@ func TestExample1(t *testing.T) {
 Database support is handled similary:
 
 ```go
-func getReader() tl.Reader {
+func getReader() adapters.Reader {
 	reader, _ := tlcsv.NewReader(URL)
 	return reader
 }

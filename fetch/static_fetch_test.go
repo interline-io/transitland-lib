@@ -12,7 +12,6 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/stretchr/testify/assert"
 )
@@ -150,7 +149,7 @@ func TestStaticFetch(t *testing.T) {
 				assert.Equal(t, !tc.responseError, tlff.Success, "did not get expected feed_fetch success")
 				//
 				if !tc.responseError {
-					fv2 := tl.FeedVersion{}
+					fv2 := dmfr.FeedVersion{}
 					fv2.ID = fv.ID
 					testdb.ShouldFind(t, atx, &fv2)
 					assert.Equal(t, url, fv2.URL, "did not get expected feed version url")
@@ -244,7 +243,7 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 			t.Errorf("got %s expect %s", fv.SHA1, ExampleZip.SHA1)
 			return nil
 		}
-		fv2 := tl.FeedVersion{}
+		fv2 := dmfr.FeedVersion{}
 		fv2.ID = fv.ID
 		testdb.ShouldFind(t, atx, &fv2)
 		if fv2.URL != url {
@@ -344,7 +343,7 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 // 		defer os.RemoveAll(tmpdir) // clean up
 // 		//
 // 		url := ts.URL
-// 		feed := tl.Feed{}
+// 		feed := dmfr.Feed{}
 // 		feed.FeedID = "caltrain"
 // 		fv, _, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: ts.URL, FeedCreate: true, Directory: tmpdir})
 // 		if err != nil {
@@ -352,10 +351,10 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 // 			return nil
 // 		}
 // 		// Check Feed
-// 		tf2 := tl.Feed{}
+// 		tf2 := dmfr.Feed{}
 // 		testdb.ShouldGet(t, atx, &tf2, `SELECT * FROM current_feeds WHERE onestop_id = ?`, "caltrain")
 // 		// Check FV
-// 		fv2 := tl.FeedVersion{ID: fv.ID}
+// 		fv2 := dmfr.FeedVersion{ID: fv.ID}
 // 		testdb.ShouldFind(t, atx, &fv2)
 // 		if fv2.URL != url {
 // 			t.Errorf("got %s expect %s", fv2.URL, url)

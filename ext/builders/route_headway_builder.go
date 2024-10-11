@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -18,8 +19,8 @@ type RouteHeadway struct {
 	ServiceDate    tt.Date
 	StopTripCount  tt.Int
 	Departures     tt.Ints
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *RouteHeadway) Filename() string {
@@ -60,10 +61,10 @@ func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
 	}
 }
 
-func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	// Keep track of all services and departures
 	switch v := ent.(type) {
-	case *tl.Service:
+	case *service.Service:
 		// Use only the first 30 days of service
 		startDate := v.StartDate
 		for i := 0; i < 31; i++ {
@@ -73,9 +74,9 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 			}
 			startDate = startDate.AddDate(0, 0, 1)
 		}
-	case *tl.Route:
+	case *gtfs.Route:
 		pp.routeDepartures[eid] = map[riKey][]int{}
-	case *tl.Trip:
+	case *gtfs.Trip:
 		// Process StopTimes assuming they will all be written
 		// otherwise this breaks on journey pattern deduplication.
 		for _, st := range v.StopTimes {

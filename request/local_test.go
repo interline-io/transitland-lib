@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 )
 
 func TestLocalUpload(t *testing.T) {
@@ -27,13 +27,13 @@ func TestLocalUpload(t *testing.T) {
 	localUri := filepath.Join(t.TempDir(), "test.txt")
 	t.Log("uploading to:", localUri)
 	uploader := Local{}
-	if err := uploader.Upload(context.Background(), localUri, tl.Secret{}, r); err != nil {
+	if err := uploader.Upload(context.Background(), localUri, dmfr.Secret{}, r); err != nil {
 		t.Fatal(err)
 	}
 	// Download again
 	downloader := Local{}
 	t.Log("downloading from:", localUri)
-	downloadReader, _, err := downloader.Download(context.Background(), localUri, tl.Secret{}, tl.FeedAuthorization{})
+	downloadReader, _, err := downloader.Download(context.Background(), localUri, dmfr.Secret{}, dmfr.FeedAuthorization{})
 	if err != nil {
 		t.Fatal(err)
 	}

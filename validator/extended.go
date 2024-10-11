@@ -4,11 +4,11 @@ import (
 	"sort"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/twpayne/go-geom"
 )
 
-func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
+func buildRouteShapes(reader adapters.Reader) map[string]*geom.MultiLineString {
 	// Generate some route geoms...
 	shapeLengths := map[string]float64{}
 	for ent := range reader.Shapes() {

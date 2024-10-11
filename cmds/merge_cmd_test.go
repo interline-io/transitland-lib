@@ -5,7 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +26,7 @@ func TestMerge(t *testing.T) {
 			t.Fatal(err)
 		}
 		entCount := map[string]int{}
-		testutil.AllEntities(outReader, func(ent tl.Entity) {
+		testutil.AllEntities(outReader, func(ent tt.Entity) {
 			entCount[ent.Filename()] += 1
 		})
 		expectCount := map[string]int{}

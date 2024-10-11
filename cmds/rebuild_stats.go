@@ -9,9 +9,9 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/store"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -190,7 +190,7 @@ func rebuildStatsWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan R
 
 func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildStatsResult, error) {
 	// Get FV
-	fv := tl.FeedVersion{}
+	fv := dmfr.FeedVersion{}
 	fv.ID = opts.FeedVersionID
 	if err := adapter.Find(&fv); err != nil {
 		return RebuildStatsResult{}, err

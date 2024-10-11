@@ -4,7 +4,9 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // OpenWriter opens & creates a db writer
@@ -67,7 +69,7 @@ func (writer *Writer) Close() error {
 }
 
 // NewReader returns a new Reader with the same adapter.
-func (writer *Writer) NewReader() (tl.Reader, error) {
+func (writer *Writer) NewReader() (adapters.Reader, error) {
 	reader := Reader{
 		FeedVersionIDs: []int{writer.FeedVersionID},
 		Adapter:        writer.Adapter,
@@ -88,8 +90,8 @@ func (writer *Writer) Delete() error {
 }
 
 // AddEntity writes an entity to the database.
-func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
-	if v, ok := ent.(*tl.Route); ok && v.AgencyID == "" {
+func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
+	if v, ok := ent.(*gtfs.Route); ok && v.AgencyID == "" {
 		v.AgencyID = strconv.Itoa(writer.defaultAgencyID)
 	}
 	// Set the FeedVersionID
@@ -103,14 +105,14 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 		v.SetID(eid)
 	}
 	// Set a default AgencyID if possible.
-	if _, ok := ent.(*tl.Agency); ok && writer.defaultAgencyID == 0 {
+	if _, ok := ent.(*gtfs.Agency); ok && writer.defaultAgencyID == 0 {
 		writer.defaultAgencyID = eid
 	}
 	return strconv.Itoa(eid), err
 }
 
 // AddEntities writes entities to the database.
-func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	if len(ents) == 0 {
 		return []string{}, nil
 	}
@@ -118,7 +120,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	ients := make([]interface{}, len(ents))
 	for i, ent := range ents {
 		// Routes may need a default AgencyID set before writing to database.
-		if v, ok := ent.(*tl.Route); ok && v.AgencyID == "" {
+		if v, ok := ent.(*gtfs.Route); ok && v.AgencyID == "" {
 			v.AgencyID = strconv.Itoa(writer.defaultAgencyID)
 		}
 		// Set FeedVersion, Timestamps

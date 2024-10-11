@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/schema/sqlite"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jmoiron/sqlx"
 
 	// sqlite3
@@ -21,11 +21,11 @@ import (
 // Register.
 func init() {
 	// Register test adapter
-	adapters["sqlite3"] = func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} }
+	adapterFactories["sqlite3"] = func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} }
 	// Register readers and writers
-	r := func(url string) (tl.Reader, error) { return NewReader(url) }
+	r := func(url string) (adapters.Reader, error) { return NewReader(url) }
 	ext.RegisterReader("sqlite3", r)
-	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
+	w := func(url string) (adapters.Writer, error) { return NewWriter(url) }
 	ext.RegisterWriter("sqlite3", w)
 	// Dummy handlers for SQL functions.
 	sql.Register("sqlite3_w_funcs",

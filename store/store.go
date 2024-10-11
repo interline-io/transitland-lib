@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/request"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
@@ -51,7 +51,7 @@ func Download(storage string, key string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	r, _, err := st.Download(context.Background(), key, tl.Secret{}, tl.FeedAuthorization{})
+	r, _, err := st.Download(context.Background(), key, dmfr.Secret{}, dmfr.FeedAuthorization{})
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func UploadFile(storage string, src string, dst string) error {
 	if err != nil {
 		return err
 	}
-	if err := st.Upload(context.Background(), dst, tl.Secret{}, rp); err != nil {
+	if err := st.Upload(context.Background(), dst, dmfr.Secret{}, rp); err != nil {
 		return err
 	}
 	return nil

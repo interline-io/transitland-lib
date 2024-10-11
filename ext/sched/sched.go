@@ -3,7 +3,8 @@ package sched
 import (
 	"time"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -16,22 +17,22 @@ type tripInfo struct {
 
 type ScheduleChecker struct {
 	tripInfo map[string]tripInfo
-	services map[string]*tl.Service
+	services map[string]*service.Service
 }
 
 func NewScheduleChecker() *ScheduleChecker {
 	return &ScheduleChecker{
 		tripInfo: map[string]tripInfo{},
-		services: map[string]*tl.Service{},
+		services: map[string]*service.Service{},
 	}
 }
 
 // Validate gets a stream of entities from Copier to build up the cache.
-func (fi *ScheduleChecker) Validate(ent tl.Entity) []error {
+func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
-	case *tl.Service:
+	case *service.Service:
 		fi.services[v.ServiceID] = v
-	case *tl.Trip:
+	case *gtfs.Trip:
 		ti := tripInfo{
 			ServiceID: v.ServiceID,
 		}
@@ -40,7 +41,7 @@ func (fi *ScheduleChecker) Validate(ent tl.Entity) []error {
 			ti.EndTime = v.StopTimes[len(v.StopTimes)-1].ArrivalTime
 		}
 		fi.tripInfo[v.TripID] = ti
-	case *tl.Frequency:
+	case *gtfs.Frequency:
 		a := fi.tripInfo[v.TripID]
 		for s := v.StartTime.Int(); s < v.EndTime.Int(); s += v.HeadwaySecs {
 			a.FrequencyStarts = append(a.FrequencyStarts, s)

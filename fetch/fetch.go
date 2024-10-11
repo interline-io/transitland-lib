@@ -8,7 +8,6 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/store"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -26,7 +25,7 @@ type Options struct {
 	MaxSize                 uint64
 	HideURL                 bool
 	FetchedAt               time.Time
-	Secrets                 []tl.Secret
+	Secrets                 []dmfr.Secret
 	CreatedBy               tt.String
 	Name                    tt.String
 	Description             tt.String
@@ -59,7 +58,7 @@ type fetchCb func(request.FetchResponse) (validationResponse, error)
 // Fetch and check for serious errors - regular errors are in fr.FetchError
 func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	result := Result{URL: opts.FeedURL}
-	feed := tl.Feed{}
+	feed := dmfr.Feed{}
 	if err := atx.Get(&feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
 		return result, err
 	}

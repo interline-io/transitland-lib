@@ -2,7 +2,8 @@ package rules
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // TODO: calculate actual contrast.
@@ -11,8 +12,8 @@ import (
 type InsufficientColorContrastCheck struct{}
 
 // Validate .
-func (e *InsufficientColorContrastCheck) Validate(ent tl.Entity) []error {
-	if v, ok := ent.(*tl.Route); ok {
+func (e *InsufficientColorContrastCheck) Validate(ent tt.Entity) []error {
+	if v, ok := ent.(*gtfs.Route); ok {
 		if v.RouteColor != "" && v.RouteColor == v.RouteTextColor {
 			return []error{causes.NewValidationWarning("route_text_color", "route_text_color should provide contrast with route_color")}
 		}

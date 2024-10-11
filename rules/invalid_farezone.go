@@ -3,7 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // InvalidFarezoneError reports when a farezone does not exist.
@@ -26,15 +27,15 @@ type ValidFarezoneCheck struct {
 }
 
 // Validate .
-func (e *ValidFarezoneCheck) Validate(ent tl.Entity) []error {
+func (e *ValidFarezoneCheck) Validate(ent tt.Entity) []error {
 	if e.zones == nil {
 		e.zones = map[string]string{}
 	}
 	var errs []error
 	switch v := ent.(type) {
-	case *tl.Stop:
+	case *gtfs.Stop:
 		e.zones[v.ZoneID] = v.ZoneID
-	case *tl.FareRule:
+	case *gtfs.FareRule:
 		// TODO: updating values should be handled in UpdateKeys
 		// probably shouldn't mutate in validators...
 		if fz, ok := e.zones[v.OriginID]; ok {

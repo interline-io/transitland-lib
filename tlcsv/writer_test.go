@@ -5,8 +5,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +22,7 @@ func TestWriter(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	testutil.TestWriter(t, *fe, func() tl.Reader { return reader }, func() tl.Writer { return writer })
+	testutil.TestWriter(t, *fe, func() adapters.Reader { return reader }, func() adapters.Writer { return writer })
 	// Clean up and double check
 	if err := os.RemoveAll(tmpdir); err != nil {
 		t.Error(err)
@@ -47,7 +48,7 @@ func TestWriterExtraColumn(t *testing.T) {
 	if err := writer.Create(); err != nil {
 		t.Error(err)
 	}
-	testEnt := tl.Stop{}
+	testEnt := gtfs.Stop{}
 	// test ordering on output
 	extraVals := []string{
 		"ok", "hello",

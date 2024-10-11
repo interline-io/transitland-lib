@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 )
 
 func NewS3FromUrl(ustr string) (*S3, error) {
@@ -28,7 +28,7 @@ type S3 struct {
 	KeyPrefix string
 }
 
-func (r S3) Download(ctx context.Context, key string, secret tl.Secret, auth tl.FeedAuthorization) (io.ReadCloser, int, error) {
+func (r S3) Download(ctx context.Context, key string, secret dmfr.Secret, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
 	// Create client
 	client, err := awsConfig(ctx, secret)
 	if err != nil {
@@ -47,7 +47,7 @@ func (r S3) Download(ctx context.Context, key string, secret tl.Secret, auth tl.
 	return s3obj.Body, 0, nil
 }
 
-func (r S3) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile io.Reader) error {
+func (r S3) Upload(ctx context.Context, key string, secret dmfr.Secret, uploadFile io.Reader) error {
 	// Create client
 	client, err := awsConfig(ctx, secret)
 	if err != nil {
@@ -65,7 +65,7 @@ func (r S3) Upload(ctx context.Context, key string, secret tl.Secret, uploadFile
 	return err
 }
 
-func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition string, secret tl.Secret) (string, error) {
+func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition string, secret dmfr.Secret) (string, error) {
 	client, err := awsConfig(ctx, secret)
 	if err != nil {
 		return "", err
@@ -82,7 +82,7 @@ func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 	return request.URL, nil
 }
 
-func awsConfig(ctx context.Context, secret tl.Secret) (*s3.Client, error) {
+func awsConfig(ctx context.Context, secret dmfr.Secret) (*s3.Client, error) {
 	// Create client
 	var client *s3.Client
 	if secret.AWSAccessKeyID != "" && secret.AWSSecretAccessKey != "" {

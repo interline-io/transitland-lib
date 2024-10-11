@@ -3,7 +3,7 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -39,8 +39,8 @@ type FrequencyOverlapCheck struct {
 }
 
 // Validate .
-func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
-	v, ok := ent.(*tl.Frequency)
+func (e *FrequencyOverlapCheck) Validate(ent tt.Entity) []error {
+	v, ok := ent.(*gtfs.Frequency)
 	if !ok {
 		return nil
 	}

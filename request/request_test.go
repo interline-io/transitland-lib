@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,19 +32,19 @@ func TestAuthorizedRequest(t *testing.T) {
 	testcases := []struct {
 		name        string
 		url         string
-		auth        tl.FeedAuthorization
+		auth        dmfr.FeedAuthorization
 		checkkey    string
 		checkvalue  string
 		checksize   int
 		checkcode   int
 		checksha1   string
 		expectError bool
-		secret      tl.Secret
+		secret      dmfr.Secret
 	}{
 		{
 			name:       "basic get",
 			url:        "/get",
-			auth:       tl.FeedAuthorization{},
+			auth:       dmfr.FeedAuthorization{},
 			checkkey:   "url",
 			checkvalue: "/get",
 			checksize:  29,
@@ -54,64 +54,64 @@ func TestAuthorizedRequest(t *testing.T) {
 		{
 			name:       "query_param",
 			url:        "/get",
-			auth:       tl.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
+			auth:       dmfr.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
 			checkkey:   "url",
 			checkvalue: "/get?api_key=abcd",
 			checksize:  42,
 			checkcode:  200,
 			checksha1:  "",
-			secret:     tl.Secret{Key: "abcd"},
+			secret:     dmfr.Secret{Key: "abcd"},
 		},
 		{
 			name:       "path_segment",
 			url:        "/anything/{}/ok",
-			auth:       tl.FeedAuthorization{Type: "path_segment"},
+			auth:       dmfr.FeedAuthorization{Type: "path_segment"},
 			checkkey:   "url",
 			checkvalue: "/anything/abcd/ok",
 			checksize:  0,
 			checkcode:  200,
 			checksha1:  "",
-			secret:     tl.Secret{Key: "abcd"},
+			secret:     dmfr.Secret{Key: "abcd"},
 		},
 		{
 			name:       "header",
 			url:        "/headers",
-			auth:       tl.FeedAuthorization{Type: "header", ParamName: "Auth"},
+			auth:       dmfr.FeedAuthorization{Type: "header", ParamName: "Auth"},
 			checkkey:   "", // TODO: check headers...
 			checkvalue: "",
 			checksize:  0,
 			checkcode:  200,
 			checksha1:  "",
-			secret:     tl.Secret{Key: "abcd"},
+			secret:     dmfr.Secret{Key: "abcd"},
 		},
 		{
 			name:       "basic_auth",
 			url:        "/basic-auth/efgh/ijkl",
-			auth:       tl.FeedAuthorization{Type: "basic_auth"},
+			auth:       dmfr.FeedAuthorization{Type: "basic_auth"},
 			checkkey:   "user",
 			checkvalue: "efgh",
 			checksize:  0,
 			checkcode:  200,
 			checksha1:  "",
-			secret:     tl.Secret{Username: "efgh", Password: "ijkl"},
+			secret:     dmfr.Secret{Username: "efgh", Password: "ijkl"},
 		},
 		{
 			name:       "replace",
 			url:        "/get",
-			auth:       tl.FeedAuthorization{Type: "replace_url"},
+			auth:       dmfr.FeedAuthorization{Type: "replace_url"},
 			checkkey:   "url",
 			checkvalue: "/anything/test",
 			checksize:  0,
 			checkcode:  200,
 			checksha1:  "",
-			secret:     tl.Secret{ReplaceUrl: ts.URL + "/anything/test"},
+			secret:     dmfr.Secret{ReplaceUrl: ts.URL + "/anything/test"},
 		},
 		{
 			name:        "replace expect error",
 			url:         "/get",
-			auth:        tl.FeedAuthorization{Type: "replace_url"},
+			auth:        dmfr.FeedAuthorization{Type: "replace_url"},
 			expectError: true,
-			secret:      tl.Secret{ReplaceUrl: "/must/be/full/url"},
+			secret:      dmfr.Secret{ReplaceUrl: "/must/be/full/url"},
 		},
 	}
 	for _, tc := range testcases {

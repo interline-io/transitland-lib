@@ -3,8 +3,8 @@ package geomcache
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
@@ -15,7 +15,7 @@ func TestGeomCache(t *testing.T) {
 	}
 	r.Open()
 	defer r.Close()
-	trips := map[string]tl.Trip{}
+	trips := map[string]gtfs.Trip{}
 	count := 1
 	for trip := range r.Trips() {
 		trip.StopPatternID = count

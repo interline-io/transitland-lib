@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -35,7 +35,7 @@ func Benchmark_StopTime_Memory_Read1000(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		stoptimes := []tl.StopTime{}
+		stoptimes := []gtfs.StopTime{}
 		for st := range reader.StopTimes() {
 			stoptimes = append(stoptimes, st)
 		}
@@ -48,7 +48,7 @@ func Benchmark_loadRowReflect_StopTime(b *testing.B) {
 		"trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled",
 		"AAMV4,16:00:00,16:00:00,BEATTY_AIRPORT,2",
 	)
-	e := tl.StopTime{}
+	e := gtfs.StopTime{}
 	for n := 0; n < b.N; n++ {
 		loadRowReflect(&e, row)
 	}
@@ -59,7 +59,7 @@ func Benchmark_loadRowFast_StopTime(b *testing.B) {
 		"trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled",
 		"AAMV4,16:00:00,16:00:00,BEATTY_AIRPORT,2",
 	)
-	e := tl.StopTime{}
+	e := gtfs.StopTime{}
 	for n := 0; n < b.N; n++ {
 		loadRowFast(&e, row)
 	}
@@ -67,7 +67,7 @@ func Benchmark_loadRowFast_StopTime(b *testing.B) {
 
 func Benchmark_loadRowReflect_Shape(b *testing.B) {
 	row := makeRow("shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled", "a,30.0,30.0,3")
-	e := tl.Shape{}
+	e := gtfs.Shape{}
 	for n := 0; n < b.N; n++ {
 		loadRowReflect(&e, row)
 	}
@@ -75,7 +75,7 @@ func Benchmark_loadRowReflect_Shape(b *testing.B) {
 
 func Benchmark_loadRowFast_Shape(b *testing.B) {
 	row := makeRow("shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled", "a,30.0,30.0,3")
-	e := tl.Shape{}
+	e := gtfs.Shape{}
 	for n := 0; n < b.N; n++ {
 		loadRowFast(&e, row)
 	}
@@ -84,7 +84,7 @@ func Benchmark_loadRowFast_Shape(b *testing.B) {
 // Benchmark reflect path loading
 func Benchmark_loadRow_Stop(b *testing.B) {
 	row := makeRow("stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url", "FUR_CREEK_RES,Furnace Creek Resort (Demo),,36.425288,-117.133162,,")
-	e := tl.Stop{}
+	e := gtfs.Stop{}
 	for n := 0; n < b.N; n++ {
 		loadRow(&e, row)
 	}
@@ -92,7 +92,7 @@ func Benchmark_loadRow_Stop(b *testing.B) {
 
 func Benchmark_loadRow_Calendar(b *testing.B) {
 	row := makeRow("service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date", "FULLW,1,1,1,1,1,1,1,20070101,20101231")
-	e := tl.Calendar{}
+	e := gtfs.Calendar{}
 	for n := 0; n < b.N; n++ {
 		loadRow(&e, row)
 	}
@@ -100,14 +100,14 @@ func Benchmark_loadRow_Calendar(b *testing.B) {
 
 func Benchmark_loadRow_Trip(b *testing.B) {
 	row := makeRow("route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id", "AB,FULLW,AB1,to Bullfrog,0,1,x")
-	e := tl.Trip{}
+	e := gtfs.Trip{}
 	for n := 0; n < b.N; n++ {
 		loadRow(&e, row)
 	}
 }
 
 func Benchmark_dumpRow_StopTime(b *testing.B) {
-	ent := tl.StopTime{
+	ent := gtfs.StopTime{
 		TripID:            "xyz",
 		StopID:            "abc",
 		StopHeadsign:      tt.NewString("hello"),
@@ -129,7 +129,7 @@ func Benchmark_dumpRow_StopTime(b *testing.B) {
 }
 
 func Benchmark_dumpRow_Route(b *testing.B) {
-	ent := tl.Route{
+	ent := gtfs.Route{
 		RouteID:        "route_id",
 		RouteShortName: "route_short_name",
 		RouteLongName:  "route_long_name",
@@ -153,7 +153,7 @@ func Benchmark_dumpRow_Route(b *testing.B) {
 }
 
 func Benchmark_dumpRow_FareProduct(b *testing.B) {
-	ent := tl.FareProduct{
+	ent := gtfs.FareProduct{
 		FareProductID:   tt.NewString("test"),
 		FareProductName: tt.NewString("name"),
 		Amount:          tt.NewCurrencyAmount(1.2345),

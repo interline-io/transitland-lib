@@ -2,7 +2,8 @@ package rules
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // AgencyIDConditionallyRequiredCheck checks if agency_id is missing when more than one agency is present.
@@ -12,19 +13,19 @@ type AgencyIDConditionallyRequiredCheck struct {
 }
 
 // Validate .
-func (e *AgencyIDConditionallyRequiredCheck) Validate(ent tl.Entity) []error {
+func (e *AgencyIDConditionallyRequiredCheck) Validate(ent tt.Entity) []error {
 	var errs []error
 	switch v := ent.(type) {
-	case *tl.FareAttribute:
+	case *gtfs.FareAttribute:
 		if v.AgencyID.Val == "" && e.agencyCount > 1 {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
-	case *tl.Route:
+	case *gtfs.Route:
 		if v.AgencyID == "" && e.agencyCount > 1 {
 			// routes.agency_id is required when more than one agency is present
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
-	case *tl.Agency:
+	case *gtfs.Agency:
 		e.agencyCount++
 	}
 	return errs

@@ -8,7 +8,6 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -191,7 +190,7 @@ func (cr *Result) HandleError(fn string, errs []error) {
 	}
 }
 
-// func entityAsJson(ent tl.Entity) map[string]any {
+// func entityAsJson(ent tt.Entity) map[string]any {
 // 	ret := map[string]any{}
 // 	entBytes, err := json.Marshal(ent)
 // 	if err != nil {
@@ -204,7 +203,7 @@ func (cr *Result) HandleError(fn string, errs []error) {
 // }
 
 // HandleEntityErrors .
-func (cr *Result) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
+func (cr *Result) HandleEntityErrors(ent tt.Entity, errs []error, warns []error) {
 	// Get entity line, if available
 	efn := ent.Filename()
 	eid := ent.EntityID()

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 )
 
 func TestFetchCommand(t *testing.T) {
@@ -29,37 +29,37 @@ func TestFetchCommand(t *testing.T) {
 	}))
 	defer ts404.Close()
 	// note - Spec==gtfs is required for fetch
-	f200 := tl.Feed{FeedID: "f--200", Spec: "gtfs", URLs: tl.FeedUrls{StaticCurrent: ts200.URL}}
-	f404 := tl.Feed{FeedID: "f--404", Spec: "gtfs", URLs: tl.FeedUrls{StaticCurrent: ts404.URL}}
+	f200 := dmfr.Feed{FeedID: "f--200", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: ts200.URL}}
+	f404 := dmfr.Feed{FeedID: "f--404", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: ts404.URL}}
 	cases := []struct {
 		fvcount            int
 		fatalErrorContains string
-		feeds              []tl.Feed
+		feeds              []dmfr.Feed
 		command            []string
 		fail               bool
 	}{
 		{
 			fvcount: 1,
-			feeds:   []tl.Feed{f200},
+			feeds:   []dmfr.Feed{f200},
 		},
 		{
 			fvcount: 1,
-			feeds:   []tl.Feed{f200, f404},
+			feeds:   []dmfr.Feed{f200, f404},
 			command: []string{"f--200", "f--404"},
 		},
 		{
 			fvcount: 1,
-			feeds:   []tl.Feed{f200, f404},
+			feeds:   []dmfr.Feed{f200, f404},
 			command: []string{"f--200"},
 		},
 		{
 			fvcount: 0,
-			feeds:   []tl.Feed{f200, f404},
+			feeds:   []dmfr.Feed{f200, f404},
 			command: []string{"f--404"},
 		},
 		{
 			fvcount:            0,
-			feeds:              []tl.Feed{f200, f404},
+			feeds:              []dmfr.Feed{f200, f404},
 			command:            []string{"f--404"},
 			fail:               true,
 			fatalErrorContains: "file does not exist or invalid data",
@@ -90,12 +90,12 @@ func TestFetchCommand(t *testing.T) {
 				t.Fatalf("Did not get expected error match: %s", exp.fatalErrorContains)
 			}
 			// Test
-			feeds := []tl.Feed{}
+			feeds := []dmfr.Feed{}
 			testdb.ShouldSelect(t, adapter, &feeds, "SELECT * FROM current_feeds")
 			if len(feeds) != len(exp.feeds) {
 				t.Errorf("got %d feeds, expect %d", len(feeds), len(exp.feeds))
 			}
-			fvs := []tl.FeedVersion{}
+			fvs := []dmfr.FeedVersion{}
 			testdb.ShouldSelect(t, adapter, &fvs, "SELECT * FROM feed_versions")
 			if len(fvs) != exp.fvcount {
 				t.Errorf("got %d feed versions, expect %d", len(fvs), exp.fvcount)

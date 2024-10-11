@@ -4,8 +4,8 @@ package extract
 import (
 	"fmt"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/internal/graph"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlxy"
 )
 
@@ -87,7 +87,7 @@ func (em *Marker) Count() int {
 }
 
 // Filter takes a Reader and selects any entities that are children of the specified file/id map.
-func (em *Marker) Filter(reader tl.Reader) error {
+func (em *Marker) Filter(reader adapters.Reader) error {
 	var bboxExcludeStops []string
 	if em.bbox != "" {
 		bbox, err := tlxy.ParseBbox(em.bbox)

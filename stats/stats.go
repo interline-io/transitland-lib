@@ -2,11 +2,11 @@ package stats
 
 import (
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldbutil"
@@ -21,7 +21,7 @@ type FeedVersionStats struct {
 	FileInfos        []dmfr.FeedVersionFileInfo
 }
 
-func NewFeedStatsFromReader(reader tl.Reader) (FeedVersionStats, error) {
+func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 	ret := FeedVersionStats{}
 
 	// File Infos - only for CSV readers

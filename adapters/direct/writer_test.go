@@ -3,13 +3,13 @@ package direct
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestWriter(t *testing.T) {
 	writer := NewWriter()
-	writer.AddEntity(&tl.Agency{AgencyID: "test", AgencyName: "ok"})
+	writer.AddEntity(&gtfs.Agency{AgencyID: "test", AgencyName: "ok"})
 	reader, err := writer.NewReader()
 	if err != nil {
 		t.Fatal(err)

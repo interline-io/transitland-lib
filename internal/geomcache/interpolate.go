@@ -1,13 +1,13 @@
 package geomcache
 
 import (
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
 // InterpolateStopTimes sets missing ArrivalTime, DestinationTime values.
 // StopTimes must be sorted and valid.
-func InterpolateStopTimes(stoptimes []tl.StopTime) ([]tl.StopTime, error) {
+func InterpolateStopTimes(stoptimes []gtfs.StopTime) ([]gtfs.StopTime, error) {
 	// Look for gaps
 	for start := 0; start < len(stoptimes)-1; {
 		// find the next stoptime with arrivaltime
@@ -25,7 +25,7 @@ func InterpolateStopTimes(stoptimes []tl.StopTime) ([]tl.StopTime, error) {
 	return stoptimes, nil
 }
 
-func interpolateGap(stoptimes *[]tl.StopTime, start int, end int) {
+func interpolateGap(stoptimes *[]gtfs.StopTime, start int, end int) {
 	if start == end {
 		return
 	}

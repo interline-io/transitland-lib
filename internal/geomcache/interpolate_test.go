@@ -3,7 +3,7 @@ package geomcache
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -21,10 +21,10 @@ type expectStopTime struct {
 	ExpectDepartureTime int
 }
 
-func expectTripToStopTime(e []expectStopTime) []tl.StopTime {
-	ret := []tl.StopTime{}
+func expectTripToStopTime(e []expectStopTime) []gtfs.StopTime {
+	ret := []gtfs.StopTime{}
 	for _, i := range e {
-		ret = append(ret, tl.StopTime{
+		ret = append(ret, gtfs.StopTime{
 			ArrivalTime:       tt.NewSeconds(i.ArrivalTime),
 			DepartureTime:     tt.NewSeconds(i.DepartureTime),
 			ShapeDistTraveled: tt.NewFloat(i.ShapeDistTraveled),

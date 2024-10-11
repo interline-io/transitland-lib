@@ -2,7 +2,7 @@ package filters
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -10,16 +10,16 @@ import (
 type NormalizeTimezoneFilter struct{}
 
 // Validate .
-func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (e *NormalizeTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Agency:
+	case *gtfs.Agency:
 		n, ok := tt.IsValidTimezone(v.AgencyTimezone)
 		if !ok {
 			return causes.NewInvalidTimezoneError("agency_timezone", v.AgencyTimezone)
 		} else {
 			v.AgencyEmail = n
 		}
-	case *tl.Stop:
+	case *gtfs.Stop:
 		n, ok := tt.IsValidTimezone(v.StopTimezone)
 		if !ok {
 			return causes.NewInvalidTimezoneError("stop_timezone", v.StopTimezone)
