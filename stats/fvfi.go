@@ -10,9 +10,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/dimchansky/utfbom"
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/tl/tt"
-	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // NewFeedVersionFileInfosFromReader calculates statistics about the contents of a feed version

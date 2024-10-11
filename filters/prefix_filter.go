@@ -6,7 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type PrefixFilter struct {
@@ -51,7 +51,7 @@ func (filter *PrefixFilter) PrefixFile(fn string) {
 	filter.prefixFiles[fn] = true
 }
 
-func (filter *PrefixFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
+func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	if _, ok := filter.prefixFiles[ent.Filename()]; !(ok || filter.PrefixAll) {
 		return nil
 	}

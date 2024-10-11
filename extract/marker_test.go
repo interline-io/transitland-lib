@@ -3,9 +3,9 @@ package extract
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
 	"github.com/interline-io/transitland-lib/internal/graph"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 type mss = map[string][]string

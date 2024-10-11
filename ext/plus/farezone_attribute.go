@@ -1,6 +1,6 @@
 package plus
 
-import "github.com/interline-io/transitland-lib/tl/tt"
+import "github.com/interline-io/transitland-lib/tt"
 
 // FarezoneAttribute farezone_attributes.txt
 type FarezoneAttribute struct {

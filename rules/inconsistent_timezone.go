@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // InconsistentTimezoneError reports when agency.txt has more than 1 unique timezone present.
@@ -24,7 +25,7 @@ type InconsistentTimezoneCheck struct {
 }
 
 // Validate .
-func (e *InconsistentTimezoneCheck) Validate(ent tl.Entity) []error {
+func (e *InconsistentTimezoneCheck) Validate(ent tt.Entity) []error {
 	v, ok := ent.(*tl.Agency)
 	if !ok {
 		return nil

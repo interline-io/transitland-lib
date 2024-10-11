@@ -3,8 +3,8 @@ package testdb
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters/tldb"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/tldb"
 )
 
 func MustOpenWriter(dburl string, create bool) *tldb.Writer {

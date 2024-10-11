@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
+	"github.com/interline-io/transitland-lib/adapters/tldb"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/rt"
@@ -20,9 +23,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
-	"github.com/interline-io/transitland-lib/tl/tt"
-	"github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -205,7 +206,7 @@ type Options struct {
 
 // Validator checks a GTFS source for errors and warnings.
 type Validator struct {
-	Reader          tl.Reader
+	Reader          adapters.Reader
 	Options         Options
 	rtValidator     *rt.Validator
 	defaultTimezone string
@@ -218,7 +219,7 @@ func (v *Validator) AddExtension(ext any) error {
 }
 
 // NewValidator returns a new Validator.
-func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
+func NewValidator(reader adapters.Reader, options Options) (*Validator, error) {
 	// Default options
 	if options.IncludeEntitiesLimit == 0 {
 		options.IncludeEntitiesLimit = defaultMaxEnts
@@ -282,7 +283,7 @@ func (v *Validator) Validate() (*Result, error) {
 	return result, nil
 }
 
-func (v *Validator) ValidateStatic(reader tl.Reader, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
+func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
 	result := NewResult(evaluateAt, evaluateAtLocal)
 
 	v.rtValidator = rt.NewValidator()
@@ -507,7 +508,7 @@ func (v *Validator) getTimes(now time.Time, tzName string) (time.Time, time.Time
 	return now, nowLocal, nil
 }
 
-func (v *Validator) setupCopier(reader tl.Reader, exts []any) (*copier.Copier, error) {
+func (v *Validator) setupCopier(reader adapters.Reader, exts []any) (*copier.Copier, error) {
 	writer := &empty.Writer{}
 	writer.Open()
 	// Prepare copier

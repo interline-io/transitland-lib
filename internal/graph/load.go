@@ -1,6 +1,6 @@
 package graph
 
-import "github.com/interline-io/transitland-lib/tl"
+import "github.com/interline-io/transitland-lib/adapters"
 
 /*
 
@@ -50,7 +50,7 @@ func entityNode(ent entity) *Node {
 }
 
 // BuildGraph .
-func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
+func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 	eg := NewEntityGraph()
 
 	// Add Agencies and select default Agency

@@ -7,14 +7,14 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/adapters/tldb"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/extract"
 	"github.com/interline-io/transitland-lib/filters"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
 
@@ -154,7 +154,7 @@ func (cmd *ExtractCommand) Run() error {
 	defer writer.Close()
 
 	if cmd.writeExtraColumns {
-		if v, ok := writer.(tl.WriterWithExtraColumns); ok {
+		if v, ok := writer.(adapters.WriterWithExtraColumns); ok {
 			v.WriteExtraColumns(true)
 		} else {
 			return errors.New("writer does not support extra output columns")

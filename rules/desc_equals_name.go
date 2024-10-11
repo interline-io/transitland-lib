@@ -3,13 +3,14 @@ package rules
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // DescriptionEqualsName checks that route_desc does not duplicate route_short_name or route_long_name.
 type DescriptionEqualsName struct{}
 
 // Validate .
-func (e *DescriptionEqualsName) Validate(ent tl.Entity) []error {
+func (e *DescriptionEqualsName) Validate(ent tt.Entity) []error {
 	if v, ok := ent.(*tl.Route); ok {
 		if v.RouteDesc != "" && (v.RouteDesc == v.RouteLongName || v.RouteDesc == v.RouteShortName) {
 			return []error{causes.NewValidationWarning("route_desc", "route_desc should not duplicate route_short_name or route_long_name")}

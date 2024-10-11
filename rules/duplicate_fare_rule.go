@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // DuplicateFareRuleError reports when multiple FareRules have the same (route_id,origin_id,_destination_id,contains_id)
@@ -30,7 +31,7 @@ type DuplicateFareRuleCheck struct {
 	rules map[string]int
 }
 
-func (e *DuplicateFareRuleCheck) Validate(ent tl.Entity) []error {
+func (e *DuplicateFareRuleCheck) Validate(ent tt.Entity) []error {
 	v, ok := ent.(*tl.FareRule)
 	if !ok {
 		return nil

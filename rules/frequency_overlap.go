@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FrequencyOverlapError is reported when two frequencies.txt entries for the same trip overlap in time.
@@ -39,7 +39,7 @@ type FrequencyOverlapCheck struct {
 }
 
 // Validate .
-func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
+func (e *FrequencyOverlapCheck) Validate(ent tt.Entity) []error {
 	v, ok := ent.(*tl.Frequency)
 	if !ok {
 		return nil

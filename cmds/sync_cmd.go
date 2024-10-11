@@ -3,8 +3,8 @@ package cmds
 import (
 	"os"
 
+	"github.com/interline-io/transitland-lib/adapters/tldb"
 	"github.com/interline-io/transitland-lib/sync"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
 

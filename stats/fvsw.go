@@ -1,19 +1,20 @@
 package stats
 
 import (
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type FeedVersionServiceWindowBuilder struct {
 	fvsw dmfr.FeedVersionServiceWindow
 }
 
-func NewFeedVersionServiceWindowFromReader(reader tl.Reader) (dmfr.FeedVersionServiceWindow, error) {
+func NewFeedVersionServiceWindowFromReader(reader adapters.Reader) (dmfr.FeedVersionServiceWindow, error) {
 	ret := dmfr.FeedVersionServiceWindow{}
 	fvswBuilder := NewFeedVersionServiceWindowBuilder()
 	if err := copier.QuietCopy(reader, &empty.Writer{}, func(o *copier.Options) { o.AddExtension(fvswBuilder) }); err != nil {
@@ -30,7 +31,7 @@ func NewFeedVersionServiceWindowBuilder() *FeedVersionServiceWindowBuilder {
 	return &FeedVersionServiceWindowBuilder{}
 }
 
-func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
+func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		if tz, ok := tt.IsValidTimezone(v.AgencyTimezone); ok {

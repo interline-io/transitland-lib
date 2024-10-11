@@ -5,14 +5,14 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // BasicRouteTypeFilter checks for extended route_type's and converts to basic route_types.
 type BasicRouteTypeFilter struct{}
 
 // Filter converts extended route_types to basic route_types.
-func (e *BasicRouteTypeFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
+func (e *BasicRouteTypeFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	// Filters can edit in place, add entity errors, etc.
 	v, ok := ent.(*tl.Route)
 	if !ok {

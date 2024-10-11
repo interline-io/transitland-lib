@@ -4,7 +4,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func init() {
@@ -18,8 +18,8 @@ type Ext struct {
 }
 
 // Entities returns the entities defined by GTFS Plus.
-func (ext Ext) Entities() []tl.Entity {
-	return []tl.Entity{
+func (ext Ext) Entities() []tt.Entity {
+	return []tt.Entity{
 		&CalendarAttribute{},
 		&PlusRiderCategory{},
 		&FareRiderCategory{},
@@ -32,7 +32,7 @@ func (ext Ext) Entities() []tl.Entity {
 	}
 }
 
-func (ext *Ext) Filter(ent tl.Entity, emap *tt.EntityMap) error {
+func (ext *Ext) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		ext.defaultAgency = v.AgencyID

@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FastTravelError reports when reasonable maximum speeds have been exceeded for at least 30 seconds.
@@ -72,7 +73,7 @@ func (e *StopTimeFastTravelCheck) SetGeomCache(g tlxy.GeomCache) {
 }
 
 // Validate .
-func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
+func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 	if v, ok := ent.(*tl.Route); ok {
 		if e.routeTypes == nil {
 			e.routeTypes = map[string]int{}

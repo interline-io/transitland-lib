@@ -1,6 +1,6 @@
 package dmfr
 
-import "github.com/interline-io/transitland-lib/tl/tt"
+import "github.com/interline-io/transitland-lib/tt"
 
 type FeedVersionAgencyOnestopID struct {
 	EntityID  string

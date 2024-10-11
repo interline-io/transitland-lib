@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
 )
 
@@ -39,7 +40,7 @@ type StopTooCloseCheck struct {
 }
 
 // Validate .
-func (e *StopTooCloseCheck) Validate(ent tl.Entity) []error {
+func (e *StopTooCloseCheck) Validate(ent tt.Entity) []error {
 	e.maxdist = 1.0
 	if e.geoms == nil {
 		e.geoms = map[string][]*stopPoint{}

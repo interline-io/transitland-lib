@@ -5,11 +5,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/interline-io/transitland-lib/adapters/tldb"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/tl/request"
-	"github.com/interline-io/transitland-lib/tl/tt"
-	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Options sets options for a fetch operation.

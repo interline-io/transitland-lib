@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // InvalidFarezoneError reports when a farezone does not exist.
@@ -26,7 +27,7 @@ type ValidFarezoneCheck struct {
 }
 
 // Validate .
-func (e *ValidFarezoneCheck) Validate(ent tl.Entity) []error {
+func (e *ValidFarezoneCheck) Validate(ent tt.Entity) []error {
 	if e.zones == nil {
 		e.zones = map[string]string{}
 	}

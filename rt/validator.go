@@ -7,8 +7,8 @@ import (
 	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
 )
 
@@ -66,7 +66,7 @@ func (fi *Validator) SetGeomCache(g tlxy.GeomCache) {
 }
 
 // Validate gets a stream of entities from Copier to build up the cache.
-func (fi *Validator) Validate(ent tl.Entity) []error {
+func (fi *Validator) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		fi.Timezone = v.AgencyTimezone

@@ -1,9 +1,8 @@
 package rules
 
 import (
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type hasEntityKey interface {
@@ -16,7 +15,7 @@ type EntityDuplicateCheck struct {
 }
 
 // Validate .
-func (e *EntityDuplicateCheck) Validate(ent tl.Entity) []error {
+func (e *EntityDuplicateCheck) Validate(ent tt.Entity) []error {
 	if e.duplicates == nil {
 		e.duplicates = tt.NewEntityMap()
 	}

@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -9,7 +9,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type RedateFilter struct {
@@ -75,7 +75,7 @@ func newRedateFilterFromJson(args string) (*RedateFilter, error) {
 	return NewRedateFilter(opts.SourceDate.Val, opts.TargetDate.Val, int(a), int(b), opts.DOWAlign.Val)
 }
 
-func (tf *RedateFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
+func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Trip:
 		if tf.excluded[v.ServiceID] {

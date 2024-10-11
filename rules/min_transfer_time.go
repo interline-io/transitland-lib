@@ -3,13 +3,14 @@ package rules
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // MinTransferTimeCheck reports when min_transfer_type is required to be set
 type MinTransferTimeCheck struct{}
 
 // Validate .
-func (e *MinTransferTimeCheck) Validate(ent tl.Entity) []error {
+func (e *MinTransferTimeCheck) Validate(ent tt.Entity) []error {
 	if v, ok := ent.(*tl.Transfer); ok {
 		var errs []error
 		if v.TransferType != 2 && v.MinTransferTime.Valid {

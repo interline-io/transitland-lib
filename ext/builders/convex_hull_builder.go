@@ -3,7 +3,7 @@ package builders
 import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/xy"
 )
@@ -58,7 +58,7 @@ func NewConvexHullBuilder() *ConvexHullBuilder {
 }
 
 // AfterWrite keeps track of which routes/agencies visit which stops
-func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
+func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Stop:
 		pp.stops[eid] = &stopGeom{

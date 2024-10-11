@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func NewApplyTimezoneFilter(timezone string) (*ApplyTimezoneFilter, error) {
@@ -36,7 +36,7 @@ type ApplyTimezoneFilter struct {
 	timezone string
 }
 
-func (e *ApplyTimezoneFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
+func (e *ApplyTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		v.AgencyTimezone = e.timezone

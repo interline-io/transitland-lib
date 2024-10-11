@@ -11,10 +11,10 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/spf13/pflag"
 )
 
@@ -213,7 +213,7 @@ type canFileInfos interface {
 	FileInfos() ([]os.FileInfo, error)
 }
 
-func checkDiffRaw(reader tl.Reader, checkFiles []string) (*diffAdapter, error) {
+func checkDiffRaw(reader adapters.Reader, checkFiles []string) (*diffAdapter, error) {
 	v, ok := reader.(*tlcsv.Reader)
 	if !ok {
 		return nil, errors.New("must be csv input")
@@ -258,7 +258,7 @@ func checkDiffRaw(reader tl.Reader, checkFiles []string) (*diffAdapter, error) {
 	return df, nil
 }
 
-func checkDiff(reader tl.Reader) (*diffAdapter, error) {
+func checkDiff(reader adapters.Reader) (*diffAdapter, error) {
 	df := newDiffAdapter()
 	writer, err := tlcsv.NewWriter("")
 	if err != nil {

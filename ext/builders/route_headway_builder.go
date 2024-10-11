@@ -7,7 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type RouteHeadway struct {
@@ -61,7 +61,7 @@ func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
 	}
 }
 
-func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
+func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	// Keep track of all services and departures
 	switch v := ent.(type) {
 	case *tlutil.Service:

@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // StopTooFarFromShapeError reports when a stop is too far from a shape.
@@ -33,7 +34,7 @@ func (e *StopTooFarFromShapeCheck) SetGeomCache(g tlxy.GeomCache) {
 }
 
 // Validate .
-func (e *StopTooFarFromShapeCheck) Validate(ent tl.Entity) []error {
+func (e *StopTooFarFromShapeCheck) Validate(ent tt.Entity) []error {
 	// An initial approach used geohashes to check shape <-> stop as an initial filter, but it turns
 	// out in practice that just checking directly is almost exactly the same speed.
 	// Even the largest feeds are only a few tens of thousands of comparisons. Just keep track

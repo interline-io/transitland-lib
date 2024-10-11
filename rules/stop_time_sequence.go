@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // StopTimeSequenceCheck checks that all sequences stop_time sequences in a trip are valid.
@@ -10,7 +11,7 @@ import (
 type StopTimeSequenceCheck struct{}
 
 // Validate .
-func (e *StopTimeSequenceCheck) Validate(ent tl.Entity) []error {
+func (e *StopTimeSequenceCheck) Validate(ent tt.Entity) []error {
 	trip, ok := ent.(*tl.Trip)
 	if !ok {
 		return nil

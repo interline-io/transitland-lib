@@ -6,14 +6,14 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
 type testCopierExpand struct{}
 
-func (ext *testCopierExpand) Expand(ent tl.Entity, emap *tt.EntityMap) ([]tl.Entity, bool, error) {
-	var ret []tl.Entity
+func (ext *testCopierExpand) Expand(ent tt.Entity, emap *tt.EntityMap) ([]tt.Entity, bool, error) {
+	var ret []tt.Entity
 	v, ok := ent.(*tl.Agency)
 	if !ok {
 		return nil, false, nil
@@ -71,8 +71,8 @@ func TestCopier_Expand(t *testing.T) {
 var wtfBatchSize = 1_000_000
 
 func BenchmarkWtfSlow(b *testing.B) {
-	testWtfCopyEntities := func(ents []tl.Entity) {
-		okEnts := make([]tl.Entity, 0, len(ents))
+	testWtfCopyEntities := func(ents []tt.Entity) {
+		okEnts := make([]tt.Entity, 0, len(ents))
 		for _, ent := range ents {
 			if err := testWtfCheck(ent); err != nil {
 				okEnts = append(okEnts, ent)
@@ -80,7 +80,7 @@ func BenchmarkWtfSlow(b *testing.B) {
 		}
 		testWtfWriteEntities(okEnts)
 	}
-	testWtfCheckBatch := func(ents []tl.Entity, ent tl.Entity) []tl.Entity {
+	testWtfCheckBatch := func(ents []tt.Entity, ent tt.Entity) []tt.Entity {
 		if len(ents) >= wtfBatchSize || ent == nil {
 			testWtfCopyEntities(ents)
 			return nil
@@ -90,7 +90,7 @@ func BenchmarkWtfSlow(b *testing.B) {
 	}
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		var ents []tl.Entity
+		var ents []tt.Entity
 		for i := 0; i < wtfBatchSize; i++ {
 			ents = testWtfCheckBatch(ents, &tl.StopTime{})
 		}
@@ -99,10 +99,10 @@ func BenchmarkWtfSlow(b *testing.B) {
 }
 
 func BenchmarkWtfFast(b *testing.B) {
-	testWtfCopyEntities := func(ents []tl.Entity) {
+	testWtfCopyEntities := func(ents []tt.Entity) {
 		testWtfWriteEntities(ents)
 	}
-	testWtfCheckBatch := func(ents []tl.Entity, ent tl.Entity) []tl.Entity {
+	testWtfCheckBatch := func(ents []tt.Entity, ent tt.Entity) []tt.Entity {
 		if len(ents) >= wtfBatchSize || ent == nil {
 			testWtfCopyEntities(ents)
 			return nil
@@ -114,7 +114,7 @@ func BenchmarkWtfFast(b *testing.B) {
 	}
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		var ents []tl.Entity
+		var ents []tt.Entity
 		for i := 0; i < wtfBatchSize; i++ {
 			ents = testWtfCheckBatch(ents, &tl.StopTime{})
 		}
@@ -122,7 +122,7 @@ func BenchmarkWtfFast(b *testing.B) {
 	}
 }
 
-func testWtfCheck(ent tl.Entity) error {
+func testWtfCheck(ent tt.Entity) error {
 	a := ent.Filename()
 	b := ent.EntityID()
 	_ = a
@@ -130,7 +130,7 @@ func testWtfCheck(ent tl.Entity) error {
 	return nil
 }
 
-func testWtfWriteEntities(ents []tl.Entity) {
+func testWtfWriteEntities(ents []tt.Entity) {
 	b := len(ents)
 	_ = b
 	_ = ents

@@ -1,16 +1,16 @@
 package rules
 
 import (
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // ServiceAllDaysEmptyCheck checks if a calendar.txt entry, non-generated, has at least one day of week marked as 1.
 type ServiceAllDaysEmptyCheck struct{}
 
 // Validate .
-func (e *ServiceAllDaysEmptyCheck) Validate(ent tl.Entity) []error {
+func (e *ServiceAllDaysEmptyCheck) Validate(ent tt.Entity) []error {
 	// Note: Calendar/CalendarDates are validated as Services.
 	if v, ok := ent.(*tlutil.Service); ok && !v.Generated {
 		days := v.Monday + v.Tuesday + v.Wednesday + v.Thursday + v.Friday + v.Saturday + v.Sunday

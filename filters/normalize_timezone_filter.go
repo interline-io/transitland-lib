@@ -3,14 +3,14 @@ package filters
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // NormalizeTimezoneFilter changes a timezone alias to a normalized timezone, e.g. "US/Pacific" -> "America/Los_Angeles"
 type NormalizeTimezoneFilter struct{}
 
 // Validate .
-func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity, emap *tt.EntityMap) error {
+func (e *NormalizeTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Agency:
 		n, ok := tt.IsValidTimezone(v.AgencyTimezone)

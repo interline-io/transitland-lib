@@ -9,10 +9,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
 
+	_ "github.com/interline-io/transitland-lib/adapters/tlcsv"
+	_ "github.com/interline-io/transitland-lib/adapters/tldb"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	_ "github.com/interline-io/transitland-lib/filters"
-	_ "github.com/interline-io/transitland-lib/tlcsv"
-	_ "github.com/interline-io/transitland-lib/tldb"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

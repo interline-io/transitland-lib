@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/geomcache"
@@ -18,40 +20,39 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
-	"github.com/interline-io/transitland-lib/tl/tt"
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/rs/zerolog"
 	"github.com/twpayne/go-geom/xy"
 )
 
 // Prepare is called before general copying begins.
 type Prepare interface {
-	Prepare(tl.Reader, *tt.EntityMap) error
+	Prepare(adapters.Reader, *tt.EntityMap) error
 }
 
 // Filter is called before validation.
 type Filter interface {
-	Filter(tl.Entity, *tt.EntityMap) error
+	Filter(tt.Entity, *tt.EntityMap) error
 }
 
 type ExpandFilter interface {
-	Expand(tl.Entity, *tt.EntityMap) ([]tl.Entity, bool, error)
+	Expand(tt.Entity, *tt.EntityMap) ([]tt.Entity, bool, error)
 }
 
 // Validator is called for each entity.
 type Validator interface {
-	Validate(tl.Entity) []error
+	Validate(tt.Entity) []error
 }
 
 // AfterValidator is called for each fully validated entity before writing.
 type AfterValidator interface {
-	AfterValidator(tl.Entity, *tt.EntityMap) error
+	AfterValidator(tt.Entity, *tt.EntityMap) error
 }
 
 // AfterWrite is called for after writing each entity.
 type AfterWrite interface {
-	AfterWrite(string, tl.Entity, *tt.EntityMap) error
+	AfterWrite(string, tt.Entity, *tt.EntityMap) error
 }
 
 // Extension is run after normal copying has completed.
@@ -61,7 +62,7 @@ type Extension interface {
 
 // ErrorHandler is called on each source file and entity; errors can be nil
 type ErrorHandler interface {
-	HandleEntityErrors(tl.Entity, []error, []error)
+	HandleEntityErrors(tt.Entity, []error, []error)
 	HandleSourceErrors(string, []error, []error)
 }
 
@@ -135,8 +136,8 @@ type Copier struct {
 	// Default options
 	Options
 	// Reader and writer
-	Reader tl.Reader
-	Writer tl.Writer
+	Reader adapters.Reader
+	Writer adapters.Writer
 	// Entity selection strategy
 	Marker Marker
 	// Error handler, called for each entity
@@ -156,7 +157,7 @@ type Copier struct {
 }
 
 // Quiet copy
-func QuietCopy(reader tl.Reader, writer tl.Writer, optfns ...func(*Options)) error {
+func QuietCopy(reader adapters.Reader, writer adapters.Writer, optfns ...func(*Options)) error {
 	opts := Options{
 		ErrorLimit: -1,
 		Quiet:      true,
@@ -176,7 +177,7 @@ func QuietCopy(reader tl.Reader, writer tl.Writer, optfns ...func(*Options)) err
 }
 
 // Copy with options builder
-func Copy(reader tl.Reader, writer tl.Writer, optfns ...func(*Options)) error {
+func Copy(reader adapters.Reader, writer adapters.Writer, optfns ...func(*Options)) error {
 	opts := Options{}
 	for _, f := range optfns {
 		f(&opts)
@@ -192,7 +193,7 @@ func Copy(reader tl.Reader, writer tl.Writer, optfns ...func(*Options)) error {
 }
 
 // NewCopier creates and initializes a new Copier.
-func NewCopier(reader tl.Reader, writer tl.Writer, opts Options) (*Copier, error) {
+func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*Copier, error) {
 	copier := &Copier{}
 	copier.Options = opts
 	copier.Reader = reader
@@ -341,7 +342,7 @@ func (copier *Copier) addExtension(ext interface{}, warning bool) error {
 ////////////////////////////////////
 
 // Check if the entity is marked for copying.
-func (copier *Copier) isMarked(ent tl.Entity) bool {
+func (copier *Copier) isMarked(ent tt.Entity) bool {
 	return copier.Marker.IsMarked(ent.Filename(), ent.EntityID())
 }
 
@@ -349,8 +350,8 @@ func (copier *Copier) isMarked(ent tl.Entity) bool {
 // An entity error means the entity was not not written because it had an error or was filtered out; not fatal.
 // A write error should be considered fatal and should stop any further write attempts.
 // Any errors and warnings are added to the copier result.
-func (copier *Copier) CopyEntity(ent tl.Entity) (error, error) {
-	var expandedEntities []tl.Entity
+func (copier *Copier) CopyEntity(ent tt.Entity) (error, error) {
+	var expandedEntities []tt.Entity
 	expanded := false
 	for _, f := range copier.expandFilters {
 		if exp, ok, err := f.Expand(ent, copier.EntityMap); err != nil {
@@ -386,8 +387,8 @@ func (copier *Copier) CopyEntity(ent tl.Entity) (error, error) {
 }
 
 // CopyEntities validates a slice of entities and writes those that pass validation.
-func (copier *Copier) CopyEntities(ents []tl.Entity) error {
-	okEnts := make([]tl.Entity, 0, len(ents))
+func (copier *Copier) CopyEntities(ents []tt.Entity) error {
+	okEnts := make([]tt.Entity, 0, len(ents))
 	for _, ent := range ents {
 		expanded := false
 		for _, f := range copier.expandFilters {
@@ -438,7 +439,7 @@ func (copier *Copier) CopyEntities(ents []tl.Entity) error {
 }
 
 // checkBatch adds an entity to the current batch and calls writeBatch if above batch size.
-func (copier *Copier) checkBatch(ents []tl.Entity, ent tl.Entity, flush bool) ([]tl.Entity, error) {
+func (copier *Copier) checkBatch(ents []tt.Entity, ent tt.Entity, flush bool) ([]tt.Entity, error) {
 	if ent != nil {
 		ents = append(ents, ent)
 	}
@@ -453,7 +454,7 @@ func (copier *Copier) checkBatch(ents []tl.Entity, ent tl.Entity, flush bool) ([
 }
 
 // checkEntity is the main filter and validation check.
-func (copier *Copier) checkEntity(ent tl.Entity) error {
+func (copier *Copier) checkEntity(ent tt.Entity) error {
 	efn := ent.Filename()
 	if !copier.isMarked(ent) {
 		copier.result.SkipEntityMarkedCount[efn]++
@@ -486,7 +487,7 @@ func (copier *Copier) checkEntity(ent tl.Entity) error {
 		warns = append(warns, v.Validate(ent)...)
 	}
 
-	if extEnt, ok := ent.(tl.EntityWithErrors); ok {
+	if extEnt, ok := ent.(tt.EntityWithErrors); ok {
 		for _, err := range errs {
 			extEnt.AddError(err)
 		}
@@ -953,7 +954,7 @@ func (copier *Copier) copyCalendars() error {
 	}
 
 	// Write Calendars
-	var bt []tl.Entity
+	var bt []tt.Entity
 	var btErr error
 	for _, svc := range svcs {
 		cid := svc.EntityID()
@@ -1029,7 +1030,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	stopPatternShapeIDs := map[int]string{}
 	journeyPatterns := map[string]patInfo{}
 	tripOffsets := map[string]int{} // used for deduplicating StopTimes
-	var stbt []tl.Entity
+	var stbt []tt.Entity
 	for sts := range copier.Reader.StopTimesByTripID() {
 		if len(sts) == 0 {
 			continue
@@ -1154,7 +1155,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 ////////// Entity Support Methods //////////
 ////////////////////////////////////////////
 
-func (copier *Copier) logCount(ent tl.Entity) {
+func (copier *Copier) logCount(ent tt.Entity) {
 	out := []string{}
 	fn := ent.Filename()
 	fnr := strings.ReplaceAll(fn, ".txt", "")

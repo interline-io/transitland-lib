@@ -5,7 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type tripInfo struct {
@@ -28,7 +28,7 @@ func NewScheduleChecker() *ScheduleChecker {
 }
 
 // Validate gets a stream of entities from Copier to build up the cache.
-func (fi *ScheduleChecker) Validate(ent tl.Entity) []error {
+func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
 	case *tlutil.Service:
 		fi.services[v.ServiceID] = v

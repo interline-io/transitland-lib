@@ -1,6 +1,6 @@
 package copier
 
-import "github.com/interline-io/transitland-lib/tl"
+import "github.com/interline-io/transitland-lib/adapters"
 
 // yesMarker will always return that an entity is visited and marked.
 type yesMarker struct {
@@ -22,6 +22,6 @@ func (marker *yesMarker) IsVisited(filename, eid string) bool {
 }
 
 // VisitAndMark traverses the feed and marks entities.
-func (marker *yesMarker) VisitAndMark(reader tl.Reader) error {
+func (marker *yesMarker) VisitAndMark(reader adapters.Reader) error {
 	return nil
 }

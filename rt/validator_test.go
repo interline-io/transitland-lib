@@ -8,15 +8,15 @@ import (
 
 	mapset "github.com/deckarep/golang-set/v2"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 // NewValidatorFromReader returns a Validator with data from a Reader.
-func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
+func NewValidatorFromReader(reader adapters.Reader) (*Validator, error) {
 	fi := NewValidator()
 	cp, err := copier.NewCopier(reader, &empty.Writer{}, copier.Options{})
 	if err != nil {

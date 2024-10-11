@@ -3,7 +3,7 @@ package builders
 import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type RouteStop struct {
@@ -38,7 +38,7 @@ func NewRouteStopBuilder() *RouteStopBuilder {
 	}
 }
 
-func (pp *RouteStopBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
+func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Route:
 		pp.routeAgencies[eid] = v.AgencyID
@@ -57,7 +57,7 @@ func (pp *RouteStopBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.Entit
 }
 
 func (pp *RouteStopBuilder) Copy(copier *copier.Copier) error {
-	bt := []tl.Entity{}
+	bt := []tt.Entity{}
 	for rid, v := range pp.routeStops {
 		aid, ok := pp.routeAgencies[rid]
 		if !ok {

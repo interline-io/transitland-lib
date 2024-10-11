@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
+	"github.com/interline-io/transitland-lib/adapters/tldb"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // var URL = "https://github.com/interline-io/transitland-lib/raw/master/testdata/external/bart.zip"
@@ -29,7 +29,7 @@ func TestExample1(t *testing.T) {
 	}
 }
 
-func getReader() tl.Reader {
+func getReader() adapters.Reader {
 	reader, _ := tlcsv.NewReader(URL)
 	return reader
 }

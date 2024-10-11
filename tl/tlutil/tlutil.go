@@ -4,10 +4,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/gtfs"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func NewShapeFromShapes(shapes []gtfs.Shape) gtfs.Shape {
@@ -33,7 +33,7 @@ type canPath interface {
 }
 
 // NewFeedVersionFromReader returns a FeedVersion from a Reader.
-func NewFeedVersionFromReader(reader tl.Reader) (dmfr.FeedVersion, error) {
+func NewFeedVersionFromReader(reader adapters.Reader) (dmfr.FeedVersion, error) {
 	fv := dmfr.FeedVersion{}
 	// Perform basic GTFS validity checks
 	if errs := reader.ValidateStructure(); len(errs) > 0 {
@@ -63,7 +63,7 @@ func NewFeedVersionFromReader(reader tl.Reader) (dmfr.FeedVersion, error) {
 	return fv, nil
 }
 
-func FeedVersionServiceBounds(reader tl.Reader) (time.Time, time.Time, error) {
+func FeedVersionServiceBounds(reader adapters.Reader) (time.Time, time.Time, error) {
 	var start time.Time
 	var end time.Time
 	for c := range reader.Calendars() {

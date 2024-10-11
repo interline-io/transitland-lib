@@ -7,8 +7,8 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
 )
 
@@ -59,7 +59,7 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 }
 
 // Counts the number of times a shape is used for each route,direction_id
-func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tt.EntityMap) error {
+func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *tl.Shape:
 		pts := make([]tlxy.Point, v.Geometry.Val.NumCoords())

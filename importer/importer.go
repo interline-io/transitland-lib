@@ -6,12 +6,12 @@ import (
 	"fmt"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
+	"github.com/interline-io/transitland-lib/adapters/tldb"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/store"
-	"github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // Options sets various options for importing a feed.

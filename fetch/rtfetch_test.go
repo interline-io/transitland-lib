@@ -7,10 +7,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters/tldb"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // ZeroCoordinateError reports when a required geometry has a (0,0) coordinate.
@@ -17,7 +18,7 @@ func (e *ZeroCoordinateError) Error() string {
 type NullIslandCheck struct{}
 
 // Validate .
-func (e *NullIslandCheck) Validate(ent tl.Entity) []error {
+func (e *NullIslandCheck) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
 	case *tl.Stop:
 		if v.LocationType == 3 || v.LocationType == 4 {

@@ -1,8 +1,10 @@
 package direct
 
 import (
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tlutil"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Writer is a mocked up Writer used in tests.
@@ -42,12 +44,12 @@ func (mw *Writer) Delete() error {
 }
 
 // NewReader .
-func (mw *Writer) NewReader() (tl.Reader, error) {
+func (mw *Writer) NewReader() (adapters.Reader, error) {
 	return &mw.Reader, nil
 }
 
 // AddEntity .
-func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
+func (mw *Writer) AddEntity(ent tt.Entity) (string, error) {
 	switch v := ent.(type) {
 	case *tl.Stop:
 		mw.Reader.StopList = append(mw.Reader.StopList, *v)
@@ -102,7 +104,7 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 }
 
 // AddEntities .
-func (mw *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+func (mw *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	retids := []string{}
 	for _, ent := range ents {
 		eid, err := mw.AddEntity(ent)

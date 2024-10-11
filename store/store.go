@@ -8,9 +8,9 @@ import (
 	"os"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters/tlcsv"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl/request"
-	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 // Store provides data storage methods.

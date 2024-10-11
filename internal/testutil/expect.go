@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type HasContext interface {
@@ -16,8 +16,8 @@ type HasContext interface {
 ///////////
 
 // GetExpectErrors gets any ExpectError specified by an Entity.
-func GetExpectErrors(ent tl.Entity) []ExpectError {
-	extEnt, ok := ent.(tl.EntityWithExtra)
+func GetExpectErrors(ent tt.Entity) []ExpectError {
+	extEnt, ok := ent.(tt.EntityWithExtra)
 	if !ok {
 		return nil
 	}

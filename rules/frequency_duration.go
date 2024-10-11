@@ -3,13 +3,14 @@ package rules
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FrequencyDurationCheck reports when a frequencies.txt entry has (start_time,end_time) less than a full headway.
 type FrequencyDurationCheck struct{}
 
 // Validate .
-func (e *FrequencyDurationCheck) Validate(ent tl.Entity) []error {
+func (e *FrequencyDurationCheck) Validate(ent tt.Entity) []error {
 	if v, ok := ent.(*tl.Frequency); ok {
 		var errs []error
 		st, et := v.StartTime.Int(), v.EndTime.Int()

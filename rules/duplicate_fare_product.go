@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // DuplicateFareProduct reports when multiple FareProducts have the same unique values.
@@ -28,7 +29,7 @@ type DuplicateFareProductCheck struct {
 	vals map[string]int
 }
 
-func (e *DuplicateFareProductCheck) Validate(ent tl.Entity) []error {
+func (e *DuplicateFareProductCheck) Validate(ent tt.Entity) []error {
 	v, ok := ent.(*tl.FareProduct)
 	if !ok {
 		return nil

@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 var bufferSize = 1000
@@ -34,7 +35,7 @@ type Reader struct {
 	FareMediaList        []tl.FareMedia
 	FareProductList      []tl.FareProduct
 	RiderCategoryList    []tl.RiderCategory
-	OtherList            []tl.Entity
+	OtherList            []tt.Entity
 }
 
 // NewReader returns a new Reader.

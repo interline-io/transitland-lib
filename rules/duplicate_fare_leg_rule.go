@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // DuplicateFareLegRule reports when multiple FareLegRules have the same unique values.
@@ -30,7 +31,7 @@ type DuplicateFareLegRuleCheck struct {
 	vals map[string]int
 }
 
-func (e *DuplicateFareLegRuleCheck) Validate(ent tl.Entity) []error {
+func (e *DuplicateFareLegRuleCheck) Validate(ent tt.Entity) []error {
 	v, ok := ent.(*tl.FareLegRule)
 	if !ok {
 		return nil

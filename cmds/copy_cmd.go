@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/adapters/tldb"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
 
@@ -76,7 +76,7 @@ func (cmd *CopyCommand) Run() error {
 		return err
 	}
 	if cmd.writeExtraColumns {
-		if v, ok := writer.(tl.WriterWithExtraColumns); ok {
+		if v, ok := writer.(adapters.WriterWithExtraColumns); ok {
 			v.WriteExtraColumns(true)
 		} else {
 			return errors.New("writer does not support extra output columns")

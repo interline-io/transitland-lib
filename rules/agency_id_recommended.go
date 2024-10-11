@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // AgencyIDRecommendedCheck checks if agency_id is missing when more than one agency is present.
@@ -12,7 +13,7 @@ type AgencyIDRecommendedCheck struct {
 }
 
 // Validate .
-func (e *AgencyIDRecommendedCheck) Validate(ent tl.Entity) []error {
+func (e *AgencyIDRecommendedCheck) Validate(ent tt.Entity) []error {
 	var errs []error
 	switch v := ent.(type) {
 	case *tl.Route:
