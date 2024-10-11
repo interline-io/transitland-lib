@@ -8,9 +8,9 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/importer"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/unimporter"
 	"github.com/spf13/pflag"
 )
 
@@ -191,9 +191,9 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var err error
 			if opts.ScheduleOnly {
-				err = unimporter.UnimportSchedule(atx, opts.FeedVersionID)
+				err = importer.UnimportSchedule(atx, opts.FeedVersionID)
 			} else {
-				err = unimporter.UnimportFeedVersion(atx, opts.FeedVersionID, opts.ExtraTables)
+				err = importer.UnimportFeedVersion(atx, opts.FeedVersionID, opts.ExtraTables)
 			}
 			return err
 		})

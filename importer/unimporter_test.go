@@ -1,4 +1,4 @@
-package unimporter
+package importer
 
 import (
 	"fmt"
@@ -7,7 +7,6 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/importer"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/stats"
@@ -47,7 +46,7 @@ func setupImport(t *testing.T, atx tldb.Adapter) int {
 		t.Fatal(err)
 	}
 	// Import
-	if _, err := importer.ImportFeedVersion(atx, importer.Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
+	if _, err := ImportFeedVersion(atx, Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
 		t.Fatal(err)
 	}
 	return fv.ID
