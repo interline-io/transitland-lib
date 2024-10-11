@@ -12,15 +12,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
-type Reader = adapters.Reader
-type FeedVersion = dmfr.FeedVersion
-type Shape = gtfs.Shape
-type StopTime = gtfs.StopTime
-
 // NewServicesFromReader returns the reader's Calendar and CalendarDate entities as a Service
-func NewServicesFromReader(reader Reader) []*Service {
+func NewServicesFromReader(reader adapters.Reader) []*Service {
 	ret := []*Service{}
-	cds := map[string][]CalendarDate{}
+	cds := map[string][]gtfs.CalendarDate{}
 	for cd := range reader.CalendarDates() {
 		sid := cd.ServiceID
 		cds[sid] = append(cds[sid], cd)
@@ -32,7 +27,7 @@ func NewServicesFromReader(reader Reader) []*Service {
 		delete(cds, sid)
 	}
 	for k, v := range cds {
-		s := NewService(Calendar{ServiceID: k}, v...)
+		s := NewService(gtfs.Calendar{ServiceID: k}, v...)
 		s.Generated = true
 		s.StartDate, s.EndDate = s.ServicePeriod()
 		ret = append(ret, s)
@@ -41,8 +36,8 @@ func NewServicesFromReader(reader Reader) []*Service {
 }
 
 // NewFeedVersionFromReader returns a FeedVersion from a Reader.
-func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
-	fv := FeedVersion{}
+func NewFeedVersionFromReader(reader adapters.Reader) (dmfr.FeedVersion, error) {
+	fv := dmfr.FeedVersion{}
 	// Perform basic GTFS validity checks
 	if errs := reader.ValidateStructure(); len(errs) > 0 {
 		return fv, errs[0]
@@ -71,7 +66,7 @@ func NewFeedVersionFromReader(reader Reader) (FeedVersion, error) {
 	return fv, nil
 }
 
-func FeedVersionServiceBounds(reader Reader) (time.Time, time.Time, error) {
+func FeedVersionServiceBounds(reader adapters.Reader) (time.Time, time.Time, error) {
 	var start time.Time
 	var end time.Time
 	for c := range reader.Calendars() {
@@ -103,7 +98,7 @@ func FeedVersionServiceBounds(reader Reader) (time.Time, time.Time, error) {
 }
 
 // ValidateShapes returns errors for an array of shapes.
-func ValidateShapes(shapes []Shape) []error {
+func ValidateShapes(shapes []gtfs.Shape) []error {
 	errs := []error{}
 	last := -1
 	dist := -1.0
@@ -124,8 +119,8 @@ func ValidateShapes(shapes []Shape) []error {
 
 // NewShapeFromShapes takes Shapes with single points and returns a Shape with linestring geometry.
 // Any errors from the input errors, or errors such as duplicate sequences, are added as entity errors.
-func NewShapeFromShapes(shapes []Shape) Shape {
-	ent := Shape{}
+func NewShapeFromShapes(shapes []gtfs.Shape) gtfs.Shape {
+	ent := gtfs.Shape{}
 	coords := []float64{}
 	sort.Slice(shapes, func(i, j int) bool {
 		return shapes[i].ShapePtSequence < shapes[j].ShapePtSequence
@@ -153,7 +148,7 @@ func NewShapeFromShapes(shapes []Shape) Shape {
 }
 
 // ValidateStopTimes checks if the trip follows GTFS rules.
-func ValidateStopTimes(stoptimes []StopTime) []error {
+func ValidateStopTimes(stoptimes []gtfs.StopTime) []error {
 	errs := []error{}
 	if len(stoptimes) == 0 {
 		errs = append(errs, causes.NewEmptyTripError(len(stoptimes)))
