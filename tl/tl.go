@@ -58,6 +58,12 @@ type FeedVersion = dmfr2.FeedVersion
 type Operator = dmfr2.Operator
 type OperatorAssociatedFeed = dmfr2.OperatorAssociatedFeed
 type OperatorAssociatedFeeds = dmfr2.OperatorAssociatedFeeds
+type Feed = dmfr2.Feed
+type FeedLanguages = dmfr2.FeedLanguages
+type FeedAssociatedFeeds = dmfr2.FeedAssociatedFeeds
+type FeedAuthorization = dmfr2.FeedAuthorization
+type FeedUrls = dmfr2.FeedUrls
+type Secret = dmfr2.Secret
 
 type Reader = adapters.Reader
 type Writer = adapters.Writer
