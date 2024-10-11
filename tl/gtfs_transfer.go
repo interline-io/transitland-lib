@@ -9,12 +9,12 @@ import (
 type Transfer struct {
 	FromStopID      string
 	ToStopID        string
-	FromRouteID     Key
-	ToRouteID       Key
-	FromTripID      Key
-	ToTripID        Key
+	FromRouteID     tt.Key
+	ToRouteID       tt.Key
+	FromTripID      tt.Key
+	ToTripID        tt.Key
 	TransferType    int
-	MinTransferTime Int
+	MinTransferTime tt.Int
 	BaseEntity
 }
 

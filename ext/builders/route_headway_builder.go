@@ -12,12 +12,12 @@ import (
 type RouteHeadway struct {
 	RouteID        string
 	SelectedStopID string
-	DirectionID    tl.Int
-	HeadwaySecs    tl.Int
-	DowCategory    tl.Int
-	ServiceDate    tl.Date
-	StopTripCount  tl.Int
-	Departures     tl.Ints
+	DirectionID    tt.Int
+	HeadwaySecs    tt.Int
+	DowCategory    tt.Int
+	ServiceDate    tt.Date
+	StopTripCount  tt.Int
+	Departures     tt.Ints
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -89,7 +89,7 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.En
 				StopID:    stopId,
 			}
 			if rd, ok := pp.routeDepartures[v.RouteID]; ok && st.DepartureTime.Valid {
-				rd[rkey] = append(rd[rkey], st.DepartureTime.Seconds)
+				rd[rkey] = append(rd[rkey], st.DepartureTime.Int())
 			}
 		}
 	}
@@ -164,13 +164,13 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				// log.Debugf("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
 				// log.Debugf("\tdepartures:", departures)
 				// for _, departure := range departures {
-				// 	wt := tt.NewWideTimeFromSeconds(departure)
+				// 	wt := tt.NewSeconds(departure)
 				// 	log.Debugf("\t", wt.String())
 				// }
 				rh := RouteHeadway{
 					RouteID:        rid,
 					SelectedStopID: mostVisitedStop,
-					HeadwaySecs:    tl.Int{},
+					HeadwaySecs:    tt.Int{},
 					DowCategory:    tt.NewInt(dowCat),
 					ServiceDate:    tt.NewDate(d),
 					StopTripCount:  tt.NewInt(len(departures)),

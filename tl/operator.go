@@ -5,18 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+
+	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 type Operator struct {
-	OnestopID       String                  `json:"onestop_id"`
-	SupersedesIDs   Strings                 `json:"supersedes_ids,omitempty" db:"-"`
-	Name            String                  `json:"name,omitempty"`
-	ShortName       String                  `json:"short_name,omitempty"`
-	Website         String                  `json:"website,omitempty"`
+	OnestopID       tt.String               `json:"onestop_id"`
+	SupersedesIDs   tt.Strings              `json:"supersedes_ids,omitempty" db:"-"`
+	Name            tt.String               `json:"name,omitempty"`
+	ShortName       tt.String               `json:"short_name,omitempty"`
+	Website         tt.String               `json:"website,omitempty"`
 	AssociatedFeeds OperatorAssociatedFeeds `json:"associated_feeds,omitempty"`
-	Tags            Tags                    `json:"tags,omitempty" db:"operator_tags"`
-	File            String                  `json:"-"` // internal
-	DeletedAt       Time                    `json:"-"` // internal
+	Tags            tt.Tags                 `json:"tags,omitempty" db:"operator_tags"`
+	File            tt.String               `json:"-"` // internal
+	DeletedAt       tt.Time                 `json:"-"` // internal
 	DatabaseEntity  `json:"-"`
 	Timestamps      `json:"-"`
 }
@@ -54,14 +56,14 @@ func (ent *Operator) GetID() int {
 ////////////
 
 type OperatorAssociatedFeed struct {
-	GtfsAgencyID         String     `json:"gtfs_agency_id,omitempty" db:"gtfs_agency_id"`
-	FeedOnestopID        String     `json:"feed_onestop_id,omitempty" db:"-"`
-	ResolvedOnestopID    String     `json:"-"` // internal
-	ResolvedGtfsAgencyID String     `json:"-"` // internal
-	ResolvedName         String     `json:"-"` // internal
-	ResolvedShortName    String     `json:"-"` // internal
-	ResolvedPlaces       String     `json:"-"` // internal
-	OperatorID           Int        `json:"-"` // internal
+	GtfsAgencyID         tt.String  `json:"gtfs_agency_id,omitempty" db:"gtfs_agency_id"`
+	FeedOnestopID        tt.String  `json:"feed_onestop_id,omitempty" db:"-"`
+	ResolvedOnestopID    tt.String  `json:"-"` // internal
+	ResolvedGtfsAgencyID tt.String  `json:"-"` // internal
+	ResolvedName         tt.String  `json:"-"` // internal
+	ResolvedShortName    tt.String  `json:"-"` // internal
+	ResolvedPlaces       tt.String  `json:"-"` // internal
+	OperatorID           tt.Int     `json:"-"` // internal
 	FeedID               int        `json:"-"` // internal
 	DatabaseEntity       `json:"-"` // internal
 }

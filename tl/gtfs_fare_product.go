@@ -9,16 +9,16 @@ import (
 
 // FareProduct fare_products.txt
 type FareProduct struct {
-	FareProductID   String
-	FareProductName String
+	FareProductID   tt.String
+	FareProductName tt.String
 	Amount          tt.CurrencyAmount // Experimental formatting
-	Currency        String
-	DurationStart   Int   // proposed extension
-	DurationAmount  Float // proposed extension
-	DurationUnit    Int   // proposed extension
-	DurationType    Int   // proposed extension
-	RiderCategoryID Key   // proposed extension
-	FareMediaID     Key   // proposed extension
+	Currency        tt.String
+	DurationStart   tt.Int   // proposed extension
+	DurationAmount  tt.Float // proposed extension
+	DurationUnit    tt.Int   // proposed extension
+	DurationType    tt.Int   // proposed extension
+	RiderCategoryID tt.Key   // proposed extension
+	FareMediaID     tt.Key   // proposed extension
 	BaseEntity
 }
 

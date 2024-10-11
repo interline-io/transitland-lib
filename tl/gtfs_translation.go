@@ -7,13 +7,13 @@ import (
 
 type Translation struct {
 	// "TableNameValue" because TableName is a required interface method
-	TableNameValue String `db:"table_name" csv:"table_name"`
-	FieldName      String
-	Language       String
-	Translation    String
-	RecordID       String
-	RecordSubID    String
-	FieldValue     String
+	TableNameValue tt.String `db:"table_name" csv:"table_name"`
+	FieldName      tt.String
+	Language       tt.String
+	Translation    tt.String
+	RecordID       tt.String
+	RecordSubID    tt.String
+	FieldValue     tt.String
 	BaseEntity
 }
 

@@ -9,11 +9,11 @@ import (
 
 // FareLegRule fare_leg_rules.txt
 type FareLegRule struct {
-	LegGroupID    String
-	FromAreaID    String
-	ToAreaID      String
-	NetworkID     String
-	FareProductID String
+	LegGroupID    tt.String
+	FromAreaID    tt.String
+	ToAreaID      tt.String
+	NetworkID     tt.String
+	FareProductID tt.String
 	TransferOnly  tt.Int // interline ext
 	BaseEntity
 }

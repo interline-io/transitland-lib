@@ -18,14 +18,14 @@ type Stop struct {
 	StopLon            float64 `db:"-"`
 	ZoneID             string
 	StopURL            string
-	TtsStopName        String
-	PlatformCode       String
+	TtsStopName        tt.String
+	PlatformCode       tt.String
 	LocationType       int
-	ParentStation      Key
+	ParentStation      tt.Key
 	StopTimezone       string
 	WheelchairBoarding int
-	LevelID            Key
-	Geometry           Point `csv:"-" db:"geometry"`
+	LevelID            tt.Key
+	Geometry           tt.Point `csv:"-" db:"geometry"`
 	BaseEntity
 }
 
@@ -37,6 +37,9 @@ func (ent *Stop) SetCoordinates(p [2]float64) {
 // Coordinates returns the stop lon,lat as a [2]float64
 func (ent *Stop) Coordinates() [2]float64 {
 	ret := [2]float64{0, 0}
+	if ent.Geometry.Val == nil {
+		return ret
+	}
 	c := ent.Geometry.FlatCoords()
 	if len(c) != 2 {
 		return ret

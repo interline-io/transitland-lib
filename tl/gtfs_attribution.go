@@ -6,17 +6,17 @@ import (
 )
 
 type Attribution struct {
-	OrganizationName String
-	AgencyID         Key
-	RouteID          Key
-	TripID           Key
-	IsProducer       Int
-	IsOperator       Int
-	IsAuthority      Int
-	AttributionID    String
-	AttributionURL   String
-	AttributionEmail String
-	AttributionPhone String
+	OrganizationName tt.String
+	AgencyID         tt.Key
+	RouteID          tt.Key
+	TripID           tt.Key
+	IsProducer       tt.Int
+	IsOperator       tt.Int
+	IsAuthority      tt.Int
+	AttributionID    tt.String
+	AttributionURL   tt.String
+	AttributionEmail tt.String
+	AttributionPhone tt.String
 	BaseEntity
 }
 

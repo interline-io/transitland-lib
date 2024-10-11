@@ -11,8 +11,8 @@ import (
 //////////
 
 type AgencyGeometry struct {
-	AgencyID tl.Key
-	Geometry tl.Polygon
+	AgencyID tt.Key
+	Geometry tt.Polygon
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -28,7 +28,7 @@ func (ent *AgencyGeometry) TableName() string {
 //////////
 
 type FeedVersionGeometry struct {
-	Geometry tl.Polygon
+	Geometry tt.Polygon
 	tl.MinEntity
 	tl.FeedVersionEntity
 }
@@ -107,7 +107,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 			continue
 		}
 		ent := FeedVersionGeometry{
-			Geometry: tl.Polygon{Valid: true, Polygon: *v},
+			Geometry: tt.NewPolygon(v),
 		}
 		if _, err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -138,7 +138,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		}
 		ent := AgencyGeometry{
 			AgencyID: tt.NewKey(aid),
-			Geometry: tl.Polygon{Valid: true, Polygon: *v},
+			Geometry: tt.NewPolygon(v),
 		}
 		if _, err := copier.CopyEntity(&ent); err != nil {
 			return err

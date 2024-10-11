@@ -13,10 +13,10 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/stats"
-	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rules"
+	"github.com/interline-io/transitland-lib/stats"
+	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/request"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -77,8 +77,8 @@ func NewResult(evaluateAt time.Time, evaluateAtLocal time.Time) *Result {
 type ResultDetails struct {
 	SHA1                 tt.String                      `json:"sha1"`
 	Timezone             tt.String                      `json:"timezone"`
-	EarliestCalendarDate tl.Date                        `json:"earliest_calendar_date"`
-	LatestCalendarDate   tl.Date                        `json:"latest_calendar_date"`
+	EarliestCalendarDate tt.Date                        `json:"earliest_calendar_date"`
+	LatestCalendarDate   tt.Date                        `json:"latest_calendar_date"`
 	Agencies             []tl.Agency                    `json:"agencies"`
 	Routes               []tl.Route                     `json:"routes"`
 	Stops                []tl.Stop                      `json:"stops"`
@@ -362,7 +362,7 @@ func (v *Validator) ValidateStatic(reader tl.Reader, evaluateAt time.Time, evalu
 		for ent := range reader.Routes() {
 			ent := ent
 			if s, ok := routeShapes[ent.RouteID]; ok {
-				g := tl.Geometry{Geometry: s, Valid: true}
+				g := tt.NewGeometry(s)
 				ent.Geometry = g
 			}
 			details.Routes = append(details.Routes, ent)

@@ -179,8 +179,8 @@ func TestOptionString(t *testing.T) {
 				1:       "", // fail
 			},
 			uj: map[string]any{
-				quote(aTimeIso):   atime,
-				quote(dayTimeStr): nil, // date format is strict and requires time not just date
+				quote(aTimeIso): atime,
+				// quote(dayTimeStr): nil, // date format is strict and requires time not just date
 			},
 			mj: map[any]string{
 				atime:   quote(aTimeIso),

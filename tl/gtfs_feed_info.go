@@ -13,11 +13,11 @@ type FeedInfo struct {
 	FeedPublisherURL  string `csv:",required"`
 	FeedLang          string `csv:",required"`
 	FeedVersion       string `db:"feed_version_name"`
-	FeedStartDate     Date
-	FeedEndDate       Date
-	DefaultLang       String
-	FeedContactEmail  String
-	FeedContactURL    String
+	FeedStartDate     tt.Date
+	FeedEndDate       tt.Date
+	DefaultLang       tt.String
+	FeedContactEmail  tt.String
+	FeedContactURL    tt.String
 	BaseEntity
 }
 

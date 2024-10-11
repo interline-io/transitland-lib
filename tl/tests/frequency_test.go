@@ -46,8 +46,8 @@ func TestFrequencyRepeatCount(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(fmt.Sprintf("%s->%s:%d", tc.start, tc.end, tc.hw), func(t *testing.T) {
 			f := tl.Frequency{}
-			f.StartTime, _ = tt.NewWideTime(tc.start)
-			f.EndTime, _ = tt.NewWideTime(tc.end)
+			f.StartTime, _ = tt.NewSecondsFromString(tc.start)
+			f.EndTime, _ = tt.NewSecondsFromString(tc.end)
 			f.HeadwaySecs = tc.hw
 			if e := f.RepeatCount(); e != tc.expect {
 				t.Errorf("got %d repeat count from %s -> %s hw %d, expected %d", e, tc.start, tc.end, tc.hw, tc.expect)

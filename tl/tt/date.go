@@ -1,17 +1,14 @@
 package tt
 
 import (
-	"database/sql/driver"
 	"encoding/json"
-	"fmt"
 	"io"
 	"time"
 )
 
 // Date is a nullable date
 type Date struct {
-	Val   time.Time
-	Valid bool
+	Option[time.Time]
 }
 
 func ParseDate(s string) (Date, error) {
@@ -21,11 +18,7 @@ func ParseDate(s string) (Date, error) {
 }
 
 func NewDate(v time.Time) Date {
-	return Date{Valid: true, Val: v}
-}
-
-func (r Date) IsZero() bool {
-	return !r.Valid
+	return Date{Option: NewOption(v)}
 }
 
 func (r Date) Before(other Date) bool {
@@ -36,49 +29,23 @@ func (r Date) After(other Date) bool {
 	return r.Val.After(other.Val)
 }
 
-func (r Date) String() string {
+func (r Date) ToCsv() string {
 	if !r.Valid {
 		return ""
 	}
 	return r.Val.Format("20060102")
 }
 
-func (r Date) Value() (driver.Value, error) {
+func (r Date) String() string {
 	if !r.Valid {
-		return nil, nil
+		return ""
 	}
-	return r.Val, nil
+	return r.Val.Format("2006-01-02")
 }
 
-func (r *Date) Scan(src interface{}) error {
-	r.Val, r.Valid = time.Time{}, false
-	var err error
-	switch v := src.(type) {
-	case nil:
-		return nil
-	case string:
-		if isEmpty(v) {
-			return nil
-		}
-		r.Val, err = time.Parse("20060102", v)
-		if err != nil {
-			v2, err2 := time.Parse("2006-01-02", v)
-			if err2 == nil {
-				r.Val = v2
-				err = nil
-			}
-		}
-	case time.Time:
-		r.Val = v
-	default:
-		err = fmt.Errorf("cant convert %T to Date", src)
-	}
-	r.Valid = (err == nil)
-	return err
-}
-
-func (r *Date) UnmarshalJSON(v []byte) error {
-	return r.Scan(string(stripQuotes(v)))
+func (r Date) MarshalGQL(w io.Writer) {
+	b, _ := r.MarshalJSON()
+	w.Write(b)
 }
 
 func (r Date) MarshalJSON() ([]byte, error) {
@@ -86,13 +53,4 @@ func (r Date) MarshalJSON() ([]byte, error) {
 		return jsonNull(), nil
 	}
 	return json.Marshal(r.Val.Format("2006-01-02"))
-}
-
-func (r *Date) UnmarshalGQL(src interface{}) error {
-	return r.Scan(src)
-}
-
-func (r Date) MarshalGQL(w io.Writer) {
-	b, _ := r.MarshalJSON()
-	w.Write(b)
 }

@@ -11,9 +11,9 @@ import (
 type RiderCategory struct {
 	RiderCategoryID   string
 	RiderCategoryName string
-	MinAge            Int
-	MaxAge            Int
-	EligibilityURL    String
+	MinAge            tt.Int
+	MaxAge            tt.Int
+	EligibilityURL    tt.String
 	BaseEntity
 }
 

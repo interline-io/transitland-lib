@@ -27,9 +27,9 @@ type Options struct {
 	HideURL                 bool
 	FetchedAt               time.Time
 	Secrets                 []tl.Secret
-	CreatedBy               tl.String
-	Name                    tl.String
-	Description             tl.String
+	CreatedBy               tt.String
+	Name                    tt.String
+	Description             tt.String
 	SaveValidationReport    bool
 	ValidationReportStorage string
 }

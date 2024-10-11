@@ -13,16 +13,16 @@ type StopTime struct {
 	TripID            string
 	StopID            string `csv:",required" required:"true"`
 	StopSequence      int    `csv:",required" required:"true"`
-	StopHeadsign      String
-	ArrivalTime       WideTime
-	DepartureTime     WideTime
-	PickupType        Int
-	DropOffType       Int
-	ContinuousPickup  Int
-	ContinuousDropOff Int
-	ShapeDistTraveled Float
-	Timepoint         Int
-	Interpolated      Int `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
+	StopHeadsign      tt.String
+	ArrivalTime       tt.Seconds
+	DepartureTime     tt.Seconds
+	PickupType        tt.Int
+	DropOffType       tt.Int
+	ContinuousPickup  tt.Int
+	ContinuousDropOff tt.Int
+	ShapeDistTraveled tt.Float
+	Timepoint         tt.Int
+	Interpolated      tt.Int `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
 	MinEntity
 	ErrorEntity
 	ExtraEntity
@@ -41,12 +41,12 @@ func (ent *StopTime) Errors() []error {
 	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Val, 0, 3)...)
 	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("timepoint", ent.Timepoint.Val, -1, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Seconds, -1, 1<<31)...)
-	errs = append(errs, tt.CheckInsideRangeInt("departure", ent.DepartureTime.Seconds, -1, 1<<31)...)
+	errs = append(errs, tt.CheckInsideRangeInt("arrival_time", ent.ArrivalTime.Int(), -1, 1<<31)...)
+	errs = append(errs, tt.CheckInsideRangeInt("departure", ent.DepartureTime.Int(), -1, 1<<31)...)
 	errs = append(errs, tt.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Val, 0, 1, 2, 3)...)
 	errs = append(errs, tt.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Val, 0, 1, 2, 3)...)
 	// Other errors
-	at, dt := ent.ArrivalTime.Seconds, ent.DepartureTime.Seconds
+	at, dt := ent.ArrivalTime.Int(), ent.DepartureTime.Int()
 	if at != 0 && dt != 0 && at > dt {
 		errs = append(errs, causes.NewInvalidFieldError("departure_time", ent.DepartureTime.String(), fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
 	}
@@ -133,14 +133,14 @@ func (ent *StopTime) SetString(key, value string) error {
 		ent.StopID = hi
 	case "arrival_time":
 		if hi == "" {
-		} else if s, err := tt.NewWideTime(hi); err != nil {
+		} else if s, err := tt.NewSecondsFromString(hi); err != nil {
 			perr = causes.NewFieldParseError("arrival_time", hi)
 		} else {
 			ent.ArrivalTime = s
 		}
 	case "departure_time":
 		if hi == "" {
-		} else if s, err := tt.NewWideTime(hi); err != nil {
+		} else if s, err := tt.NewSecondsFromString(hi); err != nil {
 			perr = causes.NewFieldParseError("departure_time", hi)
 		} else {
 			ent.DepartureTime = s
@@ -153,7 +153,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "pickup_type":
 		if hi == "" {
-			ent.PickupType = Int{}
+			ent.PickupType = tt.Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
 		} else {
@@ -161,7 +161,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "drop_off_type":
 		if hi == "" {
-			ent.DropOffType = Int{}
+			ent.DropOffType = tt.Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
 		} else {
@@ -169,7 +169,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "continuous_pickup":
 		if hi == "" {
-			ent.ContinuousPickup = Int{}
+			ent.ContinuousPickup = tt.Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_pickup", hi)
 		} else {
@@ -177,7 +177,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "continuous_drop_off":
 		if hi == "" {
-			ent.ContinuousDropOff = Int{}
+			ent.ContinuousDropOff = tt.Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_drop_off", hi)
 		} else {
@@ -185,7 +185,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "shape_dist_traveled":
 		if hi == "" {
-			ent.ShapeDistTraveled = Float{}
+			ent.ShapeDistTraveled = tt.Float{}
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
 		} else {
@@ -193,7 +193,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		}
 	case "timepoint":
 		if hi == "" {
-			ent.Timepoint = Int{}
+			ent.Timepoint = tt.Int{}
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
 		} else {
@@ -215,7 +215,7 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 	if len(stoptimes) < 2 {
 		errs = append(errs, causes.NewEmptyTripError(len(stoptimes)))
 	}
-	if lastSt := stoptimes[len(stoptimes)-1]; lastSt.ArrivalTime.Seconds <= 0 {
+	if lastSt := stoptimes[len(stoptimes)-1]; lastSt.ArrivalTime.Int() <= 0 {
 		errs = append(errs, causes.NewSequenceError("arrival_time", lastSt.ArrivalTime.String()))
 	}
 	lastDist := stoptimes[0].ShapeDistTraveled
@@ -229,11 +229,11 @@ func ValidateStopTimes(stoptimes []StopTime) []error {
 			lastSequence = st.StopSequence
 		}
 		// Ensure the arrows of time are pointing towards the future.
-		if st.ArrivalTime.Seconds > 0 && st.ArrivalTime.Seconds < lastTime.Seconds {
+		if st.ArrivalTime.Int() > 0 && st.ArrivalTime.Int() < lastTime.Int() {
 			errs = append(errs, causes.NewSequenceError("arrival_time", st.ArrivalTime.String()))
-		} else if st.DepartureTime.Seconds > 0 && st.DepartureTime.Seconds < st.ArrivalTime.Seconds {
+		} else if st.DepartureTime.Int() > 0 && st.DepartureTime.Int() < st.ArrivalTime.Int() {
 			errs = append(errs, causes.NewSequenceError("departure_time", st.DepartureTime.String()))
-		} else if st.DepartureTime.Seconds > 0 {
+		} else if st.DepartureTime.Int() > 0 {
 			lastTime = st.DepartureTime
 		}
 		if st.ShapeDistTraveled.Valid && st.ShapeDistTraveled.Val < lastDist.Val {

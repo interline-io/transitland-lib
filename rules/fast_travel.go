@@ -111,7 +111,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 			e.stopDist[key] = dx
 			e.stopDist[s2+":"+s1] = dx
 		}
-		dt := trip.StopTimes[i].ArrivalTime.Seconds - t.Seconds
+		dt := trip.StopTimes[i].ArrivalTime.Int() - t.Int()
 		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
 		if dt > 30 && speed > maxspeed {
 			errs = append(errs, newFastTravelError(trip.TripID, trip.StopTimes[i].StopSequence, s1, s2, dt, dx, speed, maxspeed))

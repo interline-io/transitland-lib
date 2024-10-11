@@ -5,67 +5,217 @@ import (
 	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 
+	"github.com/interline-io/transitland-lib/tlxy"
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/ewkb"
 	"github.com/twpayne/go-geom/encoding/geojson"
 	"github.com/twpayne/go-geom/encoding/wkb"
+	"github.com/twpayne/go-geom/encoding/wkbcommon"
 )
 
-// Geometry is an EWKB/GeoJSON wrapper for arbitary geometry.
-type Geometry struct {
-	Valid    bool
-	Geometry geom.T
+// Point is an EWKB/SL encoded point
+type GeometryOption[T geom.T] struct {
+	Val   T
+	Valid bool
 }
 
-func (g *Geometry) Scan(src interface{}) error {
-	g.Geometry, g.Valid = nil, false
+func NewGeometryOption[T geom.T](v T) GeometryOption[T] {
+	return GeometryOption[T]{Val: v, Valid: true}
+}
+
+func (g GeometryOption[T]) FlatCoords() []float64 {
+	if !g.Valid {
+		return nil
+	}
+	return g.Val.FlatCoords()
+}
+
+func (g GeometryOption[T]) Stride() int {
+	if !g.Valid {
+		return 0
+	}
+	return g.Val.Stride()
+}
+
+func (g GeometryOption[T]) Value() (driver.Value, error) {
+	if !g.Valid {
+		return nil, nil
+	}
+	a, b := wkbEncode(g.Val)
+	return string(a), b
+}
+
+func (g *GeometryOption[T]) Scan(src interface{}) error {
+	g.Valid = false
 	if src == nil {
 		return nil
 	}
 	b, ok := src.(string)
 	if !ok {
-		return nil
+		return wkb.ErrExpectedByteSlice{Value: src}
 	}
-	got, err := wkbDecode(b)
+	var err error
+	g.Val, err = wkbDecodeG[T](b)
+	g.Valid = (err == nil)
 	if err != nil {
 		return err
 	}
-	g.Geometry = got
-	g.Valid = true
 	return nil
 }
 
-func (g Geometry) Value() (driver.Value, error) {
-	if g.Geometry == nil || !g.Valid {
-		return nil, nil
+func (g *GeometryOption[T]) UnmarshalJSON(data []byte) error {
+	g.Valid = false
+	var x geom.T = g.Val
+	if err := geojson.Unmarshal(data, &x); err != nil {
+		return err
 	}
-	a, err := wkbEncode(g.Geometry)
-	return a, err
+	g.Val, g.Valid = x.(T)
+	if !g.Valid {
+		return errors.New("could not convert geometry")
+	}
+	return nil
 }
 
-// String returns the GeoJSON representation
-func (g Geometry) String() string {
-	a, _ := g.MarshalJSON()
-	return string(a)
-}
-
-func (g Geometry) MarshalJSON() ([]byte, error) {
+func (g GeometryOption[T]) MarshalJSON() ([]byte, error) {
 	if !g.Valid {
 		return jsonNull(), nil
 	}
-	return geojsonEncode(g.Geometry)
+	return geojsonEncode(g.Val)
 }
 
-func (g *Geometry) UnmarshalGQL(v interface{}) error {
-	return nil
+func (g *GeometryOption[T]) UnmarshalGQL(v interface{}) error {
+	g.Valid = false
+	jj, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return g.UnmarshalJSON(jj)
 }
 
-func (g Geometry) MarshalGQL(w io.Writer) {
+func (g GeometryOption[T]) MarshalGQL(w io.Writer) {
 	b, _ := g.MarshalJSON()
 	w.Write(b)
 }
+
+//////////
+
+type Geometry struct {
+	GeometryOption[geom.T]
+}
+
+func NewGeometry(v geom.T) Geometry {
+	return Geometry{GeometryOption: NewGeometryOption(v)}
+}
+
+//////////
+
+// Point is an EWKB/SL encoded point
+type Point struct {
+	GeometryOption[*geom.Point]
+}
+
+func (g *Point) ToPoint() tlxy.Point {
+	if !g.Valid {
+		return tlxy.Point{}
+	}
+	c := g.Val.Coords()
+	if len(c) != 2 {
+		return tlxy.Point{}
+	}
+	return tlxy.Point{Lon: c[0], Lat: c[1]}
+}
+
+func (g *Point) X() float64 {
+	if !g.Valid {
+		return 0
+	}
+	return g.Val.X()
+}
+
+func (g *Point) Y() float64 {
+	if !g.Valid {
+		return 0
+	}
+	return g.Val.Y()
+}
+
+// NewPoint returns a Point from lon, lat
+func NewPoint(lon, lat float64) Point {
+	g := geom.NewPointFlat(geom.XY, geom.Coord{lon, lat})
+	if g == nil {
+		return Point{}
+	}
+	g.SetSRID(4326)
+	return Point{GeometryOption: NewGeometryOption(g)}
+}
+
+//////////
+
+// LineString is an EWKB/SL encoded LineString
+type LineString struct {
+	GeometryOption[*geom.LineString]
+}
+
+func NewLineString(v *geom.LineString) LineString {
+	return LineString{GeometryOption: NewGeometryOption(v)}
+}
+
+// NewLineStringFromFlatCoords returns a new LineString from flat (3) coordinates
+func NewLineStringFromFlatCoords(coords []float64) LineString {
+	g := geom.NewLineStringFlat(geom.XYM, coords)
+	if g == nil {
+		return LineString{}
+	}
+	g.SetSRID(4326)
+	return LineString{GeometryOption: NewGeometryOption(g)}
+}
+
+func (g LineString) ToPoints() []tlxy.Point {
+	var ret []tlxy.Point
+	if !g.Valid {
+		return ret
+	}
+	for _, c := range g.Val.Coords() {
+		ret = append(ret, tlxy.Point{Lon: c[0], Lat: c[1]})
+	}
+	return ret
+}
+
+func (g LineString) ToLineM() tlxy.LineM {
+	var ret []tlxy.Point
+	if !g.Valid {
+		return tlxy.LineM{}
+	}
+	var ms []float64
+	for _, c := range g.Val.Coords() {
+		ret = append(ret, tlxy.Point{Lon: c[0], Lat: c[1]})
+		if len(c) > 2 {
+			ms = append(ms, c[2])
+		} else {
+			ms = append(ms, 0)
+		}
+	}
+	return tlxy.LineM{
+		Coords: ret,
+		Data:   ms,
+	}
+}
+
+//////////
+
+// Polygon is an EWKB/SL encoded Polygon
+type Polygon struct {
+	GeometryOption[*geom.Polygon]
+}
+
+func NewPolygon(v *geom.Polygon) Polygon {
+	return Polygon{GeometryOption: NewGeometryOption(v)}
+}
+
+//////////
 
 // Errors, helpers
 
@@ -81,55 +231,26 @@ func wkbEncode(g geom.T) (string, error) {
 	return string(data), nil
 }
 
-// wkbDecode tries to guess the encoding returned from the driver.
-// When not wrapped in anything, postgis returns EWKB, and spatialite returns its internal blob format.
-func wkbDecode(data string) (geom.T, error) {
+func wkbDecodeG[T any, PT *T](data string) (T, error) {
+	var ret T
 	b := make([]byte, len(data)/2)
 	hex.Decode(b, []byte(data))
 	got, err := ewkb.Unmarshal(b)
 	if err != nil {
-		return nil, err
+		return ret, err
 	}
-	return got, nil
+	ret, ok := got.(T)
+	if !ok {
+		return ret, wkbcommon.ErrUnexpectedType{Got: got, Want: ret}
+	}
+	return ret, nil
 }
 
 // geojsonEncode encodes a geometry into geojson.
 func geojsonEncode(g geom.T) ([]byte, error) {
-	if v, ok := g.(canEncodeGeojson); ok {
-		return v.MarshalJSON()
-	}
 	b, err := geojson.Marshal(g)
 	if err != nil {
 		return jsonNull(), err
 	}
 	return b, nil
-}
-
-type canEncodeGeojson interface {
-	MarshalJSON() ([]byte, error)
-}
-
-// geojsonEncode decodes geojson into a geometry.
-func geojsonDecode[T any, PT *T](v any) (T, error) {
-	var ret T
-	var data []byte
-	if a, ok := v.([]byte); ok {
-		data = a
-	} else if a, ok := v.(string); ok {
-		data = []byte(a)
-	} else {
-		var err error
-		data, err = json.Marshal(v)
-		if err != nil {
-			return ret, err
-		}
-	}
-	var gg geom.T
-	if err := geojson.Unmarshal(data, &gg); err != nil {
-		return ret, nil
-	}
-	if a, ok := gg.(PT); ok && a != nil {
-		ret = *a
-	}
-	return ret, nil
 }

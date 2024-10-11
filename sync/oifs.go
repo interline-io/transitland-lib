@@ -19,14 +19,14 @@ type oifmatch struct {
 }
 
 type agencyOnestop struct {
-	OnestopID tl.String
+	OnestopID tt.String
 	tl.Agency
 }
 
 type agencyPlace struct {
-	Name     tl.String
-	Adm1name tl.String
-	Adm0name tl.String
+	Name     tt.String
+	Adm1name tt.String
+	Adm0name tt.String
 }
 
 var nameTilde = "[-:&@/]"

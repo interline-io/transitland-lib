@@ -12,7 +12,7 @@ type FrequencyDurationCheck struct{}
 func (e *FrequencyDurationCheck) Validate(ent tl.Entity) []error {
 	if v, ok := ent.(*tl.Frequency); ok {
 		var errs []error
-		st, et := v.StartTime.Seconds, v.EndTime.Seconds
+		st, et := v.StartTime.Int(), v.EndTime.Int()
 		if st != 0 && et != 0 {
 			if st == et {
 				errs = append(errs, causes.NewValidationWarning("end_time", "end_time is equal to start_time"))

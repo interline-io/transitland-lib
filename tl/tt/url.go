@@ -7,6 +7,10 @@ import (
 	"github.com/interline-io/transitland-lib/tl/causes"
 )
 
+type Url struct {
+	Option[string]
+}
+
 // CheckURL returns an error if the value is not a reasonably valid url
 func CheckURL(field string, value string) (errs []error) {
 	if !IsValidURL(value) {
