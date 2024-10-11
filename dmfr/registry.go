@@ -11,17 +11,16 @@ import (
 
 	"github.com/dimchansky/utfbom"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
 
 // Registry represents a parsed Distributed Mobility Feed Registry (DMFR) file
 type Registry struct {
-	Schema                string        `json:"$schema,omitempty"`
-	Feeds                 []tl.Feed     `json:"feeds,omitempty"`
-	Operators             []tl.Operator `json:"operators,omitempty"`
-	Secrets               []tl.Secret   `json:"secrets,omitempty"`
-	LicenseSpdxIdentifier string        `json:"license_spdx_identifier,omitempty"`
+	Schema                string     `json:"$schema,omitempty"`
+	Feeds                 []Feed     `json:"feeds,omitempty"`
+	Operators             []Operator `json:"operators,omitempty"`
+	Secrets               []Secret   `json:"secrets,omitempty"`
+	LicenseSpdxIdentifier string     `json:"license_spdx_identifier,omitempty"`
 }
 
 // ReadRegistry TODO
@@ -40,7 +39,7 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 	if reg.Schema == "" {
 		reg.Schema = "https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.0.json"
 	}
-	operators := []tl.Operator{}
+	operators := []Operator{}
 	for _, rfeed := range loadReg.Feeds {
 		reg.Feeds = append(reg.Feeds, rfeed.Feed) // add feed without operator
 		fsid := rfeed.FeedID
@@ -56,14 +55,14 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 				operator.AssociatedFeeds[i] = oif
 			}
 			if !foundParent {
-				operator.AssociatedFeeds = append(operator.AssociatedFeeds, tl.OperatorAssociatedFeed{FeedOnestopID: tt.NewString(fsid)})
+				operator.AssociatedFeeds = append(operator.AssociatedFeeds, OperatorAssociatedFeed{FeedOnestopID: tt.NewString(fsid)})
 			}
 			operators = append(operators, operator)
 		}
 	}
 	// Merge operators
 	operators = append(operators, reg.Operators...)
-	mergeOperators := map[string]tl.Operator{}
+	mergeOperators := map[string]Operator{}
 	for _, operator := range operators {
 		osid := operator.OnestopID.Val
 		a, ok := mergeOperators[osid]

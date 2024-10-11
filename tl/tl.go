@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	adapters "github.com/interline-io/transitland-lib/adapters"
-	dmfr2 "github.com/interline-io/transitland-lib/dmfr2"
+	"github.com/interline-io/transitland-lib/dmfr"
 	gtfs "github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tl/tt"
 )
@@ -54,16 +54,16 @@ var GTFSRTVERSION = "6fcc3800b15954227af7335d571791738afb1a67"
 
 ////////
 
-type FeedVersion = dmfr2.FeedVersion
-type Operator = dmfr2.Operator
-type OperatorAssociatedFeed = dmfr2.OperatorAssociatedFeed
-type OperatorAssociatedFeeds = dmfr2.OperatorAssociatedFeeds
-type Feed = dmfr2.Feed
-type FeedLanguages = dmfr2.FeedLanguages
-type FeedAssociatedFeeds = dmfr2.FeedAssociatedFeeds
-type FeedAuthorization = dmfr2.FeedAuthorization
-type FeedUrls = dmfr2.FeedUrls
-type Secret = dmfr2.Secret
+type FeedVersion = dmfr.FeedVersion
+type Operator = dmfr.Operator
+type OperatorAssociatedFeed = dmfr.OperatorAssociatedFeed
+type OperatorAssociatedFeeds = dmfr.OperatorAssociatedFeeds
+type Feed = dmfr.Feed
+type FeedLanguages = dmfr.FeedLanguages
+type FeedAssociatedFeeds = dmfr.FeedAssociatedFeeds
+type FeedAuthorization = dmfr.FeedAuthorization
+type FeedUrls = dmfr.FeedUrls
+type Secret = dmfr.Secret
 
 type Reader = adapters.Reader
 type Writer = adapters.Writer
