@@ -10,7 +10,6 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/store"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldbutil"
@@ -49,7 +48,7 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV
 	fvi := dmfr.FeedVersionImport{InProgress: true}
 	fvi.FeedVersionID = opts.FeedVersionID
-	fv := tl.FeedVersion{}
+	fv := dmfr.FeedVersion{}
 	fv.ID = opts.FeedVersionID
 	if err := adapter.Find(&fv); err != nil {
 		return Result{FeedVersionImport: fvi}, err
@@ -127,7 +126,7 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 }
 
 // importFeedVersion .
-func importFeedVersionTx(atx tldb.Adapter, fv tl.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+func importFeedVersionTx(atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader

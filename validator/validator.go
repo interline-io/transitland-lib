@@ -10,15 +10,17 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/store"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tlutil"
@@ -53,7 +55,7 @@ type Result struct {
 	Details                 ResultDetails                          `json:"details" db:"-"`
 	Errors                  map[string]*ValidationReportErrorGroup `json:"errors" db:"-"`
 	Warnings                map[string]*ValidationReportErrorGroup `json:"warnings" db:"-"`
-	tl.BaseEntity
+	tt.BaseEntity
 }
 
 func (e *Result) TableName() string {
@@ -80,10 +82,10 @@ type ResultDetails struct {
 	Timezone             tt.String                      `json:"timezone"`
 	EarliestCalendarDate tt.Date                        `json:"earliest_calendar_date"`
 	LatestCalendarDate   tt.Date                        `json:"latest_calendar_date"`
-	Agencies             []tl.Agency                    `json:"agencies"`
-	Routes               []tl.Route                     `json:"routes"`
-	Stops                []tl.Stop                      `json:"stops"`
-	FeedInfos            []tl.FeedInfo                  `json:"feed_infos"`
+	Agencies             []gtfs.Agency                  `json:"agencies"`
+	Routes               []gtfs.Route                   `json:"routes"`
+	Stops                []gtfs.Stop                    `json:"stops"`
+	FeedInfos            []gtfs.FeedInfo                `json:"feed_infos"`
 	Files                []dmfr.FeedVersionFileInfo     `json:"files"`
 	ServiceLevels        []dmfr.FeedVersionServiceLevel `json:"service_levels"`
 	Realtime             []RealtimeResult               `json:"realtime"`
@@ -112,7 +114,7 @@ type ValidationReportErrorGroup struct {
 	Level              int
 	Count              int
 	Errors             []ValidationReportErrorExemplar `db:"-"`
-	tl.DatabaseEntity
+	tt.DatabaseEntity
 }
 
 func (e *ValidationReportErrorGroup) TableName() string {
@@ -129,7 +131,7 @@ type ValidationReportErrorExemplar struct {
 	Value                        string
 	Geometry                     tt.Geometry
 	EntityJson                   tt.Map
-	tl.DatabaseEntity
+	tt.DatabaseEntity
 }
 
 func (e *ValidationReportErrorExemplar) TableName() string {
@@ -154,7 +156,7 @@ type ValidationReportTripUpdateStat struct {
 	TripRtAddedCount        int
 	TripRtNotFoundIDs       tt.Strings `db:"trip_rt_not_found_ids"`
 	TripRtNotFoundCount     int
-	tl.DatabaseEntity
+	tt.DatabaseEntity
 }
 
 func (e *ValidationReportTripUpdateStat) TableName() string {
@@ -179,7 +181,7 @@ type ValidationReportVehiclePositionStat struct {
 	TripRtAddedCount        int
 	TripRtNotFoundIDs       tt.Strings `db:"trip_rt_not_found_ids"`
 	TripRtNotFoundCount     int
-	tl.DatabaseEntity
+	tt.DatabaseEntity
 }
 
 func (e *ValidationReportVehiclePositionStat) TableName() string {
@@ -205,7 +207,7 @@ type Options struct {
 
 // Validator checks a GTFS source for errors and warnings.
 type Validator struct {
-	Reader          tl.Reader
+	Reader          adapters.Reader
 	Options         Options
 	rtValidator     *rt.Validator
 	defaultTimezone string
@@ -218,7 +220,7 @@ func (v *Validator) AddExtension(ext any) error {
 }
 
 // NewValidator returns a new Validator.
-func NewValidator(reader tl.Reader, options Options) (*Validator, error) {
+func NewValidator(reader adapters.Reader, options Options) (*Validator, error) {
 	// Default options
 	if options.IncludeEntitiesLimit == 0 {
 		options.IncludeEntitiesLimit = defaultMaxEnts
@@ -282,7 +284,7 @@ func (v *Validator) Validate() (*Result, error) {
 	return result, nil
 }
 
-func (v *Validator) ValidateStatic(reader tl.Reader, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
+func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
 	result := NewResult(evaluateAt, evaluateAtLocal)
 
 	v.rtValidator = rt.NewValidator()
@@ -507,7 +509,7 @@ func (v *Validator) getTimes(now time.Time, tzName string) (time.Time, time.Time
 	return now, nowLocal, nil
 }
 
-func (v *Validator) setupCopier(reader tl.Reader, exts []any) (*copier.Copier, error) {
+func (v *Validator) setupCopier(reader adapters.Reader, exts []any) (*copier.Copier, error) {
 	writer := &empty.Writer{}
 	writer.Open()
 	// Prepare copier
@@ -592,7 +594,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 			return err
 		}
 		jb := bytes.NewReader(jj)
-		if err := store.Upload(context.Background(), result.File.Val, tl.Secret{}, jb); err != nil {
+		if err := store.Upload(context.Background(), result.File.Val, dmfr.Secret{}, jb); err != nil {
 			return err
 		}
 	}

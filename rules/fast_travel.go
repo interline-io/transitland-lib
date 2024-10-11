@@ -3,8 +3,9 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FastTravelError reports when reasonable maximum speeds have been exceeded for at least 30 seconds.
@@ -72,15 +73,15 @@ func (e *StopTimeFastTravelCheck) SetGeomCache(g tlxy.GeomCache) {
 }
 
 // Validate .
-func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
-	if v, ok := ent.(*tl.Route); ok {
+func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
+	if v, ok := ent.(*gtfs.Route); ok {
 		if e.routeTypes == nil {
 			e.routeTypes = map[string]int{}
 		}
 		e.routeTypes[v.RouteID] = v.RouteType
 	}
 	// Use stop to stop distances, shape_dist_traveled is not reliable.
-	trip, ok := ent.(*tl.Trip)
+	trip, ok := ent.(*gtfs.Trip)
 	if !ok || len(trip.StopTimes) < 2 {
 		return nil
 	}

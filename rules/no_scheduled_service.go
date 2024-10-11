@@ -3,7 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // NoScheduledServiceError reports when a service entry contains no active days.
@@ -23,8 +24,8 @@ func (e *NoScheduledServiceError) Error() string {
 type NoScheduledServiceCheck struct{}
 
 // Validate .
-func (e *NoScheduledServiceCheck) Validate(ent tl.Entity) []error {
-	v, ok := ent.(*tl.Service)
+func (e *NoScheduledServiceCheck) Validate(ent tt.Entity) []error {
+	v, ok := ent.(*service.Service)
 	if !ok {
 		return nil
 	}

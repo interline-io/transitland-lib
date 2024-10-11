@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -115,7 +115,7 @@ func (g *GeomCache) MakeShape(stopids ...string) ([]tlxy.Point, []float64, error
 
 // InterpolateStopTimes uses the cached geometries to interpolate StopTimes.
 // TODO: move to somewhere else
-func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
+func (g *GeomCache) InterpolateStopTimes(trip gtfs.Trip) ([]gtfs.StopTime, error) {
 	sts := trip.StopTimes
 	if len(sts) == 0 {
 		return sts, nil
@@ -144,7 +144,7 @@ func (g *GeomCache) InterpolateStopTimes(trip tl.Trip) ([]tl.StopTime, error) {
 }
 
 // TODO: move to somewhere else
-func (g *GeomCache) setStopTimeDists(shapeId string, patternId int, sts []tl.StopTime) error {
+func (g *GeomCache) setStopTimeDists(shapeId string, patternId int, sts []gtfs.StopTime) error {
 	// Check cache
 	length := 0.0
 	stopPositionsKey := fmt.Sprintf("%s-%d", shapeId, patternId)

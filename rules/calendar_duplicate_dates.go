@@ -2,14 +2,15 @@ package rules
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type CalendarDuplicateDates struct {
 }
 
-func (e *CalendarDuplicateDates) Validate(ent tl.Entity) []error {
-	svc, ok := ent.(*tl.Service)
+func (e *CalendarDuplicateDates) Validate(ent tt.Entity) []error {
+	svc, ok := ent.(*service.Service)
 	if !ok {
 		return nil
 	}

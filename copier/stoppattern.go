@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 )
 
-func stopPatternKey(stoptimes []tl.StopTime) string {
+func stopPatternKey(stoptimes []gtfs.StopTime) string {
 	key := make([]string, len(stoptimes))
 	for i := 0; i < len(stoptimes); i++ {
 		key[i] = stoptimes[i].StopID
@@ -16,7 +16,7 @@ func stopPatternKey(stoptimes []tl.StopTime) string {
 	return strings.Join(key, string(byte(0)))
 }
 
-func journeyPatternKey(trip *tl.Trip) string {
+func journeyPatternKey(trip *gtfs.Trip) string {
 	m := sha1.New()
 	a := trip.StopTimes[0].ArrivalTime
 	b := trip.StopTimes[0].DepartureTime

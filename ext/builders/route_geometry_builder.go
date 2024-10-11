@@ -6,7 +6,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
@@ -20,8 +20,8 @@ type RouteGeometry struct {
 	Length                tt.Float
 	MaxSegmentLength      tt.Float
 	FirstPointMaxDistance tt.Float
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *RouteGeometry) Filename() string {
@@ -59,9 +59,9 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 }
 
 // Counts the number of times a shape is used for each route,direction_id
-func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Shape:
+	case *gtfs.Shape:
 		pts := make([]tlxy.Point, v.Geometry.Val.NumCoords())
 		for i, c := range v.Geometry.Val.Coords() {
 			pts[i] = tlxy.Point{Lon: c[0], Lat: c[1]}
@@ -102,7 +102,7 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 			FirstPointMaxDistance: firstPointMaxDistance,
 			Line:                  pts,
 		}
-	case *tl.Trip:
+	case *gtfs.Trip:
 		// shapeCounts is layered by: route id, direction id, shape id
 		if v.ShapeID.Valid {
 			if _, ok := pp.shapeCounts[v.RouteID]; !ok {

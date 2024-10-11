@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 )
 
 func TestAzRequest(t *testing.T) {
@@ -37,7 +37,7 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := uploader.Upload(context.Background(), azKey, tl.Secret{}, r); err != nil {
+		if err := uploader.Upload(context.Background(), azKey, dmfr.Secret{}, r); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -48,7 +48,7 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		downloadReader, _, err := downloader.Download(context.Background(), azKey, tl.Secret{}, tl.FeedAuthorization{})
+		downloadReader, _, err := downloader.Download(context.Background(), azKey, dmfr.Secret{}, dmfr.FeedAuthorization{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -67,7 +67,7 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		signedUrl, err := downloader.CreateSignedUrl(context.Background(), azKey, "download.zip", tl.Secret{})
+		signedUrl, err := downloader.CreateSignedUrl(context.Background(), azKey, "download.zip", dmfr.Secret{})
 		if err != nil {
 			t.Fatal(err)
 		}

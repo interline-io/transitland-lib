@@ -7,10 +7,10 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/stats"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
@@ -28,10 +28,10 @@ func TestMain(m *testing.M) {
 
 func setupImport(t *testing.T, atx tldb.Adapter) int {
 	// Create FV
-	feed := tl.Feed{}
+	feed := dmfr.Feed{}
 	feed.FeedID = fmt.Sprintf("feed-%d", time.Now().UnixNano())
 	feedid := testdb.ShouldInsert(t, atx, &feed)
-	fv := tl.FeedVersion{File: testutil.ExampleZip.URL}
+	fv := dmfr.FeedVersion{File: testutil.ExampleZip.URL}
 	fv.FeedID = feedid
 	fv.EarliestCalendarDate = tt.NewDate(time.Now())
 	fv.LatestCalendarDate = tt.NewDate(time.Now())

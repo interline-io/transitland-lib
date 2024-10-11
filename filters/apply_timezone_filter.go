@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -36,11 +36,11 @@ type ApplyTimezoneFilter struct {
 	timezone string
 }
 
-func (e *ApplyTimezoneFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (e *ApplyTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Agency:
+	case *gtfs.Agency:
 		v.AgencyTimezone = e.timezone
-	case *tl.Stop:
+	case *gtfs.Stop:
 		v.StopTimezone = e.timezone
 	}
 	return nil

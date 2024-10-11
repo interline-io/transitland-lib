@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext/sched"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
@@ -66,24 +66,24 @@ func (fi *Validator) SetGeomCache(g tlxy.GeomCache) {
 }
 
 // Validate gets a stream of entities from Copier to build up the cache.
-func (fi *Validator) Validate(ent tl.Entity) []error {
+func (fi *Validator) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
-	case *tl.Agency:
+	case *gtfs.Agency:
 		fi.Timezone = v.AgencyTimezone
-	case *tl.Stop:
+	case *gtfs.Stop:
 		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
-	case *tl.Route:
+	case *gtfs.Route:
 		fi.routeInfo[v.RouteID] = routeInfo{
 			RouteType: v.RouteType,
 			AgencyID:  v.AgencyID,
 		}
-	case *tl.Trip:
+	case *gtfs.Trip:
 		fi.tripInfo[v.TripID] = tripInfo{
 			DirectionID: v.DirectionID,
 			ShapeID:     v.ShapeID.String(),
 			RouteID:     v.RouteID,
 		}
-	case *tl.Frequency:
+	case *gtfs.Frequency:
 		a := fi.tripInfo[v.TripID]
 		a.UsesFrequency = true
 		fi.tripInfo[v.TripID] = a

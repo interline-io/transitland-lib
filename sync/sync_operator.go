@@ -5,18 +5,18 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
 // UpdateOperator updates or inserts a single operator, as well as managing associated operator-in-feed records
-func UpdateOperator(atx tldb.Adapter, operator tl.Operator) (int, bool, bool, error) {
+func UpdateOperator(atx tldb.Adapter, operator dmfr.Operator) (int, bool, bool, error) {
 	// Check if we have the existing operator
 	found := false
 	updated := false
 	var errTx error
-	ent := tl.Operator{}
+	ent := dmfr.Operator{}
 	err := atx.Get(&ent, "SELECT * FROM current_operators WHERE onestop_id = ?", operator.OnestopID)
 	if err == nil {
 		// Exists, update key values

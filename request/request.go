@@ -14,19 +14,19 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 )
 
 type Downloader interface {
-	Download(context.Context, string, tl.Secret, tl.FeedAuthorization) (io.ReadCloser, int, error)
+	Download(context.Context, string, dmfr.Secret, dmfr.FeedAuthorization) (io.ReadCloser, int, error)
 }
 
 type Uploader interface {
-	Upload(context.Context, string, tl.Secret, io.Reader) error
+	Upload(context.Context, string, dmfr.Secret, io.Reader) error
 }
 
 type Presigner interface {
-	CreateSignedUrl(context.Context, string, string, tl.Secret) (string, error)
+	CreateSignedUrl(context.Context, string, string, dmfr.Secret) (string, error)
 }
 
 type Request struct {
@@ -35,8 +35,8 @@ type Request struct {
 	AllowLocal bool
 	AllowS3    bool
 	MaxSize    uint64
-	Secret     tl.Secret
-	Auth       tl.FeedAuthorization
+	Secret     dmfr.Secret
+	Auth       dmfr.FeedAuthorization
 }
 
 func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
@@ -119,7 +119,7 @@ func WithMaxSize(s uint64) RequestOption {
 	}
 }
 
-func WithAuth(secret tl.Secret, auth tl.FeedAuthorization) func(req *Request) {
+func WithAuth(secret dmfr.Secret, auth dmfr.FeedAuthorization) func(req *Request) {
 	return func(req *Request) {
 		req.Secret = secret
 		req.Auth = auth

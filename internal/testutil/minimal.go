@@ -4,52 +4,52 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
 // NewMinimalTestFeed returns a minimal mock Reader & ReaderTester values.
 func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 	r := &direct.Reader{
-		AgencyList: []tl.Agency{
+		AgencyList: []gtfs.Agency{
 			{AgencyID: "agency1", AgencyName: "Agency 1", AgencyTimezone: "America/Los_Angeles", AgencyURL: "http://example.com"},
 		},
-		RouteList: []tl.Route{
+		RouteList: []gtfs.Route{
 			{RouteID: "route1", RouteShortName: "Route 1", RouteType: 1, AgencyID: "agency1"},
 		},
-		TripList: []tl.Trip{
+		TripList: []gtfs.Trip{
 			{TripID: "trip1", RouteID: "route1", ServiceID: "service1"},
 		},
-		StopList: []tl.Stop{
+		StopList: []gtfs.Stop{
 			{StopID: "stop1", StopName: "Stop 1", Geometry: tt.NewPoint(1, 2)},
 			{StopID: "stop2", StopName: "Stop 2", Geometry: tt.NewPoint(3, 4)},
 		},
-		StopTimeList: []tl.StopTime{
+		StopTimeList: []gtfs.StopTime{
 			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: tt.NewSeconds(0), DepartureTime: tt.NewSeconds(5)},
 			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: tt.NewSeconds(10), DepartureTime: tt.NewSeconds(15)},
 		},
-		ShapeList: []tl.Shape{
+		ShapeList: []gtfs.Shape{
 			{ShapeID: "shape1", Geometry: tt.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
 		},
-		CalendarList: []tl.Calendar{
+		CalendarList: []gtfs.Calendar{
 			{ServiceID: "service1", StartDate: time.Now(), EndDate: time.Now()},
 		},
-		CalendarDateList: []tl.CalendarDate{
+		CalendarDateList: []gtfs.CalendarDate{
 			{ServiceID: "service1", ExceptionType: 1, Date: time.Now()},
 		},
-		FeedInfoList: []tl.FeedInfo{
+		FeedInfoList: []gtfs.FeedInfo{
 			{FeedVersion: "123", FeedPublisherURL: "http://example.com", FeedLang: "en-US", FeedPublisherName: "Example"},
 		},
-		FareRuleList: []tl.FareRule{
+		FareRuleList: []gtfs.FareRule{
 			{FareID: "fare1"},
 		},
-		FareAttributeList: []tl.FareAttribute{
+		FareAttributeList: []gtfs.FareAttribute{
 			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: tt.NewInt(1)},
 		},
-		FrequencyList: []tl.Frequency{
+		FrequencyList: []gtfs.Frequency{
 			{TripID: "trip1", HeadwaySecs: 600, StartTime: tt.NewSeconds(3600), EndTime: tt.NewSeconds(7200)},
 		},
-		TransferList: []tl.Transfer{
+		TransferList: []gtfs.Transfer{
 			{FromStopID: "stop1", ToStopID: "stop2", TransferType: 1},
 		},
 	}

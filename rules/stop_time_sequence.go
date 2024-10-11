@@ -3,7 +3,6 @@ package rules
 import (
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -12,8 +11,8 @@ import (
 type StopTimeSequenceCheck struct{}
 
 // Validate .
-func (e *StopTimeSequenceCheck) Validate(ent tl.Entity) []error {
-	trip, ok := ent.(*tl.Trip)
+func (e *StopTimeSequenceCheck) Validate(ent tt.Entity) []error {
+	trip, ok := ent.(*gtfs.Trip)
 	if !ok {
 		return nil
 	}

@@ -2,7 +2,7 @@ package rules
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type hasEntityKey interface {
@@ -11,13 +11,13 @@ type hasEntityKey interface {
 
 // EntityDuplicateCheck determines if a unique entity ID is present more than once in the file.
 type EntityDuplicateCheck struct {
-	duplicates *tl.EntityMap
+	duplicates *tt.EntityMap
 }
 
 // Validate .
-func (e *EntityDuplicateCheck) Validate(ent tl.Entity) []error {
+func (e *EntityDuplicateCheck) Validate(ent tt.Entity) []error {
 	if e.duplicates == nil {
-		e.duplicates = tl.NewEntityMap()
+		e.duplicates = tt.NewEntityMap()
 	}
 	v, ok := ent.(hasEntityKey)
 	if !ok {

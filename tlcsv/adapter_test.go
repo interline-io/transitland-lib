@@ -8,9 +8,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 )
 
 func getTestAdapters() map[string]func() Adapter {
@@ -276,11 +276,11 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	})
 	t.Run("ReadRows", func(t *testing.T) {
 		// TODO: more tests
-		ent := tl.StopTime{}
+		ent := gtfs.StopTime{}
 		m := map[string]int{}
 		total := 0
 		adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.StopTime{}
+			e := gtfs.StopTime{}
 			loadRow(&e, row)
 			m[e.StopID]++
 			total++

@@ -3,10 +3,10 @@ package cmds
 import (
 	"errors"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/multireader"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/spf13/pflag"
 )
@@ -41,7 +41,7 @@ func (cmd *MergeCommand) Parse(args []string) error {
 }
 
 func (cmd *MergeCommand) Run() error {
-	var readers []tl.Reader
+	var readers []adapters.Reader
 	for _, p := range cmd.readerPaths {
 		// Open reader
 		reader, err := ext.OpenReader(p)

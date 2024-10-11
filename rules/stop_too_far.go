@@ -3,8 +3,9 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // StopTooFarError reports when two related stops are >1km away.
@@ -31,12 +32,12 @@ type StopTooFarCheck struct {
 }
 
 // Validate .
-func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
+func (e *StopTooFarCheck) Validate(ent tt.Entity) []error {
 	e.maxdist = 1000.0
 	if e.geoms == nil {
 		e.geoms = map[string]tlxy.Point{}
 	}
-	v, ok := ent.(*tl.Stop)
+	v, ok := ent.(*gtfs.Stop)
 	if !ok {
 		return nil
 	}

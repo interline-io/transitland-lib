@@ -4,16 +4,18 @@ import (
 	"sort"
 	"time"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/snabb/isoweek"
 )
 
 // NewFeedVersionServiceLevelsFromReader .
-func NewFeedVersionServiceLevelsFromReader(reader tl.Reader) ([]dmfr.FeedVersionServiceLevel, error) {
+func NewFeedVersionServiceLevelsFromReader(reader adapters.Reader) ([]dmfr.FeedVersionServiceLevel, error) {
 	bld := NewFeedVersionServiceLevelBuilder()
 	if err := copier.QuietCopy(reader, &empty.Writer{}, func(o *copier.Options) { o.AddExtension(bld) }); err != nil {
 		return nil, err
@@ -94,34 +96,34 @@ type fvslTripInfo struct {
 }
 
 type FeedVersionServiceLevelBuilder struct {
-	services      map[string]*tl.Service
+	services      map[string]*service.Service
 	freqs         map[string]int
 	tripdurations map[string]fvslTripInfo
 }
 
 func NewFeedVersionServiceLevelBuilder() *FeedVersionServiceLevelBuilder {
 	return &FeedVersionServiceLevelBuilder{
-		services:      map[string]*tl.Service{},
+		services:      map[string]*service.Service{},
 		freqs:         map[string]int{},
 		tripdurations: map[string]fvslTripInfo{},
 	}
 }
 
-func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Service:
+	case *service.Service:
 		pp.services[v.ServiceID] = v
-	case *tl.CalendarDate:
+	case *gtfs.CalendarDate:
 		svc, ok := pp.services[v.ServiceID]
 		if !ok {
-			svc = &tl.Service{}
-			svc.Calendar = tl.Calendar{ServiceID: v.ServiceID}
+			svc = &service.Service{}
+			svc.Calendar = gtfs.Calendar{ServiceID: v.ServiceID}
 			pp.services[v.ServiceID] = svc
 		}
 		svc.AddCalendarDate(*v)
-	case *tl.Frequency:
+	case *gtfs.Frequency:
 		pp.freqs[v.TripID] += v.RepeatCount()
-	case *tl.Trip:
+	case *gtfs.Trip:
 		stoptimes := v.StopTimes
 		if len(stoptimes) > 1 {
 			d := stoptimes[len(stoptimes)-1].ArrivalTime.Int() - stoptimes[0].DepartureTime.Int()

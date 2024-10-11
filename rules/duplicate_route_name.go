@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // DuplicateRouteNameError reports when routes of the same agency have identical route_long_name values.
@@ -34,8 +35,8 @@ type DuplicateRouteNameCheck struct {
 }
 
 // Validate .
-func (e *DuplicateRouteNameCheck) Validate(ent tl.Entity) []error {
-	v, ok := ent.(*tl.Route)
+func (e *DuplicateRouteNameCheck) Validate(ent tt.Entity) []error {
+	v, ok := ent.(*gtfs.Route)
 	if !ok || v.RouteLongName == "" {
 		return nil
 	}

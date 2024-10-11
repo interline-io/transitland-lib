@@ -4,7 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
@@ -17,8 +17,8 @@ type AgencyPlace struct {
 	Adm0name tt.String
 	Count    int
 	Rank     float64
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (rs *AgencyPlace) TableName() string {
@@ -47,18 +47,18 @@ func NewAgencyPlaceBuilder() *AgencyPlaceBuilder {
 	}
 }
 
-func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Agency:
+	case *gtfs.Agency:
 		pp.agencyStops[eid] = map[string]int{}
-	case *tl.Stop:
+	case *gtfs.Stop:
 		spt := v.ToPoint()
 		pp.stops[eid] = geohash.EncodeWithPrecision(spt.Lat, spt.Lon, 6) // Note reversed coords
-	case *tl.Route:
+	case *gtfs.Route:
 		pp.routeAgency[eid] = v.AgencyID
-	case *tl.Trip:
+	case *gtfs.Trip:
 		pp.tripAgency[eid] = pp.routeAgency[v.RouteID]
-	case *tl.StopTime:
+	case *gtfs.StopTime:
 		aid := pp.tripAgency[v.TripID]
 		if sg, ok := pp.stops[v.StopID]; ok {
 			if v, ok := pp.agencyStops[aid]; ok {

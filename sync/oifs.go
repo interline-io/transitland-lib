@@ -8,7 +8,8 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -20,7 +21,7 @@ type oifmatch struct {
 
 type agencyOnestop struct {
 	OnestopID tt.String
-	tl.Agency
+	gtfs.Agency
 }
 
 type agencyPlace struct {
@@ -67,12 +68,12 @@ func getPlaces(atx tldb.Adapter, id int) (string, error) {
 	return strings.Join(places, " / "), nil
 }
 
-func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
+func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 	// Update OIFs that belong to this operator
 	updated := false
 	oiflookup := map[oifmatch]int{}
 	oifmatches := map[int]bool{}
-	oifexisting := []tl.OperatorAssociatedFeed{}
+	oifexisting := []dmfr.OperatorAssociatedFeed{}
 	if err := atx.Select(&oifexisting, "select * from current_operators_in_feed where operator_id = ?", operator.ID); err != nil {
 		return false, err
 	}
@@ -92,7 +93,7 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 			return false, err
 		}
 		// Get agencies
-		agencies := []tl.Agency{}
+		agencies := []gtfs.Agency{}
 		if err := atx.Select(&agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states using(feed_version_id) where feed_states.feed_id = ?", oif.FeedID); err != nil {
 			return false, err
 		}
@@ -141,13 +142,13 @@ func updateOifs(atx tldb.Adapter, operator tl.Operator) (bool, error) {
 	return updated, nil
 }
 
-func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
+func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 	// Update OIFs that do not have an operator
 	updated := false
 	feedid := feed.ID
 	oiflookup := map[oifmatch]int{}
 	oifmatches := map[int]bool{}
-	oifexisting := []tl.OperatorAssociatedFeed{}
+	oifexisting := []dmfr.OperatorAssociatedFeed{}
 	if err := atx.Select(&oifexisting, "select * from current_operators_in_feed where feed_id = ?", feedid); err != nil {
 		return false, err
 	}
@@ -179,7 +180,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed tl.Feed) (bool, error) {
 		} else {
 			updated = true
 			// Generate OnestopID
-			oif := tl.OperatorAssociatedFeed{
+			oif := dmfr.OperatorAssociatedFeed{
 				FeedID:               feedid,
 				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID),
 				ResolvedName:         tt.NewString(agency.AgencyName),

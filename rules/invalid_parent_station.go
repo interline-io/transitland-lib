@@ -3,7 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // InvalidParentStationError reports when a parent_station has a location_type that is not allowed.
@@ -30,19 +31,19 @@ type ParentStationLocationTypeCheck struct {
 	locationTypes map[string]int
 }
 
-func (e *ParentStationLocationTypeCheck) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (e *ParentStationLocationTypeCheck) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	if e.locationTypes == nil {
 		e.locationTypes = map[string]int{}
 	}
-	if stop, ok := ent.(*tl.Stop); ok {
+	if stop, ok := ent.(*gtfs.Stop); ok {
 		e.locationTypes[eid] = stop.LocationType
 	}
 	return nil
 }
 
-func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
+func (e *ParentStationLocationTypeCheck) Validate(ent tt.Entity) []error {
 	// Confirm the parent station location_type is acceptable
-	stop, ok := ent.(*tl.Stop)
+	stop, ok := ent.(*gtfs.Stop)
 	if !ok {
 		return nil
 	}

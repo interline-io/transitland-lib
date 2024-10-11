@@ -12,9 +12,9 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 //////////// helpers /////////////
@@ -43,12 +43,12 @@ func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []
 	testutil.CheckErrors(expecterrs, errs, cr.t)
 }
 
-func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
+func (cr *testErrorHandler) HandleEntityErrors(ent tt.Entity, errs []error, warns []error) {
 }
 
-func (cr *testErrorHandler) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	var errs []error
-	if extEnt, ok := ent.(tl.EntityWithErrors); ok {
+	if extEnt, ok := ent.(tt.EntityWithErrors); ok {
 		errs = append(errs, extEnt.Errors()...)
 		errs = append(errs, extEnt.Warnings()...)
 
