@@ -40,6 +40,16 @@ type WriterAdapter interface {
 
 /////////////////////
 
+// NewStoreAdapter is a convenience method for getting a GTFS Zip reader from the store.
+func NewStoreAdapter(storage string, key string, fragment string) (*TmpZipAdapter, error) {
+	r, err := request.Download(storage, key)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return NewTmpZipAdapterFromReader(r, fragment)
+}
+
 // NewAdapter returns a basic adapter for the given URL.
 // Use NewURLAdapter() to provide additional options.
 func NewAdapter(address string) (Adapter, error) {

@@ -11,7 +11,6 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/stats"
-	"github.com/interline-io/transitland-lib/store"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -196,7 +195,7 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 		return RebuildStatsResult{}, err
 	}
 	// Get Reader
-	tladapter, err := store.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
+	tladapter, err := tlcsv.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
 		return RebuildStatsResult{}, err
 	}
