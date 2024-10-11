@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/tt"
-	"github.com/interline-io/transitland-lib/tlutil"
 )
 
 type RedateFilter struct {
@@ -112,7 +112,7 @@ func (tf *RedateFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
 			}
 		}
 
-		newSvc := tlutil.NewService(tl.Calendar{ServiceID: v.ServiceID, StartDate: targetDate})
+		newSvc := service.NewService(tl.Calendar{ServiceID: v.ServiceID, StartDate: targetDate})
 		newSvc.ID = v.ID
 		for i := 1; i <= tf.TargetDays; i++ {
 			if v.IsActive(sourceDate) {

@@ -9,8 +9,8 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tl/tt"
-	"github.com/interline-io/transitland-lib/tlutil"
 )
 
 // Read version from compiled in git details
@@ -116,8 +116,8 @@ func NewEntityMap() *EntityMap {
 	return tt.NewEntityMap()
 }
 
-type Service = tlutil.Service
+type Service = service.Service
 
 func NewServicesFromReader(reader Reader) []*Service {
-	return tlutil.NewServicesFromReader(reader)
+	return service.NewServicesFromReader(reader)
 }

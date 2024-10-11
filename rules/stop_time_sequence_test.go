@@ -1,4 +1,4 @@
-package tlutil
+package rules
 
 import (
 	"strconv"

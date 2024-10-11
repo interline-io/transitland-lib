@@ -5,15 +5,15 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/tlutil"
+	"github.com/interline-io/transitland-lib/service"
 )
 
-func newTestService() *tlutil.Service {
+func newTestService() *service.Service {
 	start, _ := time.Parse("20060102", "20190101")
 	end, _ := time.Parse("20060102", "20190131")
 	except, _ := time.Parse("20060102", "20190102")
 	added, _ := time.Parse("20060102", "20190105")
-	s := tlutil.NewService(
+	s := service.NewService(
 		gtfs.Calendar{
 			StartDate: start,
 			EndDate:   end,
@@ -60,7 +60,7 @@ func TestService_IsActive(t *testing.T) {
 func TestService_Simplify(t *testing.T) {
 	type testcase struct {
 		name    string
-		service *tlutil.Service
+		service *service.Service
 	}
 	testcases := []testcase{
 		{"TestService", newTestService()},
