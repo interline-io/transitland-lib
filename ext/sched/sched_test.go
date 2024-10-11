@@ -6,7 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,7 +30,7 @@ func newTestScheduleSchecker(path string) (*ScheduleChecker, error) {
 }
 
 func TestScheduleChecker(t *testing.T) {
-	ex, err := newTestScheduleSchecker(testutil.RelPath("testdata/rt/ct.zip"))
+	ex, err := newTestScheduleSchecker(testpath.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestScheduleChecker(t *testing.T) {
 			assert.ElementsMatch(t, tc.exp, stats)
 		})
 	}
-	freqEx, err := newTestScheduleSchecker(testutil.RelPath("testdata/example.zip"))
+	freqEx, err := newTestScheduleSchecker(testpath.RelPath("testdata/example.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}

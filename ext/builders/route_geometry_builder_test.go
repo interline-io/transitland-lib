@@ -3,6 +3,7 @@ package builders
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestRouteGeometryBuilder(t *testing.T) {
 			},
 		},
 		"TriMet-2Routes": {
-			testutil.RelPath("testdata/external/trimet-2routes.zip"),
+			testpath.RelPath("testdata/external/trimet-2routes.zip"),
 			[]testcase{
 				{RouteID: "193", ExpectLength: 6452.065660, ExpectLineStrings: 4},
 				{RouteID: "200", ExpectLength: 23012.874312, ExpectLineStrings: 5},

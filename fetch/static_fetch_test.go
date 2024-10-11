@@ -10,6 +10,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -108,7 +109,7 @@ func TestStaticFetch(t *testing.T) {
 					http.Error(w, "404", 404)
 					return
 				}
-				buf, err := ioutil.ReadFile(testutil.RelPath(basedir + "/" + tc.serveFile))
+				buf, err := ioutil.ReadFile(testpath.RelPath(basedir + "/" + tc.serveFile))
 				if err != nil {
 					t.Error(err)
 				}
@@ -282,7 +283,7 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 // So in this case, the second fetch will return Found and the existing FV.
 func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fp := testutil.RelPath("testdata/example-nested-two-feeds.zip")
+		fp := testpath.RelPath("testdata/example-nested-two-feeds.zip")
 		buf, err := ioutil.ReadFile(fp)
 		if err != nil {
 			t.Error(err)

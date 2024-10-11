@@ -7,6 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tldbutil"
 )
 
 // UnimportSchedule removes schedule data for a feed version and updates the import record.
@@ -16,7 +17,7 @@ func UnimportSchedule(atx tldb.Adapter, id int) error {
 	fvt := dmfr.GetFeedVersionTables()
 	tables := fvt.ScheduleTables()
 	for _, table := range tables {
-		if err := dmfr.FeedVersionTableDelete(atx, table, id, false); err != nil {
+		if err := tldbutil.FeedVersionTableDelete(atx, table, id, false); err != nil {
 			return err
 		}
 	}
@@ -36,7 +37,7 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 	optTables = append(optTables, extraTables...)
 	optTables = append(optTables, fvt.GtfsExtTables...)
 	for _, table := range optTables {
-		if err := dmfr.FeedVersionTableDelete(atx, table, id, true); err != nil {
+		if err := tldbutil.FeedVersionTableDelete(atx, table, id, true); err != nil {
 			return err
 		}
 	}
@@ -45,7 +46,7 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 	tables := []string{}
 	tables = append(tables, fvt.ImportedTables()...)
 	for _, table := range tables {
-		if err := dmfr.FeedVersionTableDelete(atx, table, id, false); err != nil {
+		if err := tldbutil.FeedVersionTableDelete(atx, table, id, false); err != nil {
 			return err
 		}
 	}
@@ -74,7 +75,7 @@ func DeleteFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 	tables = append(tables, extraTables...)
 	tables = append(tables, fvt.AllTables()...)
 	for _, table := range tables {
-		if err := dmfr.FeedVersionTableDelete(atx, table, id, false); err != nil {
+		if err := tldbutil.FeedVersionTableDelete(atx, table, id, false); err != nil {
 			return err
 		}
 	}

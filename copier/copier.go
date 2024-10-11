@@ -15,6 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rules"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tl/causes"
 	"github.com/interline-io/transitland-lib/tl/tt"
@@ -916,7 +917,7 @@ func (copier *Copier) copyCalendars() error {
 			duplicateServices = append(duplicateServices, &ent)
 			continue
 		}
-		svcs[ent.EntityID()] = tl.NewService(ent)
+		svcs[ent.EntityID()] = service.NewService(ent)
 	}
 
 	// Add the CalendarDates to Services
@@ -930,7 +931,7 @@ func (copier *Copier) copyCalendars() error {
 		}
 		svc, ok := svcs[ent.ServiceID]
 		if !ok {
-			svc = tl.NewService(cal)
+			svc = service.NewService(cal)
 			svcs[ent.ServiceID] = svc
 		}
 		svc.AddCalendarDate(ent)

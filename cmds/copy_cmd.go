@@ -2,13 +2,11 @@ package cmds
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
 
@@ -84,20 +82,7 @@ func (cmd *CopyCommand) Run() error {
 	}
 
 	defer writer.Close()
-	// Create feed version
-	if dbw, ok := writer.(*tldb.Writer); ok {
-		if cmd.fvid != 0 {
-			dbw.FeedVersionID = cmd.fvid
-		}
-		if dbw.FeedVersionID == 0 {
-			fvid, err := dbw.CreateFeedVersion(reader)
-			if err != nil {
-				return fmt.Errorf("error creating feed version: %s", err.Error())
-			}
-			dbw.FeedVersionID = fvid
-		}
-		cmd.Options.NormalizeServiceIDs = true
-	}
+
 	// Setup copier
 	cmd.Options.Extensions = cmd.extensions
 	cp, err := copier.NewCopier(reader, writer, cmd.Options)

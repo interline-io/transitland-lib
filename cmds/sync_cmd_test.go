@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testdb"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tl"
 )
 
@@ -15,9 +15,9 @@ func TestSyncCommand(t *testing.T) {
 		errContains string
 		command     []string
 	}{
-		{2, "", []string{testutil.RelPath("testdata/dmfr/example.json")}},
-		{4, "", []string{testutil.RelPath("testdata/dmfr/example.json"), testutil.RelPath("testdata/dmfr/bayarea-local.dmfr.json")}},
-		{0, "no such file", []string{testutil.RelPath("testdata/dmfr/does-not-exist.json")}},
+		{2, "", []string{testpath.RelPath("testdata/dmfr/example.json")}},
+		{4, "", []string{testpath.RelPath("testdata/dmfr/example.json"), testpath.RelPath("testdata/dmfr/bayarea-local.dmfr.json")}},
+		{0, "no such file", []string{testpath.RelPath("testdata/dmfr/does-not-exist.json")}},
 	}
 	_ = cases
 	for _, exp := range cases {

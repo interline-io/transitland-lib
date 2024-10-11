@@ -7,17 +7,17 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTripUpdateStats(t *testing.T) {
-	r, err := tlcsv.NewReader(testutil.RelPath("testdata/rt/ct.zip"))
+	r, err := tlcsv.NewReader(testpath.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("testdata/rt/ct-trip-stats.json"))
+	msg, err := ReadFile(testpath.RelPath("testdata/rt/ct-trip-stats.json"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -117,11 +117,11 @@ func TestTripUpdateStats(t *testing.T) {
 }
 
 func TestVehiclePositionStats(t *testing.T) {
-	r, err := tlcsv.NewReader(testutil.RelPath("testdata/rt/ct.zip"))
+	r, err := tlcsv.NewReader(testpath.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("testdata/rt/ct-vehicle-stats.json"))
+	msg, err := ReadFile(testpath.RelPath("testdata/rt/ct-vehicle-stats.json"))
 	if err != nil {
 		t.Error(err)
 	}

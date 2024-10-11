@@ -15,6 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tlutil"
 	"github.com/interline-io/transitland-lib/validator"
 )
 
@@ -52,7 +53,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		defer reader.Close()
 
 		// Get initialized FeedVersion
-		fv, err := tl.NewFeedVersionFromReader(reader)
+		fv, err := tlutil.NewFeedVersionFromReader(reader)
 		if err != nil {
 			vr.Error = err
 			return vr, nil
