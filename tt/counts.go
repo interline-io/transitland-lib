@@ -25,6 +25,8 @@ func (r *Counts) Scan(value interface{}) error {
 	return json.Unmarshal(b, &r)
 }
 
+// Do not implement MarshalJSON, infinite recursion
+
 func (r *Counts) UnmarshalGQL(v interface{}) error {
 	return r.Scan(v)
 }

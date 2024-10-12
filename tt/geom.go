@@ -5,8 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"io"
+	"fmt"
 
 	"github.com/interline-io/transitland-lib/tlxy"
 	geom "github.com/twpayne/go-geom"
@@ -49,34 +48,30 @@ func (g GeometryOption[T]) Value() (driver.Value, error) {
 }
 
 func (g *GeometryOption[T]) Scan(src interface{}) error {
+	// Parse as WKB, GeoJSON or map[string]any
 	g.Valid = false
 	if src == nil {
 		return nil
 	}
-	b, ok := src.(string)
-	if !ok {
-		return wkb.ErrExpectedByteSlice{Value: src}
-	}
 	var err error
-	g.Val, err = wkbDecodeG[T](b)
-	g.Valid = (err == nil)
-	if err != nil {
-		return err
+	switch v := src.(type) {
+	case string:
+		g.Val, err = geomAutoDecode[T]([]byte(v))
+	case []byte:
+		g.Val, err = geomAutoDecode[T]([]byte(v))
+	case map[string]any:
+		jj, jjErr := json.Marshal(v)
+		if jjErr != nil {
+			return jjErr
+		}
+		g.Val, err = geojsonDecode[T](jj)
 	}
-	return nil
+	g.Valid = (err == nil)
+	return err
 }
 
 func (g *GeometryOption[T]) UnmarshalJSON(data []byte) error {
-	g.Valid = false
-	var x geom.T = g.Val
-	if err := geojson.Unmarshal(data, &x); err != nil {
-		return err
-	}
-	g.Val, g.Valid = x.(T)
-	if !g.Valid {
-		return errors.New("could not convert geometry")
-	}
-	return nil
+	return g.Scan(data)
 }
 
 func (g GeometryOption[T]) MarshalJSON() ([]byte, error) {
@@ -84,20 +79,6 @@ func (g GeometryOption[T]) MarshalJSON() ([]byte, error) {
 		return jsonNull(), nil
 	}
 	return geojsonEncode(g.Val)
-}
-
-func (g *GeometryOption[T]) UnmarshalGQL(v interface{}) error {
-	g.Valid = false
-	jj, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	return g.UnmarshalJSON(jj)
-}
-
-func (g GeometryOption[T]) MarshalGQL(w io.Writer) {
-	b, _ := g.MarshalJSON()
-	w.Write(b)
 }
 
 //////////
@@ -219,19 +200,26 @@ func NewPolygon(v *geom.Polygon) Polygon {
 
 // Errors, helpers
 
+func geomAutoDecode[T any](data []byte) (T, error) {
+	if len(data) > 0 && data[0] == '{' {
+		return geojsonDecode[T](data)
+	}
+	return wkbDecode[T](data)
+}
+
 // wkbEncode encodes a geometry into EWKB.
-func wkbEncode(g geom.T) (string, error) {
+func wkbEncode(g geom.T) ([]byte, error) {
 	b := &bytes.Buffer{}
 	if err := ewkb.Write(b, wkb.NDR, g); err != nil {
-		return "", err
+		return nil, err
 	}
 	bb := b.Bytes()
 	data := make([]byte, len(bb)*2)
 	hex.Encode(data, bb)
-	return string(data), nil
+	return data, nil
 }
 
-func wkbDecodeG[T any, PT *T](data string) (T, error) {
+func wkbDecode[T any](data []byte) (T, error) {
 	var ret T
 	b := make([]byte, len(data)/2)
 	hex.Decode(b, []byte(data))
@@ -253,4 +241,18 @@ func geojsonEncode(g geom.T) ([]byte, error) {
 		return jsonNull(), err
 	}
 	return b, nil
+}
+
+func geojsonDecode[T any](data []byte) (T, error) {
+	var ok bool
+	var gg geom.T
+	var v T
+	if err := geojson.Unmarshal(data, &gg); err != nil {
+		return v, err
+	}
+	v, ok = gg.(T)
+	if !ok {
+		return v, fmt.Errorf("could not decode into %T", v)
+	}
+	return v, nil
 }
