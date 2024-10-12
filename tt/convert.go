@@ -252,7 +252,6 @@ func convertAssign(dest any, src any) error {
 			srcJson, _ := json.Marshal(src)
 			err = json.Unmarshal(srcJson, dest)
 		default:
-			_ = s
 			err = cannotConvert(dest, src)
 		}
 	}
