@@ -19,6 +19,10 @@ func (r *Option[T]) Set(v T) {
 	r.Valid = true
 }
 
+func (r *Option[T]) Unset() {
+	r.Valid = false
+}
+
 func (r *Option[T]) Present() bool {
 	return r.Valid
 }
