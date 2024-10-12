@@ -8,8 +8,6 @@ import (
 	"math"
 	"strconv"
 	"time"
-
-	geom "github.com/twpayne/go-geom"
 )
 
 type canString interface {
@@ -275,12 +273,4 @@ func parseTime(d string) (time.Time, error) {
 		s, err = time.Parse(time.RFC3339, d)
 	}
 	return s, err
-}
-
-func toJson(v any) ([]byte, error) {
-	switch s := v.(type) {
-	case geom.T:
-		return geojsonEncode(s)
-	}
-	return json.Marshal(v)
 }
