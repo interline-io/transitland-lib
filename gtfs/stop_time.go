@@ -103,17 +103,11 @@ func (ent *StopTime) GetString(key string) (string, error) {
 			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled.Val)
 		}
 	case "timepoint":
-		if ent.Timepoint.Valid {
-			v = ent.Timepoint.String()
-		}
+		v = ent.Timepoint.String()
 	case "continuous_pickup":
-		if ent.ContinuousPickup.Valid {
-			v = ent.ContinuousPickup.String()
-		}
+		v = ent.ContinuousPickup.String()
 	case "continuous_drop_off":
-		if ent.ContinuousPickup.Valid {
-			v = ent.ContinuousDropOff.String()
-		}
+		v = ent.ContinuousDropOff.String()
 	default:
 		return v, fmt.Errorf("unknown key: %s", key)
 	}

@@ -7,10 +7,10 @@ import (
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
-	FareID           tt.String `csv:",required"`
-	Price            tt.Float  `csv:",required"`
-	CurrencyType     tt.String `csv:",required"`
-	PaymentMethod    tt.Int    `csv:",required"`
+	FareID           tt.String // `csv:",required"`
+	Price            tt.Float  // `csv:",required"`
+	CurrencyType     tt.String // `csv:",required"`
+	PaymentMethod    tt.Int    // `csv:",required"`
 	Transfers        tt.Int
 	AgencyID         tt.Key
 	TransferDuration tt.Int
@@ -32,9 +32,20 @@ func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID.Val)...)
 	errs = append(errs, tt.CheckPresent("currency_type", ent.CurrencyType.Val)...)
-	errs = append(errs, tt.CheckPositive("price", ent.Price.Val)...)
+
+	if !ent.Price.Valid {
+		errs = append(errs, causes.NewRequiredFieldError("price"))
+	} else {
+		errs = append(errs, tt.CheckPositive("price", ent.Price.Val)...)
+	}
+
+	if !ent.PaymentMethod.Valid {
+		errs = append(errs, causes.NewRequiredFieldError("payment_method"))
+	} else {
+		errs = append(errs, tt.CheckInsideRangeInt("payment_method", ent.PaymentMethod.Val, 0, 1)...)
+	}
+
 	errs = append(errs, tt.CheckCurrency("currency_type", ent.CurrencyType.Val)...)
-	errs = append(errs, tt.CheckInsideRangeInt("payment_method", ent.PaymentMethod.Val, 0, 1)...)
 	errs = append(errs, tt.CheckPositiveInt("transfer_duration", ent.TransferDuration.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("transfers", int(ent.Transfers.Val), 0, 2)...)
 	return errs

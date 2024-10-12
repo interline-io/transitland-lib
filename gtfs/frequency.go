@@ -10,7 +10,7 @@ import (
 // Frequency frequencies.txt
 type Frequency struct {
 	TripID      tt.String `csv:",required"`
-	HeadwaySecs tt.Int    `csv:",required"`
+	HeadwaySecs tt.Int
 	StartTime   tt.Seconds
 	EndTime     tt.Seconds
 	ExactTimes  tt.Int
@@ -39,9 +39,13 @@ func (ent *Frequency) Errors() (errs []error) {
 		errs = append(errs, causes.NewRequiredFieldError("end_time"))
 	}
 	st, et := ent.StartTime.Int(), ent.EndTime.Int()
-	if ent.HeadwaySecs.Val < 1 {
+
+	if !ent.HeadwaySecs.Valid {
+		errs = append(errs, causes.NewRequiredFieldError("headway_secs"))
+	} else if ent.HeadwaySecs.Val < 1 {
 		errs = append(errs, causes.NewInvalidFieldError("headway_secs", ent.HeadwaySecs.String(), fmt.Errorf("headway_secs must be a positive integer")))
 	}
+
 	if st != 0 && et != 0 && st > et {
 		errs = append(errs, causes.NewInvalidFieldError("end_time", fmt.Sprintf("%d", et), fmt.Errorf("end_time '%d' must come after start_time '%d'", et, st)))
 	}
