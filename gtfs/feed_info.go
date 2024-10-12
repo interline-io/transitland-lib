@@ -9,15 +9,15 @@ import (
 
 // FeedInfo feed_info.txt
 type FeedInfo struct {
-	FeedPublisherName tt.String   `csv:",required"`
-	FeedPublisherURL  tt.Url      `csv:",required"`
-	FeedLang          tt.Language `csv:",required"`
-	FeedVersion       tt.String   `db:"feed_version_name"`
+	FeedPublisherName tt.String `csv:",required"`
+	FeedPublisherURL  tt.String `csv:",required"`
+	FeedLang          tt.String `csv:",required"`
+	FeedVersion       tt.String `db:"feed_version_name"`
 	FeedStartDate     tt.Date
 	FeedEndDate       tt.Date
-	DefaultLang       tt.Language
-	FeedContactEmail  tt.Email
-	FeedContactURL    tt.Url
+	DefaultLang       tt.String
+	FeedContactEmail  tt.String
+	FeedContactURL    tt.String
 	tt.BaseEntity
 }
 
