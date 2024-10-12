@@ -60,7 +60,7 @@ func TestSetString(t *testing.T) {
 			t.Error(err)
 		}
 		if exp := 123.456; math.Abs(exp-ent.Price.Val) > 0.001 {
-			t.Errorf("got %f expect %f", ent.Price, exp)
+			t.Errorf("got %f expect %f", ent.Price.Val, exp)
 		}
 	})
 	t.Run("time", func(t *testing.T) {
