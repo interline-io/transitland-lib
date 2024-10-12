@@ -14,6 +14,11 @@ func NewOption[T any](v T) Option[T] {
 	return Option[T]{Val: v, Valid: true}
 }
 
+func (r *Option[T]) Set(v T) {
+	r.Val = v
+	r.Valid = true
+}
+
 func (r *Option[T]) Present() bool {
 	return r.Valid
 }

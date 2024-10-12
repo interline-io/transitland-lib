@@ -50,7 +50,7 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{TripID: "trip1", HeadwaySecs: 600, StartTime: tt.NewSeconds(3600), EndTime: tt.NewSeconds(7200)},
 		},
 		TransferList: []gtfs.Transfer{
-			{FromStopID: "stop1", ToStopID: "stop2", TransferType: 1},
+			{FromStopID: tt.NewKey("stop1"), ToStopID: tt.NewKey("stop2"), TransferType: 1},
 		},
 	}
 	fe := &ReaderTester{

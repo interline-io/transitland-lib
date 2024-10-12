@@ -7,8 +7,8 @@ import (
 
 // Transfer transfers.txt
 type Transfer struct {
-	FromStopID      string
-	ToStopID        string
+	FromStopID      tt.Key
+	ToStopID        tt.Key
 	FromRouteID     tt.Key
 	ToRouteID       tt.Key
 	FromTripID      tt.Key
@@ -25,8 +25,8 @@ func (ent *Transfer) Errors() (errs []error) {
 	errs = append(errs, tt.CheckInsideRangeInt("transfer_type", ent.TransferType, 0, 5)...)
 	errs = append(errs, tt.CheckPositiveInt("min_transfer_time", ent.MinTransferTime.Val)...)
 	// FromStopID, ToStopID required
-	errs = append(errs, tt.CheckPresent("from_stop_id", ent.FromStopID)...)
-	errs = append(errs, tt.CheckPresent("to_stop_id", ent.ToStopID)...)
+	errs = append(errs, tt.CheckPresent("from_stop_id", ent.FromStopID.Val)...)
+	errs = append(errs, tt.CheckPresent("to_stop_id", ent.ToStopID.Val)...)
 	if ent.TransferType == 4 || ent.TransferType == 5 {
 		// FromTripID, ToTripID conditionally required
 		errs = append(errs, tt.CheckPresent("from_trip_id", ent.FromTripID.Val)...)
@@ -48,18 +48,18 @@ func (ent *Transfer) TableName() string {
 // UpdateKeys updates entity references.
 func (ent *Transfer) UpdateKeys(emap *EntityMap) error {
 	// Adjust StopIDs
-	if ent.FromStopID != "" {
-		if fromStopID, ok := emap.GetEntity(&Stop{StopID: ent.FromStopID}); ok {
-			ent.FromStopID = fromStopID
+	if ent.FromStopID.Val != "" {
+		if fromStopID, ok := emap.GetEntity(&Stop{StopID: ent.FromStopID.Val}); ok {
+			ent.FromStopID.Set(fromStopID)
 		} else {
-			return causes.NewInvalidReferenceError("from_stop_id", ent.FromStopID)
+			return causes.NewInvalidReferenceError("from_stop_id", ent.FromStopID.Val)
 		}
 	}
-	if ent.ToStopID != "" {
-		if toStopID, ok := emap.GetEntity(&Stop{StopID: ent.ToStopID}); ok {
-			ent.ToStopID = toStopID
+	if ent.ToStopID.Val != "" {
+		if toStopID, ok := emap.GetEntity(&Stop{StopID: ent.ToStopID.Val}); ok {
+			ent.ToStopID.Set(toStopID)
 		} else {
-			return causes.NewInvalidReferenceError("to_stop_id", ent.ToStopID)
+			return causes.NewInvalidReferenceError("to_stop_id", ent.ToStopID.Val)
 		}
 	}
 	// Adjust RouteIDs
