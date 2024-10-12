@@ -31,7 +31,7 @@ func TestGeomCache(t *testing.T) {
 		cache.AddStopGeom(e.StopID, e.ToPoint())
 	}
 	for stoptimes := range r.StopTimesByTripID() {
-		trip := trips[stoptimes[0].TripID]
+		trip := trips[stoptimes[0].TripID.Val]
 		trip.StopTimes = stoptimes
 		stoptimes2, err := cache.InterpolateStopTimes(trip)
 		if err != nil {

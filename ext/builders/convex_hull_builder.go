@@ -73,17 +73,17 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 	case *gtfs.Trip:
 		pp.tripRoutes[eid] = v.RouteID
 	case *gtfs.StopTime:
-		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID]]
+		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
 		if !ok {
 			// log.Debugf("no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
-		s, ok := pp.stops[v.StopID]
+		s, ok := pp.stops[v.StopID.Val]
 		if !ok {
 			// log.Debugf("no stop:", v.StopID)
 			return nil
 		}
-		r.stopGeoms[v.StopID] = s
+		r.stopGeoms[v.StopID.Val] = s
 	}
 	return nil
 }

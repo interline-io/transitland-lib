@@ -214,7 +214,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 				if grouped && sid != last && last != "" {
 					v := m[last]
 					sort.Slice(v, func(i, j int) bool {
-						return v[i].StopSequence < v[j].StopSequence
+						return v[i].StopSequence.Val < v[j].StopSequence.Val
 					})
 					out <- v
 					delete(m, last)
@@ -223,7 +223,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 			})
 			for _, v := range m {
 				sort.Slice(v, func(i, j int) bool {
-					return v[i].StopSequence < v[j].StopSequence
+					return v[i].StopSequence.Val < v[j].StopSequence.Val
 				})
 				out <- v
 			}

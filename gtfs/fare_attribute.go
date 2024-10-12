@@ -7,35 +7,46 @@ import (
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
-	FareID           string  `csv:",required"`
-	Price            float64 `csv:",required"`
-	CurrencyType     string  `csv:",required"`
-	PaymentMethod    int     `csv:",required"`
+	FareID           tt.String // `csv:",required"`
+	Price            tt.Float  // `csv:",required"`
+	CurrencyType     tt.String // `csv:",required"`
+	PaymentMethod    tt.Int    // `csv:",required"`
 	Transfers        tt.Int
 	AgencyID         tt.Key
-	TransferDuration int
+	TransferDuration tt.Int
 	tt.BaseEntity
 }
 
 // EntityID returns the ID or FareID.
 func (ent *FareAttribute) EntityID() string {
-	return entID(ent.ID, ent.FareID)
+	return entID(ent.ID, ent.FareID.Val)
 }
 
 // EntityKey returns the GTFS identifier.
 func (ent *FareAttribute) EntityKey() string {
-	return ent.FareID
+	return ent.FareID.Val
 }
 
 // Errors for this Entity.
 func (ent *FareAttribute) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID)...)
-	errs = append(errs, tt.CheckPresent("currency_type", ent.CurrencyType)...)
-	errs = append(errs, tt.CheckPositive("price", ent.Price)...)
-	errs = append(errs, tt.CheckCurrency("currency_type", ent.CurrencyType)...)
-	errs = append(errs, tt.CheckInsideRangeInt("payment_method", ent.PaymentMethod, 0, 1)...)
-	errs = append(errs, tt.CheckPositiveInt("transfer_duration", ent.TransferDuration)...)
+	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID.Val)...)
+	errs = append(errs, tt.CheckPresent("currency_type", ent.CurrencyType.Val)...)
+
+	if !ent.Price.Valid {
+		errs = append(errs, causes.NewRequiredFieldError("price"))
+	} else {
+		errs = append(errs, tt.CheckPositive("price", ent.Price.Val)...)
+	}
+
+	if !ent.PaymentMethod.Valid {
+		errs = append(errs, causes.NewRequiredFieldError("payment_method"))
+	} else {
+		errs = append(errs, tt.CheckInsideRangeInt("payment_method", ent.PaymentMethod.Val, 0, 1)...)
+	}
+
+	errs = append(errs, tt.CheckCurrency("currency_type", ent.CurrencyType.Val)...)
+	errs = append(errs, tt.CheckPositiveInt("transfer_duration", ent.TransferDuration.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("transfers", int(ent.Transfers.Val), 0, 2)...)
 	return errs
 }

@@ -92,27 +92,27 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		}
 	case *gtfs.FareAttribute:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.FareID = fmt.Sprintf("%s%s", prefix, v.FareID)
+			v.FareID.Set(fmt.Sprintf("%s%s", prefix, v.FareID.Val))
 		}
 	case *gtfs.FareRule:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			if v.OriginID != "" {
-				v.OriginID = fmt.Sprintf("%s%s", prefix, v.OriginID)
+			if v.OriginID.Valid {
+				v.OriginID.Set(fmt.Sprintf("%s%s", prefix, v.OriginID.Val))
 			}
-			if v.DestinationID != "" {
-				v.DestinationID = fmt.Sprintf("%s%s", prefix, v.DestinationID)
+			if v.DestinationID.Valid {
+				v.DestinationID.Set(fmt.Sprintf("%s%s", prefix, v.DestinationID))
 			}
-			if v.ContainsID != "" {
-				v.ContainsID = fmt.Sprintf("%s%s", prefix, v.ContainsID)
+			if v.ContainsID.Valid {
+				v.ContainsID.Set(fmt.Sprintf("%s%s", prefix, v.ContainsID))
 			}
 		}
 	case *gtfs.Level:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.LevelID = fmt.Sprintf("%s%s", prefix, v.LevelID)
+			v.LevelID.Set(fmt.Sprintf("%s%s", prefix, v.LevelID.Val))
 		}
 	case *gtfs.Pathway:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.PathwayID = fmt.Sprintf("%s%s", prefix, v.PathwayID)
+			v.PathwayID.Set(fmt.Sprintf("%s%s", prefix, v.PathwayID.Val))
 		}
 	default:
 	}

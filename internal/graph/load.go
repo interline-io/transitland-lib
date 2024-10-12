@@ -154,11 +154,11 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 	// Add pathways and link to stops
 	for ent := range reader.Pathways() {
 		pn, _ := eg.AddNode(entityNode(&ent))
-		if fn, ok := eg.Node(NewNode("stops.txt", ent.FromStopID)); ok {
+		if fn, ok := eg.Node(NewNode("stops.txt", ent.FromStopID.Val)); ok {
 			eg.AddEdge(fn, pn)
 			eg.AddEdge(pn, fn)
 		}
-		if tn, ok := eg.Node(NewNode("stops.txt", ent.ToStopID)); ok {
+		if tn, ok := eg.Node(NewNode("stops.txt", ent.ToStopID.Val)); ok {
 			eg.AddEdge(tn, pn)
 			eg.AddEdge(pn, tn)
 		}
@@ -166,8 +166,8 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 
 	// Stop Times
 	for ent := range reader.StopTimes() {
-		t, _ := eg.Node(NewNode("trips.txt", ent.TripID))
-		s, _ := eg.Node(NewNode("stops.txt", ent.StopID))
+		t, _ := eg.Node(NewNode("trips.txt", ent.TripID.Val))
+		s, _ := eg.Node(NewNode("stops.txt", ent.StopID.Val))
 		eg.AddEdge(s, t)
 	}
 
@@ -176,14 +176,14 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 		eg.AddNode(entityNode(&ent))
 	}
 	for ent := range reader.FareRules() {
-		fn, _ := eg.Node(NewNode("fare_attributes.txt", ent.FareID))
-		if zn, ok := eg.Node(NewNode("farezone", ent.OriginID)); ok {
+		fn, _ := eg.Node(NewNode("fare_attributes.txt", ent.FareID.Val))
+		if zn, ok := eg.Node(NewNode("farezone", ent.OriginID.Val)); ok {
 			eg.AddEdge(fn, zn)
 		}
-		if zn, ok := eg.Node(NewNode("farezone", ent.DestinationID)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.DestinationID.Val)); ok {
 			eg.AddEdge(fn, zn)
 		}
-		if zn, ok := eg.Node(NewNode("farezone", ent.ContainsID)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.ContainsID.Val)); ok {
 			eg.AddEdge(fn, zn)
 		}
 	}

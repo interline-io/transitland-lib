@@ -28,7 +28,7 @@ func (ent *FareRiderCategory) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *FareRiderCategory) UpdateKeys(emap *tt.EntityMap) error {
-	if fkid, ok := emap.GetEntity(&gtfs.FareAttribute{FareID: ent.FareID}); ok {
+	if fkid, ok := emap.GetEntity(&gtfs.FareAttribute{FareID: tt.NewString(ent.FareID)}); ok {
 		ent.FareID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("fare_id", ent.FareID)

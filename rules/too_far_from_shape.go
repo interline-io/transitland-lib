@@ -57,18 +57,18 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tt.Entity) []error {
 	var errs []error
 	for _, st := range v.StopTimes {
 		// Check the cache
-		if e.checked[shapeid][st.StopID] {
+		if e.checked[shapeid][st.StopID.Val] {
 			continue
 		}
-		e.checked[shapeid][st.StopID] = true
-		g := e.geomCache.GetStop(st.StopID)
+		e.checked[shapeid][st.StopID.Val] = true
+		g := e.geomCache.GetStop(st.StopID.Val)
 		sgeom := e.geomCache.GetShape(shapeid)
 		nearest, _, _ := tlxy.LineClosestPoint(sgeom, g)
 		distance := tlxy.DistanceHaversine(g, nearest)
 		if distance > e.maxdist {
 			errs = append(errs, &StopTooFarFromShapeError{
 				TripID:   v.TripID,
-				StopID:   st.StopID,
+				StopID:   st.StopID.Val,
 				ShapeID:  shapeid,
 				Distance: distance,
 			})

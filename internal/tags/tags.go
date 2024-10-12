@@ -58,7 +58,11 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			if fi.Name == "" {
 				fi.Name = ToSnakeCase(fi.Field.Name)
 			}
-			if fi.Embedded == true || fi.Name == "id" || strings.Contains(fi.Path, ".") {
+			// TODO: This is a very bad hack. Figure out the correct way to exclude embedded fields with tags.
+			if fi.Name == "id" || fi.Name == "val" || fi.Name == "valid" {
+				continue
+			}
+			if fi.Embedded || strings.Contains(fi.Path, ".") {
 				continue
 			}
 			_, required := fi.Options["required"]

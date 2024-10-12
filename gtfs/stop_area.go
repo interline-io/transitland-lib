@@ -7,8 +7,8 @@ import (
 
 // StopArea stop_areas.txt
 type StopArea struct {
-	AreaID string
-	StopID string
+	AreaID tt.Key
+	StopID tt.Key
 	tt.BaseEntity
 }
 
@@ -21,22 +21,22 @@ func (ent *StopArea) TableName() string {
 }
 
 func (ent *StopArea) UpdateKeys(emap *EntityMap) error {
-	if fkid, ok := emap.Get("areas.txt", ent.AreaID); ok {
-		ent.AreaID = fkid
+	if fkid, ok := emap.Get("areas.txt", ent.AreaID.Val); ok {
+		ent.AreaID.Set(fkid)
 	} else {
-		return causes.NewInvalidReferenceError("area_id", ent.AreaID)
+		return causes.NewInvalidReferenceError("area_id", ent.AreaID.Val)
 	}
-	if fkid, ok := emap.Get("stops.txt", ent.StopID); ok {
-		ent.StopID = fkid
+	if fkid, ok := emap.Get("stops.txt", ent.StopID.Val); ok {
+		ent.StopID.Set(fkid)
 	} else {
-		return causes.NewInvalidReferenceError("stop_id", ent.StopID)
+		return causes.NewInvalidReferenceError("stop_id", ent.StopID.Val)
 	}
 	return nil
 }
 
 func (ent *StopArea) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, tt.CheckPresent("area_id", ent.AreaID)...)
-	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
+	errs = append(errs, tt.CheckPresent("area_id", ent.AreaID.Val)...)
+	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
 	return errs
 }

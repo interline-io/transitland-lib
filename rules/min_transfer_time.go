@@ -13,10 +13,10 @@ type MinTransferTimeCheck struct{}
 func (e *MinTransferTimeCheck) Validate(ent tt.Entity) []error {
 	if v, ok := ent.(*gtfs.Transfer); ok {
 		var errs []error
-		if v.TransferType != 2 && v.MinTransferTime.Valid {
+		if v.TransferType.Val != 2 && v.MinTransferTime.Valid {
 			errs = append(errs, causes.NewValidationWarning("min_transfer_time", "should not set min_transfer_time unless transfer_type = 2"))
 		}
-		if v.TransferType == 2 && !v.MinTransferTime.Valid {
+		if v.TransferType.Val == 2 && !v.MinTransferTime.Valid {
 			errs = append(errs, causes.NewValidationWarning("min_transfer_time", "transfer_type = 2 requires min_transfer_time to be set"))
 		}
 		return errs

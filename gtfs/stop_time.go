@@ -10,9 +10,9 @@ import (
 
 // StopTime stop_times.txt
 type StopTime struct {
-	TripID            string
-	StopID            string `csv:",required" required:"true"`
-	StopSequence      int    `csv:",required" required:"true"`
+	TripID            tt.String
+	StopID            tt.String
+	StopSequence      tt.Int
 	StopHeadsign      tt.String
 	ArrivalTime       tt.Seconds
 	DepartureTime     tt.Seconds
@@ -34,9 +34,9 @@ func (ent *StopTime) Errors() []error {
 	// No reflection
 	errs := []error{}
 	errs = append(errs, ent.ErrorEntity.Errors()...)
-	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID)...)
-	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
-	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence)...)
+	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID.Val)...)
+	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
+	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("pickup_type", ent.PickupType.Val, 0, 3)...)
 	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Val, 0, 3)...)
 	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Val)...)
@@ -65,15 +65,15 @@ func (ent *StopTime) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *StopTime) UpdateKeys(emap *EntityMap) error {
-	if tripID, ok := emap.GetEntity(&Trip{TripID: ent.TripID}); ok {
-		ent.TripID = tripID
+	if tripID, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Val}); ok {
+		ent.TripID.Set(tripID)
 	} else {
-		return causes.NewInvalidReferenceError("trip_id", ent.TripID)
+		return causes.NewInvalidReferenceError("trip_id", ent.TripID.Val)
 	}
-	if stopID, ok := emap.GetEntity(&Stop{StopID: ent.StopID}); ok {
-		ent.StopID = stopID
+	if stopID, ok := emap.GetEntity(&Stop{StopID: ent.StopID.Val}); ok {
+		ent.StopID.Set(stopID)
 	} else {
-		return causes.NewInvalidReferenceError("stop_id", ent.StopID)
+		return causes.NewInvalidReferenceError("stop_id", ent.StopID.Val)
 	}
 	return nil
 }
@@ -83,37 +83,31 @@ func (ent *StopTime) GetString(key string) (string, error) {
 	v := ""
 	switch key {
 	case "trip_id":
-		v = ent.TripID
+		v = ent.TripID.Val
 	case "stop_headsign":
 		v = ent.StopHeadsign.Val
 	case "stop_id":
-		v = ent.StopID
+		v = ent.StopID.Val
 	case "arrival_time":
 		v = ent.ArrivalTime.String()
 	case "departure_time":
 		v = ent.DepartureTime.String()
 	case "stop_sequence":
-		v = strconv.Itoa(ent.StopSequence)
+		v = ent.StopSequence.String()
 	case "pickup_type":
-		v = strconv.Itoa(int(ent.PickupType.Val))
+		v = ent.PickupType.String()
 	case "drop_off_type":
-		v = strconv.Itoa(int(ent.DropOffType.Val))
+		v = ent.DropOffType.String()
 	case "shape_dist_traveled":
 		if ent.ShapeDistTraveled.Valid {
 			v = fmt.Sprintf("%0.5f", ent.ShapeDistTraveled.Val)
 		}
 	case "timepoint":
-		if ent.Timepoint.Valid {
-			v = strconv.Itoa(int(ent.Timepoint.Val))
-		}
+		v = ent.Timepoint.String()
 	case "continuous_pickup":
-		if ent.ContinuousPickup.Valid {
-			v = strconv.Itoa(int(ent.ContinuousPickup.Val))
-		}
+		v = ent.ContinuousPickup.String()
 	case "continuous_drop_off":
-		if ent.ContinuousPickup.Valid {
-			v = strconv.Itoa(int(ent.ContinuousDropOff.Val))
-		}
+		v = ent.ContinuousDropOff.String()
 	default:
 		return v, fmt.Errorf("unknown key: %s", key)
 	}
@@ -126,11 +120,11 @@ func (ent *StopTime) SetString(key, value string) error {
 	hi := value
 	switch key {
 	case "trip_id":
-		ent.TripID = hi
+		ent.TripID.Set(hi)
 	case "stop_headsign":
 		ent.StopHeadsign = tt.NewString(hi)
 	case "stop_id":
-		ent.StopID = hi
+		ent.StopID.Set(hi)
 	case "arrival_time":
 		if hi == "" {
 		} else if s, err := tt.NewSecondsFromString(hi); err != nil {
@@ -149,7 +143,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("stop_sequence", hi)
 		} else {
-			ent.StopSequence = a
+			ent.StopSequence.Set(int64(a))
 		}
 	case "pickup_type":
 		if hi == "" {

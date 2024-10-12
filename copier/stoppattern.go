@@ -11,7 +11,7 @@ import (
 func stopPatternKey(stoptimes []gtfs.StopTime) string {
 	key := make([]string, len(stoptimes))
 	for i := 0; i < len(stoptimes); i++ {
-		key[i] = stoptimes[i].StopID
+		key[i] = stoptimes[i].StopID.Val
 	}
 	return strings.Join(key, string(byte(0)))
 }
