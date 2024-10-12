@@ -9,8 +9,8 @@ import (
 
 // RiderCategory rider_categories.txt
 type RiderCategory struct {
-	RiderCategoryID   string
-	RiderCategoryName string
+	RiderCategoryID   tt.String
+	RiderCategoryName tt.String
 	MinAge            tt.Int
 	MaxAge            tt.Int
 	EligibilityURL    tt.String
@@ -27,8 +27,8 @@ func (ent *RiderCategory) TableName() string {
 
 func (ent *RiderCategory) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, tt.CheckPresent("rider_category_id", ent.RiderCategoryID)...)
-	errs = append(errs, tt.CheckPresent("rider_category_name", ent.RiderCategoryName)...)
+	errs = append(errs, tt.CheckPresent("rider_category_id", ent.RiderCategoryID.Val)...)
+	errs = append(errs, tt.CheckPresent("rider_category_name", ent.RiderCategoryName.Val)...)
 	errs = append(errs, tt.CheckPositiveInt("min_age", ent.MinAge.Val)...)
 	errs = append(errs, tt.CheckPositiveInt("max_age", ent.MaxAge.Val)...)
 	errs = append(errs, tt.CheckURL("eligibility_url", ent.EligibilityURL.Val)...)

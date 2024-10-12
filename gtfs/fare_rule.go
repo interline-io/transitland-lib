@@ -7,18 +7,18 @@ import (
 
 // FareRule fare_rules.txt
 type FareRule struct {
-	FareID        string `csv:",required"`
+	FareID        tt.String `csv:",required"`
 	RouteID       tt.Key
-	OriginID      string
-	DestinationID string
-	ContainsID    string
+	OriginID      tt.String
+	DestinationID tt.String
+	ContainsID    tt.String
 	tt.BaseEntity
 }
 
 // Errors for this Entity.
 func (ent *FareRule) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID)...)
+	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID.Val)...)
 	return errs
 }
 
@@ -34,10 +34,10 @@ func (ent *FareRule) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *FareRule) UpdateKeys(emap *EntityMap) error {
-	if fareID, ok := emap.GetEntity(&FareAttribute{FareID: ent.FareID}); ok {
-		ent.FareID = fareID
+	if fareID, ok := emap.GetEntity(&FareAttribute{FareID: tt.NewString(ent.FareID.Val)}); ok {
+		ent.FareID.Set(fareID)
 	} else {
-		return causes.NewInvalidReferenceError("fare_id", ent.FareID)
+		return causes.NewInvalidReferenceError("fare_id", ent.FareID.Val)
 	}
 	if v := ent.RouteID.Val; v != "" {
 		if routeID, ok := emap.GetEntity(&Route{RouteID: v}); ok {

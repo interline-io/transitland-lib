@@ -105,16 +105,16 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	t.Run("MultiInsert", func(t *testing.T) {
 		st1 := gtfs.StopTime{}
 		st1.FeedVersionID = m.FeedVersionID
-		st1.StopID = strconv.Itoa(m.StopID1)
-		st1.TripID = strconv.Itoa(m.TripID)
-		st1.StopSequence = 1
+		st1.StopID.Set(strconv.Itoa(m.StopID1))
+		st1.TripID.Set(strconv.Itoa(m.TripID))
+		st1.StopSequence.Set(1)
 		st1.ArrivalTime = tt.NewSeconds(0)
 		st1.DepartureTime = tt.NewSeconds(1)
 		st2 := gtfs.StopTime{}
 		st2.FeedVersionID = m.FeedVersionID
-		st2.StopID = strconv.Itoa(m.StopID2)
-		st2.TripID = strconv.Itoa(m.TripID)
-		st2.StopSequence = 2
+		st2.StopID.Set(strconv.Itoa(m.StopID2))
+		st2.TripID.Set(strconv.Itoa(m.TripID))
+		st2.StopSequence.Set(2)
 		st2.ArrivalTime = tt.NewSeconds(2)
 		st2.DepartureTime = tt.NewSeconds(3)
 		sts := make([]interface{}, 0)
@@ -139,7 +139,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 				t.Errorf("got '%s' expected '%s'", got1.TripID, v)
 			}
 			if got1.StopSequence != st1.StopSequence {
-				t.Errorf("got '%d' expected '%d'", got1.StopSequence, st1.StopSequence)
+				t.Errorf("got '%d' expected '%d'", got1.StopSequence.Val, st1.StopSequence.Val)
 			}
 		}
 	})

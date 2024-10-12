@@ -9,26 +9,26 @@ import (
 
 // FeedInfo feed_info.txt
 type FeedInfo struct {
-	FeedPublisherName string `csv:",required"`
-	FeedPublisherURL  string `csv:",required"`
-	FeedLang          string `csv:",required"`
-	FeedVersion       string `db:"feed_version_name"`
+	FeedPublisherName tt.String   `csv:",required"`
+	FeedPublisherURL  tt.Url      `csv:",required"`
+	FeedLang          tt.Language `csv:",required"`
+	FeedVersion       tt.String   `db:"feed_version_name"`
 	FeedStartDate     tt.Date
 	FeedEndDate       tt.Date
-	DefaultLang       tt.String
-	FeedContactEmail  tt.String
-	FeedContactURL    tt.String
+	DefaultLang       tt.Language
+	FeedContactEmail  tt.Email
+	FeedContactURL    tt.Url
 	tt.BaseEntity
 }
 
 // Errors for this Entity.
 func (ent *FeedInfo) Errors() (errs []error) {
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, tt.CheckPresent("feed_publisher_name", ent.FeedPublisherName)...)
-	errs = append(errs, tt.CheckPresent("feed_publisher_url", ent.FeedPublisherURL)...)
-	errs = append(errs, tt.CheckPresent("feed_lang", ent.FeedLang)...)
-	errs = append(errs, tt.CheckURL("feed_publisher_url", ent.FeedPublisherURL)...)
-	errs = append(errs, tt.CheckLanguage("feed_lang", ent.FeedLang)...)
+	errs = append(errs, tt.CheckPresent("feed_publisher_name", ent.FeedPublisherName.Val)...)
+	errs = append(errs, tt.CheckPresent("feed_publisher_url", ent.FeedPublisherURL.Val)...)
+	errs = append(errs, tt.CheckPresent("feed_lang", ent.FeedLang.Val)...)
+	errs = append(errs, tt.CheckURL("feed_publisher_url", ent.FeedPublisherURL.Val)...)
+	errs = append(errs, tt.CheckLanguage("feed_lang", ent.FeedLang.Val)...)
 	errs = append(errs, tt.CheckLanguage("default_lang", ent.DefaultLang.Val)...)
 	errs = append(errs, tt.CheckEmail("feed_contact_email", ent.FeedContactEmail.Val)...)
 	errs = append(errs, tt.CheckURL("feed_contact_url", ent.FeedContactURL.Val)...)

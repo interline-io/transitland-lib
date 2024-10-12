@@ -25,9 +25,9 @@ func expectTripToStopTime(e expectTrip) []gtfs.StopTime {
 	ret := []gtfs.StopTime{}
 	for i := range e.ArrivalTime {
 		ret = append(ret, gtfs.StopTime{
-			TripID:            "1",
-			StopID:            strconv.Itoa(i),
-			StopSequence:      i,
+			TripID:            tt.NewString("1"),
+			StopID:            tt.NewString(strconv.Itoa(i)),
+			StopSequence:      tt.NewInt(i),
 			ArrivalTime:       tt.NewSeconds(e.ArrivalTime[i]),
 			DepartureTime:     tt.NewSeconds(e.DepartureTime[i]),
 			ShapeDistTraveled: tt.NewFloat(e.ShapeDistTraveled[i]),
@@ -73,9 +73,9 @@ func TestValidateStopTimes(t *testing.T) {
 	errorStopSequence := expectTrip{"", []int{10, 20, 30}, []int{10, 20, 30}, []float64{0, 1, 2}}
 	t.Run("SequenceError:stop_sequence", func(t *testing.T) {
 		stoptimes := expectTripToStopTime(errorStopSequence)
-		stoptimes[0].StopSequence = 1
-		stoptimes[1].StopSequence = 2
-		stoptimes[2].StopSequence = 2
+		stoptimes[0].StopSequence.Set(1)
+		stoptimes[1].StopSequence.Set(2)
+		stoptimes[2].StopSequence.Set(2)
 		if errs := ValidateStopTimes(stoptimes); len(errs) != 1 {
 			t.Errorf("expected 1 error, got 0")
 		}

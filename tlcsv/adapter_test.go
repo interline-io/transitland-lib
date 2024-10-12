@@ -282,7 +282,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := gtfs.StopTime{}
 			loadRow(&e, row)
-			m[e.StopID]++
+			m[e.StopID.Val]++
 			total++
 		})
 		expect := map[string]int{"EMSI": 2, "BULLFROG": 4, "STAGECOACH": 3}

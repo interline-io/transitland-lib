@@ -17,7 +17,7 @@ func (e *FrequencyDurationCheck) Validate(ent tt.Entity) []error {
 		if st != 0 && et != 0 {
 			if st == et {
 				errs = append(errs, causes.NewValidationWarning("end_time", "end_time is equal to start_time"))
-			} else if et > st && (et-st) < v.HeadwaySecs {
+			} else if et > st && (et-st) < v.HeadwaySecs.Int() {
 				errs = append(errs, causes.NewValidationWarning("end_time", "end_time is less than start_time + headway_secs"))
 			}
 		}

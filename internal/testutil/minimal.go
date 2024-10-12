@@ -25,8 +25,8 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{StopID: "stop2", StopName: "Stop 2", Geometry: tt.NewPoint(3, 4)},
 		},
 		StopTimeList: []gtfs.StopTime{
-			{StopID: "stop1", TripID: "trip1", StopSequence: 1, ArrivalTime: tt.NewSeconds(0), DepartureTime: tt.NewSeconds(5)},
-			{StopID: "stop2", TripID: "trip1", StopSequence: 2, ArrivalTime: tt.NewSeconds(10), DepartureTime: tt.NewSeconds(15)},
+			{StopID: tt.NewString("stop1"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(1), ArrivalTime: tt.NewSeconds(0), DepartureTime: tt.NewSeconds(5)},
+			{StopID: tt.NewString("stop2"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(2), ArrivalTime: tt.NewSeconds(10), DepartureTime: tt.NewSeconds(15)},
 		},
 		ShapeList: []gtfs.Shape{
 			{ShapeID: "shape1", Geometry: tt.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
@@ -38,19 +38,19 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{ServiceID: "service1", ExceptionType: 1, Date: time.Now()},
 		},
 		FeedInfoList: []gtfs.FeedInfo{
-			{FeedVersion: "123", FeedPublisherURL: "http://example.com", FeedLang: "en-US", FeedPublisherName: "Example"},
+			{FeedVersion: tt.NewString("123"), FeedPublisherURL: tt.NewUrl("http://example.com"), FeedLang: tt.NewLanguage("en-US"), FeedPublisherName: tt.NewString("Example")},
 		},
 		FareRuleList: []gtfs.FareRule{
-			{FareID: "fare1"},
+			{FareID: tt.NewString("fare1")},
 		},
 		FareAttributeList: []gtfs.FareAttribute{
-			{FareID: "fare1", CurrencyType: "USD", Price: 1.0, PaymentMethod: 1, Transfers: tt.NewInt(1)},
+			{FareID: tt.NewString("fare1"), CurrencyType: tt.NewString("USD"), Price: tt.NewFloat(1.0), PaymentMethod: tt.NewInt(1), Transfers: tt.NewInt(1)},
 		},
 		FrequencyList: []gtfs.Frequency{
-			{TripID: "trip1", HeadwaySecs: 600, StartTime: tt.NewSeconds(3600), EndTime: tt.NewSeconds(7200)},
+			{TripID: tt.NewString("trip1"), HeadwaySecs: tt.NewInt(600), StartTime: tt.NewSeconds(3600), EndTime: tt.NewSeconds(7200)},
 		},
 		TransferList: []gtfs.Transfer{
-			{FromStopID: tt.NewKey("stop1"), ToStopID: tt.NewKey("stop2"), TransferType: 1},
+			{FromStopID: tt.NewKey("stop1"), ToStopID: tt.NewKey("stop2"), TransferType: tt.NewInt(1)},
 		},
 	}
 	fe := &ReaderTester{

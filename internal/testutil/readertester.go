@@ -42,7 +42,7 @@ func TestReader(t *testing.T, fe ReaderTester, newReader func() adapters.Reader)
 		out := make(chan gtfs.StopTime, 1000)
 		reader.ReadEntities(out)
 		for ent := range out {
-			tripids[ent.TripID]++
+			tripids[ent.TripID.Val]++
 		}
 		expect, ok := fe.Counts["stop_times.txt"]
 		if c := msisum(tripids); ok && c != expect {
@@ -56,7 +56,7 @@ func TestReader(t *testing.T, fe ReaderTester, newReader func() adapters.Reader)
 		tripids := map[string]int{}
 		for ents := range reader.StopTimesByTripID() {
 			for _, ent := range ents {
-				tripids[ent.TripID]++
+				tripids[ent.TripID.Val]++
 			}
 		}
 		expect, ok := fe.Counts["stop_times.txt"]

@@ -68,7 +68,7 @@ func (mr *Reader) StopTimesByTripID(...string) chan []gtfs.StopTime {
 	go func() {
 		sts := map[string][]gtfs.StopTime{}
 		for _, ent := range mr.StopTimeList {
-			sts[ent.TripID] = append(sts[ent.TripID], ent)
+			sts[ent.TripID.Val] = append(sts[ent.TripID.Val], ent)
 		}
 		for _, v := range sts {
 			out <- v

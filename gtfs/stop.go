@@ -107,7 +107,7 @@ func (ent *Stop) TableName() string {
 func (ent *Stop) UpdateKeys(emap *EntityMap) error {
 	// Pathway Level
 	if ent.LevelID.Val != "" {
-		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Val}); ok {
+		if v, ok := emap.GetEntity(&Level{LevelID: tt.NewString(ent.LevelID.Val)}); ok {
 			ent.LevelID = tt.NewKey(v)
 		} else {
 			return causes.NewInvalidReferenceError("level_id", ent.LevelID.Val)

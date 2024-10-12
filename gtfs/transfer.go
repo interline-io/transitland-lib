@@ -13,7 +13,7 @@ type Transfer struct {
 	ToRouteID       tt.Key
 	FromTripID      tt.Key
 	ToTripID        tt.Key
-	TransferType    int
+	TransferType    tt.Int
 	MinTransferTime tt.Int
 	tt.BaseEntity
 }
@@ -22,12 +22,12 @@ type Transfer struct {
 func (ent *Transfer) Errors() (errs []error) {
 	// transfer_type is required but can also be empty, so hard to distinguish
 	errs = append(errs, ent.BaseEntity.Errors()...)
-	errs = append(errs, tt.CheckInsideRangeInt("transfer_type", ent.TransferType, 0, 5)...)
+	errs = append(errs, tt.CheckInsideRangeInt("transfer_type", ent.TransferType.Val, 0, 5)...)
 	errs = append(errs, tt.CheckPositiveInt("min_transfer_time", ent.MinTransferTime.Val)...)
 	// FromStopID, ToStopID required
 	errs = append(errs, tt.CheckPresent("from_stop_id", ent.FromStopID.Val)...)
 	errs = append(errs, tt.CheckPresent("to_stop_id", ent.ToStopID.Val)...)
-	if ent.TransferType == 4 || ent.TransferType == 5 {
+	if ent.TransferType.Val == 4 || ent.TransferType.Val == 5 {
 		// FromTripID, ToTripID conditionally required
 		errs = append(errs, tt.CheckPresent("from_trip_id", ent.FromTripID.Val)...)
 		errs = append(errs, tt.CheckPresent("to_trip_id", ent.ToTripID.Val)...)

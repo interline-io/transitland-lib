@@ -3,7 +3,6 @@ package gtfs
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
@@ -11,29 +10,29 @@ import (
 
 // Pathway pathways.txt
 type Pathway struct {
-	PathwayID           string  `csv:",required"`
-	FromStopID          string  `csv:",required"`
-	ToStopID            string  `csv:",required"`
-	PathwayMode         int     `csv:",required"`
-	IsBidirectional     int     `csv:",required"`
-	Length              float64 `csv:"length" min:"0"`
-	TraversalTime       int     `csv:"traversal_time" min:"0"`
-	StairCount          int     `csv:"stair_count"`
-	MaxSlope            float64 `csv:"max_slope"`
-	MinWidth            float64 `csv:"min_width"`
-	SignpostedAs        string  `csv:"signposted_as"`
-	ReverseSignpostedAs string  `csv:"reversed_signposted_as"`
+	PathwayID           tt.String `csv:",required"`
+	FromStopID          tt.String `csv:",required"`
+	ToStopID            tt.String `csv:",required"`
+	PathwayMode         tt.Int    `csv:",required"`
+	IsBidirectional     tt.Int    `csv:",required"`
+	Length              tt.Float  `csv:"length" min:"0"`
+	TraversalTime       tt.Int    `csv:"traversal_time" min:"0"`
+	StairCount          tt.Int    `csv:"stair_count"`
+	MaxSlope            tt.Float  `csv:"max_slope"`
+	MinWidth            tt.Float  `csv:"min_width"`
+	SignpostedAs        tt.String `csv:"signposted_as"`
+	ReverseSignpostedAs tt.String `csv:"reversed_signposted_as"`
 	tt.BaseEntity
 }
 
 // EntityID returns the ID or StopID.
 func (ent *Pathway) EntityID() string {
-	return entID(ent.ID, ent.PathwayID)
+	return entID(ent.ID, ent.PathwayID.Val)
 }
 
 // EntityKey returns the GTFS identifier.
 func (ent *Pathway) EntityKey() string {
-	return ent.PathwayID
+	return ent.PathwayID.Val
 }
 
 // Filename pathways.txt
@@ -48,15 +47,15 @@ func (ent *Pathway) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *Pathway) UpdateKeys(emap *EntityMap) error {
-	if fkid, ok := emap.GetEntity(&Stop{StopID: ent.FromStopID}); ok {
-		ent.FromStopID = fkid
+	if fkid, ok := emap.GetEntity(&Stop{StopID: ent.FromStopID.Val}); ok {
+		ent.FromStopID.Set(fkid)
 	} else {
-		return causes.NewInvalidReferenceError("from_stop_id", ent.FromStopID)
+		return causes.NewInvalidReferenceError("from_stop_id", ent.FromStopID.Val)
 	}
-	if fkid, ok := emap.GetEntity(&Stop{StopID: ent.ToStopID}); ok {
-		ent.ToStopID = fkid
+	if fkid, ok := emap.GetEntity(&Stop{StopID: ent.ToStopID.Val}); ok {
+		ent.ToStopID.Set(fkid)
 	} else {
-		return causes.NewInvalidReferenceError("to_stop_id", ent.ToStopID)
+		return causes.NewInvalidReferenceError("to_stop_id", ent.ToStopID.Val)
 	}
 	return nil
 }
@@ -66,39 +65,39 @@ func (ent *Pathway) GetString(key string) (string, error) {
 	v := ""
 	switch key {
 	case "pathway_id":
-		v = ent.PathwayID
+		v = ent.PathwayID.String()
 	case "from_stop_id":
-		v = ent.FromStopID
+		v = ent.FromStopID.String()
 	case "to_stop_id":
-		v = ent.ToStopID
+		v = ent.ToStopID.String()
 	case "pathway_mode":
-		v = strconv.Itoa(ent.PathwayMode)
+		v = ent.PathwayMode.String()
 	case "is_bidirectional":
-		v = strconv.Itoa(ent.IsBidirectional)
+		v = ent.IsBidirectional.String()
 	case "length":
-		if ent.Length > 0 {
-			v = fmt.Sprintf("%0.5f", ent.Length)
+		if ent.Length.Val > 0 {
+			v = fmt.Sprintf("%0.5f", ent.Length.Val)
 		}
 	case "traversal_time":
-		if ent.TraversalTime > 0 {
-			v = strconv.Itoa(ent.TraversalTime)
+		if ent.TraversalTime.Val > 0 {
+			v = ent.TraversalTime.String()
 		}
 	case "stair_count":
-		if ent.StairCount != 0 && ent.StairCount != -1 {
-			v = strconv.Itoa(ent.StairCount)
+		if ent.StairCount.Val != 0 && ent.StairCount.Val != -1 {
+			v = ent.StairCount.String()
 		}
 	case "max_slope":
-		if ent.MaxSlope != 0 {
-			v = fmt.Sprintf("%0.2f", ent.MaxSlope)
+		if ent.MaxSlope.Val != 0 {
+			v = fmt.Sprintf("%0.2f", ent.MaxSlope.Val)
 		}
 	case "min_width":
-		if ent.MinWidth != 0 {
-			v = fmt.Sprintf("%0.2f", ent.MinWidth)
+		if ent.MinWidth.Val != 0 {
+			v = fmt.Sprintf("%0.2f", ent.MinWidth.Val)
 		}
 	case "signposted_as":
-		v = ent.SignpostedAs
+		v = ent.SignpostedAs.String()
 	case "reversed_signposted_as":
-		v = ent.ReverseSignpostedAs
+		v = ent.ReverseSignpostedAs.String()
 	default:
 		return v, errors.New("unknown key")
 	}

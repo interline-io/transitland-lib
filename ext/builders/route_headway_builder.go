@@ -80,7 +80,7 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 		// Process StopTimes assuming they will all be written
 		// otherwise this breaks on journey pattern deduplication.
 		for _, st := range v.StopTimes {
-			stopId, ok := emap.Get("stops.txt", st.StopID)
+			stopId, ok := emap.Get("stops.txt", st.StopID.Val)
 			if !ok {
 				continue
 			}
