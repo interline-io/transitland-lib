@@ -478,6 +478,9 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	} else {
 		referr = tt.ReflectUpdateKeys(copier.EntityMap, ent)
 	}
+	if referr != nil {
+		fmt.Println("referr:", referr)
+	}
 
 	// Run Entity Validators
 	var errs []error
@@ -502,8 +505,16 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 		// Update to include the errors from entity validators
 		errs = extEnt.Errors()
 		warns = extEnt.Warnings()
+	} else {
+		if referr != nil {
+			errs = append(errs, referr)
+		}
+		errs = append(errs, tt.ReflectCheckErrors(ent)...)
 	}
 
+	for _, err := range errs {
+		fmt.Printf("OOOOO %#v\n", err)
+	}
 	// Log and set line context
 	for _, err := range warns {
 		copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("warning")

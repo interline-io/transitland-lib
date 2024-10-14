@@ -117,9 +117,6 @@ func (ent *ErrorEntity) AddWarning(err error) {
 }
 
 // Errors returns validation errors.
-func (ent *ErrorEntity) Errors() []error { return ent.loadErrors }
-
-// Errors returns validation errors.
 func (ent *ErrorEntity) Warnings() []error { return ent.loadWarnings }
 
 /////////////
