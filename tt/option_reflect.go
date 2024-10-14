@@ -27,7 +27,7 @@ type HasConditionalErrors interface {
 }
 
 // Error wrapping helpers
-func CheckReflect(ent any) []error {
+func ReflectCheck(ent any) []error {
 	var errs []error
 	if a, ok := ent.(HasLoadErrors); ok {
 		errs = append(errs, a.LoadErrors()...)
