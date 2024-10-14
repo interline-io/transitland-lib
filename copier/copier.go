@@ -475,6 +475,8 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	var referr error
 	if extEnt, ok := ent.(tt.EntityWithReferences); ok {
 		referr = extEnt.UpdateKeys(copier.EntityMap)
+	} else {
+		referr = copier.EntityMap.ReflectUpdate(ent)
 	}
 
 	// Run Entity Validators

@@ -1,18 +1,17 @@
 package gtfs
 
 import (
-	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Transfer transfers.txt
 type Transfer struct {
-	FromStopID      tt.Key
-	ToStopID        tt.Key
-	FromRouteID     tt.Key
-	ToRouteID       tt.Key
-	FromTripID      tt.Key
-	ToTripID        tt.Key
+	FromStopID      tt.Key `target:"stops.txt"`
+	ToStopID        tt.Key `target:"stops.txt"`
+	FromRouteID     tt.Key `target:"routes.txt"`
+	ToRouteID       tt.Key `target:"routes.txt"`
+	FromTripID      tt.Key `target:"trips.txt"`
+	ToTripID        tt.Key `target:"trips.txt"`
 	TransferType    tt.Int
 	MinTransferTime tt.Int
 	tt.BaseEntity
@@ -43,54 +42,4 @@ func (ent *Transfer) Filename() string {
 // TableName gtfs_transfers
 func (ent *Transfer) TableName() string {
 	return "gtfs_transfers"
-}
-
-// UpdateKeys updates entity references.
-func (ent *Transfer) UpdateKeys(emap *EntityMap) error {
-	// Adjust StopIDs
-	if ent.FromStopID.Val != "" {
-		if fromStopID, ok := emap.GetEntity(&Stop{StopID: ent.FromStopID.Val}); ok {
-			ent.FromStopID.Set(fromStopID)
-		} else {
-			return causes.NewInvalidReferenceError("from_stop_id", ent.FromStopID.Val)
-		}
-	}
-	if ent.ToStopID.Val != "" {
-		if toStopID, ok := emap.GetEntity(&Stop{StopID: ent.ToStopID.Val}); ok {
-			ent.ToStopID.Set(toStopID)
-		} else {
-			return causes.NewInvalidReferenceError("to_stop_id", ent.ToStopID.Val)
-		}
-	}
-	// Adjust RouteIDs
-	if ent.FromRouteID.Valid {
-		if fromRouteID, ok := emap.GetEntity(&Route{RouteID: ent.FromRouteID.Val}); ok {
-			ent.FromRouteID = tt.NewKey(fromRouteID)
-		} else {
-			return causes.NewInvalidReferenceError("from_route_id", ent.FromRouteID.Val)
-		}
-	}
-	if ent.ToRouteID.Valid {
-		if toRouteID, ok := emap.GetEntity(&Route{RouteID: ent.ToRouteID.Val}); ok {
-			ent.ToRouteID = tt.NewKey(toRouteID)
-		} else {
-			return causes.NewInvalidReferenceError("to_route_id", ent.ToRouteID.Val)
-		}
-	}
-	// Adjust TripIDs
-	if ent.FromTripID.Valid {
-		if fromTripID, ok := emap.GetEntity(&Trip{TripID: ent.FromTripID.Val}); ok {
-			ent.FromTripID = tt.NewKey(fromTripID)
-		} else {
-			return causes.NewInvalidReferenceError("from_trip_id", ent.FromTripID.Val)
-		}
-	}
-	if ent.ToTripID.Valid {
-		if toTripID, ok := emap.GetEntity(&Trip{TripID: ent.ToTripID.Val}); ok {
-			ent.ToTripID = tt.NewKey(toTripID)
-		} else {
-			return causes.NewInvalidReferenceError("to_trip_id", ent.ToTripID.Val)
-		}
-	}
-	return nil
 }

@@ -66,6 +66,7 @@ func (ent *Route) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *Route) UpdateKeys(emap *EntityMap) error {
+	// return emap.UpdateKeyField(&ent.AgencyID, "agencies.txt", "agency_id")
 	aid := ent.AgencyID
 	if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID}); ok {
 		ent.AgencyID = agencyID

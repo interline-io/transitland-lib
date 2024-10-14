@@ -24,6 +24,7 @@ func ToSnakeCase(str string) string {
 type FieldInfo struct {
 	Name     string
 	Required bool
+	Target   string
 	Index    []int
 }
 
@@ -35,6 +36,12 @@ type Cache struct {
 	Mapper  *reflectx.Mapper
 	lock    sync.Mutex
 	typemap map[string]FieldMap
+}
+
+var MapperCache *Cache
+
+func init() {
+	MapperCache = NewCache(reflectx.NewMapperFunc("csv", ToSnakeCase))
 }
 
 // NewCache initializes a new cache.
@@ -70,6 +77,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 				Name:     fi.Name,
 				Required: required,
 				Index:    fi.Index,
+				Target:   fi.Field.Tag.Get("target"),
 			}
 		}
 		c.typemap[t] = m
