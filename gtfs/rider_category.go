@@ -26,7 +26,7 @@ func (ent *RiderCategory) TableName() string {
 }
 
 func (ent *RiderCategory) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, ent.BaseEntity.LoadErrors()...)
 	errs = append(errs, tt.CheckPresent("rider_category_id", ent.RiderCategoryID.Val)...)
 	errs = append(errs, tt.CheckPresent("rider_category_name", ent.RiderCategoryName.Val)...)
 	errs = append(errs, tt.CheckPositiveInt("min_age", ent.MinAge.Val)...)

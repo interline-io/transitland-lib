@@ -41,7 +41,7 @@ func (ent *FareTransferRule) TableName() string {
 }
 
 func (ent *FareTransferRule) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, ent.BaseEntity.LoadErrors()...)
 	// Is optional in final spec
 	// errs = append(errs, tt.CheckPresent("fare_product_id", ent.FareProductID.Val)...)
 

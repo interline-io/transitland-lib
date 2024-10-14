@@ -42,7 +42,7 @@ func (ent *FareLegRule) TableName() string {
 }
 
 func (ent *FareLegRule) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, ent.BaseEntity.LoadErrors()...)
 	// Final spec: leg_group_id is optional
 	// errs = append(errs, tt.CheckPresent("leg_group_id", ent.LegGroupID.Val)...)
 	errs = append(errs, tt.CheckPresent("fare_product_id", ent.FareProductID.Val)...)

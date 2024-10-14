@@ -27,7 +27,7 @@ func (ent *Agency) EntityKey() string {
 
 // Errors for this Entity.
 func (ent *Agency) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, ent.BaseEntity.LoadErrors()...)
 	errs = append(errs, tt.CheckPresent("agency_name", ent.AgencyName)...)
 	errs = append(errs, tt.CheckPresent("agency_url", ent.AgencyURL)...)
 	errs = append(errs, tt.CheckPresent("agency_timezone", ent.AgencyTimezone)...)

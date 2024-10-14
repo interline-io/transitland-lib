@@ -20,7 +20,7 @@ type Transfer struct {
 // Errors for this Entity.
 func (ent *Transfer) Errors() (errs []error) {
 	// transfer_type is required but can also be empty, so hard to distinguish
-	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, ent.BaseEntity.LoadErrors()...)
 	errs = append(errs, tt.CheckInsideRangeInt("transfer_type", ent.TransferType.Val, 0, 5)...)
 	errs = append(errs, tt.CheckPositiveInt("min_transfer_time", ent.MinTransferTime.Val)...)
 	// FromStopID, ToStopID required

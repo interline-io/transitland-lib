@@ -20,7 +20,7 @@ func (ent *StopArea) TableName() string {
 }
 
 func (ent *StopArea) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
+	errs = append(errs, ent.BaseEntity.LoadErrors()...)
 	errs = append(errs, tt.CheckPresent("area_id", ent.AreaID.Val)...)
 	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
 	return errs
