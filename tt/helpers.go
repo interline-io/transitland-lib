@@ -122,10 +122,3 @@ func stripQuotes(v []byte) []byte {
 func jsonNull() []byte {
 	return []byte("null")
 }
-
-func isEmpty(v string) bool {
-	if len(v) == 0 || v == "" || v == "null" {
-		return true
-	}
-	return false
-}
