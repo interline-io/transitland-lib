@@ -27,7 +27,7 @@ type HasConditionalErrors interface {
 }
 
 // Error wrapping helpers
-func ReflectCheck(ent any) []error {
+func ReflectCheckErrors(ent any) []error {
 	var errs []error
 	if a, ok := ent.(HasLoadErrors); ok {
 		errs = append(errs, a.LoadErrors()...)
@@ -63,4 +63,29 @@ func ReflectCheck(ent any) []error {
 		}
 	}
 	return errs
+}
+
+func ReflectUpdateKeys(emap *EntityMap, ent any) error {
+	fields := entityMapperCache.GetStructTagMap(ent)
+	for fieldName, fieldInfo := range fields {
+		if fieldInfo.Target == "" {
+			continue
+		}
+		elem := reflect.ValueOf(ent).Elem()
+		fieldValue := reflectx.FieldByIndexes(elem, fieldInfo.Index).Addr().Interface()
+		fieldSet, ok := fieldValue.(canSet)
+		if !ok {
+			return fmt.Errorf("EntityMap ReflectUpdate cannot be used on field '%s', does not support Set()", fieldName)
+		}
+		eid := fieldSet.String()
+		if eid == "" {
+			continue
+		}
+		newId, ok := emap.Get(fieldInfo.Target, eid)
+		if !ok {
+			return TrySetField(causes.NewInvalidReferenceError(fieldName, eid), fieldName)
+		}
+		fieldSet.Set(newId)
+	}
+	return nil
 }
