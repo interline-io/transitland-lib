@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
-var mapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
+var entityMapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
 
 // EntityMap stores correspondances between Entity IDs, e.g. StopID -> Stop's integer ID in a database.
 type EntityMap struct {
@@ -28,8 +28,8 @@ type canSet interface {
 	Set(string)
 }
 
-func (emap *EntityMap) ReflectUpdate(ent Entity) error {
-	fields := mapperCache.GetStructTagMap(ent)
+func (emap *EntityMap) ReflectUpdateKeys(ent Entity) error {
+	fields := entityMapperCache.GetStructTagMap(ent)
 	for fieldName, fieldInfo := range fields {
 		if fieldInfo.Target == "" {
 			continue
@@ -51,10 +51,6 @@ func (emap *EntityMap) ReflectUpdate(ent Entity) error {
 		fieldSet.Set(newId)
 	}
 	return nil
-}
-
-func (emap *EntityMap) UpdateKeyField(v canSet, efn string, fieldName string) error {
-	return TrySetField(emap.UpdateKey(v, efn), fieldName)
 }
 
 func (emap *EntityMap) UpdateKey(v canSet, efn string) error {

@@ -66,8 +66,8 @@ func (ent *StopTime) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *StopTime) UpdateKeys(emap *EntityMap) error {
 	return tt.FirstError(
-		emap.UpdateKeyField(&ent.TripID, "trips.txt", "trip_id"),
-		emap.UpdateKeyField(&ent.StopID, "stops.txt", "stop_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.TripID, "trips.txt"), "trip_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.StopID, "stops.txt"), "stop_id"),
 	)
 }
 
