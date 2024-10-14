@@ -124,9 +124,9 @@ func Benchmark_Adapter_MultiInsert(b *testing.B) {
 				for i := 0; i < 1000; i++ {
 					count++
 					ent := gtfs.StopTime{}
-					ent.StopSequence = count
-					ent.StopID = strconv.Itoa(stopid)
-					ent.TripID = strconv.Itoa(tripid)
+					ent.StopSequence.Set(int64(count))
+					ent.StopID.Set(strconv.Itoa(stopid))
+					ent.TripID.Set(strconv.Itoa(tripid))
 					ent.FeedVersionID = fvid
 					ents = append(ents, &ent)
 				}

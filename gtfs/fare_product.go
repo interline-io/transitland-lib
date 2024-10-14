@@ -17,8 +17,8 @@ type FareProduct struct {
 	DurationAmount  tt.Float // proposed extension
 	DurationUnit    tt.Int   // proposed extension
 	DurationType    tt.Int   // proposed extension
-	RiderCategoryID tt.Key   // proposed extension
-	FareMediaID     tt.Key   // proposed extension
+	RiderCategoryID tt.Key   `target:"rider_categories.txt"` // proposed extension
+	FareMediaID     tt.Key   `target:"fare_media.txt"`       // proposed extension
 	tt.BaseEntity
 }
 
@@ -51,25 +51,6 @@ func (ent *FareProduct) Filename() string {
 
 func (ent *FareProduct) TableName() string {
 	return "gtfs_fare_products"
-}
-
-func (ent *FareProduct) UpdateKeys(emap *EntityMap) error {
-	if ent.FareMediaID.Val != "" {
-		if fkid, ok := emap.Get("fare_media.txt", ent.FareMediaID.Val); ok {
-			ent.FareMediaID.Val = fkid
-		} else {
-			return causes.NewInvalidReferenceError("fare_media_id", ent.FareMediaID.Val)
-		}
-	}
-	if ent.RiderCategoryID.Val != "" {
-		if fkid, ok := emap.Get("rider_categories.txt", ent.RiderCategoryID.Val); ok {
-			ent.RiderCategoryID.Val = fkid
-			ent.RiderCategoryID.Valid = true
-		} else {
-			return causes.NewInvalidReferenceError("rider_category_id", ent.RiderCategoryID.Val)
-		}
-	}
-	return nil
 }
 
 func (ent *FareProduct) Errors() (errs []error) {

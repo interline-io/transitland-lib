@@ -38,20 +38,20 @@ func (e *ValidFarezoneCheck) Validate(ent tt.Entity) []error {
 	case *gtfs.FareRule:
 		// TODO: updating values should be handled in UpdateKeys
 		// probably shouldn't mutate in validators...
-		if fz, ok := e.zones[v.OriginID]; ok {
-			v.OriginID = fz
-		} else if v.OriginID != "" {
-			errs = append(errs, NewInvalidFarezoneError("origin_id", v.OriginID))
+		if fz, ok := e.zones[v.OriginID.Val]; ok {
+			v.OriginID.Set(fz)
+		} else if v.OriginID.Valid {
+			errs = append(errs, NewInvalidFarezoneError("origin_id", v.OriginID.Val))
 		}
-		if fz, ok := e.zones[v.DestinationID]; ok {
-			v.DestinationID = fz
-		} else if v.DestinationID != "" {
-			errs = append(errs, NewInvalidFarezoneError("destination_id", v.DestinationID))
+		if fz, ok := e.zones[v.DestinationID.Val]; ok {
+			v.DestinationID.Set(fz)
+		} else if v.DestinationID.Valid {
+			errs = append(errs, NewInvalidFarezoneError("destination_id", v.DestinationID.Val))
 		}
-		if fz, ok := e.zones[v.ContainsID]; ok {
-			v.ContainsID = fz
-		} else if v.ContainsID != "" {
-			errs = append(errs, NewInvalidFarezoneError("contains_id", v.ContainsID))
+		if fz, ok := e.zones[v.ContainsID.Val]; ok {
+			v.ContainsID.Set(fz)
+		} else if v.ContainsID.Valid {
+			errs = append(errs, NewInvalidFarezoneError("contains_id", v.ContainsID.Val))
 		}
 	}
 	return errs

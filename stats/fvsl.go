@@ -122,7 +122,7 @@ func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, 
 		}
 		svc.AddCalendarDate(*v)
 	case *gtfs.Frequency:
-		pp.freqs[v.TripID] += v.RepeatCount()
+		pp.freqs[v.TripID.Val] += v.RepeatCount()
 	case *gtfs.Trip:
 		stoptimes := v.StopTimes
 		if len(stoptimes) > 1 {

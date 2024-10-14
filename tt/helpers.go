@@ -7,6 +7,41 @@ import (
 	"github.com/interline-io/transitland-lib/causes"
 )
 
+// Error wrapping helpers
+
+type canSetField interface {
+	SetField(string)
+}
+
+func FirstError(errs ...error) error {
+	for _, err := range errs {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func TrySetField(err error, field string) error {
+	if err == nil {
+		return nil
+	}
+	if v, ok := err.(canSetField); ok {
+		v.SetField(field)
+	}
+	return err
+}
+
+func AppendIf(err error, field string, errs []error) []error {
+	if err != nil {
+		if v, ok := err.(canSetField); ok {
+			v.SetField(field)
+		}
+		errs = append(errs, err)
+	}
+	return errs
+}
+
 // CheckInArray returns an error if the value is not in the set of provided values.
 func CheckInArray(field string, value string, values ...string) []error {
 	for _, v := range values {

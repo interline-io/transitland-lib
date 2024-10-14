@@ -475,6 +475,8 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	var referr error
 	if extEnt, ok := ent.(tt.EntityWithReferences); ok {
 		referr = extEnt.UpdateKeys(copier.EntityMap)
+	} else {
+		referr = copier.EntityMap.ReflectUpdateKeys(ent)
 	}
 
 	// Run Entity Validators
@@ -863,7 +865,7 @@ func (copier *Copier) copyFaresV2() error {
 		if entErr, err := copier.CopyEntity(&e); err != nil {
 			return err
 		} else if entErr == nil {
-			copier.EntityMap.Set("rider_categories.txt", e.RiderCategoryID, e.RiderCategoryID)
+			copier.EntityMap.Set("rider_categories.txt", e.RiderCategoryID.Val, e.RiderCategoryID.Val)
 		}
 	}
 	copier.logCount(&gtfs.RiderCategory{})
@@ -1037,7 +1039,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 
 		// Does this trip exist?
-		tripid := sts[0].TripID
+		tripid := sts[0].TripID.Val
 		if _, ok := allTripIds[tripid]; !ok {
 			// Trip doesn't exist, try to copy stop times anyway
 			for i := range sts {
@@ -1192,7 +1194,7 @@ func (copier *Copier) logCount(ent tt.Entity) {
 func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTime) (string, error) {
 	stopids := []string{}
 	for _, st := range stoptimes {
-		stopids = append(stopids, st.StopID)
+		stopids = append(stopids, st.StopID.Val)
 	}
 	line, dists, err := copier.geomCache.MakeShape(stopids...)
 	if err != nil {

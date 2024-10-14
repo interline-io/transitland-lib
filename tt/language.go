@@ -19,6 +19,10 @@ func (r Language) Check() error {
 	return nil
 }
 
+func NewLanguage(v string) Language {
+	return Language{Option: NewOption(v)}
+}
+
 // IsValidLang check is valid language
 func IsValidLanguage(value string) bool {
 	if len(value) == 0 {

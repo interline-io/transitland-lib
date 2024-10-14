@@ -10,8 +10,8 @@ import (
 
 func TestGetString(t *testing.T) {
 	ent := gtfs.StopTime{
-		TripID:            "123",
-		StopID:            "456",
+		TripID:            tt.NewString("123"),
+		StopID:            tt.NewString("456"),
 		ArrivalTime:       tt.NewSeconds(3600),
 		DepartureTime:     tt.NewSeconds(7200),
 		ShapeDistTraveled: tt.NewFloat(123.456),
@@ -41,8 +41,8 @@ func TestSetString(t *testing.T) {
 		if err := SetString(&ent, "headway_secs", "123"); err != nil {
 			t.Error(err)
 		}
-		if exp := 123; exp != ent.HeadwaySecs {
-			t.Errorf("got %d expect %d", ent.HeadwaySecs, exp)
+		if exp := 123; exp != ent.HeadwaySecs.Int() {
+			t.Errorf("got %d expect %d", ent.HeadwaySecs.Val, exp)
 		}
 	})
 	t.Run("string", func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestSetString(t *testing.T) {
 		if err := SetString(&ent, "trip_id", "123"); err != nil {
 			t.Error(err)
 		}
-		if exp := "123"; exp != ent.TripID {
+		if exp := "123"; exp != ent.TripID.Val {
 			t.Errorf("got %s expect %s", ent.TripID, exp)
 		}
 	})
@@ -59,8 +59,8 @@ func TestSetString(t *testing.T) {
 		if err := SetString(&ent, "price", "123.456"); err != nil {
 			t.Error(err)
 		}
-		if exp := 123.456; math.Abs(exp-ent.Price) > 0.001 {
-			t.Errorf("got %f expect %f", ent.Price, exp)
+		if exp := 123.456; math.Abs(exp-ent.Price.Val) > 0.001 {
+			t.Errorf("got %f expect %f", ent.Price.Val, exp)
 		}
 	})
 	t.Run("time", func(t *testing.T) {

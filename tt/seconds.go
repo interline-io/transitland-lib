@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 )
@@ -89,8 +88,8 @@ func (r *Seconds) Scan(src interface{}) error {
 	return p
 }
 
-func (r *Seconds) UnmarshalGQL(v interface{}) error {
-	return r.Scan(v)
+func (r *Seconds) UnmarshalJSON(d []byte) error {
+	return r.Scan(string(stripQuotes(d)))
 }
 
 func (r Seconds) MarshalJSON() ([]byte, error) {
@@ -98,11 +97,6 @@ func (r Seconds) MarshalJSON() ([]byte, error) {
 		return jsonNull(), nil
 	}
 	return json.Marshal(r.String())
-}
-
-func (r Seconds) MarshalGQL(w io.Writer) {
-	b, _ := r.MarshalJSON()
-	w.Write(b)
 }
 
 func (r Seconds) Int() int {

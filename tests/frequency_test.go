@@ -16,7 +16,7 @@ func TestFrequencyRepeatCount(t *testing.T) {
 	tcs := []struct {
 		start  string
 		end    string
-		hw     int
+		hw     int64
 		expect int
 	}{
 		{"08:00:00", "07:00:00", 60, 0},
@@ -48,7 +48,7 @@ func TestFrequencyRepeatCount(t *testing.T) {
 			f := gtfs.Frequency{}
 			f.StartTime, _ = tt.NewSecondsFromString(tc.start)
 			f.EndTime, _ = tt.NewSecondsFromString(tc.end)
-			f.HeadwaySecs = tc.hw
+			f.HeadwaySecs.Set(tc.hw)
 			if e := f.RepeatCount(); e != tc.expect {
 				t.Errorf("got %d repeat count from %s -> %s hw %d, expected %d", e, tc.start, tc.end, tc.hw, tc.expect)
 			}

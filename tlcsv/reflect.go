@@ -135,10 +135,14 @@ func loadRowReflect(ent interface{}, row Row) []error {
 			// Skip if empty and not required
 			if len(strv) == 0 {
 				if fieldInfo.Required {
-					// empty string type shandled in regular validators; avoid double errors
+					// Special handling for bare bool, float, int types
+					// where we can't tell later from the zero type
 					switch reflectx.FieldByIndexes(entValue, fieldInfo.Index).Interface().(type) {
-					case string:
-					default:
+					case bool:
+						errs = append(errs, causes.NewRequiredFieldError(fieldName))
+					case int:
+						errs = append(errs, causes.NewRequiredFieldError(fieldName))
+					case float64:
 						errs = append(errs, causes.NewRequiredFieldError(fieldName))
 					}
 				}

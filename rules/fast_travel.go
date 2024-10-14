@@ -96,10 +96,10 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 	}
 	// todo: cache for trip pattern?
 	var errs []error
-	s1 := trip.StopTimes[0].StopID
+	s1 := trip.StopTimes[0].StopID.Val
 	t := trip.StopTimes[0].DepartureTime
 	for i := 1; i < len(trip.StopTimes); i++ {
-		s2 := trip.StopTimes[i].StopID
+		s2 := trip.StopTimes[i].StopID.Val
 		key := s1 + ":" + s2 // todo: use a real separator...
 		dx, ok := e.stopDist[key]
 		if !ok {
@@ -115,7 +115,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 		dt := trip.StopTimes[i].ArrivalTime.Int() - t.Int()
 		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
 		if dt > 30 && speed > maxspeed {
-			errs = append(errs, newFastTravelError(trip.TripID, trip.StopTimes[i].StopSequence, s1, s2, dt, dx, speed, maxspeed))
+			errs = append(errs, newFastTravelError(trip.TripID, trip.StopTimes[i].StopSequence.Int(), s1, s2, dt, dx, speed, maxspeed))
 		}
 		s1 = s2
 		t = trip.StopTimes[i].DepartureTime

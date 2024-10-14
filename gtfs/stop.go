@@ -21,10 +21,10 @@ type Stop struct {
 	TtsStopName        tt.String
 	PlatformCode       tt.String
 	LocationType       int
-	ParentStation      tt.Key
+	ParentStation      tt.Key `target:"stops.txt"`
 	StopTimezone       string
 	WheelchairBoarding int
-	LevelID            tt.Key
+	LevelID            tt.Key   `target:"levels.txt"`
 	Geometry           tt.Point `csv:"-" db:"geometry"`
 	tt.BaseEntity
 }
@@ -101,25 +101,4 @@ func (ent *Stop) Filename() string {
 // TableName gtfs_stops
 func (ent *Stop) TableName() string {
 	return "gtfs_stops"
-}
-
-// UpdateKeys updates Entity references.
-func (ent *Stop) UpdateKeys(emap *EntityMap) error {
-	// Pathway Level
-	if ent.LevelID.Val != "" {
-		if v, ok := emap.GetEntity(&Level{LevelID: ent.LevelID.Val}); ok {
-			ent.LevelID = tt.NewKey(v)
-		} else {
-			return causes.NewInvalidReferenceError("level_id", ent.LevelID.Val)
-		}
-	}
-	// Adjust ParentStation
-	if ent.ParentStation.Val != "" {
-		if parentID, ok := emap.GetEntity(&Stop{StopID: ent.ParentStation.Val}); ok {
-			ent.ParentStation = tt.NewKey(parentID)
-		} else {
-			return causes.NewInvalidReferenceError("parent_station", ent.ParentStation.Val)
-		}
-	}
-	return nil
 }

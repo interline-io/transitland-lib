@@ -4,20 +4,20 @@ import "github.com/interline-io/transitland-lib/tt"
 
 // Level levels.txt
 type Level struct {
-	LevelID    string  `csv:",required"`
-	LevelIndex float64 `csv:",required"`
-	LevelName  string  `csv:"level_name"`
+	LevelID    tt.String `csv:",required"`
+	LevelIndex tt.Float  `csv:",required"`
+	LevelName  tt.String `csv:"level_name"`
 	tt.BaseEntity
 }
 
 // EntityID returns the ID or StopID.
 func (ent *Level) EntityID() string {
-	return entID(ent.ID, ent.LevelID)
+	return entID(ent.ID, ent.LevelID.Val)
 }
 
 // EntityKey returns the GTFS identifier.
 func (ent *Level) EntityKey() string {
-	return ent.LevelID
+	return ent.LevelID.Val
 }
 
 // Filename levels.txt

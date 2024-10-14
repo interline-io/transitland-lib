@@ -108,10 +108,10 @@ func Benchmark_loadRow_Trip(b *testing.B) {
 
 func Benchmark_dumpRow_StopTime(b *testing.B) {
 	ent := gtfs.StopTime{
-		TripID:            "xyz",
-		StopID:            "abc",
+		TripID:            tt.NewString("xyz"),
+		StopID:            tt.NewString("abc"),
 		StopHeadsign:      tt.NewString("hello"),
-		StopSequence:      123,
+		StopSequence:      tt.NewInt(123),
 		ArrivalTime:       tt.NewSeconds(3600),
 		DepartureTime:     tt.NewSeconds(7200),
 		ShapeDistTraveled: tt.NewFloat(123.456),
