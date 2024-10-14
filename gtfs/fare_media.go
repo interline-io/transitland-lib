@@ -29,7 +29,6 @@ func (ent *FareMedia) TableName() string {
 }
 
 func (ent *FareMedia) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.LoadErrors()...)
 	errs = append(errs, tt.CheckPresent("fare_media_id", ent.FareMediaID.Val)...)
 	errs = append(errs, tt.CheckPresent("fare_media_name", ent.FareMediaName.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("fare_media_type", ent.FareMediaType.Val, 0, 4)...)

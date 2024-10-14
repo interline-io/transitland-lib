@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -48,10 +49,10 @@ func (cr *testErrorHandler) HandleEntityErrors(ent tt.Entity, errs []error, warn
 
 func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	var errs []error
-	if extEnt, ok := ent.(tt.EntityWithErrors); ok {
-		errs = append(errs, extEnt.Errors()...)
-		errs = append(errs, extEnt.Warnings()...)
-
+	errs = append(errs, tt.CheckErrors(ent)...)
+	errs = append(errs, tt.CheckWarnings(ent)...)
+	for _, err := range errs {
+		fmt.Printf("AFTER WRITE %#v\n", err)
 	}
 	expecterrs := testutil.GetExpectErrors(ent)
 	cr.expectErrorCount += len(expecterrs)

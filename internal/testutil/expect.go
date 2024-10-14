@@ -50,7 +50,6 @@ func CheckErrors(expecterrs []ExpectError, errs []error, t *testing.T) {
 		for _, err := range expecterrs {
 			s2 = append(s2, fmt.Sprintf("%#v", err))
 		}
-
 		t.Errorf("got %d errors/warnings, more than the expected expected %d, got: %s expect: %s", len(errs), len(expecterrs), strings.Join(s1, " "), strings.Join(s2, " "))
 		return
 	}

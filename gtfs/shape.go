@@ -31,7 +31,6 @@ func (ent *Shape) EntityKey() string {
 
 // Errors for this Entity.
 func (ent *Shape) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.LoadErrors()...)
 	errs = append(errs, tt.CheckPresent("shape_id", ent.ShapeID)...)
 	errs = append(errs, tt.CheckInsideRange("shape_pt_lat", ent.ShapePtLat, -90.0, 90.0)...)
 	errs = append(errs, tt.CheckInsideRange("shape_pt_lon", ent.ShapePtLon, -180.0, 180.0)...)

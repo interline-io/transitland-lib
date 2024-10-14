@@ -472,49 +472,53 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	}
 
 	// UpdateKeys is handled separately from other validators.
-	var referr error
+	var refErr error
 	if extEnt, ok := ent.(tt.EntityWithReferences); ok {
-		referr = extEnt.UpdateKeys(copier.EntityMap)
+		refErr = extEnt.UpdateKeys(copier.EntityMap)
 	} else {
-		referr = tt.ReflectUpdateKeys(copier.EntityMap, ent)
-	}
-	if referr != nil {
-		fmt.Println("referr:", referr)
+		refErr = tt.ReflectUpdateKeys(copier.EntityMap, ent)
 	}
 
-	// Run Entity Validators
-	var errs []error
-	var warns []error
+	// Run filter/validator/extension validators
+	var extErrors []error
+	var extWarnings []error
 	for _, v := range copier.errorValidators {
-		errs = append(errs, v.Validate(ent)...)
+		extErrors = append(extErrors, v.Validate(ent)...)
 	}
 	for _, v := range copier.warningValidators {
-		warns = append(warns, v.Validate(ent)...)
+		extWarnings = append(extWarnings, v.Validate(ent)...)
 	}
 
-	if extEnt, ok := ent.(tt.EntityWithErrors); ok {
-		for _, err := range errs {
-			extEnt.AddError(err)
+	// Associate errors with entity if it supports AddError / AddWarning
+	var errs []error
+	var warns []error
+	if len(extErrors) > 0 || len(extWarnings) > 0 || refErr != nil {
+		if extEnt, ok := ent.(tt.EntityWithLoadErrors); ok {
+			if refErr != nil {
+				extEnt.AddError(refErr)
+			}
+			for _, err := range extErrors {
+				extEnt.AddError(err)
+			}
+			for _, err := range extWarnings {
+				extEnt.AddWarning(err)
+			}
+			errs = nil
+			warns = nil
+		} else {
+			// Otherwise just carry errors over directly
+			errs = extErrors
+			warns = extWarnings
+			if refErr != nil {
+				errs = append(errs, refErr)
+			}
 		}
-		for _, err := range warns {
-			extEnt.AddWarning(err)
-		}
-		if referr != nil {
-			extEnt.AddError(referr)
-		}
-		// Update to include the errors from entity validators
-		errs = extEnt.Errors()
-		warns = extEnt.Warnings()
-	} else {
-		if referr != nil {
-			errs = append(errs, referr)
-		}
-		errs = append(errs, tt.ReflectCheckErrors(ent)...)
 	}
 
-	for _, err := range errs {
-		fmt.Printf("OOOOO %#v\n", err)
-	}
+	// Get all errors and warnings, including those added above or by data loader
+	errs = append(errs, tt.CheckErrors(ent)...)
+	warns = append(warns, tt.CheckWarnings(ent)...)
+
 	// Log and set line context
 	for _, err := range warns {
 		copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("warning")
@@ -529,9 +533,9 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
 	}
-	if referr != nil && !copier.AllowReferenceErrors {
+	if refErr != nil && !copier.AllowReferenceErrors {
 		copier.result.SkipEntityReferenceCount[efn]++
-		return referr
+		return refErr
 	}
 
 	// Handle after validators

@@ -23,7 +23,6 @@ type FeedInfo struct {
 
 // Errors for this Entity.
 func (ent *FeedInfo) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.LoadErrors()...)
 	errs = append(errs, tt.CheckPresent("feed_publisher_name", ent.FeedPublisherName.Val)...)
 	errs = append(errs, tt.CheckPresent("feed_publisher_url", ent.FeedPublisherURL.Val)...)
 	errs = append(errs, tt.CheckPresent("feed_lang", ent.FeedLang.Val)...)

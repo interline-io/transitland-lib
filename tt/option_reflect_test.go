@@ -24,7 +24,6 @@ func TestReflectCheckErrors(t *testing.T) {
 		Timezone:     Timezone{Option: NewOption("asd")},
 		AgencyURL:    Url{Option: NewOption("xyz")},
 	}
-	// ent.AddError(errors.New("test load error"))
 	entErrs := ReflectCheckErrors(&ent)
 	for _, entErr := range entErrs {
 		fmt.Printf("entErrs: %#v\n", entErr)

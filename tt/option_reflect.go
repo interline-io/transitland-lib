@@ -18,23 +18,36 @@ type CanCheck interface {
 	IsZero() bool
 }
 
-type HasLoadErrors interface {
-	LoadErrors() []error
+func CheckErrors(ent any) []error {
+	var errs []error
+	if a, ok := ent.(EntityWithLoadErrors); ok {
+		errs = append(errs, a.LoadErrors()...)
+	}
+	if a, ok := ent.(EntityWithConditionalErrors); ok {
+		errs = append(errs, a.ConditionalErrors()...)
+	}
+	if a, ok := ent.(EntityWithErrors); ok {
+		errs = append(errs, a.Errors()...)
+	} else {
+		errs = append(errs, ReflectCheckErrors(ent)...)
+	}
+	return errs
 }
 
-type HasConditionalErrors interface {
-	ConditionalErrors() []error
+func CheckWarnings(ent any) []error {
+	var errs []error
+	if a, ok := ent.(EntityWithLoadErrors); ok {
+		errs = append(errs, a.LoadWarnings()...)
+	}
+	if a, ok := ent.(EntityWithWarnings); ok {
+		errs = append(errs, a.Warnings()...)
+	}
+	return errs
 }
 
 // Error wrapping helpers
 func ReflectCheckErrors(ent any) []error {
 	var errs []error
-	if a, ok := ent.(HasLoadErrors); ok {
-		errs = append(errs, a.LoadErrors()...)
-	}
-	if a, ok := ent.(HasConditionalErrors); ok {
-		errs = append(errs, a.ConditionalErrors()...)
-	}
 	entValue := reflect.ValueOf(ent).Elem()
 	fmap := mapperCache.GetStructTagMap(ent)
 	for fieldName, fieldInfo := range fmap {
