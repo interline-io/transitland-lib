@@ -53,7 +53,6 @@ func testCutPositionsDebug(t *testing.T, tc lineTestCase) {
 		assert.InDelta(t, 0, ret[i].Lon-tc.expect[i].Lon, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lon, tc.expect[i].Lon)
 		assert.InDelta(t, 0, ret[i].Lat-tc.expect[i].Lat, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lat, tc.expect[i].Lat)
 	}
-	fmt.Println("tcDist:", tcDist)
 	if tcDist > 0 {
 		retLength := LengthHaversine(ret)
 		assert.LessOrEqual(t, retLength, tcDist*3, "expected shape length %f to be less than 3 times the stop to stop dist %f", retLength, tcDist)

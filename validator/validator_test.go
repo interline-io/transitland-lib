@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -51,9 +50,6 @@ func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 	var errs []error
 	errs = append(errs, tt.CheckErrors(ent)...)
 	errs = append(errs, tt.CheckWarnings(ent)...)
-	for _, err := range errs {
-		fmt.Printf("AFTER WRITE %#v\n", err)
-	}
 	expecterrs := testutil.GetExpectErrors(ent)
 	cr.expectErrorCount += len(expecterrs)
 	testutil.CheckErrors(expecterrs, errs, cr.t)

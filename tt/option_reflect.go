@@ -51,15 +51,12 @@ func ReflectCheckErrors(ent any) []error {
 	entValue := reflect.ValueOf(ent).Elem()
 	fmap := mapperCache.GetStructTagMap(ent)
 	for fieldName, fieldInfo := range fmap {
-		fmt.Println("checking field:", fieldName, "index:", fieldInfo.Index, fieldInfo.Name)
 		field := reflectx.FieldByIndexes(entValue, fieldInfo.Index)
 		fieldAddr := field.Addr().Interface()
 		if fieldAddr == nil {
-			fmt.Println("\tno fieldAddr")
 			continue
 		}
 		fieldCheck, ok := fieldAddr.(CanCheck)
-		fmt.Printf("\tfield: %#v\n", fieldAddr)
 		if !ok {
 			if fieldInfo.Required && field.IsZero() {
 				errs = append(errs, causes.NewRequiredFieldError(fieldName))
