@@ -38,12 +38,6 @@ type Cache struct {
 	typemap map[string]FieldMap
 }
 
-var MapperCache *Cache
-
-func init() {
-	MapperCache = NewCache(reflectx.NewMapperFunc("csv", ToSnakeCase))
-}
-
 // NewCache initializes a new cache.
 func NewCache(mapper *reflectx.Mapper) *Cache {
 	return &Cache{
