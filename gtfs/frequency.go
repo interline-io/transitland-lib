@@ -9,7 +9,7 @@ import (
 
 // Frequency frequencies.txt
 type Frequency struct {
-	TripID      tt.String `csv:",required"`
+	TripID      tt.String `csv:",required" target:"trips.txt"`
 	HeadwaySecs tt.Int
 	StartTime   tt.Seconds
 	EndTime     tt.Seconds
@@ -63,15 +63,4 @@ func (ent *Frequency) Filename() string {
 // TableName gtfs_frequencies
 func (ent *Frequency) TableName() string {
 	return "gtfs_frequencies"
-}
-
-// UpdateKeys updates Entity references.
-func (ent *Frequency) UpdateKeys(emap *EntityMap) error {
-	// Adjust TripID
-	if tripID, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Val}); ok {
-		ent.TripID.Set(tripID)
-	} else {
-		return causes.NewInvalidReferenceError("trip_id", ent.TripID.Val)
-	}
-	return nil
 }

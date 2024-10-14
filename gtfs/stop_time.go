@@ -65,17 +65,10 @@ func (ent *StopTime) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *StopTime) UpdateKeys(emap *EntityMap) error {
-	if tripID, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Val}); ok {
-		ent.TripID.Set(tripID)
-	} else {
-		return causes.NewInvalidReferenceError("trip_id", ent.TripID.Val)
-	}
-	if stopID, ok := emap.GetEntity(&Stop{StopID: ent.StopID.Val}); ok {
-		ent.StopID.Set(stopID)
-	} else {
-		return causes.NewInvalidReferenceError("stop_id", ent.StopID.Val)
-	}
-	return nil
+	return tt.FirstError(
+		tt.TrySetField(emap.UpdateKey(&ent.TripID, "trips.txt"), "trip_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.StopID, "stops.txt"), "stop_id"),
+	)
 }
 
 // GetString returns the string representation of an field.

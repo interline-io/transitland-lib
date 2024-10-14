@@ -4,14 +4,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Pathway pathways.txt
 type Pathway struct {
-	PathwayID           tt.String `csv:",required"`
-	FromStopID          tt.String `csv:",required"`
+	PathwayID           tt.String `csv:",required" target:"stops.txt"`
+	FromStopID          tt.String `csv:",required" target:"stops.txt"`
 	ToStopID            tt.String `csv:",required"`
 	PathwayMode         tt.Int    `csv:",required"`
 	IsBidirectional     tt.Int    `csv:",required"`
@@ -43,21 +42,6 @@ func (ent *Pathway) Filename() string {
 // TableName ext_pathway_pathways
 func (ent *Pathway) TableName() string {
 	return "gtfs_pathways"
-}
-
-// UpdateKeys updates Entity references.
-func (ent *Pathway) UpdateKeys(emap *EntityMap) error {
-	if fkid, ok := emap.GetEntity(&Stop{StopID: ent.FromStopID.Val}); ok {
-		ent.FromStopID.Set(fkid)
-	} else {
-		return causes.NewInvalidReferenceError("from_stop_id", ent.FromStopID.Val)
-	}
-	if fkid, ok := emap.GetEntity(&Stop{StopID: ent.ToStopID.Val}); ok {
-		ent.ToStopID.Set(fkid)
-	} else {
-		return causes.NewInvalidReferenceError("to_stop_id", ent.ToStopID.Val)
-	}
-	return nil
 }
 
 // GetString returns the string representation of an field.

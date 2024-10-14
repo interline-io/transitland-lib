@@ -1,5 +1,16 @@
 package tt
 
+import (
+	"fmt"
+	"reflect"
+
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/internal/tags"
+	"github.com/jmoiron/sqlx/reflectx"
+)
+
+var entityMapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
+
 // EntityMap stores correspondances between Entity IDs, e.g. StopID -> Stop's integer ID in a database.
 type EntityMap struct {
 	ids map[string]map[string]string
@@ -10,6 +21,49 @@ func NewEntityMap() *EntityMap {
 	return &EntityMap{
 		ids: map[string]map[string]string{},
 	}
+}
+
+type canSet interface {
+	String() string
+	Set(string)
+}
+
+func (emap *EntityMap) ReflectUpdateKeys(ent Entity) error {
+	fields := entityMapperCache.GetStructTagMap(ent)
+	for fieldName, fieldInfo := range fields {
+		if fieldInfo.Target == "" {
+			continue
+		}
+		elem := reflect.ValueOf(ent).Elem()
+		fieldValue := reflectx.FieldByIndexes(elem, fieldInfo.Index).Addr().Interface()
+		fieldSet, ok := fieldValue.(canSet)
+		if !ok {
+			return fmt.Errorf("EntityMap ReflectUpdate cannot be used on field '%s', does not support Set()", fieldName)
+		}
+		eid := fieldSet.String()
+		if eid == "" {
+			continue
+		}
+		newId, ok := emap.Get(fieldInfo.Target, eid)
+		if !ok {
+			return TrySetField(causes.NewInvalidReferenceError(fieldName, eid), fieldName)
+		}
+		fieldSet.Set(newId)
+	}
+	return nil
+}
+
+func (emap *EntityMap) UpdateKey(v canSet, efn string) error {
+	eid := v.String()
+	if eid == "" {
+		return nil
+	}
+	newEid, ok := emap.Get(efn, eid)
+	if !ok {
+		return causes.NewInvalidReferenceError(efn, eid)
+	}
+	v.Set(newEid)
+	return nil
 }
 
 // Set directly adds an entry to the set.

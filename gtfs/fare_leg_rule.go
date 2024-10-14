@@ -3,18 +3,17 @@ package gtfs
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FareLegRule fare_leg_rules.txt
 type FareLegRule struct {
 	LegGroupID    tt.String
-	FromAreaID    tt.String
-	ToAreaID      tt.String
-	NetworkID     tt.String
-	FareProductID tt.String
-	TransferOnly  tt.Int // interline ext
+	FromAreaID    tt.String `target:"areas.txt"`
+	ToAreaID      tt.String `target:"areas.txt"`
+	NetworkID     tt.String `target:"routes.txt:network_id"`
+	FareProductID tt.String `target:"fare_products.txt"`
+	TransferOnly  tt.Int    // interline ext
 	tt.BaseEntity
 }
 
@@ -40,40 +39,6 @@ func (ent *FareLegRule) Filename() string {
 
 func (ent *FareLegRule) TableName() string {
 	return "gtfs_fare_leg_rules"
-}
-
-func (ent *FareLegRule) UpdateKeys(emap *EntityMap) error {
-	if ent.FromAreaID.Val != "" {
-		if fkid, ok := emap.Get("areas.txt", ent.FromAreaID.Val); ok {
-			ent.FromAreaID = tt.NewString(fkid)
-		} else {
-			return causes.NewInvalidReferenceError("from_area_id", ent.FromAreaID.Val)
-		}
-	}
-	if ent.ToAreaID.Val != "" {
-		if fkid, ok := emap.Get("areas.txt", ent.ToAreaID.Val); ok {
-			ent.ToAreaID = tt.NewString(fkid)
-		} else {
-			return causes.NewInvalidReferenceError("to_area_id", ent.ToAreaID.Val)
-		}
-	}
-	// Check fare network
-	if ent.NetworkID.Val == "" {
-		// ok
-	} else if fkid2, ok2 := emap.Get("routes.txt:network_id", ent.NetworkID.Val); ok2 {
-		ent.NetworkID = tt.NewString(fkid2)
-	} else {
-		return causes.NewInvalidReferenceError("network_id", ent.NetworkID.Val)
-	}
-	// Check fare product
-	if ent.FareProductID.Val != "" {
-		if fkid, ok := emap.Get("fare_products.txt", ent.FareProductID.Val); ok {
-			ent.FareProductID = tt.NewString(fkid)
-		} else {
-			return causes.NewInvalidReferenceError("fare_product_id", ent.FareProductID.Val)
-		}
-	}
-	return nil
 }
 
 func (ent *FareLegRule) Errors() (errs []error) {

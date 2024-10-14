@@ -7,12 +7,12 @@ import (
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
-	FareID           tt.String // `csv:",required"`
-	Price            tt.Float  // `csv:",required"`
-	CurrencyType     tt.String // `csv:",required"`
-	PaymentMethod    tt.Int    // `csv:",required"`
+	FareID           tt.String
+	Price            tt.Float
+	CurrencyType     tt.String
+	PaymentMethod    tt.Int
 	Transfers        tt.Int
-	AgencyID         tt.Key
+	AgencyID         tt.Key `target:"agency.txt"`
 	TransferDuration tt.Int
 	tt.BaseEntity
 }
@@ -59,18 +59,4 @@ func (ent *FareAttribute) Filename() string {
 // TableName gtfs_fare_attributes
 func (ent *FareAttribute) TableName() string {
 	return "gtfs_fare_attributes"
-}
-
-// UpdateKeys updates Entity references.
-func (ent *FareAttribute) UpdateKeys(emap *EntityMap) error {
-	// Adjust AgencyID - optional
-	if len(ent.AgencyID.Val) > 0 {
-		if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Val}); ok {
-			ent.AgencyID.Val = agencyID
-			ent.AgencyID.Valid = true
-		} else {
-			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Val)
-		}
-	}
-	return nil
 }

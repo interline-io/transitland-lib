@@ -24,6 +24,7 @@ func ToSnakeCase(str string) string {
 type FieldInfo struct {
 	Name     string
 	Required bool
+	Target   string
 	Index    []int
 }
 
@@ -70,6 +71,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 				Name:     fi.Name,
 				Required: required,
 				Index:    fi.Index,
+				Target:   fi.Field.Tag.Get("target"),
 			}
 		}
 		c.typemap[t] = m

@@ -9,14 +9,14 @@ import (
 
 // FareTransferRule fare_transfer_rules.txt
 type FareTransferRule struct {
-	FromLegGroupID      tt.String
-	ToLegGroupID        tt.String
+	FromLegGroupID      tt.String `target:"fare_leg_rules.txt"`
+	ToLegGroupID        tt.String `target:"fare_leg_rules.txt"`
 	TransferCount       tt.Int
 	DurationLimit       tt.Int
 	DurationLimitType   tt.Int
 	FareTransferType    tt.Int
-	FareProductID       tt.String
-	FilterFareProductID tt.String // proposed extension
+	FareProductID       tt.String `target:"fare_products.txt"`
+	FilterFareProductID tt.String `target:"fare_products.txt"` // proposed extension
 	tt.BaseEntity
 }
 
@@ -38,34 +38,6 @@ func (ent *FareTransferRule) Filename() string {
 
 func (ent *FareTransferRule) TableName() string {
 	return "gtfs_fare_transfer_rules"
-}
-
-func (ent *FareTransferRule) UpdateKeys(emap *EntityMap) error {
-	if ent.FromLegGroupID.Val != "" {
-		if _, ok := emap.Get("fare_leg_rules.txt", ent.FromLegGroupID.Val); !ok {
-			return causes.NewInvalidReferenceError("from_leg_group_id", ent.FromLegGroupID.Val)
-		}
-	}
-	if ent.ToLegGroupID.Val != "" {
-		if _, ok := emap.Get("fare_leg_rules.txt", ent.ToLegGroupID.Val); !ok {
-			return causes.NewInvalidReferenceError("to_leg_group_id", ent.ToLegGroupID.Val)
-		}
-	}
-	if ent.FareProductID.Val != "" {
-		if fkid, ok := emap.Get("fare_products.txt", ent.FareProductID.Val); ok {
-			ent.FareProductID = tt.NewString(fkid)
-		} else {
-			return causes.NewInvalidReferenceError("fare_product_id", ent.FareProductID.Val)
-		}
-	}
-	if ent.FilterFareProductID.Val != "" {
-		if fkid, ok := emap.Get("fare_products.txt", ent.FilterFareProductID.Val); ok {
-			ent.FilterFareProductID = tt.NewString(fkid)
-		} else {
-			return causes.NewInvalidReferenceError("filter_fare_product_id", ent.FilterFareProductID.Val)
-		}
-	}
-	return nil
 }
 
 func (ent *FareTransferRule) Errors() (errs []error) {

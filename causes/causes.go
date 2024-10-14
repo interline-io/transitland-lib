@@ -30,6 +30,14 @@ func (e *Context) Context() *Context {
 	return e
 }
 
+func (e *Context) SetFilename(v string) {
+	e.Filename = v
+}
+
+func (e *Context) SetField(v string) {
+	e.Field = v
+}
+
 // ErrorLevel 0 = error, 1 = warning, 2 = best practice
 func (e *Context) ErrorLevel() int {
 	return e.errorLevel

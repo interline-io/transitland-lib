@@ -7,9 +7,9 @@ import (
 
 type Attribution struct {
 	OrganizationName tt.String
-	AgencyID         tt.Key
-	RouteID          tt.Key
-	TripID           tt.Key
+	AgencyID         tt.Key `target:"agency.txt"`
+	RouteID          tt.Key `target:"routes.txt"`
+	TripID           tt.Key `target:"trips.txt"`
 	IsProducer       tt.Int
 	IsOperator       tt.Int
 	IsAuthority      tt.Int
@@ -55,33 +55,4 @@ func (ent *Attribution) Errors() (errs []error) {
 		}
 	}
 	return errs
-}
-
-// UpdateKeys updates Entity references.
-func (ent *Attribution) UpdateKeys(emap *EntityMap) error {
-	// Adjust AgencyID
-	if ent.AgencyID.Val != "" {
-		if eid, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID.Val}); ok {
-			ent.AgencyID = tt.NewKey(eid)
-		} else {
-			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID.Val)
-		}
-	}
-	// Adjust RouteID
-	if ent.RouteID.Val != "" {
-		if eid, ok := emap.GetEntity(&Route{RouteID: ent.RouteID.Val}); ok {
-			ent.RouteID = tt.NewKey(eid)
-		} else {
-			return causes.NewInvalidReferenceError("route_id", ent.RouteID.Val)
-		}
-	}
-	// Adjust TripID
-	if ent.TripID.Val != "" {
-		if eid, ok := emap.GetEntity(&Trip{TripID: ent.TripID.Val}); ok {
-			ent.TripID = tt.NewKey(eid)
-		} else {
-			return causes.NewInvalidReferenceError("trip_id", ent.TripID.Val)
-		}
-	}
-	return nil
 }
