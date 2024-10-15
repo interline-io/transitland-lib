@@ -7,10 +7,10 @@ import (
 
 type Translation struct {
 	// "TableNameValue" because TableName is a required interface method
-	TableNameValue tt.String `db:"table_name" csv:"table_name"`
-	FieldName      tt.String
-	Language       tt.String
-	Translation    tt.String
+	TableNameValue tt.String   `db:"table_name" csv:"table_name,required"`
+	FieldName      tt.String   `csv:",required"`
+	Language       tt.Language `csv:",required"`
+	Translation    tt.String   `csv:",required"`
 	RecordID       tt.String
 	RecordSubID    tt.String
 	FieldValue     tt.String
@@ -26,12 +26,7 @@ func (ent *Translation) TableName() string {
 }
 
 // Errors for this Entity.
-func (ent *Translation) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("table_name", ent.TableNameValue.Val)...)
-	errs = append(errs, tt.CheckPresent("field_name", ent.FieldName.Val)...)
-	errs = append(errs, tt.CheckPresent("language", ent.Language.Val)...)
-	errs = append(errs, tt.CheckLanguage("language", ent.Language.Val)...)
-	errs = append(errs, tt.CheckPresent("translation", ent.Translation.Val)...)
+func (ent *Translation) ConditionalErrors() (errs []error) {
 	errs = append(errs, tt.CheckInArray("table_name", ent.TableNameValue.Val, "agency", "routes", "stops", "trips", "stop_times", "pathways", "levels", "feed_info", "attributions")...)
 	// RecordID
 	if ent.RecordID.Val == "" {
