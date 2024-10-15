@@ -78,7 +78,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 		if e.routeTypes == nil {
 			e.routeTypes = map[string]int{}
 		}
-		e.routeTypes[v.RouteID] = v.RouteType
+		e.routeTypes[v.RouteID.Val] = v.RouteType.Int()
 	}
 	// Use stop to stop distances, shape_dist_traveled is not reliable.
 	trip, ok := ent.(*gtfs.Trip)
@@ -89,7 +89,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 		e.stopDist = map[string]float64{}
 	}
 	maxspeed := 200.0 // default max speed
-	if rtype, ok := e.routeTypes[trip.RouteID]; ok {
+	if rtype, ok := e.routeTypes[trip.RouteID.Val]; ok {
 		if m, ok := maxSpeeds[rtype]; ok {
 			maxspeed = m
 		}
@@ -115,7 +115,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 		dt := trip.StopTimes[i].ArrivalTime.Int() - t.Int()
 		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
 		if dt > 30 && speed > maxspeed {
-			errs = append(errs, newFastTravelError(trip.TripID, trip.StopTimes[i].StopSequence.Int(), s1, s2, dt, dx, speed, maxspeed))
+			errs = append(errs, newFastTravelError(trip.TripID.Val, trip.StopTimes[i].StopSequence.Int(), s1, s2, dt, dx, speed, maxspeed))
 		}
 		s1 = s2
 		t = trip.StopTimes[i].DepartureTime

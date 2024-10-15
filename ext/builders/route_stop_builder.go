@@ -41,9 +41,9 @@ func NewRouteStopBuilder() *RouteStopBuilder {
 func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Route:
-		pp.routeAgencies[eid] = v.AgencyID
+		pp.routeAgencies[eid] = v.AgencyID.Val
 	case *gtfs.Trip:
-		pp.tripRoutes[eid] = v.RouteID
+		pp.tripRoutes[eid] = v.RouteID.Val
 	case *gtfs.StopTime:
 		rid := pp.tripRoutes[v.TripID.Val]
 		rs, ok := pp.routeStops[rid]

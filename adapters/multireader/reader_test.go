@@ -20,7 +20,7 @@ func TestMultireader(t *testing.T) {
 	reader := NewReader(reader1, reader2)
 	agencyIds := map[string]int{}
 	for ent := range reader.Agencies() {
-		agencyIds[ent.AgencyID] += 1
+		agencyIds[ent.AgencyID.Val] += 1
 	}
 	assert.Equal(t, 1, agencyIds["BART"])
 	assert.Equal(t, 1, agencyIds["caltrain-ca-us"])

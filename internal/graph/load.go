@@ -65,9 +65,9 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 	for ent := range reader.Routes() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
-		if len(ent.AgencyID) == 0 {
+		if !ent.AgencyID.Valid {
 			eg.AddEdge(dan, en)
-		} else if agency, ok := eg.Node(NewNode("agency.txt", ent.AgencyID)); ok {
+		} else if agency, ok := eg.Node(NewNode("agency.txt", ent.AgencyID.Val)); ok {
 			eg.AddEdge(agency, en)
 		}
 	}
@@ -86,10 +86,10 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 	// Add Trips and link
 	for ent := range reader.Trips() {
 		en, _ := eg.AddNode(entityNode(&ent))
-		if r, ok := eg.Node(NewNode("routes.txt", ent.RouteID)); ok {
+		if r, ok := eg.Node(NewNode("routes.txt", ent.RouteID.Val)); ok {
 			eg.AddEdge(r, en)
 		}
-		if c, ok := eg.Node(NewNode("calendar.txt", ent.ServiceID)); ok {
+		if c, ok := eg.Node(NewNode("calendar.txt", ent.ServiceID.Val)); ok {
 			eg.AddEdge(c, en)
 		}
 		if ent.ShapeID.Valid {
@@ -111,12 +111,12 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 	for ent := range reader.Stops() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
-		if ent.ParentStation.Val != "" {
-			ps[ent.StopID] = ent.ParentStation.Val
-			cs[ent.ParentStation.Val] = append(cs[ent.ParentStation.Val], ent.StopID)
+		if ent.ParentStation.Valid {
+			ps[ent.StopID.Val] = ent.ParentStation.Val
+			cs[ent.ParentStation.Val] = append(cs[ent.ParentStation.Val], ent.StopID.Val)
 		}
-		if ent.ZoneID != "" {
-			fz[ent.ZoneID] = append(fz[ent.ZoneID], ent.StopID)
+		if ent.ZoneID.Valid {
+			fz[ent.ZoneID.Val] = append(fz[ent.ZoneID.Val], ent.StopID.Val)
 		}
 		// Link levels
 		if ent.LevelID.Valid {

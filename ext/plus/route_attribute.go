@@ -23,8 +23,8 @@ func (ent *RouteAttribute) TableName() string {
 }
 
 func (ent *RouteAttribute) UpdateKeys(emap *tt.EntityMap) error {
-	if routeID, ok := emap.GetEntity(&gtfs.Route{RouteID: ent.RouteID.Val}); ok {
-		ent.RouteID = tt.NewKey(routeID)
+	if routeID, ok := emap.GetEntity(&gtfs.Route{RouteID: tt.NewString(ent.RouteID.Val)}); ok {
+		ent.RouteID.Set(routeID)
 	} else {
 		return causes.NewInvalidReferenceError("route_id", ent.RouteID.Val)
 	}

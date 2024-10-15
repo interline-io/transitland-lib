@@ -6,7 +6,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/tt"
 )
 
 // NewFeedVersionFromReader returns a FeedVersion from a Reader.
@@ -18,8 +17,8 @@ func NewFeedVersionFromReader(reader adapters.Reader) (dmfr.FeedVersion, error) 
 	}
 	// Get service dates
 	if start, end, err := FeedVersionServiceBounds(reader); err == nil {
-		fv.EarliestCalendarDate = tt.NewDate(start)
-		fv.LatestCalendarDate = tt.NewDate(end)
+		fv.EarliestCalendarDate.Set(start)
+		fv.LatestCalendarDate.Set(end)
 	} else {
 		return fv, err
 	}

@@ -21,17 +21,17 @@ type NullIslandCheck struct{}
 func (e *NullIslandCheck) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
 	case *gtfs.Stop:
-		if v.LocationType == 3 || v.LocationType == 4 {
+		if v.LocationType.Val == 3 || v.LocationType.Val == 4 {
 			return nil // allowed
 		}
 		coords := v.Coordinates()
 		if coords[0] == 0 && coords[1] == 0 {
-			return []error{&ZeroCoordinateError{bc: bc{Field: "stop_lat", EntityID: v.StopID, Message: "stop has (0,0) coordinates"}}}
+			return []error{&ZeroCoordinateError{bc: bc{Field: "stop_lat", EntityID: v.StopID.Val, Message: "stop has (0,0) coordinates"}}}
 		}
 	case *gtfs.Shape:
 		for _, coords := range v.Geometry.Val.Coords() {
 			if coords[0] == 0 && coords[1] == 0 {
-				return []error{&ZeroCoordinateError{bc: bc{Field: "shape_pt_lon", EntityID: v.ShapeID, Message: "shape has (0,0) coordinates"}}}
+				return []error{&ZeroCoordinateError{bc: bc{Field: "shape_pt_lon", EntityID: v.ShapeID.Val, Message: "shape has (0,0) coordinates"}}}
 			}
 		}
 	}

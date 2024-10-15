@@ -47,7 +47,7 @@ func (ent *FareTransferRule) ConditionalErrors() (errs []error) {
 	// duration_limit, duration_limit_type
 	if ent.DurationLimitType.Valid {
 		if !ent.DurationLimit.Valid {
-			errs = append(errs, causes.NewConditionallyForbiddenFieldError("duration_limit", tt.TryCsv(ent.DurationLimitType), "duration_limit_type requires duration_limit to be present"))
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("duration_limit", ent.DurationLimitType.String(), "duration_limit_type requires duration_limit to be present"))
 		}
 	} else if ent.DurationLimit.Valid {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("duration_limit"))

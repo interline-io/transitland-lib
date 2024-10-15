@@ -17,17 +17,17 @@ func AllEntities(reader adapters.Reader, cb func(tt.Entity)) {
 
 	// stops
 	for ent := range reader.Stops() {
-		if ent.LocationType == 1 {
+		if ent.LocationType.Val == 1 {
 			cb(&ent)
 		}
 	}
 	for ent := range reader.Stops() {
-		if ent.LocationType == 0 || ent.LocationType == 2 || ent.LocationType == 3 {
+		if ent.LocationType.Val == 0 || ent.LocationType.Val == 2 || ent.LocationType.Val == 3 {
 			cb(&ent)
 		}
 	}
 	for ent := range reader.Stops() {
-		if ent.LocationType == 4 {
+		if ent.LocationType.Val == 4 {
 			cb(&ent)
 		}
 	}

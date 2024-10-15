@@ -69,19 +69,19 @@ func (fi *Validator) SetGeomCache(g tlxy.GeomCache) {
 func (fi *Validator) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
-		fi.Timezone = v.AgencyTimezone
+		fi.Timezone = v.AgencyTimezone.Val
 	case *gtfs.Stop:
-		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
+		fi.stopInfo[v.StopID.Val] = stopInfo{LocationType: v.LocationType.Int()}
 	case *gtfs.Route:
-		fi.routeInfo[v.RouteID] = routeInfo{
-			RouteType: v.RouteType,
-			AgencyID:  v.AgencyID,
+		fi.routeInfo[v.RouteID.Val] = routeInfo{
+			RouteType: v.RouteType.Int(),
+			AgencyID:  v.AgencyID.Val,
 		}
 	case *gtfs.Trip:
-		fi.tripInfo[v.TripID] = tripInfo{
-			DirectionID: v.DirectionID,
+		fi.tripInfo[v.TripID.Val] = tripInfo{
+			DirectionID: v.DirectionID.Int(),
 			ShapeID:     v.ShapeID.String(),
-			RouteID:     v.RouteID,
+			RouteID:     v.RouteID.Val,
 		}
 	case *gtfs.Frequency:
 		a := fi.tripInfo[v.TripID.Val]

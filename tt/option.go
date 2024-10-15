@@ -31,7 +31,7 @@ func (r *Option[T]) Unset() {
 	r.Valid = false
 }
 
-func (r *Option[T]) Present() bool {
+func (r Option[T]) IsPresent() bool {
 	return r.Valid
 }
 
@@ -49,10 +49,6 @@ func (r Option[T]) String() string {
 		return string(b)
 	}
 	return out
-}
-
-func (r *Option[T]) Error() error {
-	return nil
 }
 
 func (r *Option[T]) Scan(src interface{}) error {

@@ -1,7 +1,6 @@
 package tt
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -14,7 +13,7 @@ type Url struct {
 
 func (r Url) Check() error {
 	if r.Valid && !IsValidURL(r.Val) {
-		return errors.New("invalid url")
+		return causes.NewInvalidFieldError("", r.Val, fmt.Errorf("invalid url"))
 	}
 	return nil
 }

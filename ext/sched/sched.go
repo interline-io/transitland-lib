@@ -34,13 +34,13 @@ func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 		fi.services[v.ServiceID] = v
 	case *gtfs.Trip:
 		ti := tripInfo{
-			ServiceID: v.ServiceID,
+			ServiceID: v.ServiceID.Val,
 		}
 		if len(v.StopTimes) > 0 {
 			ti.StartTime = v.StopTimes[0].DepartureTime
 			ti.EndTime = v.StopTimes[len(v.StopTimes)-1].ArrivalTime
 		}
-		fi.tripInfo[v.TripID] = ti
+		fi.tripInfo[v.TripID.Val] = ti
 	case *gtfs.Frequency:
 		a := fi.tripInfo[v.TripID.Val]
 		for s := v.StartTime.Int(); s < v.EndTime.Int(); s += v.HeadwaySecs.Int() {

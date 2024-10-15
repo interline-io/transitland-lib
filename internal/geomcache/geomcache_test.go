@@ -18,17 +18,18 @@ func TestGeomCache(t *testing.T) {
 	trips := map[string]gtfs.Trip{}
 	count := 1
 	for trip := range r.Trips() {
-		trip.StopPatternID = count
-		trips[trip.TripID] = trip
+		trip := trip
+		trip.StopPatternID.SetInt(count)
+		trips[trip.TripID.Val] = trip
 		count++
 	}
 	cache := NewGeomCache()
 	for e := range r.Shapes() {
 		lm := e.Geometry.ToLineM()
-		cache.AddShapeGeom(e.ShapeID, lm.Coords, lm.Data)
+		cache.AddShapeGeom(e.ShapeID.Val, lm.Coords, lm.Data)
 	}
 	for e := range r.Stops() {
-		cache.AddStopGeom(e.StopID, e.ToPoint())
+		cache.AddStopGeom(e.StopID.Val, e.ToPoint())
 	}
 	for stoptimes := range r.StopTimesByTripID() {
 		trip := trips[stoptimes[0].TripID.Val]

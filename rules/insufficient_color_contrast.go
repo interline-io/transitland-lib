@@ -14,7 +14,7 @@ type InsufficientColorContrastCheck struct{}
 // Validate .
 func (e *InsufficientColorContrastCheck) Validate(ent tt.Entity) []error {
 	if v, ok := ent.(*gtfs.Route); ok {
-		if v.RouteColor != "" && v.RouteColor == v.RouteTextColor {
+		if v.RouteColor.Valid && v.RouteColor == v.RouteTextColor {
 			return []error{causes.NewValidationWarning("route_text_color", "route_text_color should provide contrast with route_color")}
 		}
 	}

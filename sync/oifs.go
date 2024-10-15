@@ -82,10 +82,10 @@ func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 	}
 	for _, oif := range operator.AssociatedFeeds {
 		// Get feed id
-		oif.ResolvedOnestopID = operator.OnestopID
-		oif.ResolvedName = operator.Name
-		oif.ResolvedShortName = operator.ShortName
-		oif.OperatorID = tt.NewInt(operator.ID)
+		oif.ResolvedOnestopID.Set(operator.OnestopID.Val)
+		oif.ResolvedName.Set(operator.Name.Val)
+		oif.ResolvedShortName.Set(operator.ShortName.Val)
+		oif.OperatorID.SetInt(operator.ID)
 		if err := atx.Get(&oif.FeedID, "select id from current_feeds where onestop_id = ?", oif.FeedOnestopID.Val); err == sql.ErrNoRows {
 			log.Infof("Warning: no feed for '%s'", oif.FeedOnestopID.Val)
 			continue
@@ -100,13 +100,13 @@ func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 		agencyID := 0
 		if len(agencies) == 1 {
 			// match regardless of gtfs_agency_id
-			oif.ResolvedGtfsAgencyID = tt.NewString(agencies[0].AgencyID)
+			oif.ResolvedGtfsAgencyID.Set(agencies[0].AgencyID.Val)
 			agencyID = agencies[0].ID
 		} else if len(agencies) > 1 {
 			// match on gtfs_agency_id
 			for _, agency := range agencies {
-				if agency.AgencyID == oif.GtfsAgencyID.Val {
-					oif.ResolvedGtfsAgencyID = tt.NewString(agency.AgencyID)
+				if agency.AgencyID.Val == oif.GtfsAgencyID.Val {
+					oif.ResolvedGtfsAgencyID.Set(agency.AgencyID.Val)
 					agencyID = agency.ID
 				}
 			}
@@ -120,7 +120,7 @@ func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 			if places, err := getPlaces(atx, agencyID); err != nil {
 				return false, err
 			} else {
-				oif.ResolvedPlaces = tt.NewString(places)
+				oif.ResolvedPlaces.Set(places)
 			}
 			if _, err := atx.Insert(&oif); err != nil {
 				return false, err
@@ -174,7 +174,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 		return false, err
 	}
 	for _, agency := range agencies {
-		check := oifmatch{feedID: feedid, resolvedGtfsAgencyID: agency.AgencyID}
+		check := oifmatch{feedID: feedid, resolvedGtfsAgencyID: agency.AgencyID.Val}
 		if match, ok := oiflookup[check]; ok {
 			oifmatches[match] = true
 		} else {
@@ -182,13 +182,13 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 			// Generate OnestopID
 			oif := dmfr.OperatorAssociatedFeed{
 				FeedID:               feedid,
-				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID),
-				ResolvedName:         tt.NewString(agency.AgencyName),
+				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID.Val),
+				ResolvedName:         tt.NewString(agency.AgencyName.Val),
 			}
 			if places, err := getPlaces(atx, agency.ID); err != nil {
 				return false, err
 			} else {
-				oif.ResolvedPlaces = tt.NewString(places)
+				oif.ResolvedPlaces.Set(places)
 			}
 			if agency.OnestopID.Valid {
 				oif.ResolvedOnestopID = agency.OnestopID
@@ -197,7 +197,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 				if strings.HasPrefix(feed.FeedID, "f-") && len(feed.FeedID) > 2 {
 					fsid = feed.FeedID[2:]
 				}
-				oif.ResolvedOnestopID = tt.NewString(fmt.Sprintf("o-%s-%s", fsid, filterName(agency.AgencyName)))
+				oif.ResolvedOnestopID.Set(fmt.Sprintf("o-%s-%s", fsid, filterName(agency.AgencyName.Val)))
 			}
 			// Save
 			if _, err := atx.Insert(&oif); err != nil {

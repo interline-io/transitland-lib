@@ -113,7 +113,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 			uploadDest = vr.UploadFilename
 		}
 		if vr.FeedVersionID.Valid {
-			result.FeedVersionID = tt.NewInt(vr.FeedVersionID.Int())
+			result.FeedVersionID.Set(vr.FeedVersionID.Val)
 		}
 	}
 
@@ -136,24 +136,24 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	tlfetch := dmfr.FeedFetch{}
 	tlfetch.FeedID = feed.ID
 	tlfetch.URLType = opts.URLType
-	tlfetch.FetchedAt = tt.NewTime(opts.FetchedAt)
+	tlfetch.FetchedAt.Set(opts.FetchedAt)
 	// tlfetch.FeedVersionID =
 	if !opts.HideURL {
 		tlfetch.URL = opts.FeedURL
 	}
 	if result.ResponseCode > 0 {
-		tlfetch.ResponseCode = tt.NewInt(result.ResponseCode)
-		tlfetch.ResponseSize = tt.NewInt(result.ResponseSize)
-		tlfetch.ResponseSHA1 = tt.NewString(result.ResponseSHA1)
+		tlfetch.ResponseCode.SetInt(result.ResponseCode)
+		tlfetch.ResponseSize.SetInt(result.ResponseSize)
+		tlfetch.ResponseSHA1.Set(result.ResponseSHA1)
 	}
 	if result.FeedVersionID.Valid {
-		tlfetch.FeedVersionID = tt.NewInt(result.FeedVersionID.Int())
+		tlfetch.FeedVersionID.Set(result.FeedVersionID.Val)
 	}
 	if result.FetchError == nil {
 		tlfetch.Success = true
 	} else {
 		tlfetch.Success = false
-		tlfetch.FetchError = tt.NewString(result.FetchError.Error())
+		tlfetch.FetchError.Set(result.FetchError.Error())
 	}
 	if _, err := atx.Insert(&tlfetch); err != nil {
 		return result, err

@@ -16,16 +16,16 @@ type RouteNamesCharactersCheck struct{}
 func (e *RouteNamesCharactersCheck) Validate(ent tt.Entity) []error {
 	var errs []error
 	if v, ok := ent.(*gtfs.Route); ok {
-		if !routeNameCheckAllowedChars(v.RouteShortName) {
+		if !routeNameCheckAllowedChars(v.RouteShortName.Val) {
 			err := RouteNamesCharactersError{}
 			err.Field = "route_short_name"
-			err.Value = v.RouteShortName
+			err.Value = v.RouteShortName.Val
 			errs = append(errs, &err)
 		}
-		if !routeNameCheckAllowedChars(v.RouteLongName) {
+		if !routeNameCheckAllowedChars(v.RouteLongName.Val) {
 			err := RouteNamesCharactersError{}
 			err.Field = "route_long_name"
-			err.Value = v.RouteLongName
+			err.Value = v.RouteLongName.Val
 			errs = append(errs, &err)
 		}
 	}

@@ -2,7 +2,6 @@ package tlcsv
 
 import (
 	"errors"
-	"math"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/adapters"
@@ -76,8 +75,8 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 		// Horrible special case bug fix
 		if v, ok := ent.(*gtfs.Stop); ok {
 			c := v.Coordinates()
-			v.StopLon = c[0]
-			v.StopLat = c[1]
+			v.StopLon.Set(c[0])
+			v.StopLat.Set(c[1])
 		}
 	}
 	header, ok := writer.headers[efn]
@@ -153,25 +152,24 @@ func (writer *Writer) flattenShape(ent gtfs.Shape) []gtfs.Shape {
 	for i := 0; i < len(coords); i += 3 {
 		s := gtfs.Shape{
 			ShapeID:           ent.ShapeID,
-			ShapePtSequence:   i,
-			ShapePtLon:        coords[i],
-			ShapePtLat:        coords[i+1],
-			ShapeDistTraveled: coords[i+2],
+			ShapePtSequence:   tt.NewInt(i),
+			ShapePtLon:        tt.NewFloat(coords[i]),
+			ShapePtLat:        tt.NewFloat(coords[i+1]),
+			ShapeDistTraveled: tt.NewFloat(coords[i+2]),
 		}
 		totaldist += coords[i+2]
 		shapes = append(shapes, s)
 	}
-	// Set any zeros to NaN
 	cur := 0.0
 	for i := 0; i < len(shapes); i++ {
-		if shapes[i].ShapeDistTraveled < cur {
-			shapes[i].ShapeDistTraveled = math.NaN()
+		if shapes[i].ShapeDistTraveled.Val < cur {
+			shapes[i].ShapeDistTraveled.Unset()
 		}
-		cur = shapes[i].ShapeDistTraveled
+		cur = shapes[i].ShapeDistTraveled.Val
 	}
 	if cur == 0.0 {
 		for i := 0; i < len(shapes); i++ {
-			shapes[i].ShapeDistTraveled = math.NaN()
+			shapes[i].ShapeDistTraveled.Unset()
 		}
 	}
 	return shapes

@@ -10,7 +10,7 @@ type FareAttribute struct {
 	Price            tt.Float    `csv:",required" range:"0,"`
 	CurrencyType     tt.Currency `csv:",required"`
 	PaymentMethod    tt.Int      `csv:",required" enum:"0,1"`
-	Transfers        tt.Int      `enum:"0,1,2"`
+	Transfers        tt.Int      `enum:"0,1,2"` // note! null is distinct from 0
 	AgencyID         tt.Key      `target:"agency.txt"`
 	TransferDuration tt.Int      `range:"0,"`
 	tt.BaseEntity

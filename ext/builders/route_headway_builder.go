@@ -85,11 +85,11 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 				continue
 			}
 			rkey := riKey{
-				ServiceID: v.ServiceID,
-				Direction: uint8(v.DirectionID),
+				ServiceID: v.ServiceID.Val,
+				Direction: uint8(v.DirectionID.Val),
 				StopID:    stopId,
 			}
-			if rd, ok := pp.routeDepartures[v.RouteID]; ok && st.DepartureTime.Valid {
+			if rd, ok := pp.routeDepartures[v.RouteID.Val]; ok && st.DepartureTime.Valid {
 				rd[rkey] = append(rd[rkey], st.DepartureTime.Int())
 			}
 		}
@@ -180,7 +180,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				}
 				// HeadwaySecs based on morning rush hour
 				if ws, ok := getStats(departures, 21600, 36000); ok && len(departures) >= 10 {
-					rh.HeadwaySecs = tt.NewInt(ws.mid)
+					rh.HeadwaySecs.SetInt(ws.mid)
 				}
 				if _, err := copier.CopyEntity(&rh); err != nil {
 					return err

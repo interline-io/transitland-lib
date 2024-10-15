@@ -20,7 +20,7 @@ func (ext *testCopierExpand) Expand(ent tt.Entity, emap *tt.EntityMap) ([]tt.Ent
 	}
 	for i := 0; i < 4; i++ {
 		c := *v
-		c.AgencyID = fmt.Sprintf("%s:%d", v.AgencyID, i)
+		c.AgencyID.Set(fmt.Sprintf("%s:%d", v.AgencyID.Val, i))
 		ret = append(ret, &c)
 	}
 	return ret, true, nil
@@ -29,12 +29,12 @@ func (ext *testCopierExpand) Expand(ent tt.Entity, emap *tt.EntityMap) ([]tt.Ent
 func TestCopier_Expand(t *testing.T) {
 	reader := direct.NewReader()
 	reader.AgencyList = append(reader.AgencyList, gtfs.Agency{
-		AgencyID:       "test",
-		AgencyName:     "ok",
-		AgencyPhone:    "555-123-4567",
-		AgencyEmail:    "test@example.com",
-		AgencyURL:      "http://example.com",
-		AgencyTimezone: "America/Los_Angeles",
+		AgencyID:       tt.NewString("test"),
+		AgencyName:     tt.NewString("ok"),
+		AgencyPhone:    tt.NewString("555-123-4567"),
+		AgencyEmail:    tt.NewEmail("test@example.com"),
+		AgencyURL:      tt.NewUrl("http://example.com"),
+		AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
 	})
 	writer := direct.NewWriter()
 	cp, err := NewCopier(reader, writer, Options{})
@@ -52,7 +52,7 @@ func TestCopier_Expand(t *testing.T) {
 	agencyIds := map[string]int{}
 	wreader, _ := writer.NewReader()
 	for ent := range wreader.Agencies() {
-		agencyIds[ent.AgencyID] += 1
+		agencyIds[ent.AgencyID.Val] += 1
 	}
 	assert.Equal(t, 4, len(agencyIds))
 	assert.Equal(t, 1, agencyIds["test:0"])

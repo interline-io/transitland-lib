@@ -27,7 +27,7 @@ func (ent *PlusRiderCategory) TableName() string {
 // UpdateKeys updates Entity references.
 func (ent *PlusRiderCategory) UpdateKeys(emap *tt.EntityMap) error {
 	if len(ent.AgencyID) > 0 {
-		if fkey, ok := emap.GetEntity(&gtfs.Agency{AgencyID: ent.AgencyID}); ok {
+		if fkey, ok := emap.GetEntity(&gtfs.Agency{AgencyID: tt.NewString(ent.AgencyID)}); ok {
 			ent.AgencyID = fkey
 		} else {
 			return causes.NewInvalidReferenceError("agency_id", ent.AgencyID)

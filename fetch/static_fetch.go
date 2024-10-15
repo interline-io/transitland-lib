@@ -14,7 +14,6 @@ import (
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tt"
 	"github.com/interline-io/transitland-lib/validator"
 )
 
@@ -64,7 +63,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		fv.Name = opts.Name
 		fv.Description = opts.Description
 		fv.File = fmt.Sprintf("%s.zip", fv.SHA1)
-		fv.Fragment = tt.NewString(fragment)
+		fv.Fragment.Set(fragment)
 		if !opts.HideURL {
 			fv.URL = opts.FeedURL
 		}
@@ -76,7 +75,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 			// Already present
 			fv = checkfvid
 			vr.Found = true
-			vr.FeedVersionID = tt.NewInt(fv.ID)
+			vr.FeedVersionID.SetInt(fv.ID)
 			return vr, nil
 		} else if err == sql.ErrNoRows {
 			// Not present, create below
@@ -90,7 +89,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		vr.UploadFilename = fv.File
 		if readerPath := reader.Path(); readerPath != fr.Filename {
 			// Set fragment to empty
-			fv.Fragment = tt.NewString("")
+			fv.Fragment.Set("")
 			// Copy file
 			tf2, err := os.CreateTemp("", "nested")
 			if err != nil {
@@ -111,7 +110,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 			// Fatal err
 			return vr, err
 		}
-		vr.FeedVersionID = tt.NewInt(fv.ID)
+		vr.FeedVersionID.SetInt(fv.ID)
 
 		// Update validation report
 		if opts.SaveValidationReport {

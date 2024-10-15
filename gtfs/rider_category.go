@@ -27,7 +27,7 @@ func (ent *RiderCategory) TableName() string {
 
 func (ent *RiderCategory) ConditionalErrors() (errs []error) {
 	if ent.MinAge.Valid && ent.MaxAge.Valid && ent.MaxAge.Val < ent.MinAge.Val {
-		errs = append(errs, causes.NewInvalidFieldError("max_age", tt.TryCsv(ent.MaxAge), fmt.Errorf("max_age is less than min_age")))
+		errs = append(errs, causes.NewInvalidFieldError("max_age", ent.MaxAge.String(), fmt.Errorf("max_age is less than min_age")))
 	}
 	return errs
 }

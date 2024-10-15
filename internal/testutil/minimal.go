@@ -12,24 +12,24 @@ import (
 func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 	r := &direct.Reader{
 		AgencyList: []gtfs.Agency{
-			{AgencyID: "agency1", AgencyName: "Agency 1", AgencyTimezone: "America/Los_Angeles", AgencyURL: "http://example.com"},
+			{AgencyID: tt.NewString("agency1"), AgencyName: tt.NewString("Agency 1"), AgencyTimezone: tt.NewTimezone("America/Los_Angeles"), AgencyURL: tt.NewUrl("http://example.com")},
 		},
 		RouteList: []gtfs.Route{
-			{RouteID: "route1", RouteShortName: "Route 1", RouteType: 1, AgencyID: "agency1"},
+			{RouteID: tt.NewString("route1"), RouteShortName: tt.NewString("Route 1"), RouteType: tt.NewInt(1), AgencyID: tt.NewKey("agency1")},
 		},
 		TripList: []gtfs.Trip{
-			{TripID: "trip1", RouteID: "route1", ServiceID: "service1"},
+			{TripID: tt.NewString("trip1"), RouteID: tt.NewKey("route1"), ServiceID: tt.NewKey("service1")},
 		},
 		StopList: []gtfs.Stop{
-			{StopID: "stop1", StopName: "Stop 1", Geometry: tt.NewPoint(1, 2)},
-			{StopID: "stop2", StopName: "Stop 2", Geometry: tt.NewPoint(3, 4)},
+			{StopID: tt.NewString("stop1"), StopName: tt.NewString("Stop 1"), Geometry: tt.NewPoint(1, 2)},
+			{StopID: tt.NewString("stop2"), StopName: tt.NewString("Stop 2"), Geometry: tt.NewPoint(3, 4)},
 		},
 		StopTimeList: []gtfs.StopTime{
 			{StopID: tt.NewString("stop1"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(1), ArrivalTime: tt.NewSeconds(0), DepartureTime: tt.NewSeconds(5)},
 			{StopID: tt.NewString("stop2"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(2), ArrivalTime: tt.NewSeconds(10), DepartureTime: tt.NewSeconds(15)},
 		},
 		ShapeList: []gtfs.Shape{
-			{ShapeID: "shape1", Geometry: tt.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
+			{ShapeID: tt.NewString("shape1"), Geometry: tt.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
 		},
 		CalendarList: []gtfs.Calendar{
 			{ServiceID: "service1", StartDate: time.Now(), EndDate: time.Now()},

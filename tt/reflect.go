@@ -41,7 +41,7 @@ func CheckWarnings(ent any) []error {
 
 type CanReflectCheck interface {
 	String() string
-	IsValid() bool
+	IsPresent() bool
 	Check() error
 }
 
@@ -70,11 +70,11 @@ func ReflectCheckErrors(ent any) []error {
 
 		// Check required and type based validation
 		if fieldCheck, ok := fieldAddr.(CanReflectCheck); ok {
-			if fieldInfo.Required && !fieldCheck.IsValid() {
+			if fieldInfo.Required && !fieldCheck.IsPresent() {
 				errs = append(errs, causes.NewRequiredFieldError(fieldName))
 			}
 			if err := fieldCheck.Check(); err != nil {
-				errs = append(errs, causes.NewInvalidFieldError(fieldName, fieldCheck.String(), err))
+				errs = append(errs, TrySetField(err, fieldName))
 			}
 		} else if fieldInfo.Required {
 			errs = append(errs, fmt.Errorf("type %T does not support reflect based error checks", fieldAddr))
@@ -84,7 +84,7 @@ func ReflectCheckErrors(ent any) []error {
 		if fieldInfo.RangeMin != nil || fieldInfo.RangeMax != nil {
 			if fieldCheck, ok := fieldAddr.(canReflectCheckFloat); !ok {
 				errs = append(errs, fmt.Errorf("could not convert %T to float for range check", fieldAddr))
-			} else if fieldCheck.IsValid() {
+			} else if fieldCheck.IsPresent() {
 				checkVal := fieldCheck.Float()
 				if fieldInfo.RangeMin != nil && checkVal < *fieldInfo.RangeMin {
 					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than %f", *fieldInfo.RangeMin))
@@ -101,7 +101,7 @@ func ReflectCheckErrors(ent any) []error {
 		if len(fieldInfo.EnumValues) > 0 {
 			if fieldCheck, ok := fieldAddr.(canReflectCheckInt); !ok {
 				errs = append(errs, fmt.Errorf("could not convert %T to int for enum check", fieldAddr))
-			} else if fieldCheck.IsValid() {
+			} else if fieldCheck.IsPresent() {
 				checkVal := int64(fieldCheck.Int())
 				found := false
 				for _, enumValue := range fieldInfo.EnumValues {

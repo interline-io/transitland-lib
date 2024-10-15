@@ -7,6 +7,11 @@ type Key struct {
 	Option[string]
 }
 
+func (r *Key) SetInt(v int) {
+	r.Val = strconv.Itoa(v)
+	r.Valid = true
+}
+
 func NewKey(v string) Key {
 	return Key{Option: NewOption(v)}
 }

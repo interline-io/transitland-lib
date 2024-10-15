@@ -40,6 +40,9 @@ type canFloat interface {
 
 // FromCSV sets the field from a CSV representation of the value.
 func FromCsv(val any, strv string) error {
+	// if strv == "" {
+	// 	return nil
+	// }
 	var p error
 	switch vf := val.(type) {
 	case *string:
@@ -67,12 +70,16 @@ func FromCsv(val any, strv string) error {
 		p = e
 		*vf = v
 	case canFromCsvString:
-		if err := vf.FromCsv(strv); err != nil {
-			p = errors.New("field not scannable")
+		if strv != "" {
+			if err := vf.FromCsv(strv); err != nil {
+				p = errors.New("field not scannable")
+			}
 		}
 	case canScan:
-		if err := vf.Scan(strv); err != nil {
-			p = errors.New("field not scannable")
+		if strv != "" {
+			if err := vf.Scan(strv); err != nil {
+				p = errors.New("field not scannable")
+			}
 		}
 	default:
 		p = errors.New("field not scannable")

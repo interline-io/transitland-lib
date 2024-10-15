@@ -6,7 +6,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlxy"
-	"github.com/interline-io/transitland-lib/tt"
 )
 
 func arePositionsSorted(a []float64) bool {
@@ -134,7 +133,7 @@ func (g *GeomCache) InterpolateStopTimes(trip gtfs.Trip) ([]gtfs.StopTime, error
 
 	// We need to assign valid ShapeDistTraveled Values
 	if !validDists {
-		if err := g.setStopTimeDists(trip.ShapeID.Val, trip.StopPatternID, sts); err != nil {
+		if err := g.setStopTimeDists(trip.ShapeID.Val, trip.StopPatternID.Val, sts); err != nil {
 			return sts, err
 		}
 	}
@@ -144,7 +143,7 @@ func (g *GeomCache) InterpolateStopTimes(trip gtfs.Trip) ([]gtfs.StopTime, error
 }
 
 // TODO: move to somewhere else
-func (g *GeomCache) setStopTimeDists(shapeId string, patternId int, sts []gtfs.StopTime) error {
+func (g *GeomCache) setStopTimeDists(shapeId string, patternId int64, sts []gtfs.StopTime) error {
 	// Check cache
 	length := 0.0
 	stopPositionsKey := fmt.Sprintf("%s-%d", shapeId, patternId)
@@ -187,7 +186,7 @@ func (g *GeomCache) setStopTimeDists(shapeId string, patternId int, sts []gtfs.S
 	}
 	// Set ShapeDistTraveled values
 	for i := 0; i < len(sts); i++ {
-		sts[i].ShapeDistTraveled = tt.NewFloat(stopPositions[i] * length)
+		sts[i].ShapeDistTraveled.Set(stopPositions[i] * length)
 	}
 	return nil
 }

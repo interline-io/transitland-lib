@@ -1,7 +1,6 @@
 package tt
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -14,7 +13,7 @@ type Language struct {
 
 func (r Language) Check() error {
 	if r.Valid && !IsValidLanguage(r.Val) {
-		return errors.New("invalid language")
+		return causes.NewInvalidFieldError("", r.Val, fmt.Errorf("invalid language"))
 	}
 	return nil
 }

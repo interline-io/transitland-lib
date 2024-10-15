@@ -91,8 +91,8 @@ func (writer *Writer) Delete() error {
 
 // AddEntity writes an entity to the database.
 func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
-	if v, ok := ent.(*gtfs.Route); ok && v.AgencyID == "" {
-		v.AgencyID = strconv.Itoa(writer.defaultAgencyID)
+	if v, ok := ent.(*gtfs.Route); ok && !v.AgencyID.Valid {
+		v.AgencyID.SetInt(writer.defaultAgencyID)
 	}
 	// Set the FeedVersionID
 	if z, ok := ent.(canSetFeedVersion); ok {
@@ -120,8 +120,8 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	ients := make([]interface{}, len(ents))
 	for i, ent := range ents {
 		// Routes may need a default AgencyID set before writing to database.
-		if v, ok := ent.(*gtfs.Route); ok && v.AgencyID == "" {
-			v.AgencyID = strconv.Itoa(writer.defaultAgencyID)
+		if v, ok := ent.(*gtfs.Route); ok && !v.AgencyID.Valid {
+			v.AgencyID.SetInt(writer.defaultAgencyID)
 		}
 		// Set FeedVersion, Timestamps
 		if v, ok := ent.(canSetFeedVersion); ok {

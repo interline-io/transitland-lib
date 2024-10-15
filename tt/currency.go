@@ -50,7 +50,7 @@ func NewCurrency(v string) Currency {
 
 func (r Currency) Check() error {
 	if r.Valid && !IsValidCurrency(r.Val) {
-		return errors.New("invalid currency")
+		return causes.NewInvalidFieldError("", r.Val, fmt.Errorf("invalid currency"))
 	}
 	return nil
 }

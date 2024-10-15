@@ -26,7 +26,7 @@ func (ent *Direction) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *Direction) UpdateKeys(emap *tt.EntityMap) error {
-	if routeID, ok := emap.GetEntity(&gtfs.Route{RouteID: ent.RouteID}); ok {
+	if routeID, ok := emap.GetEntity(&gtfs.Route{RouteID: tt.NewString(ent.RouteID)}); ok {
 		ent.RouteID = routeID
 	} else {
 		return causes.NewInvalidReferenceError("route_id", ent.RouteID)

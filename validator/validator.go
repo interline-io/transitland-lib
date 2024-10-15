@@ -246,7 +246,7 @@ func (v *Validator) Validate() (*Result, error) {
 	if v.Reader != nil {
 		stResult, err := v.ValidateStatic(v.Reader, evaluateAt, evaluateAtLocal)
 		if err != nil {
-			result.FailureReason = tt.NewString(err.Error())
+			result.FailureReason.Set(err.Error())
 			return result, err
 		}
 		result.Details = stResult.Details
@@ -263,7 +263,7 @@ func (v *Validator) Validate() (*Result, error) {
 	if len(v.Options.ValidateRealtimeMessages) > 0 {
 		rtResult, err := v.ValidateRTs(v.Options.ValidateRealtimeMessages, evaluateAt, evaluateAtLocal)
 		if err != nil {
-			result.FailureReason = tt.NewString(err.Error())
+			result.FailureReason.Set(err.Error())
 			return result, err
 		}
 		// Copy
@@ -278,7 +278,7 @@ func (v *Validator) Validate() (*Result, error) {
 	}
 
 	// Return
-	result.Success = tt.NewBool(true)
+	result.Success.Set(true)
 	return result, nil
 }
 
@@ -293,10 +293,10 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 
 	details := ResultDetails{}
 	if reader2, ok := reader.(*tlcsv.Reader); ok {
-		result.IncludesStatic = tt.NewBool(true)
+		result.IncludesStatic.Set(true)
 		fvfis, err := stats.NewFeedVersionFileInfosFromReader(reader2)
 		if err != nil {
-			result.FailureReason = tt.NewString(fmt.Sprintf("Could not read basic CSV data from file: %s", err.Error()))
+			result.FailureReason.Set(fmt.Sprintf("Could not read basic CSV data from file: %s", err.Error()))
 			return result, nil
 		}
 		details.Files = fvfis
@@ -304,7 +304,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 		if v.Options.CheckFileLimits {
 			for _, fvfi := range fvfis {
 				if maxRows, ok := defaultMaxFileRows[fvfi.Name]; ok && fvfi.Rows > maxRows {
-					result.FailureReason = tt.NewString(fmt.Sprintf(
+					result.FailureReason.Set(fmt.Sprintf(
 						"File '%s' exceeded maximum size; got %d rows, max allowed %d rows",
 						fvfi.Name,
 						fvfi.Rows,
@@ -319,14 +319,14 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	// get sha1 and service period; continue even if errors
 	fv, err := stats.NewFeedVersionFromReader(reader)
 	_ = err
-	details.SHA1 = tt.NewString(fv.SHA1)
+	details.SHA1.Set(fv.SHA1)
 	details.EarliestCalendarDate = fv.EarliestCalendarDate
 	details.LatestCalendarDate = fv.LatestCalendarDate
 
 	// Main validation
 	cpResult := copier.Copy()
 	if cpResult == nil {
-		result.FailureReason = tt.NewString("failed to validate feed")
+		result.FailureReason.Set("failed to validate feed")
 		return result, nil
 	}
 
@@ -334,7 +334,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	if v.Options.IncludeServiceLevels {
 		fvsls, err := stats.NewFeedVersionServiceLevelsFromReader(reader)
 		if err != nil {
-			result.FailureReason = tt.NewString(fmt.Sprintf("Could not calculate service levels: %s", err.Error()))
+			result.FailureReason.Set(fmt.Sprintf("Could not calculate service levels: %s", err.Error()))
 			return result, nil
 		}
 		for i, fvsl := range fvsls {
@@ -362,7 +362,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 		}
 		for ent := range reader.Routes() {
 			ent := ent
-			if s, ok := routeShapes[ent.RouteID]; ok {
+			if s, ok := routeShapes[ent.RouteID.Val]; ok {
 				g := tt.NewGeometry(s)
 				ent.Geometry = g
 			}
@@ -394,7 +394,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	}
 
 	// Return
-	result.Success = tt.NewBool(true)
+	result.Success.Set(true)
 	result.Details = details
 	return result, nil
 
@@ -403,7 +403,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 func (v *Validator) ValidateRTs(rtUrls []string, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
 	// Validate realtime
 	result := NewResult(evaluateAt, evaluateAtLocal)
-	result.IncludesRT = tt.NewBool(true)
+	result.IncludesRT.Set(true)
 	for _, fn := range rtUrls {
 		// Validate RT message
 		rtResult, err := v.ValidateRT(fn, evaluateAt, evaluateAtLocal)
@@ -582,7 +582,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 
 	// Save JSON
 	if reportStorage != "" {
-		result.File = tt.NewString(result.Key())
+		result.File.Set(result.Key())
 		store, err := request.GetStore(reportStorage)
 		if err != nil {
 			return err

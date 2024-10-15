@@ -46,8 +46,8 @@ func (e *StopTooFarCheck) Validate(ent tt.Entity) []error {
 	if spoint.Lon == 0 && spoint.Lat == 0 {
 		return nil // 0,0 handled elsewhere
 	}
-	e.geoms[v.StopID] = spoint
-	if v.ParentStation.Val == "" {
+	e.geoms[v.StopID.Val] = spoint
+	if !v.ParentStation.Valid {
 		return nil
 	}
 	// Check if parent stop is >1km
@@ -56,7 +56,7 @@ func (e *StopTooFarCheck) Validate(ent tt.Entity) []error {
 		d := tlxy.DistanceHaversine(spoint, pgeom)
 		if d > e.maxdist {
 			errs = append(errs, &StopTooFarError{
-				StopID:        v.StopID,
+				StopID:        v.StopID.Val,
 				ParentStation: v.ParentStation.Val,
 				Distance:      d,
 			})

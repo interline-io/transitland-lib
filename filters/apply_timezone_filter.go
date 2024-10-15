@@ -39,9 +39,9 @@ type ApplyTimezoneFilter struct {
 func (e *ApplyTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
-		v.AgencyTimezone = e.timezone
+		v.AgencyTimezone.Set(e.timezone)
 	case *gtfs.Stop:
-		v.StopTimezone = e.timezone
+		v.StopTimezone.Set(e.timezone)
 	}
 	return nil
 }

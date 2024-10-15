@@ -701,7 +701,7 @@ func (copier *Copier) copyLevels() error {
 func (copier *Copier) copyStops() error {
 	// First pass for stations
 	for ent := range copier.Reader.Stops() {
-		if ent.LocationType == 1 {
+		if ent.LocationType.Val == 1 {
 			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
@@ -710,7 +710,7 @@ func (copier *Copier) copyStops() error {
 	}
 	// Second pass for platforms, exits, and generic nodes
 	for ent := range copier.Reader.Stops() {
-		if ent.LocationType == 0 || ent.LocationType == 2 || ent.LocationType == 3 {
+		if ent.LocationType.Val == 0 || ent.LocationType.Val == 2 || ent.LocationType.Val == 3 {
 			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
@@ -719,7 +719,7 @@ func (copier *Copier) copyStops() error {
 	}
 	// Third pass for boarding areas
 	for ent := range copier.Reader.Stops() {
-		if ent.LocationType == 4 {
+		if ent.LocationType.Val == 4 {
 			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
@@ -1083,25 +1083,25 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Set StopPattern
 		patkey := stopPatternKey(trip.StopTimes)
 		if pat, ok := stopPatterns[patkey]; ok {
-			trip.StopPatternID = pat
+			trip.StopPatternID.SetInt(pat)
 		} else {
-			trip.StopPatternID = len(stopPatterns)
-			stopPatterns[patkey] = trip.StopPatternID
+			trip.StopPatternID.SetInt(len(stopPatterns))
+			stopPatterns[patkey] = trip.StopPatternID.Int()
 		}
 
 		// Create missing shape if necessary
 		if !trip.ShapeID.Valid && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
-			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID]; ok {
-				trip.ShapeID = tt.NewKey(shapeid)
+			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID.Int()]; ok {
+				trip.ShapeID.Set(shapeid)
 			} else {
-				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), trip.StopTimes); err != nil {
+				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
 					copier.sublogger.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
 					trip.AddWarning(err)
 				} else {
 					// Set ShapeID
-					stopPatternShapeIDs[trip.StopPatternID] = shapeid
-					trip.ShapeID = tt.NewKey(shapeid)
+					stopPatternShapeIDs[trip.StopPatternID.Int()] = shapeid
+					trip.ShapeID.Set(shapeid)
 				}
 			}
 		}
@@ -1118,20 +1118,20 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Set JourneyPattern
 		jkey := copier.JourneyPatternKey(&trip)
 		if jpat, ok := journeyPatterns[jkey]; ok {
-			trip.JourneyPatternID = jpat.key
-			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival
-			tripOffsets[trip.TripID] = trip.JourneyPatternOffset // do not write stop times for this trip
+			trip.JourneyPatternID.Set(jpat.key)
+			trip.JourneyPatternOffset.SetInt(trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival)
+			tripOffsets[trip.TripID.Val] = trip.JourneyPatternOffset.Int() // do not write stop times for this trip
 		} else {
-			trip.JourneyPatternID = trip.TripID
-			trip.JourneyPatternOffset = 0
-			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID}
+			trip.JourneyPatternID.Set(trip.TripID.Val)
+			trip.JourneyPatternOffset.Set(0)
+			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID.Val}
 		}
 
 		// Validate trip entity
 		if entErr, writeErr := copier.CopyEntity(&trip); writeErr != nil {
 			return writeErr
 		} else if entErr == nil {
-			if _, dedupOk := tripOffsets[trip.TripID]; dedupOk && copier.DeduplicateJourneyPatterns {
+			if _, dedupOk := tripOffsets[trip.TripID.Val]; dedupOk && copier.DeduplicateJourneyPatterns {
 				// log.Trace().Msgf("deduplicating: %s", trip.TripID)
 				// skip
 			} else {
@@ -1221,12 +1221,12 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 	}
 	shape := gtfs.Shape{}
 	shape.Generated = true
-	shape.ShapeID = shapeID
+	shape.ShapeID.Set(shapeID)
 	shape.Geometry = tt.NewLineStringFromFlatCoords(flatCoords)
 	if entErr, writeErr := copier.CopyEntity(&shape); writeErr != nil {
 		return "", writeErr
 	} else if entErr == nil {
 		copier.result.GeneratedCount["shapes.txt"]++
 	}
-	return shape.ShapeID, nil
+	return shape.ShapeID.Val, nil
 }

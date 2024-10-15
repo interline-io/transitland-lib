@@ -17,21 +17,21 @@ func (e *ApplyParentTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) er
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		if e.defaultAgencyTimezone == "" {
-			e.defaultAgencyTimezone = v.AgencyTimezone
+			e.defaultAgencyTimezone = v.AgencyTimezone.Val
 		}
 	case *gtfs.Stop:
-		if v.StopTimezone == "" {
+		if v.StopTimezone.Val == "" {
 			// Use default agency timezone, unless a parent station provided a timezone
-			v.StopTimezone = e.defaultAgencyTimezone
+			v.StopTimezone.Set(e.defaultAgencyTimezone)
 			if ptz, ok := e.parentStopTimezones[v.ParentStation.Val]; ok {
-				v.StopTimezone = ptz
+				v.StopTimezone.Set(ptz)
 			}
 		}
-		if v.LocationType == 1 {
+		if v.LocationType.Val == 1 {
 			if e.parentStopTimezones == nil {
 				e.parentStopTimezones = map[string]string{}
 			}
-			e.parentStopTimezones[v.StopID] = v.StopTimezone
+			e.parentStopTimezones[v.StopID.Val] = v.StopTimezone.Val
 		}
 	}
 	return nil

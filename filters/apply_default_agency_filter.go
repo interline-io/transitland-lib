@@ -16,12 +16,12 @@ func (e *ApplyDefaultAgencyFilter) Filter(ent tt.Entity, emap *tt.EntityMap) err
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		if e.defaultAgencyId == "" {
-			e.defaultAgencyId = v.AgencyID
+			e.defaultAgencyId = v.AgencyID.Val
 		}
 		e.agencyCount += 1
 	case *gtfs.Route:
-		if v.AgencyID == "" && e.agencyCount == 1 {
-			v.AgencyID = e.defaultAgencyId
+		if !v.AgencyID.Valid && e.agencyCount == 1 {
+			v.AgencyID.Set(e.defaultAgencyId)
 		}
 	}
 	return nil

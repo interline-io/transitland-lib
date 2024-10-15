@@ -36,7 +36,7 @@ func (e *ParentStationLocationTypeCheck) AfterWrite(eid string, ent tt.Entity, e
 		e.locationTypes = map[string]int{}
 	}
 	if stop, ok := ent.(*gtfs.Stop); ok {
-		e.locationTypes[eid] = stop.LocationType
+		e.locationTypes[eid] = stop.LocationType.Int()
 	}
 	return nil
 }
@@ -52,7 +52,7 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tt.Entity) []error {
 	}
 	// We need to compare as strings because EntityMap is map[string]string
 	var errs []error
-	stype := stop.LocationType
+	stype := stop.LocationType.Val
 	ptype, ok := e.locationTypes[stop.ParentStation.Val]
 	if !ok {
 		// parent station not found; this is checked during UpdateKeys
@@ -60,8 +60,8 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tt.Entity) []error {
 		// Boarding areas may only link to type = 0
 		if ptype != 0 {
 			errs = append(errs, &InvalidParentStationError{
-				StopID:            stop.StopID,
-				LocationType:      stop.LocationType,
+				StopID:            stop.StopID.Val,
+				LocationType:      stop.LocationType.Int(),
 				ParentStation:     stop.ParentStation.Val,
 				ParentStationType: ptype,
 			})
@@ -69,8 +69,8 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tt.Entity) []error {
 	} else if ptype != 1 {
 		// All other types must have station as parent
 		errs = append(errs, &InvalidParentStationError{
-			StopID:            stop.StopID,
-			LocationType:      stop.LocationType,
+			StopID:            stop.StopID.Val,
+			LocationType:      stop.LocationType.Int(),
 			ParentStation:     stop.ParentStation.Val,
 			ParentStationType: ptype,
 		})

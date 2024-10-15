@@ -8,7 +8,7 @@ import (
 type FareMedia struct {
 	FareMediaID   tt.String `csv:",required"`
 	FareMediaName tt.String `csv:",required"`
-	FareMediaType tt.Int    `enum:"0,1,2,3,4"`
+	FareMediaType tt.Int    `csv:",required" enum:"0,1,2,3,4"`
 	tt.BaseEntity
 }
 

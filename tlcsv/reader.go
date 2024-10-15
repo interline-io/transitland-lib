@@ -298,7 +298,7 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 				if grouped && sid != last && last != "" {
 					v := m[last]
 					sort.Slice(v, func(i, j int) bool {
-						return v[i].ShapePtSequence < v[j].ShapePtSequence
+						return v[i].ShapePtSequence.Val < v[j].ShapePtSequence.Val
 					})
 					out <- v
 					delete(m, last)
@@ -307,7 +307,7 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 			})
 			for _, v := range m {
 				sort.Slice(v, func(i, j int) bool {
-					return v[i].ShapePtSequence < v[j].ShapePtSequence
+					return v[i].ShapePtSequence.Val < v[j].ShapePtSequence.Val
 				})
 				out <- v
 			}
@@ -328,7 +328,7 @@ func (reader *Reader) Stops() (out chan gtfs.Stop) {
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := gtfs.Stop{}
 			loadRow(&e, row)
-			e.SetCoordinates([2]float64{e.StopLon, e.StopLat})
+			e.SetCoordinates([2]float64{e.StopLon.Val, e.StopLat.Val})
 			out <- e
 		})
 		close(out)
@@ -485,7 +485,7 @@ func NewShapeFromShapes(shapes []gtfs.Shape) gtfs.Shape {
 	ent := gtfs.Shape{}
 	coords := []float64{}
 	sort.Slice(shapes, func(i, j int) bool {
-		return shapes[i].ShapePtSequence < shapes[j].ShapePtSequence
+		return shapes[i].ShapePtSequence.Val < shapes[j].ShapePtSequence.Val
 	})
 	// Get sequence errors
 	if errs := ValidateShapes(shapes); len(errs) > 0 {
@@ -496,7 +496,7 @@ func NewShapeFromShapes(shapes []gtfs.Shape) gtfs.Shape {
 	// expectError is just for validation tests.
 	// Add to coords, add base errors
 	for _, shape := range shapes {
-		coords = append(coords, shape.ShapePtLon, shape.ShapePtLat, shape.ShapeDistTraveled)
+		coords = append(coords, shape.ShapePtLon.Val, shape.ShapePtLat.Val, shape.ShapeDistTraveled.Val)
 		for _, err := range shape.LoadErrors() {
 			ent.AddError(err)
 		}
@@ -519,14 +519,14 @@ func ValidateShapes(shapes []gtfs.Shape) []error {
 	dist := -1.0
 	for _, shape := range shapes {
 		// Check for duplicate ID errors
-		if shape.ShapePtSequence == last {
+		if shape.ShapePtSequence.Int() == last {
 			errs = append(errs, causes.NewSequenceError("shape_pt_sequence", tt.TryCsv(last)))
 		}
-		last = shape.ShapePtSequence
-		if shape.ShapeDistTraveled < dist {
+		last = shape.ShapePtSequence.Int()
+		if shape.ShapeDistTraveled.Val < dist {
 			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", tt.TryCsv(shape.ShapeDistTraveled)))
-		} else if shape.ShapeDistTraveled > 0 {
-			dist = shape.ShapeDistTraveled
+		} else if shape.ShapeDistTraveled.Val > 0 {
+			dist = shape.ShapeDistTraveled.Val
 		}
 	}
 	return errs

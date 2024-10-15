@@ -18,13 +18,13 @@ func (e *AgencyIDRecommendedCheck) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
 	case *gtfs.Route:
 		// If there is EXACTLY ONE agency, then the field can be omitted but with a warning.
-		if v.AgencyID == "" && e.agencyCount == 1 {
+		if v.AgencyID.Val == "" && e.agencyCount == 1 {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
 	case *gtfs.Agency:
 		// Missing agency.agency_id always gets a warning.
 		e.agencyCount++
-		if v.AgencyID == "" {
+		if !v.AgencyID.Valid {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
 	}

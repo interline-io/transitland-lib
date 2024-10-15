@@ -58,25 +58,25 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Stop:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.StopID = fmt.Sprintf("%s%s", prefix, v.StopID)
-			if v.ZoneID != "" {
-				v.ZoneID = fmt.Sprintf("%s%s", prefix, v.ZoneID)
+			v.StopID.Set(fmt.Sprintf("%s%s", prefix, v.StopID.Val))
+			if v.ZoneID.Valid {
+				v.ZoneID.Set(fmt.Sprintf("%s%s", prefix, v.ZoneID.Val))
 			}
 		}
 	case *gtfs.Agency:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.AgencyID = fmt.Sprintf("%s%s", prefix, v.AgencyID)
+			v.AgencyID.Set(fmt.Sprintf("%s%s", prefix, v.AgencyID.Val))
 		}
 	case *gtfs.Trip:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.TripID = fmt.Sprintf("%s%s", prefix, v.TripID)
-			if v.BlockID != "" {
-				v.BlockID = fmt.Sprintf("%s%s", prefix, v.BlockID)
+			v.TripID.Set(fmt.Sprintf("%s%s", prefix, v.TripID.Val))
+			if v.BlockID.Valid {
+				v.BlockID.Set(fmt.Sprintf("%s%s", prefix, v.BlockID.Val))
 			}
 		}
 	case *gtfs.Route:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.RouteID = fmt.Sprintf("%s%s", prefix, v.RouteID)
+			v.RouteID.Set(fmt.Sprintf("%s%s", prefix, v.RouteID.Val))
 		}
 	case *service.Service:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
@@ -88,7 +88,7 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		}
 	case *gtfs.Shape:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.ShapeID = fmt.Sprintf("%s%s", prefix, v.ShapeID)
+			v.ShapeID.Set(fmt.Sprintf("%s%s", prefix, v.ShapeID.Val))
 		}
 	case *gtfs.FareAttribute:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {

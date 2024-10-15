@@ -74,25 +74,25 @@ func NewOnestopIDBuilder() *OnestopIDBuilder {
 func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
-		pp.agencyNames[eid] = v.AgencyName
+		pp.agencyNames[eid] = v.AgencyName.Val
 	case *gtfs.Stop:
 		pp.stops[eid] = &stopGeom{
-			name: v.StopName,
+			name: v.StopName.Val,
 			lon:  v.Geometry.X(),
 			lat:  v.Geometry.Y(),
 		}
 	case *gtfs.Route:
-		name := v.RouteShortName
+		name := v.RouteShortName.Val
 		if name == "" {
-			name = v.RouteLongName
+			name = v.RouteLongName.Val
 		}
 		pp.routeStopGeoms[eid] = &routeStopGeoms{
 			name:      name,
-			agency:    v.AgencyID,
+			agency:    v.AgencyID.Val,
 			stopGeoms: map[string]*stopGeom{},
 		}
 	case *gtfs.Trip:
-		pp.tripRoutes[eid] = v.RouteID
+		pp.tripRoutes[eid] = v.RouteID.Val
 	case *gtfs.StopTime:
 		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
 		if !ok {

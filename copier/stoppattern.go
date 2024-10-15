@@ -22,15 +22,15 @@ func journeyPatternKey(trip *gtfs.Trip) string {
 	b := trip.StopTimes[0].DepartureTime
 	m.Write([]byte(fmt.Sprintf(
 		"%s-%s-%s-%s-%s-%d-%d-%d-%s",
-		trip.RouteID,
-		trip.ServiceID,
-		trip.TripHeadsign,
-		trip.TripShortName,
+		trip.RouteID.Val,
+		trip.ServiceID.Val,
+		trip.TripHeadsign.Val,
+		trip.TripShortName.Val,
 		trip.ShapeID.Val,
-		trip.DirectionID,
-		trip.WheelchairAccessible,
-		trip.BikesAllowed,
-		trip.BlockID,
+		trip.DirectionID.Val,
+		trip.WheelchairAccessible.Val,
+		trip.BikesAllowed.Val,
+		trip.BlockID.Val,
 	)))
 	for i := 0; i < len(trip.StopTimes); i++ {
 		st := trip.StopTimes[i]
@@ -38,7 +38,7 @@ func journeyPatternKey(trip *gtfs.Trip) string {
 			"%d-%d-%s-%s-%d-%d-%d",
 			st.ArrivalTime.Val-a.Val,
 			st.DepartureTime.Val-b.Val,
-			st.StopID,
+			st.StopID.Val,
 			st.StopHeadsign.Val,
 			st.PickupType.Val,
 			st.DropOffType.Val,

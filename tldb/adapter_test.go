@@ -43,7 +43,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		v := "Test Update"
 		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		ent.TripHeadsign = v
+		ent.TripHeadsign.Set(v)
 		err = adapter.Update(&ent, "trip_headsign")
 		if err != nil {
 			t.Error(err)
@@ -53,8 +53,8 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
 		}
-		if ent2.TripHeadsign != v {
-			t.Errorf("got %s expected %s", ent2.TripHeadsign, v)
+		if ent2.TripHeadsign.Val != v {
+			t.Errorf("got %s expected %s", ent2.TripHeadsign.Val, v)
 		}
 	})
 	t.Run("Get", func(t *testing.T) {
@@ -148,7 +148,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		v := "Test Tx"
 		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		ent.TripHeadsign = v
+		ent.TripHeadsign.Set(v)
 		adapter.Tx(func(atx Adapter) error {
 			err := atx.Update(&ent, "trip_headsign")
 			if err != nil {
@@ -161,7 +161,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
 		}
-		if ent2.TripHeadsign != v {
+		if ent2.TripHeadsign.Val != v {
 			t.Errorf("got %s expected %s", ent2.TripHeadsign, v)
 		}
 	})
@@ -170,7 +170,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		v := "Test Rollback"
 		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		ent.TripHeadsign = v
+		ent.TripHeadsign.Set(v)
 		adapter.Tx(func(atx Adapter) error {
 			err := atx.Update(&ent, "trip_headsign")
 			if err != nil {
@@ -183,7 +183,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
 		}
-		if ent2.TripHeadsign == v {
+		if ent2.TripHeadsign.Val == v {
 			t.Errorf("got %s expected != %s", ent2.TripHeadsign, v)
 		}
 	})
@@ -231,15 +231,19 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	}
 	//
 	ent0 := gtfs.Agency{}
-	ent0.AgencyID = "ok"
+	ent0.AgencyID.Set("ok")
+	ent0.AgencyName.Set("ok")
+	ent0.AgencyURL.Set("https://example.com")
+	ent0.AgencyTimezone.Set("America/Los_Angeles")
 	ent0.FeedVersionID = m.FeedVersionID
 	m.AgencyID, err = adapter.Insert(&ent0)
 	if err != nil {
 		return m, err
 	}
 	ent4 := gtfs.Route{}
-	ent4.RouteID = "ok"
-	ent4.AgencyID = strconv.Itoa(m.AgencyID)
+	ent4.RouteID.Set("ok")
+	ent4.RouteType.Set(0)
+	ent4.AgencyID.Set(strconv.Itoa(m.AgencyID))
 	ent4.FeedVersionID = m.FeedVersionID
 	m.RouteID, err = adapter.Insert(&ent4)
 	if err != nil {
@@ -255,26 +259,32 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 		return m, err
 	}
 	ent1 := gtfs.Trip{}
-	ent1.TripID = "ok"
-	ent1.RouteID = strconv.Itoa(m.RouteID)
-	ent1.ServiceID = strconv.Itoa(m.ServiceID)
+	ent1.TripID.Set("ok")
+	ent1.RouteID.Set(strconv.Itoa(m.RouteID))
+	ent1.ServiceID.Set(strconv.Itoa(m.ServiceID))
+	ent1.DirectionID.Set(0)
+	ent1.StopPatternID.Set(0)
+	ent1.JourneyPatternID.Set("")
+	ent1.JourneyPatternOffset.Set(0)
 	ent1.FeedVersionID = m.FeedVersionID
 	m.TripID, err = adapter.Insert(&ent1)
 	if err != nil {
 		return m, err
 	}
 	ent2 := gtfs.Stop{}
-	ent2.StopID = "bar"
+	ent2.StopID.Set("bar")
 	ent2.SetCoordinates([2]float64{-123.0, 42.0})
 	ent2.FeedVersionID = m.FeedVersionID
+	ent2.LocationType.Set(0)
 	m.StopID1, err = adapter.Insert(&ent2)
 	if err != nil {
 		return m, err
 	}
 	ent3 := gtfs.Stop{}
-	ent3.StopID = "foo"
+	ent3.StopID.Set("foo")
 	ent3.SetCoordinates([2]float64{-122.0, 43.0})
 	ent3.FeedVersionID = m.FeedVersionID
+	ent3.LocationType.Set(0)
 	m.StopID2, err = adapter.Insert(&ent3)
 	if err != nil {
 		return m, err

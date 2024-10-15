@@ -47,7 +47,7 @@ func (e *StopTooCloseCheck) Validate(ent tt.Entity) []error {
 	}
 	v, ok := ent.(*gtfs.Stop)
 	// This only checks location_type == 0 and no parent
-	if !ok || v.ParentStation.Val != "" || v.LocationType != 0 || !v.Geometry.Valid {
+	if !ok || v.ParentStation.Valid || v.LocationType.Val > 0 || !v.Geometry.Valid {
 		return nil
 	}
 	// Use geohash for fast neighbor search; precision = 9 is approx 5m x 5m at the equator.
@@ -60,7 +60,7 @@ func (e *StopTooCloseCheck) Validate(ent tt.Entity) []error {
 	neighbors := geohash.Neighbors(gh)
 	neighbors = append(neighbors, gh)
 	g := stopPoint{
-		id: v.StopID,
+		id: v.StopID.Val,
 		pt: spt,
 	}
 	for _, neighbor := range neighbors {
@@ -69,7 +69,7 @@ func (e *StopTooCloseCheck) Validate(ent tt.Entity) []error {
 				d := tlxy.DistanceHaversine(g.pt, hit.pt)
 				if d < e.maxdist {
 					errs = append(errs, &StopTooCloseError{
-						StopID:      v.StopID,
+						StopID:      v.StopID.Val,
 						OtherStopID: hit.id,
 						Distance:    d,
 					})
