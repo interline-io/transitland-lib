@@ -40,6 +40,17 @@ func (r *CurrencyAmount) SetCurrency(value string) error {
 	return nil
 }
 
+type Currency struct {
+	Option[string]
+}
+
+func (r Currency) Check() error {
+	if r.Valid && !IsValidCurrency(r.Val) {
+		return errors.New("invalid currency")
+	}
+	return nil
+}
+
 // CheckCurrency returns an error if the value is not a known currency
 func CheckCurrency(field string, value string) (errs []error) {
 	if !IsValidCurrency(value) {

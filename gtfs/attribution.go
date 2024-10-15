@@ -30,7 +30,6 @@ func (ent *Attribution) TableName() string {
 
 // Errors for this Entity.
 func (ent *Attribution) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("organization_name", ent.OrganizationName.Val)...)
 	errs = append(errs, tt.CheckURL("attribution_url", ent.AttributionURL.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("is_producer", ent.IsProducer.Val, 0, 1)...)

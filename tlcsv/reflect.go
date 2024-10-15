@@ -156,7 +156,7 @@ func loadRowReflect(ent interface{}, row Row) []error {
 		}
 	}
 	if len(errs) > 0 {
-		if extEnt, ok := ent.(tt.EntityWithErrors); ok {
+		if extEnt, ok := ent.(tt.EntityWithLoadErrors); ok {
 			for _, err := range errs {
 				extEnt.AddError(err)
 			}

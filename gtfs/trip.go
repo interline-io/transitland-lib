@@ -36,7 +36,6 @@ func (ent *Trip) EntityKey() string {
 
 // Errors for this Entity.
 func (ent *Trip) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("route_id", ent.RouteID)...)
 	errs = append(errs, tt.CheckPresent("service_id", ent.ServiceID)...)
 	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID)...)

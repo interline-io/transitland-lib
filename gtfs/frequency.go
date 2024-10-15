@@ -31,7 +31,6 @@ func (ent *Frequency) RepeatCount() int {
 
 // Errors for this Entity.
 func (ent *Frequency) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	if !ent.StartTime.Valid {
 		errs = append(errs, causes.NewRequiredFieldError("start_time"))
 	}

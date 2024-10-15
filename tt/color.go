@@ -11,6 +11,13 @@ type Color struct {
 	Option[string]
 }
 
+func (t Color) Check() error {
+	if t.Valid && !IsValidColor(t.Val) {
+		return fmt.Errorf("invalid color")
+	}
+	return nil
+}
+
 // CheckColor returns an error if the value is not a valid hex color
 func CheckColor(field string, value string) (errs []error) {
 	if !IsValidColor(value) {

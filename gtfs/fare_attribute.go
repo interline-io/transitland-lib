@@ -29,7 +29,6 @@ func (ent *FareAttribute) EntityKey() string {
 
 // Errors for this Entity.
 func (ent *FareAttribute) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID.Val)...)
 	errs = append(errs, tt.CheckPresent("currency_type", ent.CurrencyType.Val)...)
 

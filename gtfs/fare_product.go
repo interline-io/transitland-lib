@@ -54,7 +54,6 @@ func (ent *FareProduct) TableName() string {
 }
 
 func (ent *FareProduct) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("fare_product_id", ent.FareProductID.Val)...)
 
 	// amount

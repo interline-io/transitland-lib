@@ -497,6 +497,9 @@ func NewShapeFromShapes(shapes []gtfs.Shape) gtfs.Shape {
 	// Add to coords, add base errors
 	for _, shape := range shapes {
 		coords = append(coords, shape.ShapePtLon, shape.ShapePtLat, shape.ShapeDistTraveled)
+		for _, err := range shape.LoadErrors() {
+			ent.AddError(err)
+		}
 		for _, err := range shape.Errors() {
 			ent.AddError(err)
 		}

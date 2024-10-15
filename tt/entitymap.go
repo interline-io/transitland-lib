@@ -1,9 +1,6 @@
 package tt
 
 import (
-	"fmt"
-	"reflect"
-
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/jmoiron/sqlx/reflectx"
@@ -26,31 +23,6 @@ func NewEntityMap() *EntityMap {
 type canSet interface {
 	String() string
 	Set(string)
-}
-
-func (emap *EntityMap) ReflectUpdateKeys(ent Entity) error {
-	fields := entityMapperCache.GetStructTagMap(ent)
-	for fieldName, fieldInfo := range fields {
-		if fieldInfo.Target == "" {
-			continue
-		}
-		elem := reflect.ValueOf(ent).Elem()
-		fieldValue := reflectx.FieldByIndexes(elem, fieldInfo.Index).Addr().Interface()
-		fieldSet, ok := fieldValue.(canSet)
-		if !ok {
-			return fmt.Errorf("EntityMap ReflectUpdate cannot be used on field '%s', does not support Set()", fieldName)
-		}
-		eid := fieldSet.String()
-		if eid == "" {
-			continue
-		}
-		newId, ok := emap.Get(fieldInfo.Target, eid)
-		if !ok {
-			return TrySetField(causes.NewInvalidReferenceError(fieldName, eid), fieldName)
-		}
-		fieldSet.Set(newId)
-	}
-	return nil
 }
 
 func (emap *EntityMap) UpdateKey(v canSet, efn string) error {

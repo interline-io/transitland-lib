@@ -36,7 +36,6 @@ func (ent *Calendar) EntityKey() string {
 
 // Errors for this Entity.
 func (ent *Calendar) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("service_id", ent.ServiceID)...)
 	errs = append(errs, tt.CheckInsideRangeInt("monday", ent.Monday, 0, 1)...)
 	errs = append(errs, tt.CheckInsideRangeInt("tuesday", ent.Tuesday, 0, 1)...)

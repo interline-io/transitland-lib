@@ -11,6 +11,13 @@ type Email struct {
 	Option[string]
 }
 
+func (r Email) Check() error {
+	if r.Valid && !IsValidEmail(r.Val) {
+		return fmt.Errorf("invalid email")
+	}
+	return nil
+}
+
 // CheckEmail returns an error if the value is not a reasonably valid email address
 func CheckEmail(field string, value string) (errs []error) {
 	if !IsValidEmail(value) {

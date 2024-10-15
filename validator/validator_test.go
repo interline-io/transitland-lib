@@ -48,11 +48,8 @@ func (cr *testErrorHandler) HandleEntityErrors(ent tt.Entity, errs []error, warn
 
 func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	var errs []error
-	if extEnt, ok := ent.(tt.EntityWithErrors); ok {
-		errs = append(errs, extEnt.Errors()...)
-		errs = append(errs, extEnt.Warnings()...)
-
-	}
+	errs = append(errs, tt.CheckErrors(ent)...)
+	errs = append(errs, tt.CheckWarnings(ent)...)
 	expecterrs := testutil.GetExpectErrors(ent)
 	cr.expectErrorCount += len(expecterrs)
 	testutil.CheckErrors(expecterrs, errs, cr.t)

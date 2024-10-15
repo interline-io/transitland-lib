@@ -25,11 +25,23 @@ type EntityWithExtra interface {
 	ExtraKeys() []string
 }
 
-type EntityWithErrors interface {
-	Errors() []error
-	Warnings() []error
+type EntityWithLoadErrors interface {
+	LoadErrors() []error
+	LoadWarnings() []error
 	AddError(error)
 	AddWarning(error)
+}
+
+type EntityWithErrors interface {
+	Errors() []error
+}
+
+type EntityWithWarnings interface {
+	Warnings() []error
+}
+
+type EntityWithConditionalErrors interface {
+	ConditionalErrors() []error
 }
 
 /////////
@@ -96,10 +108,19 @@ func (ent *ExtraEntity) ClearExtra() {
 	ent.extra = nil
 }
 
-// ///////
+/////////////
+
 type ErrorEntity struct {
 	loadErrors   []error
 	loadWarnings []error
+}
+
+func (ent *ErrorEntity) LoadErrors() []error {
+	return ent.loadErrors
+}
+
+func (ent *ErrorEntity) LoadWarnings() []error {
+	return ent.loadWarnings
 }
 
 // AddError adds a loading error to the entity, e.g. from a CSV parse failure
@@ -111,12 +132,6 @@ func (ent *ErrorEntity) AddError(err error) {
 func (ent *ErrorEntity) AddWarning(err error) {
 	ent.loadWarnings = append(ent.loadWarnings, err)
 }
-
-// Errors returns validation errors.
-func (ent *ErrorEntity) Errors() []error { return ent.loadErrors }
-
-// Errors returns validation errors.
-func (ent *ErrorEntity) Warnings() []error { return ent.loadWarnings }
 
 /////////////
 

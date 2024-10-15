@@ -14,9 +14,8 @@ type FareRule struct {
 	tt.BaseEntity
 }
 
-// Errors for this Entity.
+// // Errors for this Entity.
 func (ent *FareRule) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID.Val)...)
 	return errs
 }

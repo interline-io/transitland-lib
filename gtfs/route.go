@@ -37,7 +37,6 @@ func (ent *Route) EntityKey() string {
 
 // Errors for this Entity.
 func (ent *Route) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("route_id", ent.RouteID)...)
 	errs = append(errs, tt.CheckURL("route_url", ent.RouteURL)...)
 	errs = append(errs, tt.CheckColor("route_color", ent.RouteColor)...)

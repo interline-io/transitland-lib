@@ -68,7 +68,6 @@ func (ent *Stop) Errors() (errs []error) {
 	c := ent.Coordinates()
 	lat := c[1]
 	lon := c[0]
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
 	errs = append(errs, tt.CheckInsideRange("stop_lat", lat, -90.0, 90.0)...)
 	errs = append(errs, tt.CheckInsideRange("stop_lon", lon, -180.0, 180.0)...)

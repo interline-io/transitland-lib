@@ -33,7 +33,6 @@ type StopTime struct {
 func (ent *StopTime) Errors() []error {
 	// No reflection
 	errs := []error{}
-	errs = append(errs, ent.ErrorEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID.Val)...)
 	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
 	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence.Val)...)

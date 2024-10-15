@@ -27,7 +27,6 @@ func (ent *Translation) TableName() string {
 
 // Errors for this Entity.
 func (ent *Translation) Errors() (errs []error) {
-	errs = append(errs, ent.BaseEntity.Errors()...)
 	errs = append(errs, tt.CheckPresent("table_name", ent.TableNameValue.Val)...)
 	errs = append(errs, tt.CheckPresent("field_name", ent.FieldName.Val)...)
 	errs = append(errs, tt.CheckPresent("language", ent.Language.Val)...)
