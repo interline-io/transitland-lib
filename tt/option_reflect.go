@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/jmoiron/sqlx/reflectx"
@@ -132,7 +133,8 @@ func ReflectCheckErrors(ent any) []error {
 	return errs
 }
 
-func ReflectUpdateKeys(emap *EntityMap, ent any) error {
+func ReflectUpdateKeys(emap *EntityMap, ent any) []error {
+	var errs []error
 	fields := entityMapperCache.GetStructTagMap(ent)
 	for fieldName, fieldInfo := range fields {
 		if fieldInfo.Target == "" {
@@ -142,7 +144,8 @@ func ReflectUpdateKeys(emap *EntityMap, ent any) error {
 		fieldValue := reflectx.FieldByIndexes(elem, fieldInfo.Index).Addr().Interface()
 		fieldSet, ok := fieldValue.(canSet)
 		if !ok {
-			return fmt.Errorf("EntityMap ReflectUpdate cannot be used on field '%s', does not support Set()", fieldName)
+			log.Error().Msgf("EntityMap ReflectUpdate cannot be used on field '%s', does not support Set()", fieldName)
+			continue
 		}
 		eid := fieldSet.String()
 		if eid == "" {
@@ -150,9 +153,9 @@ func ReflectUpdateKeys(emap *EntityMap, ent any) error {
 		}
 		newId, ok := emap.Get(fieldInfo.Target, eid)
 		if !ok {
-			return TrySetField(causes.NewInvalidReferenceError(fieldName, eid), fieldName)
+			errs = append(errs, TrySetField(causes.NewInvalidReferenceError(fieldName, eid), fieldName))
 		}
 		fieldSet.Set(newId)
 	}
-	return nil
+	return errs
 }
