@@ -1,6 +1,7 @@
 package tt
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -12,12 +13,31 @@ import (
 var mapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
 
 type CanCheck interface {
-	Check() error
-	IsValid() bool
-	IsZero() bool
 	String() string
-	Float() float64
-	Int() int
+	IsValid() bool
+	Check() error
+}
+
+func getString(v any) string {
+	type canString interface {
+		String() string
+	}
+
+	if a, ok := v.(canString); ok {
+		return a.String()
+	}
+
+	return ""
+}
+
+func getFloat(v any) string {
+	type canString interface {
+		String() string
+	}
+	if a, ok := v.(canString); ok {
+		return a.String()
+	}
+	return ""
 }
 
 func CheckErrors(ent any) []error {
@@ -65,16 +85,44 @@ func ReflectCheckErrors(ent any) []error {
 			}
 			continue
 		}
-		if err := fieldCheck.Check(); err != nil {
-			errs = append(errs, causes.NewInvalidFieldError(fieldName, fieldCheck.String(), err))
-			continue
-		}
 		if fieldInfo.Required && !fieldCheck.IsValid() {
 			errs = append(errs, causes.NewRequiredFieldError(fieldName))
 			continue
 		}
-		if fieldInfo.RangeMin != nil {
-
+		if err := fieldCheck.Check(); err != nil {
+			errs = append(errs, causes.NewInvalidFieldError(fieldName, fieldCheck.String(), err))
+		}
+		if fieldInfo.RangeMin != nil || fieldInfo.RangeMax != nil {
+			a, ok := fieldAddr.(canFloat)
+			if !ok {
+				errs = append(errs, errors.New("could not convert to float for range check"))
+			}
+			checkVal := a.Float()
+			if fieldInfo.RangeMin != nil && checkVal < *fieldInfo.RangeMin {
+				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than %f", *fieldInfo.RangeMin))
+				errs = append(errs, checkErr)
+			}
+			if fieldInfo.RangeMax != nil && checkVal > *fieldInfo.RangeMax {
+				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than %f", *fieldInfo.RangeMax))
+				errs = append(errs, checkErr)
+			}
+		}
+		if len(fieldInfo.EnumValues) > 0 {
+			a, ok := fieldAddr.(canInt)
+			if !ok {
+				errs = append(errs, errors.New("could not convert to int for enum check"))
+			}
+			checkVal := int64(a.Int())
+			found := false
+			for _, enumValue := range fieldInfo.EnumValues {
+				if checkVal == enumValue {
+					found = true
+				}
+			}
+			if !found {
+				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("not in allowed values"))
+				errs = append(errs, checkErr)
+			}
 		}
 	}
 	return errs

@@ -30,6 +30,14 @@ type canScan interface {
 	Scan(src interface{}) error
 }
 
+type canInt interface {
+	Int() int
+}
+
+type canFloat interface {
+	Float() float64
+}
+
 // FromCSV sets the field from a CSV representation of the value.
 func FromCsv(val any, strv string) error {
 	var p error
@@ -159,6 +167,8 @@ func convertAssign(dest any, src any) error {
 			*d = fmt.Sprintf("%0.5f", s)
 		case time.Time:
 			*d = s.Format(time.RFC3339)
+		case canString:
+			*d = s.String()
 		default:
 			err = cannotConvert(dest, src)
 		}
@@ -174,6 +184,8 @@ func convertAssign(dest any, src any) error {
 			*d = int(s)
 		case float64:
 			*d = int(s)
+		case canInt:
+			*d = s.Int()
 		default:
 			err = cannotConvert(dest, src)
 		}
@@ -189,6 +201,8 @@ func convertAssign(dest any, src any) error {
 			*d = int64(s)
 		case float64:
 			*d = int64(s)
+		case canInt:
+			*d = int64(s.Int())
 		default:
 			err = cannotConvert(dest, src)
 		}
@@ -204,6 +218,8 @@ func convertAssign(dest any, src any) error {
 			*d = float64(s)
 		case float64:
 			*d = float64(s)
+		case canFloat:
+			*d = s.Float()
 		default:
 			err = cannotConvert(dest, src)
 		}
@@ -259,7 +275,7 @@ func convertAssign(dest any, src any) error {
 }
 
 func cannotConvert(dest any, src any) error {
-	return fmt.Errorf("could not convert type '%T' into '%T'", src, dest)
+	return fmt.Errorf("could not convert type %T into %T", src, dest)
 }
 
 func parseTime(d string) (time.Time, error) {

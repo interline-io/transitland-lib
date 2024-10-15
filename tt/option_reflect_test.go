@@ -20,7 +20,7 @@ type ReflectCheckErrorsEntity struct {
 func TestReflectCheckErrors(t *testing.T) {
 	ent := ReflectCheckErrorsEntity{
 		Name:         NewString("ok"),
-		LocationType: NewInt(2),
+		LocationType: NewInt(123),
 		Timezone:     Timezone{Option: NewOption("asd")},
 		AgencyURL:    Url{Option: NewOption("xyz")},
 	}
