@@ -29,9 +29,19 @@ type StopTime struct {
 	tt.FeedVersionEntity
 }
 
+// Filename stop_times.txt
+func (ent *StopTime) Filename() string {
+	return "stop_times.txt"
+}
+
+// TableName gtfs_stop_times
+func (ent *StopTime) TableName() string {
+	return "gtfs_stop_times"
+}
+
 // Errors for this Entity.
 func (ent *StopTime) Errors() []error {
-	// No reflection
+	// Don't use reflection based path
 	errs := []error{}
 	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID.Val)...)
 	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
@@ -52,18 +62,9 @@ func (ent *StopTime) Errors() []error {
 	return errs
 }
 
-// Filename stop_times.txt
-func (ent *StopTime) Filename() string {
-	return "stop_times.txt"
-}
-
-// TableName gtfs_stop_times
-func (ent *StopTime) TableName() string {
-	return "gtfs_stop_times"
-}
-
 // UpdateKeys updates Entity references.
 func (ent *StopTime) UpdateKeys(emap *EntityMap) error {
+	// Don't use reflection based path
 	return tt.FirstError(
 		tt.TrySetField(emap.UpdateKey(&ent.TripID, "trips.txt"), "trip_id"),
 		tt.TrySetField(emap.UpdateKey(&ent.StopID, "stops.txt"), "stop_id"),
@@ -72,6 +73,7 @@ func (ent *StopTime) UpdateKeys(emap *EntityMap) error {
 
 // GetString returns the string representation of an field.
 func (ent *StopTime) GetString(key string) (string, error) {
+	// Don't use reflection based path
 	v := ""
 	switch key {
 	case "trip_id":
@@ -108,6 +110,7 @@ func (ent *StopTime) GetString(key string) (string, error) {
 
 // SetString provides a fast, non-reflect loading path.
 func (ent *StopTime) SetString(key, value string) error {
+	// Don't use reflection based path
 	var perr error
 	hi := value
 	switch key {

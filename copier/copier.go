@@ -472,11 +472,13 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	}
 
 	// UpdateKeys is handled separately from other validators.
-	var refErr error
+	var refErrs []error
 	if extEnt, ok := ent.(tt.EntityWithReferences); ok {
-		refErr = extEnt.UpdateKeys(copier.EntityMap)
+		if refErr := extEnt.UpdateKeys(copier.EntityMap); refErr != nil {
+			refErrs = append(refErrs, refErr)
+		}
 	} else {
-		refErr = tt.ReflectUpdateKeys(copier.EntityMap, ent)
+		refErrs = append(refErrs, tt.ReflectUpdateKeys(copier.EntityMap, ent)...)
 	}
 
 	// Run filter/validator/extension validators
@@ -492,10 +494,10 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	// Associate errors with entity if it supports AddError / AddWarning
 	var errs []error
 	var warns []error
-	if len(extErrors) > 0 || len(extWarnings) > 0 || refErr != nil {
+	if len(extErrors) > 0 || len(extWarnings) > 0 || len(refErrs) > 0 {
 		if extEnt, ok := ent.(tt.EntityWithLoadErrors); ok {
-			if refErr != nil {
-				extEnt.AddError(refErr)
+			for _, err := range refErrs {
+				extEnt.AddError(err)
 			}
 			for _, err := range extErrors {
 				extEnt.AddError(err)
@@ -509,9 +511,7 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 			// Otherwise just carry errors over directly
 			errs = extErrors
 			warns = extWarnings
-			if refErr != nil {
-				errs = append(errs, refErr)
-			}
+			errs = append(errs, refErrs...)
 		}
 	}
 
@@ -533,9 +533,9 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
 	}
-	if refErr != nil && !copier.AllowReferenceErrors {
+	if len(refErrs) > 0 && !copier.AllowReferenceErrors {
 		copier.result.SkipEntityReferenceCount[efn]++
-		return refErr
+		return refErrs[0]
 	}
 
 	// Handle after validators

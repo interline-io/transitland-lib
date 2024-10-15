@@ -38,13 +38,13 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{ServiceID: "service1", ExceptionType: 1, Date: time.Now()},
 		},
 		FeedInfoList: []gtfs.FeedInfo{
-			{FeedVersion: tt.NewString("123"), FeedPublisherURL: tt.NewString("http://example.com"), FeedLang: tt.NewString("en-US"), FeedPublisherName: tt.NewString("Example")},
+			{FeedVersion: tt.NewString("123"), FeedPublisherURL: tt.NewUrl("http://example.com"), FeedLang: tt.NewLanguage("en-US"), FeedPublisherName: tt.NewString("Example")},
 		},
 		FareRuleList: []gtfs.FareRule{
 			{FareID: tt.NewString("fare1")},
 		},
 		FareAttributeList: []gtfs.FareAttribute{
-			{FareID: tt.NewString("fare1"), CurrencyType: tt.NewString("USD"), Price: tt.NewFloat(1.0), PaymentMethod: tt.NewInt(1), Transfers: tt.NewInt(1)},
+			{FareID: tt.NewString("fare1"), CurrencyType: tt.NewCurrency("USD"), Price: tt.NewFloat(1.0), PaymentMethod: tt.NewInt(1), Transfers: tt.NewInt(1)},
 		},
 		FrequencyList: []gtfs.Frequency{
 			{TripID: tt.NewString("trip1"), HeadwaySecs: tt.NewInt(600), StartTime: tt.NewSeconds(3600), EndTime: tt.NewSeconds(7200)},

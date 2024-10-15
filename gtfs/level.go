@@ -6,7 +6,7 @@ import "github.com/interline-io/transitland-lib/tt"
 type Level struct {
 	LevelID    tt.String `csv:",required"`
 	LevelIndex tt.Float  `csv:",required"`
-	LevelName  tt.String `csv:"level_name"`
+	LevelName  tt.String
 	tt.BaseEntity
 }
 

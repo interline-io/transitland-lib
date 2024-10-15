@@ -13,3 +13,7 @@ func NewInt(v int) Int {
 func (r Int) Int() int {
 	return int(r.Val)
 }
+
+func (r Int) Float() float64 {
+	return float64(r.Val)
+}

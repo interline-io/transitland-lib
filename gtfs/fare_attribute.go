@@ -1,19 +1,18 @@
 package gtfs
 
 import (
-	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
-	FareID           tt.String
-	Price            tt.Float
-	CurrencyType     tt.String
-	PaymentMethod    tt.Int
-	Transfers        tt.Int
-	AgencyID         tt.Key `target:"agency.txt"`
-	TransferDuration tt.Int
+	FareID           tt.String   `csv:",required"`
+	Price            tt.Float    `csv:",required" range:"0,"`
+	CurrencyType     tt.Currency `csv:",required"`
+	PaymentMethod    tt.Int      `csv:",required" enum:"0,1"`
+	Transfers        tt.Int      `enum:"0,1,2"`
+	AgencyID         tt.Key      `target:"agency.txt"`
+	TransferDuration tt.Int      `range:"0,"`
 	tt.BaseEntity
 }
 
@@ -25,29 +24,6 @@ func (ent *FareAttribute) EntityID() string {
 // EntityKey returns the GTFS identifier.
 func (ent *FareAttribute) EntityKey() string {
 	return ent.FareID.Val
-}
-
-// Errors for this Entity.
-func (ent *FareAttribute) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID.Val)...)
-	errs = append(errs, tt.CheckPresent("currency_type", ent.CurrencyType.Val)...)
-
-	if !ent.Price.Valid {
-		errs = append(errs, causes.NewRequiredFieldError("price"))
-	} else {
-		errs = append(errs, tt.CheckPositive("price", ent.Price.Val)...)
-	}
-
-	if !ent.PaymentMethod.Valid {
-		errs = append(errs, causes.NewRequiredFieldError("payment_method"))
-	} else {
-		errs = append(errs, tt.CheckInsideRangeInt("payment_method", ent.PaymentMethod.Val, 0, 1)...)
-	}
-
-	errs = append(errs, tt.CheckCurrency("currency_type", ent.CurrencyType.Val)...)
-	errs = append(errs, tt.CheckPositiveInt("transfer_duration", ent.TransferDuration.Val)...)
-	errs = append(errs, tt.CheckInsideRangeInt("transfers", int(ent.Transfers.Val), 0, 2)...)
-	return errs
 }
 
 // Filename fare_attributes.txt

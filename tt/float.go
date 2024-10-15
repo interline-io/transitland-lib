@@ -19,3 +19,7 @@ func (r Float) String() string {
 	}
 	return fmt.Sprintf("%0.5f", r.Val)
 }
+
+func (r Float) Float() float64 {
+	return float64(r.Val)
+}

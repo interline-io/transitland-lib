@@ -5,9 +5,11 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/interline-io/log"
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
@@ -22,10 +24,13 @@ func ToSnakeCase(str string) string {
 
 // FieldInfo contains the parsed tag values for a single attribute.
 type FieldInfo struct {
-	Name     string
-	Required bool
-	Target   string
-	Index    []int
+	Name       string
+	Required   bool
+	Target     string
+	Index      []int
+	RangeMin   *float64
+	RangeMax   *float64
+	EnumValues []int64
 }
 
 // FieldMap contains all the parsed tags for a struct.
@@ -66,13 +71,54 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			if fi.Embedded || strings.Contains(fi.Path, ".") {
 				continue
 			}
-			_, required := fi.Options["required"]
-			m[fi.Name] = &FieldInfo{
-				Name:     fi.Name,
-				Required: required,
-				Index:    fi.Index,
-				Target:   fi.Field.Tag.Get("target"),
+			mfi := FieldInfo{
+				Name:   fi.Name,
+				Index:  fi.Index,
+				Target: fi.Field.Tag.Get("target"),
 			}
+			_, mfi.Required = fi.Options["required"]
+			if optVal := fi.Field.Tag.Get("range"); optVal != "" {
+				p := strings.Split(optVal, ",")
+				if len(p) > 0 && p[0] != "" {
+					if optParse, err := strconv.ParseFloat(p[0], 64); err != nil {
+						log.Error().Msgf(
+							"error constructing field map for type %T: could not parse tag 'range' with value '%s' as (*float64,*float64): %s",
+							ent,
+							optVal,
+							err.Error(),
+						)
+					} else {
+						mfi.RangeMin = &optParse
+					}
+				}
+				if len(p) > 1 && p[1] != "" {
+					if optParse, err := strconv.ParseFloat(p[1], 64); err != nil {
+						log.Error().Msgf(
+							"error constructing field map for type %T: could not parse tag 'range' with value '%s' as (*float64,*float64): %s",
+							ent,
+							optVal,
+							err.Error(),
+						)
+					} else {
+						mfi.RangeMax = &optParse
+					}
+				}
+			}
+			if optVal := fi.Field.Tag.Get("enum"); optVal != "" {
+				for _, enumVal := range strings.Split(optVal, ",") {
+					if optParse, err := strconv.ParseInt(enumVal, 10, 64); err != nil {
+						log.Error().Msgf(
+							"error constructing field map for type %T: could not parse tag 'enum' with value '%s' as []int64: %s",
+							ent,
+							optVal,
+							err.Error(),
+						)
+					} else {
+						mfi.EnumValues = append(mfi.EnumValues, optParse)
+					}
+				}
+			}
+			m[fi.Name] = &mfi
 		}
 		c.typemap[t] = m
 	}

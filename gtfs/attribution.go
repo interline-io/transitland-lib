@@ -6,16 +6,16 @@ import (
 )
 
 type Attribution struct {
-	OrganizationName tt.String
-	AgencyID         tt.Key `target:"agency.txt"`
-	RouteID          tt.Key `target:"routes.txt"`
-	TripID           tt.Key `target:"trips.txt"`
-	IsProducer       tt.Int
-	IsOperator       tt.Int
-	IsAuthority      tt.Int
+	OrganizationName tt.String `csv:",required"`
+	AgencyID         tt.Key    `target:"agency.txt"`
+	RouteID          tt.Key    `target:"routes.txt"`
+	TripID           tt.Key    `target:"trips.txt"`
+	IsProducer       tt.Int    `enum:"0,1"`
+	IsOperator       tt.Int    `enum:"0,1"`
+	IsAuthority      tt.Int    `enum:"0,1"`
 	AttributionID    tt.String
-	AttributionURL   tt.String
-	AttributionEmail tt.String
+	AttributionURL   tt.Url
+	AttributionEmail tt.Email
 	AttributionPhone tt.String
 	tt.BaseEntity
 }
@@ -29,13 +29,7 @@ func (ent *Attribution) TableName() string {
 }
 
 // Errors for this Entity.
-func (ent *Attribution) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("organization_name", ent.OrganizationName.Val)...)
-	errs = append(errs, tt.CheckURL("attribution_url", ent.AttributionURL.Val)...)
-	errs = append(errs, tt.CheckInsideRangeInt("is_producer", ent.IsProducer.Val, 0, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("is_operator", ent.IsOperator.Val, 0, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("is_authority", ent.IsAuthority.Val, 0, 1)...)
-	errs = append(errs, tt.CheckEmail("attribution_email", ent.AttributionEmail.Val)...)
+func (ent *Attribution) ConditionalErrors() (errs []error) {
 	// At least one must be present
 	if ent.IsProducer.Val == 0 && ent.IsOperator.Val == 0 && ent.IsAuthority.Val == 0 {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("is_producer"))

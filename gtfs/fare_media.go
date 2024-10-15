@@ -6,9 +6,9 @@ import (
 
 // FareMedia fare_media.txt
 type FareMedia struct {
-	FareMediaID   tt.String
-	FareMediaName tt.String
-	FareMediaType tt.Int
+	FareMediaID   tt.String `csv:",required"`
+	FareMediaName tt.String `csv:",required"`
+	FareMediaType tt.Int    `enum:"0,1,2,3,4"`
 	tt.BaseEntity
 }
 
@@ -26,11 +26,4 @@ func (ent *FareMedia) Filename() string {
 
 func (ent *FareMedia) TableName() string {
 	return "gtfs_fare_media"
-}
-
-func (ent *FareMedia) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("fare_media_id", ent.FareMediaID.Val)...)
-	errs = append(errs, tt.CheckPresent("fare_media_name", ent.FareMediaName.Val)...)
-	errs = append(errs, tt.CheckInsideRangeInt("fare_media_type", ent.FareMediaType.Val, 0, 4)...)
-	return errs
 }

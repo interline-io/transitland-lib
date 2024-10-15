@@ -35,6 +35,16 @@ func (ent *Route) EntityKey() string {
 	return ent.RouteID
 }
 
+// Filename routes.txt
+func (ent *Route) Filename() string {
+	return "routes.txt"
+}
+
+// TableName gtfs_routes
+func (ent *Route) TableName() string {
+	return "gtfs_routes"
+}
+
 // Errors for this Entity.
 func (ent *Route) Errors() (errs []error) {
 	errs = append(errs, tt.CheckPresent("route_id", ent.RouteID)...)
@@ -44,6 +54,11 @@ func (ent *Route) Errors() (errs []error) {
 	errs = append(errs, tt.CheckPositiveInt("route_sort_order", ent.RouteSortOrder)...)
 	errs = append(errs, tt.CheckInArrayInt("continuous_pickup", ent.ContinuousPickup.Val, 0, 1, 2, 3)...)
 	errs = append(errs, tt.CheckInArrayInt("continuous_drop_off", ent.ContinuousDropOff.Val, 0, 1, 2, 3)...)
+	return errs
+}
+
+func (ent *Route) ConditionalErrors() []error {
+	var errs []error
 	if len(ent.RouteShortName) == 0 && len(ent.RouteLongName) == 0 {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("route_short_name"))
 	}
@@ -51,16 +66,6 @@ func (ent *Route) Errors() (errs []error) {
 		errs = append(errs, causes.NewInvalidFieldError("route_type", tt.TryCsv(ent.RouteType), nil))
 	}
 	return errs
-}
-
-// Filename routes.txt
-func (ent *Route) Filename() string {
-	return "routes.txt"
-}
-
-// TableName gtfs_routes
-func (ent *Route) TableName() string {
-	return "gtfs_routes"
 }
 
 // UpdateKeys updates Entity references.

@@ -29,16 +29,6 @@ func (ent *Shape) EntityKey() string {
 	return ent.ShapeID
 }
 
-// Errors for this Entity.
-func (ent *Shape) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("shape_id", ent.ShapeID)...)
-	errs = append(errs, tt.CheckInsideRange("shape_pt_lat", ent.ShapePtLat, -90.0, 90.0)...)
-	errs = append(errs, tt.CheckInsideRange("shape_pt_lon", ent.ShapePtLon, -180.0, 180.0)...)
-	errs = append(errs, tt.CheckPositiveInt("shape_pt_sequence", ent.ShapePtSequence)...)
-	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled)...)
-	return errs
-}
-
 // Filename shapes.txt
 func (ent *Shape) Filename() string {
 	return "shapes.txt"
@@ -47,6 +37,16 @@ func (ent *Shape) Filename() string {
 // TableName gtfs_shapes
 func (ent *Shape) TableName() string {
 	return "gtfs_shapes"
+}
+
+// Errors for this Entity.
+func (ent *Shape) Errors() (errs []error) {
+	errs = append(errs, tt.CheckPresent("shape_id", ent.ShapeID)...)
+	errs = append(errs, tt.CheckInsideRange("shape_pt_lat", ent.ShapePtLat, -90.0, 90.0)...)
+	errs = append(errs, tt.CheckInsideRange("shape_pt_lon", ent.ShapePtLon, -180.0, 180.0)...)
+	errs = append(errs, tt.CheckPositiveInt("shape_pt_sequence", ent.ShapePtSequence)...)
+	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled)...)
+	return errs
 }
 
 // SetString provides a fast, non-reflect loading path.
