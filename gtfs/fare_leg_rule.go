@@ -12,8 +12,8 @@ type FareLegRule struct {
 	FromAreaID    tt.String `target:"areas.txt"`
 	ToAreaID      tt.String `target:"areas.txt"`
 	NetworkID     tt.String `target:"routes.txt:network_id"`
-	FareProductID tt.String `target:"fare_products.txt"`
-	TransferOnly  tt.Int    // interline ext
+	FareProductID tt.String `csv:",required" target:"fare_products.txt"`
+	TransferOnly  tt.Int    `enum:"0,1"` // interline ext
 	tt.BaseEntity
 }
 
@@ -39,12 +39,4 @@ func (ent *FareLegRule) Filename() string {
 
 func (ent *FareLegRule) TableName() string {
 	return "gtfs_fare_leg_rules"
-}
-
-func (ent *FareLegRule) Errors() (errs []error) {
-	// Final spec: leg_group_id is optional
-	// errs = append(errs, tt.CheckPresent("leg_group_id", ent.LegGroupID.Val)...)
-	errs = append(errs, tt.CheckPresent("fare_product_id", ent.FareProductID.Val)...)
-	errs = append(errs, tt.CheckInsideRangeInt("transfer_only", ent.TransferOnly.Val, 0, 1)...)
-	return errs
 }

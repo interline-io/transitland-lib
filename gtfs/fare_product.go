@@ -9,16 +9,16 @@ import (
 
 // FareProduct fare_products.txt
 type FareProduct struct {
-	FareProductID   tt.String
+	FareProductID   tt.String `csv:",required" `
 	FareProductName tt.String
-	Amount          tt.CurrencyAmount // Experimental formatting
-	Currency        tt.String
-	DurationStart   tt.Int   // proposed extension
-	DurationAmount  tt.Float // proposed extension
-	DurationUnit    tt.Int   // proposed extension
-	DurationType    tt.Int   // proposed extension
-	RiderCategoryID tt.Key   `target:"rider_categories.txt"` // proposed extension
-	FareMediaID     tt.Key   `target:"fare_media.txt"`       // proposed extension
+	Amount          tt.CurrencyAmount `csv:",required"`
+	Currency        tt.Currency       `csv:",required"`
+	DurationStart   tt.Int            `enum:"0,1"`                    // proposed extension
+	DurationAmount  tt.Float          `range:"0,"`                    // proposed extension
+	DurationUnit    tt.Int            `enum:"0,1,2,3,4,5,6"`          // proposed extension
+	DurationType    tt.Int            `enum:"1,2"`                    // proposed extension
+	RiderCategoryID tt.Key            `target:"rider_categories.txt"` // proposed extension
+	FareMediaID     tt.Key            `target:"fare_media.txt"`       // proposed extension
 	tt.BaseEntity
 }
 
@@ -53,25 +53,7 @@ func (ent *FareProduct) TableName() string {
 	return "gtfs_fare_products"
 }
 
-func (ent *FareProduct) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("fare_product_id", ent.FareProductID.Val)...)
-
-	// amount
-	if !ent.Amount.Valid {
-		errs = append(errs, causes.NewRequiredFieldError("amount"))
-	}
-
-	// currency
-	errs = append(errs, tt.CheckPresent("currency", ent.Currency.Val)...)
-	errs = append(errs, tt.CheckCurrency("currency", ent.Currency.Val)...)
-
-	// duration_start, duration_amount, duration_unit, duration_type
-	errs = append(errs, tt.CheckInsideRangeInt("duration_start", ent.DurationStart.Val, 0, 1)...)
-	errs = append(errs, tt.CheckPositive("duration_amount", ent.DurationAmount.Val)...)
-	errs = append(errs, tt.CheckInsideRangeInt("duration_unit", ent.DurationUnit.Val, 0, 6)...)
-	if ent.DurationType.Valid {
-		errs = append(errs, tt.CheckInsideRangeInt("duration_type", ent.DurationType.Val, 1, 2)...)
-	}
+func (ent *FareProduct) ConditionalErrors() (errs []error) {
 	if ent.DurationAmount.Valid && !ent.DurationType.Valid {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("duration_type"))
 	}

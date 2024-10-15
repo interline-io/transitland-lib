@@ -79,7 +79,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			_, mfi.Required = fi.Options["required"]
 			if optVal := fi.Field.Tag.Get("range"); optVal != "" {
 				p := strings.Split(optVal, ",")
-				if len(p) > 0 {
+				if len(p) > 0 && p[0] != "" {
 					if optParse, err := strconv.ParseFloat(p[0], 64); err != nil {
 						log.Error().Msgf(
 							"error constructing field map for type %T: could not parse tag 'range' with value '%s' as (*float64,*float64): %s",
@@ -91,8 +91,8 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 						mfi.RangeMin = &optParse
 					}
 				}
-				if len(p) > 1 {
-					if optParse, err := strconv.ParseFloat(p[0], 64); err != nil {
+				if len(p) > 1 && p[1] != "" {
+					if optParse, err := strconv.ParseFloat(p[1], 64); err != nil {
 						log.Error().Msgf(
 							"error constructing field map for type %T: could not parse tag 'range' with value '%s' as (*float64,*float64): %s",
 							ent,

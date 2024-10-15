@@ -1,7 +1,6 @@
 package tt
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -89,13 +88,17 @@ func ReflectCheckErrors(ent any) []error {
 			errs = append(errs, causes.NewRequiredFieldError(fieldName))
 			continue
 		}
+		if !fieldCheck.IsValid() {
+			continue
+		}
 		if err := fieldCheck.Check(); err != nil {
 			errs = append(errs, causes.NewInvalidFieldError(fieldName, fieldCheck.String(), err))
 		}
 		if fieldInfo.RangeMin != nil || fieldInfo.RangeMax != nil {
 			a, ok := fieldAddr.(canFloat)
 			if !ok {
-				errs = append(errs, errors.New("could not convert to float for range check"))
+				errs = append(errs, fmt.Errorf("could not convert %T to float for range check", fieldAddr))
+				continue
 			}
 			checkVal := a.Float()
 			if fieldInfo.RangeMin != nil && checkVal < *fieldInfo.RangeMin {
@@ -110,7 +113,8 @@ func ReflectCheckErrors(ent any) []error {
 		if len(fieldInfo.EnumValues) > 0 {
 			a, ok := fieldAddr.(canInt)
 			if !ok {
-				errs = append(errs, errors.New("could not convert to int for enum check"))
+				errs = append(errs, fmt.Errorf("could not convert %T to int for enum check", fieldAddr))
+				continue
 			}
 			checkVal := int64(a.Int())
 			found := false

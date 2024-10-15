@@ -6,7 +6,7 @@ import (
 
 // Area fare_areas.txt
 type Area struct {
-	AreaID    tt.String
+	AreaID    tt.String `csv:",required"`
 	AreaName  tt.String
 	AgencyIDs tt.Strings `csv:"-" db:"agency_ids"` // interline ext
 	Geometry  tt.Polygon `csv:"-"`                 // interline ext
@@ -27,9 +27,4 @@ func (ent *Area) Filename() string {
 
 func (ent *Area) TableName() string {
 	return "gtfs_areas"
-}
-
-func (ent *Area) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("area_id", ent.AreaID.Val)...)
-	return errs
 }

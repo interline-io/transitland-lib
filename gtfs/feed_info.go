@@ -22,10 +22,7 @@ type FeedInfo struct {
 }
 
 // Errors for this Entity.
-func (ent *FeedInfo) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("feed_publisher_name", ent.FeedPublisherName.Val)...)
-	errs = append(errs, tt.CheckPresent("feed_publisher_url", ent.FeedPublisherURL.Val)...)
-	errs = append(errs, tt.CheckPresent("feed_lang", ent.FeedLang.Val)...)
+func (ent *FeedInfo) ConditionalErrors() (errs []error) {
 	errs = append(errs, tt.CheckURL("feed_publisher_url", ent.FeedPublisherURL.Val)...)
 	errs = append(errs, tt.CheckLanguage("feed_lang", ent.FeedLang.Val)...)
 	errs = append(errs, tt.CheckLanguage("default_lang", ent.DefaultLang.Val)...)
