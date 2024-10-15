@@ -1083,24 +1083,24 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Set StopPattern
 		patkey := stopPatternKey(trip.StopTimes)
 		if pat, ok := stopPatterns[patkey]; ok {
-			trip.StopPatternID = pat
+			trip.StopPatternID.SetInt(pat)
 		} else {
-			trip.StopPatternID = len(stopPatterns)
-			stopPatterns[patkey] = trip.StopPatternID
+			trip.StopPatternID.SetInt(len(stopPatterns))
+			stopPatterns[patkey] = trip.StopPatternID.Int()
 		}
 
 		// Create missing shape if necessary
 		if !trip.ShapeID.Valid && copier.CreateMissingShapes {
 			// Note: if the trip has errors, may result in unused shapes!
-			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID]; ok {
+			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID.Int()]; ok {
 				trip.ShapeID = tt.NewKey(shapeid)
 			} else {
-				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID, time.Now().Unix()), trip.StopTimes); err != nil {
+				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
 					copier.sublogger.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
 					trip.AddWarning(err)
 				} else {
 					// Set ShapeID
-					stopPatternShapeIDs[trip.StopPatternID] = shapeid
+					stopPatternShapeIDs[trip.StopPatternID.Int()] = shapeid
 					trip.ShapeID = tt.NewKey(shapeid)
 				}
 			}
@@ -1118,20 +1118,20 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Set JourneyPattern
 		jkey := copier.JourneyPatternKey(&trip)
 		if jpat, ok := journeyPatterns[jkey]; ok {
-			trip.JourneyPatternID = jpat.key
-			trip.JourneyPatternOffset = trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival
-			tripOffsets[trip.TripID] = trip.JourneyPatternOffset // do not write stop times for this trip
+			trip.JourneyPatternID.Set(jpat.key)
+			trip.JourneyPatternOffset.SetInt(trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival)
+			tripOffsets[trip.TripID.Val] = trip.JourneyPatternOffset.Int() // do not write stop times for this trip
 		} else {
-			trip.JourneyPatternID = trip.TripID
-			trip.JourneyPatternOffset = 0
-			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID}
+			trip.JourneyPatternID.Set(trip.TripID.Val)
+			trip.JourneyPatternOffset.Set(0)
+			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID.Val}
 		}
 
 		// Validate trip entity
 		if entErr, writeErr := copier.CopyEntity(&trip); writeErr != nil {
 			return writeErr
 		} else if entErr == nil {
-			if _, dedupOk := tripOffsets[trip.TripID]; dedupOk && copier.DeduplicateJourneyPatterns {
+			if _, dedupOk := tripOffsets[trip.TripID.Val]; dedupOk && copier.DeduplicateJourneyPatterns {
 				// log.Trace().Msgf("deduplicating: %s", trip.TripID)
 				// skip
 			} else {

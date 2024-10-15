@@ -26,7 +26,7 @@ func (ent *RealtimeStop) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *RealtimeStop) UpdateKeys(emap *tt.EntityMap) error {
-	if fkid, ok := emap.GetEntity(&gtfs.Trip{TripID: ent.TripID}); ok {
+	if fkid, ok := emap.GetEntity(&gtfs.Trip{TripID: tt.NewString(ent.TripID)}); ok {
 		ent.TripID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("trip_id", ent.TripID)

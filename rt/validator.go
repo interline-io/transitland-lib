@@ -78,10 +78,10 @@ func (fi *Validator) Validate(ent tt.Entity) []error {
 			AgencyID:  v.AgencyID,
 		}
 	case *gtfs.Trip:
-		fi.tripInfo[v.TripID] = tripInfo{
-			DirectionID: v.DirectionID,
+		fi.tripInfo[v.TripID.Val] = tripInfo{
+			DirectionID: v.DirectionID.Int(),
 			ShapeID:     v.ShapeID.String(),
-			RouteID:     v.RouteID,
+			RouteID:     v.RouteID.Val,
 		}
 	case *gtfs.Frequency:
 		a := fi.tripInfo[v.TripID.Val]

@@ -134,7 +134,7 @@ func (g *GeomCache) InterpolateStopTimes(trip gtfs.Trip) ([]gtfs.StopTime, error
 
 	// We need to assign valid ShapeDistTraveled Values
 	if !validDists {
-		if err := g.setStopTimeDists(trip.ShapeID.Val, trip.StopPatternID, sts); err != nil {
+		if err := g.setStopTimeDists(trip.ShapeID.Val, trip.StopPatternID.Val, sts); err != nil {
 			return sts, err
 		}
 	}
@@ -144,7 +144,7 @@ func (g *GeomCache) InterpolateStopTimes(trip gtfs.Trip) ([]gtfs.StopTime, error
 }
 
 // TODO: move to somewhere else
-func (g *GeomCache) setStopTimeDists(shapeId string, patternId int, sts []gtfs.StopTime) error {
+func (g *GeomCache) setStopTimeDists(shapeId string, patternId int64, sts []gtfs.StopTime) error {
 	// Check cache
 	length := 0.0
 	stopPositionsKey := fmt.Sprintf("%s-%d", shapeId, patternId)

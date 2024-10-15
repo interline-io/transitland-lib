@@ -12,4 +12,14 @@ alter table gtfs_agencies alter column agency_phone drop not null;
 alter table gtfs_agencies alter column agency_fare_url drop not null;
 alter table gtfs_agencies alter column agency_email drop not null;
 
+alter table gtfs_trips alter column trip_short_name drop not null;
+alter table gtfs_trips alter column trip_headsign drop not null;
+alter table gtfs_trips alter column direction_id drop not null;
+alter table gtfs_trips alter column block_id drop not null;
+alter table gtfs_trips alter column wheelchair_accessible drop not null;
+alter table gtfs_trips alter column bikes_allowed drop not null;
+alter table gtfs_trips alter column stop_pattern_id drop not null;
+alter table gtfs_trips alter column journey_pattern_id drop not null;
+alter table gtfs_trips alter column journey_pattern_offset drop not null;
+
 COMMIT;

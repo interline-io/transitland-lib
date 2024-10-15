@@ -69,9 +69,9 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		}
 	case *gtfs.Trip:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.TripID = fmt.Sprintf("%s%s", prefix, v.TripID)
-			if v.BlockID != "" {
-				v.BlockID = fmt.Sprintf("%s%s", prefix, v.BlockID)
+			v.TripID.Set(fmt.Sprintf("%s%s", prefix, v.TripID.Val))
+			if v.BlockID.Valid {
+				v.BlockID.Set(fmt.Sprintf("%s%s", prefix, v.BlockID.Val))
 			}
 		}
 	case *gtfs.Route:

@@ -49,7 +49,7 @@ type BlockOverlapCheck struct {
 // Validate .
 func (e *BlockOverlapCheck) Validate(ent tt.Entity) []error {
 	trip, ok := ent.(*gtfs.Trip)
-	if !ok || trip.BlockID == "" || len(trip.StopTimes) < 2 {
+	if !ok || !trip.BlockID.Valid || len(trip.StopTimes) < 2 {
 		return nil
 	}
 	if e.blocks == nil {
@@ -59,12 +59,12 @@ func (e *BlockOverlapCheck) Validate(ent tt.Entity) []error {
 	// To make life easy, we only care about when the vehicle is moving.
 	// intervals are: (first departure, last arrival)
 	tf := tripBlockInfo{
-		trip:    trip.TripID,
-		service: trip.ServiceID,
+		trip:    trip.TripID.Val,
+		service: trip.ServiceID.Val,
 		start:   trip.StopTimes[0].DepartureTime.Int(),
 		end:     trip.StopTimes[len(trip.StopTimes)-1].ArrivalTime.Int(),
 	}
-	for _, hit := range e.blocks[trip.BlockID] {
+	for _, hit := range e.blocks[trip.BlockID.Val] {
 		// log.Log(
 		// 	"block:", trip.BlockID,
 		// 	"overlap?", tf,
@@ -73,10 +73,10 @@ func (e *BlockOverlapCheck) Validate(ent tt.Entity) []error {
 		// 	"start:", tf.start <= hit.end,
 		// 	"end:", tf.end >= hit.start,
 		// )
-		if trip.ServiceID == hit.service && tf.start < hit.end && tf.end > hit.start {
+		if trip.ServiceID.Val == hit.service && tf.start < hit.end && tf.end > hit.start {
 			errs = append(errs, &BlockOverlapError{
 				TripID:         tf.trip,
-				BlockID:        trip.BlockID,
+				BlockID:        trip.BlockID.Val,
 				ServiceID:      tf.service,
 				StartTime:      tt.NewSeconds(tf.start),
 				EndTime:        tt.NewSeconds(tf.end),
@@ -86,6 +86,6 @@ func (e *BlockOverlapCheck) Validate(ent tt.Entity) []error {
 			})
 		}
 	}
-	e.blocks[trip.BlockID] = append(e.blocks[trip.BlockID], &tf)
+	e.blocks[trip.BlockID.Val] = append(e.blocks[trip.BlockID.Val], &tf)
 	return errs
 }

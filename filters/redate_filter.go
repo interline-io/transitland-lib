@@ -78,7 +78,7 @@ func newRedateFilterFromJson(args string) (*RedateFilter, error) {
 func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Trip:
-		if tf.excluded[v.ServiceID] {
+		if tf.excluded[v.ServiceID.Val] {
 			return fmt.Errorf("trip service_id not in redate window")
 		}
 	case *gtfs.CalendarDate:

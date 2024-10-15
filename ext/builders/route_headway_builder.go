@@ -85,11 +85,11 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 				continue
 			}
 			rkey := riKey{
-				ServiceID: v.ServiceID,
-				Direction: uint8(v.DirectionID),
+				ServiceID: v.ServiceID.Val,
+				Direction: uint8(v.DirectionID.Val),
 				StopID:    stopId,
 			}
-			if rd, ok := pp.routeDepartures[v.RouteID]; ok && st.DepartureTime.Valid {
+			if rd, ok := pp.routeDepartures[v.RouteID.Val]; ok && st.DepartureTime.Valid {
 				rd[rkey] = append(rd[rkey], st.DepartureTime.Int())
 			}
 		}

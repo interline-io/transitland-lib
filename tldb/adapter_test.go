@@ -43,7 +43,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		v := "Test Update"
 		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		ent.TripHeadsign = v
+		ent.TripHeadsign.Set(v)
 		err = adapter.Update(&ent, "trip_headsign")
 		if err != nil {
 			t.Error(err)
@@ -53,8 +53,8 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
 		}
-		if ent2.TripHeadsign != v {
-			t.Errorf("got %s expected %s", ent2.TripHeadsign, v)
+		if ent2.TripHeadsign.Val != v {
+			t.Errorf("got %s expected %s", ent2.TripHeadsign.Val, v)
 		}
 	})
 	t.Run("Get", func(t *testing.T) {
@@ -148,7 +148,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		v := "Test Tx"
 		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		ent.TripHeadsign = v
+		ent.TripHeadsign.Set(v)
 		adapter.Tx(func(atx Adapter) error {
 			err := atx.Update(&ent, "trip_headsign")
 			if err != nil {
@@ -161,7 +161,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
 		}
-		if ent2.TripHeadsign != v {
+		if ent2.TripHeadsign.Val != v {
 			t.Errorf("got %s expected %s", ent2.TripHeadsign, v)
 		}
 	})
@@ -170,7 +170,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		v := "Test Rollback"
 		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		ent.TripHeadsign = v
+		ent.TripHeadsign.Set(v)
 		adapter.Tx(func(atx Adapter) error {
 			err := atx.Update(&ent, "trip_headsign")
 			if err != nil {
@@ -183,7 +183,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
 		}
-		if ent2.TripHeadsign == v {
+		if ent2.TripHeadsign.Val == v {
 			t.Errorf("got %s expected != %s", ent2.TripHeadsign, v)
 		}
 	})
@@ -258,9 +258,9 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 		return m, err
 	}
 	ent1 := gtfs.Trip{}
-	ent1.TripID = "ok"
-	ent1.RouteID = strconv.Itoa(m.RouteID)
-	ent1.ServiceID = strconv.Itoa(m.ServiceID)
+	ent1.TripID.Set("ok")
+	ent1.RouteID.Set(strconv.Itoa(m.RouteID))
+	ent1.ServiceID.Set(strconv.Itoa(m.ServiceID))
 	ent1.FeedVersionID = m.FeedVersionID
 	m.TripID, err = adapter.Insert(&ent1)
 	if err != nil {

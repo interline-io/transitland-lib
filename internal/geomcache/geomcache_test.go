@@ -18,8 +18,9 @@ func TestGeomCache(t *testing.T) {
 	trips := map[string]gtfs.Trip{}
 	count := 1
 	for trip := range r.Trips() {
-		trip.StopPatternID = count
-		trips[trip.TripID] = trip
+		trip := trip
+		trip.StopPatternID.SetInt(count)
+		trips[trip.TripID.Val] = trip
 		count++
 	}
 	cache := NewGeomCache()

@@ -86,10 +86,10 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 	// Add Trips and link
 	for ent := range reader.Trips() {
 		en, _ := eg.AddNode(entityNode(&ent))
-		if r, ok := eg.Node(NewNode("routes.txt", ent.RouteID)); ok {
+		if r, ok := eg.Node(NewNode("routes.txt", ent.RouteID.Val)); ok {
 			eg.AddEdge(r, en)
 		}
-		if c, ok := eg.Node(NewNode("calendar.txt", ent.ServiceID)); ok {
+		if c, ok := eg.Node(NewNode("calendar.txt", ent.ServiceID.Val)); ok {
 			eg.AddEdge(c, en)
 		}
 		if ent.ShapeID.Valid {

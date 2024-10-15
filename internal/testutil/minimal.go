@@ -18,7 +18,7 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{RouteID: "route1", RouteShortName: "Route 1", RouteType: 1, AgencyID: "agency1"},
 		},
 		TripList: []gtfs.Trip{
-			{TripID: "trip1", RouteID: "route1", ServiceID: "service1"},
+			{TripID: tt.NewString("trip1"), RouteID: tt.NewKey("route1"), ServiceID: tt.NewKey("service1")},
 		},
 		StopList: []gtfs.Stop{
 			{StopID: "stop1", StopName: "Stop 1", Geometry: tt.NewPoint(1, 2)},

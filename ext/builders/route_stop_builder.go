@@ -43,7 +43,7 @@ func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 	case *gtfs.Route:
 		pp.routeAgencies[eid] = v.AgencyID
 	case *gtfs.Trip:
-		pp.tripRoutes[eid] = v.RouteID
+		pp.tripRoutes[eid] = v.RouteID.Val
 	case *gtfs.StopTime:
 		rid := pp.tripRoutes[v.TripID.Val]
 		rs, ok := pp.routeStops[rid]

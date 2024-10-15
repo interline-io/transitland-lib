@@ -127,8 +127,8 @@ func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, 
 		stoptimes := v.StopTimes
 		if len(stoptimes) > 1 {
 			d := stoptimes[len(stoptimes)-1].ArrivalTime.Int() - stoptimes[0].DepartureTime.Int()
-			pp.tripdurations[v.TripID] = fvslTripInfo{
-				ServiceID: v.ServiceID,
+			pp.tripdurations[v.TripID.Val] = fvslTripInfo{
+				ServiceID: v.ServiceID.Val,
 				Duration:  d,
 			}
 		}

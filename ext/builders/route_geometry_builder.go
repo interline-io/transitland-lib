@@ -105,13 +105,13 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 	case *gtfs.Trip:
 		// shapeCounts is layered by: route id, direction id, shape id
 		if v.ShapeID.Valid {
-			if _, ok := pp.shapeCounts[v.RouteID]; !ok {
-				pp.shapeCounts[v.RouteID] = map[int]map[string]int{}
+			if _, ok := pp.shapeCounts[v.RouteID.Val]; !ok {
+				pp.shapeCounts[v.RouteID.Val] = map[int]map[string]int{}
 			}
-			if _, ok := pp.shapeCounts[v.RouteID][v.DirectionID]; !ok {
-				pp.shapeCounts[v.RouteID][v.DirectionID] = map[string]int{}
+			if _, ok := pp.shapeCounts[v.RouteID.Val][v.DirectionID.Int()]; !ok {
+				pp.shapeCounts[v.RouteID.Val][v.DirectionID.Int()] = map[string]int{}
 			}
-			pp.shapeCounts[v.RouteID][v.DirectionID][v.ShapeID.Val]++
+			pp.shapeCounts[v.RouteID.Val][v.DirectionID.Int()][v.ShapeID.Val]++
 		}
 	}
 	return nil

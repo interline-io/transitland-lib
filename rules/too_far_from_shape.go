@@ -67,7 +67,7 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tt.Entity) []error {
 		distance := tlxy.DistanceHaversine(g, nearest)
 		if distance > e.maxdist {
 			errs = append(errs, &StopTooFarFromShapeError{
-				TripID:   v.TripID,
+				TripID:   v.TripID.Val,
 				StopID:   st.StopID.Val,
 				ShapeID:  shapeid,
 				Distance: distance,

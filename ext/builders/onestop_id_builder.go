@@ -92,7 +92,7 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 			stopGeoms: map[string]*stopGeom{},
 		}
 	case *gtfs.Trip:
-		pp.tripRoutes[eid] = v.RouteID
+		pp.tripRoutes[eid] = v.RouteID.Val
 	case *gtfs.StopTime:
 		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
 		if !ok {
