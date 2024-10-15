@@ -16,10 +16,10 @@ type Trip struct {
 	ShapeID              tt.Key     `target:"shapes.txt"`
 	WheelchairAccessible tt.Int     `enum:"0,1,2"`
 	BikesAllowed         tt.Int     `enum:"0,1,2"`
-	StopTimes            []StopTime `csv:"-" db:"-"` // for validation methods
 	JourneyPatternID     tt.String  `csv:"-"`
 	JourneyPatternOffset tt.Int     `csv:"-"`
 	StopPatternID        tt.Int     `csv:"-"`
+	StopTimes            []StopTime `csv:"-" db:"-"` // for validation methods
 	tt.BaseEntity
 }
 

@@ -88,7 +88,7 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		}
 	case *gtfs.Shape:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.ShapeID = fmt.Sprintf("%s%s", prefix, v.ShapeID)
+			v.ShapeID.Set(fmt.Sprintf("%s%s", prefix, v.ShapeID.Val))
 		}
 	case *gtfs.FareAttribute:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {

@@ -1221,12 +1221,12 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 	}
 	shape := gtfs.Shape{}
 	shape.Generated = true
-	shape.ShapeID = shapeID
+	shape.ShapeID.Set(shapeID)
 	shape.Geometry = tt.NewLineStringFromFlatCoords(flatCoords)
 	if entErr, writeErr := copier.CopyEntity(&shape); writeErr != nil {
 		return "", writeErr
 	} else if entErr == nil {
 		copier.result.GeneratedCount["shapes.txt"]++
 	}
-	return shape.ShapeID, nil
+	return shape.ShapeID.Val, nil
 }

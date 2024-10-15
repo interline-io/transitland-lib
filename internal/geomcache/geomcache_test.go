@@ -26,7 +26,7 @@ func TestGeomCache(t *testing.T) {
 	cache := NewGeomCache()
 	for e := range r.Shapes() {
 		lm := e.Geometry.ToLineM()
-		cache.AddShapeGeom(e.ShapeID, lm.Coords, lm.Data)
+		cache.AddShapeGeom(e.ShapeID.Val, lm.Coords, lm.Data)
 	}
 	for e := range r.Stops() {
 		cache.AddStopGeom(e.StopID.Val, e.ToPoint())

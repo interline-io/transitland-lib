@@ -29,7 +29,7 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{StopID: tt.NewString("stop2"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(2), ArrivalTime: tt.NewSeconds(10), DepartureTime: tt.NewSeconds(15)},
 		},
 		ShapeList: []gtfs.Shape{
-			{ShapeID: "shape1", Geometry: tt.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
+			{ShapeID: tt.NewString("shape1"), Geometry: tt.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
 		},
 		CalendarList: []gtfs.Calendar{
 			{ServiceID: "service1", StartDate: time.Now(), EndDate: time.Now()},
