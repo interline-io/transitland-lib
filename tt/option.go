@@ -31,7 +31,7 @@ func (r *Option[T]) Unset() {
 	r.Valid = false
 }
 
-func (r *Option[T]) Present() bool {
+func (r Option[T]) IsPresent() bool {
 	return r.Valid
 }
 

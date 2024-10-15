@@ -11,9 +11,9 @@ type Color struct {
 	Option[string]
 }
 
-func (t Color) Check() error {
-	if t.Valid && !IsValidColor(t.Val) {
-		return fmt.Errorf("invalid color")
+func (r Color) Check() error {
+	if r.Valid && !IsValidColor(r.Val) {
+		return causes.NewInvalidFieldError("", r.Val, fmt.Errorf("invalid color"))
 	}
 	return nil
 }

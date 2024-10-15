@@ -11,9 +11,13 @@ type Email struct {
 	Option[string]
 }
 
+func NewEmail(v string) Email {
+	return Email{Option: NewOption(v)}
+}
+
 func (r Email) Check() error {
 	if r.Valid && !IsValidEmail(r.Val) {
-		return fmt.Errorf("invalid email")
+		return causes.NewInvalidFieldError("", r.Val, fmt.Errorf("invalid email"))
 	}
 	return nil
 }
