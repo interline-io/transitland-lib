@@ -118,7 +118,7 @@ func (ent *StopTime) SetString(key, value string) error {
 	case "trip_id":
 		ent.TripID.Set(hi)
 	case "stop_headsign":
-		ent.StopHeadsign = tt.NewString(hi)
+		ent.StopHeadsign.Set(hi)
 	case "stop_id":
 		ent.StopID.Set(hi)
 	case "arrival_time":
@@ -147,7 +147,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
 		} else {
-			ent.PickupType = tt.NewInt(a)
+			ent.PickupType.SetInt(a)
 		}
 	case "drop_off_type":
 		if hi == "" {
@@ -155,7 +155,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
 		} else {
-			ent.DropOffType = tt.NewInt(a)
+			ent.DropOffType.SetInt(a)
 		}
 	case "continuous_pickup":
 		if hi == "" {
@@ -163,7 +163,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_pickup", hi)
 		} else {
-			ent.ContinuousPickup = tt.NewInt(a)
+			ent.ContinuousPickup.SetInt(a)
 		}
 	case "continuous_drop_off":
 		if hi == "" {
@@ -171,7 +171,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_drop_off", hi)
 		} else {
-			ent.ContinuousDropOff = tt.NewInt(a)
+			ent.ContinuousDropOff.SetInt(a)
 		}
 	case "shape_dist_traveled":
 		if hi == "" {
@@ -179,7 +179,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
 		} else {
-			ent.ShapeDistTraveled = tt.NewFloat(a)
+			ent.ShapeDistTraveled.Set(a)
 		}
 	case "timepoint":
 		if hi == "" {
@@ -187,7 +187,7 @@ func (ent *StopTime) SetString(key, value string) error {
 		} else if a, err := strconv.Atoi(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
 		} else {
-			ent.Timepoint = tt.NewInt(a)
+			ent.Timepoint.SetInt(a)
 		}
 	default:
 		ent.SetExtra(key, hi)

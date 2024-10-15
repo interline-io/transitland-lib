@@ -227,15 +227,15 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// Set to max selected shape length
 		if si.Length >= ent.Length.Val {
-			ent.Length = tt.NewFloat(si.Length)
+			ent.Length.Set(si.Length)
 		}
 		// Set to max first point max distance
 		if si.FirstPointMaxDistance >= ent.FirstPointMaxDistance.Val {
-			ent.FirstPointMaxDistance = tt.NewFloat(si.FirstPointMaxDistance)
+			ent.FirstPointMaxDistance.Set(si.FirstPointMaxDistance)
 		}
 		// Set to max selected shape segment length
 		if si.MaxSegmentLength >= ent.MaxSegmentLength.Val {
-			ent.MaxSegmentLength = tt.NewFloat(si.MaxSegmentLength)
+			ent.MaxSegmentLength.Set(si.MaxSegmentLength)
 		}
 		// OK
 		matches = append(matches, si.Line)

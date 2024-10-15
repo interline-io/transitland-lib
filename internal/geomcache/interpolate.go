@@ -2,7 +2,6 @@ package geomcache
 
 import (
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/tt"
 )
 
 // InterpolateStopTimes sets missing ArrivalTime, DestinationTime values.
@@ -50,8 +49,8 @@ func interpolateGap(stoptimes *[]gtfs.StopTime, start int, end int) {
 		// 	"\tindex: %d traveled: %f dx: %f dt: %d",
 		// 	i, sts[i].ShapeDistTraveled, dx, dt,
 		// )
-		sts[i].ArrivalTime = tt.NewSeconds(dt)
-		sts[i].DepartureTime = tt.NewSeconds(dt)
-		sts[i].Interpolated = tt.NewInt(1)
+		sts[i].ArrivalTime.SetInt(dt)
+		sts[i].DepartureTime.SetInt(dt)
+		sts[i].Interpolated.Set(1)
 	}
 }

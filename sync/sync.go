@@ -70,8 +70,8 @@ func Sync(atx tldb.Adapter, opts Options) (Result, error) {
 		}
 		for _, operator := range reg.Operators {
 			osid := operator.OnestopID.Val
-			operator.File = tt.NewString(filepath.Base(fn))
-			operator.DeletedAt = tt.Time{}
+			operator.File.Set(filepath.Base(fn))
+			operator.DeletedAt.Unset()
 			operatorid, found, updated, err := UpdateOperator(atx, operator)
 			if err != nil {
 				log.Errorf("%s: error on operator %s: %s", fn, osid, err)

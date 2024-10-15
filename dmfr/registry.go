@@ -47,7 +47,7 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 			foundParent := false
 			for i, oif := range operator.AssociatedFeeds {
 				if oif.FeedOnestopID.Val == "" {
-					oif.FeedOnestopID = tt.NewString(fsid)
+					oif.FeedOnestopID.Set(fsid)
 				}
 				if oif.FeedOnestopID.Val == fsid {
 					foundParent = true

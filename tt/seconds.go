@@ -24,6 +24,11 @@ func NewSeconds(s int) Seconds {
 	return Seconds{Option: NewOption(int64(s))}
 }
 
+func (r *Seconds) SetInt(v int) {
+	r.Val = int64(v)
+	r.Valid = true
+}
+
 func (r Seconds) HMS() (int, int, int) {
 	secs := int(r.Val)
 	if secs < 0 {

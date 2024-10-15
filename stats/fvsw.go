@@ -35,7 +35,7 @@ func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tt.Entity,
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		if tz, ok := tt.IsValidTimezone(v.AgencyTimezone.Val); ok {
-			pp.fvsw.DefaultTimezone = tt.NewString(tz)
+			pp.fvsw.DefaultTimezone.Set(tz)
 		}
 	case *gtfs.FeedInfo:
 		pp.fvsw.FeedStartDate = v.FeedStartDate
@@ -44,10 +44,10 @@ func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tt.Entity,
 		cStart, cEnd := v.ServicePeriod()
 		retStart, retEnd := pp.fvsw.EarliestCalendarDate.Val, pp.fvsw.LatestCalendarDate.Val
 		if retStart.IsZero() || cStart.Before(retStart) {
-			pp.fvsw.EarliestCalendarDate = tt.NewDate(cStart)
+			pp.fvsw.EarliestCalendarDate.Set(cStart)
 		}
 		if retEnd.IsZero() || cEnd.After(retEnd) {
-			pp.fvsw.LatestCalendarDate = tt.NewDate(cEnd)
+			pp.fvsw.LatestCalendarDate.Set(cEnd)
 		}
 	}
 	return nil

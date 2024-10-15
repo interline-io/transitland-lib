@@ -180,7 +180,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				}
 				// HeadwaySecs based on morning rush hour
 				if ws, ok := getStats(departures, 21600, 36000); ok && len(departures) >= 10 {
-					rh.HeadwaySecs = tt.NewInt(ws.mid)
+					rh.HeadwaySecs.SetInt(ws.mid)
 				}
 				if _, err := copier.CopyEntity(&rh); err != nil {
 					return err

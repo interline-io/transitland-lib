@@ -6,7 +6,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlxy"
-	"github.com/interline-io/transitland-lib/tt"
 )
 
 func arePositionsSorted(a []float64) bool {
@@ -187,7 +186,7 @@ func (g *GeomCache) setStopTimeDists(shapeId string, patternId int64, sts []gtfs
 	}
 	// Set ShapeDistTraveled values
 	for i := 0; i < len(sts); i++ {
-		sts[i].ShapeDistTraveled = tt.NewFloat(stopPositions[i] * length)
+		sts[i].ShapeDistTraveled.Set(stopPositions[i] * length)
 	}
 	return nil
 }
