@@ -11,15 +11,15 @@ type Trip struct {
 	TripID               tt.String `csv:",required"`
 	TripHeadsign         tt.String
 	TripShortName        tt.String
-	DirectionID          tt.Int `enum:"0,1"`
+	DirectionID          tt.DefaultInt `enum:"0,1"` // DefaultInt: must maintain not-null in db
 	BlockID              tt.String
-	ShapeID              tt.Key     `target:"shapes.txt"`
-	WheelchairAccessible tt.Int     `enum:"0,1,2"`
-	BikesAllowed         tt.Int     `enum:"0,1,2"`
-	StopTimes            []StopTime `csv:"-" db:"-"` // for validation methods
-	StopPatternID        tt.Int     `csv:"-"`
-	JourneyPatternID     tt.String  `csv:"-"`
-	JourneyPatternOffset tt.Int     `csv:"-"`
+	ShapeID              tt.Key        `target:"shapes.txt"`
+	WheelchairAccessible tt.Int        `enum:"0,1,2"`
+	BikesAllowed         tt.Int        `enum:"0,1,2"`
+	StopTimes            []StopTime    `csv:"-" db:"-"` // for validation methods
+	JourneyPatternID     tt.String     `csv:"-"`
+	JourneyPatternOffset tt.DefaultInt `csv:"-"`
+	StopPatternID        tt.DefaultInt `csv:"-"`
 	tt.BaseEntity
 }
 

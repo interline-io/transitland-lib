@@ -20,8 +20,8 @@ type Stop struct {
 	StopURL            tt.String
 	TtsStopName        tt.String
 	PlatformCode       tt.String
-	LocationType       tt.Int
-	ParentStation      tt.Key `target:"stops.txt"`
+	LocationType       tt.DefaultInt // DefaultInt: must maintain not-null in db
+	ParentStation      tt.Key        `target:"stops.txt"`
 	StopTimezone       tt.String
 	WheelchairBoarding tt.Int
 	LevelID            tt.Key   `target:"levels.txt"`
@@ -75,9 +75,6 @@ func (ent *Stop) ToPoint() tlxy.Point {
 
 // Errors for this Entity.
 func (ent *Stop) Errors() (errs []error) {
-	if !ent.LocationType.Valid {
-		ent.LocationType.Set(0)
-	}
 	c := ent.Coordinates()
 	lat := c[1]
 	lon := c[0]
