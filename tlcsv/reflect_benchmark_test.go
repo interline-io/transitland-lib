@@ -157,7 +157,7 @@ func Benchmark_dumpRow_FareProduct(b *testing.B) {
 		FareProductID:   tt.NewString("test"),
 		FareProductName: tt.NewString("name"),
 		Amount:          tt.NewCurrencyAmount(1.2345),
-		Currency:        tt.NewString("USD"),
+		Currency:        tt.NewCurrency("USD"),
 		RiderCategoryID: tt.NewKey("rider_category_id"),
 		FareMediaID:     tt.NewKey("fare_container_id"),
 	}

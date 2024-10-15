@@ -38,7 +38,7 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{ServiceID: "service1", ExceptionType: 1, Date: time.Now()},
 		},
 		FeedInfoList: []gtfs.FeedInfo{
-			{FeedVersion: tt.NewString("123"), FeedPublisherURL: tt.NewString("http://example.com"), FeedLang: tt.NewString("en-US"), FeedPublisherName: tt.NewString("Example")},
+			{FeedVersion: tt.NewString("123"), FeedPublisherURL: tt.NewUrl("http://example.com"), FeedLang: tt.NewLanguage("en-US"), FeedPublisherName: tt.NewString("Example")},
 		},
 		FareRuleList: []gtfs.FareRule{
 			{FareID: tt.NewString("fare1")},

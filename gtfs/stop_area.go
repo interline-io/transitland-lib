@@ -6,8 +6,8 @@ import (
 
 // StopArea stop_areas.txt
 type StopArea struct {
-	AreaID tt.Key `target:"areas.txt"`
-	StopID tt.Key `target:"stops.txt"`
+	AreaID tt.Key `csv:",required" target:"areas.txt"`
+	StopID tt.Key `csv:",required" target:"stops.txt"`
 	tt.BaseEntity
 }
 
@@ -17,10 +17,4 @@ func (ent *StopArea) Filename() string {
 
 func (ent *StopArea) TableName() string {
 	return "gtfs_stop_areas"
-}
-
-func (ent *StopArea) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("area_id", ent.AreaID.Val)...)
-	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
-	return errs
 }
