@@ -40,7 +40,7 @@ func ValidateStopTimes(stoptimes []gtfs.StopTime) []error {
 	for _, st := range stoptimes[1:] {
 		// Ensure we do not have duplicate StopSequennce
 		if st.StopSequence == lastSequence {
-			errs = append(errs, causes.NewSequenceError("stop_sequence", tt.TryCsv(st.StopSequence)))
+			errs = append(errs, causes.NewSequenceError("stop_sequence", st.StopSequence.String()))
 		} else {
 			lastSequence = st.StopSequence
 		}
