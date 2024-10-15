@@ -10,10 +10,10 @@ import (
 // Shape shapes.txt
 type Shape struct {
 	ShapeID           tt.String     `csv:",required"`
-	ShapePtLat        tt.Float      `db:"-" csv:",required"`
-	ShapePtLon        tt.Float      `db:"-" csv:",required"`
-	ShapePtSequence   tt.Int        `db:"-" csv:",required"`
-	ShapeDistTraveled tt.Float      `db:"-"`
+	ShapePtLat        tt.Float      `db:"-" csv:",required" range:"-90,90"`
+	ShapePtLon        tt.Float      `db:"-" csv:",required" range:"-180,180"`
+	ShapePtSequence   tt.Int        `db:"-" csv:",required" range:"0,"`
+	ShapeDistTraveled tt.Float      `db:"-" range:"0,"`
 	Geometry          tt.LineString `db:"geometry" csv:"-"`
 	Generated         bool          `db:"generated" csv:"-"`
 	tt.BaseEntity
@@ -41,6 +41,7 @@ func (ent *Shape) TableName() string {
 
 // Errors for this Entity.
 func (ent *Shape) Errors() (errs []error) {
+	// Defer on moving this to reflect path for now
 	errs = append(errs, tt.CheckPresent("shape_id", ent.ShapeID.Val)...)
 	errs = append(errs, tt.CheckInsideRange("shape_pt_lat", ent.ShapePtLat.Val, -90.0, 90.0)...)
 	errs = append(errs, tt.CheckInsideRange("shape_pt_lon", ent.ShapePtLon.Val, -180.0, 180.0)...)
