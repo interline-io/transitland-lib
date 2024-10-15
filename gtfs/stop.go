@@ -10,20 +10,20 @@ import (
 
 // Stop stops.txt
 type Stop struct {
-	StopID             string `csv:",required" required:"true"`
-	StopName           string
-	StopCode           string
-	StopDesc           string
-	StopLat            float64 `db:"-"` // csv load to Geometry
-	StopLon            float64 `db:"-"`
-	ZoneID             string
-	StopURL            string
+	StopID             tt.String `csv:",required" required:"true"`
+	StopName           tt.String
+	StopCode           tt.String
+	StopDesc           tt.String
+	StopLat            tt.Float `db:"-"` // csv load to Geometry
+	StopLon            tt.Float `db:"-"`
+	ZoneID             tt.String
+	StopURL            tt.String
 	TtsStopName        tt.String
 	PlatformCode       tt.String
-	LocationType       int
+	LocationType       tt.Int
 	ParentStation      tt.Key `target:"stops.txt"`
-	StopTimezone       string
-	WheelchairBoarding int
+	StopTimezone       tt.String
+	WheelchairBoarding tt.Int
 	LevelID            tt.Key   `target:"levels.txt"`
 	Geometry           tt.Point `csv:"-" db:"geometry"`
 	tt.BaseEntity
@@ -31,12 +31,12 @@ type Stop struct {
 
 // EntityID returns the ID or StopID.
 func (ent *Stop) EntityID() string {
-	return entID(ent.ID, ent.StopID)
+	return entID(ent.ID, ent.StopID.Val)
 }
 
 // EntityKey returns the GTFS identifier.
 func (ent *Stop) EntityKey() string {
-	return ent.StopID
+	return ent.StopID.Val
 }
 
 // Filename stops.txt
@@ -75,17 +75,20 @@ func (ent *Stop) ToPoint() tlxy.Point {
 
 // Errors for this Entity.
 func (ent *Stop) Errors() (errs []error) {
+	if !ent.LocationType.Valid {
+		ent.LocationType.Set(0)
+	}
 	c := ent.Coordinates()
 	lat := c[1]
 	lon := c[0]
-	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID)...)
+	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
 	errs = append(errs, tt.CheckInsideRange("stop_lat", lat, -90.0, 90.0)...)
 	errs = append(errs, tt.CheckInsideRange("stop_lon", lon, -180.0, 180.0)...)
-	errs = append(errs, tt.CheckURL("stop_url", ent.StopURL)...)
-	errs = append(errs, tt.CheckInsideRangeInt("location_type", ent.LocationType, 0, 4)...)
-	errs = append(errs, tt.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding, 0, 2)...)
-	if ent.StopTimezone != "" {
-		errs = append(errs, tt.CheckTimezone("stop_timezone", ent.StopTimezone)...)
+	errs = append(errs, tt.CheckURL("stop_url", ent.StopURL.Val)...)
+	errs = append(errs, tt.CheckInsideRangeInt("location_type", ent.LocationType.Val, 0, 4)...)
+	errs = append(errs, tt.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding.Val, 0, 2)...)
+	if ent.StopTimezone.Val != "" {
+		errs = append(errs, tt.CheckTimezone("stop_timezone", ent.StopTimezone.Val)...)
 	}
 	return errs
 }
@@ -93,8 +96,8 @@ func (ent *Stop) Errors() (errs []error) {
 func (ent *Stop) ConditionalErrors() []error {
 	var errs []error
 	// TODO: This should be an enum for exhaustive search
-	lt := ent.LocationType
-	if (lt == 0 || lt == 1 || lt == 2) && len(ent.StopName) == 0 {
+	lt := ent.LocationType.Val
+	if (lt == 0 || lt == 1 || lt == 2) && len(ent.StopName.Val) == 0 {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_name"))
 	}
 	// Check for "0" value...

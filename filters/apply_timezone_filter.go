@@ -41,7 +41,7 @@ func (e *ApplyTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	case *gtfs.Agency:
 		v.AgencyTimezone.Set(e.timezone)
 	case *gtfs.Stop:
-		v.StopTimezone = e.timezone
+		v.StopTimezone.Set(e.timezone)
 	}
 	return nil
 }

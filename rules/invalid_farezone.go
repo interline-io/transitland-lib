@@ -34,7 +34,7 @@ func (e *ValidFarezoneCheck) Validate(ent tt.Entity) []error {
 	var errs []error
 	switch v := ent.(type) {
 	case *gtfs.Stop:
-		e.zones[v.ZoneID] = v.ZoneID
+		e.zones[v.ZoneID.Val] = v.ZoneID.Val
 	case *gtfs.FareRule:
 		// TODO: updating values should be handled in UpdateKeys
 		// probably shouldn't mutate in validators...

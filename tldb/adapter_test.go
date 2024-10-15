@@ -268,17 +268,19 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 		return m, err
 	}
 	ent2 := gtfs.Stop{}
-	ent2.StopID = "bar"
+	ent2.StopID.Set("bar")
 	ent2.SetCoordinates([2]float64{-123.0, 42.0})
 	ent2.FeedVersionID = m.FeedVersionID
+	ent2.LocationType.Set(0)
 	m.StopID1, err = adapter.Insert(&ent2)
 	if err != nil {
 		return m, err
 	}
 	ent3 := gtfs.Stop{}
-	ent3.StopID = "foo"
+	ent3.StopID.Set("foo")
 	ent3.SetCoordinates([2]float64{-122.0, 43.0})
 	ent3.FeedVersionID = m.FeedVersionID
+	ent3.LocationType.Set(0)
 	m.StopID2, err = adapter.Insert(&ent3)
 	if err != nil {
 		return m, err

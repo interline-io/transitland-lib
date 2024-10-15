@@ -71,7 +71,7 @@ func (fi *Validator) Validate(ent tt.Entity) []error {
 	case *gtfs.Agency:
 		fi.Timezone = v.AgencyTimezone.Val
 	case *gtfs.Stop:
-		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
+		fi.stopInfo[v.StopID.Val] = stopInfo{LocationType: v.LocationType.Int()}
 	case *gtfs.Route:
 		fi.routeInfo[v.RouteID.Val] = routeInfo{
 			RouteType: v.RouteType.Int(),

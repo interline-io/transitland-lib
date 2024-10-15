@@ -58,9 +58,9 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Stop:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.StopID = fmt.Sprintf("%s%s", prefix, v.StopID)
-			if v.ZoneID != "" {
-				v.ZoneID = fmt.Sprintf("%s%s", prefix, v.ZoneID)
+			v.StopID.Set(fmt.Sprintf("%s%s", prefix, v.StopID.Val))
+			if v.ZoneID.Valid {
+				v.ZoneID.Set(fmt.Sprintf("%s%s", prefix, v.ZoneID.Val))
 			}
 		}
 	case *gtfs.Agency:

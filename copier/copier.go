@@ -701,7 +701,7 @@ func (copier *Copier) copyLevels() error {
 func (copier *Copier) copyStops() error {
 	// First pass for stations
 	for ent := range copier.Reader.Stops() {
-		if ent.LocationType == 1 {
+		if ent.LocationType.Val == 1 {
 			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
@@ -710,7 +710,7 @@ func (copier *Copier) copyStops() error {
 	}
 	// Second pass for platforms, exits, and generic nodes
 	for ent := range copier.Reader.Stops() {
-		if ent.LocationType == 0 || ent.LocationType == 2 || ent.LocationType == 3 {
+		if ent.LocationType.Val == 0 || ent.LocationType.Val == 2 || ent.LocationType.Val == 3 {
 			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
@@ -719,7 +719,7 @@ func (copier *Copier) copyStops() error {
 	}
 	// Third pass for boarding areas
 	for ent := range copier.Reader.Stops() {
-		if ent.LocationType == 4 {
+		if ent.LocationType.Val == 4 {
 			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err

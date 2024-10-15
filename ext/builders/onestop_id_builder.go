@@ -77,7 +77,7 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 		pp.agencyNames[eid] = v.AgencyName.Val
 	case *gtfs.Stop:
 		pp.stops[eid] = &stopGeom{
-			name: v.StopName,
+			name: v.StopName.Val,
 			lon:  v.Geometry.X(),
 			lat:  v.Geometry.Y(),
 		}

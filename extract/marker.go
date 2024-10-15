@@ -100,9 +100,9 @@ func (em *Marker) Filter(reader adapters.Reader) error {
 				Lat: stop.Geometry.Y(),
 			}
 			if bbox.Contains(spt) {
-				em.AddInclude("stops.txt", stop.StopID)
+				em.AddInclude("stops.txt", stop.StopID.Val)
 			} else {
-				bboxExcludeStops = append(bboxExcludeStops, stop.StopID)
+				bboxExcludeStops = append(bboxExcludeStops, stop.StopID.Val)
 			}
 		}
 	}

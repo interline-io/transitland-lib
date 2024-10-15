@@ -30,4 +30,12 @@ alter table gtfs_routes alter column route_color drop not null;
 alter table gtfs_routes alter column route_text_color drop not null;
 alter table gtfs_routes alter column route_sort_order drop not null;
 
+alter table gtfs_stops alter column stop_code drop not null;
+alter table gtfs_stops alter column stop_name drop not null;
+alter table gtfs_stops alter column stop_desc drop not null;
+alter table gtfs_stops alter column zone_id drop not null;
+alter table gtfs_stops alter column stop_url drop not null;
+alter table gtfs_stops alter column stop_timezone drop not null;
+alter table gtfs_stops alter column wheelchair_boarding drop not null;
+
 COMMIT;

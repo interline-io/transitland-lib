@@ -76,8 +76,8 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 		// Horrible special case bug fix
 		if v, ok := ent.(*gtfs.Stop); ok {
 			c := v.Coordinates()
-			v.StopLon = c[0]
-			v.StopLat = c[1]
+			v.StopLon.Set(c[0])
+			v.StopLat.Set(c[1])
 		}
 	}
 	header, ok := writer.headers[efn]

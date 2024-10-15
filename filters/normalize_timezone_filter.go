@@ -20,11 +20,11 @@ func (e *NormalizeTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) erro
 			v.AgencyTimezone.Set(n)
 		}
 	case *gtfs.Stop:
-		n, ok := tt.IsValidTimezone(v.StopTimezone)
+		n, ok := tt.IsValidTimezone(v.StopTimezone.Val)
 		if !ok {
-			return causes.NewInvalidTimezoneError("stop_timezone", v.StopTimezone)
+			return causes.NewInvalidTimezoneError("stop_timezone", v.StopTimezone.Val)
 		} else {
-			v.StopTimezone = n
+			v.StopTimezone.Set(n)
 		}
 	}
 	return nil

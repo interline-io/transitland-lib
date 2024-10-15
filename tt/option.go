@@ -51,10 +51,6 @@ func (r Option[T]) String() string {
 	return out
 }
 
-func (r *Option[T]) Error() error {
-	return nil
-}
-
 func (r *Option[T]) Scan(src interface{}) error {
 	err := convertAssign(&r.Val, src)
 	r.Valid = (src != nil && err == nil)

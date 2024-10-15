@@ -17,7 +17,7 @@ func (e *DescriptionEqualsName) Validate(ent tt.Entity) []error {
 		}
 	}
 	if v, ok := ent.(*gtfs.Stop); ok {
-		if v.StopDesc != "" && v.StopDesc == v.StopName {
+		if v.StopDesc.Valid && v.StopDesc == v.StopName {
 			return []error{causes.NewValidationWarning("stop_name", "stop_desc should not duplicate stop_name")}
 		}
 	}

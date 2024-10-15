@@ -29,7 +29,7 @@ func TestGeomCache(t *testing.T) {
 		cache.AddShapeGeom(e.ShapeID, lm.Coords, lm.Data)
 	}
 	for e := range r.Stops() {
-		cache.AddStopGeom(e.StopID, e.ToPoint())
+		cache.AddStopGeom(e.StopID.Val, e.ToPoint())
 	}
 	for stoptimes := range r.StopTimesByTripID() {
 		trip := trips[stoptimes[0].TripID.Val]

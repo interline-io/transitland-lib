@@ -8,7 +8,7 @@ import (
 )
 
 func TestSetterFilter_Filter(t *testing.T) {
-	stop := &gtfs.Stop{StopID: "abc"}
+	stop := &gtfs.Stop{StopID: tt.NewString("abc")}
 	route := &gtfs.Route{RouteID: tt.NewString("foo")}
 	emap := tt.NewEntityMap()
 	tx := NewSetterFilter()
@@ -16,7 +16,7 @@ func TestSetterFilter_Filter(t *testing.T) {
 	tx.AddValue(route.Filename(), route.EntityID(), "route_type", "1000")
 	tx.Filter(stop, emap)
 	tx.Filter(route, emap)
-	if stop.StopName != "test" {
+	if stop.StopName.Val != "test" {
 		t.Errorf("got %s expect %s", stop.StopName, "test")
 	}
 	if route.RouteType.Val != 1000 {
