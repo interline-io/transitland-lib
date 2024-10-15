@@ -12,7 +12,7 @@ import (
 func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 	r := &direct.Reader{
 		AgencyList: []gtfs.Agency{
-			{AgencyID: "agency1", AgencyName: "Agency 1", AgencyTimezone: "America/Los_Angeles", AgencyURL: "http://example.com"},
+			{AgencyID: tt.NewString("agency1"), AgencyName: tt.NewString("Agency 1"), AgencyTimezone: tt.NewTimezone("America/Los_Angeles"), AgencyURL: tt.NewUrl("http://example.com")},
 		},
 		RouteList: []gtfs.Route{
 			{RouteID: "route1", RouteShortName: "Route 1", RouteType: 1, AgencyID: "agency1"},

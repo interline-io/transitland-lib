@@ -100,13 +100,13 @@ func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 		agencyID := 0
 		if len(agencies) == 1 {
 			// match regardless of gtfs_agency_id
-			oif.ResolvedGtfsAgencyID = tt.NewString(agencies[0].AgencyID)
+			oif.ResolvedGtfsAgencyID.Set(agencies[0].AgencyID.Val)
 			agencyID = agencies[0].ID
 		} else if len(agencies) > 1 {
 			// match on gtfs_agency_id
 			for _, agency := range agencies {
-				if agency.AgencyID == oif.GtfsAgencyID.Val {
-					oif.ResolvedGtfsAgencyID = tt.NewString(agency.AgencyID)
+				if agency.AgencyID.Val == oif.GtfsAgencyID.Val {
+					oif.ResolvedGtfsAgencyID.Set(agency.AgencyID.Val)
 					agencyID = agency.ID
 				}
 			}
@@ -174,7 +174,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 		return false, err
 	}
 	for _, agency := range agencies {
-		check := oifmatch{feedID: feedid, resolvedGtfsAgencyID: agency.AgencyID}
+		check := oifmatch{feedID: feedid, resolvedGtfsAgencyID: agency.AgencyID.Val}
 		if match, ok := oiflookup[check]; ok {
 			oifmatches[match] = true
 		} else {
@@ -182,8 +182,8 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 			// Generate OnestopID
 			oif := dmfr.OperatorAssociatedFeed{
 				FeedID:               feedid,
-				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID),
-				ResolvedName:         tt.NewString(agency.AgencyName),
+				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID.Val),
+				ResolvedName:         tt.NewString(agency.AgencyName.Val),
 			}
 			if places, err := getPlaces(atx, agency.ID); err != nil {
 				return false, err
@@ -197,7 +197,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 				if strings.HasPrefix(feed.FeedID, "f-") && len(feed.FeedID) > 2 {
 					fsid = feed.FeedID[2:]
 				}
-				oif.ResolvedOnestopID = tt.NewString(fmt.Sprintf("o-%s-%s", fsid, filterName(agency.AgencyName)))
+				oif.ResolvedOnestopID = tt.NewString(fmt.Sprintf("o-%s-%s", fsid, filterName(agency.AgencyName.Val)))
 			}
 			// Save
 			if _, err := atx.Insert(&oif); err != nil {

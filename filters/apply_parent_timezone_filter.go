@@ -17,7 +17,7 @@ func (e *ApplyParentTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) er
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		if e.defaultAgencyTimezone == "" {
-			e.defaultAgencyTimezone = v.AgencyTimezone
+			e.defaultAgencyTimezone = v.AgencyTimezone.Val
 		}
 	case *gtfs.Stop:
 		if v.StopTimezone == "" {

@@ -71,7 +71,7 @@ func (ent *Route) ConditionalErrors() []error {
 // UpdateKeys updates Entity references.
 func (ent *Route) UpdateKeys(emap *EntityMap) error {
 	aid := ent.AgencyID
-	if agencyID, ok := emap.GetEntity(&Agency{AgencyID: ent.AgencyID}); ok {
+	if agencyID, ok := emap.GetEntity(&Agency{AgencyID: tt.NewString(ent.AgencyID)}); ok {
 		ent.AgencyID = agencyID
 	} else if aid == "" {
 		// best practice warning, handled elsewhere

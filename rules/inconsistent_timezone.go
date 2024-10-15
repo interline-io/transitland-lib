@@ -31,10 +31,10 @@ func (e *InconsistentTimezoneCheck) Validate(ent tt.Entity) []error {
 		return nil
 	}
 	if e.firstTimeZone == "" {
-		e.firstTimeZone = v.AgencyTimezone
+		e.firstTimeZone = v.AgencyTimezone.Val
 	}
-	if v.AgencyTimezone != e.firstTimeZone {
-		return []error{NewInconsistentTimezoneError(v.AgencyTimezone)}
+	if v.AgencyTimezone.Val != e.firstTimeZone {
+		return []error{NewInconsistentTimezoneError(v.AgencyTimezone.Val)}
 	}
 	return nil
 }

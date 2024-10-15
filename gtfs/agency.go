@@ -4,38 +4,25 @@ import "github.com/interline-io/transitland-lib/tt"
 
 // Agency agency.txt
 type Agency struct {
-	AgencyID       string
-	AgencyName     string `csv:",required"`
-	AgencyURL      string `csv:",required"`
-	AgencyTimezone string `csv:",required"`
-	AgencyLang     string
-	AgencyPhone    string
-	AgencyFareURL  string
-	AgencyEmail    string
+	AgencyID       tt.String
+	AgencyName     tt.String   `csv:",required"`
+	AgencyURL      tt.Url      `csv:",required"`
+	AgencyTimezone tt.Timezone `csv:",required"`
+	AgencyLang     tt.Language
+	AgencyPhone    tt.String
+	AgencyFareURL  tt.Url
+	AgencyEmail    tt.Email
 	tt.BaseEntity
 }
 
 // EntityID returns the ID or AgencyID.
 func (ent *Agency) EntityID() string {
-	return entID(ent.ID, ent.AgencyID)
+	return entID(ent.ID, ent.AgencyID.Val)
 }
 
 // EntityKey returns the GTFS identifier.
 func (ent *Agency) EntityKey() string {
-	return ent.AgencyID
-}
-
-// Errors for this Entity.
-func (ent *Agency) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("agency_name", ent.AgencyName)...)
-	errs = append(errs, tt.CheckPresent("agency_url", ent.AgencyURL)...)
-	errs = append(errs, tt.CheckPresent("agency_timezone", ent.AgencyTimezone)...)
-	errs = append(errs, tt.CheckTimezone("agency_timezone", ent.AgencyTimezone)...)
-	errs = append(errs, tt.CheckURL("agency_url", ent.AgencyURL)...)
-	errs = append(errs, tt.CheckURL("agency_fare_url", ent.AgencyFareURL)...)
-	errs = append(errs, tt.CheckLanguage("agency_lang", ent.AgencyLang)...)
-	errs = append(errs, tt.CheckEmail("agency_email", ent.AgencyEmail)...)
-	return errs
+	return ent.AgencyID.Val
 }
 
 // Filename agency.txt

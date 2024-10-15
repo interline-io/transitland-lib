@@ -35,7 +35,7 @@ func (ext Ext) Entities() []tt.Entity {
 func (ext *Ext) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
-		ext.defaultAgency = v.AgencyID
+		ext.defaultAgency = v.AgencyID.Val
 	case *PlusRiderCategory:
 		if v.AgencyID == "" {
 			v.AgencyID = ext.defaultAgency

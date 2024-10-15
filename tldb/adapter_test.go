@@ -231,7 +231,10 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	}
 	//
 	ent0 := gtfs.Agency{}
-	ent0.AgencyID = "ok"
+	ent0.AgencyID.Set("ok")
+	ent0.AgencyName.Set("ok")
+	ent0.AgencyURL.Set("https://example.com")
+	ent0.AgencyTimezone.Set("America/Los_Angeles")
 	ent0.FeedVersionID = m.FeedVersionID
 	m.AgencyID, err = adapter.Insert(&ent0)
 	if err != nil {

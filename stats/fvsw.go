@@ -34,7 +34,7 @@ func NewFeedVersionServiceWindowBuilder() *FeedVersionServiceWindowBuilder {
 func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
-		if tz, ok := tt.IsValidTimezone(v.AgencyTimezone); ok {
+		if tz, ok := tt.IsValidTimezone(v.AgencyTimezone.Val); ok {
 			pp.fvsw.DefaultTimezone = tt.NewString(tz)
 		}
 	case *gtfs.FeedInfo:

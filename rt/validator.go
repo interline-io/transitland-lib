@@ -69,7 +69,7 @@ func (fi *Validator) SetGeomCache(g tlxy.GeomCache) {
 func (fi *Validator) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
-		fi.Timezone = v.AgencyTimezone
+		fi.Timezone = v.AgencyTimezone.Val
 	case *gtfs.Stop:
 		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
 	case *gtfs.Route:

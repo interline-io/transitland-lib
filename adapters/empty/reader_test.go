@@ -10,7 +10,7 @@ func TestReader(t *testing.T) {
 	reader := NewReader()
 	agencyIds := map[string]int{}
 	for ent := range reader.Agencies() {
-		agencyIds[ent.AgencyID] += 1
+		agencyIds[ent.AgencyID.Val] += 1
 	}
 	assert.Equal(t, 0, len(agencyIds))
 }

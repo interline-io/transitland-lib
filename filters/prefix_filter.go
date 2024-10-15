@@ -65,7 +65,7 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		}
 	case *gtfs.Agency:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.AgencyID = fmt.Sprintf("%s%s", prefix, v.AgencyID)
+			v.AgencyID.Set(fmt.Sprintf("%s%s", prefix, v.AgencyID.Val))
 		}
 	case *gtfs.Trip:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {

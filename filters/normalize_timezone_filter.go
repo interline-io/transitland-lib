@@ -13,11 +13,11 @@ type NormalizeTimezoneFilter struct{}
 func (e *NormalizeTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
-		n, ok := tt.IsValidTimezone(v.AgencyTimezone)
+		n, ok := tt.IsValidTimezone(v.AgencyTimezone.Val)
 		if !ok {
-			return causes.NewInvalidTimezoneError("agency_timezone", v.AgencyTimezone)
+			return causes.NewInvalidTimezoneError("agency_timezone", v.AgencyTimezone.Val)
 		} else {
-			v.AgencyEmail = n
+			v.AgencyTimezone.Set(n)
 		}
 	case *gtfs.Stop:
 		n, ok := tt.IsValidTimezone(v.StopTimezone)

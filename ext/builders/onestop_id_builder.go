@@ -74,7 +74,7 @@ func NewOnestopIDBuilder() *OnestopIDBuilder {
 func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
-		pp.agencyNames[eid] = v.AgencyName
+		pp.agencyNames[eid] = v.AgencyName.Val
 	case *gtfs.Stop:
 		pp.stops[eid] = &stopGeom{
 			name: v.StopName,
