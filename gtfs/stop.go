@@ -14,16 +14,16 @@ type Stop struct {
 	StopName           tt.String
 	StopCode           tt.String
 	StopDesc           tt.String
-	StopLat            tt.Float `db:"-"` // csv load to Geometry
-	StopLon            tt.Float `db:"-"`
+	StopLat            tt.Float `db:"-" range:"-90,90"` // csv load to Geometry
+	StopLon            tt.Float `db:"-" range:"-180,180"`
 	ZoneID             tt.String
-	StopURL            tt.String
+	StopURL            tt.Url
 	TtsStopName        tt.String
 	PlatformCode       tt.String
-	LocationType       tt.Int
+	LocationType       tt.Int `enum:"0,1,2,3,4"`
 	ParentStation      tt.Key `target:"stops.txt"`
-	StopTimezone       tt.String
-	WheelchairBoarding tt.Int
+	StopTimezone       tt.Timezone
+	WheelchairBoarding tt.Int   `enum:"0,1,2"`
 	LevelID            tt.Key   `target:"levels.txt"`
 	Geometry           tt.Point `csv:"-" db:"geometry"`
 	tt.BaseEntity
@@ -71,23 +71,6 @@ func (ent *Stop) Coordinates() [2]float64 {
 
 func (ent *Stop) ToPoint() tlxy.Point {
 	return ent.Geometry.ToPoint()
-}
-
-// Errors for this Entity.
-func (ent *Stop) Errors() (errs []error) {
-	c := ent.Coordinates()
-	lat := c[1]
-	lon := c[0]
-	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
-	errs = append(errs, tt.CheckInsideRange("stop_lat", lat, -90.0, 90.0)...)
-	errs = append(errs, tt.CheckInsideRange("stop_lon", lon, -180.0, 180.0)...)
-	errs = append(errs, tt.CheckURL("stop_url", ent.StopURL.Val)...)
-	errs = append(errs, tt.CheckInsideRangeInt("location_type", ent.LocationType.Val, 0, 4)...)
-	errs = append(errs, tt.CheckInsideRangeInt("wheelchair_boarding", ent.WheelchairBoarding.Val, 0, 2)...)
-	if ent.StopTimezone.Val != "" {
-		errs = append(errs, tt.CheckTimezone("stop_timezone", ent.StopTimezone.Val)...)
-	}
-	return errs
 }
 
 func (ent *Stop) ConditionalErrors() []error {
