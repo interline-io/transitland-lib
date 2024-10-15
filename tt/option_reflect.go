@@ -12,34 +12,6 @@ import (
 
 var mapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
 
-type CanCheck interface {
-	String() string
-	IsValid() bool
-	Check() error
-}
-
-func getString(v any) string {
-	type canString interface {
-		String() string
-	}
-
-	if a, ok := v.(canString); ok {
-		return a.String()
-	}
-
-	return ""
-}
-
-func getFloat(v any) string {
-	type canString interface {
-		String() string
-	}
-	if a, ok := v.(canString); ok {
-		return a.String()
-	}
-	return ""
-}
-
 func CheckErrors(ent any) []error {
 	var errs []error
 	if a, ok := ent.(EntityWithLoadErrors); ok {
@@ -67,22 +39,29 @@ func CheckWarnings(ent any) []error {
 	return errs
 }
 
+type CanReflectCheck interface {
+	String() string
+	IsValid() bool
+	Check() error
+}
+
 // Error wrapping helpers
 func ReflectCheckErrors(ent any) []error {
 	var errs []error
 	entValue := reflect.ValueOf(ent).Elem()
 	fmap := mapperCache.GetStructTagMap(ent)
 	for fieldName, fieldInfo := range fmap {
+		// Get field
 		field := reflectx.FieldByIndexes(entValue, fieldInfo.Index)
 		fieldAddr := field.Addr().Interface()
 		if fieldAddr == nil {
 			continue
 		}
-		fieldCheck, ok := fieldAddr.(CanCheck)
+
+		// Field cant be checked
+		fieldCheck, ok := fieldAddr.(CanReflectCheck)
 		if !ok {
-			if fieldInfo.Required && field.IsZero() {
-				errs = append(errs, causes.NewRequiredFieldError(fieldName))
-			}
+			log.Error().Msgf("type %T does not support reflect based error checks", fieldAddr)
 			continue
 		}
 		if fieldInfo.Required && !fieldCheck.IsValid() {
@@ -92,41 +71,40 @@ func ReflectCheckErrors(ent any) []error {
 		if !fieldCheck.IsValid() {
 			continue
 		}
+		// Only perform additional checks if field is present
 		if err := fieldCheck.Check(); err != nil {
 			errs = append(errs, causes.NewInvalidFieldError(fieldName, fieldCheck.String(), err))
 		}
 		if fieldInfo.RangeMin != nil || fieldInfo.RangeMax != nil {
-			a, ok := fieldAddr.(canFloat)
-			if !ok {
-				errs = append(errs, fmt.Errorf("could not convert %T to float for range check", fieldAddr))
-				continue
-			}
-			checkVal := a.Float()
-			if fieldInfo.RangeMin != nil && checkVal < *fieldInfo.RangeMin {
-				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than %f", *fieldInfo.RangeMin))
-				errs = append(errs, checkErr)
-			}
-			if fieldInfo.RangeMax != nil && checkVal > *fieldInfo.RangeMax {
-				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than %f", *fieldInfo.RangeMax))
-				errs = append(errs, checkErr)
+			if a, ok := fieldAddr.(canFloat); ok {
+				checkVal := a.Float()
+				if fieldInfo.RangeMin != nil && checkVal < *fieldInfo.RangeMin {
+					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than %f", *fieldInfo.RangeMin))
+					errs = append(errs, checkErr)
+				}
+				if fieldInfo.RangeMax != nil && checkVal > *fieldInfo.RangeMax {
+					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than %f", *fieldInfo.RangeMax))
+					errs = append(errs, checkErr)
+				}
+			} else {
+				log.Error().Msgf("could not convert %T to float for range check", fieldAddr)
 			}
 		}
 		if len(fieldInfo.EnumValues) > 0 {
-			a, ok := fieldAddr.(canInt)
-			if !ok {
-				errs = append(errs, fmt.Errorf("could not convert %T to int for enum check", fieldAddr))
-				continue
-			}
-			checkVal := int64(a.Int())
-			found := false
-			for _, enumValue := range fieldInfo.EnumValues {
-				if checkVal == enumValue {
-					found = true
+			if a, ok := fieldAddr.(canInt); ok {
+				checkVal := int64(a.Int())
+				found := false
+				for _, enumValue := range fieldInfo.EnumValues {
+					if checkVal == enumValue {
+						found = true
+					}
 				}
-			}
-			if !found {
-				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("not in allowed values"))
-				errs = append(errs, checkErr)
+				if !found {
+					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("not in allowed values"))
+					errs = append(errs, checkErr)
+				}
+			} else {
+				log.Error().Msgf("could not convert %T to int for enum check", fieldAddr)
 			}
 		}
 	}
@@ -137,24 +115,29 @@ func ReflectUpdateKeys(emap *EntityMap, ent any) []error {
 	var errs []error
 	fields := entityMapperCache.GetStructTagMap(ent)
 	for fieldName, fieldInfo := range fields {
+		// Get target from field tags
 		if fieldInfo.Target == "" {
 			continue
 		}
 		elem := reflect.ValueOf(ent).Elem()
-		fieldValue := reflectx.FieldByIndexes(elem, fieldInfo.Index).Addr().Interface()
-		fieldSet, ok := fieldValue.(canSet)
+		fieldValue := reflectx.FieldByIndexes(elem, fieldInfo.Index)
+		fieldAddr := fieldValue.Addr().Interface()
+		fieldSet, ok := fieldAddr.(canSet)
 		if !ok {
-			log.Error().Msgf("EntityMap ReflectUpdate cannot be used on field '%s', does not support Set()", fieldName)
+			log.Error().Msgf("type %T does not support reflect based reference checks", fieldAddr)
 			continue
 		}
 		eid := fieldSet.String()
 		if eid == "" {
 			continue
 		}
+		// Check if reference exists
 		newId, ok := emap.Get(fieldInfo.Target, eid)
 		if !ok {
 			errs = append(errs, TrySetField(causes.NewInvalidReferenceError(fieldName, eid), fieldName))
+			continue
 		}
+		// Update the value *if* the reference exists
 		fieldSet.Set(newId)
 	}
 	return errs
