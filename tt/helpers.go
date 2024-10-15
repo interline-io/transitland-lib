@@ -106,6 +106,14 @@ func CheckPresent(field string, value string) (errs []error) {
 	return errs
 }
 
+// CheckPresent returns an error if a string is empty
+func CheckConditionallyRequired(field string, value string) (errs []error) {
+	if value == "" {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError(field))
+	}
+	return errs
+}
+
 func stripQuotes(v []byte) []byte {
 	if len(v) < 2 {
 		return v

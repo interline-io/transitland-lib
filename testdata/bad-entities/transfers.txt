@@ -1,13 +1,13 @@
 from_stop_id,to_stop_id,from_route_id,to_route_id,from_trip_id,to_trip_id,transfer_type,min_transfer_time,expect_error
-ok1,ok2,2,600,
+ok1,ok2,2,600,,,0
 
-,ok2,,,,ok,0,,RequiredFieldError:from_stop_id
-ok1,,,,ok,,0,,RequiredFieldError:to_stop_id
+,ok2,,,,ok,1,,ConditionallyRequiredFieldError:from_stop_id
+ok1,,,,ok,,1,,ConditionallyRequiredFieldError:to_stop_id
 
-ok1,ok2,,,,ok,4,,RequiredFieldError:from_trip_id
-ok1,ok2,,,ok,,4,,RequiredFieldError:to_trip_id
-ok1,ok2,,,,ok,5,,RequiredFieldError:from_trip_id
-ok1,ok2,,,ok,,5,,RequiredFieldError:to_trip_id
+ok1,ok2,,,,ok,4,,ConditionallyRequiredFieldError:from_trip_id
+ok1,ok2,,,ok,,4,,ConditionallyRequiredFieldError:to_trip_id
+ok1,ok2,,,,ok,5,,ConditionallyRequiredFieldError:from_trip_id
+ok1,ok2,,,ok,,5,,ConditionallyRequiredFieldError:to_trip_id
 
 ok1,ok2,,,,,xyz,,FieldParseError:transfer_type
 ok1,ok2,,,,,0,xyz,FieldParseError:min_transfer_time

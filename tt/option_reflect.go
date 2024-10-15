@@ -68,8 +68,8 @@ func ReflectCheckErrors(ent any) []error {
 			continue
 		}
 
-		// Check required
-		if fieldCheck, fieldCheckOk := fieldAddr.(CanReflectCheck); fieldCheckOk {
+		// Check required and type based validation
+		if fieldCheck, ok := fieldAddr.(CanReflectCheck); ok {
 			if fieldInfo.Required && !fieldCheck.IsValid() {
 				errs = append(errs, causes.NewRequiredFieldError(fieldName))
 			}
@@ -77,13 +77,13 @@ func ReflectCheckErrors(ent any) []error {
 				errs = append(errs, causes.NewInvalidFieldError(fieldName, fieldCheck.String(), err))
 			}
 		} else if fieldInfo.Required {
-			log.Error().Msgf("type %T does not support reflect based error checks", fieldAddr)
+			errs = append(errs, fmt.Errorf("type %T does not support reflect based error checks", fieldAddr))
 		}
 
 		// Check range min/max
 		if fieldInfo.RangeMin != nil || fieldInfo.RangeMax != nil {
 			if fieldCheck, ok := fieldAddr.(canReflectCheckFloat); !ok {
-				log.Error().Msgf("could not convert %T to float for range check", fieldAddr)
+				errs = append(errs, fmt.Errorf("could not convert %T to float for range check", fieldAddr))
 			} else if fieldCheck.IsValid() {
 				checkVal := fieldCheck.Float()
 				if fieldInfo.RangeMin != nil && checkVal < *fieldInfo.RangeMin {
@@ -100,7 +100,7 @@ func ReflectCheckErrors(ent any) []error {
 		// Check enum values
 		if len(fieldInfo.EnumValues) > 0 {
 			if fieldCheck, ok := fieldAddr.(canReflectCheckInt); !ok {
-				log.Error().Msgf("could not convert %T to int for enum check", fieldAddr)
+				errs = append(errs, fmt.Errorf("could not convert %T to int for enum check", fieldAddr))
 			} else if fieldCheck.IsValid() {
 				checkVal := int64(fieldCheck.Int())
 				found := false
