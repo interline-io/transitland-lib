@@ -12,10 +12,12 @@ import (
 var mapperCache = tags.NewCache(reflectx.NewMapperFunc("csv", tags.ToSnakeCase))
 
 type CanCheck interface {
-	String() string
 	Check() error
 	IsValid() bool
 	IsZero() bool
+	String() string
+	Float() float64
+	Int() int
 }
 
 func CheckErrors(ent any) []error {
@@ -70,6 +72,9 @@ func ReflectCheckErrors(ent any) []error {
 		if fieldInfo.Required && !fieldCheck.IsValid() {
 			errs = append(errs, causes.NewRequiredFieldError(fieldName))
 			continue
+		}
+		if fieldInfo.RangeMin != nil {
+
 		}
 	}
 	return errs
