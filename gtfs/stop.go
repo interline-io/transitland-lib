@@ -20,8 +20,8 @@ type Stop struct {
 	StopURL            tt.String
 	TtsStopName        tt.String
 	PlatformCode       tt.String
-	LocationType       tt.DefaultInt // DefaultInt: must maintain not-null in db
-	ParentStation      tt.Key        `target:"stops.txt"`
+	LocationType       tt.Int
+	ParentStation      tt.Key `target:"stops.txt"`
 	StopTimezone       tt.String
 	WheelchairBoarding tt.Int
 	LevelID            tt.Key   `target:"levels.txt"`

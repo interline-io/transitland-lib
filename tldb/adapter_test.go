@@ -262,6 +262,10 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	ent1.TripID.Set("ok")
 	ent1.RouteID.Set(strconv.Itoa(m.RouteID))
 	ent1.ServiceID.Set(strconv.Itoa(m.ServiceID))
+	ent1.DirectionID.Set(0)
+	ent1.StopPatternID.Set(0)
+	ent1.JourneyPatternID.Set("")
+	ent1.JourneyPatternOffset.Set(0)
 	ent1.FeedVersionID = m.FeedVersionID
 	m.TripID, err = adapter.Insert(&ent1)
 	if err != nil {
