@@ -14,12 +14,6 @@ type FareRule struct {
 	tt.BaseEntity
 }
 
-// // Errors for this Entity.
-func (ent *FareRule) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID.Val)...)
-	return errs
-}
-
 // Filename fare_rules.txt
 func (ent *FareRule) Filename() string {
 	return "fare_rules.txt"
@@ -28,4 +22,10 @@ func (ent *FareRule) Filename() string {
 // TableName gtfs_fare_Rules
 func (ent *FareRule) TableName() string {
 	return "gtfs_fare_rules"
+}
+
+// // Errors for this Entity.
+func (ent *FareRule) Errors() (errs []error) {
+	errs = append(errs, tt.CheckPresent("fare_id", ent.FareID.Val)...)
+	return errs
 }

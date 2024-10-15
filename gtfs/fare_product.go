@@ -1,8 +1,6 @@
 package gtfs
 
 import (
-	"fmt"
-
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -22,25 +20,6 @@ type FareProduct struct {
 	tt.BaseEntity
 }
 
-func (ent *FareProduct) String() string {
-	return fmt.Sprintf(
-		"<fare_product fare_product_id:%s rider_category_id:%s fare_media_id:%s amount:%0.2f>",
-		ent.FareProductID.Val,
-		ent.RiderCategoryID.Val,
-		ent.FareMediaID.Val,
-		ent.Amount.Val,
-	)
-}
-
-func (ent *FareProduct) GetValue(key string) (any, bool) {
-	switch key {
-	case "amount":
-		ent.Amount.SetCurrency(ent.Currency.Val)
-		return ent.Amount, true
-	}
-	return nil, false
-}
-
 func (ent *FareProduct) EntityID() string {
 	return ent.FareProductID.Val
 }
@@ -51,6 +30,15 @@ func (ent *FareProduct) Filename() string {
 
 func (ent *FareProduct) TableName() string {
 	return "gtfs_fare_products"
+}
+
+func (ent *FareProduct) GetValue(key string) (any, bool) {
+	switch key {
+	case "amount":
+		ent.Amount.SetCurrency(ent.Currency.Val)
+		return ent.Amount, true
+	}
+	return nil, false
 }
 
 func (ent *FareProduct) ConditionalErrors() (errs []error) {

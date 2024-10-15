@@ -49,7 +49,13 @@ func (ent *Calendar) Errors() (errs []error) {
 	}
 	if ent.EndDate.IsZero() {
 		errs = append(errs, causes.NewInvalidFieldError("end_date", ent.EndDate.String(), fmt.Errorf("end_date is empty")))
-	} else if ent.EndDate.Before(ent.StartDate) {
+	}
+	return errs
+}
+
+func (ent *Calendar) ConditionalErrors() []error {
+	var errs []error
+	if !ent.StartDate.IsZero() && !ent.EndDate.IsZero() && ent.EndDate.Before(ent.StartDate) {
 		errs = append(errs, causes.NewInvalidFieldError("end_date", ent.EndDate.String(), fmt.Errorf("end_date '%s' must come after start_date '%s'", ent.EndDate, ent.StartDate)))
 	}
 	return errs

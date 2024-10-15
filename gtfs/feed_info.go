@@ -21,16 +21,6 @@ type FeedInfo struct {
 	tt.BaseEntity
 }
 
-// Errors for this Entity.
-func (ent *FeedInfo) ConditionalErrors() (errs []error) {
-	if ent.FeedStartDate.IsZero() || ent.FeedEndDate.IsZero() {
-		// skip
-	} else if ent.FeedEndDate.Val.Before(ent.FeedStartDate.Val) {
-		errs = append(errs, causes.NewInvalidFieldError("feed_end_date", ent.FeedStartDate.Val.String(), fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Val, ent.FeedStartDate.Val)))
-	}
-	return errs
-}
-
 // Filename feed_info.txt
 func (ent *FeedInfo) Filename() string {
 	return "feed_info.txt"
@@ -39,4 +29,14 @@ func (ent *FeedInfo) Filename() string {
 // TableName gtfs_feed_infos
 func (ent *FeedInfo) TableName() string {
 	return "gtfs_feed_infos"
+}
+
+// Errors for this Entity.
+func (ent *FeedInfo) ConditionalErrors() (errs []error) {
+	if ent.FeedStartDate.IsZero() || ent.FeedEndDate.IsZero() {
+		// skip
+	} else if ent.FeedEndDate.Val.Before(ent.FeedStartDate.Val) {
+		errs = append(errs, causes.NewInvalidFieldError("feed_end_date", ent.FeedStartDate.Val.String(), fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Val, ent.FeedStartDate.Val)))
+	}
+	return errs
 }

@@ -29,6 +29,26 @@ type Stop struct {
 	tt.BaseEntity
 }
 
+// EntityID returns the ID or StopID.
+func (ent *Stop) EntityID() string {
+	return entID(ent.ID, ent.StopID)
+}
+
+// EntityKey returns the GTFS identifier.
+func (ent *Stop) EntityKey() string {
+	return ent.StopID
+}
+
+// Filename stops.txt
+func (ent *Stop) Filename() string {
+	return "stops.txt"
+}
+
+// TableName gtfs_stops
+func (ent *Stop) TableName() string {
+	return "gtfs_stops"
+}
+
 // SetCoordinates takes a [2]float64 and sets the Stop's lon,lat
 func (ent *Stop) SetCoordinates(p [2]float64) {
 	ent.Geometry = tt.NewPoint(p[0], p[1])
@@ -53,16 +73,6 @@ func (ent *Stop) ToPoint() tlxy.Point {
 	return ent.Geometry.ToPoint()
 }
 
-// EntityID returns the ID or StopID.
-func (ent *Stop) EntityID() string {
-	return entID(ent.ID, ent.StopID)
-}
-
-// EntityKey returns the GTFS identifier.
-func (ent *Stop) EntityKey() string {
-	return ent.StopID
-}
-
 // Errors for this Entity.
 func (ent *Stop) Errors() (errs []error) {
 	c := ent.Coordinates()
@@ -77,6 +87,11 @@ func (ent *Stop) Errors() (errs []error) {
 	if ent.StopTimezone != "" {
 		errs = append(errs, tt.CheckTimezone("stop_timezone", ent.StopTimezone)...)
 	}
+	return errs
+}
+
+func (ent *Stop) ConditionalErrors() []error {
+	var errs []error
 	// TODO: This should be an enum for exhaustive search
 	lt := ent.LocationType
 	if (lt == 0 || lt == 1 || lt == 2) && len(ent.StopName) == 0 {
@@ -90,14 +105,4 @@ func (ent *Stop) Errors() (errs []error) {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("parent_station"))
 	}
 	return errs
-}
-
-// Filename stops.txt
-func (ent *Stop) Filename() string {
-	return "stops.txt"
-}
-
-// TableName gtfs_stops
-func (ent *Stop) TableName() string {
-	return "gtfs_stops"
 }

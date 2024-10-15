@@ -20,18 +20,6 @@ type FareTransferRule struct {
 	tt.BaseEntity
 }
 
-func (ent *FareTransferRule) String() string {
-	return fmt.Sprintf(
-		"<fare_transfer_rule from_leg_group_id:%s to_leg_group_id:%s product:%s duration_limit:%d duration_limit_type:%d fare_transfer_type:%d>",
-		ent.FromLegGroupID.Val,
-		ent.ToLegGroupID.Val,
-		ent.FareProductID.Val,
-		ent.DurationLimit.Val,
-		ent.DurationLimitType.Val,
-		ent.FareTransferType.Val,
-	)
-}
-
 func (ent *FareTransferRule) Filename() string {
 	return "fare_transfer_rules.txt"
 }

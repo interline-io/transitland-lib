@@ -29,9 +29,19 @@ type StopTime struct {
 	tt.FeedVersionEntity
 }
 
+// Filename stop_times.txt
+func (ent *StopTime) Filename() string {
+	return "stop_times.txt"
+}
+
+// TableName gtfs_stop_times
+func (ent *StopTime) TableName() string {
+	return "gtfs_stop_times"
+}
+
 // Errors for this Entity.
 func (ent *StopTime) Errors() []error {
-	// No reflection
+	// Don't use reflection based path
 	errs := []error{}
 	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID.Val)...)
 	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
@@ -50,16 +60,6 @@ func (ent *StopTime) Errors() []error {
 		errs = append(errs, causes.NewInvalidFieldError("departure_time", ent.DepartureTime.String(), fmt.Errorf("departure_time '%d' must come after arrival_time '%d'", dt, at)))
 	}
 	return errs
-}
-
-// Filename stop_times.txt
-func (ent *StopTime) Filename() string {
-	return "stop_times.txt"
-}
-
-// TableName gtfs_stop_times
-func (ent *StopTime) TableName() string {
-	return "gtfs_stop_times"
 }
 
 // UpdateKeys updates Entity references.

@@ -17,6 +17,16 @@ type Transfer struct {
 	tt.BaseEntity
 }
 
+// Filename transfers.txt
+func (ent *Transfer) Filename() string {
+	return "transfers.txt"
+}
+
+// TableName gtfs_transfers
+func (ent *Transfer) TableName() string {
+	return "gtfs_transfers"
+}
+
 // Errors for this Entity.
 func (ent *Transfer) ConditionalErrors() (errs []error) {
 	if ent.TransferType.Val == 1 || ent.TransferType.Val == 2 || ent.TransferType.Val == 3 {
@@ -30,14 +40,4 @@ func (ent *Transfer) ConditionalErrors() (errs []error) {
 		errs = append(errs, tt.CheckConditionallyRequired("to_trip_id", ent.ToTripID.Val)...)
 	}
 	return errs
-}
-
-// Filename transfers.txt
-func (ent *Transfer) Filename() string {
-	return "transfers.txt"
-}
-
-// TableName gtfs_transfers
-func (ent *Transfer) TableName() string {
-	return "gtfs_transfers"
 }

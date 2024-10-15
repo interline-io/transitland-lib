@@ -17,6 +17,16 @@ type Frequency struct {
 	tt.BaseEntity
 }
 
+// Filename frequencies.txt
+func (ent *Frequency) Filename() string {
+	return "frequencies.txt"
+}
+
+// TableName gtfs_frequencies
+func (ent *Frequency) TableName() string {
+	return "gtfs_frequencies"
+}
+
 // RepeatCount returns the number of times this trip will be repeated.
 func (ent *Frequency) RepeatCount() int {
 	if ent.HeadwaySecs.Val <= 0 {
@@ -36,14 +46,4 @@ func (ent *Frequency) ConditionalErrors() (errs []error) {
 		errs = append(errs, causes.NewInvalidFieldError("end_time", fmt.Sprintf("%d", et), fmt.Errorf("end_time '%d' must come after start_time '%d'", et, st)))
 	}
 	return errs
-}
-
-// Filename frequencies.txt
-func (ent *Frequency) Filename() string {
-	return "frequencies.txt"
-}
-
-// TableName gtfs_frequencies
-func (ent *Frequency) TableName() string {
-	return "gtfs_frequencies"
 }

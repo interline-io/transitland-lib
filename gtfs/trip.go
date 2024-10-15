@@ -34,6 +34,16 @@ func (ent *Trip) EntityKey() string {
 	return ent.TripID
 }
 
+// Filename trips.txt
+func (ent *Trip) Filename() string {
+	return "trips.txt"
+}
+
+// TableName gtfs_trips
+func (ent *Trip) TableName() string {
+	return "gtfs_trips"
+}
+
 // Errors for this Entity.
 func (ent *Trip) Errors() (errs []error) {
 	errs = append(errs, tt.CheckPresent("route_id", ent.RouteID)...)
@@ -43,16 +53,6 @@ func (ent *Trip) Errors() (errs []error) {
 	errs = append(errs, tt.CheckInsideRangeInt("wheelchair_accessible", ent.WheelchairAccessible, 0, 2)...)
 	errs = append(errs, tt.CheckInsideRangeInt("bikes_allowed", ent.BikesAllowed, 0, 2)...)
 	return errs
-}
-
-// Filename trips.txt
-func (ent *Trip) Filename() string {
-	return "trips.txt"
-}
-
-// TableName gtfs_trips
-func (ent *Trip) TableName() string {
-	return "gtfs_trips"
 }
 
 // UpdateKeys updates Entity references.
