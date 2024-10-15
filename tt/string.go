@@ -6,6 +6,10 @@ type String struct {
 	Option[string]
 }
 
+func (r String) String() string {
+	return r.Val
+}
+
 func (r String) Int() int {
 	if !r.Valid {
 		return 0

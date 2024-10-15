@@ -68,23 +68,26 @@ func (r *Seconds) Scan(src interface{}) error {
 	case nil:
 		return nil
 	case string:
-		r.Val, p = StringToSeconds(v)
+		if v != "" {
+			r.Val, p = StringToSeconds(v)
+			r.Valid = (p == nil)
+		}
 	case int:
-		if v < 0 {
-			return nil
+		if v >= 0 {
+			r.Val = int64(v)
+			r.Valid = (p == nil)
 		}
-		r.Val = int64(v)
 	case int64:
-		if v < 0 {
-			return nil
+		if v >= 0 {
+			r.Val = v
+			r.Valid = true
 		}
-		r.Val = v
 	case json.Number:
 		r.Val, p = v.Int64()
+		r.Valid = (p == nil)
 	default:
 		p = errors.New("could not parse time")
 	}
-	r.Valid = (p == nil)
 	return p
 }
 
