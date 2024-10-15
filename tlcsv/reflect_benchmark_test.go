@@ -130,13 +130,13 @@ func Benchmark_dumpRow_StopTime(b *testing.B) {
 
 func Benchmark_dumpRow_Route(b *testing.B) {
 	ent := gtfs.Route{
-		RouteID:        "route_id",
-		RouteShortName: "route_short_name",
-		RouteLongName:  "route_long_name",
-		RouteType:      3,
-		RouteDesc:      "route_desc",
-		RouteColor:     "#ff00ff",
-		RouteTextColor: "#000000",
+		RouteID:        tt.NewString("route_id"),
+		RouteShortName: tt.NewString("route_short_name"),
+		RouteLongName:  tt.NewString("route_long_name"),
+		RouteType:      tt.NewInt(3),
+		RouteDesc:      tt.NewString("route_desc"),
+		RouteColor:     tt.NewColor("#ff00ff"),
+		RouteTextColor: tt.NewColor("#000000"),
 		NetworkID:      tt.NewString("network_id"),
 		AsRoute:        tt.NewInt(1),
 	}

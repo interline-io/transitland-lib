@@ -78,7 +78,7 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 		if e.routeTypes == nil {
 			e.routeTypes = map[string]int{}
 		}
-		e.routeTypes[v.RouteID] = v.RouteType
+		e.routeTypes[v.RouteID.Val] = v.RouteType.Int()
 	}
 	// Use stop to stop distances, shape_dist_traveled is not reliable.
 	trip, ok := ent.(*gtfs.Trip)

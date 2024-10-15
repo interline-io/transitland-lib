@@ -65,9 +65,9 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 	for ent := range reader.Routes() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
-		if len(ent.AgencyID) == 0 {
+		if !ent.AgencyID.Valid {
 			eg.AddEdge(dan, en)
-		} else if agency, ok := eg.Node(NewNode("agency.txt", ent.AgencyID)); ok {
+		} else if agency, ok := eg.Node(NewNode("agency.txt", ent.AgencyID.Val)); ok {
 			eg.AddEdge(agency, en)
 		}
 	}

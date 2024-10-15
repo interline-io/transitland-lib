@@ -208,14 +208,14 @@ func (cmd *ExtractCommand) Run() error {
 		}
 	}
 	for ent := range reader.Routes() {
-		v, ok := rthits[ent.RouteType]
+		v, ok := rthits[ent.RouteType.Int()]
 		if !ok {
 			continue
 		}
 		if v {
-			cmd.extractRoutes = append(cmd.extractRoutes, ent.RouteID)
+			cmd.extractRoutes = append(cmd.extractRoutes, ent.RouteID.Val)
 		} else {
-			cmd.excludeRoutes = append(cmd.excludeRoutes, ent.RouteID)
+			cmd.excludeRoutes = append(cmd.excludeRoutes, ent.RouteID.Val)
 		}
 	}
 

@@ -18,8 +18,8 @@ func (e *BasicRouteTypeFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	if !ok {
 		return nil
 	}
-	if rt, ok := tt.GetBasicRouteType(v.RouteType); ok {
-		v.RouteType = rt.Code
+	if rt, ok := tt.GetBasicRouteType(v.RouteType.Int()); ok {
+		v.RouteType.SetInt(rt.Code)
 	} else {
 		return causes.NewInvalidFieldError("route_type", tt.TryCsv(v.RouteType), fmt.Errorf("cannot convert route_type %d to basic route type", v.RouteType))
 	}

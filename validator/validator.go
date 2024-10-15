@@ -362,7 +362,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 		}
 		for ent := range reader.Routes() {
 			ent := ent
-			if s, ok := routeShapes[ent.RouteID]; ok {
+			if s, ok := routeShapes[ent.RouteID.Val]; ok {
 				g := tt.NewGeometry(s)
 				ent.Geometry = g
 			}

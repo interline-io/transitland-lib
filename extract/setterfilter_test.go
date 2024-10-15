@@ -9,7 +9,7 @@ import (
 
 func TestSetterFilter_Filter(t *testing.T) {
 	stop := &gtfs.Stop{StopID: "abc"}
-	route := &gtfs.Route{RouteID: "foo"}
+	route := &gtfs.Route{RouteID: tt.NewString("foo")}
 	emap := tt.NewEntityMap()
 	tx := NewSetterFilter()
 	tx.AddValue(stop.Filename(), stop.EntityID(), "stop_name", "test")
@@ -19,7 +19,7 @@ func TestSetterFilter_Filter(t *testing.T) {
 	if stop.StopName != "test" {
 		t.Errorf("got %s expect %s", stop.StopName, "test")
 	}
-	if route.RouteType != 1000 {
-		t.Errorf("got %d expect %d", route.RouteType, 1000)
+	if route.RouteType.Val != 1000 {
+		t.Errorf("got %d expect %d", route.RouteType.Val, 1000)
 	}
 }

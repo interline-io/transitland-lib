@@ -67,7 +67,7 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 		}
 	case *gtfs.Route:
 		pp.routeStopGeoms[eid] = &routeStopGeoms{
-			agency:    v.AgencyID,
+			agency:    v.AgencyID.Val,
 			stopGeoms: map[string]*stopGeom{},
 		}
 	case *gtfs.Trip:

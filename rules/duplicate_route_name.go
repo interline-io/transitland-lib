@@ -2,7 +2,6 @@ package rules
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
@@ -37,22 +36,22 @@ type DuplicateRouteNameCheck struct {
 // Validate .
 func (e *DuplicateRouteNameCheck) Validate(ent tt.Entity) []error {
 	v, ok := ent.(*gtfs.Route)
-	if !ok || v.RouteLongName == "" {
+	if !ok || !v.RouteLongName.Valid {
 		return nil
 	}
 	if e.names == nil {
 		e.names = map[string]string{}
 	}
-	key := v.AgencyID + ":" + strconv.Itoa(v.RouteType) + ":" + v.RouteLongName // todo: use a real separator
+	key := v.AgencyID.Val + ":" + v.RouteType.String() + ":" + v.RouteLongName.Val // todo: use a real separator
 	if hit, ok := e.names[key]; ok {
 		return []error{&DuplicateRouteNameError{
-			RouteID:       v.RouteID,
-			RouteLongName: v.RouteLongName,
-			RouteType:     v.RouteType,
-			AgencyID:      v.AgencyID,
+			RouteID:       v.RouteID.Val,
+			RouteLongName: v.RouteLongName.Val,
+			RouteType:     v.RouteType.Int(),
+			AgencyID:      v.AgencyID.Val,
 			OtherRouteID:  hit,
 		}}
 	}
-	e.names[key] = v.RouteID
+	e.names[key] = v.RouteID.Val
 	return nil
 }

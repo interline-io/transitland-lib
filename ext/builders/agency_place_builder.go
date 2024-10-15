@@ -55,7 +55,7 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Ent
 		spt := v.ToPoint()
 		pp.stops[eid] = geohash.EncodeWithPrecision(spt.Lat, spt.Lon, 6) // Note reversed coords
 	case *gtfs.Route:
-		pp.routeAgency[eid] = v.AgencyID
+		pp.routeAgency[eid] = v.AgencyID.Val
 	case *gtfs.Trip:
 		pp.tripAgency[eid] = pp.routeAgency[v.RouteID.Val]
 	case *gtfs.StopTime:

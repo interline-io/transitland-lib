@@ -13,7 +13,7 @@ type RouteExtendedTypesCheck struct{}
 // Validate .
 func (e *RouteExtendedTypesCheck) Validate(ent tt.Entity) []error {
 	if v, ok := ent.(*gtfs.Route); ok {
-		if v.RouteType > 12 {
+		if v.RouteType.Val > 12 {
 			return []error{causes.NewValidationWarning("route_type", "extended route_types not universally supported")}
 		}
 	}

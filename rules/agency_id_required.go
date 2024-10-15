@@ -21,7 +21,7 @@ func (e *AgencyIDConditionallyRequiredCheck) Validate(ent tt.Entity) []error {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}
 	case *gtfs.Route:
-		if v.AgencyID == "" && e.agencyCount > 1 {
+		if !v.AgencyID.Valid && e.agencyCount > 1 {
 			// routes.agency_id is required when more than one agency is present
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("agency_id"))
 		}

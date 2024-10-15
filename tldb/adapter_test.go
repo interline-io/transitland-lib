@@ -241,8 +241,9 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 		return m, err
 	}
 	ent4 := gtfs.Route{}
-	ent4.RouteID = "ok"
-	ent4.AgencyID = strconv.Itoa(m.AgencyID)
+	ent4.RouteID.Set("ok")
+	ent4.RouteType.Set(0)
+	ent4.AgencyID.Set(strconv.Itoa(m.AgencyID))
 	ent4.FeedVersionID = m.FeedVersionID
 	m.RouteID, err = adapter.Insert(&ent4)
 	if err != nil {

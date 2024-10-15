@@ -76,7 +76,7 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		}
 	case *gtfs.Route:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.RouteID = fmt.Sprintf("%s%s", prefix, v.RouteID)
+			v.RouteID.Set(fmt.Sprintf("%s%s", prefix, v.RouteID.Val))
 		}
 	case *service.Service:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {

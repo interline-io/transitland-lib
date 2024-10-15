@@ -11,6 +11,10 @@ type Color struct {
 	Option[string]
 }
 
+func NewColor(v string) Color {
+	return Color{Option: NewOption(v)}
+}
+
 func (r Color) Check() error {
 	if r.Valid && !IsValidColor(r.Val) {
 		return causes.NewInvalidFieldError("", r.Val, fmt.Errorf("invalid color"))
