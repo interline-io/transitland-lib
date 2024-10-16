@@ -36,9 +36,6 @@ type canFloat interface {
 
 // FromCSV sets the field from a CSV representation of the value.
 func FromCsv(val any, strv string) error {
-	if strv == "" {
-		return nil
-	}
 	var p error
 	switch vf := val.(type) {
 	case canScan:
