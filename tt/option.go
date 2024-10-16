@@ -28,6 +28,7 @@ func (r *Option[T]) Set(v T) {
 }
 
 func (r *Option[T]) OrSet(v T) {
+	// FIXME: This will call Option's Set method
 	if !r.Valid {
 		r.Set(v)
 	}
