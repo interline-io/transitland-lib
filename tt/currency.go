@@ -55,19 +55,8 @@ func (r Currency) Check() error {
 	return nil
 }
 
-// CheckCurrency returns an error if the value is not a known currency
-func CheckCurrency(field string, value string) (errs []error) {
-	if !IsValidCurrency(value) {
-		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid currency")))
-	}
-	return errs
-}
-
 // IsValidCurrency check is valid currency
 func IsValidCurrency(value string) bool {
-	if len(value) == 0 {
-		return true
-	}
 	_, ok := currencies[strings.ToUpper(value)]
 	return ok
 }

@@ -6,6 +6,10 @@ type String struct {
 	Option[string]
 }
 
+func NewString(v string) String {
+	return String{Option: NewOption(v)}
+}
+
 func (r String) String() string {
 	return r.Val
 }
@@ -18,6 +22,6 @@ func (r String) Int() int {
 	return int(a)
 }
 
-func NewString(v string) String {
-	return String{Option: NewOption(v)}
+func (r String) IsPresent() bool {
+	return r.Valid && r.Val != ""
 }

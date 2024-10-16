@@ -1,4 +1,4 @@
-package filters
+package tldb
 
 import (
 	"github.com/interline-io/transitland-lib/gtfs"
@@ -24,7 +24,6 @@ func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		v.RouteLongName.OrSet("")
 		v.RouteShortName.OrSet("")
 		v.RouteDesc.OrSet("")
-		v.RouteID.OrSet("")
 	case *gtfs.Stop:
 		v.LocationType.OrSet(0)
 		// Used in textsearch
@@ -32,7 +31,6 @@ func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		v.StopDesc.OrSet("")
 		v.StopCode.OrSet("")
 		v.StopURL.OrSet("")
-		v.StopID.OrSet("")
 	case *gtfs.Trip:
 		v.DirectionID.OrSet(0)
 		v.StopPatternID.OrSet(0)

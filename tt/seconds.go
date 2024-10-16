@@ -51,20 +51,6 @@ func (r Seconds) ToCsv() string {
 	return r.String()
 }
 
-func (r *Seconds) FromCsv(v string) error {
-	r.Valid = false
-	if v == "" {
-		return nil
-	}
-	if s, err := StringToSeconds(v); err != nil {
-		return err
-	} else {
-		r.Valid = true
-		r.Val = int64(s)
-	}
-	return nil
-}
-
 func (r *Seconds) Scan(src interface{}) error {
 	r.Valid = false
 	r.Val = 0
@@ -73,10 +59,8 @@ func (r *Seconds) Scan(src interface{}) error {
 	case nil:
 		return nil
 	case string:
-		if v != "" {
-			r.Val, p = StringToSeconds(v)
-			r.Valid = (p == nil)
-		}
+		r.Val, p = StringToSeconds(v)
+		r.Valid = (p == nil)
 	case int:
 		if v >= 0 {
 			r.Val = int64(v)

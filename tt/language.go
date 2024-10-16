@@ -24,21 +24,10 @@ func NewLanguage(v string) Language {
 
 // IsValidLang check is valid language
 func IsValidLanguage(value string) bool {
-	if len(value) == 0 {
-		return true
-	}
 	// Only check the prefix code
 	code := strings.Split(value, "-")
 	_, ok := langs[strings.ToLower(code[0])]
 	return ok
-}
-
-// CheckLanguage returns an error if the value is not a known language
-func CheckLanguage(field string, value string) (errs []error) {
-	if !IsValidLanguage(value) {
-		errs = append(errs, causes.NewInvalidFieldError(field, value, fmt.Errorf("invalid language")))
-	}
-	return errs
 }
 
 // http://www.loc.gov/standards/iso639-2/php/code_list.php
