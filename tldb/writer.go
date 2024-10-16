@@ -9,6 +9,8 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
+var notNullFilter = &NotNullFilter{}
+
 // OpenWriter opens & creates a db writer
 func OpenWriter(dburl string, create bool) (*Writer, error) {
 	// Writer
@@ -91,9 +93,14 @@ func (writer *Writer) Delete() error {
 
 // AddEntity writes an entity to the database.
 func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
+	// Set some fields to not null for compatibility
+	notNullFilter.Filter(ent, nil)
+
+	// Set default agency id if not set elsewhere
 	if v, ok := ent.(*gtfs.Route); ok && !v.AgencyID.Valid {
 		v.AgencyID.SetInt(writer.defaultAgencyID)
 	}
+
 	// Set the FeedVersionID
 	if z, ok := ent.(canSetFeedVersion); ok {
 		z.SetFeedVersionID(writer.FeedVersionID)
@@ -119,6 +126,9 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	eids := []string{}
 	ients := make([]interface{}, len(ents))
 	for i, ent := range ents {
+		// Set some fields to not null for compatibility
+		notNullFilter.Filter(ent, nil)
+
 		// Routes may need a default AgencyID set before writing to database.
 		if v, ok := ent.(*gtfs.Route); ok && !v.AgencyID.Valid {
 			v.AgencyID.SetInt(writer.defaultAgencyID)

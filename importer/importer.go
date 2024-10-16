@@ -9,7 +9,6 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
-	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -155,7 +154,6 @@ func importFeedVersionTx(atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (d
 	if err != nil {
 		return fvi, err
 	}
-	cp.AddExtension(&filters.NotNullFilter{})
 	cp.AddExtension(builders.NewRouteGeometryBuilder())
 	cp.AddExtension(builders.NewRouteStopBuilder())
 	cp.AddExtension(builders.NewRouteHeadwayBuilder())

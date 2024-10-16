@@ -13,7 +13,7 @@ func Test_IsValidURL(t *testing.T) {
 		args args
 		want bool
 	}{
-		{"empty", args{""}, true},
+		{"empty", args{""}, false},
 		{"http", args{"http://example.com"}, true},
 		{"https", args{"https://example.com"}, true},
 		{"fail1", args{"fail://example.com"}, true},
@@ -40,7 +40,7 @@ func Test_IsValidColor(t *testing.T) {
 	}{
 		{"with#", args{"#ffffff"}, true},
 		{"without#", args{"ffffff"}, true},
-		{"empty", args{""}, true},
+		{"empty", args{""}, false},
 		{"wronglen", args{"#ffff"}, false},
 		{"len#", args{"xffffff"}, false},
 		//{"nothex", args{"xyzxyz"}, true},
@@ -86,7 +86,8 @@ func Test_IsValidTimezone(t *testing.T) {
 		want bool
 	}{
 		{"America/Los_Angeles", args{"America/Los_Angeles"}, true},
-		{"empty", args{""}, true},
+		{"empty", args{""}, false},
+		{"asd", args{"asd"}, false},
 		// {"invalid", args{"Not/Timezone"}, false},
 	}
 	for _, tt := range tests {
@@ -108,7 +109,8 @@ func Test_IsValidLang(t *testing.T) {
 		want bool
 	}{
 		{"en", args{"en"}, true},
-		{"empty", args{""}, true},
+		{"empty", args{""}, false},
+		{"asd", args{"asd"}, false},
 		// {"invalid", args{"Not/Timezone"}, false},
 	}
 	for _, tt := range tests {

@@ -133,7 +133,7 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				continue
 			}
 			// Skip if empty and not required
-			if len(strv) == 0 {
+			if strv == "" {
 				if fieldInfo.Required {
 					// Special handling for bare bool, float, int types
 					// where we can't tell later from the zero type
@@ -148,6 +148,7 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				}
 				continue
 			}
+
 			// Handle different known types
 			fieldValue := reflectx.FieldByIndexes(entValue, fieldInfo.Index).Addr().Interface()
 			if err := tt.FromCsv(fieldValue, strv); err != nil {

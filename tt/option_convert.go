@@ -22,10 +22,6 @@ type canCsvString interface {
 	ToCsv() string
 }
 
-type canFromCsvString interface {
-	FromCsv(string) error
-}
-
 type canScan interface {
 	Scan(src interface{}) error
 }
@@ -40,11 +36,12 @@ type canFloat interface {
 
 // FromCSV sets the field from a CSV representation of the value.
 func FromCsv(val any, strv string) error {
-	// if strv == "" {
-	// 	return nil
-	// }
 	var p error
 	switch vf := val.(type) {
+	case canScan:
+		if err := vf.Scan(strv); err != nil {
+			p = errors.New("failed to scan field")
+		}
 	case *string:
 		*vf = strv
 	case *int:
@@ -69,18 +66,6 @@ func FromCsv(val any, strv string) error {
 		v, e := time.Parse("20060102", strv)
 		p = e
 		*vf = v
-	case canFromCsvString:
-		if strv != "" {
-			if err := vf.FromCsv(strv); err != nil {
-				p = errors.New("field not scannable")
-			}
-		}
-	case canScan:
-		if strv != "" {
-			if err := vf.Scan(strv); err != nil {
-				p = errors.New("field not scannable")
-			}
-		}
 	default:
 		p = errors.New("field not scannable")
 	}

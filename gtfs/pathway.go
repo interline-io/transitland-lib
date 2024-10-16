@@ -9,9 +9,9 @@ import (
 
 // Pathway pathways.txt
 type Pathway struct {
-	PathwayID           tt.String `csv:",required" target:"stops.txt"`
+	PathwayID           tt.String `csv:",required"`
 	FromStopID          tt.String `csv:",required" target:"stops.txt"`
-	ToStopID            tt.String `csv:",required"`
+	ToStopID            tt.String `csv:",required" target:"stops.txt"`
 	PathwayMode         tt.Int    `csv:",required"`
 	IsBidirectional     tt.Int    `csv:",required"`
 	Length              tt.Float
