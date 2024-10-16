@@ -23,6 +23,7 @@ func (r String) MarshalGQL(w io.Writer)     { marshalGql(r, w) }
 func (r Strings) MarshalGQL(w io.Writer)    { marshalGql(r, w) }
 func (r Tags) MarshalGQL(w io.Writer)       { marshalGql(r, w) }
 func (r Time) MarshalGQL(w io.Writer)       { marshalGql(r, w) }
+func (r Timezone) MarshalGQL(w io.Writer)   { marshalGql(r, w) }
 func (r Url) MarshalGQL(w io.Writer)        { marshalGql(r, w) }
 
 func (r *Bool) UnmarshalGQL(v any) error       { return unmarshalGql(r, v) }
@@ -42,6 +43,7 @@ func (r *String) UnmarshalGQL(v any) error     { return unmarshalGql(r, v) }
 func (r *Strings) UnmarshalGQL(v any) error    { return unmarshalGql(r, v) }
 func (r *Tags) UnmarshalGQL(v any) error       { return unmarshalGql(r, v) }
 func (r *Time) UnmarshalGQL(v any) error       { return unmarshalGql(r, v) }
+func (r *Timezone) UnmarshalGQL(v any) error   { return unmarshalGql(r, v) }
 func (r *Url) UnmarshalGQL(v any) error        { return unmarshalGql(r, v) }
 
 type canUnmarshalJson interface {
