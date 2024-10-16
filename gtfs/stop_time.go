@@ -9,11 +9,10 @@ import (
 )
 
 // StopTime stop_times.txt
-// Tags are absent because it does not use reflect based validation.
 type StopTime struct {
-	TripID            tt.String
-	StopID            tt.String
-	StopSequence      tt.Int
+	TripID            tt.String `csv:",required" target:"trips.txt"`
+	StopID            tt.String `csv:",required" target:"stops.txt"`
+	StopSequence      tt.Int    `csv:",required"`
 	StopHeadsign      tt.String
 	ArrivalTime       tt.Seconds
 	DepartureTime     tt.Seconds

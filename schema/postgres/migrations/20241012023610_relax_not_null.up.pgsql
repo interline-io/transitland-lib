@@ -47,4 +47,21 @@ alter table gtfs_stops alter column stop_timezone drop not null;
 alter table gtfs_stops alter column wheelchair_boarding drop not null;
 -- DO NOT DROP NOT NULL for location_type
 
+------------
+
+alter table gtfs_feed_infos alter column feed_version_name drop not null;
+
+alter table gtfs_levels alter column level_name drop not null;
+
+alter table gtfs_pathways alter column length drop not null;
+alter table gtfs_pathways alter column traversal_time drop not null;
+alter table gtfs_pathways alter column stair_count drop not null;
+alter table gtfs_pathways alter column max_slope drop not null;
+alter table gtfs_pathways alter column min_width drop not null;
+alter table gtfs_pathways alter column signposted_as drop not null;
+alter table gtfs_pathways alter column reverse_signposted_as drop not null;
+
+alter table gtfs_transfers alter column from_stop_id drop not null;
+alter table gtfs_transfers alter column to_stop_id drop not null;
+
 COMMIT;

@@ -27,6 +27,12 @@ func (r *Option[T]) Set(v T) {
 	r.Valid = true
 }
 
+func (r *Option[T]) OrSet(v T) {
+	if !r.Valid {
+		r.Set(v)
+	}
+}
+
 func (r *Option[T]) Unset() {
 	r.Valid = false
 }

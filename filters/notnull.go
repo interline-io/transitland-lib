@@ -13,20 +13,16 @@ type NotNullFilter struct{}
 // Validate .
 func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
+	case *gtfs.Agency:
+		v.AgencyID.OrSet("")
 	case *gtfs.Stop:
-		if !v.LocationType.Valid {
-			v.LocationType.Set(0)
-		}
+		v.LocationType.OrSet(0)
 	case *gtfs.Trip:
-		if !v.DirectionID.Valid {
-			v.DirectionID.Set(0)
-		}
-		if !v.StopPatternID.Valid {
-			v.StopPatternID.Set(0)
-		}
-		if !v.JourneyPatternOffset.Valid {
-			v.JourneyPatternOffset.Set(0)
-		}
+		v.DirectionID.OrSet(0)
+		v.StopPatternID.OrSet(0)
+		v.JourneyPatternOffset.OrSet(0)
+	case *gtfs.Transfer:
+		v.TransferType.OrSet(0)
 	}
 	return nil
 }
