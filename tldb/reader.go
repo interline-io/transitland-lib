@@ -141,6 +141,12 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 	return out
 }
 
+// Shapes sends Shapes.
+func (reader *Reader) ShapesByShapeID(ids ...string) chan []gtfs.Shape {
+	out := make(chan []gtfs.Shape, bufferSize)
+	return out
+}
+
 // Stops sends Stops.
 func (reader *Reader) Stops() chan gtfs.Stop {
 	out := make(chan gtfs.Stop, bufferSize)

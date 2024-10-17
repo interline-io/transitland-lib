@@ -126,7 +126,7 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
 	eids := []string{}
 	var err error
-	if v, ok := ent.(*gtfs.Shape); ok {
+	if v, ok := ent.(*gtfs.ShapeLine); ok {
 		e2s := []tt.Entity{}
 		es := writer.flattenShape(*v)
 		for i := 0; i < len(es); i++ {
@@ -145,7 +145,7 @@ func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
 	return eids[0], nil
 }
 
-func (writer *Writer) flattenShape(ent gtfs.Shape) []gtfs.Shape {
+func (writer *Writer) flattenShape(ent gtfs.ShapeLine) []gtfs.Shape {
 	coords := ent.Geometry.FlatCoords()
 	shapes := []gtfs.Shape{}
 	totaldist := 0.0

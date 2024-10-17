@@ -66,6 +66,10 @@ func (mr *Reader) StopTimesByTripID(ids ...string) chan []gtfs.StopTime {
 	return readEntities(mr, func(r adapters.Reader) chan []gtfs.StopTime { return r.StopTimesByTripID(ids...) }, nil)
 }
 
+func (mr *Reader) ShapesByShapeID(ids ...string) chan []gtfs.Shape {
+	return readEntities(mr, func(r adapters.Reader) chan []gtfs.Shape { return r.ShapesByShapeID(ids...) }, nil)
+}
+
 func (mr *Reader) Stops() chan gtfs.Stop {
 	return readEntities(mr, func(r adapters.Reader) chan gtfs.Stop { return r.Stops() }, setFv[*gtfs.Stop])
 }

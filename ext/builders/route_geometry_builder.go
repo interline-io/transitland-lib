@@ -61,7 +61,7 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 // Counts the number of times a shape is used for each route,direction_id
 func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *gtfs.Shape:
+	case *gtfs.ShapeLine:
 		pts := make([]tlxy.Point, v.Geometry.Val.NumCoords())
 		for i, c := range v.Geometry.Val.Coords() {
 			pts[i] = tlxy.Point{Lon: c[0], Lat: c[1]}

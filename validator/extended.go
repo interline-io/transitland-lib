@@ -5,13 +5,15 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/twpayne/go-geom"
 )
 
 func buildRouteShapes(reader adapters.Reader) map[string]*geom.MultiLineString {
 	// Generate some route geoms...
 	shapeLengths := map[string]float64{}
-	for ent := range reader.Shapes() {
+	for shapeEnts := range reader.ShapesByShapeID() {
+		ent := gtfs.NewShapeLineFromShapes(shapeEnts)
 		if !ent.Geometry.Valid {
 			continue
 		}
@@ -71,7 +73,8 @@ func buildRouteShapes(reader adapters.Reader) map[string]*geom.MultiLineString {
 			loadShapes[shapeid] = nil
 		}
 	}
-	for ent := range reader.Shapes() {
+	for shapeEnts := range reader.ShapesByShapeID() {
+		ent := gtfs.NewShapeLineFromShapes(shapeEnts)
 		if _, ok := loadShapes[ent.ShapeID.Val]; ok {
 			// Transitland uses M coord for distance; must force 2D
 			coords := []float64{}

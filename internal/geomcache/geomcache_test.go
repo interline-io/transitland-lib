@@ -24,7 +24,8 @@ func TestGeomCache(t *testing.T) {
 		count++
 	}
 	cache := NewGeomCache()
-	for e := range r.Shapes() {
+	for shapeEnts := range r.ShapesByShapeID() {
+		e := gtfs.NewShapeLineFromShapes(shapeEnts)
 		lm := e.Geometry.ToLineM()
 		cache.AddShapeGeom(e.ShapeID.Val, lm.Coords, lm.Data)
 	}
