@@ -6,7 +6,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// FeedVersionImport .
+// FeedVersionImport is a record of when a feed version was imported into the database.
 type FeedVersionImport struct {
 	ImportLog                 string
 	ExceptionLog              string
@@ -38,16 +38,6 @@ func NewFeedVersionImport() *FeedVersionImport {
 	fvi.SkipEntityFilterCount = tt.Counts{}
 	fvi.SkipEntityMarkedCount = tt.Counts{}
 	return &fvi
-}
-
-// GetID returns the ID
-func (fvi *FeedVersionImport) GetID() int {
-	return fvi.ID
-}
-
-// SetID sets the ID.
-func (fvi *FeedVersionImport) SetID(v int) {
-	fvi.ID = v
 }
 
 // EntityID .

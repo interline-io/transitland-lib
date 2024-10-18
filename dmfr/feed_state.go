@@ -6,7 +6,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// FeedState stores the pointer to the active FeedVersion.
+// FeedState stores a pointer to the active FeedVersion and values that control feed fetch and permissions.
 type FeedState struct {
 	FeedID              int
 	FeedVersionID       tt.Int
@@ -21,16 +21,6 @@ type FeedState struct {
 // EntityID .
 func (ent *FeedState) EntityID() string {
 	return strconv.Itoa(ent.ID)
-}
-
-// SetID .
-func (ent *FeedState) SetID(id int) {
-	ent.ID = id
-}
-
-// GetID .
-func (ent *FeedState) GetID() int {
-	return ent.ID
 }
 
 // TableName .

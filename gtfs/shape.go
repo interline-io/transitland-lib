@@ -14,8 +14,6 @@ type Shape struct {
 	ShapePtLon        tt.Float  `db:"-" csv:",required" range:"-180,180"`
 	ShapePtSequence   tt.Int    `db:"-" csv:",required" range:"0,"`
 	ShapeDistTraveled tt.Float  `db:"-" range:"0,"`
-	// Geometry          tt.LineString `db:"geometry" csv:"-"`
-	// Generated         bool          `db:"generated" csv:"-"`
 	tt.BaseEntity
 }
 

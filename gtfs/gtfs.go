@@ -36,8 +36,4 @@ type Reader interface {
 	FareProducts() chan FareProduct
 	RiderCategories() chan RiderCategory
 	FareMedia() chan FareMedia
-	// Additional accessor methods
-	// May be moved to external sources
-	StopTimesByTripID(...string) chan []StopTime
-	ShapesByShapeID(...string) chan []Shape
 }

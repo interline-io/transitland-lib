@@ -7,7 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// FeedVersion represents a single GTFS data source.
+// FeedVersion represents a single version of a GTFS data source.
 type FeedVersion struct {
 	FeedID               int
 	SHA1                 string
@@ -24,16 +24,6 @@ type FeedVersion struct {
 	UpdatedBy            tt.String
 	tt.DatabaseEntity
 	tt.Timestamps
-}
-
-// SetID .
-func (ent *FeedVersion) SetID(id int) {
-	ent.ID = id
-}
-
-// GetID .
-func (ent *FeedVersion) GetID() int {
-	return ent.ID
 }
 
 // EntityID .
