@@ -2,11 +2,7 @@ package gtfs
 
 import (
 	"strconv"
-
-	"github.com/interline-io/transitland-lib/tt"
 )
-
-type EntityMap = tt.EntityMap
 
 func entID(id int, gtfsid string) string {
 	if id > 0 {

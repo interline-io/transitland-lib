@@ -1,9 +1,11 @@
-package gtfs
+package service
 
 import (
 	"sort"
+	"strconv"
 
 	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -17,7 +19,10 @@ type ShapeLine struct {
 
 // EntityID returns the ID or ShapeID.
 func (ent *ShapeLine) EntityID() string {
-	return entID(ent.ID, ent.ShapeID.Val)
+	if ent.ID > 0 {
+		return strconv.Itoa(ent.ID)
+	}
+	return ent.ShapeID.Val
 }
 
 // EntityKey returns the GTFS identifier.
@@ -46,7 +51,7 @@ func (ent ShapeLine) Flatten() []tt.Entity {
 
 // NewShapeFromShapes takes Shapes with single points and returns a Shape with linestring geometry.
 // Any errors from the input errors, or errors such as duplicate sequences, are added as entity errors.
-func NewShapeLineFromShapes(shapes []Shape) ShapeLine {
+func NewShapeLineFromShapes(shapes []gtfs.Shape) ShapeLine {
 	ent := ShapeLine{}
 	coords := []float64{}
 	sort.Slice(shapes, func(i, j int) bool {
@@ -79,7 +84,7 @@ func NewShapeLineFromShapes(shapes []Shape) ShapeLine {
 }
 
 // ValidateShapes returns errors for an array of shapes.
-func ValidateShapes(shapes []Shape) []error {
+func ValidateShapes(shapes []gtfs.Shape) []error {
 	errs := []error{}
 	last := -1
 	dist := -1.0
@@ -98,12 +103,12 @@ func ValidateShapes(shapes []Shape) []error {
 	return errs
 }
 
-func FlattenShape(ent ShapeLine) []Shape {
+func FlattenShape(ent ShapeLine) []gtfs.Shape {
 	coords := ent.Geometry.FlatCoords()
-	shapes := []Shape{}
+	shapes := []gtfs.Shape{}
 	totaldist := 0.0
 	for i := 0; i < len(coords); i += 3 {
-		s := Shape{
+		s := gtfs.Shape{
 			ShapeID:           ent.ShapeID,
 			ShapePtSequence:   tt.NewInt(i),
 			ShapePtLon:        tt.NewFloat(coords[i]),

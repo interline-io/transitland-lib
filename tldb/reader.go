@@ -7,6 +7,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -147,12 +148,12 @@ func (reader *Reader) ShapesByShapeID(ids ...string) chan []gtfs.Shape {
 	go func() {
 		lastId := 0
 		for {
-			ents := []gtfs.ShapeLine{}
+			ents := []service.ShapeLine{}
 			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
 			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
-				out <- gtfs.FlattenShape(ent)
+				out <- service.FlattenShape(ent)
 				lastId = ent.ID
 			}
 			if len(ents) < reader.PageSize {
@@ -170,12 +171,12 @@ func (reader *Reader) Shapes() chan gtfs.Shape {
 	go func() {
 		lastId := 0
 		for {
-			ents := []gtfs.ShapeLine{}
+			ents := []service.ShapeLine{}
 			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
 			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {
-				for _, shapeEnt := range gtfs.FlattenShape(ent) {
+				for _, shapeEnt := range service.FlattenShape(ent) {
 					out <- shapeEnt
 				}
 				lastId = ent.ID
