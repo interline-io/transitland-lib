@@ -63,7 +63,7 @@ func (ent *StopTime) Errors() []error {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *StopTime) UpdateKeys(emap *EntityMap) error {
+func (ent *StopTime) UpdateKeys(emap *tt.EntityMap) error {
 	// Don't use reflection based path
 	return tt.FirstError(
 		tt.TrySetField(emap.UpdateKey(&ent.TripID, "trips.txt"), "trip_id"),

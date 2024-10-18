@@ -800,7 +800,8 @@ func (copier *Copier) copyTransfers() error {
 // copyShapes writes Shapes
 func (copier *Copier) copyShapes() error {
 	// Not safe for batch copy (currently)
-	for ent := range copier.Reader.Shapes() {
+	for shapeEnts := range copier.Reader.ShapesByShapeID() {
+		ent := service.NewShapeLineFromShapes(shapeEnts)
 		sid := ent.EntityID()
 		if copier.SimplifyShapes > 0 {
 			simplifyValue := copier.SimplifyShapes / 1e6
@@ -1219,7 +1220,7 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 	for i := 0; i < len(line); i++ {
 		flatCoords = append(flatCoords, line[i].Lon, line[i].Lat, dists[i])
 	}
-	shape := gtfs.Shape{}
+	shape := service.ShapeLine{}
 	shape.Generated = true
 	shape.ShapeID.Set(shapeID)
 	shape.Geometry = tt.NewLineStringFromFlatCoords(flatCoords)

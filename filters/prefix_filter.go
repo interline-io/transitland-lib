@@ -90,6 +90,10 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
 			v.ShapeID.Set(fmt.Sprintf("%s%s", prefix, v.ShapeID.Val))
 		}
+	case *service.ShapeLine:
+		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
+			v.ShapeID.Set(fmt.Sprintf("%s%s", prefix, v.ShapeID.Val))
+		}
 	case *gtfs.FareAttribute:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
 			v.FareID.Set(fmt.Sprintf("%s%s", prefix, v.FareID.Val))

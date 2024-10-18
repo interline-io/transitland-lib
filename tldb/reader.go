@@ -7,6 +7,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -134,6 +135,54 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 			}
 			if len(cc) > 0 {
 				out <- cc
+			}
+		}
+		close(out)
+	}()
+	return out
+}
+
+// Shapes sends Shapes grouped by ID.
+func (reader *Reader) ShapesByShapeID(ids ...string) chan []gtfs.Shape {
+	out := make(chan []gtfs.Shape, bufferSize)
+	go func() {
+		lastId := 0
+		for {
+			ents := []service.ShapeLine{}
+			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
+			check(err)
+			check(reader.Adapter.Select(&ents, qstr, args...))
+			for _, ent := range ents {
+				out <- service.FlattenShape(ent)
+				lastId = ent.ID
+			}
+			if len(ents) < reader.PageSize {
+				break
+			}
+		}
+		close(out)
+	}()
+	return out
+}
+
+// Shapes sends Shapes.
+func (reader *Reader) Shapes() chan gtfs.Shape {
+	out := make(chan gtfs.Shape, bufferSize)
+	go func() {
+		lastId := 0
+		for {
+			ents := []service.ShapeLine{}
+			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
+			check(err)
+			check(reader.Adapter.Select(&ents, qstr, args...))
+			for _, ent := range ents {
+				for _, shapeEnt := range service.FlattenShape(ent) {
+					out <- shapeEnt
+				}
+				lastId = ent.ID
+			}
+			if len(ents) < reader.PageSize {
+				break
 			}
 		}
 		close(out)
@@ -356,29 +405,6 @@ func (reader *Reader) Routes() chan gtfs.Route {
 		for {
 			ents := []gtfs.Route{}
 			qstr, args, err := reader.Where().From("gtfs_routes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
-}
-
-// Shapes sends Shapes.
-func (reader *Reader) Shapes() chan gtfs.Shape {
-	out := make(chan gtfs.Shape, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []gtfs.Shape{}
-			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
 			check(reader.Adapter.Select(&ents, qstr, args...))
 			for _, ent := range ents {

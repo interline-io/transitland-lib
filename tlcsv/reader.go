@@ -235,20 +235,11 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 
 // Shapes sends single-geometry LineString Shapes
 func (reader *Reader) Shapes() chan gtfs.Shape {
-	out := make(chan gtfs.Shape, bufferSize)
-	go func() {
-		for shapes := range reader.shapesByShapeID() {
-			shape := NewShapeFromShapes(shapes)
-			shape.ShapeID = shapes[0].ShapeID
-			out <- shape
-		}
-		close(out)
-	}()
-	return out
+	return ReadEntities[gtfs.Shape](reader, getFilename(&gtfs.Shape{}))
 }
 
 // shapesByShapeID returns a map with grouped Shapes.
-func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
+func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 	var chunks s2D
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
@@ -477,57 +468,4 @@ func stringsToSet(a []string) map[string]int {
 		result[i]++
 	}
 	return result
-}
-
-// NewShapeFromShapes takes Shapes with single points and returns a Shape with linestring geometry.
-// Any errors from the input errors, or errors such as duplicate sequences, are added as entity errors.
-func NewShapeFromShapes(shapes []gtfs.Shape) gtfs.Shape {
-	ent := gtfs.Shape{}
-	coords := []float64{}
-	sort.Slice(shapes, func(i, j int) bool {
-		return shapes[i].ShapePtSequence.Val < shapes[j].ShapePtSequence.Val
-	})
-	// Get sequence errors
-	if errs := ValidateShapes(shapes); len(errs) > 0 {
-		for _, err := range errs {
-			ent.AddError(err)
-		}
-	}
-	// expectError is just for validation tests.
-	// Add to coords, add base errors
-	for _, shape := range shapes {
-		coords = append(coords, shape.ShapePtLon.Val, shape.ShapePtLat.Val, shape.ShapeDistTraveled.Val)
-		for _, err := range shape.LoadErrors() {
-			ent.AddError(err)
-		}
-		for _, err := range shape.Errors() {
-			ent.AddError(err)
-		}
-		// For tests...
-		if v, ok := shape.GetExtra("expect_error"); len(v) > 0 && ok {
-			ent.SetExtra("expect_error", v)
-		}
-	}
-	ent.Geometry = tt.NewLineStringFromFlatCoords(coords)
-	return ent
-}
-
-// ValidateShapes returns errors for an array of shapes.
-func ValidateShapes(shapes []gtfs.Shape) []error {
-	errs := []error{}
-	last := -1
-	dist := -1.0
-	for _, shape := range shapes {
-		// Check for duplicate ID errors
-		if shape.ShapePtSequence.Int() == last {
-			errs = append(errs, causes.NewSequenceError("shape_pt_sequence", tt.TryCsv(last)))
-		}
-		last = shape.ShapePtSequence.Int()
-		if shape.ShapeDistTraveled.Val < dist {
-			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", tt.TryCsv(shape.ShapeDistTraveled)))
-		} else if shape.ShapeDistTraveled.Val > 0 {
-			dist = shape.ShapeDistTraveled.Val
-		}
-	}
-	return errs
 }

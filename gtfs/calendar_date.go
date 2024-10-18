@@ -37,7 +37,7 @@ func (ent *CalendarDate) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *CalendarDate) UpdateKeys(emap *EntityMap) error {
+func (ent *CalendarDate) UpdateKeys(emap *tt.EntityMap) error {
 	if serviceID, ok := emap.GetEntity(&Calendar{ServiceID: ent.ServiceID}); ok {
 		ent.ServiceID = serviceID
 	} else {

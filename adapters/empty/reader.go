@@ -38,6 +38,11 @@ func (mr *Reader) StopTimesByTripID(ids ...string) chan []gtfs.StopTime {
 	return readNullEntities[[]gtfs.StopTime](mr)
 }
 
+// ShapesByShapeID .
+func (mr *Reader) ShapesByShapeID(...string) chan []gtfs.Shape {
+	return readNullEntities[[]gtfs.Shape](mr)
+}
+
 func (mr *Reader) Stops() chan gtfs.Stop {
 	return readNullEntities[gtfs.Stop](mr)
 }
