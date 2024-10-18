@@ -6,7 +6,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// FeedVersionFileInfo .
+// FeedVersionFileInfo describes the individual files in a static GTFS feed
 type FeedVersionFileInfo struct {
 	Name         string
 	Size         int64

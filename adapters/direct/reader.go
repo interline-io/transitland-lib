@@ -80,9 +80,18 @@ func (mr *Reader) StopTimesByTripID(...string) chan []gtfs.StopTime {
 
 // ShapesByShapeID .
 func (mr *Reader) ShapesByShapeID(...string) chan []gtfs.Shape {
-	c := make(chan []gtfs.Shape, 1000)
-	close(c)
-	return c
+	out := make(chan []gtfs.Shape, 1000)
+	go func() {
+		ents := map[string][]gtfs.Shape{}
+		for _, ent := range mr.ShapeList {
+			ents[ent.ShapeID.Val] = append(ents[ent.ShapeID.Val], ent)
+		}
+		for _, v := range ents {
+			out <- v
+		}
+		close(out)
+	}()
+	return out
 }
 
 // ShapeLinesByShapeID .

@@ -43,16 +43,6 @@ func (Operator) TableName() string {
 	return "current_operators"
 }
 
-// SetID .
-func (ent *Operator) SetID(id int) {
-	ent.ID = id
-}
-
-// GetID .
-func (ent *Operator) GetID() int {
-	return ent.ID
-}
-
 ////////////
 
 type OperatorAssociatedFeed struct {

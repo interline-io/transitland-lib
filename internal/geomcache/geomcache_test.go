@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
@@ -24,7 +25,8 @@ func TestGeomCache(t *testing.T) {
 		count++
 	}
 	cache := NewGeomCache()
-	for e := range r.Shapes() {
+	for shapeEnts := range r.ShapesByShapeID() {
+		e := service.NewShapeLineFromShapes(shapeEnts)
 		lm := e.Geometry.ToLineM()
 		cache.AddShapeGeom(e.ShapeID.Val, lm.Coords, lm.Data)
 	}

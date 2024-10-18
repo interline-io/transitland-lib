@@ -4,6 +4,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
+// FeedFetch is a record of when feed data was fetched via a URL
 type FeedFetch struct {
 	FeedID        int
 	URLType       string

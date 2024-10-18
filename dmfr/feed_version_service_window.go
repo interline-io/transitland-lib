@@ -6,6 +6,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
+// FeedVersionServiceWindow is a cached summary of the overall start and end dates for a feed version, sourced from feed_info.txt and calendar.txt.
 type FeedVersionServiceWindow struct {
 	FeedStartDate        tt.Date
 	FeedEndDate          tt.Date

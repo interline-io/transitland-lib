@@ -1,3 +1,4 @@
+// This package is for compound entities, e.g. calendar services and shape lines
 package service
 
 import (

@@ -6,7 +6,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// FeedVersionServiceLevel .
+// FeedVersionServiceLevel is a cached summary of the number of seconds of scheduled service for a GTFS feed on a week-by-week basis.
 type FeedVersionServiceLevel struct {
 	StartDate tt.Date
 	EndDate   tt.Date

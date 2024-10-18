@@ -2,8 +2,6 @@ package tldb
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/jmoiron/sqlx/reflectx"
@@ -35,8 +33,7 @@ func getTableName(ent interface{}) string {
 	if v, ok := ent.(hasTableName); ok {
 		return v.TableName()
 	}
-	s := strings.Split(fmt.Sprintf("%T", ent), ".")
-	return tags.ToSnakeCase(s[len(s)-1])
+	return ""
 }
 
 func contains(a string, b []string) bool {

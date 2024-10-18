@@ -29,7 +29,8 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{StopID: tt.NewString("stop2"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(2), ArrivalTime: tt.NewSeconds(10), DepartureTime: tt.NewSeconds(15)},
 		},
 		ShapeList: []gtfs.Shape{
-			{ShapeID: tt.NewString("shape1"), Geometry: tt.NewLineStringFromFlatCoords([]float64{1, 2, 0, 3, 4, 0})},
+			{ShapeID: tt.NewString("shape1"), ShapePtLon: tt.NewFloat(1), ShapePtLat: tt.NewFloat(2), ShapePtSequence: tt.NewInt(0)},
+			{ShapeID: tt.NewString("shape1"), ShapePtLon: tt.NewFloat(3), ShapePtLat: tt.NewFloat(4), ShapePtSequence: tt.NewInt(1)},
 		},
 		CalendarList: []gtfs.Calendar{
 			{ServiceID: "service1", StartDate: time.Now(), EndDate: time.Now()},
@@ -60,7 +61,7 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			"trips.txt":           1,
 			"stops.txt":           2,
 			"stop_times.txt":      2,
-			"shapes.txt":          1,
+			"shapes.txt":          2,
 			"calendar.txt":        1,
 			"calendar_dates.txt":  1,
 			"feed_info.txt":       1,
