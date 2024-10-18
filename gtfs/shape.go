@@ -34,11 +34,6 @@ func (ent *Shape) Filename() string {
 	return "shapes.txt"
 }
 
-// TableName gtfs_shapes
-func (ent *Shape) TableName() string {
-	return "gtfs_shapes"
-}
-
 // Errors for this Entity.
 func (ent *Shape) Errors() (errs []error) {
 	// Defer on moving this to reflect path for now

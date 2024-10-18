@@ -122,17 +122,16 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	return eids, err
 }
 
+type canFlatten interface {
+	Flatten() []tt.Entity
+}
+
 // AddEntity writes an entity to the output.
 func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
-	eids := []string{}
+	var eids []string
 	var err error
-	if v, ok := ent.(*gtfs.ShapeLine); ok {
-		e2s := []tt.Entity{}
-		es := writer.flattenShape(*v)
-		for i := 0; i < len(es); i++ {
-			e2s = append(e2s, &es[i])
-		}
-		eids, err = writer.AddEntities(e2s)
+	if v, ok := ent.(canFlatten); ok {
+		eids, err = writer.AddEntities(v.Flatten())
 	} else {
 		eids, err = writer.AddEntities([]tt.Entity{ent})
 	}
@@ -143,34 +142,4 @@ func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
 		return "", errors.New("did not write expected number of entities")
 	}
 	return eids[0], nil
-}
-
-func (writer *Writer) flattenShape(ent gtfs.ShapeLine) []gtfs.Shape {
-	coords := ent.Geometry.FlatCoords()
-	shapes := []gtfs.Shape{}
-	totaldist := 0.0
-	for i := 0; i < len(coords); i += 3 {
-		s := gtfs.Shape{
-			ShapeID:           ent.ShapeID,
-			ShapePtSequence:   tt.NewInt(i),
-			ShapePtLon:        tt.NewFloat(coords[i]),
-			ShapePtLat:        tt.NewFloat(coords[i+1]),
-			ShapeDistTraveled: tt.NewFloat(coords[i+2]),
-		}
-		totaldist += coords[i+2]
-		shapes = append(shapes, s)
-	}
-	cur := 0.0
-	for i := 0; i < len(shapes); i++ {
-		if shapes[i].ShapeDistTraveled.Val < cur {
-			shapes[i].ShapeDistTraveled.Unset()
-		}
-		cur = shapes[i].ShapeDistTraveled.Val
-	}
-	if cur == 0.0 {
-		for i := 0; i < len(shapes); i++ {
-			shapes[i].ShapeDistTraveled.Unset()
-		}
-	}
-	return shapes
 }

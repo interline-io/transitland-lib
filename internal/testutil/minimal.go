@@ -61,7 +61,7 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			"trips.txt":           1,
 			"stops.txt":           2,
 			"stop_times.txt":      2,
-			"shapes.txt":          1,
+			"shapes.txt":          2,
 			"calendar.txt":        1,
 			"calendar_dates.txt":  1,
 			"feed_info.txt":       1,

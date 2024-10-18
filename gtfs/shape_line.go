@@ -25,6 +25,25 @@ func (ent *ShapeLine) EntityKey() string {
 	return ent.ShapeID.Val
 }
 
+// Filename shapes.txt
+// This is for entity map, not output file
+func (ent ShapeLine) Filename() string {
+	return "shapes.txt"
+}
+
+// TableName gtfs_shapes
+func (ent *ShapeLine) TableName() string {
+	return "gtfs_shapes"
+}
+
+func (ent ShapeLine) Flatten() []tt.Entity {
+	var ret []tt.Entity
+	for _, shapeEnt := range FlattenShape(ent) {
+		ret = append(ret, &shapeEnt)
+	}
+	return ret
+}
+
 // NewShapeFromShapes takes Shapes with single points and returns a Shape with linestring geometry.
 // Any errors from the input errors, or errors such as duplicate sequences, are added as entity errors.
 func NewShapeLineFromShapes(shapes []Shape) ShapeLine {
@@ -54,6 +73,7 @@ func NewShapeLineFromShapes(shapes []Shape) ShapeLine {
 			ent.SetExtra("expect_error", v)
 		}
 	}
+	ent.ShapeID.Set(shapes[0].ShapeID.Val)
 	ent.Geometry = tt.NewLineStringFromFlatCoords(coords)
 	return ent
 }
