@@ -51,7 +51,7 @@ func (r Option[T]) String() string {
 		return ""
 	}
 	out := ""
-	if err := convertAssign(&out, r.Val); err != nil {
+	if _, err := convertAssign(&out, r.Val); err != nil {
 		b, _ := r.MarshalJSON()
 		return string(b)
 	}
@@ -59,8 +59,10 @@ func (r Option[T]) String() string {
 }
 
 func (r *Option[T]) Scan(src interface{}) error {
-	err := convertAssign(&r.Val, src)
-	r.Valid = (src != nil && err == nil)
+	ok, err := convertAssign(&r.Val, src)
+	if ok && err == nil && src != nil {
+		r.Valid = true
+	}
 	return err
 }
 

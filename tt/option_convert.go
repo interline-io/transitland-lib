@@ -139,10 +139,14 @@ func TryCsv(val any) string {
 	return a
 }
 
-func convertAssign(dest any, src any) error {
+func convertAssign(dest any, src any) (bool, error) {
 	if src == nil {
-		return nil
+		return false, nil
 	}
+	if s, ok := src.(string); ok && s == "" {
+		return false, nil
+	}
+	ok := true
 	var err error
 	switch d := dest.(type) {
 	case *string:
@@ -263,7 +267,7 @@ func convertAssign(dest any, src any) error {
 			err = cannotConvert(dest, src)
 		}
 	}
-	return err
+	return ok, err
 }
 
 func cannotConvert(dest any, src any) error {
