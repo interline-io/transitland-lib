@@ -78,7 +78,10 @@ func NewShapeLineFromShapes(shapes []gtfs.Shape) ShapeLine {
 			ent.SetExtra("expect_error", v)
 		}
 	}
-	ent.ShapeID.Set(shapes[0].ShapeID.Val)
+	if len(shapes) > 0 {
+		ent.FeedVersionID = shapes[0].FeedVersionID
+		ent.ShapeID.Set(shapes[0].ShapeID.Val)
+	}
 	ent.Geometry = tt.NewLineStringFromFlatCoords(coords)
 	return ent
 }
