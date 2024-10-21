@@ -27,6 +27,27 @@ func (row *Row) Get(k string) (string, bool) {
 	return "", false
 }
 
+type csvOptFn func(*csv.Reader)
+
+func ReadRowsOptions(in io.Reader, cb func(Row), optFns ...csvOptFn) error {
+	// Handle byte-order-marks.
+	r := csv.NewReader(utfbom.SkipOnly(in))
+	// Allow variable columns - very common in GTFS
+	r.FieldsPerRecord = -1
+	// Trimming is done elsewhere
+	r.TrimLeadingSpace = false
+	// Reuse record
+	r.ReuseRecord = true
+	// Allow unescaped quotes
+	r.LazyQuotes = true
+	// Add additional options
+	for _, optFn := range optFns {
+		optFn(r)
+	}
+	// Go
+	return readRows(r, cb)
+}
+
 // ReadRows iterates through csv rows with callback.
 func ReadRows(in io.Reader, cb func(Row)) error {
 	// Handle byte-order-marks.
@@ -39,6 +60,11 @@ func ReadRows(in io.Reader, cb func(Row)) error {
 	r.ReuseRecord = true
 	// Allow unescaped quotes
 	r.LazyQuotes = true
+	// Go
+	return readRows(r, cb)
+}
+
+func readRows(r *csv.Reader, cb func(Row)) error {
 	// Go for it.
 	firstRow, err := r.Read()
 	if err != nil {
