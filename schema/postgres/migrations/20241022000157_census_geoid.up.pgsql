@@ -8,6 +8,6 @@ CREATE UNIQUE INDEX ON tl_census_values(geoid, table_id);
 ALTER TABLE tl_census_values ADD COLUMN source_id bigint not null REFERENCES tl_census_sources(id);
 CREATE INDEX ON tl_census_values(source_id);
 
-ALTER TABLE tl_census_tables ADD COLUMN column_order int;
+ALTER TABLE tl_census_fields ADD COLUMN column_order int;
 
 COMMIT;
