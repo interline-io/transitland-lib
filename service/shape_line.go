@@ -78,9 +78,45 @@ func NewShapeLineFromShapes(shapes []gtfs.Shape) ShapeLine {
 			ent.SetExtra("expect_error", v)
 		}
 	}
-	ent.ShapeID.Set(shapes[0].ShapeID.Val)
+	if len(shapes) > 0 {
+		ent.ID = shapes[0].ID
+		ent.FeedVersionID = shapes[0].FeedVersionID
+		ent.ShapeID.Set(shapes[0].ShapeID.Val)
+	}
 	ent.Geometry = tt.NewLineStringFromFlatCoords(coords)
 	return ent
+}
+
+func FlattenShape(ent ShapeLine) []gtfs.Shape {
+	coords := ent.Geometry.FlatCoords()
+	shapes := []gtfs.Shape{}
+	totaldist := 0.0
+	for i := 0; i < len(coords); i += 3 {
+		s := gtfs.Shape{
+			ShapeID:           ent.ShapeID,
+			ShapePtSequence:   tt.NewInt(i),
+			ShapePtLon:        tt.NewFloat(coords[i]),
+			ShapePtLat:        tt.NewFloat(coords[i+1]),
+			ShapeDistTraveled: tt.NewFloat(coords[i+2]),
+		}
+		s.ID = ent.ID
+		s.FeedVersionID = ent.FeedVersionID
+		totaldist += coords[i+2]
+		shapes = append(shapes, s)
+	}
+	cur := 0.0
+	for i := 0; i < len(shapes); i++ {
+		if shapes[i].ShapeDistTraveled.Val < cur {
+			shapes[i].ShapeDistTraveled.Unset()
+		}
+		cur = shapes[i].ShapeDistTraveled.Val
+	}
+	if cur == 0.0 {
+		for i := 0; i < len(shapes); i++ {
+			shapes[i].ShapeDistTraveled.Unset()
+		}
+	}
+	return shapes
 }
 
 // ValidateShapes returns errors for an array of shapes.
@@ -101,34 +137,4 @@ func ValidateShapes(shapes []gtfs.Shape) []error {
 		}
 	}
 	return errs
-}
-
-func FlattenShape(ent ShapeLine) []gtfs.Shape {
-	coords := ent.Geometry.FlatCoords()
-	shapes := []gtfs.Shape{}
-	totaldist := 0.0
-	for i := 0; i < len(coords); i += 3 {
-		s := gtfs.Shape{
-			ShapeID:           ent.ShapeID,
-			ShapePtSequence:   tt.NewInt(i),
-			ShapePtLon:        tt.NewFloat(coords[i]),
-			ShapePtLat:        tt.NewFloat(coords[i+1]),
-			ShapeDistTraveled: tt.NewFloat(coords[i+2]),
-		}
-		totaldist += coords[i+2]
-		shapes = append(shapes, s)
-	}
-	cur := 0.0
-	for i := 0; i < len(shapes); i++ {
-		if shapes[i].ShapeDistTraveled.Val < cur {
-			shapes[i].ShapeDistTraveled.Unset()
-		}
-		cur = shapes[i].ShapeDistTraveled.Val
-	}
-	if cur == 0.0 {
-		for i := 0; i < len(shapes); i++ {
-			shapes[i].ShapeDistTraveled.Unset()
-		}
-	}
-	return shapes
 }

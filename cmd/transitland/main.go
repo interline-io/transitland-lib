@@ -52,8 +52,8 @@ func init() {
 		Hidden: true,
 	}
 	dmfrCommand.AddCommand(
-		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "format"),
-		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "lint"),
+		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "lint"),
+		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "format"),
 	)
 
 	genDocCommand := tlcli.CobraHelper(&tlcli.GenDocCommand{Command: rootCmd}, pc, "gendoc")
@@ -63,9 +63,9 @@ func init() {
 		tlcli.CobraHelper(&cmds.CopyCommand{}, pc, "copy"),
 		tlcli.CobraHelper(&cmds.ExtractCommand{}, pc, "extract"),
 		tlcli.CobraHelper(&cmds.FetchCommand{}, pc, "fetch"),
-		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "dmfr-lint"),
+		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "dmfr-format"),
 		tlcli.CobraHelper(&cmds.ImportCommand{}, pc, "import"),
-		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "dmfr-format"),
+		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "dmfr-lint"),
 		tlcli.CobraHelper(&cmds.MergeCommand{}, pc, "merge"),
 		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
 		tlcli.CobraHelper(&cmds.SyncCommand{}, pc, "sync"),
