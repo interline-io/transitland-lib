@@ -35,6 +35,10 @@ func (ent *Route) EntityKey() string {
 	return ent.RouteID.Val
 }
 
+func (ent *Route) GroupKey() (string, string) {
+	return "network_id", ent.NetworkID.Val
+}
+
 // Filename routes.txt
 func (ent *Route) Filename() string {
 	return "routes.txt"

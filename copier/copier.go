@@ -376,6 +376,11 @@ func (copier *Copier) CopyEntity(ent tt.Entity) (error, error) {
 			return nil, err
 		}
 		copier.EntityMap.Set(efn, sid, eid)
+		if entExt, ok := ent.(tt.EntityWithGroupKey); ok {
+			if groupKey, groupId := entExt.GroupKey(); groupId != "" {
+				copier.EntityMap.Set(fmt.Sprintf("%s:%s", efn, groupKey), groupId, groupId)
+			}
+		}
 		copier.result.EntityCount[efn]++
 		for _, v := range copier.afterWriters {
 			if err := v.AfterWrite(eid, ent, copier.EntityMap); err != nil {
@@ -767,9 +772,6 @@ func (copier *Copier) copyRoutes() error {
 		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
 		}
-		if e.NetworkID.Valid {
-			copier.EntityMap.Set("routes.txt:network_id", e.NetworkID.Val, e.NetworkID.Val)
-		}
 	}
 	copier.logCount(&gtfs.Route{})
 	return nil
@@ -878,10 +880,8 @@ func (copier *Copier) copyFaresV2() error {
 	copier.logCount(&gtfs.StopArea{})
 
 	for e := range copier.Reader.RiderCategories() {
-		if entErr, err := copier.CopyEntity(&e); err != nil {
+		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
-		} else if entErr == nil {
-			copier.EntityMap.Set("rider_categories.txt", e.RiderCategoryID.Val, e.RiderCategoryID.Val)
 		}
 	}
 	copier.logCount(&gtfs.RiderCategory{})
@@ -894,19 +894,15 @@ func (copier *Copier) copyFaresV2() error {
 	copier.logCount(&gtfs.FareMedia{})
 
 	for e := range copier.Reader.FareProducts() {
-		if entErr, err := copier.CopyEntity(&e); err != nil {
+		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
-		} else if entErr == nil {
-			copier.EntityMap.Set("fare_products.txt", e.FareProductID.Val, e.FareProductID.Val)
 		}
 	}
 	copier.logCount(&gtfs.FareProduct{})
 
 	for e := range copier.Reader.FareLegRules() {
-		if entErr, err := copier.CopyEntity(&e); err != nil {
+		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
-		} else if entErr == nil {
-			copier.EntityMap.Set("fare_leg_rules.txt", e.FareProductID.Val, e.FareProductID.Val)
 		}
 	}
 	copier.logCount(&gtfs.FareLegRule{})

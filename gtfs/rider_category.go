@@ -25,6 +25,10 @@ func (ent *RiderCategory) TableName() string {
 	return "gtfs_rider_categories"
 }
 
+func (ent *RiderCategory) GroupKey() (string, string) {
+	return "rider_category_id", ent.RiderCategoryID.Val
+}
+
 func (ent *RiderCategory) ConditionalErrors() (errs []error) {
 	if ent.MinAge.Valid && ent.MaxAge.Valid && ent.MaxAge.Val < ent.MinAge.Val {
 		errs = append(errs, causes.NewInvalidFieldError("max_age", ent.MaxAge.String(), fmt.Errorf("max_age is less than min_age")))
