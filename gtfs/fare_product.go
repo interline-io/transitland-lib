@@ -11,12 +11,12 @@ type FareProduct struct {
 	FareProductName tt.String
 	Amount          tt.CurrencyAmount `csv:",required"`
 	Currency        tt.Currency       `csv:",required"`
-	DurationStart   tt.Int            `enum:"0,1"`                    // proposed extension
-	DurationAmount  tt.Float          `range:"0,"`                    // proposed extension
-	DurationUnit    tt.Int            `enum:"0,1,2,3,4,5,6"`          // proposed extension
-	DurationType    tt.Int            `enum:"1,2"`                    // proposed extension
-	RiderCategoryID tt.Key            `target:"rider_categories.txt"` // proposed extension
-	FareMediaID     tt.Key            `target:"fare_media.txt"`       // proposed extension
+	DurationStart   tt.Int            `enum:"0,1"`                                      // proposed extension
+	DurationAmount  tt.Float          `range:"0,"`                                      // proposed extension
+	DurationUnit    tt.Int            `enum:"0,1,2,3,4,5,6"`                            // proposed extension
+	DurationType    tt.Int            `enum:"1,2"`                                      // proposed extension
+	RiderCategoryID tt.Key            `target:"rider_categories.txt:rider_category_id"` // proposed extension
+	FareMediaID     tt.Key            `target:"fare_media.txt"`                         // proposed extension
 	tt.BaseEntity
 }
 
@@ -30,6 +30,10 @@ func (ent *FareProduct) Filename() string {
 
 func (ent *FareProduct) TableName() string {
 	return "gtfs_fare_products"
+}
+
+func (ent *FareProduct) GroupKey() (string, string) {
+	return "fare_product_id", ent.FareProductID.Val
 }
 
 func (ent *FareProduct) GetValue(key string) (any, bool) {

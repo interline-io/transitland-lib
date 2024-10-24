@@ -32,6 +32,10 @@ type EntityWithLoadErrors interface {
 	AddWarning(error)
 }
 
+type EntityWithGroupKey interface {
+	GroupKey() (string, string)
+}
+
 type EntityWithErrors interface {
 	Errors() []error
 }

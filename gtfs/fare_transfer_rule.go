@@ -9,14 +9,14 @@ import (
 
 // FareTransferRule fare_transfer_rules.txt
 type FareTransferRule struct {
-	FromLegGroupID      tt.String `target:"fare_leg_rules.txt"`
-	ToLegGroupID        tt.String `target:"fare_leg_rules.txt"`
+	FromLegGroupID      tt.String `target:"fare_leg_rules.txt:leg_group_id"`
+	ToLegGroupID        tt.String `target:"fare_leg_rules.txt:leg_group_id"`
 	TransferCount       tt.Int    `range:"-1,"`
 	DurationLimit       tt.Int    `range:"0,"`
 	DurationLimitType   tt.Int    `enum:"0,1,2,3"`
 	FareTransferType    tt.Int    `csv:",required" enum:"0,1,2"`
-	FareProductID       tt.String `target:"fare_products.txt"`
-	FilterFareProductID tt.String `target:"fare_products.txt"` // proposed extension
+	FareProductID       tt.String `target:"fare_products.txt:fare_product_id"`
+	FilterFareProductID tt.String `target:"fare_products.txt:fare_product_id"` // proposed extension
 	tt.BaseEntity
 }
 
