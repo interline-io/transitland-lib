@@ -72,31 +72,26 @@ func FromCsv(val any, strv string) error {
 	return p
 }
 
-func formatFloat(v float64) string {
-	value := ""
-	if math.IsNaN(v) {
-		value = ""
-	} else if v > -100_000 && v < 100_000 {
-		// use pretty %g formatting but avoid exponents
-		value = fmt.Sprintf("%g", v)
-	} else {
-		value = fmt.Sprintf("%0.5f", v)
-	}
-	return value
-}
-
 // ToCsv converts any value to a CSV string representation
 func ToCsv(val any) (string, error) {
 	value := ""
 	switch v := val.(type) {
 	case nil:
 		value = ""
+	case canCsvString:
+		value = v.ToCsv()
+	case canValue:
+		a, err := v.Value()
+		if err != nil {
+			return "", err
+		}
+		return ToCsv(a)
 	case string:
 		value = v
-	case int:
-		value = strconv.Itoa(v)
 	case int64:
-		value = strconv.Itoa(int(v))
+		value = strconv.FormatInt(v, 10)
+	case int:
+		value = strconv.FormatInt(int64(v), 10)
 	case bool:
 		if v {
 			value = "true"
@@ -115,16 +110,6 @@ func ToCsv(val any) (string, error) {
 		}
 	case []byte:
 		value = string(v)
-	case canCsvString:
-		value = v.ToCsv()
-	case canValue:
-		a, err := v.Value()
-		if err != nil {
-			return "", err
-		}
-		return ToCsv(a)
-	case canString:
-		value = v.String()
 	case int8, int16, int32, uint, uint8, uint16, uint32, uint64:
 		value = fmt.Sprintf("%d", v)
 	default:
@@ -155,12 +140,12 @@ func convertAssign(dest any, src any) (bool, error) {
 			*d = s
 		case []byte:
 			*d = string(s)
-		case int:
-			*d = strconv.Itoa(s)
 		case int64:
-			*d = strconv.Itoa(int(s))
+			*d = strconv.FormatInt(s, 10)
+		case int:
+			*d = strconv.FormatInt(int64(s), 10)
 		case float64:
-			*d = fmt.Sprintf("%0.5f", s)
+			*d = formatFloat(s)
 		case time.Time:
 			*d = s.Format(time.RFC3339)
 		case canString:
@@ -285,4 +270,27 @@ func parseTime(d string) (time.Time, error) {
 		s, err = time.Parse(time.RFC3339, d)
 	}
 	return s, err
+}
+
+func formatFloat(v float64) string {
+	if math.IsNaN(v) || math.IsInf(v, 0) || math.IsInf(v, -1) {
+		return ""
+	}
+	return trimZeroAfterDecimal(strconv.FormatFloat(v, 'f', 5, 64))
+}
+
+func trimZeroAfterDecimal(value string) string {
+	i := 0
+	j := len(value) - 1
+	for ; i < len(value); i++ {
+		if value[i] == '.' {
+			break
+		}
+	}
+	for ; j > i+1; j-- {
+		if value[j] != '0' {
+			break
+		}
+	}
+	return value[0 : j+1]
 }

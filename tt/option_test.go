@@ -2,11 +2,71 @@ package tt
 
 import (
 	"database/sql/driver"
+	"math"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestToCsv(t *testing.T) {
+	tcs := []struct {
+		name         string
+		val          any
+		expectString string
+		expectError  bool
+	}{
+		// ints
+		{name: "int:1", val: 1, expectString: "1"},
+		{name: "int:-1", val: -1, expectString: "-1"},
+		{name: "int:0", val: 0, expectString: "0"},
+		// Ints
+		{name: "Int:1", val: NewInt(1), expectString: "1"},
+		{name: "Int:-1", val: NewInt(-1), expectString: "-1"},
+		{name: "Int:0", val: NewInt(0), expectString: "0"},
+		{name: "Int:empty", val: Int{}, expectString: ""},
+		// floats
+		{name: "float:1.0", val: 1.0, expectString: "1.0"},
+		{name: "float:NaN", val: math.NaN(), expectString: ""},
+		{name: "float:+Inf", val: math.Inf(0), expectString: ""},
+		{name: "float:-Inf", val: math.Inf(-1), expectString: ""},
+		{name: "float:1.2", val: 1.2, expectString: "1.2"},
+		{name: "float:1.23", val: 1.23, expectString: "1.23"},
+		// Floats
+		{name: "Float:1.0", val: NewFloat(1.0), expectString: "1.0"},
+		{name: "Float:empty", val: Float{}, expectString: ""},
+		{name: "Float:+Inf", val: NewFloat(math.Inf(0)), expectString: ""},
+		{name: "Float:-Inf", val: NewFloat(math.Inf(-1)), expectString: ""},
+		{name: "Float:NaN", val: NewFloat(math.NaN()), expectString: ""},
+		{name: "Float:1.2", val: NewFloat(1.2), expectString: "1.2"},
+		{name: "Float:-1.2", val: NewFloat(-1.2), expectString: "-1.2"},
+		{name: "Float:1.23", val: NewFloat(1.23), expectString: "1.23"},
+		{name: "Float:1.234", val: NewFloat(1.234), expectString: "1.234"},
+		{name: "Float:1.2345", val: NewFloat(1.23456), expectString: "1.23456"},
+		{name: "Float:1.123456", val: NewFloat(1.123456), expectString: "1.12346"},
+		{name: "Float:-1.123456", val: NewFloat(-1.123456), expectString: "-1.12346"},
+		{name: "Float:1000.0", val: NewFloat(1000.0), expectString: "1000.0"},
+		{name: "Float:1000.12345", val: NewFloat(1000.12345), expectString: "1000.12345"},
+		{name: "Float:1000.1234567890", val: NewFloat(1000.1234567890), expectString: "1000.12346"},
+		{name: "Float:123_456_789_000", val: NewFloat(123_456_789_000), expectString: "123456789000.0"},
+		{name: "Float:123_456_789_000.123`", val: NewFloat(123_456_789_000.123), expectString: "123456789000.123"},
+		{name: "Float:123_456_789_000.123456`", val: NewFloat(123_456_789_000.123456), expectString: "123456789000.12346"},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			s, ferr := ToCsv(tc.val)
+			if tc.expectError && ferr != nil {
+				// ok
+				return
+			} else if tc.expectError && ferr == nil {
+				t.Error("expected error")
+			} else if !tc.expectError && ferr != nil {
+				t.Error(ferr)
+			}
+			assert.Equal(t, tc.expectString, s)
+		})
+	}
+}
 
 func TestOptionString(t *testing.T) {
 	testStr := "hello"
@@ -43,7 +103,7 @@ func TestOptionString(t *testing.T) {
 				true:     nil,
 				"true":   "true",
 				"nil":    "nil",
-				1.23:     "1.23000",
+				1.23:     "1.23",
 				1.234567: "1.23457",
 				nil:      nil,
 			},
@@ -53,7 +113,7 @@ func TestOptionString(t *testing.T) {
 				1:        "1",
 				nil:      "",
 				true:     "",
-				1.23:     "1.23000",
+				1.23:     "1.23",
 				1.234567: "1.23457",
 			},
 			uj: map[string]any{
@@ -113,9 +173,9 @@ func TestOptionString(t *testing.T) {
 				"1.234": 1.234,
 			},
 			str: map[any]any{
-				1234:   "1234.00000",
-				1.234:  "1.23400",
-				1.567:  "1.56700",
+				1234:   "1234.0",
+				1.234:  "1.234",
+				1.567:  "1.567",
 				"fail": "",
 			},
 			uj: map[string]any{
