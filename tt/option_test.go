@@ -103,7 +103,7 @@ func TestOptionString(t *testing.T) {
 				true:     nil,
 				"true":   "true",
 				"nil":    "nil",
-				1.23:     "1.23000",
+				1.23:     "1.23",
 				1.234567: "1.23457",
 				nil:      nil,
 			},
@@ -113,7 +113,7 @@ func TestOptionString(t *testing.T) {
 				1:        "1",
 				nil:      "",
 				true:     "",
-				1.23:     "1.23000",
+				1.23:     "1.23",
 				1.234567: "1.23457",
 			},
 			uj: map[string]any{
@@ -173,9 +173,9 @@ func TestOptionString(t *testing.T) {
 				"1.234": 1.234,
 			},
 			str: map[any]any{
-				1234:   "1234.00000",
-				1.234:  "1.23400",
-				1.567:  "1.56700",
+				1234:   "1234.0",
+				1.234:  "1.234",
+				1.567:  "1.567",
 				"fail": "",
 			},
 			uj: map[string]any{
