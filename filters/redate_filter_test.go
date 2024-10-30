@@ -83,8 +83,8 @@ func TestRedateFilter(t *testing.T) {
 					continue
 				}
 				found = true
-				assert.Equal(t, v.StartDate.Val.Format(tft), svc.StartDate.Val.Format(tft))
-				assert.Equal(t, v.EndDate.Val.Format(tft), svc.EndDate.Val.Format(tft))
+				assert.Equal(t, v.StartDate.Format(tft), svc.StartDate.Format(tft))
+				assert.Equal(t, v.EndDate.Format(tft), svc.EndDate.Format(tft))
 				startDate := v.StartDate.Val
 				for startDate.Before(v.EndDate.Val) {
 					a := v.IsActive(startDate)
