@@ -66,7 +66,7 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 	switch v := ent.(type) {
 	case *service.Service:
 		// Use only the first 30 days of service
-		startDate := v.StartDate
+		startDate := v.StartDate.Val
 		for i := 0; i < 31; i++ {
 			if v.IsActive(startDate) {
 				d := startDate.Format("2006-01-02")

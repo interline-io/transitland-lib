@@ -6,6 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // NewFeedVersionFromReader returns a FeedVersion from a Reader.
@@ -52,32 +53,32 @@ type canPath interface {
 }
 
 func FeedVersionServiceBounds(reader adapters.Reader) (time.Time, time.Time, error) {
-	var start time.Time
-	var end time.Time
+	var start tt.Date
+	var end tt.Date
 	for c := range reader.Calendars() {
 		if start.IsZero() || c.StartDate.Before(start) {
-			start = c.StartDate
+			start.Set(c.StartDate.Val)
 		}
 		if end.IsZero() || c.EndDate.After(end) {
-			end = c.EndDate
+			end.Set(c.EndDate.Val)
 		}
 	}
 	for cd := range reader.CalendarDates() {
 		if cd.ExceptionType.Val != 1 {
 			continue
 		}
-		if start.IsZero() || cd.Date.Val.Before(start) {
-			start = cd.Date.Val
+		if start.IsZero() || cd.Date.Before(start) {
+			start.Set(cd.Date.Val)
 		}
-		if end.IsZero() || cd.Date.Val.After(end) {
-			end = cd.Date.Val
+		if end.IsZero() || cd.Date.After(end) {
+			end.Set(cd.Date.Val)
 		}
 	}
 	if start.IsZero() || end.IsZero() {
-		return start, end, errors.New("start or end dates were empty")
+		return start.Val, end.Val, errors.New("start or end dates were empty")
 	}
 	if end.Before(start) {
-		return start, end, errors.New("end before start")
+		return start.Val, end.Val, errors.New("end before start")
 	}
-	return start, end, nil
+	return start.Val, end.Val, nil
 }

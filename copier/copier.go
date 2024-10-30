@@ -938,9 +938,16 @@ func (copier *Copier) copyCalendars() error {
 	// Add the CalendarDates to Services
 	for ent := range copier.Reader.CalendarDates() {
 		cal := gtfs.Calendar{
-			ServiceID: ent.ServiceID.Val,
-			Generated: true,
+			ServiceID: tt.NewString(ent.ServiceID.Val),
+			Generated: tt.NewBool(true),
 		}
+		cal.Monday.OrSet(0)
+		cal.Tuesday.OrSet(0)
+		cal.Wednesday.OrSet(0)
+		cal.Thursday.OrSet(0)
+		cal.Friday.OrSet(0)
+		cal.Saturday.OrSet(0)
+		cal.Sunday.OrSet(0)
 		if !copier.isMarked(&cal) {
 			continue
 		}
@@ -962,8 +969,10 @@ func (copier *Copier) copyCalendars() error {
 			}
 		}
 		// Generated calendars may need their service period set...
-		if svc.Generated && (svc.StartDate.IsZero() || svc.EndDate.IsZero()) {
-			svc.StartDate, svc.EndDate = svc.ServicePeriod()
+		if svc.Generated.Val && (svc.StartDate.IsZero() || svc.EndDate.IsZero()) {
+			a, b := svc.ServicePeriod()
+			svc.StartDate.Set(a)
+			svc.EndDate.Set(b)
 		}
 	}
 
@@ -973,8 +982,8 @@ func (copier *Copier) copyCalendars() error {
 	for _, svc := range svcs {
 		cid := svc.EntityID()
 		// Skip main Calendar entity if generated and not normalizing/simplifying service IDs.
-		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			copier.EntityMap.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
+		if svc.Generated.Val && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
+			copier.EntityMap.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID.Val)
 		} else {
 			if entErr, writeErr := copier.CopyEntity(svc); writeErr != nil {
 				return writeErr
@@ -992,7 +1001,7 @@ func (copier *Copier) copyCalendars() error {
 				return btErr
 			}
 		}
-		if svc.Generated {
+		if svc.Generated.Val {
 			copier.result.GeneratedCount["calendar.txt"]++
 		}
 	}

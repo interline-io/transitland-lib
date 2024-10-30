@@ -32,5 +32,5 @@ func (e *NoScheduledServiceCheck) Validate(ent tt.Entity) []error {
 	if v.HasAtLeastOneDay() {
 		return nil
 	}
-	return []error{&NoScheduledServiceError{ServiceID: v.ServiceID}}
+	return []error{&NoScheduledServiceError{ServiceID: v.ServiceID.Val}}
 }

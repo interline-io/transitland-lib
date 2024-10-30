@@ -2,7 +2,6 @@ package gtfs
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
@@ -10,49 +9,31 @@ import (
 
 // Calendar calendars.txt
 type Calendar struct {
-	ServiceID string    `csv:",required"`
-	Monday    int       `csv:",required"`
-	Tuesday   int       `csv:",required"`
-	Wednesday int       `csv:",required"`
-	Thursday  int       `csv:",required"`
-	Friday    int       `csv:",required"`
-	Saturday  int       `csv:",required"`
-	Sunday    int       `csv:",required"`
-	StartDate time.Time `csv:",required"`
-	EndDate   time.Time `csv:",required"`
-	Generated bool      `csv:"-" db:"generated"`
+	ServiceID tt.String `csv:",required"`
+	Monday    tt.Int    `csv:",required" enum:"0,1"`
+	Tuesday   tt.Int    `csv:",required" enum:"0,1"`
+	Wednesday tt.Int    `csv:",required" enum:"0,1"`
+	Thursday  tt.Int    `csv:",required" enum:"0,1"`
+	Friday    tt.Int    `csv:",required" enum:"0,1"`
+	Saturday  tt.Int    `csv:",required" enum:"0,1"`
+	Sunday    tt.Int    `csv:",required" enum:"0,1"`
+	StartDate tt.Date   `csv:",required"`
+	EndDate   tt.Date   `csv:",required"`
+	Generated tt.Bool   `csv:"-" db:"generated"`
 	tt.BaseEntity
 }
 
 // EntityID returns the ID or ServiceID.
 func (ent *Calendar) EntityID() string {
-	return entID(ent.ID, ent.ServiceID)
+	return entID(ent.ID, ent.ServiceID.Val)
 }
 
 // EntityKey returns the GTFS identifier.
 func (ent *Calendar) EntityKey() string {
-	return ent.ServiceID
+	return ent.ServiceID.Val
 }
 
 // Errors for this Entity.
-func (ent *Calendar) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("service_id", ent.ServiceID)...)
-	errs = append(errs, tt.CheckInsideRangeInt("monday", ent.Monday, 0, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("tuesday", ent.Tuesday, 0, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("wednesday", ent.Wednesday, 0, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("thursday", ent.Thursday, 0, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("friday", ent.Friday, 0, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("saturday", ent.Saturday, 0, 1)...)
-	errs = append(errs, tt.CheckInsideRangeInt("sunday", ent.Sunday, 0, 1)...)
-	if ent.StartDate.IsZero() {
-		errs = append(errs, causes.NewInvalidFieldError("start_date", ent.StartDate.String(), fmt.Errorf("start_date is empty")))
-	}
-	if ent.EndDate.IsZero() {
-		errs = append(errs, causes.NewInvalidFieldError("end_date", ent.EndDate.String(), fmt.Errorf("end_date is empty")))
-	}
-	return errs
-}
-
 func (ent *Calendar) ConditionalErrors() []error {
 	var errs []error
 	if !ent.StartDate.IsZero() && !ent.EndDate.IsZero() && ent.EndDate.Before(ent.StartDate) {

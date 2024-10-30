@@ -23,13 +23,14 @@ type FastTravelError struct {
 
 func newFastTravelError(trip string, seq int, from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
 	return &FastTravelError{
-		TripID:     trip,
-		FromStopID: from,
-		ToStopID:   to,
-		Time:       t,
-		Distance:   distance,
-		Speed:      speed,
-		SpeedLimit: limit,
+		TripID:       trip,
+		FromStopID:   from,
+		ToStopID:     to,
+		Time:         t,
+		StopSequence: seq,
+		Distance:     distance,
+		Speed:        speed,
+		SpeedLimit:   limit,
 	}
 }
 

@@ -33,7 +33,7 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{ShapeID: tt.NewString("shape1"), ShapePtLon: tt.NewFloat(3), ShapePtLat: tt.NewFloat(4), ShapePtSequence: tt.NewInt(1)},
 		},
 		CalendarList: []gtfs.Calendar{
-			{ServiceID: "service1", StartDate: time.Now(), EndDate: time.Now()},
+			{ServiceID: tt.NewString("service1"), StartDate: tt.NewDate(time.Now()), EndDate: tt.NewDate(time.Now())},
 		},
 		CalendarDateList: []gtfs.CalendarDate{
 			{ServiceID: tt.NewKey("service1"), ExceptionType: tt.NewInt(1), Date: tt.NewDate(time.Now())},

@@ -2,6 +2,7 @@ package tldb
 
 import (
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -37,6 +38,15 @@ func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		v.JourneyPatternOffset.OrSet(0)
 	case *gtfs.Transfer:
 		v.TransferType.OrSet(0)
+	case *service.Service:
+		v.Generated.OrSet(false)
+		v.Monday.OrSet(0)
+		v.Tuesday.OrSet(0)
+		v.Wednesday.OrSet(0)
+		v.Thursday.OrSet(0)
+		v.Friday.OrSet(0)
+		v.Saturday.OrSet(0)
+		v.Sunday.OrSet(0)
 	}
 	return nil
 }

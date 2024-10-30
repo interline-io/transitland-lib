@@ -69,7 +69,7 @@ func TestSetString(t *testing.T) {
 			t.Error(err)
 		}
 		exp := []int{2019, 8, 02}
-		got := []int{ent.StartDate.Year(), int(ent.StartDate.Month()), ent.StartDate.Day()}
+		got := []int{ent.StartDate.Val.Year(), int(ent.StartDate.Val.Month()), ent.StartDate.Val.Day()}
 		for i := 0; i < len(exp); i++ {
 			if got[i] != exp[i] {
 				t.Errorf("got %d expect %d", got[i], exp[i])

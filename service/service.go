@@ -57,15 +57,24 @@ func NewServicesFromReader(reader adapters.Reader) []*Service {
 		cds[sid] = append(cds[sid], cd)
 	}
 	for c := range reader.Calendars() {
-		sid := c.ServiceID
+		sid := c.ServiceID.Val
 		s := NewService(c, cds[sid]...)
 		ret = append(ret, s)
 		delete(cds, sid)
 	}
 	for k, v := range cds {
-		s := NewService(gtfs.Calendar{ServiceID: k}, v...)
-		s.Generated = true
-		s.StartDate, s.EndDate = s.ServicePeriod()
+		s := NewService(gtfs.Calendar{ServiceID: tt.NewString(k)}, v...)
+		s.Generated.Set(true)
+		s.Monday.OrSet(0)
+		s.Tuesday.OrSet(0)
+		s.Wednesday.OrSet(0)
+		s.Thursday.OrSet(0)
+		s.Friday.OrSet(0)
+		s.Saturday.OrSet(0)
+		s.Sunday.OrSet(0)
+		a, b := s.ServicePeriod()
+		s.StartDate.Set(a)
+		s.EndDate.Set(b)
 		ret = append(ret, s)
 	}
 	return ret
@@ -117,7 +126,7 @@ func (s *Service) CalendarDates() []gtfs.CalendarDate {
 
 // GetWeekday returns the value fo the day of week.
 func (s *Service) GetWeekday(dow int) (int, error) {
-	v := 0
+	v := tt.Int{}
 	switch dow {
 	case 0:
 		v = s.Sunday
@@ -136,7 +145,7 @@ func (s *Service) GetWeekday(dow int) (int, error) {
 	default:
 		return 0, errors.New("unknown weekday")
 	}
-	return v, nil
+	return v.Int(), nil
 }
 
 // SetWeekday sets the day of week.
@@ -144,21 +153,22 @@ func (s *Service) SetWeekday(dow int, value int) error {
 	if value < 0 || value > 1 {
 		return errors.New("only 0,1 allowed")
 	}
+	v := int64(value)
 	switch dow {
 	case 0:
-		s.Sunday = value
+		s.Sunday.Set(v)
 	case 1:
-		s.Monday = value
+		s.Monday.Set(v)
 	case 2:
-		s.Tuesday = value
+		s.Tuesday.Set(v)
 	case 3:
-		s.Wednesday = value
+		s.Wednesday.Set(v)
 	case 4:
-		s.Thursday = value
+		s.Thursday.Set(v)
 	case 5:
-		s.Friday = value
+		s.Friday.Set(v)
 	case 6:
-		s.Saturday = value
+		s.Saturday.Set(v)
 	default:
 		return errors.New("unknown weekday")
 	}
@@ -167,7 +177,7 @@ func (s *Service) SetWeekday(dow int, value int) error {
 
 // ServicePeriod returns the widest possible range of days with transit service, including service exceptions.
 func (s *Service) ServicePeriod() (time.Time, time.Time) {
-	start, end := newYMD(s.StartDate), newYMD(s.EndDate)
+	start, end := newYMD(s.StartDate.Val), newYMD(s.EndDate.Val)
 	for _, cd := range s.dates {
 		if start.IsZero() || cd.date.Before(start) {
 			start = cd.date
@@ -195,10 +205,10 @@ func (s *Service) IsActive(t time.Time) bool {
 	if v, ok := s.Exception(t); ok {
 		return v == 1
 	}
-	if t.Before(s.StartDate) {
+	if t.Before(s.StartDate.Val) {
 		return false
 	}
-	if t.After(s.EndDate) {
+	if t.After(s.EndDate.Val) {
 		return false
 	}
 	v, err := s.GetWeekday(int(t.Weekday()))
@@ -213,8 +223,8 @@ func (s *Service) HasAtLeastOneDay() bool {
 	// Quick checks before iterating through each day.
 	// quick check that we have at least a week of service,
 	// otherwise fall back to full check...
-	duration := s.EndDate.Sub(s.StartDate).Hours() / 24
-	days := s.Monday + s.Tuesday + s.Wednesday + s.Thursday + s.Friday + s.Saturday + s.Sunday
+	duration := s.EndDate.Val.Sub(s.StartDate.Val).Hours() / 24
+	days := s.Monday.Val + s.Tuesday.Val + s.Wednesday.Val + s.Thursday.Val + s.Friday.Val + s.Saturday.Val + s.Sunday.Val
 	if duration >= 7 && days > 0 && len(s.dates) == 0 {
 		return true
 	}
@@ -247,8 +257,8 @@ func (s *Service) HasAtLeastOneDay() bool {
 
 // Simplify tries to simplify exceptions down to a basic calendar with fewer exceptions.
 func (s *Service) Simplify() (*Service, error) {
-	inputServiceStart, inputServiceEnd := s.StartDate, s.EndDate
-	if s.Generated || s.StartDate.IsZero() || s.EndDate.IsZero() {
+	inputServiceStart, inputServiceEnd := s.StartDate.Val, s.EndDate.Val
+	if s.Generated.Val || s.StartDate.IsZero() || s.EndDate.IsZero() {
 		inputServiceStart, inputServiceEnd = s.ServicePeriod()
 	}
 	// Count the total days and active days, by day of week
@@ -274,7 +284,19 @@ func (s *Service) Simplify() (*Service, error) {
 	}
 
 	// Set weekdays based on dow counts
-	ret := NewService(gtfs.Calendar{ServiceID: s.ServiceID, Generated: s.Generated, StartDate: inputServiceStart, EndDate: inputServiceEnd})
+	ret := NewService(gtfs.Calendar{
+		ServiceID: s.ServiceID,
+		Generated: s.Generated,
+		StartDate: tt.NewDate(inputServiceStart),
+		EndDate:   tt.NewDate(inputServiceEnd),
+		Monday:    tt.NewInt(0),
+		Tuesday:   tt.NewInt(0),
+		Wednesday: tt.NewInt(0),
+		Thursday:  tt.NewInt(0),
+		Friday:    tt.NewInt(0),
+		Saturday:  tt.NewInt(0),
+		Sunday:    tt.NewInt(0),
+	})
 	ret.ID = s.ID
 	for dow, total := range totalCount {
 		if total == 0 {

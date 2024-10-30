@@ -20,15 +20,15 @@ func newTestService() *service.Service {
 	added, _ := time.Parse("20060102", "20190105")
 	s := service.NewService(
 		gtfs.Calendar{
-			StartDate: start,
-			EndDate:   end,
-			Monday:    1,
-			Tuesday:   1,
-			Wednesday: 1,
-			Thursday:  1,
-			Friday:    1,
-			Saturday:  0,
-			Sunday:    0,
+			StartDate: tt.NewDate(start),
+			EndDate:   tt.NewDate(end),
+			Monday:    tt.NewInt(1),
+			Tuesday:   tt.NewInt(1),
+			Wednesday: tt.NewInt(1),
+			Thursday:  tt.NewInt(1),
+			Friday:    tt.NewInt(1),
+			Saturday:  tt.NewInt(0),
+			Sunday:    tt.NewInt(0),
 		},
 		gtfs.CalendarDate{
 			Date:          tt.NewDate(added),

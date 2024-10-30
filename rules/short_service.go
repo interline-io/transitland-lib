@@ -13,7 +13,7 @@ type ShortServiceCheck struct{}
 func (e *ShortServiceCheck) Validate(ent tt.Entity) []error {
 	// Note: Calendar/CalendarDates are validated as Services.
 	if v, ok := ent.(*service.Service); ok {
-		if diff := v.EndDate.Sub(v.StartDate).Hours(); diff >= 0 && diff <= 24 {
+		if diff := v.EndDate.Val.Sub(v.StartDate.Val).Hours(); diff >= 0 && diff <= 24 {
 			return []error{causes.NewValidationWarning("end_date", "covers one day or less")}
 		}
 	}
