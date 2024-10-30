@@ -941,13 +941,6 @@ func (copier *Copier) copyCalendars() error {
 			ServiceID: tt.NewString(ent.ServiceID.Val),
 			Generated: tt.NewBool(true),
 		}
-		cal.Monday.OrSet(0)
-		cal.Tuesday.OrSet(0)
-		cal.Wednesday.OrSet(0)
-		cal.Thursday.OrSet(0)
-		cal.Friday.OrSet(0)
-		cal.Saturday.OrSet(0)
-		cal.Sunday.OrSet(0)
 		if !copier.isMarked(&cal) {
 			continue
 		}
