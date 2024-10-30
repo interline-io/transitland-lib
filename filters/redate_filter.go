@@ -116,7 +116,10 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		newSvc.ID = v.ID
 		for i := 1; i <= tf.TargetDays; i++ {
 			if v.IsActive(sourceDate) {
-				newSvc.AddCalendarDate(gtfs.CalendarDate{Date: targetDate, ExceptionType: 1})
+				newSvc.AddCalendarDate(gtfs.CalendarDate{
+					Date:          tt.NewDate(targetDate),
+					ExceptionType: tt.NewInt(1),
+				})
 				active = true
 			}
 			log.Trace().

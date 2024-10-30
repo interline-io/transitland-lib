@@ -63,14 +63,14 @@ func FeedVersionServiceBounds(reader adapters.Reader) (time.Time, time.Time, err
 		}
 	}
 	for cd := range reader.CalendarDates() {
-		if cd.ExceptionType != 1 {
+		if cd.ExceptionType.Val != 1 {
 			continue
 		}
-		if start.IsZero() || cd.Date.Before(start) {
-			start = cd.Date
+		if start.IsZero() || cd.Date.Val.Before(start) {
+			start = cd.Date.Val
 		}
-		if end.IsZero() || cd.Date.After(end) {
-			end = cd.Date
+		if end.IsZero() || cd.Date.Val.After(end) {
+			end = cd.Date.Val
 		}
 	}
 	if start.IsZero() || end.IsZero() {

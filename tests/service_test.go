@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func newTestService() *service.Service {
@@ -29,8 +30,14 @@ func newTestService() *service.Service {
 			Saturday:  0,
 			Sunday:    0,
 		},
-		gtfs.CalendarDate{Date: added, ExceptionType: 1},
-		gtfs.CalendarDate{Date: except, ExceptionType: 2},
+		gtfs.CalendarDate{
+			Date:          tt.NewDate(added),
+			ExceptionType: tt.NewInt(1),
+		},
+		gtfs.CalendarDate{
+			Date:          tt.NewDate(except),
+			ExceptionType: tt.NewInt(2),
+		},
 	)
 	return s
 }

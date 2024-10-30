@@ -95,8 +95,10 @@ func (s *Service) Reset() {
 
 // AddCalendarDate adds a service exception.
 func (s *Service) AddCalendarDate(cd gtfs.CalendarDate) error {
-	d := newYMD(cd.Date)
-	s.dates = append(s.dates, calDate{date: d, exceptionType: cd.ExceptionType})
+	s.dates = append(s.dates, calDate{
+		date:          newYMD(cd.Date.Val),
+		exceptionType: cd.ExceptionType.Int(),
+	})
 	return nil
 }
 
@@ -106,8 +108,8 @@ func (s *Service) CalendarDates() []gtfs.CalendarDate {
 	for _, cd := range s.dates {
 		ret = append(ret, gtfs.CalendarDate{
 			ServiceID:     tt.NewKey(s.EntityID()),
-			Date:          cd.date.Time(),
-			ExceptionType: cd.exceptionType,
+			Date:          tt.NewDate(cd.date.Time()),
+			ExceptionType: tt.NewInt(cd.exceptionType),
 		})
 	}
 	return ret
@@ -295,10 +297,16 @@ func (s *Service) Simplify() (*Service, error) {
 			// both are active
 		} else if a && !b {
 			// existing is active, new is not active
-			ret.AddCalendarDate(gtfs.CalendarDate{Date: start, ExceptionType: 1})
+			ret.AddCalendarDate(gtfs.CalendarDate{
+				Date:          tt.NewDate(start),
+				ExceptionType: tt.NewInt(1),
+			})
 		} else if !a && b {
 			// existing is inactive, new is active
-			ret.AddCalendarDate(gtfs.CalendarDate{Date: start, ExceptionType: 2})
+			ret.AddCalendarDate(gtfs.CalendarDate{
+				Date:          tt.NewDate(start),
+				ExceptionType: tt.NewInt(2),
+			})
 		}
 		start = start.AddDate(0, 0, 1)
 	}

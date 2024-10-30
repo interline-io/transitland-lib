@@ -17,9 +17,9 @@ func (e *CalendarDuplicateDates) Validate(ent tt.Entity) []error {
 	var errs []error
 	hits := map[string]bool{}
 	for _, cd := range svc.CalendarDates() {
-		k := cd.Date.Format("20060102")
+		k := cd.Date.Val.Format("20060102")
 		if _, ok := hits[k]; ok {
-			errs = append(errs, causes.NewDuplicateServiceExceptionError(svc.ServiceID, cd.Date))
+			errs = append(errs, causes.NewDuplicateServiceExceptionError(svc.ServiceID, cd.Date.Val))
 		}
 		hits[k] = true
 	}

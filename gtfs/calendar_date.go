@@ -2,7 +2,6 @@ package gtfs
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
@@ -10,16 +9,16 @@ import (
 
 // CalendarDate calendar_dates.txt
 type CalendarDate struct {
-	ServiceID     tt.Key    `csv:",required"`
-	Date          time.Time `csv:",required"`
-	ExceptionType int       `csv:",required"`
+	ServiceID     tt.Key  `csv:",required" target:"calendar.txt"`
+	Date          tt.Date `csv:",required"`
+	ExceptionType tt.Int  `csv:",required" enum:"1,2"`
 	tt.BaseEntity
 }
 
 // Errors for this Entity.
 func (ent *CalendarDate) Errors() (errs []error) {
 	errs = append(errs, tt.CheckPresent("service_id", ent.ServiceID.Val)...)
-	errs = append(errs, tt.CheckInsideRangeInt("exception_type", ent.ExceptionType, 1, 2)...)
+	errs = append(errs, tt.CheckInsideRangeInt("exception_type", ent.ExceptionType.Val, 1, 2)...)
 	if ent.Date.IsZero() {
 		errs = append(errs, causes.NewInvalidFieldError("date", "", fmt.Errorf("date is zero")))
 	}
