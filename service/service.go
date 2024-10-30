@@ -8,6 +8,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type calDate struct {
@@ -52,7 +53,7 @@ func NewServicesFromReader(reader adapters.Reader) []*Service {
 	ret := []*Service{}
 	cds := map[string][]gtfs.CalendarDate{}
 	for cd := range reader.CalendarDates() {
-		sid := cd.ServiceID
+		sid := cd.ServiceID.Val
 		cds[sid] = append(cds[sid], cd)
 	}
 	for c := range reader.Calendars() {
@@ -104,7 +105,7 @@ func (s *Service) CalendarDates() []gtfs.CalendarDate {
 	ret := []gtfs.CalendarDate{}
 	for _, cd := range s.dates {
 		ret = append(ret, gtfs.CalendarDate{
-			ServiceID:     s.EntityID(),
+			ServiceID:     tt.NewKey(s.EntityID()),
 			Date:          cd.date.Time(),
 			ExceptionType: cd.exceptionType,
 		})

@@ -938,16 +938,16 @@ func (copier *Copier) copyCalendars() error {
 	// Add the CalendarDates to Services
 	for ent := range copier.Reader.CalendarDates() {
 		cal := gtfs.Calendar{
-			ServiceID: ent.ServiceID,
+			ServiceID: ent.ServiceID.Val,
 			Generated: true,
 		}
 		if !copier.isMarked(&cal) {
 			continue
 		}
-		svc, ok := svcs[ent.ServiceID]
+		svc, ok := svcs[ent.ServiceID.Val]
 		if !ok {
 			svc = service.NewService(cal)
-			svcs[ent.ServiceID] = svc
+			svcs[ent.ServiceID.Val] = svc
 		}
 		svc.AddCalendarDate(ent)
 	}
@@ -987,7 +987,7 @@ func (copier *Copier) copyCalendars() error {
 		// Copy dependent entities
 		cds := svc.CalendarDates()
 		for i := range cds {
-			cds[i].ServiceID = cid
+			cds[i].ServiceID.Set(cid)
 			if bt, btErr = copier.checkBatch(bt, &cds[i], false); btErr != nil {
 				return btErr
 			}

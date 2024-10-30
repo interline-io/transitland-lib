@@ -10,7 +10,7 @@ import (
 
 // CalendarDate calendar_dates.txt
 type CalendarDate struct {
-	ServiceID     string    `csv:",required"`
+	ServiceID     tt.Key    `csv:",required"`
 	Date          time.Time `csv:",required"`
 	ExceptionType int       `csv:",required"`
 	tt.BaseEntity
@@ -18,7 +18,7 @@ type CalendarDate struct {
 
 // Errors for this Entity.
 func (ent *CalendarDate) Errors() (errs []error) {
-	errs = append(errs, tt.CheckPresent("service_id", ent.ServiceID)...)
+	errs = append(errs, tt.CheckPresent("service_id", ent.ServiceID.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("exception_type", ent.ExceptionType, 1, 2)...)
 	if ent.Date.IsZero() {
 		errs = append(errs, causes.NewInvalidFieldError("date", "", fmt.Errorf("date is zero")))
@@ -38,10 +38,10 @@ func (ent *CalendarDate) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *CalendarDate) UpdateKeys(emap *tt.EntityMap) error {
-	if serviceID, ok := emap.GetEntity(&Calendar{ServiceID: ent.ServiceID}); ok {
-		ent.ServiceID = serviceID
+	if serviceID, ok := emap.GetEntity(&Calendar{ServiceID: ent.ServiceID.Val}); ok {
+		ent.ServiceID.Set(serviceID)
 	} else {
-		return causes.NewInvalidReferenceError("service_id", ent.ServiceID)
+		return causes.NewInvalidReferenceError("service_id", ent.ServiceID.Val)
 	}
 	return nil
 }

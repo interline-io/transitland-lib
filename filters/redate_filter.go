@@ -82,7 +82,7 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 			return fmt.Errorf("trip service_id not in redate window")
 		}
 	case *gtfs.CalendarDate:
-		if tf.excluded[v.ServiceID] {
+		if tf.excluded[v.ServiceID.Val] {
 			return fmt.Errorf("calendar date service_id not in redate window")
 		}
 	case *service.Service:

@@ -114,11 +114,11 @@ func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, 
 	case *service.Service:
 		pp.services[v.ServiceID] = v
 	case *gtfs.CalendarDate:
-		svc, ok := pp.services[v.ServiceID]
+		svc, ok := pp.services[v.ServiceID.Val]
 		if !ok {
 			svc = &service.Service{}
-			svc.Calendar = gtfs.Calendar{ServiceID: v.ServiceID}
-			pp.services[v.ServiceID] = svc
+			svc.Calendar = gtfs.Calendar{ServiceID: v.ServiceID.Val}
+			pp.services[v.ServiceID.Val] = svc
 		}
 		svc.AddCalendarDate(*v)
 	case *gtfs.Frequency:
