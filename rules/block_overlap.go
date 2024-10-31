@@ -3,8 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // BlockOverlapError reports when two block_id's with the same service_id overlap in time.
@@ -12,11 +12,11 @@ type BlockOverlapError struct {
 	BlockID        string
 	ServiceID      string
 	TripID         string
-	StartTime      tl.WideTime
-	EndTime        tl.WideTime
+	StartTime      tt.Seconds
+	EndTime        tt.Seconds
 	OtherTripID    string
-	OtherStartTime tl.WideTime
-	OtherEndTime   tl.WideTime
+	OtherStartTime tt.Seconds
+	OtherEndTime   tt.Seconds
 	bc
 }
 
@@ -47,9 +47,9 @@ type BlockOverlapCheck struct {
 }
 
 // Validate .
-func (e *BlockOverlapCheck) Validate(ent tl.Entity) []error {
-	trip, ok := ent.(*tl.Trip)
-	if !ok || trip.BlockID == "" || len(trip.StopTimes) < 2 {
+func (e *BlockOverlapCheck) Validate(ent tt.Entity) []error {
+	trip, ok := ent.(*gtfs.Trip)
+	if !ok || !trip.BlockID.Valid || len(trip.StopTimes) < 2 {
 		return nil
 	}
 	if e.blocks == nil {
@@ -59,12 +59,12 @@ func (e *BlockOverlapCheck) Validate(ent tl.Entity) []error {
 	// To make life easy, we only care about when the vehicle is moving.
 	// intervals are: (first departure, last arrival)
 	tf := tripBlockInfo{
-		trip:    trip.TripID,
-		service: trip.ServiceID,
-		start:   trip.StopTimes[0].DepartureTime.Seconds,
-		end:     trip.StopTimes[len(trip.StopTimes)-1].ArrivalTime.Seconds,
+		trip:    trip.TripID.Val,
+		service: trip.ServiceID.Val,
+		start:   trip.StopTimes[0].DepartureTime.Int(),
+		end:     trip.StopTimes[len(trip.StopTimes)-1].ArrivalTime.Int(),
 	}
-	for _, hit := range e.blocks[trip.BlockID] {
+	for _, hit := range e.blocks[trip.BlockID.Val] {
 		// log.Log(
 		// 	"block:", trip.BlockID,
 		// 	"overlap?", tf,
@@ -73,19 +73,19 @@ func (e *BlockOverlapCheck) Validate(ent tl.Entity) []error {
 		// 	"start:", tf.start <= hit.end,
 		// 	"end:", tf.end >= hit.start,
 		// )
-		if trip.ServiceID == hit.service && tf.start < hit.end && tf.end > hit.start {
+		if trip.ServiceID.Val == hit.service && tf.start < hit.end && tf.end > hit.start {
 			errs = append(errs, &BlockOverlapError{
 				TripID:         tf.trip,
-				BlockID:        trip.BlockID,
+				BlockID:        trip.BlockID.Val,
 				ServiceID:      tf.service,
-				StartTime:      tt.NewWideTimeFromSeconds(tf.start),
-				EndTime:        tt.NewWideTimeFromSeconds(tf.end),
+				StartTime:      tt.NewSeconds(tf.start),
+				EndTime:        tt.NewSeconds(tf.end),
 				OtherTripID:    hit.trip,
-				OtherStartTime: tt.NewWideTimeFromSeconds(hit.start),
-				OtherEndTime:   tt.NewWideTimeFromSeconds(hit.end),
+				OtherStartTime: tt.NewSeconds(hit.start),
+				OtherEndTime:   tt.NewSeconds(hit.end),
 			})
 		}
 	}
-	e.blocks[trip.BlockID] = append(e.blocks[trip.BlockID], &tf)
+	e.blocks[trip.BlockID.Val] = append(e.blocks[trip.BlockID.Val], &tf)
 	return errs
 }

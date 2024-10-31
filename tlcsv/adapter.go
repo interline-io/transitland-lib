@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/request"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/request"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.
@@ -39,6 +39,16 @@ type WriterAdapter interface {
 }
 
 /////////////////////
+
+// NewStoreAdapter is a convenience method for getting a GTFS Zip reader from the store.
+func NewStoreAdapter(storage string, key string, fragment string) (*TmpZipAdapter, error) {
+	r, err := request.Download(storage, key)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return NewTmpZipAdapterFromReader(r, fragment)
+}
 
 // NewAdapter returns a basic adapter for the given URL.
 // Use NewURLAdapter() to provide additional options.
@@ -447,9 +457,6 @@ func (adapter *DirAdapter) FileInfos() ([]os.FileInfo, error) {
 		fn := fi.Name()
 		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
-		}
-		if err != nil {
-			return ret, err
 		}
 		ret = append(ret, fi)
 	}

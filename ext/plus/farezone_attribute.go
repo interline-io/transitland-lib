@@ -1,12 +1,12 @@
 package plus
 
-import "github.com/interline-io/transitland-lib/tl"
+import "github.com/interline-io/transitland-lib/tt"
 
 // FarezoneAttribute farezone_attributes.txt
 type FarezoneAttribute struct {
 	ZoneID   string `csv:"zone_id"`
 	ZoneName string `csv:"zone_name"`
-	tl.BaseEntity
+	tt.BaseEntity
 }
 
 // Filename farezone_attributes.txt

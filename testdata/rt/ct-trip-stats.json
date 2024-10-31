@@ -1,0 +1,3012 @@
+{
+    "header": {
+        "gtfsRealtimeVersion": "1.0",
+        "incrementality": "FULL_DATASET",
+        "timestamp": "1699405534"
+    },
+    "entity": [
+        {
+            "id": "124added",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "124added",
+                    "routeId": "L1",
+                    "directionId": 1,
+                    "startTime": "15:37:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "ADDED"
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70232",
+                        "departure": {
+                            "time": "1699405504"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 21,
+                        "stopId": "70242",
+                        "arrival": {
+                            "time": "1699405801"
+                        },
+                        "departure": {
+                            "time": "1699405801"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 22,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699406176"
+                        },
+                        "departure": {
+                            "time": "1699406176"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 23,
+                        "stopId": "70272",
+                        "arrival": {
+                            "time": "1699406518"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "notfound",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "notfound",
+                    "routeId": "L1",
+                    "directionId": 1,
+                    "startTime": "15:37:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70232",
+                        "departure": {
+                            "time": "1699405504"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 21,
+                        "stopId": "70242",
+                        "arrival": {
+                            "time": "1699405801"
+                        },
+                        "departure": {
+                            "time": "1699405801"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 22,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699406176"
+                        },
+                        "departure": {
+                            "time": "1699406176"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 23,
+                        "stopId": "70272",
+                        "arrival": {
+                            "time": "1699406518"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },        
+        {
+            "id": "notfound-noroute",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "notfound-noroute",
+                    "directionId": 1,
+                    "startTime": "15:37:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70232",
+                        "departure": {
+                            "time": "1699405504"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 21,
+                        "stopId": "70242",
+                        "arrival": {
+                            "time": "1699405801"
+                        },
+                        "departure": {
+                            "time": "1699405801"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 22,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699406176"
+                        },
+                        "departure": {
+                            "time": "1699406176"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 23,
+                        "stopId": "70272",
+                        "arrival": {
+                            "time": "1699406518"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },   
+        {
+            "id": "124",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "124",
+                    "routeId": "L1",
+                    "directionId": 1,
+                    "startTime": "15:37:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "124",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70232",
+                        "departure": {
+                            "time": "1699405504"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 21,
+                        "stopId": "70242",
+                        "arrival": {
+                            "time": "1699405801"
+                        },
+                        "departure": {
+                            "time": "1699405801"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 22,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699406176"
+                        },
+                        "departure": {
+                            "time": "1699406176"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 23,
+                        "stopId": "70272",
+                        "arrival": {
+                            "time": "1699406518"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "125",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "125",
+                    "routeId": "L1",
+                    "directionId": 0,
+                    "startTime": "15:52:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "125",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 17,
+                        "stopId": "70061",
+                        "departure": {
+                            "time": "1699405504"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 18,
+                        "stopId": "70051",
+                        "arrival": {
+                            "time": "1699405739"
+                        },
+                        "departure": {
+                            "time": "1699405740"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 19,
+                        "stopId": "70041",
+                        "arrival": {
+                            "time": "1699406082"
+                        },
+                        "departure": {
+                            "time": "1699406082"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70031",
+                        "arrival": {
+                            "time": "1699406452"
+                        },
+                        "departure": {
+                            "time": "1699406452"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 21,
+                        "stopId": "70021",
+                        "arrival": {
+                            "time": "1699406776"
+                        },
+                        "departure": {
+                            "time": "1699406776"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 22,
+                        "stopId": "70011",
+                        "arrival": {
+                            "time": "1699407196"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "126",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "126",
+                    "routeId": "L1",
+                    "directionId": 1,
+                    "startTime": "16:37:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "126",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70052",
+                        "arrival": {
+                            "time": "1699405660"
+                        },
+                        "departure": {
+                            "time": "1699405660"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70062",
+                        "arrival": {
+                            "time": "1699405854"
+                        },
+                        "departure": {
+                            "time": "1699405854"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70082",
+                        "arrival": {
+                            "time": "1699406042"
+                        },
+                        "departure": {
+                            "time": "1699406042"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70092",
+                        "arrival": {
+                            "time": "1699406318"
+                        },
+                        "departure": {
+                            "time": "1699406318"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70102",
+                        "arrival": {
+                            "time": "1699406421"
+                        },
+                        "departure": {
+                            "time": "1699406421"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70112",
+                        "arrival": {
+                            "time": "1699406477"
+                        },
+                        "departure": {
+                            "time": "1699406477"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70122",
+                        "arrival": {
+                            "time": "1699406674"
+                        },
+                        "departure": {
+                            "time": "1699406674"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70132",
+                        "arrival": {
+                            "time": "1699406766"
+                        },
+                        "departure": {
+                            "time": "1699406766"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70142",
+                        "arrival": {
+                            "time": "1699406925"
+                        },
+                        "departure": {
+                            "time": "1699406925"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 14,
+                        "stopId": "70162",
+                        "arrival": {
+                            "time": "1699407256"
+                        },
+                        "departure": {
+                            "time": "1699407256"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 15,
+                        "stopId": "70172",
+                        "arrival": {
+                            "time": "1699407509"
+                        },
+                        "departure": {
+                            "time": "1699407509"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 16,
+                        "stopId": "70192",
+                        "arrival": {
+                            "time": "1699407698"
+                        },
+                        "departure": {
+                            "time": "1699407698"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 17,
+                        "stopId": "70202",
+                        "arrival": {
+                            "time": "1699407924"
+                        },
+                        "departure": {
+                            "time": "1699407960"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 18,
+                        "stopId": "70212",
+                        "arrival": {
+                            "time": "1699408201"
+                        },
+                        "departure": {
+                            "time": "1699408201"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 19,
+                        "stopId": "70222",
+                        "arrival": {
+                            "time": "1699408462"
+                        },
+                        "departure": {
+                            "time": "1699408500"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70232",
+                        "arrival": {
+                            "time": "1699408744"
+                        },
+                        "departure": {
+                            "time": "1699408980"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 21,
+                        "stopId": "70242",
+                        "arrival": {
+                            "time": "1699409378"
+                        },
+                        "departure": {
+                            "time": "1699409378"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 22,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699409802"
+                        },
+                        "departure": {
+                            "time": "1699409940"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 23,
+                        "stopId": "70272",
+                        "arrival": {
+                            "time": "1699410300"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "127",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "127",
+                    "routeId": "L1",
+                    "directionId": 0,
+                    "startTime": "16:46:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "127",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70231",
+                        "arrival": {
+                            "time": "1699405639"
+                        },
+                        "departure": {
+                            "time": "1699405639"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70221",
+                        "arrival": {
+                            "time": "1699405925"
+                        },
+                        "departure": {
+                            "time": "1699405925"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70211",
+                        "arrival": {
+                            "time": "1699406260"
+                        },
+                        "departure": {
+                            "time": "1699406260"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70201",
+                        "arrival": {
+                            "time": "1699406487"
+                        },
+                        "departure": {
+                            "time": "1699406487"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70191",
+                        "arrival": {
+                            "time": "1699406761"
+                        },
+                        "departure": {
+                            "time": "1699406761"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70171",
+                        "arrival": {
+                            "time": "1699406993"
+                        },
+                        "departure": {
+                            "time": "1699406993"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70161",
+                        "arrival": {
+                            "time": "1699407160"
+                        },
+                        "departure": {
+                            "time": "1699407160"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70141",
+                        "arrival": {
+                            "time": "1699407526"
+                        },
+                        "departure": {
+                            "time": "1699407526"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70131",
+                        "arrival": {
+                            "time": "1699407775"
+                        },
+                        "departure": {
+                            "time": "1699407775"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70121",
+                        "arrival": {
+                            "time": "1699407899"
+                        },
+                        "departure": {
+                            "time": "1699407960"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 14,
+                        "stopId": "70111",
+                        "arrival": {
+                            "time": "1699408263"
+                        },
+                        "departure": {
+                            "time": "1699408263"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 15,
+                        "stopId": "70101",
+                        "arrival": {
+                            "time": "1699408381"
+                        },
+                        "departure": {
+                            "time": "1699408381"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 16,
+                        "stopId": "70091",
+                        "arrival": {
+                            "time": "1699408595"
+                        },
+                        "departure": {
+                            "time": "1699408595"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 17,
+                        "stopId": "70081",
+                        "arrival": {
+                            "time": "1699408848"
+                        },
+                        "departure": {
+                            "time": "1699408848"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 18,
+                        "stopId": "70061",
+                        "arrival": {
+                            "time": "1699409110"
+                        },
+                        "departure": {
+                            "time": "1699409110"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 19,
+                        "stopId": "70051",
+                        "arrival": {
+                            "time": "1699409306"
+                        },
+                        "departure": {
+                            "time": "1699409340"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70041",
+                        "arrival": {
+                            "time": "1699409703"
+                        },
+                        "departure": {
+                            "time": "1699409703"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 21,
+                        "stopId": "70031",
+                        "arrival": {
+                            "time": "1699410037"
+                        },
+                        "departure": {
+                            "time": "1699410037"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 22,
+                        "stopId": "70021",
+                        "arrival": {
+                            "time": "1699410376"
+                        },
+                        "departure": {
+                            "time": "1699410376"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 23,
+                        "stopId": "70011",
+                        "arrival": {
+                            "time": "1699410796"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "128",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "128",
+                    "routeId": "L1",
+                    "directionId": 1,
+                    "startTime": "17:37:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "block_128_schedBasedVehicle",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70012",
+                        "departure": {
+                            "time": "1699407420",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70022",
+                        "arrival": {
+                            "time": "1699407717",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699407720",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70032",
+                        "arrival": {
+                            "time": "1699408012",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699408020",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70042",
+                        "arrival": {
+                            "time": "1699408342",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699408440",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70052",
+                        "arrival": {
+                            "time": "1699408619",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699408680",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70062",
+                        "arrival": {
+                            "time": "1699408872",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699408920",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70082",
+                        "arrival": {
+                            "time": "1699409237",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409237",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70092",
+                        "arrival": {
+                            "time": "1699409445",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409460",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70102",
+                        "arrival": {
+                            "time": "1699409643",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409643",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70112",
+                        "arrival": {
+                            "time": "1699409776",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409820",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70122",
+                        "arrival": {
+                            "time": "1699410031",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410060",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70132",
+                        "arrival": {
+                            "time": "1699410256",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410256",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70142",
+                        "arrival": {
+                            "time": "1699410513",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410513",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 14,
+                        "stopId": "70162",
+                        "arrival": {
+                            "time": "1699410825",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410840",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 15,
+                        "stopId": "70172",
+                        "arrival": {
+                            "time": "1699411038",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411080",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 16,
+                        "stopId": "70192",
+                        "arrival": {
+                            "time": "1699411283",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411283",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 17,
+                        "stopId": "70202",
+                        "arrival": {
+                            "time": "1699411534",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411560",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 18,
+                        "stopId": "70212",
+                        "arrival": {
+                            "time": "1699411786",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411800",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 19,
+                        "stopId": "70222",
+                        "arrival": {
+                            "time": "1699412088",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699412100",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70232",
+                        "arrival": {
+                            "time": "1699412432",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "129",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "129",
+                    "routeId": "L1",
+                    "directionId": 0,
+                    "startTime": "17:43:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "block_129_schedBasedVehicle",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70271",
+                        "departure": {
+                            "time": "1699407780",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70261",
+                        "arrival": {
+                            "time": "1699408216",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699408320",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70241",
+                        "arrival": {
+                            "time": "1699408678",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699408680",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70231",
+                        "arrival": {
+                            "time": "1699409051",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409220",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70221",
+                        "arrival": {
+                            "time": "1699409561",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409561",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70211",
+                        "arrival": {
+                            "time": "1699409860",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409860",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70201",
+                        "arrival": {
+                            "time": "1699410129",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410129",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70191",
+                        "arrival": {
+                            "time": "1699410338",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410338",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70171",
+                        "arrival": {
+                            "time": "1699410596",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410596",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70161",
+                        "arrival": {
+                            "time": "1699410768",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410768",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70141",
+                        "arrival": {
+                            "time": "1699411094",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411094",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70131",
+                        "arrival": {
+                            "time": "1699411388",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411388",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70121",
+                        "arrival": {
+                            "time": "1699411537",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411560",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 14,
+                        "stopId": "70111",
+                        "arrival": {
+                            "time": "1699411814",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411814",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 15,
+                        "stopId": "70101",
+                        "arrival": {
+                            "time": "1699411946",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411980",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 16,
+                        "stopId": "70091",
+                        "arrival": {
+                            "time": "1699412191",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699412191",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 17,
+                        "stopId": "70081",
+                        "arrival": {
+                            "time": "1699412484",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 18,
+                        "stopId": "70061",
+                        "arrival": {
+                            "time": "1699412665",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699412665",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "308",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "308",
+                    "routeId": "L3",
+                    "directionId": 1,
+                    "startTime": "15:28:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "308",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 17,
+                        "stopId": "70292",
+                        "arrival": {
+                            "time": "1699405661"
+                        },
+                        "departure": {
+                            "time": "1699405680"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 18,
+                        "stopId": "70302",
+                        "arrival": {
+                            "time": "1699406530"
+                        },
+                        "departure": {
+                            "time": "1699406530"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 19,
+                        "stopId": "70312",
+                        "arrival": {
+                            "time": "1699406782"
+                        },
+                        "departure": {
+                            "time": "1699406820"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70322",
+                        "arrival": {
+                            "time": "1699407568"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "310",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "310",
+                    "routeId": "L3",
+                    "directionId": 1,
+                    "startTime": "16:27:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "310",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70112",
+                        "arrival": {
+                            "time": "1699405778"
+                        },
+                        "departure": {
+                            "time": "1699405778"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70122",
+                        "arrival": {
+                            "time": "1699406017"
+                        },
+                        "departure": {
+                            "time": "1699406017"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70142",
+                        "arrival": {
+                            "time": "1699406253"
+                        },
+                        "departure": {
+                            "time": "1699406253"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70162",
+                        "arrival": {
+                            "time": "1699406564"
+                        },
+                        "departure": {
+                            "time": "1699406564"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70172",
+                        "arrival": {
+                            "time": "1699406676"
+                        },
+                        "departure": {
+                            "time": "1699406676"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70192",
+                        "arrival": {
+                            "time": "1699406789"
+                        },
+                        "departure": {
+                            "time": "1699406789"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70202",
+                        "arrival": {
+                            "time": "1699407042"
+                        },
+                        "departure": {
+                            "time": "1699407042"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70212",
+                        "arrival": {
+                            "time": "1699407201"
+                        },
+                        "departure": {
+                            "time": "1699407201"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70222",
+                        "arrival": {
+                            "time": "1699407422"
+                        },
+                        "departure": {
+                            "time": "1699407422"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70232",
+                        "arrival": {
+                            "time": "1699407563"
+                        },
+                        "departure": {
+                            "time": "1699407563"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 14,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699408201"
+                        },
+                        "departure": {
+                            "time": "1699408201"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 15,
+                        "stopId": "70272",
+                        "arrival": {
+                            "time": "1699408611"
+                        },
+                        "departure": {
+                            "time": "1699408611"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 16,
+                        "stopId": "70282",
+                        "arrival": {
+                            "time": "1699408851"
+                        },
+                        "departure": {
+                            "time": "1699408920"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 17,
+                        "stopId": "70292",
+                        "arrival": {
+                            "time": "1699409297"
+                        },
+                        "departure": {
+                            "time": "1699409297"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 18,
+                        "stopId": "70302",
+                        "arrival": {
+                            "time": "1699410169"
+                        },
+                        "departure": {
+                            "time": "1699410169"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 19,
+                        "stopId": "70312",
+                        "arrival": {
+                            "time": "1699410421"
+                        },
+                        "departure": {
+                            "time": "1699410421"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 20,
+                        "stopId": "70322",
+                        "arrival": {
+                            "time": "1699411201"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "311",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "311",
+                    "routeId": "L3",
+                    "directionId": 0,
+                    "startTime": "17:21:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "311",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70261",
+                        "departure": {
+                            "time": "1699406460"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70231",
+                        "arrival": {
+                            "time": "1699407142"
+                        },
+                        "departure": {
+                            "time": "1699407142"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70221",
+                        "arrival": {
+                            "time": "1699407347"
+                        },
+                        "departure": {
+                            "time": "1699407347"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70211",
+                        "arrival": {
+                            "time": "1699407607"
+                        },
+                        "departure": {
+                            "time": "1699407607"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70201",
+                        "arrival": {
+                            "time": "1699407807"
+                        },
+                        "departure": {
+                            "time": "1699407840"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70191",
+                        "arrival": {
+                            "time": "1699408173"
+                        },
+                        "departure": {
+                            "time": "1699408173"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70171",
+                        "arrival": {
+                            "time": "1699408286"
+                        },
+                        "departure": {
+                            "time": "1699408320"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70161",
+                        "arrival": {
+                            "time": "1699408507"
+                        },
+                        "departure": {
+                            "time": "1699408560"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70141",
+                        "arrival": {
+                            "time": "1699408901"
+                        },
+                        "departure": {
+                            "time": "1699408901"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70121",
+                        "arrival": {
+                            "time": "1699409167"
+                        },
+                        "departure": {
+                            "time": "1699409220"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70111",
+                        "arrival": {
+                            "time": "1699409535"
+                        },
+                        "departure": {
+                            "time": "1699409535"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70061",
+                        "arrival": {
+                            "time": "1699409921"
+                        },
+                        "departure": {
+                            "time": "1699409940"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70041",
+                        "arrival": {
+                            "time": "1699410415"
+                        },
+                        "departure": {
+                            "time": "1699410415"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 14,
+                        "stopId": "70021",
+                        "arrival": {
+                            "time": "1699411043"
+                        },
+                        "departure": {
+                            "time": "1699411043"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 15,
+                        "stopId": "70011",
+                        "arrival": {
+                            "time": "1699411403"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "312",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "312",
+                    "routeId": "L3",
+                    "directionId": 1,
+                    "startTime": "17:27:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "312",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70012",
+                        "departure": {
+                            "time": "1699406820"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70042",
+                        "arrival": {
+                            "time": "1699407685"
+                        },
+                        "departure": {
+                            "time": "1699407685"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70062",
+                        "arrival": {
+                            "time": "1699408070"
+                        },
+                        "departure": {
+                            "time": "1699408070"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70112",
+                        "arrival": {
+                            "time": "1699408498"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70122",
+                        "arrival": {
+                            "time": "1699408765"
+                        },
+                        "departure": {
+                            "time": "1699408765"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70142",
+                        "arrival": {
+                            "time": "1699409061"
+                        },
+                        "departure": {
+                            "time": "1699409100"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70162",
+                        "arrival": {
+                            "time": "1699409375"
+                        },
+                        "departure": {
+                            "time": "1699409400"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70172",
+                        "arrival": {
+                            "time": "1699409621"
+                        },
+                        "departure": {
+                            "time": "1699409640"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70192",
+                        "arrival": {
+                            "time": "1699409875"
+                        },
+                        "departure": {
+                            "time": "1699409880"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70202",
+                        "arrival": {
+                            "time": "1699410099"
+                        },
+                        "departure": {
+                            "time": "1699410120"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70212",
+                        "arrival": {
+                            "time": "1699410351"
+                        },
+                        "departure": {
+                            "time": "1699410420"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70222",
+                        "arrival": {
+                            "time": "1699410678"
+                        },
+                        "departure": {
+                            "time": "1699410720"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70232",
+                        "arrival": {
+                            "time": "1699410962"
+                        },
+                        "departure": {
+                            "time": "1699410962"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 14,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699411565"
+                        },
+                        "departure": {
+                            "time": "1699411800"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 15,
+                        "stopId": "70272",
+                        "arrival": {
+                            "time": "1699412326"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "410",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "410",
+                    "routeId": "L4",
+                    "directionId": 1,
+                    "startTime": "16:10:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "410",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70212",
+                        "arrival": {
+                            "time": "1699405784"
+                        },
+                        "departure": {
+                            "time": "1699405784"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70222",
+                        "arrival": {
+                            "time": "1699406034"
+                        },
+                        "departure": {
+                            "time": "1699406034"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70242",
+                        "arrival": {
+                            "time": "1699406385"
+                        },
+                        "departure": {
+                            "time": "1699406400"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699406827"
+                        },
+                        "departure": {
+                            "time": "1699406827"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 14,
+                        "stopId": "70272",
+                        "arrival": {
+                            "time": "1699407232"
+                        },
+                        "departure": {
+                            "time": "1699407232"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 15,
+                        "stopId": "70282",
+                        "arrival": {
+                            "time": "1699407452"
+                        },
+                        "departure": {
+                            "time": "1699407540"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 16,
+                        "stopId": "70292",
+                        "arrival": {
+                            "time": "1699407777"
+                        },
+                        "departure": {
+                            "time": "1699407900"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 17,
+                        "stopId": "70302",
+                        "arrival": {
+                            "time": "1699408741"
+                        },
+                        "departure": {
+                            "time": "1699408741"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 18,
+                        "stopId": "70312",
+                        "arrival": {
+                            "time": "1699409091"
+                        },
+                        "departure": {
+                            "time": "1699409091"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 19,
+                        "stopId": "70322",
+                        "arrival": {
+                            "time": "1699409871"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "411",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "411",
+                    "routeId": "L4",
+                    "directionId": 0,
+                    "startTime": "16:42:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "411",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70171",
+                        "arrival": {
+                            "time": "1699405664"
+                        },
+                        "departure": {
+                            "time": "1699405740"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70141",
+                        "arrival": {
+                            "time": "1699406088"
+                        },
+                        "departure": {
+                            "time": "1699406100"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70131",
+                        "arrival": {
+                            "time": "1699406375"
+                        },
+                        "departure": {
+                            "time": "1699406400"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70091",
+                        "arrival": {
+                            "time": "1699406814"
+                        },
+                        "departure": {
+                            "time": "1699406880"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70081",
+                        "arrival": {
+                            "time": "1699407095"
+                        },
+                        "departure": {
+                            "time": "1699407095"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70061",
+                        "arrival": {
+                            "time": "1699407364"
+                        },
+                        "departure": {
+                            "time": "1699407364"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70051",
+                        "arrival": {
+                            "time": "1699407623"
+                        },
+                        "departure": {
+                            "time": "1699407660"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70021",
+                        "arrival": {
+                            "time": "1699408384"
+                        },
+                        "departure": {
+                            "time": "1699408384"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70011",
+                        "arrival": {
+                            "time": "1699408744"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "412",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "412",
+                    "routeId": "L4",
+                    "directionId": 1,
+                    "startTime": "17:10:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "412",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70012",
+                        "departure": {
+                            "time": "1699405800"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70022",
+                        "arrival": {
+                            "time": "1699406150"
+                        },
+                        "departure": {
+                            "time": "1699406150"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70052",
+                        "arrival": {
+                            "time": "1699406775"
+                        },
+                        "departure": {
+                            "time": "1699406775"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70062",
+                        "arrival": {
+                            "time": "1699407004"
+                        },
+                        "departure": {
+                            "time": "1699407060"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70082",
+                        "arrival": {
+                            "time": "1699407340"
+                        },
+                        "departure": {
+                            "time": "1699407360"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70092",
+                        "arrival": {
+                            "time": "1699407548"
+                        },
+                        "departure": {
+                            "time": "1699407600"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70132",
+                        "arrival": {
+                            "time": "1699408104"
+                        },
+                        "departure": {
+                            "time": "1699408104"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70142",
+                        "arrival": {
+                            "time": "1699408336"
+                        },
+                        "departure": {
+                            "time": "1699408336"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70172",
+                        "arrival": {
+                            "time": "1699408695"
+                        },
+                        "departure": {
+                            "time": "1699408740"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70212",
+                        "arrival": {
+                            "time": "1699409244"
+                        },
+                        "departure": {
+                            "time": "1699409244"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70222",
+                        "arrival": {
+                            "time": "1699409510"
+                        },
+                        "departure": {
+                            "time": "1699409520"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70242",
+                        "arrival": {
+                            "time": "1699409947"
+                        },
+                        "departure": {
+                            "time": "1699410000"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699410497"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "413",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "413",
+                    "routeId": "L4",
+                    "directionId": 0,
+                    "startTime": "17:42:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "block_413_schedBasedVehicle",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70261",
+                        "departure": {
+                            "time": "1699407720",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70241",
+                        "arrival": {
+                            "time": "1699408123",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699408123",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70221",
+                        "arrival": {
+                            "time": "1699408507",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699408560",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70211",
+                        "arrival": {
+                            "time": "1699408844",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699408860",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70171",
+                        "arrival": {
+                            "time": "1699409329",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409340",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70141",
+                        "arrival": {
+                            "time": "1699409876",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409876",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70131",
+                        "arrival": {
+                            "time": "1699410028",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410028",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70091",
+                        "arrival": {
+                            "time": "1699410425",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410480",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70081",
+                        "arrival": {
+                            "time": "1699410765",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410765",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 10,
+                        "stopId": "70061",
+                        "arrival": {
+                            "time": "1699410935",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410960",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 11,
+                        "stopId": "70051",
+                        "arrival": {
+                            "time": "1699411327",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411327",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 12,
+                        "stopId": "70021",
+                        "arrival": {
+                            "time": "1699412008",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699412008",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 13,
+                        "stopId": "70011",
+                        "arrival": {
+                            "time": "1699412368",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "414",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "414",
+                    "routeId": "L4",
+                    "directionId": 1,
+                    "startTime": "18:10:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "414",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70012",
+                        "departure": {
+                            "time": "1699409400"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70022",
+                        "arrival": {
+                            "time": "1699409726"
+                        },
+                        "departure": {
+                            "time": "1699409726"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70052",
+                        "arrival": {
+                            "time": "1699410352"
+                        },
+                        "departure": {
+                            "time": "1699410360"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70062",
+                        "arrival": {
+                            "time": "1699410573"
+                        },
+                        "departure": {
+                            "time": "1699410660"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70082",
+                        "arrival": {
+                            "time": "1699410938"
+                        },
+                        "departure": {
+                            "time": "1699410960"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70092",
+                        "arrival": {
+                            "time": "1699411140"
+                        },
+                        "departure": {
+                            "time": "1699411200"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70132",
+                        "arrival": {
+                            "time": "1699411706"
+                        },
+                        "departure": {
+                            "time": "1699411706"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70142",
+                        "arrival": {
+                            "time": "1699411962"
+                        },
+                        "departure": {
+                            "time": "1699411962"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 9,
+                        "stopId": "70172",
+                        "arrival": {
+                            "time": "1699412312"
+                        },
+                        "departure": {
+                            "time": "1699412340"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "709",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "709",
+                    "routeId": "B7",
+                    "directionId": 0,
+                    "startTime": "16:57:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "709",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70211",
+                        "arrival": {
+                            "time": "1699406186"
+                        },
+                        "departure": {
+                            "time": "1699406186"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70171",
+                        "arrival": {
+                            "time": "1699406576"
+                        },
+                        "departure": {
+                            "time": "1699406576"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70141",
+                        "arrival": {
+                            "time": "1699406906"
+                        },
+                        "departure": {
+                            "time": "1699406906"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70111",
+                        "arrival": {
+                            "time": "1699407412"
+                        },
+                        "departure": {
+                            "time": "1699407412"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70061",
+                        "arrival": {
+                            "time": "1699407867"
+                        },
+                        "departure": {
+                            "time": "1699407867"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70021",
+                        "arrival": {
+                            "time": "1699408806"
+                        },
+                        "departure": {
+                            "time": "1699408806"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70011",
+                        "arrival": {
+                            "time": "1699409106"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "710",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "710",
+                    "routeId": "B7",
+                    "directionId": 1,
+                    "startTime": "17:04:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "710",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70012",
+                        "departure": {
+                            "time": "1699405519"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70062",
+                        "arrival": {
+                            "time": "1699406589"
+                        },
+                        "departure": {
+                            "time": "1699406589"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70112",
+                        "arrival": {
+                            "time": "1699406991"
+                        },
+                        "departure": {
+                            "time": "1699407060"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70142",
+                        "arrival": {
+                            "time": "1699407504"
+                        },
+                        "departure": {
+                            "time": "1699407540"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70172",
+                        "arrival": {
+                            "time": "1699407924"
+                        },
+                        "departure": {
+                            "time": "1699408020"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70212",
+                        "arrival": {
+                            "time": "1699408576"
+                        },
+                        "departure": {
+                            "time": "1699408576"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70262",
+                        "arrival": {
+                            "time": "1699409416"
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "711",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "711",
+                    "routeId": "B7",
+                    "directionId": 0,
+                    "startTime": "17:57:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "block_711_schedBasedVehicle",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70261",
+                        "departure": {
+                            "time": "1699408620",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70211",
+                        "arrival": {
+                            "time": "1699409564",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409564",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70171",
+                        "arrival": {
+                            "time": "1699409919",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699409940",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70141",
+                        "arrival": {
+                            "time": "1699410402",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410402",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70111",
+                        "arrival": {
+                            "time": "1699410997",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410997",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70061",
+                        "arrival": {
+                            "time": "1699411423",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411440",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 7,
+                        "stopId": "70021",
+                        "arrival": {
+                            "time": "1699412389",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699412389",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 8,
+                        "stopId": "70011",
+                        "arrival": {
+                            "time": "1699412689",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        },
+        {
+            "id": "712",
+            "tripUpdate": {
+                "trip": {
+                    "tripId": "712",
+                    "routeId": "B7",
+                    "directionId": 1,
+                    "startTime": "18:04:00",
+                    "startDate": "20231107",
+                    "scheduleRelationship": "SCHEDULED"
+                },
+                "vehicle": {
+                    "id": "block_712_schedBasedVehicle",
+                    "label": "",
+                    "licensePlate": ""
+                },
+                "stopTimeUpdate": [
+                    {
+                        "stopSequence": 1,
+                        "stopId": "70012",
+                        "departure": {
+                            "time": "1699409040",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 2,
+                        "stopId": "70062",
+                        "arrival": {
+                            "time": "1699410218",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699410218",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 3,
+                        "stopId": "70112",
+                        "arrival": {
+                            "time": "1699410827",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 4,
+                        "stopId": "70142",
+                        "arrival": {
+                            "time": "1699411316",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 5,
+                        "stopId": "70172",
+                        "arrival": {
+                            "time": "1699411773",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699411773",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    },
+                    {
+                        "stopSequence": 6,
+                        "stopId": "70212",
+                        "arrival": {
+                            "time": "1699412222",
+                            "uncertainty": 300
+                        },
+                        "departure": {
+                            "time": "1699412222",
+                            "uncertainty": 300
+                        },
+                        "scheduleRelationship": "SCHEDULED"
+                    }
+                ],
+                "timestamp": "1699405520"
+            }
+        }
+    ]
+}

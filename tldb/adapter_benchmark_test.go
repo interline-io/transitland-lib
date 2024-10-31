@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 )
 
 // Tests adapter Insert performance.
@@ -21,12 +22,12 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
-			feedid, err := adapter.Insert(&tl.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			feedid, err := adapter.Insert(&dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
 			if err != nil {
 				b.Error(err)
 			}
 			b.ResetTimer()
-			ent := tl.FeedVersion{FeedID: feedid}
+			ent := dmfr.FeedVersion{FeedID: feedid}
 			for i := 0; i < b.N; i++ {
 				_, err := adapter.Insert(&ent)
 				if err != nil {
@@ -48,18 +49,17 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
-			feedid, err := adapter.Insert(&tl.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			feedid, err := adapter.Insert(&dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
 			if err != nil {
 				b.Error(err)
 			}
 			b.ResetTimer()
-			ent := tl.FeedVersion{FeedID: feedid}
-			q := adapter.DBX().Rebind(`INSERT INTO feed_versions(feed_id, feed_type, file, earliest_calendar_date, latest_calendar_date, sha1, sha1_dir,fetched_at, created_at, updated_at, url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+			ent := dmfr.FeedVersion{FeedID: feedid}
+			q := adapter.DBX().Rebind(`INSERT INTO feed_versions(feed_id, file, earliest_calendar_date, latest_calendar_date, sha1, sha1_dir,fetched_at, created_at, updated_at, url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
 			for i := 0; i < b.N; i++ {
 				_, err := adapter.DBX().Exec(
 					q,
 					ent.FeedID,
-					ent.FeedType,
 					ent.File,
 					ent.EarliestCalendarDate,
 					ent.LatestCalendarDate,
@@ -80,7 +80,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 
 // Tests multiple insert performance
 // There is a lot of setup in this test because we need a FeedVersion, Trip, and Stop
-func Benchmark_Adapter_BatchInsert(b *testing.B) {
+func Benchmark_Adapter_MultiInsert(b *testing.B) {
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
@@ -123,14 +123,14 @@ func Benchmark_Adapter_BatchInsert(b *testing.B) {
 				ents := make([]interface{}, 0)
 				for i := 0; i < 1000; i++ {
 					count++
-					ent := tl.StopTime{}
-					ent.StopSequence = count
-					ent.StopID = strconv.Itoa(stopid)
-					ent.TripID = strconv.Itoa(tripid)
+					ent := gtfs.StopTime{}
+					ent.StopSequence.Set(int64(count))
+					ent.StopID.Set(strconv.Itoa(stopid))
+					ent.TripID.Set(strconv.Itoa(tripid))
 					ent.FeedVersionID = fvid
 					ents = append(ents, &ent)
 				}
-				if err := adapter.CopyInsert(ents); err != nil {
+				if _, err := adapter.MultiInsert(ents); err != nil {
 					b.Error(err)
 				}
 			}

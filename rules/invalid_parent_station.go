@@ -3,7 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // InvalidParentStationError reports when a parent_station has a location_type that is not allowed.
@@ -30,19 +31,19 @@ type ParentStationLocationTypeCheck struct {
 	locationTypes map[string]int
 }
 
-func (e *ParentStationLocationTypeCheck) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (e *ParentStationLocationTypeCheck) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	if e.locationTypes == nil {
 		e.locationTypes = map[string]int{}
 	}
-	if stop, ok := ent.(*tl.Stop); ok {
-		e.locationTypes[eid] = stop.LocationType
+	if stop, ok := ent.(*gtfs.Stop); ok {
+		e.locationTypes[eid] = stop.LocationType.Int()
 	}
 	return nil
 }
 
-func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
+func (e *ParentStationLocationTypeCheck) Validate(ent tt.Entity) []error {
 	// Confirm the parent station location_type is acceptable
-	stop, ok := ent.(*tl.Stop)
+	stop, ok := ent.(*gtfs.Stop)
 	if !ok {
 		return nil
 	}
@@ -51,7 +52,7 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 	}
 	// We need to compare as strings because EntityMap is map[string]string
 	var errs []error
-	stype := stop.LocationType
+	stype := stop.LocationType.Val
 	ptype, ok := e.locationTypes[stop.ParentStation.Val]
 	if !ok {
 		// parent station not found; this is checked during UpdateKeys
@@ -59,8 +60,8 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 		// Boarding areas may only link to type = 0
 		if ptype != 0 {
 			errs = append(errs, &InvalidParentStationError{
-				StopID:            stop.StopID,
-				LocationType:      stop.LocationType,
+				StopID:            stop.StopID.Val,
+				LocationType:      stop.LocationType.Int(),
 				ParentStation:     stop.ParentStation.Val,
 				ParentStationType: ptype,
 			})
@@ -68,8 +69,8 @@ func (e *ParentStationLocationTypeCheck) Validate(ent tl.Entity) []error {
 	} else if ptype != 1 {
 		// All other types must have station as parent
 		errs = append(errs, &InvalidParentStationError{
-			StopID:            stop.StopID,
-			LocationType:      stop.LocationType,
+			StopID:            stop.StopID.Val,
+			LocationType:      stop.LocationType.Int(),
 			ParentStation:     stop.ParentStation.Val,
 			ParentStationType: ptype,
 		})

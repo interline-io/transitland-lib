@@ -3,9 +3,9 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/internal/xy"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // StopTooFarError reports when two related stops are >1km away.
@@ -27,37 +27,36 @@ func (e *StopTooFarError) Error() string {
 
 // StopTooFarCheck checks for StopTooFarErrors.
 type StopTooFarCheck struct {
-	geoms   map[string]*tl.Point // use shared geom cache?
+	geoms   map[string]tlxy.Point // use shared geom cache?
 	maxdist float64
 }
 
 // Validate .
-func (e *StopTooFarCheck) Validate(ent tl.Entity) []error {
+func (e *StopTooFarCheck) Validate(ent tt.Entity) []error {
 	e.maxdist = 1000.0
 	if e.geoms == nil {
-		e.geoms = map[string]*tl.Point{}
+		e.geoms = map[string]tlxy.Point{}
 	}
-	v, ok := ent.(*tl.Stop)
+	v, ok := ent.(*gtfs.Stop)
 	if !ok {
 		return nil
 	}
 	var errs []error
-	coords := v.Geometry.Coords()
-	if coords[0] == 0 && coords[1] == 0 {
+	spoint := v.ToPoint()
+	if spoint.Lon == 0 && spoint.Lat == 0 {
 		return nil // 0,0 handled elsewhere
 	}
-	newp := tt.NewPoint(coords[0], coords[1]) // copy
-	e.geoms[v.StopID] = &newp
-	if v.ParentStation.Val == "" {
+	e.geoms[v.StopID.Val] = spoint
+	if !v.ParentStation.Valid {
 		return nil
 	}
 	// Check if parent stop is >1km
 	if pgeom, ok := e.geoms[v.ParentStation.Val]; ok {
 		// if not ok, then it's a parent error and out of scope for this check
-		d := xy.DistanceHaversinePoint(coords, pgeom.Coords())
+		d := tlxy.DistanceHaversine(spoint, pgeom)
 		if d > e.maxdist {
 			errs = append(errs, &StopTooFarError{
-				StopID:        v.StopID,
+				StopID:        v.StopID.Val,
 				ParentStation: v.ParentStation.Val,
 				Distance:      d,
 			})

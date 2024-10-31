@@ -3,7 +3,7 @@ package testdb
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -101,6 +101,22 @@ func ShouldSelect(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, 
 
 ////////////
 
+func TempPostgres(dburl string, cb func(tldb.Adapter) error) error {
+	adapter := tldb.PostgresAdapter{DBURL: dburl}
+	if err := adapter.Open(); err != nil {
+		panic(err)
+	}
+	writer := tldb.Writer{Adapter: &adapter}
+	if err := writer.Open(); err != nil {
+		panic(err)
+	}
+	defer writer.Close()
+	if err := writer.Create(); err != nil {
+		panic(err)
+	}
+	return writer.Adapter.Tx(cb)
+}
+
 // TempSqlite creates a temporary in-memory database and runs the callback inside a tx.
 func TempSqlite(cb func(tldb.Adapter) error) error {
 	adapter := tldb.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
@@ -139,9 +155,9 @@ func (atx *AdapterIgnoreTx) Tx(cb func(tldb.Adapter) error) error {
 }
 
 // CreateTestFeed returns a simple feed inserted into a database.
-func CreateTestFeed(atx tldb.Adapter, url string) tl.Feed {
+func CreateTestFeed(atx tldb.Adapter, url string) dmfr.Feed {
 	// Create dummy feed
-	tlfeed := tl.Feed{}
+	tlfeed := dmfr.Feed{}
 	tlfeed.FeedID = url
 	tlfeed.URLs.StaticCurrent = url
 	tlfeed.ID = MustInsert(atx, &tlfeed)

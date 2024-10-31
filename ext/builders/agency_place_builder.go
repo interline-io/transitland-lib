@@ -4,20 +4,21 @@ import (
 	"database/sql"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
 )
 
 type AgencyPlace struct {
 	AgencyID string
-	Name     tl.String
-	Adm1name tl.String
-	Adm0name tl.String
+	Name     tt.String
+	Adm1name tt.String
+	Adm0name tt.String
 	Count    int
 	Rank     float64
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (rs *AgencyPlace) TableName() string {
@@ -46,19 +47,20 @@ func NewAgencyPlaceBuilder() *AgencyPlaceBuilder {
 	}
 }
 
-func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Agency:
+	case *gtfs.Agency:
 		pp.agencyStops[eid] = map[string]int{}
-	case *tl.Stop:
-		pp.stops[eid] = geohash.EncodeWithPrecision(v.Geometry.Y(), v.Geometry.X(), 6) // note reversed coords
-	case *tl.Route:
-		pp.routeAgency[eid] = v.AgencyID
-	case *tl.Trip:
-		pp.tripAgency[eid] = pp.routeAgency[v.RouteID]
-	case *tl.StopTime:
-		aid := pp.tripAgency[v.TripID]
-		if sg, ok := pp.stops[v.StopID]; ok {
+	case *gtfs.Stop:
+		spt := v.ToPoint()
+		pp.stops[eid] = geohash.EncodeWithPrecision(spt.Lat, spt.Lon, 6) // Note reversed coords
+	case *gtfs.Route:
+		pp.routeAgency[eid] = v.AgencyID.Val
+	case *gtfs.Trip:
+		pp.tripAgency[eid] = pp.routeAgency[v.RouteID.Val]
+	case *gtfs.StopTime:
+		aid := pp.tripAgency[v.TripID.Val]
+		if sg, ok := pp.stops[v.StopID.Val]; ok {
 			if v, ok := pp.agencyStops[aid]; ok {
 				v[sg] += 1
 			}
@@ -106,9 +108,9 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	}
 	// For each geohash, check nearby populated places and inside admin boundaries
 	type foundPlace struct {
-		Name     tl.String
-		Adm1name tl.String
-		Adm0name tl.String
+		Name     tt.String
+		Adm1name tt.String
+		Adm0name tt.String
 	}
 	pointPlaces := map[string]foundPlace{}
 	pointAdmins := map[string]foundPlace{}

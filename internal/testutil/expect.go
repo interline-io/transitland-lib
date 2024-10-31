@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type HasContext interface {
@@ -16,8 +16,8 @@ type HasContext interface {
 ///////////
 
 // GetExpectErrors gets any ExpectError specified by an Entity.
-func GetExpectErrors(ent tl.Entity) []ExpectError {
-	extEnt, ok := ent.(tl.EntityWithExtra)
+func GetExpectErrors(ent tt.Entity) []ExpectError {
+	extEnt, ok := ent.(tt.EntityWithExtra)
 	if !ok {
 		return nil
 	}
@@ -50,7 +50,6 @@ func CheckErrors(expecterrs []ExpectError, errs []error, t *testing.T) {
 		for _, err := range expecterrs {
 			s2 = append(s2, fmt.Sprintf("%#v", err))
 		}
-
 		t.Errorf("got %d errors/warnings, more than the expected expected %d, got: %s expect: %s", len(errs), len(expecterrs), strings.Join(s1, " "), strings.Join(s2, " "))
 		return
 	}
@@ -142,7 +141,8 @@ func (e *ExpectError) Match(errs []error) bool {
 
 // ParseExpectError .
 // e.g.:
-//     InvalidFieldError:agency_name:agency.txt:bad_agency
+//
+//	InvalidFieldError:agency_name:agency.txt:bad_agency
 func ParseExpectError(value string) ExpectError {
 	v := strings.Split(value, ":")
 	// pad out

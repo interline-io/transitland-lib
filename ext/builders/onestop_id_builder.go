@@ -4,15 +4,16 @@ import (
 	"fmt"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
 )
 
 type StopOnestopID struct {
 	StopID    string
 	OnestopID string
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *StopOnestopID) Filename() string {
@@ -26,8 +27,8 @@ func (ent *StopOnestopID) TableName() string {
 type RouteOnestopID struct {
 	RouteID   string
 	OnestopID string
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *RouteOnestopID) Filename() string {
@@ -40,8 +41,8 @@ func (ent *RouteOnestopID) TableName() string {
 type AgencyOnestopID struct {
 	AgencyID  string
 	OnestopID string
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *AgencyOnestopID) Filename() string {
@@ -52,7 +53,7 @@ func (ent *AgencyOnestopID) TableName() string {
 	return "tl_agency_onestop_ids"
 }
 
-//////////
+// OnestopID Builder
 
 type OnestopIDBuilder struct {
 	agencyNames    map[string]string
@@ -70,74 +71,47 @@ func NewOnestopIDBuilder() *OnestopIDBuilder {
 	}
 }
 
-func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Agency:
-		pp.agencyNames[eid] = v.AgencyName
-	case *tl.Stop:
+	case *gtfs.Agency:
+		pp.agencyNames[eid] = v.AgencyName.Val
+	case *gtfs.Stop:
 		pp.stops[eid] = &stopGeom{
-			name: v.StopName,
+			name: v.StopName.Val,
 			lon:  v.Geometry.X(),
 			lat:  v.Geometry.Y(),
 		}
-	case *tl.Route:
-		name := v.RouteShortName
+	case *gtfs.Route:
+		name := v.RouteShortName.Val
 		if name == "" {
-			name = v.RouteLongName
+			name = v.RouteLongName.Val
 		}
 		pp.routeStopGeoms[eid] = &routeStopGeoms{
 			name:      name,
-			agency:    v.AgencyID,
+			agency:    v.AgencyID.Val,
 			stopGeoms: map[string]*stopGeom{},
 		}
-	case *tl.Trip:
-		pp.tripRoutes[eid] = v.RouteID
-	case *tl.StopTime:
-		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID]]
+	case *gtfs.Trip:
+		pp.tripRoutes[eid] = v.RouteID.Val
+	case *gtfs.StopTime:
+		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
 		if !ok {
 			// log.Debugf("OnestopIDBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
-		s, ok := pp.stops[v.StopID]
+		s, ok := pp.stops[v.StopID.Val]
 		if !ok {
 			// log.Debugf("OnestopIDBuilder no stop:", v.StopID)
 			return nil
 		}
-		r.stopGeoms[v.StopID] = s
+		r.stopGeoms[v.StopID.Val] = s
 	}
 	return nil
 }
 
-func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
-	// generate stop onestop id's
-	for stopid, sg := range pp.stops {
-		if gh := geohash.EncodeWithPrecision(sg.lat, sg.lon, 10); len(gh) > 0 {
-			ent := StopOnestopID{
-				StopID:    stopid,
-				OnestopID: fmt.Sprintf("s-%s-%s", gh, filterName(sg.name)),
-			}
-			if _, err := copier.CopyEntity(&ent); err != nil {
-				return err
-			}
-		}
-	}
-	// generate route onstop id's
-	for rid, rsg := range pp.routeStopGeoms {
-		pts := []point{}
-		for _, sg := range rsg.stopGeoms {
-			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
-		}
-		if gh := pointsGeohash(pts, 1, 6); len(gh) > 0 {
-			ent := RouteOnestopID{
-				RouteID:   rid,
-				OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
-			}
-			if _, err := copier.CopyEntity(&ent); err != nil {
-				return err
-			}
-		}
-	}
+func (pp *OnestopIDBuilder) AgencyOnestopIDs() []AgencyOnestopID {
 	// group stops by agency
+	var ret []AgencyOnestopID
 	agencyStops := map[string]map[string]*stopGeom{}
 	for _, rsg := range pp.routeStopGeoms {
 		r, ok := agencyStops[rsg.agency]
@@ -157,16 +131,69 @@ func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 		}
 		pts := []point{}
 		for _, sg := range sgs {
-			pts = append(pts, point{lon: sg.lon, lat: sg.lat})
+			pts = append(pts, point{Lon: sg.lon, Lat: sg.lat})
 		}
 		if gh := pointsGeohash(pts, 1, 6); len(gh) > 0 {
 			ent := AgencyOnestopID{
 				AgencyID:  aid,
 				OnestopID: fmt.Sprintf("o-%s-%s", gh, filterName(name)),
 			}
-			if _, err := copier.CopyEntity(&ent); err != nil {
-				return err
+			ret = append(ret, ent)
+		}
+	}
+	return ret
+}
+
+func (pp *OnestopIDBuilder) StopOnestopIDs() []StopOnestopID {
+	// generate stop onestop id's
+	var ret []StopOnestopID
+	for stopid, sg := range pp.stops {
+		if gh := geohash.EncodeWithPrecision(sg.lat, sg.lon, 10); len(gh) > 0 {
+			ent := StopOnestopID{
+				StopID:    stopid,
+				OnestopID: fmt.Sprintf("s-%s-%s", gh, filterName(sg.name)),
 			}
+			ret = append(ret, ent)
+		}
+	}
+	return ret
+}
+
+func (pp *OnestopIDBuilder) RouteOnestopIDs() []RouteOnestopID {
+	var ret []RouteOnestopID
+	for rid, rsg := range pp.routeStopGeoms {
+		pts := []point{}
+		for _, sg := range rsg.stopGeoms {
+			pts = append(pts, point{Lon: sg.lon, Lat: sg.lat})
+		}
+		if gh := pointsGeohash(pts, 1, 6); len(gh) > 0 {
+			ent := RouteOnestopID{
+				RouteID:   rid,
+				OnestopID: fmt.Sprintf("r-%s-%s", gh, filterName(rsg.name)),
+			}
+			ret = append(ret, ent)
+		}
+	}
+	return ret
+}
+
+func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
+	for _, ent := range pp.AgencyOnestopIDs() {
+		ent := ent
+		if _, err := copier.CopyEntity(&ent); err != nil {
+			return err
+		}
+	}
+	for _, ent := range pp.RouteOnestopIDs() {
+		ent := ent
+		if _, err := copier.CopyEntity(&ent); err != nil {
+			return err
+		}
+	}
+	for _, ent := range pp.StopOnestopIDs() {
+		ent := ent
+		if _, err := copier.CopyEntity(&ent); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/internal/schema"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/schema/sqlite"
 	"github.com/jmoiron/sqlx"
 
 	// sqlite3
@@ -21,11 +21,11 @@ import (
 // Register.
 func init() {
 	// Register test adapter
-	adapters["sqlite3"] = func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} }
+	adapterFactories["sqlite3"] = func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} }
 	// Register readers and writers
-	r := func(url string) (tl.Reader, error) { return NewReader(url) }
+	r := func(url string) (adapters.Reader, error) { return NewReader(url) }
 	ext.RegisterReader("sqlite3", r)
-	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
+	w := func(url string) (adapters.Writer, error) { return NewWriter(url) }
 	ext.RegisterWriter("sqlite3", w)
 	// Dummy handlers for SQL functions.
 	sql.Register("sqlite3_w_funcs",
@@ -76,7 +76,7 @@ func (adapter *SQLiteAdapter) Create() error {
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
-	_, err := adb.Exec(schema.SqliteSchema)
+	_, err := adb.Exec(sqlite.SqliteSchema)
 	return err
 }
 
@@ -100,8 +100,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	adapter2 := &SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}
-	if errTx := cb(adapter2); errTx != nil {
+	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3
 		}
@@ -218,10 +217,4 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 	// 	return retids, err
 	// }
 	return retids, nil
-}
-
-// CopyInsert uses MultiInsert.
-func (adapter *SQLiteAdapter) CopyInsert(ents []interface{}) error {
-	_, err := adapter.MultiInsert(ents)
-	return err
 }

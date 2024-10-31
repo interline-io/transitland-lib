@@ -5,21 +5,22 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type RouteHeadway struct {
 	RouteID        string
 	SelectedStopID string
-	DirectionID    tl.Int
-	HeadwaySecs    tl.Int
-	DowCategory    tl.Int
-	ServiceDate    tl.Date
-	StopTripCount  tl.Int
-	Departures     tl.Ints
-	tl.MinEntity
-	tl.FeedVersionEntity
+	DirectionID    tt.Int
+	HeadwaySecs    tt.Int
+	DowCategory    tt.Int
+	ServiceDate    tt.Date
+	StopTripCount  tt.Int
+	Departures     tt.Ints
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *RouteHeadway) Filename() string {
@@ -60,36 +61,37 @@ func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
 	}
 }
 
-func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	// Keep track of all services and departures
 	switch v := ent.(type) {
-	case *tl.Service:
+	case *gtfs.Calendar:
 		// Use only the first 30 days of service
-		startDate := v.StartDate
+		svc := service.NewService(*v, v.CalendarDates...)
+		startDate := v.StartDate.Val
 		for i := 0; i < 31; i++ {
-			if v.IsActive(startDate) {
+			if svc.IsActive(startDate) {
 				d := startDate.Format("2006-01-02")
 				pp.serviceDays[d] = append(pp.serviceDays[d], eid)
 			}
 			startDate = startDate.AddDate(0, 0, 1)
 		}
-	case *tl.Route:
+	case *gtfs.Route:
 		pp.routeDepartures[eid] = map[riKey][]int{}
-	case *tl.Trip:
+	case *gtfs.Trip:
 		// Process StopTimes assuming they will all be written
 		// otherwise this breaks on journey pattern deduplication.
 		for _, st := range v.StopTimes {
-			stopId, ok := emap.Get("stops.txt", st.StopID)
+			stopId, ok := emap.Get("stops.txt", st.StopID.Val)
 			if !ok {
 				continue
 			}
 			rkey := riKey{
-				ServiceID: v.ServiceID,
-				Direction: uint8(v.DirectionID),
+				ServiceID: v.ServiceID.Val,
+				Direction: uint8(v.DirectionID.Val),
 				StopID:    stopId,
 			}
-			if rd, ok := pp.routeDepartures[v.RouteID]; ok && st.DepartureTime.Valid {
-				rd[rkey] = append(rd[rkey], st.DepartureTime.Seconds)
+			if rd, ok := pp.routeDepartures[v.RouteID.Val]; ok && st.DepartureTime.Valid {
+				rd[rkey] = append(rd[rkey], st.DepartureTime.Int())
 			}
 		}
 	}
@@ -164,13 +166,13 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				// log.Debugf("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
 				// log.Debugf("\tdepartures:", departures)
 				// for _, departure := range departures {
-				// 	wt := tt.NewWideTimeFromSeconds(departure)
+				// 	wt := tt.NewSeconds(departure)
 				// 	log.Debugf("\t", wt.String())
 				// }
 				rh := RouteHeadway{
 					RouteID:        rid,
 					SelectedStopID: mostVisitedStop,
-					HeadwaySecs:    tl.Int{},
+					HeadwaySecs:    tt.Int{},
 					DowCategory:    tt.NewInt(dowCat),
 					ServiceDate:    tt.NewDate(d),
 					StopTripCount:  tt.NewInt(len(departures)),
@@ -179,7 +181,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				}
 				// HeadwaySecs based on morning rush hour
 				if ws, ok := getStats(departures, 21600, 36000); ok && len(departures) >= 10 {
-					rh.HeadwaySecs = tt.NewInt(ws.mid)
+					rh.HeadwaySecs.SetInt(ws.mid)
 				}
 				if _, err := copier.CopyEntity(&rh); err != nil {
 					return err

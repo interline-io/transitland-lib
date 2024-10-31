@@ -4,10 +4,11 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext/sched"
-	"github.com/interline-io/transitland-lib/internal/xy"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
 )
 
@@ -27,6 +28,14 @@ type routeInfo struct {
 	RouteType int
 }
 
+type rtTripKey struct {
+	AgencyID string
+	RouteID  string
+	TripID   string
+	Found    bool
+	Added    bool
+}
+
 // Validator validates RT messages based on data from a static feed.
 // It can be initialized through NewValidatorFromReader or through the Copier Validator interface.
 type Validator struct {
@@ -35,7 +44,7 @@ type Validator struct {
 	tripInfo            map[string]tripInfo
 	routeInfo           map[string]routeInfo
 	stopInfo            map[string]stopInfo
-	geomCache           *xy.GeomCache // shared with copier
+	geomCache           tlxy.GeomCache // shared with copier
 	sched               *sched.ScheduleChecker
 }
 
@@ -47,37 +56,37 @@ func NewValidator() *Validator {
 		routeInfo:           map[string]routeInfo{},
 		stopInfo:            map[string]stopInfo{},
 		sched:               sched.NewScheduleChecker(),
-		geomCache:           xy.NewGeomCache(),
+		geomCache:           geomcache.NewGeomCache(),
 	}
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (fi *Validator) SetGeomCache(g *xy.GeomCache) {
+func (fi *Validator) SetGeomCache(g tlxy.GeomCache) {
 	fi.geomCache = g
 }
 
 // Validate gets a stream of entities from Copier to build up the cache.
-func (fi *Validator) Validate(ent tl.Entity) []error {
+func (fi *Validator) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
-	case *tl.Agency:
-		fi.Timezone = v.AgencyTimezone
-	case *tl.Stop:
-		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
-	case *tl.Route:
-		fi.routeInfo[v.RouteID] = routeInfo{
-			RouteType: v.RouteType,
-			AgencyID:  v.AgencyID,
+	case *gtfs.Agency:
+		fi.Timezone = v.AgencyTimezone.Val
+	case *gtfs.Stop:
+		fi.stopInfo[v.StopID.Val] = stopInfo{LocationType: v.LocationType.Int()}
+	case *gtfs.Route:
+		fi.routeInfo[v.RouteID.Val] = routeInfo{
+			RouteType: v.RouteType.Int(),
+			AgencyID:  v.AgencyID.Val,
 		}
-	case *tl.Trip:
-		fi.tripInfo[v.TripID] = tripInfo{
-			DirectionID: v.DirectionID,
+	case *gtfs.Trip:
+		fi.tripInfo[v.TripID.Val] = tripInfo{
+			DirectionID: v.DirectionID.Int(),
 			ShapeID:     v.ShapeID.String(),
-			RouteID:     v.RouteID,
+			RouteID:     v.RouteID.Val,
 		}
-	case *tl.Frequency:
-		a := fi.tripInfo[v.TripID]
+	case *gtfs.Frequency:
+		a := fi.tripInfo[v.TripID.Val]
 		a.UsesFrequency = true
-		fi.tripInfo[v.TripID] = a
+		fi.tripInfo[v.TripID.Val] = a
 	}
 
 	// Validate with schedule checker
@@ -216,7 +225,8 @@ func (fi *Validator) ValidateFeedEntity(ent *pb.FeedEntity, current *pb.FeedMess
 // ValidateTripUpdate .
 func (fi *Validator) ValidateTripUpdate(tripUpdate *pb.TripUpdate, current *pb.FeedMessage) (errs []error) {
 	tripDescriptor := tripUpdate.GetTrip()
-	agencyId := fi.getAgencyId(tripDescriptor.GetTripId(), tripDescriptor.GetRouteId())
+	rtKey := fi.getRtTripKey(tripDescriptor)
+	agencyId := rtKey.AgencyID
 
 	// Validate TripDescriptor
 	if tripDescriptor == nil {
@@ -395,7 +405,8 @@ func (fi *Validator) ValidateTripUpdate(tripUpdate *pb.TripUpdate, current *pb.F
 // ValidateStopTimeUpdate .
 func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, tripUpdate *pb.TripUpdate, current *pb.FeedMessage) (errs []error) {
 	tripDescriptor := tripUpdate.GetTrip()
-	agencyId := fi.getAgencyId(tripDescriptor.GetTripId(), tripDescriptor.GetRouteId())
+	rtKey := fi.getRtTripKey(tripDescriptor)
+	agencyId := rtKey.AgencyID
 
 	if st.StopId == nil && st.StopSequence == nil {
 		errs = append(errs, withFieldAndJson(
@@ -503,7 +514,9 @@ func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, tr
 }
 
 func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *pb.TripUpdate) (errs []error) {
-	agencyId := fi.getAgencyId(td.GetTripId(), td.GetRouteId())
+	rtKey := fi.getRtTripKey(td)
+	agencyId := rtKey.AgencyID
+
 	if tripId := td.GetTripId(); tripId != "" {
 		tripInfo, ok := fi.tripInfo[tripId]
 		// Check trip exists
@@ -559,7 +572,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 		}
 	}
 	if startTime := td.GetStartTime(); startTime != "" {
-		if wt, err := tt.NewWideTime(startTime); err != nil {
+		if wt, err := tt.NewSecondsFromString(startTime); err != nil {
 			errs = append(errs, withFieldAndJson(
 				E020,
 				"trip_update.trip.start_time",
@@ -568,7 +581,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 				tripUpdate,
 				"",
 			))
-		} else if wt.Seconds > (7 * 24 * 60 * 60) {
+		} else if wt.Int() > (7 * 24 * 60 * 60) {
 			errs = append(errs, withFieldAndJson(
 				E020,
 				"trip_update.trip.start_time",
@@ -596,7 +609,8 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 
 func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []error) {
 	tripDescriptor := ent.GetTrip()
-	agencyId := fi.getAgencyId(tripDescriptor.GetTripId(), tripDescriptor.GetRouteId())
+	rtKey := fi.getRtTripKey(tripDescriptor)
+	agencyId := rtKey.AgencyID
 
 	// Validate stop
 	if stopId := ent.GetStopId(); stopId != "" {
@@ -620,7 +634,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 	errs = append(errs, posValid...)
 	if len(posValid) == 0 {
 		// Check distance from shape
-		posPt := xy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
+		posPt := tlxy.Point{Lon: float64(pos.GetLongitude()), Lat: float64(pos.GetLatitude())}
 		if td := ent.Trip; td != nil && td.TripId != nil {
 			tripId := td.GetTripId()
 			trip, tripOk := fi.tripInfo[tripId]
@@ -638,8 +652,8 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 			} else if len(shp) == 0 {
 				errs = append(errs, newError("Invalid shape_id", "trip_descriptor"))
 			} else {
-				nearestPoint, _ := xy.LineClosestPoint(shp, posPt)
-				nearestPointDist := xy.DistanceHaversine(nearestPoint.Lon, nearestPoint.Lat, posPt.Lon, posPt.Lat)
+				nearestPoint, _, _ := tlxy.LineClosestPoint(shp, posPt)
+				nearestPointDist := tlxy.DistanceHaversine(nearestPoint, posPt)
 				if nearestPointDist > fi.MaxDistanceFromTrip {
 					shpErr := withFieldAndJson(
 						E029,
@@ -668,7 +682,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 					shpGeomCollection := geom.NewGeometryCollection()
 					shpGeomCollection.Push(shpLineGeom)
 					shpGeomCollection.Push(shpPointGeom)
-					shpErr.geom = tt.Geometry{Geometry: shpGeomCollection, Valid: true}
+					shpErr.geom = tt.NewGeometry(shpGeomCollection)
 					errs = append(errs, shpErr)
 				}
 			}
@@ -679,7 +693,8 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 
 func (fi *Validator) validatePosition(pos *pb.Position, vehiclePosition *pb.VehiclePosition) (errs []error) {
 	tripDescriptor := vehiclePosition.GetTrip()
-	agencyId := fi.getAgencyId(tripDescriptor.GetTripId(), tripDescriptor.GetRouteId())
+	rtKey := fi.getRtTripKey(tripDescriptor)
+	agencyId := rtKey.AgencyID
 
 	if pos == nil {
 		errs = append(errs, newError("Position required", "vehicle_position.position"))
@@ -748,118 +763,24 @@ func (fi *Validator) validatePosition(pos *pb.Position, vehiclePosition *pb.Vehi
 	return errs
 }
 
-type VehiclePositionStats struct {
-	RouteID            string   `json:"route_id"`
-	AgencyID           string   `json:"agency_id"`
-	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
-	TripScheduledCount int      `json:"trip_scheduled_count"`
-	TripMatchCount     int      `json:"trip_match_count"`
-}
-
-func (fi *Validator) VehiclePositionStats(now time.Time, msg *pb.FeedMessage) ([]VehiclePositionStats, error) {
-	tripHasPosition := map[string]bool{}
-	for _, ent := range msg.Entity {
-		vp := ent.Vehicle
-		if vp == nil {
-			continue
-		}
-		pos := vp.GetPosition()
-		if td := vp.Trip; td != nil && pos != nil {
-			tripId := td.GetTripId()
-			tripHasPosition[tripId] = true
-		}
+func (fi *Validator) getRtTripKey(trip *pb.TripDescriptor) rtTripKey {
+	tripId := trip.GetTripId()
+	ret := rtTripKey{
+		TripID: tripId,
 	}
-	// Return early if no VehiclePositions
-	if len(tripHasPosition) == 0 {
-		return nil, nil
+	if trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED {
+		ret.Added = true
 	}
-	type statAggKey struct {
-		RouteID  string
-		AgencyID string
+	if a, ok := fi.tripInfo[tripId]; ok {
+		ret.RouteID = a.RouteID
+		ret.Found = true
+	} else if b := trip.GetRouteId(); b != "" {
+		ret.RouteID = b
 	}
-	statAgg := map[statAggKey]VehiclePositionStats{}
-	for _, tripId := range fi.sched.ActiveTrips(now) {
-		trip := fi.tripInfo[tripId]
-		k := statAggKey{
-			RouteID:  trip.RouteID,
-			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
-		}
-		stat := statAgg[k]
-		stat.AgencyID = k.AgencyID
-		stat.RouteID = k.RouteID
-		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
-		stat.TripScheduledCount += 1
-		if tripHasPosition[tripId] {
-			stat.TripMatchCount += 1
-		}
-		statAgg[k] = stat
+	if a, ok := fi.routeInfo[ret.RouteID]; ok {
+		ret.AgencyID = a.AgencyID
 	}
-	var ret []VehiclePositionStats
-	for _, v := range statAgg {
-		ret = append(ret, v)
-	}
-	return ret, nil
-
-}
-
-type TripUpdateStats struct {
-	AgencyID           string   `json:"agency_id"`
-	RouteID            string   `json:"route_id"`
-	TripScheduledIDs   []string `json:"trip_scheduled_ids"`
-	TripScheduledCount int      `json:"trip_scheduled_count"`
-	TripMatchCount     int      `json:"trip_match_count"`
-}
-
-func (fi *Validator) TripUpdateStats(now time.Time, msg *pb.FeedMessage) ([]TripUpdateStats, error) {
-	tripHasUpdate := map[string]bool{}
-	for _, ent := range msg.Entity {
-		tu := ent.TripUpdate
-		if tu == nil {
-			continue
-		}
-		tripHasUpdate[tu.GetTrip().GetTripId()] = true
-	}
-	// Return early if no TripUpdates
-	if len(tripHasUpdate) == 0 {
-		return nil, nil
-	}
-	type statAggKey struct {
-		AgencyID string
-		RouteID  string
-	}
-	statAgg := map[statAggKey]TripUpdateStats{}
-	for _, tripId := range fi.sched.ActiveTrips(now) {
-		trip := fi.tripInfo[tripId]
-		k := statAggKey{
-			RouteID:  trip.RouteID,
-			AgencyID: fi.routeInfo[trip.RouteID].AgencyID,
-		}
-		stat := statAgg[k]
-		stat.AgencyID = k.AgencyID
-		stat.RouteID = k.RouteID
-		stat.TripScheduledIDs = append(stat.TripScheduledIDs, tripId)
-		stat.TripScheduledCount += 1
-		if tripHasUpdate[tripId] {
-			stat.TripMatchCount += 1
-		}
-		statAgg[k] = stat
-	}
-	var ret []TripUpdateStats
-	for _, v := range statAgg {
-		ret = append(ret, v)
-	}
-	return ret, nil
-}
-
-func (fi *Validator) getAgencyId(tripId string, routeId string) string {
-	agencyId := ""
-	if trip, ok := fi.tripInfo[tripId]; ok {
-		routeId = trip.RouteID
-	}
-	if route, ok := fi.routeInfo[routeId]; ok {
-		agencyId = route.AgencyID
-	}
-	return agencyId
+	return ret
 }
 
 type EntityCounts struct {

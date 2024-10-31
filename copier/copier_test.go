@@ -5,21 +5,22 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
 type testCopierExpand struct{}
 
-func (ext *testCopierExpand) Expand(ent tl.Entity, emap *tl.EntityMap) ([]tl.Entity, bool, error) {
-	var ret []tl.Entity
-	v, ok := ent.(*tl.Agency)
+func (ext *testCopierExpand) Expand(ent tt.Entity, emap *tt.EntityMap) ([]tt.Entity, bool, error) {
+	var ret []tt.Entity
+	v, ok := ent.(*gtfs.Agency)
 	if !ok {
 		return nil, false, nil
 	}
 	for i := 0; i < 4; i++ {
 		c := *v
-		c.AgencyID = fmt.Sprintf("%s:%d", v.AgencyID, i)
+		c.AgencyID.Set(fmt.Sprintf("%s:%d", v.AgencyID.Val, i))
 		ret = append(ret, &c)
 	}
 	return ret, true, nil
@@ -27,13 +28,13 @@ func (ext *testCopierExpand) Expand(ent tl.Entity, emap *tl.EntityMap) ([]tl.Ent
 
 func TestCopier_Expand(t *testing.T) {
 	reader := direct.NewReader()
-	reader.AgencyList = append(reader.AgencyList, tl.Agency{
-		AgencyID:       "test",
-		AgencyName:     "ok",
-		AgencyPhone:    "555-123-4567",
-		AgencyEmail:    "test@example.com",
-		AgencyURL:      "http://example.com",
-		AgencyTimezone: "America/Los_Angeles",
+	reader.AgencyList = append(reader.AgencyList, gtfs.Agency{
+		AgencyID:       tt.NewString("test"),
+		AgencyName:     tt.NewString("ok"),
+		AgencyPhone:    tt.NewString("555-123-4567"),
+		AgencyEmail:    tt.NewEmail("test@example.com"),
+		AgencyURL:      tt.NewUrl("http://example.com"),
+		AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
 	})
 	writer := direct.NewWriter()
 	cp, err := NewCopier(reader, writer, Options{})
@@ -51,7 +52,7 @@ func TestCopier_Expand(t *testing.T) {
 	agencyIds := map[string]int{}
 	wreader, _ := writer.NewReader()
 	for ent := range wreader.Agencies() {
-		agencyIds[ent.AgencyID] += 1
+		agencyIds[ent.AgencyID.Val] += 1
 	}
 	assert.Equal(t, 4, len(agencyIds))
 	assert.Equal(t, 1, agencyIds["test:0"])
@@ -70,8 +71,8 @@ func TestCopier_Expand(t *testing.T) {
 var wtfBatchSize = 1_000_000
 
 func BenchmarkWtfSlow(b *testing.B) {
-	testWtfCopyEntities := func(ents []tl.Entity) {
-		okEnts := make([]tl.Entity, 0, len(ents))
+	testWtfCopyEntities := func(ents []tt.Entity) {
+		okEnts := make([]tt.Entity, 0, len(ents))
 		for _, ent := range ents {
 			if err := testWtfCheck(ent); err != nil {
 				okEnts = append(okEnts, ent)
@@ -79,7 +80,7 @@ func BenchmarkWtfSlow(b *testing.B) {
 		}
 		testWtfWriteEntities(okEnts)
 	}
-	testWtfCheckBatch := func(ents []tl.Entity, ent tl.Entity) []tl.Entity {
+	testWtfCheckBatch := func(ents []tt.Entity, ent tt.Entity) []tt.Entity {
 		if len(ents) >= wtfBatchSize || ent == nil {
 			testWtfCopyEntities(ents)
 			return nil
@@ -89,19 +90,19 @@ func BenchmarkWtfSlow(b *testing.B) {
 	}
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		var ents []tl.Entity
+		var ents []tt.Entity
 		for i := 0; i < wtfBatchSize; i++ {
-			ents = testWtfCheckBatch(ents, &tl.StopTime{})
+			ents = testWtfCheckBatch(ents, &gtfs.StopTime{})
 		}
 		testWtfCheckBatch(ents, nil)
 	}
 }
 
 func BenchmarkWtfFast(b *testing.B) {
-	testWtfCopyEntities := func(ents []tl.Entity) {
+	testWtfCopyEntities := func(ents []tt.Entity) {
 		testWtfWriteEntities(ents)
 	}
-	testWtfCheckBatch := func(ents []tl.Entity, ent tl.Entity) []tl.Entity {
+	testWtfCheckBatch := func(ents []tt.Entity, ent tt.Entity) []tt.Entity {
 		if len(ents) >= wtfBatchSize || ent == nil {
 			testWtfCopyEntities(ents)
 			return nil
@@ -113,15 +114,15 @@ func BenchmarkWtfFast(b *testing.B) {
 	}
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		var ents []tl.Entity
+		var ents []tt.Entity
 		for i := 0; i < wtfBatchSize; i++ {
-			ents = testWtfCheckBatch(ents, &tl.StopTime{})
+			ents = testWtfCheckBatch(ents, &gtfs.StopTime{})
 		}
 		testWtfCheckBatch(ents, nil)
 	}
 }
 
-func testWtfCheck(ent tl.Entity) error {
+func testWtfCheck(ent tt.Entity) error {
 	a := ent.Filename()
 	b := ent.EntityID()
 	_ = a
@@ -129,7 +130,7 @@ func testWtfCheck(ent tl.Entity) error {
 	return nil
 }
 
-func testWtfWriteEntities(ents []tl.Entity) {
+func testWtfWriteEntities(ents []tt.Entity) {
 	b := len(ents)
 	_ = b
 	_ = ents
