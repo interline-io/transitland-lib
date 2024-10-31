@@ -1,7 +1,7 @@
 package gtfs
 
 import (
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type EnumValue int32

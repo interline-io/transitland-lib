@@ -7,10 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/tlpb/gtfs"
 	"github.com/interline-io/transitland-lib/internal/tlpb/pb"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -42,7 +41,7 @@ var TESTFILE = ""
 var TESTTABLE = ""
 
 func init() {
-	TESTFILE = testutil.RelPath("test/data/external/bart.zip")
+	TESTFILE = testpath.RelPath("test/data/external/bart.zip")
 	TESTTABLE = "stops.txt"
 }
 
@@ -105,7 +104,7 @@ func ReadTT(fn string) ([]any, error) {
 	}
 	var ret []any
 	err := a.ReadRows(TESTTABLE, func(row tlcsv.Row) {
-		ent := tl.Stop{}
+		ent := gtfs.Stop{}
 		if errs := tlcsv.LoadRow(&ent, row); errs != nil {
 			for _, err := range errs {
 				panic(err)
