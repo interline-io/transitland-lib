@@ -4,10 +4,9 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
@@ -26,7 +25,7 @@ type canSetLine interface {
 // SetString //
 
 // SetString convenience method; checks for SetString method.
-func SetString(ent tl.Entity, key string, value string) error {
+func SetString(ent tt.Entity, key string, value string) error {
 	if fastent, ok := ent.(canSetString); ok {
 		return fastent.SetString(key, value)
 	}
@@ -51,7 +50,7 @@ type canGetString interface {
 }
 
 // GetString convenience method; gets a string representation of a field.
-func GetString(ent tl.Entity, key string) (string, error) {
+func GetString(ent tt.Entity, key string) (string, error) {
 	if fastent, ok := ent.(canGetString); ok {
 		return fastent.GetString(key)
 	}
@@ -133,18 +132,22 @@ func loadRowReflect(ent interface{}, row Row) []error {
 
 			// Add to extra fields if there's no struct tag
 			if !ok {
-				if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 {
+				if extEnt, ok2 := ent.(tt.EntityWithExtra); ok2 {
 					extEnt.SetExtra(fieldName, strv)
 				}
 				continue
 			}
 			// Skip if empty and not required
-			if len(strv) == 0 {
+			if strv == "" {
 				if fieldInfo.Required {
-					// empty string type shandled in regular validators; avoid double errors
+					// Special handling for bare bool, float, int types
+					// where we can't tell later from the zero type
 					switch reflectx.FieldByIndexes(entValue, fieldInfo.Index).Interface().(type) {
-					case string:
-					default:
+					case bool:
+						errs = append(errs, causes.NewRequiredFieldError(fieldName))
+					case int:
+						errs = append(errs, causes.NewRequiredFieldError(fieldName))
+					case float64:
 						errs = append(errs, causes.NewRequiredFieldError(fieldName))
 					}
 				}
@@ -159,7 +162,7 @@ func loadRowReflect(ent interface{}, row Row) []error {
 		}
 	}
 	if len(errs) > 0 {
-		if extEnt, ok := ent.(tl.EntityWithErrors); ok {
+		if extEnt, ok := ent.(tt.EntityWithLoadErrors); ok {
 			for _, err := range errs {
 				extEnt.AddError(err)
 			}
@@ -172,12 +175,12 @@ func loadRowReflect(ent interface{}, row Row) []error {
 // Dumping: fast and reflect paths //
 
 // dumpHeader returns the header for an Entity.
-func dumpHeader(ent tl.Entity) ([]string, error) {
+func dumpHeader(ent tt.Entity) ([]string, error) {
 	return MapperCache.GetHeader(ent)
 }
 
 // dumpRow returns a []string for the Entity.
-func dumpRow(ent tl.Entity, header []string) ([]string, error) {
+func dumpRow(ent tt.Entity, header []string) ([]string, error) {
 	row := make([]string, 0, len(header))
 	// Fast path
 	if a, ok := ent.(canGetString); ok {

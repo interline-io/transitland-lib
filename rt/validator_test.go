@@ -8,15 +8,15 @@ import (
 
 	mapset "github.com/deckarep/golang-set/v2"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 // NewValidatorFromReader returns a Validator with data from a Reader.
-func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
+func NewValidatorFromReader(reader adapters.Reader) (*Validator, error) {
 	fi := NewValidator()
 	cp, err := copier.NewCopier(reader, &empty.Writer{}, copier.Options{})
 	if err != nil {
@@ -33,7 +33,7 @@ func NewValidatorFromReader(reader tl.Reader) (*Validator, error) {
 }
 
 func newTestValidator() (*Validator, error) {
-	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/bart-rt.zip"))
+	r, err := tlcsv.NewReader(testpath.RelPath("testdata/rt/bart-rt.zip"))
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func TestValidateHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
+	msg, err := ReadFile(testpath.RelPath("testdata/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -65,7 +65,7 @@ func TestValidateTripUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/bart-trip-updates.pb"))
+	msg, err := ReadFile(testpath.RelPath("testdata/rt/bart-trip-updates.pb"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -89,10 +89,10 @@ func TestValidateAlert(t *testing.T) {
 
 func TestValidatorErrors(t *testing.T) {
 	rp := func(p string) string {
-		return testutil.RelPath(filepath.Join("test/data/rt/", p))
+		return testpath.RelPath(filepath.Join("testdata/rt/", p))
 	}
 	rpe := func(p string) string {
-		return testutil.RelPath(filepath.Join("test/data/rt/errors", p))
+		return testpath.RelPath(filepath.Join("testdata/rt/errors", p))
 	}
 	sor := func(a, b string) string {
 		if a != "" {

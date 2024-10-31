@@ -3,7 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // DuplicateFareTransferRule reports when multiple FareTransferRules have the same unique values.
@@ -34,8 +35,8 @@ type DuplicateFareTransferRuleCheck struct {
 	vals map[string]int
 }
 
-func (e *DuplicateFareTransferRuleCheck) Validate(ent tl.Entity) []error {
-	v, ok := ent.(*tl.FareTransferRule)
+func (e *DuplicateFareTransferRuleCheck) Validate(ent tt.Entity) []error {
+	v, ok := ent.(*gtfs.FareTransferRule)
 	if !ok {
 		return nil
 	}

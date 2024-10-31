@@ -3,7 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // DuplicateFareRuleError reports when multiple FareRules have the same (route_id,origin_id,_destination_id,contains_id)
@@ -30,21 +31,21 @@ type DuplicateFareRuleCheck struct {
 	rules map[string]int
 }
 
-func (e *DuplicateFareRuleCheck) Validate(ent tl.Entity) []error {
-	v, ok := ent.(*tl.FareRule)
+func (e *DuplicateFareRuleCheck) Validate(ent tt.Entity) []error {
+	v, ok := ent.(*gtfs.FareRule)
 	if !ok {
 		return nil
 	}
 	if e.rules == nil {
 		e.rules = map[string]int{}
 	}
-	key := v.RouteID.Val + ":" + v.OriginID + ":" + v.DestinationID + ":" + v.ContainsID
+	key := v.RouteID.Val + ":" + v.OriginID.Val + ":" + v.DestinationID.Val + ":" + v.ContainsID.Val
 	if _, ok := e.rules[key]; ok {
 		return []error{&DuplicateFareRuleError{
 			RouteID:       v.RouteID.Val,
-			OriginID:      v.OriginID,
-			DestinationID: v.DestinationID,
-			ContainsID:    v.ContainsID,
+			OriginID:      v.OriginID.Val,
+			DestinationID: v.DestinationID.Val,
+			ContainsID:    v.ContainsID.Val,
 		}}
 	}
 	e.rules[key]++

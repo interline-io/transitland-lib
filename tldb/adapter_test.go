@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 var testAdapters = map[string]func() Adapter{}
@@ -40,24 +41,24 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	}
 	t.Run("Update", func(t *testing.T) {
 		v := "Test Update"
-		ent := tl.Trip{}
+		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		ent.TripHeadsign = v
+		ent.TripHeadsign.Set(v)
 		err = adapter.Update(&ent, "trip_headsign")
 		if err != nil {
 			t.Error(err)
 		}
-		ent2 := tl.Trip{}
+		ent2 := gtfs.Trip{}
 		ent2.ID = m.TripID
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
 		}
-		if ent2.TripHeadsign != v {
-			t.Errorf("got %s expected %s", ent2.TripHeadsign, v)
+		if ent2.TripHeadsign.Val != v {
+			t.Errorf("got %s expected %s", ent2.TripHeadsign.Val, v)
 		}
 	})
 	t.Run("Get", func(t *testing.T) {
-		ent := tl.Trip{}
+		ent := gtfs.Trip{}
 		ent.ID = m.TripID
 		if err := adapter.Find(&ent); err != nil {
 			t.Error(err)
@@ -67,7 +68,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		}
 	})
 	t.Run("Select", func(t *testing.T) {
-		ents := []tl.Stop{}
+		ents := []gtfs.Stop{}
 		if err := adapter.Select(&ents, "SELECT * FROM gtfs_stops WHERE id IN (?,?) AND feed_version_id = ? ORDER BY id ASC", m.StopID1, m.StopID2, m.FeedVersionID); err != nil {
 			t.Error(err)
 		}
@@ -102,26 +103,26 @@ func testAdapter(t *testing.T, adapter Adapter) {
 
 	})
 	t.Run("MultiInsert", func(t *testing.T) {
-		st1 := tl.StopTime{}
+		st1 := gtfs.StopTime{}
 		st1.FeedVersionID = m.FeedVersionID
-		st1.StopID = strconv.Itoa(m.StopID1)
-		st1.TripID = strconv.Itoa(m.TripID)
-		st1.StopSequence = 1
-		st1.ArrivalTime = tt.NewWideTimeFromSeconds(0)
-		st1.DepartureTime = tt.NewWideTimeFromSeconds(1)
-		st2 := tl.StopTime{}
+		st1.StopID.Set(strconv.Itoa(m.StopID1))
+		st1.TripID.Set(strconv.Itoa(m.TripID))
+		st1.StopSequence.Set(1)
+		st1.ArrivalTime = tt.NewSeconds(0)
+		st1.DepartureTime = tt.NewSeconds(1)
+		st2 := gtfs.StopTime{}
 		st2.FeedVersionID = m.FeedVersionID
-		st2.StopID = strconv.Itoa(m.StopID2)
-		st2.TripID = strconv.Itoa(m.TripID)
-		st2.StopSequence = 2
-		st2.ArrivalTime = tt.NewWideTimeFromSeconds(2)
-		st2.DepartureTime = tt.NewWideTimeFromSeconds(3)
+		st2.StopID.Set(strconv.Itoa(m.StopID2))
+		st2.TripID.Set(strconv.Itoa(m.TripID))
+		st2.StopSequence.Set(2)
+		st2.ArrivalTime = tt.NewSeconds(2)
+		st2.DepartureTime = tt.NewSeconds(3)
 		sts := make([]interface{}, 0)
 		sts = append(sts, &st1, &st2)
 		if _, err := adapter.MultiInsert(sts); err != nil {
 			t.Error(err)
 		}
-		sts2 := []tl.StopTime{}
+		sts2 := []gtfs.StopTime{}
 		if err := adapter.Select(&sts2, "SELECT * FROM gtfs_stop_times WHERE feed_version_id = ? ORDER BY stop_sequence ASC", m.FeedVersionID); err != nil {
 			t.Error(err)
 		}
@@ -138,16 +139,16 @@ func testAdapter(t *testing.T, adapter Adapter) {
 				t.Errorf("got '%s' expected '%s'", got1.TripID, v)
 			}
 			if got1.StopSequence != st1.StopSequence {
-				t.Errorf("got '%d' expected '%d'", got1.StopSequence, st1.StopSequence)
+				t.Errorf("got '%d' expected '%d'", got1.StopSequence.Val, st1.StopSequence.Val)
 			}
 		}
 	})
 	t.Run("Tx Commit", func(t *testing.T) {
 		// Check commit
 		v := "Test Tx"
-		ent := tl.Trip{}
+		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		ent.TripHeadsign = v
+		ent.TripHeadsign.Set(v)
 		adapter.Tx(func(atx Adapter) error {
 			err := atx.Update(&ent, "trip_headsign")
 			if err != nil {
@@ -155,21 +156,21 @@ func testAdapter(t *testing.T, adapter Adapter) {
 			}
 			return err
 		})
-		ent2 := tl.Trip{}
+		ent2 := gtfs.Trip{}
 		ent2.ID = m.TripID
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
 		}
-		if ent2.TripHeadsign != v {
+		if ent2.TripHeadsign.Val != v {
 			t.Errorf("got %s expected %s", ent2.TripHeadsign, v)
 		}
 	})
 	t.Run("Tx Rollback", func(t *testing.T) {
 		// Check rollback
 		v := "Test Rollback"
-		ent := tl.Trip{}
+		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		ent.TripHeadsign = v
+		ent.TripHeadsign.Set(v)
 		adapter.Tx(func(atx Adapter) error {
 			err := atx.Update(&ent, "trip_headsign")
 			if err != nil {
@@ -177,12 +178,12 @@ func testAdapter(t *testing.T, adapter Adapter) {
 			}
 			return errors.New("rollback")
 		})
-		ent2 := tl.Trip{}
+		ent2 := gtfs.Trip{}
 		ent2.ID = m.TripID
 		if err := adapter.Find(&ent2); err != nil {
 			t.Error(err)
 		}
-		if ent2.TripHeadsign == v {
+		if ent2.TripHeadsign.Val == v {
 			t.Errorf("got %s expected != %s", ent2.TripHeadsign, v)
 		}
 	})
@@ -192,14 +193,14 @@ func createTestFeedVersion(adapter Adapter) (int, error) {
 	// Create Feed, FeedVersion
 	m := 0
 	t := fmt.Sprintf("%d", time.Now().UnixNano())
-	feed := tl.Feed{}
+	feed := dmfr.Feed{}
 	feed.FeedID = t
 	feedid, err := adapter.Insert(&feed)
 	if err != nil {
 		return m, err
 	}
 	feed.ID = feedid
-	fv := tl.FeedVersion{}
+	fv := dmfr.FeedVersion{}
 	fv.SHA1 = t
 	fv.FeedID = feed.ID
 	fv.EarliestCalendarDate = tt.NewDate(time.Now())
@@ -229,51 +230,69 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 		return m, err
 	}
 	//
-	ent0 := tl.Agency{}
-	ent0.AgencyID = "ok"
+	ent0 := gtfs.Agency{}
+	ent0.AgencyID.Set("ok")
+	ent0.AgencyName.Set("ok")
+	ent0.AgencyURL.Set("https://example.com")
+	ent0.AgencyTimezone.Set("America/Los_Angeles")
 	ent0.FeedVersionID = m.FeedVersionID
 	m.AgencyID, err = adapter.Insert(&ent0)
 	if err != nil {
 		return m, err
 	}
-	ent4 := tl.Route{}
-	ent4.RouteID = "ok"
-	ent4.AgencyID = strconv.Itoa(m.AgencyID)
+	ent4 := gtfs.Route{}
+	ent4.RouteID.Set("ok")
+	ent4.RouteType.Set(0)
+	ent4.AgencyID.Set(strconv.Itoa(m.AgencyID))
 	ent4.FeedVersionID = m.FeedVersionID
 	m.RouteID, err = adapter.Insert(&ent4)
 	if err != nil {
 		return m, err
 	}
-	cal := tl.Calendar{}
-	cal.StartDate = time.Now()
-	cal.EndDate = time.Now()
-	cal.ServiceID = "ok"
+	cal := gtfs.Calendar{}
+	cal.StartDate.Set(time.Now())
+	cal.EndDate.Set(time.Now())
+	cal.ServiceID.Set("ok")
+	cal.Monday.Set(0)
+	cal.Tuesday.Set(0)
+	cal.Wednesday.Set(0)
+	cal.Thursday.Set(0)
+	cal.Friday.Set(0)
+	cal.Saturday.Set(0)
+	cal.Sunday.Set(0)
+	cal.Generated.Set(false)
 	cal.FeedVersionID = m.FeedVersionID
 	m.ServiceID, err = adapter.Insert(&cal)
 	if err != nil {
 		return m, err
 	}
-	ent1 := tl.Trip{}
-	ent1.TripID = "ok"
-	ent1.RouteID = strconv.Itoa(m.RouteID)
-	ent1.ServiceID = strconv.Itoa(m.ServiceID)
+	ent1 := gtfs.Trip{}
+	ent1.TripID.Set("ok")
+	ent1.RouteID.Set(strconv.Itoa(m.RouteID))
+	ent1.ServiceID.Set(strconv.Itoa(m.ServiceID))
+	ent1.DirectionID.Set(0)
+	ent1.StopPatternID.Set(0)
+	ent1.JourneyPatternID.Set("")
+	ent1.JourneyPatternOffset.Set(0)
 	ent1.FeedVersionID = m.FeedVersionID
 	m.TripID, err = adapter.Insert(&ent1)
 	if err != nil {
 		return m, err
 	}
-	ent2 := tl.Stop{}
-	ent2.StopID = "bar"
+	ent2 := gtfs.Stop{}
+	ent2.StopID.Set("bar")
 	ent2.SetCoordinates([2]float64{-123.0, 42.0})
 	ent2.FeedVersionID = m.FeedVersionID
+	ent2.LocationType.Set(0)
 	m.StopID1, err = adapter.Insert(&ent2)
 	if err != nil {
 		return m, err
 	}
-	ent3 := tl.Stop{}
-	ent3.StopID = "foo"
+	ent3 := gtfs.Stop{}
+	ent3.StopID.Set("foo")
 	ent3.SetCoordinates([2]float64{-122.0, 43.0})
 	ent3.FeedVersionID = m.FeedVersionID
+	ent3.LocationType.Set(0)
 	m.StopID2, err = adapter.Insert(&ent3)
 	if err != nil {
 		return m, err

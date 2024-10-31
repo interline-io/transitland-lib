@@ -4,19 +4,10 @@ import (
 	_ "embed"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/copier"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/cmds"
 	"github.com/interline-io/transitland-lib/diff"
-	"github.com/interline-io/transitland-lib/dmfr/fetch"
-	"github.com/interline-io/transitland-lib/dmfr/format"
-	"github.com/interline-io/transitland-lib/dmfr/importer"
-	"github.com/interline-io/transitland-lib/dmfr/lint"
-	"github.com/interline-io/transitland-lib/dmfr/sync"
-	"github.com/interline-io/transitland-lib/dmfr/unimporter"
-	"github.com/interline-io/transitland-lib/extract"
-	"github.com/interline-io/transitland-lib/merge"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcli"
-	"github.com/interline-io/transitland-lib/validator"
 
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	_ "github.com/interline-io/transitland-lib/filters"
@@ -61,27 +52,28 @@ func init() {
 		Hidden: true,
 	}
 	dmfrCommand.AddCommand(
-		tlcli.CobraHelper(&lint.Command{}, pc, "format"),
-		tlcli.CobraHelper(&format.Command{}, pc, "lint"),
+		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "lint"),
+		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "format"),
 	)
 
 	genDocCommand := tlcli.CobraHelper(&tlcli.GenDocCommand{Command: rootCmd}, pc, "gendoc")
 	genDocCommand.Hidden = true
 
 	rootCmd.AddCommand(
-		tlcli.CobraHelper(&fetch.Command{}, pc, "fetch"),
-		tlcli.CobraHelper(&sync.Command{}, pc, "sync"),
-		tlcli.CobraHelper(&copier.Command{}, pc, "copy"),
-		tlcli.CobraHelper(&validator.Command{}, pc, "validate"),
-		tlcli.CobraHelper(&extract.Command{}, pc, "extract"),
+		tlcli.CobraHelper(&cmds.CopyCommand{}, pc, "copy"),
+		tlcli.CobraHelper(&cmds.ExtractCommand{}, pc, "extract"),
+		tlcli.CobraHelper(&cmds.FetchCommand{}, pc, "fetch"),
+		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "dmfr-format"),
+		tlcli.CobraHelper(&cmds.ImportCommand{}, pc, "import"),
+		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "dmfr-lint"),
+		tlcli.CobraHelper(&cmds.MergeCommand{}, pc, "merge"),
+		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
+		tlcli.CobraHelper(&cmds.SyncCommand{}, pc, "sync"),
+		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
+		tlcli.CobraHelper(&cmds.DeleteCommand{}, pc, "delete"),
+		tlcli.CobraHelper(&cmds.ValidatorCommand{}, pc, "validate"),
 		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
-		tlcli.CobraHelper(&fetch.RebuildStatsCommand{}, pc, "rebuild-stats"),
-		tlcli.CobraHelper(&importer.Command{}, pc, "import"),
-		tlcli.CobraHelper(&unimporter.Command{}, pc, "unimport"),
-		tlcli.CobraHelper(&merge.Command{}, pc, "merge"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
-		tlcli.CobraHelper(&lint.Command{}, pc, "dmfr-format"),
-		tlcli.CobraHelper(&format.Command{}, pc, "dmfr-lint"),
 		genDocCommand,
 		dmfrCommand,
 	)

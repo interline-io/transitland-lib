@@ -7,12 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadAndParseRegistry_from_file(t *testing.T) {
-	parsedContents, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/example.json"))
+	parsedContents, err := LoadAndParseRegistry(testpath.RelPath("testdata/dmfr/example.json"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -28,7 +28,7 @@ func TestLoadAndParseRegistry_from_file(t *testing.T) {
 }
 
 func TestParseOperators(t *testing.T) {
-	parsedContents, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/example.json"))
+	parsedContents, err := LoadAndParseRegistry(testpath.RelPath("testdata/dmfr/example.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestParseOperators(t *testing.T) {
 
 func TestLoadAndParseRegistry_from_URL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testutil.RelPath("test/data/dmfr/example.json"))
+		buf, err := ioutil.ReadFile(testpath.RelPath("testdata/dmfr/example.json"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -73,7 +73,7 @@ func TestLoadAndParseRegistry_from_URL(t *testing.T) {
 }
 
 func TestLoadAndParseRegistry_Secrets(t *testing.T) {
-	parsedContents, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/secrets.json"))
+	parsedContents, err := LoadAndParseRegistry(testpath.RelPath("testdata/dmfr/secrets.json"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -83,7 +83,7 @@ func TestLoadAndParseRegistry_Secrets(t *testing.T) {
 }
 
 func TestImplicitOperatorInFeed(t *testing.T) {
-	reg, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/embedded.json"))
+	reg, err := LoadAndParseRegistry(testpath.RelPath("testdata/dmfr/embedded.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

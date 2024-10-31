@@ -6,8 +6,8 @@ import (
 	"errors"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -15,13 +15,13 @@ import (
 
 func init() {
 	// Register driver
-	adapters["postgres"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
-	adapters["postgresql"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
+	adapterFactories["postgres"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
+	adapterFactories["postgresql"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
 	// Register readers and writers
-	r := func(url string) (tl.Reader, error) { return NewReader(url) }
+	r := func(url string) (adapters.Reader, error) { return NewReader(url) }
 	ext.RegisterReader("postgres", r)
 	ext.RegisterReader("postgresql", r)
-	w := func(url string) (tl.Writer, error) { return NewWriter(url) }
+	w := func(url string) (adapters.Writer, error) { return NewWriter(url) }
 	ext.RegisterWriter("postgres", w)
 	ext.RegisterWriter("postgresql", w)
 }

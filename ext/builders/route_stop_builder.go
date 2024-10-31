@@ -2,15 +2,16 @@ package builders
 
 import (
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type RouteStop struct {
 	RouteID  string
 	AgencyID string
 	StopID   string
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (rs *RouteStop) TableName() string {
@@ -37,26 +38,26 @@ func NewRouteStopBuilder() *RouteStopBuilder {
 	}
 }
 
-func (pp *RouteStopBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Route:
-		pp.routeAgencies[eid] = v.AgencyID
-	case *tl.Trip:
-		pp.tripRoutes[eid] = v.RouteID
-	case *tl.StopTime:
-		rid := pp.tripRoutes[v.TripID]
+	case *gtfs.Route:
+		pp.routeAgencies[eid] = v.AgencyID.Val
+	case *gtfs.Trip:
+		pp.tripRoutes[eid] = v.RouteID.Val
+	case *gtfs.StopTime:
+		rid := pp.tripRoutes[v.TripID.Val]
 		rs, ok := pp.routeStops[rid]
 		if !ok {
 			rs = map[string]bool{}
 			pp.routeStops[rid] = rs
 		}
-		rs[v.StopID] = true
+		rs[v.StopID.Val] = true
 	}
 	return nil
 }
 
 func (pp *RouteStopBuilder) Copy(copier *copier.Copier) error {
-	bt := []tl.Entity{}
+	bt := []tt.Entity{}
 	for rid, v := range pp.routeStops {
 		aid, ok := pp.routeAgencies[rid]
 		if !ok {

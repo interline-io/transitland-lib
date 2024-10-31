@@ -3,7 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // DuplicateFareProduct reports when multiple FareProducts have the same unique values.
@@ -28,8 +29,8 @@ type DuplicateFareProductCheck struct {
 	vals map[string]int
 }
 
-func (e *DuplicateFareProductCheck) Validate(ent tl.Entity) []error {
-	v, ok := ent.(*tl.FareProduct)
+func (e *DuplicateFareProductCheck) Validate(ent tt.Entity) []error {
+	v, ok := ent.(*gtfs.FareProduct)
 	if !ok {
 		return nil
 	}

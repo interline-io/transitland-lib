@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 //////////// helpers /////////////
@@ -42,16 +43,13 @@ func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []
 	testutil.CheckErrors(expecterrs, errs, cr.t)
 }
 
-func (cr *testErrorHandler) HandleEntityErrors(ent tl.Entity, errs []error, warns []error) {
+func (cr *testErrorHandler) HandleEntityErrors(ent tt.Entity, errs []error, warns []error) {
 }
 
-func (cr *testErrorHandler) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	var errs []error
-	if extEnt, ok := ent.(tl.EntityWithErrors); ok {
-		errs = append(errs, extEnt.Errors()...)
-		errs = append(errs, extEnt.Warnings()...)
-
-	}
+	errs = append(errs, tt.CheckErrors(ent)...)
+	errs = append(errs, tt.CheckWarnings(ent)...)
 	expecterrs := testutil.GetExpectErrors(ent)
 	cr.expectErrorCount += len(expecterrs)
 	testutil.CheckErrors(expecterrs, errs, cr.t)
@@ -61,8 +59,8 @@ func (cr *testErrorHandler) AfterWrite(eid string, ent tl.Entity, emap *tl.Entit
 //////////////
 
 func TestValidator_Validate(t *testing.T) {
-	basepath := testutil.RelPath("test/data/validator")
-	searchpath := testutil.RelPath("test/data/validator/errors")
+	basepath := testpath.RelPath("testdata/validator")
+	searchpath := testpath.RelPath("testdata/validator/errors")
 	files, err := ioutil.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)
@@ -105,8 +103,8 @@ func TestValidator_Validate(t *testing.T) {
 
 func TestValidator_BestPractices(t *testing.T) {
 	// TODO: Combine with above... test best practice rules.
-	basepath := testutil.RelPath("test/data/validator")
-	searchpath := testutil.RelPath("test/data/validator/best-practices")
+	basepath := testpath.RelPath("testdata/validator")
+	searchpath := testpath.RelPath("testdata/validator/best-practices")
 	files, err := ioutil.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)
@@ -150,12 +148,12 @@ func TestValidator_BestPractices(t *testing.T) {
 }
 
 func TestSaveValidationReport(t *testing.T) {
-	reader, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
+	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := os.ReadFile(testutil.RelPath(filepath.Join("test/data/rt", r.URL.Path)))
+		buf, err := os.ReadFile(testpath.RelPath(filepath.Join("testdata/rt", r.URL.Path)))
 		if err != nil {
 			t.Error(err)
 		}
