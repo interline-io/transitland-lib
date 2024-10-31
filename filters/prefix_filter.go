@@ -78,13 +78,9 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
 			v.RouteID.Set(fmt.Sprintf("%s%s", prefix, v.RouteID.Val))
 		}
-	case *service.Service:
-		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.ServiceID = fmt.Sprintf("%s%s", prefix, v.ServiceID)
-		}
 	case *gtfs.Calendar:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
-			v.ServiceID = fmt.Sprintf("%s%s", prefix, v.ServiceID)
+			v.ServiceID.Set(fmt.Sprintf("%s%s", prefix, v.ServiceID.Val))
 		}
 	case *gtfs.Shape:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {

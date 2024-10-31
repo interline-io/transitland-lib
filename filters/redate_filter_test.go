@@ -10,14 +10,15 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
 var tft = "2006-01-02"
 
-func ptime(v string) time.Time {
+func ptime(v string) tt.Date {
 	t, _ := time.Parse(tft, v)
-	return t
+	return tt.NewDate(t)
 }
 
 func TestRedateFilter(t *testing.T) {
@@ -30,15 +31,15 @@ func TestRedateFilter(t *testing.T) {
 		ExpectError bool
 		ExpectSvc   service.Service
 	}{
-		{"7/7 days", "2018-06-03", "2022-01-02", 7, 7, false, service.Service{Calendar: gtfs.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-08"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/28 days", "2018-06-03", "2022-01-02", 7, 28, false, service.Service{Calendar: gtfs.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/28 days sunday", "2018-06-03", "2022-01-02", 7, 28, false, service.Service{Calendar: gtfs.Calendar{ServiceID: "SUN", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Sunday: 1}}},
-		{"7/28 days monday holiday", "2018-05-27", "2022-01-02", 7, 28, false, service.Service{Calendar: gtfs.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Monday: 0, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/365 days", "2018-06-03", "2022-01-02", 7, 365, false, service.Service{Calendar: gtfs.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/365 days monday holiday", "2018-05-27", "2022-01-02", 7, 365, false, service.Service{Calendar: gtfs.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: 0, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
-		{"7/1 days monday start", "2018-06-04", "2022-01-03", 7, 1, false, service.Service{Calendar: gtfs.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: 1}}},
-		{"1/1 days monday start", "2018-06-04", "2022-01-03", 1, 1, false, service.Service{Calendar: gtfs.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: 1}}},
-		{"1/7 days monday start", "2018-06-04", "2022-01-03", 1, 7, false, service.Service{Calendar: gtfs.Calendar{ServiceID: "WKDY", StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-09"), Sunday: 1, Saturday: 1, Monday: 1, Tuesday: 1, Wednesday: 1, Thursday: 1, Friday: 1}}},
+		{"7/7 days", "2018-06-03", "2022-01-02", 7, 7, false, service.Service{Calendar: gtfs.Calendar{ServiceID: tt.NewString("WKDY"), StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-08"), Monday: tt.NewInt(1), Tuesday: tt.NewInt(1), Wednesday: tt.NewInt(1), Thursday: tt.NewInt(1), Friday: tt.NewInt(1)}}},
+		{"7/28 days", "2018-06-03", "2022-01-02", 7, 28, false, service.Service{Calendar: gtfs.Calendar{ServiceID: tt.NewString("WKDY"), StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Monday: tt.NewInt(1), Tuesday: tt.NewInt(1), Wednesday: tt.NewInt(1), Thursday: tt.NewInt(1), Friday: tt.NewInt(1)}}},
+		{"7/28 days sunday", "2018-06-03", "2022-01-02", 7, 28, false, service.Service{Calendar: gtfs.Calendar{ServiceID: tt.NewString("SUN"), StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Sunday: tt.NewInt(1)}}},
+		{"7/28 days monday holiday", "2018-05-27", "2022-01-02", 7, 28, false, service.Service{Calendar: gtfs.Calendar{ServiceID: tt.NewString("WKDY"), StartDate: ptime("2022-01-02"), EndDate: ptime("2022-01-29"), Monday: tt.NewInt(0), Tuesday: tt.NewInt(1), Wednesday: tt.NewInt(1), Thursday: tt.NewInt(1), Friday: tt.NewInt(1)}}},
+		{"7/365 days", "2018-06-03", "2022-01-02", 7, 365, false, service.Service{Calendar: gtfs.Calendar{ServiceID: tt.NewString("WKDY"), StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: tt.NewInt(1), Tuesday: tt.NewInt(1), Wednesday: tt.NewInt(1), Thursday: tt.NewInt(1), Friday: tt.NewInt(1)}}},
+		{"7/365 days monday holiday", "2018-05-27", "2022-01-02", 7, 365, false, service.Service{Calendar: gtfs.Calendar{ServiceID: tt.NewString("WKDY"), StartDate: ptime("2022-01-02"), EndDate: ptime("2023-01-01"), Monday: tt.NewInt(0), Tuesday: tt.NewInt(1), Wednesday: tt.NewInt(1), Thursday: tt.NewInt(1), Friday: tt.NewInt(1)}}},
+		{"7/1 days monday start", "2018-06-04", "2022-01-03", 7, 1, false, service.Service{Calendar: gtfs.Calendar{ServiceID: tt.NewString("WKDY"), StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: tt.NewInt(1)}}},
+		{"1/1 days monday start", "2018-06-04", "2022-01-03", 1, 1, false, service.Service{Calendar: gtfs.Calendar{ServiceID: tt.NewString("WKDY"), StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-03"), Monday: tt.NewInt(1)}}},
+		{"1/7 days monday start", "2018-06-04", "2022-01-03", 1, 7, false, service.Service{Calendar: gtfs.Calendar{ServiceID: tt.NewString("WKDY"), StartDate: ptime("2022-01-03"), EndDate: ptime("2022-01-09"), Sunday: tt.NewInt(1), Saturday: tt.NewInt(1), Monday: tt.NewInt(1), Tuesday: tt.NewInt(1), Wednesday: tt.NewInt(1), Thursday: tt.NewInt(1), Friday: tt.NewInt(1)}}},
 		{"no start date", "", "2022-01-02", 7, 7, true, service.Service{}},
 		{"no end date", "2018-06-04", "", 7, 7, true, service.Service{}},
 		{"no source days", "2018-06-04", "2022-01-03", 0, 7, true, service.Service{}},
@@ -51,7 +52,7 @@ func TestRedateFilter(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.Name, func(t *testing.T) {
-			rf, err := NewRedateFilter(ptime(tc.StartDate), ptime(tc.EndDate), tc.StartDays, tc.EndDays, false)
+			rf, err := NewRedateFilter(ptime(tc.StartDate).Val, ptime(tc.EndDate).Val, tc.StartDays, tc.EndDays, false)
 			if err != nil && tc.ExpectError {
 				// ok
 				return
@@ -84,8 +85,8 @@ func TestRedateFilter(t *testing.T) {
 				found = true
 				assert.Equal(t, v.StartDate.Format(tft), svc.StartDate.Format(tft))
 				assert.Equal(t, v.EndDate.Format(tft), svc.EndDate.Format(tft))
-				startDate := v.StartDate
-				for startDate.Before(v.EndDate) {
+				startDate := v.StartDate.Val
+				for startDate.Before(v.EndDate.Val) {
 					a := v.IsActive(startDate)
 					b := svc.IsActive(startDate)
 					assert.Equalf(t, a, b, "expected active %t got %t on date %s", a, b, startDate.Format(tft))

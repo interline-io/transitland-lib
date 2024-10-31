@@ -25,9 +25,9 @@ func (ent *CalendarAttribute) TableName() string {
 
 // UpdateKeys updates Entity references.
 func (ent *CalendarAttribute) UpdateKeys(emap *tt.EntityMap) error {
-	if fkid, ok := emap.GetEntity(&gtfs.Calendar{ServiceID: ent.ServiceID}); ok {
+	if fkid, ok := emap.GetEntity(&gtfs.Calendar{ServiceID: tt.NewString(ent.ServiceID)}); ok {
 		ent.ServiceID = fkid
-	} else if fkid, ok := emap.GetEntity(&gtfs.CalendarDate{ServiceID: ent.ServiceID}); ok {
+	} else if fkid, ok := emap.GetEntity(&gtfs.CalendarDate{ServiceID: tt.NewKey(ent.ServiceID)}); ok {
 		ent.ServiceID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("service_id", ent.ServiceID)

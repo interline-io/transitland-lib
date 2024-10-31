@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -25,12 +26,13 @@ type NoScheduledServiceCheck struct{}
 
 // Validate .
 func (e *NoScheduledServiceCheck) Validate(ent tt.Entity) []error {
-	v, ok := ent.(*service.Service)
+	v, ok := ent.(*gtfs.Calendar)
 	if !ok {
 		return nil
 	}
-	if v.HasAtLeastOneDay() {
+	svc := service.NewService(*v, v.CalendarDates...)
+	if svc.HasAtLeastOneDay() {
 		return nil
 	}
-	return []error{&NoScheduledServiceError{ServiceID: v.ServiceID}}
+	return []error{&NoScheduledServiceError{ServiceID: v.ServiceID.Val}}
 }

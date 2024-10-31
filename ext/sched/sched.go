@@ -30,8 +30,9 @@ func NewScheduleChecker() *ScheduleChecker {
 // Validate gets a stream of entities from Copier to build up the cache.
 func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
-	case *service.Service:
-		fi.services[v.ServiceID] = v
+	case *gtfs.Calendar:
+		svc := service.NewService(*v, v.CalendarDates...)
+		fi.services[v.ServiceID.Val] = svc
 	case *gtfs.Trip:
 		ti := tripInfo{
 			ServiceID: v.ServiceID.Val,
@@ -76,10 +77,10 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 				continue
 			}
 			// Cache if we have service on this day
-			sched, ok := nowSvc[svc.ServiceID]
+			sched, ok := nowSvc[svc.ServiceID.Val]
 			if !ok {
 				sched = svc.IsActive(nowOffset)
-				nowSvc[svc.ServiceID] = sched
+				nowSvc[svc.ServiceID.Val] = sched
 			}
 			// Not scheduled
 			if !sched {

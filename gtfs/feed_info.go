@@ -35,8 +35,8 @@ func (ent *FeedInfo) TableName() string {
 func (ent *FeedInfo) ConditionalErrors() (errs []error) {
 	if ent.FeedStartDate.IsZero() || ent.FeedEndDate.IsZero() {
 		// skip
-	} else if ent.FeedEndDate.Val.Before(ent.FeedStartDate.Val) {
-		errs = append(errs, causes.NewInvalidFieldError("feed_end_date", ent.FeedStartDate.Val.String(), fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Val, ent.FeedStartDate.Val)))
+	} else if ent.FeedEndDate.Before(ent.FeedStartDate) {
+		errs = append(errs, causes.NewInvalidFieldError("feed_end_date", ent.FeedStartDate.String(), fmt.Errorf("feed_end_date '%s' must come after feed_start_date '%s'", ent.FeedEndDate.Val, ent.FeedStartDate.Val)))
 	}
 	return errs
 }

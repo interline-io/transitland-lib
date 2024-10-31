@@ -82,10 +82,11 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 			return fmt.Errorf("trip service_id not in redate window")
 		}
 	case *gtfs.CalendarDate:
-		if tf.excluded[v.ServiceID] {
+		if tf.excluded[v.ServiceID.Val] {
 			return fmt.Errorf("calendar date service_id not in redate window")
 		}
-	case *service.Service:
+	case *gtfs.Calendar:
+		svc := service.NewService(*v, v.CalendarDates...)
 		// Copy active service days in window into new calendar
 		active := false
 		sourceDate := tf.SourceDate
@@ -102,7 +103,7 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 						Str("target_date", targetDate.Format("2006-01-02")).
 						Str("target_dow", targetDate.Weekday().String()).
 						Int("align_days", alignDays).
-						Str("service_id", v.ServiceID).
+						Str("service_id", v.ServiceID.Val).
 						Msg("weekday mismatch; shifting source_date forward 1 day")
 					sourceDate = sourceDate.AddDate(0, 0, 1)
 					alignDays += 1
@@ -112,11 +113,13 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 			}
 		}
 
-		newSvc := service.NewService(gtfs.Calendar{ServiceID: v.ServiceID, StartDate: targetDate})
-		newSvc.ID = v.ID
+		newSvc := service.NewService(gtfs.Calendar{ServiceID: v.ServiceID, StartDate: tt.NewDate(targetDate)})
 		for i := 1; i <= tf.TargetDays; i++ {
-			if v.IsActive(sourceDate) {
-				newSvc.AddCalendarDate(gtfs.CalendarDate{Date: targetDate, ExceptionType: 1})
+			if svc.IsActive(sourceDate) {
+				newSvc.AddCalendarDate(gtfs.CalendarDate{
+					Date:          tt.NewDate(targetDate),
+					ExceptionType: tt.NewInt(1),
+				})
 				active = true
 			}
 			log.Trace().
@@ -126,15 +129,15 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 				Str("target_dow", targetDate.Weekday().String()).
 				Int("i", i).
 				Int("align_days", alignDays).
-				Str("service_id", v.ServiceID).
+				Str("service_id", v.ServiceID.Val).
 				Bool("active", active).
 				Msg("redate")
 			sourceDate = tf.SourceDate.AddDate(0, 0, (alignDays+i)%tf.SourceDays)
 			targetDate = tf.TargetDate.AddDate(0, 0, i)
 		}
-		newSvc.EndDate = tf.TargetDate.AddDate(0, 0, tf.TargetDays-1)
+		newSvc.EndDate.Set(tf.TargetDate.AddDate(0, 0, tf.TargetDays-1))
 		if !active && !tf.AllowInactive {
-			tf.excluded[v.ServiceID] = true
+			tf.excluded[v.ServiceID.Val] = true
 			return fmt.Errorf("service not in redate window")
 		}
 		// Simplify back to regular calendar
@@ -142,13 +145,19 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		if err != nil {
 			return err
 		}
-		newSvc.Generated = false
+		newSvc.Generated.Set(false)
 		// Reset and update in place
-		v.Reset()
-		v.Calendar = newSvc.Calendar
-		for _, cd := range newSvc.CalendarDates() {
-			v.AddCalendarDate(cd)
-		}
+		v.StartDate.Set(newSvc.StartDate.Val)
+		v.EndDate.Set(newSvc.EndDate.Val)
+		v.Generated.Set(newSvc.Generated.Val)
+		v.Monday.Set(newSvc.Monday.Val)
+		v.Tuesday.Set(newSvc.Tuesday.Val)
+		v.Wednesday.Set(newSvc.Wednesday.Val)
+		v.Thursday.Set(newSvc.Thursday.Val)
+		v.Friday.Set(newSvc.Friday.Val)
+		v.Saturday.Set(newSvc.Saturday.Val)
+		v.Sunday.Set(newSvc.Sunday.Val)
+		v.CalendarDates = newSvc.CalendarDates()
 		return nil
 	}
 	return nil

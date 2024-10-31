@@ -77,7 +77,7 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 		eg.AddNode(entityNode(&ent))
 	}
 	for ent := range reader.CalendarDates() {
-		eg.AddNode(NewNode("calendar.txt", ent.ServiceID))
+		eg.AddNode(NewNode("calendar.txt", ent.ServiceID.Val))
 	}
 	for ent := range reader.Shapes() {
 		eg.AddNode(entityNode(&ent))

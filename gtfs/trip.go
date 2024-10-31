@@ -19,7 +19,7 @@ type Trip struct {
 	JourneyPatternID     tt.String  `csv:"-"`
 	JourneyPatternOffset tt.Int     `csv:"-"`
 	StopPatternID        tt.Int     `csv:"-"`
-	StopTimes            []StopTime `csv:"-" db:"-"` // for validation methods
+	StopTimes            []StopTime `csv:"-" db:"-"` // for validation
 	tt.BaseEntity
 }
 

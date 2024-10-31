@@ -28,6 +28,10 @@ func (r Date) After(other Date) bool {
 	return r.Val.After(other.Val)
 }
 
+func (r Date) Format(fmt string) string {
+	return r.Val.Format(fmt)
+}
+
 func (r Date) ToCsv() string {
 	if !r.Valid {
 		return ""

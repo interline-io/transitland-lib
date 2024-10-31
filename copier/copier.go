@@ -919,64 +919,74 @@ func (copier *Copier) copyFaresV2() error {
 
 // copyCalendars
 func (copier *Copier) copyCalendars() error {
-	// Get Calendars as Services
+	// Get Calendars as grouped calendars/calendar_dates
 	duplicateServices := []*gtfs.Calendar{}
-	svcs := map[string]*service.Service{}
+	cals := map[string]*gtfs.Calendar{}
 	for ent := range copier.Reader.Calendars() {
 		if !copier.isMarked(&gtfs.Calendar{}) {
 			continue
 		}
-		_, ok := svcs[ent.EntityID()]
-		if ok {
-			// save duplicates for later
+		if _, ok := cals[ent.EntityID()]; ok {
+			// Save duplicates for later
 			duplicateServices = append(duplicateServices, &ent)
 			continue
 		}
-		svcs[ent.EntityID()] = service.NewService(ent)
+		cals[ent.EntityID()] = &ent
 	}
 
 	// Add the CalendarDates to Services
 	for ent := range copier.Reader.CalendarDates() {
-		cal := gtfs.Calendar{
-			ServiceID: ent.ServiceID,
-			Generated: true,
-		}
+		// Check if marked
+		cal := gtfs.Calendar{ServiceID: tt.NewString(ent.ServiceID.Val)}
 		if !copier.isMarked(&cal) {
 			continue
 		}
-		svc, ok := svcs[ent.ServiceID]
+		// Do we create a generated calendar?
+		svc, ok := cals[ent.ServiceID.Val]
 		if !ok {
-			svc = service.NewService(cal)
-			svcs[ent.ServiceID] = svc
+			svc = &gtfs.Calendar{}
+			svc.ServiceID.Set(ent.ServiceID.Val)
+			svc.Generated.Set(true)
+			svc.Monday.OrSet(0)
+			svc.Tuesday.OrSet(0)
+			svc.Wednesday.OrSet(0)
+			svc.Thursday.OrSet(0)
+			svc.Friday.OrSet(0)
+			svc.Saturday.OrSet(0)
+			svc.Sunday.OrSet(0)
+			cals[ent.ServiceID.Val] = svc
 		}
-		svc.AddCalendarDate(ent)
+		svc.CalendarDates = append(svc.CalendarDates, ent)
 	}
 
 	// Simplify and and adjust StartDate and EndDate
-	for _, svc := range svcs {
+	for _, cal := range cals {
+		svc := service.NewService(*cal, cal.CalendarDates...)
 		// Simplify generated and non-generated calendars
 		if copier.SimplifyCalendars {
 			if s, err := svc.Simplify(); err == nil {
-				svc = s
-				svcs[svc.EntityID()] = svc
+				cal = &s.Calendar
+				cals[svc.EntityID()] = cal
 			}
 		}
 		// Generated calendars may need their service period set...
-		if svc.Generated && (svc.StartDate.IsZero() || svc.EndDate.IsZero()) {
-			svc.StartDate, svc.EndDate = svc.ServicePeriod()
+		if cal.Generated.Val && (cal.StartDate.IsZero() || cal.EndDate.IsZero()) {
+			a, b := svc.ServicePeriod()
+			cal.StartDate.Set(a)
+			cal.EndDate.Set(b)
 		}
 	}
 
 	// Write Calendars
 	var bt []tt.Entity
 	var btErr error
-	for _, svc := range svcs {
-		cid := svc.EntityID()
+	for _, cal := range cals {
+		cid := cal.EntityID()
 		// Skip main Calendar entity if generated and not normalizing/simplifying service IDs.
-		if svc.Generated && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			copier.EntityMap.SetEntity(&svc.Calendar, svc.EntityID(), svc.ServiceID)
+		if cal.Generated.Val && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
+			copier.EntityMap.SetEntity(cal, cal.EntityID(), cal.ServiceID.Val)
 		} else {
-			if entErr, writeErr := copier.CopyEntity(svc); writeErr != nil {
+			if entErr, writeErr := copier.CopyEntity(cal); writeErr != nil {
 				return writeErr
 			} else if entErr != nil {
 				// do not write calendar dates if service had error
@@ -985,14 +995,14 @@ func (copier *Copier) copyCalendars() error {
 			}
 		}
 		// Copy dependent entities
-		cds := svc.CalendarDates()
+		cds := cal.CalendarDates
 		for i := range cds {
-			cds[i].ServiceID = cid
+			cds[i].ServiceID.Set(cid)
 			if bt, btErr = copier.checkBatch(bt, &cds[i], false); btErr != nil {
 				return btErr
 			}
 		}
-		if svc.Generated {
+		if cal.Generated.Val {
 			copier.result.GeneratedCount["calendar.txt"]++
 		}
 	}

@@ -250,9 +250,17 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 		return m, err
 	}
 	cal := gtfs.Calendar{}
-	cal.StartDate = time.Now()
-	cal.EndDate = time.Now()
-	cal.ServiceID = "ok"
+	cal.StartDate.Set(time.Now())
+	cal.EndDate.Set(time.Now())
+	cal.ServiceID.Set("ok")
+	cal.Monday.Set(0)
+	cal.Tuesday.Set(0)
+	cal.Wednesday.Set(0)
+	cal.Thursday.Set(0)
+	cal.Friday.Set(0)
+	cal.Saturday.Set(0)
+	cal.Sunday.Set(0)
+	cal.Generated.Set(false)
 	cal.FeedVersionID = m.FeedVersionID
 	m.ServiceID, err = adapter.Insert(&cal)
 	if err != nil {

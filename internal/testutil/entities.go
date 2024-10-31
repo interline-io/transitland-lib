@@ -40,7 +40,9 @@ func AllEntities(reader adapters.Reader, cb func(tt.Entity)) {
 	// services
 	svcs := service.NewServicesFromReader(reader)
 	for _, svc := range svcs {
-		cb(svc)
+		cal := svc.Calendar
+		cal.CalendarDates = svc.CalendarDates()
+		cb(&cal)
 	}
 	for cd := range reader.CalendarDates() {
 		cb(&cd)
