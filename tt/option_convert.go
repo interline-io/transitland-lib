@@ -239,6 +239,20 @@ func convertAssign(dest any, src any) (bool, error) {
 		default:
 			err = cannotConvert(dest, src)
 		}
+	case *int32:
+		switch s := src.(type) {
+		case string:
+			*d, err = parseInt32(s)
+		case []byte:
+			*d, err = parseInt32(string(s))
+		case int:
+			*d = int32(s)
+		case int64:
+			*d = int32(s)
+		case float64:
+			*d = int32(s)
+		default:
+			err = cannotConvert()		
 	default:
 		switch s := src.(type) {
 		case []byte:
