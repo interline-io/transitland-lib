@@ -981,7 +981,6 @@ func (copier *Copier) copyCalendars() error {
 	var bt []tt.Entity
 	var btErr error
 	for _, cal := range cals {
-		fmt.Printf("CAL: %#v\n", cal)
 		cid := cal.EntityID()
 		// Skip main Calendar entity if generated and not normalizing/simplifying service IDs.
 		if cal.Generated.Val && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
