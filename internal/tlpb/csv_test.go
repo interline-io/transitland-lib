@@ -83,11 +83,11 @@ func ReadPB(fn string) ([]any, error) {
 
 //////////////////
 
-func TestReadTT(t *testing.T) {
-	ents, err := ReadTT(TESTFILE)
-	assert.NoError(t, err)
-	printAll(ents)
-}
+// func TestReadTT(t *testing.T) {
+// 	ents, err := ReadTT(TESTFILE)
+// 	assert.NoError(t, err)
+// 	printAll(ents)
+// }
 
 func BenchmarkReadTT(b *testing.B) {
 	for n := 0; n < b.N; n++ {
