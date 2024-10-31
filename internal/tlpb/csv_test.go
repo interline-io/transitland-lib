@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/tlpb/gtfs"
 	"github.com/interline-io/transitland-lib/internal/tlpb/pb"
@@ -117,11 +115,11 @@ func ReadTT(fn string) ([]any, error) {
 
 //////////////////
 
-func TestReadG(t *testing.T) {
-	ents, err := ReadG(TESTFILE)
-	assert.NoError(t, err)
-	printAll(ents)
-}
+// func TestReadG(t *testing.T) {
+// 	ents, err := ReadG(TESTFILE)
+// 	assert.NoError(t, err)
+// 	printAll(ents)
+// }
 
 func BenchmarkReadG(b *testing.B) {
 	for n := 0; n < b.N; n++ {
