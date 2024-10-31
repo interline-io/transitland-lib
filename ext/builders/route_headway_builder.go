@@ -64,11 +64,12 @@ func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
 func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	// Keep track of all services and departures
 	switch v := ent.(type) {
-	case *service.Service:
+	case *gtfs.Calendar:
 		// Use only the first 30 days of service
+		svc := service.NewService(*v, v.CalendarDates...)
 		startDate := v.StartDate.Val
 		for i := 0; i < 31; i++ {
-			if v.IsActive(startDate) {
+			if svc.IsActive(startDate) {
 				d := startDate.Format("2006-01-02")
 				pp.serviceDays[d] = append(pp.serviceDays[d], eid)
 			}

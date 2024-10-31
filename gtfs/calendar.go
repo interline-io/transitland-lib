@@ -9,17 +9,18 @@ import (
 
 // Calendar calendars.txt
 type Calendar struct {
-	ServiceID tt.String `csv:",required"`
-	Monday    tt.Int    `csv:",required" enum:"0,1"`
-	Tuesday   tt.Int    `csv:",required" enum:"0,1"`
-	Wednesday tt.Int    `csv:",required" enum:"0,1"`
-	Thursday  tt.Int    `csv:",required" enum:"0,1"`
-	Friday    tt.Int    `csv:",required" enum:"0,1"`
-	Saturday  tt.Int    `csv:",required" enum:"0,1"`
-	Sunday    tt.Int    `csv:",required" enum:"0,1"`
-	StartDate tt.Date   `csv:",required"`
-	EndDate   tt.Date   `csv:",required"`
-	Generated tt.Bool   `csv:"-" db:"generated"`
+	ServiceID     tt.String      `csv:",required"`
+	Monday        tt.Int         `csv:",required" enum:"0,1"`
+	Tuesday       tt.Int         `csv:",required" enum:"0,1"`
+	Wednesday     tt.Int         `csv:",required" enum:"0,1"`
+	Thursday      tt.Int         `csv:",required" enum:"0,1"`
+	Friday        tt.Int         `csv:",required" enum:"0,1"`
+	Saturday      tt.Int         `csv:",required" enum:"0,1"`
+	Sunday        tt.Int         `csv:",required" enum:"0,1"`
+	StartDate     tt.Date        `csv:",required"`
+	EndDate       tt.Date        `csv:",required"`
+	Generated     tt.Bool        `csv:"-" db:"generated"`
+	CalendarDates []CalendarDate `csv:"-" db:"-"` // for validation
 	tt.BaseEntity
 }
 

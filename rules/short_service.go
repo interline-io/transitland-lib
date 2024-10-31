@@ -2,7 +2,7 @@ package rules
 
 import (
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -12,7 +12,7 @@ type ShortServiceCheck struct{}
 // Validate .
 func (e *ShortServiceCheck) Validate(ent tt.Entity) []error {
 	// Note: Calendar/CalendarDates are validated as Services.
-	if v, ok := ent.(*service.Service); ok {
+	if v, ok := ent.(*gtfs.Calendar); ok {
 		if diff := v.EndDate.Val.Sub(v.StartDate.Val).Hours(); diff >= 0 && diff <= 24 {
 			return []error{causes.NewValidationWarning("end_date", "covers one day or less")}
 		}

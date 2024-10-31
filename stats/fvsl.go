@@ -111,8 +111,8 @@ func NewFeedVersionServiceLevelBuilder() *FeedVersionServiceLevelBuilder {
 
 func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *service.Service:
-		pp.services[v.ServiceID.Val] = v
+	case *gtfs.Calendar:
+		pp.services[v.ServiceID.Val] = service.NewService(*v)
 	case *gtfs.CalendarDate:
 		svc, ok := pp.services[v.ServiceID.Val]
 		if !ok {

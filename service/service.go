@@ -60,10 +60,15 @@ func NewServicesFromReader(reader adapters.Reader) []*Service {
 		sid := c.ServiceID.Val
 		s := NewService(c, cds[sid]...)
 		ret = append(ret, s)
+		// remove from list of calendar.txt entries
 		delete(cds, sid)
 	}
 	for k, v := range cds {
+		// remaining calendar dates without calendar.txt
 		s := NewService(gtfs.Calendar{ServiceID: tt.NewString(k)}, v...)
+		a, b := s.ServicePeriod()
+		s.StartDate.Set(a)
+		s.EndDate.Set(b)
 		s.Generated.Set(true)
 		s.Monday.OrSet(0)
 		s.Tuesday.OrSet(0)
@@ -72,9 +77,6 @@ func NewServicesFromReader(reader adapters.Reader) []*Service {
 		s.Friday.OrSet(0)
 		s.Saturday.OrSet(0)
 		s.Sunday.OrSet(0)
-		a, b := s.ServicePeriod()
-		s.StartDate.Set(a)
-		s.EndDate.Set(b)
 		ret = append(ret, s)
 	}
 	return ret

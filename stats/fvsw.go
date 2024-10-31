@@ -40,8 +40,9 @@ func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tt.Entity,
 	case *gtfs.FeedInfo:
 		pp.fvsw.FeedStartDate = v.FeedStartDate
 		pp.fvsw.FeedEndDate = v.FeedEndDate
-	case *service.Service:
-		cStart, cEnd := v.ServicePeriod()
+	case *gtfs.Calendar:
+		svc := service.NewService(*v, v.CalendarDates...)
+		cStart, cEnd := svc.ServicePeriod()
 		retStart, retEnd := pp.fvsw.EarliestCalendarDate.Val, pp.fvsw.LatestCalendarDate.Val
 		if retStart.IsZero() || cStart.Before(retStart) {
 			pp.fvsw.EarliestCalendarDate.Set(cStart)

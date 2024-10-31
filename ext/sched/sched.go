@@ -30,8 +30,9 @@ func NewScheduleChecker() *ScheduleChecker {
 // Validate gets a stream of entities from Copier to build up the cache.
 func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
-	case *service.Service:
-		fi.services[v.ServiceID.Val] = v
+	case *gtfs.Calendar:
+		svc := service.NewService(*v, v.CalendarDates...)
+		fi.services[v.ServiceID.Val] = svc
 	case *gtfs.Trip:
 		ti := tripInfo{
 			ServiceID: v.ServiceID.Val,

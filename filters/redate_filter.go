@@ -85,7 +85,8 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		if tf.excluded[v.ServiceID.Val] {
 			return fmt.Errorf("calendar date service_id not in redate window")
 		}
-	case *service.Service:
+	case *gtfs.Calendar:
+		svc := service.NewService(*v, v.CalendarDates...)
 		// Copy active service days in window into new calendar
 		active := false
 		sourceDate := tf.SourceDate
@@ -113,9 +114,8 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		}
 
 		newSvc := service.NewService(gtfs.Calendar{ServiceID: v.ServiceID, StartDate: tt.NewDate(targetDate)})
-		newSvc.ID = v.ID
 		for i := 1; i <= tf.TargetDays; i++ {
-			if v.IsActive(sourceDate) {
+			if svc.IsActive(sourceDate) {
 				newSvc.AddCalendarDate(gtfs.CalendarDate{
 					Date:          tt.NewDate(targetDate),
 					ExceptionType: tt.NewInt(1),
@@ -147,11 +147,17 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		}
 		newSvc.Generated.Set(false)
 		// Reset and update in place
-		v.Reset()
-		v.Calendar = newSvc.Calendar
-		for _, cd := range newSvc.CalendarDates() {
-			v.AddCalendarDate(cd)
-		}
+		v.StartDate.Set(newSvc.StartDate.Val)
+		v.EndDate.Set(newSvc.EndDate.Val)
+		v.Generated.Set(newSvc.Generated.Val)
+		v.Monday.Set(newSvc.Monday.Val)
+		v.Tuesday.Set(newSvc.Tuesday.Val)
+		v.Wednesday.Set(newSvc.Wednesday.Val)
+		v.Thursday.Set(newSvc.Thursday.Val)
+		v.Friday.Set(newSvc.Friday.Val)
+		v.Saturday.Set(newSvc.Saturday.Val)
+		v.Sunday.Set(newSvc.Sunday.Val)
+		v.CalendarDates = newSvc.CalendarDates()
 		return nil
 	}
 	return nil

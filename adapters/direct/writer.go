@@ -51,8 +51,6 @@ func (mw *Writer) NewReader() (adapters.Reader, error) {
 // AddEntity .
 func (mw *Writer) AddEntity(ent tt.Entity) (string, error) {
 	switch v := ent.(type) {
-	case *service.Service:
-		mw.Reader.CalendarList = append(mw.Reader.CalendarList, v.Calendar)
 	case *service.ShapeLine:
 		mw.Reader.ShapeList = append(mw.Reader.ShapeList, service.FlattenShape(*v)...)
 	case *gtfs.Stop:
