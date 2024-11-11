@@ -124,6 +124,13 @@ func TryCsv(val any) string {
 	return a
 }
 
+func ConvertAssign(dest any, src any) (bool, error) {
+	if v, ok := dest.(canScan); ok {
+		return true, v.Scan(src)
+	}
+	return convertAssign(dest, src)
+}
+
 func convertAssign(dest any, src any) (bool, error) {
 	if src == nil {
 		return false, nil
