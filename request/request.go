@@ -29,6 +29,17 @@ type Presigner interface {
 	CreateSignedUrl(context.Context, string, string, dmfr.Secret) (string, error)
 }
 
+type FetchResponse struct {
+	Filename       string
+	Data           []byte
+	ResponseSize   int
+	ResponseCode   int
+	ResponseTimeMs int
+	ResponseTtfbMs int
+	ResponseSHA1   string
+	FetchError     error
+}
+
 type Request struct {
 	URL        string
 	AllowFTP   bool
@@ -126,15 +137,6 @@ func WithAuth(secret dmfr.Secret, auth dmfr.FeedAuthorization) func(req *Request
 	}
 }
 
-type FetchResponse struct {
-	Filename     string
-	Data         []byte
-	ResponseSize int
-	ResponseCode int
-	ResponseSHA1 string
-	FetchError   error
-}
-
 // AuthenticatedRequestDownload is similar to AuthenticatedRequest but writes to a temporary file.
 // Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
 func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchResponse, error) {
@@ -178,7 +180,8 @@ func authenticatedRequest(out io.Writer, address string, opts ...RequestOption) 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
 	defer cancel()
 
-	// Download
+	// Create request and wait for response
+	t := time.Now()
 	fr := FetchResponse{}
 	req := NewRequest(address, opts...)
 	var r io.ReadCloser
@@ -190,7 +193,9 @@ func authenticatedRequest(out io.Writer, address string, opts ...RequestOption) 
 
 	// Write response
 	var err error
+	fr.ResponseTtfbMs = int(time.Since(t) / time.Millisecond)
 	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(out, r, req.MaxSize)
+	fr.ResponseTimeMs = int(time.Since(t) / time.Millisecond)
 
 	// Check for canceled
 	if ctxErr := ctx.Err(); ctxErr != nil {
