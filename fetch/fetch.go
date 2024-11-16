@@ -34,14 +34,16 @@ type Options struct {
 
 // Result contains results of a fetch operation.
 type Result struct {
-	Found         bool
-	Error         error
-	URL           string
-	ResponseSize  int
-	ResponseCode  int
-	ResponseSHA1  string
-	FetchError    error
-	FeedVersionID tt.Int
+	Found          bool
+	Error          error
+	URL            string
+	ResponseSize   int
+	ResponseCode   int
+	ResponseTtfbMs int
+	ResponseTimeMs int
+	ResponseSHA1   string
+	FetchError     error
+	FeedVersionID  tt.Int
 }
 
 type validationResponse struct {
@@ -92,6 +94,8 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	result.ResponseCode = fetchResponse.ResponseCode
 	result.ResponseSize = fetchResponse.ResponseSize
 	result.ResponseSHA1 = fetchResponse.ResponseSHA1
+	result.ResponseTimeMs = fetchResponse.ResponseTimeMs
+	result.ResponseTtfbMs = fetchResponse.ResponseTtfbMs
 	if err != nil {
 		return result, nil
 	}
@@ -137,14 +141,19 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	tlfetch.FeedID = feed.ID
 	tlfetch.URLType = opts.URLType
 	tlfetch.FetchedAt.Set(opts.FetchedAt)
+
+	// Save response details, even if local filesystem
+	if result.ResponseCode > 0 {
+		tlfetch.ResponseCode.SetInt(result.ResponseCode)
+	}
+	tlfetch.ResponseSize.SetInt(result.ResponseSize)
+	tlfetch.ResponseTimeMs.SetInt(result.ResponseTimeMs)
+	tlfetch.ResponseTtfbMs.SetInt(result.ResponseTtfbMs)
+	tlfetch.ResponseSHA1.Set(result.ResponseSHA1)
+
 	// tlfetch.FeedVersionID =
 	if !opts.HideURL {
 		tlfetch.URL = opts.FeedURL
-	}
-	if result.ResponseCode > 0 {
-		tlfetch.ResponseCode.SetInt(result.ResponseCode)
-		tlfetch.ResponseSize.SetInt(result.ResponseSize)
-		tlfetch.ResponseSHA1.Set(result.ResponseSHA1)
 	}
 	if result.FeedVersionID.Valid {
 		tlfetch.FeedVersionID.Set(result.FeedVersionID.Val)
