@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"iter"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/request"
 )
@@ -289,6 +291,40 @@ func (adapter *ZipAdapter) ReadRows(filename string, cb func(Row)) error {
 	return adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
+}
+
+type canFilename interface {
+	Filename() string
+}
+
+func (adapter *ZipAdapter) ReadRowsIter(entType any) iter.Seq[adapters.Row] {
+	filename := ""
+	if v, ok := entType.(canFilename); ok {
+		filename = v.Filename()
+	}
+
+	r, err := zip.OpenReader(adapter.path)
+	if err != nil {
+		return nil
+	}
+	defer r.Close()
+	var inFile *zip.File
+	for _, f := range r.File {
+		if f.Name != filepath.Join(adapter.internalPrefix, filename) {
+			continue
+		}
+		inFile = f
+	}
+	if inFile == nil {
+		return nil
+	}
+	//
+	in, err := inFile.Open()
+	if err != nil {
+		return nil
+	}
+	// defer in.Close()
+	return ReadRowsIter(in)
 }
 
 // SHA1 returns the SHA1 checksum of the zip archive.

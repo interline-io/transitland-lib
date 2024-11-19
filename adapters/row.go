@@ -22,18 +22,18 @@ type Row struct {
 	Err    error
 }
 
+// Get a value from the row as a string.
+func (row *Row) Get(k string) (any, bool) {
+	if i, ok := row.Hindex[k]; ok {
+		if len(row.Values) > i {
+			return row.Values[i], true
+		}
+	}
+	return nil, false
+}
+
 type RowReader interface {
-	ReadRows(any) iter.Seq[Row]
-}
-
-// check for SetString interface
-type canSetValue interface {
-	SetValue(string, any) (bool, error)
-	AddError(error)
-}
-
-type canSetLine interface {
-	SetLine(int)
+	ReadRowsIter(any) iter.Seq[Row]
 }
 
 func ReadEntities[T any](reader RowReader) chan T {
@@ -42,7 +42,7 @@ func ReadEntities[T any](reader RowReader) chan T {
 	// Prepare channel
 	eout := make(chan T, bufferSize)
 	go func(c chan T) {
-		for row := range reader.ReadRows(entType) {
+		for row := range reader.ReadRowsIter(entType) {
 			var e T
 			loadRowReflect(&e, row)
 			c <- e
@@ -54,9 +54,9 @@ func ReadEntities[T any](reader RowReader) chan T {
 
 func ReadEntitiesIter[T any](reader RowReader) iter.Seq[T] {
 	// To get Filename() or TableName()
-	var entType T
+	var entType *T = new(T)
 	return func(yield func(ent T) bool) {
-		for row := range reader.ReadRows(entType) {
+		for row := range reader.ReadRowsIter(entType) {
 			var e T
 			loadRowReflect(&e, row)
 			yield(e)

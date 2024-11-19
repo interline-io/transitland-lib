@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dimchansky/utfbom"
+	"github.com/interline-io/transitland-lib/adapters"
 )
 
 // Row is a row value with a header.
@@ -43,10 +44,6 @@ func ReadRows(in io.Reader, cb func(Row)) error {
 	// Allow unescaped quotes
 	r.LazyQuotes = true
 	// Go
-	return readRows(r, cb)
-}
-
-func readRows(r *csv.Reader, cb func(Row)) error {
 	// Go for it.
 	firstRow, err := r.Read()
 	if err != nil {
@@ -90,7 +87,7 @@ func readRows(r *csv.Reader, cb func(Row)) error {
 	return nil
 }
 
-func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[Row, error] {
+func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq[adapters.Row] {
 	// Handle byte-order-marks.
 	r := csv.NewReader(utfbom.SkipOnly(in))
 	// Allow variable columns - very common in GTFS
@@ -105,11 +102,12 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[Row, error] {
 	for _, optFn := range optFns {
 		optFn(r)
 	}
-	return func(yield func(Row, error) bool) {
+	var anyValues []any
+	return func(yield func(adapters.Row) bool) {
 		// Go for it.
 		firstRow, err := r.Read()
 		if err != nil {
-			yield(Row{}, err)
+			yield(adapters.Row{Err: err})
 			return
 		}
 		// Copy header, since we will reuse the backing array
@@ -122,6 +120,9 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[Row, error] {
 		for k, i := range header {
 			hindex[i] = k
 		}
+		// Reusable slice
+		anyValues = make([]any, len(header))
+
 		for {
 			row, err := r.Read()
 			if err == nil {
@@ -130,24 +131,31 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[Row, error] {
 				break
 			} else if _, ok := err.(*csv.ParseError); ok {
 				// Parse error: clear row, add error to row
-				row = []string{}
+				anyValues = nil
 			} else {
 				// Serious error: break and return with error
-				yield(Row{}, err)
+				yield(adapters.Row{Err: err})
 				return
 			}
 			// Remove whitespace
 			for i := 0; i < len(row); i++ {
 				v := row[i]
 				// This is dumb but saves substantial time.
+				anyValues[i] = v
 				if len(v) > 0 && (v[0] == ' ' || v[len(v)-1] == ' ' || v[0] == '\t' || v[len(v)-1] == '\t') {
-					row[i] = strings.TrimSpace(v)
+					anyValues[i] = strings.TrimSpace(v)
 				}
 			}
 			// Pass parse errors to row
 			line, _ := r.FieldPos(0)
-			cbrow := Row{Row: row, Line: line, Header: header, Hindex: hindex, Err: err}
-			if !yield(cbrow, nil) {
+			cbrow := adapters.Row{
+				Values: anyValues,
+				Line:   line,
+				Header: header,
+				Hindex: hindex,
+				Err:    err,
+			}
+			if !yield(cbrow) {
 				return
 			}
 		}
