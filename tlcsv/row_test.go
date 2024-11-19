@@ -16,7 +16,7 @@ func TestReadRowsIter(t *testing.T) {
 		return
 	}
 
-	for ent := range adapters.ReadEntitiesIter[gtfs.Stop](adapter) {
-		fmt.Printf("ent? %#v\n", ent)
+	for ent, err := range adapters.ReadEntitiesIter[gtfs.Stop](adapter) {
+		fmt.Println("ent:", ent.StopName, "err:", err)
 	}
 }

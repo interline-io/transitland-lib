@@ -87,7 +87,7 @@ func ReadRows(in io.Reader, cb func(Row)) error {
 	return nil
 }
 
-func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq[adapters.Row] {
+func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[adapters.Row, error] {
 	// Handle byte-order-marks.
 	r := csv.NewReader(utfbom.SkipOnly(in))
 	// Allow variable columns - very common in GTFS
@@ -103,11 +103,11 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq[adapters.Row] {
 		optFn(r)
 	}
 	var anyValues []any
-	return func(yield func(adapters.Row) bool) {
+	return func(yield func(adapters.Row, error) bool) {
 		// Go for it.
 		firstRow, err := r.Read()
 		if err != nil {
-			yield(adapters.Row{Err: err})
+			yield(adapters.Row{}, err)
 			return
 		}
 		// Copy header, since we will reuse the backing array
@@ -122,7 +122,7 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq[adapters.Row] {
 		}
 		// Reusable slice
 		anyValues = make([]any, len(header))
-
+		// Read all rows
 		for {
 			row, err := r.Read()
 			if err == nil {
@@ -134,7 +134,7 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq[adapters.Row] {
 				anyValues = nil
 			} else {
 				// Serious error: break and return with error
-				yield(adapters.Row{Err: err})
+				yield(adapters.Row{}, err)
 				return
 			}
 			// Remove whitespace
@@ -153,9 +153,8 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq[adapters.Row] {
 				Line:   line,
 				Header: header,
 				Hindex: hindex,
-				Err:    err,
 			}
-			if !yield(cbrow) {
+			if !yield(cbrow, nil) {
 				return
 			}
 		}

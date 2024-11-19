@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"fmt"
 	"iter"
 	"reflect"
 
@@ -19,7 +20,6 @@ type Row struct {
 	Values []any
 	Hindex map[string]int
 	Line   int
-	Err    error
 }
 
 // Get a value from the row as a string.
@@ -33,7 +33,7 @@ func (row *Row) Get(k string) (any, bool) {
 }
 
 type RowReader interface {
-	ReadRowsIter(any) iter.Seq[Row]
+	ReadRowsIter(any) iter.Seq2[Row, error]
 }
 
 func ReadEntities[T any](reader RowReader) chan T {
@@ -52,14 +52,15 @@ func ReadEntities[T any](reader RowReader) chan T {
 	return eout
 }
 
-func ReadEntitiesIter[T any](reader RowReader) iter.Seq[T] {
+func ReadEntitiesIter[T any](reader RowReader) iter.Seq2[T, error] {
 	// To get Filename() or TableName()
 	var entType *T = new(T)
-	return func(yield func(ent T) bool) {
-		for row := range reader.ReadRowsIter(entType) {
+	return func(yield func(T, error) bool) {
+		for row, err := range reader.ReadRowsIter(entType) {
+			fmt.Println("row:", row)
 			var e T
 			loadRowReflect(&e, row)
-			yield(e)
+			yield(e, err)
 		}
 	}
 }
@@ -67,42 +68,37 @@ func ReadEntitiesIter[T any](reader RowReader) iter.Seq[T] {
 // loadRowReflect is the Reflect path
 func loadRowReflect(ent any, row Row) []error {
 	var errs []error
-	// Return if there was a row parsing error
-	if row.Err != nil {
-		errs = append(errs, causes.NewRowParseError(row.Line, row.Err))
-	} else {
-		// Get the struct tag map
-		fmap := MapperCache.GetStructTagMap(ent)
-		// For each struct tag, set the field value
-		entValue := reflect.ValueOf(ent).Elem()
-		for i := 0; i < len(row.Header); i++ {
-			if i > len(row.Values) {
-				continue
-			}
-			fieldName := row.Header[i]
-			fieldValue := row.Values[i]
-			fieldInfo, ok := fmap[fieldName]
+	// Get the struct tag map
+	fmap := MapperCache.GetStructTagMap(ent)
+	// For each struct tag, set the field value
+	entValue := reflect.ValueOf(ent).Elem()
+	for i := 0; i < len(row.Header); i++ {
+		if i > len(row.Values) {
+			continue
+		}
+		fieldName := row.Header[i]
+		fieldValue := row.Values[i]
+		fieldInfo, ok := fmap[fieldName]
 
-			// Add to extra fields if there's no struct tag
-			if !ok {
-				if extEnt, ok2 := ent.(tt.EntityWithExtra); ok2 {
-					extEnt.SetExtra(fieldName, toStrv(fieldValue))
-				}
-				continue
+		// Add to extra fields if there's no struct tag
+		if !ok {
+			if extEnt, ok2 := ent.(tt.EntityWithExtra); ok2 {
+				extEnt.SetExtra(fieldName, toStrv(fieldValue))
 			}
+			continue
+		}
 
-			// Skip if empty, special case for strings
-			if fieldValue == nil {
-				continue
-			} else if v, ok := fieldValue.(string); ok && v == "" {
-				continue
-			}
+		// Skip if empty, special case for strings
+		if fieldValue == nil {
+			continue
+		} else if v, ok := fieldValue.(string); ok && v == "" {
+			continue
+		}
 
-			// Handle different known types
-			entFieldAddr := reflectx.FieldByIndexes(entValue, fieldInfo.Index).Addr().Interface()
-			if _, scanErr := tt.ConvertAssign(entFieldAddr, fieldValue); scanErr != nil {
-				errs = append(errs, causes.NewFieldParseError(fieldName, toStrv(fieldValue)))
-			}
+		// Handle different known types
+		entFieldAddr := reflectx.FieldByIndexes(entValue, fieldInfo.Index).Addr().Interface()
+		if _, scanErr := tt.ConvertAssign(entFieldAddr, fieldValue); scanErr != nil {
+			errs = append(errs, causes.NewFieldParseError(fieldName, toStrv(fieldValue)))
 		}
 	}
 	if len(errs) > 0 {
