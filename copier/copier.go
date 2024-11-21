@@ -768,8 +768,33 @@ func (copier *Copier) copyPathways() error {
 
 // copyRoutes writes routes
 func (copier *Copier) copyRoutes() error {
+	type createNetwork struct {
+		RouteID   string
+		NetworkID string
+	}
+	var createNetworks []createNetwork
 	for e := range copier.Reader.Routes() {
+		if e.NetworkID.Valid {
+			createNetworks = append(createNetworks, createNetwork{
+				RouteID:   e.RouteID.Val,
+				NetworkID: e.NetworkID.Val,
+			})
+			e.NetworkID = tt.String{}
+		}
 		if _, err := copier.CopyEntity(&e); err != nil {
+			return err
+		}
+	}
+	for _, cn := range createNetworks {
+		network := gtfs.Network{}
+		network.NetworkID.Set(cn.NetworkID)
+		if _, err := copier.CopyEntity(&network); err != nil {
+			return err
+		}
+		routeNetwork := gtfs.RouteNetwork{}
+		routeNetwork.NetworkID.Set(cn.NetworkID)
+		routeNetwork.RouteID.Set(cn.RouteID)
+		if _, err := copier.CopyEntity(&routeNetwork); err != nil {
 			return err
 		}
 	}
