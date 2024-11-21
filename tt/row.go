@@ -101,7 +101,11 @@ func loadRowReflect(ent any, row Row) []error {
 
 		// Handle different known types
 		entFieldAddr := reflectx.FieldByIndexes(entValue, fieldInfo.Index).Addr().Interface()
-		if _, scanErr := ConvertAssign(entFieldAddr, fieldValue); scanErr != nil {
+		if v, ok := entFieldAddr.(canScan); ok {
+			if err := v.Scan(fieldValue); err != nil {
+				errs = append(errs, err)
+			}
+		} else if _, scanErr := convertAssign(entFieldAddr, fieldValue); scanErr != nil {
 			errs = append(errs, causes.NewFieldParseError(fieldName, toStrv(fieldValue)))
 		}
 	}
@@ -120,6 +124,6 @@ func toStrv(value any) string {
 		return v
 	}
 	strv := ""
-	ConvertAssign(&strv, value)
+	convertAssign(&strv, value)
 	return strv
 }
