@@ -33,7 +33,7 @@ func (row *Row) Get(k string) (any, bool) {
 }
 
 type RowReader interface {
-	ReadRowsIter(any) iter.Seq2[Row, error]
+	ReadRowsIter(any) (iter.Seq[Row], func() error)
 }
 
 func ReadEntities[T any](reader RowReader) chan T {
@@ -42,7 +42,8 @@ func ReadEntities[T any](reader RowReader) chan T {
 	// Prepare channel
 	eout := make(chan T, bufferSize)
 	go func(c chan T) {
-		for row := range reader.ReadRowsIter(entType) {
+		it, _ := reader.ReadRowsIter(entType)
+		for row := range it {
 			var e T
 			loadRowReflect(&e, row)
 			c <- e
@@ -52,17 +53,20 @@ func ReadEntities[T any](reader RowReader) chan T {
 	return eout
 }
 
-func ReadEntitiesIter[T any](reader RowReader) iter.Seq2[T, error] {
+func ReadEntitiesIter[T any](reader RowReader) (iter.Seq[T], func() error) {
 	// To get Filename() or TableName()
+	var readErr error
 	var entType *T = new(T)
-	return func(yield func(T, error) bool) {
-		for row, err := range reader.ReadRowsIter(entType) {
+	return func(yield func(T) bool) {
+		it, errf := reader.ReadRowsIter(entType)
+		for row := range it {
 			fmt.Println("row:", row)
 			var e T
 			loadRowReflect(&e, row)
-			yield(e, err)
+			yield(e)
 		}
-	}
+		readErr = errf()
+	}, func() error { return readErr }
 }
 
 // loadRowReflect is the Reflect path

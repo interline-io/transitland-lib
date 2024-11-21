@@ -290,37 +290,41 @@ type canFilename interface {
 	Filename() string
 }
 
-func (adapter *ZipAdapter) ReadRowsIter(entType any) (iter.Seq[adapters.Row], error) {
-	filename := ""
-	if v, ok := entType.(canFilename); ok {
-		filename = v.Filename()
-	}
-	r, err := zip.OpenReader(adapter.path)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	var inFile *zip.File
-	for _, f := range r.File {
-		if f.Name != filepath.Join(adapter.internalPrefix, filename) {
-			continue
-		}
-		inFile = f
-	}
-	if inFile == nil {
-		return nil, causes.NewFileNotPresentError(filename)
-	}
-	in, err := inFile.Open()
-	if err != nil {
-		return nil, err
-	}
+func (adapter *ZipAdapter) ReadRowsIter(entType any) (iter.Seq[adapters.Row], func() error) {
+	var readErr error
+	errf := func() error { return readErr }
 	return func(yield func(adapters.Row) bool) {
+		filename := ""
+		if v, ok := entType.(canFilename); ok {
+			filename = v.Filename()
+		}
+		r, err := zip.OpenReader(adapter.path)
+		if err != nil {
+			readErr = err
+			return
+		}
+		defer r.Close()
+		var inFile *zip.File
+		for _, f := range r.File {
+			if f.Name != filepath.Join(adapter.internalPrefix, filename) {
+				continue
+			}
+			inFile = f
+		}
+		if inFile == nil {
+			readErr = causes.NewFileNotPresentError(filename)
+			return
+		}
+		in, err := inFile.Open()
+		if err != nil {
+			return
+		}
 		for row := range ReadRowsIter(in) {
 			yield(row)
 		}
 		in.Close()
 		r.Close()
-	}, nil
+	}, errf
 }
 
 // ReadRows opens the specified file and runs the callback on each Row. An error is returned if the file cannot be read.
