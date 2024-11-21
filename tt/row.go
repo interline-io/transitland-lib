@@ -1,4 +1,4 @@
-package adapters
+package tt
 
 import (
 	"fmt"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
-	"github.com/interline-io/transitland-lib/tt"
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
@@ -20,6 +19,7 @@ type Row struct {
 	Values []any
 	Hindex map[string]int
 	Line   int
+	Err    error
 }
 
 // Get a value from the row as a string.
@@ -86,7 +86,7 @@ func loadRowReflect(ent any, row Row) []error {
 
 		// Add to extra fields if there's no struct tag
 		if !ok {
-			if extEnt, ok2 := ent.(tt.EntityWithExtra); ok2 {
+			if extEnt, ok2 := ent.(EntityWithExtra); ok2 {
 				extEnt.SetExtra(fieldName, toStrv(fieldValue))
 			}
 			continue
@@ -101,12 +101,12 @@ func loadRowReflect(ent any, row Row) []error {
 
 		// Handle different known types
 		entFieldAddr := reflectx.FieldByIndexes(entValue, fieldInfo.Index).Addr().Interface()
-		if _, scanErr := tt.ConvertAssign(entFieldAddr, fieldValue); scanErr != nil {
+		if _, scanErr := ConvertAssign(entFieldAddr, fieldValue); scanErr != nil {
 			errs = append(errs, causes.NewFieldParseError(fieldName, toStrv(fieldValue)))
 		}
 	}
 	if len(errs) > 0 {
-		if extEnt, ok := ent.(tt.EntityWithLoadErrors); ok {
+		if extEnt, ok := ent.(EntityWithLoadErrors); ok {
 			for _, err := range errs {
 				extEnt.AddError(err)
 			}
@@ -120,6 +120,6 @@ func toStrv(value any) string {
 		return v
 	}
 	strv := ""
-	tt.ConvertAssign(&strv, value)
+	ConvertAssign(&strv, value)
 	return strv
 }

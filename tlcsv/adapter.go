@@ -16,9 +16,9 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/request"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.
@@ -290,10 +290,10 @@ type canFilename interface {
 	Filename() string
 }
 
-func (adapter *ZipAdapter) ReadRowsIter(entType any) (iter.Seq[adapters.Row], func() error) {
+func (adapter *ZipAdapter) ReadRowsIter(entType any) (iter.Seq[tt.Row], func() error) {
 	var readErr error
 	errf := func() error { return readErr }
-	return func(yield func(adapters.Row) bool) {
+	return func(yield func(tt.Row) bool) {
 		filename := ""
 		if v, ok := entType.(canFilename); ok {
 			filename = v.Filename()
@@ -319,9 +319,11 @@ func (adapter *ZipAdapter) ReadRowsIter(entType any) (iter.Seq[adapters.Row], fu
 		if err != nil {
 			return
 		}
-		for row := range ReadRowsIter(in) {
+		it, errf := ReadRowsIter(in)
+		for row := range it {
 			yield(row)
 		}
+		readErr = errf()
 		in.Close()
 		r.Close()
 	}, errf

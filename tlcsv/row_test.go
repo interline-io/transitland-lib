@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testpath"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func TestReadRowsIter(t *testing.T) {
@@ -16,7 +16,7 @@ func TestReadRowsIter(t *testing.T) {
 		return
 	}
 
-	it, errf := adapters.ReadEntitiesIter[gtfs.Stop](adapter)
+	it, errf := tt.ReadEntitiesIter[gtfs.Stop](adapter)
 	for ent := range it {
 		fmt.Println("ent:", ent.StopName)
 	}

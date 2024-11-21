@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/dimchansky/utfbom"
-	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Row is a row value with a header.
@@ -87,7 +87,7 @@ func ReadRows(in io.Reader, cb func(Row)) error {
 	return nil
 }
 
-func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[adapters.Row, error] {
+func ReadRowsIter(in io.Reader, optFns ...csvOptFn) (iter.Seq[tt.Row], func() error) {
 	// Handle byte-order-marks.
 	r := csv.NewReader(utfbom.SkipOnly(in))
 	// Allow variable columns - very common in GTFS
@@ -103,11 +103,13 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[adapters.Row, erro
 		optFn(r)
 	}
 	var anyValues []any
-	return func(yield func(adapters.Row, error) bool) {
+	var readErr error
+	errf := func() error { return readErr }
+	return func(yield func(tt.Row) bool) {
 		// Go for it.
-		firstRow, err := r.Read()
-		if err != nil {
-			yield(adapters.Row{}, err)
+		firstRow, firstRowErr := r.Read()
+		if firstRowErr != nil {
+			readErr = firstRowErr
 			return
 		}
 		// Copy header, since we will reuse the backing array
@@ -124,17 +126,19 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[adapters.Row, erro
 		anyValues = make([]any, len(header))
 		// Read all rows
 		for {
-			row, err := r.Read()
-			if err == nil {
+			row, rowErr := r.Read()
+			if rowErr == nil {
 				// ok
-			} else if err == io.EOF {
+			} else if rowErr == io.EOF {
 				break
-			} else if _, ok := err.(*csv.ParseError); ok {
+			} else if _, ok := rowErr.(*csv.ParseError); ok {
 				// Parse error: clear row, add error to row
-				anyValues = nil
+				for i := 0; i < len(anyValues); i++ {
+					anyValues[i] = nil
+				}
 			} else {
 				// Serious error: break and return with error
-				yield(adapters.Row{}, err)
+				readErr = rowErr
 				return
 			}
 			// Remove whitespace
@@ -148,15 +152,16 @@ func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[adapters.Row, erro
 			}
 			// Pass parse errors to row
 			line, _ := r.FieldPos(0)
-			cbrow := adapters.Row{
+			cbrow := tt.Row{
 				Values: anyValues,
 				Line:   line,
 				Header: header,
 				Hindex: hindex,
+				Err:    rowErr,
 			}
-			if !yield(cbrow, nil) {
+			if !yield(cbrow) {
 				return
 			}
 		}
-	}
+	}, errf
 }
