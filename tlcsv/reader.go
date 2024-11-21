@@ -428,10 +428,6 @@ func ReadEntities[T any](reader *Reader, efn string) chan T {
 	return eout
 }
 
-func getFilename(ent tt.Entity) string {
-	return ent.Filename()
-}
-
 // chunkMSI takes a string counter and chunks it into groups of size <= chunkSize
 func chunkMSI(count map[string]int, chunkSize int) s2D {
 	result := s2D{}

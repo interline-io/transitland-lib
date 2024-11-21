@@ -290,43 +290,61 @@ type canFilename interface {
 	Filename() string
 }
 
-func (adapter *ZipAdapter) ReadRowsIter(entType any) (iter.Seq[tt.Row], func() error) {
+func getFilename(entType any) string {
+	if v, ok := entType.(canFilename); ok {
+		return v.Filename()
+	}
+	return ""
+}
+
+func (adapter *ZipAdapter) ReadEntityRows(entType any) (iter.Seq[tt.Row], func() error) {
 	var readErr error
 	errf := func() error { return readErr }
 	return func(yield func(tt.Row) bool) {
-		filename := ""
-		if v, ok := entType.(canFilename); ok {
-			filename = v.Filename()
-		}
-		r, err := zip.OpenReader(adapter.path)
-		if err != nil {
-			readErr = err
-			return
-		}
-		defer r.Close()
-		var inFile *zip.File
-		for _, f := range r.File {
-			if f.Name != filepath.Join(adapter.internalPrefix, filename) {
-				continue
+		readErr = adapter.OpenFile(getFilename(entType), func(in io.Reader) {
+			it, errf := ReadRowsIter(in)
+			for row := range it {
+				yield(row)
 			}
-			inFile = f
-		}
-		if inFile == nil {
-			readErr = causes.NewFileNotPresentError(filename)
-			return
-		}
-		in, err := inFile.Open()
-		if err != nil {
-			return
-		}
-		it, errf := ReadRowsIter(in)
-		for row := range it {
-			yield(row)
-		}
-		readErr = errf()
-		in.Close()
-		r.Close()
+			_ = errf
+		})
 	}, errf
+	// var readErr error
+	// errf := func() error { return readErr }
+	// return func(yield func(tt.Row) bool) {
+	// 	filename := ""
+	// 	if v, ok := entType.(canFilename); ok {
+	// 		filename = v.Filename()
+	// 	}
+	// 	r, err := zip.OpenReader(adapter.path)
+	// 	if err != nil {
+	// 		readErr = err
+	// 		return
+	// 	}
+	// 	defer r.Close()
+	// 	var inFile *zip.File
+	// 	for _, f := range r.File {
+	// 		if f.Name != filepath.Join(adapter.internalPrefix, filename) {
+	// 			continue
+	// 		}
+	// 		inFile = f
+	// 	}
+	// 	if inFile == nil {
+	// 		readErr = causes.NewFileNotPresentError(filename)
+	// 		return
+	// 	}
+	// 	in, err := inFile.Open()
+	// 	if err != nil {
+	// 		return
+	// 	}
+	// 	it, errf := ReadRowsIter(in)
+	// 	for row := range it {
+	// 		yield(row)
+	// 	}
+	// 	readErr = errf()
+	// 	in.Close()
+	// 	r.Close()
+	// }, errf
 }
 
 // ReadRows opens the specified file and runs the callback on each Row. An error is returned if the file cannot be read.

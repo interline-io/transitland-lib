@@ -22,7 +22,7 @@ type Row struct {
 	Err    error
 }
 
-// Get a value from the row as a string.
+// Get a value from the row.
 func (row *Row) Get(k string) (any, bool) {
 	if i, ok := row.Hindex[k]; ok {
 		if len(row.Values) > i {
@@ -32,8 +32,18 @@ func (row *Row) Get(k string) (any, bool) {
 	return nil, false
 }
 
+// Get a value from the row as a string.
+func (row *Row) GetString(k string) (string, bool) {
+	if i, ok := row.Hindex[k]; ok {
+		if len(row.Values) > i {
+			return toStrv(row.Values[i]), true
+		}
+	}
+	return "", false
+}
+
 type RowReader interface {
-	ReadRowsIter(any) (iter.Seq[Row], func() error)
+	ReadEntityRows(any) (iter.Seq[Row], func() error)
 }
 
 func ReadEntities[T any](reader RowReader) chan T {
@@ -42,7 +52,7 @@ func ReadEntities[T any](reader RowReader) chan T {
 	// Prepare channel
 	eout := make(chan T, bufferSize)
 	go func(c chan T) {
-		it, _ := reader.ReadRowsIter(entType)
+		it, _ := reader.ReadEntityRows(entType)
 		for row := range it {
 			var e T
 			loadRowReflect(&e, row)
@@ -58,7 +68,7 @@ func ReadEntitiesIter[T any](reader RowReader) (iter.Seq[T], func() error) {
 	var readErr error
 	var entType *T = new(T)
 	return func(yield func(T) bool) {
-		it, errf := reader.ReadRowsIter(entType)
+		it, errf := reader.ReadEntityRows(entType)
 		for row := range it {
 			fmt.Println("row:", row)
 			var e T
