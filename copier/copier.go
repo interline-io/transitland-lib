@@ -223,6 +223,7 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	if copier.BatchSize == 0 {
 		copier.BatchSize = 1_000_000
 	}
+
 	// Set the default Journey Pattern function
 	if copier.JourneyPatternKey == nil {
 		copier.JourneyPatternKey = journeyPatternKey
@@ -591,12 +592,10 @@ func (copier *Copier) Copy() *Result {
 		func() error { return copyEntityType(copier, copier.Reader.Agencies()) },
 		func() error { return copyEntityType(copier, copier.Reader.Routes()) },
 		func() error { return copyEntityType(copier, copier.Reader.Levels()) },
-
+		func() error { return copyEntityType(copier, shapesToShapeLines(copier.Reader.ShapesByShapeID())) },
 		copier.copyStops,
 		copier.copyCalendars,
-		copier.copyShapes,
 		copier.copyTripsAndStopTimes,
-
 		func() error { return copyEntityType(copier, copier.Reader.Pathways()) },
 		func() error { return copyEntityType(copier, copier.Reader.FareAttributes()) },
 		func() error { return copyEntityType(copier, copier.Reader.FareRules()) },
@@ -727,19 +726,6 @@ func (copier *Copier) copyStops() error {
 		}
 	}
 	copier.logCount(&gtfs.Stop{})
-	return nil
-}
-
-// copyShapes writes Shapes
-func (copier *Copier) copyShapes() error {
-	// Not safe for batch copy (currently)
-	for shapeEnts := range copier.Reader.ShapesByShapeID() {
-		ent := service.NewShapeLineFromShapes(shapeEnts)
-		if _, writeErr := copier.CopyEntity(&ent); writeErr != nil {
-			return writeErr
-		}
-	}
-	copier.logCount(&gtfs.Shape{})
 	return nil
 }
 
@@ -1064,6 +1050,8 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 	return shape.ShapeID.Val, nil
 }
 
+// Copy helpers
+
 func copyEntityType[
 	T any,
 	PT interface {
@@ -1080,6 +1068,20 @@ func copyEntityType[
 	copier.logCount(entType)
 	return nil
 }
+
+func shapesToShapeLines(it chan []gtfs.Shape) chan service.ShapeLine {
+	out := make(chan service.ShapeLine)
+	go func() {
+		for shapeEnts := range it {
+			ent := service.NewShapeLineFromShapes(shapeEnts)
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+// geomCacheFilter
 
 type geomCacheFilter struct {
 	NoShapeCache bool
