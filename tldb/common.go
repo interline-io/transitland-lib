@@ -84,10 +84,14 @@ func update(adapter Adapter, ent interface{}, columns ...string) error {
 		}
 		colmap[col] = vals[i]
 	}
-	_, err2 := adapter.Sqrl().
+	result, err2 := adapter.Sqrl().
 		Update(table).
 		Where("id = ?", entid).
+		Suffix("returning id").
 		SetMap(colmap).
 		Exec()
+	if n, err := result.RowsAffected(); err != nil || n != 1 {
+		return errors.New("failed to update record")
+	}
 	return err2
 }
