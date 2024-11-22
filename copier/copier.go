@@ -23,7 +23,6 @@ import (
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/rs/zerolog"
-	"github.com/twpayne/go-geom/xy"
 )
 
 // Prepare is called before general copying begins.
@@ -151,7 +150,7 @@ type Copier struct {
 	afterWriters      []AfterWrite
 	expandFilters     []ExpandFilter
 	// book keeping
-	geomCache *geomcache.GeomCache
+	geomCache *geomCacheFilter
 	result    *Result
 	EntityMap *tt.EntityMap
 }
@@ -209,23 +208,33 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	// Result
 	result := NewResult(opts.ErrorLimit)
 	copier.result = result
-	copier.geomCache = geomcache.NewGeomCache()
 	copier.ErrorHandler = opts.ErrorHandler
 	if copier.ErrorHandler == nil {
 		copier.ErrorHandler = result
 	}
+
 	// Default Markers
 	copier.Marker = newYesMarker()
+
 	// Default EntityMap
 	copier.EntityMap = tt.NewEntityMap()
+
 	// Set the default BatchSize
 	if copier.BatchSize == 0 {
 		copier.BatchSize = 1_000_000
 	}
+
 	// Set the default Journey Pattern function
 	if copier.JourneyPatternKey == nil {
 		copier.JourneyPatternKey = journeyPatternKey
 	}
+
+	// Geometry cache
+	copier.geomCache = &geomCacheFilter{
+		NoShapeCache: opts.NoShapeCache,
+		GeomCache:    geomcache.NewGeomCache(),
+	}
+	copier.AddExtension(copier.geomCache)
 
 	// Default set of validators
 	if !opts.NoValidators {
@@ -250,6 +259,10 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 		// Normalize timezones and apply agency/stop timezones where empty
 		copier.AddExtension(&filters.NormalizeTimezoneFilter{})
 		copier.AddExtension(&filters.ApplyParentTimezoneFilter{})
+	}
+	if copier.SimplifyShapes > 0 {
+		// Simplify shapes.txt
+		copier.AddExtension(&filters.SimplifyShapeFilter{SimplifyValue: copier.SimplifyShapes})
 	}
 
 	// Add extensions
@@ -576,21 +589,28 @@ func (copier *Copier) Copy() *Result {
 	// Note that order is important!!
 	copier.sublogger.Trace().Msg("Begin processing feed")
 	fns := []func() error{
-		copier.copyAgencies,
-		copier.copyRoutes,
-		copier.copyLevels,
+		func() error { return copyEntityType(copier, copier.Reader.Agencies()) },
+		func() error { return copyEntityType(copier, copier.Reader.Routes()) },
+		func() error { return copyEntityType(copier, copier.Reader.Levels()) },
+		func() error { return copyEntityType(copier, shapesToShapeLines(copier.Reader.ShapesByShapeID())) },
 		copier.copyStops,
-		copier.copyPathways,
-		copier.copyFares,
 		copier.copyCalendars,
-		copier.copyShapes,
 		copier.copyTripsAndStopTimes,
-		copier.copyFrequencies,
-		copier.copyTransfers,
-		copier.copyFeedInfos,
-		copier.copyTranslations,
-		copier.copyAttributions,
-		copier.copyFaresV2,
+		func() error { return copyEntityType(copier, copier.Reader.Pathways()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareAttributes()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareRules()) },
+		func() error { return copyEntityType(copier, copier.Reader.Frequencies()) },
+		func() error { return copyEntityType(copier, copier.Reader.Transfers()) },
+		func() error { return copyEntityType(copier, copier.Reader.FeedInfos()) },
+		func() error { return copyEntityType(copier, copier.Reader.Translations()) },
+		func() error { return copyEntityType(copier, copier.Reader.Attributions()) },
+		func() error { return copyEntityType(copier, copier.Reader.Areas()) },
+		func() error { return copyEntityType(copier, copier.Reader.StopAreas()) },
+		func() error { return copyEntityType(copier, copier.Reader.RiderCategories()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareMedia()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareProducts()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareLegRules()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareTransferRules()) },
 	}
 	for i := range fns {
 		if err := fns[i](); err != nil {
@@ -680,34 +700,10 @@ func (copier *Copier) copyExtraFiles() error {
 	return nil
 }
 
-// copyAgencies writes agencies
-func (copier *Copier) copyAgencies() error {
-	for e := range copier.Reader.Agencies() {
-		// agency validation depends on other agencies; don't batch write.
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Agency{})
-	return nil
-}
-
-// copyLevels writes levels.
-func (copier *Copier) copyLevels() error {
-	for e := range copier.Reader.Levels() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Level{})
-	return nil
-}
-
 func (copier *Copier) copyStops() error {
 	// First pass for stations
 	for ent := range copier.Reader.Stops() {
 		if ent.LocationType.Val == 1 {
-			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
@@ -716,7 +712,6 @@ func (copier *Copier) copyStops() error {
 	// Second pass for platforms, exits, and generic nodes
 	for ent := range copier.Reader.Stops() {
 		if ent.LocationType.Val == 0 || ent.LocationType.Val == 2 || ent.LocationType.Val == 3 {
-			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
@@ -725,195 +720,12 @@ func (copier *Copier) copyStops() error {
 	// Third pass for boarding areas
 	for ent := range copier.Reader.Stops() {
 		if ent.LocationType.Val == 4 {
-			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
 		}
 	}
 	copier.logCount(&gtfs.Stop{})
-	return nil
-}
-
-func (copier *Copier) copyFares() error {
-	// FareAttributes
-	for e := range copier.Reader.FareAttributes() {
-		var err error
-		if _, err = copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareAttribute{})
-
-	// FareRules
-	for e := range copier.Reader.FareRules() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareRule{})
-	return nil
-}
-
-func (copier *Copier) copyPathways() error {
-	// Pathways
-	for e := range copier.Reader.Pathways() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Pathway{})
-	return nil
-}
-
-// copyRoutes writes routes
-func (copier *Copier) copyRoutes() error {
-	for e := range copier.Reader.Routes() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Route{})
-	return nil
-}
-
-// copyFeedInfos writes FeedInfos
-func (copier *Copier) copyFeedInfos() error {
-	for e := range copier.Reader.FeedInfos() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FeedInfo{})
-	return nil
-}
-
-// copyTransfers writes Transfers
-func (copier *Copier) copyTransfers() error {
-	for e := range copier.Reader.Transfers() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Transfer{})
-	return nil
-}
-
-// copyShapes writes Shapes
-func (copier *Copier) copyShapes() error {
-	// Not safe for batch copy (currently)
-	for shapeEnts := range copier.Reader.ShapesByShapeID() {
-		ent := service.NewShapeLineFromShapes(shapeEnts)
-		sid := ent.EntityID()
-		if copier.SimplifyShapes > 0 {
-			simplifyValue := copier.SimplifyShapes / 1e6
-			pnts := ent.Geometry.FlatCoords()
-			// before := len(pnts)
-			stride := ent.Geometry.Stride()
-			ii := xy.SimplifyFlatCoords(pnts, simplifyValue, stride)
-			for i, j := range ii {
-				if i == j*stride {
-					continue
-				}
-				pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
-			}
-			pnts = pnts[:len(ii)*stride]
-			ent.Geometry = tt.NewLineStringFromFlatCoords(pnts)
-		}
-		if entErr, writeErr := copier.CopyEntity(&ent); writeErr != nil {
-			return writeErr
-		} else if entErr == nil && !copier.Options.NoShapeCache {
-			lm := ent.Geometry.ToLineM()
-			copier.geomCache.AddShapeGeom(sid, lm.Coords, lm.Data)
-		}
-	}
-	copier.logCount(&gtfs.Shape{})
-	return nil
-}
-
-// copyFrequencies writes Frequencies
-func (copier *Copier) copyFrequencies() error {
-	for e := range copier.Reader.Frequencies() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Frequency{})
-	return nil
-}
-
-// copyAttributions writes Attributions
-func (copier *Copier) copyAttributions() error {
-	for e := range copier.Reader.Attributions() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Attribution{})
-	return nil
-}
-
-// copyTranslations writes Translations
-func (copier *Copier) copyTranslations() error {
-	for e := range copier.Reader.Translations() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Translation{})
-	return nil
-}
-
-func (copier *Copier) copyFaresV2() error {
-	for e := range copier.Reader.Areas() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Area{})
-
-	for e := range copier.Reader.StopAreas() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.StopArea{})
-
-	for e := range copier.Reader.RiderCategories() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.RiderCategory{})
-
-	for e := range copier.Reader.FareMedia() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareMedia{})
-
-	for e := range copier.Reader.FareProducts() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareProduct{})
-
-	for e := range copier.Reader.FareLegRules() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareLegRule{})
-
-	for e := range copier.Reader.FareTransferRules() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareTransferRule{})
-
 	return nil
 }
 
@@ -1236,4 +1048,55 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 		copier.result.GeneratedCount["shapes.txt"]++
 	}
 	return shape.ShapeID.Val, nil
+}
+
+// Copy helpers
+
+func copyEntityType[
+	T any,
+	PT interface {
+		tt.Entity
+		*T
+	}](copier *Copier, it chan T) error {
+	for ent := range it {
+		var x PT = &ent
+		if _, err := copier.CopyEntity(x); err != nil {
+			return err
+		}
+	}
+	var entType PT
+	copier.logCount(entType)
+	return nil
+}
+
+func shapesToShapeLines(it chan []gtfs.Shape) chan service.ShapeLine {
+	out := make(chan service.ShapeLine)
+	go func() {
+		for shapeEnts := range it {
+			ent := service.NewShapeLineFromShapes(shapeEnts)
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+// geomCacheFilter
+
+type geomCacheFilter struct {
+	NoShapeCache bool
+	*geomcache.GeomCache
+}
+
+func (e *geomCacheFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+	switch v := ent.(type) {
+	case *gtfs.Stop:
+		e.GeomCache.AddStopGeom(v.EntityID(), v.ToPoint())
+	case *service.ShapeLine:
+		if !e.NoShapeCache {
+			lm := v.Geometry.ToLineM()
+			e.GeomCache.AddShapeGeom(v.EntityID(), lm.Coords, lm.Data)
+		}
+	}
+	return nil
 }
