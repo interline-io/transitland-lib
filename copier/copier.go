@@ -108,6 +108,8 @@ type Options struct {
 	CopyExtraFiles bool
 	// Simplify shapes
 	SimplifyShapes float64
+	// Convert route network_id to networks.txt/route_networks.txt
+	NormalizeNetworks bool
 	// DeduplicateStopTimes
 	DeduplicateJourneyPatterns bool
 	// Default error handler
@@ -263,6 +265,12 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	if copier.SimplifyShapes > 0 {
 		// Simplify shapes.txt
 		copier.AddExtension(&filters.SimplifyShapeFilter{SimplifyValue: copier.SimplifyShapes})
+	}
+	if copier.NormalizeNetworks {
+		// Convert routes.txt network_id to networks.txt/route_networks.txt
+		copier.AddExtension(&filters.RouteNetworkIDFilter{})
+	} else {
+		copier.AddExtension(&filters.RouteNetworkIDCompatFilter{})
 	}
 
 	// Add extensions

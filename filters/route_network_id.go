@@ -5,6 +5,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
+// RouteNetworkIDFilter converts routes.txt network_id into networks.txt/route_networks.txt
 type RouteNetworkIDFilter struct{}
 
 func (e *RouteNetworkIDFilter) Expand(ent tt.Entity, emap *tt.EntityMap) ([]tt.Entity, bool, error) {
@@ -35,6 +36,20 @@ func (e *RouteNetworkIDFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	// Unset any set NetworkID
 	if v, ok := ent.(*gtfs.Route); ok {
 		v.NetworkID = tt.String{}
+	}
+	return nil
+}
+
+////////////
+
+// RouteNetworkIDCompatFilter copies routes.txt:network_id IDs into networks.txt:network_id
+type RouteNetworkIDCompatFilter struct{}
+
+func (e *RouteNetworkIDCompatFilter) AfterValidator(ent tt.Entity, emap *tt.EntityMap) error {
+	if v, ok := ent.(*gtfs.Route); ok {
+		if v.NetworkID.Valid {
+			emap.Set("networks.txt", v.NetworkID.Val, v.NetworkID.Val)
+		}
 	}
 	return nil
 }

@@ -1,6 +1,10 @@
 package gtfs
 
-import "github.com/interline-io/transitland-lib/tt"
+import (
+	"fmt"
+
+	"github.com/interline-io/transitland-lib/tt"
+)
 
 type RouteNetwork struct {
 	NetworkID tt.Key `target:"networks.txt"`
@@ -14,4 +18,8 @@ func (ent *RouteNetwork) Filename() string {
 
 func (ent *RouteNetwork) TableName() string {
 	return "gtfs_route_networks"
+}
+
+func (ent *RouteNetwork) EntityKey() string {
+	return fmt.Sprintf("%s:%s", ent.NetworkID.Val, ent.RouteID.Val)
 }
