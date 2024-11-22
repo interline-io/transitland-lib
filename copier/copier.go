@@ -117,7 +117,7 @@ type Options struct {
 	// Named extensions
 	Extensions []string
 	// Initialized extensions
-	extensions []Extension
+	extensions []any
 	// Error limit
 	ErrorLimit int
 
@@ -126,7 +126,7 @@ type Options struct {
 	sublogger zerolog.Logger
 }
 
-func (opts *Options) AddExtension(ext Extension) {
+func (opts *Options) AddExtension(ext any) {
 	opts.extensions = append(opts.extensions, ext)
 }
 
