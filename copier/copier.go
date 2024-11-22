@@ -23,7 +23,6 @@ import (
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/rs/zerolog"
-	"github.com/twpayne/go-geom/xy"
 )
 
 // Prepare is called before general copying begins.
@@ -250,6 +249,10 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 		// Normalize timezones and apply agency/stop timezones where empty
 		copier.AddExtension(&filters.NormalizeTimezoneFilter{})
 		copier.AddExtension(&filters.ApplyParentTimezoneFilter{})
+	}
+	if copier.SimplifyShapes > 0 {
+		// Simplify shapes.txt
+		copier.AddExtension(&filters.SimplifyShapeFilter{SimplifyValue: copier.SimplifyShapes})
 	}
 
 	// Add extensions
@@ -727,21 +730,6 @@ func (copier *Copier) copyShapes() error {
 	for shapeEnts := range copier.Reader.ShapesByShapeID() {
 		ent := service.NewShapeLineFromShapes(shapeEnts)
 		sid := ent.EntityID()
-		if copier.SimplifyShapes > 0 {
-			simplifyValue := copier.SimplifyShapes / 1e6
-			pnts := ent.Geometry.FlatCoords()
-			// before := len(pnts)
-			stride := ent.Geometry.Stride()
-			ii := xy.SimplifyFlatCoords(pnts, simplifyValue, stride)
-			for i, j := range ii {
-				if i == j*stride {
-					continue
-				}
-				pnts[i*stride], pnts[i*stride+1] = pnts[j*stride], pnts[j*stride+1]
-			}
-			pnts = pnts[:len(ii)*stride]
-			ent.Geometry = tt.NewLineStringFromFlatCoords(pnts)
-		}
 		if entErr, writeErr := copier.CopyEntity(&ent); writeErr != nil {
 			return writeErr
 		} else if entErr == nil && !copier.Options.NoShapeCache {
