@@ -32,7 +32,7 @@ func (ent *ShapeLine) EntityKey() string {
 
 // Filename shapes.txt
 // This is for entity map, not output file
-func (ent ShapeLine) Filename() string {
+func (ent *ShapeLine) Filename() string {
 	return "shapes.txt"
 }
 
