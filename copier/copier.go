@@ -241,6 +241,9 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 		copier.AddValidator(&rules.DuplicateFareProductCheck{}, 0)
 	}
 
+	// Rewrite routes network_id as networks.txt/route_networks.txt
+	copier.AddExtension(&rules.RouteNetworkIDFilter{})
+
 	// Default extensions
 	if copier.UseBasicRouteTypes {
 		// Convert extended route types to basic route types
@@ -768,37 +771,31 @@ func (copier *Copier) copyPathways() error {
 
 // copyRoutes writes routes
 func (copier *Copier) copyRoutes() error {
-	type createNetwork struct {
-		RouteID   string
-		NetworkID string
-	}
-	var createNetworks []createNetwork
+	// Copy routes
 	for e := range copier.Reader.Routes() {
-		if e.NetworkID.Valid {
-			createNetworks = append(createNetworks, createNetwork{
-				RouteID:   e.RouteID.Val,
-				NetworkID: e.NetworkID.Val,
-			})
-			e.NetworkID = tt.String{}
-		}
 		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
 		}
 	}
-	for _, cn := range createNetworks {
-		network := gtfs.Network{}
-		network.NetworkID.Set(cn.NetworkID)
-		if _, err := copier.CopyEntity(&network); err != nil {
+
+	// Copy networks.txt
+	for e := range copier.Reader.Networks() {
+		fmt.Println("Network:", e)
+		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
 		}
-		routeNetwork := gtfs.RouteNetwork{}
-		routeNetwork.NetworkID.Set(cn.NetworkID)
-		routeNetwork.RouteID.Set(cn.RouteID)
-		if _, err := copier.CopyEntity(&routeNetwork); err != nil {
+	}
+
+	// Copy base route_networks.txt
+	for e := range copier.Reader.RouteNetworks() {
+		fmt.Println("RouteNetwork:", e)
+		if _, err := copier.CopyEntity(&e); err != nil {
 			return err
 		}
 	}
 	copier.logCount(&gtfs.Route{})
+	copier.logCount(&gtfs.Network{})
+	copier.logCount(&gtfs.RouteNetwork{})
 	return nil
 }
 
