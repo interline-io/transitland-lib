@@ -576,21 +576,30 @@ func (copier *Copier) Copy() *Result {
 	// Note that order is important!!
 	copier.sublogger.Trace().Msg("Begin processing feed")
 	fns := []func() error{
-		copier.copyAgencies,
-		copier.copyRoutes,
-		copier.copyLevels,
+		func() error { return copyEntityType(copier, copier.Reader.Agencies()) },
+		func() error { return copyEntityType(copier, copier.Reader.Routes()) },
+		func() error { return copyEntityType(copier, copier.Reader.Levels()) },
+
 		copier.copyStops,
-		copier.copyPathways,
-		copier.copyFares,
 		copier.copyCalendars,
 		copier.copyShapes,
 		copier.copyTripsAndStopTimes,
-		copier.copyFrequencies,
-		copier.copyTransfers,
-		copier.copyFeedInfos,
-		copier.copyTranslations,
-		copier.copyAttributions,
-		copier.copyFaresV2,
+
+		func() error { return copyEntityType(copier, copier.Reader.Pathways()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareAttributes()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareRules()) },
+		func() error { return copyEntityType(copier, copier.Reader.Frequencies()) },
+		func() error { return copyEntityType(copier, copier.Reader.Transfers()) },
+		func() error { return copyEntityType(copier, copier.Reader.FeedInfos()) },
+		func() error { return copyEntityType(copier, copier.Reader.Translations()) },
+		func() error { return copyEntityType(copier, copier.Reader.Attributions()) },
+		func() error { return copyEntityType(copier, copier.Reader.Areas()) },
+		func() error { return copyEntityType(copier, copier.Reader.StopAreas()) },
+		func() error { return copyEntityType(copier, copier.Reader.RiderCategories()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareMedia()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareProducts()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareLegRules()) },
+		func() error { return copyEntityType(copier, copier.Reader.FareTransferRules()) },
 	}
 	for i := range fns {
 		if err := fns[i](); err != nil {
@@ -680,29 +689,6 @@ func (copier *Copier) copyExtraFiles() error {
 	return nil
 }
 
-// copyAgencies writes agencies
-func (copier *Copier) copyAgencies() error {
-	for e := range copier.Reader.Agencies() {
-		// agency validation depends on other agencies; don't batch write.
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Agency{})
-	return nil
-}
-
-// copyLevels writes levels.
-func (copier *Copier) copyLevels() error {
-	for e := range copier.Reader.Levels() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Level{})
-	return nil
-}
-
 func (copier *Copier) copyStops() error {
 	// First pass for stations
 	for ent := range copier.Reader.Stops() {
@@ -735,70 +721,6 @@ func (copier *Copier) copyStops() error {
 	return nil
 }
 
-func (copier *Copier) copyFares() error {
-	// FareAttributes
-	for e := range copier.Reader.FareAttributes() {
-		var err error
-		if _, err = copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareAttribute{})
-
-	// FareRules
-	for e := range copier.Reader.FareRules() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareRule{})
-	return nil
-}
-
-func (copier *Copier) copyPathways() error {
-	// Pathways
-	for e := range copier.Reader.Pathways() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Pathway{})
-	return nil
-}
-
-// copyRoutes writes routes
-func (copier *Copier) copyRoutes() error {
-	for e := range copier.Reader.Routes() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Route{})
-	return nil
-}
-
-// copyFeedInfos writes FeedInfos
-func (copier *Copier) copyFeedInfos() error {
-	for e := range copier.Reader.FeedInfos() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FeedInfo{})
-	return nil
-}
-
-// copyTransfers writes Transfers
-func (copier *Copier) copyTransfers() error {
-	for e := range copier.Reader.Transfers() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Transfer{})
-	return nil
-}
-
 // copyShapes writes Shapes
 func (copier *Copier) copyShapes() error {
 	// Not safe for batch copy (currently)
@@ -828,92 +750,6 @@ func (copier *Copier) copyShapes() error {
 		}
 	}
 	copier.logCount(&gtfs.Shape{})
-	return nil
-}
-
-// copyFrequencies writes Frequencies
-func (copier *Copier) copyFrequencies() error {
-	for e := range copier.Reader.Frequencies() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Frequency{})
-	return nil
-}
-
-// copyAttributions writes Attributions
-func (copier *Copier) copyAttributions() error {
-	for e := range copier.Reader.Attributions() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Attribution{})
-	return nil
-}
-
-// copyTranslations writes Translations
-func (copier *Copier) copyTranslations() error {
-	for e := range copier.Reader.Translations() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Translation{})
-	return nil
-}
-
-func (copier *Copier) copyFaresV2() error {
-	for e := range copier.Reader.Areas() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.Area{})
-
-	for e := range copier.Reader.StopAreas() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.StopArea{})
-
-	for e := range copier.Reader.RiderCategories() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.RiderCategory{})
-
-	for e := range copier.Reader.FareMedia() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareMedia{})
-
-	for e := range copier.Reader.FareProducts() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareProduct{})
-
-	for e := range copier.Reader.FareLegRules() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareLegRule{})
-
-	for e := range copier.Reader.FareTransferRules() {
-		if _, err := copier.CopyEntity(&e); err != nil {
-			return err
-		}
-	}
-	copier.logCount(&gtfs.FareTransferRule{})
-
 	return nil
 }
 
@@ -1236,4 +1072,21 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 		copier.result.GeneratedCount["shapes.txt"]++
 	}
 	return shape.ShapeID.Val, nil
+}
+
+func copyEntityType[
+	T any,
+	PT interface {
+		tt.Entity
+		*T
+	}](copier *Copier, it chan T) error {
+	for ent := range it {
+		var x PT = &ent
+		if _, err := copier.CopyEntity(x); err != nil {
+			return err
+		}
+	}
+	var entType PT
+	copier.logCount(entType)
+	return nil
 }
