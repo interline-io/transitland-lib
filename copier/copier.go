@@ -150,7 +150,7 @@ type Copier struct {
 	afterWriters      []AfterWrite
 	expandFilters     []ExpandFilter
 	// book keeping
-	geomCache *geomcache.GeomCache
+	geomCache *geomCacheFilter
 	result    *Result
 	EntityMap *tt.EntityMap
 }
@@ -208,15 +208,17 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	// Result
 	result := NewResult(opts.ErrorLimit)
 	copier.result = result
-	copier.geomCache = geomcache.NewGeomCache()
 	copier.ErrorHandler = opts.ErrorHandler
 	if copier.ErrorHandler == nil {
 		copier.ErrorHandler = result
 	}
+
 	// Default Markers
 	copier.Marker = newYesMarker()
+
 	// Default EntityMap
 	copier.EntityMap = tt.NewEntityMap()
+
 	// Set the default BatchSize
 	if copier.BatchSize == 0 {
 		copier.BatchSize = 1_000_000
@@ -225,6 +227,13 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	if copier.JourneyPatternKey == nil {
 		copier.JourneyPatternKey = journeyPatternKey
 	}
+
+	// Geometry cache
+	copier.geomCache = &geomCacheFilter{
+		NoShapeCache: opts.NoShapeCache,
+		GeomCache:    geomcache.NewGeomCache(),
+	}
+	copier.AddExtension(copier.geomCache)
 
 	// Default set of validators
 	if !opts.NoValidators {
@@ -696,7 +705,6 @@ func (copier *Copier) copyStops() error {
 	// First pass for stations
 	for ent := range copier.Reader.Stops() {
 		if ent.LocationType.Val == 1 {
-			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
@@ -705,7 +713,6 @@ func (copier *Copier) copyStops() error {
 	// Second pass for platforms, exits, and generic nodes
 	for ent := range copier.Reader.Stops() {
 		if ent.LocationType.Val == 0 || ent.LocationType.Val == 2 || ent.LocationType.Val == 3 {
-			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
@@ -714,7 +721,6 @@ func (copier *Copier) copyStops() error {
 	// Third pass for boarding areas
 	for ent := range copier.Reader.Stops() {
 		if ent.LocationType.Val == 4 {
-			copier.geomCache.AddStopGeom(ent.EntityID(), ent.ToPoint())
 			if _, err := copier.CopyEntity(&ent); err != nil {
 				return err
 			}
@@ -729,12 +735,8 @@ func (copier *Copier) copyShapes() error {
 	// Not safe for batch copy (currently)
 	for shapeEnts := range copier.Reader.ShapesByShapeID() {
 		ent := service.NewShapeLineFromShapes(shapeEnts)
-		sid := ent.EntityID()
-		if entErr, writeErr := copier.CopyEntity(&ent); writeErr != nil {
+		if _, writeErr := copier.CopyEntity(&ent); writeErr != nil {
 			return writeErr
-		} else if entErr == nil && !copier.Options.NoShapeCache {
-			lm := ent.Geometry.ToLineM()
-			copier.geomCache.AddShapeGeom(sid, lm.Coords, lm.Data)
 		}
 	}
 	copier.logCount(&gtfs.Shape{})
@@ -1076,5 +1078,23 @@ func copyEntityType[
 	}
 	var entType PT
 	copier.logCount(entType)
+	return nil
+}
+
+type geomCacheFilter struct {
+	NoShapeCache bool
+	*geomcache.GeomCache
+}
+
+func (e *geomCacheFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+	switch v := ent.(type) {
+	case *gtfs.Stop:
+		e.GeomCache.AddStopGeom(v.EntityID(), v.ToPoint())
+	case *service.ShapeLine:
+		if !e.NoShapeCache {
+			lm := v.Geometry.ToLineM()
+			e.GeomCache.AddShapeGeom(v.EntityID(), lm.Coords, lm.Data)
+		}
+	}
 	return nil
 }
