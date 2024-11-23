@@ -321,7 +321,7 @@ message Attribution {
     Phone attribution_phone = 13;
 }
 
-message ShapePoint {
+message Shape {
     Key shape_id = 1;
     double shape_pt_lat = 2;
     double shape_pt_lon = 3;
@@ -348,7 +348,7 @@ message Service {
     Bool sunday = 14;
 }
 
-message Shape {
+message ShapeLine {
     DatabaseEntity id = 1;
     Key shape_id = 2;
     LineString geometry = 3;

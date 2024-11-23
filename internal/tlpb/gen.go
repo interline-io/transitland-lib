@@ -1,36 +1,86 @@
-package tlpb
+package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
-	"testing"
 
 	"github.com/bufbuild/protocompile"
+	"github.com/interline-io/transitland-lib/tlcli"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func TestCodegen(t *testing.T) {
+func main() {
+	cmd := tlcli.CobraHelper(&GenGtfsCommand{}, "", "")
+	cmd.Execute()
+}
+
+type GenGtfsCommand struct {
+	Protopath string
+	Outpath   string
+	Command   *cobra.Command
+}
+
+func (cmd *GenGtfsCommand) AddFlags(fl *pflag.FlagSet) {
+}
+
+func (cmd *GenGtfsCommand) HelpDesc() (string, string) {
+	return "Generate GTFS entities", ""
+}
+
+func (cmd *GenGtfsCommand) Parse(args []string) error {
+	fl := tlcli.NewNArgs(args)
+	if fl.NArg() < 2 {
+		return errors.New("<proto> <outppath>")
+	}
+	cmd.Protopath = fl.Arg(0)
+	cmd.Outpath = fl.Arg(1)
+	return nil
+}
+
+func (cmd *GenGtfsCommand) Run() error {
 	compiler := protocompile.Compiler{
 		Resolver: &protocompile.SourceResolver{},
 	}
-	files, err := compiler.Compile(context.Background(), "gtfs.proto")
+	files, err := compiler.Compile(context.Background(), cmd.Protopath)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
-	outf, err := os.Create("gtfs/gtfs.go")
+	outf, err := os.Create(cmd.Outpath)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	defer outf.Close()
 
+	// Go
 	outf.WriteString(`package gtfs` + "\n\n")
 	outf.WriteString(`import ( "github.com/interline-io/transitland-lib/tt" )` + "\n\n")
-	outf.WriteString(`type EnumValue int32` + "\n\n")
+
+	ttKinds := map[string]string{
+		"Url":       "tt.Url",
+		"Date":      "tt.Date",
+		"Time":      "tt.Time",
+		"Color":     "tt.Color",
+		"Key":       "tt.Key",
+		"Phone":     "tt.Phone",
+		"Email":     "tt.Email",
+		"Reference": "tt.Reference",
+		"Currency":  "tt.Currency",
+		"Language":  "tt.Language",
+		"Int":       "tt.Int",
+		"Bool":      "tt.Bool",
+		"Float":     "tt.Float",
+		"String":    "tt.String",
+		"Timezone":  "tt.Timezone",
+		"Timestamp": "tt.Timestamp",
+		"Seconds":   "tt.Seconds",
+	}
 
 	for _, lf := range files {
-		// fmt.Printf("file %#v\n", file)
 		enums := lf.Enums()
 		for i := 0; i < enums.Len(); i++ {
 			en := enums.Get(i)
@@ -40,9 +90,16 @@ func TestCodegen(t *testing.T) {
 		for i := 0; i < msgs.Len(); i++ {
 			msg := msgs.Get(i)
 			fields := msg.Fields()
+			if _, ok := ttKinds[string(msg.Name())]; ok {
+				continue
+			}
 			if fields.Len() == 1 && fields.Get(0).Name() == "val" {
 				field := fields.Get(0)
-				outf.WriteString(fmt.Sprintf("type %s struct { tt.Option[%s] }\n\n", msg.Name(), mapKind(field)))
+				outf.WriteString(fmt.Sprintf(
+					"type %s struct { tt.Option[%s] }\n\n",
+					msg.Name(),
+					mapKind(field)),
+				)
 				continue
 			}
 
@@ -51,17 +108,21 @@ func TestCodegen(t *testing.T) {
 				field := fields.Get(j)
 				fieldName := toCamelCase(string(field.Name()))
 				fieldKind := mapKind(field)
+				if ttKind, ok := ttKinds[fieldKind]; ok {
+					outf.WriteString(fmt.Sprintf("\t%s %s\n", fieldName, ttKind))
+					continue
+				}
 				switch fieldKind {
 				case "DatabaseEntity":
 					outf.WriteString("\tDatabaseEntity\n")
 				default:
 					outf.WriteString(fmt.Sprintf("\t%s %s\n", fieldName, fieldKind))
 				}
-
 			}
 			outf.WriteString("}\n\n")
 		}
 	}
+	return nil
 }
 
 func mapKind(field protoreflect.FieldDescriptor) string {

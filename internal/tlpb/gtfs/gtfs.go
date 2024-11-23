@@ -1,8 +1,8 @@
 package gtfs
 
-import ( "github.com/interline-io/transitland-lib/tt" )
-
-type EnumValue int32
+import (
+	"github.com/interline-io/transitland-lib/tt"
+)
 
 type WheelchairAccessEnum int32
 
@@ -45,350 +45,350 @@ type PaymentMethodEnum int32
 type AttributionRoleEnum int32
 
 type FeedEntity struct {
-	Agency Agency
-	Stop Stop
-	Route Route
-	Trip Trip
+	Agency   Agency
+	Stop     Stop
+	Route    Route
+	Trip     Trip
 	StopTime StopTime
-	Shape Shape
-	Service Service
+	Shape    Shape
+	Service  Service
 }
 
 type Agency struct {
 	DatabaseEntity
-	AgencyID Key
-	AgencyName String
-	AgencyUrl Url
-	AgencyTimezone Timezone
-	AgencyLang Language
-	AgencyPhone Phone
-	AgencyFareUrl Url
-	AgencyEmail Email
+	AgencyID       tt.Key
+	AgencyName     tt.String
+	AgencyUrl      tt.Url
+	AgencyTimezone tt.Timezone
+	AgencyLang     tt.Language
+	AgencyPhone    tt.Phone
+	AgencyFareUrl  tt.Url
+	AgencyEmail    tt.Email
 }
 
 type Stop struct {
 	DatabaseEntity
-	StopID Key
-	StopCode String
-	StopName String
-	TtsStopName String
-	StopDesc String
-	StopLat Float
-	StopLon Float
-	ZoneID String
-	StopUrl Url
-	LocationType StopLocationType
-	ParentStation Reference
-	StopTimezone Timezone
+	StopID             tt.Key
+	StopCode           tt.String
+	StopName           tt.String
+	TtsStopName        tt.String
+	StopDesc           tt.String
+	StopLat            tt.Float
+	StopLon            tt.Float
+	ZoneID             tt.String
+	StopUrl            tt.Url
+	LocationType       StopLocationType
+	ParentStation      tt.Reference
+	StopTimezone       tt.Timezone
 	WheelchairBoarding WheelchairAccess
-	LevelID Reference
-	PlatformCode String
+	LevelID            tt.Reference
+	PlatformCode       tt.String
 }
 
 type Route struct {
 	DatabaseEntity
-	RouteID Key
-	AgencyID Reference
-	RouteShortName String
-	RouteLongName String
-	RouteDesc String
-	RouteType RouteType
-	RouteUrl Url
-	RouteColor Color
-	RouteTextColor Color
-	RouteSortOrder Int
-	ContinuousPickup PickupAccess
+	RouteID           tt.Key
+	AgencyID          tt.Reference
+	RouteShortName    tt.String
+	RouteLongName     tt.String
+	RouteDesc         tt.String
+	RouteType         RouteType
+	RouteUrl          tt.Url
+	RouteColor        tt.Color
+	RouteTextColor    tt.Color
+	RouteSortOrder    tt.Int
+	ContinuousPickup  PickupAccess
 	ContinuousDropOff PickupAccess
-	NetworkID String
+	NetworkID         tt.String
 }
 
 type Trip struct {
 	DatabaseEntity
-	RouteID Reference
-	ServiceID Reference
-	TripID Key
-	TripHeadsign String
-	TripShortName String
-	DirectionID TripDirection
-	BlockID String
-	ShapeID Reference
+	RouteID              tt.Reference
+	ServiceID            tt.Reference
+	TripID               tt.Key
+	TripHeadsign         tt.String
+	TripShortName        tt.String
+	DirectionID          TripDirection
+	BlockID              tt.String
+	ShapeID              tt.Reference
 	WheelchairAccessible WheelchairAccess
-	BikesAllowed BikeAccess
+	BikesAllowed         BikeAccess
 }
 
 type StopTime struct {
 	DatabaseEntity
-	TripID Reference
-	ArrivalTime Seconds
-	DepartureTime Seconds
-	StopID Reference
-	StopSequence Int
-	StopHeadsign String
-	ContinuousPickup PickupAccess
-	ContinuousDropOff PickupAccess
-	ShapeDistTraveled Float
-	Timepoint StopTimepoint
-	LocationID Reference
-	LocationGroupID Reference
-	StartPickupDropOffWindow Seconds
-	EndPickupDropOffWindow Seconds
-	PickupType PickupAccess
-	DropOffType PickupAccess
-	PickupBookingRuleID Reference
-	DropOffBookingRuleID Reference
+	TripID                   tt.Reference
+	ArrivalTime              tt.Seconds
+	DepartureTime            tt.Seconds
+	StopID                   tt.Reference
+	StopSequence             tt.Int
+	StopHeadsign             tt.String
+	ContinuousPickup         PickupAccess
+	ContinuousDropOff        PickupAccess
+	ShapeDistTraveled        tt.Float
+	Timepoint                StopTimepoint
+	LocationID               tt.Reference
+	LocationGroupID          tt.Reference
+	StartPickupDropOffWindow tt.Seconds
+	EndPickupDropOffWindow   tt.Seconds
+	PickupType               PickupAccess
+	DropOffType              PickupAccess
+	PickupBookingRuleID      tt.Reference
+	DropOffBookingRuleID     tt.Reference
 }
 
 type Calendar struct {
 	DatabaseEntity
-	ServiceID Key
-	StartDate Date
-	EndDate Date
-	Monday Bool
-	Tuesday Bool
-	Wednesday Bool
-	Thursday Bool
-	Friday Bool
-	Saturday Bool
-	Sunday Bool
+	ServiceID tt.Key
+	StartDate tt.Date
+	EndDate   tt.Date
+	Monday    tt.Bool
+	Tuesday   tt.Bool
+	Wednesday tt.Bool
+	Thursday  tt.Bool
+	Friday    tt.Bool
+	Saturday  tt.Bool
+	Sunday    tt.Bool
 }
 
 type CalendarDate struct {
 	DatabaseEntity
-	ServiceID Reference
-	Date Date
+	ServiceID     tt.Reference
+	Date          tt.Date
 	ExceptionType CalendarExceptionType
 }
 
 type FareAttribute struct {
 	DatabaseEntity
-	FareID Key
-	Price Money
-	CurrencyType Currency
-	PaymentMethod PaymentMethod
-	Transfers FareAttributeTransferType
-	AgencyID Reference
-	TransferDuration Int
+	FareID           tt.Key
+	Price            Money
+	CurrencyType     tt.Currency
+	PaymentMethod    PaymentMethod
+	Transfers        FareAttributeTransferType
+	AgencyID         tt.Reference
+	TransferDuration tt.Int
 }
 
 type FareRule struct {
 	DatabaseEntity
-	FareID Key
-	RouteID Reference
-	OriginID Reference
-	DestinationID Reference
-	ContainsID Reference
+	FareID        tt.Key
+	RouteID       tt.Reference
+	OriginID      tt.Reference
+	DestinationID tt.Reference
+	ContainsID    tt.Reference
 }
 
 type Timeframe struct {
 	DatabaseEntity
-	TimeframeGroupID Key
-	StartTime Seconds
-	EndTime Seconds
-	ServiceID Reference
+	TimeframeGroupID tt.Key
+	StartTime        tt.Seconds
+	EndTime          tt.Seconds
+	ServiceID        tt.Reference
 }
 
 type FareMedia struct {
 	DatabaseEntity
-	FareMediaID Key
-	FareMediaName String
+	FareMediaID   tt.Key
+	FareMediaName tt.String
 	FareMediaType FareMediaType
 }
 
 type FareProduct struct {
 	DatabaseEntity
-	FareProductID Key
-	FareProductName String
-	FareMediaID Reference
-	Amount Money
-	Currency Currency
+	FareProductID   tt.Key
+	FareProductName tt.String
+	FareMediaID     tt.Reference
+	Amount          Money
+	Currency        tt.Currency
 }
 
 type FareLegRule struct {
 	DatabaseEntity
-	LegGroupID Key
-	NetworkID Reference
-	FromAreaID Reference
-	ToAreaID Reference
-	FromTimeframeGroupID Reference
-	ToTimeframeGroupID Reference
-	FareProductID Reference
-	RuleProirity Int
+	LegGroupID           tt.Key
+	NetworkID            tt.Reference
+	FromAreaID           tt.Reference
+	ToAreaID             tt.Reference
+	FromTimeframeGroupID tt.Reference
+	ToTimeframeGroupID   tt.Reference
+	FareProductID        tt.Reference
+	RuleProirity         tt.Int
 }
 
 type FareTransferRule struct {
 	DatabaseEntity
-	FromLegGroupID Reference
-	ToLegGroupID Reference
-	TransferCount Int
+	FromLegGroupID    tt.Reference
+	ToLegGroupID      tt.Reference
+	TransferCount     tt.Int
 	DurationLimitType DurationLimitType
-	FareTransferType FareTransferType
-	FareProductID Reference
+	FareTransferType  FareTransferType
+	FareProductID     tt.Reference
 }
 
 type Area struct {
 	DatabaseEntity
-	AreaID Key
-	AreaName String
+	AreaID   tt.Key
+	AreaName tt.String
 }
 
 type StopArea struct {
 	DatabaseEntity
-	AreaID Reference
-	StopID Reference
+	AreaID tt.Reference
+	StopID tt.Reference
 }
 
 type Network struct {
 	DatabaseEntity
-	NetworkID Key
-	NetworkName String
+	NetworkID   tt.Key
+	NetworkName tt.String
 }
 
 type RouteNetwork struct {
 	DatabaseEntity
-	NetworkID Reference
-	RouteID Reference
+	NetworkID tt.Reference
+	RouteID   tt.Reference
 }
 
 type Frequency struct {
 	DatabaseEntity
-	TripID Reference
-	StartTime Seconds
-	EndTime Seconds
-	HeadwaySecs Int
-	ExactTime FrequencyExactTime
+	TripID      tt.Reference
+	StartTime   tt.Seconds
+	EndTime     tt.Seconds
+	HeadwaySecs tt.Int
+	ExactTime   FrequencyExactTime
 }
 
 type Transfer struct {
 	DatabaseEntity
-	FromStopID Reference
-	ToStopID Reference
-	FromRouteID Reference
-	ToRouteID Reference
-	FromTripID Reference
-	ToTripID Reference
-	TransferType TransferType
-	MinTransferTime Int
+	FromStopID      tt.Reference
+	ToStopID        tt.Reference
+	FromRouteID     tt.Reference
+	ToRouteID       tt.Reference
+	FromTripID      tt.Reference
+	ToTripID        tt.Reference
+	TransferType    TransferType
+	MinTransferTime tt.Int
 }
 
 type Pathway struct {
 	DatabaseEntity
-	PathwayID Key
-	FromStopID Reference
-	ToStopID Reference
-	PathwayMode PathwayMode
-	IsBidirectional PathwayDirectionality
-	Length Float
-	TraversalTime Int
-	StairCount Int
-	MaxSlope Float
-	MinWidth Float
-	SignpostedAs String
-	ReverseSignpostedAs String
+	PathwayID           tt.Key
+	FromStopID          tt.Reference
+	ToStopID            tt.Reference
+	PathwayMode         PathwayMode
+	IsBidirectional     PathwayDirectionality
+	Length              tt.Float
+	TraversalTime       tt.Int
+	StairCount          tt.Int
+	MaxSlope            tt.Float
+	MinWidth            tt.Float
+	SignpostedAs        tt.String
+	ReverseSignpostedAs tt.String
 }
 
 type Level struct {
 	DatabaseEntity
-	LevelID Key
-	LevelIndex Float
-	LevelName String
+	LevelID    tt.Key
+	LevelIndex tt.Float
+	LevelName  tt.String
 }
 
 type LocationGroup struct {
 	DatabaseEntity
-	LocationGroupID Key
-	LocationGroupName String
+	LocationGroupID   tt.Key
+	LocationGroupName tt.String
 }
 
 type LocationGroupStop struct {
 	DatabaseEntity
-	LocationGroupID Reference
-	StopID Reference
+	LocationGroupID tt.Reference
+	StopID          tt.Reference
 }
 
 type BookingRule struct {
 	DatabaseEntity
-	BookingRuleID Key
-	BookingType BookingRuleType
-	PriorNoticeDurationMin Int
-	PriorNoticeDurationMax Int
-	PriorNoticeLastDay Int
-	PriorNoticeLastTime Seconds
-	PriorNoticeStartDay Int
-	PriorNoticeStartTime Seconds
-	PriorNoticeServiceID Reference
-	Message String
-	PickupMessage String
-	DropOffMessage String
-	PhoneNumber String
-	InfoUrl Url
-	BookingUrl Url
+	BookingRuleID          tt.Key
+	BookingType            BookingRuleType
+	PriorNoticeDurationMin tt.Int
+	PriorNoticeDurationMax tt.Int
+	PriorNoticeLastDay     tt.Int
+	PriorNoticeLastTime    tt.Seconds
+	PriorNoticeStartDay    tt.Int
+	PriorNoticeStartTime   tt.Seconds
+	PriorNoticeServiceID   tt.Reference
+	Message                tt.String
+	PickupMessage          tt.String
+	DropOffMessage         tt.String
+	PhoneNumber            tt.String
+	InfoUrl                tt.Url
+	BookingUrl             tt.Url
 }
 
 type Translation struct {
 	DatabaseEntity
-	TableName String
-	FieldName String
-	Language Language
-	Translation String
-	RecordID String
-	RecordSubID String
-	FieldValue String
+	TableName   tt.String
+	FieldName   tt.String
+	Language    tt.Language
+	Translation tt.String
+	RecordID    tt.String
+	RecordSubID tt.String
+	FieldValue  tt.String
 }
 
 type FeedInfo struct {
 	DatabaseEntity
-	FeedPublisherName String
-	FeedPublisherUrl Url
-	FeedLang Language
-	DefaultLang Language
-	FeedStartDate Date
-	FeedEndDate Date
-	FeedContactEmail Email
-	FeedContactUrl Url
+	FeedPublisherName tt.String
+	FeedPublisherUrl  tt.Url
+	FeedLang          tt.Language
+	DefaultLang       tt.Language
+	FeedStartDate     tt.Date
+	FeedEndDate       tt.Date
+	FeedContactEmail  tt.Email
+	FeedContactUrl    tt.Url
 }
 
 type Attribution struct {
 	DatabaseEntity
-	AttributionID Key
-	AgencyID Reference
-	RouteID Reference
-	TripID Reference
-	OrganizationName String
-	IsProducer AttributionRole
-	IsOperator AttributionRole
-	IsAuthority AttributionRole
-	AttributionUrl Url
-	AttributionEmail Email
-	AttributionPhone Phone
+	AttributionID    tt.Key
+	AgencyID         tt.Reference
+	RouteID          tt.Reference
+	TripID           tt.Reference
+	OrganizationName tt.String
+	IsProducer       AttributionRole
+	IsOperator       AttributionRole
+	IsAuthority      AttributionRole
+	AttributionUrl   tt.Url
+	AttributionEmail tt.Email
+	AttributionPhone tt.Phone
 }
 
-type ShapePoint struct {
-	ShapeID Key
-	ShapePtLat float64
-	ShapePtLon float64
-	ShapePtSequence int32
+type Shape struct {
+	ShapeID           tt.Key
+	ShapePtLat        float64
+	ShapePtLon        float64
+	ShapePtSequence   int32
 	ShapeDistTraveled float64
 }
 
 type Service struct {
 	DatabaseEntity
-	ServiceID Key
-	StartDate Date
-	EndDate Date
-	Added Date
-	Removed Date
-	Monday Bool
-	Tuesday Bool
-	Wednesday Bool
-	Thursday Bool
-	Friday Bool
-	Saturday Bool
-	Sunday Bool
+	ServiceID tt.Key
+	StartDate tt.Date
+	EndDate   tt.Date
+	Added     tt.Date
+	Removed   tt.Date
+	Monday    tt.Bool
+	Tuesday   tt.Bool
+	Wednesday tt.Bool
+	Thursday  tt.Bool
+	Friday    tt.Bool
+	Saturday  tt.Bool
+	Sunday    tt.Bool
 }
 
-type Shape struct {
+type ShapeLine struct {
 	DatabaseEntity
-	ShapeID Key
+	ShapeID  tt.Key
 	Geometry LineString
 }
 
@@ -398,93 +398,72 @@ type Point struct {
 }
 
 type LineString struct {
-	Stride uint32
+	Stride      uint32
 	Coordinates float64
 }
 
 type DatabaseEntity struct {
-	ID int64
+	ID            int64
 	FeedVersionID int64
 }
-
-type Date struct {
-	Year int32
-	Month int32
-	Day int32
-}
-
-type Timestamp struct { tt.Option[int64] }
-
-type Seconds struct { tt.Option[int64] }
-
-type Key struct { tt.Option[string] }
-
-type Timezone struct { tt.Option[string] }
-
-type Reference struct { tt.Option[string] }
-
-type Url struct { tt.Option[string] }
-
-type Email struct { tt.Option[string] }
-
-type Color struct { tt.Option[string] }
 
 type Money struct {
 	Units int64
 	Nanos int64
 }
 
-type Currency struct { tt.Option[string] }
+type WheelchairAccess struct {
+	tt.Option[WheelchairAccessEnum]
+}
 
-type Language struct { tt.Option[string] }
+type BikeAccess struct{ tt.Option[BikeAccessEnum] }
 
-type Phone struct { tt.Option[string] }
+type BoardAccess struct{ tt.Option[BoardAccessEnum] }
 
-type Float struct { tt.Option[float64] }
+type PickupAccess struct{ tt.Option[PickupAccessEnum] }
 
-type String struct { tt.Option[string] }
+type StopLocationType struct {
+	tt.Option[StopLocationTypeEnum]
+}
 
-type Int struct { tt.Option[int64] }
+type RouteType struct{ tt.Option[RouteTypeEnum] }
 
-type Bool struct { tt.Option[bool] }
+type TripDirection struct{ tt.Option[TripDirectionEnum] }
 
-type WheelchairAccess struct { tt.Option[WheelchairAccessEnum] }
+type StopTimepoint struct{ tt.Option[StopTimepointEnum] }
 
-type BikeAccess struct { tt.Option[BikeAccessEnum] }
+type CalendarExceptionType struct {
+	tt.Option[CalendarExceptionTypeEnum]
+}
 
-type BoardAccess struct { tt.Option[BoardAccessEnum] }
+type FrequencyExactTime struct {
+	tt.Option[FrequencyExactTimeEnum]
+}
 
-type PickupAccess struct { tt.Option[PickupAccessEnum] }
+type TransferType struct{ tt.Option[TransferTypeEnum] }
 
-type StopLocationType struct { tt.Option[StopLocationTypeEnum] }
+type PathwayDirectionality struct {
+	tt.Option[PathwayDirectionalityEnum]
+}
 
-type RouteType struct { tt.Option[RouteTypeEnum] }
+type PathwayMode struct{ tt.Option[PathwayModeEnum] }
 
-type TripDirection struct { tt.Option[TripDirectionEnum] }
+type BookingRuleType struct{ tt.Option[BookingRuleTypeEnum] }
 
-type StopTimepoint struct { tt.Option[StopTimepointEnum] }
+type FareMediaType struct{ tt.Option[FareMediaTypeEnum] }
 
-type CalendarExceptionType struct { tt.Option[CalendarExceptionTypeEnum] }
+type FareTransferType struct {
+	tt.Option[FareTransferTypeEnum]
+}
 
-type FrequencyExactTime struct { tt.Option[FrequencyExactTimeEnum] }
+type DurationLimitType struct {
+	tt.Option[DurationLimitTypeEnum]
+}
 
-type TransferType struct { tt.Option[TransferTypeEnum] }
+type FareAttributeTransferType struct {
+	tt.Option[FareAttributeTransferTypeEnum]
+}
 
-type PathwayDirectionality struct { tt.Option[PathwayDirectionalityEnum] }
+type PaymentMethod struct{ tt.Option[PaymentMethodEnum] }
 
-type PathwayMode struct { tt.Option[PathwayModeEnum] }
-
-type BookingRuleType struct { tt.Option[BookingRuleTypeEnum] }
-
-type FareMediaType struct { tt.Option[FareMediaTypeEnum] }
-
-type FareTransferType struct { tt.Option[FareTransferTypeEnum] }
-
-type DurationLimitType struct { tt.Option[DurationLimitTypeEnum] }
-
-type FareAttributeTransferType struct { tt.Option[FareAttributeTransferTypeEnum] }
-
-type PaymentMethod struct { tt.Option[PaymentMethodEnum] }
-
-type AttributionRole struct { tt.Option[AttributionRoleEnum] }
-
+type AttributionRole struct{ tt.Option[AttributionRoleEnum] }
