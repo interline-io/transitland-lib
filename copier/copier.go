@@ -108,6 +108,8 @@ type Options struct {
 	CopyExtraFiles bool
 	// Simplify shapes
 	SimplifyShapes float64
+	// Convert route network_id to networks.txt/route_networks.txt
+	NormalizeNetworks bool
 	// DeduplicateStopTimes
 	DeduplicateJourneyPatterns bool
 	// Default error handler
@@ -117,7 +119,7 @@ type Options struct {
 	// Named extensions
 	Extensions []string
 	// Initialized extensions
-	extensions []Extension
+	extensions []any
 	// Error limit
 	ErrorLimit int
 
@@ -126,7 +128,7 @@ type Options struct {
 	sublogger zerolog.Logger
 }
 
-func (opts *Options) AddExtension(ext Extension) {
+func (opts *Options) AddExtension(ext any) {
 	opts.extensions = append(opts.extensions, ext)
 }
 
@@ -263,6 +265,12 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	if copier.SimplifyShapes > 0 {
 		// Simplify shapes.txt
 		copier.AddExtension(&filters.SimplifyShapeFilter{SimplifyValue: copier.SimplifyShapes})
+	}
+	if copier.NormalizeNetworks {
+		// Convert routes.txt network_id to networks.txt/route_networks.txt
+		copier.AddExtension(&filters.RouteNetworkIDFilter{})
+	} else {
+		copier.AddExtension(&filters.RouteNetworkIDCompatFilter{})
 	}
 
 	// Add extensions
@@ -606,6 +614,9 @@ func (copier *Copier) Copy() *Result {
 		func() error { return copyEntityType(copier, copier.Reader.Attributions()) },
 		func() error { return copyEntityType(copier, copier.Reader.Areas()) },
 		func() error { return copyEntityType(copier, copier.Reader.StopAreas()) },
+		func() error { return copyEntityType(copier, copier.Reader.Networks()) },
+		func() error { return copyEntityType(copier, copier.Reader.RouteNetworks()) },
+		func() error { return copyEntityType(copier, copier.Reader.Timeframes()) },
 		func() error { return copyEntityType(copier, copier.Reader.RiderCategories()) },
 		func() error { return copyEntityType(copier, copier.Reader.FareMedia()) },
 		func() error { return copyEntityType(copier, copier.Reader.FareProducts()) },

@@ -35,6 +35,9 @@ type Reader struct {
 	FareMediaList        []gtfs.FareMedia
 	FareProductList      []gtfs.FareProduct
 	RiderCategoryList    []gtfs.RiderCategory
+	TimeframeList        []gtfs.Timeframe
+	NetworkList          []gtfs.Network
+	RouteNetworkList     []gtfs.RouteNetwork
 	OtherList            []tt.Entity
 }
 
@@ -390,6 +393,39 @@ func (mr *Reader) RiderCategories() chan gtfs.RiderCategory {
 	out := make(chan gtfs.RiderCategory, bufferSize)
 	go func() {
 		for _, ent := range mr.RiderCategoryList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) Timeframes() chan gtfs.Timeframe {
+	out := make(chan gtfs.Timeframe, bufferSize)
+	go func() {
+		for _, ent := range mr.TimeframeList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) Networks() chan gtfs.Network {
+	out := make(chan gtfs.Network, bufferSize)
+	go func() {
+		for _, ent := range mr.NetworkList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) RouteNetworks() chan gtfs.RouteNetwork {
+	out := make(chan gtfs.RouteNetwork, bufferSize)
+	go func() {
+		for _, ent := range mr.RouteNetworkList {
 			out <- ent
 		}
 		close(out)
