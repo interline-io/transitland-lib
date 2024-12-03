@@ -2,10 +2,11 @@ package tlcsv
 
 import (
 	"errors"
-	"math"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type hasEntityKey interface {
@@ -55,12 +56,12 @@ func (writer *Writer) Delete() error {
 }
 
 // NewReader returns a new Reader for the Writer destination.
-func (writer *Writer) NewReader() (tl.Reader, error) {
+func (writer *Writer) NewReader() (adapters.Reader, error) {
 	return NewReader(writer.WriterAdapter.Path())
 }
 
 // AddEntities writes entities to the output.
-func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	eids := []string{}
 	if len(ents) == 0 {
 		return eids, nil
@@ -72,10 +73,10 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 			return eids, errors.New("all entities must be same type")
 		}
 		// Horrible special case bug fix
-		if v, ok := ent.(*tl.Stop); ok {
+		if v, ok := ent.(*gtfs.Stop); ok {
 			c := v.Coordinates()
-			v.StopLon = c[0]
-			v.StopLat = c[1]
+			v.StopLon.Set(c[0])
+			v.StopLat.Set(c[1])
 		}
 	}
 	header, ok := writer.headers[efn]
@@ -86,7 +87,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 			return eids, err
 		}
 		header = h
-		if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 && writer.writeExtraColumns {
+		if extEnt, ok2 := ent.(tt.EntityWithExtra); ok2 && writer.writeExtraColumns {
 			extraHeader = extEnt.ExtraKeys()
 		}
 		writer.headers[efn] = header
@@ -106,7 +107,7 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 			return eids, err
 		}
 		if len(extraHeader) > 0 {
-			if extEnt, ok := ent.(tl.EntityWithExtra); ok {
+			if extEnt, ok := ent.(tt.EntityWithExtra); ok {
 				for _, extraKey := range extraHeader {
 					a, _ := extEnt.GetExtra(extraKey)
 					row = append(row, a)
@@ -121,19 +122,18 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	return eids, err
 }
 
+type canFlatten interface {
+	Flatten() []tt.Entity
+}
+
 // AddEntity writes an entity to the output.
-func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
-	eids := []string{}
+func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
+	var eids []string
 	var err error
-	if v, ok := ent.(*tl.Shape); ok {
-		e2s := []tl.Entity{}
-		es := writer.flattenShape(*v)
-		for i := 0; i < len(es); i++ {
-			e2s = append(e2s, &es[i])
-		}
-		eids, err = writer.AddEntities(e2s)
+	if v, ok := ent.(canFlatten); ok {
+		eids, err = writer.AddEntities(v.Flatten())
 	} else {
-		eids, err = writer.AddEntities([]tl.Entity{ent})
+		eids, err = writer.AddEntities([]tt.Entity{ent})
 	}
 	if err != nil {
 		return "", err
@@ -142,35 +142,4 @@ func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
 		return "", errors.New("did not write expected number of entities")
 	}
 	return eids[0], nil
-}
-
-func (writer *Writer) flattenShape(ent tl.Shape) []tl.Shape {
-	coords := ent.Geometry.FlatCoords()
-	shapes := []tl.Shape{}
-	totaldist := 0.0
-	for i := 0; i < len(coords); i += 3 {
-		s := tl.Shape{
-			ShapeID:           ent.ShapeID,
-			ShapePtSequence:   i,
-			ShapePtLon:        coords[i],
-			ShapePtLat:        coords[i+1],
-			ShapeDistTraveled: coords[i+2],
-		}
-		totaldist += coords[i+2]
-		shapes = append(shapes, s)
-	}
-	// Set any zeros to NaN
-	cur := 0.0
-	for i := 0; i < len(shapes); i++ {
-		if shapes[i].ShapeDistTraveled < cur {
-			shapes[i].ShapeDistTraveled = math.NaN()
-		}
-		cur = shapes[i].ShapeDistTraveled
-	}
-	if cur == 0.0 {
-		for i := 0; i < len(shapes); i++ {
-			shapes[i].ShapeDistTraveled = math.NaN()
-		}
-	}
-	return shapes
 }

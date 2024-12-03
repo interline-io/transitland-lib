@@ -7,7 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var adapters = map[string]func(string) Adapter{}
+var adapterFactories = map[string]func(string) Adapter{}
 
 func min(a, b int) int {
 	if a <= b {
@@ -22,7 +22,7 @@ func newAdapter(dburl string) Adapter {
 	if err != nil {
 		return nil
 	}
-	fn, ok := adapters[u.Scheme]
+	fn, ok := adapterFactories[u.Scheme]
 	if !ok {
 		return nil
 	}

@@ -1,6 +1,6 @@
 package graph
 
-import "github.com/interline-io/transitland-lib/tl"
+import "github.com/interline-io/transitland-lib/adapters"
 
 /*
 
@@ -50,7 +50,7 @@ func entityNode(ent entity) *Node {
 }
 
 // BuildGraph .
-func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
+func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 	eg := NewEntityGraph()
 
 	// Add Agencies and select default Agency
@@ -65,9 +65,9 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	for ent := range reader.Routes() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
-		if len(ent.AgencyID) == 0 {
+		if !ent.AgencyID.Valid {
 			eg.AddEdge(dan, en)
-		} else if agency, ok := eg.Node(NewNode("agency.txt", ent.AgencyID)); ok {
+		} else if agency, ok := eg.Node(NewNode("agency.txt", ent.AgencyID.Val)); ok {
 			eg.AddEdge(agency, en)
 		}
 	}
@@ -77,7 +77,7 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 		eg.AddNode(entityNode(&ent))
 	}
 	for ent := range reader.CalendarDates() {
-		eg.AddNode(NewNode("calendar.txt", ent.ServiceID))
+		eg.AddNode(NewNode("calendar.txt", ent.ServiceID.Val))
 	}
 	for ent := range reader.Shapes() {
 		eg.AddNode(entityNode(&ent))
@@ -86,10 +86,10 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	// Add Trips and link
 	for ent := range reader.Trips() {
 		en, _ := eg.AddNode(entityNode(&ent))
-		if r, ok := eg.Node(NewNode("routes.txt", ent.RouteID)); ok {
+		if r, ok := eg.Node(NewNode("routes.txt", ent.RouteID.Val)); ok {
 			eg.AddEdge(r, en)
 		}
-		if c, ok := eg.Node(NewNode("calendar.txt", ent.ServiceID)); ok {
+		if c, ok := eg.Node(NewNode("calendar.txt", ent.ServiceID.Val)); ok {
 			eg.AddEdge(c, en)
 		}
 		if ent.ShapeID.Valid {
@@ -111,12 +111,12 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	for ent := range reader.Stops() {
 		en := entityNode(&ent)
 		eg.AddNode(en)
-		if ent.ParentStation.Val != "" {
-			ps[ent.StopID] = ent.ParentStation.Val
-			cs[ent.ParentStation.Val] = append(cs[ent.ParentStation.Val], ent.StopID)
+		if ent.ParentStation.Valid {
+			ps[ent.StopID.Val] = ent.ParentStation.Val
+			cs[ent.ParentStation.Val] = append(cs[ent.ParentStation.Val], ent.StopID.Val)
 		}
-		if ent.ZoneID != "" {
-			fz[ent.ZoneID] = append(fz[ent.ZoneID], ent.StopID)
+		if ent.ZoneID.Valid {
+			fz[ent.ZoneID.Val] = append(fz[ent.ZoneID.Val], ent.StopID.Val)
 		}
 		// Link levels
 		if ent.LevelID.Valid {
@@ -154,11 +154,11 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 	// Add pathways and link to stops
 	for ent := range reader.Pathways() {
 		pn, _ := eg.AddNode(entityNode(&ent))
-		if fn, ok := eg.Node(NewNode("stops.txt", ent.FromStopID)); ok {
+		if fn, ok := eg.Node(NewNode("stops.txt", ent.FromStopID.Val)); ok {
 			eg.AddEdge(fn, pn)
 			eg.AddEdge(pn, fn)
 		}
-		if tn, ok := eg.Node(NewNode("stops.txt", ent.ToStopID)); ok {
+		if tn, ok := eg.Node(NewNode("stops.txt", ent.ToStopID.Val)); ok {
 			eg.AddEdge(tn, pn)
 			eg.AddEdge(pn, tn)
 		}
@@ -166,8 +166,8 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 
 	// Stop Times
 	for ent := range reader.StopTimes() {
-		t, _ := eg.Node(NewNode("trips.txt", ent.TripID))
-		s, _ := eg.Node(NewNode("stops.txt", ent.StopID))
+		t, _ := eg.Node(NewNode("trips.txt", ent.TripID.Val))
+		s, _ := eg.Node(NewNode("stops.txt", ent.StopID.Val))
 		eg.AddEdge(s, t)
 	}
 
@@ -176,14 +176,14 @@ func BuildGraph(reader tl.Reader) (*EntityGraph, error) {
 		eg.AddNode(entityNode(&ent))
 	}
 	for ent := range reader.FareRules() {
-		fn, _ := eg.Node(NewNode("fare_attributes.txt", ent.FareID))
-		if zn, ok := eg.Node(NewNode("farezone", ent.OriginID)); ok {
+		fn, _ := eg.Node(NewNode("fare_attributes.txt", ent.FareID.Val))
+		if zn, ok := eg.Node(NewNode("farezone", ent.OriginID.Val)); ok {
 			eg.AddEdge(fn, zn)
 		}
-		if zn, ok := eg.Node(NewNode("farezone", ent.DestinationID)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.DestinationID.Val)); ok {
 			eg.AddEdge(fn, zn)
 		}
-		if zn, ok := eg.Node(NewNode("farezone", ent.ContainsID)); ok {
+		if zn, ok := eg.Node(NewNode("farezone", ent.ContainsID.Val)); ok {
 			eg.AddEdge(fn, zn)
 		}
 	}

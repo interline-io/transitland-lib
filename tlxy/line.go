@@ -6,7 +6,7 @@ import (
 	"github.com/twpayne/go-polyline"
 )
 
-type Line = []Point
+type Line []Point
 
 type LineM struct {
 	Coords []Point

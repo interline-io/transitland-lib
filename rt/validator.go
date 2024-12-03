@@ -4,11 +4,11 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/ext/sched"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
 )
 
@@ -66,27 +66,27 @@ func (fi *Validator) SetGeomCache(g tlxy.GeomCache) {
 }
 
 // Validate gets a stream of entities from Copier to build up the cache.
-func (fi *Validator) Validate(ent tl.Entity) []error {
+func (fi *Validator) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
-	case *tl.Agency:
-		fi.Timezone = v.AgencyTimezone
-	case *tl.Stop:
-		fi.stopInfo[v.StopID] = stopInfo{LocationType: v.LocationType}
-	case *tl.Route:
-		fi.routeInfo[v.RouteID] = routeInfo{
-			RouteType: v.RouteType,
-			AgencyID:  v.AgencyID,
+	case *gtfs.Agency:
+		fi.Timezone = v.AgencyTimezone.Val
+	case *gtfs.Stop:
+		fi.stopInfo[v.StopID.Val] = stopInfo{LocationType: v.LocationType.Int()}
+	case *gtfs.Route:
+		fi.routeInfo[v.RouteID.Val] = routeInfo{
+			RouteType: v.RouteType.Int(),
+			AgencyID:  v.AgencyID.Val,
 		}
-	case *tl.Trip:
-		fi.tripInfo[v.TripID] = tripInfo{
-			DirectionID: v.DirectionID,
+	case *gtfs.Trip:
+		fi.tripInfo[v.TripID.Val] = tripInfo{
+			DirectionID: v.DirectionID.Int(),
 			ShapeID:     v.ShapeID.String(),
-			RouteID:     v.RouteID,
+			RouteID:     v.RouteID.Val,
 		}
-	case *tl.Frequency:
-		a := fi.tripInfo[v.TripID]
+	case *gtfs.Frequency:
+		a := fi.tripInfo[v.TripID.Val]
 		a.UsesFrequency = true
-		fi.tripInfo[v.TripID] = a
+		fi.tripInfo[v.TripID.Val] = a
 	}
 
 	// Validate with schedule checker
@@ -572,7 +572,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 		}
 	}
 	if startTime := td.GetStartTime(); startTime != "" {
-		if wt, err := tt.NewWideTime(startTime); err != nil {
+		if wt, err := tt.NewSecondsFromString(startTime); err != nil {
 			errs = append(errs, withFieldAndJson(
 				E020,
 				"trip_update.trip.start_time",
@@ -581,7 +581,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 				tripUpdate,
 				"",
 			))
-		} else if wt.Seconds > (7 * 24 * 60 * 60) {
+		} else if wt.Int() > (7 * 24 * 60 * 60) {
 			errs = append(errs, withFieldAndJson(
 				E020,
 				"trip_update.trip.start_time",
@@ -682,7 +682,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 					shpGeomCollection := geom.NewGeometryCollection()
 					shpGeomCollection.Push(shpLineGeom)
 					shpGeomCollection.Push(shpPointGeom)
-					shpErr.geom = tt.Geometry{Geometry: shpGeomCollection, Valid: true}
+					shpErr.geom = tt.NewGeometry(shpGeomCollection)
 					errs = append(errs, shpErr)
 				}
 			}

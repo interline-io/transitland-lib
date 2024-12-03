@@ -3,49 +3,51 @@ package sched
 import (
 	"time"
 
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type tripInfo struct {
 	FrequencyStarts []int
 	ServiceID       string
-	StartTime       tt.WideTime
-	EndTime         tt.WideTime
+	StartTime       tt.Seconds
+	EndTime         tt.Seconds
 }
 
 type ScheduleChecker struct {
 	tripInfo map[string]tripInfo
-	services map[string]*tl.Service
+	services map[string]*service.Service
 }
 
 func NewScheduleChecker() *ScheduleChecker {
 	return &ScheduleChecker{
 		tripInfo: map[string]tripInfo{},
-		services: map[string]*tl.Service{},
+		services: map[string]*service.Service{},
 	}
 }
 
 // Validate gets a stream of entities from Copier to build up the cache.
-func (fi *ScheduleChecker) Validate(ent tl.Entity) []error {
+func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 	switch v := ent.(type) {
-	case *tl.Service:
-		fi.services[v.ServiceID] = v
-	case *tl.Trip:
+	case *gtfs.Calendar:
+		svc := service.NewService(*v, v.CalendarDates...)
+		fi.services[v.ServiceID.Val] = svc
+	case *gtfs.Trip:
 		ti := tripInfo{
-			ServiceID: v.ServiceID,
+			ServiceID: v.ServiceID.Val,
 		}
 		if len(v.StopTimes) > 0 {
 			ti.StartTime = v.StopTimes[0].DepartureTime
 			ti.EndTime = v.StopTimes[len(v.StopTimes)-1].ArrivalTime
 		}
-		fi.tripInfo[v.TripID] = ti
-	case *tl.Frequency:
-		a := fi.tripInfo[v.TripID]
-		for s := v.StartTime.Seconds; s < v.EndTime.Seconds; s += v.HeadwaySecs {
+		fi.tripInfo[v.TripID.Val] = ti
+	case *gtfs.Frequency:
+		a := fi.tripInfo[v.TripID.Val]
+		for s := v.StartTime.Int(); s < v.EndTime.Int(); s += v.HeadwaySecs.Int() {
 			a.FrequencyStarts = append(a.FrequencyStarts, s)
 		}
-		fi.tripInfo[v.TripID] = a
+		fi.tripInfo[v.TripID.Val] = a
 	}
 	return nil
 }
@@ -64,7 +66,7 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 	for _, d := range dayOffsets {
 		nowSvc := map[string]bool{}
 		nowOffset := now.AddDate(0, 0, d.day)
-		nowWt := tt.NewWideTimeFromSeconds(nowOffset.Hour()*3600 + nowOffset.Minute()*60 + nowOffset.Second() + d.sec)
+		nowWt := tt.NewSeconds(nowOffset.Hour()*3600 + nowOffset.Minute()*60 + nowOffset.Second() + d.sec)
 		for k, v := range fi.tripInfo {
 			svc, ok := fi.services[v.ServiceID]
 			if !ok {
@@ -75,10 +77,10 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 				continue
 			}
 			// Cache if we have service on this day
-			sched, ok := nowSvc[svc.ServiceID]
+			sched, ok := nowSvc[svc.ServiceID.Val]
 			if !ok {
 				sched = svc.IsActive(nowOffset)
-				nowSvc[svc.ServiceID] = sched
+				nowSvc[svc.ServiceID.Val] = sched
 			}
 			// Not scheduled
 			if !sched {
@@ -92,7 +94,7 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 
 			// Might be scheduled
 			found := false
-			if len(v.FrequencyStarts) == 0 && nowWt.Seconds >= v.StartTime.Seconds && nowWt.Seconds <= v.EndTime.Seconds {
+			if len(v.FrequencyStarts) == 0 && nowWt.Int() >= v.StartTime.Int() && nowWt.Int() <= v.EndTime.Int() {
 				// Check non-frequency based trips
 				// log.Debug().
 				// 	Str("date", now.Format("2006-02-03")).
@@ -106,11 +108,11 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 			}
 
 			// Check frequency based trips
-			tripDuration := v.EndTime.Seconds - v.StartTime.Seconds
+			tripDuration := v.EndTime.Int() - v.StartTime.Int()
 			for _, s := range v.FrequencyStarts {
 				freqStart := s
 				freqEnd := freqStart + tripDuration
-				if nowWt.Seconds >= freqStart && nowWt.Seconds <= freqEnd {
+				if nowWt.Int() >= freqStart && nowWt.Int() <= freqEnd {
 					found = true
 					break
 				}

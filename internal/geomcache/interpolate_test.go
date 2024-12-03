@@ -3,8 +3,8 @@ package geomcache
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func testExpectInt(t *testing.T, result, expect int) {
@@ -21,12 +21,12 @@ type expectStopTime struct {
 	ExpectDepartureTime int
 }
 
-func expectTripToStopTime(e []expectStopTime) []tl.StopTime {
-	ret := []tl.StopTime{}
+func expectTripToStopTime(e []expectStopTime) []gtfs.StopTime {
+	ret := []gtfs.StopTime{}
 	for _, i := range e {
-		ret = append(ret, tl.StopTime{
-			ArrivalTime:       tt.NewWideTimeFromSeconds(i.ArrivalTime),
-			DepartureTime:     tt.NewWideTimeFromSeconds(i.DepartureTime),
+		ret = append(ret, gtfs.StopTime{
+			ArrivalTime:       tt.NewSeconds(i.ArrivalTime),
+			DepartureTime:     tt.NewSeconds(i.DepartureTime),
 			ShapeDistTraveled: tt.NewFloat(i.ShapeDistTraveled),
 		})
 	}
@@ -66,10 +66,10 @@ func TestInterpolateStopTimes(t *testing.T) {
 		}
 		for j, st := range stoptimes2 {
 			if e[j].ExpectArrivalTime > 0 {
-				testExpectInt(t, st.ArrivalTime.Seconds, e[j].ExpectArrivalTime)
+				testExpectInt(t, st.ArrivalTime.Int(), e[j].ExpectArrivalTime)
 			}
 			if e[j].ExpectDepartureTime > 0 {
-				testExpectInt(t, st.DepartureTime.Seconds, e[j].ExpectDepartureTime)
+				testExpectInt(t, st.DepartureTime.Int(), e[j].ExpectDepartureTime)
 			}
 		}
 	}

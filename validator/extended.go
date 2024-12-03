@@ -4,19 +4,21 @@ import (
 	"sort"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/twpayne/go-geom"
 )
 
-func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
+func buildRouteShapes(reader adapters.Reader) map[string]*geom.MultiLineString {
 	// Generate some route geoms...
 	shapeLengths := map[string]float64{}
-	for ent := range reader.Shapes() {
+	for shapeEnts := range reader.ShapesByShapeID() {
+		ent := service.NewShapeLineFromShapes(shapeEnts)
 		if !ent.Geometry.Valid {
 			continue
 		}
 		// cartesian units are fine for relative lengths
-		shapeLengths[ent.ShapeID] = ent.Geometry.Length()
+		shapeLengths[ent.ShapeID.Val] = ent.Geometry.Val.Length()
 	}
 
 	shapeCounts := map[string]map[int]map[string]int{}
@@ -24,13 +26,13 @@ func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 		if !ent.ShapeID.Valid {
 			continue
 		}
-		if _, ok := shapeCounts[ent.RouteID]; !ok {
-			shapeCounts[ent.RouteID] = map[int]map[string]int{}
+		if _, ok := shapeCounts[ent.RouteID.Val]; !ok {
+			shapeCounts[ent.RouteID.Val] = map[int]map[string]int{}
 		}
-		if _, ok := shapeCounts[ent.RouteID][ent.DirectionID]; !ok {
-			shapeCounts[ent.RouteID][ent.DirectionID] = map[string]int{}
+		if _, ok := shapeCounts[ent.RouteID.Val][ent.DirectionID.Int()]; !ok {
+			shapeCounts[ent.RouteID.Val][ent.DirectionID.Int()] = map[string]int{}
 		}
-		shapeCounts[ent.RouteID][ent.DirectionID][ent.ShapeID.Val]++
+		shapeCounts[ent.RouteID.Val][ent.DirectionID.Int()][ent.ShapeID.Val]++
 	}
 	commonCount := 5
 	selectedShapes := map[string]map[string]bool{}
@@ -71,14 +73,15 @@ func buildRouteShapes(reader tl.Reader) map[string]*geom.MultiLineString {
 			loadShapes[shapeid] = nil
 		}
 	}
-	for ent := range reader.Shapes() {
-		if _, ok := loadShapes[ent.ShapeID]; ok {
+	for shapeEnts := range reader.ShapesByShapeID() {
+		ent := service.NewShapeLineFromShapes(shapeEnts)
+		if _, ok := loadShapes[ent.ShapeID.Val]; ok {
 			// Transitland uses M coord for distance; must force 2D
 			coords := []float64{}
-			for _, coord := range ent.Geometry.LineString.Coords() {
+			for _, coord := range ent.Geometry.Val.Coords() {
 				coords = append(coords, coord[0], coord[1])
 			}
-			loadShapes[ent.ShapeID] = geom.NewLineStringFlat(geom.XY, coords)
+			loadShapes[ent.ShapeID.Val] = geom.NewLineStringFlat(geom.XY, coords)
 		}
 	}
 

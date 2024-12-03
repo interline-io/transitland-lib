@@ -5,40 +5,40 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 )
 
-func stopPatternKey(stoptimes []tl.StopTime) string {
+func stopPatternKey(stoptimes []gtfs.StopTime) string {
 	key := make([]string, len(stoptimes))
 	for i := 0; i < len(stoptimes); i++ {
-		key[i] = stoptimes[i].StopID
+		key[i] = stoptimes[i].StopID.Val
 	}
 	return strings.Join(key, string(byte(0)))
 }
 
-func journeyPatternKey(trip *tl.Trip) string {
+func journeyPatternKey(trip *gtfs.Trip) string {
 	m := sha1.New()
 	a := trip.StopTimes[0].ArrivalTime
 	b := trip.StopTimes[0].DepartureTime
 	m.Write([]byte(fmt.Sprintf(
 		"%s-%s-%s-%s-%s-%d-%d-%d-%s",
-		trip.RouteID,
-		trip.ServiceID,
-		trip.TripHeadsign,
-		trip.TripShortName,
+		trip.RouteID.Val,
+		trip.ServiceID.Val,
+		trip.TripHeadsign.Val,
+		trip.TripShortName.Val,
 		trip.ShapeID.Val,
-		trip.DirectionID,
-		trip.WheelchairAccessible,
-		trip.BikesAllowed,
-		trip.BlockID,
+		trip.DirectionID.Val,
+		trip.WheelchairAccessible.Val,
+		trip.BikesAllowed.Val,
+		trip.BlockID.Val,
 	)))
 	for i := 0; i < len(trip.StopTimes); i++ {
 		st := trip.StopTimes[i]
 		m.Write([]byte(fmt.Sprintf(
 			"%d-%d-%s-%s-%d-%d-%d",
-			st.ArrivalTime.Seconds-a.Seconds,
-			st.DepartureTime.Seconds-b.Seconds,
-			st.StopID,
+			st.ArrivalTime.Val-a.Val,
+			st.DepartureTime.Val-b.Val,
+			st.StopID.Val,
 			st.StopHeadsign.Val,
 			st.PickupType.Val,
 			st.DropOffType.Val,
