@@ -58,7 +58,7 @@ func TestNewFeedVersionServiceWindowsFromReader(t *testing.T) {
 				t.Error(err)
 			}
 
-			if d, err := ServiceLevelDefaultWeek(fvsw.FeedStartDate, fvsw.FeedEndDate, fvsls); err != nil {
+			if d, err := serviceLevelDefaultWeek(fvsls, fvsw.FeedStartDate, fvsw.FeedEndDate); err != nil {
 				t.Error(err)
 			} else {
 				fvsw.FallbackWeek = d

@@ -3,7 +3,9 @@ package stats
 import (
 	"encoding/json"
 	"math/rand"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testutil"
@@ -93,7 +95,6 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 }
 
 func TestServiceLevelDefaultWeek(t *testing.T) {
-
 	fvsls := []dmfr.FeedVersionServiceLevel{
 		{StartDate: pd("2022-01-03"), EndDate: pd("2022-01-09"), Monday: 1000},
 		{StartDate: pd("2022-01-10"), EndDate: pd("2022-01-16"), Monday: 2000},
@@ -138,11 +139,63 @@ func TestServiceLevelDefaultWeek(t *testing.T) {
 			}
 			// Shuffle
 			rand.Shuffle(len(tc.fvsls), func(i, j int) { tc.fvsls[i], tc.fvsls[j] = tc.fvsls[j], tc.fvsls[i] })
-			d, err := ServiceLevelDefaultWeek(tc.start, tc.end, tc.fvsls)
+			d, err := serviceLevelDefaultWeek(tc.fvsls, tc.start, tc.end)
 			if err != nil {
 				t.Fatal(err)
 			}
 			assert.EqualValues(t, tc.expect.String(), d.String())
 		})
 	}
+}
+
+func TestServiceLevelExpandWeeks(t *testing.T) {
+	fvsls := []dmfr.FeedVersionServiceLevel{
+		{StartDate: pd("2022-01-03"), EndDate: pd("2022-01-17"), Monday: 123},
+		{StartDate: pd("2022-01-17"), EndDate: pd("2022-01-23"), Monday: 45},
+		{StartDate: pd("2022-01-24"), EndDate: pd("2022-02-28"), Monday: 678},
+	}
+	totalCount := 0
+	totalService := 0
+	var lastWeek tt.Date
+	for fvsl := range serviceLevelExpandWeeks(fvsls) {
+		// fmt.Println("week:", fvsl.StartDate, "fvsl:", fvsl)
+		lastWeek = fvsl.StartDate
+		totalCount += 1
+		totalService += fvsl.Total()
+	}
+	assert.Equal(t, 8, totalCount)
+	assert.Equal(t, 3681, totalService)
+	assert.Equal(t, time.Date(2022, 2, 21, 0, 0, 0, 0, lastWeek.Val.Location()), lastWeek.Val)
+}
+
+func TestServiceLevelDateFilter(t *testing.T) {
+	fvsls := []dmfr.FeedVersionServiceLevel{
+		{StartDate: pd("2022-01-03"), EndDate: pd("2022-01-17"), Monday: 123},
+		{StartDate: pd("2022-01-17"), EndDate: pd("2022-01-23"), Monday: 45},
+		{StartDate: pd("2022-01-24"), EndDate: pd("2022-02-28"), Monday: 678},
+	}
+	t.Run("basic", func(t *testing.T) {
+		totalCount := 0
+		totalService := 0
+		for fvsl := range serviceLevelDateFilter(fvsls, pd("2022-01-20"), pd("2022-02-01")) {
+			// fmt.Println("week:", fvsl.StartDate, "fvsl:", fvsl)
+			totalCount += 1
+			totalService += fvsl.Total()
+		}
+		assert.Equal(t, 2, totalCount)
+		assert.Equal(t, 723, totalService)
+	})
+	t.Run("expanded", func(t *testing.T) {
+		fvslsExpanded := slices.Collect(serviceLevelExpandWeeks(fvsls))
+		totalCount := 0
+		totalService := 0
+		for fvsl := range serviceLevelDateFilter(fvslsExpanded, pd("2022-01-20"), pd("2022-02-20")) {
+			// fmt.Println("week:", fvsl.StartDate, "fvsl:", fvsl)
+			totalCount += 1
+			totalService += fvsl.Total()
+		}
+		assert.Equal(t, 5, totalCount)
+		assert.Equal(t, 2757, totalService)
+
+	})
 }

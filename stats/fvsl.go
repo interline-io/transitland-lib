@@ -1,7 +1,8 @@
 package stats
 
 import (
-	"fmt"
+	"iter"
+	"slices"
 	"sort"
 	"time"
 
@@ -28,38 +29,69 @@ func NewFeedVersionServiceLevelsFromReader(reader adapters.Reader) ([]dmfr.FeedV
 	return results, nil
 }
 
-func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []dmfr.FeedVersionServiceLevel) (tt.Date, error) {
-	// Defaults
-	if start.IsZero() {
-		start = tt.NewDate(time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC))
-	}
-	if end.IsZero() {
-		end = tt.NewDate(time.Date(9999, 0, 0, 0, 0, 0, 0, time.UTC))
-	}
-
-	// Get FVSLs in window
-	var fvsort []dmfr.FeedVersionServiceLevel
-	fvsort = append(fvsort, fvsls...)
-	sort.Slice(fvsort, func(i, j int) bool {
-		a, b := fvsort[i], fvsort[j]
-		return a.StartDate.Before(b.StartDate)
-	})
+func serviceLevelDefaultWeek(fvsls []dmfr.FeedVersionServiceLevel, start tt.Date, end tt.Date) (tt.Date, error) {
 	fvDate := tt.Date{}
 	fvMax := 0
-	for _, fvsl := range fvsort {
-		fmt.Println(fvsl.StartDate, fvsl.EndDate, fvsl.Total())
-		if fvsl.StartDate.After(end) {
-			continue
-		}
-		if fvsl.EndDate.Before(start) {
-			continue
-		}
+	for fvsl := range serviceLevelDateFilter(
+		fvsls,
+		start,
+		end,
+	) {
 		if tot := fvsl.Total(); tot > fvMax {
 			fvMax = tot
 			fvDate = fvsl.StartDate
 		}
 	}
 	return fvDate, nil
+}
+
+func serviceLevelExpandWeeks(fvsls []dmfr.FeedVersionServiceLevel) iter.Seq[dmfr.FeedVersionServiceLevel] {
+	return func(yield func(dmfr.FeedVersionServiceLevel) bool) {
+		for _, fvsl := range fvsls {
+			s := fvsl.StartDate.Val
+			for s.Before(fvsl.EndDate.Val) {
+				fvslCopy := fvsl
+				fvslCopy.StartDate = tt.NewDate(s)
+				fvslCopy.EndDate = tt.NewDate(s.AddDate(0, 0, 7))
+				if !yield(fvslCopy) {
+					return
+				}
+				s = fvslCopy.EndDate.Val
+			}
+		}
+	}
+}
+
+func serviceLevelDateFilter(fvsls []dmfr.FeedVersionServiceLevel, startDate tt.Date, endDate tt.Date) iter.Seq[dmfr.FeedVersionServiceLevel] {
+	if startDate.IsZero() {
+		startDate = tt.NewDate(time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC))
+	}
+	if endDate.IsZero() {
+		endDate = tt.NewDate(time.Date(9999, 0, 0, 0, 0, 0, 0, time.UTC))
+	}
+	return func(yield func(dmfr.FeedVersionServiceLevel) bool) {
+		for _, fvsl := range fvsls {
+			if fvsl.StartDate.After(endDate) {
+				continue
+			}
+			if fvsl.EndDate.Before(startDate) {
+				continue
+			}
+			yield(fvsl)
+		}
+	}
+}
+
+func serviceLevelDateSort(fvsls []dmfr.FeedVersionServiceLevel) []dmfr.FeedVersionServiceLevel {
+	fvsort := make([]dmfr.FeedVersionServiceLevel, len(fvsls))
+	copy(fvsort, fvsls)
+	slices.SortFunc(fvsort, func(a, b dmfr.FeedVersionServiceLevel) int {
+		if a.StartDate.Before(b.StartDate) {
+			return -1
+		}
+		return 1
+	})
+	return fvsort
 }
 
 func fromJulian(day int) time.Time {
@@ -220,5 +252,5 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 	}
 
 	// Done
-	return results, nil
+	return serviceLevelDateSort(results), nil
 }

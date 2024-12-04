@@ -60,7 +60,7 @@ func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 	}
 
 	// Service window: Default week
-	ret.ServiceWindow.FallbackWeek, err = ServiceLevelDefaultWeek(ret.ServiceWindow.FeedStartDate, ret.ServiceWindow.FeedStartDate, ret.ServiceLevels)
+	ret.ServiceWindow.FallbackWeek, err = serviceLevelDefaultWeek(ret.ServiceLevels, ret.ServiceWindow.FeedStartDate, ret.ServiceWindow.FeedStartDate)
 	if err != nil {
 		return ret, err
 	}
