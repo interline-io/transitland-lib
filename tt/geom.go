@@ -71,6 +71,9 @@ func (g *GeometryOption[T]) Scan(src interface{}) error {
 }
 
 func (g *GeometryOption[T]) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		return nil
+	}
 	return g.Scan(data)
 }
 
