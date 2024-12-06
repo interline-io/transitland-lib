@@ -114,7 +114,7 @@ func (g *GeomCache) MakeShape(stopids ...string) ([]tlxy.Point, []float64, error
 
 // InterpolateStopTimes uses the cached geometries to interpolate StopTimes.
 // TODO: move to somewhere else
-func (g *GeomCache) InterpolateStopTimes(trip gtfs.Trip) ([]gtfs.StopTime, error) {
+func (g *GeomCache) InterpolateStopTimes(trip *gtfs.Trip) ([]gtfs.StopTime, error) {
 	sts := trip.StopTimes
 	if len(sts) == 0 {
 		return sts, nil
