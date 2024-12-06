@@ -438,10 +438,15 @@ func (copier *Copier) CopyEntities(ents []tt.Entity) error {
 		copier.sublogger.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(okEnts))
 		return err
 	}
-	for i, eid := range eids {
-		// copier.sublogger.Trace().Str("filename", efn).Str("source_id", sid).Str("output_id", eid).Msg("saved")
+	for i, ent := range okEnts {
 		sid := sids[i]
+		eid := eids[i]
 		copier.EntityMap.Set(efn, sid, eid)
+		if entExt, ok := ent.(tt.EntityWithGroupKey); ok {
+			if groupKey, groupId := entExt.GroupKey(); groupId != "" {
+				copier.EntityMap.Set(fmt.Sprintf("%s:%s", efn, groupKey), groupId, groupId)
+			}
+		}
 	}
 	copier.result.EntityCount[efn] += len(okEnts)
 
@@ -590,27 +595,47 @@ func (copier *Copier) Copy() *Result {
 	copier.sublogger.Trace().Msg("Begin processing feed")
 	fns := []func() error{
 		func() error { return copyEntityType(copier, copier.Reader.Agencies()) },
-		func() error { return copyEntityType(copier, copier.Reader.Routes()) },
-		func() error { return copyEntityType(copier, copier.Reader.Levels()) },
 		func() error { return copyEntityType(copier, shapesToShapeLines(copier.Reader.ShapesByShapeID())) },
-		copier.copyStops,
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.Routes()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.Levels()) },
+		func() error {
+			return copyEntityTypeBatch(copier,
+				chanFilter(copier.Reader.Stops(), func(ent gtfs.Stop) bool {
+					return ent.ParentStation.Val == ""
+				}),
+			)
+		},
+		func() error {
+			return copyEntityTypeBatch(copier,
+				chanFilter(copier.Reader.Stops(), func(ent gtfs.Stop) bool {
+					return ent.ParentStation.Val != "" && ent.LocationType.Val != 4
+				}),
+			)
+		},
+		func() error {
+			return copyEntityTypeBatch(copier,
+				chanFilter(copier.Reader.Stops(), func(ent gtfs.Stop) bool {
+					return ent.ParentStation.Val != "" && ent.LocationType.Val == 4
+				}),
+			)
+		},
 		copier.copyCalendars,
 		copier.copyTripsAndStopTimes,
-		func() error { return copyEntityType(copier, copier.Reader.Pathways()) },
-		func() error { return copyEntityType(copier, copier.Reader.FareAttributes()) },
-		func() error { return copyEntityType(copier, copier.Reader.FareRules()) },
-		func() error { return copyEntityType(copier, copier.Reader.Frequencies()) },
-		func() error { return copyEntityType(copier, copier.Reader.Transfers()) },
-		func() error { return copyEntityType(copier, copier.Reader.FeedInfos()) },
-		func() error { return copyEntityType(copier, copier.Reader.Translations()) },
-		func() error { return copyEntityType(copier, copier.Reader.Attributions()) },
-		func() error { return copyEntityType(copier, copier.Reader.Areas()) },
-		func() error { return copyEntityType(copier, copier.Reader.StopAreas()) },
-		func() error { return copyEntityType(copier, copier.Reader.RiderCategories()) },
-		func() error { return copyEntityType(copier, copier.Reader.FareMedia()) },
-		func() error { return copyEntityType(copier, copier.Reader.FareProducts()) },
-		func() error { return copyEntityType(copier, copier.Reader.FareLegRules()) },
-		func() error { return copyEntityType(copier, copier.Reader.FareTransferRules()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.Pathways()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.FareAttributes()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.FareRules()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.Frequencies()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.Transfers()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.FeedInfos()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.Translations()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.Attributions()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.Areas()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.StopAreas()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.RiderCategories()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.FareMedia()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.FareProducts()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.FareLegRules()) },
+		func() error { return copyEntityTypeBatch(copier, copier.Reader.FareTransferRules()) },
 	}
 	for i := range fns {
 		if err := fns[i](); err != nil {
@@ -697,35 +722,6 @@ func (copier *Copier) copyExtraFiles() error {
 			return err2
 		}
 	}
-	return nil
-}
-
-func (copier *Copier) copyStops() error {
-	// First pass for stations
-	for ent := range copier.Reader.Stops() {
-		if ent.LocationType.Val == 1 {
-			if _, err := copier.CopyEntity(&ent); err != nil {
-				return err
-			}
-		}
-	}
-	// Second pass for platforms, exits, and generic nodes
-	for ent := range copier.Reader.Stops() {
-		if ent.LocationType.Val == 0 || ent.LocationType.Val == 2 || ent.LocationType.Val == 3 {
-			if _, err := copier.CopyEntity(&ent); err != nil {
-				return err
-			}
-		}
-	}
-	// Third pass for boarding areas
-	for ent := range copier.Reader.Stops() {
-		if ent.LocationType.Val == 4 {
-			if _, err := copier.CopyEntity(&ent); err != nil {
-				return err
-			}
-		}
-	}
-	copier.logCount(&gtfs.Stop{})
 	return nil
 }
 
@@ -1067,6 +1063,46 @@ func copyEntityType[
 	var entType PT
 	copier.logCount(entType)
 	return nil
+}
+
+func copyEntityTypeBatch[
+	T any,
+	PT interface {
+		tt.Entity
+		*T
+	}](copier *Copier, it chan T) error {
+	var bt []tt.Entity
+	var btErr error
+	for ent := range it {
+		var x PT = &ent
+		if bt, btErr = copier.checkBatch(bt, x, false); btErr != nil {
+			return btErr
+		}
+	}
+	if _, btErr = copier.checkBatch(bt, nil, true); btErr != nil {
+		return btErr
+	}
+	var entType PT
+	copier.logCount(entType)
+	return nil
+}
+
+func chanFilter[
+	T any,
+](it chan T, filt func(T) bool) chan T {
+	out := make(chan T, 1_000)
+	go func() {
+		for ent := range it {
+			if filt(ent) {
+				// fmt.Println("ok:", ent)
+				out <- ent
+			} else {
+				// fmt.Println("skipping:", ent)
+			}
+		}
+		close(out)
+	}()
+	return out
 }
 
 func shapesToShapeLines(it chan []gtfs.Shape) chan service.ShapeLine {
