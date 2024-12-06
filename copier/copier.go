@@ -221,7 +221,7 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 
 	// Set the default BatchSize
 	if copier.BatchSize == 0 {
-		copier.BatchSize = 1_000_000
+		copier.BatchSize = 1_000
 	}
 
 	// Set the default Journey Pattern function
@@ -778,10 +778,11 @@ func (copier *Copier) copyCalendars() error {
 		}
 		if batchFlushed {
 			var batchCalendarDates []*gtfs.CalendarDate
-			for _, ent := range batchEnts {
-				eid := ent.EntityID()
-				for _, cd := range ent.CalendarDates {
-					cd.ServiceID.Set(eid)
+			for _, cal := range batchEnts {
+				// eid := cal.EntityID()
+				for _, cd := range cal.CalendarDates {
+					cd := cd
+					cd.ServiceID.Set(cal.ServiceID.Val)
 					batchCalendarDates = append(batchCalendarDates, &cd)
 				}
 			}
@@ -799,9 +800,10 @@ func (copier *Copier) copyCalendars() error {
 		if cal.Generated.Val && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
 			copier.EntityMap.SetEntity(cal, cal.EntityID(), cal.ServiceID.Val)
 			var b []*gtfs.CalendarDate
-			for _, ent := range cal.CalendarDates {
-				ent.ServiceID.Set(cal.ServiceID.Val)
-				b = append(b, &ent)
+			for _, cd := range cal.CalendarDates {
+				cd := cd
+				cd.ServiceID.Set(cal.ServiceID.Val)
+				b = append(b, &cd)
 			}
 			if _, _, err := checkBatch(copier, b, nil, true); err != nil {
 				return err
@@ -1123,6 +1125,7 @@ func checkBatch[
 	if flush {
 		writeEnts := make([]tt.Entity, 0, len(ents))
 		for _, ent := range ents {
+			ent := ent
 			writeEnts = append(writeEnts, ent)
 		}
 		if err := copier.CopyEntities(writeEnts); err != nil {
