@@ -820,7 +820,7 @@ func (copier *Copier) copyCalendars() error {
 	}
 
 	// Attempt to copy duplicate services
-	if _, _, err := checkBatch(copier, duplicateServices, nil, true); err != nil {
+	if _, err := batchCopyCalendars(duplicateServices, nil, true); err != nil {
 		return err
 	}
 	copier.logCount(&gtfs.Calendar{})
@@ -985,12 +985,12 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	for _, trip := range trips {
 		extraTrips = append(extraTrips, trip)
 	}
-	if _, _, err := checkBatch(copier, extraTrips, nil, true); err != nil {
+	if _, err := batchCopyTrips(extraTrips, nil, true); err != nil {
 		return err
 	}
 
 	// Add any duplicate trips
-	if _, _, err := checkBatch(copier, duplicateTrips, nil, true); err != nil {
+	if _, err := batchCopyTrips(duplicateTrips, nil, true); err != nil {
 		return err
 	}
 
