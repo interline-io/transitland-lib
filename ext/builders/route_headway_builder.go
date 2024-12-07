@@ -183,7 +183,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 				if ws, ok := getStats(departures, 21600, 36000); ok && len(departures) >= 10 {
 					rh.HeadwaySecs.SetInt(ws.mid)
 				}
-				if _, err := copier.CopyEntity(&rh); err != nil {
+				if err := copier.CopyEntity(&rh); err != nil {
 					return err
 				}
 			}

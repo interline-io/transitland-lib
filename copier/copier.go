@@ -360,48 +360,9 @@ func (copier *Copier) isMarked(ent tt.Entity) bool {
 }
 
 // CopyEntity performs validation and saves errors and warnings.
-// An entity error means the entity was not not written because it had an error or was filtered out; not fatal.
-// A write error should be considered fatal and should stop any further write attempts.
-// Any errors and warnings are added to the copier result.
-func (copier *Copier) CopyEntity(ent tt.Entity) (error, error) {
-	var expandedEntities []tt.Entity
-	expanded := false
-	for _, f := range copier.expandFilters {
-		if exp, ok, err := f.Expand(ent, copier.EntityMap); err != nil {
-			return err, nil
-		} else if ok {
-			expanded = true
-			expandedEntities = append(expandedEntities, exp...)
-		}
-	}
-	if !expanded {
-		expandedEntities = append(expandedEntities, ent)
-	}
-	for _, ent := range expandedEntities {
-		efn := ent.Filename()
-		sid := ent.EntityID()
-		if err := copier.checkEntity(ent); err != nil {
-			return err, nil
-		}
-		eid, err := copier.Writer.AddEntity(ent)
-		if err != nil {
-			copier.sublogger.Error().Err(err).Str("filename", efn).Str("source_id", sid).Msgf("critical error: failed to write -- entity dump %#v", ent)
-			return nil, err
-		}
-		copier.EntityMap.Set(efn, sid, eid)
-		if entExt, ok := ent.(tt.EntityWithGroupKey); ok {
-			if groupKey, groupId := entExt.GroupKey(); groupId != "" {
-				copier.EntityMap.Set(fmt.Sprintf("%s:%s", efn, groupKey), groupId, groupId)
-			}
-		}
-		copier.result.EntityCount[efn]++
-		for _, v := range copier.afterWriters {
-			if err := v.AfterWrite(eid, ent, copier.EntityMap); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return nil, nil
+func (copier *Copier) CopyEntity(ent tt.Entity) error {
+	return copier.CopyEntities([]tt.Entity{ent})
+
 }
 
 // CopyEntities validates a slice of entities and writes those that pass validation.
@@ -1056,9 +1017,9 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 	shape.Generated = true
 	shape.ShapeID.Set(shapeID)
 	shape.Geometry = tt.NewLineStringFromFlatCoords(flatCoords)
-	if entErr, writeErr := copier.CopyEntity(&shape); writeErr != nil {
+	if writeErr := copier.CopyEntity(&shape); writeErr != nil {
 		return "", writeErr
-	} else if entErr == nil {
+	} else {
 		copier.result.GeneratedCount["shapes.txt"]++
 	}
 	return shape.ShapeID.Val, nil
@@ -1074,7 +1035,7 @@ func copyEntityType[
 	}](copier *Copier, it chan T) error {
 	for ent := range it {
 		var x PT = &ent
-		if _, err := copier.CopyEntity(x); err != nil {
+		if err := copier.CopyEntity(x); err != nil {
 			return err
 		}
 	}

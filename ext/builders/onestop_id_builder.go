@@ -180,19 +180,19 @@ func (pp *OnestopIDBuilder) RouteOnestopIDs() []RouteOnestopID {
 func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
 	for _, ent := range pp.AgencyOnestopIDs() {
 		ent := ent
-		if _, err := copier.CopyEntity(&ent); err != nil {
+		if err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
 	for _, ent := range pp.RouteOnestopIDs() {
 		ent := ent
-		if _, err := copier.CopyEntity(&ent); err != nil {
+		if err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
 	for _, ent := range pp.StopOnestopIDs() {
 		ent := ent
-		if _, err := copier.CopyEntity(&ent); err != nil {
+		if err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
