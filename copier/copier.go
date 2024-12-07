@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"os"
 	"strings"
 	"time"
@@ -539,51 +540,51 @@ func (copier *Copier) Copy() *Result {
 
 	// Note that order is important!!
 	copier.sublogger.Trace().Msg("Begin processing feed")
+	r := copier.Reader
+	bs := copier.BatchSize
 	fns := []func() error{
-		func() error { return copyEntityTypeBatch(copier, 1, copier.Reader.Agencies()) },
+		func() error { return batchCopy(copier, batchChan(r.Agencies(), 1, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Routes(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Levels(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(shapeLines(r.ShapesByShapeID()), bs, nil)) },
 		func() error {
-			return copyEntityTypeBatch(copier, copier.BatchSize, shapesToShapeLines(copier.Reader.ShapesByShapeID()))
-		},
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.Routes()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.Levels()) },
-		func() error {
-			return copyEntityTypeBatch(copier, copier.BatchSize,
-				chanFilter(copier.Reader.Stops(), func(ent gtfs.Stop) bool {
+			return batchCopy(copier,
+				batchChan(r.Stops(), bs, func(ent gtfs.Stop) bool {
 					return ent.ParentStation.Val == ""
 				}),
 			)
 		},
 		func() error {
-			return copyEntityTypeBatch(copier, copier.BatchSize,
-				chanFilter(copier.Reader.Stops(), func(ent gtfs.Stop) bool {
+			return batchCopy(copier,
+				batchChan(r.Stops(), bs, func(ent gtfs.Stop) bool {
 					return ent.ParentStation.Val != "" && ent.LocationType.Val != 4
 				}),
 			)
 		},
 		func() error {
-			return copyEntityTypeBatch(copier, copier.BatchSize,
-				chanFilter(copier.Reader.Stops(), func(ent gtfs.Stop) bool {
+			return batchCopy(copier,
+				batchChan(r.Stops(), bs, func(ent gtfs.Stop) bool {
 					return ent.ParentStation.Val != "" && ent.LocationType.Val == 4
 				}),
 			)
 		},
 		copier.copyCalendars,
 		copier.copyTripsAndStopTimes,
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.Pathways()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.FareAttributes()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.FareRules()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.Frequencies()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.Transfers()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.FeedInfos()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.Translations()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.Attributions()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.Areas()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.StopAreas()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.RiderCategories()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.FareMedia()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.FareProducts()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.FareLegRules()) },
-		func() error { return copyEntityTypeBatch(copier, copier.BatchSize, copier.Reader.FareTransferRules()) },
+		func() error { return batchCopy(copier, batchChan(r.Pathways(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.FareAttributes(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.FareRules(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Frequencies(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Transfers(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.FeedInfos(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Translations(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Attributions(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Areas(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.StopAreas(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.RiderCategories(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.FareMedia(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.FareProducts(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.FareLegRules(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.FareTransferRules(), bs, nil)) },
 	}
 	for i := range fns {
 		if err := fns[i](); err != nil {
@@ -676,7 +677,7 @@ func (copier *Copier) copyExtraFiles() error {
 // copyCalendars
 func (copier *Copier) copyCalendars() error {
 	// Get Calendars as grouped calendars/calendar_dates
-	duplicateServices := []*gtfs.Calendar{}
+	duplicateServices := []tt.Entity{}
 	cals := map[string]*gtfs.Calendar{}
 	for ent := range copier.Reader.Calendars() {
 		if !copier.isMarked(&gtfs.Calendar{}) {
@@ -733,59 +734,39 @@ func (copier *Copier) copyCalendars() error {
 		}
 	}
 
-	// Helper function for batch copy calendars
-	batchCopyCalendars := func(batchEnts []*gtfs.Calendar, ent *gtfs.Calendar, flush bool) ([]*gtfs.Calendar, error) {
-		batchEnts, batchEntsAppend, batchFlushed, batchErr := checkBatch(copier, copier.BatchSize, batchEnts, ent, flush)
-		if batchErr != nil {
-			return nil, batchErr
-		}
-		if batchFlushed {
-			var batchCalendarDates []*gtfs.CalendarDate
-			for _, cal := range batchEntsAppend {
-				// eid := cal.EntityID()
-				for _, cd := range cal.CalendarDates {
-					cd := cd
-					cd.ServiceID.Set(cal.ServiceID.Val)
-					batchCalendarDates = append(batchCalendarDates, &cd)
-				}
-			}
-			if _, _, _, err := checkBatch(copier, copier.BatchSize, batchCalendarDates, nil, true); err != nil {
-				return nil, err
-			}
-		}
-		return batchEnts, nil
-	}
-
 	// Process calendars
-	var batchCalendars []*gtfs.Calendar
-	for _, cal := range cals {
-		// Write un-normalized calendar dates
-		if cal.Generated.Val && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-			copier.EntityMap.SetEntity(cal, cal.EntityID(), cal.ServiceID.Val)
-			var b []*gtfs.CalendarDate
-			for _, cd := range cal.CalendarDates {
-				cd := cd
-				cd.ServiceID.Set(cal.ServiceID.Val)
-				b = append(b, &cd)
+	for cals := range batchMap(cals, copier.BatchSize) {
+		writeCals := make([]*gtfs.Calendar, 0, len(cals))
+		writeCalDates := make([]*gtfs.CalendarDate, 0)
+		for _, cal := range cals {
+			// Write un-normalized calendar dates
+			if cal.Generated.Val && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
+				copier.EntityMap.SetEntity(cal, cal.EntityID(), cal.ServiceID.Val)
+				for _, cd := range cal.CalendarDates {
+					cd.ServiceID.Set(cal.ServiceID.Val)
+					writeCalDates = append(writeCalDates, &cd)
+				}
+				continue
 			}
-			if _, _, _, err := checkBatch(copier, copier.BatchSize, b, nil, true); err != nil {
-				return err
+			writeCals = append(writeCals, cal)
+		}
+		if err := copier.CopyEntities(toEnts(writeCals)); err != nil {
+			return err
+		}
+		// Process regular calendar dates
+		for _, ent := range writeCals {
+			for _, cd := range ent.CalendarDates {
+				cd.ServiceID.Set(ent.EntityID())
+				writeCalDates = append(writeCalDates, &cd)
 			}
-			continue
 		}
-		// Write calendar
-		var batchErr error
-		batchCalendars, batchErr = batchCopyCalendars(batchCalendars, cal, false)
-		if batchErr != nil {
-			return batchErr
+		if err := copier.CopyEntities(toEnts(writeCalDates)); err != nil {
+			return err
 		}
-	}
-	if _, batchErr := batchCopyCalendars(batchCalendars, nil, true); batchErr != nil {
-		return batchErr
 	}
 
 	// Attempt to copy duplicate services
-	if _, err := batchCopyCalendars(duplicateServices, nil, true); err != nil {
+	if err := copier.CopyEntities(duplicateServices); err != nil {
 		return err
 	}
 	copier.logCount(&gtfs.Calendar{})
@@ -1028,26 +1009,77 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 }
 
 // Copy helpers
-func copyEntityTypeBatch[
+func batchCopy[
 	T any,
 	PT interface {
 		tt.Entity
 		*T
-	}](copier *Copier, batchSize int, it chan T) error {
-	var batchEnts []PT
-	for ent := range it {
-		if batchEntsNew, _, _, batchErr := checkBatch(copier, batchSize, batchEnts, &ent, false); batchErr != nil {
-			return batchErr
-		} else {
-			batchEnts = batchEntsNew
+	}](
+	copier *Copier,
+	itBatch iter.Seq[[]T],
+) error {
+	for entBatch := range itBatch {
+		writeEnts := make([]tt.Entity, len(entBatch))
+		for i, ent := range entBatch {
+			var x PT = &ent
+			writeEnts[i] = x
 		}
-	}
-	if _, _, _, batchErr := checkBatch(copier, batchSize, batchEnts, nil, true); batchErr != nil {
-		return batchErr
+		if err := copier.CopyEntities(writeEnts); err != nil {
+			return err
+		}
 	}
 	var entType PT
 	copier.logCount(entType)
 	return nil
+}
+
+func batchChan[T any](it chan T, batchSize int, filt func(T) bool) iter.Seq[[]T] {
+	return func(yield func([]T) bool) {
+		var ents []T
+		for ent := range it {
+			if filt != nil && !filt(ent) {
+				continue
+			}
+			ents = append(ents, ent)
+			if len(ents) < batchSize {
+				continue
+			}
+			if !yield(ents) {
+				return
+			}
+			ents = nil
+		}
+		if len(ents) > 0 {
+			yield(ents)
+		}
+	}
+}
+
+func batchMap[K comparable, T any](m map[K]T, batchSize int) iter.Seq[[]T] {
+	return func(yield func([]T) bool) {
+		var ents []T
+		for _, v := range m {
+			ents = append(ents, v)
+			if len(ents) < batchSize {
+				continue
+			}
+			if !yield(ents) {
+				return
+			}
+			ents = nil
+		}
+		if len(ents) > 0 {
+			yield(ents)
+		}
+	}
+}
+
+func toEnts[T tt.Entity](ents []T) []tt.Entity {
+	ret := make([]tt.Entity, 0, len(ents))
+	for _, ent := range ents {
+		ret = append(ret, ent)
+	}
+	return ret
 }
 
 func checkBatch[
@@ -1085,25 +1117,7 @@ func checkBatch[
 	return entsNew, entsAppend, flush, nil
 }
 
-func chanFilter[
-	T any,
-](it chan T, filt func(T) bool) chan T {
-	out := make(chan T, 1_000)
-	go func() {
-		for ent := range it {
-			if filt(ent) {
-				// fmt.Println("ok:", ent)
-				out <- ent
-			} else {
-				// fmt.Println("skipping:", ent)
-			}
-		}
-		close(out)
-	}()
-	return out
-}
-
-func shapesToShapeLines(it chan []gtfs.Shape) chan service.ShapeLine {
+func shapeLines(it chan []gtfs.Shape) chan service.ShapeLine {
 	out := make(chan service.ShapeLine)
 	go func() {
 		for shapeEnts := range it {
