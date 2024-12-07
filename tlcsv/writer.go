@@ -66,6 +66,8 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	if len(ents) == 0 {
 		return eids, nil
 	}
+
+	// Normal write path
 	ent := ents[0]
 	efn := ents[0].Filename()
 	for _, ent := range ents {
@@ -79,8 +81,30 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 			v.StopLat.Set(c[1])
 		}
 	}
+
+	// Awful Ugly Hack to Flatten entities
+	var expandedEnts []tt.Entity
+	var originalEids []string
+	for _, ent := range ents {
+		if a, ok := ent.(canFlatten); ok {
+			eid := ""
+			if b, ok := ent.(hasEntityKey); ok {
+				eid = b.EntityKey()
+			}
+			originalEids = append(originalEids, eid)
+			expandedEnts = append(expandedEnts, a.Flatten()...)
+		}
+	}
+	if len(expandedEnts) > 0 {
+		_, err := writer.AddEntities(expandedEnts)
+		if err != nil {
+			return nil, err
+		}
+		return originalEids, nil
+	}
+
+	extraHeader := writer.extraHeaders[efn]
 	header, ok := writer.headers[efn]
-	extraHeader, ok := writer.extraHeaders[efn]
 	if !ok {
 		h, err := dumpHeader(ent)
 		if err != nil {
@@ -122,19 +146,23 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	return eids, err
 }
 
-type canFlatten interface {
-	Flatten() []tt.Entity
-}
-
 // AddEntity writes an entity to the output.
 func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
-	var eids []string
-	var err error
-	if v, ok := ent.(canFlatten); ok {
-		eids, err = writer.AddEntities(v.Flatten())
-	} else {
-		eids, err = writer.AddEntities([]tt.Entity{ent})
-	}
+	// var eids []string
+	// var err error
+	// if v, ok := ent.(canFlatten); ok {
+	// 	eids, err = writer.AddEntities(v.Flatten())
+	// } else {
+	// 	eids, err = writer.AddEntities([]tt.Entity{ent})
+	// }
+	// if err != nil {
+	// 	return "", err
+	// }
+	// if len(eids) == 0 {
+	// 	return "", errors.New("did not write expected number of entities")
+	// }
+	// return eids[0], nil
+	eids, err := writer.AddEntities([]tt.Entity{ent})
 	if err != nil {
 		return "", err
 	}
@@ -142,4 +170,8 @@ func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
 		return "", errors.New("did not write expected number of entities")
 	}
 	return eids[0], nil
+}
+
+type canFlatten interface {
+	Flatten() []tt.Entity
 }

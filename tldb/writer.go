@@ -93,29 +93,14 @@ func (writer *Writer) Delete() error {
 
 // AddEntity writes an entity to the database.
 func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
-	// Set some fields to not null for compatibility
-	notNullFilter.Filter(ent, nil)
-
-	// Set default agency id if not set elsewhere
-	if v, ok := ent.(*gtfs.Route); ok && !v.AgencyID.Valid {
-		v.AgencyID.SetInt(writer.defaultAgencyID)
+	eids, err := writer.AddEntities([]tt.Entity{ent})
+	if err != nil {
+		return "", err
 	}
-
-	// Set the FeedVersionID
-	if z, ok := ent.(canSetFeedVersion); ok {
-		z.SetFeedVersionID(writer.FeedVersionID)
+	if len(eids) == 0 {
+		return "", errors.New("did not write expected number of entities")
 	}
-	// Save
-	eid, err := writer.Adapter.Insert(ent)
-	// Update ID
-	if v, ok := ent.(canSetID); ok {
-		v.SetID(eid)
-	}
-	// Set a default AgencyID if possible.
-	if _, ok := ent.(*gtfs.Agency); ok && writer.defaultAgencyID == 0 {
-		writer.defaultAgencyID = eid
-	}
-	return strconv.Itoa(eid), err
+	return eids[0], nil
 }
 
 // AddEntities writes entities to the database.
