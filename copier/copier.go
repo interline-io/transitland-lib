@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"iter"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -362,65 +364,13 @@ func (copier *Copier) isMarked(ent tt.Entity) bool {
 
 // CopyEntity performs validation and saves errors and warnings.
 func (copier *Copier) CopyEntity(ent tt.Entity) error {
-	return copier.CopyEntities([]tt.Entity{ent})
-
+	_, err := copyEntities(copier, []tt.Entity{ent})
+	return err
 }
 
-// CopyEntities validates a slice of entities and writes those that pass validation.
 func (copier *Copier) CopyEntities(ents []tt.Entity) error {
-	okEnts := make([]tt.Entity, 0, len(ents))
-	for _, ent := range ents {
-		expanded := false
-		for _, f := range copier.expandFilters {
-			if exp, ok, err := f.Expand(ent, copier.EntityMap); err != nil {
-				// skip
-			} else if ok {
-				expanded = true
-				if err := copier.checkEntity(ent); err == nil {
-					okEnts = append(okEnts, exp...)
-				}
-			}
-		}
-		if !expanded {
-			if err := copier.checkEntity(ent); err == nil {
-				okEnts = append(okEnts, ent)
-			}
-		}
-	}
-	if len(okEnts) == 0 {
-		return nil
-	}
-	efn := okEnts[0].Filename()
-	sids := make([]string, len(okEnts))
-	for i, ent := range okEnts {
-		sids[i] = ent.EntityID()
-	}
-	eids, err := copier.Writer.AddEntities(okEnts)
-	if err != nil {
-		copier.sublogger.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(okEnts))
-		return err
-	}
-	for i, ent := range okEnts {
-		sid := sids[i]
-		eid := eids[i]
-		copier.EntityMap.Set(efn, sid, eid)
-		if entExt, ok := ent.(tt.EntityWithGroupKey); ok {
-			if groupKey, groupId := entExt.GroupKey(); groupId != "" {
-				copier.EntityMap.Set(fmt.Sprintf("%s:%s", efn, groupKey), groupId, groupId)
-			}
-		}
-	}
-	copier.result.EntityCount[efn] += len(okEnts)
-
-	// AfterWriters
-	for i, eid := range eids {
-		for _, v := range copier.afterWriters {
-			if err := v.AfterWrite(eid, okEnts[i], copier.EntityMap); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	_, err := copyEntities(copier, ents)
+	return err
 }
 
 // checkEntity is the main filter and validation check.
@@ -735,38 +685,46 @@ func (copier *Copier) copyCalendars() error {
 	}
 
 	// Process calendars
-	for cals := range batchMap(cals, copier.BatchSize) {
-		writeCals := make([]*gtfs.Calendar, 0, len(cals))
-		writeCalDates := make([]*gtfs.CalendarDate, 0)
-		for _, cal := range cals {
+	for calGroup := range batchMap(cals, copier.BatchSize) {
+		batchCals := make([]*gtfs.Calendar, 0, len(cals))
+		batchCalDates := make([]*gtfs.CalendarDate, 0)
+		for _, cal := range calGroup {
 			// Write un-normalized calendar dates
 			if cal.Generated.Val && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
 				copier.EntityMap.SetEntity(cal, cal.EntityID(), cal.ServiceID.Val)
 				for _, cd := range cal.CalendarDates {
 					cd.ServiceID.Set(cal.ServiceID.Val)
-					writeCalDates = append(writeCalDates, &cd)
+					batchCalDates = append(batchCalDates, &cd)
 				}
 				continue
 			}
-			writeCals = append(writeCals, cal)
+			batchCals = append(batchCals, cal)
 		}
-		if err := copier.CopyEntities(toEnts(writeCals)); err != nil {
+
+		// Write calendars
+		okCals, err := copyEntities(copier, batchCals)
+		if err != nil {
 			return err
 		}
+
 		// Process regular calendar dates
-		for _, ent := range writeCals {
-			for _, cd := range ent.CalendarDates {
-				cd.ServiceID.Set(ent.EntityID())
-				writeCalDates = append(writeCalDates, &cd)
+		for _, ent := range okCals {
+			if v, ok := ent.(*gtfs.Calendar); ok {
+				for _, cd := range v.CalendarDates {
+					cd.ServiceID.Set(ent.EntityID())
+					batchCalDates = append(batchCalDates, &cd)
+				}
 			}
 		}
-		if err := copier.CopyEntities(toEnts(writeCalDates)); err != nil {
+
+		// Write calendar dates
+		if _, err := copyEntities(copier, batchCalDates); err != nil {
 			return err
 		}
 	}
 
 	// Attempt to copy duplicate services
-	if err := copier.CopyEntities(duplicateServices); err != nil {
+	if _, err := copyEntities(copier, duplicateServices); err != nil {
 		return err
 	}
 	copier.logCount(&gtfs.Calendar{})
@@ -809,134 +767,127 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	journeyPatterns := map[string]patInfo{}
 	tripOffsets := map[string]int{} // used for deduplicating StopTimes
 
-	// Helper function for batch copy trips
-	batchCopyTrips := func(batchEnts []*gtfs.Trip, ent *gtfs.Trip, flush bool) ([]*gtfs.Trip, error) {
-		batchEntsNew, batchEntsAppend, batchFlushed, batchErr := checkBatch(copier, copier.BatchSize, batchEnts, ent, flush)
-		if batchErr != nil {
-			return nil, batchErr
+	// Process trips and stop times
+	for stsGroup := range batchChan(copier.Reader.StopTimesByTripID(), copier.BatchSize, nil) {
+		count := 0
+		for _, sts := range stsGroup {
+			count += len(sts)
 		}
-		if batchFlushed {
-			var batchStopTimes []tt.Entity
-			for _, ent := range batchEntsAppend {
-				if _, dedupOk := tripOffsets[ent.TripID.Val]; dedupOk && copier.DeduplicateJourneyPatterns {
-					log.Trace().Msgf("deduplicating: %s", ent.TripID)
+		batchTrips := make([]*gtfs.Trip, 0, len(stsGroup))
+		batchStopTimes := make([]*gtfs.StopTime, 0, count)
+		for _, sts := range stsGroup {
+			if len(sts) == 0 {
+				continue
+			}
+
+			// Does this trip exist?
+			tripid := sts[0].TripID.Val
+			if _, ok := allTripIds[tripid]; !ok {
+				// Trip doesn't exist, try to copy stop times anyway
+				for _, st := range sts {
+					batchStopTimes = append(batchStopTimes, &st)
+				}
+				continue
+			}
+
+			// Is this trip marked?
+			trip, ok := trips[tripid]
+			if !ok {
+				// Trip exists but is not marked
+				copier.result.SkipEntityMarkedCount["stop_times.txt"] += len(sts)
+				continue
+			}
+
+			// Mark trip as associated with at least 1 stop_time
+			// Remaining trips will be processed later
+			delete(trips, tripid)
+
+			// Set stop times
+			trip.StopTimes = sts
+
+			// Set StopPattern
+			patkey := stopPatternKey(trip.StopTimes)
+			if pat, ok := stopPatterns[patkey]; ok {
+				trip.StopPatternID.SetInt(pat)
+			} else {
+				trip.StopPatternID.SetInt(len(stopPatterns))
+				stopPatterns[patkey] = trip.StopPatternID.Int()
+			}
+
+			// Create missing shape if necessary
+			if !trip.ShapeID.Valid && copier.CreateMissingShapes {
+				// Note: if the trip has errors, may result in unused shapes!
+				if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID.Int()]; ok {
+					trip.ShapeID.Set(shapeid)
+				} else {
+					if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
+						copier.sublogger.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
+						trip.AddWarning(err)
+					} else {
+						// Set ShapeID
+						stopPatternShapeIDs[trip.StopPatternID.Int()] = shapeid
+						trip.ShapeID.Set(shapeid)
+					}
+				}
+			}
+
+			// Interpolate stop times
+			if copier.InterpolateStopTimes {
+				if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip); err != nil {
+					trip.AddWarning(err)
+				} else {
+					trip.StopTimes = stoptimes2
+				}
+			}
+
+			// Set JourneyPattern
+			jkey := copier.JourneyPatternKey(trip)
+			if jpat, ok := journeyPatterns[jkey]; ok {
+				trip.JourneyPatternID.Set(jpat.key)
+				trip.JourneyPatternOffset.SetInt(trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival)
+				tripOffsets[trip.TripID.Val] = trip.JourneyPatternOffset.Int() // do not write stop times for this trip
+			} else {
+				trip.JourneyPatternID.Set(trip.TripID.Val)
+				trip.JourneyPatternOffset.Set(0)
+				journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID.Val}
+			}
+
+			// Add to group
+			batchTrips = append(batchTrips, trip)
+		}
+
+		// Write trips
+		okTrips, err := copyEntities(copier, batchTrips)
+		if err != nil {
+			return err
+		}
+
+		// Process regular stop times
+		for _, ent := range okTrips {
+			if v, ok := ent.(*gtfs.Trip); ok {
+				if _, dedupOk := tripOffsets[v.TripID.Val]; dedupOk && copier.DeduplicateJourneyPatterns {
+					log.Trace().Msgf("deduplicating: %s", v.TripID)
 					continue
 				}
-				for _, st := range ent.StopTimes {
+				for _, st := range v.StopTimes {
 					batchStopTimes = append(batchStopTimes, &st)
 				}
 			}
-			if err := copier.CopyEntities(batchStopTimes); err != nil {
-				return nil, err
-			}
-		}
-		return batchEntsNew, nil
-	}
-
-	// Process trips and stop times
-	var batchTrips []*gtfs.Trip
-	for sts := range copier.Reader.StopTimesByTripID() {
-		if len(sts) == 0 {
-			continue
 		}
 
-		// Does this trip exist?
-		tripid := sts[0].TripID.Val
-		if _, ok := allTripIds[tripid]; !ok {
-			// Trip doesn't exist, try to copy stop times anyway
-			var writeSts []*gtfs.StopTime
-			for _, st := range sts {
-				writeSts = append(writeSts, &st)
-			}
-			if _, _, _, err := checkBatch(copier, copier.BatchSize, writeSts, nil, true); err != nil {
-				return err
-			}
-			continue
+		// Write stop times
+		if _, err := copyEntities(copier, batchStopTimes); err != nil {
+			return err
 		}
-
-		// Is this trip marked?
-		trip, ok := trips[tripid]
-		if !ok {
-			// Trip exists but is not marked
-			copier.result.SkipEntityMarkedCount["stop_times.txt"] += len(sts)
-			continue
-		}
-
-		// Mark trip as associated with at least 1 stop_time
-		// Remaining trips will be processed later
-		delete(trips, tripid)
-
-		// Set stop times
-		trip.StopTimes = sts
-
-		// Set StopPattern
-		patkey := stopPatternKey(trip.StopTimes)
-		if pat, ok := stopPatterns[patkey]; ok {
-			trip.StopPatternID.SetInt(pat)
-		} else {
-			trip.StopPatternID.SetInt(len(stopPatterns))
-			stopPatterns[patkey] = trip.StopPatternID.Int()
-		}
-
-		// Create missing shape if necessary
-		if !trip.ShapeID.Valid && copier.CreateMissingShapes {
-			// Note: if the trip has errors, may result in unused shapes!
-			if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID.Int()]; ok {
-				trip.ShapeID.Set(shapeid)
-			} else {
-				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
-					copier.sublogger.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
-					trip.AddWarning(err)
-				} else {
-					// Set ShapeID
-					stopPatternShapeIDs[trip.StopPatternID.Int()] = shapeid
-					trip.ShapeID.Set(shapeid)
-				}
-			}
-		}
-
-		// Interpolate stop times
-		if copier.InterpolateStopTimes {
-			if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip); err != nil {
-				trip.AddWarning(err)
-			} else {
-				trip.StopTimes = stoptimes2
-			}
-		}
-
-		// Set JourneyPattern
-		jkey := copier.JourneyPatternKey(trip)
-		if jpat, ok := journeyPatterns[jkey]; ok {
-			trip.JourneyPatternID.Set(jpat.key)
-			trip.JourneyPatternOffset.SetInt(trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival)
-			tripOffsets[trip.TripID.Val] = trip.JourneyPatternOffset.Int() // do not write stop times for this trip
-		} else {
-			trip.JourneyPatternID.Set(trip.TripID.Val)
-			trip.JourneyPatternOffset.Set(0)
-			journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID.Val}
-		}
-
-		var batchErr error
-		batchTrips, batchErr = batchCopyTrips(batchTrips, trip, false)
-		if batchErr != nil {
-			return batchErr
-		}
-	}
-	if _, batchErr := batchCopyTrips(batchTrips, nil, true); batchErr != nil {
-		return batchErr
 	}
 
 	// Add any Trips that were not visited/did not have StopTimes
-	var extraTrips []*gtfs.Trip
-	for _, trip := range trips {
-		extraTrips = append(extraTrips, trip)
-	}
-	if _, err := batchCopyTrips(extraTrips, nil, true); err != nil {
+	if _, err := copyEntities(copier, slices.Collect(maps.Values(trips))); err != nil {
 		return err
 	}
 
 	// Add any duplicate trips
-	if _, err := batchCopyTrips(duplicateTrips, nil, true); err != nil {
+	if _, err := copyEntities(copier, duplicateTrips); err != nil {
 		return err
 	}
 
@@ -1008,6 +959,66 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 	return shape.ShapeID.Val, nil
 }
 
+func copyEntities[T tt.Entity](copier *Copier, ents []T) ([]tt.Entity, error) {
+	if len(ents) == 0 {
+		return nil, nil
+	}
+	okEnts := make([]tt.Entity, 0, len(ents))
+	for _, ent := range ents {
+		ent := ent
+		expanded := false
+		for _, f := range copier.expandFilters {
+			if exp, ok, err := f.Expand(ent, copier.EntityMap); err != nil {
+				// skip
+			} else if ok {
+				expanded = true
+				if err := copier.checkEntity(ent); err == nil {
+					okEnts = append(okEnts, exp...)
+				}
+			}
+		}
+		if !expanded {
+			if err := copier.checkEntity(ent); err == nil {
+				okEnts = append(okEnts, ent)
+			}
+		}
+	}
+	if len(okEnts) == 0 {
+		return nil, nil
+	}
+	efn := okEnts[0].Filename()
+	sids := make([]string, len(okEnts))
+	for i, ent := range okEnts {
+		sids[i] = ent.EntityID()
+	}
+	eids, err := copier.Writer.AddEntities(okEnts)
+	if err != nil {
+		copier.sublogger.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(okEnts))
+		return nil, err
+	}
+	for i, ent := range okEnts {
+		sid := sids[i]
+		eid := eids[i]
+		copier.EntityMap.Set(efn, sid, eid)
+		if entExt, ok := ent.(tt.EntityWithGroupKey); ok {
+			if groupKey, groupId := entExt.GroupKey(); groupId != "" {
+				copier.EntityMap.Set(fmt.Sprintf("%s:%s", efn, groupKey), groupId, groupId)
+			}
+		}
+	}
+	copier.result.EntityCount[efn] += len(okEnts)
+
+	// AfterWriters
+	for i, eid := range eids {
+		for _, v := range copier.afterWriters {
+			if err := v.AfterWrite(eid, okEnts[i], copier.EntityMap); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return okEnts, nil
+}
+
 // Copy helpers
 func batchCopy[
 	T any,
@@ -1072,49 +1083,6 @@ func batchMap[K comparable, T any](m map[K]T, batchSize int) iter.Seq[[]T] {
 			yield(ents)
 		}
 	}
-}
-
-func toEnts[T tt.Entity](ents []T) []tt.Entity {
-	ret := make([]tt.Entity, 0, len(ents))
-	for _, ent := range ents {
-		ret = append(ret, ent)
-	}
-	return ret
-}
-
-func checkBatch[
-	T any,
-	PT interface {
-		tt.Entity
-		*T
-	}](
-	copier *Copier,
-	batchSize int,
-	ents []PT,
-	ent PT,
-	flush bool,
-) ([]PT, []PT, bool, error) {
-	if ent != nil {
-		ents = append(ents, ent)
-	}
-	if len(ents) >= batchSize {
-		flush = true
-	}
-	entsNew := ents
-	entsAppend := ents
-	if flush {
-		entsNew = nil
-		writeEnts := make([]tt.Entity, 0, len(ents))
-		for _, ent := range ents {
-			ent := ent
-			writeEnts = append(writeEnts, ent)
-		}
-		if err := copier.CopyEntities(writeEnts); err != nil {
-			return nil, nil, false, err
-		}
-		ents = nil
-	}
-	return entsNew, entsAppend, flush, nil
 }
 
 func shapeLines(it chan []gtfs.Shape) chan service.ShapeLine {
