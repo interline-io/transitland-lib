@@ -14,7 +14,7 @@ func TestMerge(t *testing.T) {
 		f1 := testutil.ExampleFeedBART
 		f2 := testutil.ExampleFeedCaltrain
 		cmd := MergeCommand{}
-		tdir := "/Users/irees/tmp/branch" // t.TempDir()
+		tdir := t.TempDir()
 		if err := cmd.Parse([]string{tdir, f1.URL, f2.URL}); err != nil {
 			t.Fatal(err)
 		}
