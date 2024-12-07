@@ -1,7 +1,6 @@
 package cmds
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/ext"
@@ -15,8 +14,7 @@ func TestMerge(t *testing.T) {
 		f1 := testutil.ExampleFeedBART
 		f2 := testutil.ExampleFeedCaltrain
 		cmd := MergeCommand{}
-		tdir := t.TempDir()
-		fmt.Println("tdir:", tdir)
+		tdir := "/Users/irees/tmp/branch" // t.TempDir()
 		if err := cmd.Parse([]string{tdir, f1.URL, f2.URL}); err != nil {
 			t.Fatal(err)
 		}
@@ -47,6 +45,5 @@ func TestMerge(t *testing.T) {
 		if checked == 0 {
 			t.Fatal("no checks were performed - make sure both example feeds in test_feeds.go have entity counts set")
 		}
-		// time.Sleep(1000 * time.Second)
 	})
 }
