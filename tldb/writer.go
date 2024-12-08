@@ -138,5 +138,15 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 			v.SetID(int(retids[i]))
 		}
 	}
+	// Set default agency ID
+	// TODO: handle this in ApplyDefaultAgencyFilter
+	for _, ent := range ents {
+		if a, ok := ent.(*gtfs.Agency); ok {
+			if writer.defaultAgencyID == 0 {
+				writer.defaultAgencyID = a.ID
+			}
+			break
+		}
+	}
 	return eids, nil
 }
