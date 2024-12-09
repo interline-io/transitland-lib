@@ -691,7 +691,7 @@ func (copier *Copier) copyCalendars() error {
 		for _, cal := range calGroup {
 			// Write un-normalized calendar dates
 			if cal.Generated.Val && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-				copier.EntityMap.SetEntity(cal, cal.EntityID(), cal.ServiceID.Val)
+				copier.EntityMap.SetEntity(cal, cal.ServiceID.Val, cal.EntityID())
 				for _, cd := range cal.CalendarDates {
 					cd.ServiceID.Set(cal.ServiceID.Val)
 					batchCalDates = append(batchCalDates, &cd)
@@ -711,7 +711,7 @@ func (copier *Copier) copyCalendars() error {
 		for _, ent := range okCals {
 			if v, ok := ent.(*gtfs.Calendar); ok {
 				for _, cd := range v.CalendarDates {
-					cd.ServiceID.Set(ent.EntityID())
+					cd.ServiceID.Set(v.ServiceID.Val)
 					batchCalDates = append(batchCalDates, &cd)
 				}
 			}
