@@ -2,7 +2,6 @@
 package copier
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -396,8 +395,6 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 		}
 	}
 
-	jj, _ := json.MarshalIndent(ent, "", "  ")
-
 	// UpdateKeys is handled separately from other validators.
 	var refErrs []error
 	if extEnt, ok := ent.(tt.EntityWithReferences); ok {
@@ -445,11 +442,6 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	// Get all errors and warnings, including those added above or by data loader
 	errs = append(errs, tt.CheckErrors(ent)...)
 	warns = append(warns, tt.CheckWarnings(ent)...)
-	if len(errs) > 0 {
-		fmt.Println("ENT 1:", string(jj))
-		jj, _ := json.MarshalIndent(ent, "", "  ")
-		fmt.Println("ENT2 :", string(jj))
-	}
 
 	// Log and set line context
 	for _, err := range warns {
@@ -714,7 +706,7 @@ func (copier *Copier) copyCalendars() error {
 		} else {
 			okCals = make([]tt.Entity, 0, len(batchCals))
 			for _, cal := range batchCals {
-				copier.EntityMap.Set("calendars.txt", cal.ServiceID.Val, cal.ServiceID.Val)
+				copier.EntityMap.Set("calendar.txt", cal.ServiceID.Val, cal.ServiceID.Val)
 				okCals = append(okCals, cal)
 			}
 		}
