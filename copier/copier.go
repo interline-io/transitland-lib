@@ -992,6 +992,9 @@ func copyEntities[T tt.Entity](copier *Copier, ents []T) ([]tt.Entity, error) {
 		copier.sublogger.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(okEnts))
 		return nil, err
 	}
+	if len(eids) != len(okEnts) {
+		return nil, fmt.Errorf("expected to write %d entities, got %d", len(okEnts), len(eids))
+	}
 	for i, ent := range okEnts {
 		sid := sids[i]
 		eid := eids[i]
