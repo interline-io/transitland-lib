@@ -2,6 +2,7 @@
 package copier
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -267,6 +268,10 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 		// Simplify shapes.txt
 		copier.AddExtension(&filters.SimplifyShapeFilter{SimplifyValue: copier.SimplifyShapes})
 	}
+	if copier.SimplifyCalendars && copier.NormalizeServiceIDs {
+		// Simplify calendar and calendar dates
+		copier.AddExtension(&filters.SimplifyCalendarFilter{})
+	}
 
 	// Add extensions
 	for _, ext := range opts.extensions {
@@ -391,6 +396,8 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 		}
 	}
 
+	jj, _ := json.MarshalIndent(ent, "", "  ")
+
 	// UpdateKeys is handled separately from other validators.
 	var refErrs []error
 	if extEnt, ok := ent.(tt.EntityWithReferences); ok {
@@ -438,6 +445,11 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	// Get all errors and warnings, including those added above or by data loader
 	errs = append(errs, tt.CheckErrors(ent)...)
 	warns = append(warns, tt.CheckWarnings(ent)...)
+	if len(errs) > 0 {
+		fmt.Println("ENT 1:", string(jj))
+		jj, _ := json.MarshalIndent(ent, "", "  ")
+		fmt.Println("ENT2 :", string(jj))
+	}
 
 	// Log and set line context
 	for _, err := range warns {
@@ -500,21 +512,22 @@ func (copier *Copier) Copy() *Result {
 		func() error {
 			return batchCopy(copier,
 				batchChan(r.Stops(), bs, func(ent gtfs.Stop) bool {
-					return ent.ParentStation.Val == ""
+					return ent.LocationType.Val == 1
 				}),
 			)
 		},
 		func() error {
 			return batchCopy(copier,
 				batchChan(r.Stops(), bs, func(ent gtfs.Stop) bool {
-					return ent.ParentStation.Val != "" && ent.LocationType.Val != 4
+					lt := ent.LocationType.Val
+					return lt == 0 || lt == 2 || lt == 3
 				}),
 			)
 		},
 		func() error {
 			return batchCopy(copier,
 				batchChan(r.Stops(), bs, func(ent gtfs.Stop) bool {
-					return ent.ParentStation.Val != "" && ent.LocationType.Val == 4
+					return ent.LocationType.Val == 4
 				}),
 			)
 		},
@@ -627,105 +640,96 @@ func (copier *Copier) copyExtraFiles() error {
 // copyCalendars
 func (copier *Copier) copyCalendars() error {
 	// Get Calendars as grouped calendars/calendar_dates
-	duplicateServices := []tt.Entity{}
-	cals := map[string]*gtfs.Calendar{}
-	for ent := range copier.Reader.Calendars() {
-		if !copier.isMarked(&gtfs.Calendar{}) {
-			continue
-		}
-		if _, ok := cals[ent.EntityID()]; ok {
-			// Save duplicates for later
-			duplicateServices = append(duplicateServices, &ent)
-			continue
-		}
-		cals[ent.EntityID()] = &ent
-	}
-
-	// Add the CalendarDates to Services
+	calDates := map[string][]gtfs.CalendarDate{}
 	for ent := range copier.Reader.CalendarDates() {
-		// Check if marked
-		cal := gtfs.Calendar{ServiceID: tt.NewString(ent.ServiceID.Val)}
-		if !copier.isMarked(&cal) {
-			continue
-		}
-		// Do we create a generated calendar?
-		svc, ok := cals[ent.ServiceID.Val]
-		if !ok {
-			svc = &gtfs.Calendar{}
-			svc.ServiceID.Set(ent.ServiceID.Val)
-			svc.Generated.Set(true)
-			svc.Monday.OrSet(0)
-			svc.Tuesday.OrSet(0)
-			svc.Wednesday.OrSet(0)
-			svc.Thursday.OrSet(0)
-			svc.Friday.OrSet(0)
-			svc.Saturday.OrSet(0)
-			svc.Sunday.OrSet(0)
-			cals[ent.ServiceID.Val] = svc
-		}
-		svc.CalendarDates = append(svc.CalendarDates, ent)
+		calDates[ent.ServiceID.Val] = append(calDates[ent.ServiceID.Val], ent)
 	}
 
 	// Simplify and and adjust StartDate and EndDate
-	for _, cal := range cals {
-		svc := service.NewService(*cal, cal.CalendarDates...)
-		// Simplify generated and non-generated calendars
-		if copier.SimplifyCalendars {
-			if s, err := svc.Simplify(); err == nil {
-				cal = &s.Calendar
-				cals[svc.EntityID()] = cal
-			}
-		}
-		// Generated calendars may need their service period set...
-		if cal.Generated.Val && (cal.StartDate.IsZero() || cal.EndDate.IsZero()) {
-			a, b := svc.ServicePeriod()
-			cal.StartDate.Set(a)
-			cal.EndDate.Set(b)
-		}
-	}
-
-	// Process calendars
-	for calGroup := range batchMap(cals, copier.BatchSize) {
+	for cals := range batchChan(copier.Reader.Calendars(), copier.BatchSize, nil) {
 		batchCals := make([]*gtfs.Calendar, 0, len(cals))
-		batchCalDates := make([]*gtfs.CalendarDate, 0)
-		for _, cal := range calGroup {
-			// Write un-normalized calendar dates
-			if cal.Generated.Val && !copier.NormalizeServiceIDs && !copier.SimplifyCalendars {
-				copier.EntityMap.SetEntity(cal, cal.ServiceID.Val, cal.EntityID())
-				for _, cd := range cal.CalendarDates {
-					cd.ServiceID.Set(cal.ServiceID.Val)
-					batchCalDates = append(batchCalDates, &cd)
-				}
-				continue
-			}
-			batchCals = append(batchCals, cal)
+		cdCount := 0
+		for _, cal := range cals {
+			// Add CalendarDates
+			cal.CalendarDates = calDates[cal.EntityID()]
+			// Remove from CalendarDates, process only once
+			// Left-overs will be handled as Generated Calendars below
+			delete(calDates, cal.EntityID())
+			batchCals = append(batchCals, &cal)
+			cdCount += len(cal.CalendarDates)
 		}
-
-		// Write calendars
+		// Write Calendars
 		okCals, err := copyEntities(copier, batchCals)
 		if err != nil {
 			return err
 		}
-
-		// Process regular calendar dates
+		// Write CalendarDates
+		batchCalDates := make([]*gtfs.CalendarDate, 0, cdCount)
 		for _, ent := range okCals {
-			if v, ok := ent.(*gtfs.Calendar); ok {
-				for _, cd := range v.CalendarDates {
-					cd.ServiceID.Set(v.ServiceID.Val)
+			if cal, ok := ent.(*gtfs.Calendar); ok {
+				for _, cd := range cal.CalendarDates {
 					batchCalDates = append(batchCalDates, &cd)
 				}
 			}
 		}
-
-		// Write calendar dates
 		if _, err := copyEntities(copier, batchCalDates); err != nil {
 			return err
 		}
 	}
 
-	// Attempt to copy duplicate services
-	if _, err := copyEntities(copier, duplicateServices); err != nil {
-		return err
+	// Process generated Calendars
+	{
+		batchCals := make([]*gtfs.Calendar, 0, len(calDates))
+		cdCount := 0
+		for serviceId, cds := range calDates {
+			cal := gtfs.Calendar{}
+			cal.ServiceID.Set(serviceId)
+			// Set generated
+			cal.Generated.Set(true)
+			// Set days of week as 0
+			cal.Monday.Set(0)
+			cal.Tuesday.Set(0)
+			cal.Wednesday.Set(0)
+			cal.Thursday.Set(0)
+			cal.Friday.Set(0)
+			cal.Saturday.Set(0)
+			cal.Sunday.Set(0)
+			cal.CalendarDates = cds
+			// Set StartDate, EndDate
+			svc := service.NewService(cal, cal.CalendarDates...)
+			a, b := svc.ServicePeriod()
+			cal.StartDate.Set(a)
+			cal.EndDate.Set(b)
+			batchCals = append(batchCals, &cal)
+			cdCount += len(cal.CalendarDates)
+		}
+		// Write Calendars
+		var okCals []tt.Entity
+		if copier.NormalizeServiceIDs {
+			var err error
+			okCals, err = copyEntities(copier, batchCals)
+			if err != nil {
+				return err
+			}
+		} else {
+			okCals = make([]tt.Entity, 0, len(batchCals))
+			for _, cal := range batchCals {
+				copier.EntityMap.Set("calendars.txt", cal.ServiceID.Val, cal.ServiceID.Val)
+				okCals = append(okCals, cal)
+			}
+		}
+		// Write CalendarDates
+		batchCalDates := make([]*gtfs.CalendarDate, 0, cdCount)
+		for _, ent := range okCals {
+			if cal, ok := ent.(*gtfs.Calendar); ok {
+				for _, cd := range cal.CalendarDates {
+					batchCalDates = append(batchCalDates, &cd)
+				}
+			}
+		}
+		if _, err := copyEntities(copier, batchCalDates); err != nil {
+			return err
+		}
 	}
 	copier.logCount(&gtfs.Calendar{})
 	copier.logCount(&gtfs.CalendarDate{})
