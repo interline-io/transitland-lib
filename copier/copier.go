@@ -111,6 +111,8 @@ type Options struct {
 	CopyExtraFiles bool
 	// Simplify shapes
 	SimplifyShapes float64
+	// Convert route network_id to networks.txt/route_networks.txt
+	NormalizeNetworks bool
 	// DeduplicateStopTimes
 	DeduplicateJourneyPatterns bool
 	// Default error handler
@@ -120,7 +122,7 @@ type Options struct {
 	// Named extensions
 	Extensions []string
 	// Initialized extensions
-	extensions []Extension
+	extensions []any
 	// Error limit
 	ErrorLimit int
 
@@ -129,7 +131,7 @@ type Options struct {
 	sublogger zerolog.Logger
 }
 
-func (opts *Options) AddExtension(ext Extension) {
+func (opts *Options) AddExtension(ext any) {
 	opts.extensions = append(opts.extensions, ext)
 }
 
@@ -266,6 +268,12 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	if copier.SimplifyShapes > 0 {
 		// Simplify shapes.txt
 		copier.AddExtension(&filters.SimplifyShapeFilter{SimplifyValue: copier.SimplifyShapes})
+	}
+	if copier.NormalizeNetworks {
+		// Convert routes.txt network_id to networks.txt/route_networks.txt
+		copier.AddExtension(&filters.RouteNetworkIDFilter{})
+	} else {
+		copier.AddExtension(&filters.RouteNetworkIDCompatFilter{})
 	}
 	if copier.SimplifyCalendars && copier.NormalizeServiceIDs {
 		// Simplify calendar and calendar dates
@@ -533,6 +541,8 @@ func (copier *Copier) Copy() *Result {
 		func() error { return batchCopy(copier, batchChan(r.FeedInfos(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Translations(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Attributions(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Networks(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.RouteNetworks(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Areas(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.StopAreas(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.RiderCategories(), bs, nil)) },

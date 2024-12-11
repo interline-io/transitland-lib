@@ -36,4 +36,7 @@ type Reader interface {
 	FareProducts() chan FareProduct
 	RiderCategories() chan RiderCategory
 	FareMedia() chan FareMedia
+	Timeframes() chan Timeframe
+	Networks() chan Network
+	RouteNetworks() chan RouteNetwork
 }
