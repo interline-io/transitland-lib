@@ -77,9 +77,18 @@ func (ent *Stop) ConditionalErrors() []error {
 	var errs []error
 	// TODO: This should be an enum for exhaustive search
 	lt := ent.LocationType.Val
-	if (lt == 0 || lt == 1 || lt == 2) && len(ent.StopName.Val) == 0 {
-		errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_name"))
+	if lt == 0 || lt == 1 || lt == 2 {
+		if len(ent.StopName.Val) == 0 {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_name"))
+		}
+		if !ent.StopLon.Valid {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_lon"))
+		}
+		if !ent.StopLat.Valid {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_lat"))
+		}
 	}
+
 	// Check for "0" value...
 	if lt == 1 && ent.ParentStation.Val != "" {
 		errs = append(errs, causes.NewInvalidFieldError("parent_station", ent.ParentStation.Val, fmt.Errorf("station cannot have parent_station")))
