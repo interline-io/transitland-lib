@@ -75,16 +75,25 @@ func (ent *Stop) ToPoint() tlxy.Point {
 
 func (ent *Stop) ConditionalErrors() []error {
 	var errs []error
-	// TODO: This should be an enum for exhaustive search
+	// TODO: LocationType should be an enum for exhaustive search
 	lt := ent.LocationType.Val
 	if lt == 0 || lt == 1 || lt == 2 {
 		if len(ent.StopName.Val) == 0 {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_name"))
 		}
-		if !ent.StopLon.Valid {
+		// Handle geometry passed via csv stop_lon/stop_lat OR geometry
+		stopLon := ent.StopLon
+		stopLat := ent.StopLat
+		if ent.Geometry.Valid {
+			if g := ent.Geometry.FlatCoords(); len(g) >= 2 {
+				stopLon = tt.NewFloat(g[0])
+				stopLat = tt.NewFloat(g[1])
+			}
+		}
+		if !stopLon.Valid {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_lon"))
 		}
-		if !ent.StopLat.Valid {
+		if !stopLat.Valid {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_lat"))
 		}
 	}
