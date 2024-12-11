@@ -17,11 +17,19 @@ ok_no_stop_lat_for_nodes,node stop_lat = 0,,0.0,-116.40094,,,3,,,,ok_station,
 ok_no_stop_lon_for_nodes,node stop_lon = 0,,36.641496,0.0,,,3,,,,ok_station,
 ok_no_stop_lat_for_boarding_areas,area stop_lat = 0,,,-116.40094,,,4,,,,ok_stop,
 ok_no_stop_lon_for_boarding_areas,area stop_lon = 0,,36.641496,,,,4,,,,ok_stop,
-parse_stop_lon,stop_lat parse error,,36.641496,xyz,,,,,,,,FieldParseError:stop_lon
-parse_stop_lat,stop_lon parse error,,xyz,-116.40094,,,,,,,,FieldParseError:stop_lat
+parse_stop_lon,stop_lat parse error,,36.641496,xyz,,,3,,,,station,FieldParseError:stop_lon
+parse_stop_lat,stop_lon parse error,,xyz,-116.40094,,,3,,,,station,FieldParseError:stop_lat
 invalid_location_type,location_type = 6,,36.641496,-116.40094,,,6,,,,,InvalidFieldError:location_type
 parse_location_type,location_type parse error,,36.641496,-116.40094,,,xyz,,,,,FieldParseError:location_type
 parse_wheelchair_boarding,wheelchair_boarding parse error,,36.641496,-116.40094,,,,xyz,,,,FieldParseError:wheelchair_boarding
 invalid_wheelchair_boarding,wheelchair_boarding > 2,,36.641496,-116.40094,,,,3,,,,InvalidFieldError:wheelchair_boarding
 error_location_type_without_parent_station,location_type = 2 without parent_station,,36.641496,-116.40094,,,2,,,,,ConditionallyRequiredFieldError:parent_station
 error_station_with_parent_station,location_type = 1 with parent_station,,36.641496,-116.40094,,,1,,,,station,InvalidFieldError:parent_station
+error_lat_NaN,stop_lat = NaN,,NaN,-116.40094,,,0,,,,,ConditionallyRequiredFieldError:stop_lat
+error_lon_NaN,stop_lat = NaN,,36.641,NaN,,,0,,,,,ConditionallyRequiredFieldError:stop_lon
+error_lat_Inf,stop_lat = NaN,,Inf,-116.40094,,,0,,,,,ConditionallyRequiredFieldError:stop_lat
+error_lon_Inf,stop_lat = NaN,,36.641,Inf,,,0,,,,,ConditionallyRequiredFieldError:stop_lon
+error_lat_-Inf,stop_lat = NaN,,-Inf,-116.40094,,,0,,,,,ConditionallyRequiredFieldError:stop_lat
+error_lon_-Inf,stop_lat = NaN,,36.641,-Inf,,,0,,,,,ConditionallyRequiredFieldError:stop_lon
+error_lat_+Inf,stop_lat = NaN,,+Inf,-116.40094,,,0,,,,,ConditionallyRequiredFieldError:stop_lat
+error_lon_+Inf,stop_lat = NaN,,36.641,+Inf,,,0,,,,,ConditionallyRequiredFieldError:stop_lon
