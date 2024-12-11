@@ -138,6 +138,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 			pointAdmins[ghPoint] = r[0]
 		}
 	}
+	var ents []tt.Entity
 	for aid, agencyPoints := range pp.agencyStops {
 		// log.Traceln("agency stops:", agencyPoints)
 		placeWeights := map[foundPlace]int{}
@@ -170,14 +171,9 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				ap.Adm1name = k.Adm1name
 				ap.Count = v
 				ap.Rank = score
-				if _, err := copier.CopyEntity(&ap); err != nil {
-					return err
-				}
-
+				ents = append(ents, &ap)
 			}
 		}
 	}
-	////////
-
-	return nil
+	return copier.CopyEntities(ents)
 }

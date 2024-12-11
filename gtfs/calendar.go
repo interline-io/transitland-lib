@@ -7,7 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// Calendar calendars.txt
+// Calendar calendar.txt
 type Calendar struct {
 	ServiceID     tt.String      `csv:",required"`
 	Monday        tt.Int         `csv:",required" enum:"0,1"`

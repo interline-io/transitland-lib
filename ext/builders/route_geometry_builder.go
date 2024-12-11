@@ -127,7 +127,7 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 			log.Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
 			continue
 		}
-		if _, err := copier.CopyEntity(ent); err != nil {
+		if err := copier.CopyEntity(ent); err != nil {
 			return err
 		}
 	}
