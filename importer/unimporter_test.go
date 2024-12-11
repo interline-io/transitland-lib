@@ -7,6 +7,7 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testutil"
@@ -20,7 +21,7 @@ import (
 func TestMain(m *testing.M) {
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
 	if dburl == "" {
-		fmt.Println("TL_TEST_DATABASE_URL is not set, skipping")
+		log.Infof("TL_TEST_DATABASE_URL is not set, skipping")
 		return
 	}
 	os.Exit(m.Run())

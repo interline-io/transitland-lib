@@ -109,7 +109,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		ent := FeedVersionGeometry{
 			Geometry: tt.NewPolygon(v),
 		}
-		if _, err := copier.CopyEntity(&ent); err != nil {
+		if err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
@@ -140,7 +140,7 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 			AgencyID: tt.NewKey(aid),
 			Geometry: tt.NewPolygon(v),
 		}
-		if _, err := copier.CopyEntity(&ent); err != nil {
+		if err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
