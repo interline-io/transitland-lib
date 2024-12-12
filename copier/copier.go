@@ -471,6 +471,46 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	return nil
 }
 
+func (copier *Copier) writerAddEntities(okEnts []tt.Entity) error {
+	if len(okEnts) == 0 {
+		return nil
+	}
+	efn := okEnts[0].Filename()
+	sids := make([]string, len(okEnts))
+	for i, ent := range okEnts {
+		sids[i] = ent.EntityID()
+	}
+	eids, err := copier.Writer.AddEntities(okEnts)
+	if err != nil {
+		copier.sublogger.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(okEnts))
+		return err
+	}
+	if len(eids) != len(okEnts) {
+		return fmt.Errorf("expected to write %d entities, got %d", len(okEnts), len(eids))
+	}
+	for i, ent := range okEnts {
+		sid := sids[i]
+		eid := eids[i]
+		copier.EntityMap.Set(efn, sid, eid)
+		if entExt, ok := ent.(tt.EntityWithGroupKey); ok {
+			if groupKey, groupId := entExt.GroupKey(); groupId != "" {
+				copier.EntityMap.Set(fmt.Sprintf("%s:%s", efn, groupKey), groupId, groupId)
+			}
+		}
+	}
+	copier.result.EntityCount[efn] += len(okEnts)
+
+	// AfterWriters
+	for i, eid := range eids {
+		for _, v := range copier.afterWriters {
+			if err := v.AfterWrite(eid, okEnts[i], copier.EntityMap); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 //////////////////////////////////
 ////////// Copy Methods //////////
 //////////////////////////////////
@@ -959,61 +999,40 @@ func copyEntities[T tt.Entity](copier *Copier, ents []T) ([]tt.Entity, error) {
 	if len(ents) == 0 {
 		return nil, nil
 	}
-	okEnts := make([]tt.Entity, 0, len(ents))
+	expandedEnts := make([]tt.Entity, 0, len(ents))
 	for _, ent := range ents {
 		ent := ent
 		expanded := false
 		for _, f := range copier.expandFilters {
-			if exp, ok, err := f.Expand(ent, copier.EntityMap); err != nil {
-				// skip
+			if a, ok, err := f.Expand(ent, copier.EntityMap); err != nil {
+				log.Error().Err(err).Msg("failed to expand")
 			} else if ok {
 				expanded = true
-				if err := copier.checkEntity(ent); err == nil {
-					okEnts = append(okEnts, exp...)
-				}
+				expandedEnts = append(expandedEnts, a...)
 			}
 		}
 		if !expanded {
+			expandedEnts = append(expandedEnts, ent)
+		}
+	}
+	// Group by filename, retaining input order
+	batchedEnts := batchEntFilenames(expandedEnts)
+	if len(batchedEnts) == 0 {
+		batchedEnts = append(batchedEnts, expandedEnts)
+	}
+	// Write in filename batches
+	okEnts := make([]tt.Entity, 0, len(expandedEnts))
+	for _, batch := range batchedEnts {
+		checkedEnts := make([]tt.Entity, 0, len(batch))
+		for _, ent := range batch {
 			if err := copier.checkEntity(ent); err == nil {
-				okEnts = append(okEnts, ent)
+				checkedEnts = append(checkedEnts, ent)
 			}
 		}
-	}
-	if len(okEnts) == 0 {
-		return nil, nil
-	}
-	efn := okEnts[0].Filename()
-	sids := make([]string, len(okEnts))
-	for i, ent := range okEnts {
-		sids[i] = ent.EntityID()
-	}
-	eids, err := copier.Writer.AddEntities(okEnts)
-	if err != nil {
-		copier.sublogger.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(okEnts))
-		return nil, err
-	}
-	if len(eids) != len(okEnts) {
-		return nil, fmt.Errorf("expected to write %d entities, got %d", len(okEnts), len(eids))
-	}
-	for i, ent := range okEnts {
-		sid := sids[i]
-		eid := eids[i]
-		copier.EntityMap.Set(efn, sid, eid)
-		if entExt, ok := ent.(tt.EntityWithGroupKey); ok {
-			if groupKey, groupId := entExt.GroupKey(); groupId != "" {
-				copier.EntityMap.Set(fmt.Sprintf("%s:%s", efn, groupKey), groupId, groupId)
-			}
+		if err := copier.writerAddEntities(checkedEnts); err != nil {
+			return nil, err
 		}
-	}
-	copier.result.EntityCount[efn] += len(okEnts)
-
-	// AfterWriters
-	for i, eid := range eids {
-		for _, v := range copier.afterWriters {
-			if err := v.AfterWrite(eid, okEnts[i], copier.EntityMap); err != nil {
-				return nil, err
-			}
-		}
+		okEnts = append(okEnts, checkedEnts...)
 	}
 	return okEnts, nil
 }
@@ -1065,23 +1084,36 @@ func batchChan[T any](it chan T, batchSize int, filt func(T) bool) iter.Seq[[]T]
 	}
 }
 
-func batchMap[K comparable, T any](m map[K]T, batchSize int) iter.Seq[[]T] {
-	return func(yield func([]T) bool) {
-		var ents []T
-		for _, v := range m {
-			ents = append(ents, v)
-			if len(ents) < batchSize {
-				continue
-			}
-			if !yield(ents) {
-				return
-			}
-			ents = nil
-		}
-		if len(ents) > 0 {
-			yield(ents)
+func batchEntFilenames(ents []tt.Entity) [][]tt.Entity {
+	mixedFns := false
+	lastFn := ents[0].Filename()
+	for _, ent := range ents {
+		fn := ent.Filename()
+		if fn != lastFn {
+			mixedFns = true
+			break
 		}
 	}
+	if !mixedFns {
+		return nil
+	}
+	var batches [][]tt.Entity
+	var batch []tt.Entity
+	lastFn = ents[0].Filename()
+	for _, ent := range ents {
+		if fn := ent.Filename(); fn == lastFn {
+			batch = append(batch, ent)
+		} else {
+			lastFn = fn
+			batches = append(batches, batch)
+			batch = nil
+			batch = append(batch, ent)
+		}
+	}
+	if len(batch) > 0 {
+		batches = append(batches, batch)
+	}
+	return batches
 }
 
 func shapeLines(it chan []gtfs.Shape) chan service.ShapeLine {
