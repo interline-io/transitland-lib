@@ -60,26 +60,22 @@ func (writer *Writer) NewReader() (adapters.Reader, error) {
 	return NewReader(writer.WriterAdapter.Path())
 }
 
+// AddEntity writes an entity to the output.
+func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
+	eids, err := writer.AddEntities([]tt.Entity{ent})
+	if err != nil {
+		return "", err
+	}
+	if len(eids) == 0 {
+		return "", errors.New("did not write expected number of entities")
+	}
+	return eids[0], nil
+}
+
 // AddEntities writes entities to the output.
 func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
-	eids := []string{}
 	if len(ents) == 0 {
-		return eids, nil
-	}
-
-	// Normal write path
-	ent := ents[0]
-	efn := ents[0].Filename()
-	for _, ent := range ents {
-		if efn != ent.Filename() {
-			return eids, errors.New("all entities must be same type")
-		}
-		// Horrible special case bug fix
-		if v, ok := ent.(*gtfs.Stop); ok {
-			c := v.Coordinates()
-			v.StopLon.Set(c[0])
-			v.StopLat.Set(c[1])
-		}
+		return nil, nil
 	}
 
 	// Awful Ugly Hack to Flatten entities
@@ -96,11 +92,35 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 		}
 	}
 	if len(expandedEnts) > 0 {
-		_, err := writer.AddEntities(expandedEnts)
+		_, err := writer.addBatch(expandedEnts)
 		if err != nil {
 			return nil, err
 		}
 		return originalEids, nil
+	}
+
+	// Normal write path
+	return writer.addBatch(ents)
+}
+
+func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
+	var eids []string
+	if len(ents) == 0 {
+		return nil, nil
+	}
+
+	ent := ents[0]
+	efn := ents[0].Filename()
+	for _, ent := range ents {
+		if efn != ent.Filename() {
+			return nil, errors.New("all entities must be same type")
+		}
+		// Horrible special case bug fix
+		if v, ok := ent.(*gtfs.Stop); ok {
+			c := v.Coordinates()
+			v.StopLon.Set(c[0])
+			v.StopLat.Set(c[1])
+		}
 	}
 
 	extraHeader := writer.extraHeaders[efn]
@@ -108,7 +128,7 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	if !ok {
 		h, err := dumpHeader(ent)
 		if err != nil {
-			return eids, err
+			return nil, err
 		}
 		header = h
 		if extEnt, ok2 := ent.(tt.EntityWithExtra); ok2 && writer.writeExtraColumns {
@@ -128,7 +148,7 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 		}
 		row, err := dumpRow(ent, header)
 		if err != nil {
-			return eids, err
+			return nil, err
 		}
 		if len(extraHeader) > 0 {
 			if extEnt, ok := ent.(tt.EntityWithExtra); ok {
@@ -144,32 +164,6 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	}
 	err := writer.WriterAdapter.WriteRows(efn, rows)
 	return eids, err
-}
-
-// AddEntity writes an entity to the output.
-func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
-	// var eids []string
-	// var err error
-	// if v, ok := ent.(canFlatten); ok {
-	// 	eids, err = writer.AddEntities(v.Flatten())
-	// } else {
-	// 	eids, err = writer.AddEntities([]tt.Entity{ent})
-	// }
-	// if err != nil {
-	// 	return "", err
-	// }
-	// if len(eids) == 0 {
-	// 	return "", errors.New("did not write expected number of entities")
-	// }
-	// return eids[0], nil
-	eids, err := writer.AddEntities([]tt.Entity{ent})
-	if err != nil {
-		return "", err
-	}
-	if len(eids) == 0 {
-		return "", errors.New("did not write expected number of entities")
-	}
-	return eids[0], nil
 }
 
 type canFlatten interface {
