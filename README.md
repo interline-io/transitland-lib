@@ -63,6 +63,7 @@ The main subcommands are:
 * [transitland sync](doc/cli/transitland_sync.md)	 - Sync DMFR files to database
 * [transitland unimport](doc/cli/transitland_unimport.md)	 - Unimport feed versions
 * [transitland validate](doc/cli/transitland_validate.md)	 - Validate a GTFS feed
+* [transitland rt-convert](transitland_rt-convert.md)	 - Convert GTFS-RealTime to JSON
 
 ### Breaking changes
 
