@@ -72,6 +72,7 @@ func init() {
 		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
 		tlcli.CobraHelper(&cmds.DeleteCommand{}, pc, "delete"),
 		tlcli.CobraHelper(&cmds.ValidatorCommand{}, pc, "validate"),
+		tlcli.CobraHelper(&cmds.RTConvertCommand{}, pc, "rt-convert"),
 		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		genDocCommand,
