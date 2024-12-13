@@ -204,6 +204,10 @@ func convertAssign(dest any, src any) (bool, error) {
 		default:
 			err = cannotConvert(dest, src)
 		}
+		if math.IsNaN(*d) || math.IsInf(*d, 0) {
+			*d = 0.0
+			ok = false
+		}
 	case *bool:
 		switch s := src.(type) {
 		case []byte:

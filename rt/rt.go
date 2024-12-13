@@ -30,7 +30,7 @@ func ReadURL(address string, opts ...request.RequestOption) (*pb.FeedMessage, er
 		return nil, err
 	}
 	if fr.FetchError != nil {
-		return nil, err
+		return nil, fr.FetchError
 	}
 	msg := pb.FeedMessage{}
 	data := fr.Data

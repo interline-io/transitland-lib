@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"os"
 
 	"github.com/interline-io/log"
 	tl "github.com/interline-io/transitland-lib"
@@ -72,6 +73,7 @@ func init() {
 		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
 		tlcli.CobraHelper(&cmds.DeleteCommand{}, pc, "delete"),
 		tlcli.CobraHelper(&cmds.ValidatorCommand{}, pc, "validate"),
+		tlcli.CobraHelper(&cmds.RTConvertCommand{}, pc, "rt-convert"),
 		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		genDocCommand,
@@ -81,5 +83,8 @@ func init() {
 }
 
 func main() {
-	rootCmd.Execute()
+	err := rootCmd.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
 }

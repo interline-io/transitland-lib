@@ -319,7 +319,9 @@ func (reader *Reader) Stops() (out chan gtfs.Stop) {
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := gtfs.Stop{}
 			loadRow(&e, row)
-			e.SetCoordinates([2]float64{e.StopLon.Val, e.StopLat.Val})
+			if e.StopLon.Valid && e.StopLat.Valid {
+				e.SetCoordinates([2]float64{e.StopLon.Val, e.StopLat.Val})
+			}
 			out <- e
 		})
 		close(out)

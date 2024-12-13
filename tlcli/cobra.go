@@ -78,6 +78,7 @@ func CobraHelper(r Runner, pc string, subc string) *cobra.Command {
 		return r.Parse(args)
 	}
 	cobraCommand.RunE = func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true
 		return r.Run()
 	}
 	r.AddFlags(cobraCommand.Flags())

@@ -14,7 +14,7 @@ require (
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/iancoleman/orderedmap v0.2.0
-	github.com/interline-io/log v0.0.0-20240613202707-4e3adcc06d2d
+	github.com/interline-io/log v0.0.0-20241212203449-4bcff214cd71
 	github.com/jackc/pgx/v5 v5.7.0
 	github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af
 	github.com/jmoiron/sqlx v1.4.0
@@ -65,10 +65,10 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	golang.org/x/crypto v0.24.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
