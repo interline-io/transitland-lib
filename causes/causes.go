@@ -226,6 +226,22 @@ func (e *DuplicateIDError) Error() string {
 
 ////////////////////////////
 
+// DuplicateIDError reports when a unique ID is used more than once in a file.
+type DuplicateKeyError struct {
+	bc
+}
+
+// NewDuplicateIDError returns a new DuplicateIDErrror
+func NewDuplicateKeyError(eid string) *DuplicateKeyError {
+	return &DuplicateKeyError{bc: bc{Value: eid}}
+}
+
+func (e *DuplicateKeyError) Error() string {
+	return fmt.Sprintf("entity with fields '%s' is present more than once", e.Value)
+}
+
+////////////////////////////
+
 // DuplicateServiceExceptionError reports when a (service_id,date) value is present more than once.
 type DuplicateServiceExceptionError struct {
 	ServiceID string

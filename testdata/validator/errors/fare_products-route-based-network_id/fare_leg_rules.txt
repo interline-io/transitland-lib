@@ -1,0 +1,3 @@
+leg_group_id,from_area_id,to_area_id,network_id,fare_product_id,expect_error
+BA,,,test,free,
+BA,,,missing,free,InvalidReferenceError:network_id

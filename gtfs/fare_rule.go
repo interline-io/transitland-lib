@@ -1,6 +1,8 @@
 package gtfs
 
 import (
+	"fmt"
+
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -22,4 +24,14 @@ func (ent *FareRule) Filename() string {
 // TableName gtfs_fare_Rules
 func (ent *FareRule) TableName() string {
 	return "gtfs_fare_rules"
+}
+
+func (ent *FareRule) DuplicateKey() string {
+	return fmt.Sprintf(
+		"route_id:'%s' origin_id:'%s' destination_id:'%s' contains_id:'%s'",
+		ent.RouteID.Val,
+		ent.OriginID.Val,
+		ent.DestinationID.Val,
+		ent.ContainsID.Val,
+	)
 }

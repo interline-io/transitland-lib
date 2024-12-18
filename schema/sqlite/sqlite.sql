@@ -686,6 +686,42 @@ CREATE TABLE gtfs_rider_categories (
   eligibility_url varchar(255),
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
+
+CREATE TABLE gtfs_timeframes (
+  "id" integer primary key autoincrement,
+  "feed_version_id" int not null,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  timeframe_group_id varchar(255),
+  start_time int,
+  end_time int,
+  service_id int,
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(service_id) REFERENCES gtfs_calendars(id)
+);
+
+CREATE TABLE gtfs_networks (
+  "id" integer primary key autoincrement,
+  "feed_version_id" int not null,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  network_id varchar(255),
+  network_name varchar(255),
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
+);
+
+CREATE TABLE gtfs_route_networks (
+  "id" integer primary key autoincrement,
+  "feed_version_id" int not null,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  network_id int,
+  route_id int,
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(network_id) REFERENCES gtfs_networks(id),
+  foreign key(route_id) REFERENCES gtfs_routes(id)
+);
+
 CREATE TABLE tl_validation_reports (
   "id" integer primary key autoincrement,
   "feed_version_id" int not null,

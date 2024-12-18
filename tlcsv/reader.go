@@ -417,6 +417,18 @@ func (reader *Reader) RiderCategories() (out chan gtfs.RiderCategory) {
 	return ReadEntities[gtfs.RiderCategory](reader, getFilename(&gtfs.RiderCategory{}))
 }
 
+func (reader *Reader) Timeframes() (out chan gtfs.Timeframe) {
+	return ReadEntities[gtfs.Timeframe](reader, getFilename(&gtfs.Timeframe{}))
+}
+
+func (reader *Reader) Networks() (out chan gtfs.Network) {
+	return ReadEntities[gtfs.Network](reader, getFilename(&gtfs.Network{}))
+}
+
+func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
+	return ReadEntities[gtfs.RouteNetwork](reader, getFilename(&gtfs.RouteNetwork{}))
+}
+
 func ReadEntities[T any](reader *Reader, efn string) chan T {
 	eout := make(chan T, bufferSize)
 	go func(fn string, c chan T) {

@@ -1,6 +1,8 @@
 package gtfs
 
 import (
+	"fmt"
+
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -53,4 +55,13 @@ func (ent *FareProduct) ConditionalErrors() (errs []error) {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("duration_amount"))
 	}
 	return errs
+}
+
+func (ent *FareProduct) DuplicateKey() string {
+	return fmt.Sprintf(
+		"fare_product_id:'%s' rider_category_id:'%s' fare_media_id:'%s'",
+		ent.FareProductID,
+		ent.RiderCategoryID,
+		ent.FareMediaID,
+	)
 }
