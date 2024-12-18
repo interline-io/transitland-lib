@@ -360,7 +360,9 @@ func (copier *Copier) addExtension(ext interface{}, warning bool) error {
 		added = true
 	}
 	if !added {
-		return errors.New("extension does not satisfy any extension interfaces")
+		err := errors.New("extension does not satisfy any extension interfaces")
+		log.Error().Err(err).Msg(err.Error())
+		return err
 	}
 	return nil
 }

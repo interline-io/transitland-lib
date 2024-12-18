@@ -45,7 +45,7 @@ func (e *RouteNetworkIDFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 // RouteNetworkIDCompatFilter copies routes.txt:network_id IDs into networks.txt:network_id
 type RouteNetworkIDCompatFilter struct{}
 
-func (e *RouteNetworkIDCompatFilter) AfterValidator(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *RouteNetworkIDCompatFilter) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	if v, ok := ent.(*gtfs.Route); ok {
 		if v.NetworkID.Valid {
 			emap.Set("networks.txt", v.NetworkID.Val, v.NetworkID.Val)
