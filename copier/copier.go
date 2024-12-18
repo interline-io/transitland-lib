@@ -583,6 +583,7 @@ func (copier *Copier) Copy() *Result {
 		func() error { return batchCopy(copier, batchChan(r.FeedInfos(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Translations(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Attributions(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Timeframes(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Networks(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.RouteNetworks(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Areas(), bs, nil)) },
