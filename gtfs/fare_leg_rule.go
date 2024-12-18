@@ -1,6 +1,8 @@
 package gtfs
 
 import (
+	"fmt"
+
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -32,4 +34,17 @@ func (ent *FareLegRule) TableName() string {
 
 func (ent *FareLegRule) GroupKey() (string, string) {
 	return "leg_group_id", ent.LegGroupID.Val
+}
+
+func (ent *FareLegRule) DuplicateKey() string {
+	key := fmt.Sprintf(
+		"fare_product_id:'%s' network_id:'%s' from_area_id:'%s' to_area_id:'%s' from_timeframe_group_id:'%s' to_timeframe_group_id:'%s'",
+		ent.FareProductID.Val,
+		ent.NetworkID.Val,
+		ent.FromAreaID.Val,
+		ent.ToAreaID.Val,
+		ent.FromTimeframeGroupID.Val,
+		ent.ToTimeframeGroupID.Val,
+	)
+	return key
 }

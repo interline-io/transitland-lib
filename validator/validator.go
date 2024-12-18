@@ -526,7 +526,6 @@ func (v *Validator) setupCopier(reader adapters.Reader, exts []any) (*copier.Cop
 		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
 		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
 		copier.AddValidator(&rules.DuplicateRouteNameCheck{}, 1)
-		copier.AddValidator(&rules.DuplicateFareRuleCheck{}, 1)
 		copier.AddValidator(&rules.FrequencyOverlapCheck{}, 1)
 		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
 		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)

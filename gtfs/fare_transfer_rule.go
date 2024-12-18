@@ -54,3 +54,15 @@ func (ent *FareTransferRule) ConditionalErrors() (errs []error) {
 	}
 	return errs
 }
+
+func (ent *FareTransferRule) DuplicateKey() string {
+	return fmt.Sprintf(
+		"fare_product_id:'%s' from_leg_group_id:'%s' to_leg_group_id:'%s' filter_fare_product_id:'%s' transfer_count:%d duration_limit:%d",
+		ent.FareProductID.Val,
+		ent.FromLegGroupID.Val,
+		ent.ToLegGroupID.Val,
+		ent.FilterFareProductID.Val,
+		ent.TransferCount.Val,
+		ent.DurationLimit.Val,
+	)
+}

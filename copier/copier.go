@@ -243,16 +243,14 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 
 	// Default set of validators
 	if !opts.NoValidators {
-		copier.AddValidator(&rules.EntityDuplicateCheck{}, 0)
+		copier.AddValidator(&rules.EntityDuplicateIDCheck{}, 0)
+		copier.AddValidator(&rules.EntityDuplicateKeyCheck{}, 0)
 		copier.AddValidator(&rules.ValidFarezoneCheck{}, 0)
 		copier.AddValidator(&rules.AgencyIDConditionallyRequiredCheck{}, 0)
 		copier.AddValidator(&rules.StopTimeSequenceCheck{}, 0)
 		copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
 		copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
 		copier.AddValidator(&rules.CalendarDuplicateDates{}, 0)
-		copier.AddValidator(&rules.DuplicateFareLegRuleCheck{}, 0)
-		copier.AddValidator(&rules.DuplicateFareTransferRuleCheck{}, 0)
-		copier.AddValidator(&rules.DuplicateFareProductCheck{}, 0)
 	}
 
 	// Default extensions

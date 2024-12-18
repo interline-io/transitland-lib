@@ -20,6 +20,10 @@ func (ent *RouteNetwork) TableName() string {
 	return "gtfs_route_networks"
 }
 
-func (ent *RouteNetwork) EntityKey() string {
-	return fmt.Sprintf("%s:%s", ent.NetworkID.Val, ent.RouteID.Val)
+func (ent *RouteNetwork) DuplicateKey() string {
+	return fmt.Sprintf(
+		"network_id:'%s' route_id:'%s'",
+		ent.NetworkID.Val,
+		ent.RouteID.Val,
+	)
 }
