@@ -10,7 +10,7 @@ import (
 type FareRiderCategory struct {
 	FareID           string  `csv:"fare_id"`
 	RiderCategoryID  int     `csv:"rider_category_id"`
-	Price            float64 `csv:"price"`
+	Price            string  `csv:"price"`
 	ExpirationDate   tt.Date `csv:"expiration_date"`
 	CommencementDate tt.Date `csv:"commencement_date"`
 	tt.BaseEntity
