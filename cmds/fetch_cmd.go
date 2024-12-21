@@ -27,6 +27,7 @@ type FetchCommandResult struct {
 // FetchCommand fetches feeds defined a DMFR database.
 type FetchCommand struct {
 	Options     fetch.Options
+	SecretsFile string
 	CreateFeed  bool
 	Workers     int
 	Fail        bool
@@ -37,7 +38,6 @@ type FetchCommand struct {
 	Results     []FetchCommandResult
 	Adapter     tldb.Adapter // allow for mocks
 	fetchedAt   string
-	secretsFile string
 }
 
 func (cmd *FetchCommand) HelpDesc() (string, string) {
@@ -52,7 +52,7 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.CreateFeed, "create-feed", false, "Create feed record if not found")
 	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
 	fl.StringVar(&cmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
-	fl.StringVar(&cmd.secretsFile, "secrets", "", "Path to DMFR Secrets file")
+	fl.StringVar(&cmd.SecretsFile, "secrets", "", "Path to DMFR Secrets file")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
@@ -68,13 +68,19 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 }
 
 func (cmd *FetchCommand) Parse(args []string) error {
-	if cmd.Workers < 1 {
-		cmd.Workers = 1
-	}
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
 	cmd.FeedIDs = args
+	return nil
+}
+
+// Run executes this command.
+func (cmd *FetchCommand) Run() error {
+	// Init
+	if cmd.Workers < 1 {
+		cmd.Workers = 1
+	}
 	if cmd.fetchedAt != "" {
 		t, err := time.Parse(time.RFC3339Nano, cmd.fetchedAt)
 		if err != nil {
@@ -82,8 +88,8 @@ func (cmd *FetchCommand) Parse(args []string) error {
 		}
 		cmd.Options.FetchedAt = t
 	}
-	if cmd.secretsFile != "" {
-		r, err := dmfr.LoadAndParseRegistry(cmd.secretsFile)
+	if cmd.SecretsFile != "" {
+		r, err := dmfr.LoadAndParseRegistry(cmd.SecretsFile)
 		if err != nil {
 			return err
 		}
@@ -96,6 +102,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 	if cmd.Options.FeedURL != "" && len(cmd.FeedIDs) != 1 {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
 	}
+
 	// Get feeds
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
@@ -129,11 +136,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 			}
 		}
 	}
-	return nil
-}
 
-// Run executes this command.
-func (cmd *FetchCommand) Run() error {
 	// Check feeds
 	adapter := cmd.Adapter
 	var toFetch []fetchJob

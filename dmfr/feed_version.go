@@ -11,7 +11,7 @@ import (
 type FeedVersion struct {
 	FeedID               int
 	SHA1                 string
-	SHA1Dir              string
+	SHA1Dir              tt.String
 	File                 string
 	URL                  string
 	EarliestCalendarDate tt.Date

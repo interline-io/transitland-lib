@@ -31,7 +31,7 @@ func NewFeedVersionFromReader(reader adapters.Reader) (dmfr.FeedVersion, error) 
 	}
 	if s, ok := reader.(canDirSHA1); ok {
 		if h, err := s.DirSHA1(); err == nil {
-			fv.SHA1Dir = h
+			fv.SHA1Dir.Set(h)
 		}
 	}
 	if s, ok := reader.(canPath); ok {
