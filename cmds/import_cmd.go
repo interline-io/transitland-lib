@@ -114,6 +114,9 @@ func (cmd *ImportCommand) Parse(args []string) error {
 
 // Run this command
 func (cmd *ImportCommand) Run() error {
+	if cmd.Workers < 1 {
+		cmd.Workers = 1
+	}
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -129,6 +132,8 @@ func (cmd *ImportCommand) Run() error {
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
 		Where("feed_version_gtfs_imports.id IS NULL").
+		Where("feed_versions.sha1 <> ''").
+		Where("feed_versions.file <> ''").
 		OrderBy("feed_versions.id desc")
 	if cmd.Latest {
 		// Only fetch latest feed version for each feed
