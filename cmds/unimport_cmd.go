@@ -193,9 +193,9 @@ func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs 
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var err error
 			if opts.ScheduleOnly {
-				err = importer.UnimportSchedule(atx, opts.FeedVersionID)
+				err = importer.UnimportSchedule(ctx, atx, opts.FeedVersionID)
 			} else {
-				err = importer.UnimportFeedVersion(atx, opts.FeedVersionID, opts.ExtraTables)
+				err = importer.UnimportFeedVersion(ctx, atx, opts.FeedVersionID, opts.ExtraTables)
 			}
 			return err
 		})

@@ -1,6 +1,7 @@
 package tt
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -120,6 +121,7 @@ func ReflectCheckErrors(ent any) []error {
 }
 
 func ReflectUpdateKeys(emap *EntityMap, ent any) []error {
+	ctx := context.TODO()
 	var errs []error
 	fields := entityMapperCache.GetStructTagMap(ent)
 	for fieldName, fieldInfo := range fields {
@@ -132,7 +134,7 @@ func ReflectUpdateKeys(emap *EntityMap, ent any) []error {
 		fieldAddr := fieldValue.Addr().Interface()
 		fieldSet, ok := fieldAddr.(canSet)
 		if !ok {
-			log.Error().Msgf("type %T does not support reflect based reference checks", fieldAddr)
+			log.For(ctx).Error().Msgf("type %T does not support reflect based reference checks", fieldAddr)
 			continue
 		}
 		eid := fieldSet.String()

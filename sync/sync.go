@@ -45,7 +45,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 			fsid := rfeed.FeedID
 			rfeed.File = filepath.Base(fn)
 			rfeed.DeletedAt = tt.Time{}
-			feedid, found, updated, err := UpdateFeed(atx, rfeed)
+			feedid, found, updated, err := UpdateFeed(ctx, atx, rfeed)
 			if err != nil {
 				log.For(ctx).Error().Msgf("%s: error on feed %d: %s", fn, feedid, err)
 				sr.Errors = append(sr.Errors, err)
@@ -97,7 +97,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 	// Hide
 	if opts.HideUnseen {
 		var err error
-		sr.HiddenCount, err = HideUnseedFeeds(atx, sr.FeedIDs)
+		sr.HiddenCount, err = HideUnseedFeeds(ctx, atx, sr.FeedIDs)
 		if err != nil {
 			log.For(ctx).Error().Msgf("Error soft-deleting feeds: %s", err.Error())
 			return sr, err
@@ -118,7 +118,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 		}
 	}
 	// Update any automatically generated agency-operator associations
-	if err := UpdateFeedGeneratedOperators(atx, sr.FeedIDs); err != nil {
+	if err := UpdateFeedGeneratedOperators(ctx, atx, sr.FeedIDs); err != nil {
 		sr.Errors = append(sr.Errors, err)
 	}
 	// Rollback on any errors

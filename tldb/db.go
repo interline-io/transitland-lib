@@ -3,6 +3,7 @@ package tldb
 
 import (
 	// Driver
+	"context"
 	"errors"
 	"net/url"
 	"strconv"
@@ -24,8 +25,9 @@ type canClose interface {
 // check for error and panic
 // TODO: don't do this. panic is bad.
 func check(err error) {
+	ctx := context.TODO()
 	if err != nil {
-		log.Debugf("Error: %s", err)
+		log.For(ctx).Debug().Msgf("Error: %s", err)
 		panic(err)
 	}
 }

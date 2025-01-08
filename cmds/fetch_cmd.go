@@ -154,7 +154,7 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			return fmt.Errorf("problem with feed '%s': %s", osid, err.Error())
 		}
 		// Create feed state if not exists
-		if _, err := stats.GetFeedState(adapter, feed.ID); err != nil {
+		if _, err := stats.GetFeedState(ctx, adapter, feed.ID); err != nil {
 			return err
 		}
 		// Prepare options for this fetch
@@ -254,9 +254,9 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		// Log result
 		fv := result.FeedVersion
 		if fetchError != nil {
-			log.Error().Err(fetchError).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, fetchError.Error(), t2)
+			log.For(ctx).Error().Err(fetchError).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, fetchError.Error(), t2)
 		} else if result.FetchError != nil {
-			log.Error().Err(result.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, result.FetchError.Error(), t2)
+			log.For(ctx).Error().Err(result.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, result.FetchError.Error(), t2)
 		} else if fv != nil && result.Found {
 			log.For(ctx).Info().Msgf("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
 		} else if fv != nil {

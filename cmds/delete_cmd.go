@@ -86,7 +86,7 @@ func (cmd *DeleteCommand) Run(ctx context.Context) error {
 	} else {
 		log.For(ctx).Info().Msgf("Deleting feed version: %d", cmd.FVID)
 		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-			return importer.DeleteFeedVersion(cmd.Adapter, cmd.FVID, cmd.ExtraTables)
+			return importer.DeleteFeedVersion(ctx, cmd.Adapter, cmd.FVID, cmd.ExtraTables)
 		})
 		if err != nil {
 			return err

@@ -1,8 +1,10 @@
 package builders
 
 import (
+	"context"
 	"database/sql"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -91,6 +93,7 @@ where st_intersects(ne.geometry, ST_MakePoint(?, ?));
 `
 
 func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
+	ctx := context.TODO()
 	// get places for each point
 	ghPoints := map[string][]string{}
 	for stopId, ghPoint := range pp.stops {
@@ -98,12 +101,12 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	}
 	dbWriter, ok := copier.Writer.(*tldb.Writer)
 	if !ok {
-		// log.Traceln("writer is not dbwriter")
+		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, writer is not dbwriter")
 		return nil
 	}
 	db := dbWriter.Adapter
 	if _, ok := db.(*tldb.PostgresAdapter); !ok {
-		// log.Traceln("only postgres is supported")
+		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, only postgres is supported")
 		return nil
 	}
 	// For each geohash, check nearby populated places and inside admin boundaries
@@ -140,7 +143,6 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	}
 	var ents []tt.Entity
 	for aid, agencyPoints := range pp.agencyStops {
-		// log.Traceln("agency stops:", agencyPoints)
 		placeWeights := map[foundPlace]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
@@ -159,11 +161,9 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				}
 			}
 		}
-		// log.Traceln("aid:", aid, "total weight:", agencyTotalWeight)
 		for k, v := range placeWeights {
 			score := float64(v) / float64(agencyTotalWeight)
 			if score > 0.05 {
-				// log.Traceln("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
 				ap := AgencyPlace{}
 				ap.AgencyID = aid
 				ap.Name = k.Name

@@ -1,6 +1,8 @@
 package stats
 
 import (
+	"context"
+
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
@@ -105,7 +107,7 @@ func NewFeedVersionOnestopIDBuilder() *FeedVersionOnestopIDBuilder {
 
 //////////
 
-func CreateFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
+func CreateFeedStats(ctx context.Context, atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	stats, err := NewFeedStatsFromReader(reader)
 	if err != nil {
 		return err
@@ -116,7 +118,7 @@ func CreateFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	// Delete any existing records
 	tables := fvt.FetchStatDerivedTables
 	for _, table := range tables {
-		if err := FeedVersionTableDelete(atx, table, fvid, false); err != nil {
+		if err := FeedVersionTableDelete(ctx, atx, table, fvid, false); err != nil {
 			return err
 		}
 	}
@@ -164,11 +166,12 @@ type canSetFeedVersion interface {
 }
 
 func setFvid(input []any, fvid int) []any {
+	ctx := context.TODO()
 	for i := 0; i < len(input); i++ {
 		if v, ok := input[i].(canSetFeedVersion); ok {
 			v.SetFeedVersionID(fvid)
 		} else {
-			log.Error().Msgf("could not set feed version id for type %T", input[i])
+			log.For(ctx).Error().Msgf("could not set feed version id for type %T", input[i])
 		}
 	}
 	return input

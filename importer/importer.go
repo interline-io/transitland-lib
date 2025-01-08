@@ -29,9 +29,9 @@ type Result struct {
 }
 
 // ActivateFeedVersion .
-func ActivateFeedVersion(atx tldb.Adapter, feedId int, fvid int) error {
+func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, feedId int, fvid int) error {
 	// Check FeedState exists
-	if _, err := stats.GetFeedState(atx, feedId); err != nil {
+	if _, err := stats.GetFeedState(ctx, atx, feedId); err != nil {
 		return err
 	}
 	// sqlite3 only supports "UPDATE ... FROM" in versions 3.33 and higher
@@ -91,7 +91,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		log.For(ctx).Info().Msgf("Finalizing import")
 		if opts.Activate {
 			log.For(ctx).Info().Msgf("Activating feed version")
-			if err := ActivateFeedVersion(atx, fv.FeedID, fv.ID); err != nil {
+			if err := ActivateFeedVersion(ctx, atx, fv.FeedID, fv.ID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
 		}

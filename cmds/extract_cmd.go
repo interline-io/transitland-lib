@@ -257,12 +257,12 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 
 	// Marker
 	if em.Count() > 0 {
-		log.Debugf("Extract filter: loading graph")
+		log.For(ctx).Debug().Msgf("Extract filter: loading graph")
 		if err := em.Filter(reader); err != nil {
 			return err
 		}
 		cp.Marker = &em
-		log.Debugf("Graph loading complete")
+		log.For(ctx).Debug().Msgf("Graph loading complete")
 	}
 
 	// Copy

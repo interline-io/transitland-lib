@@ -52,7 +52,7 @@ type Request struct {
 
 func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
 	// Download
-	log.Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")
+	log.For(ctx).Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")
 	downloader, key, err := req.newDownloader(req.URL)
 	if err != nil {
 		return nil, 0, err

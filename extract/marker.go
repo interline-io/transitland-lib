@@ -163,6 +163,6 @@ func (em *Marker) Filter(reader adapters.Reader) error {
 		em.Mark("stops.txt", sid, false)
 	}
 
-	// log.Debugf("result: %#v\n", result)
+	// log.For(ctx).Debug().Msgf("result: %#v\n", result)
 	return nil
 }

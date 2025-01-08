@@ -98,6 +98,7 @@ func TestSync_Update(t *testing.T) {
 
 // Unit tests
 func TestUpdateFeed(t *testing.T) {
+	ctx := context.TODO()
 	t.Run("New", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			rfeed := dmfr.Feed{}
@@ -107,7 +108,7 @@ func TestUpdateFeed(t *testing.T) {
 			rfeed.License.UseWithoutAttribution = "yes"
 			rfeed.Authorization.ParamName = "test"
 			rfeed.Languages = dmfr.FeedLanguages{"en"}
-			feedid, found, _, err := UpdateFeed(atx, rfeed)
+			feedid, found, _, err := UpdateFeed(ctx, atx, rfeed)
 			if err != nil {
 				t.Error(err)
 			}
@@ -144,11 +145,12 @@ func TestUpdateFeed(t *testing.T) {
 		}
 	})
 	t.Run("Update", func(t *testing.T) {
+		ctx := context.TODO()
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			rfeed := dmfr.Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Name = tt.NewString("An Updated Name")
-			feedid, found, _, err := UpdateFeed(atx, rfeed)
+			feedid, found, _, err := UpdateFeed(ctx, atx, rfeed)
 			if err != nil {
 				t.Error(err)
 			}
@@ -160,7 +162,7 @@ func TestUpdateFeed(t *testing.T) {
 			//
 			dfeed := dmfr.Feed{}
 			dfeed.FeedID = "caltrain"
-			feedid2, found2, _, err2 := UpdateFeed(atx, dfeed)
+			feedid2, found2, _, err2 := UpdateFeed(ctx, atx, dfeed)
 			if err2 != nil {
 				t.Error(err)
 			}
@@ -194,6 +196,7 @@ func TestUpdateFeed(t *testing.T) {
 }
 
 func TestHideUnseedFeeds(t *testing.T) {
+	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		feedids := []string{"caltrain", "seen"}
 		fids := []int{}
@@ -203,7 +206,7 @@ func TestHideUnseedFeeds(t *testing.T) {
 		}
 		expseen := fids[0:1]
 		expunseen := fids[1:]
-		count, err := HideUnseedFeeds(atx, expseen)
+		count, err := HideUnseedFeeds(ctx, atx, expseen)
 		if err != nil {
 			t.Error(err)
 		}

@@ -1,6 +1,7 @@
 package tags
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -53,6 +54,7 @@ func NewCache(mapper *reflectx.Mapper) *Cache {
 
 // GetStructTagMap .
 func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
+	ctx := context.TODO()
 	c.lock.Lock()
 	t := reflect.TypeOf(ent).String()
 	m, ok := c.typemap[t]
@@ -81,7 +83,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 				p := strings.Split(optVal, ",")
 				if len(p) > 0 && p[0] != "" {
 					if optParse, err := strconv.ParseFloat(p[0], 64); err != nil {
-						log.Error().Msgf(
+						log.For(ctx).Error().Msgf(
 							"error constructing field map for type %T: could not parse tag 'range' with value '%s' as (*float64,*float64): %s",
 							ent,
 							optVal,
@@ -93,7 +95,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 				}
 				if len(p) > 1 && p[1] != "" {
 					if optParse, err := strconv.ParseFloat(p[1], 64); err != nil {
-						log.Error().Msgf(
+						log.For(ctx).Error().Msgf(
 							"error constructing field map for type %T: could not parse tag 'range' with value '%s' as (*float64,*float64): %s",
 							ent,
 							optVal,
@@ -107,7 +109,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			if optVal := fi.Field.Tag.Get("enum"); optVal != "" {
 				for _, enumVal := range strings.Split(optVal, ",") {
 					if optParse, err := strconv.ParseInt(enumVal, 10, 64); err != nil {
-						log.Error().Msgf(
+						log.For(ctx).Error().Msgf(
 							"error constructing field map for type %T: could not parse tag 'enum' with value '%s' as []int64: %s",
 							ent,
 							optVal,

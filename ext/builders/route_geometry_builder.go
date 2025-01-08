@@ -121,11 +121,12 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 
 // Collects and assembles the default shapes and writes to the database
 func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
+	ctx := context.TODO()
 	// Process shapes for each route
 	for rid := range pp.shapeCounts {
 		ent, err := pp.buildRouteShape(rid)
 		if err != nil {
-			log.For(context.TODO()).Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
+			log.For(ctx).Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
 			continue
 		}
 		if err := copier.CopyEntity(ent); err != nil {
@@ -262,7 +263,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// Add to MultiLineString
 		if err := g.Push(sl); err != nil {
-			// log.Debugf("failed to build route geometry: %s", err.Error())
+			// log.For(ctx).Debug().Msgf("failed to build route geometry: %s", err.Error())
 		}
 	}
 	if g.NumLineStrings() == 0 || len(matches) == 0 {

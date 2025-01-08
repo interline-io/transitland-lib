@@ -30,6 +30,7 @@ func TestMain(m *testing.M) {
 
 func setupImport(t *testing.T, atx tldb.Adapter) int {
 	// Create FV
+	ctx := context.TODO()
 	feed := dmfr.Feed{}
 	feed.FeedID = fmt.Sprintf("feed-%d", time.Now().UnixNano())
 	feedid := testdb.ShouldInsert(t, atx, &feed)
@@ -44,7 +45,7 @@ func setupImport(t *testing.T, atx tldb.Adapter) int {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := stats.CreateFeedStats(atx, tlreader, fvid); err != nil {
+	if err := stats.CreateFeedStats(ctx, atx, tlreader, fvid); err != nil {
 		t.Fatal(err)
 	}
 	// Import
@@ -55,11 +56,12 @@ func setupImport(t *testing.T, atx tldb.Adapter) int {
 }
 
 func TestUnimportSchedule(t *testing.T) {
+	ctx := context.TODO()
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
 	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
 		// Note - it's difficult to test feed_version_gtfs_imports.schedule_removed
 		fvid := setupImport(t, atx)
-		if err := UnimportSchedule(atx, fvid); err != nil {
+		if err := UnimportSchedule(ctx, atx, fvid); err != nil {
 			t.Fatal(err)
 		}
 		tcs := []struct {
@@ -108,11 +110,12 @@ func TestUnimportSchedule(t *testing.T) {
 }
 
 func TestUnimportFeedVersion(t *testing.T) {
+	ctx := context.TODO()
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
 	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
 		fvid := setupImport(t, atx)
 		// TODO: test ExtraTables option
-		if err := UnimportFeedVersion(atx, fvid, nil); err != nil {
+		if err := UnimportFeedVersion(ctx, atx, fvid, nil); err != nil {
 			t.Fatal(err)
 		}
 		tcs := []struct {
@@ -161,10 +164,11 @@ func TestUnimportFeedVersion(t *testing.T) {
 }
 
 func TestDeleteFeedVersion(t *testing.T) {
+	ctx := context.TODO()
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
 	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
 		fvid := setupImport(t, atx)
-		if err := DeleteFeedVersion(atx, fvid, nil); err != nil {
+		if err := DeleteFeedVersion(ctx, atx, fvid, nil); err != nil {
 			t.Fatal(err)
 		}
 		tcs := []struct {

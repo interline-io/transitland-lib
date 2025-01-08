@@ -442,9 +442,9 @@ func (v *Validator) ValidateRT(ctx context.Context, fn string, evaluateAt time.T
 		if v.Options.UseHeaderTimestamp {
 			evaluateAt = time.Unix(int64(msg.GetHeader().GetTimestamp()), 0)
 			evaluateAtLocal = evaluateAt.In(evaluateAtLocal.Location())
-			log.Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using header timestamps for evaluation time")
+			log.For(ctx).Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using header timestamps for evaluation time")
 		} else {
-			log.Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using provided timestamp for evaluation time")
+			log.For(ctx).Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using provided timestamp for evaluation time")
 		}
 		rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
 		rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
@@ -464,10 +464,10 @@ func (v *Validator) ValidateRT(ctx context.Context, fn string, evaluateAt time.T
 		mOpts := protojson.MarshalOptions{UseProtoNames: true}
 		rtJson, err := mOpts.Marshal(msg)
 		if err != nil {
-			log.Error().Err(err).Msg("Could not convert RT message to JSON")
+			log.For(ctx).Error().Err(err).Msg("Could not convert RT message to JSON")
 		}
 		if err := json.Unmarshal(rtJson, &rtResult.Json); err != nil {
-			log.Error().Err(err).Msg("Could not round-trip RT message back to JSON")
+			log.For(ctx).Error().Err(err).Msg("Could not round-trip RT message back to JSON")
 		}
 	}
 	rtResult.Errors = rterrs
@@ -598,7 +598,7 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 
 	// Save record
 	if _, err := atx.Insert(result); err != nil {
-		log.Error().Err(err).Msg("failed to save validation report")
+		log.For(ctx).Error().Err(err).Msg("failed to save validation report")
 		return err
 	}
 
@@ -613,13 +613,13 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 	for _, eg := range combinedErrors {
 		eg.ValidationReportID = result.ID
 		if _, err := atx.Insert(eg); err != nil {
-			log.Error().Err(err).Msg("failed to save validation report error group")
+			log.For(ctx).Error().Err(err).Msg("failed to save validation report error group")
 			return err
 		}
 		for _, egErr := range eg.Errors {
 			egErr.ValidationReportErrorGroupID = eg.ID
 			if _, err := atx.Insert(&egErr); err != nil {
-				log.Error().Err(err).Msg("failed to save validation report error exemplar")
+				log.For(ctx).Error().Err(err).Msg("failed to save validation report error exemplar")
 				return err
 			}
 		}
@@ -646,7 +646,7 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 				TripRtAddedCount:        s.TripRtAddedCount,
 			}
 			if _, err := atx.Insert(&tripReport); err != nil {
-				log.Error().Err(err).Msg("failed to save trip update stat")
+				log.For(ctx).Error().Err(err).Msg("failed to save trip update stat")
 				return err
 			}
 		}
@@ -669,7 +669,7 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 				TripRtAddedCount:        s.TripRtAddedCount,
 			}
 			if _, err := atx.Insert(&vpReport); err != nil {
-				log.Error().Err(err).Msg("failed to save vehicle position stat")
+				log.For(ctx).Error().Err(err).Msg("failed to save vehicle position stat")
 				return err
 			}
 		}

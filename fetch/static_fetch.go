@@ -124,7 +124,7 @@ func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFet
 		}
 
 		// Update stats records
-		if err := stats.CreateFeedStats(atx, reader, fv.ID); err != nil {
+		if err := stats.CreateFeedStats(ctx, atx, reader, fv.ID); err != nil {
 			// Fatal err
 			return vr, err
 		}
@@ -132,7 +132,7 @@ func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFet
 	}
 	result, err := ffetch(ctx, atx, opts, cb)
 	if err != nil {
-		log.Error().Err(err).Msg("fatal error during static fetch")
+		log.For(ctx).Error().Err(err).Msg("fatal error during static fetch")
 	}
 	ret.Result = result
 	ret.Error = err

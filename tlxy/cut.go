@@ -1,6 +1,7 @@
 package tlxy
 
 import (
+	"context"
 	"math"
 
 	"github.com/interline-io/log"
@@ -148,6 +149,7 @@ func cutBetweenPositions(line []Point, dists []float64, startDist float64, endDi
 
 // cutBetweenPositions is similar to CutBetweenPoints but takes absolute positions.
 func cutBetweenPositionsDebug(line []Point, dists []float64, startDist float64, endDist float64, extraPts ...Point) []Point {
+	ctx := context.TODO()
 	spt, ept, sidx, eidx, ok := cutBetweenPositions(line, dists, startDist, endDist)
 	if !ok {
 		return nil
@@ -222,7 +224,7 @@ func cutBetweenPositionsDebug(line []Point, dists []float64, startDist float64, 
 	})
 	fc := geojson.FeatureCollection{Features: fs}
 	d, _ := fc.MarshalJSON()
-	log.Trace().Msgf("LineBetweenPositions: %s", string(d))
+	log.For(ctx).Trace().Msgf("LineBetweenPositions: %s", string(d))
 	return ret
 }
 

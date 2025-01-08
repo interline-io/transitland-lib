@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"database/sql"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 )
 
 // UpdateFeed .
-func UpdateFeed(atx tldb.Adapter, rfeed dmfr.Feed) (int, bool, bool, error) {
+func UpdateFeed(ctx context.Context, atx tldb.Adapter, rfeed dmfr.Feed) (int, bool, bool, error) {
 	// Check if we have the existing Feed
 	feedid := 0
 	found := false
@@ -37,14 +38,14 @@ func UpdateFeed(atx tldb.Adapter, rfeed dmfr.Feed) (int, bool, bool, error) {
 		errTx = err
 	}
 	// Create feed state if not exists
-	if _, err := stats.GetFeedState(atx, feedid); err != nil {
+	if _, err := stats.GetFeedState(ctx, atx, feedid); err != nil {
 		errTx = err
 	}
 	return feedid, found, updated, errTx
 }
 
 // HideUnseedFeeds .
-func HideUnseedFeeds(atx tldb.Adapter, found []int) (int, error) {
+func HideUnseedFeeds(ctx context.Context, atx tldb.Adapter, found []int) (int, error) {
 	// Delete unreferenced feeds
 	t := tt.NewTime(time.Now().UTC())
 	r, err := atx.Sqrl().
@@ -61,7 +62,7 @@ func HideUnseedFeeds(atx tldb.Adapter, found []int) (int, error) {
 }
 
 // UpdateFeedGeneratedOperators creates OperatorInFeed records for agencies that are not associated with an operator
-func UpdateFeedGeneratedOperators(atx tldb.Adapter, found []int) error {
+func UpdateFeedGeneratedOperators(ctx context.Context, atx tldb.Adapter, found []int) error {
 	for _, id := range found {
 		feed := dmfr.Feed{}
 		if err := atx.Get(&feed, "select * from current_feeds where id = ?", id); err != nil {

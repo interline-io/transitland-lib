@@ -209,7 +209,7 @@ func rebuildStatsMain(ctx context.Context, adapter tldb.Adapter, opts RebuildSta
 	}
 	// Save
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
-		if err := stats.CreateFeedStats(atx, reader, fv.ID); err != nil {
+		if err := stats.CreateFeedStats(ctx, atx, reader, fv.ID); err != nil {
 			return err
 		}
 		if opts.SaveValidationReport {

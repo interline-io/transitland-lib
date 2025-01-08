@@ -44,7 +44,7 @@ func GetStore(ustr string) (Store, error) {
 
 // Download is a convenience method for downloading a file from the store.
 func Download(ctx context.Context, storage string, key string) (io.ReadCloser, error) {
-	log.Debug().Str("src", key).Str("storage", storage).Msg("fetch: download from store")
+	log.For(ctx).Debug().Str("src", key).Str("storage", storage).Msg("fetch: download from store")
 	st, err := GetStore(storage)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func Download(ctx context.Context, storage string, key string) (io.ReadCloser, e
 
 // UploadFile is a convenience method for uploading a file to the store.
 func UploadFile(ctx context.Context, storage string, src string, dst string) error {
-	log.Debug().Str("src", src).Str("storage", storage).Str("storage_key", dst).Msg("fetch: upload to store")
+	log.For(ctx).Debug().Str("src", src).Str("storage", storage).Str("storage_key", dst).Msg("fetch: upload to store")
 	rp, err := os.Open(src)
 	if err != nil {
 		return err
