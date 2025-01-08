@@ -113,9 +113,8 @@ func CreateFeedStats(ctx context.Context, atx tldb.Adapter, reader *tlcsv.Reader
 		return err
 	}
 
-	fvt := dmfr.GetFeedVersionTables()
-
 	// Delete any existing records
+	fvt := dmfr.GetFeedVersionTables()
 	tables := fvt.FetchStatDerivedTables
 	for _, table := range tables {
 		if err := FeedVersionTableDelete(ctx, atx, table, fvid, false); err != nil {

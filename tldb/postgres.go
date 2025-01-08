@@ -26,13 +26,19 @@ func init() {
 	ext.RegisterWriter("postgresql", w)
 }
 
+type SqlExt interface {
+	sqlx.Ext
+	sqlx.ExecerContext
+	sqlx.QueryerContext
+}
+
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
 	DBURL string
-	db    sqlx.Ext
+	db    SqlExt
 }
 
-func NewPostgresAdapterFromDBX(db sqlx.Ext) *PostgresAdapter {
+func NewPostgresAdapterFromDBX(db SqlExt) *PostgresAdapter {
 	return &PostgresAdapter{DBURL: "", db: db}
 }
 
@@ -47,7 +53,7 @@ func (adapter *PostgresAdapter) Open() error {
 	}
 	db := sqlx.NewDb(stdlib.OpenDBFromPool(pool), "pgx")
 	db.Mapper = MapperCache.Mapper
-	adapter.db = &QueryLogger{Ext: db.Unsafe()}
+	adapter.db = &QueryLogger{SqlExt: db.Unsafe()}
 	return nil
 }
 
@@ -65,7 +71,7 @@ func (adapter *PostgresAdapter) Create() error {
 }
 
 // DBX returns sqlx.Ext
-func (adapter *PostgresAdapter) DBX() sqlx.Ext {
+func (adapter *PostgresAdapter) DBX() SqlExt {
 	return adapter.db
 }
 
@@ -79,7 +85,7 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	case *sqlx.Tx:
 		tx = a
 	case *QueryLogger:
-		if b, ok := a.Ext.(*sqlx.Tx); ok {
+		if b, ok := a.SqlExt.(*sqlx.Tx); ok {
 			tx = b
 		}
 	}
@@ -91,7 +97,7 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); err != nil {
+	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{SqlExt: tx}}); err != nil {
 		if commit {
 			if errTx := tx.Rollback(); errTx != nil {
 				return errTx
@@ -123,7 +129,11 @@ func (adapter *PostgresAdapter) TableExists(t string) (bool, error) {
 
 // Find finds a single entity based on the EntityID()
 func (adapter *PostgresAdapter) Find(dest interface{}) error {
-	return find(adapter, dest)
+	return adapter.FindContext(context.Background(), dest)
+}
+
+func (adapter *PostgresAdapter) FindContext(ctx context.Context, dest interface{}) error {
+	return find(ctx, adapter, dest)
 }
 
 // Get wraps sqlx.Get
@@ -131,21 +141,37 @@ func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...inter
 	return sqlx.Get(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
+func (adapter *PostgresAdapter) GetContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.GetContext(ctx, adapter.db, dest, adapter.db.Rebind(qstr), args...)
+}
+
 // Select wraps sqlx.Select
 func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
 	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
+func (adapter *PostgresAdapter) SelectContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.SelectContext(ctx, adapter.db, dest, adapter.db.Rebind(qstr), args...)
+}
+
 // Update a single entity.
 func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
+	return adapter.UpdateContext(context.Background(), ent, columns...)
+}
+
+func (adapter *PostgresAdapter) UpdateContext(ctx context.Context, ent interface{}, columns ...string) error {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	return update(adapter, ent, columns...)
+	return update(ctx, adapter, ent, columns...)
+}
+
+func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
+	return adapter.InsertContext(context.Background(), ent)
 }
 
 // Insert builds and executes an insert statement for the given entity.
-func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
+func (adapter *PostgresAdapter) InsertContext(ctx context.Context, ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
@@ -164,7 +190,7 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 		Columns(header...).
 		Values(vals...)
 	if _, ok := ent.(canSetID); ok {
-		err = q.Suffix(`RETURNING "id"`).QueryRow().Scan(&eid)
+		err = q.Suffix(`RETURNING "id"`).QueryRow().Scan(&eid) // TODO: QueryRowContext
 	} else {
 		_, err = q.Exec()
 	}
@@ -177,8 +203,12 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 	return int(eid.Int64), err
 }
 
-// MultiInsert builds and executes a multi-insert statement for the given entities.
 func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
+	return adapter.MultiInsertContext(context.Background(), ents)
+}
+
+// MultiInsert builds and executes a multi-insert statement for the given entities.
+func (adapter *PostgresAdapter) MultiInsertContext(ctx context.Context, ents []interface{}) ([]int, error) {
 	retids := []int{}
 	if len(ents) == 0 {
 		return retids, nil
@@ -215,7 +245,7 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 				retids = append(retids, int(eid.Int64))
 			}
 		} else {
-			_, err = q.Exec()
+			_, err = q.Exec() // TODO: ExecContext
 			for range batch {
 				retids = append(retids, 0)
 			}

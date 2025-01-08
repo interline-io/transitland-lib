@@ -4,6 +4,7 @@
 package tldb
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 
@@ -40,7 +41,7 @@ func init() {
 // SQLiteAdapter provides support for SQLite.
 type SQLiteAdapter struct {
 	DBURL string
-	db    sqlx.Ext
+	db    SqlExt
 }
 
 // Open the database.
@@ -54,7 +55,7 @@ func (adapter *SQLiteAdapter) Open() error {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
 	db.Mapper = MapperCache.Mapper
-	adapter.db = &QueryLogger{Ext: db.Unsafe()}
+	adapter.db = &QueryLogger{SqlExt: db.Unsafe()}
 	return nil
 }
 
@@ -71,7 +72,7 @@ func (adapter *SQLiteAdapter) Create() error {
 	// Dont log, used often in tests
 	adb := adapter.db
 	if a, ok := adapter.db.(*QueryLogger); ok {
-		adb = a.Ext
+		adb = a.SqlExt
 	}
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
@@ -81,7 +82,7 @@ func (adapter *SQLiteAdapter) Create() error {
 }
 
 // DBX returns the underlying Sqlx DB or Tx.
-func (adapter *SQLiteAdapter) DBX() sqlx.Ext {
+func (adapter *SQLiteAdapter) DBX() SqlExt {
 	return adapter.db
 }
 
@@ -100,7 +101,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); errTx != nil {
+	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{SqlExt: tx}}); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3
 		}
@@ -122,29 +123,49 @@ func (adapter *SQLiteAdapter) TableExists(t string) (bool, error) {
 
 // Find finds a single entity based on the EntityID()
 func (adapter *SQLiteAdapter) Find(dest interface{}) error {
-	return find(adapter, dest)
+	return adapter.FindContext(context.Background(), dest)
+}
+
+func (adapter *SQLiteAdapter) FindContext(ctx context.Context, dest interface{}) error {
+	return find(ctx, adapter, dest)
 }
 
 // Get wraps sqlx.Get
 func (adapter *SQLiteAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
+	return adapter.GetContext(context.Background(), dest, qstr, args...)
+}
+
+func (adapter *SQLiteAdapter) GetContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
 	return sqlx.Get(adapter.db, dest, qstr, args...)
 }
 
 // Select wraps sqlx.Select
 func (adapter *SQLiteAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
+	return adapter.SelectContext(context.Background(), dest, qstr, args...)
+}
+
+func (adapter *SQLiteAdapter) SelectContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
 	return sqlx.Select(adapter.db, dest, qstr, args...)
 }
 
 // Update a single record.
 func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
+	return adapter.UpdateContext(context.Background(), ent, columns...)
+}
+
+func (adapter *SQLiteAdapter) UpdateContext(ctx context.Context, ent interface{}, columns ...string) error {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	return update(adapter, ent, columns...)
+	return update(ctx, adapter, ent, columns...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
+	return adapter.InsertContext(context.Background(), ent)
+}
+
+func (adapter *SQLiteAdapter) InsertContext(ctx context.Context, ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
@@ -162,7 +183,7 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 		Columns(header...).
 		Values(vals...).
 		RunWith(adapter.db)
-	result, err := q.Exec()
+	result, err := q.Exec() // TODO: ExecContext?
 	if err != nil {
 		return 0, err
 	}
@@ -175,6 +196,10 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 
 // MultiInsert inserts multiple entities.
 func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
+	return adapter.MultiInsertContext(context.Background(), ents)
+}
+
+func (adapter *SQLiteAdapter) MultiInsertContext(ctx context.Context, ents []interface{}) ([]int, error) {
 	retids := []int{}
 	if len(ents) == 0 {
 		return retids, nil
