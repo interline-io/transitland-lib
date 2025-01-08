@@ -41,7 +41,7 @@ func init() {
 // SQLiteAdapter provides support for SQLite.
 type SQLiteAdapter struct {
 	DBURL string
-	db    SqlExt
+	db    Ext
 }
 
 // Open the database.
@@ -55,7 +55,7 @@ func (adapter *SQLiteAdapter) Open() error {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
 	db.Mapper = MapperCache.Mapper
-	adapter.db = &QueryLogger{SqlExt: db.Unsafe()}
+	adapter.db = &QueryLogger{Ext: db.Unsafe()}
 	return nil
 }
 
@@ -72,7 +72,7 @@ func (adapter *SQLiteAdapter) Create() error {
 	// Dont log, used often in tests
 	adb := adapter.db
 	if a, ok := adapter.db.(*QueryLogger); ok {
-		adb = a.SqlExt
+		adb = a.Ext
 	}
 	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
@@ -82,7 +82,7 @@ func (adapter *SQLiteAdapter) Create() error {
 }
 
 // DBX returns the underlying Sqlx DB or Tx.
-func (adapter *SQLiteAdapter) DBX() SqlExt {
+func (adapter *SQLiteAdapter) DBX() Ext {
 	return adapter.db
 }
 
@@ -101,7 +101,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{SqlExt: tx}}); errTx != nil {
+	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); errTx != nil {
 		if err3 := tx.Rollback(); err3 != nil {
 			return err3
 		}

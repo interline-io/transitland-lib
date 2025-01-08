@@ -25,6 +25,7 @@ type sqrlExt interface {
 type Ext interface {
 	sqlx.Ext
 	sqlx.QueryerContext
+	sqlx.ExecerContext
 }
 
 func init() {
@@ -33,7 +34,7 @@ func init() {
 
 // QueryLogger wraps sql/sqlx methods with loggers.
 type QueryLogger struct {
-	SqlExt
+	Ext
 	Trace bool
 }
 
@@ -44,7 +45,7 @@ func (p *QueryLogger) Exec(query string, args ...interface{}) (sql.Result, error
 		logt1(rid, query, args...)
 	}
 	defer queryTime(rid, t, query, args...)
-	return p.SqlExt.Exec(query, args...)
+	return p.Ext.Exec(query, args...)
 }
 
 // Query .
@@ -58,7 +59,7 @@ func (p *QueryLogger) QueryContext(ctx context.Context, query string, args ...in
 		logt1(rid, query, args...)
 	}
 	defer queryTime(rid, t, query, args...)
-	return p.SqlExt.QueryContext(ctx, query, args...)
+	return p.Ext.QueryContext(ctx, query, args...)
 }
 
 // Queryx .
@@ -68,7 +69,7 @@ func (p *QueryLogger) QueryxContext(ctx context.Context, query string, args ...i
 		logt1(rid, query, args...)
 	}
 	defer queryTime(rid, t, query, args...)
-	return p.SqlExt.QueryxContext(ctx, query, args...)
+	return p.Ext.QueryxContext(ctx, query, args...)
 }
 
 func (p *QueryLogger) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
@@ -82,7 +83,7 @@ func (p *QueryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
 		logt1(rid, query, args...)
 	}
 	defer queryTime(rid, t, query, args...)
-	if v, ok := p.SqlExt.(sqrlExt); ok {
+	if v, ok := p.Ext.(sqrlExt); ok {
 		return v.QueryRow(query, args...)
 	}
 	return nil
@@ -95,11 +96,11 @@ func (p *QueryLogger) QueryRowxContext(ctx context.Context, query string, args .
 		logt1(rid, query, args...)
 	}
 	defer queryTime(rid, t, query, args...)
-	return p.SqlExt.QueryRowxContext(ctx, query, args...)
+	return p.Ext.QueryRowxContext(ctx, query, args...)
 }
 
 func (p *QueryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
-	return p.SqlExt.QueryRowxContext(context.Background(), query, args...)
+	return p.Ext.QueryRowxContext(context.Background(), query, args...)
 }
 
 // Prepare
@@ -109,7 +110,7 @@ func (p *QueryLogger) Prepare(query string) (*sql.Stmt, error) {
 		logt1(rid, query)
 	}
 	defer queryTime(rid, t, query)
-	if v, ok := p.SqlExt.(sqrlExt); ok {
+	if v, ok := p.Ext.(sqrlExt); ok {
 		return v.Prepare(query)
 	}
 	return nil, errors.New("not Preparer")
@@ -117,7 +118,7 @@ func (p *QueryLogger) Prepare(query string) (*sql.Stmt, error) {
 
 // Beginx .
 func (p *QueryLogger) Beginx() (*sqlx.Tx, error) {
-	if a, ok := p.SqlExt.(canBeginx); ok {
+	if a, ok := p.Ext.(canBeginx); ok {
 		return a.Beginx()
 	}
 	return nil, errors.New("not Beginxer")

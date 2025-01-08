@@ -26,19 +26,13 @@ func init() {
 	ext.RegisterWriter("postgresql", w)
 }
 
-type SqlExt interface {
-	sqlx.Ext
-	sqlx.ExecerContext
-	sqlx.QueryerContext
-}
-
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
 	DBURL string
-	db    SqlExt
+	db    Ext
 }
 
-func NewPostgresAdapterFromDBX(db SqlExt) *PostgresAdapter {
+func NewPostgresAdapterFromDBX(db Ext) *PostgresAdapter {
 	return &PostgresAdapter{DBURL: "", db: db}
 }
 
@@ -53,7 +47,7 @@ func (adapter *PostgresAdapter) Open() error {
 	}
 	db := sqlx.NewDb(stdlib.OpenDBFromPool(pool), "pgx")
 	db.Mapper = MapperCache.Mapper
-	adapter.db = &QueryLogger{SqlExt: db.Unsafe()}
+	adapter.db = &QueryLogger{Ext: db.Unsafe()}
 	return nil
 }
 
@@ -71,7 +65,7 @@ func (adapter *PostgresAdapter) Create() error {
 }
 
 // DBX returns sqlx.Ext
-func (adapter *PostgresAdapter) DBX() SqlExt {
+func (adapter *PostgresAdapter) DBX() Ext {
 	return adapter.db
 }
 
@@ -85,7 +79,7 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	case *sqlx.Tx:
 		tx = a
 	case *QueryLogger:
-		if b, ok := a.SqlExt.(*sqlx.Tx); ok {
+		if b, ok := a.Ext.(*sqlx.Tx); ok {
 			tx = b
 		}
 	}
@@ -97,7 +91,7 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{SqlExt: tx}}); err != nil {
+	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); err != nil {
 		if commit {
 			if errTx := tx.Rollback(); errTx != nil {
 				return errTx
@@ -142,7 +136,7 @@ func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...inter
 }
 
 func (adapter *PostgresAdapter) GetContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.GetContext(ctx, adapter.db, dest, adapter.db.Rebind(qstr), args...)
+	return sqlx.Get(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Select wraps sqlx.Select
@@ -151,7 +145,7 @@ func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...in
 }
 
 func (adapter *PostgresAdapter) SelectContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.SelectContext(ctx, adapter.db, dest, adapter.db.Rebind(qstr), args...)
+	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Update a single entity.

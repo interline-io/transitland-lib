@@ -34,7 +34,7 @@ type Adapter interface {
 	Open() error
 	Close() error
 	Create() error
-	DBX() SqlExt
+	DBX() Ext
 	Tx(func(Adapter) error) error
 	Sqrl() sq.StatementBuilderType
 	TableExists(string) (bool, error)
