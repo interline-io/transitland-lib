@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -25,7 +26,7 @@ func TestSync(t *testing.T) {
 			Filenames:  regs,
 			HideUnseen: true,
 		}
-		found, err := Sync(atx, opts)
+		found, err := Sync(context.Background(), atx, opts)
 		if err != nil {
 			t.Error(err)
 		}
@@ -70,7 +71,7 @@ func TestSync_Update(t *testing.T) {
 		opts := Options{
 			Filenames: regs,
 		}
-		if _, err = Sync(atx, opts); err != nil {
+		if _, err = Sync(context.Background(), atx, opts); err != nil {
 			t.Error(err)
 		}
 		// Check Updated values
@@ -238,7 +239,7 @@ func TestUpdateOperator(t *testing.T) {
 				Filenames:  regs,
 				HideUnseen: true,
 			}
-			found, err := Sync(atx, opts)
+			found, err := Sync(context.Background(), atx, opts)
 			if err != nil {
 				t.Error(err)
 			}
@@ -272,7 +273,7 @@ func TestUpdateOperator(t *testing.T) {
 				testpath.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
 			}
 			opts := Options{Filenames: regs}
-			found, err := Sync(atx, opts)
+			found, err := Sync(context.Background(), atx, opts)
 			if err != nil {
 				t.Error(err)
 			}
@@ -292,7 +293,7 @@ func TestUpdateOperator(t *testing.T) {
 				t.Errorf("did not get updated file value, got '%s' expected '%s'", tlops[0].File.Val, newFile)
 			}
 			// Resync and check updated file
-			if _, err := Sync(atx, opts); err != nil {
+			if _, err := Sync(context.Background(), atx, opts); err != nil {
 				t.Error(err)
 			}
 			newOps := []dmfr.Operator{}

@@ -75,7 +75,7 @@ func (cmd *LintCommand) Run(ctx context.Context) error {
 			diffs := dmp.DiffMain(originalJsonString, formattedJsonString, false)
 			fmt.Println(dmp.DiffPrettyText(diffs))
 		} else {
-			log.Infof("%s: Formatted properly.", filename)
+			log.For(ctx).Info().Msgf("%s: Formatted properly.", filename)
 		}
 	}
 	if len(fileErrors) > 0 {

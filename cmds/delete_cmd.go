@@ -82,9 +82,9 @@ func (cmd *DeleteCommand) Run(ctx context.Context) error {
 		return err
 	}
 	if cmd.DryRun {
-		log.Info().Msgf("Deleting feed version: %d (dry run)", cmd.FVID)
+		log.For(ctx).Info().Msgf("Deleting feed version: %d (dry run)", cmd.FVID)
 	} else {
-		log.Info().Msgf("Deleting feed version: %d", cmd.FVID)
+		log.For(ctx).Info().Msgf("Deleting feed version: %d", cmd.FVID)
 		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
 			return importer.DeleteFeedVersion(cmd.Adapter, cmd.FVID, cmd.ExtraTables)
 		})

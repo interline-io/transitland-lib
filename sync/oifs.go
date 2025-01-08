@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"regexp"
@@ -68,7 +69,7 @@ func getPlaces(atx tldb.Adapter, id int) (string, error) {
 	return strings.Join(places, " / "), nil
 }
 
-func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
+func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 	// Update OIFs that belong to this operator
 	updated := false
 	oiflookup := map[oifmatch]int{}
@@ -87,7 +88,7 @@ func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 		oif.ResolvedShortName.Set(operator.ShortName.Val)
 		oif.OperatorID.SetInt(operator.ID)
 		if err := atx.Get(&oif.FeedID, "select id from current_feeds where onestop_id = ?", oif.FeedOnestopID.Val); err == sql.ErrNoRows {
-			log.Infof("Warning: no feed for '%s'", oif.FeedOnestopID.Val)
+			log.For(ctx).Info().Msgf("Warning: no feed for '%s'", oif.FeedOnestopID.Val)
 			continue
 		} else if err != nil {
 			return false, err

@@ -88,9 +88,9 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 			}
 		}
 		// Update route_stops, agency_geometries, etc...
-		log.Infof("Finalizing import")
+		log.For(ctx).Info().Msgf("Finalizing import")
 		if opts.Activate {
-			log.Infof("Activating feed version")
+			log.For(ctx).Info().Msgf("Activating feed version")
 			if err := ActivateFeedVersion(atx, fv.FeedID, fv.ID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}

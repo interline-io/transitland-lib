@@ -135,9 +135,9 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 		return err
 	}
 	if cmd.ScheduleOnly {
-		log.Infof("Unmporting schedule data from %d feed versions", len(qrs))
+		log.For(ctx).Info().Msgf("Unmporting schedule data from %d feed versions", len(qrs))
 	} else {
-		log.Infof("Unmporting %d feed versions", len(qrs))
+		log.For(ctx).Info().Msgf("Unmporting %d feed versions", len(qrs))
 	}
 
 	jobs := make(chan jobOptions, len(qrs))
@@ -154,13 +154,13 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go dmfrUnimportWorker(w, cmd.Adapter, jobs, &wg)
+		go dmfrUnimportWorker(w, ctx, cmd.Adapter, jobs, &wg)
 	}
 	wg.Wait()
 	return nil
 }
 
-func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg *sync.WaitGroup) {
+func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs <-chan jobOptions, wg *sync.WaitGroup) {
 	_ = id
 	type qr struct {
 		FeedVersionID   int
@@ -185,10 +185,10 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg
 			continue
 		}
 		if opts.DryRun {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue
 		}
-		log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var err error
@@ -203,7 +203,7 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg
 		if err != nil {
 			log.Errorf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
 		} else {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
 		}
 	}
 	wg.Done()

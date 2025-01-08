@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
@@ -26,11 +27,11 @@ type Result struct {
 	HiddenOperators int
 }
 
-func MainSync(atx tldb.Adapter, opts Options) (Result, error) {
-	return Sync(atx, opts)
+func MainSync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
+	return Sync(ctx, atx, opts)
 }
 
-func Sync(atx tldb.Adapter, opts Options) (Result, error) {
+func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 	sr := Result{}
 	// Load Feeds
 	for _, fn := range opts.Filenames {
@@ -51,11 +52,11 @@ func Sync(atx tldb.Adapter, opts Options) (Result, error) {
 				continue
 			}
 			if found && updated {
-				log.Infof("%s: updated feed %s (id:%d)", fn, fsid, feedid)
+				log.For(ctx).Info().Msgf("%s: updated feed %s (id:%d)", fn, fsid, feedid)
 			} else if found {
-				log.Infof("%s: no changes for feed %s (id:%d)", fn, fsid, feedid)
+				log.For(ctx).Info().Msgf("%s: no changes for feed %s (id:%d)", fn, fsid, feedid)
 			} else {
-				log.Infof("%s: new feed %s (id:%d)", fn, fsid, feedid)
+				log.For(ctx).Info().Msgf("%s: new feed %s (id:%d)", fn, fsid, feedid)
 			}
 			sr.FeedIDs = append(sr.FeedIDs, feedid)
 		}
@@ -72,18 +73,18 @@ func Sync(atx tldb.Adapter, opts Options) (Result, error) {
 			osid := operator.OnestopID.Val
 			operator.File.Set(filepath.Base(fn))
 			operator.DeletedAt.Unset()
-			operatorid, found, updated, err := UpdateOperator(atx, operator)
+			operatorid, found, updated, err := UpdateOperator(ctx, atx, operator)
 			if err != nil {
 				log.Errorf("%s: error on operator %s: %s", fn, osid, err)
 				sr.Errors = append(sr.Errors, err)
 				continue
 			}
 			if found && updated {
-				log.Infof("%s: updated operator %s (id:%d)", fn, osid, operatorid)
+				log.For(ctx).Info().Msgf("%s: updated operator %s (id:%d)", fn, osid, operatorid)
 			} else if found {
-				log.Infof("%s: no changes for operator %s (id:%d)", fn, osid, operatorid)
+				log.For(ctx).Info().Msgf("%s: no changes for operator %s (id:%d)", fn, osid, operatorid)
 			} else {
-				log.Infof("%s: new operator %s (id:%d)", fn, osid, operatorid)
+				log.For(ctx).Info().Msgf("%s: new operator %s (id:%d)", fn, osid, operatorid)
 			}
 			sr.OperatorIDs = append(sr.OperatorIDs, operatorid)
 		}
@@ -102,7 +103,7 @@ func Sync(atx tldb.Adapter, opts Options) (Result, error) {
 			return sr, err
 		}
 		if sr.HiddenCount > 0 {
-			log.Infof("Soft-deleted %d feeds", sr.HiddenCount)
+			log.For(ctx).Info().Msgf("Soft-deleted %d feeds", sr.HiddenCount)
 		}
 	}
 	if opts.HideUnseenOperators {
@@ -113,7 +114,7 @@ func Sync(atx tldb.Adapter, opts Options) (Result, error) {
 			return sr, err
 		}
 		if sr.HiddenOperators > 0 {
-			log.Infof("Soft-deleted %d operators", sr.HiddenOperators)
+			log.For(ctx).Info().Msgf("Soft-deleted %d operators", sr.HiddenOperators)
 		}
 	}
 	// Update any automatically generated agency-operator associations

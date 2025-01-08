@@ -1,6 +1,7 @@
 package builders
 
 import (
+	"context"
 	"errors"
 	"sort"
 
@@ -124,7 +125,7 @@ func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
 	for rid := range pp.shapeCounts {
 		ent, err := pp.buildRouteShape(rid)
 		if err != nil {
-			log.Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
+			log.For(context.TODO()).Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
 			continue
 		}
 		if err := copier.CopyEntity(ent); err != nil {

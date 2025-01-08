@@ -98,7 +98,7 @@ func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFet
 			}
 			vr.UploadTmpfile = tf2.Name()
 			tf2.Close()
-			log.Info().Str("dst", vr.UploadTmpfile).Str("src", readerPath).Msg("fetch: copying extracted nested zip file for upload")
+			log.For(ctx).Info().Str("dst", vr.UploadTmpfile).Str("src", readerPath).Msg("fetch: copying extracted nested zip file for upload")
 			if err := copyFileContents(vr.UploadTmpfile, readerPath); err != nil {
 				// Fatal err
 				return vr, err

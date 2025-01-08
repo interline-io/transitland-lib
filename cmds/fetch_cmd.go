@@ -182,7 +182,7 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 
 	///////////////
 	// Here we go
-	log.Infof("Fetching %d feeds", len(cmd.FeedIDs))
+	log.For(ctx).Info().Msgf("Fetching %d feeds", len(cmd.FeedIDs))
 	jobs := make(chan fetchJob, len(cmd.FeedIDs))
 	results := make(chan FetchCommandResult, len(cmd.FeedIDs))
 	for _, opts := range toFetch {
@@ -219,9 +219,9 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			fetchNew++
 		}
 	}
-	log.Infof("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
+	log.For(ctx).Info().Msgf("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
 	if fatalError != nil {
-		log.Infof("Exiting with error because at least one fetch had fatal error: %s", fatalError.Error())
+		log.For(ctx).Info().Msgf("Exiting with error because at least one fetch had fatal error: %s", fatalError.Error())
 		return fatalError
 	}
 	return nil
@@ -235,9 +235,9 @@ type fetchJob struct {
 func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- FetchCommandResult, wg *sync.WaitGroup) {
 	for job := range jobs {
 		// Start
-		log.Infof("Feed %s: start", job.OnestopID)
+		log.For(ctx).Info().Msgf("Feed %s: start", job.OnestopID)
 		if DryRun {
-			log.Infof("Feed %s: dry-run", job.OnestopID)
+			log.For(ctx).Info().Msgf("Feed %s: dry-run", job.OnestopID)
 			continue
 		}
 
@@ -258,11 +258,11 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		} else if result.FetchError != nil {
 			log.Error().Err(result.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, result.FetchError.Error(), t2)
 		} else if fv != nil && result.Found {
-			log.Infof("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
 		} else if fv != nil {
-			log.Infof("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
 		} else {
-			log.Infof("Feed %s (id:%d): url: %s invalid result (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, t2)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): url: %s invalid result (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, t2)
 		}
 		results <- FetchCommandResult{
 			Result:           result.Result,

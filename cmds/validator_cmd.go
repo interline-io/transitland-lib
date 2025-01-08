@@ -69,7 +69,7 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 }
 
 func (cmd *ValidatorCommand) Run(ctx context.Context) error {
-	log.Infof("Validating: %s", cmd.readerPath)
+	log.For(ctx).Info().Msgf("Validating: %s", cmd.readerPath)
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (cmd *ValidatorCommand) Run(ctx context.Context) error {
 
 	// Save to database
 	if cmd.SaveValidationReport {
-		log.Infof("Saving validation report to feed version: %d", cmd.FVID)
+		log.For(ctx).Info().Msgf("Saving validation report to feed version: %d", cmd.FVID)
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
 			return err

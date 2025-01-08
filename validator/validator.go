@@ -430,7 +430,7 @@ func (v *Validator) ValidateRTs(ctx context.Context, rtUrls []string, evaluateAt
 
 // Validate realtime messages
 func (v *Validator) ValidateRT(ctx context.Context, fn string, evaluateAt time.Time, evaluateAtLocal time.Time) (RealtimeResult, error) {
-	log.Info().Str("url", fn).Msg("Validating GTFS-RT")
+	log.For(ctx).Info().Str("url", fn).Msg("Validating GTFS-RT")
 	rtResult := RealtimeResult{
 		Url: fn,
 	}

@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"database/sql"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 )
 
 // UpdateOperator updates or inserts a single operator, as well as managing associated operator-in-feed records
-func UpdateOperator(atx tldb.Adapter, operator dmfr.Operator) (int, bool, bool, error) {
+func UpdateOperator(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (int, bool, bool, error) {
 	// Check if we have the existing operator
 	found := false
 	updated := false
@@ -40,7 +41,7 @@ func UpdateOperator(atx tldb.Adapter, operator dmfr.Operator) (int, bool, bool, 
 	}
 	// Update operator in feeds
 	// This happens even if the entity did not change.
-	oifUpdate, err := updateOifs(atx, operator)
+	oifUpdate, err := updateOifs(ctx, atx, operator)
 	if err != nil {
 		return 0, false, false, err
 	}

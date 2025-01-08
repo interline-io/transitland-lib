@@ -134,7 +134,7 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	}
 	///////////////
 	// Here we go
-	log.Infof("Rebuilding stats for %d feed versions", len(qrs))
+	log.For(ctx).Info().Msgf("Rebuilding stats for %d feed versions", len(qrs))
 	jobs := make(chan RebuildStatsOptions, len(qrs))
 	results := make(chan RebuildStatsResult, len(qrs))
 	for _, fvid := range qrs {
@@ -171,17 +171,17 @@ func rebuildStatsWorker(id int, ctx context.Context, adapter tldb.Adapter, dryru
 			continue
 		}
 		if dryrun {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue
 		}
-		log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
 		result, err := rebuildStatsMain(ctx, adapter, opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
 			log.Errorf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
 		} else {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
 		}
 		results <- result
 	}
