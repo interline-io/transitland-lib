@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"os"
 
@@ -31,7 +32,7 @@ func (cmd *versionCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *versionCommand) Run() error {
+func (cmd *versionCommand) Run(ctx context.Context) error {
 	log.Print("transitland-lib version: %s", tl.Version.Tag)
 	log.Print("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)", tl.Version.Commit, tl.Version.CommitTime)
 	log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)

@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -76,7 +77,7 @@ func (cmd *FetchCommand) Parse(args []string) error {
 }
 
 // Run executes this command.
-func (cmd *FetchCommand) Run() error {
+func (cmd *FetchCommand) Run(ctx context.Context) error {
 	// Init
 	if cmd.Workers < 1 {
 		cmd.Workers = 1
@@ -193,7 +194,7 @@ func (cmd *FetchCommand) Run() error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go fetchWorker(cmd.Adapter, cmd.DryRun, jobs, results, &wg)
+		go fetchWorker(ctx, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
 	}
 	wg.Wait()
 	close(results)
@@ -231,7 +232,7 @@ type fetchJob struct {
 	fetch.Options
 }
 
-func fetchWorker(adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- FetchCommandResult, wg *sync.WaitGroup) {
+func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- FetchCommandResult, wg *sync.WaitGroup) {
 	for job := range jobs {
 		// Start
 		log.Infof("Feed %s: start", job.OnestopID)
@@ -245,7 +246,7 @@ func fetchWorker(adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, result
 		t := time.Now()
 		fetchError := adapter.Tx(func(atx tldb.Adapter) error {
 			var fetchError error
-			result, fetchError = fetch.StaticFetch(atx, job.Options)
+			result, fetchError = fetch.StaticFetch(ctx, atx, job.Options)
 			return fetchError
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0

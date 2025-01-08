@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/ext"
@@ -18,7 +19,7 @@ func TestMerge(t *testing.T) {
 		if err := cmd.Parse([]string{tdir, f1.URL, f2.URL}); err != nil {
 			t.Fatal(err)
 		}
-		if err := cmd.Run(); err != nil {
+		if err := cmd.Run(context.Background()); err != nil {
 			t.Fatal(err)
 		}
 		outReader, err := ext.OpenReader(tdir)

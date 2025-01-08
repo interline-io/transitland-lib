@@ -2,6 +2,7 @@ package tlcsv
 
 import (
 	"archive/zip"
+	"context"
 	"crypto/sha1"
 	"encoding/csv"
 	"errors"
@@ -41,8 +42,8 @@ type WriterAdapter interface {
 /////////////////////
 
 // NewStoreAdapter is a convenience method for getting a GTFS Zip reader from the store.
-func NewStoreAdapter(storage string, key string, fragment string) (*TmpZipAdapter, error) {
-	r, err := request.Download(storage, key)
+func NewStoreAdapter(ctx context.Context, storage string, key string, fragment string) (*TmpZipAdapter, error) {
+	r, err := request.Download(ctx, storage, key)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +114,7 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	fr, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
+	fr, err := request.AuthenticatedRequestDownload(context.TODO(), url, adapter.reqOpts...)
 	if err != nil {
 		return err
 	}

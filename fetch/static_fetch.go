@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
@@ -27,7 +28,7 @@ type StaticFetchResult struct {
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
-func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
+func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 	var ret StaticFetchResult
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		tmpfilepath := fr.Filename
@@ -114,7 +115,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 
 		// Update validation report
 		if opts.SaveValidationReport {
-			validationResult, err := createFeedValidationReport(atx, reader, fv.ID, opts.FetchedAt, opts.ValidationReportStorage)
+			validationResult, err := createFeedValidationReport(ctx, atx, reader, fv.ID, opts.FetchedAt, opts.ValidationReportStorage)
 			if err != nil {
 				// Fatal err
 				return vr, err
@@ -129,7 +130,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		}
 		return vr, nil
 	}
-	result, err := ffetch(atx, opts, cb)
+	result, err := ffetch(ctx, atx, opts, cb)
 	if err != nil {
 		log.Error().Err(err).Msg("fatal error during static fetch")
 	}
@@ -162,7 +163,7 @@ func copyFileContents(dst, src string) (err error) {
 }
 
 // Duplicated
-func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
+func createFeedValidationReport(ctx context.Context, atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
 	// Create new report
 	_ = fetchedAt
 	opts := validator.Options{}
@@ -171,11 +172,11 @@ func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int
 	if err != nil {
 		return nil, err
 	}
-	validationResult, err := v.Validate()
+	validationResult, err := v.Validate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err := validator.SaveValidationReport(atx, validationResult, fvid, storage); err != nil {
+	if err := validator.SaveValidationReport(ctx, atx, validationResult, fvid, storage); err != nil {
 		return nil, err
 	}
 	return validationResult, nil

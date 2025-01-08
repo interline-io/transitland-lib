@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -52,7 +53,7 @@ func TestRTFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := RTFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
+				fr, err := RTFetch(context.Background(), atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err

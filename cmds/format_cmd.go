@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -38,7 +39,7 @@ func (cmd *FormatCommand) Parse(args []string) error {
 }
 
 // Run this command.
-func (cmd *FormatCommand) Run() error {
+func (cmd *FormatCommand) Run(ctx context.Context) error {
 	filename := cmd.Filename
 	if filename == "" {
 		return errors.New("must specify filename")

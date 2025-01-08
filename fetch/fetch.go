@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"errors"
 	"os"
 	"time"
@@ -57,7 +58,7 @@ type validationResponse struct {
 type fetchCb func(request.FetchResponse) (validationResponse, error)
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
-func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
+func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	result := Result{URL: opts.FeedURL}
 	feed := dmfr.Feed{}
 	if err := atx.Get(&feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
@@ -89,7 +90,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		}
 		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
 	}
-	fetchResponse, err := request.AuthenticatedRequestDownload(opts.FeedURL, reqOpts...)
+	fetchResponse, err := request.AuthenticatedRequestDownload(ctx, opts.FeedURL, reqOpts...)
 	result.FetchError = fetchResponse.FetchError
 	result.ResponseCode = fetchResponse.ResponseCode
 	result.ResponseSize = fetchResponse.ResponseSize
@@ -131,7 +132,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 
 	// Validate OK, upload
 	if newFile && uploadFile != "" && opts.Storage != "" {
-		if err := request.UploadFile(opts.Storage, uploadFile, uploadDest); err != nil {
+		if err := request.UploadFile(ctx, opts.Storage, uploadFile, uploadDest); err != nil {
 			return result, err
 		}
 	}

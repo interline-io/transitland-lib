@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"errors"
 	"os"
 	"sync"
@@ -96,7 +97,7 @@ type jobOptions struct {
 }
 
 // Run this command
-func (cmd *UnimportCommand) Run() error {
+func (cmd *UnimportCommand) Run(ctx context.Context) error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -160,6 +161,7 @@ func (cmd *UnimportCommand) Run() error {
 }
 
 func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg *sync.WaitGroup) {
+	_ = id
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int

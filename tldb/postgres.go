@@ -41,7 +41,7 @@ func (adapter *PostgresAdapter) Open() error {
 	if adapter.db != nil {
 		return nil
 	}
-	pool, err := pgxpool.New(context.Background(), adapter.DBURL)
+	pool, err := pgxpool.New(context.TODO(), adapter.DBURL)
 	if err != nil {
 		return err
 	}

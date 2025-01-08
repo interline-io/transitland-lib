@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -56,7 +57,7 @@ func (cmd *DeleteCommand) Parse(args []string) error {
 }
 
 // Run this command
-func (cmd *DeleteCommand) Run() error {
+func (cmd *DeleteCommand) Run(ctx context.Context) error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {

@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestSyncCommand(t *testing.T) {
 			if err := c.Parse(exp.command); err != nil {
 				t.Error(err)
 			}
-			err := c.Run()
+			err := c.Run(context.Background())
 			if err != nil {
 				if !strings.Contains(err.Error(), exp.errContains) {
 					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.errContains)

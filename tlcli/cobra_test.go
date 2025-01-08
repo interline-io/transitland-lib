@@ -2,6 +2,7 @@ package tlcli
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -29,7 +30,7 @@ func (cmd *testCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *testCommand) Run() error {
+func (cmd *testCommand) Run(ctx context.Context) error {
 	fmt.Fprintf(
 		cmd.w,
 		"testCommand: flag: '%s' slice: '%s' args: '%s'",

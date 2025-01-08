@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -139,7 +140,7 @@ func (cmd *ExtractCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *ExtractCommand) Run() error {
+func (cmd *ExtractCommand) Run(ctx context.Context) error {
 	// Reader / Writer
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {

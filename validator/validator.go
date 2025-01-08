@@ -231,7 +231,7 @@ func NewValidator(reader adapters.Reader, options Options) (*Validator, error) {
 }
 
 // Validate performs a basic validation, as well as optional extended reports.
-func (v *Validator) Validate() (*Result, error) {
+func (v *Validator) Validate(ctx context.Context) (*Result, error) {
 	tzName, err := v.setDefaultTimezone(v.Options.EvaluateAtTimezone)
 	if err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func (v *Validator) Validate() (*Result, error) {
 
 	// Validate realtime
 	if len(v.Options.ValidateRealtimeMessages) > 0 {
-		rtResult, err := v.ValidateRTs(v.Options.ValidateRealtimeMessages, evaluateAt, evaluateAtLocal)
+		rtResult, err := v.ValidateRTs(ctx, v.Options.ValidateRealtimeMessages, evaluateAt, evaluateAtLocal)
 		if err != nil {
 			result.FailureReason.Set(err.Error())
 			return result, err
@@ -400,13 +400,13 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 
 }
 
-func (v *Validator) ValidateRTs(rtUrls []string, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
+func (v *Validator) ValidateRTs(ctx context.Context, rtUrls []string, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
 	// Validate realtime
 	result := NewResult(evaluateAt, evaluateAtLocal)
 	result.IncludesRT.Set(true)
 	for _, fn := range rtUrls {
 		// Validate RT message
-		rtResult, err := v.ValidateRT(fn, evaluateAt, evaluateAtLocal)
+		rtResult, err := v.ValidateRT(ctx, fn, evaluateAt, evaluateAtLocal)
 		if err != nil {
 			return result, err
 		}
@@ -429,13 +429,13 @@ func (v *Validator) ValidateRTs(rtUrls []string, evaluateAt time.Time, evaluateA
 }
 
 // Validate realtime messages
-func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal time.Time) (RealtimeResult, error) {
+func (v *Validator) ValidateRT(ctx context.Context, fn string, evaluateAt time.Time, evaluateAtLocal time.Time) (RealtimeResult, error) {
 	log.Info().Str("url", fn).Msg("Validating GTFS-RT")
 	rtResult := RealtimeResult{
 		Url: fn,
 	}
 	var rterrs []error
-	msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal)
+	msg, err := rt.ReadURL(ctx, fn, request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal)
 	if err != nil {
 		rterrs = append(rterrs, err)
 	} else {
@@ -575,7 +575,7 @@ func copierEgToValidationEg(eg *copier.ValidationErrorGroup) *ValidationReportEr
 	return &ret
 }
 
-func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStorage string) error {
+func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result, fvid int, reportStorage string) error {
 	// Save validation reports
 	result.FeedVersionID = fvid
 
@@ -591,7 +591,7 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 			return err
 		}
 		jb := bytes.NewReader(jj)
-		if err := store.Upload(context.Background(), result.File.Val, dmfr.Secret{}, jb); err != nil {
+		if err := store.Upload(ctx, result.File.Val, dmfr.Secret{}, jb); err != nil {
 			return err
 		}
 	}

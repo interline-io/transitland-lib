@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -38,12 +39,12 @@ func ActivateFeedVersion(atx tldb.Adapter, feedId int, fvid int) error {
 	return err
 }
 
-func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
-	return ImportFeedVersion(adapter, opts)
+func MainImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
+	return ImportFeedVersion(ctx, adapter, opts)
 }
 
 // ImportFeedVersion create FVI and run Copier inside a Tx.
-func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
+func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV
 	fvi := dmfr.FeedVersionImport{InProgress: true}
 	fvi.FeedVersionID = opts.FeedVersionID
@@ -76,7 +77,7 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 	fviresult := dmfr.FeedVersionImport{} // keep result
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
 		var err error
-		fviresult, err = importFeedVersionTx(atx, fv, opts)
+		fviresult, err = importFeedVersionTx(ctx, atx, fv, opts)
 		if err != nil {
 			return err
 		}
@@ -125,11 +126,11 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 }
 
 // importFeedVersion .
-func importFeedVersionTx(atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader
-	tladapter, err := tlcsv.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
+	tladapter, err := tlcsv.NewStoreAdapter(ctx, opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
 		return fvi, err
 	}

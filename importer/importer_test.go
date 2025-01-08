@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -25,7 +26,7 @@ func TestImportFeedVersion(t *testing.T) {
 		testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid := setup(atx, testutil.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := ImportFeedVersion(&atx2, Options{Activate: true, FeedVersionID: fvid, Storage: "/"})
+			_, err := ImportFeedVersion(context.Background(), &atx2, Options{Activate: true, FeedVersionID: fvid, Storage: "/"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -59,7 +60,7 @@ func TestImportFeedVersion(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid = setup(atx, testpath.RelPath("testdata/does-not-exist"))
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := ImportFeedVersion(&atx2, Options{FeedVersionID: fvid, Storage: "/"})
+			_, err := ImportFeedVersion(context.Background(), &atx2, Options{FeedVersionID: fvid, Storage: "/"})
 			if err == nil {
 				t.Errorf("expected an error, got none")
 			}
@@ -91,7 +92,7 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		fviresult, err := importFeedVersionTx(atx, fv, Options{Storage: "/"})
+		fviresult, err := importFeedVersionTx(context.Background(), atx, fv, Options{Storage: "/"})
 		if err != nil {
 			t.Error(err)
 		}

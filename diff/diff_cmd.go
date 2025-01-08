@@ -2,6 +2,7 @@
 package diff
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
@@ -69,7 +70,7 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *Command) Run() error {
+func (cmd *Command) Run(ctx context.Context) error {
 	readerA, err := tlcsv.NewReader(cmd.readerPathA)
 	if err != nil {
 		return err

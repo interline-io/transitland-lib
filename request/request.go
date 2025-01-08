@@ -61,7 +61,7 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
 }
 
 func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
-	u, err := url.Parse(req.URL)
+	u, err := url.Parse(ustr)
 	if err != nil {
 		return nil, "", errors.New("could not parse url")
 	}
@@ -139,7 +139,7 @@ func WithAuth(secret dmfr.Secret, auth dmfr.FeedAuthorization) func(req *Request
 
 // AuthenticatedRequestDownload is similar to AuthenticatedRequest but writes to a temporary file.
 // Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
-func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchResponse, error) {
+func AuthenticatedRequestDownload(ctx context.Context, address string, opts ...RequestOption) (FetchResponse, error) {
 	// Create temp file
 	tmpfile, err := os.CreateTemp("", "fetch")
 	if err != nil {
@@ -148,7 +148,7 @@ func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchR
 	defer tmpfile.Close()
 
 	// Download
-	fr, err := authenticatedRequest(tmpfile, address, opts...)
+	fr, err := authenticatedRequest(ctx, tmpfile, address, opts...)
 	if err != nil {
 		return fr, err
 	}
@@ -158,14 +158,14 @@ func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchR
 	return fr, nil
 }
 
-// AuthenticatedRequest fetches a url using a secret and auth description. Returns []byte, sha1, size, response code.
+// AuthenticatedRequestContext fetches a url using a secret and auth description. Returns []byte, sha1, size, response code.
 // Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
-func AuthenticatedRequest(address string, opts ...RequestOption) (FetchResponse, error) {
+func AuthenticatedRequest(ctx context.Context, address string, opts ...RequestOption) (FetchResponse, error) {
 	// Create buffer
 	var buf bytes.Buffer
 
 	// Download
-	fr, err := authenticatedRequest(&buf, address, opts...)
+	fr, err := authenticatedRequest(ctx, &buf, address, opts...)
 	if err != nil {
 		return fr, err
 	}
@@ -175,9 +175,9 @@ func AuthenticatedRequest(address string, opts ...RequestOption) (FetchResponse,
 	return fr, nil
 }
 
-func authenticatedRequest(out io.Writer, address string, opts ...RequestOption) (FetchResponse, error) {
+func authenticatedRequest(ctx context.Context, out io.Writer, address string, opts ...RequestOption) (FetchResponse, error) {
 	// 10 minute timeout
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(time.Second*600))
 	defer cancel()
 
 	// Create request and wait for response

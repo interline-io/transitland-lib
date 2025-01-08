@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -67,7 +68,7 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *ValidatorCommand) Run() error {
+func (cmd *ValidatorCommand) Run(ctx context.Context) error {
 	log.Infof("Validating: %s", cmd.readerPath)
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {
@@ -78,7 +79,7 @@ func (cmd *ValidatorCommand) Run() error {
 	if err != nil {
 		return err
 	}
-	result, err := v.Validate()
+	result, err := v.Validate(ctx)
 	if err != nil {
 		return err
 	}
@@ -109,7 +110,7 @@ func (cmd *ValidatorCommand) Run() error {
 		}
 		atx := writer.Adapter
 		defer atx.Close()
-		if err := validator.SaveValidationReport(atx, result, cmd.FVID, cmd.ValidationReportStorage); err != nil {
+		if err := validator.SaveValidationReport(ctx, atx, result, cmd.FVID, cmd.ValidationReportStorage); err != nil {
 			return err
 		}
 	}
