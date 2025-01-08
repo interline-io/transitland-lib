@@ -22,7 +22,7 @@ func FeedVersionTableDelete(ctx context.Context, atx tldb.Adapter, table string,
 		}
 	}
 	where := sq.Eq{"feed_version_id": fvid}
-	_, err := atx.Sqrl().Delete(table).Where(where).ExecContext(ctx)
+	_, err := atx.Sqrl().Delete(table).Where(where).Exec()
 	if err != nil {
 		return err
 	}
