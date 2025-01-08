@@ -47,7 +47,7 @@ func (cmd *FormatCommand) Run(ctx context.Context) error {
 	// First, validate DMFR
 	_, err := dmfr.LoadAndParseRegistry(filename)
 	if err != nil {
-		log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+		log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
 	}
 
 	// Re-read as raw registry
@@ -57,7 +57,7 @@ func (cmd *FormatCommand) Run(ctx context.Context) error {
 	}
 	rr, err := dmfr.ReadRawRegistry(r)
 	if err != nil {
-		log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+		log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
 	}
 	var buf bytes.Buffer
 	if err := rr.Write(&buf); err != nil {

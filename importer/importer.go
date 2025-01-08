@@ -70,7 +70,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		fvi.ID = fviid
 	} else {
 		// Serious error
-		log.Errorf("Error creating FeedVersionImport: %s", err.Error())
+		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Import
@@ -105,7 +105,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		fviresult.ExceptionLog = ""
 		if err := atx.Update(&fviresult); err != nil {
 			// Serious error
-			log.Errorf("Error saving FeedVersionImport: %s", err.Error())
+			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return err
 		}
 		return err
@@ -117,7 +117,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		fvi.ExceptionLog = errImport.Error()
 		if err := adapter.Update(&fvi); err != nil {
 			// Serious error
-			log.Errorf("Error saving FeedVersionImport: %s", err.Error())
+			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
 		}
 		return Result{FeedVersionImport: fvi}, errImport

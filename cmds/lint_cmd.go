@@ -48,14 +48,14 @@ func (cmd *LintCommand) Run(ctx context.Context) error {
 		// first validate DMFR
 		_, err := dmfr.LoadAndParseRegistry(filename)
 		if err != nil {
-			log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+			log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
 		}
 
 		// Now load again as raw dmfr
 		rawJson, err := ioutil.ReadFile(filename)
 		rr, err := dmfr.ReadRawRegistry(bytes.NewBuffer(rawJson))
 		if err != nil {
-			log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+			log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
 		}
 		var buf bytes.Buffer
 		if err := rr.Write(&buf); err != nil {
@@ -68,7 +68,7 @@ func (cmd *LintCommand) Run(ctx context.Context) error {
 
 		// Compare against input json
 		if formattedJsonString != originalJsonString {
-			log.Errorf("%s: not formatted correctly", filename)
+			log.For(ctx).Error().Msgf("%s: not formatted correctly", filename)
 			fileErrors = append(fileErrors, filename)
 			// print out diff
 			dmp := diffmatchpatch.New()

@@ -37,7 +37,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 	for _, fn := range opts.Filenames {
 		reg, err := dmfr.LoadAndParseRegistry(fn)
 		if err != nil {
-			log.Errorf("%s: Error parsing DMFR: %s", fn, err.Error())
+			log.For(ctx).Error().Msgf("%s: Error parsing DMFR: %s", fn, err.Error())
 			sr.Errors = append(sr.Errors, err)
 			continue
 		}
@@ -47,7 +47,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 			rfeed.DeletedAt = tt.Time{}
 			feedid, found, updated, err := UpdateFeed(atx, rfeed)
 			if err != nil {
-				log.Errorf("%s: error on feed %d: %s", fn, feedid, err)
+				log.For(ctx).Error().Msgf("%s: error on feed %d: %s", fn, feedid, err)
 				sr.Errors = append(sr.Errors, err)
 				continue
 			}
@@ -65,7 +65,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 	for _, fn := range opts.Filenames {
 		reg, err := dmfr.LoadAndParseRegistry(fn)
 		if err != nil {
-			log.Errorf("%s: Error parsing DMFR: %s", fn, err.Error())
+			log.For(ctx).Error().Msgf("%s: Error parsing DMFR: %s", fn, err.Error())
 			sr.Errors = append(sr.Errors, err)
 			continue
 		}
@@ -75,7 +75,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 			operator.DeletedAt.Unset()
 			operatorid, found, updated, err := UpdateOperator(ctx, atx, operator)
 			if err != nil {
-				log.Errorf("%s: error on operator %s: %s", fn, osid, err)
+				log.For(ctx).Error().Msgf("%s: error on operator %s: %s", fn, osid, err)
 				sr.Errors = append(sr.Errors, err)
 				continue
 			}
@@ -91,7 +91,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 	}
 	// Rollback on any errors
 	if len(sr.Errors) > 0 {
-		log.Errorf("Rollback due to one or more failures")
+		log.For(ctx).Error().Msgf("Rollback due to one or more failures")
 		return sr, fmt.Errorf("failed: %s", sr.Errors[0].Error())
 	}
 	// Hide
@@ -99,7 +99,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 		var err error
 		sr.HiddenCount, err = HideUnseedFeeds(atx, sr.FeedIDs)
 		if err != nil {
-			log.Errorf("Error soft-deleting feeds: %s", err.Error())
+			log.For(ctx).Error().Msgf("Error soft-deleting feeds: %s", err.Error())
 			return sr, err
 		}
 		if sr.HiddenCount > 0 {
@@ -110,7 +110,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 		var err error
 		sr.HiddenOperators, err = HideUnseedOperators(atx, sr.OperatorIDs)
 		if err != nil {
-			log.Errorf("Error soft-deleting operators: %s", err.Error())
+			log.For(ctx).Error().Msgf("Error soft-deleting operators: %s", err.Error())
 			return sr, err
 		}
 		if sr.HiddenOperators > 0 {
@@ -123,7 +123,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 	}
 	// Rollback on any errors
 	if len(sr.Errors) > 0 {
-		log.Errorf("Rollback due to one or more failures")
+		log.For(ctx).Error().Msgf("Rollback due to one or more failures")
 		return sr, fmt.Errorf("failed: %s", sr.Errors[0].Error())
 	}
 	return sr, nil

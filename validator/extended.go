@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"sort"
 
 	"github.com/interline-io/log"
@@ -10,6 +11,7 @@ import (
 )
 
 func buildRouteShapes(reader adapters.Reader) map[string]*geom.MultiLineString {
+	ctx := context.TODO()
 	// Generate some route geoms...
 	shapeLengths := map[string]float64{}
 	for shapeEnts := range reader.ShapesByShapeID() {
@@ -94,7 +96,7 @@ func buildRouteShapes(reader adapters.Reader) map[string]*geom.MultiLineString {
 					g = geom.NewMultiLineString(geom.XY)
 				}
 				if err := g.Push(shape); err != nil {
-					log.Errorf("failed to build route geometry: %s", err.Error())
+					log.For(ctx).Error().Msgf("failed to build route geometry: %s", err.Error())
 				} else {
 					routeShapes[rid] = g
 				}
