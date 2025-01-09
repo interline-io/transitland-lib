@@ -12,6 +12,7 @@ import (
 )
 
 func TestS3Request(t *testing.T) {
+	ctx := context.TODO()
 	s3Key := "test-s3-upload.txt"
 	s3Uri := os.Getenv("TL_TEST_S3_STORAGE")
 	testData := []byte("test s3 file upload")
@@ -37,7 +38,7 @@ func TestS3Request(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := uploader.Upload(context.Background(), s3Key, dmfr.Secret{}, r); err != nil {
+		if err := uploader.Upload(ctx, s3Key, dmfr.Secret{}, r); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -48,7 +49,7 @@ func TestS3Request(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		downloadReader, _, err := downloader.Download(context.Background(), s3Key, dmfr.Secret{}, dmfr.FeedAuthorization{})
+		downloadReader, _, err := downloader.Download(ctx, s3Key, dmfr.Secret{}, dmfr.FeedAuthorization{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -67,7 +68,7 @@ func TestS3Request(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		signedUrl, err := downloader.CreateSignedUrl(context.Background(), s3Key, "download.zip", dmfr.Secret{})
+		signedUrl, err := downloader.CreateSignedUrl(ctx, s3Key, "download.zip", dmfr.Secret{})
 		if err != nil {
 			t.Fatal(err)
 		}

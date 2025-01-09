@@ -31,6 +31,7 @@ func TestRTFetch(t *testing.T) {
 		{"404", "example.pb", "404.pb", false, "", 404, true, 0},
 		{"invalid", "invalid.pb", "invalid.pb", false, "cc0fcdb9351ee7cf357afc548236eff75acd8327", 200, true, 0},
 	}
+	ctx := context.TODO()
 	for _, tc := range tcs {
 		t.Run("", func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +54,7 @@ func TestRTFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := RTFetch(context.Background(), atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
+				fr, err := RTFetch(ctx, atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
 				if err != nil {
 					t.Error(err)
 					return err

@@ -14,6 +14,7 @@ import (
 
 // Full tests
 func TestSync(t *testing.T) {
+	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create a feed we will check is soft-deleted
 		testdb.CreateTestFeed(atx, "caltrain")
@@ -26,7 +27,7 @@ func TestSync(t *testing.T) {
 			Filenames:  regs,
 			HideUnseen: true,
 		}
-		found, err := Sync(context.Background(), atx, opts)
+		found, err := Sync(ctx, atx, opts)
 		if err != nil {
 			t.Error(err)
 		}
@@ -58,6 +59,7 @@ func TestSync(t *testing.T) {
 }
 
 func TestSync_Update(t *testing.T) {
+	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create existing feed
 		exposid := "f-c20-trimet"
@@ -71,7 +73,7 @@ func TestSync_Update(t *testing.T) {
 		opts := Options{
 			Filenames: regs,
 		}
-		if _, err = Sync(context.Background(), atx, opts); err != nil {
+		if _, err = Sync(ctx, atx, opts); err != nil {
 			t.Error(err)
 		}
 		// Check Updated values
@@ -145,7 +147,6 @@ func TestUpdateFeed(t *testing.T) {
 		}
 	})
 	t.Run("Update", func(t *testing.T) {
-		ctx := context.TODO()
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			rfeed := dmfr.Feed{}
 			rfeed.FeedID = "caltrain"
@@ -232,6 +233,7 @@ func TestHideUnseedFeeds(t *testing.T) {
 }
 
 func TestUpdateOperator(t *testing.T) {
+	ctx := context.TODO()
 	t.Run("New", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			// Import
@@ -242,7 +244,7 @@ func TestUpdateOperator(t *testing.T) {
 				Filenames:  regs,
 				HideUnseen: true,
 			}
-			found, err := Sync(context.Background(), atx, opts)
+			found, err := Sync(ctx, atx, opts)
 			if err != nil {
 				t.Error(err)
 			}
@@ -272,7 +274,6 @@ func TestUpdateOperator(t *testing.T) {
 	})
 	t.Run("Update", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-			ctx := context.TODO()
 			regs := []string{
 				testpath.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
 			}

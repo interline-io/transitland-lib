@@ -49,7 +49,7 @@ func setupImport(t *testing.T, atx tldb.Adapter) int {
 		t.Fatal(err)
 	}
 	// Import
-	if _, err := ImportFeedVersion(context.Background(), atx, Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
+	if _, err := ImportFeedVersion(ctx, atx, Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
 		t.Fatal(err)
 	}
 	return fv.ID

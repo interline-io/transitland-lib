@@ -11,6 +11,7 @@ import (
 )
 
 func TestLocalUpload(t *testing.T) {
+	ctx := context.TODO()
 	testData := []byte("test local file upload")
 	rw, err := os.CreateTemp(t.TempDir(), "local-upload.txt")
 	if err != nil {
@@ -27,13 +28,13 @@ func TestLocalUpload(t *testing.T) {
 	localUri := filepath.Join(t.TempDir(), "test.txt")
 	t.Log("uploading to:", localUri)
 	uploader := Local{}
-	if err := uploader.Upload(context.Background(), localUri, dmfr.Secret{}, r); err != nil {
+	if err := uploader.Upload(ctx, localUri, dmfr.Secret{}, r); err != nil {
 		t.Fatal(err)
 	}
 	// Download again
 	downloader := Local{}
 	t.Log("downloading from:", localUri)
-	downloadReader, _, err := downloader.Download(context.Background(), localUri, dmfr.Secret{}, dmfr.FeedAuthorization{})
+	downloadReader, _, err := downloader.Download(ctx, localUri, dmfr.Secret{}, dmfr.FeedAuthorization{})
 	if err != nil {
 		t.Fatal(err)
 	}

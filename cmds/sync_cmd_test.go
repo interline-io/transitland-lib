@@ -20,16 +20,15 @@ func TestSyncCommand(t *testing.T) {
 		{4, "", []string{testpath.RelPath("testdata/dmfr/example.json"), testpath.RelPath("testdata/dmfr/bayarea-local.dmfr.json")}},
 		{0, "no such file", []string{testpath.RelPath("testdata/dmfr/does-not-exist.json")}},
 	}
-	_ = cases
+	ctx := context.TODO()
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
-			ctx := context.TODO()
 			w := testdb.MustOpenWriter("sqlite3://:memory:", true)
 			c := SyncCommand{Adapter: w.Adapter}
 			if err := c.Parse(exp.command); err != nil {
 				t.Error(err)
 			}
-			err := c.Run(context.Background())
+			err := c.Run(ctx)
 			if err != nil {
 				if !strings.Contains(err.Error(), exp.errContains) {
 					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.errContains)

@@ -11,6 +11,7 @@ import (
 )
 
 func TestMerge(t *testing.T) {
+	ctx := context.TODO()
 	t.Run("merge", func(t *testing.T) {
 		f1 := testutil.ExampleFeedBART
 		f2 := testutil.ExampleFeedCaltrain
@@ -19,7 +20,7 @@ func TestMerge(t *testing.T) {
 		if err := cmd.Parse([]string{tdir, f1.URL, f2.URL}); err != nil {
 			t.Fatal(err)
 		}
-		if err := cmd.Run(context.Background()); err != nil {
+		if err := cmd.Run(ctx); err != nil {
 			t.Fatal(err)
 		}
 		outReader, err := ext.OpenReader(tdir)

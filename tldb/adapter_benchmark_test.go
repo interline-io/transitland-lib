@@ -14,9 +14,9 @@ import (
 
 // Tests adapter Insert performance.
 func Benchmark_Adapter_Insert(b *testing.B) {
+	ctx := context.TODO()
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
-			ctx := context.TODO()
 			adapter := v()
 			if err := adapter.Open(); err != nil {
 				b.Error(err)
@@ -42,9 +42,9 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 
 // Tests raw database performance.
 func Benchmark_Adapter_InsertRaw(b *testing.B) {
+	ctx := context.TODO()
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
-			ctx := context.TODO()
 			adapter := v()
 			if err := adapter.Open(); err != nil {
 				b.Error(err)
@@ -85,9 +85,9 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 // Tests multiple insert performance
 // There is a lot of setup in this test because we need a FeedVersion, Trip, and Stop
 func Benchmark_Adapter_MultiInsert(b *testing.B) {
+	ctx := context.TODO()
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
-			ctx := context.TODO()
 			adapter := v()
 			if err := adapter.Open(); err != nil {
 				b.Error(err)
