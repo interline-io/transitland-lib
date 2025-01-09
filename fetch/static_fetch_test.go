@@ -376,6 +376,7 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 		http.Error(w, "not found", 404)
 	}))
 	defer ts.Close()
+	ctx := context.TODO()
 	testdb.TempSqlite(func(atx tldb.Adapter) error {
 		tmpdir, err := ioutil.TempDir("", "gtfs")
 		if err != nil {
@@ -385,7 +386,7 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, err = StaticFetch(context.Background(), atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
+		_, err = StaticFetch(ctx, atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
 		if err != nil {
 			t.Error(err)
 			return nil

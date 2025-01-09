@@ -16,8 +16,7 @@ import (
 var testAdapters = map[string]func() Adapter{}
 
 // Interface tests for Adapter
-func testAdapter(t *testing.T, adapter Adapter) {
-	ctx := context.TODO()
+func testAdapter(ctx context.Context, t *testing.T, adapter Adapter) {
 	if err := adapter.Open(); err != nil {
 		t.Error(err)
 	}

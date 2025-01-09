@@ -1,6 +1,7 @@
 package tldb
 
 import (
+	"context"
 	"os"
 	"testing"
 )
@@ -19,5 +20,5 @@ func TestPostgresAdapter(t *testing.T) {
 		return
 	}
 	adapter := &PostgresAdapter{DBURL: dburl}
-	testAdapter(t, adapter)
+	testAdapter(context.TODO(), t, adapter)
 }

@@ -1,12 +1,10 @@
 package tlxy
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/stretchr/testify/assert"
 	geom "github.com/twpayne/go-geom"
@@ -14,7 +12,7 @@ import (
 )
 
 // cutBetweenPositions is similar to CutBetweenPoints but takes absolute positions.
-func cutBetweenPositionsDebug(line []Point, dists []float64, startDist float64, endDist float64, extraPts ...Point) []Point {
+func cutBetweenPositionsDebug(t *testing.T, line []Point, dists []float64, startDist float64, endDist float64, extraPts ...Point) []Point {
 	spt, ept, sidx, eidx, ok := cutBetweenPositions(line, dists, startDist, endDist)
 	if !ok {
 		return nil
@@ -89,7 +87,7 @@ func cutBetweenPositionsDebug(line []Point, dists []float64, startDist float64, 
 	})
 	fc := geojson.FeatureCollection{Features: fs}
 	d, _ := fc.MarshalJSON()
-	log.For(context.TODO()).Trace().Msgf("LineBetweenPositions: %s", string(d))
+	t.Logf("LineBetweenPositions: %s", string(d))
 	return ret
 }
 
@@ -125,7 +123,7 @@ func testCutPositionsDebug(t *testing.T, tc lineTestCase) {
 		extraPoints = append(extraPoints, tc.to)
 		tcDist = DistanceHaversine(tc.from, tc.to)
 	}
-	ret := cutBetweenPositionsDebug(tc.line, tc.dists, tc.a, tc.b, extraPoints...)
+	ret := cutBetweenPositionsDebug(t, tc.line, tc.dists, tc.a, tc.b, extraPoints...)
 	if tc.debugOnly {
 		return
 	}
