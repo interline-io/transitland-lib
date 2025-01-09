@@ -127,7 +127,7 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			return err
 		}
 		feeds := []dmfr.Feed{}
-		err = cmd.Adapter.Select(&feeds, qstr, qargs...)
+		err = cmd.Adapter.Select(ctx, &feeds, qstr, qargs...)
 		if err != nil {
 			return err
 		}
@@ -144,10 +144,10 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 	for _, osid := range cmd.FeedIDs {
 		// Get feed, create if not present and FeedCreate is specified
 		feed := dmfr.Feed{}
-		if err := adapter.Get(&feed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, osid); err == sql.ErrNoRows && cmd.CreateFeed {
+		if err := adapter.Get(ctx, &feed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, osid); err == sql.ErrNoRows && cmd.CreateFeed {
 			feed.FeedID = osid
 			feed.Spec = "gtfs"
-			if feed.ID, err = adapter.Insert(&feed); err != nil {
+			if feed.ID, err = adapter.Insert(ctx, &feed); err != nil {
 				return err
 			}
 		} else if err != nil {

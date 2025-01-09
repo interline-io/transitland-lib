@@ -61,7 +61,7 @@ type fetchCb func(request.FetchResponse) (validationResponse, error)
 func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	result := Result{URL: opts.FeedURL}
 	feed := dmfr.Feed{}
-	if err := atx.Get(&feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
+	if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
 		return result, err
 	}
 	if opts.FeedURL == "" {
@@ -165,7 +165,7 @@ func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Re
 		tlfetch.Success = false
 		tlfetch.FetchError.Set(result.FetchError.Error())
 	}
-	if _, err := atx.Insert(&tlfetch); err != nil {
+	if _, err := atx.Insert(ctx, &tlfetch); err != nil {
 		return result, err
 	}
 	return result, nil

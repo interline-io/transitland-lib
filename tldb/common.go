@@ -58,7 +58,7 @@ func find(ctx context.Context, adapter Adapter, dest interface{}) error {
 	if err != nil {
 		return err
 	}
-	return adapter.Get(dest, qstr, args...)
+	return adapter.Get(ctx, dest, qstr, args...)
 }
 
 // update a single record.
@@ -90,7 +90,7 @@ func update(ctx context.Context, adapter Adapter, ent interface{}, columns ...st
 		Where("id = ?", entid).
 		Suffix("returning id").
 		SetMap(colmap).
-		Exec()
+		ExecContext(ctx)
 	if n, err := result.RowsAffected(); err != nil || n != 1 {
 		return errors.New("failed to update record")
 	}

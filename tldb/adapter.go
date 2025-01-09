@@ -38,18 +38,10 @@ type Adapter interface {
 	Tx(func(Adapter) error) error
 	Sqrl() sq.StatementBuilderType
 	TableExists(string) (bool, error)
-	//////////
-	Insert(interface{}) (int, error)
-	Update(interface{}, ...string) error
-	Find(interface{}) error
-	Get(interface{}, string, ...interface{}) error
-	Select(interface{}, string, ...interface{}) error
-	MultiInsert([]interface{}) ([]int, error)
-	//////////
-	InsertContext(context.Context, interface{}) (int, error)
-	UpdateContext(context.Context, interface{}, ...string) error
-	FindContext(context.Context, interface{}) error
-	GetContext(context.Context, interface{}, string, ...interface{}) error
-	SelectContext(context.Context, interface{}, string, ...interface{}) error
-	MultiInsertContext(context.Context, []interface{}) ([]int, error)
+	Insert(context.Context, interface{}) (int, error)
+	Update(context.Context, interface{}, ...string) error
+	Find(context.Context, interface{}) error
+	Get(context.Context, interface{}, string, ...interface{}) error
+	Select(context.Context, interface{}, string, ...interface{}) error
+	MultiInsert(context.Context, []interface{}) ([]int, error)
 }

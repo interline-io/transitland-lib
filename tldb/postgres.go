@@ -123,50 +123,30 @@ func (adapter *PostgresAdapter) TableExists(t string) (bool, error) {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *PostgresAdapter) Find(dest interface{}) error {
-	return adapter.FindContext(context.Background(), dest)
-}
-
-func (adapter *PostgresAdapter) FindContext(ctx context.Context, dest interface{}) error {
+func (adapter *PostgresAdapter) Find(ctx context.Context, dest interface{}) error {
 	return find(ctx, adapter, dest)
 }
 
 // Get wraps sqlx.Get
-func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Get(adapter.db, dest, adapter.db.Rebind(qstr), args...)
-}
-
-func (adapter *PostgresAdapter) GetContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Get(adapter.db, dest, adapter.db.Rebind(qstr), args...)
+func (adapter *PostgresAdapter) Get(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.GetContext(context.TODO(), adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Select wraps sqlx.Select
-func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
-}
-
-func (adapter *PostgresAdapter) SelectContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
+func (adapter *PostgresAdapter) Select(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.SelectContext(ctx, adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Update a single entity.
-func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
-	return adapter.UpdateContext(context.Background(), ent, columns...)
-}
-
-func (adapter *PostgresAdapter) UpdateContext(ctx context.Context, ent interface{}, columns ...string) error {
+func (adapter *PostgresAdapter) Update(ctx context.Context, ent interface{}, columns ...string) error {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
 	return update(ctx, adapter, ent, columns...)
 }
 
-func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
-	return adapter.InsertContext(context.Background(), ent)
-}
-
 // Insert builds and executes an insert statement for the given entity.
-func (adapter *PostgresAdapter) InsertContext(ctx context.Context, ent interface{}) (int, error) {
+func (adapter *PostgresAdapter) Insert(ctx context.Context, ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
@@ -198,12 +178,8 @@ func (adapter *PostgresAdapter) InsertContext(ctx context.Context, ent interface
 	return int(eid.Int64), err
 }
 
-func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
-	return adapter.MultiInsertContext(context.Background(), ents)
-}
-
 // MultiInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) MultiInsertContext(ctx context.Context, ents []interface{}) ([]int, error) {
+func (adapter *PostgresAdapter) MultiInsert(ctx context.Context, ents []interface{}) ([]int, error) {
 	retids := []int{}
 	if len(ents) == 0 {
 		return retids, nil

@@ -130,7 +130,7 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = cmd.Adapter.Select(&qrs, qstr, qargs...)
+	err = cmd.Adapter.Select(ctx, &qrs, qstr, qargs...)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs 
 		INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id 
 		WHERE feed_versions.id = ?
 		`
-		if err := adapter.Get(&q, query, opts.FeedVersionID); err != nil {
+		if err := adapter.Get(ctx, &q, query, opts.FeedVersionID); err != nil {
 			log.For(ctx).Error().Msgf("Could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}

@@ -16,6 +16,7 @@ import (
 func Benchmark_Adapter_Insert(b *testing.B) {
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
+			ctx := context.TODO()
 			adapter := v()
 			if err := adapter.Open(); err != nil {
 				b.Error(err)
@@ -23,14 +24,14 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
-			feedid, err := adapter.Insert(&dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			feedid, err := adapter.Insert(ctx, &dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
 			if err != nil {
 				b.Error(err)
 			}
 			b.ResetTimer()
 			ent := dmfr.FeedVersion{FeedID: feedid}
 			for i := 0; i < b.N; i++ {
-				_, err := adapter.Insert(&ent)
+				_, err := adapter.Insert(ctx, &ent)
 				if err != nil {
 					b.Error(err)
 				}
@@ -51,7 +52,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
-			feedid, err := adapter.Insert(&dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			feedid, err := adapter.Insert(ctx, &dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
 			if err != nil {
 				b.Error(err)
 			}
@@ -134,7 +135,7 @@ func Benchmark_Adapter_MultiInsert(b *testing.B) {
 					ent.FeedVersionID = fvid
 					ents = append(ents, &ent)
 				}
-				if _, err := adapter.MultiInsert(ents); err != nil {
+				if _, err := adapter.MultiInsert(ctx, ents); err != nil {
 					b.Error(err)
 				}
 			}

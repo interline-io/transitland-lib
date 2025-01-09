@@ -1,6 +1,7 @@
 package tldb
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -16,6 +17,7 @@ var testAdapters = map[string]func() Adapter{}
 
 // Interface tests for Adapter
 func testAdapter(t *testing.T, adapter Adapter) {
+	ctx := context.TODO()
 	if err := adapter.Open(); err != nil {
 		t.Error(err)
 	}
@@ -44,13 +46,13 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		ent := gtfs.Trip{}
 		ent.ID = m.TripID
 		ent.TripHeadsign.Set(v)
-		err = adapter.Update(&ent, "trip_headsign")
+		err = adapter.Update(ctx, &ent, "trip_headsign")
 		if err != nil {
 			t.Error(err)
 		}
 		ent2 := gtfs.Trip{}
 		ent2.ID = m.TripID
-		if err := adapter.Find(&ent2); err != nil {
+		if err := adapter.Find(ctx, &ent2); err != nil {
 			t.Error(err)
 		}
 		if ent2.TripHeadsign.Val != v {
@@ -60,7 +62,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	t.Run("Get", func(t *testing.T) {
 		ent := gtfs.Trip{}
 		ent.ID = m.TripID
-		if err := adapter.Find(&ent); err != nil {
+		if err := adapter.Find(ctx, &ent); err != nil {
 			t.Error(err)
 		}
 		if ent.ID != m.TripID {
@@ -69,7 +71,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	})
 	t.Run("Select", func(t *testing.T) {
 		ents := []gtfs.Stop{}
-		if err := adapter.Select(&ents, "SELECT * FROM gtfs_stops WHERE id IN (?,?) AND feed_version_id = ? ORDER BY id ASC", m.StopID1, m.StopID2, m.FeedVersionID); err != nil {
+		if err := adapter.Select(ctx, &ents, "SELECT * FROM gtfs_stops WHERE id IN (?,?) AND feed_version_id = ? ORDER BY id ASC", m.StopID1, m.StopID2, m.FeedVersionID); err != nil {
 			t.Error(err)
 		}
 		if len(ents) == 0 {
@@ -119,11 +121,11 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		st2.DepartureTime = tt.NewSeconds(3)
 		sts := make([]interface{}, 0)
 		sts = append(sts, &st1, &st2)
-		if _, err := adapter.MultiInsert(sts); err != nil {
+		if _, err := adapter.MultiInsert(ctx, sts); err != nil {
 			t.Error(err)
 		}
 		sts2 := []gtfs.StopTime{}
-		if err := adapter.Select(&sts2, "SELECT * FROM gtfs_stop_times WHERE feed_version_id = ? ORDER BY stop_sequence ASC", m.FeedVersionID); err != nil {
+		if err := adapter.Select(ctx, &sts2, "SELECT * FROM gtfs_stop_times WHERE feed_version_id = ? ORDER BY stop_sequence ASC", m.FeedVersionID); err != nil {
 			t.Error(err)
 		}
 		if len(sts2) == 0 {
@@ -150,7 +152,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		ent.ID = m.TripID
 		ent.TripHeadsign.Set(v)
 		adapter.Tx(func(atx Adapter) error {
-			err := atx.Update(&ent, "trip_headsign")
+			err := atx.Update(ctx, &ent, "trip_headsign")
 			if err != nil {
 				t.Error(err)
 			}
@@ -158,7 +160,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		})
 		ent2 := gtfs.Trip{}
 		ent2.ID = m.TripID
-		if err := adapter.Find(&ent2); err != nil {
+		if err := adapter.Find(ctx, &ent2); err != nil {
 			t.Error(err)
 		}
 		if ent2.TripHeadsign.Val != v {
@@ -172,7 +174,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		ent.ID = m.TripID
 		ent.TripHeadsign.Set(v)
 		adapter.Tx(func(atx Adapter) error {
-			err := atx.Update(&ent, "trip_headsign")
+			err := atx.Update(ctx, &ent, "trip_headsign")
 			if err != nil {
 				t.Error(err)
 			}
@@ -180,7 +182,7 @@ func testAdapter(t *testing.T, adapter Adapter) {
 		})
 		ent2 := gtfs.Trip{}
 		ent2.ID = m.TripID
-		if err := adapter.Find(&ent2); err != nil {
+		if err := adapter.Find(ctx, &ent2); err != nil {
 			t.Error(err)
 		}
 		if ent2.TripHeadsign.Val == v {
@@ -191,11 +193,12 @@ func testAdapter(t *testing.T, adapter Adapter) {
 
 func createTestFeedVersion(adapter Adapter) (int, error) {
 	// Create Feed, FeedVersion
+	ctx := context.TODO()
 	m := 0
 	t := fmt.Sprintf("%d", time.Now().UnixNano())
 	feed := dmfr.Feed{}
 	feed.FeedID = t
-	feedid, err := adapter.Insert(&feed)
+	feedid, err := adapter.Insert(ctx, &feed)
 	if err != nil {
 		return m, err
 	}
@@ -205,7 +208,7 @@ func createTestFeedVersion(adapter Adapter) (int, error) {
 	fv.FeedID = feed.ID
 	fv.EarliestCalendarDate = tt.NewDate(time.Now())
 	fv.LatestCalendarDate = tt.NewDate(time.Now())
-	m, err = adapter.Insert(&fv)
+	m, err = adapter.Insert(ctx, &fv)
 	return m, err
 }
 
@@ -223,6 +226,7 @@ type minEnts struct {
 // with only enough detail to satisfy database constraints.
 // This function uses adapter.Insert.
 func createMinEntities(adapter Adapter) (minEnts, error) {
+	ctx := context.TODO()
 	m := minEnts{}
 	var err error
 	m.FeedVersionID, err = createTestFeedVersion(adapter)
@@ -236,7 +240,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	ent0.AgencyURL.Set("https://example.com")
 	ent0.AgencyTimezone.Set("America/Los_Angeles")
 	ent0.FeedVersionID = m.FeedVersionID
-	m.AgencyID, err = adapter.Insert(&ent0)
+	m.AgencyID, err = adapter.Insert(ctx, &ent0)
 	if err != nil {
 		return m, err
 	}
@@ -245,7 +249,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	ent4.RouteType.Set(0)
 	ent4.AgencyID.Set(strconv.Itoa(m.AgencyID))
 	ent4.FeedVersionID = m.FeedVersionID
-	m.RouteID, err = adapter.Insert(&ent4)
+	m.RouteID, err = adapter.Insert(ctx, &ent4)
 	if err != nil {
 		return m, err
 	}
@@ -262,7 +266,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	cal.Sunday.Set(0)
 	cal.Generated.Set(false)
 	cal.FeedVersionID = m.FeedVersionID
-	m.ServiceID, err = adapter.Insert(&cal)
+	m.ServiceID, err = adapter.Insert(ctx, &cal)
 	if err != nil {
 		return m, err
 	}
@@ -275,7 +279,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	ent1.JourneyPatternID.Set("")
 	ent1.JourneyPatternOffset.Set(0)
 	ent1.FeedVersionID = m.FeedVersionID
-	m.TripID, err = adapter.Insert(&ent1)
+	m.TripID, err = adapter.Insert(ctx, &ent1)
 	if err != nil {
 		return m, err
 	}
@@ -284,7 +288,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	ent2.SetCoordinates([2]float64{-123.0, 42.0})
 	ent2.FeedVersionID = m.FeedVersionID
 	ent2.LocationType.Set(0)
-	m.StopID1, err = adapter.Insert(&ent2)
+	m.StopID1, err = adapter.Insert(ctx, &ent2)
 	if err != nil {
 		return m, err
 	}
@@ -293,7 +297,7 @@ func createMinEntities(adapter Adapter) (minEnts, error) {
 	ent3.SetCoordinates([2]float64{-122.0, 43.0})
 	ent3.FeedVersionID = m.FeedVersionID
 	ent3.LocationType.Set(0)
-	m.StopID2, err = adapter.Insert(&ent3)
+	m.StopID2, err = adapter.Insert(ctx, &ent3)
 	if err != nil {
 		return m, err
 	}

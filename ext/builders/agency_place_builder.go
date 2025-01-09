@@ -120,7 +120,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	for ghPoint := range ghPoints {
 		gLat, gLon := geohash.Decode(ghPoint)
 		r := []foundPlace{}
-		if err := db.Select(&r, agencyPlaceQuery, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
+		if err := db.Select(ctx, &r, agencyPlaceQuery, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
 			// ok
 		} else if err != nil {
 			return nil
@@ -132,7 +132,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	for ghPoint := range ghPoints {
 		gLat, gLon := geohash.Decode(ghPoint)
 		r := []foundPlace{}
-		if err := db.Select(&r, agencyAdminQuery, gLon, gLat); err == sql.ErrNoRows {
+		if err := db.Select(ctx, &r, agencyAdminQuery, gLon, gLat); err == sql.ErrNoRows {
 			// ok
 		} else if err != nil {
 			return nil

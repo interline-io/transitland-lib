@@ -20,7 +20,7 @@ func UpdateFeed(ctx context.Context, atx tldb.Adapter, rfeed dmfr.Feed) (int, bo
 	updated := false
 	var errTx error
 	dbfeed := dmfr.Feed{}
-	if err := atx.Get(&dbfeed, "select * from current_feeds where onestop_id = ?", rfeed.FeedID); err == nil {
+	if err := atx.Get(ctx, &dbfeed, "select * from current_feeds where onestop_id = ?", rfeed.FeedID); err == nil {
 		// Exists, update key values
 		found = true
 		feedid = dbfeed.ID
@@ -29,10 +29,10 @@ func UpdateFeed(ctx context.Context, atx tldb.Adapter, rfeed dmfr.Feed) (int, bo
 			updated = true
 			rfeed.CreatedAt = dbfeed.CreatedAt
 			rfeed.DeletedAt = tt.Time{}
-			errTx = atx.Update(&rfeed)
+			errTx = atx.Update(ctx, &rfeed)
 		}
 	} else if err == sql.ErrNoRows {
-		feedid, errTx = atx.Insert(&rfeed)
+		feedid, errTx = atx.Insert(ctx, &rfeed)
 	} else {
 		// Error
 		errTx = err
@@ -65,7 +65,7 @@ func HideUnseedFeeds(ctx context.Context, atx tldb.Adapter, found []int) (int, e
 func UpdateFeedGeneratedOperators(ctx context.Context, atx tldb.Adapter, found []int) error {
 	for _, id := range found {
 		feed := dmfr.Feed{}
-		if err := atx.Get(&feed, "select * from current_feeds where id = ?", id); err != nil {
+		if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", id); err != nil {
 			return err
 		}
 		if _, err := feedUpdateOifs(atx, feed); err != nil {

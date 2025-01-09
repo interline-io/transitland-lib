@@ -125,28 +125,28 @@ func CreateFeedStats(ctx context.Context, atx tldb.Adapter, reader *tlcsv.Reader
 	// Insert FVSW
 	fvsw := stats.ServiceWindow
 	fvsw.FeedVersionID = fvid
-	if _, err := atx.Insert(&fvsw); err != nil {
+	if _, err := atx.Insert(ctx, &fvsw); err != nil {
 		return err
 	}
 
 	// Batch insert OSIDs
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
 		return err
 	}
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
 		return err
 	}
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
 		return err
 	}
 
 	// Insert FVFIs
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
 		return err
 	}
 
 	// Batch insert FVSLs
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
 		return err
 	}
 	return nil

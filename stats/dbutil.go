@@ -32,8 +32,8 @@ func FeedVersionTableDelete(ctx context.Context, atx tldb.Adapter, table string,
 func GetFeedState(ctx context.Context, atx tldb.Adapter, feedId int) (dmfr.FeedState, error) {
 	// Get state, create if necessary
 	fs := dmfr.FeedState{FeedID: feedId}
-	if err := atx.Get(&fs, `SELECT * FROM feed_states WHERE feed_id = ?`, feedId); err == sql.ErrNoRows {
-		fs.ID, err = atx.InsertContext(ctx, &fs)
+	if err := atx.Get(ctx, &fs, `SELECT * FROM feed_states WHERE feed_id = ?`, feedId); err == sql.ErrNoRows {
+		fs.ID, err = atx.Insert(ctx, &fs)
 		if err != nil {
 			return fs, err
 		}

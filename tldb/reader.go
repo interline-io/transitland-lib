@@ -1,6 +1,7 @@
 package tldb
 
 import (
+	"context"
 	"errors"
 	"reflect"
 
@@ -65,6 +66,7 @@ func (reader *Reader) Where() sq.SelectBuilder {
 // ReadEntities provides a generic interface for reading entities.
 func (reader *Reader) ReadEntities(c interface{}) error {
 	// Seems to work.
+	ctx := context.TODO()
 	outValue := reflect.ValueOf(c)
 	outInnerType := outValue.Type().Elem()
 	outInner := reflect.New(outInnerType)
@@ -82,7 +84,7 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	if err != nil {
 		return err
 	}
-	if err := reader.Adapter.Select(x.Interface(), qstr, args...); err != nil {
+	if err := reader.Adapter.Select(ctx, x.Interface(), qstr, args...); err != nil {
 		return err
 	}
 	go func() {
@@ -121,7 +123,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 			ents := []gtfs.StopTime{}
 			qstr, args, err := reader.Where().From("gtfs_stop_times").Where(sq.Eq{"trip_id": tripChunk}).OrderBy("trip_id", "stop_sequence").ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			// split by trip
 			var cc []gtfs.StopTime
 			for _, st := range ents {
@@ -151,7 +153,7 @@ func (reader *Reader) ShapesByShapeID(ids ...string) chan []gtfs.Shape {
 			ents := []service.ShapeLine{}
 			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- service.FlattenShape(ent)
 				lastId = ent.ID
@@ -174,7 +176,7 @@ func (reader *Reader) Shapes() chan gtfs.Shape {
 			ents := []service.ShapeLine{}
 			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				for _, shapeEnt := range service.FlattenShape(ent) {
 					out <- shapeEnt
@@ -199,7 +201,7 @@ func (reader *Reader) Stops() chan gtfs.Stop {
 			ents := []gtfs.Stop{}
 			qstr, args, err := reader.Where().From("gtfs_stops").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -222,7 +224,7 @@ func (reader *Reader) StopTimes() chan gtfs.StopTime {
 			ents := []gtfs.StopTime{}
 			qstr, args, err := reader.Where().From("gtfs_stop_times").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -245,7 +247,7 @@ func (reader *Reader) Agencies() chan gtfs.Agency {
 			ents := []gtfs.Agency{}
 			qstr, args, err := reader.Where().From("gtfs_agencies").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -268,7 +270,7 @@ func (reader *Reader) Calendars() chan gtfs.Calendar {
 			ents := []gtfs.Calendar{}
 			qstr, args, err := reader.Where().From("gtfs_calendars").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -291,7 +293,7 @@ func (reader *Reader) CalendarDates() chan gtfs.CalendarDate {
 			ents := []gtfs.CalendarDate{}
 			qstr, args, err := reader.Where().From("gtfs_calendar_dates").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -314,7 +316,7 @@ func (reader *Reader) FareAttributes() chan gtfs.FareAttribute {
 			ents := []gtfs.FareAttribute{}
 			qstr, args, err := reader.Where().From("gtfs_fare_attributes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -337,7 +339,7 @@ func (reader *Reader) FareRules() chan gtfs.FareRule {
 			ents := []gtfs.FareRule{}
 			qstr, args, err := reader.Where().From("gtfs_fare_rules").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -360,7 +362,7 @@ func (reader *Reader) FeedInfos() chan gtfs.FeedInfo {
 			ents := []gtfs.FeedInfo{}
 			qstr, args, err := reader.Where().From("gtfs_feed_infos").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -383,7 +385,7 @@ func (reader *Reader) Frequencies() chan gtfs.Frequency {
 			ents := []gtfs.Frequency{}
 			qstr, args, err := reader.Where().From("gtfs_frequencies").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -406,7 +408,7 @@ func (reader *Reader) Routes() chan gtfs.Route {
 			ents := []gtfs.Route{}
 			qstr, args, err := reader.Where().From("gtfs_routes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -429,7 +431,7 @@ func (reader *Reader) Transfers() chan gtfs.Transfer {
 			ents := []gtfs.Transfer{}
 			qstr, args, err := reader.Where().From("gtfs_transfers").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -452,7 +454,7 @@ func (reader *Reader) Pathways() chan gtfs.Pathway {
 			ents := []gtfs.Pathway{}
 			qstr, args, err := reader.Where().From("gtfs_pathways").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -475,7 +477,7 @@ func (reader *Reader) Levels() chan gtfs.Level {
 			ents := []gtfs.Level{}
 			qstr, args, err := reader.Where().From("gtfs_levels").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -498,7 +500,7 @@ func (reader *Reader) Trips() chan gtfs.Trip {
 			ents := []gtfs.Trip{}
 			qstr, args, err := reader.Where().From("gtfs_trips").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -514,6 +516,7 @@ func (reader *Reader) Trips() chan gtfs.Trip {
 
 // Attributions sends Attributions.
 func (reader *Reader) Attributions() chan gtfs.Attribution {
+	ctx := context.TODO()
 	out := make(chan gtfs.Attribution, bufferSize)
 	go func() {
 		lastId := 0
@@ -521,7 +524,7 @@ func (reader *Reader) Attributions() chan gtfs.Attribution {
 			ents := []gtfs.Attribution{}
 			qstr, args, err := reader.Where().From("gtfs_attributions").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(ctx, &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -537,6 +540,7 @@ func (reader *Reader) Attributions() chan gtfs.Attribution {
 
 // Translations sends Translations.
 func (reader *Reader) Translations() chan gtfs.Translation {
+	ctx := context.TODO()
 	out := make(chan gtfs.Translation, bufferSize)
 	go func() {
 		lastId := 0
@@ -544,7 +548,7 @@ func (reader *Reader) Translations() chan gtfs.Translation {
 			ents := []gtfs.Translation{}
 			qstr, args, err := reader.Where().From("gtfs_translations").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(ctx, &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.ID
@@ -599,6 +603,7 @@ func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
 }
 
 func ReadEntities[T tt.EntityWithID](reader *Reader, table string) chan T {
+	ctx := context.TODO()
 	out := make(chan T, bufferSize)
 	go func() {
 		lastId := 0
@@ -606,7 +611,7 @@ func ReadEntities[T tt.EntityWithID](reader *Reader, table string) chan T {
 			var ents []T
 			qstr, args, err := reader.Where().From(table).Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(ctx, &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.GetID()

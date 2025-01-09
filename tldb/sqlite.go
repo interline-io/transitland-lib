@@ -123,38 +123,22 @@ func (adapter *SQLiteAdapter) TableExists(t string) (bool, error) {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *SQLiteAdapter) Find(dest interface{}) error {
-	return adapter.FindContext(context.Background(), dest)
-}
-
-func (adapter *SQLiteAdapter) FindContext(ctx context.Context, dest interface{}) error {
+func (adapter *SQLiteAdapter) Find(ctx context.Context, dest interface{}) error {
 	return find(ctx, adapter, dest)
 }
 
 // Get wraps sqlx.Get
-func (adapter *SQLiteAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
-	return adapter.GetContext(context.Background(), dest, qstr, args...)
-}
-
-func (adapter *SQLiteAdapter) GetContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Get(adapter.db, dest, qstr, args...)
+func (adapter *SQLiteAdapter) Get(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.GetContext(ctx, adapter.db, dest, qstr, args...)
 }
 
 // Select wraps sqlx.Select
-func (adapter *SQLiteAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
-	return adapter.SelectContext(context.Background(), dest, qstr, args...)
-}
-
-func (adapter *SQLiteAdapter) SelectContext(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Select(adapter.db, dest, qstr, args...)
+func (adapter *SQLiteAdapter) Select(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.SelectContext(ctx, adapter.db, dest, qstr, args...)
 }
 
 // Update a single record.
-func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
-	return adapter.UpdateContext(context.Background(), ent, columns...)
-}
-
-func (adapter *SQLiteAdapter) UpdateContext(ctx context.Context, ent interface{}, columns ...string) error {
+func (adapter *SQLiteAdapter) Update(ctx context.Context, ent interface{}, columns ...string) error {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
@@ -162,11 +146,7 @@ func (adapter *SQLiteAdapter) UpdateContext(ctx context.Context, ent interface{}
 }
 
 // Insert builds and executes an insert statement for the given entity.
-func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
-	return adapter.InsertContext(context.Background(), ent)
-}
-
-func (adapter *SQLiteAdapter) InsertContext(ctx context.Context, ent interface{}) (int, error) {
+func (adapter *SQLiteAdapter) Insert(ctx context.Context, ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
@@ -204,11 +184,7 @@ func (adapter *SQLiteAdapter) InsertContext(ctx context.Context, ent interface{}
 }
 
 // MultiInsert inserts multiple entities.
-func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
-	return adapter.MultiInsertContext(context.Background(), ents)
-}
-
-func (adapter *SQLiteAdapter) MultiInsertContext(ctx context.Context, ents []interface{}) ([]int, error) {
+func (adapter *SQLiteAdapter) MultiInsert(ctx context.Context, ents []interface{}) ([]int, error) {
 	retids := []int{}
 	if len(ents) == 0 {
 		return retids, nil

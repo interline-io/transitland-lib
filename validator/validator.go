@@ -597,7 +597,7 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 	}
 
 	// Save record
-	if _, err := atx.Insert(result); err != nil {
+	if _, err := atx.Insert(ctx, result); err != nil {
 		log.For(ctx).Error().Err(err).Msg("failed to save validation report")
 		return err
 	}
@@ -612,13 +612,13 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 	}
 	for _, eg := range combinedErrors {
 		eg.ValidationReportID = result.ID
-		if _, err := atx.Insert(eg); err != nil {
+		if _, err := atx.Insert(ctx, eg); err != nil {
 			log.For(ctx).Error().Err(err).Msg("failed to save validation report error group")
 			return err
 		}
 		for _, egErr := range eg.Errors {
 			egErr.ValidationReportErrorGroupID = eg.ID
-			if _, err := atx.Insert(&egErr); err != nil {
+			if _, err := atx.Insert(ctx, &egErr); err != nil {
 				log.For(ctx).Error().Err(err).Msg("failed to save validation report error exemplar")
 				return err
 			}
@@ -645,7 +645,7 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 				TripRtNotFoundCount:     s.TripRtNotFoundCount,
 				TripRtAddedCount:        s.TripRtAddedCount,
 			}
-			if _, err := atx.Insert(&tripReport); err != nil {
+			if _, err := atx.Insert(ctx, &tripReport); err != nil {
 				log.For(ctx).Error().Err(err).Msg("failed to save trip update stat")
 				return err
 			}
@@ -668,7 +668,7 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 				TripRtNotFoundCount:     s.TripRtNotFoundCount,
 				TripRtAddedCount:        s.TripRtAddedCount,
 			}
-			if _, err := atx.Insert(&vpReport); err != nil {
+			if _, err := atx.Insert(ctx, &vpReport); err != nil {
 				log.For(ctx).Error().Err(err).Msg("failed to save vehicle position stat")
 				return err
 			}

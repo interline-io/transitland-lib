@@ -75,7 +75,7 @@ func (cmd *DeleteCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = cmd.Adapter.Get(&qrs, qstr, qargs...)
+	err = cmd.Adapter.Get(ctx, &qrs, qstr, qargs...)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("feed version %d does not exist", cmd.FVID)
 	} else if err != nil {

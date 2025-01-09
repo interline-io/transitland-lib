@@ -173,7 +173,7 @@ func (cmd *ImportCommand) Run(ctx context.Context) error {
 		return err
 	}
 	qrs := []int{}
-	err = cmd.Adapter.Select(&qrs, qstr, qargs...)
+	err = cmd.Adapter.Select(ctx, &qrs, qstr, qargs...)
 	if err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func dmfrImportWorker(ctx context.Context, adapter tldb.Adapter, dryrun bool, jo
 	}
 	for opts := range jobs {
 		q := qr{}
-		if err := adapter.Get(&q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
+		if err := adapter.Get(ctx, &q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
 			log.For(ctx).Error().Msgf("Could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}

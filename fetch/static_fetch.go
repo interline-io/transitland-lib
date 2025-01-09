@@ -71,7 +71,7 @@ func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFet
 
 		// Is this SHA1 already present?
 		checkfvid := dmfr.FeedVersion{}
-		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", fv.SHA1, fv.SHA1Dir)
+		err = atx.Get(ctx, &checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", fv.SHA1, fv.SHA1Dir)
 		if err == nil {
 			// Already present
 			fv = checkfvid
@@ -106,7 +106,7 @@ func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFet
 		}
 
 		// Create fv record
-		fv.ID, err = atx.Insert(&fv)
+		fv.ID, err = atx.Insert(ctx, &fv)
 		if err != nil {
 			// Fatal err
 			return vr, err

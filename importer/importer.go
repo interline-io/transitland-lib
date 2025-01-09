@@ -50,12 +50,12 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 	fvi.FeedVersionID = opts.FeedVersionID
 	fv := dmfr.FeedVersion{}
 	fv.ID = opts.FeedVersionID
-	if err := adapter.Find(&fv); err != nil {
+	if err := adapter.Find(ctx, &fv); err != nil {
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Check FVI
 	checkfviid := 0
-	if err := adapter.Get(&checkfviid, `SELECT id FROM feed_version_gtfs_imports WHERE feed_version_id = ?`, fv.ID); err == sql.ErrNoRows {
+	if err := adapter.Get(ctx, &checkfviid, `SELECT id FROM feed_version_gtfs_imports WHERE feed_version_id = ?`, fv.ID); err == sql.ErrNoRows {
 		// ok
 	} else if err == nil {
 		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
@@ -65,7 +65,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Create FVI
-	if fviid, err := adapter.Insert(&fvi); err == nil {
+	if fviid, err := adapter.Insert(ctx, &fvi); err == nil {
 		// note: handle OK first
 		fvi.ID = fviid
 	} else {
@@ -103,7 +103,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		fviresult.Success = true
 		fviresult.InProgress = false
 		fviresult.ExceptionLog = ""
-		if err := atx.Update(&fviresult); err != nil {
+		if err := atx.Update(ctx, &fviresult); err != nil {
 			// Serious error
 			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return err
@@ -115,7 +115,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
-		if err := adapter.Update(&fvi); err != nil {
+		if err := adapter.Update(ctx, &fvi); err != nil {
 			// Serious error
 			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
