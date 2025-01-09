@@ -113,7 +113,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	return nil
 }
 
-// Run this command) Run(ctx context.Context) error
+// Run this command
 func (cmd *ImportCommand) Run(ctx context.Context) error {
 	if cmd.Workers < 1 {
 		cmd.Workers = 1
