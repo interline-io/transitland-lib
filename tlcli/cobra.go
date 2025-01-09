@@ -86,8 +86,8 @@ func CobraHelper(r Runner, pc string, subc string) *cobra.Command {
 	return cobraCommand
 }
 
-func RunWithArgs(r Runner, args []string) error {
+func RunWithArgs(ctx context.Context, r Runner, args []string) error {
 	c := CobraHelper(r, "", "")
 	c.SetArgs(args)
-	return c.ExecuteContext(context.TODO())
+	return c.ExecuteContext(ctx)
 }

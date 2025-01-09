@@ -1,13 +1,97 @@
 package tlxy
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/stretchr/testify/assert"
+	geom "github.com/twpayne/go-geom"
+	"github.com/twpayne/go-geom/encoding/geojson"
 )
+
+// cutBetweenPositions is similar to CutBetweenPoints but takes absolute positions.
+func cutBetweenPositionsDebug(line []Point, dists []float64, startDist float64, endDist float64, extraPts ...Point) []Point {
+	spt, ept, sidx, eidx, ok := cutBetweenPositions(line, dists, startDist, endDist)
+	if !ok {
+		return nil
+	}
+	var ret []Point
+	ret = append(ret, spt)
+	ret = append(ret, line[sidx:eidx]...)
+	ret = append(ret, ept)
+
+	i := sidx
+	j := eidx
+
+	// DEBUG - Trace log a geojson feature with visualization of result
+	var fs []*geojson.Feature
+	var baseLine []float64
+	for _, pt := range ret {
+		baseLine = append(baseLine, pt.Lon, pt.Lat)
+	}
+	var rawLine []float64
+	for _, pt := range line {
+		rawLine = append(rawLine, pt.Lon, pt.Lat)
+	}
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "input line", "stroke": "#ff00ff", "stroke-width": 1, "stroke-opacity": 0.5},
+		Geometry:   geom.NewLineStringFlat(geom.XY, rawLine),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "return line", "stroke": "#aaaaaa", "stroke-width": 20, "stroke-opacity": 0.5},
+		Geometry:   geom.NewLineStringFlat(geom.XY, baseLine),
+	})
+	for _, extraPt := range extraPts {
+		fs = append(fs, &geojson.Feature{
+			Properties: map[string]any{"name": "extraPt", "marker-color": "#999999"},
+			Geometry:   geom.NewPointFlat(geom.XY, []float64{extraPt.Lon, extraPt.Lat}),
+		})
+	}
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "start matched segment", "stroke": "#00ffff", "stroke-width": 5, "stroke-opacity": 0.2},
+		Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+			line[i-1].Lon, line[i-1].Lat,
+			line[i].Lon, line[i].Lat,
+		}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "end matched segment", "stroke": "#ff00ff", "stroke-width": 5, "stroke-opacity": 0.2},
+		Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+			line[j-1].Lon, line[j-1].Lat,
+			line[j].Lon, line[j].Lat,
+		}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "start point", "marker-color": "#00ff00"},
+		Geometry:   geom.NewPointFlat(geom.XY, []float64{spt.Lon, spt.Lat}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "start point to line[i]", "stroke": "#00ff00"},
+		Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+			spt.Lon, spt.Lat,
+			line[i].Lon, line[i].Lat,
+		}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "ept", "marker-color": "#ff0000"},
+		Geometry:   geom.NewPointFlat(geom.XY, []float64{ept.Lon, ept.Lat}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "end point to line[j-1]", "stroke": "#ff0000"},
+		Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+			line[j-1].Lon, line[j-1].Lat,
+			ept.Lon, ept.Lat,
+		}),
+	})
+	fc := geojson.FeatureCollection{Features: fs}
+	d, _ := fc.MarshalJSON()
+	log.For(context.TODO()).Trace().Msgf("LineBetweenPositions: %s", string(d))
+	return ret
+}
 
 func TestSegmentClosestPoint(t *testing.T) {
 	tcs := []struct {

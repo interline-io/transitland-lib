@@ -83,9 +83,6 @@ func (cmd *ValidatorCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// result.DisplayErrors()
-	// result.DisplayWarnings()
-	// result.DisplaySummary()
 
 	// Write output
 	if cmd.OutputFile != "" {

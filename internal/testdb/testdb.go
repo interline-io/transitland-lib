@@ -18,7 +18,7 @@ func MustOpenWriter(dburl string, create bool) *tldb.Writer {
 
 // MustInsert panics on failure
 func MustInsert(atx tldb.Adapter, ent interface{}) int {
-	id, err := atx.Insert(context.TODO(), ent)
+	id, err := atx.Insert(context.Background(), ent)
 	if err != nil {
 		panic(err)
 	}
@@ -27,7 +27,7 @@ func MustInsert(atx tldb.Adapter, ent interface{}) int {
 
 // MustUpdate panics on failure
 func MustUpdate(atx tldb.Adapter, ent interface{}, columns ...string) {
-	err := atx.Update(context.TODO(), ent, columns...)
+	err := atx.Update(context.Background(), ent, columns...)
 	if err != nil {
 		panic(err)
 	}
@@ -35,7 +35,7 @@ func MustUpdate(atx tldb.Adapter, ent interface{}, columns ...string) {
 
 // MustFind panics on failure
 func MustFind(atx tldb.Adapter, ent interface{}) {
-	err := atx.Find(context.TODO(), ent)
+	err := atx.Find(context.Background(), ent)
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,7 @@ func MustFind(atx tldb.Adapter, ent interface{}) {
 
 // MustGet panics on failure
 func MustGet(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
-	err := atx.Get(context.TODO(), ent, qstr, qargs...)
+	err := atx.Get(context.Background(), ent, qstr, qargs...)
 	if err != nil {
 		panic(err)
 	}
@@ -51,7 +51,7 @@ func MustGet(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{
 
 // MustSelect panics on failure
 func MustSelect(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
-	err := atx.Select(context.TODO(), ent, qstr, qargs...)
+	err := atx.Select(context.Background(), ent, qstr, qargs...)
 	if err != nil {
 		panic(err)
 	}
@@ -61,7 +61,7 @@ func MustSelect(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interfa
 
 // ShouldInsert sends a test error on failure
 func ShouldInsert(t *testing.T, atx tldb.Adapter, ent interface{}) int {
-	id, err := atx.Insert(context.TODO(), ent)
+	id, err := atx.Insert(context.Background(), ent)
 	if err != nil {
 		t.Errorf("failed insert: %s", err.Error())
 	}
@@ -70,7 +70,7 @@ func ShouldInsert(t *testing.T, atx tldb.Adapter, ent interface{}) int {
 
 // ShouldUpdate sends a test error on failure
 func ShouldUpdate(t *testing.T, atx tldb.Adapter, ent interface{}, columns ...string) {
-	err := atx.Update(context.TODO(), ent, columns...)
+	err := atx.Update(context.Background(), ent, columns...)
 	if err != nil {
 		t.Errorf("failed update: %s", err.Error())
 	}
@@ -78,7 +78,7 @@ func ShouldUpdate(t *testing.T, atx tldb.Adapter, ent interface{}, columns ...st
 
 // ShouldFind sends a test error on failure
 func ShouldFind(t *testing.T, atx tldb.Adapter, ent interface{}) {
-	err := atx.Find(context.TODO(), ent)
+	err := atx.Find(context.Background(), ent)
 	if err != nil {
 		t.Errorf("failed find: %s", err.Error())
 	}
@@ -86,7 +86,7 @@ func ShouldFind(t *testing.T, atx tldb.Adapter, ent interface{}) {
 
 // ShouldGet sends a test error on failure
 func ShouldGet(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
-	err := atx.Get(context.TODO(), ent, qstr, qargs...)
+	err := atx.Get(context.Background(), ent, qstr, qargs...)
 	if err != nil {
 		t.Errorf("failed get: %s", err.Error())
 	}
@@ -94,7 +94,7 @@ func ShouldGet(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, qar
 
 // ShouldSelect sends a test error on failure
 func ShouldSelect(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
-	err := atx.Select(context.TODO(), ent, qstr, qargs...)
+	err := atx.Select(context.Background(), ent, qstr, qargs...)
 	if err != nil {
 		t.Errorf("failed select: %s", err.Error())
 	}

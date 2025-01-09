@@ -45,7 +45,7 @@ func TestRunWithArgs(t *testing.T) {
 	r := &testCommand{}
 	w := bytes.NewBuffer(nil)
 	r.w = w
-	RunWithArgs(r, []string{"--value=abc", "--slice=1", "--slice=2", "one", "two", "three"})
+	RunWithArgs(context.TODO(), r, []string{"--value=abc", "--slice=1", "--slice=2", "one", "two", "three"})
 	expect := `testCommand: flag: 'abc' slice: '1 2' args: 'one two three'`
 	assert.Equal(t, expect, w.String())
 }

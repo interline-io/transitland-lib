@@ -1,11 +1,9 @@
 package tt
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/jmoiron/sqlx/reflectx"
@@ -121,7 +119,6 @@ func ReflectCheckErrors(ent any) []error {
 }
 
 func ReflectUpdateKeys(emap *EntityMap, ent any) []error {
-	ctx := context.TODO()
 	var errs []error
 	fields := entityMapperCache.GetStructTagMap(ent)
 	for fieldName, fieldInfo := range fields {
@@ -134,7 +131,7 @@ func ReflectUpdateKeys(emap *EntityMap, ent any) []error {
 		fieldAddr := fieldValue.Addr().Interface()
 		fieldSet, ok := fieldAddr.(canSet)
 		if !ok {
-			log.For(ctx).Error().Msgf("type %T does not support reflect based reference checks", fieldAddr)
+			errs = append(errs, fmt.Errorf("type %T does not support reflect based reference checks", fieldAddr))
 			continue
 		}
 		eid := fieldSet.String()

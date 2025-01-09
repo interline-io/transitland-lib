@@ -167,9 +167,8 @@ func (adapter *TmpZipAdapter) Open() error {
 }
 
 func (adapter *TmpZipAdapter) Close() error {
-	ctx := context.TODO()
 	if adapter.tmpfilepath != "" {
-		log.For(ctx).Debug().Msgf("tmp zip adapter: removing temp file: %s", adapter.tmpfilepath)
+		log.For(context.TODO()).Debug().Msgf("tmp zip adapter: removing temp file: %s", adapter.tmpfilepath)
 		if err := os.Remove(adapter.tmpfilepath); err != nil {
 			return err
 		}
@@ -196,7 +195,6 @@ func (adapter *ZipAdapter) String() string {
 
 // Open the adapter. Return an error if the file does not exist.
 func (adapter *ZipAdapter) Open() error {
-	ctx := context.TODO()
 	// Split fragment
 	if spliturl := strings.SplitN(adapter.path, "#", 2); len(spliturl) > 1 {
 		adapter.path = spliturl[0]
@@ -224,7 +222,7 @@ func (adapter *ZipAdapter) Open() error {
 			// Get the full path
 			tmpfilepath = tmpfile.Name()
 			// Write the body to file
-			log.For(ctx).Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
+			log.For(context.TODO()).Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
 			io.Copy(tmpfile, r)
 		})
 		if err != nil {
@@ -234,7 +232,7 @@ func (adapter *ZipAdapter) Open() error {
 		adapter.internalPrefix = ""
 	}
 	if adapter.internalPrefix != "" {
-		log.For(ctx).Trace().Msgf("zip adapter: using internal prefix: %s", adapter.internalPrefix)
+		log.For(context.TODO()).Trace().Msgf("zip adapter: using internal prefix: %s", adapter.internalPrefix)
 	}
 	return nil
 }

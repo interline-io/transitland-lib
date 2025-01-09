@@ -54,11 +54,11 @@ func NewCache(mapper *reflectx.Mapper) *Cache {
 
 // GetStructTagMap .
 func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
-	ctx := context.TODO()
 	c.lock.Lock()
 	t := reflect.TypeOf(ent).String()
 	m, ok := c.typemap[t]
 	if !ok {
+		ctx := context.TODO()
 		m = FieldMap{}
 		fields := c.Mapper.TypeMap(reflect.TypeOf(ent))
 		for i, fi := range fields.Index {

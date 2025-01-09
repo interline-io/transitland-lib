@@ -41,8 +41,7 @@ func filterName(name string) string {
 	return strings.ToLower(re2.ReplaceAllString(re1.ReplaceAllString(name, "~"), ""))
 }
 
-func getPlaces(atx tldb.Adapter, id int) (string, error) {
-	ctx := context.TODO()
+func getPlaces(ctx context.Context, atx tldb.Adapter, id int) (string, error) {
 	agencyPlaces := []agencyPlace{}
 	if err := atx.Select(ctx, &agencyPlaces, "select name,adm0name,adm1name from tl_agency_places where agency_id = ? AND rank > 0.2 order by rank desc", id); err != nil {
 		return "", err
@@ -119,7 +118,7 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 			oifmatches[match] = true
 		} else {
 			updated = true
-			if places, err := getPlaces(atx, agencyID); err != nil {
+			if places, err := getPlaces(ctx, atx, agencyID); err != nil {
 				return false, err
 			} else {
 				oif.ResolvedPlaces.Set(places)
@@ -144,8 +143,7 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 	return updated, nil
 }
 
-func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
-	ctx := context.TODO()
+func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 	// Update OIFs that do not have an operator
 	updated := false
 	feedid := feed.ID
@@ -188,7 +186,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID.Val),
 				ResolvedName:         tt.NewString(agency.AgencyName.Val),
 			}
-			if places, err := getPlaces(atx, agency.ID); err != nil {
+			if places, err := getPlaces(ctx, atx, agency.ID); err != nil {
 				return false, err
 			} else {
 				oif.ResolvedPlaces.Set(places)

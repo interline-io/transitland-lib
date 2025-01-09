@@ -58,8 +58,7 @@ func (adapter *PostgresAdapter) Close() error {
 
 // Create an initial database schema.
 func (adapter *PostgresAdapter) Create() error {
-	ctx := context.TODO()
-	if _, err := adapter.db.ExecContext(ctx, "SELECT * FROM feed_versions LIMIT 0"); err == nil {
+	if _, err := adapter.db.ExecContext(context.TODO(), "SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
 	return errors.New("please run postgres migrations manually")
@@ -129,7 +128,7 @@ func (adapter *PostgresAdapter) Find(ctx context.Context, dest interface{}) erro
 
 // Get wraps sqlx.Get
 func (adapter *PostgresAdapter) Get(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.GetContext(context.TODO(), adapter.db, dest, adapter.db.Rebind(qstr), args...)
+	return sqlx.GetContext(ctx, adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Select wraps sqlx.Select

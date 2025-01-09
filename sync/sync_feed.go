@@ -68,7 +68,7 @@ func UpdateFeedGeneratedOperators(ctx context.Context, atx tldb.Adapter, found [
 		if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", id); err != nil {
 			return err
 		}
-		if _, err := feedUpdateOifs(atx, feed); err != nil {
+		if _, err := feedUpdateOifs(ctx, atx, feed); err != nil {
 			return err
 		}
 	}

@@ -165,12 +165,11 @@ type canSetFeedVersion interface {
 }
 
 func setFvid(input []any, fvid int) []any {
-	ctx := context.TODO()
 	for i := 0; i < len(input); i++ {
 		if v, ok := input[i].(canSetFeedVersion); ok {
 			v.SetFeedVersionID(fvid)
 		} else {
-			log.For(ctx).Error().Msgf("could not set feed version id for type %T", input[i])
+			log.For(context.TODO()).Error().Msgf("could not set feed version id for type %T", input[i])
 		}
 	}
 	return input
