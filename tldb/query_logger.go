@@ -17,15 +17,12 @@ import (
 
 var queryCounter = uint64(0)
 
-type sqrlExt interface {
-	QueryRow(string, ...interface{}) *sql.Row
-	Prepare(query string) (*sql.Stmt, error)
-}
-
 type Ext interface {
 	sqlx.Ext
 	sqlx.QueryerContext
 	sqlx.ExecerContext
+	// QueryRowContext is missing from sqlx.QueryerContext, despite having QueryRowContext
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
 }
 
 func init() {
@@ -40,12 +37,16 @@ type QueryLogger struct {
 
 // Exec .
 func (p *QueryLogger) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return p.ExecContext(context.Background(), query, args...)
+}
+
+func (p *QueryLogger) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	t, rid := p.queryId()
 	if p.Trace {
 		logt1(rid, query, args...)
 	}
 	defer queryTime(rid, t, query, args...)
-	return p.Ext.Exec(query, args...)
+	return p.Ext.ExecContext(ctx, query, args...)
 }
 
 // Query .
@@ -63,6 +64,10 @@ func (p *QueryLogger) QueryContext(ctx context.Context, query string, args ...in
 }
 
 // Queryx .
+func (p *QueryLogger) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
+	return p.QueryxContext(context.Background(), query, args...)
+}
+
 func (p *QueryLogger) QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
 	t, rid := p.queryId()
 	if p.Trace {
@@ -72,24 +77,25 @@ func (p *QueryLogger) QueryxContext(ctx context.Context, query string, args ...i
 	return p.Ext.QueryxContext(ctx, query, args...)
 }
 
-func (p *QueryLogger) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
-	return p.QueryxContext(context.Background(), query, args...)
-}
-
 // QueryRow .
 func (p *QueryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
+	return p.QueryRowContext(context.Background(), query, args...)
+}
+
+func (p *QueryLogger) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	t, rid := p.queryId()
 	if p.Trace {
 		logt1(rid, query, args...)
 	}
 	defer queryTime(rid, t, query, args...)
-	if v, ok := p.Ext.(sqrlExt); ok {
-		return v.QueryRow(query, args...)
-	}
-	return nil
+	return p.Ext.QueryRowContext(ctx, query, args...)
 }
 
 // QueryRowx .
+func (p *QueryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
+	return p.QueryRowxContext(context.Background(), query, args...)
+}
+
 func (p *QueryLogger) QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row {
 	t, rid := p.queryId()
 	if p.Trace {
@@ -97,23 +103,6 @@ func (p *QueryLogger) QueryRowxContext(ctx context.Context, query string, args .
 	}
 	defer queryTime(rid, t, query, args...)
 	return p.Ext.QueryRowxContext(ctx, query, args...)
-}
-
-func (p *QueryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
-	return p.Ext.QueryRowxContext(context.Background(), query, args...)
-}
-
-// Prepare
-func (p *QueryLogger) Prepare(query string) (*sql.Stmt, error) {
-	t, rid := p.queryId()
-	if p.Trace {
-		logt1(rid, query)
-	}
-	defer queryTime(rid, t, query)
-	if v, ok := p.Ext.(sqrlExt); ok {
-		return v.Prepare(query)
-	}
-	return nil, errors.New("not Preparer")
 }
 
 // Beginx .

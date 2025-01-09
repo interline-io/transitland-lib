@@ -22,7 +22,7 @@ func FeedVersionTableDelete(ctx context.Context, atx tldb.Adapter, table string,
 		}
 	}
 	where := sq.Eq{"feed_version_id": fvid}
-	_, err := atx.Sqrl().Delete(table).Where(where).Exec()
+	_, err := atx.Sqrl().Delete(table).Where(where).ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func GetFeedState(ctx context.Context, atx tldb.Adapter, feedId int) (dmfr.FeedS
 	// Get state, create if necessary
 	fs := dmfr.FeedState{FeedID: feedId}
 	if err := atx.Get(&fs, `SELECT * FROM feed_states WHERE feed_id = ?`, feedId); err == sql.ErrNoRows {
-		fs.ID, err = atx.Insert(&fs)
+		fs.ID, err = atx.InsertContext(ctx, &fs)
 		if err != nil {
 			return fs, err
 		}

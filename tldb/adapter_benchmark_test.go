@@ -1,6 +1,7 @@
 package tldb
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -42,6 +43,7 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 func Benchmark_Adapter_InsertRaw(b *testing.B) {
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
+			ctx := context.TODO()
 			adapter := v()
 			if err := adapter.Open(); err != nil {
 				b.Error(err)
@@ -57,7 +59,8 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 			ent := dmfr.FeedVersion{FeedID: feedid}
 			q := adapter.DBX().Rebind(`INSERT INTO feed_versions(feed_id, file, earliest_calendar_date, latest_calendar_date, sha1, sha1_dir,fetched_at, created_at, updated_at, url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
 			for i := 0; i < b.N; i++ {
-				_, err := adapter.DBX().Exec(
+				_, err := adapter.DBX().ExecContext(
+					ctx,
 					q,
 					ent.FeedID,
 					ent.File,
@@ -83,6 +86,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 func Benchmark_Adapter_MultiInsert(b *testing.B) {
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
+			ctx := context.TODO()
 			adapter := v()
 			if err := adapter.Open(); err != nil {
 				b.Error(err)
@@ -103,16 +107,16 @@ func Benchmark_Adapter_MultiInsert(b *testing.B) {
 			fvid := 0
 			tripid := 0
 			stopid := 0
-			if err := adapter.DBX().QueryRowx("SELECT id FROM feed_versions LIMIT 1").Scan(&fvid); err != nil {
+			if err := adapter.DBX().QueryRowxContext(ctx, "SELECT id FROM feed_versions LIMIT 1").Scan(&fvid); err != nil {
 				b.Error(err)
 			}
-			if err := adapter.DBX().QueryRowx("SELECT id FROM gtfs_trips LIMIT 1").Scan(&tripid); err != nil {
+			if err := adapter.DBX().QueryRowxContext(ctx, "SELECT id FROM gtfs_trips LIMIT 1").Scan(&tripid); err != nil {
 				b.Error(err)
 			}
-			if err := adapter.DBX().QueryRowx("SELECT id FROM gtfs_stops LIMIT 1").Scan(&stopid); err != nil {
+			if err := adapter.DBX().QueryRowxContext(ctx, "SELECT id FROM gtfs_stops LIMIT 1").Scan(&stopid); err != nil {
 				b.Error(err)
 			}
-			if _, err := adapter.DBX().Exec(adapter.DBX().Rebind("DELETE FROM gtfs_stop_times WHERE trip_id = ?"), tripid); err != nil {
+			if _, err := adapter.DBX().ExecContext(ctx, adapter.DBX().Rebind("DELETE FROM gtfs_stop_times WHERE trip_id = ?"), tripid); err != nil {
 				b.Error(err)
 			}
 			// Reset the timer

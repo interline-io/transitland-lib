@@ -272,18 +272,19 @@ func TestUpdateOperator(t *testing.T) {
 	})
 	t.Run("Update", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+			ctx := context.TODO()
 			regs := []string{
 				testpath.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
 			}
 			opts := Options{Filenames: regs}
-			found, err := Sync(context.Background(), atx, opts)
+			found, err := Sync(ctx, atx, opts)
 			if err != nil {
 				t.Error(err)
 			}
 			// Manual update so we can test operator updates
 			newFile := "test.dmfr.json"
 			_ = found
-			if _, err := atx.DBX().Exec("update current_operators set file = ? where onestop_id = ?", newFile, "o-mbta"); err != nil {
+			if _, err := atx.DBX().ExecContext(ctx, "update current_operators set file = ? where onestop_id = ?", newFile, "o-mbta"); err != nil {
 				t.Fatal(err)
 			}
 			// Check updated
@@ -296,7 +297,7 @@ func TestUpdateOperator(t *testing.T) {
 				t.Errorf("did not get updated file value, got '%s' expected '%s'", tlops[0].File.Val, newFile)
 			}
 			// Resync and check updated file
-			if _, err := Sync(context.Background(), atx, opts); err != nil {
+			if _, err := Sync(ctx, atx, opts); err != nil {
 				t.Error(err)
 			}
 			newOps := []dmfr.Operator{}

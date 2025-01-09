@@ -23,7 +23,7 @@ func UnimportSchedule(ctx context.Context, atx tldb.Adapter, id int) error {
 		}
 	}
 	where := sq.Eq{"feed_version_id": id}
-	if _, err := atx.Sqrl().Update("feed_version_gtfs_imports").Set("schedule_removed", true).Where(where).Exec(); err != nil {
+	if _, err := atx.Sqrl().Update("feed_version_gtfs_imports").Set("schedule_removed", true).Where(where).ExecContext(ctx); err != nil {
 		return err
 	}
 	return nil
@@ -54,11 +54,11 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 
 	// Remove fvgi
 	where := sq.Eq{"feed_version_id": id}
-	if _, err := atx.Sqrl().Delete("feed_version_gtfs_imports").Where(where).Exec(); err != nil {
+	if _, err := atx.Sqrl().Delete("feed_version_gtfs_imports").Where(where).ExecContext(ctx); err != nil {
 		return err
 	}
 	// Unset feed state
-	if _, err := atx.Sqrl().Update("feed_states").Set("feed_version_id", nil).Where(where).Exec(); err != nil {
+	if _, err := atx.Sqrl().Update("feed_states").Set("feed_version_id", nil).Where(where).ExecContext(ctx); err != nil {
 		return err
 	}
 	return nil

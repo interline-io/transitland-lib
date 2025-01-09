@@ -69,15 +69,16 @@ func (adapter *SQLiteAdapter) Close() error {
 
 // Create the database if necessary.
 func (adapter *SQLiteAdapter) Create() error {
+	ctx := context.TODO()
 	// Dont log, used often in tests
 	adb := adapter.db
 	if a, ok := adapter.db.(*QueryLogger); ok {
 		adb = a.Ext
 	}
-	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
+	if _, err := adb.ExecContext(ctx, "SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
-	_, err := adb.Exec(sqlite.SqliteSchema)
+	_, err := adb.ExecContext(ctx, sqlite.SqliteSchema)
 	return err
 }
 
@@ -178,12 +179,20 @@ func (adapter *SQLiteAdapter) InsertContext(ctx context.Context, ent interface{}
 	if err != nil {
 		return 0, err
 	}
+	var x sq.ExecerContext = adapter.db
+	if _, err := x.ExecContext(ctx, "select 1"); err != nil {
+		panic(err)
+	}
+	if _, ok := adapter.db.(sq.ExecerContext); !ok {
+		panic("no ctx")
+	}
+
 	q := sq.
 		Insert(table).
 		Columns(header...).
 		Values(vals...).
 		RunWith(adapter.db)
-	result, err := q.Exec() // TODO: ExecContext?
+	result, err := q.ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -228,7 +237,7 @@ func (adapter *SQLiteAdapter) MultiInsertContext(ctx context.Context, ents []int
 		if err != nil {
 			return retids, err
 		}
-		result, err := db.Exec(q, vals...)
+		result, err := db.ExecContext(ctx, q, vals...)
 		if err != nil {
 			return retids, err
 		}

@@ -58,7 +58,8 @@ func (adapter *PostgresAdapter) Close() error {
 
 // Create an initial database schema.
 func (adapter *PostgresAdapter) Create() error {
-	if _, err := adapter.db.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
+	ctx := context.TODO()
+	if _, err := adapter.db.ExecContext(ctx, "SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
 	return errors.New("please run postgres migrations manually")
@@ -184,9 +185,9 @@ func (adapter *PostgresAdapter) InsertContext(ctx context.Context, ent interface
 		Columns(header...).
 		Values(vals...)
 	if _, ok := ent.(canSetID); ok {
-		err = q.Suffix(`RETURNING "id"`).QueryRow().Scan(&eid) // TODO: QueryRowContext
+		err = q.Suffix(`RETURNING "id"`).QueryRowContext(ctx).Scan(&eid)
 	} else {
-		_, err = q.Exec()
+		_, err = q.ExecContext(ctx)
 	}
 	if err != nil {
 		return 0, err
@@ -239,7 +240,7 @@ func (adapter *PostgresAdapter) MultiInsertContext(ctx context.Context, ents []i
 				retids = append(retids, int(eid.Int64))
 			}
 		} else {
-			_, err = q.Exec() // TODO: ExecContext
+			_, err = q.ExecContext(ctx)
 			for range batch {
 				retids = append(retids, 0)
 			}

@@ -136,7 +136,7 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 	}
 	if len(deleteoifs) > 0 {
 		updated = true
-		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).Exec(); err != nil {
+		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).ExecContext(ctx); err != nil {
 			return false, err
 		}
 	}
@@ -144,6 +144,7 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 }
 
 func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
+	ctx := context.TODO()
 	// Update OIFs that do not have an operator
 	updated := false
 	feedid := feed.ID
@@ -214,7 +215,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 	}
 	if len(deleteoifs) > 0 {
 		updated = true
-		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).Exec(); err != nil {
+		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).ExecContext(ctx); err != nil {
 			return false, err
 		}
 	}
