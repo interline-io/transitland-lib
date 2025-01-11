@@ -88,7 +88,7 @@ func (r S3) DownloadFile(ctx context.Context, key string, fn string, secret dmfr
 		return err
 	}
 	defer rio.Close()
-	if _, _, err := copyTo(outf, rio, 0); err != nil {
+	if _, err := io.Copy(outf, rio); err != nil {
 		return err
 	}
 	return nil
@@ -170,7 +170,7 @@ func (h *S3) DownloadAll(ctx context.Context, outDir string, prefix string, secr
 			return nil, err
 		}
 		defer f.Close()
-		if _, _, err := copyTo(f, result.Body, 0); err != nil {
+		if _, err := io.Copy(f, result.Body); err != nil {
 			return nil, nil
 		}
 	}
