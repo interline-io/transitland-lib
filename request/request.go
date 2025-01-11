@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -27,6 +28,14 @@ type Uploader interface {
 
 type Presigner interface {
 	CreateSignedUrl(context.Context, string, string, dmfr.Secret) (string, error)
+}
+
+type DownloaderAll interface {
+	DownloadAll(ctx context.Context, outDir string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error)
+}
+
+type UploaderAll interface {
+	UploadAll(ctx context.Context, srcDir string, secret dmfr.Secret, checkFile func(string) bool) error
 }
 
 type FetchResponse struct {
@@ -232,4 +241,54 @@ func copyTo(dst io.Writer, src io.Reader, maxSize uint64) (int, string, error) {
 		}
 	}
 	return size, fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func mkdir(basePath string, path string) (string, error) {
+	ret := basePath
+	if path != "" {
+		ret = filepath.Join(basePath, path)
+	}
+	log.Info().Msgf("mkdir '%s'", ret)
+	if err := os.MkdirAll(ret, os.ModePerm|os.ModeDir); err != nil {
+		return "", err
+	}
+	return ret, nil
+}
+
+func findFiles(srcDir string, checkFile func(string) bool) ([]string, error) {
+	if checkFile == nil {
+		checkFile = func(string) bool { return true }
+	}
+	var ret []string
+	err := filepath.Walk(srcDir, func(path string, info fs.FileInfo, err error) error {
+		fn := info.Name()
+		if info.IsDir() {
+			return nil
+		}
+		if !info.Mode().IsRegular() {
+			return nil
+		}
+		if info.Size() == 0 {
+			return nil
+		}
+		if err != nil {
+			panic(err)
+		}
+		if checkFile != nil && !checkFile(fn) {
+			return nil
+		}
+		ret = append(ret, path)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func stripDir(srcDir string, fn string) string {
+	if !strings.HasSuffix(srcDir, "/") {
+		srcDir = srcDir + "/"
+	}
+	return strings.TrimPrefix(fn, srcDir)
 }

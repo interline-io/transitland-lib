@@ -10,6 +10,14 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
+func init() {
+	var _ Downloader = &S3{}
+	var _ DownloaderAll = &S3{}
+	var _ Uploader = &S3{}
+	var _ UploaderAll = &S3{}
+	var _ Presigner = &S3{}
+}
+
 type Local struct {
 	Directory string
 }
@@ -37,4 +45,60 @@ func (r Local) Exists(ctx context.Context, key string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func (r *Local) DownloadAll(ctx context.Context, outDir string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error) {
+	// Get matching files
+	downloadKeys, err := findFiles(r.Directory, checkFile)
+	if err != nil {
+		return nil, err
+	}
+	var ret []string
+	for _, key := range downloadKeys {
+		// Get relative location
+		relKey := stripDir(r.Directory, key)
+		// Get output location and create directory
+		outfn := filepath.Join(outDir, relKey)
+		if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
+			return nil, err
+		}
+		// Create output file
+		outf, err := os.Create(outfn)
+		if err != nil {
+			return nil, err
+		}
+		// Download to output file
+		rio, _, err := r.Download(ctx, relKey, secret, dmfr.FeedAuthorization{})
+		if err != nil {
+			return nil, err
+		}
+		if _, _, err := copyTo(outf, rio, 0); err != nil {
+			return nil, err
+		}
+		// Ok
+		ret = append(ret, outfn)
+	}
+	return ret, nil
+}
+
+func (r *Local) UploadAll(ctx context.Context, srcDir string, secret dmfr.Secret, checkFile func(string) bool) error {
+	// Get matching files
+	fns, err := findFiles(srcDir, checkFile)
+	if err != nil {
+		return err
+	}
+	for _, fn := range fns {
+		// Open for reading
+		f, err := os.Open(fn)
+		if err != nil {
+			return err
+		}
+		// Get relative location
+		relKey := stripDir(srcDir, fn)
+		// Upload to relative location
+		if err := r.Upload(ctx, relKey, secret, f); err != nil {
+			return err
+		}
+	}
+	return nil
 }
