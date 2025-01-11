@@ -2,7 +2,6 @@ package request
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -67,11 +66,12 @@ func TestLocal(t *testing.T) {
 		if len(fns) == 0 {
 			t.Fatal("did not copy any files")
 		}
+		if len(fns) != 9 {
+			t.Fatalf("expected 9 files, got %d", len(fns))
+		}
 		for _, fn := range fns {
-			if st, err := os.Stat(fn); err != nil {
+			if _, err := os.Stat(fn); err != nil {
 				t.Fatal(err)
-			} else {
-				fmt.Printf("%#v\n", st)
 			}
 		}
 	})

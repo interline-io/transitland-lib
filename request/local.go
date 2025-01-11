@@ -2,7 +2,6 @@ package request
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -31,10 +30,11 @@ func (r Local) Download(ctx context.Context, ustr string, secret dmfr.Secret, au
 func (r Local) Upload(ctx context.Context, key string, secret dmfr.Secret, uploadFile io.Reader) error {
 	// Do not overwrite files
 	fn := filepath.Join(r.Directory, key)
-	fmt.Println("Checking:", fn, "Dir:", r.Directory)
 	out, err := os.OpenFile(fn, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
-		fmt.Println("failed to open:", err)
+		return err
+	}
+	if _, err := mkdir(filepath.Dir(fn), ""); err != nil {
 		return err
 	}
 	_, err = io.Copy(out, uploadFile)

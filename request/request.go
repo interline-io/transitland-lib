@@ -276,7 +276,8 @@ func findFiles(srcDir string, checkFile func(string) bool) ([]string, error) {
 		if err != nil {
 			panic(err)
 		}
-		if checkFile != nil && !checkFile(fn) {
+		relFn := filepath.Join(stripDir(srcDir, path), fn)
+		if checkFile != nil && !checkFile(relFn) {
 			return nil
 		}
 		ret = append(ret, path)
