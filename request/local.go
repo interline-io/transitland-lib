@@ -11,11 +11,10 @@ import (
 )
 
 func init() {
-	var _ Downloader = &S3{}
-	var _ DownloaderAll = &S3{}
-	var _ Uploader = &S3{}
-	var _ UploaderAll = &S3{}
-	var _ Presigner = &S3{}
+	var _ Downloader = &Local{}
+	var _ DownloaderAll = &Local{}
+	var _ Uploader = &Local{}
+	var _ UploaderAll = &Local{}
 }
 
 type Local struct {
@@ -36,6 +35,31 @@ func (r Local) Upload(ctx context.Context, key string, secret dmfr.Secret, uploa
 	}
 	_, err = io.Copy(out, uploadFile)
 	return err
+}
+
+func (r Local) DownloadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error {
+	outf, err := os.Create(fn)
+	if err != nil {
+		return err
+	}
+	defer outf.Close()
+	rio, _, err := r.Download(ctx, key, dmfr.Secret{}, dmfr.FeedAuthorization{})
+	if err != nil {
+		return err
+	}
+	if _, _, err := copyTo(outf, rio, 0); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r Local) UploadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error {
+	inf, err := os.Open(fn)
+	if err != nil {
+		return err
+	}
+	defer inf.Close()
+	return r.Upload(ctx, key, dmfr.Secret{}, inf)
 }
 
 func (r Local) Exists(ctx context.Context, key string) bool {
@@ -62,17 +86,8 @@ func (r *Local) DownloadAll(ctx context.Context, outDir string, secret dmfr.Secr
 		if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
 			return nil, err
 		}
-		// Create output file
-		outf, err := os.Create(outfn)
-		if err != nil {
-			return nil, err
-		}
 		// Download to output file
-		rio, _, err := r.Download(ctx, relKey, secret, dmfr.FeedAuthorization{})
-		if err != nil {
-			return nil, err
-		}
-		if _, _, err := copyTo(outf, rio, 0); err != nil {
+		if err := r.DownloadFile(ctx, relKey, outfn, secret); err != nil {
 			return nil, err
 		}
 		// Ok
@@ -88,15 +103,10 @@ func (r *Local) UploadAll(ctx context.Context, srcDir string, secret dmfr.Secret
 		return err
 	}
 	for _, fn := range fns {
-		// Open for reading
-		f, err := os.Open(fn)
-		if err != nil {
-			return err
-		}
 		// Get relative location
 		relKey := stripDir(srcDir, fn)
 		// Upload to relative location
-		if err := r.Upload(ctx, relKey, secret, f); err != nil {
+		if err := r.UploadFile(ctx, relKey, fn, secret); err != nil {
 			return err
 		}
 	}

@@ -77,6 +77,32 @@ func (r S3) Upload(ctx context.Context, key string, secret dmfr.Secret, uploadFi
 	return err
 }
 
+func (r S3) DownloadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error {
+	outf, err := os.Create(fn)
+	if err != nil {
+		return err
+	}
+	defer outf.Close()
+	rio, _, err := r.Download(ctx, key, dmfr.Secret{}, dmfr.FeedAuthorization{})
+	if err != nil {
+		return err
+	}
+	defer rio.Close()
+	if _, _, err := copyTo(outf, rio, 0); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r S3) UploadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error {
+	inf, err := os.Open(fn)
+	if err != nil {
+		return err
+	}
+	defer inf.Close()
+	return r.Upload(ctx, key, dmfr.Secret{}, inf)
+}
+
 func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition string, secret dmfr.Secret) (string, error) {
 	client, err := awsConfig(ctx, secret)
 	if err != nil {
