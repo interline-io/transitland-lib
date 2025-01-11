@@ -32,12 +32,12 @@ type Presigner interface {
 
 type DownloaderAll interface {
 	DownloadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error
-	DownloadAll(ctx context.Context, outDir string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error)
+	DownloadAll(ctx context.Context, outDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error)
 }
 
 type UploaderAll interface {
 	UploadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error
-	UploadAll(ctx context.Context, srcDir string, secret dmfr.Secret, checkFile func(string) bool) error
+	UploadAll(ctx context.Context, srcDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) error
 }
 
 type FetchResponse struct {

@@ -94,7 +94,7 @@ func (r S3) DownloadFile(ctx context.Context, key string, fn string, secret dmfr
 	return nil
 }
 
-func (r S3) UploadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error {
+func (r S3) UploadFile(ctx context.Context, fn string, key string, secret dmfr.Secret) error {
 	inf, err := os.Open(fn)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 	return request.URL, err
 }
 
-func (h *S3) DownloadAll(ctx context.Context, outDir string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error) {
+func (h *S3) DownloadAll(ctx context.Context, outDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error) {
 	s, err := awsConfig(ctx, secret)
 	if err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func (h *S3) DownloadAll(ctx context.Context, outDir string, secret dmfr.Secret,
 	return ret, nil
 }
 
-func (h *S3) UploadAll(ctx context.Context, srcDir string, secret dmfr.Secret, checkFile func(string) bool) error {
+func (h *S3) UploadAll(ctx context.Context, srcDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) error {
 	fns, err := findFiles(srcDir, checkFile)
 	if err != nil {
 		return err

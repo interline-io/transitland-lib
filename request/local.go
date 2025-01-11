@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
@@ -50,16 +51,21 @@ func (r Local) DownloadFile(ctx context.Context, key string, fn string, secret d
 	if _, _, err := copyTo(outf, rio, 0); err != nil {
 		return err
 	}
+	log.Info().Msgf("copied: '%s' -> '%s'", key, fn)
 	return nil
 }
 
-func (r Local) UploadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error {
+func (r Local) UploadFile(ctx context.Context, fn string, key string, secret dmfr.Secret) error {
 	inf, err := os.Open(fn)
 	if err != nil {
 		return err
 	}
 	defer inf.Close()
-	return r.Upload(ctx, key, dmfr.Secret{}, inf)
+	if err := r.Upload(ctx, key, dmfr.Secret{}, inf); err != nil {
+		return err
+	}
+	log.Info().Msgf("copied: '%s' -> '%s'", fn, key)
+	return nil
 }
 
 func (r Local) Exists(ctx context.Context, key string) bool {
@@ -71,9 +77,17 @@ func (r Local) Exists(ctx context.Context, key string) bool {
 	return !info.IsDir()
 }
 
-func (r *Local) DownloadAll(ctx context.Context, outDir string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error) {
+func (r *Local) DownloadAll(ctx context.Context, outDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error) {
 	// Get matching files
-	downloadKeys, err := findFiles(r.Directory, checkFile)
+	downloadKeys, err := findFiles(r.Directory, func(b string) bool {
+		if !strings.HasPrefix(b, prefix) {
+			return false
+		}
+		if checkFile != nil {
+			return checkFile(b)
+		}
+		return true
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +96,7 @@ func (r *Local) DownloadAll(ctx context.Context, outDir string, secret dmfr.Secr
 		// Get relative location
 		relKey := stripDir(r.Directory, key)
 		// Get output location and create directory
-		outfn := filepath.Join(outDir, relKey)
+		outfn := filepath.Join(outDir, stripDir(prefix, relKey))
 		if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
 			return nil, err
 		}
@@ -96,7 +110,7 @@ func (r *Local) DownloadAll(ctx context.Context, outDir string, secret dmfr.Secr
 	return ret, nil
 }
 
-func (r *Local) UploadAll(ctx context.Context, srcDir string, secret dmfr.Secret, checkFile func(string) bool) error {
+func (r *Local) UploadAll(ctx context.Context, srcDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) error {
 	// Get matching files
 	fns, err := findFiles(srcDir, checkFile)
 	if err != nil {
@@ -104,9 +118,10 @@ func (r *Local) UploadAll(ctx context.Context, srcDir string, secret dmfr.Secret
 	}
 	for _, fn := range fns {
 		// Get relative location
-		relKey := stripDir(srcDir, fn)
+		uploadKey := stripDir(srcDir, fn)
+		uploadKey = filepath.Join(prefix, uploadKey)
 		// Upload to relative location
-		if err := r.UploadFile(ctx, relKey, fn, secret); err != nil {
+		if err := r.UploadFile(ctx, fn, uploadKey, secret); err != nil {
 			return err
 		}
 	}

@@ -31,12 +31,12 @@ func GetStore(ustr string) (Store, error) {
 	case "az":
 		s, storeErr = NewAzFromUrl(ustr)
 	case "file":
-		s = Local{Directory: ustr}
+		s = &Local{Directory: ustr}
 	default:
 		if ustr == "" {
 			return nil, errors.New("no storage specified")
 		} else {
-			s = Local{Directory: ustr}
+			s = &Local{Directory: ustr}
 		}
 	}
 	return s, storeErr
@@ -74,18 +74,18 @@ func UploadFile(storage string, src string, dst string) error {
 	return nil
 }
 
-func DownloadFile(ctx context.Context, storage string, key string, outfn string) error {
-	outf, err := os.Create(outfn)
-	if err != nil {
-		return err
-	}
-	defer outf.Close()
-	r, err := Download(storage, key)
-	if err != nil {
-		return err
-	}
-	if _, _, err := copyTo(outf, r, 0); err != nil {
-		return err
-	}
-	return nil
-}
+// func DownloadFile(ctx context.Context, storage string, key string, outfn string) error {
+// 	outf, err := os.Create(outfn)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer outf.Close()
+// 	r, err := Download(storage, key)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if _, _, err := copyTo(outf, r, 0); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }

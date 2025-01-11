@@ -58,7 +58,7 @@ func TestLocal(t *testing.T) {
 	t.Run("DownloadAll", func(t *testing.T) {
 		baseDir := testpath.RelPath("testdata")
 		d := Local{Directory: baseDir}
-		fns, err := d.DownloadAll(ctx, t.TempDir(), dmfr.Secret{}, func(key string) bool {
+		fns, err := d.DownloadAll(ctx, t.TempDir(), "rt", dmfr.Secret{}, func(key string) bool {
 			return strings.HasSuffix(key, ".pb")
 		})
 		if err != nil {
