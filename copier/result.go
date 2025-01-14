@@ -190,18 +190,6 @@ func (cr *Result) HandleError(fn string, errs []error) {
 	}
 }
 
-// func entityAsJson(ent tt.Entity) map[string]any {
-// 	ret := map[string]any{}
-// 	entBytes, err := json.Marshal(ent)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	if err := json.Unmarshal(entBytes, &ret); err != nil {
-// 		panic(err)
-// 	}
-// 	return ret
-// }
-
 // HandleEntityErrors .
 func (cr *Result) HandleEntityErrors(ent tt.Entity, errs []error, warns []error) {
 	// Get entity line, if available

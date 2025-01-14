@@ -2,13 +2,11 @@ package request
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
@@ -75,15 +73,14 @@ func (r *Local) DownloadAll(ctx context.Context, outDir string, prefix string, c
 	return ret, nil
 }
 func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
-	// Do not overwrite files
-	log.Trace().Msgf("uploading to key %s", key)
+	// Check if directory exists
 	fn := filepath.Join(r.Directory, key)
-	out, err := os.OpenFile(fn, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
-	if err != nil {
+	if _, err := mkdir(filepath.Dir(fn), ""); err != nil {
 		return err
 	}
-	log.Trace().Msgf("checking dir: %s", filepath.Dir(fn))
-	if _, err := mkdir(filepath.Dir(fn), ""); err != nil {
+	// Do not overwrite files
+	out, err := os.OpenFile(fn, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	if err != nil {
 		return err
 	}
 	_, err = io.Copy(out, uploadFile)
@@ -95,9 +92,6 @@ func (r *Local) UploadAll(ctx context.Context, srcDir string, prefix string, che
 	fns, err := findFiles(srcDir, checkFile)
 	if err != nil {
 		return err
-	}
-	for _, fn := range fns {
-		fmt.Println("found file:", fn)
 	}
 	for _, fn := range fns {
 		// Get relative location

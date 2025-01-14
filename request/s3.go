@@ -108,6 +108,7 @@ func (r *S3) DownloadAll(ctx context.Context, outDir string, prefix string, chec
 	}
 	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(r.Bucket),
+		Prefix: aws.String(prefix),
 	}
 	var objects []types.Object
 	var output *s3.ListObjectsV2Output
@@ -133,6 +134,7 @@ func (r *S3) DownloadAll(ctx context.Context, outDir string, prefix string, chec
 	/////////
 	var ret []string
 	for _, obj := range objects {
+		// Get the object again
 		result, err := s.GetObject(ctx, &s3.GetObjectInput{
 			Bucket: &r.Bucket,
 			Key:    obj.Key,
@@ -141,19 +143,17 @@ func (r *S3) DownloadAll(ctx context.Context, outDir string, prefix string, chec
 			return nil, err
 		}
 		defer result.Body.Close()
-		outfn := filepath.Join(outDir, *obj.Key)
+		// Strip the prefix from the object key, make path in output directory
+		outfn := filepath.Join(outDir, stripDir(prefix, *obj.Key))
+		// Create the directory if necessary
 		if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
 			return nil, err
 		}
-		ret = append(ret, outfn)
-		f, err := os.Create(outfn)
-		if err != nil {
+		// Save the file
+		if err := copyToFile(ctx, result.Body, outfn); err != nil {
 			return nil, err
 		}
-		defer f.Close()
-		if _, err := io.Copy(f, result.Body); err != nil {
-			return nil, nil
-		}
+		ret = append(ret, outfn)
 	}
 	return ret, nil
 }
@@ -164,11 +164,12 @@ func (h *S3) UploadAll(ctx context.Context, srcDir string, prefix string, checkF
 		return err
 	}
 	for _, fn := range fns {
-		key := filepath.Join("", stripDir(srcDir, fn))
 		f, err := os.Open(fn)
 		if err != nil {
 			return err
 		}
+		defer f.Close()
+		key := filepath.Join("", stripDir(srcDir, fn))
 		if err := h.Upload(ctx, key, f); err != nil {
 			return err
 		}

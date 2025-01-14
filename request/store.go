@@ -64,24 +64,27 @@ func GetBucket(ustr string) (Bucket, error) {
 		}
 	}
 	return s, storeErr
-
 }
 
-func DownloadFile(r Downloader, ctx context.Context, key string, fn string) error {
-	outf, err := os.Create(fn)
+func copyToFile(ctx context.Context, rio io.Reader, outfn string) error {
+	outf, err := os.Create(outfn)
 	if err != nil {
 		return err
 	}
 	defer outf.Close()
+	if _, err := io.Copy(outf, rio); err != nil {
+		return nil
+	}
+	return nil
+}
+
+func DownloadFile(r Downloader, ctx context.Context, key string, fn string) error {
 	rio, _, err := r.Download(ctx, key)
 	if err != nil {
 		return err
 	}
 	defer rio.Close()
-	if _, err := io.Copy(outf, rio); err != nil {
-		return err
-	}
-	return nil
+	return copyToFile(ctx, rio, fn)
 }
 
 func UploadFile(r Uploader, ctx context.Context, fn string, key string) error {

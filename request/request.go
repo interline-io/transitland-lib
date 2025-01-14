@@ -252,7 +252,7 @@ func findFiles(srcDir string, checkFile func(string) bool) ([]string, error) {
 		checkFile = func(string) bool { return true }
 	}
 	var ret []string
-	err := filepath.Walk(srcDir, func(path string, info fs.FileInfo, err error) error {
+	if err := filepath.Walk(srcDir, func(path string, info fs.FileInfo, err error) error {
 		fn := info.Name()
 		if info.IsDir() {
 			return nil
@@ -264,7 +264,7 @@ func findFiles(srcDir string, checkFile func(string) bool) ([]string, error) {
 			return nil
 		}
 		if err != nil {
-			panic(err)
+			return err
 		}
 		relFn := filepath.Join(stripDir(srcDir, path), fn)
 		if checkFile != nil && !checkFile(relFn) {
@@ -272,8 +272,7 @@ func findFiles(srcDir string, checkFile func(string) bool) ([]string, error) {
 		}
 		ret = append(ret, path)
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
 	return ret, nil
