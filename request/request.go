@@ -62,7 +62,7 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
 }
 
 func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
-	u, err := url.Parse(req.URL)
+	u, err := url.Parse(ustr)
 	if err != nil {
 		return nil, "", errors.New("could not parse url")
 	}
@@ -71,12 +71,12 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 	reqUrl := req.URL
 	switch u.Scheme {
 	case "http":
-		downloader = Http{}
+		downloader = &Http{}
 	case "https":
-		downloader = Http{}
+		downloader = &Http{}
 	case "ftp":
 		if req.AllowFTP {
-			downloader = Ftp{}
+			downloader = &Ftp{}
 		} else {
 			reqErr = errors.New("request not configured to allow ftp")
 		}
@@ -93,7 +93,7 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 			// Setup the local reader
 			reqDir := ""
 			reqDir, reqUrl = filepath.Split(strings.TrimPrefix(req.URL, "file://"))
-			downloader = Local{
+			downloader = &Local{
 				Directory: reqDir,
 			}
 		} else {

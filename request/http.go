@@ -13,11 +13,17 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
+func init() {
+	var _ Downloader = &Http{}
+	var _ CanSetSecret = &Http{}
+}
+
 type Http struct {
 	secret dmfr.Secret
 }
 
 func (r *Http) SetSecret(secret dmfr.Secret) error {
+	r.secret = secret
 	return nil
 }
 

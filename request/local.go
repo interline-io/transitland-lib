@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
@@ -32,8 +33,13 @@ func (r Local) Exists(ctx context.Context, key string) bool {
 }
 
 func (r Local) Download(ctx context.Context, ustr string) (io.ReadCloser, int, error) {
-	rd, err := os.Open(strings.TrimPrefix(filepath.Join(r.Directory, ustr), "file://"))
-	return rd, 0, err
+	fn := strings.TrimPrefix(filepath.Join(r.Directory, ustr), "file://")
+	rd, err := os.Open(fn)
+	if err != nil {
+		return nil, 0, err
+	}
+	log.Trace().Msgf("open '%s'", fn)
+	return rd, 0, nil
 }
 
 func (r Local) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
@@ -72,18 +78,20 @@ func (r *Local) DownloadAll(ctx context.Context, outDir string, prefix string, c
 	}
 	return ret, nil
 }
+
 func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
 	// Check if directory exists
-	fn := filepath.Join(r.Directory, key)
-	if _, err := mkdir(filepath.Dir(fn), ""); err != nil {
+	outfn := filepath.Join(r.Directory, key)
+	if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
 		return err
 	}
 	// Do not overwrite files
-	out, err := os.OpenFile(fn, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	outf, err := os.OpenFile(outfn, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(out, uploadFile)
+	_, err = io.Copy(outf, uploadFile)
+	log.Trace().Msgf("wrote '%s'", outfn)
 	return err
 }
 
