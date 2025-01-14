@@ -15,19 +15,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testBucket(t *testing.T, ctx context.Context, bucket Bucket) {
-	testDir := "testdata/request"
-	testRelkey := "testdata/request/readme.md"
+func testBucket(t *testing.T, ctx context.Context, bucket Store) {
 	uploadKey := "ok.md"
-	testFullkey := testpath.RelPath(testRelkey)
+	testFullkey := testpath.RelPath("testdata/request/readme.md")
 	checkfunc := func(b string) bool {
 		return strings.HasSuffix(b, ".txt")
 	}
-	checkRtFiles, err := findFiles(testpath.RelPath(testDir), checkfunc)
+	checkRtFiles, err := findFiles(testpath.RelPath("testdata/request"), checkfunc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	srcDir := testpath.RelPath(testDir)
+	srcDir := testpath.RelPath("testdata/request")
 	srcDirPrefix := "test-upload-all"
 
 	////////
@@ -46,7 +44,7 @@ func testBucket(t *testing.T, ctx context.Context, bucket Bucket) {
 	})
 	t.Run("Download", func(t *testing.T) {
 		// Now check the uploaded file
-		checkfn := filepath.Join(localCheckDir, "test.pb")
+		checkfn := filepath.Join(localCheckDir, uploadKey+".download")
 		if err := Download(ctx, bucket, uploadKey, checkfn); err != nil {
 			t.Fatal(err)
 		}
@@ -61,6 +59,13 @@ func testBucket(t *testing.T, ctx context.Context, bucket Bucket) {
 		if err := UploadAll(ctx, bucket, srcDir, srcDirPrefix, checkfunc); err != nil {
 			t.Fatal(err)
 		}
+	})
+	t.Run("ListKeys", func(t *testing.T) {
+		keys, err := bucket.ListKeys(ctx, srcDirPrefix)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, len(checkRtFiles), len(keys), "expected same number of keys in ListKeys")
 	})
 	t.Run("DownloadAll", func(t *testing.T) {
 		// Now download and check the uploaded files

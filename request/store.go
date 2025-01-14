@@ -18,25 +18,25 @@ type CanSetSecret interface {
 	SetSecret(dmfr.Secret) error
 }
 
-type Bucket interface {
+type Store interface {
 	Downloader
 	Uploader
 	CanSetSecret
-	ListAll(ctx context.Context, prefix string) ([]string, error)
+	ListKeys(ctx context.Context, prefix string) ([]string, error)
 }
 
 type Presigner interface {
 	CreateSignedUrl(context.Context, string, string) (string, error)
 }
 
-// GetBucket returns a configured bucket based on the provided url.
-func GetBucket(ustr string) (Bucket, error) {
+// Store returns a configured store based on the provided url.
+func GetStore(ustr string) (Store, error) {
 	u, err := url.Parse(ustr)
 	if err != nil {
 		return nil, err
 	}
 	var storeErr error
-	var s Bucket
+	var s Store
 	switch u.Scheme {
 	case "s3":
 		s, storeErr = NewS3FromUrl(ustr)
@@ -91,8 +91,8 @@ func UploadAll(ctx context.Context, r Uploader, srcDir string, prefix string, ch
 	return nil
 }
 
-func DownloadAll(ctx context.Context, r Bucket, outDir string, prefix string, checkFile func(string) bool) ([]string, error) {
-	keys, err := r.ListAll(ctx, prefix)
+func DownloadAll(ctx context.Context, r Store, outDir string, prefix string, checkFile func(string) bool) ([]string, error) {
+	keys, err := r.ListKeys(ctx, prefix)
 	if err != nil {
 		return nil, nil
 	}

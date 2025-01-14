@@ -582,7 +582,7 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 	// Save JSON
 	if reportStorage != "" {
 		result.File.Set(result.Key())
-		store, err := request.GetBucket(reportStorage)
+		store, err := request.GetStore(reportStorage)
 		if err != nil {
 			return err
 		}

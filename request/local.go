@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	var _ Bucket = &Local{}
+	var _ Store = &Local{}
 }
 
 type Local struct {
@@ -47,7 +47,7 @@ func (r Local) DownloadAuth(ctx context.Context, key string, auth dmfr.FeedAutho
 	return r.Download(ctx, key)
 }
 
-func (r *Local) ListAll(ctx context.Context, prefix string) ([]string, error) {
+func (r *Local) ListKeys(ctx context.Context, prefix string) ([]string, error) {
 	// Get matching files
 	downloadKeys, err := findFiles(r.Directory, func(b string) bool {
 		return strings.HasPrefix(b, prefix)

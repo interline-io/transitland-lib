@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	var _ Bucket = &S3{}
+	var _ Store = &S3{}
 	var _ Presigner = &S3{}
 }
 
@@ -73,7 +73,7 @@ func (r S3) DownloadAuth(ctx context.Context, key string, auth dmfr.FeedAuthoriz
 	return r.Download(ctx, key)
 }
 
-func (r S3) ListAll(ctx context.Context, prefix string) ([]string, error) {
+func (r S3) ListKeys(ctx context.Context, prefix string) ([]string, error) {
 	s, err := awsConfig(ctx, r.secret)
 	if err != nil {
 		return nil, err
