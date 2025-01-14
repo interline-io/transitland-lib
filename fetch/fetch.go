@@ -136,12 +136,7 @@ func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Re
 		if err != nil {
 			return result, err
 		}
-		rio, err := os.Open(uploadFile)
-		if err != nil {
-			return result, err
-		}
-		defer rio.Close()
-		if err := store.Upload(ctx, uploadDest, rio); err != nil {
+		if err := request.Upload(ctx, store, uploadFile, uploadDest); err != nil {
 			return result, err
 		}
 	}
