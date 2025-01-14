@@ -3,7 +3,6 @@ package request
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/url"
 	"os"
@@ -48,7 +47,7 @@ func (r *S3) SetSecret(secret dmfr.Secret) error {
 func (r S3) getFullKey(key string) string {
 	trimKey := strings.TrimPrefix(key, "/")
 	trimPrefix := strings.TrimPrefix(r.KeyPrefix, "/")
-	return trimPrefix + "/" + trimKey
+	return "/" + trimPrefix + "/" + trimKey
 }
 
 func (r S3) Download(ctx context.Context, key string) (io.ReadCloser, int, error) {
@@ -83,7 +82,7 @@ func (r *S3) DownloadAll(ctx context.Context, outDir string, downloadPrefix stri
 		Bucket: aws.String(r.Bucket),
 		Prefix: aws.String(r.getFullKey(downloadPrefix)),
 	}
-	var objects []types.Object
+	var downloadKeys []string
 	var output *s3.ListObjectsV2Output
 	objectPaginator := s3.NewListObjectsV2Paginator(s, input)
 	for objectPaginator.HasMorePages() {
@@ -99,11 +98,9 @@ func (r *S3) DownloadAll(ctx context.Context, outDir string, downloadPrefix stri
 			if obj.Key == nil {
 				continue
 			}
-			key := *obj.Key
-			fmt.Println("key?", key)
-			if checkFile(key) {
-				fmt.Println("\tok")
-				objects = append(objects, obj)
+			relKey := stripDir(r.KeyPrefix, *obj.Key)
+			if checkFile(relKey) {
+				downloadKeys = append(downloadKeys, relKey)
 			}
 		}
 	}
@@ -112,22 +109,18 @@ func (r *S3) DownloadAll(ctx context.Context, outDir string, downloadPrefix stri
 	}
 	/////////
 	var ret []string
-	for _, obj := range objects {
+	for _, downloadKey := range downloadKeys {
 		// Get the object again
 		result, err := s.GetObject(ctx, &s3.GetObjectInput{
-			Bucket: &r.Bucket,
-			Key:    obj.Key,
+			Bucket: aws.String(r.Bucket),
+			Key:    aws.String(r.getFullKey(downloadKey)),
 		})
 		if err != nil {
 			return nil, err
 		}
 		defer result.Body.Close()
 		// Strip the prefix from the object key, make path in output directory
-		relKey := *obj.Key
-		relKey = stripDir(r.KeyPrefix, relKey)
-		relKey = stripDir(downloadPrefix, relKey)
-		outfn := filepath.Join(outDir, relKey)
-		fmt.Println("full key:", *obj.Key, "rel key:", relKey, "outfn:", outfn, "key prefix:", r.KeyPrefix, "downloadPrefix:", downloadPrefix)
+		outfn := filepath.Join(outDir, stripDir(downloadPrefix, downloadKey))
 		// Create the directory if necessary
 		if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
 			return nil, err
