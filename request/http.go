@@ -15,7 +15,6 @@ import (
 
 func init() {
 	var _ Downloader = &Http{}
-	var _ CanSetSecret = &Http{}
 }
 
 type Http struct {

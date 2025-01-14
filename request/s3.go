@@ -5,8 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,7 +27,10 @@ func NewS3FromUrl(ustr string) (*S3, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := S3{Bucket: u.Host, KeyPrefix: u.Path}
+	s := S3{
+		Bucket:    strings.TrimPrefix(u.Host, "s3://"),
+		KeyPrefix: u.Path,
+	}
 	return &s, nil
 }
 
@@ -57,11 +58,10 @@ func (r S3) Download(ctx context.Context, key string) (io.ReadCloser, int, error
 		return nil, 0, err
 	}
 	// Get object
-	s3bucket := strings.TrimPrefix(r.Bucket, "s3://")
-	s3key := r.getFullKey(key)
+	log.Debug().Msgf("s3 store: downloading key '%s', full key is '%s'", key, r.getFullKey(key))
 	s3obj, err := client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(s3bucket),
-		Key:    aws.String(s3key),
+		Bucket: aws.String(r.Bucket),
+		Key:    aws.String(r.getFullKey(key)),
 	})
 	if err != nil {
 		return nil, 0, err
@@ -73,14 +73,14 @@ func (r S3) DownloadAuth(ctx context.Context, key string, auth dmfr.FeedAuthoriz
 	return r.Download(ctx, key)
 }
 
-func (r *S3) DownloadAll(ctx context.Context, outDir string, downloadPrefix string, checkFile func(string) bool) ([]string, error) {
+func (r S3) ListAll(ctx context.Context, prefix string) ([]string, error) {
 	s, err := awsConfig(ctx, r.secret)
 	if err != nil {
 		return nil, err
 	}
 	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(r.Bucket),
-		Prefix: aws.String(r.getFullKey(downloadPrefix)),
+		Prefix: aws.String(r.getFullKey(prefix)),
 	}
 	var downloadKeys []string
 	var output *s3.ListObjectsV2Output
@@ -98,40 +98,13 @@ func (r *S3) DownloadAll(ctx context.Context, outDir string, downloadPrefix stri
 			if obj.Key == nil {
 				continue
 			}
-			relKey := stripDir(r.KeyPrefix, *obj.Key)
-			if checkFile(relKey) {
-				downloadKeys = append(downloadKeys, relKey)
-			}
+			downloadKeys = append(downloadKeys, stripDir(r.KeyPrefix, *obj.Key))
 		}
 	}
 	if err != nil {
 		return nil, err
 	}
-	/////////
-	var ret []string
-	for _, downloadKey := range downloadKeys {
-		// Get the object again
-		result, err := s.GetObject(ctx, &s3.GetObjectInput{
-			Bucket: aws.String(r.Bucket),
-			Key:    aws.String(r.getFullKey(downloadKey)),
-		})
-		if err != nil {
-			return nil, err
-		}
-		defer result.Body.Close()
-		// Strip the prefix from the object key, make path in output directory
-		outfn := filepath.Join(outDir, stripDir(downloadPrefix, downloadKey))
-		// Create the directory if necessary
-		if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
-			return nil, err
-		}
-		// Save the file
-		if err := copyToFile(ctx, result.Body, outfn); err != nil {
-			return nil, err
-		}
-		ret = append(ret, outfn)
-	}
-	return ret, nil
+	return downloadKeys, nil
 }
 
 func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
@@ -141,35 +114,14 @@ func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		return err
 	}
 	// Save object
-	s3bucket := strings.TrimPrefix(r.Bucket, "s3://")
-	s3key := r.getFullKey(key)
-	log.Debug().Msgf("s3 store: uploading to key '%s', full key is '%s'", key, s3key)
+	log.Debug().Msgf("s3 store: uploading to key '%s', full key is '%s'", key, r.getFullKey(key))
 	result, err := client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(s3bucket),
-		Key:    aws.String(s3key),
+		Bucket: aws.String(r.Bucket),
+		Key:    aws.String(r.getFullKey(key)),
 		Body:   uploadFile,
 	})
 	_ = result
 	return err
-}
-
-func (h *S3) UploadAll(ctx context.Context, srcDir string, prefix string, checkFile func(string) bool) error {
-	fns, err := findFiles(srcDir, checkFile)
-	if err != nil {
-		return err
-	}
-	for _, fn := range fns {
-		f, err := os.Open(fn)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		key := filepath.Join(prefix, stripDir(srcDir, fn))
-		if err := h.Upload(ctx, key, f); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition string) (string, error) {
@@ -177,12 +129,10 @@ func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 	if err != nil {
 		return "", err
 	}
-	s3bucket := strings.TrimPrefix(r.Bucket, "s3://")
-	s3key := r.getFullKey(key)
 	presignClient := s3.NewPresignClient(client)
 	request, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(s3bucket),
-		Key:    aws.String(s3key),
+		Bucket: aws.String(r.Bucket),
+		Key:    aws.String(r.getFullKey(key)),
 	}, func(opts *s3.PresignOptions) {
 		opts.Expires = time.Duration(1 * time.Hour)
 	})

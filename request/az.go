@@ -63,7 +63,7 @@ func (r Az) DownloadAuth(ctx context.Context, key string, auth dmfr.FeedAuthoriz
 	return r.Download(ctx, key)
 }
 
-func (r Az) DownloadAll(ctx context.Context, outDir string, prefix string, checkFile func(string) bool) ([]string, error) {
+func (r Az) ListAll(ctx context.Context, prefix string) ([]string, error) {
 	return nil, errors.New("not implemented")
 }
 
@@ -82,10 +82,6 @@ func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 	}
 	_, err = blobClient.UploadStream(ctx, r.Container, azKey, uploadFile, nil)
 	return err
-}
-
-func (r Az) UploadAll(ctx context.Context, srcDir string, prefix string, checkFile func(string) bool) error {
-	return errors.New("not implemented")
 }
 
 func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition string) (string, error) {

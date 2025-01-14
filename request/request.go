@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -233,57 +232,4 @@ func copyTo(dst io.Writer, src io.Reader, maxSize uint64) (int, string, error) {
 		}
 	}
 	return size, fmt.Sprintf("%x", h.Sum(nil)), nil
-}
-
-func mkdir(basePath string, path string) (string, error) {
-	ret := basePath
-	if path != "" {
-		ret = filepath.Join(basePath, path)
-	}
-	// log.Info().Msgf("mkdir '%s'", ret)
-	if err := os.MkdirAll(ret, os.ModePerm|os.ModeDir); err != nil {
-		return "", err
-	}
-	return ret, nil
-}
-
-func findFiles(srcDir string, checkFile func(string) bool) ([]string, error) {
-	if checkFile == nil {
-		checkFile = func(string) bool { return true }
-	}
-	var ret []string
-	if err := filepath.Walk(srcDir, func(path string, info fs.FileInfo, err error) error {
-		if info == nil {
-			return errors.New("no file")
-		}
-		fn := info.Name()
-		if info.IsDir() {
-			return nil
-		}
-		if !info.Mode().IsRegular() {
-			return nil
-		}
-		if info.Size() == 0 {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		relFn := filepath.Join(stripDir(srcDir, path), fn)
-		if checkFile != nil && !checkFile(relFn) {
-			return nil
-		}
-		ret = append(ret, path)
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	return ret, nil
-}
-
-func stripDir(srcDir string, fn string) string {
-	if !strings.HasSuffix(srcDir, "/") {
-		srcDir = srcDir + "/"
-	}
-	return strings.TrimPrefix(fn, srcDir)
 }
