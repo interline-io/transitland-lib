@@ -1,8 +1,10 @@
 package request
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -235,6 +237,33 @@ func testBucket(t *testing.T, ctx context.Context, bucket Bucket) {
 
 		}
 	})
+	if bucketSign, ok := bucket.(Presigner); ok {
+		t.Run("CreateSignedUrl", func(t *testing.T) {
+			// Upload file
+			signKey := "test-upload.zip"
+			testData := []byte("test file upload")
+			data := bytes.NewBuffer(testData)
+			if err := bucket.Upload(ctx, signKey, data); err != nil {
+				t.Fatal(err)
+			}
+			// Download again
+			signedUrl, err := bucketSign.CreateSignedUrl(ctx, signKey, "download.zip")
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := http.Get(signedUrl)
+			if err != nil {
+				t.Error(err)
+			}
+			downloadData, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(downloadData) != string(testData) {
+				t.Errorf("got data '%s', expected '%s'", string(downloadData), string(testData))
+			}
+		})
+	}
 }
 
 func filesEqual(a string, b string) (bool, error) {

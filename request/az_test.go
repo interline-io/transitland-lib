@@ -2,17 +2,13 @@ package request
 
 import (
 	"context"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"testing"
 )
 
-func TestAzRequest(t *testing.T) {
-	azKey := "test-az-upload.txt"
+func TestAz(t *testing.T) {
+	ctx := context.TODO()
 	azUri := os.Getenv("TL_TEST_AZ_STORAGE")
-	testData := []byte("test azure file upload")
 	if azUri == "" {
 		t.Skip("Set TL_TEST_AZ_STORAGE for this test")
 		return
