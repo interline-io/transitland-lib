@@ -240,7 +240,7 @@ func mkdir(basePath string, path string) (string, error) {
 	if path != "" {
 		ret = filepath.Join(basePath, path)
 	}
-	log.Info().Msgf("mkdir '%s'", ret)
+	// log.Info().Msgf("mkdir '%s'", ret)
 	if err := os.MkdirAll(ret, os.ModePerm|os.ModeDir); err != nil {
 		return "", err
 	}
@@ -253,6 +253,9 @@ func findFiles(srcDir string, checkFile func(string) bool) ([]string, error) {
 	}
 	var ret []string
 	if err := filepath.Walk(srcDir, func(path string, info fs.FileInfo, err error) error {
+		if info == nil {
+			return errors.New("no file")
+		}
 		fn := info.Name()
 		if info.IsDir() {
 			return nil

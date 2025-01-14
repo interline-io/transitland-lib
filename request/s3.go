@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
@@ -73,6 +74,7 @@ func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		return err
 	}
 	// Save object
+	log.Debug().Msgf("s3 store: uploading to key '%s'", key)
 	s3bucket := strings.TrimPrefix(r.Bucket, "s3://")
 	s3key := strings.TrimPrefix(r.KeyPrefix+"/"+strings.TrimPrefix(key, "/"), "/")
 	result, err := client.PutObject(ctx, &s3.PutObjectInput{

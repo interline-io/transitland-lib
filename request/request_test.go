@@ -1,12 +1,18 @@
 package request
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -155,4 +161,91 @@ func TestAuthorizedRequest(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testBucket(t *testing.T, ctx context.Context, bucket Bucket) {
+	testDir := "testdata/request"
+	testRelkey := "testdata/request/readme.md"
+	uploadKey := "ok.md"
+	testFullkey := testpath.RelPath(testRelkey)
+	checkfunc := func(b string) bool {
+		return strings.HasSuffix(b, ".txt")
+	}
+	checkRtFiles, err := findFiles(testpath.RelPath(testDir), checkfunc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srcDir := testpath.RelPath(testDir)
+	srcDirPrefix := "test-upload-all"
+
+	////////
+	localCheckDir, err := os.MkdirTemp("", "testBucketDownload")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// defer os.RemoveAll(localCheckDir)
+	///////
+	t.Run("Upload", func(t *testing.T) {
+		inf, err := os.Open(testFullkey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := bucket.Upload(ctx, uploadKey, inf); err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("Download", func(t *testing.T) {
+		// Now check
+		rio, _, err := bucket.Download(ctx, uploadKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		checkfn := filepath.Join(localCheckDir, "test.pb")
+		if err := copyToFile(ctx, rio, checkfn); err != nil {
+			t.Fatal(err)
+		}
+		if checkf, err := filesEqual(testFullkey, checkfn); err != nil {
+			t.Fatal(err)
+		} else if !checkf {
+			t.Error("expected files to be equal")
+		}
+	})
+	t.Run("UploadAll", func(t *testing.T) {
+		if err := bucket.UploadAll(ctx, srcDir, srcDirPrefix, checkfunc); err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("DownloadAll", func(t *testing.T) {
+		downloadDir := filepath.Join(localCheckDir, "downloadAll")
+		fns, err := bucket.DownloadAll(ctx, downloadDir, srcDirPrefix, checkfunc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, len(checkRtFiles), len(fns), "expected number of downloaded files")
+		for _, checkRtFn := range checkRtFiles {
+			checkDownloadFn := filepath.Join(
+				downloadDir,
+				srcDirPrefix,
+				stripDir(testpath.RelPath("testdata/request"), checkRtFn),
+			)
+			if checkRelKey, err := filesEqual(checkRtFn, checkDownloadFn); err != nil {
+				t.Fatal(err)
+			} else if !checkRelKey {
+				t.Error("expeced files to be equal")
+			}
+
+		}
+	})
+}
+
+func filesEqual(a string, b string) (bool, error) {
+	adata, err := os.ReadFile(a)
+	if err != nil {
+		return false, err
+	}
+	bdata, err := os.ReadFile(b)
+	if err != nil {
+		return false, err
+	}
+	return slices.Equal(adata, bdata), nil
 }

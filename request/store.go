@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
@@ -67,6 +68,7 @@ func GetBucket(ustr string) (Bucket, error) {
 }
 
 func copyToFile(ctx context.Context, rio io.Reader, outfn string) error {
+	log.Trace().Msgf("copyToFile: %s", outfn)
 	outf, err := os.Create(outfn)
 	if err != nil {
 		return err
@@ -78,7 +80,7 @@ func copyToFile(ctx context.Context, rio io.Reader, outfn string) error {
 	return nil
 }
 
-func DownloadFile(r Downloader, ctx context.Context, key string, fn string) error {
+func DownloadFileHelper(r Downloader, ctx context.Context, key string, fn string) error {
 	rio, _, err := r.Download(ctx, key)
 	if err != nil {
 		return err
@@ -87,7 +89,7 @@ func DownloadFile(r Downloader, ctx context.Context, key string, fn string) erro
 	return copyToFile(ctx, rio, fn)
 }
 
-func UploadFile(r Uploader, ctx context.Context, fn string, key string) error {
+func UploadFileHelper(r Uploader, ctx context.Context, fn string, key string) error {
 	inf, err := os.Open(fn)
 	if err != nil {
 		return err

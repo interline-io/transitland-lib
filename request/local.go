@@ -34,11 +34,11 @@ func (r Local) Exists(ctx context.Context, key string) bool {
 
 func (r Local) Download(ctx context.Context, ustr string) (io.ReadCloser, int, error) {
 	fn := strings.TrimPrefix(filepath.Join(r.Directory, ustr), "file://")
+	log.Debug().Msgf("local store: downloading key '%s', full path is '%s'", ustr, fn)
 	rd, err := os.Open(fn)
 	if err != nil {
 		return nil, 0, err
 	}
-	log.Trace().Msgf("open '%s'", fn)
 	return rd, 0, nil
 }
 
@@ -70,7 +70,7 @@ func (r *Local) DownloadAll(ctx context.Context, outDir string, prefix string, c
 			return nil, err
 		}
 		// Download to output file
-		if err := DownloadFile(r, ctx, relKey, outfn); err != nil {
+		if err := DownloadFileHelper(r, ctx, relKey, outfn); err != nil {
 			return nil, err
 		}
 		// Ok
@@ -80,8 +80,9 @@ func (r *Local) DownloadAll(ctx context.Context, outDir string, prefix string, c
 }
 
 func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
-	// Check if directory exists
 	outfn := filepath.Join(r.Directory, key)
+	log.Debug().Msgf("s3 store: uploading to key '%s', full path is '%s'", key, outfn)
+	// Check if directory exists
 	if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
 		return err
 	}
@@ -90,8 +91,8 @@ func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) err
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(outf, uploadFile)
-	log.Trace().Msgf("wrote '%s'", outfn)
+	n, err := io.Copy(outf, uploadFile)
+	log.Debug().Msgf("local store: wrote %d bytes to '%s'", n, outfn)
 	return err
 }
 
@@ -105,7 +106,7 @@ func (r *Local) UploadAll(ctx context.Context, srcDir string, prefix string, che
 		// Get relative location
 		uploadKey := filepath.Join(prefix, stripDir(srcDir, fn))
 		// Upload to relative location
-		if err := UploadFile(r, ctx, fn, uploadKey); err != nil {
+		if err := UploadFileHelper(r, ctx, fn, uploadKey); err != nil {
 			return err
 		}
 	}
