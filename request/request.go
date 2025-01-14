@@ -18,15 +18,12 @@ import (
 )
 
 type Downloader interface {
-	Download(context.Context, string, dmfr.Secret, dmfr.FeedAuthorization) (io.ReadCloser, int, error)
+	Download(context.Context, string) (io.ReadCloser, int, error)
+	DownloadAuth(context.Context, string, dmfr.FeedAuthorization) (io.ReadCloser, int, error)
 }
 
 type Uploader interface {
-	Upload(context.Context, string, dmfr.Secret, io.Reader) error
-}
-
-type Presigner interface {
-	CreateSignedUrl(context.Context, string, string, dmfr.Secret) (string, error)
+	Upload(context.Context, string, io.Reader) error
 }
 
 type FetchResponse struct {
@@ -57,7 +54,10 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	return downloader.Download(ctx, key, req.Secret, req.Auth)
+	if a, ok := downloader.(CanSetSecret); ok {
+		a.SetSecret(req.Secret)
+	}
+	return downloader.DownloadAuth(ctx, key, req.Auth)
 }
 
 func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
@@ -70,12 +70,12 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 	reqUrl := req.URL
 	switch u.Scheme {
 	case "http":
-		downloader = Http{}
+		downloader = &Http{}
 	case "https":
-		downloader = Http{}
+		downloader = &Http{}
 	case "ftp":
 		if req.AllowFTP {
-			downloader = Ftp{}
+			downloader = &Ftp{}
 		} else {
 			reqErr = errors.New("request not configured to allow ftp")
 		}
@@ -92,7 +92,7 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 			// Setup the local reader
 			reqDir := ""
 			reqDir, reqUrl = filepath.Split(strings.TrimPrefix(req.URL, "file://"))
-			downloader = Local{
+			downloader = &Local{
 				Directory: reqDir,
 			}
 		} else {

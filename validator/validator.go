@@ -591,7 +591,7 @@ func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result,
 			return err
 		}
 		jb := bytes.NewReader(jj)
-		if err := store.Upload(ctx, result.File.Val, dmfr.Secret{}, jb); err != nil {
+		if err := store.Upload(context.Background(), result.File.Val, jb); err != nil {
 			return err
 		}
 	}

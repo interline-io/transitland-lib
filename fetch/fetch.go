@@ -132,7 +132,11 @@ func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Re
 
 	// Validate OK, upload
 	if newFile && uploadFile != "" && opts.Storage != "" {
-		if err := request.UploadFile(ctx, opts.Storage, uploadFile, uploadDest); err != nil {
+		store, err := request.GetStore(opts.Storage)
+		if err != nil {
+			return result, err
+		}
+		if err := request.Upload(ctx, store, uploadFile, uploadDest); err != nil {
 			return result, err
 		}
 	}
