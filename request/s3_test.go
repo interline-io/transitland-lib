@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"net/http"
@@ -19,20 +20,28 @@ func TestS3(t *testing.T) {
 }
 
 func TestS3CreateSignedUrl(t *testing.T) {
+	ctx := context.TODO()
 	s3Uri := os.Getenv("TL_TEST_S3_STORAGE")
-	s3Key := "test-s3-upload.txt"
+	s3Key := "test-s3-upload.zip"
 	testData := []byte("test s3 file upload")
 	if s3Uri == "" {
 		t.Skip("Set TL_TEST_S3_STORAGE for this test")
 		return
 	}
-	// Download again
-	t.Log("creating signed url:", s3Uri)
-	downloader, err := NewS3FromUrl(s3Uri)
+	///////
+	b, err := NewS3FromUrl(s3Uri)
 	if err != nil {
 		t.Fatal(err)
 	}
-	signedUrl, err := downloader.CreateSignedUrl(context.Background(), s3Key, "download.zip")
+	// Upload file
+	data := bytes.NewBuffer(testData)
+	if err := b.Upload(ctx, s3Key, data); err != nil {
+		t.Fatal(err)
+	}
+
+	// Download again
+	t.Log("creating signed url:", s3Uri)
+	signedUrl, err := b.CreateSignedUrl(ctx, s3Key, "download.zip")
 	if err != nil {
 		t.Fatal(err)
 	}
