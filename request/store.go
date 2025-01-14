@@ -7,24 +7,48 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
-// Store provides data storage methods.
 type Store interface {
 	Uploader
 	Downloader
 }
 
+type CanSetSecret interface {
+	SetSecret(dmfr.Secret) error
+}
+
+type Bucket interface {
+	CanSetSecret
+	Downloader
+	Uploader
+	DownloadAll(ctx context.Context, outDir string, prefix string, checkFile func(string) bool) ([]string, error)
+	UploadAll(ctx context.Context, srcDir string, prefix string, checkFile func(string) bool) error
+}
+
+type Presigner interface {
+	CreateSignedUrl(context.Context, string, string) (string, error)
+}
+
 // GetStore returns a configured store based on the provided url.
 func GetStore(ustr string) (Store, error) {
+	var h Store
+	h, err := GetBucket(ustr)
+	if err != nil {
+		return nil, err
+	}
+	return h, nil
+}
+
+// GetBucket returns a configured bucket based on the provided url.
+func GetBucket(ustr string) (Bucket, error) {
 	u, err := url.Parse(ustr)
 	if err != nil {
 		return nil, err
 	}
 	var storeErr error
-	var s Store
+	var s Bucket
 	switch u.Scheme {
 	case "s3":
 		s, storeErr = NewS3FromUrl(ustr)
@@ -40,52 +64,34 @@ func GetStore(ustr string) (Store, error) {
 		}
 	}
 	return s, storeErr
+
 }
 
-// Download is a convenience method for downloading a file from the store.
-func Download(storage string, key string) (io.ReadCloser, error) {
-	log.Debug().Str("src", key).Str("storage", storage).Msg("fetch: download from store")
-	st, err := GetStore(storage)
-	if err != nil {
-		return nil, err
-	}
-	r, _, err := st.Download(context.Background(), key, dmfr.Secret{}, dmfr.FeedAuthorization{})
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
-}
-
-// UploadFile is a convenience method for uploading a file to the store.
-func UploadFile(storage string, src string, dst string) error {
-	log.Debug().Str("src", src).Str("storage", storage).Str("storage_key", dst).Msg("fetch: upload to store")
-	rp, err := os.Open(src)
+func DownloadFile(r Downloader, ctx context.Context, key string, fn string) error {
+	outf, err := os.Create(fn)
 	if err != nil {
 		return err
 	}
-	defer rp.Close()
-	st, err := GetStore(storage)
+	defer outf.Close()
+	rio, _, err := r.Download(ctx, key)
 	if err != nil {
 		return err
 	}
-	if err := st.Upload(context.Background(), dst, dmfr.Secret{}, rp); err != nil {
+	defer rio.Close()
+	if _, err := io.Copy(outf, rio); err != nil {
 		return err
 	}
 	return nil
 }
 
-// func DownloadFile(ctx context.Context, storage string, key string, outfn string) error {
-// 	outf, err := os.Create(outfn)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer outf.Close()
-// 	r, err := Download(storage, key)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if _, _, err := copyTo(outf, r, 0); err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
+func UploadFile(r Uploader, ctx context.Context, fn string, key string) error {
+	inf, err := os.Open(fn)
+	if err != nil {
+		return err
+	}
+	defer inf.Close()
+	if err := r.Upload(ctx, key, inf); err != nil {
+		return err
+	}
+	return nil
+}

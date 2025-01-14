@@ -19,10 +19,7 @@ import (
 )
 
 func init() {
-	var _ Downloader = &S3{}
-	var _ DownloaderAll = &S3{}
-	var _ Uploader = &S3{}
-	var _ UploaderAll = &S3{}
+	var _ Bucket = &S3{}
 	var _ Presigner = &S3{}
 }
 
@@ -38,11 +35,17 @@ func NewS3FromUrl(ustr string) (*S3, error) {
 type S3 struct {
 	Bucket    string
 	KeyPrefix string
+	secret    dmfr.Secret
 }
 
-func (r S3) Download(ctx context.Context, key string, secret dmfr.Secret, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
+func (r *S3) SetSecret(secret dmfr.Secret) error {
+	r.secret = secret
+	return nil
+}
+
+func (r S3) Download(ctx context.Context, key string) (io.ReadCloser, int, error) {
 	// Create client
-	client, err := awsConfig(ctx, secret)
+	client, err := awsConfig(ctx, r.secret)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -59,9 +62,13 @@ func (r S3) Download(ctx context.Context, key string, secret dmfr.Secret, auth d
 	return s3obj.Body, 0, nil
 }
 
-func (r S3) Upload(ctx context.Context, key string, secret dmfr.Secret, uploadFile io.Reader) error {
+func (r S3) DownloadAuth(ctx context.Context, key string, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
+	return r.Download(ctx, key)
+}
+
+func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
 	// Create client
-	client, err := awsConfig(ctx, secret)
+	client, err := awsConfig(ctx, r.secret)
 	if err != nil {
 		return err
 	}
@@ -77,34 +84,8 @@ func (r S3) Upload(ctx context.Context, key string, secret dmfr.Secret, uploadFi
 	return err
 }
 
-func (r S3) DownloadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error {
-	outf, err := os.Create(fn)
-	if err != nil {
-		return err
-	}
-	defer outf.Close()
-	rio, _, err := r.Download(ctx, key, dmfr.Secret{}, dmfr.FeedAuthorization{})
-	if err != nil {
-		return err
-	}
-	defer rio.Close()
-	if _, err := io.Copy(outf, rio); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r S3) UploadFile(ctx context.Context, fn string, key string, secret dmfr.Secret) error {
-	inf, err := os.Open(fn)
-	if err != nil {
-		return err
-	}
-	defer inf.Close()
-	return r.Upload(ctx, key, dmfr.Secret{}, inf)
-}
-
-func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition string, secret dmfr.Secret) (string, error) {
-	client, err := awsConfig(ctx, secret)
+func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition string) (string, error) {
+	client, err := awsConfig(ctx, r.secret)
 	if err != nil {
 		return "", err
 	}
@@ -120,13 +101,13 @@ func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 	return request.URL, err
 }
 
-func (h *S3) DownloadAll(ctx context.Context, outDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error) {
-	s, err := awsConfig(ctx, secret)
+func (r *S3) DownloadAll(ctx context.Context, outDir string, prefix string, checkFile func(string) bool) ([]string, error) {
+	s, err := awsConfig(ctx, r.secret)
 	if err != nil {
 		return nil, err
 	}
 	input := &s3.ListObjectsV2Input{
-		Bucket: aws.String(h.Bucket),
+		Bucket: aws.String(r.Bucket),
 	}
 	var objects []types.Object
 	var output *s3.ListObjectsV2Output
@@ -153,7 +134,7 @@ func (h *S3) DownloadAll(ctx context.Context, outDir string, prefix string, secr
 	var ret []string
 	for _, obj := range objects {
 		result, err := s.GetObject(ctx, &s3.GetObjectInput{
-			Bucket: &h.Bucket,
+			Bucket: &r.Bucket,
 			Key:    obj.Key,
 		})
 		if err != nil {
@@ -177,7 +158,7 @@ func (h *S3) DownloadAll(ctx context.Context, outDir string, prefix string, secr
 	return ret, nil
 }
 
-func (h *S3) UploadAll(ctx context.Context, srcDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) error {
+func (h *S3) UploadAll(ctx context.Context, srcDir string, prefix string, checkFile func(string) bool) error {
 	fns, err := findFiles(srcDir, checkFile)
 	if err != nil {
 		return err
@@ -188,7 +169,7 @@ func (h *S3) UploadAll(ctx context.Context, srcDir string, prefix string, secret
 		if err != nil {
 			return err
 		}
-		if err := h.Upload(ctx, key, secret, f); err != nil {
+		if err := h.Upload(ctx, key, f); err != nil {
 			return err
 		}
 	}

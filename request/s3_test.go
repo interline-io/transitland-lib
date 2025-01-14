@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"os"
 	"testing"
-
-	"github.com/interline-io/transitland-lib/dmfr"
 )
 
 func TestS3Request(t *testing.T) {
@@ -37,7 +35,7 @@ func TestS3Request(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := uploader.Upload(context.Background(), s3Key, dmfr.Secret{}, r); err != nil {
+		if err := uploader.Upload(context.Background(), s3Key, r); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -48,7 +46,7 @@ func TestS3Request(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		downloadReader, _, err := downloader.Download(context.Background(), s3Key, dmfr.Secret{}, dmfr.FeedAuthorization{})
+		downloadReader, _, err := downloader.Download(context.Background(), s3Key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -67,7 +65,7 @@ func TestS3Request(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		signedUrl, err := downloader.CreateSignedUrl(context.Background(), s3Key, "download.zip", dmfr.Secret{})
+		signedUrl, err := downloader.CreateSignedUrl(context.Background(), s3Key, "download.zip")
 		if err != nil {
 			t.Fatal(err)
 		}

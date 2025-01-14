@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"errors"
 	"os"
 	"time"
@@ -131,7 +132,16 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 
 	// Validate OK, upload
 	if newFile && uploadFile != "" && opts.Storage != "" {
-		if err := request.UploadFile(opts.Storage, uploadFile, uploadDest); err != nil {
+		store, err := request.GetStore(opts.Storage)
+		if err != nil {
+			return result, err
+		}
+		rio, err := os.Open(uploadFile)
+		if err != nil {
+			return result, err
+		}
+		defer rio.Close()
+		if err := store.Upload(context.TODO(), uploadDest, rio); err != nil {
 			return result, err
 		}
 	}

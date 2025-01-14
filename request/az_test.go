@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"os"
 	"testing"
-
-	"github.com/interline-io/transitland-lib/dmfr"
 )
 
 func TestAzRequest(t *testing.T) {
@@ -31,13 +29,16 @@ func TestAzRequest(t *testing.T) {
 			t.Fatal(err)
 		}
 		r, err := os.Open(rw.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
 		// Upload file
 		t.Log("uploading to:", azUri)
 		uploader, err := NewAzFromUrl(azUri)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := uploader.Upload(context.Background(), azKey, dmfr.Secret{}, r); err != nil {
+		if err := uploader.Upload(context.Background(), azKey, r); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -48,7 +49,7 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		downloadReader, _, err := downloader.Download(context.Background(), azKey, dmfr.Secret{}, dmfr.FeedAuthorization{})
+		downloadReader, _, err := downloader.Download(context.Background(), azKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -67,7 +68,7 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		signedUrl, err := downloader.CreateSignedUrl(context.Background(), azKey, "download.zip", dmfr.Secret{})
+		signedUrl, err := downloader.CreateSignedUrl(context.Background(), azKey, "download.zip")
 		if err != nil {
 			t.Fatal(err)
 		}

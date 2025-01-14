@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 )
 
@@ -35,14 +34,14 @@ func TestLocal(t *testing.T) {
 	t.Run("Upload", func(t *testing.T) {
 		t.Log("uploading to:", localUri)
 		uploader := Local{}
-		if err := uploader.Upload(ctx, localUri, dmfr.Secret{}, r); err != nil {
+		if err := uploader.Upload(ctx, localUri, r); err != nil {
 			t.Fatal(err)
 		}
 	})
 	t.Run("Download", func(t *testing.T) {
 		// Download again
 		t.Log("downloading from:", localUri)
-		downloadReader, _, err := downloader.Download(ctx, localUri, dmfr.Secret{}, dmfr.FeedAuthorization{})
+		downloadReader, _, err := downloader.Download(ctx, localUri)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -57,7 +56,7 @@ func TestLocal(t *testing.T) {
 	t.Run("DownloadAll", func(t *testing.T) {
 		baseDir := testpath.RelPath("testdata")
 		d := Local{Directory: baseDir}
-		fns, err := d.DownloadAll(ctx, t.TempDir(), "rt", dmfr.Secret{}, func(key string) bool {
+		fns, err := d.DownloadAll(ctx, t.TempDir(), "rt", func(key string) bool {
 			return strings.HasSuffix(key, ".pb")
 		})
 		if err != nil {

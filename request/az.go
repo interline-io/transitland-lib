@@ -14,9 +14,13 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
-
 	"github.com/interline-io/transitland-lib/dmfr"
 )
+
+func init() {
+	var _ Bucket = &Az{}
+	var _ Presigner = &Az{}
+}
 
 type Az struct {
 	Account   string
@@ -24,7 +28,21 @@ type Az struct {
 	KeyPrefix string
 }
 
-func (r Az) Download(ctx context.Context, key string, secret dmfr.Secret, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
+func NewAzFromUrl(ustr string) (*Az, error) {
+	u, err := url.Parse(ustr)
+	if err != nil {
+		return nil, err
+	}
+	p := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
+	a := Az{Account: u.Host, Container: p[0], KeyPrefix: strings.Join(p[1:], "/")}
+	return &a, nil
+}
+
+func (r *Az) SetSecret(secret dmfr.Secret) error {
+	return nil
+}
+
+func (r Az) Download(ctx context.Context, key string) (io.ReadCloser, int, error) {
 	if key == "" {
 		return nil, 0, errors.New("key must not be empty")
 	}
@@ -41,7 +59,15 @@ func (r Az) Download(ctx context.Context, key string, secret dmfr.Secret, auth d
 	return rs.Body, 0, err
 }
 
-func (r Az) Upload(ctx context.Context, key string, secret dmfr.Secret, uploadFile io.Reader) error {
+func (r Az) DownloadAuth(ctx context.Context, key string, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
+	return r.Download(ctx, key)
+}
+
+func (r Az) DownloadAll(ctx context.Context, outDir string, prefix string, checkFile func(string) bool) ([]string, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
 	if key == "" {
 		return errors.New("key must not be empty")
 	}
@@ -58,7 +84,11 @@ func (r Az) Upload(ctx context.Context, key string, secret dmfr.Secret, uploadFi
 	return err
 }
 
-func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition string, secret dmfr.Secret) (string, error) {
+func (r Az) UploadAll(ctx context.Context, srcDir string, prefix string, checkFile func(string) bool) error {
+	return errors.New("not implemented")
+}
+
+func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition string) (string, error) {
 	if key == "" {
 		return "", errors.New("key must not be empty")
 	}
@@ -113,14 +143,4 @@ func getAzBlobClient(account string) (*azidentity.DefaultAzureCredential, *azblo
 		return nil, nil, err
 	}
 	return credential, blobClient, nil
-}
-
-func NewAzFromUrl(ustr string) (*Az, error) {
-	u, err := url.Parse(ustr)
-	if err != nil {
-		return nil, err
-	}
-	p := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
-	a := Az{Account: u.Host, Container: p[0], KeyPrefix: strings.Join(p[1:], "/")}
-	return &a, nil
 }

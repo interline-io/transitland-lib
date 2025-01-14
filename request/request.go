@@ -19,25 +19,12 @@ import (
 )
 
 type Downloader interface {
-	Download(context.Context, string, dmfr.Secret, dmfr.FeedAuthorization) (io.ReadCloser, int, error)
+	Download(context.Context, string) (io.ReadCloser, int, error)
+	DownloadAuth(context.Context, string, dmfr.FeedAuthorization) (io.ReadCloser, int, error)
 }
 
 type Uploader interface {
-	Upload(context.Context, string, dmfr.Secret, io.Reader) error
-}
-
-type Presigner interface {
-	CreateSignedUrl(context.Context, string, string, dmfr.Secret) (string, error)
-}
-
-type DownloaderAll interface {
-	DownloadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error
-	DownloadAll(ctx context.Context, outDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) ([]string, error)
-}
-
-type UploaderAll interface {
-	UploadFile(ctx context.Context, key string, fn string, secret dmfr.Secret) error
-	UploadAll(ctx context.Context, srcDir string, prefix string, secret dmfr.Secret, checkFile func(string) bool) error
+	Upload(context.Context, string, io.Reader) error
 }
 
 type FetchResponse struct {
@@ -68,7 +55,10 @@ func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	return downloader.Download(ctx, key, req.Secret, req.Auth)
+	if a, ok := downloader.(CanSetSecret); ok {
+		a.SetSecret(req.Secret)
+	}
+	return downloader.DownloadAuth(ctx, key, req.Auth)
 }
 
 func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
