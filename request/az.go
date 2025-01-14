@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	var _ Bucket = &Az{}
+	var _ Store = &Az{}
 	var _ Presigner = &Az{}
 }
 
@@ -34,7 +34,11 @@ func NewAzFromUrl(ustr string) (*Az, error) {
 		return nil, err
 	}
 	p := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
-	a := Az{Account: u.Host, Container: p[0], KeyPrefix: strings.Join(p[1:], "/")}
+	a := Az{
+		Account:   u.Host,
+		Container: p[0],
+		KeyPrefix: strings.Join(p[1:], "/"),
+	}
 	return &a, nil
 }
 
@@ -47,15 +51,11 @@ func (r Az) Download(ctx context.Context, key string) (io.ReadCloser, int, error
 		return nil, 0, errors.New("key must not be empty")
 	}
 	// Create request
-	_, blobClient, err := getAzBlobClient(r.Account)
+	_, client, err := getAzBlobClient(r.Account)
 	if err != nil {
 		return nil, 0, err
 	}
-	azKey := strings.TrimPrefix(key, "/")
-	if r.KeyPrefix != "" {
-		azKey = r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
-	}
-	rs, err := blobClient.DownloadStream(ctx, r.Container, azKey, nil)
+	rs, err := client.DownloadStream(ctx, r.Container, r.getFullKey(key), nil)
 	return rs.Body, 0, err
 }
 
@@ -63,24 +63,39 @@ func (r Az) DownloadAuth(ctx context.Context, key string, auth dmfr.FeedAuthoriz
 	return r.Download(ctx, key)
 }
 
-func (r Az) ListAll(ctx context.Context, prefix string) ([]string, error) {
-	return nil, errors.New("not implemented")
+func (r Az) ListKeys(ctx context.Context, prefix string) ([]string, error) {
+	// List the containers in the storage account with a prefix
+	_, client, err := getAzBlobClient(r.Account)
+	if err != nil {
+		return nil, err
+	}
+	// List the blobs in the container with a prefix
+	pager := client.NewListBlobsFlatPager(r.Container, &azblob.ListBlobsFlatOptions{
+		Prefix: to.Ptr(r.getFullKey(prefix)),
+	})
+	var ret []string
+	for pager.More() {
+		resp, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, blob := range resp.Segment.BlobItems {
+			ret = append(ret, stripDir(r.KeyPrefix, *blob.Name))
+		}
+	}
+	return ret, nil
 }
 
 func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
 	if key == "" {
 		return errors.New("key must not be empty")
 	}
-	_, blobClient, err := getAzBlobClient(r.Account)
+	_, client, err := getAzBlobClient(r.Account)
 	if err != nil {
 		return err
 	}
 	// Upload the file to the specified container and blob name
-	azKey := strings.TrimPrefix(key, "/")
-	if r.KeyPrefix != "" {
-		azKey = r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
-	}
-	_, err = blobClient.UploadStream(ctx, r.Container, azKey, uploadFile, nil)
+	_, err = client.UploadStream(ctx, r.Container, r.getFullKey(key), uploadFile, nil)
 	return err
 }
 
@@ -128,15 +143,23 @@ func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 	return sasUrl, nil
 }
 
+func (r Az) getFullKey(key string) string {
+	azKey := strings.TrimPrefix(key, "/")
+	if r.KeyPrefix != "" {
+		azKey = r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
+	}
+	return azKey
+}
+
 func getAzBlobClient(account string) (*azidentity.DefaultAzureCredential, *azblob.Client, error) {
 	credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	accountUrl := fmt.Sprintf("https://%s", strings.TrimPrefix(account, "az://"))
-	blobClient, err := azblob.NewClient(accountUrl, credential, nil)
+	client, err := azblob.NewClient(accountUrl, credential, nil)
 	if err != nil {
 		return nil, nil, err
 	}
-	return credential, blobClient, nil
+	return credential, client, nil
 }
