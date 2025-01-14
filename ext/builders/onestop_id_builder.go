@@ -96,12 +96,12 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 	case *gtfs.StopTime:
 		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
 		if !ok {
-			// log.Debugf("OnestopIDBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
+			// log.For(ctx).Debug().Msgf("OnestopIDBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
 		s, ok := pp.stops[v.StopID.Val]
 		if !ok {
-			// log.Debugf("OnestopIDBuilder no stop:", v.StopID)
+			// log.For(ctx).Debug().Msgf("OnestopIDBuilder no stop:", v.StopID)
 			return nil
 		}
 		r.stopGeoms[v.StopID.Val] = s

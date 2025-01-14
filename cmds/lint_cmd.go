@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -41,20 +42,20 @@ func (cmd *LintCommand) Parse(args []string) error {
 }
 
 // Run this command.
-func (cmd *LintCommand) Run() error {
+func (cmd *LintCommand) Run(ctx context.Context) error {
 	var fileErrors []string
 	for _, filename := range cmd.Filenames {
 		// first validate DMFR
 		_, err := dmfr.LoadAndParseRegistry(filename)
 		if err != nil {
-			log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+			log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
 		}
 
 		// Now load again as raw dmfr
 		rawJson, err := ioutil.ReadFile(filename)
 		rr, err := dmfr.ReadRawRegistry(bytes.NewBuffer(rawJson))
 		if err != nil {
-			log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+			log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
 		}
 		var buf bytes.Buffer
 		if err := rr.Write(&buf); err != nil {
@@ -63,23 +64,22 @@ func (cmd *LintCommand) Run() error {
 
 		// load JSON
 		originalJsonString := string(rawJson)
-		formattedJsonString := string(buf.Bytes())
+		formattedJsonString := buf.String()
 
 		// Compare against input json
 		if formattedJsonString != originalJsonString {
-			err := fmt.Errorf("%s: not formatted correctly", filename)
-			log.Errorf(err.Error())
+			log.For(ctx).Error().Msgf("%s: not formatted correctly", filename)
 			fileErrors = append(fileErrors, filename)
 			// print out diff
 			dmp := diffmatchpatch.New()
 			diffs := dmp.DiffMain(originalJsonString, formattedJsonString, false)
 			fmt.Println(dmp.DiffPrettyText(diffs))
 		} else {
-			log.Infof("%s: Formatted properly.", filename)
+			log.For(ctx).Info().Msgf("%s: Formatted properly.", filename)
 		}
 	}
 	if len(fileErrors) > 0 {
-		return fmt.Errorf("Incorrectly formatted files: %s", strings.Join(fileErrors, ", "))
+		return fmt.Errorf("incorrectly formatted files: %s", strings.Join(fileErrors, ", "))
 
 	}
 	return nil

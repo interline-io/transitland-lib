@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"regexp"
@@ -40,9 +41,9 @@ func filterName(name string) string {
 	return strings.ToLower(re2.ReplaceAllString(re1.ReplaceAllString(name, "~"), ""))
 }
 
-func getPlaces(atx tldb.Adapter, id int) (string, error) {
+func getPlaces(ctx context.Context, atx tldb.Adapter, id int) (string, error) {
 	agencyPlaces := []agencyPlace{}
-	if err := atx.Select(&agencyPlaces, "select name,adm0name,adm1name from tl_agency_places where agency_id = ? AND rank > 0.2 order by rank desc", id); err != nil {
+	if err := atx.Select(ctx, &agencyPlaces, "select name,adm0name,adm1name from tl_agency_places where agency_id = ? AND rank > 0.2 order by rank desc", id); err != nil {
 		return "", err
 	}
 	uniquePlaces := map[string]bool{}
@@ -68,13 +69,13 @@ func getPlaces(atx tldb.Adapter, id int) (string, error) {
 	return strings.Join(places, " / "), nil
 }
 
-func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
+func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 	// Update OIFs that belong to this operator
 	updated := false
 	oiflookup := map[oifmatch]int{}
 	oifmatches := map[int]bool{}
 	oifexisting := []dmfr.OperatorAssociatedFeed{}
-	if err := atx.Select(&oifexisting, "select * from current_operators_in_feed where operator_id = ?", operator.ID); err != nil {
+	if err := atx.Select(ctx, &oifexisting, "select * from current_operators_in_feed where operator_id = ?", operator.ID); err != nil {
 		return false, err
 	}
 	for _, oif := range oifexisting {
@@ -86,15 +87,15 @@ func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 		oif.ResolvedName.Set(operator.Name.Val)
 		oif.ResolvedShortName.Set(operator.ShortName.Val)
 		oif.OperatorID.SetInt(operator.ID)
-		if err := atx.Get(&oif.FeedID, "select id from current_feeds where onestop_id = ?", oif.FeedOnestopID.Val); err == sql.ErrNoRows {
-			log.Infof("Warning: no feed for '%s'", oif.FeedOnestopID.Val)
+		if err := atx.Get(ctx, &oif.FeedID, "select id from current_feeds where onestop_id = ?", oif.FeedOnestopID.Val); err == sql.ErrNoRows {
+			log.For(ctx).Info().Msgf("Warning: no feed for '%s'", oif.FeedOnestopID.Val)
 			continue
 		} else if err != nil {
 			return false, err
 		}
 		// Get agencies
 		agencies := []gtfs.Agency{}
-		if err := atx.Select(&agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states using(feed_version_id) where feed_states.feed_id = ?", oif.FeedID); err != nil {
+		if err := atx.Select(ctx, &agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states using(feed_version_id) where feed_states.feed_id = ?", oif.FeedID); err != nil {
 			return false, err
 		}
 		agencyID := 0
@@ -117,12 +118,12 @@ func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 			oifmatches[match] = true
 		} else {
 			updated = true
-			if places, err := getPlaces(atx, agencyID); err != nil {
+			if places, err := getPlaces(ctx, atx, agencyID); err != nil {
 				return false, err
 			} else {
 				oif.ResolvedPlaces.Set(places)
 			}
-			if _, err := atx.Insert(&oif); err != nil {
+			if _, err := atx.Insert(ctx, &oif); err != nil {
 				return false, err
 			}
 		}
@@ -135,21 +136,21 @@ func updateOifs(atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
 	}
 	if len(deleteoifs) > 0 {
 		updated = true
-		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).Exec(); err != nil {
+		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).ExecContext(ctx); err != nil {
 			return false, err
 		}
 	}
 	return updated, nil
 }
 
-func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
+func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 	// Update OIFs that do not have an operator
 	updated := false
 	feedid := feed.ID
 	oiflookup := map[oifmatch]int{}
 	oifmatches := map[int]bool{}
 	oifexisting := []dmfr.OperatorAssociatedFeed{}
-	if err := atx.Select(&oifexisting, "select * from current_operators_in_feed where feed_id = ?", feedid); err != nil {
+	if err := atx.Select(ctx, &oifexisting, "select * from current_operators_in_feed where feed_id = ?", feedid); err != nil {
 		return false, err
 	}
 	for _, oif := range oifexisting {
@@ -170,7 +171,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if err := atx.Select(&agencies, qstr, qargs...); err != nil {
+	if err := atx.Select(ctx, &agencies, qstr, qargs...); err != nil {
 		return false, err
 	}
 	for _, agency := range agencies {
@@ -185,7 +186,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID.Val),
 				ResolvedName:         tt.NewString(agency.AgencyName.Val),
 			}
-			if places, err := getPlaces(atx, agency.ID); err != nil {
+			if places, err := getPlaces(ctx, atx, agency.ID); err != nil {
 				return false, err
 			} else {
 				oif.ResolvedPlaces.Set(places)
@@ -200,7 +201,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 				oif.ResolvedOnestopID.Set(fmt.Sprintf("o-%s-%s", fsid, filterName(agency.AgencyName.Val)))
 			}
 			// Save
-			if _, err := atx.Insert(&oif); err != nil {
+			if _, err := atx.Insert(ctx, &oif); err != nil {
 				return false, err
 			}
 		}
@@ -213,7 +214,7 @@ func feedUpdateOifs(atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 	}
 	if len(deleteoifs) > 0 {
 		updated = true
-		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).Exec(); err != nil {
+		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).ExecContext(ctx); err != nil {
 			return false, err
 		}
 	}

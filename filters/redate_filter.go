@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -76,6 +77,7 @@ func newRedateFilterFromJson(args string) (*RedateFilter, error) {
 }
 
 func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+	ctx := context.TODO()
 	switch v := ent.(type) {
 	case *gtfs.Trip:
 		if tf.excluded[v.ServiceID.Val] {
@@ -97,7 +99,7 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		if tf.DOWAlign {
 			for {
 				if sourceDate.Weekday() != targetDate.Weekday() {
-					log.Trace().
+					log.For(ctx).Trace().
 						Str("source_date", sourceDate.Format("2006-01-02")).
 						Str("source_dow", sourceDate.Weekday().String()).
 						Str("target_date", targetDate.Format("2006-01-02")).
@@ -122,7 +124,7 @@ func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 				})
 				active = true
 			}
-			log.Trace().
+			log.For(ctx).Trace().
 				Str("source_date", sourceDate.Format("2006-01-02")).
 				Str("source_dow", sourceDate.Weekday().String()).
 				Str("target_date", targetDate.Format("2006-01-02")).

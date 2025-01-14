@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"errors"
 	"os"
 	"sync"
@@ -96,7 +97,7 @@ type jobOptions struct {
 }
 
 // Run this command
-func (cmd *UnimportCommand) Run() error {
+func (cmd *UnimportCommand) Run(ctx context.Context) error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -129,14 +130,14 @@ func (cmd *UnimportCommand) Run() error {
 	if err != nil {
 		return err
 	}
-	err = cmd.Adapter.Select(&qrs, qstr, qargs...)
+	err = cmd.Adapter.Select(ctx, &qrs, qstr, qargs...)
 	if err != nil {
 		return err
 	}
 	if cmd.ScheduleOnly {
-		log.Infof("Unmporting schedule data from %d feed versions", len(qrs))
+		log.For(ctx).Info().Msgf("Unmporting schedule data from %d feed versions", len(qrs))
 	} else {
-		log.Infof("Unmporting %d feed versions", len(qrs))
+		log.For(ctx).Info().Msgf("Unmporting %d feed versions", len(qrs))
 	}
 
 	jobs := make(chan jobOptions, len(qrs))
@@ -153,13 +154,14 @@ func (cmd *UnimportCommand) Run() error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go dmfrUnimportWorker(w, cmd.Adapter, jobs, &wg)
+		go dmfrUnimportWorker(w, ctx, cmd.Adapter, jobs, &wg)
 	}
 	wg.Wait()
 	return nil
 }
 
-func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg *sync.WaitGroup) {
+func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs <-chan jobOptions, wg *sync.WaitGroup) {
+	_ = id
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -178,30 +180,30 @@ func dmfrUnimportWorker(id int, adapter tldb.Adapter, jobs <-chan jobOptions, wg
 		INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id 
 		WHERE feed_versions.id = ?
 		`
-		if err := adapter.Get(&q, query, opts.FeedVersionID); err != nil {
-			log.Errorf("Could not get details for FeedVersion %d", opts.FeedVersionID)
+		if err := adapter.Get(ctx, &q, query, opts.FeedVersionID); err != nil {
+			log.For(ctx).Error().Msgf("Could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}
 		if opts.DryRun {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue
 		}
-		log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var err error
 			if opts.ScheduleOnly {
-				err = importer.UnimportSchedule(atx, opts.FeedVersionID)
+				err = importer.UnimportSchedule(ctx, atx, opts.FeedVersionID)
 			} else {
-				err = importer.UnimportFeedVersion(atx, opts.FeedVersionID, opts.ExtraTables)
+				err = importer.UnimportFeedVersion(ctx, atx, opts.FeedVersionID, opts.ExtraTables)
 			}
 			return err
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.Errorf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
+			log.For(ctx).Error().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
 		} else {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
 		}
 	}
 	wg.Done()

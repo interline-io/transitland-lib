@@ -1,8 +1,10 @@
+//go:build cgo
 // +build cgo
 
 package tldb
 
 import (
+	"context"
 	"testing"
 )
 
@@ -13,5 +15,5 @@ func init() {
 
 func TestSQLiteAdapter(t *testing.T) {
 	adapter := &SQLiteAdapter{DBURL: "sqlite3://:memory:"}
-	testAdapter(t, adapter)
+	testAdapter(context.TODO(), t, adapter)
 }

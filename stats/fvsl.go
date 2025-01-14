@@ -43,11 +43,9 @@ func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []dmfr.FeedVersio
 	} else {
 		for _, fvsl := range fvsls {
 			if fvsl.EndDate.Before(start) {
-				// log.Traceln("fvsl ends before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
 				continue
 			}
 			if fvsl.StartDate.After(end) {
-				// log.Traceln("fvsl starts before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
 				continue
 			}
 			fvsort = append(fvsort, fvsl)
@@ -64,11 +62,6 @@ func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []dmfr.FeedVersio
 		}
 		return a > b
 	})
-	// log.Traceln("window start:", start.String(), "end:", end.String())
-	// for _, fvsl := range fvsort {
-	// 	log.Traceln("start:", fvsl.StartDate.String(), "end:", fvsl.EndDate.String(), "total:", fvsl.Total())
-	// }
-	// log.Traceln("d:", fvsort[0].StartDate.String())
 	return fvsort[0].StartDate, nil
 }
 
@@ -149,7 +142,6 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 		td := ti.Duration
 		// Multiply out frequency based trips; they are scheduled or not scheduled together
 		if freq, ok := pp.freqs[tripId]; ok {
-			// log.Traceln("\ttrip:", trip.TripID, "frequency repeat count:", freq)
 			td = td * freq
 		}
 		// Add to pattern
@@ -157,10 +149,7 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 	}
 
 	// Assign durations to week
-	// log.Traceln("assigning durations to week")
-	// log.Traceln("\troute_id:", route)
 	// Calculate the total duration for each day of the service period
-	// log.Printf("\t\tchecking service periods (%d)\n", len(v))
 	smap := map[int][7]int{}
 	for k, seconds := range serviceTotals {
 		service, ok := services[k]
@@ -169,12 +158,10 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 		}
 		start, end := service.ServicePeriod()
 		if start.IsZero() {
-			// log.Traceln("\t\t\tstart is zero! skipping", k)
 			continue
 		}
 		// Iterate from the first day to the last day,
 		// saving the result to the Julian date index for that week
-		// log.Traceln("\t\t\tservice_id:", k, "start, end", start, end)
 		for start.Before(end) || start.Equal(end) {
 			if service.IsActive(start) {
 				jd := toJulian(start)
@@ -186,14 +173,12 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 		}
 	}
 	// Group weeks by pattern
-	// log.Traceln("\t\tgrouping weeks")
 	imap := map[[7]int][]int{}
 	for k, v := range smap {
 		imap[v] = append(imap[v], k)
 	}
 
 	// Find repeating weeks
-	// log.Traceln("\t\tfinding week repeats")
 	var results []dmfr.FeedVersionServiceLevel
 	for k, v := range imap {
 		if len(v) == 0 {
@@ -224,7 +209,6 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 				Saturday:  k[5],
 				Sunday:    k[6],
 			}
-			// log.Traceln(a)
 			results = append(results, a)
 		}
 	}

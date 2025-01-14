@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -19,7 +20,7 @@ func TestSyncCommand(t *testing.T) {
 		{4, "", []string{testpath.RelPath("testdata/dmfr/example.json"), testpath.RelPath("testdata/dmfr/bayarea-local.dmfr.json")}},
 		{0, "no such file", []string{testpath.RelPath("testdata/dmfr/does-not-exist.json")}},
 	}
-	_ = cases
+	ctx := context.TODO()
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
 			w := testdb.MustOpenWriter("sqlite3://:memory:", true)
@@ -27,7 +28,7 @@ func TestSyncCommand(t *testing.T) {
 			if err := c.Parse(exp.command); err != nil {
 				t.Error(err)
 			}
-			err := c.Run()
+			err := c.Run(ctx)
 			if err != nil {
 				if !strings.Contains(err.Error(), exp.errContains) {
 					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.errContains)
@@ -35,7 +36,7 @@ func TestSyncCommand(t *testing.T) {
 			}
 			// Test
 			feeds := []dmfr.Feed{}
-			w.Adapter.Select(&feeds, "SELECT * FROM current_feeds")
+			w.Adapter.Select(ctx, &feeds, "SELECT * FROM current_feeds")
 			if len(feeds) != exp.count {
 				t.Errorf("got %d feeds, expect %d", len(feeds), exp.count)
 			}

@@ -1,6 +1,7 @@
 package tldb
 
 import (
+	"context"
 	"errors"
 	"strconv"
 
@@ -105,6 +106,7 @@ func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
 
 // AddEntities writes entities to the database.
 func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
+	ctx := context.TODO()
 	if len(ents) == 0 {
 		return []string{}, nil
 	}
@@ -124,7 +126,7 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 		}
 		ients[i] = ent
 	}
-	retids, err := writer.Adapter.MultiInsert(ients)
+	retids, err := writer.Adapter.MultiInsert(ctx, ients)
 	if err != nil {
 		return eids, err
 	}

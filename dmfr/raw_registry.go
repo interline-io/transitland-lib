@@ -2,6 +2,7 @@ package dmfr
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -26,6 +27,7 @@ type RawRegistryFeed struct {
 }
 
 func ReadRawRegistry(reader io.Reader) (*RawRegistry, error) {
+	ctx := context.TODO()
 	contents, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
@@ -33,7 +35,7 @@ func ReadRawRegistry(reader io.Reader) (*RawRegistry, error) {
 	var loadReg RawRegistry
 	if err := json.Unmarshal([]byte(contents), &loadReg); err != nil {
 		if e, ok := err.(*json.SyntaxError); ok {
-			log.Debugf("syntax error at byte offset %d", e.Offset)
+			log.For(ctx).Debug().Msgf("syntax error at byte offset %d", e.Offset)
 		}
 		return nil, err
 	}

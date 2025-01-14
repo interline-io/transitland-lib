@@ -2,6 +2,7 @@
 package tlcli
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -30,7 +31,7 @@ func (cmd *GenDocCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *GenDocCommand) Run() error {
+func (cmd *GenDocCommand) Run(ctx context.Context) error {
 	if cmd.Delete {
 		files, err := filepath.Glob(filepath.Join(cmd.Outpath, "*.md"))
 		if err != nil {

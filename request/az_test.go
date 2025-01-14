@@ -12,6 +12,7 @@ import (
 )
 
 func TestAzRequest(t *testing.T) {
+	ctx := context.TODO()
 	azKey := "test-az-upload.txt"
 	azUri := os.Getenv("TL_TEST_AZ_STORAGE")
 	testData := []byte("test azure file upload")
@@ -37,7 +38,7 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := uploader.Upload(context.Background(), azKey, dmfr.Secret{}, r); err != nil {
+		if err := uploader.Upload(ctx, azKey, dmfr.Secret{}, r); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -48,7 +49,7 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		downloadReader, _, err := downloader.Download(context.Background(), azKey, dmfr.Secret{}, dmfr.FeedAuthorization{})
+		downloadReader, _, err := downloader.Download(ctx, azKey, dmfr.Secret{}, dmfr.FeedAuthorization{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -67,7 +68,7 @@ func TestAzRequest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		signedUrl, err := downloader.CreateSignedUrl(context.Background(), azKey, "download.zip", dmfr.Secret{})
+		signedUrl, err := downloader.CreateSignedUrl(ctx, azKey, "download.zip", dmfr.Secret{})
 		if err != nil {
 			t.Fatal(err)
 		}

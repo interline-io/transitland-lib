@@ -29,10 +29,10 @@ func init() {
 // PostgresAdapter connects to a Postgres/PostGIS database.
 type PostgresAdapter struct {
 	DBURL string
-	db    sqlx.Ext
+	db    Ext
 }
 
-func NewPostgresAdapterFromDBX(db sqlx.Ext) *PostgresAdapter {
+func NewPostgresAdapterFromDBX(db Ext) *PostgresAdapter {
 	return &PostgresAdapter{DBURL: "", db: db}
 }
 
@@ -41,7 +41,7 @@ func (adapter *PostgresAdapter) Open() error {
 	if adapter.db != nil {
 		return nil
 	}
-	pool, err := pgxpool.New(context.Background(), adapter.DBURL)
+	pool, err := pgxpool.New(context.TODO(), adapter.DBURL)
 	if err != nil {
 		return err
 	}
@@ -58,14 +58,14 @@ func (adapter *PostgresAdapter) Close() error {
 
 // Create an initial database schema.
 func (adapter *PostgresAdapter) Create() error {
-	if _, err := adapter.db.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
+	if _, err := adapter.db.ExecContext(context.TODO(), "SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
 	return errors.New("please run postgres migrations manually")
 }
 
 // DBX returns sqlx.Ext
-func (adapter *PostgresAdapter) DBX() sqlx.Ext {
+func (adapter *PostgresAdapter) DBX() Ext {
 	return adapter.db
 }
 
@@ -122,30 +122,30 @@ func (adapter *PostgresAdapter) TableExists(t string) (bool, error) {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *PostgresAdapter) Find(dest interface{}) error {
-	return find(adapter, dest)
+func (adapter *PostgresAdapter) Find(ctx context.Context, dest interface{}) error {
+	return find(ctx, adapter, dest)
 }
 
 // Get wraps sqlx.Get
-func (adapter *PostgresAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Get(adapter.db, dest, adapter.db.Rebind(qstr), args...)
+func (adapter *PostgresAdapter) Get(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.GetContext(ctx, adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Select wraps sqlx.Select
-func (adapter *PostgresAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Select(adapter.db, dest, adapter.db.Rebind(qstr), args...)
+func (adapter *PostgresAdapter) Select(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.SelectContext(ctx, adapter.db, dest, adapter.db.Rebind(qstr), args...)
 }
 
 // Update a single entity.
-func (adapter *PostgresAdapter) Update(ent interface{}, columns ...string) error {
+func (adapter *PostgresAdapter) Update(ctx context.Context, ent interface{}, columns ...string) error {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	return update(adapter, ent, columns...)
+	return update(ctx, adapter, ent, columns...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
-func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
+func (adapter *PostgresAdapter) Insert(ctx context.Context, ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
@@ -164,9 +164,9 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 		Columns(header...).
 		Values(vals...)
 	if _, ok := ent.(canSetID); ok {
-		err = q.Suffix(`RETURNING "id"`).QueryRow().Scan(&eid)
+		err = q.Suffix(`RETURNING "id"`).QueryRowContext(ctx).Scan(&eid)
 	} else {
-		_, err = q.Exec()
+		_, err = q.ExecContext(ctx)
 	}
 	if err != nil {
 		return 0, err
@@ -178,7 +178,7 @@ func (adapter *PostgresAdapter) Insert(ent interface{}) (int, error) {
 }
 
 // MultiInsert builds and executes a multi-insert statement for the given entities.
-func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
+func (adapter *PostgresAdapter) MultiInsert(ctx context.Context, ents []interface{}) ([]int, error) {
 	retids := []int{}
 	if len(ents) == 0 {
 		return retids, nil
@@ -215,7 +215,7 @@ func (adapter *PostgresAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 				retids = append(retids, int(eid.Int64))
 			}
 		} else {
-			_, err = q.Exec()
+			_, err = q.ExecContext(ctx)
 			for range batch {
 				retids = append(retids, 0)
 			}

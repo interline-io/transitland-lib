@@ -17,14 +17,12 @@ import (
 
 var queryCounter = uint64(0)
 
-type sqrlExt interface {
-	QueryRow(string, ...interface{}) *sql.Row
-	Prepare(query string) (*sql.Stmt, error)
-}
-
 type Ext interface {
 	sqlx.Ext
 	sqlx.QueryerContext
+	sqlx.ExecerContext
+	// QueryRowContext is missing from sqlx.QueryerContext, despite having QueryRowContext
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
 }
 
 func init() {
@@ -39,12 +37,16 @@ type QueryLogger struct {
 
 // Exec .
 func (p *QueryLogger) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return p.ExecContext(context.Background(), query, args...)
+}
+
+func (p *QueryLogger) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	t, rid := p.queryId()
 	if p.Trace {
-		logt1(rid, query, args...)
+		logt1(ctx, rid, query, args...)
 	}
-	defer queryTime(rid, t, query, args...)
-	return p.Ext.Exec(query, args...)
+	defer queryTime(ctx, rid, t, query, args...)
+	return p.Ext.ExecContext(ctx, query, args...)
 }
 
 // Query .
@@ -55,64 +57,52 @@ func (p *QueryLogger) Query(query string, args ...interface{}) (*sql.Rows, error
 func (p *QueryLogger) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	t, rid := p.queryId()
 	if p.Trace {
-		logt1(rid, query, args...)
+		logt1(ctx, rid, query, args...)
 	}
-	defer queryTime(rid, t, query, args...)
+	defer queryTime(ctx, rid, t, query, args...)
 	return p.Ext.QueryContext(ctx, query, args...)
 }
 
 // Queryx .
-func (p *QueryLogger) QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
-	t, rid := p.queryId()
-	if p.Trace {
-		logt1(rid, query, args...)
-	}
-	defer queryTime(rid, t, query, args...)
-	return p.Ext.QueryxContext(ctx, query, args...)
-}
-
 func (p *QueryLogger) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
 	return p.QueryxContext(context.Background(), query, args...)
 }
 
-// QueryRow .
-func (p *QueryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
+func (p *QueryLogger) QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
 	t, rid := p.queryId()
 	if p.Trace {
-		logt1(rid, query, args...)
+		logt1(ctx, rid, query, args...)
 	}
-	defer queryTime(rid, t, query, args...)
-	if v, ok := p.Ext.(sqrlExt); ok {
-		return v.QueryRow(query, args...)
+	defer queryTime(ctx, rid, t, query, args...)
+	return p.Ext.QueryxContext(ctx, query, args...)
+}
+
+// QueryRow .
+func (p *QueryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
+	return p.QueryRowContext(context.Background(), query, args...)
+}
+
+func (p *QueryLogger) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	t, rid := p.queryId()
+	if p.Trace {
+		logt1(ctx, rid, query, args...)
 	}
-	return nil
+	defer queryTime(ctx, rid, t, query, args...)
+	return p.Ext.QueryRowContext(ctx, query, args...)
 }
 
 // QueryRowx .
+func (p *QueryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
+	return p.QueryRowxContext(context.Background(), query, args...)
+}
+
 func (p *QueryLogger) QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row {
 	t, rid := p.queryId()
 	if p.Trace {
-		logt1(rid, query, args...)
+		logt1(ctx, rid, query, args...)
 	}
-	defer queryTime(rid, t, query, args...)
+	defer queryTime(ctx, rid, t, query, args...)
 	return p.Ext.QueryRowxContext(ctx, query, args...)
-}
-
-func (p *QueryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
-	return p.Ext.QueryRowxContext(context.Background(), query, args...)
-}
-
-// Prepare
-func (p *QueryLogger) Prepare(query string) (*sql.Stmt, error) {
-	t, rid := p.queryId()
-	if p.Trace {
-		logt1(rid, query)
-	}
-	defer queryTime(rid, t, query)
-	if v, ok := p.Ext.(sqrlExt); ok {
-		return v.Prepare(query)
-	}
-	return nil, errors.New("not Preparer")
 }
 
 // Beginx .
@@ -133,14 +123,14 @@ func (p *QueryLogger) queryId() (time.Time, int) {
 
 var qstrRex = regexp.MustCompile(`[\s]+`)
 
-func logt1(rid int, qstr string, a ...interface{}) time.Time {
+func logt1(ctx context.Context, rid int, qstr string, a ...interface{}) time.Time {
 	t := time.Now()
-	queryStart(rid, qstr, a...)
+	queryStart(ctx, rid, qstr, a...)
 	return t
 }
 
 // QueryStart logs database query beginnings; requires TRACE.
-func queryStart(rid int, qstr string, a ...interface{}) {
+func queryStart(ctx context.Context, rid int, qstr string, a ...interface{}) {
 	log.TraceCheck(func() {
 		sts := []string{}
 		for i, val := range a {
@@ -148,12 +138,12 @@ func queryStart(rid int, qstr string, a ...interface{}) {
 			sts = append(sts, q.String())
 		}
 		qstr = qstrRex.ReplaceAllString(qstr, " ")
-		log.Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Msg("query: begin")
+		log.For(ctx).Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Msg("query: begin")
 	})
 }
 
 // QueryTime logs database queries and time relative to start; requires LogQuery or TRACE.
-func queryTime(rid int, t time.Time, qstr string, a ...interface{}) {
+func queryTime(ctx context.Context, rid int, t time.Time, qstr string, a ...interface{}) {
 	log.TraceCheck(func() {
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e6
 		sts := []string{}
@@ -162,7 +152,7 @@ func queryTime(rid int, t time.Time, qstr string, a ...interface{}) {
 			sts = append(sts, q.String())
 		}
 		qstr = qstrRex.ReplaceAllString(qstr, " ")
-		log.Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Float64("queryTime", t2).Msg("query: complete")
+		log.For(ctx).Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Float64("queryTime", t2).Msg("query: complete")
 	})
 }
 

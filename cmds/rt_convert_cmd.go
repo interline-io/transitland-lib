@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"errors"
 	"os"
 
@@ -42,9 +43,9 @@ func (cmd *RTConvertCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *RTConvertCommand) Run() error {
+func (cmd *RTConvertCommand) Run(ctx context.Context) error {
 	// Fetch
-	msg, err := rt.ReadURL(cmd.InputFile, request.WithAllowLocal)
+	msg, err := rt.ReadURL(ctx, cmd.InputFile, request.WithAllowLocal)
 	if err != nil {
 		return err
 	}

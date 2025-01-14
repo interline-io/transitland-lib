@@ -1,6 +1,8 @@
 package stats
 
 import (
+	"context"
+
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
@@ -105,18 +107,17 @@ func NewFeedVersionOnestopIDBuilder() *FeedVersionOnestopIDBuilder {
 
 //////////
 
-func CreateFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
+func CreateFeedStats(ctx context.Context, atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	stats, err := NewFeedStatsFromReader(reader)
 	if err != nil {
 		return err
 	}
 
-	fvt := dmfr.GetFeedVersionTables()
-
 	// Delete any existing records
+	fvt := dmfr.GetFeedVersionTables()
 	tables := fvt.FetchStatDerivedTables
 	for _, table := range tables {
-		if err := FeedVersionTableDelete(atx, table, fvid, false); err != nil {
+		if err := FeedVersionTableDelete(ctx, atx, table, fvid, false); err != nil {
 			return err
 		}
 	}
@@ -124,28 +125,28 @@ func CreateFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	// Insert FVSW
 	fvsw := stats.ServiceWindow
 	fvsw.FeedVersionID = fvid
-	if _, err := atx.Insert(&fvsw); err != nil {
+	if _, err := atx.Insert(ctx, &fvsw); err != nil {
 		return err
 	}
 
 	// Batch insert OSIDs
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
 		return err
 	}
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
 		return err
 	}
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
 		return err
 	}
 
 	// Insert FVFIs
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
 		return err
 	}
 
 	// Batch insert FVSLs
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
 		return err
 	}
 	return nil
@@ -168,7 +169,7 @@ func setFvid(input []any, fvid int) []any {
 		if v, ok := input[i].(canSetFeedVersion); ok {
 			v.SetFeedVersionID(fvid)
 		} else {
-			log.Error().Msgf("could not set feed version id for type %T", input[i])
+			log.For(context.TODO()).Error().Msgf("could not set feed version id for type %T", input[i])
 		}
 	}
 	return input

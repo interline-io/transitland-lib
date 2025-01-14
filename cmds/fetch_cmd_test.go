@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -65,7 +66,7 @@ func TestFetchCommand(t *testing.T) {
 			fatalErrorContains: "file does not exist or invalid data",
 		},
 	}
-	_ = cases
+	ctx := context.TODO()
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
 			adapter := testdb.MustOpenWriter("sqlite3://:memory:", true).Adapter
@@ -80,7 +81,7 @@ func TestFetchCommand(t *testing.T) {
 			if err := c.Parse(exp.command); err != nil {
 				t.Fatal(err)
 			}
-			if err := c.Run(); err != nil && exp.fatalErrorContains != "" {
+			if err := c.Run(ctx); err != nil && exp.fatalErrorContains != "" {
 				if !strings.Contains(err.Error(), exp.fatalErrorContains) {
 					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.fatalErrorContains)
 				}
