@@ -225,7 +225,6 @@ func testBucket(t *testing.T, ctx context.Context, bucket Bucket) {
 		for _, checkRtFn := range checkRtFiles {
 			checkDownloadFn := filepath.Join(
 				downloadDir,
-				srcDirPrefix,
 				stripDir(testpath.RelPath("testdata/request"), checkRtFn),
 			)
 			if checkRelKey, err := filesEqual(checkRtFn, checkDownloadFn); err != nil {
