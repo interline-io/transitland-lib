@@ -95,8 +95,7 @@ func (r *Local) UploadAll(ctx context.Context, srcDir string, prefix string, che
 	}
 	for _, fn := range fns {
 		// Get relative location
-		uploadKey := stripDir(srcDir, fn)
-		uploadKey = filepath.Join(prefix, uploadKey)
+		uploadKey := filepath.Join(prefix, stripDir(srcDir, fn))
 		// Upload to relative location
 		if err := UploadFile(r, ctx, fn, uploadKey); err != nil {
 			return err
