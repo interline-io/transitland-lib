@@ -67,7 +67,7 @@ func GetBucket(ustr string) (Bucket, error) {
 	return s, storeErr
 }
 
-func copyToFile(ctx context.Context, rio io.Reader, outfn string) error {
+func copyToFile(_ context.Context, rio io.Reader, outfn string) error {
 	log.Trace().Msgf("copyToFile: %s", outfn)
 	outf, err := os.Create(outfn)
 	if err != nil {

@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"os"
 	"sync"
 	"time"
@@ -95,7 +96,7 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 }
 
 // Run this command
-func (cmd *RebuildStatsCommand) Run() error {
+func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -127,13 +128,13 @@ func (cmd *RebuildStatsCommand) Run() error {
 		return err
 	}
 	qrs := []int{}
-	err = cmd.Adapter.Select(&qrs, qstr, qargs...)
+	err = cmd.Adapter.Select(ctx, &qrs, qstr, qargs...)
 	if err != nil {
 		return err
 	}
 	///////////////
 	// Here we go
-	log.Infof("Rebuilding stats for %d feed versions", len(qrs))
+	log.For(ctx).Info().Msgf("Rebuilding stats for %d feed versions", len(qrs))
 	jobs := make(chan RebuildStatsOptions, len(qrs))
 	results := make(chan RebuildStatsResult, len(qrs))
 	for _, fvid := range qrs {
@@ -149,13 +150,13 @@ func (cmd *RebuildStatsCommand) Run() error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go rebuildStatsWorker(w, cmd.Adapter, false, jobs, results, &wg)
+		go rebuildStatsWorker(w, ctx, cmd.Adapter, false, jobs, results, &wg)
 	}
 	wg.Wait()
 	return nil
 }
 
-func rebuildStatsWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan RebuildStatsOptions, results chan<- RebuildStatsResult, wg *sync.WaitGroup) {
+func rebuildStatsWorker(id int, ctx context.Context, adapter tldb.Adapter, dryrun bool, jobs <-chan RebuildStatsOptions, results chan<- RebuildStatsResult, wg *sync.WaitGroup) {
 	_ = id
 	type qr struct {
 		FeedVersionID   int
@@ -165,37 +166,37 @@ func rebuildStatsWorker(id int, adapter tldb.Adapter, dryrun bool, jobs <-chan R
 	}
 	for opts := range jobs {
 		q := qr{}
-		if err := adapter.Get(&q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
-			log.Errorf("Could not get details for FeedVersion %d", opts.FeedVersionID)
+		if err := adapter.Get(ctx, &q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
+			log.For(ctx).Error().Msgf("Could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}
 		if dryrun {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue
 		}
-		log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
-		result, err := rebuildStatsMain(adapter, opts)
+		result, err := rebuildStatsMain(ctx, adapter, opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.Errorf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
+			log.For(ctx).Error().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
 		} else {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
 		}
 		results <- result
 	}
 	wg.Done()
 }
 
-func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildStatsResult, error) {
+func rebuildStatsMain(ctx context.Context, adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildStatsResult, error) {
 	// Get FV
 	fv := dmfr.FeedVersion{}
 	fv.ID = opts.FeedVersionID
-	if err := adapter.Find(&fv); err != nil {
+	if err := adapter.Find(ctx, &fv); err != nil {
 		return RebuildStatsResult{}, err
 	}
 	// Get Reader
-	tladapter, err := tlcsv.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
+	tladapter, err := tlcsv.NewStoreAdapter(ctx, opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
 		return RebuildStatsResult{}, err
 	}
@@ -208,11 +209,11 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 	}
 	// Save
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
-		if err := stats.CreateFeedStats(atx, reader, fv.ID); err != nil {
+		if err := stats.CreateFeedStats(ctx, atx, reader, fv.ID); err != nil {
 			return err
 		}
 		if opts.SaveValidationReport {
-			if _, err := createFeedValidationReport(atx, reader, fv.ID, fv.FetchedAt, opts.ValidationReportStorage); err != nil {
+			if _, err := createFeedValidationReport(ctx, atx, reader, fv.ID, fv.FetchedAt, opts.ValidationReportStorage); err != nil {
 				return err
 			}
 		}
@@ -221,7 +222,7 @@ func rebuildStatsMain(adapter tldb.Adapter, opts RebuildStatsOptions) (RebuildSt
 	return RebuildStatsResult{}, errImport
 }
 
-func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
+func createFeedValidationReport(ctx context.Context, atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
 	// Create new report
 	_ = fetchedAt
 	opts := validator.Options{}
@@ -230,11 +231,11 @@ func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int
 	if err != nil {
 		return nil, err
 	}
-	validationResult, err := v.Validate()
+	validationResult, err := v.Validate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err := validator.SaveValidationReport(atx, validationResult, fvid, storage); err != nil {
+	if err := validator.SaveValidationReport(ctx, atx, validationResult, fvid, storage); err != nil {
 		return nil, err
 	}
 	return validationResult, nil

@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -65,6 +66,7 @@ func TestValidator_Validate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	ctx := context.TODO()
 	for _, file := range files {
 		if !file.IsDir() {
 			continue
@@ -77,7 +79,7 @@ func TestValidator_Validate(t *testing.T) {
 			}
 			// Directly read the expect_errors.txt
 			reader.Adapter.ReadRows("expect_errors.txt", func(row tlcsv.Row) {
-				fn := func(a string, b bool) string { return a }
+				fn := func(a string, _ bool) string { return a }
 				ee := testutil.NewExpectError(
 					fn(row.Get("filename")),
 					fn(row.Get("entity_id")),
@@ -93,7 +95,7 @@ func TestValidator_Validate(t *testing.T) {
 			opts.ErrorHandler = &handler
 			v, _ := NewValidator(reader, opts)
 			v.AddExtension(&handler)
-			v.Validate()
+			v.Validate(ctx)
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")
 			}
@@ -103,6 +105,7 @@ func TestValidator_Validate(t *testing.T) {
 
 func TestValidator_BestPractices(t *testing.T) {
 	// TODO: Combine with above... test best practice rules.
+	ctx := context.TODO()
 	basepath := testpath.RelPath("testdata/validator")
 	searchpath := testpath.RelPath("testdata/validator/best-practices")
 	files, err := ioutil.ReadDir(searchpath)
@@ -121,7 +124,7 @@ func TestValidator_BestPractices(t *testing.T) {
 			}
 			// Directly read the expect_errors.txt
 			reader.Adapter.ReadRows("expect_errors.txt", func(row tlcsv.Row) {
-				fn := func(a string, b bool) string { return a }
+				fn := func(a string, _ bool) string { return a }
 				ee := testutil.NewExpectError(
 					fn(row.Get("filename")),
 					fn(row.Get("entity_id")),
@@ -138,7 +141,7 @@ func TestValidator_BestPractices(t *testing.T) {
 			opts.BestPractices = true
 			v, _ := NewValidator(reader, opts)
 			v.AddExtension(&handler)
-			result, _ := v.Validate()
+			result, _ := v.Validate(ctx)
 			_ = result
 			if handler.expectErrorCount == 0 {
 				t.Errorf("feed did not contain any test cases")
@@ -148,6 +151,7 @@ func TestValidator_BestPractices(t *testing.T) {
 }
 
 func TestSaveValidationReport(t *testing.T) {
+	ctx := context.TODO()
 	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
@@ -172,12 +176,12 @@ func TestSaveValidationReport(t *testing.T) {
 	}
 
 	v, _ := NewValidator(reader, opts)
-	result, err := v.Validate()
+	result, err := v.Validate(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	testdb.TempSqlite(func(atx tldb.Adapter) error {
-		if err := SaveValidationReport(atx, result, 1, ""); err != nil {
+		if err := SaveValidationReport(ctx, atx, result, 1, ""); err != nil {
 			t.Fatal(err)
 		}
 		return nil

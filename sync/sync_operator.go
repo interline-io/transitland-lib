@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"database/sql"
 	"time"
 
@@ -11,13 +12,13 @@ import (
 )
 
 // UpdateOperator updates or inserts a single operator, as well as managing associated operator-in-feed records
-func UpdateOperator(atx tldb.Adapter, operator dmfr.Operator) (int, bool, bool, error) {
+func UpdateOperator(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (int, bool, bool, error) {
 	// Check if we have the existing operator
 	found := false
 	updated := false
 	var errTx error
 	ent := dmfr.Operator{}
-	err := atx.Get(&ent, "SELECT * FROM current_operators WHERE onestop_id = ?", operator.OnestopID)
+	err := atx.Get(ctx, &ent, "SELECT * FROM current_operators WHERE onestop_id = ?", operator.OnestopID)
 	if err == nil {
 		// Exists, update key values
 		found = true
@@ -26,11 +27,11 @@ func UpdateOperator(atx tldb.Adapter, operator dmfr.Operator) (int, bool, bool, 
 			updated = true
 			operator.CreatedAt = ent.CreatedAt
 			operator.DeletedAt = tt.Time{}
-			errTx = atx.Update(&operator)
+			errTx = atx.Update(ctx, &operator)
 		}
 	} else if err == sql.ErrNoRows {
 		// Insert
-		operator.ID, errTx = atx.Insert(&operator)
+		operator.ID, errTx = atx.Insert(ctx, &operator)
 	} else {
 		// Error
 		errTx = err
@@ -40,7 +41,7 @@ func UpdateOperator(atx tldb.Adapter, operator dmfr.Operator) (int, bool, bool, 
 	}
 	// Update operator in feeds
 	// This happens even if the entity did not change.
-	oifUpdate, err := updateOifs(atx, operator)
+	oifUpdate, err := updateOifs(ctx, atx, operator)
 	if err != nil {
 		return 0, false, false, err
 	}

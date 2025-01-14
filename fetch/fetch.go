@@ -58,10 +58,10 @@ type validationResponse struct {
 type fetchCb func(request.FetchResponse) (validationResponse, error)
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
-func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
+func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 	result := Result{URL: opts.FeedURL}
 	feed := dmfr.Feed{}
-	if err := atx.Get(&feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
+	if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
 		return result, err
 	}
 	if opts.FeedURL == "" {
@@ -90,7 +90,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		}
 		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
 	}
-	fetchResponse, err := request.AuthenticatedRequestDownload(opts.FeedURL, reqOpts...)
+	fetchResponse, err := request.AuthenticatedRequestDownload(ctx, opts.FeedURL, reqOpts...)
 	result.FetchError = fetchResponse.FetchError
 	result.ResponseCode = fetchResponse.ResponseCode
 	result.ResponseSize = fetchResponse.ResponseSize
@@ -141,7 +141,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 			return result, err
 		}
 		defer rio.Close()
-		if err := store.Upload(context.TODO(), uploadDest, rio); err != nil {
+		if err := store.Upload(ctx, uploadDest, rio); err != nil {
 			return result, err
 		}
 	}
@@ -174,7 +174,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		tlfetch.Success = false
 		tlfetch.FetchError.Set(result.FetchError.Error())
 	}
-	if _, err := atx.Insert(&tlfetch); err != nil {
+	if _, err := atx.Insert(ctx, &tlfetch); err != nil {
 		return result, err
 	}
 	return result, nil

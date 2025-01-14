@@ -1,6 +1,7 @@
 package tldb
 
 import (
+	"context"
 	"errors"
 
 	"github.com/interline-io/transitland-lib/internal/tags"
@@ -46,7 +47,7 @@ func contains(a string, b []string) bool {
 }
 
 // find a single record.
-func find(adapter Adapter, dest interface{}) error {
+func find(ctx context.Context, adapter Adapter, dest interface{}) error {
 	entid := 0
 	if v, ok := dest.(canGetID); ok {
 		entid = v.GetID()
@@ -57,11 +58,11 @@ func find(adapter Adapter, dest interface{}) error {
 	if err != nil {
 		return err
 	}
-	return adapter.Get(dest, qstr, args...)
+	return adapter.Get(ctx, dest, qstr, args...)
 }
 
 // update a single record.
-func update(adapter Adapter, ent interface{}, columns ...string) error {
+func update(ctx context.Context, adapter Adapter, ent interface{}, columns ...string) error {
 	entid := 0
 	if v, ok := ent.(canGetID); ok {
 		entid = v.GetID()
@@ -89,7 +90,7 @@ func update(adapter Adapter, ent interface{}, columns ...string) error {
 		Where("id = ?", entid).
 		Suffix("returning id").
 		SetMap(colmap).
-		Exec()
+		ExecContext(ctx)
 	if n, err := result.RowsAffected(); err != nil || n != 1 {
 		return errors.New("failed to update record")
 	}

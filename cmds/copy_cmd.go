@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"errors"
 
 	"github.com/interline-io/transitland-lib/adapters"
@@ -62,7 +63,7 @@ func (cmd *CopyCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *CopyCommand) Run() error {
+func (cmd *CopyCommand) Run(ctx context.Context) error {
 	// Reader / Writer
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {

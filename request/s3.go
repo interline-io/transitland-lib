@@ -180,7 +180,7 @@ func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 	s3bucket := strings.TrimPrefix(r.Bucket, "s3://")
 	s3key := r.getFullKey(key)
 	presignClient := s3.NewPresignClient(client)
-	request, err := presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
+	request, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s3bucket),
 		Key:    aws.String(s3key),
 	}, func(opts *s3.PresignOptions) {

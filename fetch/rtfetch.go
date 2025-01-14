@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/interline-io/log"
@@ -15,7 +16,7 @@ type RTFetchResult struct {
 	Result
 }
 
-func RTFetch(atx tldb.Adapter, opts Options) (RTFetchResult, error) {
+func RTFetch(ctx context.Context, atx tldb.Adapter, opts Options) (RTFetchResult, error) {
 	ret := RTFetchResult{}
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		// Validate
@@ -26,9 +27,9 @@ func RTFetch(atx tldb.Adapter, opts Options) (RTFetchResult, error) {
 		ret.Message, v.Error = rt.ReadFile(fr.Filename)
 		return v, nil
 	}
-	result, err := ffetch(atx, opts, cb)
+	result, err := ffetch(ctx, atx, opts, cb)
 	if err != nil {
-		log.Error().Err(err).Msg("fatal error during rt fetch")
+		log.For(ctx).Error().Err(err).Msg("fatal error during rt fetch")
 	}
 	ret.Result = result
 	ret.Error = err

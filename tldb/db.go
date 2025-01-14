@@ -3,11 +3,11 @@ package tldb
 
 import (
 	// Driver
+
 	"errors"
 	"net/url"
 	"strconv"
 
-	"github.com/interline-io/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -25,7 +25,6 @@ type canClose interface {
 // TODO: don't do this. panic is bad.
 func check(err error) {
 	if err != nil {
-		log.Debugf("Error: %s", err)
 		panic(err)
 	}
 }

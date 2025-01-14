@@ -31,7 +31,7 @@ func RegisterReader(name string, factory readerFactory) error {
 	if registered {
 		return fmt.Errorf("reader '%s' already registered", name)
 	}
-	log.Tracef("Registering reader: %s", name)
+	log.Tracef("registering reader: %s", name)
 	readerFactories[name] = factory
 	return nil
 }
@@ -45,7 +45,7 @@ func RegisterWriter(name string, factory writerFactory) error {
 	if registered {
 		return fmt.Errorf("writer '%s' already registered", name)
 	}
-	log.Tracef("Registering writer: %s", name)
+	log.Tracef("registering writer: %s", name)
 	writerFactories[name] = factory
 	return nil
 }

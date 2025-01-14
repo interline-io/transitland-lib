@@ -100,7 +100,6 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 
 func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 	for rid, routeDepartures := range pp.routeDepartures {
-		// log.Traceln("\n============", rid)
 		// Both directions will use the same day
 		departuresByService := map[string]int{}
 		for k, v := range routeDepartures {
@@ -114,10 +113,6 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 		}
 		// Stable sort
 		tripsByDaySorted := sortMap(tripsByDay)
-		// log.Traceln("tripsByDay:")
-		// for _, day := range tripsByDaySorted {
-		// 	log.Traceln("\tday:", day, "count:", tripsByDay[day])
-		// }
 		// Get the highest trip count for each dow category
 		dowCatDay := map[int]string{}
 		dowCatCounts := map[int]int{}
@@ -150,25 +145,13 @@ func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
 						}
 					}
 				}
-				// log.Traceln("routeDepartures:", routeDepartures)
-				// log.Traceln("stopDepartures:", stopDepartures)
 				stopsByVisits := sortMapSlice(stopDepartures)
 				if len(stopsByVisits) == 0 {
 					continue
 				}
-				// log.Traceln("direction:", direction, "dowCat:", dowCat, "dowCatDay:", dowCatDay)
-				// for _, v := range stopsByVisits {
-				// 	log.Traceln("\tstop:", v, "count:", len(stopDepartures[v]))
-				// }
 				mostVisitedStop := stopsByVisits[0]
 				departures := stopDepartures[mostVisitedStop]
 				sort.Ints(departures)
-				// log.Debugf("rid:", rid, "dowCat:", dowCat, "dowCatDay:", day, "direction:", direction, "most visited stop:", mostVisitedStop, "sids:", serviceids)
-				// log.Debugf("\tdepartures:", departures)
-				// for _, departure := range departures {
-				// 	wt := tt.NewSeconds(departure)
-				// 	log.Debugf("\t", wt.String())
-				// }
 				rh := RouteHeadway{
 					RouteID:        rid,
 					SelectedStopID: mostVisitedStop,

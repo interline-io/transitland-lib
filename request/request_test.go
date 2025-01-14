@@ -122,9 +122,10 @@ func TestAuthorizedRequest(t *testing.T) {
 			secret:      dmfr.Secret{ReplaceUrl: "/must/be/full/url"},
 		},
 	}
+	ctx := context.TODO()
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			fr, err := AuthenticatedRequest(ts.URL+tc.url, WithAuth(tc.secret, tc.auth))
+			fr, err := AuthenticatedRequest(ctx, ts.URL+tc.url, WithAuth(tc.secret, tc.auth))
 			if err != nil {
 				t.Error(err)
 				return

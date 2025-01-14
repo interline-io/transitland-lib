@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/jmoiron/sqlx/reflectx"
@@ -132,7 +131,7 @@ func ReflectUpdateKeys(emap *EntityMap, ent any) []error {
 		fieldAddr := fieldValue.Addr().Interface()
 		fieldSet, ok := fieldAddr.(canSet)
 		if !ok {
-			log.Error().Msgf("type %T does not support reflect based reference checks", fieldAddr)
+			errs = append(errs, fmt.Errorf("type %T does not support reflect based reference checks", fieldAddr))
 			continue
 		}
 		eid := fieldSet.String()
