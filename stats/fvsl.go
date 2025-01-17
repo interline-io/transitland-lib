@@ -16,27 +16,32 @@ import (
 )
 
 func ServiceLevelDaysMaxWindow(fvsls []dmfr.FeedVersionServiceLevel, startDate time.Time, endDate time.Time, windowSize int) (time.Time, time.Time, int) {
+	// Requires window size > 0
 	if windowSize < 1 {
 		windowSize = 1
 	}
-	i := 0
-	window := make([]int, windowSize)
 	windowSeconds := 0
 	windowStart := startDate
 	windowEnd := startDate
-	for d, slevel := range ServiceLevelDays(fvsls, startDate, endDate) {
-		// fmt.Println("d:", d, "slevel:", slevel)
-		window[i%windowSize] = slevel
+
+	i := 0
+	window := make([]int, windowSize)
+	for serviceDate, serviceLevel := range ServiceLevelDays(fvsls, startDate, endDate) {
+		// Overwrite window position
+		window[i%windowSize] = serviceLevel
 		i++
+
+		// Calculate window total
 		tot := 0
 		for _, v := range window {
 			tot += v
 		}
-		// fmt.Println("\twindow:", window, "tot:", tot)
+
+		// Update max window
 		if tot >= windowSeconds {
 			windowSeconds = tot
-			windowEnd = d
-			windowStart = d.AddDate(0, 0, -windowSize+1)
+			windowEnd = serviceDate
+			windowStart = serviceDate.AddDate(0, 0, -windowSize+1)
 		}
 	}
 	return windowStart, windowEnd, windowSeconds
