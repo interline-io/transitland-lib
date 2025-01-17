@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"iter"
 	"sort"
 	"time"
 
@@ -13,6 +14,71 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/snabb/isoweek"
 )
+
+func ServiceLevelDaysMaxWindow(fvsls []dmfr.FeedVersionServiceLevel, startDate time.Time, endDate time.Time, windowSize int) (time.Time, time.Time, int) {
+	if windowSize < 1 {
+		windowSize = 1
+	}
+	i := 0
+	window := make([]int, windowSize)
+	windowSeconds := 0
+	windowStart := startDate
+	windowEnd := startDate
+	for d, slevel := range ServiceLevelDays(fvsls, startDate, endDate) {
+		// fmt.Println("d:", d, "slevel:", slevel)
+		window[i%windowSize] = slevel
+		i++
+		tot := 0
+		for _, v := range window {
+			tot += v
+		}
+		// fmt.Println("\twindow:", window, "tot:", tot)
+		if tot >= windowSeconds {
+			windowSeconds = tot
+			windowEnd = d
+			windowStart = d.AddDate(0, 0, -windowSize+1)
+		}
+	}
+	return windowStart, windowEnd, windowSeconds
+}
+
+func ServiceLevelDays(fvsls []dmfr.FeedVersionServiceLevel, startDate time.Time, endDate time.Time) iter.Seq2[time.Time, int] {
+	return func(yield func(time.Time, int) bool) {
+		d := startDate
+		for ; d.Before(endDate) || d.Equal(endDate); d = d.AddDate(0, 0, 1) {
+			// Find fvsl for this date
+			// TODO: optimize by keeping last matched index
+			fvsl := dmfr.FeedVersionServiceLevel{}
+			for _, a := range fvsls {
+				if (d.After(a.StartDate.Val) || d.Equal(a.StartDate.Val)) && (d.Before(a.EndDate.Val) || d.Equal(a.EndDate.Val)) {
+					fvsl = a
+					break
+				}
+			}
+			// Get fvsl day of week service seconds
+			slevel := 0
+			switch d.Weekday() {
+			case time.Monday:
+				slevel = fvsl.Monday
+			case time.Tuesday:
+				slevel = fvsl.Tuesday
+			case time.Wednesday:
+				slevel = fvsl.Wednesday
+			case time.Thursday:
+				slevel = fvsl.Thursday
+			case time.Friday:
+				slevel = fvsl.Friday
+			case time.Saturday:
+				slevel = fvsl.Saturday
+			case time.Sunday:
+				slevel = fvsl.Sunday
+			}
+			if !yield(d, slevel) {
+				return
+			}
+		}
+	}
+}
 
 // NewFeedVersionServiceLevelsFromReader .
 func NewFeedVersionServiceLevelsFromReader(reader adapters.Reader) ([]dmfr.FeedVersionServiceLevel, error) {
