@@ -1,6 +1,7 @@
 package tldb
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -13,6 +14,7 @@ import (
 
 // Tests adapter Insert performance.
 func Benchmark_Adapter_Insert(b *testing.B) {
+	ctx := context.TODO()
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
@@ -22,14 +24,14 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
-			feedid, err := adapter.Insert(&dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			feedid, err := adapter.Insert(ctx, &dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
 			if err != nil {
 				b.Error(err)
 			}
 			b.ResetTimer()
 			ent := dmfr.FeedVersion{FeedID: feedid}
 			for i := 0; i < b.N; i++ {
-				_, err := adapter.Insert(&ent)
+				_, err := adapter.Insert(ctx, &ent)
 				if err != nil {
 					b.Error(err)
 				}
@@ -40,6 +42,7 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 
 // Tests raw database performance.
 func Benchmark_Adapter_InsertRaw(b *testing.B) {
+	ctx := context.TODO()
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
@@ -49,7 +52,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 			if err := adapter.Create(); err != nil {
 				b.Error(err)
 			}
-			feedid, err := adapter.Insert(&dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
+			feedid, err := adapter.Insert(ctx, &dmfr.Feed{FeedID: fmt.Sprintf("%d", time.Now().UnixNano())})
 			if err != nil {
 				b.Error(err)
 			}
@@ -57,7 +60,8 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 			ent := dmfr.FeedVersion{FeedID: feedid}
 			q := adapter.DBX().Rebind(`INSERT INTO feed_versions(feed_id, file, earliest_calendar_date, latest_calendar_date, sha1, sha1_dir,fetched_at, created_at, updated_at, url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
 			for i := 0; i < b.N; i++ {
-				_, err := adapter.DBX().Exec(
+				_, err := adapter.DBX().ExecContext(
+					ctx,
 					q,
 					ent.FeedID,
 					ent.File,
@@ -81,6 +85,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 // Tests multiple insert performance
 // There is a lot of setup in this test because we need a FeedVersion, Trip, and Stop
 func Benchmark_Adapter_MultiInsert(b *testing.B) {
+	ctx := context.TODO()
 	for k, v := range testAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
@@ -103,16 +108,16 @@ func Benchmark_Adapter_MultiInsert(b *testing.B) {
 			fvid := 0
 			tripid := 0
 			stopid := 0
-			if err := adapter.DBX().QueryRowx("SELECT id FROM feed_versions LIMIT 1").Scan(&fvid); err != nil {
+			if err := adapter.DBX().QueryRowxContext(ctx, "SELECT id FROM feed_versions LIMIT 1").Scan(&fvid); err != nil {
 				b.Error(err)
 			}
-			if err := adapter.DBX().QueryRowx("SELECT id FROM gtfs_trips LIMIT 1").Scan(&tripid); err != nil {
+			if err := adapter.DBX().QueryRowxContext(ctx, "SELECT id FROM gtfs_trips LIMIT 1").Scan(&tripid); err != nil {
 				b.Error(err)
 			}
-			if err := adapter.DBX().QueryRowx("SELECT id FROM gtfs_stops LIMIT 1").Scan(&stopid); err != nil {
+			if err := adapter.DBX().QueryRowxContext(ctx, "SELECT id FROM gtfs_stops LIMIT 1").Scan(&stopid); err != nil {
 				b.Error(err)
 			}
-			if _, err := adapter.DBX().Exec(adapter.DBX().Rebind("DELETE FROM gtfs_stop_times WHERE trip_id = ?"), tripid); err != nil {
+			if _, err := adapter.DBX().ExecContext(ctx, adapter.DBX().Rebind("DELETE FROM gtfs_stop_times WHERE trip_id = ?"), tripid); err != nil {
 				b.Error(err)
 			}
 			// Reset the timer
@@ -130,7 +135,7 @@ func Benchmark_Adapter_MultiInsert(b *testing.B) {
 					ent.FeedVersionID = fvid
 					ents = append(ents, &ent)
 				}
-				if _, err := adapter.MultiInsert(ents); err != nil {
+				if _, err := adapter.MultiInsert(ctx, ents); err != nil {
 					b.Error(err)
 				}
 			}

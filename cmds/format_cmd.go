@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -38,7 +39,7 @@ func (cmd *FormatCommand) Parse(args []string) error {
 }
 
 // Run this command.
-func (cmd *FormatCommand) Run() error {
+func (cmd *FormatCommand) Run(ctx context.Context) error {
 	filename := cmd.Filename
 	if filename == "" {
 		return errors.New("must specify filename")
@@ -46,7 +47,7 @@ func (cmd *FormatCommand) Run() error {
 	// First, validate DMFR
 	_, err := dmfr.LoadAndParseRegistry(filename)
 	if err != nil {
-		log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+		log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
 	}
 
 	// Re-read as raw registry
@@ -56,7 +57,7 @@ func (cmd *FormatCommand) Run() error {
 	}
 	rr, err := dmfr.ReadRawRegistry(r)
 	if err != nil {
-		log.Errorf("%s: Error when loading DMFR: %s", filename, err.Error())
+		log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
 	}
 	var buf bytes.Buffer
 	if err := rr.Write(&buf); err != nil {

@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE gtfs_stops ALTER COLUMN geometry DROP NOT NULL;
+
+COMMIT;

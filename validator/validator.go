@@ -231,7 +231,7 @@ func NewValidator(reader adapters.Reader, options Options) (*Validator, error) {
 }
 
 // Validate performs a basic validation, as well as optional extended reports.
-func (v *Validator) Validate() (*Result, error) {
+func (v *Validator) Validate(ctx context.Context) (*Result, error) {
 	tzName, err := v.setDefaultTimezone(v.Options.EvaluateAtTimezone)
 	if err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func (v *Validator) Validate() (*Result, error) {
 
 	// Validate realtime
 	if len(v.Options.ValidateRealtimeMessages) > 0 {
-		rtResult, err := v.ValidateRTs(v.Options.ValidateRealtimeMessages, evaluateAt, evaluateAtLocal)
+		rtResult, err := v.ValidateRTs(ctx, v.Options.ValidateRealtimeMessages, evaluateAt, evaluateAtLocal)
 		if err != nil {
 			result.FailureReason.Set(err.Error())
 			return result, err
@@ -400,13 +400,13 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 
 }
 
-func (v *Validator) ValidateRTs(rtUrls []string, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
+func (v *Validator) ValidateRTs(ctx context.Context, rtUrls []string, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
 	// Validate realtime
 	result := NewResult(evaluateAt, evaluateAtLocal)
 	result.IncludesRT.Set(true)
 	for _, fn := range rtUrls {
 		// Validate RT message
-		rtResult, err := v.ValidateRT(fn, evaluateAt, evaluateAtLocal)
+		rtResult, err := v.ValidateRT(ctx, fn, evaluateAt, evaluateAtLocal)
 		if err != nil {
 			return result, err
 		}
@@ -429,22 +429,22 @@ func (v *Validator) ValidateRTs(rtUrls []string, evaluateAt time.Time, evaluateA
 }
 
 // Validate realtime messages
-func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal time.Time) (RealtimeResult, error) {
-	log.Info().Str("url", fn).Msg("Validating GTFS-RT")
+func (v *Validator) ValidateRT(ctx context.Context, fn string, evaluateAt time.Time, evaluateAtLocal time.Time) (RealtimeResult, error) {
+	log.For(ctx).Info().Str("url", fn).Msg("Validating GTFS-RT")
 	rtResult := RealtimeResult{
 		Url: fn,
 	}
 	var rterrs []error
-	msg, err := rt.ReadURL(fn, request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal)
+	msg, err := rt.ReadURL(ctx, fn, request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal)
 	if err != nil {
 		rterrs = append(rterrs, err)
 	} else {
 		if v.Options.UseHeaderTimestamp {
 			evaluateAt = time.Unix(int64(msg.GetHeader().GetTimestamp()), 0)
 			evaluateAtLocal = evaluateAt.In(evaluateAtLocal.Location())
-			log.Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using header timestamps for evaluation time")
+			log.For(ctx).Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using header timestamps for evaluation time")
 		} else {
-			log.Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using provided timestamp for evaluation time")
+			log.For(ctx).Debug().Str("evaluateAt", evaluateAt.String()).Str("evaluateAtLocal", evaluateAtLocal.String()).Msg("Using provided timestamp for evaluation time")
 		}
 		rtResult.EntityCounts = v.rtValidator.EntityCounts(msg)
 		rterrs = v.rtValidator.ValidateFeedMessage(msg, nil)
@@ -464,10 +464,10 @@ func (v *Validator) ValidateRT(fn string, evaluateAt time.Time, evaluateAtLocal 
 		mOpts := protojson.MarshalOptions{UseProtoNames: true}
 		rtJson, err := mOpts.Marshal(msg)
 		if err != nil {
-			log.Error().Err(err).Msg("Could not convert RT message to JSON")
+			log.For(ctx).Error().Err(err).Msg("Could not convert RT message to JSON")
 		}
 		if err := json.Unmarshal(rtJson, &rtResult.Json); err != nil {
-			log.Error().Err(err).Msg("Could not round-trip RT message back to JSON")
+			log.For(ctx).Error().Err(err).Msg("Could not round-trip RT message back to JSON")
 		}
 	}
 	rtResult.Errors = rterrs
@@ -575,7 +575,7 @@ func copierEgToValidationEg(eg *copier.ValidationErrorGroup) *ValidationReportEr
 	return &ret
 }
 
-func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStorage string) error {
+func SaveValidationReport(ctx context.Context, atx tldb.Adapter, result *Result, fvid int, reportStorage string) error {
 	// Save validation reports
 	result.FeedVersionID = fvid
 
@@ -591,14 +591,14 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 			return err
 		}
 		jb := bytes.NewReader(jj)
-		if err := store.Upload(context.Background(), result.File.Val, dmfr.Secret{}, jb); err != nil {
+		if err := store.Upload(context.Background(), result.File.Val, jb); err != nil {
 			return err
 		}
 	}
 
 	// Save record
-	if _, err := atx.Insert(result); err != nil {
-		log.Error().Err(err).Msg("failed to save validation report")
+	if _, err := atx.Insert(ctx, result); err != nil {
+		log.For(ctx).Error().Err(err).Msg("failed to save validation report")
 		return err
 	}
 
@@ -612,14 +612,14 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 	}
 	for _, eg := range combinedErrors {
 		eg.ValidationReportID = result.ID
-		if _, err := atx.Insert(eg); err != nil {
-			log.Error().Err(err).Msg("failed to save validation report error group")
+		if _, err := atx.Insert(ctx, eg); err != nil {
+			log.For(ctx).Error().Err(err).Msg("failed to save validation report error group")
 			return err
 		}
 		for _, egErr := range eg.Errors {
 			egErr.ValidationReportErrorGroupID = eg.ID
-			if _, err := atx.Insert(&egErr); err != nil {
-				log.Error().Err(err).Msg("failed to save validation report error exemplar")
+			if _, err := atx.Insert(ctx, &egErr); err != nil {
+				log.For(ctx).Error().Err(err).Msg("failed to save validation report error exemplar")
 				return err
 			}
 		}
@@ -645,8 +645,8 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 				TripRtNotFoundCount:     s.TripRtNotFoundCount,
 				TripRtAddedCount:        s.TripRtAddedCount,
 			}
-			if _, err := atx.Insert(&tripReport); err != nil {
-				log.Error().Err(err).Msg("failed to save trip update stat")
+			if _, err := atx.Insert(ctx, &tripReport); err != nil {
+				log.For(ctx).Error().Err(err).Msg("failed to save trip update stat")
 				return err
 			}
 		}
@@ -668,8 +668,8 @@ func SaveValidationReport(atx tldb.Adapter, result *Result, fvid int, reportStor
 				TripRtNotFoundCount:     s.TripRtNotFoundCount,
 				TripRtAddedCount:        s.TripRtAddedCount,
 			}
-			if _, err := atx.Insert(&vpReport); err != nil {
-				log.Error().Err(err).Msg("failed to save vehicle position stat")
+			if _, err := atx.Insert(ctx, &vpReport); err != nil {
+				log.For(ctx).Error().Err(err).Msg("failed to save vehicle position stat")
 				return err
 			}
 		}

@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
@@ -27,7 +28,7 @@ type StaticFetchResult struct {
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
-func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
+func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 	var ret StaticFetchResult
 	cb := func(fr request.FetchResponse) (validationResponse, error) {
 		tmpfilepath := fr.Filename
@@ -70,7 +71,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 
 		// Is this SHA1 already present?
 		checkfvid := dmfr.FeedVersion{}
-		err = atx.Get(&checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", fv.SHA1, fv.SHA1Dir)
+		err = atx.Get(ctx, &checkfvid, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", fv.SHA1, fv.SHA1Dir)
 		if err == nil {
 			// Already present
 			fv = checkfvid
@@ -97,7 +98,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 			}
 			vr.UploadTmpfile = tf2.Name()
 			tf2.Close()
-			log.Info().Str("dst", vr.UploadTmpfile).Str("src", readerPath).Msg("fetch: copying extracted nested zip file for upload")
+			log.For(ctx).Info().Str("dst", vr.UploadTmpfile).Str("src", readerPath).Msg("fetch: copying extracted nested zip file for upload")
 			if err := copyFileContents(vr.UploadTmpfile, readerPath); err != nil {
 				// Fatal err
 				return vr, err
@@ -105,7 +106,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		}
 
 		// Create fv record
-		fv.ID, err = atx.Insert(&fv)
+		fv.ID, err = atx.Insert(ctx, &fv)
 		if err != nil {
 			// Fatal err
 			return vr, err
@@ -114,7 +115,7 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 
 		// Update validation report
 		if opts.SaveValidationReport {
-			validationResult, err := createFeedValidationReport(atx, reader, fv.ID, opts.FetchedAt, opts.ValidationReportStorage)
+			validationResult, err := createFeedValidationReport(ctx, atx, reader, fv.ID, opts.FetchedAt, opts.ValidationReportStorage)
 			if err != nil {
 				// Fatal err
 				return vr, err
@@ -123,15 +124,15 @@ func StaticFetch(atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 		}
 
 		// Update stats records
-		if err := stats.CreateFeedStats(atx, reader, fv.ID); err != nil {
+		if err := stats.CreateFeedStats(ctx, atx, reader, fv.ID); err != nil {
 			// Fatal err
 			return vr, err
 		}
 		return vr, nil
 	}
-	result, err := ffetch(atx, opts, cb)
+	result, err := ffetch(ctx, atx, opts, cb)
 	if err != nil {
-		log.Error().Err(err).Msg("fatal error during static fetch")
+		log.For(ctx).Error().Err(err).Msg("fatal error during static fetch")
 	}
 	ret.Result = result
 	ret.Error = err
@@ -162,7 +163,7 @@ func copyFileContents(dst, src string) (err error) {
 }
 
 // Duplicated
-func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
+func createFeedValidationReport(ctx context.Context, atx tldb.Adapter, reader *tlcsv.Reader, fvid int, fetchedAt time.Time, storage string) (*validator.Result, error) {
 	// Create new report
 	_ = fetchedAt
 	opts := validator.Options{}
@@ -171,11 +172,11 @@ func createFeedValidationReport(atx tldb.Adapter, reader *tlcsv.Reader, fvid int
 	if err != nil {
 		return nil, err
 	}
-	validationResult, err := v.Validate()
+	validationResult, err := v.Validate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err := validator.SaveValidationReport(atx, validationResult, fvid, storage); err != nil {
+	if err := validator.SaveValidationReport(ctx, atx, validationResult, fvid, storage); err != nil {
 		return nil, err
 	}
 	return validationResult, nil

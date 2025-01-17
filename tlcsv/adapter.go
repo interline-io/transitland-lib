@@ -2,6 +2,7 @@ package tlcsv
 
 import (
 	"archive/zip"
+	"context"
 	"crypto/sha1"
 	"encoding/csv"
 	"errors"
@@ -41,8 +42,12 @@ type WriterAdapter interface {
 /////////////////////
 
 // NewStoreAdapter is a convenience method for getting a GTFS Zip reader from the store.
-func NewStoreAdapter(storage string, key string, fragment string) (*TmpZipAdapter, error) {
-	r, err := request.Download(storage, key)
+func NewStoreAdapter(ctx context.Context, storage string, key string, fragment string) (*TmpZipAdapter, error) {
+	store, err := request.GetStore(storage)
+	if err != nil {
+		return nil, err
+	}
+	r, _, err := store.Download(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +118,7 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	fr, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
+	fr, err := request.AuthenticatedRequestDownload(context.TODO(), url, adapter.reqOpts...)
 	if err != nil {
 		return err
 	}
@@ -167,7 +172,7 @@ func (adapter *TmpZipAdapter) Open() error {
 
 func (adapter *TmpZipAdapter) Close() error {
 	if adapter.tmpfilepath != "" {
-		log.Debugf("tmp zip adapter: removing temp file: %s", adapter.tmpfilepath)
+		log.For(context.TODO()).Debug().Msgf("tmp zip adapter: removing temp file: %s", adapter.tmpfilepath)
 		if err := os.Remove(adapter.tmpfilepath); err != nil {
 			return err
 		}
@@ -221,7 +226,7 @@ func (adapter *ZipAdapter) Open() error {
 			// Get the full path
 			tmpfilepath = tmpfile.Name()
 			// Write the body to file
-			log.Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
+			log.For(context.TODO()).Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
 			io.Copy(tmpfile, r)
 		})
 		if err != nil {
@@ -231,7 +236,7 @@ func (adapter *ZipAdapter) Open() error {
 		adapter.internalPrefix = ""
 	}
 	if adapter.internalPrefix != "" {
-		log.Tracef("zip adapter: using internal prefix: %s", adapter.internalPrefix)
+		log.For(context.TODO()).Trace().Msgf("zip adapter: using internal prefix: %s", adapter.internalPrefix)
 	}
 	return nil
 }

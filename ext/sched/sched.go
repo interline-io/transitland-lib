@@ -43,11 +43,13 @@ func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 		}
 		fi.tripInfo[v.TripID.Val] = ti
 	case *gtfs.Frequency:
-		a := fi.tripInfo[v.TripID.Val]
-		for s := v.StartTime.Int(); s < v.EndTime.Int(); s += v.HeadwaySecs.Int() {
-			a.FrequencyStarts = append(a.FrequencyStarts, s)
+		if v.HeadwaySecs.Val > 0 {
+			a := fi.tripInfo[v.TripID.Val]
+			for s := v.StartTime.Int(); s < v.EndTime.Int(); s += v.HeadwaySecs.Int() {
+				a.FrequencyStarts = append(a.FrequencyStarts, s)
+			}
+			fi.tripInfo[v.TripID.Val] = a
 		}
-		fi.tripInfo[v.TripID.Val] = a
 	}
 	return nil
 }
@@ -70,7 +72,7 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 		for k, v := range fi.tripInfo {
 			svc, ok := fi.services[v.ServiceID]
 			if !ok {
-				// log.Debug().
+				// log.For(ctx).Debug().
 				// 	Str("service", v.ServiceID).
 				// 	Str("trip", k).
 				// 	Msg("no service, skipping")
@@ -84,7 +86,7 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 			}
 			// Not scheduled
 			if !sched {
-				// log.Debug().
+				// log.For(ctx).Debug().
 				// 	Str("date", now.Format("2006-02-03")).
 				// 	Str("service", v.ServiceID).
 				// 	Str("trip", k).
@@ -96,7 +98,7 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 			found := false
 			if len(v.FrequencyStarts) == 0 && nowWt.Int() >= v.StartTime.Int() && nowWt.Int() <= v.EndTime.Int() {
 				// Check non-frequency based trips
-				// log.Debug().
+				// log.For(ctx).Debug().
 				// 	Str("date", now.Format("2006-02-03")).
 				// 	Str("cur_time", nowWt.String()).
 				// 	Str("trip_start", v.StartTime.String()).

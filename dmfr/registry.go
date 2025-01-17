@@ -2,6 +2,7 @@ package dmfr
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -25,6 +26,7 @@ type Registry struct {
 
 // ReadRegistry TODO
 func ReadRegistry(reader io.Reader) (*Registry, error) {
+	ctx := context.TODO()
 	loadReg, err := ReadRawRegistry(reader)
 	if err != nil {
 		return nil, err
@@ -86,9 +88,9 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 	}
 
 	// Check license and required feeds
-	log.Debugf("Loaded a DMFR file containing %d feeds", len(loadReg.Feeds))
+	log.For(ctx).Debug().Msgf("Loaded a DMFR file containing %d feeds", len(loadReg.Feeds))
 	if loadReg.LicenseSpdxIdentifier != "CC0-1.0" {
-		log.Debugf("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
+		log.For(ctx).Debug().Msgf("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
 	}
 	for i := 0; i < len(loadReg.Feeds); i++ {
 		feedSpec := strings.ToLower(loadReg.Feeds[i].Spec)

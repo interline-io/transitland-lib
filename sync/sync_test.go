@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -13,6 +14,7 @@ import (
 
 // Full tests
 func TestSync(t *testing.T) {
+	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create a feed we will check is soft-deleted
 		testdb.CreateTestFeed(atx, "caltrain")
@@ -25,7 +27,7 @@ func TestSync(t *testing.T) {
 			Filenames:  regs,
 			HideUnseen: true,
 		}
-		found, err := Sync(atx, opts)
+		found, err := Sync(ctx, atx, opts)
 		if err != nil {
 			t.Error(err)
 		}
@@ -57,6 +59,7 @@ func TestSync(t *testing.T) {
 }
 
 func TestSync_Update(t *testing.T) {
+	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create existing feed
 		exposid := "f-c20-trimet"
@@ -70,7 +73,7 @@ func TestSync_Update(t *testing.T) {
 		opts := Options{
 			Filenames: regs,
 		}
-		if _, err = Sync(atx, opts); err != nil {
+		if _, err = Sync(ctx, atx, opts); err != nil {
 			t.Error(err)
 		}
 		// Check Updated values
@@ -97,6 +100,7 @@ func TestSync_Update(t *testing.T) {
 
 // Unit tests
 func TestUpdateFeed(t *testing.T) {
+	ctx := context.TODO()
 	t.Run("New", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			rfeed := dmfr.Feed{}
@@ -106,7 +110,7 @@ func TestUpdateFeed(t *testing.T) {
 			rfeed.License.UseWithoutAttribution = "yes"
 			rfeed.Authorization.ParamName = "test"
 			rfeed.Languages = dmfr.FeedLanguages{"en"}
-			feedid, found, _, err := UpdateFeed(atx, rfeed)
+			feedid, found, _, err := UpdateFeed(ctx, atx, rfeed)
 			if err != nil {
 				t.Error(err)
 			}
@@ -147,7 +151,7 @@ func TestUpdateFeed(t *testing.T) {
 			rfeed := dmfr.Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Name = tt.NewString("An Updated Name")
-			feedid, found, _, err := UpdateFeed(atx, rfeed)
+			feedid, found, _, err := UpdateFeed(ctx, atx, rfeed)
 			if err != nil {
 				t.Error(err)
 			}
@@ -159,7 +163,7 @@ func TestUpdateFeed(t *testing.T) {
 			//
 			dfeed := dmfr.Feed{}
 			dfeed.FeedID = "caltrain"
-			feedid2, found2, _, err2 := UpdateFeed(atx, dfeed)
+			feedid2, found2, _, err2 := UpdateFeed(ctx, atx, dfeed)
 			if err2 != nil {
 				t.Error(err)
 			}
@@ -193,6 +197,7 @@ func TestUpdateFeed(t *testing.T) {
 }
 
 func TestHideUnseedFeeds(t *testing.T) {
+	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		feedids := []string{"caltrain", "seen"}
 		fids := []int{}
@@ -202,7 +207,7 @@ func TestHideUnseedFeeds(t *testing.T) {
 		}
 		expseen := fids[0:1]
 		expunseen := fids[1:]
-		count, err := HideUnseedFeeds(atx, expseen)
+		count, err := HideUnseedFeeds(ctx, atx, expseen)
 		if err != nil {
 			t.Error(err)
 		}
@@ -228,6 +233,7 @@ func TestHideUnseedFeeds(t *testing.T) {
 }
 
 func TestUpdateOperator(t *testing.T) {
+	ctx := context.TODO()
 	t.Run("New", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			// Import
@@ -238,7 +244,7 @@ func TestUpdateOperator(t *testing.T) {
 				Filenames:  regs,
 				HideUnseen: true,
 			}
-			found, err := Sync(atx, opts)
+			found, err := Sync(ctx, atx, opts)
 			if err != nil {
 				t.Error(err)
 			}
@@ -272,14 +278,14 @@ func TestUpdateOperator(t *testing.T) {
 				testpath.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
 			}
 			opts := Options{Filenames: regs}
-			found, err := Sync(atx, opts)
+			found, err := Sync(ctx, atx, opts)
 			if err != nil {
 				t.Error(err)
 			}
 			// Manual update so we can test operator updates
 			newFile := "test.dmfr.json"
 			_ = found
-			if _, err := atx.DBX().Exec("update current_operators set file = ? where onestop_id = ?", newFile, "o-mbta"); err != nil {
+			if _, err := atx.DBX().ExecContext(ctx, "update current_operators set file = ? where onestop_id = ?", newFile, "o-mbta"); err != nil {
 				t.Fatal(err)
 			}
 			// Check updated
@@ -292,7 +298,7 @@ func TestUpdateOperator(t *testing.T) {
 				t.Errorf("did not get updated file value, got '%s' expected '%s'", tlops[0].File.Val, newFile)
 			}
 			// Resync and check updated file
-			if _, err := Sync(atx, opts); err != nil {
+			if _, err := Sync(ctx, atx, opts); err != nil {
 				t.Error(err)
 			}
 			newOps := []dmfr.Operator{}

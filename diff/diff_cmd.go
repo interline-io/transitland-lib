@@ -2,6 +2,7 @@
 package diff
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
@@ -69,7 +70,7 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *Command) Run() error {
+func (cmd *Command) Run(ctx context.Context) error {
 	readerA, err := tlcsv.NewReader(cmd.readerPathA)
 	if err != nil {
 		return err
@@ -144,28 +145,21 @@ func (cmd *Command) Run() error {
 		for k := range combinedKeys {
 			ent1, ok1 := df1.ents[diffKey{fn, k}]
 			ent2, ok2 := df2.ents[diffKey{fn, k}]
-			// log.Traceln("========", fn, "key:", k)
-			// log.Traceln("ent1:", ent1)
-			// log.Traceln("ent2:", ent2)
 			hh1 := hashRow(ent1.row)
 			hh2 := hashRow(ent2.row)
 			if ok1 && ok2 {
 				if hh1 == hh2 && cmd.ShowSame {
-					// log.Traceln("same")
 					ent1.row = append(ent1.row, readerB.String(), "same")
 					presentBoth = append(presentBoth, ent1)
 				} else if hh1 != hh2 && cmd.ShowDiff {
-					// log.Traceln("diff")
 					ent1.row = append(ent1.row, readerA.String(), "diff")
 					ent2.row = append(ent2.row, readerB.String(), "diff")
 					presentDiff = append(presentDiff, ent1, ent2)
 				}
 			} else if ok1 && !ok2 && cmd.ShowDeleted {
-				// log.Traceln("deleted")
 				ent1.row = append(ent1.row, readerA.String(), "deleted")
 				deletedRows = append(deletedRows, ent1)
 			} else if ok2 && !ok1 && cmd.ShowAdded {
-				// log.Traceln("added")
 				ent2.row = append(ent2.row, readerB.String(), "added")
 				addedRows = append(addedRows, ent2)
 			}
@@ -184,9 +178,9 @@ func (cmd *Command) Run() error {
 			h2 = h1
 		}
 		if hashRow(h1.row) != hashRow(h2.row) {
-			log.Traceln("headers are different:")
-			log.Traceln(h1.row)
-			log.Traceln(h2.row)
+			log.For(ctx).Trace().Msg("headers are different:")
+			log.For(ctx).Trace().Msgf("%v", h1.row)
+			log.For(ctx).Trace().Msgf("%v", h2.row)
 			continue
 		}
 		header = append(header, h1.row...)
@@ -249,7 +243,6 @@ func checkDiffRaw(reader adapters.Reader, checkFiles []string) (*diffAdapter, er
 				df.WriteRows(fi.Name(), [][]string{row.Header})
 				header = true
 			}
-			// log.Traceln(fi.Name(), row.Row)
 			var row2 []string
 			row2 = append(row2, row.Row...)
 			df.WriteRows(fi.Name(), [][]string{row2})

@@ -4,6 +4,7 @@
 package tldb
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 
@@ -40,7 +41,7 @@ func init() {
 // SQLiteAdapter provides support for SQLite.
 type SQLiteAdapter struct {
 	DBURL string
-	db    sqlx.Ext
+	db    Ext
 }
 
 // Open the database.
@@ -68,20 +69,21 @@ func (adapter *SQLiteAdapter) Close() error {
 
 // Create the database if necessary.
 func (adapter *SQLiteAdapter) Create() error {
+	ctx := context.TODO()
 	// Dont log, used often in tests
 	adb := adapter.db
 	if a, ok := adapter.db.(*QueryLogger); ok {
 		adb = a.Ext
 	}
-	if _, err := adb.Exec("SELECT * FROM feed_versions LIMIT 0"); err == nil {
+	if _, err := adb.ExecContext(ctx, "SELECT * FROM feed_versions LIMIT 0"); err == nil {
 		return nil
 	}
-	_, err := adb.Exec(sqlite.SqliteSchema)
+	_, err := adb.ExecContext(ctx, sqlite.SqliteSchema)
 	return err
 }
 
 // DBX returns the underlying Sqlx DB or Tx.
-func (adapter *SQLiteAdapter) DBX() sqlx.Ext {
+func (adapter *SQLiteAdapter) DBX() Ext {
 	return adapter.db
 }
 
@@ -121,30 +123,30 @@ func (adapter *SQLiteAdapter) TableExists(t string) (bool, error) {
 }
 
 // Find finds a single entity based on the EntityID()
-func (adapter *SQLiteAdapter) Find(dest interface{}) error {
-	return find(adapter, dest)
+func (adapter *SQLiteAdapter) Find(ctx context.Context, dest interface{}) error {
+	return find(ctx, adapter, dest)
 }
 
 // Get wraps sqlx.Get
-func (adapter *SQLiteAdapter) Get(dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Get(adapter.db, dest, qstr, args...)
+func (adapter *SQLiteAdapter) Get(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.GetContext(ctx, adapter.db, dest, qstr, args...)
 }
 
 // Select wraps sqlx.Select
-func (adapter *SQLiteAdapter) Select(dest interface{}, qstr string, args ...interface{}) error {
-	return sqlx.Select(adapter.db, dest, qstr, args...)
+func (adapter *SQLiteAdapter) Select(ctx context.Context, dest interface{}, qstr string, args ...interface{}) error {
+	return sqlx.SelectContext(ctx, adapter.db, dest, qstr, args...)
 }
 
 // Update a single record.
-func (adapter *SQLiteAdapter) Update(ent interface{}, columns ...string) error {
+func (adapter *SQLiteAdapter) Update(ctx context.Context, ent interface{}, columns ...string) error {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	return update(adapter, ent, columns...)
+	return update(ctx, adapter, ent, columns...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
-func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
+func (adapter *SQLiteAdapter) Insert(ctx context.Context, ent interface{}) (int, error) {
 	if v, ok := ent.(canUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
@@ -157,12 +159,20 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	var x sq.ExecerContext = adapter.db
+	if _, err := x.ExecContext(ctx, "select 1"); err != nil {
+		panic(err)
+	}
+	if _, ok := adapter.db.(sq.ExecerContext); !ok {
+		panic("no ctx")
+	}
+
 	q := sq.
 		Insert(table).
 		Columns(header...).
 		Values(vals...).
 		RunWith(adapter.db)
-	result, err := q.Exec()
+	result, err := q.ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -174,7 +184,7 @@ func (adapter *SQLiteAdapter) Insert(ent interface{}) (int, error) {
 }
 
 // MultiInsert inserts multiple entities.
-func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
+func (adapter *SQLiteAdapter) MultiInsert(ctx context.Context, ents []interface{}) ([]int, error) {
 	retids := []int{}
 	if len(ents) == 0 {
 		return retids, nil
@@ -203,7 +213,7 @@ func (adapter *SQLiteAdapter) MultiInsert(ents []interface{}) ([]int, error) {
 		if err != nil {
 			return retids, err
 		}
-		result, err := db.Exec(q, vals...)
+		result, err := db.ExecContext(ctx, q, vals...)
 		if err != nil {
 			return retids, err
 		}

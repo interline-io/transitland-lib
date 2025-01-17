@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -113,7 +114,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 }
 
 // Run this command
-func (cmd *ImportCommand) Run() error {
+func (cmd *ImportCommand) Run(ctx context.Context) error {
 	if cmd.Workers < 1 {
 		cmd.Workers = 1
 	}
@@ -172,14 +173,14 @@ func (cmd *ImportCommand) Run() error {
 		return err
 	}
 	qrs := []int{}
-	err = cmd.Adapter.Select(&qrs, qstr, qargs...)
+	err = cmd.Adapter.Select(ctx, &qrs, qstr, qargs...)
 	if err != nil {
 		return err
 	}
 
 	///////////////
 	// Here we go
-	log.Infof("Importing %d feed versions", len(qrs))
+	log.For(ctx).Info().Msgf("Importing %d feed versions", len(qrs))
 	jobs := make(chan importer.Options, len(qrs))
 	results := make(chan ImportCommandResult, len(qrs))
 	for _, fvid := range qrs {
@@ -196,7 +197,7 @@ func (cmd *ImportCommand) Run() error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go dmfrImportWorker(cmd.Adapter, cmd.DryRun, jobs, results, &wg)
+		go dmfrImportWorker(ctx, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
 	}
 	wg.Wait()
 	close(results)
@@ -214,13 +215,13 @@ func (cmd *ImportCommand) Run() error {
 		}
 	}
 	if fatalError != nil {
-		log.Infof("Exiting with error because at least one import had fatal error: %s", fatalError.Error())
+		log.For(ctx).Info().Msgf("Exiting with error because at least one import had fatal error: %s", fatalError.Error())
 		return fatalError
 	}
 	return nil
 }
 
-func dmfrImportWorker(adapter tldb.Adapter, dryrun bool, jobs <-chan importer.Options, results chan<- ImportCommandResult, wg *sync.WaitGroup) {
+func dmfrImportWorker(ctx context.Context, adapter tldb.Adapter, dryrun bool, jobs <-chan importer.Options, results chan<- ImportCommandResult, wg *sync.WaitGroup) {
 	type qr struct {
 		FeedVersionID   int
 		FeedID          int
@@ -229,24 +230,24 @@ func dmfrImportWorker(adapter tldb.Adapter, dryrun bool, jobs <-chan importer.Op
 	}
 	for opts := range jobs {
 		q := qr{}
-		if err := adapter.Get(&q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
-			log.Errorf("Could not get details for FeedVersion %d", opts.FeedVersionID)
+		if err := adapter.Get(ctx, &q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
+			log.For(ctx).Error().Msgf("Could not get details for FeedVersion %d", opts.FeedVersionID)
 			continue
 		}
 		if dryrun {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 			continue
 		}
-		log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
-		result, err := importer.ImportFeedVersion(adapter, opts)
+		result, err := importer.ImportFeedVersion(ctx, adapter, opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.Errorf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
+			log.For(ctx).Error().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
 		} else if result.FeedVersionImport.Success {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): success: count %v errors: %v referrors: %v (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.EntityCount, result.FeedVersionImport.SkipEntityErrorCount, result.FeedVersionImport.SkipEntityReferenceCount, t2)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success: count %v errors: %v referrors: %v (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.EntityCount, result.FeedVersionImport.SkipEntityErrorCount, result.FeedVersionImport.SkipEntityReferenceCount, t2)
 		} else {
-			log.Infof("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s, (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): error: %s, (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, result.FeedVersionImport.ExceptionLog, t2)
 		}
 		results <- ImportCommandResult{
 			Result:     result,

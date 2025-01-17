@@ -3,6 +3,7 @@ package cmds
 // End to end tests for sync, fetch, and import
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -108,6 +109,7 @@ func TestE2E(t *testing.T) {
 			expectStopTimes: 28,
 		},
 	}
+	ctx := context.TODO()
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +143,7 @@ func TestE2E(t *testing.T) {
 					FetchedAt: time.Now(),
 				},
 			}
-			if err := fetch.Run(); err != nil {
+			if err := fetch.Run(ctx); err != nil {
 				t.Fatal(err)
 			}
 
@@ -155,7 +157,7 @@ func TestE2E(t *testing.T) {
 					Activate: tc.activate,
 				},
 			}
-			if err := impcmd.Run(); err != nil {
+			if err := impcmd.Run(ctx); err != nil {
 				t.Fatal(err)
 			}
 
@@ -169,7 +171,7 @@ func TestE2E(t *testing.T) {
 					Workers:      1,
 					Adapter:      atx,
 				}
-				if err := unimpcmd.Run(); err != nil {
+				if err := unimpcmd.Run(ctx); err != nil {
 					t.Fatal(err)
 				}
 			}

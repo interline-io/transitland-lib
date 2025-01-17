@@ -2,6 +2,7 @@ package tlcli
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"text/template"
 
@@ -24,7 +25,7 @@ type hasHelpArgs interface {
 type Runner interface {
 	AddFlags(*pflag.FlagSet)
 	Parse([]string) error
-	Run() error
+	Run(context.Context) error
 }
 
 type NArgs struct {
@@ -79,14 +80,14 @@ func CobraHelper(r Runner, pc string, subc string) *cobra.Command {
 	}
 	cobraCommand.RunE = func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		return r.Run()
+		return r.Run(cmd.Context())
 	}
 	r.AddFlags(cobraCommand.Flags())
 	return cobraCommand
 }
 
-func RunWithArgs(r Runner, args []string) error {
+func RunWithArgs(ctx context.Context, r Runner, args []string) error {
 	c := CobraHelper(r, "", "")
 	c.SetArgs(args)
-	return c.Execute()
+	return c.ExecuteContext(ctx)
 }

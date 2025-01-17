@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -27,7 +28,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func setupImport(t *testing.T, atx tldb.Adapter) int {
+func setupImport(ctx context.Context, t *testing.T, atx tldb.Adapter) int {
 	// Create FV
 	feed := dmfr.Feed{}
 	feed.FeedID = fmt.Sprintf("feed-%d", time.Now().UnixNano())
@@ -43,22 +44,23 @@ func setupImport(t *testing.T, atx tldb.Adapter) int {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := stats.CreateFeedStats(atx, tlreader, fvid); err != nil {
+	if err := stats.CreateFeedStats(ctx, atx, tlreader, fvid); err != nil {
 		t.Fatal(err)
 	}
 	// Import
-	if _, err := ImportFeedVersion(atx, Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
+	if _, err := ImportFeedVersion(ctx, atx, Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
 		t.Fatal(err)
 	}
 	return fv.ID
 }
 
 func TestUnimportSchedule(t *testing.T) {
+	ctx := context.TODO()
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
 	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
 		// Note - it's difficult to test feed_version_gtfs_imports.schedule_removed
-		fvid := setupImport(t, atx)
-		if err := UnimportSchedule(atx, fvid); err != nil {
+		fvid := setupImport(ctx, t, atx)
+		if err := UnimportSchedule(ctx, atx, fvid); err != nil {
 			t.Fatal(err)
 		}
 		tcs := []struct {
@@ -107,11 +109,12 @@ func TestUnimportSchedule(t *testing.T) {
 }
 
 func TestUnimportFeedVersion(t *testing.T) {
+	ctx := context.TODO()
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
 	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
-		fvid := setupImport(t, atx)
+		fvid := setupImport(ctx, t, atx)
 		// TODO: test ExtraTables option
-		if err := UnimportFeedVersion(atx, fvid, nil); err != nil {
+		if err := UnimportFeedVersion(ctx, atx, fvid, nil); err != nil {
 			t.Fatal(err)
 		}
 		tcs := []struct {
@@ -160,10 +163,11 @@ func TestUnimportFeedVersion(t *testing.T) {
 }
 
 func TestDeleteFeedVersion(t *testing.T) {
+	ctx := context.TODO()
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
 	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
-		fvid := setupImport(t, atx)
-		if err := DeleteFeedVersion(atx, fvid, nil); err != nil {
+		fvid := setupImport(ctx, t, atx)
+		if err := DeleteFeedVersion(ctx, atx, fvid, nil); err != nil {
 			t.Fatal(err)
 		}
 		tcs := []struct {

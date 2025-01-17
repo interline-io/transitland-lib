@@ -173,7 +173,7 @@ func (g *GeomCache) setStopTimeDists(shapeId string, patternId int64, sts []gtfs
 
 		// Check for simple or fallback positions
 		if !arePositionsSorted(stopPositions) || len(stopLine) == 0 {
-			// log.Debugf("positions %f not increasing, falling back to stop positions; shapeline %f stopLine %f", positions, shapeline, stopLine)
+			// log.For(ctx).Debug().Msgf("positions %f not increasing, falling back to stop positions; shapeline %f stopLine %f", positions, shapeline, stopLine)
 			stopPositions = tlxy.LineRelativePositionsFallback(stopLine)
 			if !arePositionsSorted(stopPositions) {
 				return errors.New("fallback positions not sorted")

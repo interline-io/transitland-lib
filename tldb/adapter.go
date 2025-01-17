@@ -1,10 +1,10 @@
 package tldb
 
 import (
+	"context"
 	"net/url"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/jmoiron/sqlx"
 )
 
 var adapterFactories = map[string]func(string) Adapter{}
@@ -34,14 +34,14 @@ type Adapter interface {
 	Open() error
 	Close() error
 	Create() error
-	DBX() sqlx.Ext
+	DBX() Ext
 	Tx(func(Adapter) error) error
 	Sqrl() sq.StatementBuilderType
 	TableExists(string) (bool, error)
-	Insert(interface{}) (int, error)
-	Update(interface{}, ...string) error
-	Find(interface{}) error
-	Get(interface{}, string, ...interface{}) error
-	Select(interface{}, string, ...interface{}) error
-	MultiInsert([]interface{}) ([]int, error)
+	Insert(context.Context, interface{}) (int, error)
+	Update(context.Context, interface{}, ...string) error
+	Find(context.Context, interface{}) error
+	Get(context.Context, interface{}, string, ...interface{}) error
+	Select(context.Context, interface{}, string, ...interface{}) error
+	MultiInsert(context.Context, []interface{}) ([]int, error)
 }

@@ -2,6 +2,7 @@
 package copier
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -204,10 +205,11 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	copier.Writer = writer
 
 	// Logging
+	ctx := context.TODO()
 	if opts.Quiet {
-		copier.Options.sublogger = log.Logger.Level(zerolog.ErrorLevel).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+		copier.Options.sublogger = log.For(ctx).Level(zerolog.ErrorLevel).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
 	} else {
-		copier.Options.sublogger = log.Logger.With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+		copier.Options.sublogger = log.For(ctx).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
 	}
 
 	// Result
@@ -359,7 +361,7 @@ func (copier *Copier) addExtension(ext interface{}, warning bool) error {
 	}
 	if !added {
 		err := errors.New("extension does not satisfy any extension interfaces")
-		log.Error().Err(err).Msg(err.Error())
+		copier.sublogger.Error().Err(err).Msg(err.Error())
 		return err
 	}
 	return nil
@@ -806,7 +808,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		trips[eid] = &tripCopy
 	}
-	log.Trace().Msgf("Loaded %d trips", len(allTripIds))
+	copier.sublogger.Trace().Msgf("Loaded %d trips", len(allTripIds))
 
 	// Process each set of Trip/StopTimes
 	stopPatterns := map[string]int{}
@@ -913,7 +915,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		for _, ent := range okTrips {
 			if v, ok := ent.(*gtfs.Trip); ok {
 				if _, dedupOk := tripOffsets[v.TripID.Val]; dedupOk && copier.DeduplicateJourneyPatterns {
-					log.Trace().Msgf("deduplicating: %s", v.TripID)
+					copier.sublogger.Trace().Msgf("deduplicating: %s", v.TripID)
 					continue
 				}
 				for _, st := range v.StopTimes {
@@ -1016,7 +1018,7 @@ func copyEntities[T tt.Entity](copier *Copier, ents []T) ([]tt.Entity, error) {
 		expanded := false
 		for _, f := range copier.expandFilters {
 			if a, ok, err := f.Expand(ent, copier.EntityMap); err != nil {
-				log.Error().Err(err).Msg("failed to expand")
+				copier.sublogger.Error().Err(err).Msg("failed to expand")
 			} else if ok {
 				expanded = true
 				expandedEnts = append(expandedEnts, a...)

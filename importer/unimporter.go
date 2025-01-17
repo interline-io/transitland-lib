@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"context"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -13,23 +14,23 @@ import (
 // UnimportSchedule removes schedule data for a feed version and updates the import record.
 // stops, routes, agencies, pathways, levels are not affected.
 // Note: calendars and calendar_dates MAY be deleted in future versions.
-func UnimportSchedule(atx tldb.Adapter, id int) error {
+func UnimportSchedule(ctx context.Context, atx tldb.Adapter, id int) error {
 	fvt := dmfr.GetFeedVersionTables()
 	tables := fvt.ScheduleTables()
 	for _, table := range tables {
-		if err := stats.FeedVersionTableDelete(atx, table, id, false); err != nil {
+		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
 			return err
 		}
 	}
 	where := sq.Eq{"feed_version_id": id}
-	if _, err := atx.Sqrl().Update("feed_version_gtfs_imports").Set("schedule_removed", true).Where(where).Exec(); err != nil {
+	if _, err := atx.Sqrl().Update("feed_version_gtfs_imports").Set("schedule_removed", true).Where(where).ExecContext(ctx); err != nil {
 		return err
 	}
 	return nil
 }
 
 // UnimportFeedVersion unimports a feed version and removes the feed_version_gtfs_import record.
-func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
+func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
 	fvt := dmfr.GetFeedVersionTables()
 
 	// Allow extension tables to not exist
@@ -37,7 +38,7 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 	optTables = append(optTables, extraTables...)
 	optTables = append(optTables, fvt.GtfsExtTables...)
 	for _, table := range optTables {
-		if err := stats.FeedVersionTableDelete(atx, table, id, true); err != nil {
+		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, true); err != nil {
 			return err
 		}
 	}
@@ -46,26 +47,26 @@ func UnimportFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 	tables := []string{}
 	tables = append(tables, fvt.ImportedTables()...)
 	for _, table := range tables {
-		if err := stats.FeedVersionTableDelete(atx, table, id, false); err != nil {
+		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
 			return err
 		}
 	}
 
 	// Remove fvgi
 	where := sq.Eq{"feed_version_id": id}
-	if _, err := atx.Sqrl().Delete("feed_version_gtfs_imports").Where(where).Exec(); err != nil {
+	if _, err := atx.Sqrl().Delete("feed_version_gtfs_imports").Where(where).ExecContext(ctx); err != nil {
 		return err
 	}
 	// Unset feed state
-	if _, err := atx.Sqrl().Update("feed_states").Set("feed_version_id", nil).Where(where).Exec(); err != nil {
+	if _, err := atx.Sqrl().Update("feed_states").Set("feed_version_id", nil).Where(where).ExecContext(ctx); err != nil {
 		return err
 	}
 	return nil
 }
 
-func DeleteFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
+func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
 	// Unimport feed version first
-	if err := UnimportFeedVersion(atx, id, extraTables); err != nil {
+	if err := UnimportFeedVersion(ctx, atx, id, extraTables); err != nil {
 		return err
 	}
 
@@ -75,7 +76,7 @@ func DeleteFeedVersion(atx tldb.Adapter, id int, extraTables []string) error {
 	tables = append(tables, extraTables...)
 	tables = append(tables, fvt.AllTables()...)
 	for _, table := range tables {
-		if err := stats.FeedVersionTableDelete(atx, table, id, false); err != nil {
+		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
 			return err
 		}
 	}

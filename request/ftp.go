@@ -11,9 +11,20 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-type Ftp struct{}
+type Ftp struct {
+	secret dmfr.Secret
+}
 
-func (Ftp) Download(ctx context.Context, ustr string, secret dmfr.Secret, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
+func (r *Ftp) SetSecret(secret dmfr.Secret) error {
+	r.secret = secret
+	return nil
+}
+
+func (r Ftp) Download(ctx context.Context, ustr string) (io.ReadCloser, int, error) {
+	return r.DownloadAuth(ctx, ustr, dmfr.FeedAuthorization{})
+}
+
+func (r Ftp) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAuthorization) (io.ReadCloser, int, error) {
 	// Download FTP
 	u, err := url.Parse(ustr)
 	if err != nil {
@@ -28,17 +39,17 @@ func (Ftp) Download(ctx context.Context, ustr string, secret dmfr.Secret, auth d
 		return nil, 0, errors.New("could not connect to server")
 	}
 	if auth.Type != "basic_auth" {
-		secret.Username = "anonymous"
-		secret.Password = "anonymous"
+		r.secret.Username = "anonymous"
+		r.secret.Password = "anonymous"
 	}
-	err = c.Login(secret.Username, secret.Password)
+	err = c.Login(r.secret.Username, r.secret.Password)
 	if err != nil {
 		return nil, 0, errors.New("could not connect to server")
 	}
-	r, err := c.Retr(u.Path)
+	rio, err := c.Retr(u.Path)
 	if err != nil {
 		// return error directly
 		return nil, 0, err
 	}
-	return r, 0, nil
+	return rio, 0, nil
 }

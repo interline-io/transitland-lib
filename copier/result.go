@@ -1,6 +1,7 @@
 package copier
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -190,18 +191,6 @@ func (cr *Result) HandleError(fn string, errs []error) {
 	}
 }
 
-// func entityAsJson(ent tt.Entity) map[string]any {
-// 	ret := map[string]any{}
-// 	entBytes, err := json.Marshal(ent)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	if err := json.Unmarshal(entBytes, &ret); err != nil {
-// 		panic(err)
-// 	}
-// 	return ret
-// }
-
 // HandleEntityErrors .
 func (cr *Result) HandleEntityErrors(ent tt.Entity, errs []error, warns []error) {
 	// Get entity line, if available
@@ -248,23 +237,24 @@ func (cr *Result) HandleEntityErrors(ent tt.Entity, errs []error, warns []error)
 
 // DisplayErrors shows individual errors in log.Info
 func (cr *Result) DisplayErrors() {
+	ctx := context.TODO()
 	if cr.WriteError == nil && len(cr.Errors) == 0 {
-		log.Infof("No errors")
+		log.For(ctx).Info().Msgf("No errors")
 		return
 	}
 	if cr.WriteError != nil {
-		log.Infof("Write error: %s", cr.WriteError.Error())
+		log.For(ctx).Info().Msgf("Write error: %s", cr.WriteError.Error())
 	}
 	if len(cr.Errors) > 0 {
-		log.Infof("Errors:")
+		log.For(ctx).Info().Msgf("Errors:")
 		for _, v := range cr.Errors {
-			log.Infof("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
+			log.For(ctx).Info().Msgf("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 			for _, err := range v.Errors {
-				log.Infof("\t\t%s", errfmt(err))
+				log.For(ctx).Info().Msgf("\t\t%s", errfmt(err))
 			}
 			remain := v.Count - len(v.Errors)
 			if remain > 0 {
-				log.Infof("\t\t... and %d more", remain)
+				log.For(ctx).Info().Msgf("\t\t... and %d more", remain)
 			}
 		}
 	}
@@ -272,60 +262,62 @@ func (cr *Result) DisplayErrors() {
 
 // DisplayWarnings shows individual warnings in log.Info
 func (cr *Result) DisplayWarnings() {
+	ctx := context.TODO()
 	if len(cr.Warnings) == 0 {
-		log.Infof("No warnings")
+		log.For(ctx).Info().Msgf("No warnings")
 		return
 	}
-	log.Infof("Warnings:")
+	log.For(ctx).Info().Msgf("Warnings:")
 	for _, v := range cr.Warnings {
-		log.Infof("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
+		log.For(ctx).Info().Msgf("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
 		for _, err := range v.Errors {
-			log.Infof("\t\t%s", errfmt(err))
+			log.For(ctx).Info().Msgf("\t\t%s", errfmt(err))
 		}
 		remain := v.Count - len(v.Errors)
 		if remain > 0 {
-			log.Infof("\t\t... and %d more", remain)
+			log.For(ctx).Info().Msgf("\t\t... and %d more", remain)
 		}
 	}
 }
 
 // DisplaySummary shows entity and error counts in log.Info
 func (cr *Result) DisplaySummary() {
-	log.Infof("Copied count:")
+	ctx := context.TODO()
+	log.For(ctx).Info().Msgf("Copied count:")
 	for _, k := range sortedKeys(cr.EntityCount) {
-		log.Infof("\t%s: %d", k, cr.EntityCount[k])
+		log.For(ctx).Info().Msgf("\t%s: %d", k, cr.EntityCount[k])
 	}
 	if msiSum(cr.GeneratedCount) > 0 {
-		log.Infof("Generated count:")
+		log.For(ctx).Info().Msgf("Generated count:")
 		for _, k := range sortedKeys(cr.GeneratedCount) {
-			log.Infof("\t%s: %d", k, cr.GeneratedCount[k])
+			log.For(ctx).Info().Msgf("\t%s: %d", k, cr.GeneratedCount[k])
 		}
 	}
 	if cr.InterpolatedStopTimeCount > 0 {
-		log.Infof("Interpolated stop_time count: %d", cr.InterpolatedStopTimeCount)
+		log.For(ctx).Info().Msgf("Interpolated stop_time count: %d", cr.InterpolatedStopTimeCount)
 	}
 	if msiSum(cr.SkipEntityErrorCount) > 0 {
-		log.Infof("Skipped with errors:")
+		log.For(ctx).Info().Msgf("Skipped with errors:")
 		for _, k := range sortedKeys(cr.SkipEntityErrorCount) {
-			log.Infof("\t%s: %d", k, cr.SkipEntityErrorCount[k])
+			log.For(ctx).Info().Msgf("\t%s: %d", k, cr.SkipEntityErrorCount[k])
 		}
 	}
 	if msiSum(cr.SkipEntityReferenceCount) > 0 {
-		log.Infof("Skipped with reference errors:")
+		log.For(ctx).Info().Msgf("Skipped with reference errors:")
 		for _, k := range sortedKeys(cr.SkipEntityReferenceCount) {
-			log.Infof("\t%s: %d", k, cr.SkipEntityReferenceCount[k])
+			log.For(ctx).Info().Msgf("\t%s: %d", k, cr.SkipEntityReferenceCount[k])
 		}
 	}
 	if msiSum(cr.SkipEntityFilterCount) > 0 {
-		log.Infof("Skipped by filter:")
+		log.For(ctx).Info().Msgf("Skipped by filter:")
 		for _, k := range sortedKeys(cr.SkipEntityFilterCount) {
-			log.Infof("\t%s: %d", k, cr.SkipEntityFilterCount[k])
+			log.For(ctx).Info().Msgf("\t%s: %d", k, cr.SkipEntityFilterCount[k])
 		}
 	}
 	if msiSum(cr.SkipEntityMarkedCount) > 0 {
-		log.Infof("Skipped by marker:")
+		log.For(ctx).Info().Msgf("Skipped by marker:")
 		for _, k := range sortedKeys(cr.SkipEntityMarkedCount) {
-			log.Infof("\t%s: %d", k, cr.SkipEntityMarkedCount[k])
+			log.For(ctx).Info().Msgf("\t%s: %d", k, cr.SkipEntityMarkedCount[k])
 		}
 	}
 }

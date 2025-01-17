@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"os"
 
 	"github.com/interline-io/transitland-lib/sync"
@@ -39,7 +40,7 @@ func (cmd *SyncCommand) Parse(args []string) error {
 }
 
 // Run this command.
-func (cmd *SyncCommand) Run() error {
+func (cmd *SyncCommand) Run(ctx context.Context) error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -49,7 +50,7 @@ func (cmd *SyncCommand) Run() error {
 		defer cmd.Adapter.Close()
 	}
 	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-		_, err := sync.Sync(atx, cmd.Options)
+		_, err := sync.Sync(ctx, atx, cmd.Options)
 		return err
 	})
 }
