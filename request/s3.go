@@ -22,14 +22,18 @@ func init() {
 	var _ Presigner = &S3{}
 }
 
+func trimSlash(v string) string {
+	return strings.TrimPrefix(strings.TrimSuffix(v, "/"), "/")
+}
+
 func NewS3FromUrl(ustr string) (*S3, error) {
 	u, err := url.Parse(ustr)
 	if err != nil {
 		return nil, err
 	}
 	s := S3{
-		Bucket:    strings.TrimPrefix(u.Host, "s3://"),
-		KeyPrefix: u.Path,
+		Bucket:    trimSlash(strings.TrimPrefix(u.Host, "s3://")),
+		KeyPrefix: trimSlash(u.Path),
 	}
 	return &s, nil
 }
@@ -46,9 +50,10 @@ func (r *S3) SetSecret(secret dmfr.Secret) error {
 }
 
 func (r S3) getFullKey(key string) string {
-	trimKey := strings.TrimPrefix(key, "/")
-	trimPrefix := strings.TrimPrefix(r.KeyPrefix, "/")
-	return "/" + trimPrefix + "/" + trimKey
+	if r.KeyPrefix != "" {
+		return r.KeyPrefix + "/" + trimSlash(key)
+	}
+	return trimSlash(key)
 }
 
 func (r S3) Download(ctx context.Context, key string) (io.ReadCloser, int, error) {
@@ -98,7 +103,8 @@ func (r S3) ListKeys(ctx context.Context, prefix string) ([]string, error) {
 			if obj.Key == nil {
 				continue
 			}
-			downloadKeys = append(downloadKeys, stripDir(r.KeyPrefix, *obj.Key))
+			downloadKey := stripDir(r.KeyPrefix, *obj.Key)
+			downloadKeys = append(downloadKeys, downloadKey)
 		}
 	}
 	if err != nil {
