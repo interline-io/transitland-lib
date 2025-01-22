@@ -98,6 +98,9 @@ func DownloadAll(ctx context.Context, r Store, outDir string, prefix string, che
 	}
 	var ret []string
 	for _, key := range keys {
+		if checkFile != nil && !checkFile(key) {
+			continue
+		}
 		outfn := filepath.Join(outDir, stripDir(prefix, key))
 		if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
 			return nil, err
@@ -139,9 +142,6 @@ func mkdir(basePath string, path string) (string, error) {
 }
 
 func findFiles(srcDir string, checkFile func(string) bool) ([]string, error) {
-	if checkFile == nil {
-		checkFile = func(string) bool { return true }
-	}
 	var ret []string
 	if err := filepath.Walk(srcDir, func(path string, info fs.FileInfo, err error) error {
 		if info == nil {
