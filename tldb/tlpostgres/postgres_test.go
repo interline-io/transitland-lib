@@ -1,9 +1,11 @@
-package tldb
+package tlpostgres
 
 import (
 	"context"
 	"os"
 	"testing"
+
+	"github.com/interline-io/transitland-lib/tldb/tldbtest"
 )
 
 func TestPostgresAdapter(t *testing.T) {
@@ -13,5 +15,5 @@ func TestPostgresAdapter(t *testing.T) {
 		return
 	}
 	adapter := &PostgresAdapter{DBURL: dburl}
-	testAdapter(context.TODO(), t, adapter)
+	tldbtest.AdapterTest(context.TODO(), t, adapter)
 }
