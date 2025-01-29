@@ -128,7 +128,7 @@ func TestE2E(t *testing.T) {
 			}
 			defer os.RemoveAll(tmpdir) // clean up
 
-			atx := testdb.TempSqliteAdapter("sqlite3://:memory:")
+			atx := testdb.TempSqliteAdapter()
 
 			// Fetch
 			feedName := tc.name

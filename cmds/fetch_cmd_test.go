@@ -69,7 +69,7 @@ func TestFetchCommand(t *testing.T) {
 	ctx := context.TODO()
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
-			adapter := testdb.MustOpenWriter("sqlite3://:memory:", true).Adapter
+			adapter := testdb.TempSqliteAdapter()
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}

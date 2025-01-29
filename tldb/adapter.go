@@ -9,11 +9,8 @@ import (
 
 var adapterFactories = map[string]func(string) Adapter{}
 
-func min(a, b int) int {
-	if a <= b {
-		return a
-	}
-	return b
+func RegisterAdapter(name string, fn func(string) Adapter) {
+	adapterFactories[name] = fn
 }
 
 // newAdapter returns a Adapter for the given dburl.

@@ -1,17 +1,12 @@
-package tldb
+package postgres
 
 import (
 	"context"
 	"os"
 	"testing"
-)
 
-func init() {
-	dburl := os.Getenv("TL_TEST_DATABASE_URL")
-	if dburl != "" {
-		testAdapters["PostgresAdapter"] = func() Adapter { return &PostgresAdapter{DBURL: dburl} }
-	}
-}
+	"github.com/interline-io/transitland-lib/tldb/tldbtest"
+)
 
 func TestPostgresAdapter(t *testing.T) {
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
@@ -20,5 +15,5 @@ func TestPostgresAdapter(t *testing.T) {
 		return
 	}
 	adapter := &PostgresAdapter{DBURL: dburl}
-	testAdapter(context.TODO(), t, adapter)
+	tldbtest.AdapterTest(context.TODO(), t, adapter)
 }

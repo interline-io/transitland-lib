@@ -1,4 +1,4 @@
-package tldb
+package querylogger
 
 import (
 	"context"
@@ -103,6 +103,10 @@ func (p *QueryLogger) QueryRowxContext(ctx context.Context, query string, args .
 	}
 	defer queryTime(ctx, rid, t, query, args...)
 	return p.Ext.QueryRowxContext(ctx, query, args...)
+}
+
+type canBeginx interface {
+	Beginx() (*sqlx.Tx, error)
 }
 
 // Beginx .

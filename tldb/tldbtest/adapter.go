@@ -1,4 +1,4 @@
-package tldb
+package tldbtest
 
 import (
 	"context"
@@ -10,13 +10,16 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-var testAdapters = map[string]func() Adapter{}
+type Adapter = tldb.Adapter
+
+var TestAdapters = map[string]func() Adapter{}
 
 // Interface tests for Adapter
-func testAdapter(ctx context.Context, t *testing.T, adapter Adapter) {
+func AdapterTest(ctx context.Context, t *testing.T, adapter Adapter) {
 	if err := adapter.Open(); err != nil {
 		t.Error(err)
 	}

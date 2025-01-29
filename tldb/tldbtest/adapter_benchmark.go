@@ -1,4 +1,4 @@
-package tldb
+package tldbtest
 
 import (
 	"context"
@@ -10,12 +10,13 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // Tests adapter Insert performance.
 func Benchmark_Adapter_Insert(b *testing.B) {
 	ctx := context.TODO()
-	for k, v := range testAdapters {
+	for k, v := range TestAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
 			if err := adapter.Open(); err != nil {
@@ -43,7 +44,7 @@ func Benchmark_Adapter_Insert(b *testing.B) {
 // Tests raw database performance.
 func Benchmark_Adapter_InsertRaw(b *testing.B) {
 	ctx := context.TODO()
-	for k, v := range testAdapters {
+	for k, v := range TestAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
 			if err := adapter.Open(); err != nil {
@@ -86,7 +87,7 @@ func Benchmark_Adapter_InsertRaw(b *testing.B) {
 // There is a lot of setup in this test because we need a FeedVersion, Trip, and Stop
 func Benchmark_Adapter_MultiInsert(b *testing.B) {
 	ctx := context.TODO()
-	for k, v := range testAdapters {
+	for k, v := range TestAdapters {
 		b.Run(k, func(b *testing.B) {
 			adapter := v()
 			if err := adapter.Open(); err != nil {
@@ -96,7 +97,7 @@ func Benchmark_Adapter_MultiInsert(b *testing.B) {
 				b.Error(err)
 			}
 			// Load the minimal test feed...
-			writer := Writer{Adapter: adapter}
+			writer := tldb.Writer{Adapter: adapter}
 			_, reader := testutil.NewMinimalTestFeed()
 			if err := reader.Open(); err != nil {
 				b.Error(err)

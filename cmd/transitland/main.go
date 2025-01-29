@@ -15,6 +15,8 @@ import (
 	_ "github.com/interline-io/transitland-lib/filters"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
+	_ "github.com/interline-io/transitland-lib/tldb/postgres"
+	_ "github.com/interline-io/transitland-lib/tldb/sqlite"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

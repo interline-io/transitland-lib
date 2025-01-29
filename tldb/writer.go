@@ -121,7 +121,7 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 			v.AgencyID.SetInt(writer.defaultAgencyID)
 		}
 		// Set FeedVersion, Timestamps
-		if v, ok := ent.(canSetFeedVersion); ok {
+		if v, ok := ent.(CanSetFeedVersion); ok {
 			v.SetFeedVersionID(writer.FeedVersionID)
 		}
 		ients[i] = ent
@@ -136,7 +136,7 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	for i := 0; i < len(ents); i++ {
 		eids = append(eids, strconv.Itoa(retids[i]))
 		// Update ID
-		if v, ok := ents[i].(canSetID); ok {
+		if v, ok := ents[i].(CanSetID); ok {
 			v.SetID(int(retids[i]))
 		}
 	}

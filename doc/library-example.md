@@ -34,6 +34,9 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+
+	// Import a driver
+	_ "github.com/interline-io/transitland-lib/tldb/tlsqlite"
 )
 
 var URL = "https://github.com/interline-io/transitland-lib/raw/master/testdata/external/bart.zip"
