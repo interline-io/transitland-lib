@@ -1,7 +1,7 @@
 //go:build cgo
 // +build cgo
 
-package tlsqlite
+package sqlite
 
 import (
 	"context"

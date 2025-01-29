@@ -6,8 +6,8 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/tlpostgres"
-	"github.com/interline-io/transitland-lib/tldb/tlsqlite"
+	"github.com/interline-io/transitland-lib/tldb/postgres"
+	"github.com/interline-io/transitland-lib/tldb/sqlite"
 )
 
 func MustOpenWriter(dburl string, create bool) *tldb.Writer {
@@ -105,7 +105,7 @@ func ShouldSelect(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, 
 ////////////
 
 func TempPostgres(dburl string, cb func(tldb.Adapter) error) error {
-	adapter := tlpostgres.PostgresAdapter{DBURL: dburl}
+	adapter := postgres.PostgresAdapter{DBURL: dburl}
 	if err := adapter.Open(); err != nil {
 		panic(err)
 	}
@@ -122,7 +122,7 @@ func TempPostgres(dburl string, cb func(tldb.Adapter) error) error {
 
 // TempSqlite creates a temporary in-memory database and runs the callback inside a tx.
 func TempSqlite(cb func(tldb.Adapter) error) error {
-	adapter := tlsqlite.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
+	adapter := sqlite.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
 	writer := tldb.Writer{Adapter: &adapter}
 	if err := writer.Open(); err != nil {
 		panic(err)
@@ -135,7 +135,7 @@ func TempSqlite(cb func(tldb.Adapter) error) error {
 }
 
 func TempSqliteAdapter() tldb.Adapter {
-	adapter := tlsqlite.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
+	adapter := sqlite.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
 	writer := tldb.Writer{Adapter: &adapter}
 	if err := writer.Open(); err != nil {
 		panic(err)
