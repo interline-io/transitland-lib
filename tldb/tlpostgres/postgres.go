@@ -9,24 +9,22 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/tldbutil"
+	"github.com/interline-io/transitland-lib/tldb/querylogger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
 
 type Adapter = tldb.Adapter
-type QueryLogger = tldb.QueryLogger
+type QueryLogger = querylogger.QueryLogger
 type Ext = tldb.Ext
 
 var MapperCache = tldb.MapperCache
 
-var adapterFactories = map[string]func(string) Adapter{}
-
 func init() {
 	// Register driver
-	adapterFactories["postgres"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
-	adapterFactories["postgresql"] = func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} }
+	tldb.RegisterAdapter("postgres", func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} })
+	tldb.RegisterAdapter("postgresql", func(dburl string) Adapter { return &PostgresAdapter{DBURL: dburl} })
 	// Register readers and writers
 	ext.RegisterReader("postgres", func(url string) (adapters.Reader, error) { return tldb.NewReader(url) })
 	ext.RegisterReader("postgresql", func(url string) (adapters.Reader, error) { return tldb.NewReader(url) })
@@ -92,7 +90,7 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 		}
 	}
 	// If we aren't already in a transaction, begin one, and commit at end
-	if a, ok := adapter.db.(tldbutil.CanBeginx); tx == nil && ok {
+	if a, ok := adapter.db.(tldb.CanBeginx); tx == nil && ok {
 		tx, err = a.Beginx()
 		commit = true
 	}
@@ -131,7 +129,7 @@ func (adapter *PostgresAdapter) TableExists(t string) (bool, error) {
 
 // Find finds a single entity based on the EntityID()
 func (adapter *PostgresAdapter) Find(ctx context.Context, dest interface{}) error {
-	return tldbutil.Find(ctx, adapter, dest)
+	return tldb.Find(ctx, adapter, dest)
 }
 
 // Get wraps sqlx.Get
@@ -146,18 +144,18 @@ func (adapter *PostgresAdapter) Select(ctx context.Context, dest interface{}, qs
 
 // Update a single entity.
 func (adapter *PostgresAdapter) Update(ctx context.Context, ent interface{}, columns ...string) error {
-	if v, ok := ent.(tldbutil.CanUpdateTimestamps); ok {
+	if v, ok := ent.(tldb.CanUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	return tldbutil.Update(ctx, adapter, ent, columns...)
+	return tldb.Update(ctx, adapter, ent, columns...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *PostgresAdapter) Insert(ctx context.Context, ent interface{}) (int, error) {
-	if v, ok := ent.(tldbutil.CanUpdateTimestamps); ok {
+	if v, ok := ent.(tldb.CanUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	table := tldbutil.GetTableName(ent)
+	table := tldb.GetTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
 	if err != nil {
 		return 0, err
@@ -171,7 +169,7 @@ func (adapter *PostgresAdapter) Insert(ctx context.Context, ent interface{}) (in
 		Insert(table).
 		Columns(header...).
 		Values(vals...)
-	if _, ok := ent.(tldbutil.CanSetID); ok {
+	if _, ok := ent.(tldb.CanSetID); ok {
 		err = q.Suffix(`RETURNING "id"`).QueryRowContext(ctx).Scan(&eid)
 	} else {
 		_, err = q.ExecContext(ctx)
@@ -179,7 +177,7 @@ func (adapter *PostgresAdapter) Insert(ctx context.Context, ent interface{}) (in
 	if err != nil {
 		return 0, err
 	}
-	if v, ok := ent.(tldbutil.CanSetID); ok {
+	if v, ok := ent.(tldb.CanSetID); ok {
 		v.SetID(int(eid.Int64))
 	}
 	return int(eid.Int64), err
@@ -192,13 +190,13 @@ func (adapter *PostgresAdapter) MultiInsert(ctx context.Context, ents []interfac
 		return retids, nil
 	}
 	for _, ent := range ents {
-		if v, ok := ent.(tldbutil.CanUpdateTimestamps); ok {
+		if v, ok := ent.(tldb.CanUpdateTimestamps); ok {
 			v.UpdateTimestamps()
 		}
 	}
 	header, err := MapperCache.GetHeader(ents[0])
-	table := tldbutil.GetTableName(ents[0])
-	_, setid := ents[0].(tldbutil.CanSetID)
+	table := tldb.GetTableName(ents[0])
+	_, setid := ents[0].(tldb.CanSetID)
 	batchSize := 65536 / (len(header) + 1)
 	for i := 0; i < len(ents); i += batchSize {
 		batch := ents[i:min(i+batchSize, len(ents))]
@@ -231,7 +229,7 @@ func (adapter *PostgresAdapter) MultiInsert(ctx context.Context, ents []interfac
 	}
 	for i := 0; i < len(ents); i++ {
 		ent := ents[i]
-		if v, ok := ent.(tldbutil.CanSetID); ok {
+		if v, ok := ent.(tldb.CanSetID); ok {
 			v.SetID(retids[i])
 		}
 	}

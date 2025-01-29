@@ -23,8 +23,8 @@ func TestSyncCommand(t *testing.T) {
 	ctx := context.TODO()
 	for _, exp := range cases {
 		t.Run("", func(t *testing.T) {
-			w := testdb.MustOpenWriter("sqlite3://:memory:", true)
-			c := SyncCommand{Adapter: w.Adapter}
+			w := testdb.TempSqliteAdapter()
+			c := SyncCommand{Adapter: w}
 			if err := c.Parse(exp.command); err != nil {
 				t.Error(err)
 			}
@@ -36,7 +36,7 @@ func TestSyncCommand(t *testing.T) {
 			}
 			// Test
 			feeds := []dmfr.Feed{}
-			w.Adapter.Select(ctx, &feeds, "SELECT * FROM current_feeds")
+			w.Select(ctx, &feeds, "SELECT * FROM current_feeds")
 			if len(feeds) != exp.count {
 				t.Errorf("got %d feeds, expect %d", len(feeds), exp.count)
 			}

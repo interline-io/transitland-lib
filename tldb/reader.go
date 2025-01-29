@@ -80,7 +80,7 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	z := x.Elem()
 	z.Set(slice)
 	//
-	qstr, args, err := reader.Where().From(getTableName(ent)).ToSql()
+	qstr, args, err := reader.Where().From(GetTableName(ent)).ToSql()
 	if err != nil {
 		return err
 	}
@@ -214,104 +214,103 @@ func (reader *Reader) StopTimes() chan gtfs.StopTime {
 }
 
 func (reader *Reader) Stops() chan gtfs.Stop {
-	return ReadEntities[gtfs.Stop](reader, getTableName(&gtfs.Stop{}))
+	return ReadEntities[gtfs.Stop](reader, GetTableName(&gtfs.Stop{}))
 }
 
 func (reader *Reader) Agencies() chan gtfs.Agency {
-	return ReadEntities[gtfs.Agency](reader, getTableName(&gtfs.Agency{}))
+	return ReadEntities[gtfs.Agency](reader, GetTableName(&gtfs.Agency{}))
 }
 
 func (reader *Reader) Calendars() chan gtfs.Calendar {
-	return ReadEntities[gtfs.Calendar](reader, getTableName(&gtfs.Calendar{}))
+	return ReadEntities[gtfs.Calendar](reader, GetTableName(&gtfs.Calendar{}))
 }
 
 func (reader *Reader) CalendarDates() chan gtfs.CalendarDate {
-	return ReadEntities[gtfs.CalendarDate](reader, getTableName(&gtfs.CalendarDate{}))
+	return ReadEntities[gtfs.CalendarDate](reader, GetTableName(&gtfs.CalendarDate{}))
 }
 
 func (reader *Reader) FareAttributes() chan gtfs.FareAttribute {
-	return ReadEntities[gtfs.FareAttribute](reader, getTableName(&gtfs.FareAttribute{}))
+	return ReadEntities[gtfs.FareAttribute](reader, GetTableName(&gtfs.FareAttribute{}))
 }
 
 func (reader *Reader) FareRules() chan gtfs.FareRule {
-	return ReadEntities[gtfs.FareRule](reader, getTableName(&gtfs.FareRule{}))
+	return ReadEntities[gtfs.FareRule](reader, GetTableName(&gtfs.FareRule{}))
 }
 
 func (reader *Reader) FeedInfos() chan gtfs.FeedInfo {
-	return ReadEntities[gtfs.FeedInfo](reader, getTableName(&gtfs.FeedInfo{}))
+	return ReadEntities[gtfs.FeedInfo](reader, GetTableName(&gtfs.FeedInfo{}))
 }
 
 func (reader *Reader) Frequencies() chan gtfs.Frequency {
-	return ReadEntities[gtfs.Frequency](reader, getTableName(&gtfs.Frequency{}))
+	return ReadEntities[gtfs.Frequency](reader, GetTableName(&gtfs.Frequency{}))
 }
 
 func (reader *Reader) Routes() chan gtfs.Route {
-	return ReadEntities[gtfs.Route](reader, getTableName(&gtfs.Route{}))
+	return ReadEntities[gtfs.Route](reader, GetTableName(&gtfs.Route{}))
 }
 
 func (reader *Reader) Transfers() chan gtfs.Transfer {
-	return ReadEntities[gtfs.Transfer](reader, getTableName(&gtfs.Transfer{}))
+	return ReadEntities[gtfs.Transfer](reader, GetTableName(&gtfs.Transfer{}))
 }
 
 func (reader *Reader) Pathways() chan gtfs.Pathway {
-	return ReadEntities[gtfs.Pathway](reader, getTableName(&gtfs.Pathway{}))
+	return ReadEntities[gtfs.Pathway](reader, GetTableName(&gtfs.Pathway{}))
 }
 
 func (reader *Reader) Levels() chan gtfs.Level {
-	return ReadEntities[gtfs.Level](reader, getTableName(&gtfs.Level{}))
+	return ReadEntities[gtfs.Level](reader, GetTableName(&gtfs.Level{}))
 }
 
 func (reader *Reader) Trips() chan gtfs.Trip {
-	return ReadEntities[gtfs.Trip](reader, getTableName(&gtfs.Trip{}))
-
+	return ReadEntities[gtfs.Trip](reader, GetTableName(&gtfs.Trip{}))
 }
 
 func (reader *Reader) Attributions() chan gtfs.Attribution {
-	return ReadEntities[gtfs.Attribution](reader, getTableName(&gtfs.Attribution{}))
+	return ReadEntities[gtfs.Attribution](reader, GetTableName(&gtfs.Attribution{}))
 }
 
 func (reader *Reader) Translations() chan gtfs.Translation {
-	return ReadEntities[gtfs.Translation](reader, getTableName(&gtfs.Translation{}))
+	return ReadEntities[gtfs.Translation](reader, GetTableName(&gtfs.Translation{}))
 }
 
 func (reader *Reader) Areas() (out chan gtfs.Area) {
-	return ReadEntities[gtfs.Area](reader, getTableName(&gtfs.Area{}))
+	return ReadEntities[gtfs.Area](reader, GetTableName(&gtfs.Area{}))
 }
 
 func (reader *Reader) StopAreas() (out chan gtfs.StopArea) {
-	return ReadEntities[gtfs.StopArea](reader, getTableName(&gtfs.StopArea{}))
+	return ReadEntities[gtfs.StopArea](reader, GetTableName(&gtfs.StopArea{}))
 }
 
 func (reader *Reader) FareLegRules() (out chan gtfs.FareLegRule) {
-	return ReadEntities[gtfs.FareLegRule](reader, getTableName(&gtfs.FareLegRule{}))
+	return ReadEntities[gtfs.FareLegRule](reader, GetTableName(&gtfs.FareLegRule{}))
 }
 
 func (reader *Reader) FareTransferRules() (out chan gtfs.FareTransferRule) {
-	return ReadEntities[gtfs.FareTransferRule](reader, getTableName(&gtfs.FareTransferRule{}))
+	return ReadEntities[gtfs.FareTransferRule](reader, GetTableName(&gtfs.FareTransferRule{}))
 }
 
 func (reader *Reader) FareProducts() (out chan gtfs.FareProduct) {
-	return ReadEntities[gtfs.FareProduct](reader, getTableName(&gtfs.FareProduct{}))
+	return ReadEntities[gtfs.FareProduct](reader, GetTableName(&gtfs.FareProduct{}))
 }
 
 func (reader *Reader) FareMedia() (out chan gtfs.FareMedia) {
-	return ReadEntities[gtfs.FareMedia](reader, getTableName(&gtfs.FareMedia{}))
+	return ReadEntities[gtfs.FareMedia](reader, GetTableName(&gtfs.FareMedia{}))
 }
 
 func (reader *Reader) RiderCategories() (out chan gtfs.RiderCategory) {
-	return ReadEntities[gtfs.RiderCategory](reader, getTableName(&gtfs.RiderCategory{}))
+	return ReadEntities[gtfs.RiderCategory](reader, GetTableName(&gtfs.RiderCategory{}))
 }
 
 func (reader *Reader) Timeframes() (out chan gtfs.Timeframe) {
-	return ReadEntities[gtfs.Timeframe](reader, getTableName(&gtfs.Timeframe{}))
+	return ReadEntities[gtfs.Timeframe](reader, GetTableName(&gtfs.Timeframe{}))
 }
 
 func (reader *Reader) Networks() (out chan gtfs.Network) {
-	return ReadEntities[gtfs.Network](reader, getTableName(&gtfs.Network{}))
+	return ReadEntities[gtfs.Network](reader, GetTableName(&gtfs.Network{}))
 }
 
 func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
-	return ReadEntities[gtfs.RouteNetwork](reader, getTableName(&gtfs.RouteNetwork{}))
+	return ReadEntities[gtfs.RouteNetwork](reader, GetTableName(&gtfs.RouteNetwork{}))
 }
 
 func ReadEntities[T tt.EntityWithID](reader *Reader, table string) chan T {

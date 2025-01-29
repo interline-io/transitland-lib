@@ -1,7 +1,7 @@
 //go:build cgo
 // +build cgo
 
-package tldb
+package tlsqlite
 
 import (
 	"context"
@@ -14,36 +14,27 @@ import (
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/schema/sqlite"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/tldbutil"
+	"github.com/interline-io/transitland-lib/tldb/querylogger"
 	"github.com/jmoiron/sqlx"
 
 	// sqlite3
-	"github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Adapter = tldb.Adapter
-type QueryLogger = tldb.QueryLogger
+type QueryLogger = querylogger.QueryLogger
 type Ext = tldb.Ext
 
 var MapperCache = tldb.MapperCache
 
-var adapterFactories = map[string]func(string) Adapter{}
-
 // Register.
 func init() {
 	// Register test adapter
-	adapterFactories["sqlite3"] = func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} }
+	tldb.RegisterAdapter("sqlite3", func(dburl string) Adapter { return &SQLiteAdapter{DBURL: dburl} })
 	// Register readers and writers
 	ext.RegisterReader("sqlite3", func(url string) (adapters.Reader, error) { return tldb.NewReader(url) })
 	ext.RegisterWriter("sqlite3", func(url string) (adapters.Writer, error) { return tldb.NewWriter(url) })
-	// Dummy handlers for SQL functions.
-	sql.Register("sqlite3_w_funcs",
-		&sqlite3.SQLiteDriver{
-			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-				return nil
-			},
-		},
-	)
+
 }
 
 // SQLiteAdapter provides support for SQLite.
@@ -58,7 +49,7 @@ func (adapter *SQLiteAdapter) Open() error {
 	if len(dbname) != 2 {
 		return causes.NewSourceUnreadableError("no database filename provided", nil)
 	}
-	db, err := sqlx.Open("sqlite3_w_funcs", dbname[1])
+	db, err := sqlx.Open("sqlite3", dbname[1])
 	if err != nil {
 		return causes.NewSourceUnreadableError("could not open database", err)
 	}
@@ -69,7 +60,7 @@ func (adapter *SQLiteAdapter) Open() error {
 
 // Close the database.
 func (adapter *SQLiteAdapter) Close() error {
-	if a, ok := adapter.db.(tldbutil.CanClose); ok {
+	if a, ok := adapter.db.(tldb.CanClose); ok {
 		return a.Close()
 	}
 	return nil
@@ -104,7 +95,7 @@ func (adapter *SQLiteAdapter) Sqrl() sq.StatementBuilderType {
 func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	var err error
 	var tx *sqlx.Tx
-	if a, ok := adapter.db.(tldbutil.CanBeginx); ok {
+	if a, ok := adapter.db.(tldb.CanBeginx); ok {
 		tx, err = a.Beginx()
 	}
 	if err != nil {
@@ -132,7 +123,7 @@ func (adapter *SQLiteAdapter) TableExists(t string) (bool, error) {
 
 // Find finds a single entity based on the EntityID()
 func (adapter *SQLiteAdapter) Find(ctx context.Context, dest interface{}) error {
-	return tldbutil.Find(ctx, adapter, dest)
+	return tldb.Find(ctx, adapter, dest)
 }
 
 // Get wraps sqlx.Get
@@ -147,18 +138,18 @@ func (adapter *SQLiteAdapter) Select(ctx context.Context, dest interface{}, qstr
 
 // Update a single record.
 func (adapter *SQLiteAdapter) Update(ctx context.Context, ent interface{}, columns ...string) error {
-	if v, ok := ent.(tldbutil.CanUpdateTimestamps); ok {
+	if v, ok := ent.(tldb.CanUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	return tldbutil.Update(ctx, adapter, ent, columns...)
+	return tldb.Update(ctx, adapter, ent, columns...)
 }
 
 // Insert builds and executes an insert statement for the given entity.
 func (adapter *SQLiteAdapter) Insert(ctx context.Context, ent interface{}) (int, error) {
-	if v, ok := ent.(tldbutil.CanUpdateTimestamps); ok {
+	if v, ok := ent.(tldb.CanUpdateTimestamps); ok {
 		v.UpdateTimestamps()
 	}
-	table := tldbutil.GetTableName(ent)
+	table := tldb.GetTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
 	if err != nil {
 		return 0, err
@@ -185,7 +176,7 @@ func (adapter *SQLiteAdapter) Insert(ctx context.Context, ent interface{}) (int,
 		return 0, err
 	}
 	eid, err := result.LastInsertId()
-	if v, ok := ent.(tldbutil.CanSetID); ok {
+	if v, ok := ent.(tldb.CanSetID); ok {
 		v.SetID(int(eid))
 	}
 	return int(eid), err
@@ -197,7 +188,7 @@ func (adapter *SQLiteAdapter) MultiInsert(ctx context.Context, ents []interface{
 	if len(ents) == 0 {
 		return retids, nil
 	}
-	table := tldbutil.GetTableName(ents[0])
+	table := tldb.GetTableName(ents[0])
 	header, err := MapperCache.GetHeader(ents[0])
 	if err != nil {
 		return retids, nil
@@ -214,7 +205,7 @@ func (adapter *SQLiteAdapter) MultiInsert(ctx context.Context, ents []interface{
 	// if err := adapter.Tx(func(adapter Adapter) error {
 	db := adapter.DBX()
 	for _, d := range ents {
-		if v, ok := d.(tldbutil.CanUpdateTimestamps); ok {
+		if v, ok := d.(tldb.CanUpdateTimestamps); ok {
 			v.UpdateTimestamps()
 		}
 		vals, err := MapperCache.GetInsert(d, header)

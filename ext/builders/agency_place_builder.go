@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tldb/tlpostgres"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
 )
@@ -105,7 +106,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 		return nil
 	}
 	db := dbWriter.Adapter
-	if _, ok := db.(*tldb.PostgresAdapter); !ok {
+	if _, ok := db.(*tlpostgres.PostgresAdapter); !ok {
 		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, only postgres is supported")
 		return nil
 	}
