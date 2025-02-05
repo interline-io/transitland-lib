@@ -34,7 +34,6 @@ func (tx *SetterFilter) AddValuesFromFile(filename string) error {
 		tx.AddValue(efn, eid, key, val)
 	})
 	return nil
-
 }
 
 // AddValue sets a new value to override.

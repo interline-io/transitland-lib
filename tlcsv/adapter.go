@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"iter"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -18,6 +19,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/request"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.
@@ -287,6 +289,67 @@ func (adapter *ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 	defer in.Close()
 	cb(in)
 	return nil
+}
+
+type canFilename interface {
+	Filename() string
+}
+
+func getFilename(entType any) string {
+	if v, ok := entType.(canFilename); ok {
+		return v.Filename()
+	}
+	return ""
+}
+
+func (adapter *ZipAdapter) ReadEntityRows(entType any) (iter.Seq[tt.Row], func() error) {
+	var readErr error
+	errf := func() error { return readErr }
+	return func(yield func(tt.Row) bool) {
+		readErr = adapter.OpenFile(getFilename(entType), func(in io.Reader) {
+			it, errf := ReadRowsIter(in)
+			for row := range it {
+				yield(row)
+			}
+			_ = errf
+		})
+	}, errf
+	// var readErr error
+	// errf := func() error { return readErr }
+	// return func(yield func(tt.Row) bool) {
+	// 	filename := ""
+	// 	if v, ok := entType.(canFilename); ok {
+	// 		filename = v.Filename()
+	// 	}
+	// 	r, err := zip.OpenReader(adapter.path)
+	// 	if err != nil {
+	// 		readErr = err
+	// 		return
+	// 	}
+	// 	defer r.Close()
+	// 	var inFile *zip.File
+	// 	for _, f := range r.File {
+	// 		if f.Name != filepath.Join(adapter.internalPrefix, filename) {
+	// 			continue
+	// 		}
+	// 		inFile = f
+	// 	}
+	// 	if inFile == nil {
+	// 		readErr = causes.NewFileNotPresentError(filename)
+	// 		return
+	// 	}
+	// 	in, err := inFile.Open()
+	// 	if err != nil {
+	// 		return
+	// 	}
+	// 	it, errf := ReadRowsIter(in)
+	// 	for row := range it {
+	// 		yield(row)
+	// 	}
+	// 	readErr = errf()
+	// 	in.Close()
+	// 	r.Close()
+	// }, errf
 }
 
 // ReadRows opens the specified file and runs the callback on each Row. An error is returned if the file cannot be read.

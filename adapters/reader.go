@@ -1,6 +1,8 @@
 package adapters
 
-import "github.com/interline-io/transitland-lib/gtfs"
+import (
+	"github.com/interline-io/transitland-lib/gtfs"
+)
 
 // Reader is the main interface for reading GTFS data
 type Reader interface {
