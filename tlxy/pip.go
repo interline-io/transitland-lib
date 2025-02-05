@@ -15,10 +15,12 @@ type pipShape struct {
 	Polygon    *geom.Polygon
 }
 
+// PolygonIndex is a spatial index for polygons that supports point-in-polygon queries.
 type PolygonIndex struct {
 	idx *rtree.RTreeG[pipShape]
 }
 
+// FeatureAt returns the feature at the given point, or nil and false if no feature is found.
 func (pip *PolygonIndex) FeatureAt(pt Point) (*geojson.Feature, bool) {
 	ggPoint := geom.NewPointFlat(geom.XY, []float64{pt.Lon, pt.Lat})
 	rtPoint := [2]float64{pt.Lon, pt.Lat}
@@ -39,6 +41,7 @@ func (pip *PolygonIndex) FeatureAt(pt Point) (*geojson.Feature, bool) {
 	return ret, found
 }
 
+// FeatureNameAt returns the name of the feature at the given point, or an empty string and false if no feature is found.
 func (pip *PolygonIndex) FeatureNameAt(pt Point) (string, bool) {
 	a, ok := pip.FeatureAt(pt)
 	if ok {
@@ -47,6 +50,7 @@ func (pip *PolygonIndex) FeatureNameAt(pt Point) (string, bool) {
 	return "", false
 }
 
+// NewPolygonIndex returns a new PolygonIndex from a FeatureCollection.
 func NewPolygonIndex(fc geojson.FeatureCollection) (*PolygonIndex, error) {
 	PolygonIndex := PolygonIndex{
 		idx: &rtree.RTreeG[pipShape]{},
@@ -76,6 +80,7 @@ func NewPolygonIndex(fc geojson.FeatureCollection) (*PolygonIndex, error) {
 	return &PolygonIndex, nil
 }
 
+// pointInPolygon returns true if the point is in the polygon.
 func pointInPolygon(pg *geom.Polygon, p *geom.Point) bool {
 	if !xy.IsPointInRing(geom.XY, p.Coords(), pg.LinearRing(0).FlatCoords()) {
 		return false
