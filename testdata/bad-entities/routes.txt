@@ -1,0 +1,15 @@
+route_id,agency_id,route_desc,route_long_name,route_short_name,route_type,route_url,route_color,route_text_color,route_sort_order,expect_error,continuous_pickup,continuous_drop_off,network_id,as_route
+ok,ok,valid route,valid route 1,ok,3,http://example.com,#ff0000,#00ff00,0,,,,ok
+,ok,no route_id,,ok,3,,,,,RequiredFieldError:route_id
+no_route_name,ok,No short_name or route_long_name,,,3,,,,,ConditionallyRequiredFieldError:route_short_name
+parse_route_type,ok,parse route_type,,ok,xyz,,,,,FieldParseError:route_type|RequiredFieldError:route_type
+invalid_route_type,ok,invalid route_type,,ok,-1,,,,,InvalidFieldError:route_type
+invalid_route_type,ok,invalid route_type,,ok,1234567,,,,,InvalidFieldError:route_type
+invalid_route_url,ok,invalid route_url,,ok,3,abcxyz,,,,InvalidFieldError:route_url
+invalid_route_color,ok,invalid route_color,,ok,3,,xyz,,,InvalidFieldError:route_color
+invalid_route_text_color,ok,invalid route_text_color,,ok,3,,,xyz,,InvalidFieldError:route_text_color
+parse_route_sort_order,ok,parse route_sort_order,,ok,3,,,,xyz,FieldParseError:route_sort_order
+invalid_continuous_pickup,ok,invalid continuous pickup,,ok,3,,,,,InvalidFieldError:continuous_pickup,100,
+invalid_continuous_drop_off,ok,invalid continuous pickup,,ok,3,,,,,InvalidFieldError:continuous_drop_off,,100
+parse_continuous_pickup,ok,invalid continuous pickup,,ok,3,,,,,FieldParseError:continuous_pickup,xyz,
+parse_continuous_drop_off,ok,invalid continuous pickup,,ok,3,,,,,FieldParseError:continuous_drop_off,,xyz

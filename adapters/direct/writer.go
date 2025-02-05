@@ -1,7 +1,10 @@
 package direct
 
 import (
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Writer is a mocked up Writer used in tests.
@@ -41,58 +44,58 @@ func (mw *Writer) Delete() error {
 }
 
 // NewReader .
-func (mw *Writer) NewReader() (tl.Reader, error) {
+func (mw *Writer) NewReader() (adapters.Reader, error) {
 	return &mw.Reader, nil
 }
 
 // AddEntity .
-func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
+func (mw *Writer) AddEntity(ent tt.Entity) (string, error) {
 	switch v := ent.(type) {
-	case *tl.Stop:
+	case *service.ShapeLine:
+		mw.Reader.ShapeList = append(mw.Reader.ShapeList, service.FlattenShape(*v)...)
+	case *gtfs.Stop:
 		mw.Reader.StopList = append(mw.Reader.StopList, *v)
-	case *tl.StopTime:
+	case *gtfs.StopTime:
 		mw.Reader.StopTimeList = append(mw.Reader.StopTimeList, *v)
-	case *tl.Agency:
+	case *gtfs.Agency:
 		mw.Reader.AgencyList = append(mw.Reader.AgencyList, *v)
-	case *tl.Service:
-		mw.Reader.CalendarList = append(mw.Reader.CalendarList, v.Calendar)
-	case *tl.Calendar:
+	case *gtfs.Calendar:
 		mw.Reader.CalendarList = append(mw.Reader.CalendarList, *v)
-	case *tl.CalendarDate:
+	case *gtfs.CalendarDate:
 		mw.Reader.CalendarDateList = append(mw.Reader.CalendarDateList, *v)
-	case *tl.FareAttribute:
+	case *gtfs.FareAttribute:
 		mw.Reader.FareAttributeList = append(mw.Reader.FareAttributeList, *v)
-	case *tl.FareRule:
+	case *gtfs.FareRule:
 		mw.Reader.FareRuleList = append(mw.Reader.FareRuleList, *v)
-	case *tl.FeedInfo:
+	case *gtfs.FeedInfo:
 		mw.Reader.FeedInfoList = append(mw.Reader.FeedInfoList, *v)
-	case *tl.Frequency:
+	case *gtfs.Frequency:
 		mw.Reader.FrequencyList = append(mw.Reader.FrequencyList, *v)
-	case *tl.Route:
+	case *gtfs.Route:
 		mw.Reader.RouteList = append(mw.Reader.RouteList, *v)
-	case *tl.Shape:
+	case *gtfs.Shape:
 		mw.Reader.ShapeList = append(mw.Reader.ShapeList, *v)
-	case *tl.Transfer:
+	case *gtfs.Transfer:
 		mw.Reader.TransferList = append(mw.Reader.TransferList, *v)
-	case *tl.Trip:
+	case *gtfs.Trip:
 		mw.Reader.TripList = append(mw.Reader.TripList, *v)
-	case *tl.Translation:
+	case *gtfs.Translation:
 		mw.Reader.TranslationList = append(mw.Reader.TranslationList, *v)
-	case *tl.Attribution:
+	case *gtfs.Attribution:
 		mw.Reader.AttributionList = append(mw.Reader.AttributionList, *v)
-	case *tl.Area:
+	case *gtfs.Area:
 		mw.Reader.AreaList = append(mw.Reader.AreaList, *v)
-	case *tl.StopArea:
+	case *gtfs.StopArea:
 		mw.Reader.StopAreaList = append(mw.Reader.StopAreaList, *v)
-	case *tl.FareLegRule:
+	case *gtfs.FareLegRule:
 		mw.Reader.FareLegRuleList = append(mw.Reader.FareLegRuleList, *v)
-	case *tl.FareTransferRule:
+	case *gtfs.FareTransferRule:
 		mw.Reader.FareTransferRuleList = append(mw.Reader.FareTransferRuleList, *v)
-	case *tl.FareMedia:
+	case *gtfs.FareMedia:
 		mw.Reader.FareMediaList = append(mw.Reader.FareMediaList, *v)
-	case *tl.RiderCategory:
+	case *gtfs.RiderCategory:
 		mw.Reader.RiderCategoryList = append(mw.Reader.RiderCategoryList, *v)
-	case *tl.FareProduct:
+	case *gtfs.FareProduct:
 		mw.Reader.FareProductList = append(mw.Reader.FareProductList, *v)
 	default:
 		mw.Reader.OtherList = append(mw.Reader.OtherList, v)
@@ -101,7 +104,7 @@ func (mw *Writer) AddEntity(ent tl.Entity) (string, error) {
 }
 
 // AddEntities .
-func (mw *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+func (mw *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	retids := []string{}
 	for _, ent := range ents {
 		eid, err := mw.AddEntity(ent)

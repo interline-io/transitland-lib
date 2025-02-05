@@ -1,109 +1,93 @@
 package main
 
 import (
-	"flag"
+	"context"
+	_ "embed"
 	"os"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/copier"
+	tl "github.com/interline-io/transitland-lib"
+	"github.com/interline-io/transitland-lib/cmds"
 	"github.com/interline-io/transitland-lib/diff"
-	"github.com/interline-io/transitland-lib/dmfr/fetch"
-	"github.com/interline-io/transitland-lib/dmfr/importer"
-	"github.com/interline-io/transitland-lib/dmfr/sync"
-	"github.com/interline-io/transitland-lib/dmfr/unimporter"
+	"github.com/interline-io/transitland-lib/tlcli"
+
 	_ "github.com/interline-io/transitland-lib/ext/plus"
-	"github.com/interline-io/transitland-lib/extract"
 	_ "github.com/interline-io/transitland-lib/filters"
-	"github.com/interline-io/transitland-lib/merge"
-	"github.com/interline-io/transitland-lib/tl"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/validator"
-	"github.com/rs/zerolog"
+	_ "github.com/interline-io/transitland-lib/tldb/postgres"
+	_ "github.com/interline-io/transitland-lib/tldb/sqlite"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
-type runner interface {
-	Parse([]string) error
-	Run() error
+type versionCommand struct{}
+
+func (cmd *versionCommand) AddFlags(fl *pflag.FlagSet) {}
+
+func (cmd *versionCommand) HelpDesc() (string, string) {
+	return "Program version and supported GTFS and GTFS-RT versions", ""
+}
+
+func (cmd *versionCommand) Parse(args []string) error {
+	return nil
+}
+
+func (cmd *versionCommand) Run(ctx context.Context) error {
+	log.Print("transitland-lib version: %s", tl.Version.Tag)
+	log.Print("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)", tl.Version.Commit, tl.Version.CommitTime)
+	log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
+	log.Print("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto", tl.GTFSRTVERSION)
+	return nil
+}
+
+var rootCmd = &cobra.Command{
+	Use:   "transitland",
+	Short: "transitland-lib utilities",
+}
+
+func init() {
+	pc := "transitland"
+	dmfrCommand := &cobra.Command{
+		Use:    "dmfr",
+		Short:  "DMFR subcommands",
+		Long:   "DMFR Subcommands. Deprecated. Use dmfr-format, dmfr-lint, etc. instead.",
+		Hidden: true,
+	}
+	dmfrCommand.AddCommand(
+		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "lint"),
+		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "format"),
+	)
+
+	genDocCommand := tlcli.CobraHelper(&tlcli.GenDocCommand{Command: rootCmd}, pc, "gendoc")
+	genDocCommand.Hidden = true
+
+	rootCmd.AddCommand(
+		tlcli.CobraHelper(&cmds.CopyCommand{}, pc, "copy"),
+		tlcli.CobraHelper(&cmds.ExtractCommand{}, pc, "extract"),
+		tlcli.CobraHelper(&cmds.FetchCommand{}, pc, "fetch"),
+		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "dmfr-format"),
+		tlcli.CobraHelper(&cmds.ImportCommand{}, pc, "import"),
+		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "dmfr-lint"),
+		tlcli.CobraHelper(&cmds.MergeCommand{}, pc, "merge"),
+		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
+		tlcli.CobraHelper(&cmds.SyncCommand{}, pc, "sync"),
+		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
+		tlcli.CobraHelper(&cmds.DeleteCommand{}, pc, "delete"),
+		tlcli.CobraHelper(&cmds.ValidatorCommand{}, pc, "validate"),
+		tlcli.CobraHelper(&cmds.RTConvertCommand{}, pc, "rt-convert"),
+		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
+		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
+		genDocCommand,
+		dmfrCommand,
+	)
+
 }
 
 func main() {
-	quietFlag := false
-	debugFlag := false
-	traceFlag := false
-	versionFlag := false
-	flag.BoolVar(&quietFlag, "q", false, "Only send critical errors to stderr")
-	flag.BoolVar(&debugFlag, "v", false, "Enable verbose output")
-	flag.BoolVar(&traceFlag, "vv", false, "Enable more verbose/query output")
-	flag.BoolVar(&versionFlag, "version", false, "Show version and GTFS spec information")
-	flag.Usage = func() {
-		log.Print("Usage of %s:", os.Args[0])
-		log.Print("Commands:")
-		log.Print("  copy")
-		log.Print("  validate")
-		log.Print("  extract")
-		log.Print("  fetch")
-		log.Print("  rebuild-stats")
-		log.Print("  import")
-		log.Print("  unimport")
-		log.Print("  sync")
-		log.Print("  dmfr")
-	}
-	flag.Parse()
-	if versionFlag {
-		log.Print("transitland-lib version: %s", tl.VERSION)
-		log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
-		log.Print("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto", tl.GTFSRTVERSION)
-		return
-	}
-	if quietFlag {
-		log.SetLevel(zerolog.Disabled)
-	} else if debugFlag {
-		log.SetLevel(zerolog.DebugLevel)
-	} else if traceFlag {
-		log.SetLevel(zerolog.TraceLevel)
-	}
-
-	args := flag.Args()
-	subc := flag.Arg(0)
-	if subc == "" {
-		flag.Usage()
-		os.Exit(1)
-	}
-	var r runner
-	switch subc {
-	case "copy":
-		r = &copier.Command{}
-	case "validate":
-		r = &validator.Command{}
-	case "extract":
-		r = &extract.Command{}
-	case "diff":
-		r = &diff.Command{}
-	case "fetch":
-		r = &fetch.Command{}
-	case "rebuild-stats":
-		r = &fetch.RebuildStatsCommand{}
-	case "import":
-		r = &importer.Command{}
-	case "unimport":
-		r = &unimporter.Command{}
-	case "sync":
-		r = &sync.Command{}
-	case "merge":
-		r = &merge.Command{}
-	case "dmfr": // backwards compat
-		r = &dmfrCommand{}
-	default:
-		log.Errorf("%q is not valid command.", subc)
-		os.Exit(1)
-	}
-	if err := r.Parse(args[1:]); err != nil {
-		log.Errorf(err.Error())
-		os.Exit(1)
-	}
-	if err := r.Run(); err != nil {
-		log.Errorf(err.Error())
+	err := rootCmd.Execute()
+	if err != nil {
 		os.Exit(1)
 	}
 }

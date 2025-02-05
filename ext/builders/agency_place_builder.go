@@ -1,23 +1,27 @@
 package builders
 
 import (
+	"context"
 	"database/sql"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tldb/postgres"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
 )
 
 type AgencyPlace struct {
 	AgencyID string
-	Name     tl.String
-	Adm1name tl.String
-	Adm0name tl.String
+	Name     tt.String
+	Adm1name tt.String
+	Adm0name tt.String
 	Count    int
 	Rank     float64
-	tl.MinEntity
-	tl.FeedVersionEntity
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (rs *AgencyPlace) TableName() string {
@@ -46,20 +50,20 @@ func NewAgencyPlaceBuilder() *AgencyPlaceBuilder {
 	}
 }
 
-func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Agency:
+	case *gtfs.Agency:
 		pp.agencyStops[eid] = map[string]int{}
-	case *tl.Stop:
+	case *gtfs.Stop:
 		spt := v.ToPoint()
 		pp.stops[eid] = geohash.EncodeWithPrecision(spt.Lat, spt.Lon, 6) // Note reversed coords
-	case *tl.Route:
-		pp.routeAgency[eid] = v.AgencyID
-	case *tl.Trip:
-		pp.tripAgency[eid] = pp.routeAgency[v.RouteID]
-	case *tl.StopTime:
-		aid := pp.tripAgency[v.TripID]
-		if sg, ok := pp.stops[v.StopID]; ok {
+	case *gtfs.Route:
+		pp.routeAgency[eid] = v.AgencyID.Val
+	case *gtfs.Trip:
+		pp.tripAgency[eid] = pp.routeAgency[v.RouteID.Val]
+	case *gtfs.StopTime:
+		aid := pp.tripAgency[v.TripID.Val]
+		if sg, ok := pp.stops[v.StopID.Val]; ok {
 			if v, ok := pp.agencyStops[aid]; ok {
 				v[sg] += 1
 			}
@@ -90,6 +94,7 @@ where st_intersects(ne.geometry, ST_MakePoint(?, ?));
 `
 
 func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
+	ctx := context.TODO()
 	// get places for each point
 	ghPoints := map[string][]string{}
 	for stopId, ghPoint := range pp.stops {
@@ -97,26 +102,26 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	}
 	dbWriter, ok := copier.Writer.(*tldb.Writer)
 	if !ok {
-		// log.Traceln("writer is not dbwriter")
+		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, writer is not dbwriter")
 		return nil
 	}
 	db := dbWriter.Adapter
-	if _, ok := db.(*tldb.PostgresAdapter); !ok {
-		// log.Traceln("only postgres is supported")
+	if _, ok := db.(*postgres.PostgresAdapter); !ok {
+		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, only postgres is supported")
 		return nil
 	}
 	// For each geohash, check nearby populated places and inside admin boundaries
 	type foundPlace struct {
-		Name     tl.String
-		Adm1name tl.String
-		Adm0name tl.String
+		Name     tt.String
+		Adm1name tt.String
+		Adm0name tt.String
 	}
 	pointPlaces := map[string]foundPlace{}
 	pointAdmins := map[string]foundPlace{}
 	for ghPoint := range ghPoints {
 		gLat, gLon := geohash.Decode(ghPoint)
 		r := []foundPlace{}
-		if err := db.Select(&r, agencyPlaceQuery, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
+		if err := db.Select(ctx, &r, agencyPlaceQuery, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
 			// ok
 		} else if err != nil {
 			return nil
@@ -128,7 +133,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	for ghPoint := range ghPoints {
 		gLat, gLon := geohash.Decode(ghPoint)
 		r := []foundPlace{}
-		if err := db.Select(&r, agencyAdminQuery, gLon, gLat); err == sql.ErrNoRows {
+		if err := db.Select(ctx, &r, agencyAdminQuery, gLon, gLat); err == sql.ErrNoRows {
 			// ok
 		} else if err != nil {
 			return nil
@@ -137,8 +142,8 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 			pointAdmins[ghPoint] = r[0]
 		}
 	}
+	var ents []tt.Entity
 	for aid, agencyPoints := range pp.agencyStops {
-		// log.Traceln("agency stops:", agencyPoints)
 		placeWeights := map[foundPlace]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
@@ -157,11 +162,9 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				}
 			}
 		}
-		// log.Traceln("aid:", aid, "total weight:", agencyTotalWeight)
 		for k, v := range placeWeights {
 			score := float64(v) / float64(agencyTotalWeight)
 			if score > 0.05 {
-				// log.Traceln("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
 				ap := AgencyPlace{}
 				ap.AgencyID = aid
 				ap.Name = k.Name
@@ -169,14 +172,9 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				ap.Adm1name = k.Adm1name
 				ap.Count = v
 				ap.Rank = score
-				if _, err := copier.CopyEntity(&ap); err != nil {
-					return err
-				}
-
+				ents = append(ents, &ap)
 			}
 		}
 	}
-	////////
-
-	return nil
+	return copier.CopyEntities(ents)
 }

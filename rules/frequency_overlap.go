@@ -3,16 +3,16 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FrequencyOverlapError is reported when two frequencies.txt entries for the same trip overlap in time.
 type FrequencyOverlapError struct {
-	StartTime      tl.WideTime
-	EndTime        tl.WideTime
-	OtherStartTime tl.WideTime
-	OtherEndTime   tl.WideTime
+	StartTime      tt.Seconds
+	EndTime        tt.Seconds
+	OtherStartTime tt.Seconds
+	OtherEndTime   tt.Seconds
 	TripID         string
 	bc
 }
@@ -39,8 +39,8 @@ type FrequencyOverlapCheck struct {
 }
 
 // Validate .
-func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
-	v, ok := ent.(*tl.Frequency)
+func (e *FrequencyOverlapCheck) Validate(ent tt.Entity) []error {
+	v, ok := ent.(*gtfs.Frequency)
 	if !ok {
 		return nil
 	}
@@ -49,20 +49,20 @@ func (e *FrequencyOverlapCheck) Validate(ent tl.Entity) []error {
 	}
 	var errs []error
 	tf := freqValue{
-		start: v.StartTime.Seconds,
-		end:   v.EndTime.Seconds,
+		start: v.StartTime.Int(),
+		end:   v.EndTime.Int(),
 	}
-	for _, hit := range e.freqs[v.TripID] {
+	for _, hit := range e.freqs[v.TripID.Val] {
 		if !(tf.start >= hit.end || tf.end <= hit.start) {
 			errs = append(errs, &FrequencyOverlapError{
-				TripID:         v.TripID,
+				TripID:         v.TripID.Val,
 				StartTime:      v.StartTime,
 				EndTime:        v.EndTime,
-				OtherStartTime: tt.NewWideTimeFromSeconds(hit.start),
-				OtherEndTime:   tt.NewWideTimeFromSeconds(hit.end),
+				OtherStartTime: tt.NewSeconds(hit.start),
+				OtherEndTime:   tt.NewSeconds(hit.end),
 			})
 		}
 	}
-	e.freqs[v.TripID] = append(e.freqs[v.TripID], &tf)
+	e.freqs[v.TripID.Val] = append(e.freqs[v.TripID.Val], &tf)
 	return errs
 }

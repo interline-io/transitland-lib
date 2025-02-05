@@ -2,6 +2,7 @@ package dmfr
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -9,24 +10,24 @@ import (
 
 	"github.com/iancoleman/orderedmap"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl"
 )
 
 type RawRegistry struct {
 	Schema                string            `json:"$schema,omitempty"`
 	Feeds                 []RawRegistryFeed `json:"feeds,omitempty"`
-	Operators             []tl.Operator     `json:"operators,omitempty"`
-	Secrets               []tl.Secret       `json:"secrets,omitempty"`
+	Operators             []Operator        `json:"operators,omitempty"`
+	Secrets               []Secret          `json:"secrets,omitempty"`
 	LicenseSpdxIdentifier string            `json:"license_spdx_identifier,omitempty"`
 }
 
 // feed.Operators should be loaded but not exported
 type RawRegistryFeed struct {
-	tl.Feed
-	Operators []tl.Operator `json:"operators"`
+	Feed
+	Operators []Operator `json:"operators"`
 }
 
 func ReadRawRegistry(reader io.Reader) (*RawRegistry, error) {
+	ctx := context.TODO()
 	contents, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
@@ -34,7 +35,7 @@ func ReadRawRegistry(reader io.Reader) (*RawRegistry, error) {
 	var loadReg RawRegistry
 	if err := json.Unmarshal([]byte(contents), &loadReg); err != nil {
 		if e, ok := err.(*json.SyntaxError); ok {
-			log.Debugf("syntax error at byte offset %d", e.Offset)
+			log.For(ctx).Debug().Msgf("syntax error at byte offset %d", e.Offset)
 		}
 		return nil, err
 	}

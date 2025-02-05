@@ -2,10 +2,11 @@
 package rt
 
 import (
+	"context"
 	"os"
 
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/tl/request"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -24,13 +25,13 @@ func FlexDecode(data []byte, msg protoreflect.ProtoMessage) error {
 }
 
 // ReadURL opens a message from a url.
-func ReadURL(address string, opts ...request.RequestOption) (*pb.FeedMessage, error) {
-	fr, err := request.AuthenticatedRequest(address, opts...)
+func ReadURL(ctx context.Context, address string, opts ...request.RequestOption) (*pb.FeedMessage, error) {
+	fr, err := request.AuthenticatedRequest(ctx, address, opts...)
 	if err != nil {
 		return nil, err
 	}
 	if fr.FetchError != nil {
-		return nil, err
+		return nil, fr.FetchError
 	}
 	msg := pb.FeedMessage{}
 	data := fr.Data

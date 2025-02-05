@@ -1,30 +1,30 @@
 package filters
 
 import (
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // NormalizeTimezoneFilter changes a timezone alias to a normalized timezone, e.g. "US/Pacific" -> "America/Los_Angeles"
 type NormalizeTimezoneFilter struct{}
 
 // Validate .
-func (e *NormalizeTimezoneFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (e *NormalizeTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Agency:
-		n, ok := tt.IsValidTimezone(v.AgencyTimezone)
+	case *gtfs.Agency:
+		n, ok := tt.IsValidTimezone(v.AgencyTimezone.Val)
 		if !ok {
-			return causes.NewInvalidTimezoneError("agency_timezone", v.AgencyTimezone)
+			return causes.NewInvalidTimezoneError("agency_timezone", v.AgencyTimezone.Val)
 		} else {
-			v.AgencyEmail = n
+			v.AgencyTimezone.Set(n)
 		}
-	case *tl.Stop:
-		n, ok := tt.IsValidTimezone(v.StopTimezone)
+	case *gtfs.Stop:
+		n, ok := tt.IsValidTimezone(v.StopTimezone.Val)
 		if !ok {
-			return causes.NewInvalidTimezoneError("stop_timezone", v.StopTimezone)
+			return causes.NewInvalidTimezoneError("stop_timezone", v.StopTimezone.Val)
 		} else {
-			v.StopTimezone = n
+			v.StopTimezone.Set(n)
 		}
 	}
 	return nil

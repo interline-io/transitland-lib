@@ -1,8 +1,14 @@
+// Package tlxy provides simple XY geometry helper functions; these are approximate and designed for our specific use cases.
 package tlxy
 
 import (
 	"math"
 )
+
+type GeomCache interface {
+	GetStop(string) Point
+	GetShape(eid string) []Point
+}
 
 // Simple XY geometry helper functions.
 

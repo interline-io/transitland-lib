@@ -1,19 +1,22 @@
+// Package diff provides tools and utilities for comparing GTFS feeds.
 package diff
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
-	"flag"
 	"io"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/spf13/pflag"
 )
 
 type Command struct {
@@ -23,30 +26,36 @@ type Command struct {
 	ShowSame    bool
 	ShowAdded   bool
 	ShowDeleted bool
+	CheckFiles  []string
 	readerPathA string
 	readerPathB string
 }
 
-func (cmd *Command) Parse(args []string) error {
-	fl := flag.NewFlagSet("diff", flag.ExitOnError)
-	fl.Usage = func() {
-		log.Print("Usage: diff <input1> <input2> <output>")
-		log.Print("This command is experimental; it may provide incorrect results or crash on large feeds.")
-		fl.PrintDefaults()
-	}
+func (cmd *Command) HelpDesc() (string, string) {
+	a := "Calculate difference between two feeds, writing output in a GTFS-like format"
+	b := "This command is experimental; it may provide incorrect results or crash on large feeds."
+	return a, b
+}
+
+func (cmd *Command) HelpArgs() string {
+	return "[flags] <feed1> <feed2> <output>"
+}
+
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.ShowSame, "same", false, "Show entities present in both files and identical")
 	fl.BoolVar(&cmd.ShowDiff, "diff", false, "Show entities present in both files but different")
 	fl.BoolVar(&cmd.ShowAdded, "added", false, "Show entities added in second file")
 	fl.BoolVar(&cmd.ShowDeleted, "deleted", false, "Show entities deleted from first file")
 	fl.BoolVar(&cmd.RawDiff, "raw", false, "Diff based on raw CSV contents")
-	fl.Parse(args)
+}
+
+func (cmd *Command) Parse(args []string) error {
+	fl := tlcli.NewNArgs(args)
 	if fl.NArg() < 2 {
-		fl.Usage()
-		return errors.New("Requires two input readers")
+		return errors.New("requires two input readers")
 	}
 	if fl.NArg() < 3 {
-		fl.Usage()
-		return errors.New("Requires output directory")
+		return errors.New("requires output directory")
 	}
 	if !cmd.ShowAdded && !cmd.ShowDeleted && !cmd.ShowSame && !cmd.ShowDiff {
 		log.Print("Using default mode of -same -diff -added -deleted")
@@ -61,7 +70,7 @@ func (cmd *Command) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *Command) Run() error {
+func (cmd *Command) Run(ctx context.Context) error {
 	readerA, err := tlcsv.NewReader(cmd.readerPathA)
 	if err != nil {
 		return err
@@ -80,11 +89,11 @@ func (cmd *Command) Run() error {
 	var df2 *diffAdapter
 	if cmd.RawDiff {
 		var err error
-		df1, err = checkDiffRaw(readerA)
+		df1, err = checkDiffRaw(readerA, cmd.CheckFiles)
 		if err != nil {
 			return err
 		}
-		df2, err = checkDiffRaw(readerB)
+		df2, err = checkDiffRaw(readerB, cmd.CheckFiles)
 		if err != nil {
 			return err
 		}
@@ -136,28 +145,21 @@ func (cmd *Command) Run() error {
 		for k := range combinedKeys {
 			ent1, ok1 := df1.ents[diffKey{fn, k}]
 			ent2, ok2 := df2.ents[diffKey{fn, k}]
-			// log.Traceln("========", fn, "key:", k)
-			// log.Traceln("ent1:", ent1)
-			// log.Traceln("ent2:", ent2)
 			hh1 := hashRow(ent1.row)
 			hh2 := hashRow(ent2.row)
 			if ok1 && ok2 {
 				if hh1 == hh2 && cmd.ShowSame {
-					// log.Traceln("same")
 					ent1.row = append(ent1.row, readerB.String(), "same")
 					presentBoth = append(presentBoth, ent1)
 				} else if hh1 != hh2 && cmd.ShowDiff {
-					// log.Traceln("diff")
 					ent1.row = append(ent1.row, readerA.String(), "diff")
 					ent2.row = append(ent2.row, readerB.String(), "diff")
 					presentDiff = append(presentDiff, ent1, ent2)
 				}
 			} else if ok1 && !ok2 && cmd.ShowDeleted {
-				// log.Traceln("deleted")
 				ent1.row = append(ent1.row, readerA.String(), "deleted")
 				deletedRows = append(deletedRows, ent1)
 			} else if ok2 && !ok1 && cmd.ShowAdded {
-				// log.Traceln("added")
 				ent2.row = append(ent2.row, readerB.String(), "added")
 				addedRows = append(addedRows, ent2)
 			}
@@ -176,9 +178,9 @@ func (cmd *Command) Run() error {
 			h2 = h1
 		}
 		if hashRow(h1.row) != hashRow(h2.row) {
-			log.Traceln("headers are different:")
-			log.Traceln(h1.row)
-			log.Traceln(h2.row)
+			log.For(ctx).Trace().Msg("headers are different:")
+			log.For(ctx).Trace().Msgf("%v", h1.row)
+			log.For(ctx).Trace().Msgf("%v", h2.row)
 			continue
 		}
 		header = append(header, h1.row...)
@@ -205,7 +207,7 @@ type canFileInfos interface {
 	FileInfos() ([]os.FileInfo, error)
 }
 
-func checkDiffRaw(reader tl.Reader) (*diffAdapter, error) {
+func checkDiffRaw(reader adapters.Reader, checkFiles []string) (*diffAdapter, error) {
 	v, ok := reader.(*tlcsv.Reader)
 	if !ok {
 		return nil, errors.New("must be csv input")
@@ -221,9 +223,18 @@ func checkDiffRaw(reader tl.Reader) (*diffAdapter, error) {
 		return nil, err
 	}
 	defer df.Close()
+
+	cfMap := map[string]bool{}
+	for _, k := range checkFiles {
+		cfMap[k] = true
+	}
+
 	for _, fi := range fis {
 		// Only compare files with lowercase names that end with .txt
 		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
+			continue
+		}
+		if len(cfMap) > 0 && !cfMap[fi.Name()] {
 			continue
 		}
 		header := false
@@ -231,9 +242,7 @@ func checkDiffRaw(reader tl.Reader) (*diffAdapter, error) {
 			if !header {
 				df.WriteRows(fi.Name(), [][]string{row.Header})
 				header = true
-				return
 			}
-			// log.Traceln(fi.Name(), row.Row)
 			var row2 []string
 			row2 = append(row2, row.Row...)
 			df.WriteRows(fi.Name(), [][]string{row2})
@@ -242,7 +251,7 @@ func checkDiffRaw(reader tl.Reader) (*diffAdapter, error) {
 	return df, nil
 }
 
-func checkDiff(reader tl.Reader) (*diffAdapter, error) {
+func checkDiff(reader adapters.Reader) (*diffAdapter, error) {
 	df := newDiffAdapter()
 	writer, err := tlcsv.NewWriter("")
 	if err != nil {

@@ -2,10 +2,11 @@ package tlcsv
 
 import (
 	"errors"
-	"math"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type hasEntityKey interface {
@@ -55,38 +56,82 @@ func (writer *Writer) Delete() error {
 }
 
 // NewReader returns a new Reader for the Writer destination.
-func (writer *Writer) NewReader() (tl.Reader, error) {
+func (writer *Writer) NewReader() (adapters.Reader, error) {
 	return NewReader(writer.WriterAdapter.Path())
 }
 
-// AddEntities writes entities to the output.
-func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
-	eids := []string{}
-	if len(ents) == 0 {
-		return eids, nil
+// AddEntity writes an entity to the output.
+func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
+	eids, err := writer.AddEntities([]tt.Entity{ent})
+	if err != nil {
+		return "", err
 	}
+	if len(eids) == 0 {
+		return "", errors.New("did not write expected number of entities")
+	}
+	return eids[0], nil
+}
+
+// AddEntities writes entities to the output.
+func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
+	if len(ents) == 0 {
+		return nil, nil
+	}
+
+	// Awful Ugly Hack to Flatten entities
+	var expandedEnts []tt.Entity
+	var originalEids []string
+	for _, ent := range ents {
+		if a, ok := ent.(canFlatten); ok {
+			eid := ""
+			if b, ok := ent.(hasEntityKey); ok {
+				eid = b.EntityKey()
+			}
+			originalEids = append(originalEids, eid)
+			expandedEnts = append(expandedEnts, a.Flatten()...)
+		}
+	}
+	if len(expandedEnts) > 0 {
+		_, err := writer.addBatch(expandedEnts)
+		if err != nil {
+			return nil, err
+		}
+		return originalEids, nil
+	}
+
+	// Normal write path
+	return writer.addBatch(ents)
+}
+
+func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
+	var eids []string
+	if len(ents) == 0 {
+		return nil, nil
+	}
+
 	ent := ents[0]
 	efn := ents[0].Filename()
 	for _, ent := range ents {
 		if efn != ent.Filename() {
-			return eids, errors.New("all entities must be same type")
+			return nil, errors.New("all entities must be same type")
 		}
 		// Horrible special case bug fix
-		if v, ok := ent.(*tl.Stop); ok {
+		if v, ok := ent.(*gtfs.Stop); ok {
 			c := v.Coordinates()
-			v.StopLon = c[0]
-			v.StopLat = c[1]
+			v.StopLon.Set(c[0])
+			v.StopLat.Set(c[1])
 		}
 	}
+
+	extraHeader := writer.extraHeaders[efn]
 	header, ok := writer.headers[efn]
-	extraHeader, ok := writer.extraHeaders[efn]
 	if !ok {
 		h, err := dumpHeader(ent)
 		if err != nil {
-			return eids, err
+			return nil, err
 		}
 		header = h
-		if extEnt, ok2 := ent.(tl.EntityWithExtra); ok2 && writer.writeExtraColumns {
+		if extEnt, ok2 := ent.(tt.EntityWithExtra); ok2 && writer.writeExtraColumns {
 			extraHeader = extEnt.ExtraKeys()
 		}
 		writer.headers[efn] = header
@@ -103,10 +148,10 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 		}
 		row, err := dumpRow(ent, header)
 		if err != nil {
-			return eids, err
+			return nil, err
 		}
 		if len(extraHeader) > 0 {
-			if extEnt, ok := ent.(tl.EntityWithExtra); ok {
+			if extEnt, ok := ent.(tt.EntityWithExtra); ok {
 				for _, extraKey := range extraHeader {
 					a, _ := extEnt.GetExtra(extraKey)
 					row = append(row, a)
@@ -121,56 +166,6 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	return eids, err
 }
 
-// AddEntity writes an entity to the output.
-func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
-	eids := []string{}
-	var err error
-	if v, ok := ent.(*tl.Shape); ok {
-		e2s := []tl.Entity{}
-		es := writer.flattenShape(*v)
-		for i := 0; i < len(es); i++ {
-			e2s = append(e2s, &es[i])
-		}
-		eids, err = writer.AddEntities(e2s)
-	} else {
-		eids, err = writer.AddEntities([]tl.Entity{ent})
-	}
-	if err != nil {
-		return "", err
-	}
-	if len(eids) == 0 {
-		return "", errors.New("did not write expected number of entities")
-	}
-	return eids[0], nil
-}
-
-func (writer *Writer) flattenShape(ent tl.Shape) []tl.Shape {
-	coords := ent.Geometry.FlatCoords()
-	shapes := []tl.Shape{}
-	totaldist := 0.0
-	for i := 0; i < len(coords); i += 3 {
-		s := tl.Shape{
-			ShapeID:           ent.ShapeID,
-			ShapePtSequence:   i,
-			ShapePtLon:        coords[i],
-			ShapePtLat:        coords[i+1],
-			ShapeDistTraveled: coords[i+2],
-		}
-		totaldist += coords[i+2]
-		shapes = append(shapes, s)
-	}
-	// Set any zeros to NaN
-	cur := 0.0
-	for i := 0; i < len(shapes); i++ {
-		if shapes[i].ShapeDistTraveled < cur {
-			shapes[i].ShapeDistTraveled = math.NaN()
-		}
-		cur = shapes[i].ShapeDistTraveled
-	}
-	if cur == 0.0 {
-		for i := 0; i < len(shapes); i++ {
-			shapes[i].ShapeDistTraveled = math.NaN()
-		}
-	}
-	return shapes
+type canFlatten interface {
+	Flatten() []tt.Entity
 }

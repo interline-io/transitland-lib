@@ -1,6 +1,8 @@
 package empty
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"github.com/interline-io/transitland-lib/gtfs"
+)
 
 var bufferSize = 1000
 
@@ -32,104 +34,109 @@ func (mr *Reader) ReadEntities(c any) error {
 	return nil
 }
 
-func (mr *Reader) StopTimesByTripID(ids ...string) chan []tl.StopTime {
-	return readNullEntities[[]tl.StopTime](mr)
+func (mr *Reader) StopTimesByTripID(ids ...string) chan []gtfs.StopTime {
+	return readNullEntities[[]gtfs.StopTime](mr)
 }
 
-func (mr *Reader) Stops() chan tl.Stop {
-	return readNullEntities[tl.Stop](mr)
+// ShapesByShapeID .
+func (mr *Reader) ShapesByShapeID(...string) chan []gtfs.Shape {
+	return readNullEntities[[]gtfs.Shape](mr)
 }
 
-func (mr *Reader) StopTimes() chan tl.StopTime {
-	return readNullEntities[tl.StopTime](mr)
+func (mr *Reader) Stops() chan gtfs.Stop {
+	return readNullEntities[gtfs.Stop](mr)
 }
 
-func (mr *Reader) Agencies() chan tl.Agency {
-	return readNullEntities[tl.Agency](mr)
+func (mr *Reader) StopTimes() chan gtfs.StopTime {
+	return readNullEntities[gtfs.StopTime](mr)
 }
 
-func (mr *Reader) Calendars() chan tl.Calendar {
-	return readNullEntities[tl.Calendar](mr)
+func (mr *Reader) Agencies() chan gtfs.Agency {
+	return readNullEntities[gtfs.Agency](mr)
 }
 
-func (mr *Reader) CalendarDates() chan tl.CalendarDate {
-	return readNullEntities[tl.CalendarDate](mr)
+func (mr *Reader) Calendars() chan gtfs.Calendar {
+	return readNullEntities[gtfs.Calendar](mr)
 }
 
-func (mr *Reader) FareAttributes() chan tl.FareAttribute {
-	return readNullEntities[tl.FareAttribute](mr)
+func (mr *Reader) CalendarDates() chan gtfs.CalendarDate {
+	return readNullEntities[gtfs.CalendarDate](mr)
 }
 
-func (mr *Reader) FareRules() chan tl.FareRule {
-	return readNullEntities[tl.FareRule](mr)
+func (mr *Reader) FareAttributes() chan gtfs.FareAttribute {
+	return readNullEntities[gtfs.FareAttribute](mr)
 }
 
-func (mr *Reader) FeedInfos() chan tl.FeedInfo {
-	return readNullEntities[tl.FeedInfo](mr)
+func (mr *Reader) FareRules() chan gtfs.FareRule {
+	return readNullEntities[gtfs.FareRule](mr)
 }
 
-func (mr *Reader) Frequencies() chan tl.Frequency {
-	return readNullEntities[tl.Frequency](mr)
+func (mr *Reader) FeedInfos() chan gtfs.FeedInfo {
+	return readNullEntities[gtfs.FeedInfo](mr)
 }
 
-func (mr *Reader) Routes() chan tl.Route {
-	return readNullEntities[tl.Route](mr)
+func (mr *Reader) Frequencies() chan gtfs.Frequency {
+	return readNullEntities[gtfs.Frequency](mr)
 }
 
-func (mr *Reader) Shapes() chan tl.Shape {
-	return readNullEntities[tl.Shape](mr)
+func (mr *Reader) Routes() chan gtfs.Route {
+	return readNullEntities[gtfs.Route](mr)
 }
 
-func (mr *Reader) Transfers() chan tl.Transfer {
-	return readNullEntities[tl.Transfer](mr)
+func (mr *Reader) Shapes() chan gtfs.Shape {
+	return readNullEntities[gtfs.Shape](mr)
 }
 
-func (mr *Reader) Pathways() chan tl.Pathway {
-	return readNullEntities[tl.Pathway](mr)
+func (mr *Reader) Transfers() chan gtfs.Transfer {
+	return readNullEntities[gtfs.Transfer](mr)
 }
 
-func (mr *Reader) Levels() chan tl.Level {
-	return readNullEntities[tl.Level](mr)
+func (mr *Reader) Pathways() chan gtfs.Pathway {
+	return readNullEntities[gtfs.Pathway](mr)
 }
 
-func (mr *Reader) Trips() chan tl.Trip {
-	return readNullEntities[tl.Trip](mr)
+func (mr *Reader) Levels() chan gtfs.Level {
+	return readNullEntities[gtfs.Level](mr)
 }
 
-func (mr *Reader) Attributions() chan tl.Attribution {
-	return readNullEntities[tl.Attribution](mr)
+func (mr *Reader) Trips() chan gtfs.Trip {
+	return readNullEntities[gtfs.Trip](mr)
 }
 
-func (mr *Reader) Translations() chan tl.Translation {
-	return readNullEntities[tl.Translation](mr)
+func (mr *Reader) Attributions() chan gtfs.Attribution {
+	return readNullEntities[gtfs.Attribution](mr)
 }
 
-func (mr *Reader) Areas() chan tl.Area {
-	return readNullEntities[tl.Area](mr)
+func (mr *Reader) Translations() chan gtfs.Translation {
+	return readNullEntities[gtfs.Translation](mr)
 }
 
-func (mr *Reader) StopAreas() chan tl.StopArea {
-	return readNullEntities[tl.StopArea](mr)
+func (mr *Reader) Areas() chan gtfs.Area {
+	return readNullEntities[gtfs.Area](mr)
 }
 
-func (mr *Reader) FareLegRules() chan tl.FareLegRule {
-	return readNullEntities[tl.FareLegRule](mr)
+func (mr *Reader) StopAreas() chan gtfs.StopArea {
+	return readNullEntities[gtfs.StopArea](mr)
 }
 
-func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
-	return readNullEntities[tl.FareTransferRule](mr)
+func (mr *Reader) FareLegRules() chan gtfs.FareLegRule {
+	return readNullEntities[gtfs.FareLegRule](mr)
 }
 
-func (mr *Reader) FareMedia() chan tl.FareMedia {
-	return readNullEntities[tl.FareMedia](mr)
+func (mr *Reader) FareTransferRules() chan gtfs.FareTransferRule {
+	return readNullEntities[gtfs.FareTransferRule](mr)
 }
 
-func (mr *Reader) FareProducts() chan tl.FareProduct {
-	return readNullEntities[tl.FareProduct](mr)
+func (mr *Reader) FareMedia() chan gtfs.FareMedia {
+	return readNullEntities[gtfs.FareMedia](mr)
 }
 
-func (mr *Reader) RiderCategories() chan tl.RiderCategory {
-	return readNullEntities[tl.RiderCategory](mr)
+func (mr *Reader) FareProducts() chan gtfs.FareProduct {
+	return readNullEntities[gtfs.FareProduct](mr)
+}
+
+func (mr *Reader) RiderCategories() chan gtfs.RiderCategory {
+	return readNullEntities[gtfs.RiderCategory](mr)
 }
 
 func readNullEntities[T any](reader *Reader) chan T {

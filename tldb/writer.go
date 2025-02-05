@@ -1,13 +1,16 @@
 package tldb
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"strconv"
-	"time"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
+
+var notNullFilter = &NotNullFilter{}
 
 // OpenWriter opens & creates a db writer
 func OpenWriter(dburl string, create bool) (*Writer, error) {
@@ -69,7 +72,7 @@ func (writer *Writer) Close() error {
 }
 
 // NewReader returns a new Reader with the same adapter.
-func (writer *Writer) NewReader() (tl.Reader, error) {
+func (writer *Writer) NewReader() (adapters.Reader, error) {
 	reader := Reader{
 		FeedVersionIDs: []int{writer.FeedVersionID},
 		Adapter:        writer.Adapter,
@@ -90,59 +93,40 @@ func (writer *Writer) Delete() error {
 }
 
 // AddEntity writes an entity to the database.
-func (writer *Writer) AddEntity(ent tl.Entity) (string, error) {
-	if v, ok := ent.(*tl.Route); ok && v.AgencyID == "" {
-		v.AgencyID = strconv.Itoa(writer.defaultAgencyID)
+func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
+	eids, err := writer.AddEntities([]tt.Entity{ent})
+	if err != nil {
+		return "", err
 	}
-	// Set the FeedVersionID
-	if z, ok := ent.(canSetFeedVersion); ok {
-		z.SetFeedVersionID(writer.FeedVersionID)
+	if len(eids) == 0 {
+		return "", errors.New("did not write expected number of entities")
 	}
-	// Save
-	eid, err := writer.Adapter.Insert(ent)
-	// Update ID
-	if v, ok := ent.(canSetID); ok {
-		v.SetID(eid)
-	}
-	// Set a default AgencyID if possible.
-	if _, ok := ent.(*tl.Agency); ok && writer.defaultAgencyID == 0 {
-		writer.defaultAgencyID = eid
-	}
-	return strconv.Itoa(eid), err
+	return eids[0], nil
 }
 
 // AddEntities writes entities to the database.
-func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
+func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
+	ctx := context.TODO()
 	if len(ents) == 0 {
 		return []string{}, nil
 	}
 	eids := []string{}
 	ients := make([]interface{}, len(ents))
-	useCopy := true
 	for i, ent := range ents {
-		if ent.EntityID() != "" {
-			useCopy = false
-		}
+		// Set some fields to not null for compatibility
+		notNullFilter.Filter(ent, nil)
+
 		// Routes may need a default AgencyID set before writing to database.
-		if v, ok := ent.(*tl.Route); ok && v.AgencyID == "" {
-			v.AgencyID = strconv.Itoa(writer.defaultAgencyID)
+		if v, ok := ent.(*gtfs.Route); ok && !v.AgencyID.Valid {
+			v.AgencyID.SetInt(writer.defaultAgencyID)
 		}
 		// Set FeedVersion, Timestamps
-		if v, ok := ent.(canSetFeedVersion); ok {
+		if v, ok := ent.(CanSetFeedVersion); ok {
 			v.SetFeedVersionID(writer.FeedVersionID)
 		}
 		ients[i] = ent
 	}
-	if useCopy {
-		if err := writer.Adapter.CopyInsert(ients); err != nil {
-			return eids, err
-		}
-		for range ents {
-			eids = append(eids, "")
-		}
-		return eids, nil
-	}
-	retids, err := writer.Adapter.MultiInsert(ients)
+	retids, err := writer.Adapter.MultiInsert(ctx, ients)
 	if err != nil {
 		return eids, err
 	}
@@ -152,32 +136,19 @@ func (writer *Writer) AddEntities(ents []tl.Entity) ([]string, error) {
 	for i := 0; i < len(ents); i++ {
 		eids = append(eids, strconv.Itoa(retids[i]))
 		// Update ID
-		if v, ok := ents[i].(canSetID); ok {
+		if v, ok := ents[i].(CanSetID); ok {
 			v.SetID(int(retids[i]))
 		}
 	}
+	// Set default agency ID
+	// TODO: handle this in ApplyDefaultAgencyFilter
+	for _, ent := range ents {
+		if a, ok := ent.(*gtfs.Agency); ok {
+			if writer.defaultAgencyID == 0 {
+				writer.defaultAgencyID = a.ID
+			}
+			break
+		}
+	}
 	return eids, nil
-}
-
-// CreateFeedVersion creates a new FeedVersion and inserts into the database.
-func (writer *Writer) CreateFeedVersion(reader tl.Reader) (int, error) {
-	if reader == nil {
-		return 0, errors.New("reader required")
-	}
-	var err error
-	feed := tl.Feed{}
-	feed.FeedID = fmt.Sprintf("%d", time.Now().UnixNano())
-	feed.ID, err = writer.Adapter.Insert(&feed)
-	if err != nil {
-		return 0, err
-	}
-	fvid := 0
-	fv, err := tl.NewFeedVersionFromReader(reader)
-	if err != nil {
-		return 0, err
-	}
-	fv.FeedID = feed.ID
-	fvid, err = writer.Adapter.Insert(&fv)
-	writer.FeedVersionID = fvid
-	return fvid, err
 }

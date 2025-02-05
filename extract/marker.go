@@ -1,10 +1,11 @@
+// Package extract provides tools and utilities for extracting subsets of GTFS feeds.
 package extract
 
 import (
 	"fmt"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/internal/graph"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlxy"
 )
 
@@ -28,6 +29,15 @@ func NewMarker() Marker {
 		fm:    map[string][]string{},
 		ex:    map[string][]string{},
 	}
+}
+
+func (em *Marker) SetBbox(bbox string) error {
+	_, err := tlxy.ParseBbox(bbox)
+	if err != nil {
+		return err
+	}
+	em.bbox = bbox
+	return nil
 }
 
 func (em *Marker) Mark(filename string, eid string, val bool) {
@@ -77,7 +87,7 @@ func (em *Marker) Count() int {
 }
 
 // Filter takes a Reader and selects any entities that are children of the specified file/id map.
-func (em *Marker) Filter(reader tl.Reader) error {
+func (em *Marker) Filter(reader adapters.Reader) error {
 	var bboxExcludeStops []string
 	if em.bbox != "" {
 		bbox, err := tlxy.ParseBbox(em.bbox)
@@ -86,13 +96,13 @@ func (em *Marker) Filter(reader tl.Reader) error {
 		}
 		for stop := range reader.Stops() {
 			spt := tlxy.Point{
-				Lon: stop.Geometry.Point.X(),
-				Lat: stop.Geometry.Point.Y(),
+				Lon: stop.Geometry.X(),
+				Lat: stop.Geometry.Y(),
 			}
 			if bbox.Contains(spt) {
-				em.AddInclude("stops.txt", stop.StopID)
+				em.AddInclude("stops.txt", stop.StopID.Val)
 			} else {
-				bboxExcludeStops = append(bboxExcludeStops, stop.StopID)
+				bboxExcludeStops = append(bboxExcludeStops, stop.StopID.Val)
 			}
 		}
 	}
@@ -153,6 +163,6 @@ func (em *Marker) Filter(reader tl.Reader) error {
 		em.Mark("stops.txt", sid, false)
 	}
 
-	// log.Debugf("result: %#v\n", result)
+	// log.For(ctx).Debug().Msgf("result: %#v\n", result)
 	return nil
 }

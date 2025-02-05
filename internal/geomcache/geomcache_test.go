@@ -3,8 +3,9 @@ package geomcache
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
@@ -15,25 +16,27 @@ func TestGeomCache(t *testing.T) {
 	}
 	r.Open()
 	defer r.Close()
-	trips := map[string]tl.Trip{}
+	trips := map[string]gtfs.Trip{}
 	count := 1
 	for trip := range r.Trips() {
-		trip.StopPatternID = count
-		trips[trip.TripID] = trip
+		trip := trip
+		trip.StopPatternID.SetInt(count)
+		trips[trip.TripID.Val] = trip
 		count++
 	}
 	cache := NewGeomCache()
-	for e := range r.Shapes() {
+	for shapeEnts := range r.ShapesByShapeID() {
+		e := service.NewShapeLineFromShapes(shapeEnts)
 		lm := e.Geometry.ToLineM()
-		cache.AddShapeGeom(e.ShapeID, lm.Coords, lm.Data)
+		cache.AddShapeGeom(e.ShapeID.Val, lm.Coords, lm.Data)
 	}
 	for e := range r.Stops() {
-		cache.AddStopGeom(e.StopID, e.ToPoint())
+		cache.AddStopGeom(e.StopID.Val, e.ToPoint())
 	}
 	for stoptimes := range r.StopTimesByTripID() {
-		trip := trips[stoptimes[0].TripID]
+		trip := trips[stoptimes[0].TripID.Val]
 		trip.StopTimes = stoptimes
-		stoptimes2, err := cache.InterpolateStopTimes(trip)
+		stoptimes2, err := cache.InterpolateStopTimes(&trip)
 		if err != nil {
 			t.Error(err)
 		}

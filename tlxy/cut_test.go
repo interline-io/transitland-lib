@@ -7,7 +7,89 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/stretchr/testify/assert"
+	geom "github.com/twpayne/go-geom"
+	"github.com/twpayne/go-geom/encoding/geojson"
 )
+
+// cutBetweenPositions is similar to CutBetweenPoints but takes absolute positions.
+func cutBetweenPositionsDebug(t *testing.T, line []Point, dists []float64, startDist float64, endDist float64, extraPts ...Point) []Point {
+	spt, ept, sidx, eidx, ok := cutBetweenPositions(line, dists, startDist, endDist)
+	if !ok {
+		return nil
+	}
+	var ret []Point
+	ret = append(ret, spt)
+	ret = append(ret, line[sidx:eidx]...)
+	ret = append(ret, ept)
+
+	i := sidx
+	j := eidx
+
+	// DEBUG - Trace log a geojson feature with visualization of result
+	var fs []*geojson.Feature
+	var baseLine []float64
+	for _, pt := range ret {
+		baseLine = append(baseLine, pt.Lon, pt.Lat)
+	}
+	var rawLine []float64
+	for _, pt := range line {
+		rawLine = append(rawLine, pt.Lon, pt.Lat)
+	}
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "input line", "stroke": "#ff00ff", "stroke-width": 1, "stroke-opacity": 0.5},
+		Geometry:   geom.NewLineStringFlat(geom.XY, rawLine),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "return line", "stroke": "#aaaaaa", "stroke-width": 20, "stroke-opacity": 0.5},
+		Geometry:   geom.NewLineStringFlat(geom.XY, baseLine),
+	})
+	for _, extraPt := range extraPts {
+		fs = append(fs, &geojson.Feature{
+			Properties: map[string]any{"name": "extraPt", "marker-color": "#999999"},
+			Geometry:   geom.NewPointFlat(geom.XY, []float64{extraPt.Lon, extraPt.Lat}),
+		})
+	}
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "start matched segment", "stroke": "#00ffff", "stroke-width": 5, "stroke-opacity": 0.2},
+		Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+			line[i-1].Lon, line[i-1].Lat,
+			line[i].Lon, line[i].Lat,
+		}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "end matched segment", "stroke": "#ff00ff", "stroke-width": 5, "stroke-opacity": 0.2},
+		Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+			line[j-1].Lon, line[j-1].Lat,
+			line[j].Lon, line[j].Lat,
+		}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "start point", "marker-color": "#00ff00"},
+		Geometry:   geom.NewPointFlat(geom.XY, []float64{spt.Lon, spt.Lat}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "start point to line[i]", "stroke": "#00ff00"},
+		Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+			spt.Lon, spt.Lat,
+			line[i].Lon, line[i].Lat,
+		}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "ept", "marker-color": "#ff0000"},
+		Geometry:   geom.NewPointFlat(geom.XY, []float64{ept.Lon, ept.Lat}),
+	})
+	fs = append(fs, &geojson.Feature{
+		Properties: map[string]any{"name": "end point to line[j-1]", "stroke": "#ff0000"},
+		Geometry: geom.NewLineStringFlat(geom.XY, []float64{
+			line[j-1].Lon, line[j-1].Lat,
+			ept.Lon, ept.Lat,
+		}),
+	})
+	fc := geojson.FeatureCollection{Features: fs}
+	d, _ := fc.MarshalJSON()
+	t.Logf("LineBetweenPositions: %s", string(d))
+	return ret
+}
 
 func TestSegmentClosestPoint(t *testing.T) {
 	tcs := []struct {
@@ -41,7 +123,7 @@ func testCutPositionsDebug(t *testing.T, tc lineTestCase) {
 		extraPoints = append(extraPoints, tc.to)
 		tcDist = DistanceHaversine(tc.from, tc.to)
 	}
-	ret := cutBetweenPositionsDebug(tc.line, tc.dists, tc.a, tc.b, extraPoints...)
+	ret := cutBetweenPositionsDebug(t, tc.line, tc.dists, tc.a, tc.b, extraPoints...)
 	if tc.debugOnly {
 		return
 	}
@@ -53,7 +135,6 @@ func testCutPositionsDebug(t *testing.T, tc lineTestCase) {
 		assert.InDelta(t, 0, ret[i].Lon-tc.expect[i].Lon, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lon, tc.expect[i].Lon)
 		assert.InDelta(t, 0, ret[i].Lat-tc.expect[i].Lat, 0.001, "expected to be within 0.001: %f - %f", ret[i].Lat, tc.expect[i].Lat)
 	}
-	fmt.Println("tcDist:", tcDist)
 	if tcDist > 0 {
 		retLength := LengthHaversine(ret)
 		assert.LessOrEqual(t, retLength, tcDist*3, "expected shape length %f to be less than 3 times the stop to stop dist %f", retLength, tcDist)
@@ -222,7 +303,7 @@ func TestCutBetweenPositions_Loop(t *testing.T) {
 
 func TestCutBetweenPositions_IgnoreDists(t *testing.T) {
 	// Ignore included shape_dist_traveled values
-	data, err := os.ReadFile(testpath.RelPath("test/data/tlxy/ac.geojson"))
+	data, err := os.ReadFile(testpath.RelPath("testdata/tlxy/ac.geojson"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +333,7 @@ func TestCutBetweenPositions_RealShape(t *testing.T) {
 	// You can enable trace logging to see this example from AC Transit.
 	testcases := []lineTestCase{}
 	// AC Transit test shape and stops
-	acData, err := os.ReadFile(testpath.RelPath("test/data/tlxy/ac.geojson"))
+	acData, err := os.ReadFile(testpath.RelPath("testdata/tlxy/ac.geojson"))
 	if err != nil {
 		t.Fatal(err)
 	}

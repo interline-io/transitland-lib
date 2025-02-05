@@ -6,8 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // s2D is two dimensional string slice
@@ -41,14 +42,14 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	outValue := reflect.ValueOf(c)
 	outInnerType := outValue.Type().Elem()
 	outInner := reflect.New(outInnerType)
-	ent, ok := outInner.Interface().(tl.Entity)
+	ent, ok := outInner.Interface().(tt.Entity)
 	if !ok {
 		return causes.NewSourceUnreadableError("not a valid entity", nil)
 	}
 	go func() {
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			a := reflect.New(outInnerType)
-			e := a.Interface().(tl.Entity)
+			e := a.Interface().(tt.Entity)
 			loadRow(e, row)
 			outValue.Send(a.Elem())
 		})
@@ -68,7 +69,7 @@ func (reader *Reader) ValidateStructure() []error {
 	}
 	// Check if these files contain valid headers
 	// TODO: An error in the header should also stop a file from being opened for further CSV reading.
-	check := func(ent tl.Entity) []error {
+	check := func(ent tt.Entity) []error {
 		fileerrs := []error{}
 		efn := ent.Filename()
 		err := reader.Adapter.OpenFile(efn, func(in io.Reader) {
@@ -125,13 +126,13 @@ func (reader *Reader) ValidateStructure() []error {
 		}
 		return fileerrs
 	}
-	allerrs = append(allerrs, check(&tl.Stop{})...)
-	allerrs = append(allerrs, check(&tl.Route{})...)
-	allerrs = append(allerrs, check(&tl.Agency{})...)
-	allerrs = append(allerrs, check(&tl.Trip{})...)
-	allerrs = append(allerrs, check(&tl.StopTime{})...)
-	cal := tl.Calendar{}
-	cd := tl.CalendarDate{}
+	allerrs = append(allerrs, check(&gtfs.Stop{})...)
+	allerrs = append(allerrs, check(&gtfs.Route{})...)
+	allerrs = append(allerrs, check(&gtfs.Agency{})...)
+	allerrs = append(allerrs, check(&gtfs.Trip{})...)
+	allerrs = append(allerrs, check(&gtfs.StopTime{})...)
+	cal := gtfs.Calendar{}
+	cd := gtfs.CalendarDate{}
 	calerrs := check(&cal)
 	cderrs := check(&cd)
 	if reader.ContainsFile(cal.Filename()) && reader.ContainsFile(cd.Filename()) {
@@ -161,7 +162,7 @@ func (reader *Reader) ContainsFile(filename string) bool {
 }
 
 // StopTimesByTripID sends StopTimes for selected trips.
-func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
+func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime {
 	chunks := s2D{}
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
@@ -196,16 +197,16 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 	}
 
 	//
-	out := make(chan []tl.StopTime, bufferSize)
+	out := make(chan []gtfs.StopTime, bufferSize)
 	go func(chunks s2D, grouped bool) {
 		for _, chunk := range chunks {
 			set := stringsToSet(chunk)
-			m := map[string][]tl.StopTime{}
+			m := map[string][]gtfs.StopTime{}
 			last := ""
 			reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
 				sid, _ := row.Get("trip_id")
 				if _, ok := set[sid]; ok {
-					ent := tl.StopTime{}
+					ent := gtfs.StopTime{}
 					loadRow(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
@@ -213,7 +214,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 				if grouped && sid != last && last != "" {
 					v := m[last]
 					sort.Slice(v, func(i, j int) bool {
-						return v[i].StopSequence < v[j].StopSequence
+						return v[i].StopSequence.Val < v[j].StopSequence.Val
 					})
 					out <- v
 					delete(m, last)
@@ -222,7 +223,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 			})
 			for _, v := range m {
 				sort.Slice(v, func(i, j int) bool {
-					return v[i].StopSequence < v[j].StopSequence
+					return v[i].StopSequence.Val < v[j].StopSequence.Val
 				})
 				out <- v
 			}
@@ -233,21 +234,12 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 }
 
 // Shapes sends single-geometry LineString Shapes
-func (reader *Reader) Shapes() chan tl.Shape {
-	out := make(chan tl.Shape, bufferSize)
-	go func() {
-		for shapes := range reader.shapesByShapeID() {
-			shape := tl.NewShapeFromShapes(shapes)
-			shape.ShapeID = shapes[0].ShapeID
-			out <- shape
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Shapes() chan gtfs.Shape {
+	return ReadEntities[gtfs.Shape](reader, getFilename(&gtfs.Shape{}))
 }
 
 // shapesByShapeID returns a map with grouped Shapes.
-func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
+func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 	var chunks s2D
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
@@ -280,16 +272,16 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
 		chunks = s2D{shapeIDs}
 	}
 	//
-	out := make(chan []tl.Shape, bufferSize)
+	out := make(chan []gtfs.Shape, bufferSize)
 	go func(chunks s2D, grouped bool) {
 		for _, chunk := range chunks {
 			set := stringsToSet(chunk)
-			m := map[string][]tl.Shape{}
+			m := map[string][]gtfs.Shape{}
 			last := ""
 			reader.Adapter.ReadRows("shapes.txt", func(row Row) {
 				sid, _ := row.Get("shape_id")
 				if _, ok := set[sid]; ok {
-					ent := tl.Shape{}
+					ent := gtfs.Shape{}
 					loadRow(&ent, row)
 					m[sid] = append(m[sid], ent)
 				}
@@ -297,7 +289,7 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
 				if grouped && sid != last && last != "" {
 					v := m[last]
 					sort.Slice(v, func(i, j int) bool {
-						return v[i].ShapePtSequence < v[j].ShapePtSequence
+						return v[i].ShapePtSequence.Val < v[j].ShapePtSequence.Val
 					})
 					out <- v
 					delete(m, last)
@@ -306,7 +298,7 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
 			})
 			for _, v := range m {
 				sort.Slice(v, func(i, j int) bool {
-					return v[i].ShapePtSequence < v[j].ShapePtSequence
+					return v[i].ShapePtSequence.Val < v[j].ShapePtSequence.Val
 				})
 				out <- v
 			}
@@ -320,14 +312,16 @@ func (reader *Reader) shapesByShapeID(shapeIDs ...string) chan []tl.Shape {
 // Entities
 //////////////////////////////
 
-func (reader *Reader) Stops() (out chan tl.Stop) {
-	out = make(chan tl.Stop, bufferSize)
+func (reader *Reader) Stops() (out chan gtfs.Stop) {
+	out = make(chan gtfs.Stop, bufferSize)
 	go func() {
-		ent := tl.Stop{}
+		ent := gtfs.Stop{}
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.Stop{}
+			e := gtfs.Stop{}
 			loadRow(&e, row)
-			e.SetCoordinates([2]float64{e.StopLon, e.StopLat})
+			if e.StopLon.Valid && e.StopLat.Valid {
+				e.SetCoordinates([2]float64{e.StopLon.Val, e.StopLat.Val})
+			}
 			out <- e
 		})
 		close(out)
@@ -335,92 +329,104 @@ func (reader *Reader) Stops() (out chan tl.Stop) {
 	return out
 }
 
-func (reader *Reader) StopTimes() (out chan tl.StopTime) {
-	return ReadEntities[tl.StopTime](reader, getFilename(&tl.StopTime{}))
+func (reader *Reader) StopTimes() (out chan gtfs.StopTime) {
+	return ReadEntities[gtfs.StopTime](reader, getFilename(&gtfs.StopTime{}))
 }
 
-func (reader *Reader) Agencies() (out chan tl.Agency) {
-	return ReadEntities[tl.Agency](reader, getFilename(&tl.Agency{}))
+func (reader *Reader) Agencies() (out chan gtfs.Agency) {
+	return ReadEntities[gtfs.Agency](reader, getFilename(&gtfs.Agency{}))
 }
 
-func (reader *Reader) Calendars() (out chan tl.Calendar) {
-	return ReadEntities[tl.Calendar](reader, getFilename(&tl.Calendar{}))
+func (reader *Reader) Calendars() (out chan gtfs.Calendar) {
+	return ReadEntities[gtfs.Calendar](reader, getFilename(&gtfs.Calendar{}))
 }
 
-func (reader *Reader) CalendarDates() (out chan tl.CalendarDate) {
-	return ReadEntities[tl.CalendarDate](reader, getFilename(&tl.CalendarDate{}))
+func (reader *Reader) CalendarDates() (out chan gtfs.CalendarDate) {
+	return ReadEntities[gtfs.CalendarDate](reader, getFilename(&gtfs.CalendarDate{}))
 }
 
-func (reader *Reader) FareAttributes() (out chan tl.FareAttribute) {
-	return ReadEntities[tl.FareAttribute](reader, getFilename(&tl.FareAttribute{}))
+func (reader *Reader) FareAttributes() (out chan gtfs.FareAttribute) {
+	return ReadEntities[gtfs.FareAttribute](reader, getFilename(&gtfs.FareAttribute{}))
 }
 
-func (reader *Reader) FareRules() (out chan tl.FareRule) {
-	return ReadEntities[tl.FareRule](reader, getFilename(&tl.FareRule{}))
+func (reader *Reader) FareRules() (out chan gtfs.FareRule) {
+	return ReadEntities[gtfs.FareRule](reader, getFilename(&gtfs.FareRule{}))
 }
 
-func (reader *Reader) FeedInfos() (out chan tl.FeedInfo) {
-	return ReadEntities[tl.FeedInfo](reader, getFilename(&tl.FeedInfo{}))
+func (reader *Reader) FeedInfos() (out chan gtfs.FeedInfo) {
+	return ReadEntities[gtfs.FeedInfo](reader, getFilename(&gtfs.FeedInfo{}))
 }
 
-func (reader *Reader) Frequencies() (out chan tl.Frequency) {
-	return ReadEntities[tl.Frequency](reader, getFilename(&tl.Frequency{}))
+func (reader *Reader) Frequencies() (out chan gtfs.Frequency) {
+	return ReadEntities[gtfs.Frequency](reader, getFilename(&gtfs.Frequency{}))
 }
 
-func (reader *Reader) Routes() (out chan tl.Route) {
-	return ReadEntities[tl.Route](reader, getFilename(&tl.Route{}))
+func (reader *Reader) Routes() (out chan gtfs.Route) {
+	return ReadEntities[gtfs.Route](reader, getFilename(&gtfs.Route{}))
 }
 
-func (reader *Reader) Transfers() (out chan tl.Transfer) {
-	return ReadEntities[tl.Transfer](reader, getFilename(&tl.Transfer{}))
+func (reader *Reader) Transfers() (out chan gtfs.Transfer) {
+	return ReadEntities[gtfs.Transfer](reader, getFilename(&gtfs.Transfer{}))
 }
 
-func (reader *Reader) Trips() (out chan tl.Trip) {
-	return ReadEntities[tl.Trip](reader, getFilename(&tl.Trip{}))
+func (reader *Reader) Trips() (out chan gtfs.Trip) {
+	return ReadEntities[gtfs.Trip](reader, getFilename(&gtfs.Trip{}))
 }
 
-func (reader *Reader) Levels() (out chan tl.Level) {
-	return ReadEntities[tl.Level](reader, getFilename(&tl.Level{}))
+func (reader *Reader) Levels() (out chan gtfs.Level) {
+	return ReadEntities[gtfs.Level](reader, getFilename(&gtfs.Level{}))
 }
 
-func (reader *Reader) Pathways() (out chan tl.Pathway) {
-	return ReadEntities[tl.Pathway](reader, getFilename(&tl.Pathway{}))
+func (reader *Reader) Pathways() (out chan gtfs.Pathway) {
+	return ReadEntities[gtfs.Pathway](reader, getFilename(&gtfs.Pathway{}))
 }
 
-func (reader *Reader) Attributions() (out chan tl.Attribution) {
-	return ReadEntities[tl.Attribution](reader, getFilename(&tl.Attribution{}))
+func (reader *Reader) Attributions() (out chan gtfs.Attribution) {
+	return ReadEntities[gtfs.Attribution](reader, getFilename(&gtfs.Attribution{}))
 }
 
-func (reader *Reader) Translations() (out chan tl.Translation) {
-	return ReadEntities[tl.Translation](reader, getFilename(&tl.Translation{}))
+func (reader *Reader) Translations() (out chan gtfs.Translation) {
+	return ReadEntities[gtfs.Translation](reader, getFilename(&gtfs.Translation{}))
 }
 
-func (reader *Reader) Areas() (out chan tl.Area) {
-	return ReadEntities[tl.Area](reader, getFilename(&tl.Area{}))
+func (reader *Reader) Areas() (out chan gtfs.Area) {
+	return ReadEntities[gtfs.Area](reader, getFilename(&gtfs.Area{}))
 }
 
-func (reader *Reader) StopAreas() (out chan tl.StopArea) {
-	return ReadEntities[tl.StopArea](reader, getFilename(&tl.StopArea{}))
+func (reader *Reader) StopAreas() (out chan gtfs.StopArea) {
+	return ReadEntities[gtfs.StopArea](reader, getFilename(&gtfs.StopArea{}))
 }
 
-func (reader *Reader) FareLegRules() (out chan tl.FareLegRule) {
-	return ReadEntities[tl.FareLegRule](reader, getFilename(&tl.FareLegRule{}))
+func (reader *Reader) FareLegRules() (out chan gtfs.FareLegRule) {
+	return ReadEntities[gtfs.FareLegRule](reader, getFilename(&gtfs.FareLegRule{}))
 }
 
-func (reader *Reader) FareTransferRules() (out chan tl.FareTransferRule) {
-	return ReadEntities[tl.FareTransferRule](reader, getFilename(&tl.FareTransferRule{}))
+func (reader *Reader) FareTransferRules() (out chan gtfs.FareTransferRule) {
+	return ReadEntities[gtfs.FareTransferRule](reader, getFilename(&gtfs.FareTransferRule{}))
 }
 
-func (reader *Reader) FareProducts() (out chan tl.FareProduct) {
-	return ReadEntities[tl.FareProduct](reader, getFilename(&tl.FareProduct{}))
+func (reader *Reader) FareProducts() (out chan gtfs.FareProduct) {
+	return ReadEntities[gtfs.FareProduct](reader, getFilename(&gtfs.FareProduct{}))
 }
 
-func (reader *Reader) FareMedia() (out chan tl.FareMedia) {
-	return ReadEntities[tl.FareMedia](reader, getFilename(&tl.FareMedia{}))
+func (reader *Reader) FareMedia() (out chan gtfs.FareMedia) {
+	return ReadEntities[gtfs.FareMedia](reader, getFilename(&gtfs.FareMedia{}))
 }
 
-func (reader *Reader) RiderCategories() (out chan tl.RiderCategory) {
-	return ReadEntities[tl.RiderCategory](reader, getFilename(&tl.RiderCategory{}))
+func (reader *Reader) RiderCategories() (out chan gtfs.RiderCategory) {
+	return ReadEntities[gtfs.RiderCategory](reader, getFilename(&gtfs.RiderCategory{}))
+}
+
+func (reader *Reader) Timeframes() (out chan gtfs.Timeframe) {
+	return ReadEntities[gtfs.Timeframe](reader, getFilename(&gtfs.Timeframe{}))
+}
+
+func (reader *Reader) Networks() (out chan gtfs.Network) {
+	return ReadEntities[gtfs.Network](reader, getFilename(&gtfs.Network{}))
+}
+
+func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
+	return ReadEntities[gtfs.RouteNetwork](reader, getFilename(&gtfs.RouteNetwork{}))
 }
 
 func ReadEntities[T any](reader *Reader, efn string) chan T {
@@ -436,7 +442,7 @@ func ReadEntities[T any](reader *Reader, efn string) chan T {
 	return eout
 }
 
-func getFilename(ent tl.Entity) string {
+func getFilename(ent tt.Entity) string {
 	return ent.Filename()
 }
 

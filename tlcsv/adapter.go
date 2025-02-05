@@ -2,6 +2,7 @@ package tlcsv
 
 import (
 	"archive/zip"
+	"context"
 	"crypto/sha1"
 	"encoding/csv"
 	"errors"
@@ -15,8 +16,8 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/request"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/request"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.
@@ -39,6 +40,20 @@ type WriterAdapter interface {
 }
 
 /////////////////////
+
+// NewStoreAdapter is a convenience method for getting a GTFS Zip reader from the store.
+func NewStoreAdapter(ctx context.Context, storage string, key string, fragment string) (*TmpZipAdapter, error) {
+	store, err := request.GetStore(storage)
+	if err != nil {
+		return nil, err
+	}
+	r, _, err := store.Download(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return NewTmpZipAdapterFromReader(r, fragment)
+}
 
 // NewAdapter returns a basic adapter for the given URL.
 // Use NewURLAdapter() to provide additional options.
@@ -103,7 +118,7 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	fr, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
+	fr, err := request.AuthenticatedRequestDownload(context.TODO(), url, adapter.reqOpts...)
 	if err != nil {
 		return err
 	}
@@ -157,7 +172,7 @@ func (adapter *TmpZipAdapter) Open() error {
 
 func (adapter *TmpZipAdapter) Close() error {
 	if adapter.tmpfilepath != "" {
-		log.Debugf("tmp zip adapter: removing temp file: %s", adapter.tmpfilepath)
+		log.For(context.TODO()).Debug().Msgf("tmp zip adapter: removing temp file: %s", adapter.tmpfilepath)
 		if err := os.Remove(adapter.tmpfilepath); err != nil {
 			return err
 		}
@@ -211,7 +226,7 @@ func (adapter *ZipAdapter) Open() error {
 			// Get the full path
 			tmpfilepath = tmpfile.Name()
 			// Write the body to file
-			log.Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
+			log.For(context.TODO()).Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
 			io.Copy(tmpfile, r)
 		})
 		if err != nil {
@@ -221,7 +236,7 @@ func (adapter *ZipAdapter) Open() error {
 		adapter.internalPrefix = ""
 	}
 	if adapter.internalPrefix != "" {
-		log.Tracef("zip adapter: using internal prefix: %s", adapter.internalPrefix)
+		log.For(context.TODO()).Trace().Msgf("zip adapter: using internal prefix: %s", adapter.internalPrefix)
 	}
 	return nil
 }
@@ -447,9 +462,6 @@ func (adapter *DirAdapter) FileInfos() ([]os.FileInfo, error) {
 		fn := fi.Name()
 		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
 			continue
-		}
-		if err != nil {
-			return ret, err
 		}
 		ret = append(ret, fi)
 	}

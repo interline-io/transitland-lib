@@ -1,10 +1,13 @@
 package testdb
 
 import (
+	"context"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tldb/postgres"
+	"github.com/interline-io/transitland-lib/tldb/sqlite"
 )
 
 func MustOpenWriter(dburl string, create bool) *tldb.Writer {
@@ -17,7 +20,7 @@ func MustOpenWriter(dburl string, create bool) *tldb.Writer {
 
 // MustInsert panics on failure
 func MustInsert(atx tldb.Adapter, ent interface{}) int {
-	id, err := atx.Insert(ent)
+	id, err := atx.Insert(context.Background(), ent)
 	if err != nil {
 		panic(err)
 	}
@@ -26,7 +29,7 @@ func MustInsert(atx tldb.Adapter, ent interface{}) int {
 
 // MustUpdate panics on failure
 func MustUpdate(atx tldb.Adapter, ent interface{}, columns ...string) {
-	err := atx.Update(ent, columns...)
+	err := atx.Update(context.Background(), ent, columns...)
 	if err != nil {
 		panic(err)
 	}
@@ -34,7 +37,7 @@ func MustUpdate(atx tldb.Adapter, ent interface{}, columns ...string) {
 
 // MustFind panics on failure
 func MustFind(atx tldb.Adapter, ent interface{}) {
-	err := atx.Find(ent)
+	err := atx.Find(context.Background(), ent)
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +45,7 @@ func MustFind(atx tldb.Adapter, ent interface{}) {
 
 // MustGet panics on failure
 func MustGet(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
-	err := atx.Get(ent, qstr, qargs...)
+	err := atx.Get(context.Background(), ent, qstr, qargs...)
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +53,7 @@ func MustGet(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{
 
 // MustSelect panics on failure
 func MustSelect(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
-	err := atx.Select(ent, qstr, qargs...)
+	err := atx.Select(context.Background(), ent, qstr, qargs...)
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +63,7 @@ func MustSelect(atx tldb.Adapter, ent interface{}, qstr string, qargs ...interfa
 
 // ShouldInsert sends a test error on failure
 func ShouldInsert(t *testing.T, atx tldb.Adapter, ent interface{}) int {
-	id, err := atx.Insert(ent)
+	id, err := atx.Insert(context.Background(), ent)
 	if err != nil {
 		t.Errorf("failed insert: %s", err.Error())
 	}
@@ -69,7 +72,7 @@ func ShouldInsert(t *testing.T, atx tldb.Adapter, ent interface{}) int {
 
 // ShouldUpdate sends a test error on failure
 func ShouldUpdate(t *testing.T, atx tldb.Adapter, ent interface{}, columns ...string) {
-	err := atx.Update(ent, columns...)
+	err := atx.Update(context.Background(), ent, columns...)
 	if err != nil {
 		t.Errorf("failed update: %s", err.Error())
 	}
@@ -77,7 +80,7 @@ func ShouldUpdate(t *testing.T, atx tldb.Adapter, ent interface{}, columns ...st
 
 // ShouldFind sends a test error on failure
 func ShouldFind(t *testing.T, atx tldb.Adapter, ent interface{}) {
-	err := atx.Find(ent)
+	err := atx.Find(context.Background(), ent)
 	if err != nil {
 		t.Errorf("failed find: %s", err.Error())
 	}
@@ -85,7 +88,7 @@ func ShouldFind(t *testing.T, atx tldb.Adapter, ent interface{}) {
 
 // ShouldGet sends a test error on failure
 func ShouldGet(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
-	err := atx.Get(ent, qstr, qargs...)
+	err := atx.Get(context.Background(), ent, qstr, qargs...)
 	if err != nil {
 		t.Errorf("failed get: %s", err.Error())
 	}
@@ -93,7 +96,7 @@ func ShouldGet(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, qar
 
 // ShouldSelect sends a test error on failure
 func ShouldSelect(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, qargs ...interface{}) {
-	err := atx.Select(ent, qstr, qargs...)
+	err := atx.Select(context.Background(), ent, qstr, qargs...)
 	if err != nil {
 		t.Errorf("failed select: %s", err.Error())
 	}
@@ -101,9 +104,11 @@ func ShouldSelect(t *testing.T, atx tldb.Adapter, ent interface{}, qstr string, 
 
 ////////////
 
-// TempSqlite creates a temporary in-memory database and runs the callback inside a tx.
-func TempSqlite(cb func(tldb.Adapter) error) error {
-	adapter := tldb.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
+func TempPostgres(dburl string, cb func(tldb.Adapter) error) error {
+	adapter := postgres.PostgresAdapter{DBURL: dburl}
+	if err := adapter.Open(); err != nil {
+		panic(err)
+	}
 	writer := tldb.Writer{Adapter: &adapter}
 	if err := writer.Open(); err != nil {
 		panic(err)
@@ -115,8 +120,22 @@ func TempSqlite(cb func(tldb.Adapter) error) error {
 	return writer.Adapter.Tx(cb)
 }
 
-func TempSqliteAdapter(path string) tldb.Adapter {
-	adapter := tldb.SQLiteAdapter{DBURL: path}
+// TempSqlite creates a temporary in-memory database and runs the callback inside a tx.
+func TempSqlite(cb func(tldb.Adapter) error) error {
+	adapter := sqlite.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
+	writer := tldb.Writer{Adapter: &adapter}
+	if err := writer.Open(); err != nil {
+		panic(err)
+	}
+	defer writer.Close()
+	if err := writer.Create(); err != nil {
+		panic(err)
+	}
+	return writer.Adapter.Tx(cb)
+}
+
+func TempSqliteAdapter() tldb.Adapter {
+	adapter := sqlite.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
 	writer := tldb.Writer{Adapter: &adapter}
 	if err := writer.Open(); err != nil {
 		panic(err)
@@ -139,9 +158,9 @@ func (atx *AdapterIgnoreTx) Tx(cb func(tldb.Adapter) error) error {
 }
 
 // CreateTestFeed returns a simple feed inserted into a database.
-func CreateTestFeed(atx tldb.Adapter, url string) tl.Feed {
+func CreateTestFeed(atx tldb.Adapter, url string) dmfr.Feed {
 	// Create dummy feed
-	tlfeed := tl.Feed{}
+	tlfeed := dmfr.Feed{}
 	tlfeed.FeedID = url
 	tlfeed.URLs.StaticCurrent = url
 	tlfeed.ID = MustInsert(atx, &tlfeed)

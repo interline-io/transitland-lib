@@ -1,12 +1,15 @@
 package tldb
 
 import (
+	"context"
 	"errors"
 	"reflect"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Reader reads from a database.
@@ -63,10 +66,11 @@ func (reader *Reader) Where() sq.SelectBuilder {
 // ReadEntities provides a generic interface for reading entities.
 func (reader *Reader) ReadEntities(c interface{}) error {
 	// Seems to work.
+	ctx := context.TODO()
 	outValue := reflect.ValueOf(c)
 	outInnerType := outValue.Type().Elem()
 	outInner := reflect.New(outInnerType)
-	ent, ok := outInner.Interface().(tl.Entity)
+	ent, ok := outInner.Interface().(tt.Entity)
 	if !ok {
 		return causes.NewSourceUnreadableError("not an entity", nil)
 	}
@@ -76,11 +80,11 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	z := x.Elem()
 	z.Set(slice)
 	//
-	qstr, args, err := reader.Where().From(getTableName(ent)).ToSql()
+	qstr, args, err := reader.Where().From(GetTableName(ent)).ToSql()
 	if err != nil {
 		return err
 	}
-	if err := reader.Adapter.Select(x.Interface(), qstr, args...); err != nil {
+	if err := reader.Adapter.Select(ctx, x.Interface(), qstr, args...); err != nil {
 		return err
 	}
 	go func() {
@@ -95,7 +99,7 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 
 // StopTimesByTripID sends StopTimes grouped by TripID.
 // Each group is sorted by stop_sequence.
-func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
+func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime {
 	if len(tripIDs) == 0 {
 		q := reader.Adapter.Sqrl().Select("id").Distinct().From("gtfs_trips")
 		if len(reader.FeedVersionIDs) == 1 {
@@ -112,16 +116,16 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 			tripIDs = append(tripIDs, tripID)
 		}
 	}
-	out := make(chan []tl.StopTime, bufferSize)
+	out := make(chan []gtfs.StopTime, bufferSize)
 	go func() {
 		tripChunks := chunkStrings(tripIDs, 1000)
 		for _, tripChunk := range tripChunks {
-			ents := []tl.StopTime{}
+			ents := []gtfs.StopTime{}
 			qstr, args, err := reader.Where().From("gtfs_stop_times").Where(sq.Eq{"trip_id": tripChunk}).OrderBy("trip_id", "stop_sequence").ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			// split by trip
-			var cc []tl.StopTime
+			var cc []gtfs.StopTime
 			for _, st := range ents {
 				if len(cc) == 0 {
 					// ok
@@ -140,18 +144,18 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []tl.StopTime {
 	return out
 }
 
-// Stops sends Stops.
-func (reader *Reader) Stops() chan tl.Stop {
-	out := make(chan tl.Stop, bufferSize)
+// Shapes sends Shapes grouped by ID.
+func (reader *Reader) ShapesByShapeID(ids ...string) chan []gtfs.Shape {
+	out := make(chan []gtfs.Shape, bufferSize)
 	go func() {
 		lastId := 0
 		for {
-			ents := []tl.Stop{}
-			qstr, args, err := reader.Where().From("gtfs_stops").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
+			ents := []service.ShapeLine{}
+			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
-				out <- ent
+				out <- service.FlattenShape(ent)
 				lastId = ent.ID
 			}
 			if len(ents) < reader.PageSize {
@@ -163,16 +167,39 @@ func (reader *Reader) Stops() chan tl.Stop {
 	return out
 }
 
-// StopTimes sends StopTimes.
-func (reader *Reader) StopTimes() chan tl.StopTime {
-	out := make(chan tl.StopTime, bufferSize)
+func (reader *Reader) Shapes() chan gtfs.Shape {
+	out := make(chan gtfs.Shape, bufferSize)
+	go func() {
+		lastId := 0
+		for {
+			ents := []service.ShapeLine{}
+			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
+			check(err)
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
+			for _, ent := range ents {
+				for _, shapeEnt := range service.FlattenShape(ent) {
+					out <- shapeEnt
+				}
+				lastId = ent.ID
+			}
+			if len(ents) < reader.PageSize {
+				break
+			}
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (reader *Reader) StopTimes() chan gtfs.StopTime {
+	out := make(chan gtfs.StopTime, bufferSize)
 	go func() {
 		offset := 0
 		for {
-			ents := []tl.StopTime{}
+			ents := []gtfs.StopTime{}
 			qstr, args, err := reader.Where().From("gtfs_stop_times").Offset(uint64(offset)).Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 			}
@@ -186,380 +213,108 @@ func (reader *Reader) StopTimes() chan tl.StopTime {
 	return out
 }
 
-// Agencies sends Agencies.
-func (reader *Reader) Agencies() chan tl.Agency {
-	out := make(chan tl.Agency, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Agency{}
-			qstr, args, err := reader.Where().From("gtfs_agencies").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Stops() chan gtfs.Stop {
+	return ReadEntities[gtfs.Stop](reader, GetTableName(&gtfs.Stop{}))
 }
 
-// Calendars sends Calendars.
-func (reader *Reader) Calendars() chan tl.Calendar {
-	out := make(chan tl.Calendar, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Calendar{}
-			qstr, args, err := reader.Where().From("gtfs_calendars").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Agencies() chan gtfs.Agency {
+	return ReadEntities[gtfs.Agency](reader, GetTableName(&gtfs.Agency{}))
 }
 
-// CalendarDates sends CalendarDates.
-func (reader *Reader) CalendarDates() chan tl.CalendarDate {
-	out := make(chan tl.CalendarDate, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.CalendarDate{}
-			qstr, args, err := reader.Where().From("gtfs_calendar_dates").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Calendars() chan gtfs.Calendar {
+	return ReadEntities[gtfs.Calendar](reader, GetTableName(&gtfs.Calendar{}))
 }
 
-// FareAttributes sends FareAttributes.
-func (reader *Reader) FareAttributes() chan tl.FareAttribute {
-	out := make(chan tl.FareAttribute, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.FareAttribute{}
-			qstr, args, err := reader.Where().From("gtfs_fare_attributes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) CalendarDates() chan gtfs.CalendarDate {
+	return ReadEntities[gtfs.CalendarDate](reader, GetTableName(&gtfs.CalendarDate{}))
 }
 
-// FareRules sends FareRules.
-func (reader *Reader) FareRules() chan tl.FareRule {
-	out := make(chan tl.FareRule, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.FareRule{}
-			qstr, args, err := reader.Where().From("gtfs_fare_rules").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) FareAttributes() chan gtfs.FareAttribute {
+	return ReadEntities[gtfs.FareAttribute](reader, GetTableName(&gtfs.FareAttribute{}))
 }
 
-// FeedInfos sends FeedInfos.
-func (reader *Reader) FeedInfos() chan tl.FeedInfo {
-	out := make(chan tl.FeedInfo, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.FeedInfo{}
-			qstr, args, err := reader.Where().From("gtfs_feed_infos").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) FareRules() chan gtfs.FareRule {
+	return ReadEntities[gtfs.FareRule](reader, GetTableName(&gtfs.FareRule{}))
 }
 
-// Frequencies sends Frequencies.
-func (reader *Reader) Frequencies() chan tl.Frequency {
-	out := make(chan tl.Frequency, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Frequency{}
-			qstr, args, err := reader.Where().From("gtfs_frequencies").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) FeedInfos() chan gtfs.FeedInfo {
+	return ReadEntities[gtfs.FeedInfo](reader, GetTableName(&gtfs.FeedInfo{}))
 }
 
-// Routes sends Routes.
-func (reader *Reader) Routes() chan tl.Route {
-	out := make(chan tl.Route, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Route{}
-			qstr, args, err := reader.Where().From("gtfs_routes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Frequencies() chan gtfs.Frequency {
+	return ReadEntities[gtfs.Frequency](reader, GetTableName(&gtfs.Frequency{}))
 }
 
-// Shapes sends Shapes.
-func (reader *Reader) Shapes() chan tl.Shape {
-	out := make(chan tl.Shape, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Shape{}
-			qstr, args, err := reader.Where().From("gtfs_shapes").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Routes() chan gtfs.Route {
+	return ReadEntities[gtfs.Route](reader, GetTableName(&gtfs.Route{}))
 }
 
-// Transfers sends Transfers.
-func (reader *Reader) Transfers() chan tl.Transfer {
-	out := make(chan tl.Transfer, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Transfer{}
-			qstr, args, err := reader.Where().From("gtfs_transfers").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Transfers() chan gtfs.Transfer {
+	return ReadEntities[gtfs.Transfer](reader, GetTableName(&gtfs.Transfer{}))
 }
 
-// Pathways sends Pathways.
-func (reader *Reader) Pathways() chan tl.Pathway {
-	out := make(chan tl.Pathway, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Pathway{}
-			qstr, args, err := reader.Where().From("gtfs_pathways").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Pathways() chan gtfs.Pathway {
+	return ReadEntities[gtfs.Pathway](reader, GetTableName(&gtfs.Pathway{}))
 }
 
-// Levels sends Levels.
-func (reader *Reader) Levels() chan tl.Level {
-	out := make(chan tl.Level, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Level{}
-			qstr, args, err := reader.Where().From("gtfs_levels").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Levels() chan gtfs.Level {
+	return ReadEntities[gtfs.Level](reader, GetTableName(&gtfs.Level{}))
 }
 
-// Trips sends Trips.
-func (reader *Reader) Trips() chan tl.Trip {
-	out := make(chan tl.Trip, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Trip{}
-			qstr, args, err := reader.Where().From("gtfs_trips").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Trips() chan gtfs.Trip {
+	return ReadEntities[gtfs.Trip](reader, GetTableName(&gtfs.Trip{}))
 }
 
-// Attributions sends Attributions.
-func (reader *Reader) Attributions() chan tl.Attribution {
-	out := make(chan tl.Attribution, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Attribution{}
-			qstr, args, err := reader.Where().From("gtfs_attributions").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Attributions() chan gtfs.Attribution {
+	return ReadEntities[gtfs.Attribution](reader, GetTableName(&gtfs.Attribution{}))
 }
 
-// Translations sends Translations.
-func (reader *Reader) Translations() chan tl.Translation {
-	out := make(chan tl.Translation, bufferSize)
-	go func() {
-		lastId := 0
-		for {
-			ents := []tl.Translation{}
-			qstr, args, err := reader.Where().From("gtfs_translations").Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
-			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
-			for _, ent := range ents {
-				out <- ent
-				lastId = ent.ID
-			}
-			if len(ents) < reader.PageSize {
-				break
-			}
-		}
-		close(out)
-	}()
-	return out
+func (reader *Reader) Translations() chan gtfs.Translation {
+	return ReadEntities[gtfs.Translation](reader, GetTableName(&gtfs.Translation{}))
 }
 
-func (reader *Reader) Areas() (out chan tl.Area) {
-	return ReadEntities[tl.Area](reader, getTableName(&tl.Area{}))
+func (reader *Reader) Areas() (out chan gtfs.Area) {
+	return ReadEntities[gtfs.Area](reader, GetTableName(&gtfs.Area{}))
 }
 
-func (reader *Reader) StopAreas() (out chan tl.StopArea) {
-	return ReadEntities[tl.StopArea](reader, getTableName(&tl.StopArea{}))
+func (reader *Reader) StopAreas() (out chan gtfs.StopArea) {
+	return ReadEntities[gtfs.StopArea](reader, GetTableName(&gtfs.StopArea{}))
 }
 
-func (reader *Reader) FareLegRules() (out chan tl.FareLegRule) {
-	return ReadEntities[tl.FareLegRule](reader, getTableName(&tl.FareLegRule{}))
+func (reader *Reader) FareLegRules() (out chan gtfs.FareLegRule) {
+	return ReadEntities[gtfs.FareLegRule](reader, GetTableName(&gtfs.FareLegRule{}))
 }
 
-func (reader *Reader) FareTransferRules() (out chan tl.FareTransferRule) {
-	return ReadEntities[tl.FareTransferRule](reader, getTableName(&tl.FareTransferRule{}))
+func (reader *Reader) FareTransferRules() (out chan gtfs.FareTransferRule) {
+	return ReadEntities[gtfs.FareTransferRule](reader, GetTableName(&gtfs.FareTransferRule{}))
 }
 
-func (reader *Reader) FareProducts() (out chan tl.FareProduct) {
-	return ReadEntities[tl.FareProduct](reader, getTableName(&tl.FareProduct{}))
+func (reader *Reader) FareProducts() (out chan gtfs.FareProduct) {
+	return ReadEntities[gtfs.FareProduct](reader, GetTableName(&gtfs.FareProduct{}))
 }
 
-func (reader *Reader) FareMedia() (out chan tl.FareMedia) {
-	return ReadEntities[tl.FareMedia](reader, getTableName(&tl.FareMedia{}))
+func (reader *Reader) FareMedia() (out chan gtfs.FareMedia) {
+	return ReadEntities[gtfs.FareMedia](reader, GetTableName(&gtfs.FareMedia{}))
 }
 
-func (reader *Reader) RiderCategories() (out chan tl.RiderCategory) {
-	return ReadEntities[tl.RiderCategory](reader, getTableName(&tl.RiderCategory{}))
+func (reader *Reader) RiderCategories() (out chan gtfs.RiderCategory) {
+	return ReadEntities[gtfs.RiderCategory](reader, GetTableName(&gtfs.RiderCategory{}))
 }
 
-func ReadEntities[T tl.EntityWithID](reader *Reader, table string) chan T {
+func (reader *Reader) Timeframes() (out chan gtfs.Timeframe) {
+	return ReadEntities[gtfs.Timeframe](reader, GetTableName(&gtfs.Timeframe{}))
+}
+
+func (reader *Reader) Networks() (out chan gtfs.Network) {
+	return ReadEntities[gtfs.Network](reader, GetTableName(&gtfs.Network{}))
+}
+
+func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
+	return ReadEntities[gtfs.RouteNetwork](reader, GetTableName(&gtfs.RouteNetwork{}))
+}
+
+func ReadEntities[T tt.EntityWithID](reader *Reader, table string) chan T {
+	ctx := context.TODO()
 	out := make(chan T, bufferSize)
 	go func() {
 		lastId := 0
@@ -567,7 +322,7 @@ func ReadEntities[T tl.EntityWithID](reader *Reader, table string) chan T {
 			var ents []T
 			qstr, args, err := reader.Where().From(table).Where(sq.Gt{"id": lastId}).OrderBy("id").Limit(uint64(reader.PageSize)).ToSql()
 			check(err)
-			check(reader.Adapter.Select(&ents, qstr, args...))
+			check(reader.Adapter.Select(ctx, &ents, qstr, args...))
 			for _, ent := range ents {
 				out <- ent
 				lastId = ent.GetID()

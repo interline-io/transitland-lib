@@ -3,9 +3,9 @@ package rules
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/internal/geomcache"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // FastTravelError reports when reasonable maximum speeds have been exceeded for at least 30 seconds.
@@ -23,13 +23,14 @@ type FastTravelError struct {
 
 func newFastTravelError(trip string, seq int, from string, to string, t int, distance float64, speed float64, limit float64) *FastTravelError {
 	return &FastTravelError{
-		TripID:     trip,
-		FromStopID: from,
-		ToStopID:   to,
-		Time:       t,
-		Distance:   distance,
-		Speed:      speed,
-		SpeedLimit: limit,
+		TripID:       trip,
+		FromStopID:   from,
+		ToStopID:     to,
+		Time:         t,
+		StopSequence: seq,
+		Distance:     distance,
+		Speed:        speed,
+		SpeedLimit:   limit,
 	}
 }
 
@@ -62,26 +63,26 @@ var maxSpeeds = map[int]float64{
 
 // StopTimeFastTravelCheck checks for FastTravelErrors.
 type StopTimeFastTravelCheck struct {
-	routeTypes map[string]int       // keep track of route_types
-	stopDist   map[string]float64   // cache stop-to-stop distances
-	geomCache  *geomcache.GeomCache // share with copier
+	routeTypes map[string]int     // keep track of route_types
+	stopDist   map[string]float64 // cache stop-to-stop distances
+	geomCache  tlxy.GeomCache     // share with copier
 }
 
 // SetGeomCache sets a shared geometry cache.
-func (e *StopTimeFastTravelCheck) SetGeomCache(g *geomcache.GeomCache) {
+func (e *StopTimeFastTravelCheck) SetGeomCache(g tlxy.GeomCache) {
 	e.geomCache = g
 }
 
 // Validate .
-func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
-	if v, ok := ent.(*tl.Route); ok {
+func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
+	if v, ok := ent.(*gtfs.Route); ok {
 		if e.routeTypes == nil {
 			e.routeTypes = map[string]int{}
 		}
-		e.routeTypes[v.RouteID] = v.RouteType
+		e.routeTypes[v.RouteID.Val] = v.RouteType.Int()
 	}
 	// Use stop to stop distances, shape_dist_traveled is not reliable.
-	trip, ok := ent.(*tl.Trip)
+	trip, ok := ent.(*gtfs.Trip)
 	if !ok || len(trip.StopTimes) < 2 {
 		return nil
 	}
@@ -89,17 +90,17 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 		e.stopDist = map[string]float64{}
 	}
 	maxspeed := 200.0 // default max speed
-	if rtype, ok := e.routeTypes[trip.RouteID]; ok {
+	if rtype, ok := e.routeTypes[trip.RouteID.Val]; ok {
 		if m, ok := maxSpeeds[rtype]; ok {
 			maxspeed = m
 		}
 	}
 	// todo: cache for trip pattern?
 	var errs []error
-	s1 := trip.StopTimes[0].StopID
+	s1 := trip.StopTimes[0].StopID.Val
 	t := trip.StopTimes[0].DepartureTime
 	for i := 1; i < len(trip.StopTimes); i++ {
-		s2 := trip.StopTimes[i].StopID
+		s2 := trip.StopTimes[i].StopID.Val
 		key := s1 + ":" + s2 // todo: use a real separator...
 		dx, ok := e.stopDist[key]
 		if !ok {
@@ -112,10 +113,10 @@ func (e *StopTimeFastTravelCheck) Validate(ent tl.Entity) []error {
 			e.stopDist[key] = dx
 			e.stopDist[s2+":"+s1] = dx
 		}
-		dt := trip.StopTimes[i].ArrivalTime.Seconds - t.Seconds
+		dt := trip.StopTimes[i].ArrivalTime.Int() - t.Int()
 		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
 		if dt > 30 && speed > maxspeed {
-			errs = append(errs, newFastTravelError(trip.TripID, trip.StopTimes[i].StopSequence, s1, s2, dt, dx, speed, maxspeed))
+			errs = append(errs, newFastTravelError(trip.TripID.Val, trip.StopTimes[i].StopSequence.Int(), s1, s2, dt, dx, speed, maxspeed))
 		}
 		s1 = s2
 		t = trip.StopTimes[i].DepartureTime

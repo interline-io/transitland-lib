@@ -1,15 +1,16 @@
 package plus
 
 import (
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // RealtimeRoute realtime_routes.txt
 type RealtimeRoute struct {
 	RouteID         string `csv:"route_id"`
 	RealtimeEnabled int    `csv:"realtime_enabled"`
-	tl.BaseEntity
+	tt.BaseEntity
 }
 
 // Filename realtime_routes.txt
@@ -23,8 +24,8 @@ func (ent *RealtimeRoute) TableName() string {
 }
 
 // UpdateKeys updates Entity references.
-func (ent *RealtimeRoute) UpdateKeys(emap *tl.EntityMap) error {
-	if fkid, ok := emap.GetEntity(&tl.Route{RouteID: ent.RouteID}); ok {
+func (ent *RealtimeRoute) UpdateKeys(emap *tt.EntityMap) error {
+	if fkid, ok := emap.GetEntity(&gtfs.Route{RouteID: tt.NewString(ent.RouteID)}); ok {
 		ent.RouteID = fkid
 	} else {
 		return causes.NewInvalidReferenceError("route_id", ent.RouteID)
