@@ -1,3 +1,4 @@
+// Package tlxy provides spatial indexing for polygons.
 package tlxy
 
 import (
@@ -9,18 +10,20 @@ import (
 	"github.com/twpayne/go-geom/xy"
 )
 
+// pipShape stores a polygon with its identifier and metadata.
 type pipShape struct {
 	Name       string
 	Properties map[string]any
 	Polygon    *geom.Polygon
 }
 
-// PolygonIndex is a spatial index for polygons that supports point-in-polygon queries.
+// PolygonIndex enables efficient point-in-polygon lookups using an R-tree.
 type PolygonIndex struct {
 	idx *rtree.RTreeG[pipShape]
 }
 
-// FeatureAt returns the feature at the given point, or nil and false if no feature is found.
+// FeatureAt returns the GeoJSON Feature containing the given point, if any.
+// Returns (feature, found).
 func (pip *PolygonIndex) FeatureAt(pt Point) (*geojson.Feature, bool) {
 	ggPoint := geom.NewPointFlat(geom.XY, []float64{pt.Lon, pt.Lat})
 	rtPoint := [2]float64{pt.Lon, pt.Lat}
@@ -41,7 +44,8 @@ func (pip *PolygonIndex) FeatureAt(pt Point) (*geojson.Feature, bool) {
 	return ret, found
 }
 
-// FeatureNameAt returns the name of the feature at the given point, or an empty string and false if no feature is found.
+// FeatureNameAt returns the name of the polygon containing the point.
+// Returns (name, found).
 func (pip *PolygonIndex) FeatureNameAt(pt Point) (string, bool) {
 	a, ok := pip.FeatureAt(pt)
 	if ok {
@@ -50,7 +54,8 @@ func (pip *PolygonIndex) FeatureNameAt(pt Point) (string, bool) {
 	return "", false
 }
 
-// NewPolygonIndex returns a new PolygonIndex from a FeatureCollection.
+// NewPolygonIndex builds an index from a GeoJSON FeatureCollection.
+// Returns (index, error).
 func NewPolygonIndex(fc geojson.FeatureCollection) (*PolygonIndex, error) {
 	PolygonIndex := PolygonIndex{
 		idx: &rtree.RTreeG[pipShape]{},
@@ -80,7 +85,8 @@ func NewPolygonIndex(fc geojson.FeatureCollection) (*PolygonIndex, error) {
 	return &PolygonIndex, nil
 }
 
-// pointInPolygon returns true if the point is in the polygon.
+// pointInPolygon tests if a point is inside a polygon's outer ring but not in its holes.
+// Returns true if point is contained.
 func pointInPolygon(pg *geom.Polygon, p *geom.Point) bool {
 	if !xy.IsPointInRing(geom.XY, p.Coords(), pg.LinearRing(0).FlatCoords()) {
 		return false

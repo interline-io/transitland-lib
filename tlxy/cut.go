@@ -95,22 +95,6 @@ func CutBetweenPoints(line []Point, from Point, to Point) []Point {
 	return coords
 }
 
-// func CutBetweenPoints(line []Point, startPoint Point, endPoint Point) []Point {
-// 	spt, sidx, _ := LineClosestPoint(line, startPoint)
-// 	ept, eidx, _ := LineClosestPoint(line, endPoint)
-// 	if eidx < sidx {
-// 		return nil
-// 	}
-// 	if DistanceHaversine(startPoint, spt) > 1000 || DistanceHaversine(endPoint, ept) > 1000 {
-// 		return nil
-// 	}
-// 	var ret []Point
-// 	ret = append(ret, spt)
-// 	ret = append(ret, line[sidx:eidx]...)
-// 	ret = append(ret, ept)
-// 	return ret
-// }
-
 // CutBetweenPositions is similar to CutBetweenPoints but takes absolute positions.
 func CutBetweenPositions(line []Point, dists []float64, startDist float64, endDist float64) []Point {
 	spt, ept, sidx, eidx, ok := cutBetweenPositions(line, dists, startDist, endDist)

@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// BoundingBox is a simple bounding box.
 type BoundingBox struct {
 	MinLon float64 `json:"min_lon"`
 	MinLat float64 `json:"min_lat"`
@@ -12,6 +13,7 @@ type BoundingBox struct {
 	MaxLat float64 `json:"max_lat"`
 }
 
+// Contains returns true if the point is within the bounding box.
 func (v *BoundingBox) Contains(pt Point) bool {
 	if pt.Lon >= v.MinLon && pt.Lon <= v.MaxLon && pt.Lat >= v.MinLat && pt.Lat <= v.MaxLat {
 		return true
@@ -19,6 +21,7 @@ func (v *BoundingBox) Contains(pt Point) bool {
 	return false
 }
 
+// ParseBbox parses a bounding box from a string.
 func ParseBbox(v string) (BoundingBox, error) {
 	r := BoundingBox{}
 	if s := strings.Split(v, ","); len(s) == 4 {
