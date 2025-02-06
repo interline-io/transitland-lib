@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
+	"github.com/stretchr/testify/assert"
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
@@ -122,12 +123,8 @@ func TestPolygonIndex_Errors(t *testing.T) {
 func TestPolygonIndex_EmptyQueries(t *testing.T) {
 	idx, _ := NewPolygonIndex(geojson.FeatureCollection{})
 
-	if feat, found := idx.FeatureAt(Point{0, 0}); found || feat != nil {
+	if feat, found := idx.NearestFeature(Point{0, 0}); feat != nil || found > 0 {
 		t.Errorf("FeatureAt() on empty index = %v, %v; want nil, false", feat, found)
-	}
-
-	if name, found := idx.FeatureNameAt(Point{0, 0}); found || name != "" {
-		t.Errorf("FeatureNameAt() on empty index = %v, %v; want \"\", false", name, found)
 	}
 }
 
@@ -147,34 +144,73 @@ func TestPolygonIndex_SanFrancisco(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		point       Point
-		wantFeature string
-		wantFound   bool
+		name           string
+		point          Point
+		withinFeature  string
+		nearestFeature string
 	}{
-		{"Mission District", Point{-122.4194, 37.7601}, "san_francisco", true},
-		{"Financial District", Point{-122.4001, 37.7890}, "san_francisco", true},
-		{"Golden Gate Park", Point{-122.4862, 37.7694}, "san_francisco", true},
-		{"Berkeley", Point{-122.2729, 37.8715}, "berkeley", true},
-		{"Pacific Ocean", Point{-122.6000, 37.7500}, "", false},
-		{"San Jose", Point{-121.8863, 37.3382}, "", false},
-		{"Treasure Island", Point{-122.3704, 37.8235}, "san_francisco", true},
-		{"Alcatraz", Point{-122.4229, 37.8267}, "", false},
+		{
+			name:           "Mission District",
+			point:          Point{-122.4194, 37.7601},
+			withinFeature:  "san_francisco",
+			nearestFeature: "san_francisco",
+		},
+		{
+			name:           "Financial District",
+			point:          Point{-122.4001, 37.7890},
+			withinFeature:  "san_francisco",
+			nearestFeature: "san_francisco",
+		},
+		{
+			name:           "Golden Gate Park",
+			point:          Point{-122.4862, 37.7694},
+			withinFeature:  "san_francisco",
+			nearestFeature: "san_francisco",
+		},
+		{
+			name:           "Berkeley",
+			point:          Point{-122.2729, 37.8715},
+			withinFeature:  "berkeley",
+			nearestFeature: "berkeley",
+		},
+		{
+			name:           "Pacific Ocean",
+			point:          Point{-122.6000, 37.7500},
+			withinFeature:  "",
+			nearestFeature: "san_francisco",
+		},
+		{
+			name:           "San Jose",
+			point:          Point{-121.8863, 37.3382},
+			withinFeature:  "",
+			nearestFeature: "",
+		},
+		{
+			name:           "Treasure Island",
+			point:          Point{-122.3704, 37.8235},
+			withinFeature:  "san_francisco",
+			nearestFeature: "san_francisco",
+		},
+		{
+			name:           "Alcatraz",
+			point:          Point{-122.4229, 37.8267},
+			withinFeature:  "",
+			nearestFeature: "san_francisco",
+		},
+		{
+			name:           "Walnut Creek",
+			point:          Point{-122.0545550, 37.90998},
+			withinFeature:  "",
+			nearestFeature: "berkeley",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			feat, found := idx.FeatureAt(tt.point)
-			if found != tt.wantFound {
-				t.Errorf("FeatureAt(%v) found = %v, want %v", tt.point, found, tt.wantFound)
-			}
-			if tt.wantFound {
-				if feat == nil {
-					t.Errorf("FeatureAt(%v) feature = nil, want non-nil", tt.point)
-				} else if feat.ID != tt.wantFeature {
-					t.Errorf("FeatureAt(%v) feature ID = %v, want %v", tt.point, feat.ID, tt.wantFeature)
-				}
-			}
+			withinFeat, _ := idx.WithinFeature(tt.point)
+			nearestFeat, _ := idx.NearestFeature(tt.point)
+			assert.Equal(t, tt.withinFeature, checkFeatId(withinFeat), "WithinFeature")
+			assert.Equal(t, tt.nearestFeature, checkFeatId(nearestFeat), "NearestFeature")
 		})
 	}
 }
@@ -182,102 +218,131 @@ func TestPolygonIndex_SanFrancisco(t *testing.T) {
 // Test with polyline encoded features loaded from a file
 func TestPolygonIndex_Timezones(t *testing.T) {
 	type testCase struct {
-		name          string
-		point         Point
-		expectName    string
-		expectMissing bool
+		name           string
+		point          Point
+		withinFeature  string
+		nearestFeature string
 	}
 
 	tcs := []testCase{
 		{
-			name:       "new york",
-			expectName: "America/New_York",
-			point:      Point{Lon: -74.132285, Lat: 40.625665},
+			name:           "new york",
+			withinFeature:  "America/New_York",
+			nearestFeature: "America/New_York",
+			point:          Point{Lon: -74.132285, Lat: 40.625665},
 		},
 		{
-			name:       "california",
-			expectName: "America/Los_Angeles",
-			point:      Point{Lon: -122.431297, Lat: 37.773972},
+			name:           "california",
+			withinFeature:  "America/Los_Angeles",
+			nearestFeature: "America/Los_Angeles",
+			point:          Point{Lon: -122.431297, Lat: 37.773972},
 		},
 		{
-			name:       "utah",
-			expectName: "America/Denver",
-			point:      Point{Lon: -109.056664, Lat: 40.996479},
+			// Point is in the Pacific Ocean, closest to California
+			name:           "just off california coast",
+			withinFeature:  "",
+			nearestFeature: "America/Los_Angeles",
+			point:          Point{Lon: -122.8121, Lat: 37.5116},
 		},
 		{
-			name:       "colorado",
-			expectName: "America/Denver",
-			point:      Point{Lon: -109.045685, Lat: 40.997833},
+			name:           "utah",
+			withinFeature:  "America/Denver",
+			nearestFeature: "America/Denver",
+			point:          Point{Lon: -109.056664, Lat: 40.996479},
 		},
 		{
-			name:       "wyoming",
-			expectName: "America/Denver",
-			point:      Point{Lon: -109.050133, Lat: 41.002209},
+			name:           "colorado",
+			withinFeature:  "America/Denver",
+			nearestFeature: "America/Denver",
+			point:          Point{Lon: -109.045685, Lat: 40.997833},
 		},
 		{
-			name:       "north dakota",
-			expectName: "America/Chicago",
-			point:      Point{Lon: -100.964531, Lat: 45.946934},
+			name:           "wyoming",
+			withinFeature:  "America/Denver",
+			nearestFeature: "America/Denver",
+			point:          Point{Lon: -109.050133, Lat: 41.002209},
 		},
 		{
-			name:       "georgia",
-			expectName: "America/New_York",
-			point:      Point{Lon: -82.066697, Lat: 30.370054},
+			name:           "north dakota",
+			withinFeature:  "America/Chicago",
+			nearestFeature: "America/Chicago",
+			point:          Point{Lon: -100.964531, Lat: 45.946934},
 		},
 		{
-			name:       "florida",
-			expectName: "America/New_York",
-			point:      Point{Lon: -82.046522, Lat: 30.360419},
+			name:           "georgia",
+			withinFeature:  "America/New_York",
+			nearestFeature: "America/New_York",
+			point:          Point{Lon: -82.066697, Lat: 30.370054},
 		},
 		{
-			name:       "saskatchewan",
-			expectName: "America/Mexico_City",
-			point:      Point{Lon: -102.007904, Lat: 58.269615},
+			name:           "florida",
+			withinFeature:  "America/New_York",
+			nearestFeature: "America/New_York",
+			point:          Point{Lon: -82.046522, Lat: 30.360419},
 		},
 		{
-			name:       "manitoba",
-			expectName: "America/Chicago",
-			point:      Point{Lon: -101.982025, Lat: 58.269245},
+			name:           "saskatchewan",
+			withinFeature:  "America/Mexico_City",
+			nearestFeature: "America/Mexico_City",
+			point:          Point{Lon: -102.007904, Lat: 58.269615},
 		},
 		{
-			name:       "texas",
-			expectName: "America/Chicago",
-			point:      Point{Lon: -94.794261, Lat: 29.289210},
+			name:           "manitoba",
+			withinFeature:  "America/Chicago",
+			nearestFeature: "America/Chicago",
+			point:          Point{Lon: -101.982025, Lat: 58.269245},
 		},
 		{
-			name:       "texas water 1",
-			expectName: "America/Chicago",
-			point:      Point{Lon: -94.784667, Lat: 29.286234},
+			name:           "texas",
+			withinFeature:  "America/Chicago",
+			nearestFeature: "America/Chicago",
+			point:          Point{Lon: -94.794261, Lat: 29.289210},
 		},
 		{
-			name:          "texas water 2",
-			expectMissing: true,
-			point:         Point{Lon: -94.237, Lat: 26.874},
+			name:           "texas water 1",
+			withinFeature:  "America/Chicago",
+			nearestFeature: "America/Chicago",
+			point:          Point{Lon: -94.784667, Lat: 29.286234},
 		},
 		{
-			name:       "canada maidstone 1",
-			expectName: "America/Denver",
-			point:      Point{Lon: -108.96735, Lat: 53.01851},
+			name:  "texas water 2",
+			point: Point{Lon: -94.237, Lat: 26.874},
 		},
 		{
-			name:       "canada maidstone 2",
-			expectName: "America/Mexico_City",
-			point:      Point{Lon: -108.86594, Lat: 52.99610},
+			name:           "texas water 3",
+			withinFeature:  "",
+			nearestFeature: "America/Chicago",
+			point:          Point{Lon: -95.10091, Lat: 28.75702},
 		},
 		{
-			name:       "canada halifax",
-			expectName: "America/Halifax",
-			point:      Point{Lon: -68.90401, Lat: 47.26115},
+			name:           "canada maidstone 1",
+			withinFeature:  "America/Denver",
+			nearestFeature: "America/Denver",
+			point:          Point{Lon: -108.96735, Lat: 53.01851},
 		},
 		{
-			name:       "phoenix exclave",
-			expectName: "America/Phoenix",
-			point:      Point{Lon: -110.7767, Lat: 35.6494},
+			name:           "canada maidstone 2",
+			withinFeature:  "America/Mexico_City",
+			nearestFeature: "America/Mexico_City",
+			point:          Point{Lon: -108.86594, Lat: 52.99610},
 		},
 		{
-			name:       "phoenix exclave inclave",
-			expectName: "America/Denver",
-			point:      Point{Lon: -110.1514, Lat: 35.7432},
+			name:           "canada halifax",
+			withinFeature:  "America/Halifax",
+			nearestFeature: "America/Halifax",
+			point:          Point{Lon: -68.90401, Lat: 47.26115},
+		},
+		{
+			name:           "phoenix exclave",
+			withinFeature:  "America/Phoenix",
+			nearestFeature: "America/Phoenix",
+			point:          Point{Lon: -110.7767, Lat: 35.6494},
+		},
+		{
+			name:           "phoenix exclave inclave",
+			withinFeature:  "America/Denver",
+			nearestFeature: "America/Denver",
+			point:          Point{Lon: -110.1514, Lat: 35.7432},
 		},
 	}
 	fn := testpath.RelPath("testdata/tlxy/tz-example.polyline")
@@ -295,21 +360,17 @@ func TestPolygonIndex_Timezones(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			feat, ok := tzWorld.FeatureAt(tc.point)
-			switch {
-			case tc.expectMissing:
-				if ok {
-					t.Errorf("expected missing, got %v", ok)
-				}
-			case feat == nil || !ok:
-				t.Errorf("expected feature, got nil")
-			case feat.ID != tc.expectName:
-				t.Errorf("expected %s, got %s", tc.expectName, feat.ID)
-			case feat.ID == tc.expectName:
-				// ok
-			default:
-				t.Errorf("unexpected test case")
-			}
+			withinFeature, _ := tzWorld.WithinFeature(tc.point)
+			nearestFeature, _ := tzWorld.NearestFeature(tc.point)
+			assert.Equal(t, tc.withinFeature, checkFeatId(withinFeature), "WithinFeature")
+			assert.Equal(t, tc.nearestFeature, checkFeatId(nearestFeature), "NearestFeature")
+
 		})
 	}
+}
+func checkFeatId(g *geojson.Feature) string {
+	if g == nil {
+		return ""
+	}
+	return g.ID
 }

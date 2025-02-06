@@ -10,55 +10,16 @@ import (
 	"github.com/twpayne/go-geom/xy"
 )
 
-// pipShape stores a polygon with its identifier and metadata.
-type pipShape struct {
-	Name       string
-	Properties map[string]any
-	Polygon    *geom.Polygon
-}
-
 // PolygonIndex enables efficient point-in-polygon lookups using an R-tree.
 type PolygonIndex struct {
-	idx *rtree.RTreeG[pipShape]
-}
-
-// FeatureAt returns the GeoJSON Feature containing the given point, if any.
-// Returns (feature, found).
-func (pip *PolygonIndex) FeatureAt(pt Point) (*geojson.Feature, bool) {
-	ggPoint := geom.NewPointFlat(geom.XY, []float64{pt.Lon, pt.Lat})
-	rtPoint := [2]float64{pt.Lon, pt.Lat}
-	found := false
-	var ret *geojson.Feature
-	pip.idx.Search(rtPoint, rtPoint, func(a, b [2]float64, s pipShape) bool {
-		if pointInPolygon(s.Polygon, ggPoint) {
-			ret = &geojson.Feature{
-				ID:         s.Name,
-				Properties: s.Properties,
-				Geometry:   s.Polygon,
-			}
-			found = true
-			return false
-		}
-		return true
-	})
-	return ret, found
-}
-
-// FeatureNameAt returns the name of the polygon containing the point.
-// Returns (name, found).
-func (pip *PolygonIndex) FeatureNameAt(pt Point) (string, bool) {
-	a, ok := pip.FeatureAt(pt)
-	if ok {
-		return a.ID, true
-	}
-	return "", false
+	idx rtree.Generic[pipShape]
 }
 
 // NewPolygonIndex builds an index from a GeoJSON FeatureCollection.
 // Returns (index, error).
 func NewPolygonIndex(fc geojson.FeatureCollection) (*PolygonIndex, error) {
 	PolygonIndex := PolygonIndex{
-		idx: &rtree.RTreeG[pipShape]{},
+		idx: rtree.Generic[pipShape]{},
 	}
 	for _, feature := range fc.Features {
 		bb := geom.NewBounds(geom.XY)
@@ -85,6 +46,68 @@ func NewPolygonIndex(fc geojson.FeatureCollection) (*PolygonIndex, error) {
 	return &PolygonIndex, nil
 }
 
+// WithinFeature returns a polygon containing the point, and the number of matching polygons.
+func (pip *PolygonIndex) WithinFeature(pt Point) (*geojson.Feature, int) {
+	// No, we are not being fancy with projections.
+	// That could be improved.
+	var ret *geojson.Feature
+	gp := geom.NewPointFlat(geom.XY, []float64{pt.Lon, pt.Lat})
+	count := 0
+	pip.idx.Search(
+		[2]float64{pt.Lon, pt.Lat},
+		[2]float64{pt.Lon, pt.Lat},
+		func(min, max [2]float64, s pipShape) bool {
+			if pointInPolygon(s.Polygon, gp) {
+				ret = &geojson.Feature{
+					ID:         s.Name,
+					Properties: s.Properties,
+					Geometry:   s.Polygon,
+				}
+				count += 1
+			}
+			return true
+		},
+	)
+	return ret, count
+}
+
+// Check does a quick search, then does a nearest feature search if no match is found.
+func (pip *PolygonIndex) NearestFeature(pt Point) (*geojson.Feature, int) {
+	ret, count := pip.WithinFeature(pt)
+	if count >= 1 {
+		return ret, count
+	}
+	tolerance := 0.25
+	nearestAdmin, _, count := pip.nearestFeatureTolerance(pt, tolerance)
+	return nearestAdmin, count
+}
+
+// NearestFeature returns the nearest polygon to the point within a tolerance, the distance, and the number of matching polygons.
+func (pip *PolygonIndex) nearestFeatureTolerance(pt Point, tolerance float64) (*geojson.Feature, float64, int) {
+	minDist := -1.0
+	gp := geom.NewPointFlat(geom.XY, []float64{pt.Lon, pt.Lat})
+	count := 0
+	var ret *geojson.Feature
+	pip.idx.Search(
+		[2]float64{pt.Lon - tolerance, pt.Lat - tolerance},
+		[2]float64{pt.Lon + tolerance, pt.Lat + tolerance},
+		func(min, max [2]float64, s pipShape) bool {
+			d := pointPolygonDistance(s.Polygon, gp)
+			if d < tolerance && (d < minDist || minDist < 0) {
+				ret = &geojson.Feature{
+					ID:         s.Name,
+					Properties: s.Properties,
+					Geometry:   s.Polygon,
+				}
+				count += 1
+				minDist = d
+			}
+			return true
+		},
+	)
+	return ret, minDist, count
+}
+
 // pointInPolygon tests if a point is inside a polygon's outer ring but not in its holes.
 // Returns true if point is contained.
 func pointInPolygon(pg *geom.Polygon, p *geom.Point) bool {
@@ -97,4 +120,23 @@ func pointInPolygon(pg *geom.Polygon, p *geom.Point) bool {
 		}
 	}
 	return true
+}
+
+func pointPolygonDistance(pg *geom.Polygon, p *geom.Point) float64 {
+	minDist := -1.0
+	c := geom.Coord{p.X(), p.Y()}
+	for i := 0; i < pg.NumLinearRings(); i++ {
+		d := xy.DistanceFromPointToLineString(p.Layout(), c, pg.LinearRing(i).FlatCoords())
+		if d < minDist || minDist < 0 {
+			minDist = d
+		}
+	}
+	return minDist
+}
+
+// pipShape stores a polygon with its identifier and metadata.
+type pipShape struct {
+	Name       string
+	Properties map[string]any
+	Polygon    *geom.Polygon
 }
