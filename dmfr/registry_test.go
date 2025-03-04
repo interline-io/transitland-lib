@@ -2,9 +2,9 @@ package dmfr
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
@@ -53,7 +53,7 @@ func TestParseOperators(t *testing.T) {
 
 func TestLoadAndParseRegistry_from_URL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testpath.RelPath("testdata/dmfr/example.json"))
+		buf, err := os.ReadFile(testpath.RelPath("testdata/dmfr/example.json"))
 		if err != nil {
 			t.Error(err)
 		}

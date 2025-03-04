@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -124,7 +123,7 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 			return nil, err
 		}
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(utfbom.SkipOnly(resp.Body))
+		body, err := io.ReadAll(utfbom.SkipOnly(resp.Body))
 		if err != nil {
 			return nil, err
 		}

@@ -29,7 +29,7 @@ type StaticFetchResult struct {
 // feed is an argument to provide the ID, File, and Authorization.
 func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
 	cb := &staticFetchValidator{}
-	result, err := fetchMain(ctx, atx, opts, cb)
+	result, err := Fetch(ctx, atx, opts, cb)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Msg("fatal error during static fetch")
 	}

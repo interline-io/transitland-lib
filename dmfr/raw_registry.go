@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"sort"
 
 	"github.com/iancoleman/orderedmap"
@@ -28,7 +27,7 @@ type RawRegistryFeed struct {
 
 func ReadRawRegistry(reader io.Reader) (*RawRegistry, error) {
 	ctx := context.TODO()
-	contents, err := ioutil.ReadAll(reader)
+	contents, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

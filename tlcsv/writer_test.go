@@ -1,7 +1,6 @@
 package tlcsv
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -14,7 +13,7 @@ import (
 // Round trip Writer test.
 func TestWriter(t *testing.T) {
 	fe, reader := testutil.NewMinimalTestFeed()
-	tmpdir, err := ioutil.TempDir("", "gtfs")
+	tmpdir, err := os.MkdirTemp("", "gtfs")
 	if err != nil {
 		t.Error(err)
 	}
@@ -33,7 +32,7 @@ func TestWriter(t *testing.T) {
 }
 
 func TestWriterExtraColumn(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "gtfs")
+	tmpdir, err := os.MkdirTemp("", "gtfs")
 	if err != nil {
 		t.Error(err)
 	}

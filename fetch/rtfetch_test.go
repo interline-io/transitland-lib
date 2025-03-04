@@ -2,7 +2,6 @@ package fetch
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -39,14 +38,14 @@ func TestRTFetch(t *testing.T) {
 					http.Error(w, "404", 404)
 					return
 				}
-				buf, err := ioutil.ReadFile(testpath.RelPath(basedir + "/" + tc.serveFile))
+				buf, err := os.ReadFile(testpath.RelPath(basedir + "/" + tc.serveFile))
 				if err != nil {
 					t.Error(err)
 				}
 				w.Write(buf)
 			}))
 			defer ts.Close()
-			tmpdir, err := ioutil.TempDir("", "gtfs")
+			tmpdir, err := os.MkdirTemp("", "gtfs")
 			if err != nil {
 				t.Fatal(err)
 			}
