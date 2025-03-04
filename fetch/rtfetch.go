@@ -31,9 +31,9 @@ type RTFetchValidator struct {
 	Result RTFetchResult
 }
 
-func (r *RTFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fr request.FetchResponse, opts Options) (ValidationResult, error) {
+func (r *RTFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fr request.FetchResponse, opts Options) (FetchValidationResult, error) {
 	// Validate
-	v := ValidationResult{}
+	v := FetchValidationResult{}
 	v.UploadTmpfile = fr.Filename
 	v.UploadFilename = fmt.Sprintf("%s.pb", fr.ResponseSHA1)
 	v.Found = false

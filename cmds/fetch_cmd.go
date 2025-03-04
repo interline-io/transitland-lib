@@ -19,10 +19,10 @@ import (
 )
 
 type FetchCommandResult struct {
-	Result           fetch.Result
-	FeedVersion      *dmfr.FeedVersion
-	ValidationResult *validator.Result
-	FatalError       error
+	Result                     fetch.Result
+	FeedVersion                *dmfr.FeedVersion
+	FeedVersionValidatorResult *validator.Result
+	FatalError                 error
 }
 
 // FetchCommand fetches feeds defined a DMFR database.
@@ -210,10 +210,12 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 	for result := range results {
 		cmd.Results = append(cmd.Results, result)
 		if result.FatalError != nil {
+			// A fatal error occurred, always exit with error
 			fatalError = result.FatalError
 		} else if result.Result.FetchError != nil {
 			fetchErrs++
 			if cmd.Fail {
+				// Exit with error if any fetch is not successful
 				fatalError = result.Result.FetchError
 			}
 		} else if result.Result.Found {
@@ -247,17 +249,17 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		// Fetch
 		var result fetch.StaticFetchResult
 		t := time.Now()
-		fetchError := adapter.Tx(func(atx tldb.Adapter) error {
-			var fetchError error
-			result, fetchError = fetch.StaticFetch(ctx, atx, job.Options)
-			return fetchError
+		fatalError := adapter.Tx(func(atx tldb.Adapter) error {
+			var fatalError error
+			result, fatalError = fetch.StaticFetch(ctx, atx, job.Options)
+			return fatalError
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 
 		// Log result
 		fv := result.FeedVersion
-		if fetchError != nil {
-			log.For(ctx).Error().Err(fetchError).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, fetchError.Error(), t2)
+		if fatalError != nil {
+			log.For(ctx).Error().Err(fatalError).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, fatalError.Error(), t2)
 		} else if result.FetchError != nil {
 			log.For(ctx).Error().Err(result.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, result.FetchError.Error(), t2)
 		} else if fv != nil && result.Found {
@@ -268,10 +270,10 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 			log.For(ctx).Info().Msgf("Feed %s (id:%d): url: %s invalid result (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, t2)
 		}
 		results <- FetchCommandResult{
-			Result:           result.Result,
-			FeedVersion:      result.FeedVersion,
-			ValidationResult: result.ValidationResult,
-			FatalError:       fetchError,
+			Result:                     result.Result,
+			FeedVersion:                result.FeedVersion,
+			FeedVersionValidatorResult: result.FeedVersionValidatorResult,
+			FatalError:                 fatalError,
 		}
 	}
 	wg.Done()
