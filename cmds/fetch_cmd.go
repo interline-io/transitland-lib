@@ -27,18 +27,19 @@ type FetchCommandResult struct {
 
 // FetchCommand fetches feeds defined a DMFR database.
 type FetchCommand struct {
-	Options     fetch.Options
-	SecretsFile string
-	CreateFeed  bool
-	Workers     int
-	Fail        bool
-	Limit       int
-	DBURL       string
-	DryRun      bool
-	FeedIDs     []string
-	Results     []FetchCommandResult
-	Adapter     tldb.Adapter // allow for mocks
-	fetchedAt   string
+	Options          fetch.Options
+	SecretsFile      string
+	CreateFeed       bool
+	Workers          int
+	Fail             bool
+	Limit            int
+	DBURL            string
+	DryRun           bool
+	FeedIDs          []string
+	StrictValidation bool
+	Results          []FetchCommandResult
+	Adapter          tldb.Adapter // allow for mocks
+	fetchedAt        string
 }
 
 func (cmd *FetchCommand) HelpDesc() (string, string) {
@@ -57,6 +58,7 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
+	fl.BoolVar(&cmd.StrictValidation, "strict", false, "Reject feeds with validation errors")
 	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
@@ -171,6 +173,7 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			Secrets:                 cmd.Options.Secrets,
 			SaveValidationReport:    cmd.Options.SaveValidationReport,
 			ValidationReportStorage: cmd.Options.ValidationReportStorage,
+			StrictValidation:        cmd.StrictValidation,
 		}
 		opts.URLType = "manual"
 		if opts.FeedURL == "" {

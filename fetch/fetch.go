@@ -29,6 +29,7 @@ type Options struct {
 	CreatedBy               tt.String
 	Name                    tt.String
 	Description             tt.String
+	StrictValidation        bool
 	SaveValidationReport    bool
 	ValidationReportStorage string
 }
@@ -55,10 +56,12 @@ type validationResponse struct {
 	FeedVersionID  tt.Int
 }
 
-type fetchCb func(request.FetchResponse) (validationResponse, error)
+type fetchInner interface {
+	ValidateResponse(context.Context, tldb.Adapter, request.FetchResponse, Options) (validationResponse, error)
+}
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
-func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
+func fetchMain(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchInner) (Result, error) {
 	result := Result{URL: opts.FeedURL}
 	feed := dmfr.Feed{}
 	if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
@@ -106,7 +109,7 @@ func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Re
 	uploadFile := ""
 	uploadDest := ""
 	if result.FetchError == nil {
-		vr, err := cb(fetchResponse)
+		vr, err := cb.ValidateResponse(ctx, atx, fetchResponse, opts)
 		if err != nil {
 			return result, err
 		}
