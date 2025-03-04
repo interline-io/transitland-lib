@@ -28,23 +28,23 @@ type StaticFetchResult struct {
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
 // feed is an argument to provide the ID, File, and Authorization.
 func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
-	cb := &staticFetchValidator{}
+	cb := &StaticFetchValidator{}
 	result, err := Fetch(ctx, atx, opts, cb)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Msg("fatal error during static fetch")
 	}
-	cb.ret.Result = result
-	cb.ret.Error = err
-	return cb.ret, err
+	cb.Result.Result = result
+	cb.Result.Error = err
+	return cb.Result, err
 }
 
-type staticFetchValidator struct {
-	ret StaticFetchResult
+type StaticFetchValidator struct {
+	Result StaticFetchResult
 }
 
-func (r *staticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fr request.FetchResponse, opts Options) (validationResponse, error) {
+func (r *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fr request.FetchResponse, opts Options) (ValidationResult, error) {
 	tmpfilepath := fr.Filename
-	vr := validationResponse{}
+	vr := ValidationResult{}
 
 	// Open reader
 	fragment := ""
@@ -69,7 +69,7 @@ func (r *staticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Ad
 		vr.Error = err
 		return vr, nil
 	}
-	r.ret.FeedVersion = &fv
+	r.Result.FeedVersion = &fv
 	fv.FeedID = opts.FeedID
 	fv.FetchedAt = opts.FetchedAt
 	fv.CreatedBy = opts.CreatedBy
@@ -138,7 +138,7 @@ func (r *staticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Ad
 		if err != nil {
 			return vr, err
 		}
-		r.ret.ValidationResult = validationResult
+		r.Result.ValidationResult = validationResult
 
 		// Strict validation; fail if errors
 		errCount := len(validationResult.Errors)

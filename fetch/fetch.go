@@ -48,7 +48,7 @@ type Result struct {
 	FeedVersionID  tt.Int
 }
 
-type validationResponse struct {
+type ValidationResult struct {
 	UploadTmpfile  string
 	UploadFilename string
 	Error          error
@@ -57,7 +57,7 @@ type validationResponse struct {
 }
 
 type FetchValidator interface {
-	ValidateResponse(context.Context, tldb.Adapter, request.FetchResponse, Options) (validationResponse, error)
+	ValidateResponse(context.Context, tldb.Adapter, request.FetchResponse, Options) (ValidationResult, error)
 }
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError

@@ -17,26 +17,26 @@ type RTFetchResult struct {
 }
 
 func RTFetch(ctx context.Context, atx tldb.Adapter, opts Options) (RTFetchResult, error) {
-	cb := &rtFetchValidator{}
+	cb := &RTFetchValidator{}
 	result, err := Fetch(ctx, atx, opts, cb)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Msg("fatal error during rt fetch")
 	}
-	cb.ret.Result = result
-	cb.ret.Error = err
-	return cb.ret, err
+	cb.Result.Result = result
+	cb.Result.Error = err
+	return cb.Result, err
 }
 
-type rtFetchValidator struct {
-	ret RTFetchResult
+type RTFetchValidator struct {
+	Result RTFetchResult
 }
 
-func (r *rtFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fr request.FetchResponse, opts Options) (validationResponse, error) {
+func (r *RTFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fr request.FetchResponse, opts Options) (ValidationResult, error) {
 	// Validate
-	v := validationResponse{}
+	v := ValidationResult{}
 	v.UploadTmpfile = fr.Filename
 	v.UploadFilename = fmt.Sprintf("%s.pb", fr.ResponseSHA1)
 	v.Found = false
-	r.ret.Message, v.Error = rt.ReadFile(fr.Filename)
+	r.Result.Message, v.Error = rt.ReadFile(fr.Filename)
 	return v, nil
 }
