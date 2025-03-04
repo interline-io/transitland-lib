@@ -135,10 +135,10 @@ func (fi *Validator) compareTripSets(scheduledTrips []string, rtTrips []rtTripKe
 	var ret []RTTripStat
 	for _, k := range statAggSortedKeys {
 		v := statAgg[k]
-		scheduledSet := mapset.NewSet[string](v.TripScheduledIDs...)
-		updateSet := mapset.NewSet[string](v.TripRtIDs...)
-		updateNotFoundSet := mapset.NewSet[string](v.TripRtNotFoundIDs...)
-		updateAddedSet := mapset.NewSet[string](v.TripRtAddedIDs...)
+		scheduledSet := mapset.NewSet(v.TripScheduledIDs...)
+		updateSet := mapset.NewSet(v.TripRtIDs...)
+		updateNotFoundSet := mapset.NewSet(v.TripRtNotFoundIDs...)
+		updateAddedSet := mapset.NewSet(v.TripRtAddedIDs...)
 		tripScheduledMatched := scheduledSet.Intersect(updateSet)
 		tripScheduledNotMatched := scheduledSet.Difference(updateSet)
 		tripRtMatched := updateSet.Intersect(scheduledSet)

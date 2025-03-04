@@ -248,7 +248,7 @@ func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 			// Only check shape_id
 			sid, _ := row.Get("shape_id")
 			// If ID transition, have we seen this ID
-			if sid != last && grouped == true && last != "" {
+			if sid != last && grouped && last != "" {
 				if _, ok := counter[sid]; ok {
 					grouped = false
 				}
