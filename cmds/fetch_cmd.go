@@ -27,19 +27,18 @@ type FetchCommandResult struct {
 
 // FetchCommand fetches feeds defined a DMFR database.
 type FetchCommand struct {
-	Options          fetch.Options
-	SecretsFile      string
-	CreateFeed       bool
-	Workers          int
-	Fail             bool
-	Limit            int
-	DBURL            string
-	DryRun           bool
-	FeedIDs          []string
-	StrictValidation bool
-	Results          []FetchCommandResult
-	Adapter          tldb.Adapter // allow for mocks
-	fetchedAt        string
+	Options     fetch.Options
+	SecretsFile string
+	CreateFeed  bool
+	Workers     int
+	Fail        bool
+	Limit       int
+	DBURL       string
+	DryRun      bool
+	FeedIDs     []string
+	Results     []FetchCommandResult
+	Adapter     tldb.Adapter // allow for mocks
+	fetchedAt   string
 }
 
 func (cmd *FetchCommand) HelpDesc() (string, string) {
@@ -58,9 +57,9 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&cmd.StrictValidation, "strict", false, "Reject feeds with validation errors")
 	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
+	fl.BoolVar(&cmd.Options.StrictValidation, "strict", false, "Reject feeds with validation errors")
 	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
 	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
@@ -160,21 +159,8 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			return err
 		}
 		// Prepare options for this fetch
-		opts := fetch.Options{
-			FeedID:                  feed.ID,
-			FeedURL:                 cmd.Options.FeedURL,
-			FetchedAt:               cmd.Options.FetchedAt,
-			URLType:                 cmd.Options.URLType,
-			Storage:                 cmd.Options.Storage,
-			IgnoreDuplicateContents: cmd.Options.IgnoreDuplicateContents,
-			AllowFTPFetch:           cmd.Options.AllowFTPFetch,
-			AllowS3Fetch:            cmd.Options.AllowS3Fetch,
-			AllowLocalFetch:         cmd.Options.AllowLocalFetch,
-			Secrets:                 cmd.Options.Secrets,
-			SaveValidationReport:    cmd.Options.SaveValidationReport,
-			ValidationReportStorage: cmd.Options.ValidationReportStorage,
-			StrictValidation:        cmd.StrictValidation,
-		}
+		opts := cmd.Options // copy
+		opts.FeedID = feed.ID
 		opts.URLType = "manual"
 		if opts.FeedURL == "" {
 			opts.URLType = "static_current"

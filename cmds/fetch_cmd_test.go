@@ -101,8 +101,8 @@ func TestFetchCommand(t *testing.T) {
 			c.Adapter = adapter
 			tmpDir := t.TempDir()
 			c.Options.Storage = tmpDir
+			c.Options.StrictValidation = exp.strict
 			c.Fail = exp.fail
-			c.StrictValidation = exp.strict
 			if err := c.Parse(exp.command); err != nil {
 				t.Fatal(err)
 			}
