@@ -18,7 +18,7 @@ type RTFetchResult struct {
 
 func RTFetch(ctx context.Context, atx tldb.Adapter, opts Options) (RTFetchResult, error) {
 	cb := &rtFetchValidator{}
-	result, err := fetchMain(ctx, atx, opts, cb)
+	result, err := Fetch(ctx, atx, opts, cb)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Msg("fatal error during rt fetch")
 	}

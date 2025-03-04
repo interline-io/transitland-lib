@@ -56,13 +56,16 @@ type validationResponse struct {
 	FeedVersionID  tt.Int
 }
 
-type fetchInner interface {
+type FetchValidator interface {
 	ValidateResponse(context.Context, tldb.Adapter, request.FetchResponse, Options) (validationResponse, error)
 }
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
-func fetchMain(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchInner) (Result, error) {
+func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidator) (Result, error) {
 	result := Result{URL: opts.FeedURL}
+	if cb == nil {
+		return result, errors.New("no validator provided")
+	}
 	feed := dmfr.Feed{}
 	if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
 		return result, err
