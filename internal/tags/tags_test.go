@@ -7,11 +7,10 @@ import (
 )
 
 type testEntity struct {
-	Req         string `csv:"req,required"`
-	Number      int    `csv:"this_is_a_number"`
-	DefaultTag  string
-	NotTagged   string `csv:"-"`
-	notExported string
+	Req        string `csv:"req,required"`
+	Number     int    `csv:"this_is_a_number"`
+	DefaultTag string
+	NotTagged  string `csv:"-"`
 }
 
 func TestCache_GetStructTagMap(t *testing.T) {

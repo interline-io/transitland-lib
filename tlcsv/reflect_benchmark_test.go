@@ -39,6 +39,7 @@ func Benchmark_StopTime_Memory_Read1000(b *testing.B) {
 		for st := range reader.StopTimes() {
 			stoptimes = append(stoptimes, st)
 		}
+		_ = stoptimes
 	}
 }
 

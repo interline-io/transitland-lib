@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -62,7 +61,7 @@ func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 func TestValidator_Validate(t *testing.T) {
 	basepath := testpath.RelPath("testdata/validator")
 	searchpath := testpath.RelPath("testdata/validator/errors")
-	files, err := ioutil.ReadDir(searchpath)
+	files, err := os.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,7 +107,7 @@ func TestValidator_BestPractices(t *testing.T) {
 	ctx := context.TODO()
 	basepath := testpath.RelPath("testdata/validator")
 	searchpath := testpath.RelPath("testdata/validator/best-practices")
-	files, err := ioutil.ReadDir(searchpath)
+	files, err := os.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)
 	}

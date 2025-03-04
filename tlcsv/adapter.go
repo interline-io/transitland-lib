@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -136,7 +135,7 @@ func (adapter *URLAdapter) Open() error {
 
 func NewTmpZipAdapterFromReader(reader io.Reader, fragment string) (*TmpZipAdapter, error) {
 	// Read stream to a temporary file
-	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
+	tmpfile, err := os.CreateTemp("", "gtfs.zip")
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +220,7 @@ func (adapter *ZipAdapter) Open() error {
 		tmpfilepath := ""
 		err := adapter.OpenFile(pf, func(r io.Reader) {
 			// Create the file
-			tmpfile, _ := ioutil.TempFile("", "gtfs.zip")
+			tmpfile, _ := os.CreateTemp("", "gtfs.zip")
 			defer tmpfile.Close()
 			// Get the full path
 			tmpfilepath = tmpfile.Name()
@@ -571,7 +570,7 @@ type ZipWriterAdapter struct {
 
 // NewZipWriterAdapter returns a new ZipWriterAdapter.
 func NewZipWriterAdapter(path string) *ZipWriterAdapter {
-	tmpdir, err := ioutil.TempDir("", "gtfs")
+	tmpdir, err := os.MkdirTemp("", "gtfs")
 	if err != nil {
 		return nil
 	}

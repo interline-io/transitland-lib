@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -153,7 +152,7 @@ func (c *PolylinesCommand) CreateFromZipGeojson() error {
 		if err != nil {
 			return err
 		}
-		fcData, err := ioutil.ReadAll(r)
+		fcData, err := io.ReadAll(r)
 		if err != nil {
 			return err
 		}
