@@ -4,7 +4,6 @@ package cmds
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -114,7 +113,7 @@ func TestE2E(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				p := strings.Split(tc.fn, "#")
-				buf, err := ioutil.ReadFile(testpath.RelPath(p[0]))
+				buf, err := os.ReadFile(testpath.RelPath(p[0]))
 				if err != nil {
 					t.Error(err)
 				}
@@ -122,7 +121,7 @@ func TestE2E(t *testing.T) {
 			}))
 			defer ts.Close()
 
-			tmpdir, err := ioutil.TempDir("", "gtfs")
+			tmpdir, err := os.MkdirTemp("", "gtfs")
 			if err != nil {
 				t.Fatal(err)
 			}

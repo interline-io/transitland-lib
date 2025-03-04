@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/interline-io/log"
@@ -52,7 +52,7 @@ func (cmd *LintCommand) Run(ctx context.Context) error {
 		}
 
 		// Now load again as raw dmfr
-		rawJson, err := ioutil.ReadFile(filename)
+		rawJson, err := os.ReadFile(filename)
 		rr, err := dmfr.ReadRawRegistry(bytes.NewBuffer(rawJson))
 		if err != nil {
 			log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())

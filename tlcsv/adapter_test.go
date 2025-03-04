@@ -2,7 +2,6 @@ package tlcsv
 
 import (
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -170,7 +169,7 @@ func TestZipAdapterNestedZip(t *testing.T) {
 
 func TestURLAdapter(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testutil.ExampleZip.URL)
+		buf, err := os.ReadFile(testutil.ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}
@@ -203,7 +202,7 @@ func TestZipWriterAdapter(t *testing.T) {
 	// creates temporary shadow directory
 	// removes temporary shadow directory
 	// creates zip file when closed
-	outf, err := ioutil.TempFile("", "zip")
+	outf, err := os.CreateTemp("", "zip")
 	outpath := outf.Name()
 	defer os.Remove(outpath)
 	if err != nil {

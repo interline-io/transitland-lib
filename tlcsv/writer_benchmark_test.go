@@ -1,7 +1,6 @@
 package tlcsv
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -14,7 +13,7 @@ func BenchmarkWriter(b *testing.B) {
 	for k, fe := range testutil.ExternalTestFeeds {
 		b.Run(k, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				tmpdir, err := ioutil.TempDir("", "gtfs")
+				tmpdir, err := os.MkdirTemp("", "gtfs")
 				if err != nil {
 					b.Error(err)
 					return

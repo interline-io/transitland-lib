@@ -3,7 +3,7 @@ package request
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -106,7 +106,7 @@ func testBucket(t *testing.T, ctx context.Context, bucket Store) {
 			if err != nil {
 				t.Error(err)
 			}
-			downloadData, err := ioutil.ReadAll(resp.Body)
+			downloadData, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
