@@ -53,6 +53,9 @@ func (cmd *LintCommand) Run(ctx context.Context) error {
 
 		// Now load again as raw dmfr
 		rawJson, err := os.ReadFile(filename)
+		if err != nil {
+			return err
+		}
 		rr, err := dmfr.ReadRawRegistry(bytes.NewBuffer(rawJson))
 		if err != nil {
 			log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())

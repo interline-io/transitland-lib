@@ -8,8 +8,7 @@ import (
 
 // AgencyIDRecommendedCheck checks if agency_id is missing when more than one agency is present.
 type AgencyIDRecommendedCheck struct {
-	agencyCount     int
-	defaultAgencyID string
+	agencyCount int
 }
 
 // Validate .

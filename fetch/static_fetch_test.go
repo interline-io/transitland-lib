@@ -339,7 +339,7 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 // 	}))
 // 	defer ts.Close()
 // 	testdb.TempSqlite(func(atx tldb.Adapter) error {
-// 		tmpdir, err := os.MkdirTemp("", "gtfs")
+// 		tmpdir, err := os.MkdirTemp.("", "gtfs")
 // 		if err != nil {
 // 			t.Error(err)
 // 			return nil

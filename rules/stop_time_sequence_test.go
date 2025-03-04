@@ -8,12 +8,6 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-type expectStopTime struct {
-	ArrivalTime       int
-	DepartureTime     int
-	ShapeDistTraveled float64
-}
-
 type expectTrip struct {
 	ExpectError       string
 	ArrivalTime       []int

@@ -128,7 +128,7 @@ func (s *Service) CalendarDates() []gtfs.CalendarDate {
 
 // GetWeekday returns the value fo the day of week.
 func (s *Service) GetWeekday(dow int) (int, error) {
-	v := tt.Int{}
+	var v tt.Int
 	switch dow {
 	case 0:
 		v = s.Sunday

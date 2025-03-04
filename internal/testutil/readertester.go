@@ -151,15 +151,9 @@ func CheckReader(t testing.TB, fe ReaderTester, reader adapters.Reader) {
 	}
 }
 
-func getfn(ent tt.Entity) string {
-	return ent.Filename()
-}
-
 func msisum(m map[string]int) int {
 	count := 0
-	keys := []string{}
-	for k, v := range m {
-		keys = append(keys, k)
+	for _, v := range m {
 		count += v
 	}
 	return count

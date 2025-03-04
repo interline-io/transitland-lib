@@ -815,10 +815,7 @@ func checkTimestamp(ts int64) bool {
 
 func checkFuture(ts int64) bool {
 	// Is timestamp more than 1 minute in the future
-	if ts > int64(time.Now().Unix()+60) {
-		return false
-	}
-	return true
+	return ts <= int64(time.Now().Unix()+60)
 }
 
 func toLocalTime(v int64, tzName string) string {

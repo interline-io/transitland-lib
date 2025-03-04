@@ -155,15 +155,12 @@ func (reader *Reader) ValidateStructure() []error {
 func (reader *Reader) ContainsFile(filename string) bool {
 	// First check if we can read the file
 	err := reader.Adapter.OpenFile(filename, func(in io.Reader) {})
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // StopTimesByTripID sends StopTimes for selected trips.
 func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime {
-	chunks := s2D{}
+	var chunks s2D
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
 	if len(tripIDs) == 0 {
@@ -251,7 +248,7 @@ func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 			// Only check shape_id
 			sid, _ := row.Get("shape_id")
 			// If ID transition, have we seen this ID
-			if sid != last && grouped == true && last != "" {
+			if sid != last && grouped && last != "" {
 				if _, ok := counter[sid]; ok {
 					grouped = false
 				}

@@ -8,9 +8,7 @@ import (
 var bufferSize = 1000
 
 func init() {
-	var v adapters.Reader
-	v = &Reader{}
-	_ = v
+	var _ adapters.Reader = &Reader{}
 }
 
 // Reader is a mocked up Reader used for testing.
