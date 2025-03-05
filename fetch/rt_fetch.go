@@ -44,12 +44,12 @@ func (r *RTFetchValidator) Fetch(ctx context.Context, atx tldb.Adapter) (RTFetch
 	return r.Result, err
 }
 
-func (r *RTFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fr request.FetchResponse) (FetchValidationResult, error) {
+func (r *RTFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fn string, fr request.FetchResponse) (FetchValidationResult, error) {
 	// Validate
 	v := FetchValidationResult{}
-	v.UploadTmpfile = fr.Filename
+	v.UploadTmpfile = fn
 	v.UploadFilename = fmt.Sprintf("%s.pb", fr.ResponseSHA1)
 	v.Found = false
-	r.Result.Message, v.Error = rt.ReadFile(fr.Filename)
+	r.Result.Message, v.Error = rt.ReadFile(fn)
 	return v, nil
 }
