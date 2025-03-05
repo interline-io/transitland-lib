@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -120,7 +120,7 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 }
 
 // Collects and assembles the default shapes and writes to the database
-func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
+func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
 	ctx := context.TODO()
 	// Process shapes for each route
 	for rid := range pp.shapeCounts {

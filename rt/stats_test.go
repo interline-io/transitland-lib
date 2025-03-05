@@ -21,12 +21,13 @@ func TestTripUpdateStats(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	ex := NewValidator()
+	cpOpts := copier.Options{}
+	cpOpts.AddExtension(ex)
 	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	ex := NewValidator()
-	cp.AddExtension(ex)
 	result := cp.Copy()
 	_ = result
 
@@ -125,12 +126,13 @@ func TestVehiclePositionStats(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
+	ex := NewValidator()
+	cpOpts := copier.Options{}
+	cpOpts.AddExtension(ex)
+	cp, err := copier.NewCopier(r, &empty.Writer{}, cpOpts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ex := NewValidator()
-	cp.AddExtension(ex)
 	result := cp.Copy()
 	_ = result
 

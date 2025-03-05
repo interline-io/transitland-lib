@@ -95,7 +95,7 @@ type FeedVersionOnestopIDBuilder struct {
 	*builders.OnestopIDBuilder
 }
 
-func (ext *FeedVersionOnestopIDBuilder) Copy(*copier.Copier) error {
+func (ext *FeedVersionOnestopIDBuilder) Copy(adapters.EntityCopier) error {
 	return nil
 }
 

@@ -14,8 +14,17 @@ import (
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/interline-io/transitland-lib/validator"
 )
+
+// StaticFetch from a URL. Creates FeedVersion and FeedFetch records.
+// Returns an error if a serious failure occurs, such as database or filesystem access.
+// Sets Result.FetchError if a regular failure occurs, such as a 404.
+func StaticFetch(ctx context.Context, atx tldb.Adapter, opts StaticFetchOptions) (StaticFetchResult, error) {
+	sfv := NewStaticFetchValidator(opts)
+	return sfv.Fetch(ctx, atx)
+}
 
 type StaticFetchResult struct {
 	FeedVersion                *dmfr.FeedVersion
@@ -23,29 +32,42 @@ type StaticFetchResult struct {
 	Result
 }
 
-// StaticFetch from a URL. Creates FeedVersion and FeedFetch records.
-// Returns an error if a serious failure occurs, such as database or filesystem access.
-// Sets Result.FetchError if a regular failure occurs, such as a 404.
-func StaticFetch(ctx context.Context, atx tldb.Adapter, opts Options) (StaticFetchResult, error) {
-	cb := &StaticFetchValidator{}
-	fetchResult, err := Fetch(ctx, atx, opts, cb)
-	if err != nil {
-		log.For(ctx).Error().Err(err).Msg("fatal error during static fetch")
-	}
-	staticFetchResult := StaticFetchResult{
-		Result:                     fetchResult,
-		FeedVersion:                cb.FeedVersion,
-		FeedVersionValidatorResult: cb.FeedVersionValidatorResult,
-	}
-	return staticFetchResult, err
+type StaticFetchOptions struct {
+	StrictValidation        bool
+	SaveValidationReport    bool
+	ValidationReportStorage string
+	ValidatorOptions        validator.Options
+	CreatedBy               tt.String
+	Name                    tt.String
+	Description             tt.String
+	Options
 }
 
 type StaticFetchValidator struct {
 	FeedVersion                *dmfr.FeedVersion
 	FeedVersionValidatorResult *validator.Result
+	StaticFetchOptions         StaticFetchOptions
 }
 
-func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fetchResponse request.FetchResponse, opts Options) (FetchValidationResult, error) {
+func NewStaticFetchValidator(opts StaticFetchOptions) *StaticFetchValidator {
+	return &StaticFetchValidator{StaticFetchOptions: opts}
+}
+
+func (sfv *StaticFetchValidator) Fetch(ctx context.Context, atx tldb.Adapter) (StaticFetchResult, error) {
+	fetchResult, err := Fetch(ctx, atx, sfv.StaticFetchOptions.Options, sfv)
+	if err != nil {
+		log.For(ctx).Error().Err(err).Msg("fatal error during static fetch")
+	}
+	staticFetchResult := StaticFetchResult{
+		Result:                     fetchResult,
+		FeedVersion:                sfv.FeedVersion,
+		FeedVersionValidatorResult: sfv.FeedVersionValidatorResult,
+	}
+	return staticFetchResult, err
+}
+
+func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fetchResponse request.FetchResponse) (FetchValidationResult, error) {
+	opts := sfv.StaticFetchOptions
 	tmpfilepath := fetchResponse.Filename
 	fetchValidationResult := FetchValidationResult{}
 
@@ -125,7 +147,7 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 	}
 
 	// Create a validation report
-	validatorOptions := validator.Options{}
+	validatorOptions := opts.ValidatorOptions
 	validatorOptions.ErrorLimit = 10
 	v, err := validator.NewValidator(reader, validatorOptions)
 	if err != nil {

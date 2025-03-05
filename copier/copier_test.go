@@ -37,10 +37,9 @@ func TestCopier_Expand(t *testing.T) {
 		AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
 	})
 	writer := direct.NewWriter()
+	cpOpts := Options{}
+	cpOpts.AddExtension(&testCopierExpand{})
 	cp, err := NewCopier(reader, writer, Options{})
-	if err := cp.AddExtension(&testCopierExpand{}); err != nil {
-		t.Fatal(err)
-	}
 	if err != nil {
 		t.Fatal(err)
 	}

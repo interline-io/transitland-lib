@@ -18,11 +18,10 @@ import (
 // NewValidatorFromReader returns a Validator with data from a Reader.
 func NewValidatorFromReader(reader adapters.Reader) (*Validator, error) {
 	fi := NewValidator()
+	cpOpts := copier.Options{}
+	cpOpts.AddExtension(fi)
 	cp, err := copier.NewCopier(reader, &empty.Writer{}, copier.Options{})
 	if err != nil {
-		return nil, err
-	}
-	if err := cp.AddExtension(fi); err != nil {
 		return nil, err
 	}
 	cpResult := cp.Copy()
@@ -152,12 +151,13 @@ func TestValidatorErrors(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Validate
-			cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
+			ex := NewValidator()
+			cpOpts := copier.Options{}
+			cpOpts.AddExtension(ex)
+			cp, err := copier.NewCopier(r, &empty.Writer{}, cpOpts)
 			if err != nil {
 				t.Fatal(err)
 			}
-			ex := NewValidator()
-			cp.AddExtension(ex)
 			result := cp.Copy()
 			_ = result
 			// Validate feed message

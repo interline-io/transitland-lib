@@ -54,7 +54,7 @@ func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tt.Entity,
 	return nil
 }
 
-func (pp *FeedVersionServiceWindowBuilder) Copy(*copier.Copier) error {
+func (pp *FeedVersionServiceWindowBuilder) Copy(adapters.EntityCopier) error {
 	return nil
 }
 

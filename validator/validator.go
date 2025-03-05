@@ -58,12 +58,6 @@ type Validator struct {
 	Options         Options
 	rtValidator     *rt.Validator
 	defaultTimezone string
-	copierExts      []any
-}
-
-func (v *Validator) AddExtension(ext any) error {
-	v.copierExts = append(v.copierExts, ext)
-	return nil
 }
 
 // NewValidator returns a new Validator.
@@ -135,7 +129,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	result := NewResult(evaluateAt, evaluateAtLocal)
 
 	v.rtValidator = rt.NewValidator()
-	copier, err := v.setupCopier(reader, v.copierExts)
+	copier, err := v.setupCopier(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -356,47 +350,43 @@ func (v *Validator) getTimes(now time.Time, tzName string) (time.Time, time.Time
 	return now, nowLocal, nil
 }
 
-func (v *Validator) setupCopier(reader adapters.Reader, exts []any) (*copier.Copier, error) {
+func (v *Validator) setupCopier(reader adapters.Reader) (*copier.Copier, error) {
 	writer := &empty.Writer{}
 	writer.Open()
+
 	// Prepare copier
 	cpOpts := v.Options.Options
 	cpOpts.AllowEntityErrors = true
 	cpOpts.AllowReferenceErrors = true
-	copier, err := copier.NewCopier(reader, writer, cpOpts)
-	if err != nil {
-		return nil, err
-	}
-	copier.AddValidator(v.rtValidator, 1)
+	cpOpts.AddExtensionWithLevel(v.rtValidator, 1)
 
 	// Best practices extension
 	if v.Options.BestPractices {
-		copier.AddValidator(&rules.NoScheduledServiceCheck{}, 1)
-		copier.AddValidator(&rules.StopTooCloseCheck{}, 1)
-		copier.AddValidator(&rules.StopTooFarCheck{}, 1)
-		copier.AddValidator(&rules.DuplicateRouteNameCheck{}, 1)
-		copier.AddValidator(&rules.FrequencyOverlapCheck{}, 1)
-		copier.AddValidator(&rules.StopTooFarFromShapeCheck{}, 1)
-		copier.AddValidator(&rules.StopTimeFastTravelCheck{}, 1)
-		copier.AddValidator(&rules.BlockOverlapCheck{}, 1)
-		copier.AddValidator(&rules.AgencyIDRecommendedCheck{}, 1)
-		copier.AddValidator(&rules.DescriptionEqualsName{}, 1)
-		copier.AddValidator(&rules.RouteExtendedTypesCheck{}, 1)
-		copier.AddValidator(&rules.InsufficientColorContrastCheck{}, 1)
-		copier.AddValidator(&rules.RouteShortNameTooLongCheck{}, 1)
-		copier.AddValidator(&rules.ShortServiceCheck{}, 1)
-		copier.AddValidator(&rules.ServiceAllDaysEmptyCheck{}, 1)
-		copier.AddValidator(&rules.NullIslandCheck{}, 1)
-		copier.AddValidator(&rules.FrequencyDurationCheck{}, 1)
-		copier.AddValidator(&rules.MinTransferTimeCheck{}, 1)
-		copier.AddValidator(&rules.RouteNamesPrefixCheck{}, 1)
-		copier.AddValidator(&rules.RouteNamesCharactersCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.NoScheduledServiceCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.StopTooCloseCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.StopTooFarCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.DuplicateRouteNameCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.FrequencyOverlapCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.StopTooFarFromShapeCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.StopTimeFastTravelCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.BlockOverlapCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.AgencyIDRecommendedCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.DescriptionEqualsName{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.RouteExtendedTypesCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.InsufficientColorContrastCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.RouteShortNameTooLongCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.ShortServiceCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.ServiceAllDaysEmptyCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.NullIslandCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.FrequencyDurationCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.MinTransferTimeCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.RouteNamesPrefixCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.RouteNamesCharactersCheck{}, 1)
 	}
 
-	for _, ext := range exts {
-		if err := copier.AddExtension(ext); err != nil {
-			return nil, err
-		}
+	copier, err := copier.NewCopier(reader, writer, cpOpts)
+	if err != nil {
+		return nil, err
 	}
 	return copier, nil
 }

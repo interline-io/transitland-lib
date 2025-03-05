@@ -10,13 +10,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newMockCopier(url string) (*copier.Copier, *direct.Writer, error) {
+func newMockCopier(url string, exts ...any) (*copier.Copier, *direct.Writer, error) {
 	reader, err := tlcsv.NewReader(url)
 	if err != nil {
 		return nil, nil, err
 	}
 	writer := direct.NewWriter()
-	cp, err := copier.NewCopier(reader, writer, copier.Options{})
+	cpOpts := copier.Options{}
+	for _, e := range exts {
+		cpOpts.AddExtension(e)
+	}
+	cp, err := copier.NewCopier(reader, writer, cpOpts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -24,12 +28,11 @@ func newMockCopier(url string) (*copier.Copier, *direct.Writer, error) {
 }
 
 func TestRouteStopBuilder(t *testing.T) {
-	cp, writer, err := newMockCopier(testutil.ExampleFeedBART.URL)
+	e := NewRouteStopBuilder()
+	cp, writer, err := newMockCopier(testutil.ExampleFeedBART.URL, e)
 	if err != nil {
 		t.Fatal(err)
 	}
-	e := NewRouteStopBuilder()
-	cp.AddExtension(e)
 	cpr := cp.Copy()
 	if cpr.WriteError != nil {
 		t.Fatal(err)

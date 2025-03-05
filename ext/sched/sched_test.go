@@ -17,11 +17,12 @@ func newTestScheduleSchecker(path string) (*ScheduleChecker, error) {
 	if err != nil {
 		return nil, err
 	}
-	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
+	cpOpts := copier.Options{}
+	cpOpts.AddExtension(ex)
+	cp, err := copier.NewCopier(r, &empty.Writer{}, cpOpts)
 	if err != nil {
 		return nil, err
 	}
-	cp.AddExtension(ex)
 	cpResult := cp.Copy()
 	if cpResult.WriteError != nil {
 		return nil, err

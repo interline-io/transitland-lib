@@ -14,24 +14,17 @@ import (
 
 // Options sets options for a fetch operation.
 type Options struct {
-	FeedURL                 string
-	FeedID                  int
-	URLType                 string
-	IgnoreDuplicateContents bool
-	Storage                 string
-	AllowFTPFetch           bool
-	AllowLocalFetch         bool
-	AllowS3Fetch            bool
-	MaxSize                 uint64
-	HideURL                 bool
-	FetchedAt               time.Time
-	Secrets                 []dmfr.Secret
-	CreatedBy               tt.String
-	Name                    tt.String
-	Description             tt.String
-	StrictValidation        bool
-	SaveValidationReport    bool
-	ValidationReportStorage string
+	FeedURL         string
+	FeedID          int
+	URLType         string
+	Storage         string
+	AllowFTPFetch   bool
+	AllowLocalFetch bool
+	AllowS3Fetch    bool
+	MaxSize         uint64
+	HideURL         bool
+	FetchedAt       time.Time
+	Secrets         []dmfr.Secret
 }
 
 // Result contains results of a fetch operation.
@@ -57,7 +50,7 @@ type FetchValidationResult struct {
 }
 
 type FetchValidator interface {
-	ValidateResponse(context.Context, tldb.Adapter, request.FetchResponse, Options) (FetchValidationResult, error)
+	ValidateResponse(context.Context, tldb.Adapter, request.FetchResponse) (FetchValidationResult, error)
 }
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
@@ -112,7 +105,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 	uploadFile := ""
 	uploadDest := ""
 	if result.FetchError == nil {
-		vr, err := cb.ValidateResponse(ctx, atx, fetchResponse, opts)
+		vr, err := cb.ValidateResponse(ctx, atx, fetchResponse)
 		if err != nil {
 			return result, err
 		}

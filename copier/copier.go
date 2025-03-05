@@ -60,7 +60,7 @@ type AfterWrite interface {
 
 // Extension is run after normal copying has completed.
 type Extension interface {
-	Copy(*Copier) error
+	Copy(adapters.EntityCopier) error
 }
 
 // ErrorHandler is called on each source file and entity; errors can be nil
@@ -116,39 +116,60 @@ type Options struct {
 	NormalizeNetworks bool
 	// DeduplicateStopTimes
 	DeduplicateJourneyPatterns bool
+	// Error limit
+	ErrorLimit int
+	// Logging level
+	Quiet bool
 	// Default error handler
 	ErrorHandler ErrorHandler
 	// Journey Pattern Key Function
 	JourneyPatternKey func(*gtfs.Trip) string
 	// Named extensions
-	Extensions []string
+	ExtensionDefs []string
 	// Initialized extensions
-	extensions []any
-	// Error limit
-	ErrorLimit int
+	exts []optionExtLevel
+}
 
-	// Sub-logger
-	Quiet     bool
-	sublogger zerolog.Logger
+type optionExtLevel struct {
+	ext   any
+	level int
 }
 
 func (opts *Options) AddExtension(ext any) {
-	opts.extensions = append(opts.extensions, ext)
+	opts.AddExtensionWithLevel(ext, 0)
+}
+
+func (opts *Options) ParseExtensionDef(extDef string) (ext.Extension, error) {
+	extName, extArgs, err := ext.ParseExtensionArgs(extDef)
+	if err != nil {
+		return nil, err
+	}
+	e, err := ext.GetExtension(extName, extArgs)
+	if err != nil {
+		return nil, fmt.Errorf("error creating extension '%s' with args '%s': %s", extName, extArgs, err.Error())
+	} else if e == nil {
+		return nil, fmt.Errorf("no registered extension for '%s'", extName)
+	}
+	return e, nil
+}
+
+func (opts *Options) AddExtensionWithLevel(e any, level int) {
+	opts.exts = append(opts.exts, optionExtLevel{ext: e, level: level})
 }
 
 // Copier copies from Reader to Writer
 type Copier struct {
 	// Default options
-	Options
+	Options Options
 	// Reader and writer
-	Reader adapters.Reader
-	Writer adapters.Writer
+	reader adapters.Reader
+	writer adapters.Writer
 	// Entity selection strategy
 	Marker Marker
 	// Error handler, called for each entity
 	ErrorHandler ErrorHandler
 	// Exts
-	extensions        []Extension
+	copierExtensions  []Extension
 	filters           []Filter
 	errorValidators   []Validator
 	warningValidators []Validator
@@ -156,9 +177,10 @@ type Copier struct {
 	afterWriters      []AfterWrite
 	expandFilters     []ExpandFilter
 	// book keeping
+	EntityMap *tt.EntityMap
 	geomCache *geomCacheFilter
 	result    *Result
-	EntityMap *tt.EntityMap
+	log       zerolog.Logger
 }
 
 // Quiet copy
@@ -178,7 +200,14 @@ func QuietCopy(reader adapters.Reader, writer adapters.Writer, optfns ...func(*O
 		return err
 	}
 	return nil
+}
 
+func (copier *Copier) Reader() adapters.Reader {
+	return copier.reader
+}
+
+func (copier *Copier) Writer() adapters.Writer {
+	return copier.writer
 }
 
 // Copy with options builder
@@ -201,15 +230,15 @@ func Copy(reader adapters.Reader, writer adapters.Writer, optfns ...func(*Option
 func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*Copier, error) {
 	copier := &Copier{}
 	copier.Options = opts
-	copier.Reader = reader
-	copier.Writer = writer
+	copier.reader = reader
+	copier.writer = writer
 
 	// Logging
 	ctx := context.TODO()
 	if opts.Quiet {
-		copier.Options.sublogger = log.For(ctx).Level(zerolog.ErrorLevel).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+		copier.log = log.For(ctx).Level(zerolog.ErrorLevel).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
 	} else {
-		copier.Options.sublogger = log.For(ctx).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+		copier.log = log.For(ctx).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
 	}
 
 	// Result
@@ -227,13 +256,13 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	copier.EntityMap = tt.NewEntityMap()
 
 	// Set the default BatchSize
-	if copier.BatchSize == 0 {
-		copier.BatchSize = 1_000
+	if copier.Options.BatchSize == 0 {
+		copier.Options.BatchSize = 1_000
 	}
 
 	// Set the default Journey Pattern function
-	if copier.JourneyPatternKey == nil {
-		copier.JourneyPatternKey = journeyPatternKey
+	if copier.Options.JourneyPatternKey == nil {
+		copier.Options.JourneyPatternKey = journeyPatternKey
 	}
 
 	// Geometry cache
@@ -241,102 +270,91 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 		NoShapeCache: opts.NoShapeCache,
 		GeomCache:    geomcache.NewGeomCache(),
 	}
-	copier.AddExtension(copier.geomCache)
 
 	// Default set of validators
+	var addExts []any
+	addExts = append(addExts, copier.geomCache)
+
+	// Minimal validators
 	if !opts.NoValidators {
-		copier.AddValidator(&rules.EntityDuplicateIDCheck{}, 0)
-		copier.AddValidator(&rules.EntityDuplicateKeyCheck{}, 0)
-		copier.AddValidator(&rules.ValidFarezoneCheck{}, 0)
-		copier.AddValidator(&rules.AgencyIDConditionallyRequiredCheck{}, 0)
-		copier.AddValidator(&rules.StopTimeSequenceCheck{}, 0)
-		copier.AddValidator(&rules.InconsistentTimezoneCheck{}, 0)
-		copier.AddValidator(&rules.ParentStationLocationTypeCheck{}, 0)
-		copier.AddValidator(&rules.CalendarDuplicateDates{}, 0)
+		addExts = append(addExts,
+			&rules.EntityDuplicateIDCheck{},
+			&rules.EntityDuplicateKeyCheck{},
+			&rules.ValidFarezoneCheck{},
+			&rules.AgencyIDConditionallyRequiredCheck{},
+			&rules.StopTimeSequenceCheck{},
+			&rules.InconsistentTimezoneCheck{},
+			&rules.ParentStationLocationTypeCheck{},
+			&rules.CalendarDuplicateDates{},
+		)
 	}
 
 	// Default extensions
-	if copier.UseBasicRouteTypes {
+	if copier.Options.UseBasicRouteTypes {
 		// Convert extended route types to basic route types
-		copier.AddExtension(&filters.BasicRouteTypeFilter{})
+		addExts = append(addExts, &filters.BasicRouteTypeFilter{})
 	}
-	if copier.NormalizeTimezones {
+	if copier.Options.NormalizeTimezones {
 		// Normalize timezones and apply agency/stop timezones where empty
-		copier.AddExtension(&filters.NormalizeTimezoneFilter{})
-		copier.AddExtension(&filters.ApplyParentTimezoneFilter{})
+		addExts = append(addExts, &filters.NormalizeTimezoneFilter{})
+		addExts = append(addExts, &filters.ApplyParentTimezoneFilter{})
 	}
-	if copier.SimplifyShapes > 0 {
+	if copier.Options.SimplifyShapes > 0 {
 		// Simplify shapes.txt
-		copier.AddExtension(&filters.SimplifyShapeFilter{SimplifyValue: copier.SimplifyShapes})
+		addExts = append(addExts, &filters.SimplifyShapeFilter{SimplifyValue: copier.Options.SimplifyShapes})
 	}
-	if copier.NormalizeNetworks {
+	if copier.Options.NormalizeNetworks {
 		// Convert routes.txt network_id to networks.txt/route_networks.txt
-		copier.AddExtension(&filters.RouteNetworkIDFilter{})
+		addExts = append(addExts, &filters.RouteNetworkIDFilter{})
 	} else {
-		copier.AddExtension(&filters.RouteNetworkIDCompatFilter{})
+		addExts = append(addExts, &filters.RouteNetworkIDCompatFilter{})
 	}
-	if copier.SimplifyCalendars && copier.NormalizeServiceIDs {
+	if copier.Options.SimplifyCalendars && copier.Options.NormalizeServiceIDs {
 		// Simplify calendar and calendar dates
-		copier.AddExtension(&filters.SimplifyCalendarFilter{})
+		addExts = append(addExts, &filters.SimplifyCalendarFilter{})
 	}
 
-	// Add extensions
-	for _, ext := range opts.extensions {
-		if err := copier.AddExtension(ext); err != nil {
-			return nil, fmt.Errorf("failed to add extension: %s", err.Error())
-		}
+	// Set default extension level to 0
+	var addExtLevels []optionExtLevel
+	for _, e := range addExts {
+		addExtLevels = append(addExtLevels, optionExtLevel{ext: e, level: 0})
 	}
-	for _, extName := range opts.Extensions {
-		extName, extArgs, err := ext.ParseExtensionArgs(extName)
+
+	// Add Option extensions
+	addExtLevels = append(addExtLevels, opts.exts...)
+
+	// Parse option extension defs
+	for _, extDef := range opts.ExtensionDefs {
+		e, err := opts.ParseExtensionDef(extDef)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse extension: %s", err.Error())
 		}
-		e, err := ext.GetExtension(extName, extArgs)
-		if err != nil {
-			return nil, fmt.Errorf("error creating extension '%s' with args '%s': %s", extName, extArgs, err.Error())
-		} else if e == nil {
-			return nil, fmt.Errorf("no registered extension for '%s'", extName)
-		}
-		if err := copier.AddExtension(e); err != nil {
-			return nil, fmt.Errorf("failed to add extension '%s': %s", extName, err.Error())
+		addExtLevels = append(addExtLevels, optionExtLevel{ext: e, level: 0})
+	}
+
+	// Add option extensions
+	for _, e := range addExtLevels {
+		if err := copier.addExtension(e.ext, e.level); err != nil {
+			return nil, fmt.Errorf("failed to add extension: %s", err.Error())
 		}
 	}
 	return copier, nil
 }
 
-func (copier *Copier) SetLogger(g zerolog.Logger) {
-	copier.sublogger = g
-}
-
-// AddValidator adds an additional entity validator.
-func (copier *Copier) AddValidator(ext Validator, level int) error {
-	if level == 0 {
-		return copier.addExtension(ext, false)
-	} else if level == 1 {
-		return copier.addExtension(ext, true)
-	}
-	return errors.New("unknown validation level")
-}
-
-// AddExtension adds an Extension to the copy process.
-func (copier *Copier) AddExtension(ext interface{}) error {
-	return copier.addExtension(ext, false)
-}
-
-func (copier *Copier) addExtension(ext interface{}, warning bool) error {
+func (copier *Copier) addExtension(ext any, level int) error {
 	added := false
 	if v, ok := ext.(canShareGeomCache); ok {
 		v.SetGeomCache(copier.geomCache)
 	}
 	if v, ok := ext.(Prepare); ok {
-		v.Prepare(copier.Reader, copier.EntityMap)
+		v.Prepare(copier.reader, copier.EntityMap)
 	}
 	if v, ok := ext.(Filter); ok {
 		copier.filters = append(copier.filters, v)
 		added = true
 	}
 	if v, ok := ext.(Validator); ok {
-		if warning {
+		if level > 0 {
 			copier.warningValidators = append(copier.warningValidators, v)
 		} else {
 			copier.errorValidators = append(copier.errorValidators, v)
@@ -348,7 +366,7 @@ func (copier *Copier) addExtension(ext interface{}, warning bool) error {
 		added = true
 	}
 	if v, ok := ext.(Extension); ok {
-		copier.extensions = append(copier.extensions, v)
+		copier.copierExtensions = append(copier.copierExtensions, v)
 		added = true
 	}
 	if v, ok := ext.(AfterWrite); ok {
@@ -361,7 +379,7 @@ func (copier *Copier) addExtension(ext interface{}, warning bool) error {
 	}
 	if !added {
 		err := errors.New("extension does not satisfy any extension interfaces")
-		copier.sublogger.Error().Err(err).Msg(err.Error())
+		copier.log.Error().Err(err).Msg(err.Error())
 		return err
 	}
 	return nil
@@ -400,7 +418,7 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
 			copier.result.SkipEntityFilterCount[efn]++
-			copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("skipped by filter")
+			copier.log.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("skipped by filter")
 			return errors.New("skipped by filter")
 		}
 	}
@@ -455,19 +473,19 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 
 	// Log and set line context
 	for _, err := range warns {
-		copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("warning")
+		copier.log.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("warning")
 	}
 	for _, err := range errs {
-		copier.sublogger.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("error")
+		copier.log.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("error")
 	}
 	copier.ErrorHandler.HandleEntityErrors(ent, errs, warns)
 
 	// Check strictness
-	if len(errs) > 0 && !copier.AllowEntityErrors {
+	if len(errs) > 0 && !copier.Options.AllowEntityErrors {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
 	}
-	if len(refErrs) > 0 && !copier.AllowReferenceErrors {
+	if len(refErrs) > 0 && !copier.Options.AllowReferenceErrors {
 		copier.result.SkipEntityReferenceCount[efn]++
 		return refErrs[0]
 	}
@@ -490,9 +508,9 @@ func (copier *Copier) writerAddEntities(okEnts []tt.Entity) error {
 	for i, ent := range okEnts {
 		sids[i] = ent.EntityID()
 	}
-	eids, err := copier.Writer.AddEntities(okEnts)
+	eids, err := copier.writer.AddEntities(okEnts)
 	if err != nil {
-		copier.sublogger.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(okEnts))
+		copier.log.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(okEnts))
 		return err
 	}
 	if len(eids) != len(okEnts) {
@@ -530,8 +548,8 @@ func (copier *Copier) Copy() *Result {
 	// Handle source errors and warnings
 	sourceErrors := map[string][]error{}
 
-	copier.sublogger.Trace().Msg("Validating structure")
-	for _, err := range copier.Reader.ValidateStructure() {
+	copier.log.Trace().Msg("Validating structure")
+	for _, err := range copier.reader.ValidateStructure() {
 		fn := ""
 		if v, ok := err.(errorWithContext); ok {
 			fn = v.Context().Filename
@@ -543,9 +561,9 @@ func (copier *Copier) Copy() *Result {
 	}
 
 	// Note that order is important!!
-	copier.sublogger.Trace().Msg("Begin processing feed")
-	r := copier.Reader
-	bs := copier.BatchSize
+	copier.log.Trace().Msg("Begin processing feed")
+	r := copier.reader
+	bs := copier.Options.BatchSize
 	fns := []func() error{
 		func() error { return batchCopy(copier, batchChan(r.Agencies(), 1, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Routes(), bs, nil)) },
@@ -601,23 +619,23 @@ func (copier *Copier) Copy() *Result {
 		}
 	}
 
-	for _, e := range copier.extensions {
-		copier.sublogger.Trace().Msgf("Running extension Copy(): %T", e)
+	for _, e := range copier.copierExtensions {
+		copier.log.Trace().Msgf("Running extension Copy(): %T", e)
 		if err := e.Copy(copier); err != nil {
 			copier.result.WriteError = err
 			return copier.result
 		}
 	}
 
-	if copier.CopyExtraFiles {
-		copier.sublogger.Trace().Msg("Copying extra files")
+	if copier.Options.CopyExtraFiles {
+		copier.log.Trace().Msg("Copying extra files")
 		if err := copier.copyExtraFiles(); err != nil {
 			copier.result.WriteError = err
 			return copier.result
 		}
 	}
 
-	copier.sublogger.Trace().Msg("Done")
+	copier.log.Trace().Msg("Done")
 	return copier.result
 }
 
@@ -637,7 +655,7 @@ func (copier *Copier) copyExtraFiles() error {
 		AddFile(string, io.Reader) error
 	}
 	//
-	csvReader, ok := copier.Reader.(*tlcsv.Reader)
+	csvReader, ok := copier.reader.(*tlcsv.Reader)
 	if !ok {
 		return errors.New("reader does not support copying extra files")
 	}
@@ -645,7 +663,7 @@ func (copier *Copier) copyExtraFiles() error {
 	if !ok {
 		return errors.New("reader does not support copying extra files")
 	}
-	csvWriter, ok := copier.Writer.(*tlcsv.Writer)
+	csvWriter, ok := copier.writer.(*tlcsv.Writer)
 	if !ok {
 		return errors.New("writer does not support copying extra files")
 	}
@@ -666,7 +684,7 @@ func (copier *Copier) copyExtraFiles() error {
 		if found {
 			continue
 		}
-		copier.sublogger.Info().Str("filename", rf.Name()).Msgf("copying extra file")
+		copier.log.Info().Str("filename", rf.Name()).Msgf("copying extra file")
 		var err1 error
 		var err2 error
 		err1 = readerAdapter.OpenFile(rf.Name(), func(rio io.Reader) {
@@ -686,12 +704,12 @@ func (copier *Copier) copyExtraFiles() error {
 func (copier *Copier) copyCalendars() error {
 	// Get Calendars as grouped calendars/calendar_dates
 	calDates := map[string][]gtfs.CalendarDate{}
-	for ent := range copier.Reader.CalendarDates() {
+	for ent := range copier.reader.CalendarDates() {
 		calDates[ent.ServiceID.Val] = append(calDates[ent.ServiceID.Val], ent)
 	}
 
 	// Simplify and and adjust StartDate and EndDate
-	for cals := range batchChan(copier.Reader.Calendars(), copier.BatchSize, nil) {
+	for cals := range batchChan(copier.reader.Calendars(), copier.Options.BatchSize, nil) {
 		batchCals := make([]*gtfs.Calendar, 0, len(cals))
 		cdCount := 0
 		for _, cal := range cals {
@@ -750,7 +768,7 @@ func (copier *Copier) copyCalendars() error {
 		}
 		// Write Calendars
 		var okCals []tt.Entity
-		if copier.NormalizeServiceIDs {
+		if copier.Options.NormalizeServiceIDs {
 			var err error
 			okCals, err = copyEntities(copier, batchCals)
 			if err != nil {
@@ -792,7 +810,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	trips := map[string]*gtfs.Trip{}
 	duplicateTrips := []*gtfs.Trip{}
 	allTripIds := map[string]struct{}{}
-	for trip := range copier.Reader.Trips() {
+	for trip := range copier.reader.Trips() {
 		eid := trip.EntityID()
 		allTripIds[eid] = struct{}{}
 		// Skip unmarked trips to save work
@@ -808,7 +826,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		}
 		trips[eid] = &tripCopy
 	}
-	copier.sublogger.Trace().Msgf("Loaded %d trips", len(allTripIds))
+	copier.log.Trace().Msgf("Loaded %d trips", len(allTripIds))
 
 	// Process each set of Trip/StopTimes
 	stopPatterns := map[string]int{}
@@ -817,7 +835,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	tripOffsets := map[string]int{} // used for deduplicating StopTimes
 
 	// Process trips and stop times
-	for stsGroup := range batchChan(copier.Reader.StopTimesByTripID(), copier.BatchSize, nil) {
+	for stsGroup := range batchChan(copier.reader.StopTimesByTripID(), copier.Options.BatchSize, nil) {
 		count := 0
 		for _, sts := range stsGroup {
 			count += len(sts)
@@ -864,13 +882,13 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 
 			// Create missing shape if necessary
-			if !trip.ShapeID.Valid && copier.CreateMissingShapes {
+			if !trip.ShapeID.Valid && copier.Options.CreateMissingShapes {
 				// Note: if the trip has errors, may result in unused shapes!
 				if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID.Int()]; ok {
 					trip.ShapeID.Set(shapeid)
 				} else {
 					if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
-						copier.sublogger.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
+						copier.log.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
 						trip.AddWarning(err)
 					} else {
 						// Set ShapeID
@@ -881,7 +899,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 
 			// Interpolate stop times
-			if copier.InterpolateStopTimes {
+			if copier.Options.InterpolateStopTimes {
 				if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip); err != nil {
 					trip.AddWarning(err)
 				} else {
@@ -890,7 +908,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 
 			// Set JourneyPattern
-			jkey := copier.JourneyPatternKey(trip)
+			jkey := copier.Options.JourneyPatternKey(trip)
 			if jpat, ok := journeyPatterns[jkey]; ok {
 				trip.JourneyPatternID.Set(jpat.key)
 				trip.JourneyPatternOffset.SetInt(trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival)
@@ -914,8 +932,8 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Process regular stop times
 		for _, ent := range okTrips {
 			if v, ok := ent.(*gtfs.Trip); ok {
-				if _, dedupOk := tripOffsets[v.TripID.Val]; dedupOk && copier.DeduplicateJourneyPatterns {
-					copier.sublogger.Trace().Msgf("deduplicating: %s", v.TripID)
+				if _, dedupOk := tripOffsets[v.TripID.Val]; dedupOk && copier.Options.DeduplicateJourneyPatterns {
+					copier.log.Trace().Msgf("deduplicating: %s", v.TripID)
 					continue
 				}
 				for _, st := range v.StopTimes {
@@ -955,7 +973,7 @@ func (copier *Copier) logCount(ent tt.Entity) {
 	fnr := strings.ReplaceAll(fn, ".txt", "")
 	saved := copier.result.EntityCount[fn]
 	out = append(out, fmt.Sprintf("Saved %d %s", saved, fnr))
-	evt := copier.sublogger.Info().Str("filename", fn).Int("saved", saved)
+	evt := copier.log.Info().Str("filename", fn).Int("saved", saved)
 	if a, ok := copier.result.GeneratedCount[fn]; ok && a > 0 {
 		out = append(out, fmt.Sprintf("generated %d", a))
 		evt = evt.Int("generated", a)
@@ -1018,7 +1036,7 @@ func copyEntities[T tt.Entity](copier *Copier, ents []T) ([]tt.Entity, error) {
 		expanded := false
 		for _, f := range copier.expandFilters {
 			if a, ok, err := f.Expand(ent, copier.EntityMap); err != nil {
-				copier.sublogger.Error().Err(err).Msg("failed to expand")
+				copier.log.Error().Err(err).Msg("failed to expand")
 			} else if ok {
 				expanded = true
 				expandedEnts = append(expandedEnts, a...)

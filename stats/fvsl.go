@@ -201,7 +201,7 @@ func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, 
 	return nil
 }
 
-func (pp *FeedVersionServiceLevelBuilder) Copy(*copier.Copier) error {
+func (pp *FeedVersionServiceLevelBuilder) Copy(adapters.EntityCopier) error {
 	return nil
 }
 
