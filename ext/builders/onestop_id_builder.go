@@ -3,7 +3,7 @@ package builders
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
@@ -177,7 +177,7 @@ func (pp *OnestopIDBuilder) RouteOnestopIDs() []RouteOnestopID {
 	return ret
 }
 
-func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
+func (pp *OnestopIDBuilder) Copy(copier adapters.EntityCopier) error {
 	var agencyEnts []tt.Entity
 	for _, ent := range pp.AgencyOnestopIDs() {
 		ent := ent

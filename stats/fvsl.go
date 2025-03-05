@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"context"
 	"iter"
 	"sort"
 	"time"
@@ -88,7 +89,7 @@ func ServiceLevelDays(fvsls []dmfr.FeedVersionServiceLevel, startDate time.Time,
 // NewFeedVersionServiceLevelsFromReader .
 func NewFeedVersionServiceLevelsFromReader(reader adapters.Reader) ([]dmfr.FeedVersionServiceLevel, error) {
 	bld := NewFeedVersionServiceLevelBuilder()
-	if err := copier.QuietCopy(reader, &empty.Writer{}, func(o *copier.Options) { o.AddExtension(bld) }); err != nil {
+	if _, err := copier.QuietCopy(context.TODO(), reader, &empty.Writer{}, func(o *copier.Options) { o.AddExtension(bld) }); err != nil {
 		return nil, err
 	}
 	results, err := bld.ServiceLevels()
@@ -201,7 +202,7 @@ func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, 
 	return nil
 }
 
-func (pp *FeedVersionServiceLevelBuilder) Copy(*copier.Copier) error {
+func (pp *FeedVersionServiceLevelBuilder) Copy(adapters.EntityCopier) error {
 	return nil
 }
 

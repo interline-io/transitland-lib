@@ -1,6 +1,7 @@
 package copier
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -37,15 +38,11 @@ func TestCopier_Expand(t *testing.T) {
 		AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
 	})
 	writer := direct.NewWriter()
-	cp, err := NewCopier(reader, writer, Options{})
-	if err := cp.AddExtension(&testCopierExpand{}); err != nil {
-		t.Fatal(err)
-	}
+	cpOpts := Options{}
+	cpOpts.AddExtension(&testCopierExpand{})
+
+	_, err := CopyWithOptions(context.Background(), reader, writer, cpOpts)
 	if err != nil {
-		t.Fatal(err)
-	}
-	result := cp.Copy()
-	if result.WriteError != nil {
 		t.Fatal(err)
 	}
 	//

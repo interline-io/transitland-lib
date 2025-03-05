@@ -1,6 +1,7 @@
 package sched
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -17,13 +18,9 @@ func newTestScheduleSchecker(path string) (*ScheduleChecker, error) {
 	if err != nil {
 		return nil, err
 	}
-	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
-	if err != nil {
-		return nil, err
-	}
-	cp.AddExtension(ex)
-	cpResult := cp.Copy()
-	if cpResult.WriteError != nil {
+	cpOpts := copier.Options{}
+	cpOpts.AddExtension(ex)
+	if _, err := copier.CopyWithOptions(context.Background(), r, &empty.Writer{}, cpOpts); err != nil {
 		return nil, err
 	}
 	return ex, nil

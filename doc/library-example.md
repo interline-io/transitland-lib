@@ -116,9 +116,9 @@ func TestExample3(t *testing.T) {
 		t.Fatalf("no writer available")
 	}
 	// Create a copier to stream, filter, and validate entities
-	cp := copier.NewCopier(reader, writer)
-	result := cp.Copy()
-	if result.WriteError != nil {
+	cp := copier.NewCopier(reader, writer, copier.Options{})
+	result, err := cp.Copy()
+	if err != nil {
 		t.Fatalf("fatal copy error")
 	}
 	for _, err := range result.Errors {

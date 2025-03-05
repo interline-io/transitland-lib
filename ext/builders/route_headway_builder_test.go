@@ -64,14 +64,9 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 	}
 	for groupName, testGroup := range groups {
 		t.Run(groupName, func(t *testing.T) {
-			cp, writer, err := newMockCopier(testGroup.URL)
-			if err != nil {
-				t.Fatal(err)
-			}
 			e := NewRouteHeadwayBuilder()
-			cp.AddExtension(e)
-			cpr := cp.Copy()
-			if cpr.WriteError != nil {
+			_, writer, err := newMockCopier(testGroup.URL, e)
+			if err != nil {
 				t.Fatal(err)
 			}
 			routeHeadways := map[string][]*RouteHeadway{}

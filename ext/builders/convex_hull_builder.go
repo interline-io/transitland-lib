@@ -1,7 +1,7 @@
 package builders
 
 import (
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
@@ -88,7 +88,7 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 	return nil
 }
 
-func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
+func (pp *ConvexHullBuilder) Copy(copier adapters.EntityCopier) error {
 	// build feed version convex hulls
 	fvStops := map[int][]*stopGeom{}
 	for _, sg := range pp.stops {

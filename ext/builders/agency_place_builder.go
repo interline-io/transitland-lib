@@ -5,7 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/postgres"
@@ -93,14 +93,14 @@ from ne_10m_admin_1_states_provinces ne
 where st_intersects(ne.geometry, ST_MakePoint(?, ?));
 `
 
-func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
+func (pp *AgencyPlaceBuilder) Copy(copier adapters.EntityCopier) error {
 	ctx := context.TODO()
 	// get places for each point
 	ghPoints := map[string][]string{}
 	for stopId, ghPoint := range pp.stops {
 		ghPoints[ghPoint] = append(ghPoints[ghPoint], stopId)
 	}
-	dbWriter, ok := copier.Writer.(*tldb.Writer)
+	dbWriter, ok := copier.Writer().(*tldb.Writer)
 	if !ok {
 		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, writer is not dbwriter")
 		return nil
