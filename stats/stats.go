@@ -112,7 +112,10 @@ func CreateFeedStats(ctx context.Context, atx tldb.Adapter, reader *tlcsv.Reader
 	if err != nil {
 		return err
 	}
+	return WriteFeedVersionStats(ctx, atx, stats, fvid)
+}
 
+func WriteFeedVersionStats(ctx context.Context, atx tldb.Adapter, stats FeedVersionStats, fvid int) error {
 	// Delete any existing records
 	fvt := dmfr.GetFeedVersionTables()
 	tables := fvt.FetchStatDerivedTables

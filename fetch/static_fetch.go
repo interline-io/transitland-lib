@@ -83,20 +83,17 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 		fv.URL = opts.FeedURL
 	}
 
-	// Is this SHA1 already present?
-	checkFeedVersion := dmfr.FeedVersion{}
-	err = atx.Get(ctx, &checkFeedVersion, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", fv.SHA1, fv.SHA1Dir)
-	if err == nil {
-		// Already present
-		fetchValidationResult.Found = true
-		fetchValidationResult.FeedVersionID.SetInt(checkFeedVersion.ID)
-		sfv.FeedVersion = &checkFeedVersion
-		return fetchValidationResult, nil
-	} else if err == sql.ErrNoRows {
-		// Not present, create below
-	} else {
+	// If the fv is already present, return.
+	// This is to skip unncessary work, not avoid duplicates. A second check is done later.
+	if checkFv, err := checkFeedVersion(ctx, atx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
 		// Fatal error
 		return fetchValidationResult, err
+	} else if checkFv != nil {
+		// Already present
+		fetchValidationResult.Found = true
+		fetchValidationResult.FeedVersionID.SetInt(checkFv.ID)
+		sfv.FeedVersion = checkFv
+		return fetchValidationResult, nil
 	}
 
 	// If a second tmpfile is created, copy it and overwrite the input tmp file
@@ -120,6 +117,13 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 		}
 	}
 
+	// Generate feed version stats
+	feedVersionStats, err := stats.NewFeedStatsFromReader(reader)
+	if err != nil {
+		// Fatal error
+		return fetchValidationResult, err
+	}
+
 	// Create a validation report
 	validatorOptions := validator.Options{}
 	validatorOptions.ErrorLimit = 10
@@ -141,14 +145,27 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 		return fetchValidationResult, nil
 	}
 
+	// The validation after the initial check may take some time to complete, so check again.
+	// We want to avoid database write failures (unique index on sha1) because those are considered fatal.
+	if checkFv, err := checkFeedVersion(ctx, atx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
+		// Fatal error
+		return fetchValidationResult, err
+	} else if checkFv != nil {
+		// Already present
+		fetchValidationResult.Found = true
+		fetchValidationResult.FeedVersionID.SetInt(checkFv.ID)
+		sfv.FeedVersion = checkFv
+		return fetchValidationResult, nil
+	}
+
 	// Create fv record
 	if _, err = atx.Insert(ctx, &fv); err != nil {
 		// Fatal err
 		return fetchValidationResult, err
 	}
 
-	// Update stats records
-	if err := stats.CreateFeedStats(ctx, atx, reader, fv.ID); err != nil {
+	// Save stats records
+	if err := stats.WriteFeedVersionStats(ctx, atx, feedVersionStats, fv.ID); err != nil {
 		// Fatal err
 		return fetchValidationResult, err
 	}
@@ -162,10 +179,26 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 	}
 
 	// OK
+	fetchValidationResult.Found = false
 	fetchValidationResult.FeedVersionID.SetInt(fv.ID)
 	sfv.FeedVersionValidatorResult = validationResult
 	sfv.FeedVersion = &fv
 	return fetchValidationResult, nil
+}
+
+// Is this SHA1 already present?
+func checkFeedVersion(ctx context.Context, atx tldb.Adapter, sha1 string, sha1dir string) (*dmfr.FeedVersion, error) {
+	checkFeedVersion := dmfr.FeedVersion{}
+	err := atx.Get(ctx, &checkFeedVersion, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", sha1, sha1dir)
+	if err == nil {
+		return &checkFeedVersion, nil
+	} else if err == sql.ErrNoRows {
+		// Not present, create below
+	} else {
+		// Fatal error
+		return nil, err
+	}
+	return nil, nil
 }
 
 func copyFileContents(dst, src string) (err error) {
