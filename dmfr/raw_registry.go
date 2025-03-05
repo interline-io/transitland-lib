@@ -92,7 +92,10 @@ func (r *RawRegistry) Write(w io.Writer) error {
 	if err := json.Indent(&mbi, mb, "", "  "); err != nil {
 		return err
 	}
-	_, err = w.Write(mbi.Bytes())
+	if _, err = w.Write(mbi.Bytes()); err != nil {
+		return err
+	}
+	_, err = w.Write([]byte{'\n'})
 	return err
 }
 
