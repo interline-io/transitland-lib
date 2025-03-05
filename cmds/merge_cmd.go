@@ -64,11 +64,6 @@ func (cmd *MergeCommand) Run(ctx context.Context) error {
 	defer writer.Close()
 
 	// Setup copier
-	cp, err := copier.NewCopier(reader, writer, cmd.Options)
-	if err != nil {
-		return err
-	}
-	result := cp.Copy()
-	result.DisplaySummary()
-	return nil
+	_, err = copier.CopyWithOptions(ctx, reader, writer, cmd.Options)
+	return err
 }

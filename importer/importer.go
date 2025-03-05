@@ -3,7 +3,6 @@ package importer
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/interline-io/log"
@@ -146,7 +145,6 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 	// Get writer with existing tx
 	writer := &tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 
-	// Create copier
 	// Non-settable options
 	opts.Options.AllowEntityErrors = false
 	opts.Options.AllowReferenceErrors = false
@@ -156,22 +154,19 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 	opts.Options.AddExtension(builders.NewRouteHeadwayBuilder())
 	opts.Options.AddExtension(builders.NewConvexHullBuilder())
 	opts.Options.AddExtension(builders.NewAgencyPlaceBuilder())
-	cp, err := copier.NewCopier(reader, writer, opts.Options)
-	if err != nil {
-		return fvi, err
-	}
 	fvi.InProgress = false
 
 	// Go
-	cpresult := cp.Copy()
-	if cpresult == nil {
-		return fvi, errors.New("copy result was nil")
-	} else if cpresult.WriteError != nil {
-		return fvi, cpresult.WriteError
+	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, writer, opts.Options)
+	if cpErr != nil {
+		return fvi, cpErr
+	}
+	if cpResult == nil {
+		return fvi, fmt.Errorf("copier returned nil result")
 	}
 
-	cpresult.DisplaySummary()
-	counts := copyResultCounts(*cpresult)
+	// Save feed version import
+	counts := copyResultCounts(*cpResult)
 	fvi.Success = true
 	fvi.InterpolatedStopTimeCount = counts.InterpolatedStopTimeCount
 	fvi.EntityCount = counts.EntityCount

@@ -186,12 +186,6 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 		cmd.Options.AddExtension(tx)
 	}
 
-	// Setup copier
-	cp, err := copier.NewCopier(reader, writer, cmd.Options)
-	if err != nil {
-		return err
-	}
-
 	// Create Marker
 	rthits := map[int]bool{}
 	for _, i := range cmd.extractRouteTypes {
@@ -262,13 +256,10 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 		if err := em.Filter(reader); err != nil {
 			return err
 		}
-		cp.Marker = &em
+		cmd.Options.Marker = &em
 		log.For(ctx).Debug().Msgf("Graph loading complete")
 	}
 
-	// Copy
-	result := cp.Copy()
-	result.DisplaySummary()
-	result.DisplayErrors()
-	return nil
+	_, err = copier.CopyWithOptions(ctx, reader, writer, cmd.Options)
+	return err
 }

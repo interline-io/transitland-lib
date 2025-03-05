@@ -1,6 +1,7 @@
 package builders
 
 import (
+	"context"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
@@ -10,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newMockCopier(url string, exts ...any) (*copier.Copier, *direct.Writer, error) {
+func newMockCopier(url string, exts ...any) (*copier.Result, *direct.Writer, error) {
 	reader, err := tlcsv.NewReader(url)
 	if err != nil {
 		return nil, nil, err
@@ -20,21 +21,18 @@ func newMockCopier(url string, exts ...any) (*copier.Copier, *direct.Writer, err
 	for _, e := range exts {
 		cpOpts.AddExtension(e)
 	}
-	cp, err := copier.NewCopier(reader, writer, cpOpts)
-	if err != nil {
-		return nil, nil, err
-	}
-	return cp, writer, nil
+	// cp, err := copier.NewCopier(reader, writer, cpOpts)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+	cpResult, err := copier.CopyWithOptions(context.Background(), reader, writer, cpOpts)
+	return cpResult, writer, err
 }
 
 func TestRouteStopBuilder(t *testing.T) {
 	e := NewRouteStopBuilder()
-	cp, writer, err := newMockCopier(testutil.ExampleFeedBART.URL, e)
+	_, writer, err := newMockCopier(testutil.ExampleFeedBART.URL, e)
 	if err != nil {
-		t.Fatal(err)
-	}
-	cpr := cp.Copy()
-	if cpr.WriteError != nil {
 		t.Fatal(err)
 	}
 	routeStops := []*RouteStop{}

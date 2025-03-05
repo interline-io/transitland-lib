@@ -127,13 +127,7 @@ func (v *Validator) Validate(ctx context.Context) (*Result, error) {
 
 func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
 	result := NewResult(evaluateAt, evaluateAtLocal)
-
 	v.rtValidator = rt.NewValidator()
-	copier, err := v.setupCopier(reader)
-	if err != nil {
-		return nil, err
-	}
-
 	details := ResultDetails{}
 	if reader2, ok := reader.(*tlcsv.Reader); ok {
 		result.IncludesStatic.Set(true)
@@ -167,8 +161,13 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	details.LatestCalendarDate = fv.LatestCalendarDate
 
 	// Main validation
-	cpResult := copier.Copy()
-	if cpResult == nil {
+	cpResult, err := copier.CopyWithOptions(
+		context.TODO(),
+		reader,
+		&empty.Writer{},
+		v.copierOptions(),
+	)
+	if err != nil {
 		result.FailureReason.Set("failed to validate feed")
 		return result, nil
 	}
@@ -350,10 +349,7 @@ func (v *Validator) getTimes(now time.Time, tzName string) (time.Time, time.Time
 	return now, nowLocal, nil
 }
 
-func (v *Validator) setupCopier(reader adapters.Reader) (*copier.Copier, error) {
-	writer := &empty.Writer{}
-	writer.Open()
-
+func (v *Validator) copierOptions() copier.Options {
 	// Prepare copier
 	cpOpts := v.Options.Options
 	cpOpts.AllowEntityErrors = true
@@ -383,12 +379,7 @@ func (v *Validator) setupCopier(reader adapters.Reader) (*copier.Copier, error) 
 		cpOpts.AddExtensionWithLevel(&rules.RouteNamesPrefixCheck{}, 1)
 		cpOpts.AddExtensionWithLevel(&rules.RouteNamesCharactersCheck{}, 1)
 	}
-
-	copier, err := copier.NewCopier(reader, writer, cpOpts)
-	if err != nil {
-		return nil, err
-	}
-	return copier, nil
+	return cpOpts
 }
 
 func copierEgToValidationEg(eg *copier.ValidationErrorGroup) *ValidationReportErrorGroup {

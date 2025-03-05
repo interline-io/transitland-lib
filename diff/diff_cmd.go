@@ -258,14 +258,18 @@ func checkDiff(reader adapters.Reader) (*diffAdapter, error) {
 		return nil, err
 	}
 	writer.WriterAdapter = df
-	copier, err := copier.NewCopier(reader, writer, copier.Options{
-		AllowEntityErrors:    true,
-		AllowReferenceErrors: true,
-	})
+	_, err = copier.CopyWithOptions(
+		context.TODO(),
+		reader,
+		writer,
+		copier.Options{
+			AllowEntityErrors:    true,
+			AllowReferenceErrors: true,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
-	copier.Copy()
 	return df, nil
 }
 

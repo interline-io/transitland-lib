@@ -86,13 +86,6 @@ func (cmd *CopyCommand) Run(ctx context.Context) error {
 
 	// Setup copier
 	cmd.Options.ExtensionDefs = cmd.extensionDefs
-	cp, err := copier.NewCopier(reader, writer, cmd.Options)
-	if err != nil {
-		return err
-	}
-	result := cp.Copy()
-	result.DisplaySummary()
-	result.DisplayErrors()
-	result.DisplayWarnings()
-	return nil
+	_, err = copier.CopyWithOptions(ctx, reader, writer, cmd.Options)
+	return err
 }

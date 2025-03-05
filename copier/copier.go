@@ -15,7 +15,6 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
-	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/filters"
@@ -122,6 +121,8 @@ type Options struct {
 	Quiet bool
 	// Default error handler
 	ErrorHandler ErrorHandler
+	// Entity selection strategy
+	Marker Marker
 	// Journey Pattern Key Function
 	JourneyPatternKey func(*gtfs.Trip) string
 	// Named extensions
@@ -157,17 +158,17 @@ func (opts *Options) AddExtensionWithLevel(e any, level int) {
 	opts.exts = append(opts.exts, optionExtLevel{ext: e, level: level})
 }
 
+////////////////////////////////////
+// Copier
+////////////////////////////////////
+
 // Copier copies from Reader to Writer
 type Copier struct {
 	// Default options
-	Options Options
+	options Options
 	// Reader and writer
 	reader adapters.Reader
 	writer adapters.Writer
-	// Entity selection strategy
-	Marker Marker
-	// Error handler, called for each entity
-	ErrorHandler ErrorHandler
 	// Exts
 	copierExtensions  []Extension
 	filters           []Filter
@@ -184,7 +185,7 @@ type Copier struct {
 }
 
 // Quiet copy
-func QuietCopy(reader adapters.Reader, writer adapters.Writer, optfns ...func(*Options)) error {
+func QuietCopy(ctx context.Context, reader adapters.Reader, writer adapters.Writer, optfns ...func(*Options)) (*Result, error) {
 	opts := Options{
 		ErrorLimit: -1,
 		Quiet:      true,
@@ -192,44 +193,39 @@ func QuietCopy(reader adapters.Reader, writer adapters.Writer, optfns ...func(*O
 	for _, f := range optfns {
 		f(&opts)
 	}
-	cp, err := NewCopier(reader, &empty.Writer{}, opts)
-	if err != nil {
-		return nil
-	}
-	if cpResult := cp.Copy(); cpResult.WriteError != nil {
-		return err
-	}
-	return nil
-}
-
-func (copier *Copier) Reader() adapters.Reader {
-	return copier.reader
-}
-
-func (copier *Copier) Writer() adapters.Writer {
-	return copier.writer
+	return CopyWithOptions(ctx, reader, writer, opts)
 }
 
 // Copy with options builder
-func Copy(reader adapters.Reader, writer adapters.Writer, optfns ...func(*Options)) error {
+func Copy(ctx context.Context, reader adapters.Reader, writer adapters.Writer, optfns ...func(*Options)) (*Result, error) {
 	opts := Options{}
 	for _, f := range optfns {
 		f(&opts)
 	}
-	cp, err := NewCopier(reader, &empty.Writer{}, opts)
+	return CopyWithOptions(ctx, reader, writer, opts)
+}
+
+func CopyWithOptions(ctx context.Context, reader adapters.Reader, writer adapters.Writer, opts Options) (*Result, error) {
+	cp, err := NewCopier(reader, writer, opts)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	if cpResult := cp.Copy(); cpResult.WriteError != nil {
-		return err
+	cpResult, err := cp.Copy()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	if !opts.Quiet {
+		cpResult.DisplaySummary()
+		cpResult.DisplayErrors()
+		cpResult.DisplayWarnings()
+	}
+	return cpResult, nil
 }
 
 // NewCopier creates and initializes a new Copier.
 func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*Copier, error) {
 	copier := &Copier{}
-	copier.Options = opts
+	copier.options = opts
 	copier.reader = reader
 	copier.writer = writer
 
@@ -244,25 +240,26 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	// Result
 	result := NewResult(opts.ErrorLimit)
 	copier.result = result
-	copier.ErrorHandler = opts.ErrorHandler
-	if copier.ErrorHandler == nil {
-		copier.ErrorHandler = result
+	if copier.options.ErrorHandler == nil {
+		copier.options.ErrorHandler = result
 	}
 
 	// Default Markers
-	copier.Marker = newYesMarker()
+	if copier.options.Marker == nil {
+		copier.options.Marker = newYesMarker()
+	}
 
 	// Default EntityMap
 	copier.EntityMap = tt.NewEntityMap()
 
 	// Set the default BatchSize
-	if copier.Options.BatchSize == 0 {
-		copier.Options.BatchSize = 1_000
+	if copier.options.BatchSize == 0 {
+		copier.options.BatchSize = 1_000
 	}
 
 	// Set the default Journey Pattern function
-	if copier.Options.JourneyPatternKey == nil {
-		copier.Options.JourneyPatternKey = journeyPatternKey
+	if copier.options.JourneyPatternKey == nil {
+		copier.options.JourneyPatternKey = journeyPatternKey
 	}
 
 	// Geometry cache
@@ -290,26 +287,26 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 	}
 
 	// Default extensions
-	if copier.Options.UseBasicRouteTypes {
+	if copier.options.UseBasicRouteTypes {
 		// Convert extended route types to basic route types
 		addExts = append(addExts, &filters.BasicRouteTypeFilter{})
 	}
-	if copier.Options.NormalizeTimezones {
+	if copier.options.NormalizeTimezones {
 		// Normalize timezones and apply agency/stop timezones where empty
 		addExts = append(addExts, &filters.NormalizeTimezoneFilter{})
 		addExts = append(addExts, &filters.ApplyParentTimezoneFilter{})
 	}
-	if copier.Options.SimplifyShapes > 0 {
+	if copier.options.SimplifyShapes > 0 {
 		// Simplify shapes.txt
-		addExts = append(addExts, &filters.SimplifyShapeFilter{SimplifyValue: copier.Options.SimplifyShapes})
+		addExts = append(addExts, &filters.SimplifyShapeFilter{SimplifyValue: copier.options.SimplifyShapes})
 	}
-	if copier.Options.NormalizeNetworks {
+	if copier.options.NormalizeNetworks {
 		// Convert routes.txt network_id to networks.txt/route_networks.txt
 		addExts = append(addExts, &filters.RouteNetworkIDFilter{})
 	} else {
 		addExts = append(addExts, &filters.RouteNetworkIDCompatFilter{})
 	}
-	if copier.Options.SimplifyCalendars && copier.Options.NormalizeServiceIDs {
+	if copier.options.SimplifyCalendars && copier.options.NormalizeServiceIDs {
 		// Simplify calendar and calendar dates
 		addExts = append(addExts, &filters.SimplifyCalendarFilter{})
 	}
@@ -339,6 +336,14 @@ func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*C
 		}
 	}
 	return copier, nil
+}
+
+func (copier *Copier) Reader() adapters.Reader {
+	return copier.reader
+}
+
+func (copier *Copier) Writer() adapters.Writer {
+	return copier.writer
 }
 
 func (copier *Copier) addExtension(ext any, level int) error {
@@ -391,7 +396,7 @@ func (copier *Copier) addExtension(ext any, level int) error {
 
 // Check if the entity is marked for copying.
 func (copier *Copier) isMarked(ent tt.Entity) bool {
-	return copier.Marker.IsMarked(ent.Filename(), ent.EntityID())
+	return copier.options.Marker.IsMarked(ent.Filename(), ent.EntityID())
 }
 
 // CopyEntity performs validation and saves errors and warnings.
@@ -478,14 +483,14 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	for _, err := range errs {
 		copier.log.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("error")
 	}
-	copier.ErrorHandler.HandleEntityErrors(ent, errs, warns)
+	copier.options.ErrorHandler.HandleEntityErrors(ent, errs, warns)
 
 	// Check strictness
-	if len(errs) > 0 && !copier.Options.AllowEntityErrors {
+	if len(errs) > 0 && !copier.options.AllowEntityErrors {
 		copier.result.SkipEntityErrorCount[efn]++
 		return errs[0]
 	}
-	if len(refErrs) > 0 && !copier.Options.AllowReferenceErrors {
+	if len(refErrs) > 0 && !copier.options.AllowReferenceErrors {
 		copier.result.SkipEntityReferenceCount[efn]++
 		return refErrs[0]
 	}
@@ -544,7 +549,7 @@ func (copier *Copier) writerAddEntities(okEnts []tt.Entity) error {
 //////////////////////////////////
 
 // Copy copies Base GTFS entities from the Reader to the Writer, returning the summary as a Result.
-func (copier *Copier) Copy() *Result {
+func (copier *Copier) Copy() (*Result, error) {
 	// Handle source errors and warnings
 	sourceErrors := map[string][]error{}
 
@@ -557,13 +562,13 @@ func (copier *Copier) Copy() *Result {
 		sourceErrors[fn] = append(sourceErrors[fn], err)
 	}
 	for fn, errs := range sourceErrors {
-		copier.ErrorHandler.HandleSourceErrors(fn, errs, nil)
+		copier.options.ErrorHandler.HandleSourceErrors(fn, errs, nil)
 	}
 
 	// Note that order is important!!
 	copier.log.Trace().Msg("Begin processing feed")
 	r := copier.reader
-	bs := copier.Options.BatchSize
+	bs := copier.options.BatchSize
 	fns := []func() error{
 		func() error { return batchCopy(copier, batchChan(r.Agencies(), 1, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Routes(), bs, nil)) },
@@ -614,29 +619,26 @@ func (copier *Copier) Copy() *Result {
 	}
 	for i := range fns {
 		if err := fns[i](); err != nil {
-			copier.result.WriteError = err
-			return copier.result
+			return copier.result, err
 		}
 	}
 
 	for _, e := range copier.copierExtensions {
 		copier.log.Trace().Msgf("Running extension Copy(): %T", e)
 		if err := e.Copy(copier); err != nil {
-			copier.result.WriteError = err
-			return copier.result
+			return copier.result, err
 		}
 	}
 
-	if copier.Options.CopyExtraFiles {
+	if copier.options.CopyExtraFiles {
 		copier.log.Trace().Msg("Copying extra files")
 		if err := copier.copyExtraFiles(); err != nil {
-			copier.result.WriteError = err
-			return copier.result
+			return copier.result, err
 		}
 	}
 
 	copier.log.Trace().Msg("Done")
-	return copier.result
+	return copier.result, nil
 }
 
 /////////////////////////////////////////
@@ -709,7 +711,7 @@ func (copier *Copier) copyCalendars() error {
 	}
 
 	// Simplify and and adjust StartDate and EndDate
-	for cals := range batchChan(copier.reader.Calendars(), copier.Options.BatchSize, nil) {
+	for cals := range batchChan(copier.reader.Calendars(), copier.options.BatchSize, nil) {
 		batchCals := make([]*gtfs.Calendar, 0, len(cals))
 		cdCount := 0
 		for _, cal := range cals {
@@ -768,7 +770,7 @@ func (copier *Copier) copyCalendars() error {
 		}
 		// Write Calendars
 		var okCals []tt.Entity
-		if copier.Options.NormalizeServiceIDs {
+		if copier.options.NormalizeServiceIDs {
 			var err error
 			okCals, err = copyEntities(copier, batchCals)
 			if err != nil {
@@ -835,7 +837,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	tripOffsets := map[string]int{} // used for deduplicating StopTimes
 
 	// Process trips and stop times
-	for stsGroup := range batchChan(copier.reader.StopTimesByTripID(), copier.Options.BatchSize, nil) {
+	for stsGroup := range batchChan(copier.reader.StopTimesByTripID(), copier.options.BatchSize, nil) {
 		count := 0
 		for _, sts := range stsGroup {
 			count += len(sts)
@@ -882,7 +884,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 
 			// Create missing shape if necessary
-			if !trip.ShapeID.Valid && copier.Options.CreateMissingShapes {
+			if !trip.ShapeID.Valid && copier.options.CreateMissingShapes {
 				// Note: if the trip has errors, may result in unused shapes!
 				if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID.Int()]; ok {
 					trip.ShapeID.Set(shapeid)
@@ -899,7 +901,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 
 			// Interpolate stop times
-			if copier.Options.InterpolateStopTimes {
+			if copier.options.InterpolateStopTimes {
 				if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip); err != nil {
 					trip.AddWarning(err)
 				} else {
@@ -908,7 +910,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 
 			// Set JourneyPattern
-			jkey := copier.Options.JourneyPatternKey(trip)
+			jkey := copier.options.JourneyPatternKey(trip)
 			if jpat, ok := journeyPatterns[jkey]; ok {
 				trip.JourneyPatternID.Set(jpat.key)
 				trip.JourneyPatternOffset.SetInt(trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival)
@@ -932,7 +934,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		// Process regular stop times
 		for _, ent := range okTrips {
 			if v, ok := ent.(*gtfs.Trip); ok {
-				if _, dedupOk := tripOffsets[v.TripID.Val]; dedupOk && copier.Options.DeduplicateJourneyPatterns {
+				if _, dedupOk := tripOffsets[v.TripID.Val]; dedupOk && copier.options.DeduplicateJourneyPatterns {
 					copier.log.Trace().Msgf("deduplicating: %s", v.TripID)
 					continue
 				}

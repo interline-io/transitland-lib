@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -80,15 +81,18 @@ func TestExample3(t *testing.T) {
 	if err != nil {
 		t.Fatalf("no writer available")
 	}
+
 	// Create a copier to stream, filter, and validate entities
-	cp, err := copier.NewCopier(reader, writer, copier.Options{})
+	result, err := copier.CopyWithOptions(
+		context.Background(),
+		reader,
+		writer,
+		copier.Options{},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := cp.Copy()
-	if result.WriteError != nil {
-		t.Fatalf("fatal copy error")
-	}
+
 	for _, err := range result.Errors {
 		fmt.Println("error:", err)
 	}

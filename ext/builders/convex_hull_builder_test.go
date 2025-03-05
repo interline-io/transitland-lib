@@ -65,12 +65,8 @@ func TestConvexHullBuilder(t *testing.T) {
 	for groupName, testGroup := range groups {
 		t.Run(groupName, func(t *testing.T) {
 			e := NewConvexHullBuilder()
-			cp, writer, err := newMockCopier(testGroup.URL, e)
+			_, writer, err := newMockCopier(testGroup.URL, e)
 			if err != nil {
-				t.Fatal(err)
-			}
-			cpr := cp.Copy()
-			if cpr.WriteError != nil {
 				t.Fatal(err)
 			}
 			fvGeoms := []*FeedVersionGeometry{}

@@ -1,6 +1,7 @@
 package rt
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,13 +21,8 @@ func NewValidatorFromReader(reader adapters.Reader) (*Validator, error) {
 	fi := NewValidator()
 	cpOpts := copier.Options{}
 	cpOpts.AddExtension(fi)
-	cp, err := copier.NewCopier(reader, &empty.Writer{}, copier.Options{})
-	if err != nil {
+	if _, err := copier.CopyWithOptions(context.Background(), reader, &empty.Writer{}, cpOpts); err != nil {
 		return nil, err
-	}
-	cpResult := cp.Copy()
-	if cpResult.WriteError != nil {
-		return nil, cpResult.WriteError
 	}
 	return fi, nil
 }
@@ -145,21 +141,21 @@ func TestValidatorErrors(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			// Read static
 			r, err := tlcsv.NewReader(sor(tc.static, rp("ct.zip")))
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			// Validate
 			ex := NewValidator()
 			cpOpts := copier.Options{}
 			cpOpts.AddExtension(ex)
-			cp, err := copier.NewCopier(r, &empty.Writer{}, cpOpts)
-			if err != nil {
+			if _, err := copier.CopyWithOptions(context.Background(), r, &empty.Writer{}, cpOpts); err != nil {
 				t.Fatal(err)
 			}
-			result := cp.Copy()
-			_ = result
+
 			// Validate feed message
 			rterrs := ex.ValidateFeedMessage(msg, nil)
 

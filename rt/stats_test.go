@@ -1,6 +1,7 @@
 package rt
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -24,12 +25,9 @@ func TestTripUpdateStats(t *testing.T) {
 	ex := NewValidator()
 	cpOpts := copier.Options{}
 	cpOpts.AddExtension(ex)
-	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
-	if err != nil {
+	if _, err := copier.CopyWithOptions(context.Background(), r, &empty.Writer{}, cpOpts); err != nil {
 		t.Fatal(err)
 	}
-	result := cp.Copy()
-	_ = result
 
 	// Tuesday, Nov 7 2023 17:30:00
 	tz, _ := time.LoadLocation("America/Los_Angeles")
@@ -129,12 +127,9 @@ func TestVehiclePositionStats(t *testing.T) {
 	ex := NewValidator()
 	cpOpts := copier.Options{}
 	cpOpts.AddExtension(ex)
-	cp, err := copier.NewCopier(r, &empty.Writer{}, cpOpts)
-	if err != nil {
+	if _, err := copier.CopyWithOptions(context.Background(), r, &empty.Writer{}, cpOpts); err != nil {
 		t.Fatal(err)
 	}
-	result := cp.Copy()
-	_ = result
 
 	// Tuesday, Nov 7 2023 17:30:00
 	tz, _ := time.LoadLocation("America/Los_Angeles")
