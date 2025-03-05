@@ -96,22 +96,22 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 		return fetchValidationResult, nil
 	}
 
-	// If a second tmpfile is created, copy it and overwrite the input tmp file
+	// If a second tmpfile is created, copy it out since it will be deleted on reader.Close()
 	fetchValidationResult.UploadTmpfile = reader.Path()
 	fetchValidationResult.UploadFilename = fmt.Sprintf("%s.zip", fv.SHA1)
 	if readerPath := reader.Path(); readerPath != fn {
 		// Set fragment to empty
 		fv.Fragment.Set("")
 		// This file will be removed after upload
-		uploadTmpfile, err := os.CreateTemp("", "nested")
+		uploadTmpfile, err := os.CreateTemp("", "fetch-nested")
 		if err != nil {
 			// Fatal error
 			return fetchValidationResult, err
 		}
 		uploadTmpfile.Close() // close immediately
 		fetchValidationResult.UploadTmpfile = uploadTmpfile.Name()
-		log.For(ctx).Info().Str("dst", fetchValidationResult.UploadTmpfile).Str("src", readerPath).Msg("fetch: copying extracted nested zip file for upload")
 		// Copy file to file
+		log.For(ctx).Info().Str("dst", fetchValidationResult.UploadTmpfile).Str("src", readerPath).Msg("fetch: copying extracted nested zip file for upload")
 		if err := copyFileContents(fetchValidationResult.UploadTmpfile, readerPath); err != nil {
 			// Fatal err
 			return fetchValidationResult, err
