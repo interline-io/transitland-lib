@@ -206,11 +206,11 @@ func Copy(ctx context.Context, reader adapters.Reader, writer adapters.Writer, o
 }
 
 func CopyWithOptions(ctx context.Context, reader adapters.Reader, writer adapters.Writer, opts Options) (*Result, error) {
-	cp, err := NewCopier(reader, writer, opts)
+	cp, err := NewCopier(ctx, reader, writer, opts)
 	if err != nil {
 		return nil, err
 	}
-	cpResult, err := cp.Copy()
+	cpResult, err := cp.Copy(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -223,14 +223,13 @@ func CopyWithOptions(ctx context.Context, reader adapters.Reader, writer adapter
 }
 
 // NewCopier creates and initializes a new Copier.
-func NewCopier(reader adapters.Reader, writer adapters.Writer, opts Options) (*Copier, error) {
+func NewCopier(ctx context.Context, reader adapters.Reader, writer adapters.Writer, opts Options) (*Copier, error) {
 	copier := &Copier{}
 	copier.options = opts
 	copier.reader = reader
 	copier.writer = writer
 
 	// Logging
-	ctx := context.TODO()
 	if opts.Quiet {
 		copier.log = log.For(ctx).Level(zerolog.ErrorLevel).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
 	} else {
@@ -549,7 +548,7 @@ func (copier *Copier) writerAddEntities(okEnts []tt.Entity) error {
 //////////////////////////////////
 
 // Copy copies Base GTFS entities from the Reader to the Writer, returning the summary as a Result.
-func (copier *Copier) Copy() (*Result, error) {
+func (copier *Copier) Copy(ctx context.Context) (*Result, error) {
 	// Handle source errors and warnings
 	sourceErrors := map[string][]error{}
 

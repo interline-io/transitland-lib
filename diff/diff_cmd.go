@@ -89,21 +89,21 @@ func (cmd *Command) Run(ctx context.Context) error {
 	var df2 *diffAdapter
 	if cmd.RawDiff {
 		var err error
-		df1, err = checkDiffRaw(readerA, cmd.CheckFiles)
+		df1, err = checkDiffRaw(ctx, readerA, cmd.CheckFiles)
 		if err != nil {
 			return err
 		}
-		df2, err = checkDiffRaw(readerB, cmd.CheckFiles)
+		df2, err = checkDiffRaw(ctx, readerB, cmd.CheckFiles)
 		if err != nil {
 			return err
 		}
 	} else {
 		var err error
-		df1, err = checkDiff(readerA)
+		df1, err = checkDiff(ctx, readerA)
 		if err != nil {
 			return err
 		}
-		df2, err = checkDiff(readerB)
+		df2, err = checkDiff(ctx, readerB)
 		if err != nil {
 			return err
 		}
@@ -207,7 +207,7 @@ type canFileInfos interface {
 	FileInfos() ([]os.FileInfo, error)
 }
 
-func checkDiffRaw(reader adapters.Reader, checkFiles []string) (*diffAdapter, error) {
+func checkDiffRaw(_ context.Context, reader adapters.Reader, checkFiles []string) (*diffAdapter, error) {
 	v, ok := reader.(*tlcsv.Reader)
 	if !ok {
 		return nil, errors.New("must be csv input")
@@ -251,7 +251,7 @@ func checkDiffRaw(reader adapters.Reader, checkFiles []string) (*diffAdapter, er
 	return df, nil
 }
 
-func checkDiff(reader adapters.Reader) (*diffAdapter, error) {
+func checkDiff(ctx context.Context, reader adapters.Reader) (*diffAdapter, error) {
 	df := newDiffAdapter()
 	writer, err := tlcsv.NewWriter("")
 	if err != nil {
@@ -259,7 +259,7 @@ func checkDiff(reader adapters.Reader) (*diffAdapter, error) {
 	}
 	writer.WriterAdapter = df
 	_, err = copier.CopyWithOptions(
-		context.TODO(),
+		ctx,
 		reader,
 		writer,
 		copier.Options{

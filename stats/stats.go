@@ -38,14 +38,18 @@ func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 	fvslBuilder := NewFeedVersionServiceLevelBuilder()
 	fvswBuilder := NewFeedVersionServiceWindowBuilder()
 	osidBuilder := NewFeedVersionOnestopIDBuilder()
-	if _, err := copier.QuietCopy(context.TODO(), reader, &empty.Writer{}, func(o *copier.Options) {
-		o.Quiet = false
-		o.NoShapeCache = true
-		o.NoValidators = true
-		o.AddExtension(fvslBuilder)
-		o.AddExtension(fvswBuilder)
-		o.AddExtension(osidBuilder)
-	}); err != nil {
+	if _, err := copier.QuietCopy(
+		context.TODO(),
+		reader, &empty.Writer{},
+		func(o *copier.Options) {
+			o.Quiet = false
+			o.NoShapeCache = true
+			o.NoValidators = true
+			o.AddExtension(fvslBuilder)
+			o.AddExtension(fvswBuilder)
+			o.AddExtension(osidBuilder)
+		},
+	); err != nil {
 		return ret, err
 	}
 
