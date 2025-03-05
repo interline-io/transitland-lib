@@ -2,6 +2,7 @@
 package rt
 
 import (
+	"bytes"
 	"context"
 	"os"
 
@@ -26,7 +27,8 @@ func FlexDecode(data []byte, msg protoreflect.ProtoMessage) error {
 
 // ReadURL opens a message from a url.
 func ReadURL(ctx context.Context, address string, opts ...request.RequestOption) (*pb.FeedMessage, error) {
-	fr, err := request.AuthenticatedRequest(ctx, address, opts...)
+	var out bytes.Buffer
+	fr, err := request.AuthenticatedRequestToWriter(ctx, &out, address, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +36,7 @@ func ReadURL(ctx context.Context, address string, opts ...request.RequestOption)
 		return nil, fr.FetchError
 	}
 	msg := pb.FeedMessage{}
-	data := fr.Data
-	if err := FlexDecode(data, &msg); err != nil {
+	if err := FlexDecode(out.Bytes(), &msg); err != nil {
 		return nil, err
 	}
 	return &msg, nil

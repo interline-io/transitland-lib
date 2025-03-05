@@ -117,13 +117,16 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	fr, err := request.AuthenticatedRequestDownload(context.TODO(), url, adapter.reqOpts...)
+	fn, fr, err := request.AuthenticatedRequestDownload(context.TODO(), url, adapter.reqOpts...)
 	if err != nil {
 		return err
 	}
+	if fr.FetchError != nil {
+		return fr.FetchError
+	}
 	// Add internal path prefix back
 	adapter.TmpZipAdapter = TmpZipAdapter{
-		tmpfilepath:    fr.Filename,
+		tmpfilepath:    fn,
 		internalPrefix: fragment,
 	}
 	return adapter.TmpZipAdapter.Open()

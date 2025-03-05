@@ -1,7 +1,6 @@
 package request
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha1"
 	"errors"
@@ -27,8 +26,6 @@ type Uploader interface {
 }
 
 type FetchResponse struct {
-	Filename       string
-	Data           []byte
 	ResponseSize   int
 	ResponseCode   int
 	ResponseTimeMs int
@@ -139,43 +136,26 @@ func WithAuth(secret dmfr.Secret, auth dmfr.FeedAuthorization) func(req *Request
 
 // AuthenticatedRequestDownload is similar to AuthenticatedRequest but writes to a temporary file.
 // Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
-func AuthenticatedRequestDownload(ctx context.Context, address string, opts ...RequestOption) (FetchResponse, error) {
+func AuthenticatedRequestDownload(ctx context.Context, address string, opts ...RequestOption) (string, FetchResponse, error) {
 	// Create temp file
 	tmpfile, err := os.CreateTemp("", "fetch")
 	if err != nil {
-		return FetchResponse{}, errors.New("could not create temporary file")
+		return "", FetchResponse{}, errors.New("could not create temporary file")
 	}
 	defer tmpfile.Close()
 
 	// Download
-	fr, err := authenticatedRequest(ctx, tmpfile, address, opts...)
+	fr, err := AuthenticatedRequestToWriter(ctx, tmpfile, address, opts...)
 	if err != nil {
-		return fr, err
+		return "", fr, err
 	}
 
 	// Collect data
-	fr.Filename = tmpfile.Name()
-	return fr, nil
+	return tmpfile.Name(), fr, nil
 }
 
-// AuthenticatedRequestContext fetches a url using a secret and auth description. Returns []byte, sha1, size, response code.
-// Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
-func AuthenticatedRequest(ctx context.Context, address string, opts ...RequestOption) (FetchResponse, error) {
-	// Create buffer
-	var buf bytes.Buffer
-
-	// Download
-	fr, err := authenticatedRequest(ctx, &buf, address, opts...)
-	if err != nil {
-		return fr, err
-	}
-
-	// Collect bytes
-	fr.Data = buf.Bytes()
-	return fr, nil
-}
-
-func authenticatedRequest(ctx context.Context, out io.Writer, address string, opts ...RequestOption) (FetchResponse, error) {
+// AuthenticatedRequestContext fetches a url using a secret and auth description.
+func AuthenticatedRequestToWriter(ctx context.Context, out io.Writer, address string, opts ...RequestOption) (FetchResponse, error) {
 	// 10 minute timeout
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(time.Second*600))
 	defer cancel()

@@ -31,12 +31,12 @@ type RTFetchValidator struct {
 	Result RTFetchResult
 }
 
-func (r *RTFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fr request.FetchResponse, opts Options) (FetchValidationResult, error) {
+func (r *RTFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fn string, fr request.FetchResponse, opts Options) (FetchValidationResult, error) {
 	// Validate
 	v := FetchValidationResult{}
-	v.UploadTmpfile = fr.Filename
+	v.UploadTmpfile = fn
 	v.UploadFilename = fmt.Sprintf("%s.pb", fr.ResponseSHA1)
 	v.Found = false
-	r.Result.Message, v.Error = rt.ReadFile(fr.Filename)
+	r.Result.Message, v.Error = rt.ReadFile(fn)
 	return v, nil
 }

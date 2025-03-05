@@ -45,17 +45,16 @@ type StaticFetchValidator struct {
 	FeedVersionValidatorResult *validator.Result
 }
 
-func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fetchResponse request.FetchResponse, opts Options) (FetchValidationResult, error) {
-	tmpfilepath := fetchResponse.Filename
+func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fn string, fetchResponse request.FetchResponse, opts Options) (FetchValidationResult, error) {
 	fetchValidationResult := FetchValidationResult{}
 
 	// Open reader
 	fragment := ""
 	if a := strings.SplitN(opts.FeedURL, "#", 2); len(a) > 1 {
-		tmpfilepath = tmpfilepath + "#" + a[1]
+		fn = fn + "#" + a[1]
 		fragment = a[1]
 	}
-	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewZipAdapter(tmpfilepath))
+	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewZipAdapter(fn))
 	if err != nil {
 		fetchValidationResult.Error = err
 		return fetchValidationResult, nil
@@ -99,7 +98,7 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 	// If a second tmpfile is created, copy it and overwrite the input tmp file
 	fetchValidationResult.UploadTmpfile = reader.Path()
 	fetchValidationResult.UploadFilename = fv.File
-	if readerPath := reader.Path(); readerPath != fetchResponse.Filename {
+	if readerPath := reader.Path(); readerPath != fn {
 		// Set fragment to empty
 		fv.Fragment.Set("")
 		// Copy file
