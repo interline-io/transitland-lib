@@ -17,21 +17,26 @@ type RTFetchResult struct {
 }
 
 func RTFetch(ctx context.Context, atx tldb.Adapter, opts Options) (RTFetchResult, error) {
-	ret := RTFetchResult{}
-	cb := func(fr request.FetchResponse) (validationResponse, error) {
-		// Validate
-		v := validationResponse{}
-		v.UploadTmpfile = fr.Filename
-		v.UploadFilename = fmt.Sprintf("%s.pb", fr.ResponseSHA1)
-		v.Found = false
-		ret.Message, v.Error = rt.ReadFile(fr.Filename)
-		return v, nil
-	}
-	result, err := ffetch(ctx, atx, opts, cb)
+	cb := &RTFetchValidator{}
+	result, err := Fetch(ctx, atx, opts, cb)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Msg("fatal error during rt fetch")
 	}
-	ret.Result = result
-	ret.Error = err
-	return ret, err
+	cb.Result.Result = result
+	cb.Result.Error = err
+	return cb.Result, err
+}
+
+type RTFetchValidator struct {
+	Result RTFetchResult
+}
+
+func (r *RTFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fr request.FetchResponse, opts Options) (FetchValidationResult, error) {
+	// Validate
+	v := FetchValidationResult{}
+	v.UploadTmpfile = fr.Filename
+	v.UploadFilename = fmt.Sprintf("%s.pb", fr.ResponseSHA1)
+	v.Found = false
+	r.Result.Message, v.Error = rt.ReadFile(fr.Filename)
+	return v, nil
 }

@@ -19,10 +19,10 @@ import (
 )
 
 type FetchCommandResult struct {
-	Result           fetch.Result
-	FeedVersion      *dmfr.FeedVersion
-	ValidationResult *validator.Result
-	FatalError       error
+	Result                     fetch.Result
+	FeedVersion                *dmfr.FeedVersion
+	FeedVersionValidatorResult *validator.Result
+	FatalError                 error
 }
 
 // FetchCommand fetches feeds defined a DMFR database.
@@ -59,6 +59,7 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
+	fl.BoolVar(&cmd.Options.StrictValidation, "strict", false, "Reject feeds with validation errors")
 	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
 	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
@@ -158,20 +159,8 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			return err
 		}
 		// Prepare options for this fetch
-		opts := fetch.Options{
-			FeedID:                  feed.ID,
-			FeedURL:                 cmd.Options.FeedURL,
-			FetchedAt:               cmd.Options.FetchedAt,
-			URLType:                 cmd.Options.URLType,
-			Storage:                 cmd.Options.Storage,
-			IgnoreDuplicateContents: cmd.Options.IgnoreDuplicateContents,
-			AllowFTPFetch:           cmd.Options.AllowFTPFetch,
-			AllowS3Fetch:            cmd.Options.AllowS3Fetch,
-			AllowLocalFetch:         cmd.Options.AllowLocalFetch,
-			Secrets:                 cmd.Options.Secrets,
-			SaveValidationReport:    cmd.Options.SaveValidationReport,
-			ValidationReportStorage: cmd.Options.ValidationReportStorage,
-		}
+		opts := cmd.Options // copy
+		opts.FeedID = feed.ID
 		opts.URLType = "manual"
 		if opts.FeedURL == "" {
 			opts.URLType = "static_current"
@@ -207,10 +196,12 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 	for result := range results {
 		cmd.Results = append(cmd.Results, result)
 		if result.FatalError != nil {
+			// A fatal error occurred, always exit with error
 			fatalError = result.FatalError
 		} else if result.Result.FetchError != nil {
 			fetchErrs++
 			if cmd.Fail {
+				// Exit with error if any fetch is not successful
 				fatalError = result.Result.FetchError
 			}
 		} else if result.Result.Found {
@@ -244,17 +235,17 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		// Fetch
 		var result fetch.StaticFetchResult
 		t := time.Now()
-		fetchError := adapter.Tx(func(atx tldb.Adapter) error {
-			var fetchError error
-			result, fetchError = fetch.StaticFetch(ctx, atx, job.Options)
-			return fetchError
+		fatalError := adapter.Tx(func(atx tldb.Adapter) error {
+			var fatalError error
+			result, fatalError = fetch.StaticFetch(ctx, atx, job.Options)
+			return fatalError
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 
 		// Log result
 		fv := result.FeedVersion
-		if fetchError != nil {
-			log.For(ctx).Error().Err(fetchError).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, fetchError.Error(), t2)
+		if fatalError != nil {
+			log.For(ctx).Error().Err(fatalError).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, fatalError.Error(), t2)
 		} else if result.FetchError != nil {
 			log.For(ctx).Error().Err(result.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, result.FetchError.Error(), t2)
 		} else if fv != nil && result.Found {
@@ -265,10 +256,10 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 			log.For(ctx).Info().Msgf("Feed %s (id:%d): url: %s invalid result (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, t2)
 		}
 		results <- FetchCommandResult{
-			Result:           result.Result,
-			FeedVersion:      result.FeedVersion,
-			ValidationResult: result.ValidationResult,
-			FatalError:       fetchError,
+			Result:                     result.Result,
+			FeedVersion:                result.FeedVersion,
+			FeedVersionValidatorResult: result.FeedVersionValidatorResult,
+			FatalError:                 fatalError,
 		}
 	}
 	wg.Done()

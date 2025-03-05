@@ -29,6 +29,7 @@ type Options struct {
 	CreatedBy               tt.String
 	Name                    tt.String
 	Description             tt.String
+	StrictValidation        bool
 	SaveValidationReport    bool
 	ValidationReportStorage string
 }
@@ -47,7 +48,7 @@ type Result struct {
 	FeedVersionID  tt.Int
 }
 
-type validationResponse struct {
+type FetchValidationResult struct {
 	UploadTmpfile  string
 	UploadFilename string
 	Error          error
@@ -55,11 +56,16 @@ type validationResponse struct {
 	FeedVersionID  tt.Int
 }
 
-type fetchCb func(request.FetchResponse) (validationResponse, error)
+type FetchValidator interface {
+	ValidateResponse(context.Context, tldb.Adapter, request.FetchResponse, Options) (FetchValidationResult, error)
+}
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
-func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
+func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidator) (Result, error) {
 	result := Result{URL: opts.FeedURL}
+	if cb == nil {
+		return result, errors.New("no validator provided")
+	}
 	feed := dmfr.Feed{}
 	if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
 		return result, err
@@ -106,7 +112,7 @@ func ffetch(ctx context.Context, atx tldb.Adapter, opts Options, cb fetchCb) (Re
 	uploadFile := ""
 	uploadDest := ""
 	if result.FetchError == nil {
-		vr, err := cb(fetchResponse)
+		vr, err := cb.ValidateResponse(ctx, atx, fetchResponse, opts)
 		if err != nil {
 			return result, err
 		}
