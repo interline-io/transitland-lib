@@ -28,7 +28,7 @@ func FlexDecode(data []byte, msg protoreflect.ProtoMessage) error {
 // ReadURL opens a message from a url.
 func ReadURL(ctx context.Context, address string, opts ...request.RequestOption) (*pb.FeedMessage, error) {
 	var out bytes.Buffer
-	fr, err := request.AuthenticatedRequestToWriter(ctx, &out, address, opts...)
+	fr, err := request.AuthenticatedRequest(ctx, &out, address, opts...)
 	if err != nil {
 		return nil, err
 	}

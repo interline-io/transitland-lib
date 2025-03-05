@@ -120,7 +120,7 @@ func TestAuthorizedRequest(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			var out bytes.Buffer
-			fr, err := AuthenticatedRequestToWriter(ctx, &out, ts.URL+tc.url, WithAuth(tc.secret, tc.auth))
+			fr, err := AuthenticatedRequest(ctx, &out, ts.URL+tc.url, WithAuth(tc.secret, tc.auth))
 			if err != nil {
 				t.Error(err)
 				return

@@ -137,21 +137,20 @@ func (adapter *URLAdapter) Open() error {
 // Temporary zip adapter
 
 func NewTmpZipAdapterFromReader(reader io.Reader, fragment string) (*TmpZipAdapter, error) {
-	// Read stream to a temporary file
+	// Create temp file
 	tmpfile, err := os.CreateTemp("", "gtfs.zip")
 	if err != nil {
 		return nil, err
 	}
+	defer tmpfile.Close()
+
+	// Read stream to a temporary file
 	if _, err := io.Copy(tmpfile, reader); err != nil {
-		return nil, err
-	}
-	tfn := tmpfile.Name()
-	if err := tmpfile.Close(); err != nil {
 		return nil, err
 	}
 	// Add internal path prefix back
 	adapter := TmpZipAdapter{
-		tmpfilepath:    tfn, // delete on close
+		tmpfilepath:    tmpfile.Name(), // delete on close
 		internalPrefix: fragment,
 	}
 	return &adapter, nil
@@ -218,6 +217,7 @@ func (adapter *ZipAdapter) Open() error {
 		adapter.internalPrefix = pfx
 	} else if strings.HasSuffix(adapter.internalPrefix, ".zip") {
 		// If the internal prefix is a zip, extract this to a temp file
+		// FIXME: Does the outer temporary file get cleaned up?
 		pf := adapter.internalPrefix
 		adapter.internalPrefix = ""
 		tmpfilepath := ""

@@ -145,7 +145,7 @@ func AuthenticatedRequestDownload(ctx context.Context, address string, opts ...R
 	defer tmpfile.Close()
 
 	// Download
-	fr, err := AuthenticatedRequestToWriter(ctx, tmpfile, address, opts...)
+	fr, err := AuthenticatedRequest(ctx, tmpfile, address, opts...)
 	if err != nil {
 		return "", fr, err
 	}
@@ -155,7 +155,7 @@ func AuthenticatedRequestDownload(ctx context.Context, address string, opts ...R
 }
 
 // AuthenticatedRequestContext fetches a url using a secret and auth description.
-func AuthenticatedRequestToWriter(ctx context.Context, out io.Writer, address string, opts ...RequestOption) (FetchResponse, error) {
+func AuthenticatedRequest(ctx context.Context, out io.Writer, address string, opts ...RequestOption) (FetchResponse, error) {
 	// 10 minute timeout
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(time.Second*600))
 	defer cancel()
