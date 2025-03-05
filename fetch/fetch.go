@@ -57,7 +57,7 @@ type FetchValidationResult struct {
 }
 
 type FetchValidator interface {
-	ValidateResponse(context.Context, tldb.Adapter, request.FetchResponse, Options) (FetchValidationResult, error)
+	ValidateResponse(context.Context, tldb.Adapter, string, request.FetchResponse, Options) (FetchValidationResult, error)
 }
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
@@ -96,15 +96,25 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 		}
 		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
 	}
-	fetchResponse, err := request.AuthenticatedRequestDownload(ctx, opts.FeedURL, reqOpts...)
+
+	// Fetch
+	tmpfile, fetchResponse, fetchFatalError := request.AuthenticatedRequestDownload(ctx, opts.FeedURL, reqOpts...)
+
+	// Cleanup any temporary files
+	if tmpfile != "" {
+		defer os.Remove(tmpfile)
+	}
+
+	// Setup result
 	result.FetchError = fetchResponse.FetchError
 	result.ResponseCode = fetchResponse.ResponseCode
 	result.ResponseSize = fetchResponse.ResponseSize
 	result.ResponseSHA1 = fetchResponse.ResponseSHA1
 	result.ResponseTimeMs = fetchResponse.ResponseTimeMs
 	result.ResponseTtfbMs = fetchResponse.ResponseTtfbMs
-	if err != nil {
-		return result, nil
+	if fetchFatalError != nil {
+		// Fatal error
+		return result, fetchFatalError
 	}
 
 	// Fetch OK, validate
@@ -112,7 +122,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 	uploadFile := ""
 	uploadDest := ""
 	if result.FetchError == nil {
-		vr, err := cb.ValidateResponse(ctx, atx, fetchResponse, opts)
+		vr, err := cb.ValidateResponse(ctx, atx, tmpfile, fetchResponse, opts)
 		if err != nil {
 			return result, err
 		}
@@ -128,11 +138,8 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 		}
 	}
 
-	// Cleanup any temporary files
-	if fetchResponse.Filename != "" {
-		defer os.Remove(fetchResponse.Filename)
-	}
-	if uploadFile != "" && uploadFile != fetchResponse.Filename {
+	// Cleanup any other temporary files
+	if uploadFile != "" && uploadFile != tmpfile {
 		defer os.Remove(uploadFile)
 	}
 

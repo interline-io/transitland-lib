@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -118,7 +119,8 @@ func TestAuthorizedRequest(t *testing.T) {
 	ctx := context.TODO()
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			fr, err := AuthenticatedRequest(ctx, ts.URL+tc.url, WithAuth(tc.secret, tc.auth))
+			var out bytes.Buffer
+			fr, err := AuthenticatedRequest(ctx, &out, ts.URL+tc.url, WithAuth(tc.secret, tc.auth))
 			if err != nil {
 				t.Error(err)
 				return
@@ -134,7 +136,7 @@ func TestAuthorizedRequest(t *testing.T) {
 			}
 
 			var result map[string]interface{}
-			if err := json.Unmarshal(fr.Data, &result); err != nil {
+			if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 				t.Error(err)
 				return
 			}
