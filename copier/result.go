@@ -119,7 +119,6 @@ func newValidationError(err error) ValidationError {
 
 // Result stores Copier results and statistics.
 type Result struct {
-	WriteError                error
 	InterpolatedStopTimeCount int
 	EntityCount               map[string]int
 	GeneratedCount            map[string]int
@@ -238,13 +237,6 @@ func (cr *Result) HandleEntityErrors(ent tt.Entity, errs []error, warns []error)
 // DisplayErrors shows individual errors in log.Info
 func (cr *Result) DisplayErrors() {
 	ctx := context.TODO()
-	if cr.WriteError == nil && len(cr.Errors) == 0 {
-		log.For(ctx).Info().Msgf("No errors")
-		return
-	}
-	if cr.WriteError != nil {
-		log.For(ctx).Info().Msgf("Write error: %s", cr.WriteError.Error())
-	}
 	if len(cr.Errors) > 0 {
 		log.For(ctx).Info().Msgf("Errors:")
 		for _, v := range cr.Errors {

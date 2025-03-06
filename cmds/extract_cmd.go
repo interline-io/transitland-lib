@@ -23,9 +23,9 @@ type ExtractCommand struct {
 	// Default options
 	copier.Options
 	// Typical DMFR options
-	fvid       int
-	create     bool
-	extensions []string
+	fvid          int
+	create        bool
+	extensionDefs []string
 	// extract specific arguments
 	Prefix            string
 	extractAgencies   []string
@@ -89,7 +89,7 @@ func (cmd *ExtractCommand) HelpArgs() string {
 }
 
 func (cmd *ExtractCommand) AddFlags(fl *pflag.FlagSet) {
-	fl.StringArrayVar(&cmd.extensions, "ext", nil, "Include GTFS Extension")
+	fl.StringArrayVar(&cmd.extensionDefs, "ext", nil, "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
 	// Copy options
@@ -161,18 +161,13 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 		}
 	}
 
-	// Setup copier
-	cmd.Options.Extensions = cmd.extensions
-	cp, err := copier.NewCopier(reader, writer, cmd.Options)
-	if err != nil {
-		return err
-	}
-
+	// Setup options
+	cmd.Options.ExtensionDefs = cmd.extensionDefs
 	if cmd.Prefix != "" {
 		pfx, _ := filters.NewPrefixFilter()
 		pfx.PrefixAll = true
 		pfx.SetPrefix(0, cmd.Prefix)
-		cp.AddExtension(pfx)
+		cmd.Options.AddExtension(pfx)
 	}
 
 	// Create SetterFilter
@@ -188,7 +183,7 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 			}
 			tx.AddValue(setv[0], setv[1], setv[2], setv[3])
 		}
-		cp.AddExtension(tx)
+		cmd.Options.AddExtension(tx)
 	}
 
 	// Create Marker
@@ -261,13 +256,10 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 		if err := em.Filter(reader); err != nil {
 			return err
 		}
-		cp.Marker = &em
+		cmd.Options.Marker = &em
 		log.For(ctx).Debug().Msgf("Graph loading complete")
 	}
 
-	// Copy
-	result := cp.Copy()
-	result.DisplaySummary()
-	result.DisplayErrors()
-	return nil
+	_, err = copier.CopyWithOptions(ctx, reader, writer, cmd.Options)
+	return err
 }

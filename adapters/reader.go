@@ -1,6 +1,9 @@
 package adapters
 
-import "github.com/interline-io/transitland-lib/gtfs"
+import (
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
+)
 
 // Reader is the main interface for reading GTFS data
 type Reader interface {
@@ -22,4 +25,11 @@ type GtfsReader interface {
 	gtfs.Reader
 	StopTimesByTripID(...string) chan []gtfs.StopTime
 	ShapesByShapeID(...string) chan []gtfs.Shape
+}
+
+type EntityCopier interface {
+	CopyEntity(ent tt.Entity) error
+	CopyEntities(ents []tt.Entity) error
+	Reader() Reader
+	Writer() Writer
 }

@@ -4,7 +4,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
@@ -98,7 +98,7 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 	return nil
 }
 
-func (pp *RouteHeadwayBuilder) Copy(copier *copier.Copier) error {
+func (pp *RouteHeadwayBuilder) Copy(copier adapters.EntityCopier) error {
 	for rid, routeDepartures := range pp.routeDepartures {
 		// Both directions will use the same day
 		departuresByService := map[string]int{}

@@ -136,10 +136,12 @@ func TestE2E(t *testing.T) {
 				FeedIDs:    []string{feedName},
 				Workers:    1,
 				Adapter:    atx,
-				Options: fetch.Options{
-					FeedURL:   ts.URL + "/" + tc.fn,
-					Storage:   tmpdir,
-					FetchedAt: time.Now(),
+				Options: fetch.StaticFetchOptions{
+					Options: fetch.Options{
+						FeedURL:   ts.URL + "/" + tc.fn,
+						Storage:   tmpdir,
+						FetchedAt: time.Now(),
+					},
 				},
 			}
 			if err := fetch.Run(ctx); err != nil {

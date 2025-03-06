@@ -1,7 +1,7 @@
 package plus
 
 import (
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
@@ -45,7 +45,7 @@ func (ext *Ext) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 }
 
 // Copy uses the Copier to copy Entities.
-func (ext *Ext) Copy(c *copier.Copier) error {
+func (ext *Ext) Copy(c adapters.EntityCopier) error {
 	if err := copyCalendarAttributes(c); err != nil {
 		return err
 	}
@@ -79,9 +79,9 @@ func (ext *Ext) Copy(c *copier.Copier) error {
 	return nil
 }
 
-func copyCalendarAttributes(copier *copier.Copier) error {
+func copyCalendarAttributes(copier adapters.EntityCopier) error {
 	out := make(chan CalendarAttribute, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -90,9 +90,9 @@ func copyCalendarAttributes(copier *copier.Copier) error {
 	return nil
 }
 
-func copyRiderCategories(copier *copier.Copier) error {
+func copyRiderCategories(copier adapters.EntityCopier) error {
 	out := make(chan PlusRiderCategory, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -101,9 +101,9 @@ func copyRiderCategories(copier *copier.Copier) error {
 	return nil
 }
 
-func copyFareRiderCategories(copier *copier.Copier) error {
+func copyFareRiderCategories(copier adapters.EntityCopier) error {
 	out := make(chan FareRiderCategory, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -112,9 +112,9 @@ func copyFareRiderCategories(copier *copier.Copier) error {
 	return nil
 }
 
-func copyFarezoneAttributes(copier *copier.Copier) error {
+func copyFarezoneAttributes(copier adapters.EntityCopier) error {
 	out := make(chan FarezoneAttribute, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -123,9 +123,9 @@ func copyFarezoneAttributes(copier *copier.Copier) error {
 	return nil
 }
 
-func copyDirections(copier *copier.Copier) error {
+func copyDirections(copier adapters.EntityCopier) error {
 	out := make(chan Direction, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -134,9 +134,9 @@ func copyDirections(copier *copier.Copier) error {
 	return nil
 }
 
-func copyRealtimeRoutes(copier *copier.Copier) error {
+func copyRealtimeRoutes(copier adapters.EntityCopier) error {
 	out := make(chan RealtimeRoute, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -145,9 +145,9 @@ func copyRealtimeRoutes(copier *copier.Copier) error {
 	return nil
 }
 
-func copyRealtimeStops(copier *copier.Copier) error {
+func copyRealtimeStops(copier adapters.EntityCopier) error {
 	out := make(chan RealtimeStop, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -156,9 +156,9 @@ func copyRealtimeStops(copier *copier.Copier) error {
 	return nil
 }
 
-func copyStopAttributes(copier *copier.Copier) error {
+func copyStopAttributes(copier adapters.EntityCopier) error {
 	out := make(chan StopAttribute, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -167,9 +167,9 @@ func copyStopAttributes(copier *copier.Copier) error {
 	return nil
 }
 
-func copyTimepoint(copier *copier.Copier) error {
+func copyTimepoint(copier adapters.EntityCopier) error {
 	out := make(chan Timepoint, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err
@@ -178,9 +178,9 @@ func copyTimepoint(copier *copier.Copier) error {
 	return nil
 }
 
-func copyRouteAttributes(copier *copier.Copier) error {
+func copyRouteAttributes(copier adapters.EntityCopier) error {
 	out := make(chan RouteAttribute, 1000)
-	copier.Reader.ReadEntities(out)
+	copier.Reader().ReadEntities(out)
 	for ent := range out {
 		if err := copier.CopyEntity(&ent); err != nil {
 			return err

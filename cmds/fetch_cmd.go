@@ -27,7 +27,7 @@ type FetchCommandResult struct {
 
 // FetchCommand fetches feeds defined a DMFR database.
 type FetchCommand struct {
-	Options     fetch.Options
+	Options     fetch.StaticFetchOptions
 	SecretsFile string
 	CreateFeed  bool
 	Workers     int
@@ -60,7 +60,6 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.StrictValidation, "strict", false, "Reject feeds with validation errors")
-	fl.BoolVar(&cmd.Options.IgnoreDuplicateContents, "ignore-duplicate-contents", false, "Allow duplicate internal SHA1 contents")
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
 	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
 	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
@@ -166,7 +165,7 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			opts.URLType = "static_current"
 			opts.FeedURL = feed.URLs.StaticCurrent
 		}
-		toFetch = append(toFetch, fetchJob{OnestopID: feed.FeedID, Options: opts})
+		toFetch = append(toFetch, fetchJob{OnestopID: feed.FeedID, StaticFetchOptions: opts})
 	}
 
 	///////////////
@@ -220,7 +219,7 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 
 type fetchJob struct {
 	OnestopID string
-	fetch.Options
+	fetch.StaticFetchOptions
 }
 
 func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- FetchCommandResult, wg *sync.WaitGroup) {
@@ -237,7 +236,7 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		t := time.Now()
 		fatalError := adapter.Tx(func(atx tldb.Adapter) error {
 			var fatalError error
-			result, fatalError = fetch.StaticFetch(ctx, atx, job.Options)
+			result, fatalError = fetch.StaticFetch(ctx, atx, job.StaticFetchOptions)
 			return fatalError
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
