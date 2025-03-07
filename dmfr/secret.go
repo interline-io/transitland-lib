@@ -9,6 +9,8 @@ type Secret struct {
 	Key                string `json:"key"`
 	Username           string `json:"username"`
 	Password           string `json:"password"`
+	AWSProfile         string `json:"aws_profile"`
+	AWSRegion          string `json:"aws_region"`
 	AWSAccessKeyID     string `json:"aws_access_key_id"`
 	AWSSecretAccessKey string `json:"aws_secret_access_key"`
 	FeedID             string `json:"feed_id"`

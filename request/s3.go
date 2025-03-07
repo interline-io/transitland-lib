@@ -148,20 +148,26 @@ func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 func awsConfig(ctx context.Context, secret dmfr.Secret) (*s3.Client, error) {
 	// Create client
 	var client *s3.Client
-	if secret.AWSAccessKeyID != "" && secret.AWSSecretAccessKey != "" {
-		cfg, err := config.LoadDefaultConfig(ctx,
-			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(secret.AWSAccessKeyID, secret.AWSSecretAccessKey, "")),
-		)
-		if err != nil {
-			return nil, err
-		}
-		client = s3.NewFromConfig(cfg)
-	} else {
-		cfg, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
-			return nil, err
-		}
-		client = s3.NewFromConfig(cfg)
+	var credFns []func(*config.LoadOptions) error
+	if secret.AWSRegion != "" {
+		credFns = append(credFns, config.WithRegion(secret.AWSRegion))
 	}
+	if secret.AWSProfile != "" {
+		credFns = append(credFns, config.WithSharedConfigProfile(secret.AWSProfile))
+	}
+	if secret.AWSAccessKeyID != "" && secret.AWSSecretAccessKey != "" {
+		credFns = append(credFns, config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(
+				secret.AWSAccessKeyID,
+				secret.AWSSecretAccessKey,
+				"",
+			),
+		))
+	}
+	cfg, err := config.LoadDefaultConfig(ctx, credFns...)
+	if err != nil {
+		return nil, err
+	}
+	client = s3.NewFromConfig(cfg)
 	return client, nil
 }
