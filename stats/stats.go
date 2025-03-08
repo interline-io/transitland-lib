@@ -42,7 +42,6 @@ func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 		context.TODO(),
 		reader, &empty.Writer{},
 		func(o *copier.Options) {
-			o.Quiet = false
 			o.NoShapeCache = true
 			o.NoValidators = true
 			o.AddExtension(fvslBuilder)

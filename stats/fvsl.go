@@ -89,7 +89,14 @@ func ServiceLevelDays(fvsls []dmfr.FeedVersionServiceLevel, startDate time.Time,
 // NewFeedVersionServiceLevelsFromReader .
 func NewFeedVersionServiceLevelsFromReader(reader adapters.Reader) ([]dmfr.FeedVersionServiceLevel, error) {
 	bld := NewFeedVersionServiceLevelBuilder()
-	if _, err := copier.QuietCopy(context.TODO(), reader, &empty.Writer{}, func(o *copier.Options) { o.AddExtension(bld) }); err != nil {
+	if _, err := copier.QuietCopy(
+		context.TODO(),
+		reader,
+		&empty.Writer{},
+		func(o *copier.Options) {
+			o.AddExtension(bld)
+		},
+	); err != nil {
 		return nil, err
 	}
 	results, err := bld.ServiceLevels()

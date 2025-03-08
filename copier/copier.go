@@ -230,6 +230,7 @@ func NewCopier(ctx context.Context, reader adapters.Reader, writer adapters.Writ
 	copier.writer = writer
 
 	// Logging
+	fmt.Println("New copier...")
 	if opts.Quiet {
 		copier.log = log.For(ctx).Level(zerolog.ErrorLevel).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
 	} else {
