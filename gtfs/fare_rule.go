@@ -28,7 +28,8 @@ func (ent *FareRule) TableName() string {
 
 func (ent *FareRule) DuplicateKey() string {
 	return fmt.Sprintf(
-		"route_id:'%s' origin_id:'%s' destination_id:'%s' contains_id:'%s'",
+		"fare_id:'%s' route_id:'%s' origin_id:'%s' destination_id:'%s' contains_id:'%s'",
+		ent.FareID.Val,
 		ent.RouteID.Val,
 		ent.OriginID.Val,
 		ent.DestinationID.Val,
