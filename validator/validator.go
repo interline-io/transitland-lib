@@ -322,13 +322,11 @@ func (v *Validator) setDefaultTimezone(tzName string) (string, error) {
 		tzName = v.defaultTimezone
 	}
 	if v.Reader != nil && tzName == "" {
-		// Get service window and timezone
-		fvsw, err := stats.NewFeedVersionServiceWindowFromReader(v.Reader)
-		if err != nil {
-			return "", err
+		for ent := range v.Reader.Agencies() {
+			if tz, ok := tt.IsValidTimezone(ent.AgencyTimezone.Val); ok {
+				tzName = tz
+			}
 		}
-		tzName = fvsw.DefaultTimezone.Val
-		v.defaultTimezone = tzName
 	}
 	return tzName, nil
 }

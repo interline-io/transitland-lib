@@ -19,7 +19,14 @@ type FeedVersionServiceWindowBuilder struct {
 func NewFeedVersionServiceWindowFromReader(reader adapters.Reader) (dmfr.FeedVersionServiceWindow, error) {
 	ret := dmfr.FeedVersionServiceWindow{}
 	fvswBuilder := NewFeedVersionServiceWindowBuilder()
-	if _, err := copier.QuietCopy(context.TODO(), reader, &empty.Writer{}, func(o *copier.Options) { o.AddExtension(fvswBuilder) }); err != nil {
+	if _, err := copier.QuietCopy(
+		context.TODO(),
+		reader,
+		&empty.Writer{},
+		func(o *copier.Options) {
+			o.AddExtension(fvswBuilder)
+		},
+	); err != nil {
 		return ret, err
 	}
 	ret, err := fvswBuilder.ServiceWindow()
