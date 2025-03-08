@@ -14,12 +14,12 @@ import (
 )
 
 type FeedVersionStats struct {
-	ServiceWindow    dmfr.FeedVersionServiceWindow
-	ServiceLevels    []dmfr.FeedVersionServiceLevel
-	AgencyOnestopIDs []dmfr.FeedVersionAgencyOnestopID
-	RouteOnestopIDs  []dmfr.FeedVersionRouteOnestopID
-	StopOnestopIDs   []dmfr.FeedVersionStopOnestopID
-	FileInfos        []dmfr.FeedVersionFileInfo
+	ServiceWindow    dmfr.FeedVersionServiceWindow     `json:"service_window,omitempty"`
+	ServiceLevels    []dmfr.FeedVersionServiceLevel    `json:"service_levels,omitempty"`
+	AgencyOnestopIDs []dmfr.FeedVersionAgencyOnestopID `json:"agency_onestop_i_ds,omitempty"`
+	RouteOnestopIDs  []dmfr.FeedVersionRouteOnestopID  `json:"route_onestop_i_ds,omitempty"`
+	StopOnestopIDs   []dmfr.FeedVersionStopOnestopID   `json:"stop_onestop_i_ds,omitempty"`
+	FileInfos        []dmfr.FeedVersionFileInfo        `json:"file_infos,omitempty"`
 }
 
 func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
