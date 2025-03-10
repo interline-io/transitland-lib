@@ -107,16 +107,21 @@ func Update(ctx context.Context, adapter Adapter, ent interface{}, columns ...st
 		}
 		colmap[col] = vals[i]
 	}
-	result, err2 := adapter.Sqrl().
+	result, err := adapter.Sqrl().
 		Update(table).
 		Where("id = ?", entid).
 		Suffix("returning id").
 		SetMap(colmap).
 		ExecContext(ctx)
-	if n, err := result.RowsAffected(); err != nil || n != 1 {
+	if err != nil {
+		return err
+	}
+	if n, err := result.RowsAffected(); err != nil {
+		return err
+	} else if n != 1 {
 		return errors.New("failed to update record")
 	}
-	return err2
+	return nil
 }
 
 // check for error and panic
