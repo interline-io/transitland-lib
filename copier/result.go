@@ -237,17 +237,18 @@ func (cr *Result) HandleEntityErrors(ent tt.Entity, errs []error, warns []error)
 // DisplayErrors shows individual errors in log.Info
 func (cr *Result) DisplayErrors() {
 	ctx := context.TODO()
-	if len(cr.Errors) > 0 {
-		log.For(ctx).Info().Msgf("Errors:")
-		for _, v := range cr.Errors {
-			log.For(ctx).Info().Msgf("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
-			for _, err := range v.Errors {
-				log.For(ctx).Info().Msgf("\t\t%s", errfmt(err))
-			}
-			remain := v.Count - len(v.Errors)
-			if remain > 0 {
-				log.For(ctx).Info().Msgf("\t\t... and %d more", remain)
-			}
+	if len(cr.Errors) == 0 {
+		return
+	}
+	log.For(ctx).Info().Msgf("Errors:")
+	for _, v := range cr.Errors {
+		log.For(ctx).Info().Msgf("\tFilename: %s Type: %s Count: %d", v.Filename, v.ErrorType, v.Count)
+		for _, err := range v.Errors {
+			log.For(ctx).Info().Msgf("\t\t%s", errfmt(err))
+		}
+		remain := v.Count - len(v.Errors)
+		if remain > 0 {
+			log.For(ctx).Info().Msgf("\t\t... and %d more", remain)
 		}
 	}
 }
@@ -256,7 +257,6 @@ func (cr *Result) DisplayErrors() {
 func (cr *Result) DisplayWarnings() {
 	ctx := context.TODO()
 	if len(cr.Warnings) == 0 {
-		log.For(ctx).Info().Msgf("No warnings")
 		return
 	}
 	log.For(ctx).Info().Msgf("Warnings:")
