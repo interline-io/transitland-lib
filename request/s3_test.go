@@ -19,3 +19,8 @@ func TestS3(t *testing.T) {
 	}
 	testBucket(t, ctx, b)
 }
+
+func TestAsd(t *testing.T) {
+	s, _ := NewS3FromUrl("s3://asd.s3.us-west-2.amazonaws.com/asd123")
+	_ = s
+}

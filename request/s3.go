@@ -3,6 +3,7 @@ package request
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/url"
 	"strings"
@@ -31,10 +32,20 @@ func NewS3FromUrl(ustr string) (*S3, error) {
 	if err != nil {
 		return nil, err
 	}
+	bucket := strings.TrimPrefix(u.Host, "s3://")
+
+	// Is bucket in the form <bucket>.s3.<region>.amazonaws.com?
+	bucketRegion := ""
+	if a := strings.Split(bucket, "."); len(a) == 5 && a[1] == "s3" {
+		bucket = a[0]
+		bucketRegion = a[2]
+	}
 	s := S3{
-		Bucket:    trimSlash(strings.TrimPrefix(u.Host, "s3://")),
+		Bucket:    trimSlash(bucket),
 		KeyPrefix: trimSlash(u.Path),
 	}
+	s.secret.AWSRegion = bucketRegion
+	fmt.Printf("s: %#v\n", s)
 	return &s, nil
 }
 
