@@ -3,7 +3,6 @@ package request
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/url"
 	"strings"
@@ -45,7 +44,6 @@ func NewS3FromUrl(ustr string) (*S3, error) {
 		KeyPrefix: trimSlash(u.Path),
 	}
 	s.secret.AWSRegion = bucketRegion
-	fmt.Printf("s: %#v\n", s)
 	return &s, nil
 }
 
