@@ -1,13 +1,38 @@
 package stats
 
 import (
+	"context"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/adapters/empty"
+	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
+
+func NewFeedVersionServiceWindowFromReader(reader adapters.Reader) (dmfr.FeedVersionServiceWindow, error) {
+	ret := dmfr.FeedVersionServiceWindow{}
+	fvswBuilder := NewFeedVersionServiceWindowBuilder()
+	if _, err := copier.QuietCopy(
+		context.TODO(),
+		reader,
+		&empty.Writer{},
+		func(o *copier.Options) {
+			o.AddExtension(fvswBuilder)
+		},
+	); err != nil {
+		return ret, err
+	}
+	ret, err := fvswBuilder.ServiceWindow()
+	if err != nil {
+		return ret, err
+	}
+	return ret, nil
+}
 
 func TestNewFeedVersionServiceWindowsFromReader(t *testing.T) {
 	tcs := []struct {

@@ -1,11 +1,15 @@
 package stats
 
 import (
+	"context"
 	"encoding/json"
 	"math/rand"
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/adapters/empty"
+	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -28,6 +32,26 @@ func pd(s string) tt.Date {
 
 func pdv(s string) time.Time {
 	return pd(s).Val
+}
+
+// NewFeedVersionServiceLevelsFromReader .
+func NewFeedVersionServiceLevelsFromReader(reader adapters.Reader) ([]dmfr.FeedVersionServiceLevel, error) {
+	bld := NewFeedVersionServiceLevelBuilder()
+	if _, err := copier.QuietCopy(
+		context.TODO(),
+		reader,
+		&empty.Writer{},
+		func(o *copier.Options) {
+			o.AddExtension(bld)
+		},
+	); err != nil {
+		return nil, err
+	}
+	results, err := bld.ServiceLevels()
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }
 
 func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {

@@ -1,14 +1,11 @@
 package stats
 
 import (
-	"context"
 	"iter"
 	"sort"
 	"time"
 
 	"github.com/interline-io/transitland-lib/adapters"
-	"github.com/interline-io/transitland-lib/adapters/empty"
-	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/service"
@@ -84,26 +81,6 @@ func ServiceLevelDays(fvsls []dmfr.FeedVersionServiceLevel, startDate time.Time,
 			}
 		}
 	}
-}
-
-// NewFeedVersionServiceLevelsFromReader .
-func NewFeedVersionServiceLevelsFromReader(reader adapters.Reader) ([]dmfr.FeedVersionServiceLevel, error) {
-	bld := NewFeedVersionServiceLevelBuilder()
-	if _, err := copier.QuietCopy(
-		context.TODO(),
-		reader,
-		&empty.Writer{},
-		func(o *copier.Options) {
-			o.AddExtension(bld)
-		},
-	); err != nil {
-		return nil, err
-	}
-	results, err := bld.ServiceLevels()
-	if err != nil {
-		return nil, err
-	}
-	return results, nil
 }
 
 func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []dmfr.FeedVersionServiceLevel) (tt.Date, error) {

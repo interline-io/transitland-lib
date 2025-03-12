@@ -172,14 +172,20 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 		return result, nil
 	}
 
-	// Service levels
-	if v.Options.IncludeServiceLevels {
-		fvsls, err := stats.NewFeedVersionServiceLevelsFromReader(reader)
+	// Generate stats
+	generateStats := v.Options.IncludeServiceLevels
+	var fvStats stats.FeedVersionStats
+	if generateStats {
+		fvStats, err = stats.NewFeedStatsFromReader(reader)
 		if err != nil {
-			result.FailureReason.Set(fmt.Sprintf("Could not calculate service levels: %s", err.Error()))
+			result.FailureReason.Set(fmt.Sprintf("Could not calculate feed stats: %s", err.Error()))
 			return result, nil
 		}
-		for i, fvsl := range fvsls {
+	}
+
+	// Service levels
+	if v.Options.IncludeServiceLevels {
+		for i, fvsl := range fvStats.ServiceLevels {
 			if i > v.Options.IncludeEntitiesLimit {
 				break
 			}
