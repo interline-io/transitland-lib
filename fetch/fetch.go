@@ -111,6 +111,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 	}
 
 	// Fetch OK, validate
+	validationTime := time.Now()
 	newFile := false
 	uploadFile := ""
 	uploadDest := ""
@@ -130,6 +131,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 			result.FeedVersionID.Set(vr.FeedVersionID.Val)
 		}
 	}
+	validationDuration := time.Since(validationTime)
 
 	// Cleanup any other temporary files
 	if uploadFile != "" && uploadFile != tmpfile {
@@ -137,6 +139,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 	}
 
 	// Validate OK, upload
+	uploadTime := time.Now()
 	if newFile && uploadFile != "" && opts.Storage != "" {
 		store, err := request.GetStore(opts.Storage)
 		if err != nil {
@@ -146,6 +149,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 			return result, err
 		}
 	}
+	uploadDuration := time.Since(uploadTime)
 
 	// Prepare and save feed fetch record
 	tlfetch := dmfr.FeedFetch{}
@@ -161,6 +165,10 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 	tlfetch.ResponseTimeMs.SetInt(result.ResponseTimeMs)
 	tlfetch.ResponseTtfbMs.SetInt(result.ResponseTtfbMs)
 	tlfetch.ResponseSHA1.Set(result.ResponseSHA1)
+
+	// Save timing details
+	tlfetch.ValidationDurationMs.SetInt(int(validationDuration.Milliseconds()))
+	tlfetch.UploadDurationMs.SetInt(int(uploadDuration.Milliseconds()))
 
 	// tlfetch.FeedVersionID =
 	if !opts.HideURL {
