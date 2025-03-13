@@ -588,6 +588,8 @@ CREATE TABLE feed_fetches (
   "response_time_ms" int,
   "response_ttfb_ms" int,
   "response_sha1" varchar(255),
+  "validation_duration_ms" int,
+  "upload_duration_ms" int,
   "feed_version_id" int,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
