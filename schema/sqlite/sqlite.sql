@@ -685,6 +685,7 @@ CREATE TABLE gtfs_rider_categories (
   rider_category_name varchar(255),
   min_age int,
   max_age int,
+  is_default_fare_category int,
   eligibility_url varchar(255),
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
