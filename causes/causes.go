@@ -3,6 +3,7 @@ package causes
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -258,6 +259,31 @@ func NewDuplicateServiceExceptionError(service string, date time.Time) *Duplicat
 	return &DuplicateServiceExceptionError{
 		ServiceID: service,
 		Date:      date.Format("20060102"),
+	}
+}
+
+////////////////////////////
+
+// AmbiguousRiderCategoryError reports when more than one RiderCategory is allowed in a FareProductID group where IsDefaultFareCategory is set.
+type AmbiguousRiderCategoryError struct {
+	FareProductID   string
+	RiderCategories []string
+	bc
+}
+
+func (e *AmbiguousRiderCategoryError) Error() string {
+	return fmt.Sprintf(
+		"fare_product_id '%s' has more than one rider category where is_default_fare_category is set: %s",
+		e.FareProductID,
+		strings.Join(e.RiderCategories, ","),
+	)
+}
+
+// NewAmbiguousRiderCategoryError returns a new DuplicateRiderCategoryError.
+func NewAmbiguousRiderCategoryError(fareProductID string, riderCategories ...string) *AmbiguousRiderCategoryError {
+	return &AmbiguousRiderCategoryError{
+		FareProductID:   fareProductID,
+		RiderCategories: riderCategories,
 	}
 }
 

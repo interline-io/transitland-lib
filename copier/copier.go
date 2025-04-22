@@ -282,6 +282,7 @@ func NewCopier(ctx context.Context, reader adapters.Reader, writer adapters.Writ
 			&rules.InconsistentTimezoneCheck{},
 			&rules.ParentStationLocationTypeCheck{},
 			&rules.CalendarDuplicateDates{},
+			&rules.FareProductRiderCategoryDefaultCheck{},
 		)
 	}
 
