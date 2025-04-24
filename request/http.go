@@ -68,7 +68,21 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 	// Make HTTP request
 	req.Header.Set("User-Agent", fmt.Sprintf("transitland/%s", tl.Version.Tag))
 
-	client := &http.Client{}
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// If we're being redirect to a pre-signed S3 URL, ensure that the host will match the signature
+			if strings.Contains(req.URL.Host, "s3.amazonaws.com") {
+				req.Method = "GET"
+				// In at least one case, an open data portal includes :443 in the redirect URL,
+				//so we need to strip that to match the signature
+				host := strings.Split(req.URL.Host, ":")[0]
+				req.Header.Set("Host", host)
+				req.URL.Host = host
+				req.URL.Scheme = "https"
+			}
+			return nil
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		// return error directly
