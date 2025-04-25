@@ -27,12 +27,9 @@ func (r *Http) SetSecret(secret dmfr.Secret) error {
 }
 
 func removeDefaultPortFromHost(req *http.Request) {
-	if req.URL.Scheme == "https" && strings.HasSuffix(req.URL.Host, ":443") {
-		host := strings.TrimSuffix(req.URL.Host, ":443")
-		req.Host = host
-	} else if req.URL.Scheme == "http" && strings.HasSuffix(req.URL.Host, ":80") {
-		host := strings.TrimSuffix(req.URL.Host, ":80")
-		req.Host = host
+	if (req.URL.Scheme == "https" && strings.HasSuffix(req.URL.Host, ":443")) ||
+		(req.URL.Scheme == "http" && strings.HasSuffix(req.URL.Host, ":80")) {
+		req.Host = strings.Split(req.URL.Host, ":")[0]
 	}
 }
 
