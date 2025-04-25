@@ -14,14 +14,14 @@ require (
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/iancoleman/orderedmap v0.2.0
-	github.com/interline-io/log v0.0.0-20241212203449-4bcff214cd71
+	github.com/interline-io/log v0.0.0-20250425230611-851ec713ec98
 	github.com/jackc/pgx/v5 v5.7.0
 	github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 	github.com/sergi/go-diff v1.2.0
 	github.com/snabb/isoweek v1.0.1
 	github.com/spf13/cobra v1.8.1
