@@ -1,6 +1,6 @@
 module github.com/interline-io/transitland-lib
 
-go 1.23.0
+go 1.24.2
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1
@@ -31,7 +31,7 @@ require (
 	github.com/twpayne/go-geom v1.5.7
 	github.com/twpayne/go-polyline v1.1.1
 	github.com/twpayne/go-shapefile v0.0.5
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.2
 )
 
 require (
@@ -76,3 +76,5 @@ require (
 	golang.org/x/text v0.24.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+tool google.golang.org/protobuf/cmd/protoc-gen-go
