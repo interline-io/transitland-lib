@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"os"
+	_ "time/tzdata"
 
 	"github.com/interline-io/log"
 	tl "github.com/interline-io/transitland-lib"
