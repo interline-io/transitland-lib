@@ -1,4 +1,4 @@
-CREATE EXTENSION btree_gist;
+CREATE EXTENSION btree_gist IF NOT EXISTS btree_gist;
 
 BEGIN;
 
