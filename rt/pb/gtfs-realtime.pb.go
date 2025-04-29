@@ -28,8 +28,6 @@
 // 	protoc        v5.27.1
 // source: gtfs-realtime.proto
 
-// asdf test proto generated output check
-
 package pb
 
 import (
