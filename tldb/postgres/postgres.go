@@ -47,14 +47,22 @@ func (adapter *PostgresAdapter) Open() error {
 	if adapter.db != nil {
 		return nil
 	}
-	pool, err := pgxpool.New(context.TODO(), adapter.DBURL)
+	db, err := adapter.OpenDB()
 	if err != nil {
 		return err
 	}
-	db := sqlx.NewDb(stdlib.OpenDBFromPool(pool), "pgx")
 	db.Mapper = MapperCache.Mapper
 	adapter.db = &QueryLogger{Ext: db.Unsafe()}
 	return nil
+}
+
+func (adapter *PostgresAdapter) OpenDB() (*sqlx.DB, error) {
+	pool, err := pgxpool.New(context.TODO(), adapter.DBURL)
+	if err != nil {
+		return nil, err
+	}
+	db := sqlx.NewDb(stdlib.OpenDBFromPool(pool), "pgx")
+	return db, nil
 }
 
 // Close the adapter.
