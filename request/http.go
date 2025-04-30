@@ -74,6 +74,9 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 
 	// Make HTTP request
 	req.Header.Set("User-Agent", fmt.Sprintf("transitland/%s", tl.Version.Tag))
+	// If the following headers are not set, some CDNs may block the request as coming from a bot rather than a browser
+	req.Header.Set("Accept", "application/zip,application/x-zip-compressed,application/octet-stream;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "")
 
 	// Remove default ports from host header if explicitly specified as it
 	// may break pre-signed S3 URLs or other systems that rely on the host header
