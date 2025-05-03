@@ -353,7 +353,6 @@ func (v *Validator) copierOptions() copier.Options {
 	cpOpts.AllowEntityErrors = true
 	cpOpts.AllowReferenceErrors = true
 	cpOpts.AddExtensionWithLevel(v.rtValidator, 1)
-	cpOpts.AddExtensionWithLevel(&rules.TransferStopLocationTypeCheck{}, 0)
 
 	// Best practices extension
 	if v.Options.BestPractices {
