@@ -5,9 +5,9 @@ import (
 	"time"
 
 	tl "github.com/interline-io/transitland-lib"
-	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/rt"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -49,17 +49,16 @@ func NewResult(evaluateAt time.Time, evaluateAtLocal time.Time) *Result {
 }
 
 type ResultDetails struct {
-	SHA1                 tt.String                      `json:"sha1"`
-	Timezone             tt.String                      `json:"timezone"`
-	EarliestCalendarDate tt.Date                        `json:"earliest_calendar_date"`
-	LatestCalendarDate   tt.Date                        `json:"latest_calendar_date"`
-	Agencies             []gtfs.Agency                  `json:"agencies"`
-	Routes               []gtfs.Route                   `json:"routes"`
-	Stops                []gtfs.Stop                    `json:"stops"`
-	FeedInfos            []gtfs.FeedInfo                `json:"feed_infos"`
-	Files                []dmfr.FeedVersionFileInfo     `json:"files"`
-	ServiceLevels        []dmfr.FeedVersionServiceLevel `json:"service_levels"`
-	Realtime             []RealtimeResult               `json:"realtime"`
+	SHA1                 tt.String        `json:"sha1"`
+	Timezone             tt.String        `json:"timezone"`
+	EarliestCalendarDate tt.Date          `json:"earliest_calendar_date"`
+	LatestCalendarDate   tt.Date          `json:"latest_calendar_date"`
+	Agencies             []gtfs.Agency    `json:"agencies"`
+	Routes               []gtfs.Route     `json:"routes"`
+	Stops                []gtfs.Stop      `json:"stops"`
+	FeedInfos            []gtfs.FeedInfo  `json:"feed_infos"`
+	Realtime             []RealtimeResult `json:"realtime"`
+	stats.FeedVersionStats
 }
 
 type RealtimeResult struct {
