@@ -67,7 +67,7 @@ func TestExtract_Bbox(t *testing.T) {
 }
 
 func TestExtract_Filter_ExampleFeed(t *testing.T) {
-	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/extract-examples"))
+	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/gtfs-examples/extract-examples"))
 	if err != nil {
 		t.Error(err)
 	}
