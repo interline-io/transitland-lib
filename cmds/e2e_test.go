@@ -33,7 +33,7 @@ func TestE2E(t *testing.T) {
 	}{
 		{
 			name:            "basic",
-			fn:              "testdata/example.zip",
+			fn:              "testdata/gtfs-examples/example.zip",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,
@@ -42,7 +42,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic no activate",
-			fn:              "testdata/example.zip",
+			fn:              "testdata/gtfs-examples/example.zip",
 			activate:        false,
 			fvcount:         1,
 			expectStops:     0,
@@ -51,7 +51,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic unimport",
-			fn:              "testdata/example.zip",
+			fn:              "testdata/gtfs-examples/example.zip",
 			activate:        true,
 			unimport:        true,
 			fvcount:         1,
@@ -61,7 +61,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:              "basic unimport sched",
-			fn:                "testdata/example.zip",
+			fn:                "testdata/gtfs-examples/example.zip",
 			activate:          true,
 			unimport:          true,
 			unimportSchedOnly: true,
@@ -72,7 +72,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic nested dir",
-			fn:              "testdata/example-nested-dir.zip#example-nested-dir/example",
+			fn:              "testdata/gtfs-examples/example-nested-dir.zip#example-nested-dir/example",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,
@@ -81,7 +81,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic nested two feeds 1",
-			fn:              "testdata/example-nested-two-feeds.zip#example1",
+			fn:              "testdata/gtfs-examples/example-nested-two-feeds.zip#example1",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,
@@ -91,7 +91,7 @@ func TestE2E(t *testing.T) {
 
 		{
 			name:            "basic nested two feeds 2",
-			fn:              "testdata/example-nested-two-feeds.zip#example2",
+			fn:              "testdata/gtfs-examples/example-nested-two-feeds.zip#example2",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,
@@ -100,7 +100,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic nested zip",
-			fn:              "testdata/example-nested-zip.zip#example-nested-zip/example.zip",
+			fn:              "testdata/gtfs-examples/example-nested-zip.zip#example-nested-zip/example.zip",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,

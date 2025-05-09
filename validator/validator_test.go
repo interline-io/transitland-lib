@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -58,9 +59,31 @@ func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 
 //////////////
 
+func TestEntityErrors(t *testing.T) {
+	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/gtfs-examples/bad-entities"))
+	if err != nil {
+		t.Error(err)
+	}
+	if err := reader.Open(); err != nil {
+		t.Error(err)
+	}
+	testutil.AllEntities(reader, func(ent tt.Entity) {
+		t.Run(fmt.Sprintf("%s:%s", ent.Filename(), ent.EntityID()), func(t *testing.T) {
+			errs := tt.CheckErrors(ent)
+			expecterrs := testutil.GetExpectErrors(ent)
+			testutil.CheckErrors(expecterrs, errs, t)
+		})
+	})
+	if err := reader.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+//////////////
+
 func TestValidator_Validate(t *testing.T) {
-	basepath := testpath.RelPath("testdata/validator")
-	searchpath := testpath.RelPath("testdata/validator/errors")
+	basepath := testpath.RelPath("testdata/gtfs-validator-layers/base")
+	searchpath := testpath.RelPath("testdata/gtfs-validator-layers/errors")
 	files, err := os.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)
@@ -105,8 +128,8 @@ func TestValidator_Validate(t *testing.T) {
 func TestValidator_BestPractices(t *testing.T) {
 	// TODO: Combine with above... test best practice rules.
 	ctx := context.TODO()
-	basepath := testpath.RelPath("testdata/validator")
-	searchpath := testpath.RelPath("testdata/validator/best-practices")
+	basepath := testpath.RelPath("testdata/gtfs-validator-layers/base")
+	searchpath := testpath.RelPath("testdata/gtfs-validator-layers/best-practices")
 	files, err := os.ReadDir(searchpath)
 	if err != nil {
 		t.Error(err)

@@ -40,7 +40,7 @@ func Test_readmsg(t *testing.T) {
 }
 
 func TestReadFileError(t *testing.T) {
-	_, err := ReadFile(testpath.RelPath("testdata/example.zip"))
+	_, err := ReadFile(testpath.RelPath("testdata/gtfs-examples/example.zip"))
 	if err == nil {
 		t.Errorf("got no error, expected illegal tag")
 	}

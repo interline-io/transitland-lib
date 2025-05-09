@@ -32,8 +32,8 @@ func TestStaticFetch(t *testing.T) {
 	}{
 		{
 			name:          "example.zip",
-			serveFile:     "testdata/example.zip",
-			requestPath:   "testdata/example.zip",
+			serveFile:     "testdata/gtfs-examples/example.zip",
+			requestPath:   "testdata/gtfs-examples/example.zip",
 			responseSha1:  "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
 			responseCode:  200,
 			responseError: false,
@@ -42,7 +42,7 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "404",
-			serveFile:     "testdata/example.zip",
+			serveFile:     "testdata/gtfs-examples/example.zip",
 			requestPath:   "404.zip",
 			responseSha1:  "",
 			responseCode:  404,
@@ -52,8 +52,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "invalid zip",
-			serveFile:     "testdata/invalid.zip",
-			requestPath:   "testdata/invalid.zip",
+			serveFile:     "testdata/gtfs-examples/invalid.zip",
+			requestPath:   "testdata/gtfs-examples/invalid.zip",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: true,
@@ -62,8 +62,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "nested dir",
-			serveFile:     "testdata/example-nested-dir.zip",
-			requestPath:   "testdata/example-nested-dir.zip#example-nested-dir/example",
+			serveFile:     "testdata/gtfs-examples/example-nested-dir.zip",
+			requestPath:   "testdata/gtfs-examples/example-nested-dir.zip#example-nested-dir/example",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: false,
@@ -72,8 +72,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "nested two feeds 1",
-			serveFile:     "testdata/example-nested-two-feeds.zip",
-			requestPath:   "testdata/example-nested-two-feeds.zip#example1",
+			serveFile:     "testdata/gtfs-examples/example-nested-two-feeds.zip",
+			requestPath:   "testdata/gtfs-examples/example-nested-two-feeds.zip#example1",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: false,
@@ -82,8 +82,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "nested two feeds 2",
-			serveFile:     "testdata/example-nested-two-feeds.zip",
-			requestPath:   "testdata/example-nested-two-feeds.zip#example2",
+			serveFile:     "testdata/gtfs-examples/example-nested-two-feeds.zip",
+			requestPath:   "testdata/gtfs-examples/example-nested-two-feeds.zip#example2",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: false,
@@ -92,8 +92,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "nested zip",
-			serveFile:     "testdata/example-nested-zip.zip",
-			requestPath:   "testdata/example-nested-zip.zip#example-nested-zip/example.zip",
+			serveFile:     "testdata/gtfs-examples/example-nested-zip.zip",
+			requestPath:   "testdata/gtfs-examples/example-nested-zip.zip#example-nested-zip/example.zip",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: false,
@@ -285,7 +285,7 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 // So in this case, the second fetch will return Found and the existing FV.
 func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fp := testpath.RelPath("testdata/example-nested-two-feeds.zip")
+		fp := testpath.RelPath("testdata/gtfs-examples/example-nested-two-feeds.zip")
 		buf, err := os.ReadFile(fp)
 		if err != nil {
 			t.Error(err)
