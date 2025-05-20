@@ -201,6 +201,17 @@ func NewPolygon(v *geom.Polygon) Polygon {
 
 //////////
 
+// MultiPolygon is an EWKB/SL encoded MultiPolygon
+type MultiPolygon struct {
+	GeometryOption[*geom.MultiPolygon]
+}
+
+func NewMultiPolygon(v *geom.MultiPolygon) MultiPolygon {
+	return MultiPolygon{GeometryOption: NewGeometryOption(v)}
+}
+
+//////////
+
 // Errors, helpers
 
 func geomAutoDecode[T any](data []byte) (T, error) {
