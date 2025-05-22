@@ -24,3 +24,5 @@ func (r Key) Int() int {
 	a, _ := strconv.Atoi(r.Val)
 	return a
 }
+
+type Reference = Key
