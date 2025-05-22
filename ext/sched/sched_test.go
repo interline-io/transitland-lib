@@ -60,7 +60,7 @@ func TestScheduleChecker(t *testing.T) {
 			assert.ElementsMatch(t, tc.exp, stats)
 		})
 	}
-	freqEx, err := newTestScheduleSchecker(testpath.RelPath("testdata/example.zip"))
+	freqEx, err := newTestScheduleSchecker(testpath.RelPath("testdata/gtfs-examples/example.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}

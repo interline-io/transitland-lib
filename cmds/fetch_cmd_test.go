@@ -27,9 +27,9 @@ func TestFetchCommand(t *testing.T) {
 	defer ts.Close()
 
 	// note - Spec==gtfs is required for fetch
-	f200 := dmfr.Feed{FeedID: "f-200", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: fmt.Sprintf("%s/example.zip", ts.URL)}}
+	f200 := dmfr.Feed{FeedID: "f-200", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: fmt.Sprintf("%s/gtfs-examples/example.zip", ts.URL)}}
 	f404 := dmfr.Feed{FeedID: "f-404", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: fmt.Sprintf("%s/404", ts.URL)}}
-	fvErrorExample := dmfr.Feed{FeedID: "f-error", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: fmt.Sprintf("%s/example-errors.zip", ts.URL)}}
+	fvErrorExample := dmfr.Feed{FeedID: "f-error", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: fmt.Sprintf("%s/gtfs-examples/example-errors.zip", ts.URL)}}
 	cases := []struct {
 		name               string
 		fvcount            int

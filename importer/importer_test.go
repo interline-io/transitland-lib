@@ -59,7 +59,7 @@ func TestImportFeedVersion(t *testing.T) {
 	t.Run("Failed", func(t *testing.T) {
 		fvid := 0
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-			fvid = setup(atx, testpath.RelPath("testdata/does-not-exist"))
+			fvid = setup(atx, testpath.RelPath("testdata/gtfs-examples/does-not-exist"))
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := ImportFeedVersion(ctx, &atx2, Options{FeedVersionID: fvid, Storage: "/"})
 			if err == nil {

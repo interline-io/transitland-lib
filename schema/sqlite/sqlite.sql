@@ -567,13 +567,15 @@ CREATE TABLE IF NOT EXISTS "gtfs_attributions" (
 CREATE INDEX idx_gtfs_attributions_feed_version_id ON "gtfs_attributions"(feed_version_id);
 CREATE TABLE tl_stop_external_references (
   "id" integer primary key autoincrement,
+  "stop_id" integer not null,
   "feed_version_id" integer NOT NULL,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "target_feed_onestop_id" varchar(255),
   "target_stop_id" varchar(255),
   "inactive" bool,
-  foreign key(feed_version_id) REFERENCES feed_versions(id)
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(stop_id) REFERENCES gtfs_stops(id)
 );
 CREATE TABLE feed_fetches (
   "id" integer primary key autoincrement,
