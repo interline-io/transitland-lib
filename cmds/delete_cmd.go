@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -56,7 +57,7 @@ func (cmd *DeleteCommand) Parse(args []string) error {
 }
 
 // Run this command
-func (cmd *DeleteCommand) Run() error {
+func (cmd *DeleteCommand) Run(ctx context.Context) error {
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -74,18 +75,18 @@ func (cmd *DeleteCommand) Run() error {
 	if err != nil {
 		return err
 	}
-	err = cmd.Adapter.Get(&qrs, qstr, qargs...)
+	err = cmd.Adapter.Get(ctx, &qrs, qstr, qargs...)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("feed version %d does not exist", cmd.FVID)
 	} else if err != nil {
 		return err
 	}
 	if cmd.DryRun {
-		log.Info().Msgf("Deleting feed version: %d (dry run)", cmd.FVID)
+		log.For(ctx).Info().Msgf("Deleting feed version: %d (dry run)", cmd.FVID)
 	} else {
-		log.Info().Msgf("Deleting feed version: %d", cmd.FVID)
+		log.For(ctx).Info().Msgf("Deleting feed version: %d", cmd.FVID)
 		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-			return importer.DeleteFeedVersion(cmd.Adapter, cmd.FVID, cmd.ExtraTables)
+			return importer.DeleteFeedVersion(ctx, cmd.Adapter, cmd.FVID, cmd.ExtraTables)
 		})
 		if err != nil {
 			return err

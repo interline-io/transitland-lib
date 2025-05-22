@@ -3,6 +3,7 @@ package causes
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -226,6 +227,22 @@ func (e *DuplicateIDError) Error() string {
 
 ////////////////////////////
 
+// DuplicateIDError reports when a unique ID is used more than once in a file.
+type DuplicateKeyError struct {
+	bc
+}
+
+// NewDuplicateIDError returns a new DuplicateIDErrror
+func NewDuplicateKeyError(eid string) *DuplicateKeyError {
+	return &DuplicateKeyError{bc: bc{Value: eid}}
+}
+
+func (e *DuplicateKeyError) Error() string {
+	return fmt.Sprintf("entity with fields '%s' is present more than once", e.Value)
+}
+
+////////////////////////////
+
 // DuplicateServiceExceptionError reports when a (service_id,date) value is present more than once.
 type DuplicateServiceExceptionError struct {
 	ServiceID string
@@ -242,6 +259,31 @@ func NewDuplicateServiceExceptionError(service string, date time.Time) *Duplicat
 	return &DuplicateServiceExceptionError{
 		ServiceID: service,
 		Date:      date.Format("20060102"),
+	}
+}
+
+////////////////////////////
+
+// AmbiguousRiderCategoryError reports when more than one RiderCategory is allowed in a FareProductID group where IsDefaultFareCategory is set.
+type AmbiguousRiderCategoryError struct {
+	FareProductID   string
+	RiderCategories []string
+	bc
+}
+
+func (e *AmbiguousRiderCategoryError) Error() string {
+	return fmt.Sprintf(
+		"fare_product_id '%s' has more than one rider category where is_default_fare_category is set: %s",
+		e.FareProductID,
+		strings.Join(e.RiderCategories, ","),
+	)
+}
+
+// NewAmbiguousRiderCategoryError returns a new DuplicateRiderCategoryError.
+func NewAmbiguousRiderCategoryError(fareProductID string, riderCategories ...string) *AmbiguousRiderCategoryError {
+	return &AmbiguousRiderCategoryError{
+		FareProductID:   fareProductID,
+		RiderCategories: riderCategories,
 	}
 }
 

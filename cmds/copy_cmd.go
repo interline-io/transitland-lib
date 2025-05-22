@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"errors"
 
 	"github.com/interline-io/transitland-lib/adapters"
@@ -15,7 +16,7 @@ type CopyCommand struct {
 	copier.Options
 	fvid              int
 	create            bool
-	extensions        []string
+	extensionDefs     []string
 	readerPath        string
 	writerPath        string
 	writeExtraColumns bool
@@ -42,7 +43,7 @@ func (cmd *CopyCommand) HelpArgs() string {
 }
 
 func (cmd *CopyCommand) AddFlags(fl *pflag.FlagSet) {
-	fl.StringSliceVar(&cmd.extensions, "ext", nil, "Include GTFS Extension")
+	fl.StringSliceVar(&cmd.extensionDefs, "ext", nil, "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
 	fl.BoolVar(&cmd.CopyExtraFiles, "write-extra-files", false, "Copy additional files found in source to destination")
@@ -62,7 +63,7 @@ func (cmd *CopyCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *CopyCommand) Run() error {
+func (cmd *CopyCommand) Run(ctx context.Context) error {
 	// Reader / Writer
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {
@@ -84,14 +85,7 @@ func (cmd *CopyCommand) Run() error {
 	defer writer.Close()
 
 	// Setup copier
-	cmd.Options.Extensions = cmd.extensions
-	cp, err := copier.NewCopier(reader, writer, cmd.Options)
-	if err != nil {
-		return err
-	}
-	result := cp.Copy()
-	result.DisplaySummary()
-	result.DisplayErrors()
-	result.DisplayWarnings()
-	return nil
+	cmd.Options.ExtensionDefs = cmd.extensionDefs
+	_, err = copier.CopyWithOptions(ctx, reader, writer, cmd.Options)
+	return err
 }

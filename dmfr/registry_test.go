@@ -2,9 +2,9 @@ package dmfr
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
@@ -53,7 +53,7 @@ func TestParseOperators(t *testing.T) {
 
 func TestLoadAndParseRegistry_from_URL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testpath.RelPath("testdata/dmfr/example.json"))
+		buf, err := os.ReadFile(testpath.RelPath("testdata/dmfr/example.json"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -139,17 +139,17 @@ func TestRegistry_Write(t *testing.T) {
 		{
 			"feed",
 			`{"feeds":[{"id":"test","spec":"gtfs"}]}`,
-			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.0.json","feeds":[{"id":"test","spec":"gtfs"}]}`,
+			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.1.json","feeds":[{"id":"test","spec":"gtfs"}]}`,
 		},
 		{
 			"feed sorted",
 			`{"feeds":[{"id":"z","spec":"gtfs"},{"id":"a","spec":"gtfs"}]}`,
-			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.0.json","feeds":[{"id":"a","spec":"gtfs"},{"id":"z","spec":"gtfs"}]}`,
+			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.1.json","feeds":[{"id":"a","spec":"gtfs"},{"id":"z","spec":"gtfs"}]}`,
 		},
 		{
 			"nested operators moved to top level",
 			`{"feeds": [{"id": "z","spec": "gtfs","operators": [{"onestop_id": "o"}]}]}`,
-			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.0.json","feeds":[{"id":"z","spec":"gtfs"}],"operators":[{"onestop_id":"o","associated_feeds":[{"feed_onestop_id":"z"}]}]}`,
+			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.1.json","feeds":[{"id":"z","spec":"gtfs"}],"operators":[{"onestop_id":"o","associated_feeds":[{"feed_onestop_id":"z"}]}]}`,
 		},
 	}
 	for _, tc := range tcs {

@@ -2,8 +2,6 @@ package tlxy
 
 import (
 	"math"
-
-	"github.com/twpayne/go-polyline"
 )
 
 type Line []Point
@@ -11,27 +9,6 @@ type Line []Point
 type LineM struct {
 	Coords []Point
 	Data   []float64
-}
-
-func DecodePolyline(p string) ([]Point, error) {
-	return DecodePolylineBytes([]byte(p))
-}
-
-func DecodePolylineBytes(p []byte) ([]Point, error) {
-	coords, _, err := polyline.DecodeCoords(p)
-	var ret []Point
-	for _, c := range coords {
-		ret = append(ret, Point{Lon: c[1], Lat: c[0]})
-	}
-	return ret, err
-}
-
-func EncodePolyline(coords []Point) []byte {
-	var g [][]float64
-	for _, c := range coords {
-		g = append(g, []float64{c.Lat, c.Lon})
-	}
-	return polyline.EncodeCoords(g)
 }
 
 // LineRelativePositionsFallback returns the relative position along the line for each point.

@@ -155,15 +155,12 @@ func (reader *Reader) ValidateStructure() []error {
 func (reader *Reader) ContainsFile(filename string) bool {
 	// First check if we can read the file
 	err := reader.Adapter.OpenFile(filename, func(in io.Reader) {})
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // StopTimesByTripID sends StopTimes for selected trips.
 func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime {
-	chunks := s2D{}
+	var chunks s2D
 	grouped := false
 	// Get chunks and check if the file is already grouped by ID
 	if len(tripIDs) == 0 {
@@ -251,7 +248,7 @@ func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 			// Only check shape_id
 			sid, _ := row.Get("shape_id")
 			// If ID transition, have we seen this ID
-			if sid != last && grouped == true && last != "" {
+			if sid != last && grouped && last != "" {
 				if _, ok := counter[sid]; ok {
 					grouped = false
 				}
@@ -319,7 +316,9 @@ func (reader *Reader) Stops() (out chan gtfs.Stop) {
 		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
 			e := gtfs.Stop{}
 			loadRow(&e, row)
-			e.SetCoordinates([2]float64{e.StopLon.Val, e.StopLat.Val})
+			if e.StopLon.Valid && e.StopLat.Valid {
+				e.SetCoordinates([2]float64{e.StopLon.Val, e.StopLat.Val})
+			}
 			out <- e
 		})
 		close(out)
@@ -413,6 +412,18 @@ func (reader *Reader) FareMedia() (out chan gtfs.FareMedia) {
 
 func (reader *Reader) RiderCategories() (out chan gtfs.RiderCategory) {
 	return ReadEntities[gtfs.RiderCategory](reader, getFilename(&gtfs.RiderCategory{}))
+}
+
+func (reader *Reader) Timeframes() (out chan gtfs.Timeframe) {
+	return ReadEntities[gtfs.Timeframe](reader, getFilename(&gtfs.Timeframe{}))
+}
+
+func (reader *Reader) Networks() (out chan gtfs.Network) {
+	return ReadEntities[gtfs.Network](reader, getFilename(&gtfs.Network{}))
+}
+
+func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
+	return ReadEntities[gtfs.RouteNetwork](reader, getFilename(&gtfs.RouteNetwork{}))
 }
 
 func ReadEntities[T any](reader *Reader, efn string) chan T {

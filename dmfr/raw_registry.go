@@ -2,9 +2,9 @@ package dmfr
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"sort"
 
 	"github.com/iancoleman/orderedmap"
@@ -26,14 +26,15 @@ type RawRegistryFeed struct {
 }
 
 func ReadRawRegistry(reader io.Reader) (*RawRegistry, error) {
-	contents, err := ioutil.ReadAll(reader)
+	ctx := context.TODO()
+	contents, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
 	var loadReg RawRegistry
 	if err := json.Unmarshal([]byte(contents), &loadReg); err != nil {
 		if e, ok := err.(*json.SyntaxError); ok {
-			log.Debugf("syntax error at byte offset %d", e.Offset)
+			log.For(ctx).Debug().Msgf("syntax error at byte offset %d", e.Offset)
 		}
 		return nil, err
 	}
@@ -91,7 +92,10 @@ func (r *RawRegistry) Write(w io.Writer) error {
 	if err := json.Indent(&mbi, mb, "", "  "); err != nil {
 		return err
 	}
-	_, err = w.Write(mbi.Bytes())
+	if _, err = w.Write(mbi.Bytes()); err != nil {
+		return err
+	}
+	_, err = w.Write([]byte{'\n'})
 	return err
 }
 

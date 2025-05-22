@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"errors"
 
 	"github.com/interline-io/transitland-lib/adapters"
@@ -13,10 +14,9 @@ import (
 
 // MergeCommand
 type MergeCommand struct {
-	Options           copier.Options
-	readerPaths       []string
-	writerPath        string
-	writeExtraColumns bool
+	Options     copier.Options
+	readerPaths []string
+	writerPath  string
 }
 
 func (cmd *MergeCommand) HelpDesc() (string, string) {
@@ -40,7 +40,7 @@ func (cmd *MergeCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *MergeCommand) Run() error {
+func (cmd *MergeCommand) Run(ctx context.Context) error {
 	var readers []adapters.Reader
 	for _, p := range cmd.readerPaths {
 		// Open reader
@@ -64,11 +64,6 @@ func (cmd *MergeCommand) Run() error {
 	defer writer.Close()
 
 	// Setup copier
-	cp, err := copier.NewCopier(reader, writer, cmd.Options)
-	if err != nil {
-		return err
-	}
-	result := cp.Copy()
-	result.DisplaySummary()
-	return nil
+	_, err = copier.CopyWithOptions(ctx, reader, writer, cmd.Options)
+	return err
 }

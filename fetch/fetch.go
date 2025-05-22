@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"errors"
 	"os"
 	"time"
@@ -13,38 +14,34 @@ import (
 
 // Options sets options for a fetch operation.
 type Options struct {
-	FeedURL                 string
-	FeedID                  int
-	URLType                 string
-	IgnoreDuplicateContents bool
-	Storage                 string
-	AllowFTPFetch           bool
-	AllowLocalFetch         bool
-	AllowS3Fetch            bool
-	MaxSize                 uint64
-	HideURL                 bool
-	FetchedAt               time.Time
-	Secrets                 []dmfr.Secret
-	CreatedBy               tt.String
-	Name                    tt.String
-	Description             tt.String
-	SaveValidationReport    bool
-	ValidationReportStorage string
+	FeedURL         string
+	FeedID          int
+	URLType         string
+	Storage         string
+	AllowFTPFetch   bool
+	AllowLocalFetch bool
+	AllowS3Fetch    bool
+	MaxSize         uint64
+	HideURL         bool
+	FetchedAt       time.Time
+	Secrets         []dmfr.Secret
 }
 
 // Result contains results of a fetch operation.
 type Result struct {
-	Found         bool
-	Error         error
-	URL           string
-	ResponseSize  int
-	ResponseCode  int
-	ResponseSHA1  string
-	FetchError    error
-	FeedVersionID tt.Int
+	Found          bool
+	Error          error
+	URL            string
+	ResponseSize   int
+	ResponseCode   int
+	ResponseTtfbMs int
+	ResponseTimeMs int
+	ResponseSHA1   string
+	FetchError     error
+	FeedVersionID  tt.Int
 }
 
-type validationResponse struct {
+type FetchValidationResult struct {
 	UploadTmpfile  string
 	UploadFilename string
 	Error          error
@@ -52,13 +49,18 @@ type validationResponse struct {
 	FeedVersionID  tt.Int
 }
 
-type fetchCb func(request.FetchResponse) (validationResponse, error)
+type FetchValidator interface {
+	ValidateResponse(context.Context, tldb.Adapter, string, request.FetchResponse) (FetchValidationResult, error)
+}
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
-func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
+func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidator) (Result, error) {
 	result := Result{URL: opts.FeedURL}
+	if cb == nil {
+		return result, errors.New("no validator provided")
+	}
 	feed := dmfr.Feed{}
-	if err := atx.Get(&feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
+	if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
 		return result, err
 	}
 	if opts.FeedURL == "" {
@@ -87,21 +89,34 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		}
 		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
 	}
-	fetchResponse, err := request.AuthenticatedRequestDownload(opts.FeedURL, reqOpts...)
+
+	// Fetch
+	tmpfile, fetchResponse, fetchFatalError := request.AuthenticatedRequestDownload(ctx, opts.FeedURL, reqOpts...)
+
+	// Cleanup any temporary files
+	if tmpfile != "" {
+		defer os.Remove(tmpfile)
+	}
+
+	// Setup result
 	result.FetchError = fetchResponse.FetchError
 	result.ResponseCode = fetchResponse.ResponseCode
 	result.ResponseSize = fetchResponse.ResponseSize
 	result.ResponseSHA1 = fetchResponse.ResponseSHA1
-	if err != nil {
-		return result, nil
+	result.ResponseTimeMs = fetchResponse.ResponseTimeMs
+	result.ResponseTtfbMs = fetchResponse.ResponseTtfbMs
+	if fetchFatalError != nil {
+		// Fatal error
+		return result, fetchFatalError
 	}
 
 	// Fetch OK, validate
+	validationTime := time.Now()
 	newFile := false
 	uploadFile := ""
 	uploadDest := ""
 	if result.FetchError == nil {
-		vr, err := cb(fetchResponse)
+		vr, err := cb.ValidateResponse(ctx, atx, tmpfile, fetchResponse)
 		if err != nil {
 			return result, err
 		}
@@ -116,35 +131,48 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 			result.FeedVersionID.Set(vr.FeedVersionID.Val)
 		}
 	}
+	validationDuration := time.Since(validationTime)
 
-	// Cleanup any temporary files
-	if fetchResponse.Filename != "" {
-		defer os.Remove(fetchResponse.Filename)
-	}
-	if uploadFile != "" && uploadFile != fetchResponse.Filename {
+	// Cleanup any other temporary files
+	if uploadFile != "" && uploadFile != tmpfile {
 		defer os.Remove(uploadFile)
 	}
 
 	// Validate OK, upload
+	uploadTime := time.Now()
 	if newFile && uploadFile != "" && opts.Storage != "" {
-		if err := request.UploadFile(opts.Storage, uploadFile, uploadDest); err != nil {
+		store, err := request.GetStore(opts.Storage)
+		if err != nil {
+			return result, err
+		}
+		if err := request.Upload(ctx, store, uploadFile, uploadDest); err != nil {
 			return result, err
 		}
 	}
+	uploadDuration := time.Since(uploadTime)
 
 	// Prepare and save feed fetch record
 	tlfetch := dmfr.FeedFetch{}
 	tlfetch.FeedID = feed.ID
 	tlfetch.URLType = opts.URLType
 	tlfetch.FetchedAt.Set(opts.FetchedAt)
+
+	// Save response details, even if local filesystem
+	if result.ResponseCode > 0 {
+		tlfetch.ResponseCode.SetInt(result.ResponseCode)
+	}
+	tlfetch.ResponseSize.SetInt(result.ResponseSize)
+	tlfetch.ResponseTimeMs.SetInt(result.ResponseTimeMs)
+	tlfetch.ResponseTtfbMs.SetInt(result.ResponseTtfbMs)
+	tlfetch.ResponseSHA1.Set(result.ResponseSHA1)
+
+	// Save timing details
+	tlfetch.ValidationDurationMs.SetInt(int(validationDuration.Milliseconds()))
+	tlfetch.UploadDurationMs.SetInt(int(uploadDuration.Milliseconds()))
+
 	// tlfetch.FeedVersionID =
 	if !opts.HideURL {
 		tlfetch.URL = opts.FeedURL
-	}
-	if result.ResponseCode > 0 {
-		tlfetch.ResponseCode.SetInt(result.ResponseCode)
-		tlfetch.ResponseSize.SetInt(result.ResponseSize)
-		tlfetch.ResponseSHA1.Set(result.ResponseSHA1)
 	}
 	if result.FeedVersionID.Valid {
 		tlfetch.FeedVersionID.Set(result.FeedVersionID.Val)
@@ -155,7 +183,7 @@ func ffetch(atx tldb.Adapter, opts Options, cb fetchCb) (Result, error) {
 		tlfetch.Success = false
 		tlfetch.FetchError.Set(result.FetchError.Error())
 	}
-	if _, err := atx.Insert(&tlfetch); err != nil {
+	if _, err := atx.Insert(ctx, &tlfetch); err != nil {
 		return result, err
 	}
 	return result, nil

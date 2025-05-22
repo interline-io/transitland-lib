@@ -1,6 +1,8 @@
 package stats
 
 import (
+	"context"
+
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
@@ -36,14 +38,17 @@ func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 	fvslBuilder := NewFeedVersionServiceLevelBuilder()
 	fvswBuilder := NewFeedVersionServiceWindowBuilder()
 	osidBuilder := NewFeedVersionOnestopIDBuilder()
-	if err := copier.QuietCopy(reader, &empty.Writer{}, func(o *copier.Options) {
-		o.Quiet = false
-		o.NoShapeCache = true
-		o.NoValidators = true
-		o.AddExtension(fvslBuilder)
-		o.AddExtension(fvswBuilder)
-		o.AddExtension(osidBuilder)
-	}); err != nil {
+	if _, err := copier.QuietCopy(
+		context.TODO(),
+		reader, &empty.Writer{},
+		func(o *copier.Options) {
+			o.NoShapeCache = true
+			o.NoValidators = true
+			o.AddExtension(fvslBuilder)
+			o.AddExtension(fvswBuilder)
+			o.AddExtension(osidBuilder)
+		},
+	); err != nil {
 		return ret, err
 	}
 
@@ -93,7 +98,7 @@ type FeedVersionOnestopIDBuilder struct {
 	*builders.OnestopIDBuilder
 }
 
-func (ext *FeedVersionOnestopIDBuilder) Copy(*copier.Copier) error {
+func (ext *FeedVersionOnestopIDBuilder) Copy(adapters.EntityCopier) error {
 	return nil
 }
 
@@ -105,18 +110,20 @@ func NewFeedVersionOnestopIDBuilder() *FeedVersionOnestopIDBuilder {
 
 //////////
 
-func CreateFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
+func CreateFeedStats(ctx context.Context, atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	stats, err := NewFeedStatsFromReader(reader)
 	if err != nil {
 		return err
 	}
+	return WriteFeedVersionStats(ctx, atx, stats, fvid)
+}
 
-	fvt := dmfr.GetFeedVersionTables()
-
+func WriteFeedVersionStats(ctx context.Context, atx tldb.Adapter, stats FeedVersionStats, fvid int) error {
 	// Delete any existing records
+	fvt := dmfr.GetFeedVersionTables()
 	tables := fvt.FetchStatDerivedTables
 	for _, table := range tables {
-		if err := FeedVersionTableDelete(atx, table, fvid, false); err != nil {
+		if err := FeedVersionTableDelete(ctx, atx, table, fvid, false); err != nil {
 			return err
 		}
 	}
@@ -124,28 +131,28 @@ func CreateFeedStats(atx tldb.Adapter, reader *tlcsv.Reader, fvid int) error {
 	// Insert FVSW
 	fvsw := stats.ServiceWindow
 	fvsw.FeedVersionID = fvid
-	if _, err := atx.Insert(&fvsw); err != nil {
+	if _, err := atx.Insert(ctx, &fvsw); err != nil {
 		return err
 	}
 
 	// Batch insert OSIDs
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.AgencyOnestopIDs), fvid)); err != nil {
 		return err
 	}
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.RouteOnestopIDs), fvid)); err != nil {
 		return err
 	}
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.StopOnestopIDs), fvid)); err != nil {
 		return err
 	}
 
 	// Insert FVFIs
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.FileInfos), fvid)); err != nil {
 		return err
 	}
 
 	// Batch insert FVSLs
-	if _, err := atx.MultiInsert(setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
 		return err
 	}
 	return nil
@@ -168,7 +175,7 @@ func setFvid(input []any, fvid int) []any {
 		if v, ok := input[i].(canSetFeedVersion); ok {
 			v.SetFeedVersionID(fvid)
 		} else {
-			log.Error().Msgf("could not set feed version id for type %T", input[i])
+			log.For(context.TODO()).Error().Msgf("could not set feed version id for type %T", input[i])
 		}
 	}
 	return input

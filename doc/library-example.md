@@ -34,9 +34,12 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+
+	// Import a driver
+	_ "github.com/interline-io/transitland-lib/tldb/tlsqlite"
 )
 
-var URL = "https://github.com/interline-io/transitland-lib/raw/master/testdata/external/bart.zip"
+var URL = "https://github.com/interline-io/transitland-lib/raw/master/testdata/gtfs-external/bart.zip"
 
 func TestExample1(t *testing.T) {
 	// Read stops from a GTFS url
@@ -113,9 +116,9 @@ func TestExample3(t *testing.T) {
 		t.Fatalf("no writer available")
 	}
 	// Create a copier to stream, filter, and validate entities
-	cp := copier.NewCopier(reader, writer)
-	result := cp.Copy()
-	if result.WriteError != nil {
+	cp := copier.NewCopier(reader, writer, copier.Options{})
+	result, err := cp.Copy()
+	if err != nil {
 		t.Fatalf("fatal copy error")
 	}
 	for _, err := range result.Errors {

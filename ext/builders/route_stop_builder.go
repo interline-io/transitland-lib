@@ -1,7 +1,7 @@
 package builders
 
 import (
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -56,7 +56,7 @@ func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 	return nil
 }
 
-func (pp *RouteStopBuilder) Copy(copier *copier.Copier) error {
+func (pp *RouteStopBuilder) Copy(copier adapters.EntityCopier) error {
 	bt := []tt.Entity{}
 	for rid, v := range pp.routeStops {
 		aid, ok := pp.routeAgencies[rid]

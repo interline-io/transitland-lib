@@ -1,7 +1,7 @@
 package fetch
 
 import (
-	"io/ioutil"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -32,8 +32,8 @@ func TestStaticFetch(t *testing.T) {
 	}{
 		{
 			name:          "example.zip",
-			serveFile:     "testdata/example.zip",
-			requestPath:   "testdata/example.zip",
+			serveFile:     "testdata/gtfs-examples/example.zip",
+			requestPath:   "testdata/gtfs-examples/example.zip",
 			responseSha1:  "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
 			responseCode:  200,
 			responseError: false,
@@ -42,7 +42,7 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "404",
-			serveFile:     "testdata/example.zip",
+			serveFile:     "testdata/gtfs-examples/example.zip",
 			requestPath:   "404.zip",
 			responseSha1:  "",
 			responseCode:  404,
@@ -52,8 +52,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "invalid zip",
-			serveFile:     "testdata/invalid.zip",
-			requestPath:   "testdata/invalid.zip",
+			serveFile:     "testdata/gtfs-examples/invalid.zip",
+			requestPath:   "testdata/gtfs-examples/invalid.zip",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: true,
@@ -62,8 +62,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "nested dir",
-			serveFile:     "testdata/example-nested-dir.zip",
-			requestPath:   "testdata/example-nested-dir.zip#example-nested-dir/example",
+			serveFile:     "testdata/gtfs-examples/example-nested-dir.zip",
+			requestPath:   "testdata/gtfs-examples/example-nested-dir.zip#example-nested-dir/example",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: false,
@@ -72,8 +72,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "nested two feeds 1",
-			serveFile:     "testdata/example-nested-two-feeds.zip",
-			requestPath:   "testdata/example-nested-two-feeds.zip#example1",
+			serveFile:     "testdata/gtfs-examples/example-nested-two-feeds.zip",
+			requestPath:   "testdata/gtfs-examples/example-nested-two-feeds.zip#example1",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: false,
@@ -82,8 +82,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "nested two feeds 2",
-			serveFile:     "testdata/example-nested-two-feeds.zip",
-			requestPath:   "testdata/example-nested-two-feeds.zip#example2",
+			serveFile:     "testdata/gtfs-examples/example-nested-two-feeds.zip",
+			requestPath:   "testdata/gtfs-examples/example-nested-two-feeds.zip#example2",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: false,
@@ -92,8 +92,8 @@ func TestStaticFetch(t *testing.T) {
 		},
 		{
 			name:          "nested zip",
-			serveFile:     "testdata/example-nested-zip.zip",
-			requestPath:   "testdata/example-nested-zip.zip#example-nested-zip/example.zip",
+			serveFile:     "testdata/gtfs-examples/example-nested-zip.zip",
+			requestPath:   "testdata/gtfs-examples/example-nested-zip.zip#example-nested-zip/example.zip",
 			responseSha1:  "",
 			responseCode:  200,
 			responseError: false,
@@ -101,6 +101,7 @@ func TestStaticFetch(t *testing.T) {
 			fvSha1:        "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
 		},
 	}
+	ctx := context.TODO()
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -108,14 +109,14 @@ func TestStaticFetch(t *testing.T) {
 					http.Error(w, "404", 404)
 					return
 				}
-				buf, err := ioutil.ReadFile(testpath.RelPath(basedir + "/" + tc.serveFile))
+				buf, err := os.ReadFile(testpath.RelPath(basedir + "/" + tc.serveFile))
 				if err != nil {
 					t.Error(err)
 				}
 				w.Write(buf)
 			}))
 			defer ts.Close()
-			tmpdir, err := ioutil.TempDir("", "gtfs")
+			tmpdir, err := os.MkdirTemp("", "gtfs")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -123,7 +124,7 @@ func TestStaticFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
+				fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir}})
 				if err != nil {
 					t.Error(err)
 					return err
@@ -164,22 +165,23 @@ func TestStaticFetch(t *testing.T) {
 
 func TestStaticFetch_Exists(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(ExampleZip.URL)
+		buf, err := os.ReadFile(ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}
 		w.Write(buf)
 	}))
+	ctx := context.TODO()
 	testdb.TempSqlite(func(atx tldb.Adapter) error {
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, url)
 		_ = feed
 		tmpdir := t.TempDir()
-		fr1, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
+		fr1, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir}})
 		if err != nil {
 			t.Fatal(err)
 		}
-		fr2, err2 := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir})
+		fr2, err2 := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir}})
 		if err2 != nil {
 			t.Error(err2)
 		}
@@ -206,15 +208,16 @@ func TestStaticFetch_Exists(t *testing.T) {
 
 func TestStaticFetch_AdditionalTests(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(ExampleZip.URL)
+		buf, err := os.ReadFile(ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}
 		w.Write(buf)
 	}))
 	defer ts.Close()
+	ctx := context.TODO()
 	testdb.TempSqlite(func(atx tldb.Adapter) error {
-		tmpdir, err := ioutil.TempDir("", "gtfs")
+		tmpdir, err := os.MkdirTemp("", "gtfs")
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -223,7 +226,7 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 		//
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, ts.URL)
-		fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
+		fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir}})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -282,16 +285,17 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 // So in this case, the second fetch will return Found and the existing FV.
 func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fp := testpath.RelPath("testdata/example-nested-two-feeds.zip")
-		buf, err := ioutil.ReadFile(fp)
+		fp := testpath.RelPath("testdata/gtfs-examples/example-nested-two-feeds.zip")
+		buf, err := os.ReadFile(fp)
 		if err != nil {
 			t.Error(err)
 		}
 		w.Write(buf)
 	}))
 	defer ts.Close()
+	ctx := context.TODO()
 	testdb.TempSqlite(func(atx tldb.Adapter) error {
-		tmpdir, err := ioutil.TempDir("", "gtfs")
+		tmpdir, err := os.MkdirTemp("", "gtfs")
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -308,7 +312,7 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 		for _, tc := range tcs {
 			_ = tc
 			feed := testdb.CreateTestFeed(atx, ts.URL+"/"+tc.url)
-			fr, err := StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
+			fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir}})
 			if err != nil {
 				t.Error(err)
 				return nil
@@ -327,7 +331,7 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 
 // func TestStaticFetch_CreateFeed(t *testing.T) {
 // 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		buf, err := ioutil.ReadFile(ExampleZip.URL)
+// 		buf, err := os.ReadFile(ExampleZip.URL)
 // 		if err != nil {
 // 			t.Error(err)
 // 		}
@@ -335,7 +339,7 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 // 	}))
 // 	defer ts.Close()
 // 	testdb.TempSqlite(func(atx tldb.Adapter) error {
-// 		tmpdir, err := ioutil.TempDir("", "gtfs")
+// 		tmpdir, err := os.MkdirTemp.("", "gtfs")
 // 		if err != nil {
 // 			t.Error(err)
 // 			return nil
@@ -371,8 +375,9 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 		http.Error(w, "not found", 404)
 	}))
 	defer ts.Close()
+	ctx := context.TODO()
 	testdb.TempSqlite(func(atx tldb.Adapter) error {
-		tmpdir, err := ioutil.TempDir("", "gtfs")
+		tmpdir, err := os.MkdirTemp("", "gtfs")
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -380,7 +385,7 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir})
+		_, err = StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir}})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -396,15 +401,16 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 
 func TestStaticStateFetch_HideURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(ExampleZip.URL)
+		buf, err := os.ReadFile(ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}
 		w.Write(buf)
 	}))
 	defer ts.Close()
+	ctx := context.TODO()
 	testdb.TempSqlite(func(atx tldb.Adapter) error {
-		tmpdir, err := ioutil.TempDir("", "gtfs")
+		tmpdir, err := os.MkdirTemp("", "gtfs")
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -412,7 +418,7 @@ func TestStaticStateFetch_HideURL(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, err = StaticFetch(atx, Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, HideURL: true})
+		_, err = StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, HideURL: true}})
 		if err != nil {
 			t.Error(err)
 			return nil

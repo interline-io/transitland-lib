@@ -1,11 +1,12 @@
 package builders
 
 import (
+	"context"
 	"errors"
 	"sort"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -119,15 +120,16 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 }
 
 // Collects and assembles the default shapes and writes to the database
-func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
+func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
+	ctx := context.TODO()
 	// Process shapes for each route
 	for rid := range pp.shapeCounts {
 		ent, err := pp.buildRouteShape(rid)
 		if err != nil {
-			log.Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
+			log.For(ctx).Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
 			continue
 		}
-		if _, err := copier.CopyEntity(ent); err != nil {
+		if err := copier.CopyEntity(ent); err != nil {
 			return err
 		}
 	}
@@ -261,7 +263,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// Add to MultiLineString
 		if err := g.Push(sl); err != nil {
-			// log.Debugf("failed to build route geometry: %s", err.Error())
+			// log.For(ctx).Debug().Msgf("failed to build route geometry: %s", err.Error())
 		}
 	}
 	if g.NumLineStrings() == 0 || len(matches) == 0 {

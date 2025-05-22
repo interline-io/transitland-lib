@@ -2,9 +2,9 @@ package dmfr
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -25,6 +25,7 @@ type Registry struct {
 
 // ReadRegistry TODO
 func ReadRegistry(reader io.Reader) (*Registry, error) {
+	ctx := context.TODO()
 	loadReg, err := ReadRawRegistry(reader)
 	if err != nil {
 		return nil, err
@@ -37,7 +38,7 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 	reg.Operators = loadReg.Operators
 	reg.Secrets = loadReg.Secrets
 	if reg.Schema == "" {
-		reg.Schema = "https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.0.json"
+		reg.Schema = "https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.1.json"
 	}
 	operators := []Operator{}
 	for _, rfeed := range loadReg.Feeds {
@@ -86,9 +87,9 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 	}
 
 	// Check license and required feeds
-	log.Debugf("Loaded a DMFR file containing %d feeds", len(loadReg.Feeds))
+	log.For(ctx).Debug().Msgf("Loaded a DMFR file containing %d feeds", len(loadReg.Feeds))
 	if loadReg.LicenseSpdxIdentifier != "CC0-1.0" {
-		log.Debugf("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
+		log.For(ctx).Debug().Msgf("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
 	}
 	for i := 0; i < len(loadReg.Feeds); i++ {
 		feedSpec := strings.ToLower(loadReg.Feeds[i].Spec)
@@ -122,7 +123,7 @@ func LoadAndParseRegistry(path string) (*Registry, error) {
 			return nil, err
 		}
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(utfbom.SkipOnly(resp.Body))
+		body, err := io.ReadAll(utfbom.SkipOnly(resp.Body))
 		if err != nil {
 			return nil, err
 		}

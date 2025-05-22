@@ -2,6 +2,8 @@
 package rt
 
 import (
+	"bytes"
+	"context"
 	"os"
 
 	"github.com/interline-io/transitland-lib/request"
@@ -24,17 +26,17 @@ func FlexDecode(data []byte, msg protoreflect.ProtoMessage) error {
 }
 
 // ReadURL opens a message from a url.
-func ReadURL(address string, opts ...request.RequestOption) (*pb.FeedMessage, error) {
-	fr, err := request.AuthenticatedRequest(address, opts...)
+func ReadURL(ctx context.Context, address string, opts ...request.RequestOption) (*pb.FeedMessage, error) {
+	var out bytes.Buffer
+	fr, err := request.AuthenticatedRequest(ctx, &out, address, opts...)
 	if err != nil {
 		return nil, err
 	}
 	if fr.FetchError != nil {
-		return nil, err
+		return nil, fr.FetchError
 	}
 	msg := pb.FeedMessage{}
-	data := fr.Data
-	if err := FlexDecode(data, &msg); err != nil {
+	if err := FlexDecode(out.Bytes(), &msg); err != nil {
 		return nil, err
 	}
 	return &msg, nil

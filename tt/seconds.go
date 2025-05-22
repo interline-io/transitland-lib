@@ -81,6 +81,9 @@ func (r *Seconds) Scan(src interface{}) error {
 }
 
 func (r *Seconds) UnmarshalJSON(d []byte) error {
+	if string(d) == "null" {
+		return nil
+	}
 	return r.Scan(string(stripQuotes(d)))
 }
 

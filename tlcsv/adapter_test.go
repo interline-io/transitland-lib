@@ -2,7 +2,6 @@ package tlcsv
 
 import (
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -111,7 +110,7 @@ func TestZipAdapterNestedTwoFeeds(t *testing.T) {
 
 func TestZipAdapter_findInternalPrefix(t *testing.T) {
 	t.Run("single", func(t *testing.T) {
-		v := ZipAdapter{path: testpath.RelPath("testdata/example-nested-dir.zip")}
+		v := ZipAdapter{path: testpath.RelPath("testdata/gtfs-examples/example-nested-dir.zip")}
 		if err := v.Open(); err != nil {
 			t.Error(err)
 			return
@@ -126,7 +125,7 @@ func TestZipAdapter_findInternalPrefix(t *testing.T) {
 		}
 	})
 	t.Run("findInternalPrefix ambiguous", func(t *testing.T) {
-		v := ZipAdapter{path: testpath.RelPath("testdata/example-nested-dir-ambiguous.zip")}
+		v := ZipAdapter{path: testpath.RelPath("testdata/gtfs-examples/example-nested-dir-ambiguous.zip")}
 		p, err := v.findInternalPrefix()
 		if err == nil {
 			t.Errorf("expected Open error for ambiguous prefixes")
@@ -142,7 +141,7 @@ func TestZipAdapter_findInternalPrefix(t *testing.T) {
 		}
 	})
 	t.Run("findInternalPrefix ambiguous with two complete feeds", func(t *testing.T) {
-		v := ZipAdapter{path: testpath.RelPath("testdata/example-nested-two-dirs.zip")}
+		v := ZipAdapter{path: testpath.RelPath("testdata/gtfs-examples/example-nested-two-dirs.zip")}
 		p, err := v.findInternalPrefix()
 		if err == nil {
 			t.Errorf("expected Open error for ambiguous prefixes")
@@ -170,7 +169,7 @@ func TestZipAdapterNestedZip(t *testing.T) {
 
 func TestURLAdapter(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testutil.ExampleZip.URL)
+		buf, err := os.ReadFile(testutil.ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}
@@ -203,7 +202,7 @@ func TestZipWriterAdapter(t *testing.T) {
 	// creates temporary shadow directory
 	// removes temporary shadow directory
 	// creates zip file when closed
-	outf, err := ioutil.TempFile("", "zip")
+	outf, err := os.CreateTemp("", "zip")
 	outpath := outf.Name()
 	defer os.Remove(outpath)
 	if err != nil {

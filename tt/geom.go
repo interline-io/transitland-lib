@@ -71,6 +71,9 @@ func (g *GeometryOption[T]) Scan(src interface{}) error {
 }
 
 func (g *GeometryOption[T]) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		return nil
+	}
 	return g.Scan(data)
 }
 
@@ -194,6 +197,17 @@ type Polygon struct {
 
 func NewPolygon(v *geom.Polygon) Polygon {
 	return Polygon{GeometryOption: NewGeometryOption(v)}
+}
+
+//////////
+
+// MultiPolygon is an EWKB/SL encoded MultiPolygon
+type MultiPolygon struct {
+	GeometryOption[*geom.MultiPolygon]
+}
+
+func NewMultiPolygon(v *geom.MultiPolygon) MultiPolygon {
+	return MultiPolygon{GeometryOption: NewGeometryOption(v)}
 }
 
 //////////

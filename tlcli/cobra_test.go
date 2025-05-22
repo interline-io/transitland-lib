@@ -2,6 +2,7 @@ package tlcli
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -29,7 +30,7 @@ func (cmd *testCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *testCommand) Run() error {
+func (cmd *testCommand) Run(ctx context.Context) error {
 	fmt.Fprintf(
 		cmd.w,
 		"testCommand: flag: '%s' slice: '%s' args: '%s'",
@@ -44,7 +45,7 @@ func TestRunWithArgs(t *testing.T) {
 	r := &testCommand{}
 	w := bytes.NewBuffer(nil)
 	r.w = w
-	RunWithArgs(r, []string{"--value=abc", "--slice=1", "--slice=2", "one", "two", "three"})
+	RunWithArgs(context.TODO(), r, []string{"--value=abc", "--slice=1", "--slice=2", "one", "two", "three"})
 	expect := `testCommand: flag: 'abc' slice: '1 2' args: 'one two three'`
 	assert.Equal(t, expect, w.String())
 }

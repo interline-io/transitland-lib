@@ -9,11 +9,12 @@ import (
 
 // RiderCategory rider_categories.txt
 type RiderCategory struct {
-	RiderCategoryID   tt.String `csv:",required"`
-	RiderCategoryName tt.String `csv:",required"`
-	MinAge            tt.Int    `range:"0,"`
-	MaxAge            tt.Int    `range:"0,"`
-	EligibilityURL    tt.Url
+	RiderCategoryID       tt.String `csv:",required"`
+	RiderCategoryName     tt.String `csv:",required"`
+	MinAge                tt.Int    `range:"0,"`
+	MaxAge                tt.Int    `range:"0,"`
+	IsDefaultFareCategory tt.Int    `range:"0,1"`
+	EligibilityURL        tt.Url
 	tt.BaseEntity
 }
 

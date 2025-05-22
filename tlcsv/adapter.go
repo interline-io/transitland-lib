@@ -2,12 +2,12 @@ package tlcsv
 
 import (
 	"archive/zip"
+	"context"
 	"crypto/sha1"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -41,8 +41,12 @@ type WriterAdapter interface {
 /////////////////////
 
 // NewStoreAdapter is a convenience method for getting a GTFS Zip reader from the store.
-func NewStoreAdapter(storage string, key string, fragment string) (*TmpZipAdapter, error) {
-	r, err := request.Download(storage, key)
+func NewStoreAdapter(ctx context.Context, storage string, key string, fragment string) (*ZipAdapter, error) {
+	store, err := request.GetStore(storage)
+	if err != nil {
+		return nil, err
+	}
+	r, _, err := store.Download(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +89,7 @@ func NewAdapter(address string) (Adapter, error) {
 type URLAdapter struct {
 	url     string
 	reqOpts []request.RequestOption
-	TmpZipAdapter
+	ZipAdapter
 }
 
 func NewURLAdapter(address string, opts ...request.RequestOption) *URLAdapter {
@@ -113,66 +117,45 @@ func (adapter *URLAdapter) Open() error {
 		fragment = split[1]
 	}
 	// Download to temporary file
-	fr, err := request.AuthenticatedRequestDownload(url, adapter.reqOpts...)
+	tmpfile, fr, err := request.AuthenticatedRequestDownload(context.TODO(), url, adapter.reqOpts...)
 	if err != nil {
 		return err
 	}
-	// Add internal path prefix back
-	adapter.TmpZipAdapter = TmpZipAdapter{
-		tmpfilepath:    fr.Filename,
-		internalPrefix: fragment,
+	if fr.FetchError != nil {
+		return fr.FetchError
 	}
-	return adapter.TmpZipAdapter.Open()
+	// Add internal path prefix back
+	adapter.ZipAdapter = ZipAdapter{
+		path:           tmpfile,
+		internalPrefix: fragment,
+		tmpfiles:       []string{tmpfile},
+	}
+	return adapter.ZipAdapter.Open()
 }
 
 ///////////////
 
 // Temporary zip adapter
 
-func NewTmpZipAdapterFromReader(reader io.Reader, fragment string) (*TmpZipAdapter, error) {
-	// Read stream to a temporary file
-	tmpfile, err := ioutil.TempFile("", "gtfs.zip")
+func NewTmpZipAdapterFromReader(reader io.Reader, fragment string) (*ZipAdapter, error) {
+	// Create temp file
+	tmpfile, err := os.CreateTemp("", "gtfs")
 	if err != nil {
 		return nil, err
 	}
+	defer tmpfile.Close()
+
+	// Read stream to a temporary file
 	if _, err := io.Copy(tmpfile, reader); err != nil {
 		return nil, err
 	}
-	tfn := tmpfile.Name()
-	if err := tmpfile.Close(); err != nil {
-		return nil, err
-	}
 	// Add internal path prefix back
-	adapter := TmpZipAdapter{
-		tmpfilepath:    tfn, // delete on close
+	adapter := ZipAdapter{
+		path:           tmpfile.Name(),
 		internalPrefix: fragment,
+		tmpfiles:       []string{tmpfile.Name()},
 	}
 	return &adapter, nil
-}
-
-// TmpZipAdapter is similar to ZipAdapter, but deletes the file on close.
-type TmpZipAdapter struct {
-	tmpfilepath    string
-	internalPrefix string
-	ZipAdapter
-}
-
-func (adapter *TmpZipAdapter) Open() error {
-	adapter.ZipAdapter = ZipAdapter{
-		path:           adapter.tmpfilepath,
-		internalPrefix: adapter.internalPrefix,
-	}
-	return adapter.ZipAdapter.Open()
-}
-
-func (adapter *TmpZipAdapter) Close() error {
-	if adapter.tmpfilepath != "" {
-		log.Debugf("tmp zip adapter: removing temp file: %s", adapter.tmpfilepath)
-		if err := os.Remove(adapter.tmpfilepath); err != nil {
-			return err
-		}
-	}
-	return adapter.ZipAdapter.Close()
 }
 
 /////////////////////
@@ -181,6 +164,7 @@ func (adapter *TmpZipAdapter) Close() error {
 type ZipAdapter struct {
 	path           string
 	internalPrefix string
+	tmpfiles       []string
 }
 
 // NewZipAdapter returns an initialized zip adapter.
@@ -216,12 +200,14 @@ func (adapter *ZipAdapter) Open() error {
 		tmpfilepath := ""
 		err := adapter.OpenFile(pf, func(r io.Reader) {
 			// Create the file
-			tmpfile, _ := ioutil.TempFile("", "gtfs.zip")
+			tmpfile, _ := os.CreateTemp("", "gtfs-nested")
 			defer tmpfile.Close()
 			// Get the full path
 			tmpfilepath = tmpfile.Name()
+			// Add to temp file list
+			adapter.tmpfiles = append(adapter.tmpfiles, tmpfilepath)
 			// Write the body to file
-			log.Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
+			log.For(context.TODO()).Debug().Str("dst", tmpfilepath).Str("src", adapter.path).Str("prefix", pf).Msg("zip adapter: extracted internal zip")
 			io.Copy(tmpfile, r)
 		})
 		if err != nil {
@@ -231,13 +217,19 @@ func (adapter *ZipAdapter) Open() error {
 		adapter.internalPrefix = ""
 	}
 	if adapter.internalPrefix != "" {
-		log.Tracef("zip adapter: using internal prefix: %s", adapter.internalPrefix)
+		log.For(context.TODO()).Trace().Msgf("zip adapter: using internal prefix: %s", adapter.internalPrefix)
 	}
 	return nil
 }
 
 // Close the adapter.
 func (adapter *ZipAdapter) Close() error {
+	for _, tmpfile := range adapter.tmpfiles {
+		log.For(context.TODO()).Debug().Msgf("zip adapter: removing temp file: %s", tmpfile)
+		if err := os.Remove(tmpfile); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -566,7 +558,7 @@ type ZipWriterAdapter struct {
 
 // NewZipWriterAdapter returns a new ZipWriterAdapter.
 func NewZipWriterAdapter(path string) *ZipWriterAdapter {
-	tmpdir, err := ioutil.TempDir("", "gtfs")
+	tmpdir, err := os.MkdirTemp("", "gtfs")
 	if err != nil {
 		return nil
 	}

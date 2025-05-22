@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -22,7 +23,7 @@ type ValidatorCommand struct {
 	OutputFile              string
 	DBURL                   string
 	FVID                    int
-	extensions              []string
+	extensionDefs           []string
 	SaveValidationReport    bool
 	ValidationReportStorage string
 	readerPath              string
@@ -41,7 +42,7 @@ func (cmd *ValidatorCommand) HelpArgs() string {
 }
 
 func (cmd *ValidatorCommand) AddFlags(fl *pflag.FlagSet) {
-	fl.StringSliceVar(&cmd.extensions, "ext", nil, "Include GTFS Extension")
+	fl.StringSliceVar(&cmd.extensionDefs, "ext", nil, "Include GTFS Extension")
 	fl.StringVar(&cmd.OutputFile, "o", "", "Write validation report as JSON to file")
 	fl.BoolVar(&cmd.Options.BestPractices, "best-practices", false, "Include Best Practices validations")
 	fl.BoolVar(&cmd.Options.IncludeRealtimeJson, "rt-json", false, "Include GTFS-RT proto messages as JSON in validation report")
@@ -62,13 +63,13 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 	}
 	cmd.readerPath = fl.Arg(0)
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles
-	cmd.Options.Extensions = cmd.extensions
+	cmd.Options.ExtensionDefs = cmd.extensionDefs
 	cmd.Options.EvaluateAt = time.Now().In(time.UTC)
 	return nil
 }
 
-func (cmd *ValidatorCommand) Run() error {
-	log.Infof("Validating: %s", cmd.readerPath)
+func (cmd *ValidatorCommand) Run(ctx context.Context) error {
+	log.For(ctx).Info().Msgf("Validating: %s", cmd.readerPath)
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {
 		return err
@@ -78,13 +79,10 @@ func (cmd *ValidatorCommand) Run() error {
 	if err != nil {
 		return err
 	}
-	result, err := v.Validate()
+	result, err := v.Validate(ctx)
 	if err != nil {
 		return err
 	}
-	// result.DisplayErrors()
-	// result.DisplayWarnings()
-	// result.DisplaySummary()
 
 	// Write output
 	if cmd.OutputFile != "" {
@@ -102,14 +100,14 @@ func (cmd *ValidatorCommand) Run() error {
 
 	// Save to database
 	if cmd.SaveValidationReport {
-		log.Infof("Saving validation report to feed version: %d", cmd.FVID)
+		log.For(ctx).Info().Msgf("Saving validation report to feed version: %d", cmd.FVID)
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
 			return err
 		}
 		atx := writer.Adapter
 		defer atx.Close()
-		if err := validator.SaveValidationReport(atx, result, cmd.FVID, cmd.ValidationReportStorage); err != nil {
+		if err := validator.SaveValidationReport(ctx, atx, result, cmd.FVID, cmd.ValidationReportStorage); err != nil {
 			return err
 		}
 	}

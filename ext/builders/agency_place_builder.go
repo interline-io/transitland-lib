@@ -1,11 +1,14 @@
 package builders
 
 import (
+	"context"
 	"database/sql"
 
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
 )
@@ -90,20 +93,21 @@ from ne_10m_admin_1_states_provinces ne
 where st_intersects(ne.geometry, ST_MakePoint(?, ?));
 `
 
-func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
+func (pp *AgencyPlaceBuilder) Copy(copier adapters.EntityCopier) error {
+	ctx := context.TODO()
 	// get places for each point
 	ghPoints := map[string][]string{}
 	for stopId, ghPoint := range pp.stops {
 		ghPoints[ghPoint] = append(ghPoints[ghPoint], stopId)
 	}
-	dbWriter, ok := copier.Writer.(*tldb.Writer)
+	dbWriter, ok := copier.Writer().(*tldb.Writer)
 	if !ok {
-		// log.Traceln("writer is not dbwriter")
+		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, writer is not dbwriter")
 		return nil
 	}
 	db := dbWriter.Adapter
-	if _, ok := db.(*tldb.PostgresAdapter); !ok {
-		// log.Traceln("only postgres is supported")
+	if _, ok := db.(*postgres.PostgresAdapter); !ok {
+		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, only postgres is supported")
 		return nil
 	}
 	// For each geohash, check nearby populated places and inside admin boundaries
@@ -117,7 +121,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	for ghPoint := range ghPoints {
 		gLat, gLon := geohash.Decode(ghPoint)
 		r := []foundPlace{}
-		if err := db.Select(&r, agencyPlaceQuery, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
+		if err := db.Select(ctx, &r, agencyPlaceQuery, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
 			// ok
 		} else if err != nil {
 			return nil
@@ -129,7 +133,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 	for ghPoint := range ghPoints {
 		gLat, gLon := geohash.Decode(ghPoint)
 		r := []foundPlace{}
-		if err := db.Select(&r, agencyAdminQuery, gLon, gLat); err == sql.ErrNoRows {
+		if err := db.Select(ctx, &r, agencyAdminQuery, gLon, gLat); err == sql.ErrNoRows {
 			// ok
 		} else if err != nil {
 			return nil
@@ -138,8 +142,8 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 			pointAdmins[ghPoint] = r[0]
 		}
 	}
+	var ents []tt.Entity
 	for aid, agencyPoints := range pp.agencyStops {
-		// log.Traceln("agency stops:", agencyPoints)
 		placeWeights := map[foundPlace]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
@@ -158,11 +162,9 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				}
 			}
 		}
-		// log.Traceln("aid:", aid, "total weight:", agencyTotalWeight)
 		for k, v := range placeWeights {
 			score := float64(v) / float64(agencyTotalWeight)
 			if score > 0.05 {
-				// log.Traceln("\tplace:", k.Name.String, "/", k.Adm1name.String, "/", k.Adm0name.String, "weight:", v, "score:", score)
 				ap := AgencyPlace{}
 				ap.AgencyID = aid
 				ap.Name = k.Name
@@ -170,14 +172,9 @@ func (pp *AgencyPlaceBuilder) Copy(copier *copier.Copier) error {
 				ap.Adm1name = k.Adm1name
 				ap.Count = v
 				ap.Rank = score
-				if _, err := copier.CopyEntity(&ap); err != nil {
-					return err
-				}
-
+				ents = append(ents, &ap)
 			}
 		}
 	}
-	////////
-
-	return nil
+	return copier.CopyEntities(ents)
 }

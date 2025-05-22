@@ -34,7 +34,7 @@ func interpolateGap(stoptimes *[]gtfs.StopTime, start int, end int) {
 	t := float64((stEnd.ArrivalTime.Int() - stStart.DepartureTime.Int()))
 	x := stEnd.ShapeDistTraveled.Val - stStart.ShapeDistTraveled.Val
 	// For StopTimes *between* start and end
-	// log.Trace(
+	// log.Tracef(
 	// 	"trip '%s' interpolating %d stoptimes: index %d -> %d time: %d .. %d = %f distance: %f .. %f = %f",
 	// 	sts[0].TripID,
 	// 	end-start-1,
@@ -45,7 +45,7 @@ func interpolateGap(stoptimes *[]gtfs.StopTime, start int, end int) {
 	for i := start + 1; i < end; i++ {
 		dx := (sts[i].ShapeDistTraveled.Val - stStart.ShapeDistTraveled.Val) / x
 		dt := stStart.DepartureTime.Int() + int(t*dx)
-		// log.Trace(
+		// log.Tracef(
 		// 	"\tindex: %d traveled: %f dx: %f dt: %d",
 		// 	i, sts[i].ShapeDistTraveled, dx, dt,
 		// )

@@ -567,13 +567,15 @@ CREATE TABLE IF NOT EXISTS "gtfs_attributions" (
 CREATE INDEX idx_gtfs_attributions_feed_version_id ON "gtfs_attributions"(feed_version_id);
 CREATE TABLE tl_stop_external_references (
   "id" integer primary key autoincrement,
+  "stop_id" integer not null,
   "feed_version_id" integer NOT NULL,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "target_feed_onestop_id" varchar(255),
   "target_stop_id" varchar(255),
   "inactive" bool,
-  foreign key(feed_version_id) REFERENCES feed_versions(id)
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(stop_id) REFERENCES gtfs_stops(id)
 );
 CREATE TABLE feed_fetches (
   "id" integer primary key autoincrement,
@@ -585,7 +587,11 @@ CREATE TABLE feed_fetches (
   "fetch_error" varchar(255),
   "response_size" int,
   "response_code" int,
+  "response_time_ms" int,
+  "response_ttfb_ms" int,
   "response_sha1" varchar(255),
+  "validation_duration_ms" int,
+  "upload_duration_ms" int,
   "feed_version_id" int,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
@@ -681,9 +687,46 @@ CREATE TABLE gtfs_rider_categories (
   rider_category_name varchar(255),
   min_age int,
   max_age int,
+  is_default_fare_category int,
   eligibility_url varchar(255),
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
+
+CREATE TABLE gtfs_timeframes (
+  "id" integer primary key autoincrement,
+  "feed_version_id" int not null,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  timeframe_group_id varchar(255),
+  start_time int,
+  end_time int,
+  service_id int,
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(service_id) REFERENCES gtfs_calendars(id)
+);
+
+CREATE TABLE gtfs_networks (
+  "id" integer primary key autoincrement,
+  "feed_version_id" int not null,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  network_id varchar(255),
+  network_name varchar(255),
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
+);
+
+CREATE TABLE gtfs_route_networks (
+  "id" integer primary key autoincrement,
+  "feed_version_id" int not null,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  network_id int,
+  route_id int,
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(network_id) REFERENCES gtfs_networks(id),
+  foreign key(route_id) REFERENCES gtfs_routes(id)
+);
+
 CREATE TABLE tl_validation_reports (
   "id" integer primary key autoincrement,
   "feed_version_id" int not null,

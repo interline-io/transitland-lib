@@ -26,7 +26,7 @@ func makehindex(header []string) map[string]int {
 
 // Benchmark StopTime memory usage
 func Benchmark_StopTime_Memory_Read1000(b *testing.B) {
-	p := testpath.RelPath("testdata/external/bart.zip")
+	p := testpath.RelPath("testdata/gtfs-external/bart.zip")
 	reader, err := NewReader(p)
 	if err != nil {
 		b.Error(err)
@@ -39,6 +39,7 @@ func Benchmark_StopTime_Memory_Read1000(b *testing.B) {
 		for st := range reader.StopTimes() {
 			stoptimes = append(stoptimes, st)
 		}
+		_ = stoptimes
 	}
 }
 

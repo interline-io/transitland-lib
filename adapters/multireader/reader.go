@@ -8,9 +8,7 @@ import (
 var bufferSize = 1000
 
 func init() {
-	var v adapters.Reader
-	v = &Reader{}
-	_ = v
+	var _ adapters.Reader = &Reader{}
 }
 
 // Reader is a mocked up Reader used for testing.
@@ -164,6 +162,18 @@ func (mr *Reader) FareProducts() chan gtfs.FareProduct {
 
 func (mr *Reader) RiderCategories() chan gtfs.RiderCategory {
 	return readEntities(mr, func(r adapters.Reader) chan gtfs.RiderCategory { return r.RiderCategories() }, setFv[*gtfs.RiderCategory])
+}
+
+func (mr *Reader) Timeframes() chan gtfs.Timeframe {
+	return readEntities(mr, func(r adapters.Reader) chan gtfs.Timeframe { return r.Timeframes() }, setFv[*gtfs.Timeframe])
+}
+
+func (mr *Reader) Networks() chan gtfs.Network {
+	return readEntities(mr, func(r adapters.Reader) chan gtfs.Network { return r.Networks() }, setFv[*gtfs.Network])
+}
+
+func (mr *Reader) RouteNetworks() chan gtfs.RouteNetwork {
+	return readEntities(mr, func(r adapters.Reader) chan gtfs.RouteNetwork { return r.RouteNetworks() }, setFv[*gtfs.RouteNetwork])
 }
 
 type canSetFV interface {

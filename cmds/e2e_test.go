@@ -3,7 +3,7 @@ package cmds
 // End to end tests for sync, fetch, and import
 
 import (
-	"io/ioutil"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -33,7 +33,7 @@ func TestE2E(t *testing.T) {
 	}{
 		{
 			name:            "basic",
-			fn:              "testdata/example.zip",
+			fn:              "testdata/gtfs-examples/example.zip",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,
@@ -42,7 +42,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic no activate",
-			fn:              "testdata/example.zip",
+			fn:              "testdata/gtfs-examples/example.zip",
 			activate:        false,
 			fvcount:         1,
 			expectStops:     0,
@@ -51,7 +51,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic unimport",
-			fn:              "testdata/example.zip",
+			fn:              "testdata/gtfs-examples/example.zip",
 			activate:        true,
 			unimport:        true,
 			fvcount:         1,
@@ -61,7 +61,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:              "basic unimport sched",
-			fn:                "testdata/example.zip",
+			fn:                "testdata/gtfs-examples/example.zip",
 			activate:          true,
 			unimport:          true,
 			unimportSchedOnly: true,
@@ -72,7 +72,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic nested dir",
-			fn:              "testdata/example-nested-dir.zip#example-nested-dir/example",
+			fn:              "testdata/gtfs-examples/example-nested-dir.zip#example-nested-dir/example",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,
@@ -81,7 +81,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic nested two feeds 1",
-			fn:              "testdata/example-nested-two-feeds.zip#example1",
+			fn:              "testdata/gtfs-examples/example-nested-two-feeds.zip#example1",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,
@@ -91,7 +91,7 @@ func TestE2E(t *testing.T) {
 
 		{
 			name:            "basic nested two feeds 2",
-			fn:              "testdata/example-nested-two-feeds.zip#example2",
+			fn:              "testdata/gtfs-examples/example-nested-two-feeds.zip#example2",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,
@@ -100,7 +100,7 @@ func TestE2E(t *testing.T) {
 		},
 		{
 			name:            "basic nested zip",
-			fn:              "testdata/example-nested-zip.zip#example-nested-zip/example.zip",
+			fn:              "testdata/gtfs-examples/example-nested-zip.zip#example-nested-zip/example.zip",
 			activate:        true,
 			fvcount:         1,
 			expectStops:     9,
@@ -108,11 +108,12 @@ func TestE2E(t *testing.T) {
 			expectStopTimes: 28,
 		},
 	}
+	ctx := context.TODO()
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				p := strings.Split(tc.fn, "#")
-				buf, err := ioutil.ReadFile(testpath.RelPath(p[0]))
+				buf, err := os.ReadFile(testpath.RelPath(p[0]))
 				if err != nil {
 					t.Error(err)
 				}
@@ -120,13 +121,13 @@ func TestE2E(t *testing.T) {
 			}))
 			defer ts.Close()
 
-			tmpdir, err := ioutil.TempDir("", "gtfs")
+			tmpdir, err := os.MkdirTemp("", "gtfs")
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer os.RemoveAll(tmpdir) // clean up
 
-			atx := testdb.TempSqliteAdapter("sqlite3://:memory:")
+			atx := testdb.TempSqliteAdapter()
 
 			// Fetch
 			feedName := tc.name
@@ -135,13 +136,15 @@ func TestE2E(t *testing.T) {
 				FeedIDs:    []string{feedName},
 				Workers:    1,
 				Adapter:    atx,
-				Options: fetch.Options{
-					FeedURL:   ts.URL + "/" + tc.fn,
-					Storage:   tmpdir,
-					FetchedAt: time.Now(),
+				Options: fetch.StaticFetchOptions{
+					Options: fetch.Options{
+						FeedURL:   ts.URL + "/" + tc.fn,
+						Storage:   tmpdir,
+						FetchedAt: time.Now(),
+					},
 				},
 			}
-			if err := fetch.Run(); err != nil {
+			if err := fetch.Run(ctx); err != nil {
 				t.Fatal(err)
 			}
 
@@ -155,7 +158,7 @@ func TestE2E(t *testing.T) {
 					Activate: tc.activate,
 				},
 			}
-			if err := impcmd.Run(); err != nil {
+			if err := impcmd.Run(ctx); err != nil {
 				t.Fatal(err)
 			}
 
@@ -169,7 +172,7 @@ func TestE2E(t *testing.T) {
 					Workers:      1,
 					Adapter:      atx,
 				}
-				if err := unimpcmd.Run(); err != nil {
+				if err := unimpcmd.Run(ctx); err != nil {
 					t.Fatal(err)
 				}
 			}

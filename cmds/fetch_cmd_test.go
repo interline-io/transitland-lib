@@ -1,7 +1,8 @@
 package cmds
 
 import (
-	"io/ioutil"
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,64 +12,88 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 )
 
 func TestFetchCommand(t *testing.T) {
-	ts200 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testutil.ExampleZip.URL)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := os.ReadFile(testpath.RelPath(filepath.Join("testdata", r.URL.Path)))
 		if err != nil {
-			t.Error(err)
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
 		}
 		w.Write(buf)
 	}))
-	defer ts200.Close()
-	ts404 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Status-Code", "404")
-		w.Write([]byte("not found"))
-	}))
-	defer ts404.Close()
+	defer ts.Close()
+
 	// note - Spec==gtfs is required for fetch
-	f200 := dmfr.Feed{FeedID: "f--200", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: ts200.URL}}
-	f404 := dmfr.Feed{FeedID: "f--404", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: ts404.URL}}
+	f200 := dmfr.Feed{FeedID: "f-200", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: fmt.Sprintf("%s/gtfs-examples/example.zip", ts.URL)}}
+	f404 := dmfr.Feed{FeedID: "f-404", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: fmt.Sprintf("%s/404", ts.URL)}}
+	fvErrorExample := dmfr.Feed{FeedID: "f-error", Spec: "gtfs", URLs: dmfr.FeedUrls{StaticCurrent: fmt.Sprintf("%s/gtfs-examples/example-errors.zip", ts.URL)}}
 	cases := []struct {
+		name               string
 		fvcount            int
 		fatalErrorContains string
 		feeds              []dmfr.Feed
 		command            []string
 		fail               bool
+		strict             bool
 	}{
 		{
+			name:    "single fetch",
 			fvcount: 1,
 			feeds:   []dmfr.Feed{f200},
 		},
 		{
+			name:    "multiple fetch",
 			fvcount: 1,
 			feeds:   []dmfr.Feed{f200, f404},
-			command: []string{"f--200", "f--404"},
+			command: []string{"f-200", "f-404"},
 		},
 		{
+			name:    "fetch error",
 			fvcount: 1,
 			feeds:   []dmfr.Feed{f200, f404},
-			command: []string{"f--200"},
+			command: []string{"f-200"},
 		},
 		{
+			name:    "fetch error 2",
 			fvcount: 0,
 			feeds:   []dmfr.Feed{f200, f404},
-			command: []string{"f--404"},
+			command: []string{"f-404"},
 		},
 		{
+			name:               "fail",
 			fvcount:            0,
 			feeds:              []dmfr.Feed{f200, f404},
-			command:            []string{"f--404"},
+			command:            []string{"f-404"},
 			fail:               true,
-			fatalErrorContains: "file does not exist or invalid data",
+			fatalErrorContains: "404",
+		},
+		{
+			name:    "non-strict validation",
+			fvcount: 2,
+			feeds:   []dmfr.Feed{f200, fvErrorExample},
+		},
+		{
+			name:    "strict validation",
+			fvcount: 1,
+			feeds:   []dmfr.Feed{f200, fvErrorExample},
+			strict:  true,
+		},
+		{
+			name:               "strict validation with fail",
+			fvcount:            1,
+			feeds:              []dmfr.Feed{f200, fvErrorExample},
+			fail:               true,
+			strict:             true,
+			fatalErrorContains: "strict validation failed",
 		},
 	}
-	_ = cases
+	ctx := context.TODO()
 	for _, exp := range cases {
-		t.Run("", func(t *testing.T) {
-			adapter := testdb.MustOpenWriter("sqlite3://:memory:", true).Adapter
+		t.Run(exp.name, func(t *testing.T) {
+			adapter := testdb.TempSqliteAdapter()
 			for _, feed := range exp.feeds {
 				testdb.ShouldInsert(t, adapter, &feed)
 			}
@@ -76,11 +101,12 @@ func TestFetchCommand(t *testing.T) {
 			c.Adapter = adapter
 			tmpDir := t.TempDir()
 			c.Options.Storage = tmpDir
+			c.Options.StrictValidation = exp.strict
 			c.Fail = exp.fail
 			if err := c.Parse(exp.command); err != nil {
 				t.Fatal(err)
 			}
-			if err := c.Run(); err != nil && exp.fatalErrorContains != "" {
+			if err := c.Run(ctx); err != nil && exp.fatalErrorContains != "" {
 				if !strings.Contains(err.Error(), exp.fatalErrorContains) {
 					t.Errorf("got '%s' error, expected to contain '%s'", err.Error(), exp.fatalErrorContains)
 				}

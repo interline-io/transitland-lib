@@ -55,7 +55,7 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 			},
 		},
 		"TriMet-2Routes": {
-			testpath.RelPath("testdata/external/trimet-2routes.zip"),
+			testpath.RelPath("testdata/gtfs-external/trimet-2routes.zip"),
 			[]testcase{
 				{RouteID: "193", DowCat: 1, DirectionID: 0, StopID: "10776", ServiceDate: "2021-10-18", HeadwaySecs: 960},
 				{RouteID: "200", DowCat: 1, DirectionID: 0, StopID: "10293", ServiceDate: "2021-10-25", HeadwaySecs: 900},
@@ -64,14 +64,9 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 	}
 	for groupName, testGroup := range groups {
 		t.Run(groupName, func(t *testing.T) {
-			cp, writer, err := newMockCopier(testGroup.URL)
-			if err != nil {
-				t.Fatal(err)
-			}
 			e := NewRouteHeadwayBuilder()
-			cp.AddExtension(e)
-			cpr := cp.Copy()
-			if cpr.WriteError != nil {
+			_, writer, err := newMockCopier(testGroup.URL, e)
+			if err != nil {
 				t.Fatal(err)
 			}
 			routeHeadways := map[string][]*RouteHeadway{}

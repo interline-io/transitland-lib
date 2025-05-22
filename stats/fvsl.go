@@ -1,6 +1,8 @@
 package stats
 
 import (
+	"context"
+	"iter"
 	"sort"
 	"time"
 
@@ -14,10 +16,87 @@ import (
 	"github.com/snabb/isoweek"
 )
 
+func ServiceLevelDaysMaxWindow(fvsls []dmfr.FeedVersionServiceLevel, startDate time.Time, endDate time.Time, windowSize int) (time.Time, time.Time, int) {
+	// Requires window size > 0
+	if windowSize < 1 {
+		windowSize = 1
+	}
+	windowSeconds := 0
+	windowStart := startDate
+	windowEnd := startDate
+
+	i := 0
+	window := make([]int, windowSize)
+	for serviceDate, serviceLevel := range ServiceLevelDays(fvsls, startDate, endDate) {
+		// Overwrite window position
+		window[i%windowSize] = serviceLevel
+		i++
+
+		// Calculate window total
+		tot := 0
+		for _, v := range window {
+			tot += v
+		}
+
+		// Update max window
+		if tot >= windowSeconds {
+			windowSeconds = tot
+			windowEnd = serviceDate
+			windowStart = serviceDate.AddDate(0, 0, -windowSize+1)
+		}
+	}
+	return windowStart, windowEnd, windowSeconds
+}
+
+func ServiceLevelDays(fvsls []dmfr.FeedVersionServiceLevel, startDate time.Time, endDate time.Time) iter.Seq2[time.Time, int] {
+	return func(yield func(time.Time, int) bool) {
+		d := startDate
+		for ; d.Before(endDate) || d.Equal(endDate); d = d.AddDate(0, 0, 1) {
+			// Find fvsl for this date
+			// TODO: optimize by keeping last matched index
+			fvsl := dmfr.FeedVersionServiceLevel{}
+			for _, a := range fvsls {
+				if (d.After(a.StartDate.Val) || d.Equal(a.StartDate.Val)) && (d.Before(a.EndDate.Val) || d.Equal(a.EndDate.Val)) {
+					fvsl = a
+					break
+				}
+			}
+			// Get fvsl day of week service seconds
+			slevel := 0
+			switch d.Weekday() {
+			case time.Monday:
+				slevel = fvsl.Monday
+			case time.Tuesday:
+				slevel = fvsl.Tuesday
+			case time.Wednesday:
+				slevel = fvsl.Wednesday
+			case time.Thursday:
+				slevel = fvsl.Thursday
+			case time.Friday:
+				slevel = fvsl.Friday
+			case time.Saturday:
+				slevel = fvsl.Saturday
+			case time.Sunday:
+				slevel = fvsl.Sunday
+			}
+			if !yield(d, slevel) {
+				return
+			}
+		}
+	}
+}
+
 // NewFeedVersionServiceLevelsFromReader .
 func NewFeedVersionServiceLevelsFromReader(reader adapters.Reader) ([]dmfr.FeedVersionServiceLevel, error) {
 	bld := NewFeedVersionServiceLevelBuilder()
-	if err := copier.QuietCopy(reader, &empty.Writer{}, func(o *copier.Options) { o.AddExtension(bld) }); err != nil {
+	if _, err := copier.QuietCopy(
+		context.TODO(),
+		reader,
+		&empty.Writer{},
+		func(o *copier.Options) {
+			o.AddExtension(bld)
+		},
+	); err != nil {
 		return nil, err
 	}
 	results, err := bld.ServiceLevels()
@@ -43,11 +122,9 @@ func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []dmfr.FeedVersio
 	} else {
 		for _, fvsl := range fvsls {
 			if fvsl.EndDate.Before(start) {
-				// log.Traceln("fvsl ends before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
 				continue
 			}
 			if fvsl.StartDate.After(end) {
-				// log.Traceln("fvsl starts before window:", fvsl.StartDate.String(), fvsl.EndDate.String())
 				continue
 			}
 			fvsort = append(fvsort, fvsl)
@@ -64,11 +141,6 @@ func ServiceLevelDefaultWeek(start tt.Date, end tt.Date, fvsls []dmfr.FeedVersio
 		}
 		return a > b
 	})
-	// log.Traceln("window start:", start.String(), "end:", end.String())
-	// for _, fvsl := range fvsort {
-	// 	log.Traceln("start:", fvsl.StartDate.String(), "end:", fvsl.EndDate.String(), "total:", fvsl.Total())
-	// }
-	// log.Traceln("d:", fvsort[0].StartDate.String())
 	return fvsort[0].StartDate, nil
 }
 
@@ -137,7 +209,7 @@ func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, 
 	return nil
 }
 
-func (pp *FeedVersionServiceLevelBuilder) Copy(*copier.Copier) error {
+func (pp *FeedVersionServiceLevelBuilder) Copy(adapters.EntityCopier) error {
 	return nil
 }
 
@@ -149,7 +221,6 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 		td := ti.Duration
 		// Multiply out frequency based trips; they are scheduled or not scheduled together
 		if freq, ok := pp.freqs[tripId]; ok {
-			// log.Traceln("\ttrip:", trip.TripID, "frequency repeat count:", freq)
 			td = td * freq
 		}
 		// Add to pattern
@@ -157,10 +228,7 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 	}
 
 	// Assign durations to week
-	// log.Traceln("assigning durations to week")
-	// log.Traceln("\troute_id:", route)
 	// Calculate the total duration for each day of the service period
-	// log.Printf("\t\tchecking service periods (%d)\n", len(v))
 	smap := map[int][7]int{}
 	for k, seconds := range serviceTotals {
 		service, ok := services[k]
@@ -169,12 +237,10 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 		}
 		start, end := service.ServicePeriod()
 		if start.IsZero() {
-			// log.Traceln("\t\t\tstart is zero! skipping", k)
 			continue
 		}
 		// Iterate from the first day to the last day,
 		// saving the result to the Julian date index for that week
-		// log.Traceln("\t\t\tservice_id:", k, "start, end", start, end)
 		for start.Before(end) || start.Equal(end) {
 			if service.IsActive(start) {
 				jd := toJulian(start)
@@ -186,14 +252,12 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 		}
 	}
 	// Group weeks by pattern
-	// log.Traceln("\t\tgrouping weeks")
 	imap := map[[7]int][]int{}
 	for k, v := range smap {
 		imap[v] = append(imap[v], k)
 	}
 
 	// Find repeating weeks
-	// log.Traceln("\t\tfinding week repeats")
 	var results []dmfr.FeedVersionServiceLevel
 	for k, v := range imap {
 		if len(v) == 0 {
@@ -224,7 +288,6 @@ func (pp *FeedVersionServiceLevelBuilder) ServiceLevels() ([]dmfr.FeedVersionSer
 				Saturday:  k[5],
 				Sunday:    k[6],
 			}
-			// log.Traceln(a)
 			results = append(results, a)
 		}
 	}

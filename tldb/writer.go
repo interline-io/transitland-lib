@@ -1,6 +1,7 @@
 package tldb
 
 import (
+	"context"
 	"errors"
 	"strconv"
 
@@ -93,33 +94,19 @@ func (writer *Writer) Delete() error {
 
 // AddEntity writes an entity to the database.
 func (writer *Writer) AddEntity(ent tt.Entity) (string, error) {
-	// Set some fields to not null for compatibility
-	notNullFilter.Filter(ent, nil)
-
-	// Set default agency id if not set elsewhere
-	if v, ok := ent.(*gtfs.Route); ok && !v.AgencyID.Valid {
-		v.AgencyID.SetInt(writer.defaultAgencyID)
+	eids, err := writer.AddEntities([]tt.Entity{ent})
+	if err != nil {
+		return "", err
 	}
-
-	// Set the FeedVersionID
-	if z, ok := ent.(canSetFeedVersion); ok {
-		z.SetFeedVersionID(writer.FeedVersionID)
+	if len(eids) == 0 {
+		return "", errors.New("did not write expected number of entities")
 	}
-	// Save
-	eid, err := writer.Adapter.Insert(ent)
-	// Update ID
-	if v, ok := ent.(canSetID); ok {
-		v.SetID(eid)
-	}
-	// Set a default AgencyID if possible.
-	if _, ok := ent.(*gtfs.Agency); ok && writer.defaultAgencyID == 0 {
-		writer.defaultAgencyID = eid
-	}
-	return strconv.Itoa(eid), err
+	return eids[0], nil
 }
 
 // AddEntities writes entities to the database.
 func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
+	ctx := context.TODO()
 	if len(ents) == 0 {
 		return []string{}, nil
 	}
@@ -134,12 +121,12 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 			v.AgencyID.SetInt(writer.defaultAgencyID)
 		}
 		// Set FeedVersion, Timestamps
-		if v, ok := ent.(canSetFeedVersion); ok {
+		if v, ok := ent.(CanSetFeedVersion); ok {
 			v.SetFeedVersionID(writer.FeedVersionID)
 		}
 		ients[i] = ent
 	}
-	retids, err := writer.Adapter.MultiInsert(ients)
+	retids, err := writer.Adapter.MultiInsert(ctx, ients)
 	if err != nil {
 		return eids, err
 	}
@@ -149,8 +136,18 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	for i := 0; i < len(ents); i++ {
 		eids = append(eids, strconv.Itoa(retids[i]))
 		// Update ID
-		if v, ok := ents[i].(canSetID); ok {
+		if v, ok := ents[i].(CanSetID); ok {
 			v.SetID(int(retids[i]))
+		}
+	}
+	// Set default agency ID
+	// TODO: handle this in ApplyDefaultAgencyFilter
+	for _, ent := range ents {
+		if a, ok := ent.(*gtfs.Agency); ok {
+			if writer.defaultAgencyID == 0 {
+				writer.defaultAgencyID = a.ID
+			}
+			break
 		}
 	}
 	return eids, nil

@@ -1,7 +1,6 @@
 package request
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha1"
 	"errors"
@@ -18,15 +17,21 @@ import (
 )
 
 type Downloader interface {
-	Download(context.Context, string, dmfr.Secret, dmfr.FeedAuthorization) (io.ReadCloser, int, error)
+	Download(context.Context, string) (io.ReadCloser, int, error)
+	DownloadAuth(context.Context, string, dmfr.FeedAuthorization) (io.ReadCloser, int, error)
 }
 
 type Uploader interface {
-	Upload(context.Context, string, dmfr.Secret, io.Reader) error
+	Upload(context.Context, string, io.Reader) error
 }
 
-type Presigner interface {
-	CreateSignedUrl(context.Context, string, string, dmfr.Secret) (string, error)
+type FetchResponse struct {
+	ResponseSize   int
+	ResponseCode   int
+	ResponseTimeMs int
+	ResponseTtfbMs int
+	ResponseSHA1   string
+	FetchError     error
 }
 
 type Request struct {
@@ -41,16 +46,19 @@ type Request struct {
 
 func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
 	// Download
-	log.Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")
+	log.For(ctx).Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")
 	downloader, key, err := req.newDownloader(req.URL)
 	if err != nil {
 		return nil, 0, err
 	}
-	return downloader.Download(ctx, key, req.Secret, req.Auth)
+	if a, ok := downloader.(CanSetSecret); ok {
+		a.SetSecret(req.Secret)
+	}
+	return downloader.DownloadAuth(ctx, key, req.Auth)
 }
 
 func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
-	u, err := url.Parse(req.URL)
+	u, err := url.Parse(ustr)
 	if err != nil {
 		return nil, "", errors.New("could not parse url")
 	}
@@ -59,12 +67,12 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 	reqUrl := req.URL
 	switch u.Scheme {
 	case "http":
-		downloader = Http{}
+		downloader = &Http{}
 	case "https":
-		downloader = Http{}
+		downloader = &Http{}
 	case "ftp":
 		if req.AllowFTP {
-			downloader = Ftp{}
+			downloader = &Ftp{}
 		} else {
 			reqErr = errors.New("request not configured to allow ftp")
 		}
@@ -81,7 +89,7 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 			// Setup the local reader
 			reqDir := ""
 			reqDir, reqUrl = filepath.Split(strings.TrimPrefix(req.URL, "file://"))
-			downloader = Local{
+			downloader = &Local{
 				Directory: reqDir,
 			}
 		} else {
@@ -126,59 +134,34 @@ func WithAuth(secret dmfr.Secret, auth dmfr.FeedAuthorization) func(req *Request
 	}
 }
 
-type FetchResponse struct {
-	Filename     string
-	Data         []byte
-	ResponseSize int
-	ResponseCode int
-	ResponseSHA1 string
-	FetchError   error
-}
-
 // AuthenticatedRequestDownload is similar to AuthenticatedRequest but writes to a temporary file.
 // Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
-func AuthenticatedRequestDownload(address string, opts ...RequestOption) (FetchResponse, error) {
+func AuthenticatedRequestDownload(ctx context.Context, address string, opts ...RequestOption) (string, FetchResponse, error) {
 	// Create temp file
 	tmpfile, err := os.CreateTemp("", "fetch")
 	if err != nil {
-		return FetchResponse{}, errors.New("could not create temporary file")
+		return "", FetchResponse{}, errors.New("could not create temporary file")
 	}
 	defer tmpfile.Close()
 
 	// Download
-	fr, err := authenticatedRequest(tmpfile, address, opts...)
+	fr, err := AuthenticatedRequest(ctx, tmpfile, address, opts...)
 	if err != nil {
-		return fr, err
+		return "", fr, err
 	}
 
 	// Collect data
-	fr.Filename = tmpfile.Name()
-	return fr, nil
+	return tmpfile.Name(), fr, nil
 }
 
-// AuthenticatedRequest fetches a url using a secret and auth description. Returns []byte, sha1, size, response code.
-// Fatal errors will be returned as the error; non-fatal errors as FetchResponse.FetchError
-func AuthenticatedRequest(address string, opts ...RequestOption) (FetchResponse, error) {
-	// Create buffer
-	var buf bytes.Buffer
-
-	// Download
-	fr, err := authenticatedRequest(&buf, address, opts...)
-	if err != nil {
-		return fr, err
-	}
-
-	// Collect bytes
-	fr.Data = buf.Bytes()
-	return fr, nil
-}
-
-func authenticatedRequest(out io.Writer, address string, opts ...RequestOption) (FetchResponse, error) {
+// AuthenticatedRequestContext fetches a url using a secret and auth description.
+func AuthenticatedRequest(ctx context.Context, out io.Writer, address string, opts ...RequestOption) (FetchResponse, error) {
 	// 10 minute timeout
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*600))
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(time.Second*600))
 	defer cancel()
 
-	// Download
+	// Create request and wait for response
+	t := time.Now()
 	fr := FetchResponse{}
 	req := NewRequest(address, opts...)
 	var r io.ReadCloser
@@ -190,7 +173,9 @@ func authenticatedRequest(out io.Writer, address string, opts ...RequestOption) 
 
 	// Write response
 	var err error
+	fr.ResponseTtfbMs = int(time.Since(t) / time.Millisecond)
 	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(out, r, req.MaxSize)
+	fr.ResponseTimeMs = int(time.Since(t) / time.Millisecond)
 
 	// Check for canceled
 	if ctxErr := ctx.Err(); ctxErr != nil {

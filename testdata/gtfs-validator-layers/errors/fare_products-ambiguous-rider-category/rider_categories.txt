@@ -1,0 +1,5 @@
+rider_category_id,rider_category_name,min_age,max_age,eligibility_url,is_default_fare_category
+adult,adult,,,,1
+test1,test1,,,,1
+test2,test2,,,,0
+test3,test3,,,,0

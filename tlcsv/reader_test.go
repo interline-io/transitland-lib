@@ -1,9 +1,9 @@
 package tlcsv
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/adapters"
@@ -13,7 +13,7 @@ import (
 func TestReader(t *testing.T) {
 	// Start local HTTP server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testutil.ExampleZip.URL)
+		buf, err := os.ReadFile(testutil.ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}

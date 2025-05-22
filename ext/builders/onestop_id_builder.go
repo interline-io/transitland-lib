@@ -3,7 +3,7 @@ package builders
 import (
 	"fmt"
 
-	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
@@ -96,12 +96,12 @@ func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 	case *gtfs.StopTime:
 		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
 		if !ok {
-			// log.Debugf("OnestopIDBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
+			// log.For(ctx).Debug().Msgf("OnestopIDBuilder no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
 		s, ok := pp.stops[v.StopID.Val]
 		if !ok {
-			// log.Debugf("OnestopIDBuilder no stop:", v.StopID)
+			// log.For(ctx).Debug().Msgf("OnestopIDBuilder no stop:", v.StopID)
 			return nil
 		}
 		r.stopGeoms[v.StopID.Val] = s
@@ -177,24 +177,32 @@ func (pp *OnestopIDBuilder) RouteOnestopIDs() []RouteOnestopID {
 	return ret
 }
 
-func (pp *OnestopIDBuilder) Copy(copier *copier.Copier) error {
+func (pp *OnestopIDBuilder) Copy(copier adapters.EntityCopier) error {
+	var agencyEnts []tt.Entity
 	for _, ent := range pp.AgencyOnestopIDs() {
 		ent := ent
-		if _, err := copier.CopyEntity(&ent); err != nil {
-			return err
-		}
+		agencyEnts = append(agencyEnts, &ent)
 	}
+	if err := copier.CopyEntities(agencyEnts); err != nil {
+		return err
+	}
+
+	var routeEnts []tt.Entity
 	for _, ent := range pp.RouteOnestopIDs() {
 		ent := ent
-		if _, err := copier.CopyEntity(&ent); err != nil {
-			return err
-		}
+		routeEnts = append(routeEnts, &ent)
 	}
+	if err := copier.CopyEntities(routeEnts); err != nil {
+		return err
+	}
+
+	var stopEnts []tt.Entity
 	for _, ent := range pp.StopOnestopIDs() {
 		ent := ent
-		if _, err := copier.CopyEntity(&ent); err != nil {
-			return err
-		}
+		stopEnts = append(stopEnts, &ent)
+	}
+	if err := copier.CopyEntities(stopEnts); err != nil {
+		return err
 	}
 	return nil
 }

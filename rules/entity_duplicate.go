@@ -10,20 +10,21 @@ type hasEntityKey interface {
 }
 
 // EntityDuplicateCheck determines if a unique entity ID is present more than once in the file.
-type EntityDuplicateCheck struct {
+type EntityDuplicateIDCheck struct {
 	duplicates *tt.EntityMap
 }
 
 // Validate .
-func (e *EntityDuplicateCheck) Validate(ent tt.Entity) []error {
+func (e *EntityDuplicateIDCheck) Validate(ent tt.Entity) []error {
 	if e.duplicates == nil {
 		e.duplicates = tt.NewEntityMap()
 	}
-	v, ok := ent.(hasEntityKey)
-	if !ok {
+	eid := ""
+	if v, ok := ent.(hasEntityKey); ok {
+		eid = v.EntityKey()
+	} else {
 		return nil
 	}
-	eid := v.EntityKey()
 	if eid == "" {
 		return nil
 	}
@@ -31,6 +32,40 @@ func (e *EntityDuplicateCheck) Validate(ent tt.Entity) []error {
 	efn := ent.Filename()
 	if _, ok := e.duplicates.Get(efn, eid); ok {
 		errs = append(errs, causes.NewDuplicateIDError(eid))
+	} else {
+		e.duplicates.Set(efn, eid, eid)
+	}
+	return errs
+}
+
+/////////
+
+type hasDuplicateKey interface {
+	DuplicateKey() string
+}
+
+type EntityDuplicateKeyCheck struct {
+	duplicates *tt.EntityMap
+}
+
+// Validate .
+func (e *EntityDuplicateKeyCheck) Validate(ent tt.Entity) []error {
+	if e.duplicates == nil {
+		e.duplicates = tt.NewEntityMap()
+	}
+	eid := ""
+	if v, ok := ent.(hasDuplicateKey); ok {
+		eid = v.DuplicateKey()
+	} else {
+		return nil
+	}
+	if eid == "" {
+		return nil
+	}
+	var errs []error
+	efn := ent.Filename()
+	if _, ok := e.duplicates.Get(efn, eid); ok {
+		errs = append(errs, causes.NewDuplicateKeyError(eid))
 	} else {
 		e.duplicates.Set(efn, eid, eid)
 	}

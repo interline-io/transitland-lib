@@ -1,6 +1,8 @@
 package stats
 
 import (
+	"context"
+
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
@@ -17,7 +19,14 @@ type FeedVersionServiceWindowBuilder struct {
 func NewFeedVersionServiceWindowFromReader(reader adapters.Reader) (dmfr.FeedVersionServiceWindow, error) {
 	ret := dmfr.FeedVersionServiceWindow{}
 	fvswBuilder := NewFeedVersionServiceWindowBuilder()
-	if err := copier.QuietCopy(reader, &empty.Writer{}, func(o *copier.Options) { o.AddExtension(fvswBuilder) }); err != nil {
+	if _, err := copier.QuietCopy(
+		context.TODO(),
+		reader,
+		&empty.Writer{},
+		func(o *copier.Options) {
+			o.AddExtension(fvswBuilder)
+		},
+	); err != nil {
 		return ret, err
 	}
 	ret, err := fvswBuilder.ServiceWindow()
@@ -54,7 +63,7 @@ func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tt.Entity,
 	return nil
 }
 
-func (pp *FeedVersionServiceWindowBuilder) Copy(*copier.Copier) error {
+func (pp *FeedVersionServiceWindowBuilder) Copy(adapters.EntityCopier) error {
 	return nil
 }
 

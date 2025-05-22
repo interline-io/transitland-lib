@@ -1,8 +1,8 @@
 package importer
 
 import (
+	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/interline-io/log"
@@ -28,33 +28,33 @@ type Result struct {
 }
 
 // ActivateFeedVersion .
-func ActivateFeedVersion(atx tldb.Adapter, feedId int, fvid int) error {
+func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, feedId int, fvid int) error {
 	// Check FeedState exists
-	if _, err := stats.GetFeedState(atx, feedId); err != nil {
+	if _, err := stats.GetFeedState(ctx, atx, feedId); err != nil {
 		return err
 	}
 	// sqlite3 only supports "UPDATE ... FROM" in versions 3.33 and higher
-	_, err := atx.DBX().Exec("UPDATE feed_states SET feed_version_id = $1 WHERE feed_id = (SELECT feed_id FROM feed_versions WHERE id = $2)", fvid, fvid)
+	_, err := atx.DBX().ExecContext(ctx, "UPDATE feed_states SET feed_version_id = $1 WHERE feed_id = (SELECT feed_id FROM feed_versions WHERE id = $2)", fvid, fvid)
 	return err
 }
 
-func MainImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
-	return ImportFeedVersion(adapter, opts)
+func MainImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
+	return ImportFeedVersion(ctx, adapter, opts)
 }
 
 // ImportFeedVersion create FVI and run Copier inside a Tx.
-func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
+func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV
 	fvi := dmfr.FeedVersionImport{InProgress: true}
 	fvi.FeedVersionID = opts.FeedVersionID
 	fv := dmfr.FeedVersion{}
 	fv.ID = opts.FeedVersionID
-	if err := adapter.Find(&fv); err != nil {
+	if err := adapter.Find(ctx, &fv); err != nil {
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Check FVI
 	checkfviid := 0
-	if err := adapter.Get(&checkfviid, `SELECT id FROM feed_version_gtfs_imports WHERE feed_version_id = ?`, fv.ID); err == sql.ErrNoRows {
+	if err := adapter.Get(ctx, &checkfviid, `SELECT id FROM feed_version_gtfs_imports WHERE feed_version_id = ?`, fv.ID); err == sql.ErrNoRows {
 		// ok
 	} else if err == nil {
 		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
@@ -64,19 +64,19 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Create FVI
-	if fviid, err := adapter.Insert(&fvi); err == nil {
+	if fviid, err := adapter.Insert(ctx, &fvi); err == nil {
 		// note: handle OK first
 		fvi.ID = fviid
 	} else {
 		// Serious error
-		log.Errorf("Error creating FeedVersionImport: %s", err.Error())
+		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Import
 	fviresult := dmfr.FeedVersionImport{} // keep result
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
 		var err error
-		fviresult, err = importFeedVersionTx(atx, fv, opts)
+		fviresult, err = importFeedVersionTx(ctx, atx, fv, opts)
 		if err != nil {
 			return err
 		}
@@ -87,10 +87,10 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 			}
 		}
 		// Update route_stops, agency_geometries, etc...
-		log.Infof("Finalizing import")
+		log.For(ctx).Info().Msgf("Finalizing import")
 		if opts.Activate {
-			log.Infof("Activating feed version")
-			if err := ActivateFeedVersion(atx, fv.FeedID, fv.ID); err != nil {
+			log.For(ctx).Info().Msgf("Activating feed version")
+			if err := ActivateFeedVersion(ctx, atx, fv.FeedID, fv.ID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
 		}
@@ -102,9 +102,9 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		fviresult.Success = true
 		fviresult.InProgress = false
 		fviresult.ExceptionLog = ""
-		if err := atx.Update(&fviresult); err != nil {
+		if err := atx.Update(ctx, &fviresult); err != nil {
 			// Serious error
-			log.Errorf("Error saving FeedVersionImport: %s", err.Error())
+			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return err
 		}
 		return err
@@ -114,9 +114,9 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
-		if err := adapter.Update(&fvi); err != nil {
+		if err := adapter.Update(ctx, &fvi); err != nil {
 			// Serious error
-			log.Errorf("Error saving FeedVersionImport: %s", err.Error())
+			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
 		}
 		return Result{FeedVersionImport: fvi}, errImport
@@ -125,11 +125,11 @@ func ImportFeedVersion(adapter tldb.Adapter, opts Options) (Result, error) {
 }
 
 // importFeedVersion .
-func importFeedVersionTx(atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader
-	tladapter, err := tlcsv.NewStoreAdapter(opts.Storage, fv.File, fv.Fragment.Val)
+	tladapter, err := tlcsv.NewStoreAdapter(ctx, opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
 		return fvi, err
 	}
@@ -145,32 +145,28 @@ func importFeedVersionTx(atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (d
 	// Get writer with existing tx
 	writer := &tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 
-	// Create copier
 	// Non-settable options
 	opts.Options.AllowEntityErrors = false
 	opts.Options.AllowReferenceErrors = false
 	opts.Options.NormalizeServiceIDs = true
-	cp, err := copier.NewCopier(reader, writer, opts.Options)
-	if err != nil {
-		return fvi, err
-	}
-	cp.AddExtension(builders.NewRouteGeometryBuilder())
-	cp.AddExtension(builders.NewRouteStopBuilder())
-	cp.AddExtension(builders.NewRouteHeadwayBuilder())
-	cp.AddExtension(builders.NewConvexHullBuilder())
-	cp.AddExtension(builders.NewAgencyPlaceBuilder())
+	opts.Options.AddExtension(builders.NewRouteGeometryBuilder())
+	opts.Options.AddExtension(builders.NewRouteStopBuilder())
+	opts.Options.AddExtension(builders.NewRouteHeadwayBuilder())
+	opts.Options.AddExtension(builders.NewConvexHullBuilder())
+	opts.Options.AddExtension(builders.NewAgencyPlaceBuilder())
 	fvi.InProgress = false
 
 	// Go
-	cpresult := cp.Copy()
-	if cpresult == nil {
-		return fvi, errors.New("copy result was nil")
-	} else if cpresult.WriteError != nil {
-		return fvi, cpresult.WriteError
+	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, writer, opts.Options)
+	if cpErr != nil {
+		return fvi, cpErr
+	}
+	if cpResult == nil {
+		return fvi, fmt.Errorf("copier returned nil result")
 	}
 
-	cpresult.DisplaySummary()
-	counts := copyResultCounts(*cpresult)
+	// Save feed version import
+	counts := copyResultCounts(*cpResult)
 	fvi.Success = true
 	fvi.InterpolatedStopTimeCount = counts.InterpolatedStopTimeCount
 	fvi.EntityCount = counts.EntityCount

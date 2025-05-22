@@ -78,6 +78,9 @@ func (r Option[T]) Value() (driver.Value, error) {
 }
 
 func (r *Option[T]) UnmarshalJSON(v []byte) error {
+	if string(v) == "null" {
+		return nil
+	}
 	return r.Scan(stripQuotes(v))
 }
 
