@@ -2,6 +2,9 @@ BEGIN;
 
 ALTER TABLE tl_census_datasets rename column dataset_name to name;
 ALTER TABLE tl_census_datasets add column description text;
+ALTER TABLE tl_census_datasets alter column year_min drop not null;
+ALTER TABLE tl_census_datasets alter column year_max drop not null;
+ALTER TABLE tl_census_datasets alter column url drop not null;
 
 ALTER TABLE tl_census_sources rename column source_name to name;
 ALTER TABLE tl_census_sources add column description text;
