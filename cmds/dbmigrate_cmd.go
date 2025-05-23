@@ -116,7 +116,6 @@ func (cmd *DBMigrateCommand) neLoad(ctx context.Context) error {
 		if !strings.HasSuffix(path, ".zip") {
 			return nil
 		}
-		fmt.Println("Processing:", path)
 		neZipData, err := ne.EmbeddedNaturalEarthData.ReadFile(path)
 		if err != nil {
 			return err
@@ -135,13 +134,20 @@ func (cmd *DBMigrateCommand) neLoad(ctx context.Context) error {
 func (cmd *DBMigrateCommand) neProcess(ctx context.Context, neZipFile []byte, cb shpFileHandler) error {
 	ret := []neShape{}
 	zipReader, err := zip.NewReader(bytes.NewReader(neZipFile), int64(len(neZipFile)))
-	shape, err := shapefile.NewScannerFromZipReader(zipReader, &shapefile.ReadShapefileOptions{})
 	if err != nil {
 		return err
 	}
-	shapeFields := shape.DBFFieldDescriptors()
-	for shape.Next() {
-		shpGeom, _, shpRec := shape.Scan()
+	scanner, err := shapefile.NewScannerFromZipReader(zipReader, &shapefile.ReadShapefileOptions{
+		DBF: &shapefile.ReadDBFOptions{
+			SkipBrokenFields: true,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	shapeFields := scanner.DBFFieldDescriptors()
+	for scanner.Next() {
+		shpGeom, _, shpRec := scanner.Scan()
 		if shpGeom == nil {
 			continue
 		}
@@ -198,6 +204,7 @@ func (cmd *DBMigrateCommand) neLoadAdmins(ctx context.Context, atx tldb.Adapter,
 		}
 		ents = append(ents, &ent)
 	}
+	log.Info().Msgf("Inserting %d admin boundaries", len(ents))
 	if _, err := cmd.Adapter.MultiInsert(ctx, ents); err != nil {
 		return err
 	}
@@ -237,6 +244,7 @@ func (cmd *DBMigrateCommand) neLoadPlaces(ctx context.Context, atx tldb.Adapter,
 		}
 		ents = append(ents, &ent)
 	}
+	log.Info().Msgf("Inserting %d populated places", len(ents))
 	if _, err := cmd.Adapter.MultiInsert(ctx, ents); err != nil {
 		return err
 	}
