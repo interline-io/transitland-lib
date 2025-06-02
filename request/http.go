@@ -2,13 +2,17 @@ package request
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/interline-io/log"
 	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
@@ -78,15 +82,56 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 	req.Header.Set("Accept", "application/zip,application/x-zip-compressed,application/octet-stream;q=0.9,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "")
 
+	// Log request details
+	log.For(ctx).Trace().
+		Str("url", ustr).
+		Str("method", req.Method).
+		Str("host", req.Host).
+		Str("user_agent", req.UserAgent()).
+		Interface("headers", req.Header).
+		Msg("making HTTP request")
+
 	// Remove default ports from host header if explicitly specified as it
 	// may break pre-signed S3 URLs or other systems that rely on the host header
 	removeDefaultPortFromHost(req)
 
+	// Create custom transport with logging
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			CipherSuites: []uint16{
+				tls.TLS_RSA_WITH_RC4_128_SHA,
+				tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_128_CBC_SHA256,
+				tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
+				tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+			},
+		},
+	}
+
 	client := &http.Client{
+		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			removeDefaultPortFromHost(req)
 			return nil
 		},
+		Timeout: 30 * time.Second,
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -98,4 +143,15 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 		return nil, resp.StatusCode, fmt.Errorf("response status code: %d", resp.StatusCode)
 	}
 	return resp.Body, resp.StatusCode, nil
+}
+
+// loggingConn wraps a net.Conn to log when it's closed
+type loggingConn struct {
+	net.Conn
+	onClose func()
+}
+
+func (c *loggingConn) Close() error {
+	c.onClose()
+	return c.Conn.Close()
 }
