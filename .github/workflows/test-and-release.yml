@@ -46,7 +46,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Build on Linux
         working-directory: ${{ github.workspace }}/cmd/transitland
-        run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 GODEBUG=tlsrsakex=1 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
+        run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Store Linux binary
         uses: actions/upload-artifact@v4
         with:
@@ -68,7 +68,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Build on macOS
         working-directory: ${{ github.workspace }}/cmd/transitland
-        run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 GODEBUG=tlsrsakex=1 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
+        run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Import Code-Signing Certificates
         uses: Apple-Actions/import-codesign-certs@v5.0.1
         with:
@@ -105,7 +105,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Build on macOS
         working-directory: ${{ github.workspace }}/cmd/transitland
-        run: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 GODEBUG=tlsrsakex=1 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
+        run: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Import Code-Signing Certificates
         uses: Apple-Actions/import-codesign-certs@v5
         with:
