@@ -70,7 +70,7 @@ jobs:
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 GODEBUG=tlsrsakex=1 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Import Code-Signing Certificates
-        uses: Apple-Actions/import-codesign-certs@v2
+        uses: Apple-Actions/import-codesign-certs@v5.0.1
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
@@ -107,7 +107,7 @@ jobs:
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 GODEBUG=tlsrsakex=1 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Import Code-Signing Certificates
-        uses: Apple-Actions/import-codesign-certs@v2
+        uses: Apple-Actions/import-codesign-certs@v5
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
@@ -136,52 +136,34 @@ jobs:
         with:
           name: transitland-linux
           path: transitland-linux
-      - name: Attach Linux binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.workspace }}/transitland-linux/transitland
-          asset_name: transitland-linux
-          asset_content_type: application/binary
       - name: Download macOS Intel binary
         uses: actions/download-artifact@v4
         with:
           name: transitland-macos-intel
           path: transitland-macos-intel
-      - name: Attach macOS Intel binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.workspace }}/transitland-macos-intel/transitland.zip
-          asset_name: transitland-macos-intel.zip
-          asset_content_type: application/binary
       - name: Download macOS Apple Silicon binary
         uses: actions/download-artifact@v4
         with:
           name: transitland-macos-apple
           path: transitland-macos-apple
-      - name: Attach macOS Apple Silicon binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.2
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            transitland-linux/transitland
+            transitland-macos-intel/transitland.zip
+            transitland-macos-apple/transitland.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.workspace }}/transitland-macos-apple/transitland.zip
-          asset_name: transitland-macos-apple.zip
-          asset_content_type: application/binary
   release-notes:
     needs: release
     if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: '16.x'
+          node-version: '20.x'
       - run: npm install github-release-notes -g
       - run: gren release --override
         env:
