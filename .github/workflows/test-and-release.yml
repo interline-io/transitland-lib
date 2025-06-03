@@ -136,43 +136,25 @@ jobs:
         with:
           name: transitland-linux
           path: transitland-linux
-      - name: Attach Linux binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.workspace }}/transitland-linux/transitland
-          asset_name: transitland-linux
-          asset_content_type: application/binary
       - name: Download macOS Intel binary
         uses: actions/download-artifact@v4
         with:
           name: transitland-macos-intel
           path: transitland-macos-intel
-      - name: Attach macOS Intel binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.workspace }}/transitland-macos-intel/transitland.zip
-          asset_name: transitland-macos-intel.zip
-          asset_content_type: application/binary
       - name: Download macOS Apple Silicon binary
         uses: actions/download-artifact@v4
         with:
           name: transitland-macos-apple
           path: transitland-macos-apple
-      - name: Attach macOS Apple Silicon binary to GitHub release
-        uses: actions/upload-release-asset@v1.0.2
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            transitland-linux/transitland
+            transitland-macos-intel/transitland.zip
+            transitland-macos-apple/transitland.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.workspace }}/transitland-macos-apple/transitland.zip
-          asset_name: transitland-macos-apple.zip
-          asset_content_type: application/binary
   release-notes:
     needs: release
     if: ${{ github.event_name == 'release' }}
