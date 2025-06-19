@@ -51,6 +51,7 @@ type S3 struct {
 	Bucket    string
 	KeyPrefix string
 	secret    dmfr.Secret
+	acl       string
 }
 
 func (r *S3) SetSecret(secret dmfr.Secret) error {
@@ -128,12 +129,31 @@ func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 	if err != nil {
 		return err
 	}
+	var acl types.ObjectCannedACL
+	switch r.acl {
+	case "private":
+		acl = types.ObjectCannedACLPrivate
+	case "public-read":
+		acl = types.ObjectCannedACLPublicRead
+	case "authenticated-read":
+		acl = types.ObjectCannedACLAuthenticatedRead
+	case "bucket-owner-read":
+		acl = types.ObjectCannedACLBucketOwnerRead
+	default:
+		if r.acl != "" {
+			log.Error().Msgf("s3 store: invalid ACL '%s' set, using private ACL instead", r.acl)
+		}
+		// Default to private if no valid ACL is set
+		acl = types.ObjectCannedACLPrivate
+	}
+
 	// Save object
 	log.Debug().Msgf("s3 store: uploading to key '%s', full key is '%s'", key, r.getFullKey(key))
 	result, err := client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(r.Bucket),
 		Key:    aws.String(r.getFullKey(key)),
 		Body:   uploadFile,
+		ACL:    acl,
 	})
 	_ = result
 	return err
@@ -152,6 +172,10 @@ func (r S3) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 		opts.Expires = time.Duration(1 * time.Hour)
 	})
 	return request.URL, err
+}
+
+func (r *S3) SetAcl(acl string) {
+	r.acl = acl
 }
 
 func awsConfig(ctx context.Context, secret dmfr.Secret) (*s3.Client, error) {
