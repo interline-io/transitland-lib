@@ -1,20 +1,29 @@
 ## transitland checksum
 
-Calculate the SHA1 checksum of a static GTFS feed's contents
+Calculate the SHA1 checksum of a static GTFS feed
 
 ### Synopsis
 
-Calculate the SHA1 checksum of a static GTFS feed's contents
+Calculate the SHA1 checksum of a static GTFS feed
 
 Calculate the SHA1 checksum of a GTFS feed archive and provide a link to look for a matching feed version in Transitland's online archive.
 
-This checksum uniquely identifies the feed version and is used by Transitland to detect when new feed versions are available. The SHA1 is calculated from the contents of the feed archive, not the zip archive as a whole, so it won't change if only the zip packaging changes.
+This checksum uniquely identifies the feed version and is used by Transitland to detect when new feed versions are available. By default, this command shows both the zip SHA1 (archive file) and the directory SHA1 (feed contents). 
+
+The directory SHA1 is calculated by:
+- Finding all lowercase .txt files in the main directory (agency.txt, stops.txt, routes.txt, etc.)
+- Sorting them alphabetically by filename
+- Concatenating their contents in sorted order
+- Calculating the SHA1 hash of the concatenated data
+
+This approach ensures the hash represents the actual transit data, not the packaging, so it won't change if only the zip compression, file ordering, or metadata changes.
 
 Example:
   transitland checksum myfeed.zip
-  transitland checksum --raw http://example.com/myfeed.zip  # Output only the SHA1 hash
+  transitland checksum --raw-dir-sha1 http://example.com/myfeed.zip  # Output only the directory SHA1 hash, which is used in Transitland APIs
+  transitland checksum --raw-zip-sha1 myfeed.zip  # Output only the zip SHA1 hash
 
-This command is useful for verifying feed integrity and looking up feed versions on Transitland. Use --raw for scripting scenarios where only the hash is needed.
+This command is useful for verifying feed integrity and looking up feed versions on Transitland. Use --raw-dir-sha1 or --raw-zip-sha1 for scripting scenarios where only a specific hash is needed.
 
 ```
 transitland checksum <feed-path> [flags]
@@ -23,8 +32,9 @@ transitland checksum <feed-path> [flags]
 ### Options
 
 ```
-  -h, --help   help for checksum
-      --raw    Output only the SHA1 hash (useful for scripting)
+  -h, --help           help for checksum
+      --raw-dir-sha1   Output only the directory SHA1 hash
+      --raw-zip-sha1   Output only the zip SHA1 hash
 ```
 
 ### SEE ALSO

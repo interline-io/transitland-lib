@@ -10,7 +10,7 @@ transitland-lib utilities
 
 ### SEE ALSO
 
-* [transitland checksum](transitland_checksum.md)	 - Calculate the SHA1 checksum of a static GTFS feed's contents
+* [transitland checksum](transitland_checksum.md)	 - Calculate the SHA1 checksum of a static GTFS feed
 * [transitland completion](transitland_completion.md)	 - Generate the autocompletion script for the specified shell
 * [transitland copy](transitland_copy.md)	 - Copy performs a basic copy from a reader to a writer.
 * [transitland dbmigrate](transitland_dbmigrate.md)	 - Perform database migrations and load Natural Earth geographies
