@@ -37,8 +37,8 @@ This approach ensures the hash represents the actual transit data, not the packa
 
 Example:
   transitland checksum myfeed.zip
-  transitland checksum --raw-dir-sha1 http://example.com/myfeed.zip  # Output only the directory SHA1 hash, which is used in Transitland APIs
-  transitland checksum --raw-zip-sha1 myfeed.zip  # Output only the zip SHA1 hash
+  transitland checksum --raw-dir-sha1 http://example.com/myfeed.zip  # Output only the directory SHA1 hash, which is used for comparison in Transitland fetch process
+  transitland checksum --raw-zip-sha1 myfeed.zip  # Output only the zip SHA1 hash, which is used as an identifier in public Transitland APIs
 
 This command is useful for verifying feed integrity and looking up feed versions on Transitland. Use --raw-dir-sha1 or --raw-zip-sha1 for scripting scenarios where only a specific hash is needed.`
 }
@@ -94,8 +94,8 @@ func (cmd *ChecksumCommand) Run(ctx context.Context) error {
 	} else {
 		fmt.Printf("Zip SHA1 (archive file): %s\n", fv.SHA1)
 		fmt.Printf("Directory SHA1 (feed contents): %s\n", fv.SHA1Dir.Val)
-		fmt.Printf("Find via Transitland website: https://www.transit.land/feed-versions/%s\n", fv.SHA1Dir.Val)
-		fmt.Printf("Find via Transitland REST API: https://transit.land/api/v2/rest/feed_versions/%s?apikey=YOUR_API_KEY\n", fv.SHA1Dir.Val)
+		fmt.Printf("Find via Transitland website: https://www.transit.land/feed-versions/%s\n", fv.SHA1)
+		fmt.Printf("Find via Transitland REST API: https://transit.land/api/v2/rest/feed_versions/%s?apikey=YOUR_API_KEY\n", fv.SHA1)
 	}
 
 	return nil

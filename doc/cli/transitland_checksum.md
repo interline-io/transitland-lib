@@ -20,8 +20,8 @@ This approach ensures the hash represents the actual transit data, not the packa
 
 Example:
   transitland checksum myfeed.zip
-  transitland checksum --raw-dir-sha1 http://example.com/myfeed.zip  # Output only the directory SHA1 hash, which is used in Transitland APIs
-  transitland checksum --raw-zip-sha1 myfeed.zip  # Output only the zip SHA1 hash
+  transitland checksum --raw-dir-sha1 http://example.com/myfeed.zip  # Output only the directory SHA1 hash, which is used for comparison in Transitland fetch process
+  transitland checksum --raw-zip-sha1 myfeed.zip  # Output only the zip SHA1 hash, which is used as an identifier in public Transitland APIs
 
 This command is useful for verifying feed integrity and looking up feed versions on Transitland. Use --raw-dir-sha1 or --raw-zip-sha1 for scripting scenarios where only a specific hash is needed.
 
