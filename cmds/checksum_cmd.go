@@ -82,14 +82,6 @@ func (cmd *ChecksumCommand) Run(ctx context.Context) error {
 		return fmt.Errorf("could not analyze feed at %s: %w", cmd.FeedPath, err)
 	}
 
-	// Get both SHA1 values
-	var zipSHA1 string
-	if adapter, ok := reader.Adapter.(interface{ SHA1() (string, error) }); ok {
-		if sha1, err := adapter.SHA1(); err == nil {
-			zipSHA1 = sha1
-		}
-	}
-
 	// Print the SHA1 hash
 	if fv.SHA1 == "" {
 		return fmt.Errorf("could not calculate SHA1 checksum for GTFS feed at %s", cmd.FeedPath)
@@ -98,9 +90,9 @@ func (cmd *ChecksumCommand) Run(ctx context.Context) error {
 	if cmd.RawDirSHA1 {
 		fmt.Printf("%s\n", fv.SHA1Dir.Val)
 	} else if cmd.RawZipSHA1 {
-		fmt.Printf("%s\n", zipSHA1)
+		fmt.Printf("%s\n", fv.SHA1)
 	} else {
-		fmt.Printf("Zip SHA1 (archive file): %s\n", zipSHA1)
+		fmt.Printf("Zip SHA1 (archive file): %s\n", fv.SHA1)
 		fmt.Printf("Directory SHA1 (feed contents): %s\n", fv.SHA1Dir.Val)
 		fmt.Printf("Find via Transitland website: https://www.transit.land/feed-versions/%s\n", fv.SHA1Dir.Val)
 		fmt.Printf("Find via Transitland REST API: https://transit.land/api/v2/rest/feed_versions/%s?apikey=YOUR_API_KEY\n", fv.SHA1Dir.Val)
