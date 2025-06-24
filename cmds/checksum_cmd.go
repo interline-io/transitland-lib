@@ -79,7 +79,8 @@ func (cmd *ChecksumCommand) Run(ctx context.Context) error {
 		fmt.Printf("%s\n", fv.SHA1)
 	} else {
 		fmt.Printf("SHA1 checksum of feed contents: %s\n", fv.SHA1)
-		fmt.Printf("Find via Transitland: https://www.transit.land/feed-versions/%s\n", fv.SHA1)
+		fmt.Printf("Find via Transitland website: https://www.transit.land/feed-versions/%s\n", fv.SHA1)
+		fmt.Printf("Find via Transitland REST API: https://transit.land/api/v2/rest/feed_versions/%s?apikey=YOUR_API_KEY\n", fv.SHA1)
 	}
 
 	return nil
