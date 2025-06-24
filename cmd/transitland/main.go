@@ -71,6 +71,7 @@ func init() {
 		tlcli.CobraHelper(&cmds.FetchCommand{}, pc, "fetch"),
 		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "dmfr-format"),
 		tlcli.CobraHelper(&cmds.ImportCommand{}, pc, "import"),
+		tlcli.CobraHelper(&cmds.ChecksumCommand{}, pc, "checksum"),
 		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "dmfr-lint"),
 		tlcli.CobraHelper(&cmds.MergeCommand{}, pc, "merge"),
 		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
