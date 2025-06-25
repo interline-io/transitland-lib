@@ -414,17 +414,18 @@ func (copier *Copier) CopyEntities(ents []tt.Entity) error {
 // checkEntity is the main filter and validation check.
 func (copier *Copier) checkEntity(ent tt.Entity) error {
 	efn := ent.Filename()
+	sid := ent.EntityID() // source ID
 	if !copier.isMarked(ent) {
 		copier.result.SkipEntityMarkedCount[efn]++
+		copier.log.Trace().Str("filename", efn).Str("source_id", sid).Msg("skipped by marker")
 		return errors.New("skipped by marker")
 	}
 
 	// Check the entity against filters.
-	sid := ent.EntityID() // source ID
 	for _, ef := range copier.filters {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
 			copier.result.SkipEntityFilterCount[efn]++
-			copier.log.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("skipped by filter")
+			copier.log.Trace().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("skipped by filter")
 			return errors.New("skipped by filter")
 		}
 	}
