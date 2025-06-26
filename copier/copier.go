@@ -416,7 +416,7 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	// Check the entity against markers.
 	for _, ef := range copier.markers {
 		if ok := ef.IsMarked(ent, copier.EntityMap); !ok {
-			copier.result.SkipEntityFilterCount[efn]++
+			copier.result.SkipEntityMarkedCount[efn]++
 			copier.log.Trace().Str("filename", efn).Str("source_id", sid).Msg("skipped by marker")
 			return errors.New("skipped by marker")
 		}
