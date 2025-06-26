@@ -154,11 +154,13 @@ jobs:
         run: |
           unzip -j transitland-macos-apple/transitland.zip -d transitland-macos-apple/
           mv transitland-macos-apple/transitland transitland-macos-apple/transitland-macos-apple
+      - name: Copy and rename Linux binary
+        run: cp transitland-linux/transitland transitland-linux/transitland-linux
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            transitland-linux/transitland
+            transitland-linux/transitland-linux
             transitland-macos-intel/transitland-macos-intel
             transitland-macos-apple/transitland-macos-apple
         env:
