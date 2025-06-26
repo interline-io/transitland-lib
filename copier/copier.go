@@ -412,18 +412,13 @@ func (copier *Copier) CopyEntities(ents []tt.Entity) error {
 func (copier *Copier) checkEntity(ent tt.Entity) error {
 	efn := ent.Filename()
 	sid := ent.EntityID() // source ID
-	// if !copier.isMarked(ent) {
-	// 	copier.result.SkipEntityMarkedCount[efn]++
-	// 	copier.log.Trace().Str("filename", efn).Str("source_id", sid).Msg("skipped by marker")
-	// 	return errors.New("skipped by marker")
-	// }
 
 	// Check the entity against markers.
 	for _, ef := range copier.markers {
 		if ok := ef.IsMarked(ent, copier.EntityMap); !ok {
 			copier.result.SkipEntityFilterCount[efn]++
 			copier.log.Trace().Str("filename", efn).Str("source_id", sid).Msg("skipped by marker")
-			return errors.New("skipped by filter")
+			return errors.New("skipped by marker")
 		}
 	}
 
