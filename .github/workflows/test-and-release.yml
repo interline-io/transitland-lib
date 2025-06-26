@@ -92,7 +92,7 @@ jobs:
   build-macos-apple:
     if: ${{ github.event_name == 'release' }}
     needs: test
-    runs-on: macos-15-arm64 # to use Apple Silicon
+    runs-on: macos-latest-xlarge # to use Apple Silicon: https://github.blog/2023-10-02-introducing-the-new-apple-silicon-powered-m1-macos-larger-runner-for-github-actions/
     strategy:
       matrix:
         go-version: ['1.24.2']
