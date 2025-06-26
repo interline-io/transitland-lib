@@ -7,6 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/internal/graph"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // TODO: Use found map[graph.Node] bool values, not pointers
@@ -46,11 +47,13 @@ func (em *Marker) Mark(filename string, eid string, val bool) {
 }
 
 // IsMarked returns if an Entity is marked.
-func (em *Marker) IsMarked(filename, eid string) bool {
+func (em *Marker) IsMarked(ent tt.Entity, emap *tt.EntityMap) bool {
+	eid := ent.EntityID()
+	efn := ent.Filename()
 	if len(eid) == 0 {
 		return true
 	}
-	if n, ok := em.graph.Node(graph.NewNode(filename, eid)); !ok {
+	if n, ok := em.graph.Node(graph.NewNode(efn, eid)); !ok {
 		return false
 	} else if v, ok2 := em.found[n]; ok2 {
 		return v

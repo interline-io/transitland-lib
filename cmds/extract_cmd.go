@@ -256,7 +256,7 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 		if err := em.Filter(reader); err != nil {
 			return err
 		}
-		cmd.Options.Marker = &em
+		cmd.Options.AddExtension(em)
 		log.For(ctx).Debug().Msgf("Graph loading complete")
 	}
 
