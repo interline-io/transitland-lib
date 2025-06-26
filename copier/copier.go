@@ -38,8 +38,15 @@ type Filter interface {
 	Filter(tt.Entity, *tt.EntityMap) error
 }
 
+// Marker is the "classic" marker interface
 type Marker interface {
-	IsMarked(tt.Entity, *tt.EntityMap) bool
+	IsMarked(string, string) bool
+	IsVisited(string, string) bool
+}
+
+// EntityMarker is a marker interface that checks if an entity is marked.
+type EntityMarker interface {
+	Marked(tt.Entity, *tt.EntityMap) bool
 }
 
 type ExpandFilter interface {
@@ -172,8 +179,9 @@ type Copier struct {
 	reader adapters.Reader
 	writer adapters.Writer
 	// Exts
+	Marker            Marker
 	copierExtensions  []Extension
-	markers           []Marker
+	markers           []EntityMarker
 	filters           []Filter
 	errorValidators   []Validator
 	warningValidators []Validator
@@ -357,7 +365,7 @@ func (copier *Copier) addExtension(ext any, level int) error {
 		copier.filters = append(copier.filters, v)
 		added = true
 	}
-	if v, ok := ext.(Marker); ok {
+	if v, ok := ext.(EntityMarker); ok {
 		copier.markers = append(copier.markers, v)
 		added = true
 	}
@@ -413,9 +421,16 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	efn := ent.Filename()
 	sid := ent.EntityID() // source ID
 
+	// Classic marker interface
+	if copier.Marker != nil && !copier.Marker.IsMarked(efn, sid) {
+		copier.result.SkipEntityMarkedCount[efn]++
+		copier.log.Trace().Str("filename", efn).Str("source_id", sid).Msg("skipped by marker (classic)")
+		return errors.New("skipped by marker (classic)")
+	}
+
 	// Check the entity against markers.
 	for _, ef := range copier.markers {
-		if ok := ef.IsMarked(ent, copier.EntityMap); !ok {
+		if ok := ef.Marked(ent, copier.EntityMap); !ok {
 			copier.result.SkipEntityMarkedCount[efn]++
 			copier.log.Trace().Str("filename", efn).Str("source_id", sid).Msg("skipped by marker")
 			return errors.New("skipped by marker")
