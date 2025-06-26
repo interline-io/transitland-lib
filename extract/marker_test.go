@@ -3,12 +3,10 @@ package extract
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/graph"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/interline-io/transitland-lib/tt"
 )
 
 type mss = map[string][]string
@@ -26,16 +24,16 @@ func TestExtract_Filter_BART(t *testing.T) {
 	}
 	em.fm["trips.txt"] = []string{"3792107WKDY"}
 	em.Filter(reader)
-	if !em.IsMarked(&gtfs.Stop{StopID: tt.NewString("MCAR")}, nil) {
+	if !em.IsMarked("stops.txt", "MCAR") {
 		t.Error("expected stop MCAR")
 	}
-	if em.IsMarked(&gtfs.Stop{StopID: tt.NewString("FTVL")}, nil) {
+	if em.IsMarked("stops.txt", "FTVL") {
 		t.Error("expected no stop FTVL")
 	}
-	if !em.IsMarked(&gtfs.Agency{AgencyID: tt.NewString("BART")}, nil) {
+	if !em.IsMarked("agency.txt", "BART") {
 		t.Error("expected agency BART")
 	}
-	if em.IsMarked(&gtfs.Route{RouteID: tt.NewString("03")}, nil) {
+	if em.IsMarked("routes.txt", "03") {
 		t.Error("expected no route 03")
 	}
 }
@@ -48,22 +46,22 @@ func TestExtract_Bbox(t *testing.T) {
 		t.Error(err)
 	}
 	em.Filter(reader)
-	if !em.IsMarked(&gtfs.Stop{StopID: tt.NewString("MCAR")}, nil) {
+	if !em.IsMarked("stops.txt", "MCAR") {
 		t.Error("expected stop MCAR")
 	}
-	if !em.IsMarked(&gtfs.Stop{StopID: tt.NewString("12TH")}, nil) {
+	if !em.IsMarked("stops.txt", "12TH") {
 		t.Error("expected stop 12TH")
 	}
-	if !em.IsMarked(&gtfs.Stop{StopID: tt.NewString("LAKE")}, nil) {
+	if !em.IsMarked("stops.txt", "LAKE") {
 		t.Error("expected stop LAKE")
 	}
-	if em.IsMarked(&gtfs.Stop{StopID: tt.NewString("FTVL")}, nil) {
+	if em.IsMarked("stops.txt", "FTVL") {
 		t.Error("expected no stop FTVL")
 	}
-	if em.IsMarked(&gtfs.Stop{StopID: tt.NewString("ROCK")}, nil) {
+	if em.IsMarked("stops.txt", "ROCK") {
 		t.Error("expected no stop ROCK")
 	}
-	if !em.IsMarked(&gtfs.Agency{AgencyID: tt.NewString("BART")}, nil) {
+	if !em.IsMarked("agency.txt", "BART") {
 		t.Error("expected agency BART")
 	}
 }
@@ -233,23 +231,11 @@ func TestExtract_Filter_ExampleFeed(t *testing.T) {
 				t.Errorf("got %d nodes expect %d nodes", len(em.found), len(testcase.nodes))
 			}
 			for _, n := range testcase.nodes {
-				ok := em.IsMarked(&testEnt{efn: n.Filename, eid: n.ID}, nil)
+				ok := em.IsMarked(n.Filename, n.ID)
 				if !ok {
 					t.Errorf("expected %s %s but not found", n.Filename, n.ID)
 				}
 			}
 		})
 	}
-}
-
-type testEnt struct {
-	efn string
-	eid string
-}
-
-func (te *testEnt) Filename() string {
-	return te.efn
-}
-func (te *testEnt) EntityID() string {
-	return te.eid
 }
