@@ -132,6 +132,8 @@ type Options struct {
 	Quiet bool
 	// Default error handler
 	ErrorHandler ErrorHandler
+	// Entity selection strategy
+	Marker Marker
 	// Journey Pattern Key Function
 	JourneyPatternKey func(*gtfs.Trip) string
 	// Named extensions
@@ -179,7 +181,6 @@ type Copier struct {
 	reader adapters.Reader
 	writer adapters.Writer
 	// Exts
-	Marker            Marker
 	copierExtensions  []Extension
 	markers           []EntityMarker
 	filters           []Filter
@@ -422,7 +423,7 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	sid := ent.EntityID() // source ID
 
 	// Classic marker interface
-	if copier.Marker != nil && !copier.Marker.IsMarked(efn, sid) {
+	if copier.options.Marker != nil && !copier.options.Marker.IsMarked(efn, sid) {
 		copier.result.SkipEntityMarkedCount[efn]++
 		copier.log.Trace().Str("filename", efn).Str("source_id", sid).Msg("skipped by marker (classic)")
 		return errors.New("skipped by marker (classic)")
