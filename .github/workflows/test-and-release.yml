@@ -146,13 +146,21 @@ jobs:
         with:
           name: transitland-macos-apple
           path: transitland-macos-apple
+      - name: Unzip and rename macOS Intel binary
+        run: |
+          unzip -j transitland-macos-intel/transitland.zip -d transitland-macos-intel/
+          mv transitland-macos-intel/transitland transitland-macos-intel/transitland-macos-intel
+      - name: Unzip and rename macOS Apple Silicon binary
+        run: |
+          unzip -j transitland-macos-apple/transitland.zip -d transitland-macos-apple/
+          mv transitland-macos-apple/transitland transitland-macos-apple/transitland-macos-apple
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
             transitland-linux/transitland
-            transitland-macos-intel/transitland.zip
-            transitland-macos-apple/transitland.zip
+            transitland-macos-intel/transitland-macos-intel
+            transitland-macos-apple/transitland-macos-apple
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   release-notes:
