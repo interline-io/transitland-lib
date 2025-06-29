@@ -298,35 +298,23 @@ func (adapter *ZipAdapter) SHA1() (string, error) {
 
 // DirSHA1 returns the SHA1 of all the .txt files in the main directory, sorted, and concatenated.
 func (adapter *ZipAdapter) DirSHA1() (string, error) {
-	r, err := zip.OpenReader(adapter.path)
+	h := sha1.New()
+	fis, err := adapter.FileInfos()
 	if err != nil {
 		return "", err
 	}
-	defer r.Close()
-	// Sort the files
-	sort.Slice(r.File, func(i, j int) bool { return r.File[i].Name < r.File[j].Name })
-	// Generate SHA1
-	h := sha1.New()
-	for _, zf := range r.File {
-		fi := zf.FileInfo()
-		fn := zf.Name
-		if adapter.internalPrefix != "" {
-			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
-		}
-		// Ignore directories, subdirs, dot files
-		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
-			continue
-		}
+	for _, fi := range fis {
 		// Only generate stats for files with lowercase names that end with .txt
 		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
 			continue
 		}
-		f, err := zf.Open()
+		// Open the file from the zip and copy its contents
+		err := adapter.OpenFile(fi.Name(), func(r io.Reader) {
+			io.Copy(h, r)
+		})
 		if err != nil {
 			return "", err
 		}
-		defer f.Close()
-		io.Copy(h, f)
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
