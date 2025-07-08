@@ -353,7 +353,6 @@ func (v *Validator) copierOptions() copier.Options {
 	cpOpts.AllowEntityErrors = true
 	cpOpts.AllowReferenceErrors = true
 	cpOpts.AddExtensionWithLevel(v.rtValidator, 1)
-
 	// Best practices extension
 	if v.Options.BestPractices {
 		cpOpts.AddExtensionWithLevel(&rules.NoScheduledServiceCheck{}, 1)
@@ -376,6 +375,9 @@ func (v *Validator) copierOptions() copier.Options {
 		cpOpts.AddExtensionWithLevel(&rules.MinTransferTimeCheck{}, 1)
 		cpOpts.AddExtensionWithLevel(&rules.RouteNamesPrefixCheck{}, 1)
 		cpOpts.AddExtensionWithLevel(&rules.RouteNamesCharactersCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.ShapeMaxSegmentLengthCheck{
+			MaxAllowedDistance: 1_000_000, // 1000 km
+		}, 1)
 	}
 	return cpOpts
 }
