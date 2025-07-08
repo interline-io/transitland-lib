@@ -376,6 +376,9 @@ func (v *Validator) copierOptions() copier.Options {
 		cpOpts.AddExtensionWithLevel(&rules.MinTransferTimeCheck{}, 1)
 		cpOpts.AddExtensionWithLevel(&rules.RouteNamesPrefixCheck{}, 1)
 		cpOpts.AddExtensionWithLevel(&rules.RouteNamesCharactersCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&rules.ShapeMaxSegmentLengthCheck{
+			MaxAllowedDistance: 1_000_000, // 1000 km
+		}, 1)
 	}
 	return cpOpts
 }
