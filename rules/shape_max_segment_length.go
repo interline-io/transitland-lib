@@ -8,13 +8,13 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-type ShapeSegmentLengthError struct {
+type ShapeMaxSegmentLengthError struct {
 	MaxAllowedDistance float64
 	MaxDistance        float64
 	bc
 }
 
-func (e ShapeSegmentLengthError) Error() string {
+func (e ShapeMaxSegmentLengthError) Error() string {
 	return fmt.Sprintf("shape segment length exceeds maximum allowed distance: %f > %f", e.MaxDistance, e.MaxAllowedDistance)
 }
 
@@ -42,9 +42,10 @@ func (e *ShapeMaxSegmentLengthCheck) Validate(ent tt.Entity) []error {
 		if d > maxLength {
 			maxLength = d
 		}
+		lastPt = pt
 	}
 	if maxLength > e.MaxAllowedDistance {
-		errs = append(errs, ShapeSegmentLengthError{
+		errs = append(errs, ShapeMaxSegmentLengthError{
 			MaxAllowedDistance: e.MaxAllowedDistance,
 			MaxDistance:        maxLength,
 		})

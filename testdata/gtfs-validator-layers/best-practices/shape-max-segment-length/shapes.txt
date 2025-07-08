@@ -1,8 +1,4 @@
 shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,expect_error
-zero_shape,37.937192,-122.353449,0
-zero_shape,37.936814,-122.353085,1
-zero_shape,0,0,2,ZeroCoordinateError:shape_pt_lon|ShapeMaxSegmentLengthError
-zero_shape,37.936532,-122.352827,3
 04_shp,37.937192,-122.353449,0
 04_shp,37.936814,-122.353085,1
 04_shp,37.936532,-122.352827,2
@@ -55,7 +51,7 @@ zero_shape,37.936532,-122.352827,3
 04_shp,37.931510,-122.345661,49
 04_shp,37.931499,-122.345598,50
 04_shp,37.931492,-122.345541,51
-04_shp,37.931480,-122.345460,52
+04_shp,30,-100,52,ShapeMaxSegmentLengthError
 04_shp,37.931472,-122.345390,53
 04_shp,37.931465,-122.345334,54
 04_shp,37.931459,-122.345270,55
