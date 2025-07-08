@@ -66,13 +66,19 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Latest, "latest", false, "Only import latest feed version available for each feed")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.Activate, "activate", false, "Set as active feed version after import")
+
 	// Copy options
-	fl.Float64Var(&cmd.Options.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance (ex. 0.000005)")
 	fl.BoolVar(&cmd.Options.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
 	fl.BoolVar(&cmd.Options.DeduplicateJourneyPatterns, "deduplicate-stop-times", false, "Deduplicate StopTimes using Journey Patterns")
 	fl.BoolVar(&cmd.Options.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
 	fl.BoolVar(&cmd.Options.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
-	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
+
+	// Common extension options
+	fl.Float64Var(&cmd.Options.CommonExtensions.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance (ex. 0.000005)")
+	fl.BoolVar(&cmd.Options.CommonExtensions.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
+	fl.BoolVar(&cmd.Options.CommonExtensions.UseBasicRouteTypes, "use-basic-route-types", false, "Collapse extended route_type's into basic GTFS values")
+	fl.Float64Var(&cmd.Options.CommonExtensions.ShapeMaxSegmentLength, "shape-max-segment-length", 0.0, "Maximum shape segment length in meters (0.0 to disable check)")
+	fl.BoolVar(&cmd.Options.CommonExtensions.NullIslandCheck, "null-island-check", false, "Check for Null Island in shapes.txt and stops.txt")
 }
 
 // Parse command line flags
