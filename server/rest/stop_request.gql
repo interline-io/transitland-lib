@@ -1,0 +1,102 @@
+fragment alert on Alert {
+  cause
+  effect
+  severity_level
+  url {
+    language
+    text
+  }
+  header_text {
+    language
+    text
+  }
+  description_text {
+    language
+    text
+  }
+  tts_header_text {
+    language
+    text
+  }
+  tts_description_text {
+    language
+    text
+  }
+  active_period {
+    start
+    end
+  }
+}
+
+query ($limit: Int, $after: Int, $ids: [Int!], $include_alerts: Boolean!, $include_routes: Boolean!, $where: StopFilter) {
+  stops(limit: $limit, ids: $ids, after: $after, where: $where) {
+    id
+    stop_id
+    stop_name
+    stop_url
+    stop_timezone
+    stop_desc
+    stop_code
+    zone_id
+    platform_code
+    tts_stop_name
+    wheelchair_boarding
+    location_type
+    onestop_id
+    geometry
+    place {
+      adm0_name
+      adm1_name
+      adm0_iso
+      adm1_iso
+    }
+    feed_version {
+      id
+      sha1
+      fetched_at
+      feed {
+        id
+        onestop_id
+      }
+    }
+    level {
+      level_id
+      level_name
+      level_index
+    }
+    parent {
+      id
+      stop_id
+      stop_name
+      geometry
+      alerts @include(if: $include_alerts) {
+        ...alert
+      }
+    }
+    alerts @include(if: $include_alerts) {
+      ...alert
+    }
+    # [hide:true]
+    route_stops(limit: 1000) @include(if: $include_routes) {
+      route {
+        id
+        route_id
+        route_short_name
+        route_long_name
+        route_type
+        alerts @include(if: $include_alerts) {
+          ...alert
+        }
+        agency {
+          id
+          agency_id
+          agency_name
+          onestop_id
+          alerts @include(if: $include_alerts) {
+            ...alert
+          }
+        }
+      }
+    }
+  }
+}
