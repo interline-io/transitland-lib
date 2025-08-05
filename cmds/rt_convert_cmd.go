@@ -21,7 +21,7 @@ type RTConvertCommand struct {
 }
 
 func (cmd *RTConvertCommand) HelpDesc() (string, string) {
-	return "Convert GTFS-Realtime to JSON.", "Convert GTFS-Realtime protocol buffer files to JSON format. Eases inspecting live GTFS Realtime feeds. Enables processing with JSON-based tools like jq. For vehicle position feeds, you can also convert to GeoJSON (FeatureCollection) or GeoJSONL (one feature per line) formats for visualization or geographic analysis. See https://www.interline.io/blog/geojsonl-extracts/ for more information about GeoJSONL."
+	return "Convert GTFS Realtime to JSON.", "Convert GTFS Realtime protocol buffer files to JSON format. Eases inspecting live feeds. Enables processing with JSON-based tools like jq. For vehicle position feeds, you can also convert to GeoJSON (FeatureCollection) or GeoJSONL (one feature per line) formats for visualization or geographic analysis. See https://www.interline.io/blog/geojsonl-extracts/ for more information about GeoJSONL. Note: GeoJSON formats only include vehicle position; trip updates and service alerts can be converted to JSON but not GeoJSON/GeoJSONL."
 }
 
 func (cmd *RTConvertCommand) HelpExample() string {
@@ -40,7 +40,7 @@ func (cmd *RTConvertCommand) HelpArgs() string {
 
 func (cmd *RTConvertCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVarP(&cmd.OutputFile, "out", "o", "", "Write output to file; defaults to stdout")
-	fl.StringVarP(&cmd.Format, "format", "f", "json", "Output format: json, geojson, geojsonl (geojson formats only work with vehicle positions)")
+	fl.StringVarP(&cmd.Format, "format", "f", "json", "Output format: json, geojson, geojsonl (geojson formats only convert vehicle position entities)")
 }
 
 func (cmd *RTConvertCommand) Parse(args []string) error {
@@ -71,19 +71,7 @@ func (cmd *RTConvertCommand) Run(ctx context.Context) error {
 			return err
 		}
 	case "geojson", "geojsonl":
-		// Check if this is a vehicle positions feed
-		hasVehiclePositions := false
-		for _, entity := range msg.Entity {
-			if entity.Vehicle != nil {
-				hasVehiclePositions = true
-				break
-			}
-		}
-		if !hasVehiclePositions {
-			return errors.New("geojson format only supported for vehicle positions feeds")
-		}
-
-		// Convert to GeoJSON
+		// Convert to GeoJSON - will handle empty vehicle positions gracefully
 		outputData, err = rt.VehiclePositionsToGeoJSON(msg, cmd.Format == "geojsonl")
 		if err != nil {
 			return err
