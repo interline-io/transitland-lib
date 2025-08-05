@@ -7,7 +7,6 @@ ok5,stop1,stop2,3,1,15.0,90,0,0.05,2.0,Moving Sidewalk,,
 ok6,stop1,stop2,1,1,8.0,40,0,-0.02,1.5,Downward Slope,,
 ok7,stop1,stop2,7,0,5.0,30,0,0.0,1.0,Exit Gate,,
 invalid_negative_length,stop1,stop2,1,1,-2.0,60,5,0.1,1.5,Sign 1,Reverse Sign 1,InvalidFieldError:length
-invalid_zero_length,stop1,stop2,1,1,0.0,60,5,0.1,1.5,Sign 1,Reverse Sign 1,InvalidFieldError:length
 invalid_negative_min_width,stop1,stop2,1,1,10.5,60,5,0.1,-1.0,Sign 1,Reverse Sign 1,InvalidFieldError:min_width
 invalid_zero_min_width,stop1,stop2,1,1,10.5,60,5,0.1,0.0,Sign 1,Reverse Sign 1,InvalidFieldError:min_width
 invalid_negative_stair_count,stop1,stop2,1,1,10.5,60,-3,0.1,1.5,Sign 1,Reverse Sign 1,InvalidFieldError:stair_count

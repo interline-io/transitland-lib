@@ -47,8 +47,8 @@ func (ent *Pathway) TableName() string {
 // ConditionalErrors returns validation errors for the Pathway entity.
 func (ent *Pathway) ConditionalErrors() []error {
 	var errs []error
-	if ent.Length.Valid && ent.Length.Float() <= 0 {
-		errs = append(errs, causes.NewInvalidFieldError("length", ent.Length.String(), fmt.Errorf("must be positive when specified")))
+	if ent.Length.Valid && ent.Length.Float() < 0 {
+		errs = append(errs, causes.NewInvalidFieldError("length", ent.Length.String(), fmt.Errorf("must be non-negative when specified")))
 	}
 	if ent.MinWidth.Valid && ent.MinWidth.Float() <= 0 {
 		errs = append(errs, causes.NewInvalidFieldError("min_width", ent.MinWidth.String(), fmt.Errorf("must be positive when specified")))
