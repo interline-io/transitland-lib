@@ -6,6 +6,12 @@ on:
   release:
     types:
       - created
+
+permissions:
+  contents: read
+  actions: write
+  pull-requests: write
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -183,10 +189,23 @@ jobs:
     needs: release
     if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     steps:
+      - name: Create GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+          owner: interline-io
+          repositories: homebrew-transitland-lib
+          permission-actions: write
+
       - name: Trigger Homebrew Update
         uses: actions/github-script@v7
         with:
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             await github.rest.actions.createWorkflowDispatch({
               owner: 'interline-io',
