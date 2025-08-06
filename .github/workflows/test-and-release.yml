@@ -178,3 +178,22 @@ jobs:
       - run: gren release --override
         env:
           GREN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  trigger-homebrew-update:
+    needs: release
+    if: ${{ github.event_name == 'release' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Homebrew Update
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'interline-io',
+              repo: 'homebrew-transitland-lib',
+              workflow_id: 'update-formula.yml',
+              ref: 'main',
+              inputs: {
+                version: '${{ github.event.release.tag_name }}'
+              }
+            });
