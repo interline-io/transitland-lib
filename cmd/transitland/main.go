@@ -84,6 +84,7 @@ func init() {
 		tlcli.CobraHelper(&tlxy.PolylinesCommand{}, pc, "polylines-create"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		tlcli.CobraHelper(&cmds.DBMigrateCommand{}, pc, "dbmigrate"),
+		tlcli.CobraHelper(&ServerCommand{}, pc, "server"),
 		genDocCommand,
 		dmfrCommand,
 	)

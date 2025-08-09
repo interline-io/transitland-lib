@@ -1,0 +1,199 @@
+fragment stop on Stop {
+  id
+  onestop_id
+  stop_code
+  stop_desc
+  stop_id
+  stop_name
+  stop_timezone
+  stop_url
+  geometry
+  location_type
+  platform_code
+  tts_stop_name
+  wheelchair_boarding
+  zone_id
+}
+
+fragment agency on Agency {
+  id
+  onestop_id
+  agency_id
+  agency_name
+}
+
+fragment route on Route {
+  id
+  onestop_id
+  route_id
+  route_short_name
+  route_long_name
+  route_color
+  route_desc
+  route_text_color
+  route_type
+  route_url
+  continuous_drop_off
+  continuous_pickup
+}
+
+fragment trip on Trip {
+  id
+  trip_id
+  trip_headsign
+  trip_short_name
+  direction_id
+  block_id
+  wheelchair_accessible
+  bikes_allowed
+  stop_pattern_id
+  schedule_relationship
+  timestamp
+}
+
+fragment departures on StopTime {
+  stop_sequence
+  stop_headsign
+  timepoint
+  pickup_type
+  drop_off_type
+  continuous_pickup
+  continuous_drop_off
+  interpolated
+  service_date
+  arrival_time
+  departure_time
+  shape_dist_traveled
+  schedule_relationship
+  service_date
+  date
+  arrival {
+    scheduled
+    scheduled_utc
+    scheduled_local
+    estimated
+    estimated_utc
+    estimated_local
+    estimated_delay
+    delay
+    uncertainty
+  }
+  departure {
+    scheduled
+    scheduled_utc
+    scheduled_local
+    estimated
+    estimated_utc
+    estimated_local
+    estimated_delay
+    delay
+    uncertainty
+  }
+  trip {
+    ...trip
+    route {
+      ...route
+      alerts @include(if: $include_alerts) {
+        ...alert
+      }
+      agency {
+        ...agency
+        alerts @include(if: $include_alerts) {
+          ...alert
+        }
+      }
+    }
+    shape {
+      id
+      shape_id
+      geometry @include(if: $include_geometry)
+      generated
+    }
+    frequencies {
+      id
+      start_time
+      end_time
+      headway_secs
+      exact_times
+    }
+    alerts @include(if: $include_alerts) {
+      ...alert
+    }
+  }
+}
+
+fragment alert on Alert {
+  cause
+  effect
+  severity_level
+  url {
+    language
+    text
+  }
+  header_text {
+    language
+    text
+  }
+  description_text {
+    language
+    text
+  }
+  tts_header_text {
+    language
+    text
+  }
+  tts_description_text {
+    language
+    text
+  }
+  active_period {
+    start
+    end
+  }
+}
+
+
+query ($include_geometry: Boolean!, $include_alerts: Boolean!, $limit: Int, $ids: [Int!], $after: Int, $where: StopFilter, $stop_time_where: StopTimeFilter) {
+  stops(limit: 100, ids: $ids, after: $after, where: $where) {
+    ...stop
+    feed_version {
+      id
+      sha1
+      fetched_at
+      feed {
+        id
+        onestop_id
+      }
+    }
+    departures(limit: $limit, where: $stop_time_where) {
+      ...departures
+    }
+    children {
+      ...stop
+      departures(limit: $limit, where: $stop_time_where) {
+        ...departures
+      }      
+      alerts @include(if: $include_alerts) {
+        ...alert
+      }        
+    }    
+    parent {
+      ...stop
+      children {
+        ...stop
+        departures(limit: $limit, where: $stop_time_where) {
+          ...departures
+        }      
+        alerts @include(if: $include_alerts) {
+          ...alert
+        }        
+      }
+      alerts @include(if: $include_alerts) {
+        ...alert
+      }
+    }
+    alerts @include(if: $include_alerts) {
+      ...alert
+    }
+  }
+}

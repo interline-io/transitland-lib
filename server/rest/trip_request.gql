@@ -1,0 +1,118 @@
+fragment alert on Alert {
+  cause
+  effect
+  severity_level
+  url {
+    language
+    text
+  }
+  header_text {
+    language
+    text
+  }
+  description_text {
+    language
+    text
+  }
+  tts_header_text {
+    language
+    text
+  }
+  tts_description_text {
+    language
+    text
+  }
+  active_period {
+    start
+    end
+  }
+}
+
+query ($limit: Int, $ids: [Int!], $after: Int, $include_route: Boolean!, $include_stop_times: Boolean!, $include_geometry: Boolean!, $include_alerts: Boolean!, $where: TripFilter) {
+  trips(limit: $limit, ids: $ids, after: $after, where: $where) {
+    id
+    trip_id
+    trip_headsign
+    trip_short_name
+    direction_id
+    block_id
+    wheelchair_accessible
+    bikes_allowed
+    schedule_relationship
+    stop_pattern_id
+    feed_version {
+      sha1
+      fetched_at
+      feed {
+        id
+        onestop_id
+      }
+    }
+    shape {
+      shape_id
+      geometry @include(if: $include_geometry)
+      generated
+    }
+    calendar {
+      service_id
+      start_date
+      end_date
+      monday
+      tuesday
+      wednesday
+      thursday
+      friday
+      saturday
+      sunday
+      added_dates
+      removed_dates
+    }
+    frequencies {
+      start_time
+      end_time
+      headway_secs
+      exact_times
+    }
+    alerts @include(if: $include_alerts) {
+      ...alert
+    }
+    route @include(if: $include_route) {
+      id
+      onestop_id
+      route_id
+      route_short_name
+      route_long_name
+      alerts @include(if: $include_alerts) {
+        ...alert
+      }
+      agency {
+        id
+        agency_id
+        agency_name
+        onestop_id
+        alerts @include(if: $include_alerts) {
+          ...alert
+        }
+      }
+    }
+    stop_times @include(if: $include_stop_times) {
+      arrival_time
+      departure_time
+      stop_sequence
+      stop_headsign
+      pickup_type
+      drop_off_type
+      timepoint
+      interpolated
+      stop {
+        id
+        stop_id
+        stop_name
+        geometry
+        alerts @include(if: $include_alerts) {
+          ...alert
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+---
+version: 1
+interactions:
+    - request:
+        body: '{"fromPlace":{"lat":37.789001,"lon":-122.401001},"toPlace":{"lat":37.782001,"lon":-122.446999},"unixTime":1738200531,"time":"","date":"","maxItineraries":0,"mode":"WALK","arriveBy":false,"maxWalkingDistance":0,"walkingSpeed":0,"maxK":0,"maxTripTime":0,"transferTimePenalty":0}'
+        form: {}
+        headers: {}
+        url: directions://tlrouter
+        method: GET
+      response:
+        body: '{"plan":{"date":1738200531000,"from":{"lat":37.789001,"lon":-122.401001,"name":"Origin"},"to":{"lat":37.782001,"lon":-122.446999,"name":"Destination"},"itineraries":[{"duration":4116,"distance":4116.4971546787765,"startTime":1738200531000,"endTime":1738204647000,"walkTime":4116,"walkDistance":0,"transitTime":0,"transitDistance":0,"waitingTime":0,"transfers":0,"legs":[{"startTime":1738200531000,"endTime":1738204647000,"distance":4116.4971546787765,"duration":4116,"mode":"WALK","transitLeg":false,"from":{"lat":37.789001,"lon":-122.401001,"name":""},"to":{"lat":37.782001,"lon":-122.446999,"name":""},"steps":[],"legGeometry":{"points":"gtseFfmajVvj@n~G","length":2}}]}]}}'
+        headers: {}
+        status: 200 OK
+        code: 200
+        duration: 19.922805ms

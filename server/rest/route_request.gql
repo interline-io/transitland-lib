@@ -1,0 +1,80 @@
+fragment alert on Alert {
+  cause
+  effect
+  severity_level
+  url {
+    language
+    text
+  }
+  header_text {
+    language
+    text
+  }
+  description_text {
+    language
+    text
+  }
+  tts_header_text {
+    language
+    text
+  }
+  tts_description_text {
+    language
+    text
+  }
+  active_period {
+    start
+    end
+  }
+}
+
+query ($limit: Int, $ids: [Int!], $after: Int, $where: RouteFilter, $include_geometry: Boolean!, $include_alerts: Boolean!, $include_stops: Boolean!) {
+  routes(limit: $limit, ids: $ids, after: $after, where: $where) {
+    id
+    route_color
+    route_desc
+    route_id
+    route_long_name
+    route_short_name
+    route_sort_order
+    route_text_color
+    route_type
+    route_url
+    continuous_pickup
+    continuous_drop_off
+    onestop_id
+    geometry @include(if: $include_geometry)
+    alerts @include(if: $include_alerts) {
+      ...alert
+    }
+    agency {
+      id
+      agency_id
+      agency_name
+      onestop_id
+      alerts @include(if: $include_alerts) {
+        ...alert
+      }
+    }
+    feed_version {
+      id
+      sha1
+      fetched_at
+      feed {
+        id
+        onestop_id
+      }
+    }
+    route_stops(limit: 1000) @include(if: $include_stops) {
+      stop {
+        id
+        stop_id
+        stop_name
+        geometry @include(if: $include_geometry)
+        alerts @include(if: $include_alerts) {
+          ...alert
+        }
+      }
+    }
+  }
+}

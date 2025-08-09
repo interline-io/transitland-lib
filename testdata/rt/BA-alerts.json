@@ -1,0 +1,295 @@
+{
+    "header": {
+        "gtfs_realtime_version": "1.0",
+        "incrementality": 0,
+        "timestamp": 1527719250
+    },
+    "entity": [
+        {
+            "id": "1",
+            "alert": {
+                "active_period": [
+                    {
+                        "start": 1527719250,
+                        "end": 1527729250
+                    }
+                ],
+                "informed_entity": [
+                    {
+                        "agency_id": "BART",
+                        "trip": {
+                            "trip_id": "1031527WKDY"
+                        }
+                    }
+                ],
+                "cause": 1,
+                "effect": 8,
+                "header_text": {
+                    "translation": [
+                        {
+                            "text": "Test trip header",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "descriptionText": {
+                    "translation": [
+                        {
+                            "text": "Test trip description. trip_id:1031527WKDY",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "severity_level": 1
+            }
+        },
+        {
+            "id": "1a",
+            "alert": {
+                "active_period": [
+                    {
+                        "start": 1661543832,
+                        "end": 1664135832
+                    }
+                ],
+                "informed_entity": [
+                    {
+                        "agency_id": "BART",
+                        "trip": {
+                            "trip_id": "1031527WKDY"
+                        }
+                    }
+                ],
+                "cause": 1,
+                "effect": 8,
+                "header_text": {
+                    "translation": [
+                        {
+                            "text": "Test trip header - active",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "descriptionText": {
+                    "translation": [
+                        {
+                            "text": "Test trip description - active. trip_id:1031527WKDY",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "severity_level": 1
+            }
+        },        
+        {
+            "id": "2",
+            "alert": {
+                "active_period": [
+                    {
+                        "start": 1527719250,
+                        "end": 1527729250
+                    }
+                ],
+                "informed_entity": [
+                    {
+                        "agency_id": "BART"
+                    }
+                ],
+                "cause": 1,
+                "effect": 8,
+                "header_text": {
+                    "translation": [
+                        {
+                            "text": "Test agency header",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "descriptionText": {
+                    "translation": [
+                        {
+                            "text": "Test agency description. agency_id:BART",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "severity_level": 1
+            }
+        },
+        {
+            "id": "2a",
+            "alert": {
+                "active_period": [
+                    {
+                        "start": 1661543832,
+                        "end": 1664135832
+                    }
+                ],
+                "informed_entity": [
+                    {
+                        "agency_id": "BART"
+                    }
+                ],
+                "cause": 1,
+                "effect": 8,
+                "header_text": {
+                    "translation": [
+                        {
+                            "text": "Test agency header - active",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "descriptionText": {
+                    "translation": [
+                        {
+                            "text": "Test agency description - active. agency_id:BART",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "severity_level": 1
+            }
+        },
+        {
+            "id": "3",
+            "alert": {
+                "active_period": [
+                    {
+                        "start": 1527719250,
+                        "end": 1527729250
+                    }
+                ],
+                "informed_entity": [
+                    {
+                        "stop_id": "FTVL"
+                    }
+                ],
+                "cause": 1,
+                "effect": 8,
+                "header_text": {
+                    "translation": [
+                        {
+                            "text": "Test stop header",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "descriptionText": {
+                    "translation": [
+                        {
+                            "text": "Test stop description. stop_id:FTVL",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "severity_level": 1
+            }
+        },
+        {
+            "id": "3a",
+            "alert": {
+                "active_period": [
+                    {
+                        "start": 1661543832,
+                        "end": 1664135832
+                    }
+                ],
+                "informed_entity": [
+                    {
+                        "stop_id": "FTVL"
+                    }
+                ],
+                "cause": 1,
+                "effect": 8,
+                "header_text": {
+                    "translation": [
+                        {
+                            "text": "Test stop header - active",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "descriptionText": {
+                    "translation": [
+                        {
+                            "text": "Test stop description - active. stop_id:FTVL",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "severity_level": 1
+            }
+        },        
+        {
+            "id": "4",
+            "alert": {
+                "active_period": [
+                    {
+                        "start": 1527719250,
+                        "end": 1527729250
+                    }
+                ],
+                "informed_entity": [
+                    {
+                        "route_id": "05"
+                    }
+                ],
+                "cause": 1,
+                "effect": 8,
+                "header_text": {
+                    "translation": [
+                        {
+                            "text": "Test route header",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "descriptionText": {
+                    "translation": [
+                        {
+                            "text": "Test route description. route_id:05",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "severity_level": 1
+            }
+        },
+        {
+            "id": "4a",
+            "alert": {
+                "active_period": [
+                    {
+                        "start": 1661543832,
+                        "end": 1664135832
+                    }
+                ],
+                "informed_entity": [
+                    {
+                        "route_id": "05"
+                    }
+                ],
+                "cause": 1,
+                "effect": 8,
+                "header_text": {
+                    "translation": [
+                        {
+                            "text": "Test route header - active",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "descriptionText": {
+                    "translation": [
+                        {
+                            "text": "Test route description - active. route_id:05",
+                            "language": "en"
+                        }
+                    ]
+                },
+                "severity_level": 1
+            }
+        }        
+    ]
+}

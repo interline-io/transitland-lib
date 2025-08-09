@@ -1,0 +1,48 @@
+{
+    "header": {
+        "gtfs_realtime_version": "1.0",
+        "incrementality": 0,
+        "timestamp": 1527719250
+    },
+    "entity": [
+        {
+            "id": "2292315WKDY",
+            "trip_update": {
+                "trip": {
+                    "trip_id": "2292315WKDY",
+                    "route_id": "03",
+                    "schedule_relationship": 0
+                },
+                "stop_time_update": [
+                    {
+                        "stop_sequence": 11,
+                        "stop_id": "FTVL",
+                        "departure": {
+                            "time": 1527749700
+                        }
+                    }
+               ]
+            }
+        },
+        {
+            "id": "5172328WKDY",
+            "trip_update": {
+                "trip": {
+                    "trip_id": "5172328WKDY",
+                    "route_id": "11",
+                    "schedule_relationship": 0
+                },
+                "stop_time_update": [
+                    {
+                        "stop_sequence": 12,
+                        "stop_id": "FTVL",
+                        "departure": {
+                            "time": 1527750300
+                        }
+                    }
+               ]
+            }
+        }
+
+    ]
+}

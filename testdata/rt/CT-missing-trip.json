@@ -1,0 +1,245 @@
+{
+    "header": {
+        "gtfs_realtime_version": "1.0",
+        "incrementality": 0,
+        "timestamp": 1527719550
+    },
+    "entity": [
+        {
+            "id": "261",
+            "trip_update": {
+                "trip": {
+                    "trip_id": "261-missing",
+                    "route_id": "Li-130",
+                    "schedule_relationship": 0
+                },
+                "stop_time_update": [
+                    {
+                        "stop_sequence": 1,
+                        "stop_id": "70271",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527719550
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527719550
+                        }
+                    },
+                    {
+                        "stop_sequence": 2,
+                        "stop_id": "70261",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527720030
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527720030
+                        }
+                    },
+                    {
+                        "stop_sequence": 3,
+                        "stop_id": "70241",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527720330
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527720330
+                        }
+                    },
+                    {
+                        "stop_sequence": 4,
+                        "stop_id": "70231",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527720630
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527720630
+                        }
+                    },
+                    {
+                        "stop_sequence": 5,
+                        "stop_id": "70221",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527721050
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527721050
+                        }
+                    },
+                    {
+                        "stop_sequence": 6,
+                        "stop_id": "70211",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527721350
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527721350
+                        }
+                    },
+                    {
+                        "stop_sequence": 7,
+                        "stop_id": "70201",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527721590
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527721590
+                        }
+                    },
+                    {
+                        "stop_sequence": 8,
+                        "stop_id": "70191",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527721890
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527721890
+                        }
+                    },
+                    {
+                        "stop_sequence": 9,
+                        "stop_id": "70171",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527722130
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527722130
+                        }
+                    },
+                    {
+                        "stop_sequence": 10,
+                        "stop_id": "70161",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527722370
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527722370
+                        }
+                    },
+                    {
+                        "stop_sequence": 11,
+                        "stop_id": "70141",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527722670
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527722670
+                        }
+                    },
+                    {
+                        "stop_sequence": 12,
+                        "stop_id": "70131",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527722970
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527722970
+                        }
+                    },
+                    {
+                        "stop_sequence": 13,
+                        "stop_id": "70091",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527723390
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527723390
+                        }
+                    },
+                    {
+                        "stop_sequence": 14,
+                        "stop_id": "70061",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527723750
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527723750
+                        }
+                    },
+                    {
+                        "stop_sequence": 15,
+                        "stop_id": "70021",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527724590
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527724590
+                        }
+                    },
+                    {
+                        "stop_sequence": 16,
+                        "stop_id": "70011",
+                        "arrival": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527724950
+                        },
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527724950
+                        }
+                    }
+                ]
+            }        
+        }
+    ]
+}
