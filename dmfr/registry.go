@@ -16,11 +16,10 @@ import (
 
 // Registry represents a parsed Distributed Mobility Feed Registry (DMFR) file
 type Registry struct {
-	Schema                string     `json:"$schema,omitempty"`
-	Feeds                 []Feed     `json:"feeds,omitempty"`
-	Operators             []Operator `json:"operators,omitempty"`
-	Secrets               []Secret   `json:"secrets,omitempty"`
-	LicenseSpdxIdentifier string     `json:"license_spdx_identifier,omitempty"`
+	Schema    string     `json:"$schema,omitempty"`
+	Feeds     []Feed     `json:"feeds,omitempty"`
+	Operators []Operator `json:"operators,omitempty"`
+	Secrets   []Secret   `json:"secrets,omitempty"`
 }
 
 // ReadRegistry TODO
@@ -33,12 +32,11 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 
 	// Apply nested operator rules
 	reg := Registry{}
-	reg.LicenseSpdxIdentifier = loadReg.LicenseSpdxIdentifier
 	reg.Schema = loadReg.Schema
 	reg.Operators = loadReg.Operators
 	reg.Secrets = loadReg.Secrets
 	if reg.Schema == "" {
-		reg.Schema = "https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.1.json"
+		reg.Schema = "https://dmfr.transit.land/json-schema/dmfr.schema-v0.6.0.json"
 	}
 	operators := []Operator{}
 	for _, rfeed := range loadReg.Feeds {
@@ -86,11 +84,8 @@ func ReadRegistry(reader io.Reader) (*Registry, error) {
 		reg.Operators = append(reg.Operators, operator)
 	}
 
-	// Check license and required feeds
+	// Check required feeds
 	log.For(ctx).Debug().Msgf("Loaded a DMFR file containing %d feeds", len(loadReg.Feeds))
-	if loadReg.LicenseSpdxIdentifier != "CC0-1.0" {
-		log.For(ctx).Debug().Msgf("Loading a DMFR file without the standard CC0-1.0 license. Proceed with caution!")
-	}
 	for i := 0; i < len(loadReg.Feeds); i++ {
 		feedSpec := strings.ToLower(loadReg.Feeds[i].Spec)
 		if feedSpec == "gtfs" || feedSpec == "gtfs-rt" || feedSpec == "gbfs" || feedSpec == "mds" {
@@ -108,7 +103,6 @@ func (r *Registry) Write(w io.Writer) error {
 	rr.Operators = r.Operators
 	rr.Secrets = r.Secrets
 	rr.Schema = r.Schema
-	rr.LicenseSpdxIdentifier = r.LicenseSpdxIdentifier
 	for _, feed := range r.Feeds {
 		rr.Feeds = append(rr.Feeds, RawRegistryFeed{Feed: feed})
 	}
