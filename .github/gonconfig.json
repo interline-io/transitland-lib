@@ -1,11 +1,6 @@
 {
   "source": ["./cmd/transitland/transitland"],
   "bundle_id": "io.interline.transitland-lib",
-  "apple_id": {
-    "username": "AC_USERNAME",
-    "password": "AC_PASSWORD",
-    "provider": "AC_PROVIDER"
-  },
   "sign": {},
   "zip": {
     "output_path": "transitland.zip"
