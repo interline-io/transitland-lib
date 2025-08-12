@@ -418,7 +418,7 @@ func (copier *Copier) CopyEntities(ents []tt.Entity) error {
 }
 
 // checkEntity is the main filter and validation check.
-func (copier *Copier) checkEntity(ent tt.Entity) error {
+func (copier *Copier) checkEntity(ent tt.Entity) (string, error) {
 	efn := ent.Filename()
 	sid := ent.EntityID() // source ID
 
@@ -426,7 +426,7 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	if copier.options.Marker != nil && !copier.options.Marker.IsMarked(efn, sid) {
 		copier.result.SkipEntityMarkedCount[efn]++
 		copier.log.Trace().Str("filename", efn).Str("source_id", sid).Msg("skipped by marker (classic)")
-		return errors.New("skipped by marker (classic)")
+		return sid, errors.New("skipped by marker (classic)")
 	}
 
 	// Check the entity against markers.
@@ -434,7 +434,7 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 		if ok := ef.Marked(ent, copier.EntityMap); !ok {
 			copier.result.SkipEntityMarkedCount[efn]++
 			copier.log.Trace().Str("filename", efn).Str("source_id", sid).Msg("skipped by marker")
-			return errors.New("skipped by marker")
+			return sid, errors.New("skipped by marker")
 		}
 	}
 
@@ -443,7 +443,7 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 		if err := ef.Filter(ent, copier.EntityMap); err != nil {
 			copier.result.SkipEntityFilterCount[efn]++
 			copier.log.Debug().Str("filename", efn).Str("source_id", sid).Str("cause", err.Error()).Msg("skipped by filter")
-			return errors.New("skipped by filter")
+			return sid, errors.New("skipped by filter")
 		}
 	}
 
@@ -507,31 +507,27 @@ func (copier *Copier) checkEntity(ent tt.Entity) error {
 	// Check strictness
 	if len(errs) > 0 && !copier.options.AllowEntityErrors {
 		copier.result.SkipEntityErrorCount[efn]++
-		return errs[0]
+		return sid, errs[0]
 	}
 	if len(refErrs) > 0 && !copier.options.AllowReferenceErrors {
 		copier.result.SkipEntityReferenceCount[efn]++
-		return refErrs[0]
+		return sid, refErrs[0]
 	}
 
 	// Handle after validators
 	for _, v := range copier.afterValidators {
 		if err := v.AfterValidator(ent, copier.EntityMap); err != nil {
-			return err
+			return sid, err
 		}
 	}
-	return nil
+	return sid, nil
 }
 
-func (copier *Copier) writerAddEntities(okEnts []tt.Entity) error {
+func (copier *Copier) writerAddEntities(okIds []string, okEnts []tt.Entity) error {
 	if len(okEnts) == 0 {
 		return nil
 	}
 	efn := okEnts[0].Filename()
-	sids := make([]string, len(okEnts))
-	for i, ent := range okEnts {
-		sids[i] = ent.EntityID()
-	}
 	eids, err := copier.writer.AddEntities(okEnts)
 	if err != nil {
 		copier.log.Error().Err(err).Str("filename", efn).Msgf("critical error: failed to write %d entities", len(okEnts))
@@ -541,7 +537,7 @@ func (copier *Copier) writerAddEntities(okEnts []tt.Entity) error {
 		return fmt.Errorf("expected to write %d entities, got %d", len(okEnts), len(eids))
 	}
 	for i, ent := range okEnts {
-		sid := sids[i]
+		sid := okIds[i]
 		eid := eids[i]
 		copier.EntityMap.Set(efn, sid, eid)
 		if entExt, ok := ent.(tt.EntityWithGroupKey); ok {
@@ -1071,12 +1067,14 @@ func copyEntities[T tt.Entity](copier *Copier, ents []T) ([]tt.Entity, error) {
 	okEnts := make([]tt.Entity, 0, len(expandedEnts))
 	for _, batch := range batchedEnts {
 		checkedEnts := make([]tt.Entity, 0, len(batch))
+		checkedSourceIds := make([]string, 0, len(batch))
 		for _, ent := range batch {
-			if err := copier.checkEntity(ent); err == nil {
+			if sid, err := copier.checkEntity(ent); err == nil {
 				checkedEnts = append(checkedEnts, ent)
+				checkedSourceIds = append(checkedSourceIds, sid)
 			}
 		}
-		if err := copier.writerAddEntities(checkedEnts); err != nil {
+		if err := copier.writerAddEntities(checkedSourceIds, checkedEnts); err != nil {
 			return nil, err
 		}
 		okEnts = append(okEnts, checkedEnts...)
