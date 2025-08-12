@@ -84,10 +84,12 @@ jobs:
         run: |
           brew install Bearer/tap/gon
       - name: Sign the mac binaries with Gon
+        timeout-minutes: 20
         env:
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
           AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
+          AC_APPLICATION_IDENTITY: ${{ secrets.AC_APPLICATION_IDENTITY }}
         run: |
           gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
@@ -121,10 +123,12 @@ jobs:
         run: |
           brew install Bearer/tap/gon
       - name: Sign the mac binaries with Gon
+        timeout-minutes: 20
         env:
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
           AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
+          AC_APPLICATION_IDENTITY: ${{ secrets.AC_APPLICATION_IDENTITY }}
         run: |
           gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
