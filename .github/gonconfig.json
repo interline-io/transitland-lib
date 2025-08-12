@@ -7,7 +7,7 @@
     "provider": "AC_PROVIDER"
   },
   "sign": {
-    "application_identity": "Developer ID Application: Interline Technologies LLC (YYA9WP364B)"
+    "application_identity": "AC_APPLICATION_IDENTITY"
   },
   "zip": {
     "output_path": "transitland.zip"
