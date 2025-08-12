@@ -6,6 +6,7 @@
     "password": "AC_PASSWORD",
     "provider": "AC_PROVIDER"
   },
+  "sign": {},
   "zip": {
     "output_path": "transitland.zip"
   }
