@@ -8,7 +8,7 @@ on:
       - created
 
 permissions:
-  contents: read
+  contents: write
   actions: write
   pull-requests: write
 
@@ -188,13 +188,14 @@ jobs:
       - run: gren release --override
         env:
           GREN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+  
   trigger-homebrew-update:
     needs: release
     if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
+      contents: read
     steps:
       - name: Create GitHub App Token
         id: app-token
