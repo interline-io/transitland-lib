@@ -7,12 +7,12 @@ import (
 	"regexp"
 	"strings"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
+	sq "github.com/irees/squirrel"
 )
 
 type oifmatch struct {

@@ -8,13 +8,13 @@ import (
 	"database/sql"
 	"strings"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/schema/sqlite"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/querylogger"
+	sq "github.com/irees/squirrel"
 	"github.com/jmoiron/sqlx"
 
 	// sqlite3

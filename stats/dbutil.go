@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	sq "github.com/Masterminds/squirrel"
+	sq "github.com/irees/squirrel"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"

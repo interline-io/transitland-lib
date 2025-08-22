@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/importer"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
+	sq "github.com/irees/squirrel"
 	"github.com/spf13/pflag"
 )
 
