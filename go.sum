@@ -109,6 +109,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/interline-io/log v0.0.0-20250425230611-851ec713ec98 h1:8qQzEZx913zpFaedWwdJYehTD1RexoEsmyGKRvEHMfI=
 github.com/interline-io/log v0.0.0-20250425230611-851ec713ec98/go.mod h1:chJaM8SKcHI6ivoeFuZ8M8axTjSV4TPmuQ+sAyAHa34=
+github.com/irees/squirrel v0.0.0-20250822021440-28034b47d2f4 h1:c0mRr/4sBBNE08b5i6qOuPR2lpPTZg8KfCNWgSk2nIQ=
+github.com/irees/squirrel v0.0.0-20250822021440-28034b47d2f4/go.mod h1:wCz5pT6Imdp6KW0CDgra/CmG5br34QLt04Kn+HWCoqM=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
 github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 h1:iCEnooe7UlwOQYpKFhBabPMi4aNAfoODPEFNiAnClxo=

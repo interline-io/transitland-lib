@@ -3,7 +3,6 @@ module github.com/interline-io/transitland-lib
 go 1.24.2
 
 require (
-	github.com/irees/squirrel v0.0.0-20250822021440-28034b47d2f4
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.6.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0
@@ -16,6 +15,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/iancoleman/orderedmap v0.2.0
 	github.com/interline-io/log v0.0.0-20250425230611-851ec713ec98
+	github.com/irees/squirrel v0.0.0-20250822021440-28034b47d2f4
 	github.com/jackc/pgx/v5 v5.7.0
 	github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af
 	github.com/jmoiron/sqlx v1.4.0
