@@ -31,8 +31,9 @@ func init() {
 
 // QueryLogger wraps sql/sqlx methods with loggers.
 type QueryLogger struct {
+	LongQueryDuration time.Duration
+	Trace             bool
 	Ext
-	Trace bool
 }
 
 // Exec .
@@ -48,7 +49,7 @@ func (p *QueryLogger) ExecContext(ctx context.Context, query string, args ...int
 
 	t := time.Now()
 	result, err := p.Ext.ExecContext(ctx, query, args...)
-	queryTime(ctx, rid, t, query, args...)
+	p.queryTime(ctx, rid, t, query, args...)
 
 	return result, err
 }
@@ -66,7 +67,7 @@ func (p *QueryLogger) QueryContext(ctx context.Context, query string, args ...in
 
 	t := time.Now()
 	result, err := p.Ext.QueryContext(ctx, query, args...)
-	queryTime(ctx, rid, t, query, args...)
+	p.queryTime(ctx, rid, t, query, args...)
 
 	return result, err
 }
@@ -84,7 +85,7 @@ func (p *QueryLogger) QueryxContext(ctx context.Context, query string, args ...i
 
 	t := time.Now()
 	result, err := p.Ext.QueryxContext(ctx, query, args...)
-	queryTime(ctx, rid, t, query, args...)
+	p.queryTime(ctx, rid, t, query, args...)
 
 	return result, err
 }
@@ -102,7 +103,7 @@ func (p *QueryLogger) QueryRowContext(ctx context.Context, query string, args ..
 
 	t := time.Now()
 	result := p.Ext.QueryRowContext(ctx, query, args...)
-	queryTime(ctx, rid, t, query, args...)
+	p.queryTime(ctx, rid, t, query, args...)
 
 	return result
 }
@@ -120,7 +121,7 @@ func (p *QueryLogger) QueryRowxContext(ctx context.Context, query string, args .
 
 	t := time.Now()
 	result := p.Ext.QueryRowxContext(ctx, query, args...)
-	queryTime(ctx, rid, t, query, args...)
+	p.queryTime(ctx, rid, t, query, args...)
 
 	return result
 }
@@ -160,9 +161,16 @@ func queryStart(ctx context.Context, rid int, qstr string, a ...interface{}) {
 }
 
 // QueryTime logs database queries and time relative to start; requires LogQuery or TRACE.
-func queryTime(ctx context.Context, rid int, t time.Time, qstr string, a ...interface{}) {
+func (p *QueryLogger) queryTime(ctx context.Context, rid int, t time.Time, qstr string, a ...interface{}) {
+	duration := time.Since(t)
+
+	// Only log if duration exceeds threshold (or threshold is zero for all queries)
+	if p.LongQueryDuration > 0 && duration < p.LongQueryDuration {
+		return
+	}
+
 	log.TraceCheck(func() {
-		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e6
+		t2 := float64(duration.Nanoseconds()) / 1e6
 		sts := []string{}
 		for i, val := range a {
 			q := qval{strconv.Itoa(i + 1), val}
