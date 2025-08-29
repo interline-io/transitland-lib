@@ -19,7 +19,7 @@ require (
 	github.com/flopp/go-staticmaps v0.0.0-20220221183018-c226716bec53
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 	github.com/getkin/kin-openapi v0.127.0
-	github.com/go-chi/chi/v5 v5.0.10
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-chi/cors v1.2.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-migrate/migrate/v4 v4.18.3
