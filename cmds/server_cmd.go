@@ -1,4 +1,4 @@
-package main
+package cmds
 
 import (
 	"context"
@@ -287,8 +287,8 @@ func (cmd *versionCommand) Parse(args []string) error {
 
 func (cmd *versionCommand) Run(context.Context) error {
 	vi := getVersion()
-	log.Print("transitland-server version: %s", vi.Tag)
-	log.Print("transitland-server commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)", vi.Commit, vi.CommitTime)
+	log.Print("transitland-lib version: %s", vi.Tag)
+	log.Print("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)", vi.Commit, vi.CommitTime)
 	log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
 	log.Print("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto", tl.GTFSRTVERSION)
 	return nil

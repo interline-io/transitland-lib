@@ -23,7 +23,7 @@ resolver:
 # omit_slice_element_pointers: false
 
 autobind:
-  - "github.com/interline-io/transitland-server/server/model"
+  - "github.com/interline-io/transitland-lib/server/model"
 
 models:
   String:
