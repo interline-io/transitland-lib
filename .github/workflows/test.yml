@@ -66,7 +66,7 @@ jobs:
     - run: (cd cmd/transitland && go version && go install .)
     - run: ./testdata/server/test_setup.sh
     - name: Run tests
-      run: go test -coverprofile c.out ./...
+      run: go test -v -coverprofile c.out ./...
     - name: Produce coverage report
       run: go tool cover -html=c.out -o coverage.html
     - name: Save coverage report as artifact
