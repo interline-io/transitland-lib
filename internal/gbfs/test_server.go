@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/tt"
@@ -16,6 +16,16 @@ import (
 type TestGbfsServer struct {
 	Language string
 	Path     string
+	fsys     fs.FS
+}
+
+// NewTestGbfsServer creates a new TestGbfsServer with a rooted filesystem
+func NewTestGbfsServer(language, path string) *TestGbfsServer {
+	return &TestGbfsServer{
+		Language: language,
+		Path:     path,
+		fsys:     os.DirFS(path),
+	}
 }
 
 func (g *TestGbfsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +39,7 @@ func (g *TestGbfsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (g *TestGbfsServer) open(host string, path string) ([]byte, error) {
 	if path == "/" || path == "" || path == "/gbfs.json" {
 		sf := SystemFile{}
-		fis, err := os.ReadDir(g.Path)
+		fis, err := fs.ReadDir(g.fsys, ".")
 		_ = err
 		var sfs SystemFeeds
 		for _, fi := range fis {
@@ -44,9 +54,12 @@ func (g *TestGbfsServer) open(host string, path string) ([]byte, error) {
 		data, err := json.Marshal(sf)
 		return data, err
 	}
-	r, err := os.Open(filepath.Join(g.Path, path))
+	// Clean the path and ensure it doesn't escape the root
+	cleanPath := strings.TrimPrefix(path, "/")
+	r, err := g.fsys.Open(cleanPath)
 	if err != nil {
 		return nil, err
 	}
+	defer r.Close()
 	return io.ReadAll(r)
 }

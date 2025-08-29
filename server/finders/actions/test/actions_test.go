@@ -40,7 +40,7 @@ func (t *testWorker) Run(ctx context.Context) error {
 }
 
 func TestGbfsFetch(t *testing.T) {
-	ts := httptest.NewServer(&gbfs.TestGbfsServer{Language: "en", Path: testdata.Path("server/gbfs")})
+	ts := httptest.NewServer(gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")))
 	defer ts.Close()
 	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 		ctx := model.WithConfig(context.Background(), cfg)

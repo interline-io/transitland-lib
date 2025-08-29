@@ -62,7 +62,7 @@ func TestGbfsFinder(t *testing.T) {
 func testSetupGbfs(gbf model.GbfsFinder) error {
 	// Setup
 	sourceFeedId := "gbfs-test"
-	ts := httptest.NewServer(&gbfs.TestGbfsServer{Language: "en", Path: testdata.Path("server", "gbfs")})
+	ts := httptest.NewServer(gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")))
 	defer ts.Close()
 	opts := gbfs.Options{}
 	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
