@@ -6,7 +6,7 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "./cmd/tlserver/main.go",
+      "program": "./cmd/transitland/main.go",
       "args": ["server", "-auth", "admin"]
     }
   ]

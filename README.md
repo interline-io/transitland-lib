@@ -13,6 +13,7 @@
 - [Usage as a CLI tool](#usage-as-a-cli-tool)
 	- [Breaking changes](#breaking-changes)
 - [Usage as a library](#usage-as-a-library)
+- [Usage as a web service](#usage-as-a-web-service)
 - [Database migrations](#database-migrations)
 - [Included Readers and Writers](#included-readers-and-writers)
 - [Development](#development)
@@ -63,6 +64,7 @@ The main subcommands are:
 * [transitland unimport](doc/cli/transitland_unimport.md)	 - Unimport feed versions
 * [transitland validate](doc/cli/transitland_validate.md)	 - Validate a GTFS feed
 * [transitland rt-convert](doc/cli/transitland_rt-convert.md)	 - Convert GTFS-RealTime to JSON
+* [transitland server](doc/cli/transitland_server.md)	 - Run transitland server
 
 See the [full list of subcommands](doc/cli/transitland.md)
 
@@ -73,6 +75,24 @@ Note: as of v0.17, we moved from Go standard library `flags` to Cobra's `pflags`
 ## Usage as a library
 
 See [library examples](doc/library-example.md).
+
+## Usage as a web service
+
+To start the server with the REST API endpoints, GraphQL API endpoint, GraphQL explorer UI, and image generation endpoints:
+
+```
+transitland server --dburl "postgres://your_host/your_database"
+```
+
+Alternatively, the database connection string can be specified using `TL_DATABASE_URL` environment variable. For local development environments, you will usually need to add `?sslmode=disable` to the connection string.
+
+Open http://localhost:8080/ in your web browser to see the GraphQL browser, or use the endpoints at `/query` or `/rest/...`
+
+The REST API is documented with OpenAPI 3.0:
+- **Interactive documentation**: http://localhost:8080/rest/openapi.json
+- **Static schema**: [docs/openapi/rest.json](docs/openapi/rest.json)
+
+The "example" server instance configured by the  `transitland server` command runs without authentication or authorization. Auth configuration is beyond the scope of this example command but can be added by configuring the server in your own package and adding HTTP middlewares to set user context and permissions data. You can use `cmd/tlserver/main.go` as an example to get started; it uses only public APIs from this package. (Earlier versions of `transitland server` included more built-in auth middlewares, but in our experience these are almost always custom per-installation, and were removed from this repo.) Additionally, this example server configuration exposes Go profiler endpoints on `/debug/pprof/...`. 
 
 ## Database migrations
 
@@ -95,6 +115,27 @@ We welcome the addition of more readers and writers.
 `transitland-lib` follows Go coding conventions.
 
 GitHub Actions runs all tests, stores code coverage reports as artifacts, and prepares releases.
+
+For running tests locally, the following instructions should help get started:
+
+1. Set `TL_TEST_SERVER_DATABASE_URL` to the connection string to a test database
+   - e.g. `postgresql://localhost:5432/tlv2_test_server?sslmode=disable`
+   - You must also set `PGHOST=localhost`, `PGDATABASE=tlv2_test_server`, etc., to match this url
+2. Initialize test fixtures: `./testdata/server/test_setup.sh`
+   - This will create the `tlv2_test_server` database in postgres
+   - Will halt with an error (intentionally) if this database already exists
+   - Runs migrations in `transitland-lib/schema/postgres/migrations`
+   - Unpacks and imports the Natural Earth datasets bundled with `transitland-lib`
+   - Builds and installs the `cmd/tlserver` command
+   - Sets up test feeds contained in `testdata/server/server-test.dmfr.json`
+   - Fetches and imports feeds contained in `testdata/server/gtfs`
+   - Creates additional fixtures defined in `testdata/server/test_supplement.pgsql`
+   - Note that temporary files will be created in `testdata/server/tmp`; these are excluded in `.gitignore`
+3. Optional: Set `TL_TEST_REDIS_URL` to run some GBFS tests
+4. Optional: Set `TL_TEST_FGA_ENDPOINT` to a running [OpenFGA](https://github.com/openfga/openfga) server to run authorization tests
+5. Run all tests with `go test -v ./...`
+
+Test cases generally run within transactions; you do not need to regenerate the fixtures unless you are testing migrations or changes to data import functionality.
 
 ### Releases
 
