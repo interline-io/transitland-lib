@@ -18,7 +18,8 @@ permissions:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     env:
       PGDATABASE: tlv2_test_server
       PGUSER: root
