@@ -52,7 +52,7 @@ require (
 	github.com/twpayne/go-shapefile v0.0.6
 	github.com/vektah/gqlparser/v2 v2.5.30
 	google.golang.org/grpc v1.65.0
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/protobuf v1.36.8
 	gopkg.in/dnaeon/go-vcr.v2 v2.3.0
 )
 
@@ -131,9 +131,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-tool google.golang.org/protobuf/cmd/protoc-gen-go
-
 tool github.com/99designs/gqlgen
+
+tool google.golang.org/protobuf/cmd/protoc-gen-go
 
 tool google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
