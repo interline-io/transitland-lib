@@ -18,8 +18,11 @@ permissions:
 
 jobs:
   test:
-    # runs-on: ${{ matrix.os }}
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest] # , macos-15
+        go-version: ['1.24.2']    
+    runs-on: ${{ matrix.os }}
     env:
       PGDATABASE: tlv2_test_server
       PGUSER: root
@@ -51,10 +54,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-15]
-        go-version: ['1.24.2']
     steps:
     - name: Checkout
       uses: actions/checkout@v4
