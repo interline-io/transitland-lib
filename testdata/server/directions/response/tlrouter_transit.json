@@ -1,0 +1,3319 @@
+{
+  "plan": {
+    "date": 1738200531000,
+    "from": {
+      "lat": 37.789001,
+      "lon": -122.401001,
+      "name": "Origin"
+    },
+    "to": {
+      "lat": 37.782001,
+      "lon": -122.446999,
+      "name": "Destination"
+    },
+    "itineraries": [
+      {
+        "duration": 1480,
+        "distance": 4460.178277379083,
+        "startTime": 1738200745000,
+        "endTime": 1738202225000,
+        "walkTime": 268,
+        "walkDistance": 269.23445942489354,
+        "transitTime": 1212,
+        "transitDistance": 4190.943817954189,
+        "waitingTime": 0,
+        "transfers": 0,
+        "legs": [
+          {
+            "startTime": 1738200745000,
+            "endTime": 1738200948000,
+            "distance": 203.84015996978485,
+            "duration": 203,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738200745000
+            },
+            "to": {
+              "lat": 37.790013,
+              "lon": -122.400491,
+              "name": "Market St & Sansome St",
+              "departure": 1738200948000,
+              "stopId": "15689",
+              "stopCode": "15689",
+              "stopOnestopId": "s-9q8yyxqwvc-marketst~sansomest"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtAOTMOkBgCW]????",
+              "length": 11
+            }
+          },
+          {
+            "startTime": 1738200948000,
+            "endTime": 1738202160000,
+            "distance": 4190.943817954189,
+            "duration": 1212,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.790013,
+              "lon": -122.400491,
+              "name": "Market St & Sansome St",
+              "departure": 1738200948000,
+              "stopId": "15689",
+              "stopCode": "15689",
+              "stopIndex": 2,
+              "stopSequence": 2,
+              "stopOnestopId": "s-9q8yyxqwvc-marketst~sansomest"
+            },
+            "to": {
+              "lat": 37.782536,
+              "lon": -122.44669,
+              "name": "Geary Blvd & Presidio Ave",
+              "departure": 1738202160000,
+              "stopId": "14758",
+              "stopCode": "14758",
+              "stopIndex": 12,
+              "stopSequence": 12,
+              "stopOnestopId": "s-9q8yvwj51r-gearyblvd~presidioave"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.78849,
+                "lon": -122.40248,
+                "name": "Market St & Montgomery St",
+                "departure": 1738201080000,
+                "stopId": "15684",
+                "stopCode": "15684",
+                "stopIndex": 3,
+                "stopSequence": 3,
+                "stopOnestopId": "s-9q8yyxjjzm-marketst~montgomeryst"
+              },
+              {
+                "lat": 37.787997,
+                "lon": -122.403656,
+                "name": "Geary St & Kearny St",
+                "departure": 1738201134000,
+                "stopId": "14301",
+                "stopCode": "14301",
+                "stopIndex": 4,
+                "stopSequence": 4,
+                "stopOnestopId": "s-9q8yyxh7h1-gearyst~kearnyst"
+              },
+              {
+                "lat": 37.787633,
+                "lon": -122.406568,
+                "name": "Geary St & Stockton St",
+                "departure": 1738201247000,
+                "stopId": "14766",
+                "stopCode": "14766",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8yyx42bj-gearyst~stocktonst"
+              },
+              {
+                "lat": 37.787401,
+                "lon": -122.408391,
+                "name": "Geary St & Powell St",
+                "departure": 1738201320000,
+                "stopId": "14757",
+                "stopCode": "14757",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8yywbztf-gearyst~powellst"
+              },
+              {
+                "lat": 37.786556,
+                "lon": -122.414971,
+                "name": "Geary St & Leavenworth St",
+                "departure": 1738201469000,
+                "stopId": "14303",
+                "stopCode": "14303",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8yyqu4sk-gearyst~leavenworthst"
+              },
+              {
+                "lat": 37.785745,
+                "lon": -122.421575,
+                "name": "Geary Blvd & Van Ness Ave",
+                "departure": 1738201620000,
+                "stopId": "14768",
+                "stopCode": "14768",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8yynxmft-gearyblvd~vannessave"
+              },
+              {
+                "lat": 37.785033,
+                "lon": -122.427811,
+                "name": "Geary Blvd & Laguna St",
+                "departure": 1738201750000,
+                "stopId": "14304",
+                "stopCode": "14304",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yyndcc0-gearyblvd~lagunast"
+              },
+              {
+                "lat": 37.784391,
+                "lon": -122.43305,
+                "name": "Geary Blvd & Fillmore St",
+                "departure": 1738201860000,
+                "stopId": "14295",
+                "stopCode": "14295",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yvyqyp0-gearyblvd~fillmorest"
+              },
+              {
+                "lat": 37.783428,
+                "lon": -122.439366,
+                "name": "Geary Blvd & Divisadero St",
+                "departure": 1738201999000,
+                "stopId": "14293",
+                "stopCode": "14293",
+                "stopIndex": 11,
+                "stopSequence": 11,
+                "stopOnestopId": "s-9q8yvy627v-gearyblvd~divisaderost"
+              }
+            ],
+            "legGeometry": {
+              "points": "ozseF~iajVpCtDjBhC~BfDVrBf@tHf@tHh@fIh@hIh@fIRbDTbDh@hIf@fIh@fIh@hIh@jIf@dILfBDt@?~@Az@AVLXb@|If@tHf@dId@|Hh@tIPfDT`DvAnSHd@Tv@V`ALbAFz@Bd@b@jIn@jIhAdQH`E",
+              "length": 42
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "38R",
+            "routeLongName": "GEARY RAPID",
+            "routeType": 3,
+            "routeId": "SF:38R",
+            "routeColor": "BF2B45",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-38r",
+            "tripId": "SF:11141981",
+            "headsign": "Lands End - 48th Avenue",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202160000,
+            "endTime": 1738202225000,
+            "distance": 65.39429945510871,
+            "duration": 65,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.782536,
+              "lon": -122.44669,
+              "name": "Geary Blvd & Presidio Ave",
+              "departure": 1738202160000,
+              "stopId": "14758",
+              "stopCode": "14758",
+              "stopOnestopId": "s-9q8yvwj51r-gearyblvd~presidioave"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738202225000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "{kreFxjjjVjB|@",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 1781,
+        "distance": 4462.211120049833,
+        "startTime": 1738200624000,
+        "endTime": 1738202405000,
+        "walkTime": 268,
+        "walkDistance": 269.23445942489354,
+        "transitTime": 1513,
+        "transitDistance": 4192.9766606249395,
+        "waitingTime": 0,
+        "transfers": 0,
+        "legs": [
+          {
+            "startTime": 1738200624000,
+            "endTime": 1738200827000,
+            "distance": 203.84015996978485,
+            "duration": 203,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738200624000
+            },
+            "to": {
+              "lat": 37.790013,
+              "lon": -122.400491,
+              "name": "Market St & Sansome St",
+              "departure": 1738200827000,
+              "stopId": "15689",
+              "stopCode": "15689",
+              "stopOnestopId": "s-9q8yyxqwvc-marketst~sansomest"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtAOTMOkBgCW]????",
+              "length": 11
+            }
+          },
+          {
+            "startTime": 1738200827000,
+            "endTime": 1738202340000,
+            "distance": 4192.9766606249395,
+            "duration": 1513,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.790013,
+              "lon": -122.400491,
+              "name": "Market St & Sansome St",
+              "departure": 1738200827000,
+              "stopId": "15689",
+              "stopCode": "15689",
+              "stopIndex": 2,
+              "stopSequence": 2,
+              "stopOnestopId": "s-9q8yyxqwvc-marketst~sansomest"
+            },
+            "to": {
+              "lat": 37.782536,
+              "lon": -122.44669,
+              "name": "Geary Blvd & Presidio Ave",
+              "departure": 1738202340000,
+              "stopId": "14758",
+              "stopCode": "14758",
+              "stopIndex": 19,
+              "stopSequence": 19,
+              "stopOnestopId": "s-9q8yvwj51r-gearyblvd~presidioave"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.78849,
+                "lon": -122.40248,
+                "name": "Market St & Montgomery St",
+                "departure": 1738200960000,
+                "stopId": "15684",
+                "stopCode": "15684",
+                "stopIndex": 3,
+                "stopSequence": 3,
+                "stopOnestopId": "s-9q8yyxjjzm-marketst~montgomeryst"
+              },
+              {
+                "lat": 37.787997,
+                "lon": -122.403656,
+                "name": "Geary St & Kearny St",
+                "departure": 1738201028000,
+                "stopId": "14301",
+                "stopCode": "14301",
+                "stopIndex": 4,
+                "stopSequence": 4,
+                "stopOnestopId": "s-9q8yyxh7h1-gearyst~kearnyst"
+              },
+              {
+                "lat": 37.787633,
+                "lon": -122.406568,
+                "name": "Geary St & Stockton St",
+                "departure": 1738201170000,
+                "stopId": "14766",
+                "stopCode": "14766",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8yyx42bj-gearyst~stocktonst"
+              },
+              {
+                "lat": 37.787401,
+                "lon": -122.408391,
+                "name": "Geary St & Powell St",
+                "departure": 1738201260000,
+                "stopId": "14757",
+                "stopCode": "14757",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8yywbztf-gearyst~powellst"
+              },
+              {
+                "lat": 37.786983,
+                "lon": -122.411681,
+                "name": "Geary St & Taylor St",
+                "departure": 1738201364000,
+                "stopId": "14767",
+                "stopCode": "14767",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8yyqyt1h-gearyst~taylorst"
+              },
+              {
+                "lat": 37.786769,
+                "lon": -122.413332,
+                "name": "Geary St & Jones St",
+                "departure": 1738201416000,
+                "stopId": "14300",
+                "stopCode": "14300",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8yyqv7fs-gearyst~jonesst"
+              },
+              {
+                "lat": 37.786556,
+                "lon": -122.414971,
+                "name": "Geary St & Leavenworth St",
+                "departure": 1738201468000,
+                "stopId": "14303",
+                "stopCode": "14303",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yyqu4sk-gearyst~leavenworthst"
+              },
+              {
+                "lat": 37.786137,
+                "lon": -122.41825,
+                "name": "Geary St & Larkin St",
+                "departure": 1738201572000,
+                "stopId": "14302",
+                "stopCode": "14302",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yyqcb0n-gearyst~larkinst"
+              },
+              {
+                "lat": 37.785745,
+                "lon": -122.421575,
+                "name": "Geary Blvd & Van Ness Ave",
+                "departure": 1738201680000,
+                "stopId": "14768",
+                "stopCode": "14768",
+                "stopIndex": 11,
+                "stopSequence": 11,
+                "stopOnestopId": "s-9q8yynxmft-gearyblvd~vannessave"
+              },
+              {
+                "lat": 37.785434,
+                "lon": -122.425082,
+                "name": "Geary Blvd & Gough St",
+                "departure": 1738201790000,
+                "stopId": "14298",
+                "stopCode": "14298",
+                "stopIndex": 12,
+                "stopSequence": 12,
+                "stopOnestopId": "s-9q8yynsu0g-gearyblvd~goughst"
+              },
+              {
+                "lat": 37.785033,
+                "lon": -122.427811,
+                "name": "Geary Blvd & Laguna St",
+                "departure": 1738201875000,
+                "stopId": "14304",
+                "stopCode": "14304",
+                "stopIndex": 13,
+                "stopSequence": 13,
+                "stopOnestopId": "s-9q8yyndcc0-gearyblvd~lagunast"
+              },
+              {
+                "lat": 37.784641,
+                "lon": -122.431021,
+                "name": "Geary Blvd & Webster St",
+                "departure": 1738201975000,
+                "stopId": "14769",
+                "stopCode": "14769",
+                "stopIndex": 14,
+                "stopSequence": 14,
+                "stopOnestopId": "s-9q8yyn2rqr-gearyblvd~websterst"
+              },
+              {
+                "lat": 37.784391,
+                "lon": -122.43305,
+                "name": "Geary Blvd & Fillmore St",
+                "departure": 1738202040000,
+                "stopId": "14295",
+                "stopCode": "14295",
+                "stopIndex": 15,
+                "stopSequence": 15,
+                "stopOnestopId": "s-9q8yvyqyp0-gearyblvd~fillmorest"
+              },
+              {
+                "lat": 37.783847,
+                "lon": -122.437761,
+                "name": "Geary Blvd & Scott St",
+                "departure": 1738202142000,
+                "stopId": "14760",
+                "stopCode": "14760",
+                "stopIndex": 16,
+                "stopSequence": 16,
+                "stopOnestopId": "s-9q8yvy7dc7-gearyblvd~scottst"
+              },
+              {
+                "lat": 37.783428,
+                "lon": -122.439366,
+                "name": "Geary Blvd & Divisadero St",
+                "departure": 1738202179000,
+                "stopId": "14293",
+                "stopCode": "14293",
+                "stopIndex": 17,
+                "stopSequence": 17,
+                "stopOnestopId": "s-9q8yvy627v-gearyblvd~divisaderost"
+              },
+              {
+                "lat": 37.782973,
+                "lon": -122.442965,
+                "name": "Geary Blvd & Baker St",
+                "departure": 1738202257000,
+                "stopId": "14289",
+                "stopCode": "14289",
+                "stopIndex": 18,
+                "stopSequence": 18,
+                "stopOnestopId": "s-9q8yvwpvb0-gearyblvd~bakerst"
+              }
+            ],
+            "legGeometry": {
+              "points": "ozseF~iajVpCtDjBhC~BfDVrBf@tHf@tHh@fIh@hIh@fIRbDTbDh@hIf@fIh@fIh@hIh@jIf@dILfBDt@?~@Az@AVLXb@|If@tHf@dId@|Hh@tIPfDT`DvAnSHd@Tv@V`ALbAFz@Bd@b@jIn@jIhAdQH`E",
+              "length": 42
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "38",
+            "routeLongName": "GEARY",
+            "routeType": 3,
+            "routeId": "SF:38",
+            "routeColor": "005B95",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-38",
+            "tripId": "SF:11139892",
+            "headsign": "Balboa + 33rd Avenue",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202340000,
+            "endTime": 1738202405000,
+            "distance": 65.39429945510871,
+            "duration": 65,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.782536,
+              "lon": -122.44669,
+              "name": "Geary Blvd & Presidio Ave",
+              "departure": 1738202340000,
+              "stopId": "14758",
+              "stopCode": "14758",
+              "stopOnestopId": "s-9q8yvwj51r-gearyblvd~presidioave"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738202405000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "{kreFxjjjVjB|@",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 2219,
+        "distance": 5675.164741627353,
+        "startTime": 1738200732000,
+        "endTime": 1738202951000,
+        "walkTime": 924,
+        "walkDistance": 1147.9494203684035,
+        "transitTime": 1230,
+        "transitDistance": 4527.215321258948,
+        "waitingTime": 65,
+        "transfers": 1,
+        "legs": [
+          {
+            "startTime": 1738200732000,
+            "endTime": 1738200905000,
+            "distance": 351.5199174771024,
+            "duration": 173,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738200732000
+            },
+            "to": {
+              "lat": 37.78878614759489,
+              "lon": -122.40206172138267,
+              "name": "Metro Montgomery Station/Outbound",
+              "departure": 1738200905000,
+              "stopId": "16994",
+              "stopCode": "16994",
+              "stopOnestopId": "s-9q8yyxjx9h-metromontgomerystation~outbound"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtA??CEEEACU[uAmBAAA???lEtH",
+              "length": 15
+            }
+          },
+          {
+            "startTime": 1738200905000,
+            "endTime": 1738201079000,
+            "distance": 1477.2644736589414,
+            "duration": 174,
+            "mode": "RAIL",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.78878614759489,
+              "lon": -122.40206172138267,
+              "name": "Metro Montgomery Station/Outbound",
+              "departure": 1738200905000,
+              "stopId": "16994",
+              "stopCode": "16994",
+              "stopIndex": 1,
+              "stopSequence": 1,
+              "stopOnestopId": "s-9q8yyxjx9h-metromontgomerystation~outbound"
+            },
+            "to": {
+              "lat": 37.77942025046315,
+              "lon": -122.41398333343135,
+              "name": "Metro Civic Center Station/Outbd",
+              "departure": 1738201079000,
+              "stopId": "16997",
+              "stopCode": "16997",
+              "stopIndex": 3,
+              "stopSequence": 3,
+              "stopOnestopId": "s-9q8yymsc56-metrociviccenterstation~outbd"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.7845530317612,
+                "lon": -122.407526184828,
+                "name": "Metro Powell Station/Outbound",
+                "departure": 1738200982000,
+                "stopId": "16995",
+                "stopCode": "16995",
+                "stopIndex": 2,
+                "stopSequence": 2,
+                "stopOnestopId": "s-9q8yyw3wcz-metropowellstation~outbound"
+              }
+            ],
+            "legGeometry": {
+              "points": "wrseFvsajVDF~BfDvAfBtDfFdEvF|I~LlCpDpEjGpEhGv@dAtAjB~ExG",
+              "length": 13
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "J",
+            "routeLongName": "CHURCH",
+            "routeType": 0,
+            "routeId": "SF:J",
+            "routeColor": "A96614",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yy-j",
+            "tripId": "SF:11155738",
+            "headsign": "Balboa Park",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738201079000,
+            "endTime": 1738201459000,
+            "distance": 424.92587452890103,
+            "duration": 380,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.77942025046315,
+              "lon": -122.41398333343135,
+              "name": "Metro Civic Center Station/Outbd",
+              "departure": 1738201079000,
+              "stopId": "16997",
+              "stopCode": "16997",
+              "stopOnestopId": "s-9q8yymsc56-metrociviccenterstation~outbd"
+            },
+            "to": {
+              "lat": 37.782835,
+              "lon": -122.414217,
+              "name": "Turk St & Leavenworth St",
+              "departure": 1738201459000,
+              "stopId": "16721",
+              "stopCode": "16721",
+              "stopOnestopId": "s-9q8yyqhsvy-turkst~leavenworthst"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "kxqeFj~cjV????A@]e@??KLYa@CGe@Fe@Fa@i@qAPWBKH??QBoANyAPyDd@BZK@??",
+              "length": 23
+            }
+          },
+          {
+            "startTime": 1738201524000,
+            "endTime": 1738202580000,
+            "distance": 3049.950847600007,
+            "duration": 1056,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.782835,
+              "lon": -122.414217,
+              "name": "Turk St & Leavenworth St",
+              "departure": 1738201524000,
+              "stopId": "16721",
+              "stopCode": "16721",
+              "stopIndex": 3,
+              "stopSequence": 3,
+              "stopOnestopId": "s-9q8yyqhsvy-turkst~leavenworthst"
+            },
+            "to": {
+              "lat": 37.778664,
+              "lon": -122.447206,
+              "name": "Turk St & Masonic Ave",
+              "departure": 1738202580000,
+              "stopId": "16724",
+              "stopCode": "16724",
+              "stopIndex": 20,
+              "stopSequence": 20,
+              "stopOnestopId": "s-9q8yvtkstm-turkst~masonicave"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.782621,
+                "lon": -122.415856,
+                "name": "Turk St & Hyde St",
+                "departure": 1738201598000,
+                "stopId": "16718",
+                "stopCode": "16718",
+                "stopIndex": 4,
+                "stopSequence": 4,
+                "stopOnestopId": "s-9q8yyq57xz-turkst~hydest"
+              },
+              {
+                "lat": 37.782461,
+                "lon": -122.417197,
+                "name": "Turk St & Larkin St",
+                "departure": 1738201658000,
+                "stopId": "16720",
+                "stopCode": "16720",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8yyq4db9-turkst~larkinst"
+              },
+              {
+                "lat": 37.783353,
+                "lon": -122.41769,
+                "name": "Eddy St & Larkin St",
+                "departure": 1738201725000,
+                "stopId": "14481",
+                "stopCode": "14481",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8yyq4pvp-eddyst~larkinst"
+              },
+              {
+                "lat": 37.783184,
+                "lon": -122.419042,
+                "name": "Eddy St & Polk St",
+                "departure": 1738201786000,
+                "stopId": "14489",
+                "stopCode": "14489",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8yyq1nvx-eddyst~polkst"
+              },
+              {
+                "lat": 37.782988,
+                "lon": -122.420613,
+                "name": "Eddy St & Van Ness Ave",
+                "departure": 1738201860000,
+                "stopId": "14494",
+                "stopCode": "14494",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8yyq0jbg-eddyst~vannessave"
+              },
+              {
+                "lat": 37.782516,
+                "lon": -122.42427,
+                "name": "Eddy St & Gough St",
+                "departure": 1738201954000,
+                "stopId": "14477",
+                "stopCode": "14477",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yynj75e-eddyst~goughst"
+              },
+              {
+                "lat": 37.782133,
+                "lon": -122.427296,
+                "name": "Eddy St & Laguna St",
+                "departure": 1738202031000,
+                "stopId": "14484",
+                "stopCode": "14484",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yyn50vh-eddyst~lagunast"
+              },
+              {
+                "lat": 37.781919,
+                "lon": -122.428946,
+                "name": "Eddy St & Buchanan St",
+                "departure": 1738202073000,
+                "stopId": "14472",
+                "stopCode": "14472",
+                "stopIndex": 11,
+                "stopSequence": 11,
+                "stopOnestopId": "s-9q8yyjczwu-eddyst~buchananst"
+              },
+              {
+                "lat": 37.7815,
+                "lon": -122.432236,
+                "name": "Eddy St & Fillmore St",
+                "departure": 1738202157000,
+                "stopId": "14475",
+                "stopCode": "14475",
+                "stopIndex": 12,
+                "stopSequence": 12,
+                "stopOnestopId": "s-9q8yvvzt4n-eddyst~fillmorest"
+              },
+              {
+                "lat": 37.781081,
+                "lon": -122.435515,
+                "name": "Eddy St & Pierce St",
+                "departure": 1738202241000,
+                "stopId": "14487",
+                "stopCode": "14487",
+                "stopIndex": 13,
+                "stopSequence": 13,
+                "stopOnestopId": "s-9q8yvvv4tx-eddyst~piercest"
+              },
+              {
+                "lat": 37.780876,
+                "lon": -122.437165,
+                "name": "Eddy St & Scott St",
+                "departure": 1738202283000,
+                "stopId": "14491",
+                "stopCode": "14491",
+                "stopIndex": 14,
+                "stopSequence": 14,
+                "stopOnestopId": "s-9q8yvvgcx3-eddyst~scottst"
+              },
+              {
+                "lat": 37.780591,
+                "lon": -122.438942,
+                "name": "Divisadero St & Eddy St",
+                "departure": 1738202329000,
+                "stopId": "14415",
+                "stopCode": "14415",
+                "stopIndex": 15,
+                "stopSequence": 15,
+                "stopOnestopId": "s-9q8yvvdxvu-divisaderost~eddyst"
+              },
+              {
+                "lat": 37.779511,
+                "lon": -122.440295,
+                "name": "Turk St & Broderick St",
+                "departure": 1738202399000,
+                "stopId": "16712",
+                "stopCode": "16712",
+                "stopIndex": 16,
+                "stopSequence": 16,
+                "stopOnestopId": "s-9q8yvv99w7-turkst~broderickst"
+              },
+              {
+                "lat": 37.779288,
+                "lon": -122.442174,
+                "name": "Turk St & Baker St",
+                "departure": 1738202447000,
+                "stopId": "16710",
+                "stopCode": "16710",
+                "stopIndex": 17,
+                "stopSequence": 17,
+                "stopOnestopId": "s-9q8yvv8269-turkst~bakerst"
+              },
+              {
+                "lat": 37.77911,
+                "lon": -122.443596,
+                "name": "Turk St & Lyon St",
+                "departure": 1738202483000,
+                "stopId": "16722",
+                "stopCode": "16722",
+                "stopIndex": 18,
+                "stopSequence": 18,
+                "stopOnestopId": "s-9q8yvtrr32-turkst~lyonst"
+              },
+              {
+                "lat": 37.778914,
+                "lon": -122.445246,
+                "name": "Turk St & Central Ave",
+                "departure": 1738202525000,
+                "stopId": "16716",
+                "stopCode": "16716",
+                "stopIndex": 19,
+                "stopSequence": 19,
+                "stopOnestopId": "s-9q8yvtqn4u-turkst~centralave"
+              }
+            ],
+            "legGeometry": {
+              "points": "kmreFx_djVd@jH^`GHdA{Dd@h@hIh@fIh@hIBXd@lHrApSh@fIf@xHj@vIh@hIh@fIf@fIj@lIxDe@j@jILnBA^XzDh@fIf@hIPhCVfEB\\",
+              "length": 28
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "31",
+            "routeLongName": "BALBOA",
+            "routeType": 3,
+            "routeId": "SF:31",
+            "routeColor": "005B95",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-31",
+            "tripId": "SF:11138350",
+            "headsign": "Ocean Beach",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202580000,
+            "endTime": 1738202951000,
+            "distance": 371.5036283624001,
+            "duration": 371,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.778664,
+              "lon": -122.447206,
+              "name": "Turk St & Masonic Ave",
+              "departure": 1738202580000,
+              "stopId": "16724",
+              "stopCode": "16724",
+              "stopOnestopId": "s-9q8yvtkstm-turkst~masonicave"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738202951000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "ssqeF`njjV{Si@",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 2224,
+        "distance": 5671.747355777766,
+        "startTime": 1738200727000,
+        "endTime": 1738202951000,
+        "walkTime": 926,
+        "walkDistance": 1074.257964617663,
+        "transitTime": 1236,
+        "transitDistance": 4597.489391160103,
+        "waitingTime": 62,
+        "transfers": 1,
+        "legs": [
+          {
+            "startTime": 1738200727000,
+            "endTime": 1738200900000,
+            "distance": 272.1671621265574,
+            "duration": 173,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738200727000
+            },
+            "to": {
+              "lat": 37.78924863397131,
+              "lon": -122.40137394207487,
+              "name": "Montgomery Street",
+              "departure": 1738200900000,
+              "stopId": "MONT",
+              "stopCode": "MONT",
+              "stopOnestopId": "s-9q8yyxq436-montgomerystreet"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtA??CEEEACU[uAmBAAA???pBjD",
+              "length": 15
+            }
+          },
+          {
+            "startTime": 1738200900000,
+            "endTime": 1738201080000,
+            "distance": 1547.538543560096,
+            "duration": 180,
+            "mode": "RAIL",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.78924863397131,
+              "lon": -122.40137394207487,
+              "name": "Montgomery Street",
+              "departure": 1738200900000,
+              "stopId": "MONT",
+              "stopCode": "MONT",
+              "stopIndex": 11,
+              "stopSequence": 11,
+              "stopOnestopId": "s-9q8yyxq436-montgomerystreet"
+            },
+            "to": {
+              "lat": 37.779408,
+              "lon": -122.413826,
+              "name": "Civic Center / UN Plaza",
+              "departure": 1738201080000,
+              "stopId": "CIVC",
+              "stopCode": "CIVC",
+              "stopIndex": 13,
+              "stopSequence": 13,
+              "stopOnestopId": "s-9q8yymscp0-civiccenter~unplaza"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.78486164387391,
+                "lon": -122.40685728655569,
+                "name": "Powell Street",
+                "departure": 1738201020000,
+                "stopId": "POWL",
+                "stopCode": "POWL",
+                "stopIndex": 12,
+                "stopSequence": 12,
+                "stopOnestopId": "s-9q8yywd0c2-powellstreet"
+              }
+            ],
+            "legGeometry": {
+              "points": "evseFzoajVh@t@lA~AlA`BlA`BlA`BjAbBlA`BlA`BjA`BlA`BlA`BlA`BlA~AlA`BlA`BlA`BlA`BlA`BlA~AlA`BlA~AlA`BlA`BlA`BlA~AbAtA",
+              "length": 27
+            },
+            "agencyId": "BA",
+            "agencyName": "Bay Area Rapid Transit",
+            "routeShortName": "Red-S",
+            "routeLongName": "Richmond to Daly City/Millbrae",
+            "routeType": 1,
+            "routeId": "BA:Red-S",
+            "routeColor": "FF0000",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8y-red~s",
+            "tripId": "BA:1250163",
+            "headsign": "SFO Airport",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738201080000,
+            "endTime": 1738201462000,
+            "distance": 430.5871741287055,
+            "duration": 382,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.779408,
+              "lon": -122.413826,
+              "name": "Civic Center / UN Plaza",
+              "departure": 1738201080000,
+              "stopId": "CIVC",
+              "stopCode": "CIVC",
+              "stopOnestopId": "s-9q8yymscp0-civiccenter~unplaza"
+            },
+            "to": {
+              "lat": 37.782835,
+              "lon": -122.414217,
+              "name": "Turk St & Leavenworth St",
+              "departure": 1738201462000,
+              "stopId": "16721",
+              "stopCode": "16721",
+              "stopOnestopId": "s-9q8yyqhsvy-turkst~leavenworthst"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "ixqeFl}cjV????@AQY??GHIJKLYa@CGe@Fe@Fa@i@qAPWBKH??QBoANyAPyDd@BZK@??",
+              "length": 25
+            }
+          },
+          {
+            "startTime": 1738201524000,
+            "endTime": 1738202580000,
+            "distance": 3049.950847600007,
+            "duration": 1056,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.782835,
+              "lon": -122.414217,
+              "name": "Turk St & Leavenworth St",
+              "departure": 1738201524000,
+              "stopId": "16721",
+              "stopCode": "16721",
+              "stopIndex": 3,
+              "stopSequence": 3,
+              "stopOnestopId": "s-9q8yyqhsvy-turkst~leavenworthst"
+            },
+            "to": {
+              "lat": 37.778664,
+              "lon": -122.447206,
+              "name": "Turk St & Masonic Ave",
+              "departure": 1738202580000,
+              "stopId": "16724",
+              "stopCode": "16724",
+              "stopIndex": 20,
+              "stopSequence": 20,
+              "stopOnestopId": "s-9q8yvtkstm-turkst~masonicave"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.782621,
+                "lon": -122.415856,
+                "name": "Turk St & Hyde St",
+                "departure": 1738201598000,
+                "stopId": "16718",
+                "stopCode": "16718",
+                "stopIndex": 4,
+                "stopSequence": 4,
+                "stopOnestopId": "s-9q8yyq57xz-turkst~hydest"
+              },
+              {
+                "lat": 37.782461,
+                "lon": -122.417197,
+                "name": "Turk St & Larkin St",
+                "departure": 1738201658000,
+                "stopId": "16720",
+                "stopCode": "16720",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8yyq4db9-turkst~larkinst"
+              },
+              {
+                "lat": 37.783353,
+                "lon": -122.41769,
+                "name": "Eddy St & Larkin St",
+                "departure": 1738201725000,
+                "stopId": "14481",
+                "stopCode": "14481",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8yyq4pvp-eddyst~larkinst"
+              },
+              {
+                "lat": 37.783184,
+                "lon": -122.419042,
+                "name": "Eddy St & Polk St",
+                "departure": 1738201786000,
+                "stopId": "14489",
+                "stopCode": "14489",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8yyq1nvx-eddyst~polkst"
+              },
+              {
+                "lat": 37.782988,
+                "lon": -122.420613,
+                "name": "Eddy St & Van Ness Ave",
+                "departure": 1738201860000,
+                "stopId": "14494",
+                "stopCode": "14494",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8yyq0jbg-eddyst~vannessave"
+              },
+              {
+                "lat": 37.782516,
+                "lon": -122.42427,
+                "name": "Eddy St & Gough St",
+                "departure": 1738201954000,
+                "stopId": "14477",
+                "stopCode": "14477",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yynj75e-eddyst~goughst"
+              },
+              {
+                "lat": 37.782133,
+                "lon": -122.427296,
+                "name": "Eddy St & Laguna St",
+                "departure": 1738202031000,
+                "stopId": "14484",
+                "stopCode": "14484",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yyn50vh-eddyst~lagunast"
+              },
+              {
+                "lat": 37.781919,
+                "lon": -122.428946,
+                "name": "Eddy St & Buchanan St",
+                "departure": 1738202073000,
+                "stopId": "14472",
+                "stopCode": "14472",
+                "stopIndex": 11,
+                "stopSequence": 11,
+                "stopOnestopId": "s-9q8yyjczwu-eddyst~buchananst"
+              },
+              {
+                "lat": 37.7815,
+                "lon": -122.432236,
+                "name": "Eddy St & Fillmore St",
+                "departure": 1738202157000,
+                "stopId": "14475",
+                "stopCode": "14475",
+                "stopIndex": 12,
+                "stopSequence": 12,
+                "stopOnestopId": "s-9q8yvvzt4n-eddyst~fillmorest"
+              },
+              {
+                "lat": 37.781081,
+                "lon": -122.435515,
+                "name": "Eddy St & Pierce St",
+                "departure": 1738202241000,
+                "stopId": "14487",
+                "stopCode": "14487",
+                "stopIndex": 13,
+                "stopSequence": 13,
+                "stopOnestopId": "s-9q8yvvv4tx-eddyst~piercest"
+              },
+              {
+                "lat": 37.780876,
+                "lon": -122.437165,
+                "name": "Eddy St & Scott St",
+                "departure": 1738202283000,
+                "stopId": "14491",
+                "stopCode": "14491",
+                "stopIndex": 14,
+                "stopSequence": 14,
+                "stopOnestopId": "s-9q8yvvgcx3-eddyst~scottst"
+              },
+              {
+                "lat": 37.780591,
+                "lon": -122.438942,
+                "name": "Divisadero St & Eddy St",
+                "departure": 1738202329000,
+                "stopId": "14415",
+                "stopCode": "14415",
+                "stopIndex": 15,
+                "stopSequence": 15,
+                "stopOnestopId": "s-9q8yvvdxvu-divisaderost~eddyst"
+              },
+              {
+                "lat": 37.779511,
+                "lon": -122.440295,
+                "name": "Turk St & Broderick St",
+                "departure": 1738202399000,
+                "stopId": "16712",
+                "stopCode": "16712",
+                "stopIndex": 16,
+                "stopSequence": 16,
+                "stopOnestopId": "s-9q8yvv99w7-turkst~broderickst"
+              },
+              {
+                "lat": 37.779288,
+                "lon": -122.442174,
+                "name": "Turk St & Baker St",
+                "departure": 1738202447000,
+                "stopId": "16710",
+                "stopCode": "16710",
+                "stopIndex": 17,
+                "stopSequence": 17,
+                "stopOnestopId": "s-9q8yvv8269-turkst~bakerst"
+              },
+              {
+                "lat": 37.77911,
+                "lon": -122.443596,
+                "name": "Turk St & Lyon St",
+                "departure": 1738202483000,
+                "stopId": "16722",
+                "stopCode": "16722",
+                "stopIndex": 18,
+                "stopSequence": 18,
+                "stopOnestopId": "s-9q8yvtrr32-turkst~lyonst"
+              },
+              {
+                "lat": 37.778914,
+                "lon": -122.445246,
+                "name": "Turk St & Central Ave",
+                "departure": 1738202525000,
+                "stopId": "16716",
+                "stopCode": "16716",
+                "stopIndex": 19,
+                "stopSequence": 19,
+                "stopOnestopId": "s-9q8yvtqn4u-turkst~centralave"
+              }
+            ],
+            "legGeometry": {
+              "points": "kmreFx_djVd@jH^`GHdA{Dd@h@hIh@fIh@hIBXd@lHrApSh@fIf@xHj@vIh@hIh@fIf@fIj@lIxDe@j@jILnBA^XzDh@fIf@hIPhCVfEB\\",
+              "length": 28
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "31",
+            "routeLongName": "BALBOA",
+            "routeType": 3,
+            "routeId": "SF:31",
+            "routeColor": "005B95",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-31",
+            "tripId": "SF:11138350",
+            "headsign": "Ocean Beach",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202580000,
+            "endTime": 1738202951000,
+            "distance": 371.5036283624001,
+            "duration": 371,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.778664,
+              "lon": -122.447206,
+              "name": "Turk St & Masonic Ave",
+              "departure": 1738202580000,
+              "stopId": "16724",
+              "stopCode": "16724",
+              "stopOnestopId": "s-9q8yvtkstm-turkst~masonicave"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738202951000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "ssqeF`njjV{Si@",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 2279,
+        "distance": 5675.164741627353,
+        "startTime": 1738200672000,
+        "endTime": 1738202951000,
+        "walkTime": 924,
+        "walkDistance": 1147.9494203684035,
+        "transitTime": 1230,
+        "transitDistance": 4527.215321258948,
+        "waitingTime": 125,
+        "transfers": 1,
+        "legs": [
+          {
+            "startTime": 1738200672000,
+            "endTime": 1738200845000,
+            "distance": 351.5199174771024,
+            "duration": 173,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738200672000
+            },
+            "to": {
+              "lat": 37.78878614759489,
+              "lon": -122.40206172138267,
+              "name": "Metro Montgomery Station/Outbound",
+              "departure": 1738200845000,
+              "stopId": "16994",
+              "stopCode": "16994",
+              "stopOnestopId": "s-9q8yyxjx9h-metromontgomerystation~outbound"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtA??CEEEACU[uAmBAAA???lEtH",
+              "length": 15
+            }
+          },
+          {
+            "startTime": 1738200845000,
+            "endTime": 1738201019000,
+            "distance": 1477.2644736589414,
+            "duration": 174,
+            "mode": "RAIL",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.78878614759489,
+              "lon": -122.40206172138267,
+              "name": "Metro Montgomery Station/Outbound",
+              "departure": 1738200845000,
+              "stopId": "16994",
+              "stopCode": "16994",
+              "stopIndex": 1,
+              "stopSequence": 1,
+              "stopOnestopId": "s-9q8yyxjx9h-metromontgomerystation~outbound"
+            },
+            "to": {
+              "lat": 37.77942025046315,
+              "lon": -122.41398333343135,
+              "name": "Metro Civic Center Station/Outbd",
+              "departure": 1738201019000,
+              "stopId": "16997",
+              "stopCode": "16997",
+              "stopIndex": 3,
+              "stopSequence": 3,
+              "stopOnestopId": "s-9q8yymsc56-metrociviccenterstation~outbd"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.7845530317612,
+                "lon": -122.407526184828,
+                "name": "Metro Powell Station/Outbound",
+                "departure": 1738200922000,
+                "stopId": "16995",
+                "stopCode": "16995",
+                "stopIndex": 2,
+                "stopSequence": 2,
+                "stopOnestopId": "s-9q8yyw3wcz-metropowellstation~outbound"
+              }
+            ],
+            "legGeometry": {
+              "points": "wrseFvsajVDF~BfDvAfBtDfFdEvF|I~LlCpDpEjGpEhGv@dAtAjB~ExG",
+              "length": 13
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "M",
+            "routeLongName": "OCEAN VIEW",
+            "routeType": 0,
+            "routeId": "SF:M",
+            "routeColor": "008547",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yt-m",
+            "tripId": "SF:11159013",
+            "headsign": "Balboa Park via S.F. State",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738201019000,
+            "endTime": 1738201399000,
+            "distance": 424.92587452890103,
+            "duration": 380,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.77942025046315,
+              "lon": -122.41398333343135,
+              "name": "Metro Civic Center Station/Outbd",
+              "departure": 1738201019000,
+              "stopId": "16997",
+              "stopCode": "16997",
+              "stopOnestopId": "s-9q8yymsc56-metrociviccenterstation~outbd"
+            },
+            "to": {
+              "lat": 37.782835,
+              "lon": -122.414217,
+              "name": "Turk St & Leavenworth St",
+              "departure": 1738201399000,
+              "stopId": "16721",
+              "stopCode": "16721",
+              "stopOnestopId": "s-9q8yyqhsvy-turkst~leavenworthst"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "kxqeFj~cjV????A@]e@??KLYa@CGe@Fe@Fa@i@qAPWBKH??QBoANyAPyDd@BZK@??",
+              "length": 23
+            }
+          },
+          {
+            "startTime": 1738201524000,
+            "endTime": 1738202580000,
+            "distance": 3049.950847600007,
+            "duration": 1056,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.782835,
+              "lon": -122.414217,
+              "name": "Turk St & Leavenworth St",
+              "departure": 1738201524000,
+              "stopId": "16721",
+              "stopCode": "16721",
+              "stopIndex": 3,
+              "stopSequence": 3,
+              "stopOnestopId": "s-9q8yyqhsvy-turkst~leavenworthst"
+            },
+            "to": {
+              "lat": 37.778664,
+              "lon": -122.447206,
+              "name": "Turk St & Masonic Ave",
+              "departure": 1738202580000,
+              "stopId": "16724",
+              "stopCode": "16724",
+              "stopIndex": 20,
+              "stopSequence": 20,
+              "stopOnestopId": "s-9q8yvtkstm-turkst~masonicave"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.782621,
+                "lon": -122.415856,
+                "name": "Turk St & Hyde St",
+                "departure": 1738201598000,
+                "stopId": "16718",
+                "stopCode": "16718",
+                "stopIndex": 4,
+                "stopSequence": 4,
+                "stopOnestopId": "s-9q8yyq57xz-turkst~hydest"
+              },
+              {
+                "lat": 37.782461,
+                "lon": -122.417197,
+                "name": "Turk St & Larkin St",
+                "departure": 1738201658000,
+                "stopId": "16720",
+                "stopCode": "16720",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8yyq4db9-turkst~larkinst"
+              },
+              {
+                "lat": 37.783353,
+                "lon": -122.41769,
+                "name": "Eddy St & Larkin St",
+                "departure": 1738201725000,
+                "stopId": "14481",
+                "stopCode": "14481",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8yyq4pvp-eddyst~larkinst"
+              },
+              {
+                "lat": 37.783184,
+                "lon": -122.419042,
+                "name": "Eddy St & Polk St",
+                "departure": 1738201786000,
+                "stopId": "14489",
+                "stopCode": "14489",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8yyq1nvx-eddyst~polkst"
+              },
+              {
+                "lat": 37.782988,
+                "lon": -122.420613,
+                "name": "Eddy St & Van Ness Ave",
+                "departure": 1738201860000,
+                "stopId": "14494",
+                "stopCode": "14494",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8yyq0jbg-eddyst~vannessave"
+              },
+              {
+                "lat": 37.782516,
+                "lon": -122.42427,
+                "name": "Eddy St & Gough St",
+                "departure": 1738201954000,
+                "stopId": "14477",
+                "stopCode": "14477",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yynj75e-eddyst~goughst"
+              },
+              {
+                "lat": 37.782133,
+                "lon": -122.427296,
+                "name": "Eddy St & Laguna St",
+                "departure": 1738202031000,
+                "stopId": "14484",
+                "stopCode": "14484",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yyn50vh-eddyst~lagunast"
+              },
+              {
+                "lat": 37.781919,
+                "lon": -122.428946,
+                "name": "Eddy St & Buchanan St",
+                "departure": 1738202073000,
+                "stopId": "14472",
+                "stopCode": "14472",
+                "stopIndex": 11,
+                "stopSequence": 11,
+                "stopOnestopId": "s-9q8yyjczwu-eddyst~buchananst"
+              },
+              {
+                "lat": 37.7815,
+                "lon": -122.432236,
+                "name": "Eddy St & Fillmore St",
+                "departure": 1738202157000,
+                "stopId": "14475",
+                "stopCode": "14475",
+                "stopIndex": 12,
+                "stopSequence": 12,
+                "stopOnestopId": "s-9q8yvvzt4n-eddyst~fillmorest"
+              },
+              {
+                "lat": 37.781081,
+                "lon": -122.435515,
+                "name": "Eddy St & Pierce St",
+                "departure": 1738202241000,
+                "stopId": "14487",
+                "stopCode": "14487",
+                "stopIndex": 13,
+                "stopSequence": 13,
+                "stopOnestopId": "s-9q8yvvv4tx-eddyst~piercest"
+              },
+              {
+                "lat": 37.780876,
+                "lon": -122.437165,
+                "name": "Eddy St & Scott St",
+                "departure": 1738202283000,
+                "stopId": "14491",
+                "stopCode": "14491",
+                "stopIndex": 14,
+                "stopSequence": 14,
+                "stopOnestopId": "s-9q8yvvgcx3-eddyst~scottst"
+              },
+              {
+                "lat": 37.780591,
+                "lon": -122.438942,
+                "name": "Divisadero St & Eddy St",
+                "departure": 1738202329000,
+                "stopId": "14415",
+                "stopCode": "14415",
+                "stopIndex": 15,
+                "stopSequence": 15,
+                "stopOnestopId": "s-9q8yvvdxvu-divisaderost~eddyst"
+              },
+              {
+                "lat": 37.779511,
+                "lon": -122.440295,
+                "name": "Turk St & Broderick St",
+                "departure": 1738202399000,
+                "stopId": "16712",
+                "stopCode": "16712",
+                "stopIndex": 16,
+                "stopSequence": 16,
+                "stopOnestopId": "s-9q8yvv99w7-turkst~broderickst"
+              },
+              {
+                "lat": 37.779288,
+                "lon": -122.442174,
+                "name": "Turk St & Baker St",
+                "departure": 1738202447000,
+                "stopId": "16710",
+                "stopCode": "16710",
+                "stopIndex": 17,
+                "stopSequence": 17,
+                "stopOnestopId": "s-9q8yvv8269-turkst~bakerst"
+              },
+              {
+                "lat": 37.77911,
+                "lon": -122.443596,
+                "name": "Turk St & Lyon St",
+                "departure": 1738202483000,
+                "stopId": "16722",
+                "stopCode": "16722",
+                "stopIndex": 18,
+                "stopSequence": 18,
+                "stopOnestopId": "s-9q8yvtrr32-turkst~lyonst"
+              },
+              {
+                "lat": 37.778914,
+                "lon": -122.445246,
+                "name": "Turk St & Central Ave",
+                "departure": 1738202525000,
+                "stopId": "16716",
+                "stopCode": "16716",
+                "stopIndex": 19,
+                "stopSequence": 19,
+                "stopOnestopId": "s-9q8yvtqn4u-turkst~centralave"
+              }
+            ],
+            "legGeometry": {
+              "points": "kmreFx_djVd@jH^`GHdA{Dd@h@hIh@fIh@hIBXd@lHrApSh@fIf@xHj@vIh@hIh@fIf@fIj@lIxDe@j@jILnBA^XzDh@fIf@hIPhCVfEB\\",
+              "length": 28
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "31",
+            "routeLongName": "BALBOA",
+            "routeType": 3,
+            "routeId": "SF:31",
+            "routeColor": "005B95",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-31",
+            "tripId": "SF:11138350",
+            "headsign": "Ocean Beach",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202580000,
+            "endTime": 1738202951000,
+            "distance": 371.5036283624001,
+            "duration": 371,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.778664,
+              "lon": -122.447206,
+              "name": "Turk St & Masonic Ave",
+              "departure": 1738202580000,
+              "stopId": "16724",
+              "stopCode": "16724",
+              "stopOnestopId": "s-9q8yvtkstm-turkst~masonicave"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738202951000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "ssqeF`njjV{Si@",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 2381,
+        "distance": 5554.328925069828,
+        "startTime": 1738200624000,
+        "endTime": 1738203005000,
+        "walkTime": 564,
+        "walkDistance": 1005.1333061029607,
+        "transitTime": 1642,
+        "transitDistance": 4549.195618966868,
+        "waitingTime": 175,
+        "transfers": 1,
+        "legs": [
+          {
+            "startTime": 1738200624000,
+            "endTime": 1738200827000,
+            "distance": 203.84015996978485,
+            "duration": 203,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738200624000
+            },
+            "to": {
+              "lat": 37.790013,
+              "lon": -122.400491,
+              "name": "Market St & Sansome St",
+              "departure": 1738200827000,
+              "stopId": "15689",
+              "stopCode": "15689",
+              "stopOnestopId": "s-9q8yyxqwvc-marketst~sansomest"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtAOTMOkBgCW]????",
+              "length": 11
+            }
+          },
+          {
+            "startTime": 1738200827000,
+            "endTime": 1738202340000,
+            "distance": 4192.9766606249395,
+            "duration": 1513,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.790013,
+              "lon": -122.400491,
+              "name": "Market St & Sansome St",
+              "departure": 1738200827000,
+              "stopId": "15689",
+              "stopCode": "15689",
+              "stopIndex": 2,
+              "stopSequence": 2,
+              "stopOnestopId": "s-9q8yyxqwvc-marketst~sansomest"
+            },
+            "to": {
+              "lat": 37.782536,
+              "lon": -122.44669,
+              "name": "Geary Blvd & Presidio Ave",
+              "departure": 1738202340000,
+              "stopId": "14758",
+              "stopCode": "14758",
+              "stopIndex": 19,
+              "stopSequence": 19,
+              "stopOnestopId": "s-9q8yvwj51r-gearyblvd~presidioave"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.78849,
+                "lon": -122.40248,
+                "name": "Market St & Montgomery St",
+                "departure": 1738200960000,
+                "stopId": "15684",
+                "stopCode": "15684",
+                "stopIndex": 3,
+                "stopSequence": 3,
+                "stopOnestopId": "s-9q8yyxjjzm-marketst~montgomeryst"
+              },
+              {
+                "lat": 37.787997,
+                "lon": -122.403656,
+                "name": "Geary St & Kearny St",
+                "departure": 1738201028000,
+                "stopId": "14301",
+                "stopCode": "14301",
+                "stopIndex": 4,
+                "stopSequence": 4,
+                "stopOnestopId": "s-9q8yyxh7h1-gearyst~kearnyst"
+              },
+              {
+                "lat": 37.787633,
+                "lon": -122.406568,
+                "name": "Geary St & Stockton St",
+                "departure": 1738201170000,
+                "stopId": "14766",
+                "stopCode": "14766",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8yyx42bj-gearyst~stocktonst"
+              },
+              {
+                "lat": 37.787401,
+                "lon": -122.408391,
+                "name": "Geary St & Powell St",
+                "departure": 1738201260000,
+                "stopId": "14757",
+                "stopCode": "14757",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8yywbztf-gearyst~powellst"
+              },
+              {
+                "lat": 37.786983,
+                "lon": -122.411681,
+                "name": "Geary St & Taylor St",
+                "departure": 1738201364000,
+                "stopId": "14767",
+                "stopCode": "14767",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8yyqyt1h-gearyst~taylorst"
+              },
+              {
+                "lat": 37.786769,
+                "lon": -122.413332,
+                "name": "Geary St & Jones St",
+                "departure": 1738201416000,
+                "stopId": "14300",
+                "stopCode": "14300",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8yyqv7fs-gearyst~jonesst"
+              },
+              {
+                "lat": 37.786556,
+                "lon": -122.414971,
+                "name": "Geary St & Leavenworth St",
+                "departure": 1738201468000,
+                "stopId": "14303",
+                "stopCode": "14303",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yyqu4sk-gearyst~leavenworthst"
+              },
+              {
+                "lat": 37.786137,
+                "lon": -122.41825,
+                "name": "Geary St & Larkin St",
+                "departure": 1738201572000,
+                "stopId": "14302",
+                "stopCode": "14302",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yyqcb0n-gearyst~larkinst"
+              },
+              {
+                "lat": 37.785745,
+                "lon": -122.421575,
+                "name": "Geary Blvd & Van Ness Ave",
+                "departure": 1738201680000,
+                "stopId": "14768",
+                "stopCode": "14768",
+                "stopIndex": 11,
+                "stopSequence": 11,
+                "stopOnestopId": "s-9q8yynxmft-gearyblvd~vannessave"
+              },
+              {
+                "lat": 37.785434,
+                "lon": -122.425082,
+                "name": "Geary Blvd & Gough St",
+                "departure": 1738201790000,
+                "stopId": "14298",
+                "stopCode": "14298",
+                "stopIndex": 12,
+                "stopSequence": 12,
+                "stopOnestopId": "s-9q8yynsu0g-gearyblvd~goughst"
+              },
+              {
+                "lat": 37.785033,
+                "lon": -122.427811,
+                "name": "Geary Blvd & Laguna St",
+                "departure": 1738201875000,
+                "stopId": "14304",
+                "stopCode": "14304",
+                "stopIndex": 13,
+                "stopSequence": 13,
+                "stopOnestopId": "s-9q8yyndcc0-gearyblvd~lagunast"
+              },
+              {
+                "lat": 37.784641,
+                "lon": -122.431021,
+                "name": "Geary Blvd & Webster St",
+                "departure": 1738201975000,
+                "stopId": "14769",
+                "stopCode": "14769",
+                "stopIndex": 14,
+                "stopSequence": 14,
+                "stopOnestopId": "s-9q8yyn2rqr-gearyblvd~websterst"
+              },
+              {
+                "lat": 37.784391,
+                "lon": -122.43305,
+                "name": "Geary Blvd & Fillmore St",
+                "departure": 1738202040000,
+                "stopId": "14295",
+                "stopCode": "14295",
+                "stopIndex": 15,
+                "stopSequence": 15,
+                "stopOnestopId": "s-9q8yvyqyp0-gearyblvd~fillmorest"
+              },
+              {
+                "lat": 37.783847,
+                "lon": -122.437761,
+                "name": "Geary Blvd & Scott St",
+                "departure": 1738202142000,
+                "stopId": "14760",
+                "stopCode": "14760",
+                "stopIndex": 16,
+                "stopSequence": 16,
+                "stopOnestopId": "s-9q8yvy7dc7-gearyblvd~scottst"
+              },
+              {
+                "lat": 37.783428,
+                "lon": -122.439366,
+                "name": "Geary Blvd & Divisadero St",
+                "departure": 1738202179000,
+                "stopId": "14293",
+                "stopCode": "14293",
+                "stopIndex": 17,
+                "stopSequence": 17,
+                "stopOnestopId": "s-9q8yvy627v-gearyblvd~divisaderost"
+              },
+              {
+                "lat": 37.782973,
+                "lon": -122.442965,
+                "name": "Geary Blvd & Baker St",
+                "departure": 1738202257000,
+                "stopId": "14289",
+                "stopCode": "14289",
+                "stopIndex": 18,
+                "stopSequence": 18,
+                "stopOnestopId": "s-9q8yvwpvb0-gearyblvd~bakerst"
+              }
+            ],
+            "legGeometry": {
+              "points": "ozseF~iajVpCtDjBhC~BfDVrBf@tHf@tHh@fIh@hIh@fIRbDTbDh@hIf@fIh@fIh@hIh@jIf@dILfBDt@?~@Az@AVLXb@|If@tHf@dId@|Hh@tIPfDT`DvAnSHd@Tv@V`ALbAFz@Bd@b@jIn@jIhAdQH`E",
+              "length": 42
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "38",
+            "routeLongName": "GEARY",
+            "routeType": 3,
+            "routeId": "SF:38",
+            "routeColor": "005B95",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-38",
+            "tripId": "SF:11139892",
+            "headsign": "Balboa + 33rd Avenue",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202340000,
+            "endTime": 1738202411000,
+            "distance": 510.8436493207936,
+            "duration": 71,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.782536,
+              "lon": -122.44669,
+              "name": "Geary Blvd & Presidio Ave",
+              "departure": 1738202340000,
+              "stopId": "14758",
+              "stopCode": "14758",
+              "stopOnestopId": "s-9q8yvwj51r-gearyblvd~presidioave"
+            },
+            "to": {
+              "lat": 37.782161,
+              "lon": -122.447355,
+              "name": "Masonic Ave & Geary Blvd",
+              "departure": 1738202411000,
+              "stopId": "15709",
+              "stopCode": "15709",
+              "stopOnestopId": "s-9q8yvwh91c-masonicave~gearyblvd"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "{kreFxjjjV????h@zKNbD??y@iMZ?HDTLNF???K????",
+              "length": 15
+            }
+          },
+          {
+            "startTime": 1738202586000,
+            "endTime": 1738202715000,
+            "distance": 356.21895834192816,
+            "duration": 129,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.782161,
+              "lon": -122.447355,
+              "name": "Masonic Ave & Geary Blvd",
+              "departure": 1738202586000,
+              "stopId": "15709",
+              "stopCode": "15709",
+              "stopIndex": 67,
+              "stopSequence": 67,
+              "stopOnestopId": "s-9q8yvwh91c-masonicave~gearyblvd"
+            },
+            "to": {
+              "lat": 37.784535,
+              "lon": -122.446197,
+              "name": "Presidio Ave & Sutter St",
+              "departure": 1738202715000,
+              "stopId": "16098",
+              "stopCode": "16098",
+              "stopIndex": 69,
+              "stopSequence": 69,
+              "stopOnestopId": "s-9q8yvwmqug-presidioave~sutterst"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.782706,
+                "lon": -122.445796,
+                "name": "Presidio Ave & Geary Blvd",
+                "departure": 1738202649000,
+                "stopId": "16092",
+                "stopCode": "16092",
+                "stopIndex": 68,
+                "stopSequence": 68,
+                "stopOnestopId": "s-9q8yvwjsnn-presidioave~gearyblvd"
+              }
+            ],
+            "legGeometry": {
+              "points": "sireFfojjV??k@Q`@Ka@kGQOkEj@yDh@O@",
+              "length": 9
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "43",
+            "routeLongName": "MASONIC",
+            "routeType": 3,
+            "routeId": "SF:43",
+            "routeColor": "005B95",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-43",
+            "tripId": "SF:11144657",
+            "headsign": "Fort Mason",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202715000,
+            "endTime": 1738203005000,
+            "distance": 290.44949681238216,
+            "duration": 290,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.784535,
+              "lon": -122.446197,
+              "name": "Presidio Ave & Sutter St",
+              "departure": 1738202715000,
+              "stopId": "16098",
+              "stopCode": "16098",
+              "stopOnestopId": "s-9q8yvwmqug-presidioave~sutterst"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738203005000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "kxreFvgjjVzN~C",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 2545,
+        "distance": 5172.8843969980935,
+        "startTime": 1738200541000,
+        "endTime": 1738203086000,
+        "walkTime": 921,
+        "walkDistance": 922.3449557888155,
+        "transitTime": 1624,
+        "transitDistance": 4250.539441209278,
+        "waitingTime": 0,
+        "transfers": 0,
+        "legs": [
+          {
+            "startTime": 1738200541000,
+            "endTime": 1738200776000,
+            "distance": 235.7227699303483,
+            "duration": 235,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738200541000
+            },
+            "to": {
+              "lat": 37.78849,
+              "lon": -122.40248,
+              "name": "Market St & Montgomery St",
+              "departure": 1738200776000,
+              "stopId": "15684",
+              "stopCode": "15684",
+              "stopOnestopId": "s-9q8yyxjjzm-marketst~montgomeryst"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtA??NRdAxAHLJLHLBDBBE@E?E@I@??f@p@HNEB??",
+              "length": 22
+            }
+          },
+          {
+            "startTime": 1738200776000,
+            "endTime": 1738202400000,
+            "distance": 4250.539441209278,
+            "duration": 1624,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.78849,
+              "lon": -122.40248,
+              "name": "Market St & Montgomery St",
+              "departure": 1738200776000,
+              "stopId": "15684",
+              "stopCode": "15684",
+              "stopIndex": 3,
+              "stopSequence": 3,
+              "stopOnestopId": "s-9q8yyxjjzm-marketst~montgomeryst"
+            },
+            "to": {
+              "lat": 37.775844,
+              "lon": -122.446404,
+              "name": "Fulton St & Masonic Ave",
+              "departure": 1738202400000,
+              "stopId": "14229",
+              "stopCode": "14229",
+              "stopIndex": 11,
+              "stopSequence": 11,
+              "stopOnestopId": "s-9q8yvsvhpz-fultonst~masonicave"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.78639,
+                "lon": -122.40516,
+                "name": "Market St & Grant Ave",
+                "departure": 1738200935000,
+                "stopId": "15674",
+                "stopCode": "15674",
+                "stopIndex": 4,
+                "stopSequence": 4,
+                "stopOnestopId": "s-9q8yywg39j-marketst~grantave"
+              },
+              {
+                "lat": 37.784474,
+                "lon": -122.407544,
+                "name": "Market St & Powell St",
+                "departure": 1738201080000,
+                "stopId": "15688",
+                "stopCode": "15688",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8yyw3w92-marketst~powellst"
+              },
+              {
+                "lat": 37.78285,
+                "lon": -122.40964,
+                "name": "Market St & Mason St",
+                "departure": 1738201190000,
+                "stopId": "15683",
+                "stopCode": "15683",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8yyw0j09-marketst~masonst"
+              },
+              {
+                "lat": 37.781166,
+                "lon": -122.412189,
+                "name": "Mcallister St & Jones St",
+                "departure": 1738201320000,
+                "stopId": "17563",
+                "stopCode": "17563",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8yymy5jr-mcallisterst~jonesst"
+              },
+              {
+                "lat": 37.78009,
+                "lon": -122.42071,
+                "name": "Mcallister St & Van Ness Ave",
+                "departure": 1738201680000,
+                "stopId": "15404",
+                "stopCode": "15404",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8yyjxuyx-mcallisterst~vannessave"
+              },
+              {
+                "lat": 37.77864,
+                "lon": -122.43207,
+                "name": "Mcallister St & Fillmore St",
+                "departure": 1738201980000,
+                "stopId": "15391",
+                "stopCode": "15391",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yvvrstb-mcallisterst~fillmorest"
+              },
+              {
+                "lat": 37.777825,
+                "lon": -122.438289,
+                "name": "Mcallister St & Divisadero St",
+                "departure": 1738202145000,
+                "stopId": "15389",
+                "stopCode": "15389",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yvv5pv1-mcallisterst~divisaderost"
+              }
+            ],
+            "legGeometry": {
+              "points": "ypseFhvajVfA|AvAfBtDfFdEvF|I~LlCpDpEjGpEhGHnAZ~ELhBh@fIRbDNdCJZh@hIb@~G@h@@h@`@|Gj@hIrApSnAbSThDTlDh@fIh@hIh@fIh@lIh@jIh@hIh@fIh@hIzDe@f@`I",
+              "length": 36
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "5R",
+            "routeLongName": "FULTON RAPID",
+            "routeType": 3,
+            "routeId": "SF:5R",
+            "routeColor": "BF2B45",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-5r",
+            "tripId": "SF:11113396",
+            "headsign": "Ocean Beach",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202400000,
+            "endTime": 1738203086000,
+            "distance": 686.6221858584672,
+            "duration": 686,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.775844,
+              "lon": -122.446404,
+              "name": "Fulton St & Masonic Ave",
+              "departure": 1738202400000,
+              "stopId": "14229",
+              "stopCode": "14229",
+              "stopOnestopId": "s-9q8yvsvhpz-fultonst~masonicave"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738203086000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "_bqeF~hjjVoe@vB",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 2569,
+        "distance": 5389.307558697517,
+        "startTime": 1738200637000,
+        "endTime": 1738203206000,
+        "walkTime": 889,
+        "walkDistance": 890.4623458282521,
+        "transitTime": 1680,
+        "transitDistance": 4498.845212869266,
+        "waitingTime": 0,
+        "transfers": 0,
+        "legs": [
+          {
+            "startTime": 1738200637000,
+            "endTime": 1738200840000,
+            "distance": 203.84015996978485,
+            "duration": 203,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738200637000
+            },
+            "to": {
+              "lat": 37.790013,
+              "lon": -122.400491,
+              "name": "Market St & Sansome St",
+              "departure": 1738200840000,
+              "stopId": "15689",
+              "stopCode": "15689",
+              "stopOnestopId": "s-9q8yyxqwvc-marketst~sansomest"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtAOTMOkBgCW]????",
+              "length": 11
+            }
+          },
+          {
+            "startTime": 1738200840000,
+            "endTime": 1738202520000,
+            "distance": 4498.845212869266,
+            "duration": 1680,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.790013,
+              "lon": -122.400491,
+              "name": "Market St & Sansome St",
+              "departure": 1738200840000,
+              "stopId": "15689",
+              "stopCode": "15689",
+              "stopIndex": 2,
+              "stopSequence": 2,
+              "stopOnestopId": "s-9q8yyxqwvc-marketst~sansomest"
+            },
+            "to": {
+              "lat": 37.775844,
+              "lon": -122.446404,
+              "name": "Fulton St & Masonic Ave",
+              "departure": 1738202520000,
+              "stopId": "14229",
+              "stopCode": "14229",
+              "stopIndex": 17,
+              "stopSequence": 17,
+              "stopOnestopId": "s-9q8yvsvhpz-fultonst~masonicave"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.78849,
+                "lon": -122.40248,
+                "name": "Market St & Montgomery St",
+                "departure": 1738200956000,
+                "stopId": "15684",
+                "stopCode": "15684",
+                "stopIndex": 3,
+                "stopSequence": 3,
+                "stopOnestopId": "s-9q8yyxjjzm-marketst~montgomeryst"
+              },
+              {
+                "lat": 37.78639,
+                "lon": -122.40516,
+                "name": "Market St & Grant Ave",
+                "departure": 1738201115000,
+                "stopId": "15674",
+                "stopCode": "15674",
+                "stopIndex": 4,
+                "stopSequence": 4,
+                "stopOnestopId": "s-9q8yywg39j-marketst~grantave"
+              },
+              {
+                "lat": 37.784474,
+                "lon": -122.407544,
+                "name": "Market St & Powell St",
+                "departure": 1738201260000,
+                "stopId": "15688",
+                "stopCode": "15688",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8yyw3w92-marketst~powellst"
+              },
+              {
+                "lat": 37.78285,
+                "lon": -122.40964,
+                "name": "Market St & Mason St",
+                "departure": 1738201370000,
+                "stopId": "15683",
+                "stopCode": "15683",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8yyw0j09-marketst~masonst"
+              },
+              {
+                "lat": 37.781166,
+                "lon": -122.412189,
+                "name": "Mcallister St & Jones St",
+                "departure": 1738201500000,
+                "stopId": "17563",
+                "stopCode": "17563",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8yymy5jr-mcallisterst~jonesst"
+              },
+              {
+                "lat": 37.78073,
+                "lon": -122.41569,
+                "name": "Mcallister St & Hyde St",
+                "departure": 1738201623000,
+                "stopId": "15395",
+                "stopCode": "15395",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8yymg8ew-mcallisterst~hydest"
+              },
+              {
+                "lat": 37.78051,
+                "lon": -122.41741,
+                "name": "Mcallister St & Larkin St",
+                "departure": 1738201683000,
+                "stopId": "15397",
+                "stopCode": "15397",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yymdr7t-mcallisterst~larkinst"
+              },
+              {
+                "lat": 37.78009,
+                "lon": -122.42071,
+                "name": "Mcallister St & Van Ness Ave",
+                "departure": 1738201800000,
+                "stopId": "15404",
+                "stopCode": "15404",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yyjxuyx-mcallisterst~vannessave"
+              },
+              {
+                "lat": 37.779714,
+                "lon": -122.423881,
+                "name": "Mcallister St & Gough St",
+                "departure": 1738201883000,
+                "stopId": "15393",
+                "stopCode": "15393",
+                "stopIndex": 11,
+                "stopSequence": 11,
+                "stopOnestopId": "s-9q8yyjtduc-mcallisterst~goughst"
+              },
+              {
+                "lat": 37.779304,
+                "lon": -122.42717,
+                "name": "Mcallister St & Laguna St",
+                "departure": 1738201969000,
+                "stopId": "15398",
+                "stopCode": "15398",
+                "stopIndex": 12,
+                "stopSequence": 12,
+                "stopOnestopId": "s-9q8yyje22h-mcallisterst~lagunast"
+              },
+              {
+                "lat": 37.77864,
+                "lon": -122.43207,
+                "name": "Mcallister St & Fillmore St",
+                "departure": 1738202100000,
+                "stopId": "15391",
+                "stopCode": "15391",
+                "stopIndex": 13,
+                "stopSequence": 13,
+                "stopOnestopId": "s-9q8yvvrstb-mcallisterst~fillmorest"
+              },
+              {
+                "lat": 37.778244,
+                "lon": -122.435045,
+                "name": "Mcallister St & Pierce St",
+                "departure": 1738202179000,
+                "stopId": "15400",
+                "stopCode": "15400",
+                "stopIndex": 14,
+                "stopSequence": 14,
+                "stopOnestopId": "s-9q8yvvmd0x-mcallisterst~piercest"
+              },
+              {
+                "lat": 37.777825,
+                "lon": -122.438289,
+                "name": "Mcallister St & Divisadero St",
+                "departure": 1738202265000,
+                "stopId": "15389",
+                "stopCode": "15389",
+                "stopIndex": 15,
+                "stopSequence": 15,
+                "stopOnestopId": "s-9q8yvv5pv1-mcallisterst~divisaderost"
+              },
+              {
+                "lat": 37.777397,
+                "lon": -122.441659,
+                "name": "Mcallister St & Baker St",
+                "departure": 1738202355000,
+                "stopId": "15384",
+                "stopCode": "15384",
+                "stopIndex": 16,
+                "stopSequence": 16,
+                "stopOnestopId": "s-9q8yvv0tq9-mcallisterst~bakerst"
+              }
+            ],
+            "legGeometry": {
+              "points": "ozseF~iajVpCtDjBhC~BfDvAfBtDfFdEvF|I~LlCpDpEjGpEhGHnAZ~ELhBh@fIRbDNdCJZh@hIb@~G@h@@h@`@|Gj@hIrApSnAbSThDTlDh@fIh@hIh@fIh@lIh@jIh@hIh@fIh@hIzDe@f@`I",
+              "length": 38
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "5",
+            "routeLongName": "FULTON",
+            "routeType": 3,
+            "routeId": "SF:5",
+            "routeColor": "005B95",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-5",
+            "tripId": "SF:11111096",
+            "headsign": "6th Av + Fulton",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202520000,
+            "endTime": 1738203206000,
+            "distance": 686.6221858584672,
+            "duration": 686,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.775844,
+              "lon": -122.446404,
+              "name": "Fulton St & Masonic Ave",
+              "departure": 1738202520000,
+              "stopId": "14229",
+              "stopCode": "14229",
+              "stopOnestopId": "s-9q8yvsvhpz-fultonst~masonicave"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738203206000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "_bqeF~hjjVoe@vB",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 1756,
+        "distance": 4596.0808561447875,
+        "startTime": 1738201486000,
+        "endTime": 1738203242000,
+        "walkTime": 544,
+        "walkDistance": 544.6343717552306,
+        "transitTime": 1212,
+        "transitDistance": 4051.4464843895576,
+        "waitingTime": 0,
+        "transfers": 0,
+        "legs": [
+          {
+            "startTime": 1738201486000,
+            "endTime": 1738201740000,
+            "distance": 254.18487494284847,
+            "duration": 254,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738201486000
+            },
+            "to": {
+              "lat": 37.790298,
+              "lon": -122.400674,
+              "name": "Sutter St & Sansome St",
+              "departure": 1738201740000,
+              "stopId": "16606",
+              "stopCode": "16606",
+              "stopOnestopId": "s-9q8yyxw83w-sutterst~sansomest"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtAOTUC??IJmBkCSYKMAXC@K@O@?CBA??",
+              "length": 19
+            }
+          },
+          {
+            "startTime": 1738201740000,
+            "endTime": 1738202952000,
+            "distance": 4051.4464843895576,
+            "duration": 1212,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.790298,
+              "lon": -122.400674,
+              "name": "Sutter St & Sansome St",
+              "departure": 1738201740000,
+              "stopId": "16606",
+              "stopCode": "16606",
+              "stopIndex": 4,
+              "stopSequence": 4,
+              "stopOnestopId": "s-9q8yyxw83w-sutterst~sansomest"
+            },
+            "to": {
+              "lat": 37.784535,
+              "lon": -122.446197,
+              "name": "Presidio Ave & Sutter St",
+              "departure": 1738202952000,
+              "stopId": "16098",
+              "stopCode": "16098",
+              "stopIndex": 25,
+              "stopSequence": 25,
+              "stopOnestopId": "s-9q8yvwmqug-presidioave~sutterst"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.789818,
+                "lon": -122.404378,
+                "name": "Sutter St & Kearny St",
+                "departure": 1738201962000,
+                "stopId": "16596",
+                "stopCode": "16596",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8yyx7vek-sutterst~kearnyst"
+              },
+              {
+                "lat": 37.78948,
+                "lon": -122.407026,
+                "name": "Sutter St & Stockton St",
+                "departure": 1738202120000,
+                "stopId": "16611",
+                "stopCode": "16611",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8yyx3gtt-sutterst~stocktonst"
+              },
+              {
+                "lat": 37.789266,
+                "lon": -122.408677,
+                "name": "Sutter St & Powell St",
+                "departure": 1738202220000,
+                "stopId": "16604",
+                "stopCode": "16604",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8yyx2drj-sutterst~powellst"
+              },
+              {
+                "lat": 37.789062,
+                "lon": -122.410316,
+                "name": "Sutter St & Mason St",
+                "departure": 1738202242000,
+                "stopId": "16601",
+                "stopCode": "16601",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8yyrr90z-sutterst~masonst"
+              },
+              {
+                "lat": 37.788857,
+                "lon": -122.411956,
+                "name": "Sutter St & Taylor St",
+                "departure": 1738202264000,
+                "stopId": "16612",
+                "stopCode": "16612",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yyrq249-sutterst~taylorst"
+              },
+              {
+                "lat": 37.788643,
+                "lon": -122.413618,
+                "name": "Sutter St & Jones St",
+                "departure": 1738202287000,
+                "stopId": "16595",
+                "stopCode": "16595",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yyrjngc-sutterst~jonesst"
+              },
+              {
+                "lat": 37.788429,
+                "lon": -122.415269,
+                "name": "Sutter St & Leavenworth St",
+                "departure": 1738202310000,
+                "stopId": "16598",
+                "stopCode": "16598",
+                "stopIndex": 11,
+                "stopSequence": 11,
+                "stopOnestopId": "s-9q8yyr5vt3-sutterst~leavenworthst"
+              },
+              {
+                "lat": 37.788216,
+                "lon": -122.416908,
+                "name": "Sutter St & Hyde St",
+                "departure": 1738202332000,
+                "stopId": "16594",
+                "stopCode": "16594",
+                "stopIndex": 12,
+                "stopSequence": 12,
+                "stopOnestopId": "s-9q8yyr4sr6-sutterst~hydest"
+              },
+              {
+                "lat": 37.788011,
+                "lon": -122.418536,
+                "name": "Sutter St & Larkin St",
+                "departure": 1738202354000,
+                "stopId": "16597",
+                "stopCode": "16597",
+                "stopIndex": 13,
+                "stopSequence": 13,
+                "stopOnestopId": "s-9q8yyr1e17-sutterst~larkinst"
+              },
+              {
+                "lat": 37.787797,
+                "lon": -122.420198,
+                "name": "Sutter St & Polk St",
+                "departure": 1738202377000,
+                "stopId": "16603",
+                "stopCode": "16603",
+                "stopIndex": 14,
+                "stopSequence": 14,
+                "stopOnestopId": "s-9q8yyr03fe-sutterst~polkst"
+              },
+              {
+                "lat": 37.78763,
+                "lon": -122.42154,
+                "name": "Sutter St & Van Ness Ave",
+                "departure": 1738202400000,
+                "stopId": "16613",
+                "stopCode": "16613",
+                "stopIndex": 15,
+                "stopSequence": 15,
+                "stopOnestopId": "s-9q8yypp2gk-sutterst~vannessave"
+              },
+              {
+                "lat": 37.787207,
+                "lon": -122.424924,
+                "name": "Sutter St & Gough St",
+                "departure": 1738202487000,
+                "stopId": "16593",
+                "stopCode": "16593",
+                "stopIndex": 16,
+                "stopSequence": 16,
+                "stopOnestopId": "s-9q8yynuykt-sutterst~goughst"
+              },
+              {
+                "lat": 37.786933,
+                "lon": -122.427062,
+                "name": "Sutter St & Octavia St",
+                "departure": 1738202542000,
+                "stopId": "16602",
+                "stopCode": "16602",
+                "stopIndex": 17,
+                "stopSequence": 17,
+                "stopOnestopId": "s-9q8yyngkfd-sutterst~octaviast"
+              },
+              {
+                "lat": 37.786724,
+                "lon": -122.428706,
+                "name": "Sutter St & Laguna St",
+                "departure": 1738202584000,
+                "stopId": "16599",
+                "stopCode": "16599",
+                "stopIndex": 18,
+                "stopSequence": 18,
+                "stopOnestopId": "s-9q8yynf5s7-sutterst~lagunast"
+              },
+              {
+                "lat": 37.786577,
+                "lon": -122.429863,
+                "name": "Sutter St & Buchanan St",
+                "departure": 1738202613000,
+                "stopId": "16587",
+                "stopCode": "16587",
+                "stopIndex": 19,
+                "stopSequence": 19,
+                "stopOnestopId": "s-9q8yync6c2-sutterst~buchananst"
+              },
+              {
+                "lat": 37.786158,
+                "lon": -122.433151,
+                "name": "Sutter St & Fillmore St",
+                "departure": 1738202700000,
+                "stopId": "16591",
+                "stopCode": "16591",
+                "stopIndex": 20,
+                "stopSequence": 20,
+                "stopOnestopId": "s-9q8yvyybkf-sutterst~fillmorest"
+              },
+              {
+                "lat": 37.785942,
+                "lon": -122.434793,
+                "name": "Sutter St & Steiner St",
+                "departure": 1738202731000,
+                "stopId": "16609",
+                "stopCode": "16609",
+                "stopIndex": 21,
+                "stopSequence": 21,
+                "stopOnestopId": "s-9q8yvytxnd-sutterst~steinerst"
+              },
+              {
+                "lat": 37.78552,
+                "lon": -122.438078,
+                "name": "Sutter St & Scott St",
+                "departure": 1738202794000,
+                "stopId": "16607",
+                "stopCode": "16607",
+                "stopIndex": 22,
+                "stopSequence": 22,
+                "stopOnestopId": "s-9q8yvyek9g-sutterst~scottst"
+              },
+              {
+                "lat": 37.78531,
+                "lon": -122.439732,
+                "name": "Sutter St & Divisadero St",
+                "departure": 1738202825000,
+                "stopId": "16589",
+                "stopCode": "16589",
+                "stopIndex": 23,
+                "stopSequence": 23,
+                "stopOnestopId": "s-9q8yvyd57k-sutterst~divisaderost"
+              },
+              {
+                "lat": 37.784889,
+                "lon": -122.443067,
+                "name": "Sutter St & Baker St",
+                "departure": 1738202889000,
+                "stopId": "16585",
+                "stopCode": "16585",
+                "stopIndex": 24,
+                "stopSequence": 24,
+                "stopOnestopId": "s-9q8yvwx8vt-sutterst~bakerst"
+              }
+            ],
+            "legGeometry": {
+              "points": "_|seFdkajVf@pHFdAF`AX`EFhA\\lFf@vHh@fIh@hIh@fIh@hIh@hIh@fIh@fIh@hIh@fIh@hIf@fIh@bIh@lIh@fIf@zHN~BZtEh@hIh@fIh@hIh@lIh@jIh@hIh@fIb@zGO@",
+              "length": 34
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "2",
+            "routeLongName": "SUTTER",
+            "routeType": 3,
+            "routeId": "SF:2",
+            "routeColor": "005B95",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yy-2",
+            "tripId": "SF:11110344",
+            "headsign": "California + Presidio Avenue",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202952000,
+            "endTime": 1738203242000,
+            "distance": 290.44949681238216,
+            "duration": 290,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.784535,
+              "lon": -122.446197,
+              "name": "Presidio Ave & Sutter St",
+              "departure": 1738202952000,
+              "stopId": "16098",
+              "stopCode": "16098",
+              "stopOnestopId": "s-9q8yvwmqug-presidioave~sutterst"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738203242000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "kxreFvgjjVzN~C",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 2702,
+        "distance": 5349.720802735613,
+        "startTime": 1738200823000,
+        "endTime": 1738203525000,
+        "walkTime": 1262,
+        "walkDistance": 1263.3298795140727,
+        "transitTime": 1440,
+        "transitDistance": 4086.3909232215406,
+        "waitingTime": 0,
+        "transfers": 0,
+        "legs": [
+          {
+            "startTime": 1738200823000,
+            "endTime": 1738201500000,
+            "distance": 677.9914246103689,
+            "duration": 677,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": "",
+              "departure": 1738200823000
+            },
+            "to": {
+              "lat": 37.79403,
+              "lon": -122.401551,
+              "name": "Sacramento St & Sansome St",
+              "departure": 1738201500000,
+              "stopId": "16314",
+              "stopCode": "16314",
+              "stopOnestopId": "s-9q8zn8jyjj-sacramentost~sansomest"
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajV??\\[??eAtAOTUC??IJmBkCSYKMAXC@K@O@}C^KBOB{C\\MBQB{C\\OBQBiALC@I@eALI@??@PK@??",
+              "length": 34
+            }
+          },
+          {
+            "startTime": 1738201500000,
+            "endTime": 1738202940000,
+            "distance": 4086.3909232215406,
+            "duration": 1440,
+            "mode": "BUS",
+            "transitLeg": true,
+            "from": {
+              "lat": 37.79403,
+              "lon": -122.401551,
+              "name": "Sacramento St & Sansome St",
+              "departure": 1738201500000,
+              "stopId": "16314",
+              "stopCode": "16314",
+              "stopIndex": 3,
+              "stopSequence": 3,
+              "stopOnestopId": "s-9q8zn8jyjj-sacramentost~sansomest"
+            },
+            "to": {
+              "lat": 37.787265,
+              "lon": -122.446965,
+              "name": "California St & Presidio Ave",
+              "departure": 1738202940000,
+              "stopId": "13892",
+              "stopCode": "13892",
+              "stopIndex": 27,
+              "stopSequence": 27,
+              "stopOnestopId": "s-9q8yvwuyfb-californiast~presidioave"
+            },
+            "steps": [],
+            "intermediateStops": [
+              {
+                "lat": 37.793842,
+                "lon": -122.403068,
+                "name": "Sacramento St & Montgomery St",
+                "departure": 1738201571000,
+                "stopId": "16307",
+                "stopCode": "16307",
+                "stopIndex": 4,
+                "stopSequence": 4,
+                "stopOnestopId": "s-9q8zn8hv1f-sacramentost~montgomeryst"
+              },
+              {
+                "lat": 37.793575,
+                "lon": -122.404846,
+                "name": "Sacramento St & Kearny St",
+                "departure": 1738201656000,
+                "stopId": "16302",
+                "stopCode": "16302",
+                "stopIndex": 5,
+                "stopSequence": 5,
+                "stopOnestopId": "s-9q8zn85e83-sacramentost~kearnyst"
+              },
+              {
+                "lat": 37.793411,
+                "lon": -122.406306,
+                "name": "Sacramento St & Grant Ave",
+                "departure": 1738201725000,
+                "stopId": "16299",
+                "stopCode": "16299",
+                "stopIndex": 6,
+                "stopSequence": 6,
+                "stopOnestopId": "s-9q8zn846w6-sacramentost~grantave"
+              },
+              {
+                "lat": 37.793236,
+                "lon": -122.407591,
+                "name": "Sacramento St & Stockton St",
+                "departure": 1738201785000,
+                "stopId": "16316",
+                "stopCode": "16316",
+                "stopIndex": 7,
+                "stopSequence": 7,
+                "stopOnestopId": "s-9q8zn81983-sacramentost~stocktonst"
+              },
+              {
+                "lat": 37.793043,
+                "lon": -122.409116,
+                "name": "Sacramento St & Powell St",
+                "departure": 1738201860000,
+                "stopId": "16312",
+                "stopCode": "16312",
+                "stopIndex": 8,
+                "stopSequence": 8,
+                "stopOnestopId": "s-9q8zn802kv-sacramentost~powellst"
+              },
+              {
+                "lat": 37.792673,
+                "lon": -122.411864,
+                "name": "Sacramento St & Sproule Ln",
+                "departure": 1738201942000,
+                "stopId": "16315",
+                "stopCode": "16315",
+                "stopIndex": 9,
+                "stopSequence": 9,
+                "stopOnestopId": "s-9q8yyryqkb-sacramentost~sprouleln"
+              },
+              {
+                "lat": 37.792396,
+                "lon": -122.414161,
+                "name": "Sacramento St & Jones St",
+                "departure": 1738202010000,
+                "stopId": "16301",
+                "stopCode": "16301",
+                "stopIndex": 10,
+                "stopSequence": 10,
+                "stopOnestopId": "s-9q8yyrusxm-sacramentost~jonesst"
+              },
+              {
+                "lat": 37.792183,
+                "lon": -122.415755,
+                "name": "Sacramento St & Leavenworth St",
+                "departure": 1738202057000,
+                "stopId": "16304",
+                "stopCode": "16304",
+                "stopIndex": 11,
+                "stopSequence": 11,
+                "stopOnestopId": "s-9q8yyrge6j-sacramentost~leavenworthst"
+              },
+              {
+                "lat": 37.79197,
+                "lon": -122.417445,
+                "name": "Sacramento St & Hyde St",
+                "departure": 1738202107000,
+                "stopId": "16300",
+                "stopCode": "16300",
+                "stopIndex": 12,
+                "stopSequence": 12,
+                "stopOnestopId": "s-9q8yyrf64v-sacramentost~hydest"
+              },
+              {
+                "lat": 37.791721,
+                "lon": -122.419531,
+                "name": "Sacramento St & Larkin St",
+                "departure": 1738202169000,
+                "stopId": "16303",
+                "stopCode": "16303",
+                "stopIndex": 13,
+                "stopSequence": 13,
+                "stopOnestopId": "s-9q8yyrbbdp-sacramentost~larkinst"
+              },
+              {
+                "lat": 37.791516,
+                "lon": -122.421146,
+                "name": "Sacramento St & Polk St",
+                "departure": 1738202220000,
+                "stopId": "16311",
+                "stopCode": "16311",
+                "stopIndex": 14,
+                "stopSequence": 14,
+                "stopOnestopId": "s-9q8yypxxs9-sacramentost~polkst"
+              },
+              {
+                "lat": 37.791378,
+                "lon": -122.422286,
+                "name": "Sacramento St & Van Ness Ave",
+                "departure": 1738202251000,
+                "stopId": "16317",
+                "stopCode": "16317",
+                "stopIndex": 15,
+                "stopSequence": 15,
+                "stopOnestopId": "s-9q8yypwy9z-sacramentost~vannessave"
+              },
+              {
+                "lat": 37.79115,
+                "lon": -122.424037,
+                "name": "Sacramento St & Franklin St",
+                "departure": 1738202299000,
+                "stopId": "16297",
+                "stopCode": "16297",
+                "stopIndex": 16,
+                "stopSequence": 16,
+                "stopOnestopId": "s-9q8yyptt3h-sacramentost~franklinst"
+              },
+              {
+                "lat": 37.790887,
+                "lon": -122.426132,
+                "name": "Sacramento St & Gough St",
+                "departure": 1738202357000,
+                "stopId": "16298",
+                "stopCode": "16298",
+                "stopIndex": 17,
+                "stopSequence": 17,
+                "stopOnestopId": "s-9q8yyps5b7-sacramentost~goughst"
+              },
+              {
+                "lat": 37.790743,
+                "lon": -122.427328,
+                "name": "Sacramento St & Octavia St",
+                "departure": 1738202395000,
+                "stopId": "16309",
+                "stopCode": "16309",
+                "stopIndex": 18,
+                "stopSequence": 18,
+                "stopOnestopId": "s-9q8yype5h3-sacramentost~octaviast"
+              },
+              {
+                "lat": 37.790526,
+                "lon": -122.42896,
+                "name": "Sacramento St & Laguna St",
+                "departure": 1738202435000,
+                "stopId": "16305",
+                "stopCode": "16305",
+                "stopIndex": 19,
+                "stopSequence": 19,
+                "stopOnestopId": "s-9q8yyp9cy2-sacramentost~lagunast"
+              },
+              {
+                "lat": 37.790316,
+                "lon": -122.430617,
+                "name": "Sacramento St & Buchanan St",
+                "departure": 1738202480000,
+                "stopId": "16291",
+                "stopCode": "16291",
+                "stopIndex": 20,
+                "stopSequence": 20,
+                "stopOnestopId": "s-9q8yyp88xc-sacramentost~buchananst"
+              },
+              {
+                "lat": 37.790107,
+                "lon": -122.432226,
+                "name": "Sacramento St & Webster St",
+                "departure": 1738202524000,
+                "stopId": "16319",
+                "stopCode": "16319",
+                "stopIndex": 21,
+                "stopSequence": 21,
+                "stopOnestopId": "s-9q8yvzrx66-sacramentost~websterst"
+              },
+              {
+                "lat": 37.789861,
+                "lon": -122.434114,
+                "name": "Sacramento St & Fillmore St",
+                "departure": 1738202580000,
+                "stopId": "16295",
+                "stopCode": "16295",
+                "stopIndex": 22,
+                "stopSequence": 22,
+                "stopOnestopId": "s-9q8yvzqjyk-sacramentost~fillmorest"
+              },
+              {
+                "lat": 37.788844,
+                "lon": -122.435568,
+                "name": "Steiner St & California St",
+                "departure": 1738202645000,
+                "stopId": "16486",
+                "stopCode": "16486",
+                "stopIndex": 23,
+                "stopSequence": 23,
+                "stopOnestopId": "s-9q8yvzjpur-steinerst~californiast"
+              },
+              {
+                "lat": 37.788518,
+                "lon": -122.437484,
+                "name": "California St & Pierce St",
+                "departure": 1738202699000,
+                "stopId": "13884",
+                "stopCode": "13884",
+                "stopIndex": 24,
+                "stopSequence": 24,
+                "stopOnestopId": "s-9q8yvz5wpf-californiast~piercest"
+              },
+              {
+                "lat": 37.788087,
+                "lon": -122.44087,
+                "name": "California St & Divisadero St",
+                "departure": 1738202784000,
+                "stopId": "13858",
+                "stopCode": "13858",
+                "stopIndex": 25,
+                "stopSequence": 25,
+                "stopOnestopId": "s-9q8yvz178c-californiast~divisaderost"
+              },
+              {
+                "lat": 37.787738,
+                "lon": -122.443634,
+                "name": "California St & Baker St",
+                "departure": 1738202853000,
+                "stopId": "13847",
+                "stopCode": "13847",
+                "stopIndex": 26,
+                "stopSequence": 26,
+                "stopOnestopId": "s-9q8yvxp388-californiast~bakerst"
+              }
+            ],
+            "legGeometry": {
+              "points": "gsteFrpajVL|BT~CXrENvBd@lHJfBN~B@PHdARbDJzAFdAh@hIVpD?DPnCh@hINpBDp@HpAHpAHdA^bGj@dIh@jIh@fIf@fIh@hIh@fIh@hIf@fIh@hI\\pFJtAh@hIxAS~AQh@fIh@hIh@jIh@lIh@hIh@hI`@tGB\\",
+              "length": 46
+            },
+            "agencyId": "SF",
+            "agencyName": "San Francisco Municipal Transportation Agency",
+            "routeShortName": "1",
+            "routeLongName": "CALIFORNIA",
+            "routeType": 3,
+            "routeId": "SF:1",
+            "routeColor": "005B95",
+            "routeTextColor": "FFFFFF",
+            "routeOnestopId": "r-9q8yv-1",
+            "tripId": "SF:11108845",
+            "headsign": "Geary + 33rd Avenue",
+            "block_id": "",
+            "feedId": "RG-redate",
+            "feedVersionSha1": "b0349e0c78cdc552c2c8adaa8c39061ac3f424bc"
+          },
+          {
+            "startTime": 1738202940000,
+            "endTime": 1738203525000,
+            "distance": 585.3384549037039,
+            "duration": 585,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.787265,
+              "lon": -122.446965,
+              "name": "California St & Presidio Ave",
+              "departure": 1738202940000,
+              "stopId": "13892",
+              "stopCode": "13892",
+              "stopOnestopId": "s-9q8yvwuyfb-californiast~presidioave"
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": "",
+              "departure": 1738203525000
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "miseFpljjV|_@D",
+              "length": 2
+            }
+          }
+        ]
+      },
+      {
+        "duration": 4116,
+        "distance": 4116.4971546787765,
+        "startTime": 1738200531000,
+        "endTime": 1738204647000,
+        "walkTime": 4116,
+        "walkDistance": 0,
+        "transitTime": 0,
+        "transitDistance": 0,
+        "waitingTime": 0,
+        "transfers": 0,
+        "legs": [
+          {
+            "startTime": 1738200531000,
+            "endTime": 1738204647000,
+            "distance": 4116.4971546787765,
+            "duration": 4116,
+            "mode": "WALK",
+            "transitLeg": false,
+            "from": {
+              "lat": 37.789001,
+              "lon": -122.401001,
+              "name": ""
+            },
+            "to": {
+              "lat": 37.782001,
+              "lon": -122.446999,
+              "name": ""
+            },
+            "steps": [],
+            "legGeometry": {
+              "points": "gtseFfmajVvj@n~G",
+              "length": 2
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

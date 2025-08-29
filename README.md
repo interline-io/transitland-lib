@@ -14,7 +14,6 @@
 	- [Breaking changes](#breaking-changes)
 - [Usage as a library](#usage-as-a-library)
 - [Database migrations](#database-migrations)
-- [Usage as a Web Service](#usage-as-a-web-service)
 - [Included Readers and Writers](#included-readers-and-writers)
 - [Development](#development)
 	- [Releases](#releases)
@@ -80,10 +79,6 @@ See [library examples](doc/library-example.md).
 Migrations are supported for PostgreSQL, using the schema files in `internal/schema/postgres/migrations`. These files can be read and applied using [golang-migrate](https://github.com/golang-migrate/migrate), which will store the most recently applied migration version in `schema_migrations`. See the `bootstrap.sh` script in that directory for an example, as well as details on how to import Natural Earth data files for associating agencies with places.
 
 SQLite database are intended to be short-lived. They can be created on an as needed basis by passing the `-create` flag to some commands that accept a writer. They use a single executable schema, defined in `internal/schema/sqlite.sql`.
-
-## Usage as a Web Service
-
-See [transitland-server](https://github.com/interline-io/transitland-server) documentation.
 
 ## Included Readers and Writers
 
