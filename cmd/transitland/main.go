@@ -1,13 +1,10 @@
 package main
 
 import (
-	"context"
 	_ "embed"
 	"os"
 	_ "time/tzdata"
 
-	"github.com/interline-io/log"
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/cmds"
 	"github.com/interline-io/transitland-lib/diff"
 	"github.com/interline-io/transitland-lib/tlcli"
@@ -21,28 +18,7 @@ import (
 	_ "github.com/interline-io/transitland-lib/tldb/sqlite"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
-
-type versionCommand struct{}
-
-func (cmd *versionCommand) AddFlags(fl *pflag.FlagSet) {}
-
-func (cmd *versionCommand) HelpDesc() (string, string) {
-	return "Program version and supported GTFS and GTFS-RT versions", ""
-}
-
-func (cmd *versionCommand) Parse(args []string) error {
-	return nil
-}
-
-func (cmd *versionCommand) Run(ctx context.Context) error {
-	log.Print("transitland-lib version: %s", tl.Version.Tag)
-	log.Print("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)", tl.Version.Commit, tl.Version.CommitTime)
-	log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
-	log.Print("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto", tl.GTFSRTVERSION)
-	return nil
-}
 
 var rootCmd = &cobra.Command{
 	Use:   "transitland",
@@ -84,6 +60,7 @@ func init() {
 		tlcli.CobraHelper(&tlxy.PolylinesCommand{}, pc, "polylines-create"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		tlcli.CobraHelper(&cmds.DBMigrateCommand{}, pc, "dbmigrate"),
+		tlcli.CobraHelper(&ServerCommand{}, pc, "server"),
 		genDocCommand,
 		dmfrCommand,
 	)
