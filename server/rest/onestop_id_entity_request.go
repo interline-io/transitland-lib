@@ -52,7 +52,6 @@ func (handler OnestopIdEntityRedirectRequest) RequestInfo() RequestInfo {
 func (handler *OnestopIdEntityRedirectRequest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cfg := model.ForContext(r.Context())
 	onestop_id := chi.URLParam(r, "onestop_id")
-	fmt.Println("onestop_id:", onestop_id)
 	var redirectUrl string
 	if strings.HasPrefix(onestop_id, "f-") {
 		redirectUrl = fmt.Sprintf("%s/feeds/%s", cfg.RestPrefix, onestop_id)
