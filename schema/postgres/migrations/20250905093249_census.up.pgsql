@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY ON tl_census_geographies USING GIST (layer_id, geometry);
