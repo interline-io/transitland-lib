@@ -61,19 +61,12 @@ func (f *Finder) CensusSourcesByIDs(ctx context.Context, ids []int) ([]*model.Ce
 }
 
 func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, where *model.CensusGeographyFilter, entityType string, entityIds []int) ([][]*model.CensusGeography, error) {
-	// Sadly cannot be optimized to avoid N+1
-	var ret [][]*model.CensusGeography
-	fields := getCensusGeographySelectFields(ctx)
-	for _, entityId := range entityIds {
-		if where == nil {
-			where = &model.CensusGeographyFilter{}
-		}
-		stopIds, err := getBufferStopIds(ctx, f.db, entityType, entityId)
-		if err != nil {
-			return nil, logErr(ctx, err)
-		}
-		var ents []*model.CensusGeography
-		pw := &model.CensusDatasetGeographyFilter{
+	// Setup where clauses
+	if where == nil {
+		where = &model.CensusGeographyFilter{}
+	}
+	forStopids := func(stopIds []int) *model.CensusDatasetGeographyFilter {
+		return &model.CensusDatasetGeographyFilter{
 			Layer:  where.Layer,
 			Search: where.Search,
 			Location: &model.CensusDatasetGeographyLocationFilter{
@@ -83,11 +76,36 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 				},
 			},
 		}
+	}
+
+	// Process stops in 1 batch, others one-by-one (and set MatchEntityID for grouping later)
+	var entityGeogs []*model.CensusGeography
+	fields := getCensusGeographySelectFields(ctx)
+	if entityType == "stop" {
+		var ents []*model.CensusGeography
+		pw := forStopids(entityIds)
 		if err := dbutil.Select(ctx, f.db, censusDatasetGeographySelect(limit, pw, fields), &ents); err != nil {
 			return nil, logErr(ctx, err)
 		}
-		ret = append(ret, ents)
+		entityGeogs = append(entityGeogs, ents...)
+	} else {
+		for _, entityId := range entityIds {
+			stopIds, err := getBufferStopIds(ctx, f.db, entityType, entityId)
+			if err != nil {
+				return nil, logErr(ctx, err)
+			}
+			var ents []*model.CensusGeography
+			pw := forStopids(stopIds)
+			if err := dbutil.Select(ctx, f.db, censusDatasetGeographySelect(limit, pw, fields), &ents); err != nil {
+				return nil, logErr(ctx, err)
+			}
+			for _, ent := range ents {
+				ent.MatchEntityID = entityId
+			}
+			entityGeogs = append(entityGeogs, ents...)
+		}
 	}
+	ret := arrangeGroup(entityIds, entityGeogs, func(ent *model.CensusGeography) int { return ent.MatchEntityID })
 	return ret, nil
 }
 
