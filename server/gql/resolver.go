@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/internal/generated/gqlout"
 	"github.com/interline-io/transitland-lib/server/meters"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -80,6 +81,16 @@ func checkFloat(v *float64, min float64, max float64) float64 {
 		return max
 	}
 	return *v
+}
+
+func containsField(ctx context.Context, fieldName string) bool {
+	fields := graphql.CollectFieldsCtx(ctx, nil)
+	for _, field := range fields {
+		if field.Name == fieldName {
+			return true
+		}
+	}
+	return false
 }
 
 func convertScheduleRelationship(sr string) *model.ScheduleRelationship {

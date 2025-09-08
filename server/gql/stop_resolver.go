@@ -109,16 +109,21 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 	// Merge scheduled stop times with rt stop times
 	// TODO: handle StopTimeFilter in RT
 	// Handle scheduled trips; these can be matched on trip_id or (route_id,direction_id,...)
-	for _, st := range sts {
-		ft := model.Trip{}
-		ft.FeedVersionID = obj.FeedVersionID
-		tripId, _ := model.ForContext(ctx).RTFinder.GetGtfsTripID(ctx, st.TripID.Int())
-		ft.TripID.Set(tripId) // TODO!
-		if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, &ft, st); ok {
-			st.RTStopTimeUpdate = ste
+	if containsField(ctx, "arrival") || containsField(ctx, "departure") {
+		for _, st := range sts {
+			ft := model.Trip{}
+			ft.FeedVersionID = obj.FeedVersionID
+			tripId, _ := model.ForContext(ctx).RTFinder.GetGtfsTripID(ctx, st.TripID.Int())
+			ft.TripID.Set(tripId) // TODO!
+			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, &ft, st); ok {
+				st.RTStopTimeUpdate = ste
+			}
 		}
+
 	}
+
 	// Handle added trips; these must specify stop_id in StopTimeUpdates
+	// We can't skip this, because we need to find added trips even for static only feeds
 	for _, rtTrip := range model.ForContext(ctx).RTFinder.GetAddedTripsForStop(ctx, obj) {
 		for _, stu := range rtTrip.StopTimeUpdate {
 			if stu.GetStopId() != obj.StopID.Val {
@@ -135,6 +140,7 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 			sts = append(sts, rtst)
 		}
 	}
+
 	// Sort by scheduled departure time.
 	// TODO: Sort by rt departure time? Requires full StopTime Resolver for timezones, processing, etc.
 	sort.Slice(sts, func(i, j int) bool {
