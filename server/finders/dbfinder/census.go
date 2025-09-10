@@ -375,13 +375,19 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		found := true
 		var qJoin sq.SelectBuilder
 		if loc.Bbox != nil {
-			qJoin = sq.StatementBuilder.Select().Column("ST_MakeEnvelope(?,?,?,?,4326) as buffer", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat).Column("0 as match_entity_id")
+			qJoin = sq.StatementBuilder.Select().
+				Column("ST_MakeEnvelope(?,?,?,?,4326) as buffer", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat).
+				Column("0 as match_entity_id")
 		} else if loc.Within != nil && loc.Within.Valid {
 			jj, _ := geojson.Marshal(loc.Within.Val)
-			qJoin = sq.StatementBuilder.Select().Column("ST_GeomFromGeoJSON(?) as buffer", string(jj)).Column("0 as match_entity_id")
+			qJoin = sq.StatementBuilder.Select().
+				Column("ST_GeomFromGeoJSON(?) as buffer", string(jj)).
+				Column("0 as match_entity_id")
 		} else if loc.Near != nil {
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
-			qJoin = sq.StatementBuilder.Select().Column("ST_Buffer(ST_MakePoint(?,?)::geography, ?) as buffer", loc.Near.Lon, loc.Near.Lat, radius).Column("0 as match_entity_id")
+			qJoin = sq.StatementBuilder.Select().
+				Column("ST_Buffer(ST_MakePoint(?,?)::geography, ?) as buffer", loc.Near.Lon, loc.Near.Lat, radius).
+				Column("0 as match_entity_id")
 		} else if loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0 {
 			radius := checkFloat(loc.StopBuffer.Radius, 0, 1_000)
 			if radius == 0 {
@@ -402,8 +408,9 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			found = false
 		}
 		if found {
-			q = q.JoinClause(qJoin.Prefix("join (").Suffix(") as buffer on true"))
-			q = q.Where("ST_Intersects(tlcg.geometry, buffer.buffer)").Column("buffer.match_entity_id as match_entity_id")
+			q = q.JoinClause(qJoin.Prefix("join (").Suffix(") as buffer on true")).
+				Where("ST_Intersects(tlcg.geometry, buffer.buffer)").
+				Column("buffer.match_entity_id as match_entity_id")
 			if fields.intersectionArea {
 				q = q.Column("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) as intersection_area")
 			}
