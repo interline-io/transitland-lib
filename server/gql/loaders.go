@@ -17,9 +17,10 @@ import (
 type ctxKey string
 
 const (
-	loadersKey = ctxKey("dataloaders")
-	waitTime   = 2 * time.Millisecond
-	maxBatch   = 100
+	loadersKey            = ctxKey("dataloaders")
+	waitTime              = 2 * time.Millisecond
+	maxBatch              = 100
+	stopTimeBatchWaitTime = 10 * time.Millisecond
 )
 
 // Loaders wrap your data loaders to inject via middleware
@@ -105,6 +106,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 	if stopTimeBatchSize == 0 {
 		stopTimeBatchSize = maxBatch
 	}
+
 	loaders := &Loaders{
 		AgenciesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.AgenciesByFeedVersionIDs,
 			func(p agencyLoaderParam) (int, *model.AgencyFilter, *int) {
@@ -353,7 +355,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.RouteID, p.Where, p.Limit
 			},
 		),
-		StopTimesByStopIDs: withWaitAndCapacityGroup(waitTime, stopTimeBatchSize, dbf.StopTimesByStopIDs,
+		StopTimesByStopIDs: withWaitAndCapacityGroup(stopTimeBatchWaitTime, stopTimeBatchSize, dbf.StopTimesByStopIDs,
 			func(p stopTimeLoaderParam) (model.FVPair, *model.StopTimeFilter, *int) {
 				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.StopID}, p.Where, p.Limit
 			},
