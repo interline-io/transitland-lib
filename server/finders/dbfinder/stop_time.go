@@ -199,7 +199,6 @@ func stopDeparturesSelect(fvid int, sids []int, where *model.StopTimeFilter) sq.
 		Join("active_services gc on gc.id = gtfs_trips.service_id").
 		Join("gtfs_trips base_trip ON base_trip.trip_id::text = gtfs_trips.journey_pattern_id AND gtfs_trips.feed_version_id = base_trip.feed_version_id").
 		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
-		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
 		JoinClause(`left join lateral (
 			select
 				generate_series(start_time, end_time, headway_secs) freq_start

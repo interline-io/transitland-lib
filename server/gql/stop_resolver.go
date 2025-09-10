@@ -119,7 +119,6 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 				st.RTStopTimeUpdate = ste
 			}
 		}
-
 	}
 
 	// Handle added trips; these must specify stop_id in StopTimeUpdates
