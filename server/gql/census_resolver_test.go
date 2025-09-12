@@ -1,10 +1,14 @@
 package gql
 
 import (
+	"context"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
+
+	sq "github.com/irees/squirrel"
 )
 
 func TestCensusResolver(t *testing.T) {
@@ -22,6 +26,10 @@ func TestCensusResolver(t *testing.T) {
 	bartMcarStopId := 0
 	if err := cfg.Finder.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = 'MCAR'`).Scan(&bartMcarStopId); err != nil {
 		t.Errorf("could not get stop id for test: %s", err.Error())
+	}
+	var allStopIds []int64
+	if err := dbutil.Select(context.Background(), cfg.Finder.DBX(), sq.StatementBuilder.Select("gtfs_stops.id").From("gtfs_stops"), &allStopIds); err != nil {
+		t.Errorf("could not get all stop ids for test: %s", err.Error())
 	}
 
 	// Define test cases
@@ -238,6 +246,20 @@ func TestCensusResolver(t *testing.T) {
 			},
 		},
 		{
+			name:  "dataset intersection areas by stop buffer - all stops",
+			query: `query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{stop_buffer:{stop_ids:$stop_ids, radius:1000}}}) { name geoid geometry_area geometry intersection_geometry intersection_area }} }`,
+			vars:  hw{"stop_ids": allStopIds},
+			f: func(t *testing.T, jj string) {
+				// testIntersectionArea(
+				// 	t,
+				// 	gjson.Get(jj, "census_datasets.0.geographies").Array(),
+				// 	1,
+				// 	1918910.47033,
+				// 	31235.844716912135,
+				// )
+			},
+		},
+		{
 			name:  "dataset intersection areas within feature - tract",
 			query: `query($feature:Polygon) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
 			vars: hw{"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
@@ -339,6 +361,7 @@ func TestCensusResolver(t *testing.T) {
 	}
 	queryTestcases(t, c, testcases)
 }
+
 func testIntersectionArea(t *testing.T, a []gjson.Result, expectCount int, expectGeometryArea float64, expectIntersectionArea float64) {
 	intersectionArea := 0.0
 	geometryArea := 0.0

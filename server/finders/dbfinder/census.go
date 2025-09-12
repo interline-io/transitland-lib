@@ -3,11 +3,13 @@ package dbfinder
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
@@ -191,6 +193,41 @@ func (f *Finder) CensusSourceLayersBySourceIDs(ctx context.Context, keys []int) 
 }
 
 func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, p *model.CensusDatasetGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
+	if p != nil && p.Location != nil && p.Location.StopBuffer != nil && len(p.Location.StopBuffer.StopIds) > 0 {
+		stopIds := p.Location.StopBuffer.StopIds
+		radius := checkFloat(p.Location.StopBuffer.Radius, 0, 1_000)
+		if radius > 0 {
+			for chunk := range slices.Chunk(stopIds, 10000) {
+				var geogs []tt.Point
+				q := sq.StatementBuilder.
+					Select().
+					Column("gtfs_stops.geometry").
+					From("gtfs_stops").
+					Where(In("gtfs_stops.id", chunk))
+				if err := dbutil.Select(ctx, f.db, q, &geogs); err != nil {
+					panic(err)
+				}
+				for _, geog := range geogs {
+					fmt.Println(geog.X(), geog.Y())
+				}
+				//////////// MERGE
+				// var mergedGeog []string
+				// q = sq.StatementBuilder.
+				// 	Select().
+				// 	Column("ST_AsGeoJSON(ST_Buffer(ST_GeomFromGeoJSON(?)::geography, ?)::geometry) as geom", geogs[0], radius).
+				// 	From("gtfs_stops")
+				// if err := dbutil.Select(ctx, f.db, q, &mergedGeog); err != nil {
+				// 	panic(err)
+				// }
+				// fmt.Println(len(mergedGeog))
+				// for _, g := range mergedGeog {
+				// 	fmt.Println(g)
+				// }
+
+			}
+		}
+	}
+
 	var ents []*model.CensusGeography
 	q := censusDatasetGeographySelect(limit, p, getCensusGeographySelectFields(ctx))
 	err := dbutil.Select(ctx,
