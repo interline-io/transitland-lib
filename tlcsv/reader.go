@@ -1,6 +1,7 @@
 package tlcsv
 
 import (
+	"fmt"
 	"io"
 	"reflect"
 	"sort"
@@ -87,7 +88,7 @@ func (reader *Reader) ValidateStructure() []error {
 				return
 			}
 			if rowcount == 0 {
-				fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
+				// fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
 				return
 			}
 			// Check columns
@@ -123,6 +124,10 @@ func (reader *Reader) ValidateStructure() []error {
 		})
 		if err != nil {
 			fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
+		}
+		fmt.Println("checked", ent.Filename(), "found", len(fileerrs), "errors")
+		for _, e := range fileerrs {
+			fmt.Println(" ", e.Error())
 		}
 		return fileerrs
 	}

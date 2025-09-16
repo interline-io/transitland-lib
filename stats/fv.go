@@ -74,9 +74,9 @@ func FeedVersionServiceBounds(reader adapters.Reader) (time.Time, time.Time, err
 			end.Set(cd.Date.Val)
 		}
 	}
-	if start.IsZero() || end.IsZero() {
-		return start.Val, end.Val, errors.New("start or end dates were empty")
-	}
+	// if start.IsZero() || end.IsZero() {
+	// 	return start.Val, end.Val, errors.New("start or end dates were empty")
+	// }
 	if end.Before(start) {
 		return start.Val, end.Val, errors.New("end before start")
 	}

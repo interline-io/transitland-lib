@@ -80,7 +80,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		if err != nil {
 			return err
 		}
-		required := []string{"agency.txt", "routes.txt", "stops.txt"}
+		required := []string{"agency.txt", "stops.txt"}
 		for _, fn := range required {
 			if c := fviresult.EntityCount[fn]; c == 0 {
 				return fmt.Errorf("failed to import any entities from required file '%s'", fn)
