@@ -8649,7 +8649,7 @@ type Level {
   "GTFS levels.level_name"
   level_name: String
   "An optional geometry describing the footprint of this level"
-  geometry: Polygon!
+  geometry: MultiPolygon!
   "Stops associated with this level"
   stops: [Stop!]
 }
@@ -10137,7 +10137,7 @@ input LevelSetInput {
   "Set GTFS level_index to this value"
   level_index: Float
   "Set level geometry to this value"
-  geometry: Polygon
+  geometry: MultiPolygon
   "Set level parent station to this stop"
   parent: StopSetInput
 }
@@ -33124,9 +33124,9 @@ func (ec *executionContext) _Level_geometry(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(tt.Polygon)
+	res := resTmp.(tt.MultiPolygon)
 	fc.Result = res
-	return ec.marshalNPolygon2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐPolygon(ctx, field.Selections, res)
+	return ec.marshalNMultiPolygon2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMultiPolygon(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Level_geometry(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -33136,7 +33136,7 @@ func (ec *executionContext) fieldContext_Level_geometry(_ context.Context, field
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Polygon does not have child fields")
+			return nil, errors.New("field of type MultiPolygon does not have child fields")
 		},
 	}
 	return fc, nil
@@ -54659,7 +54659,7 @@ func (ec *executionContext) unmarshalInputLevelSetInput(ctx context.Context, obj
 			it.LevelIndex = data
 		case "geometry":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geometry"))
-			data, err := ec.unmarshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐPolygon(ctx, v)
+			data, err := ec.unmarshalOMultiPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMultiPolygon(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -67454,6 +67454,16 @@ func (ec *executionContext) marshalNMe2ᚖgithubᚗcomᚋinterlineᚑioᚋtransi
 	return ec._Me(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNMultiPolygon2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMultiPolygon(ctx context.Context, v any) (tt.MultiPolygon, error) {
+	var res tt.MultiPolygon
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNMultiPolygon2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMultiPolygon(ctx context.Context, sel ast.SelectionSet, v tt.MultiPolygon) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperatorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Operator) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -67588,16 +67598,6 @@ func (ec *executionContext) unmarshalNPoint2githubᚗcomᚋinterlineᚑioᚋtran
 }
 
 func (ec *executionContext) marshalNPoint2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐPoint(ctx context.Context, sel ast.SelectionSet, v tt.Point) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) unmarshalNPolygon2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐPolygon(ctx context.Context, v any) (tt.Polygon, error) {
-	var res tt.Polygon
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNPolygon2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐPolygon(ctx context.Context, sel ast.SelectionSet, v tt.Polygon) graphql.Marshaler {
 	return v
 }
 
