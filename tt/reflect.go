@@ -54,6 +54,13 @@ type canReflectCheckFloat interface {
 	Float() float64
 }
 
+func checkFloat(val *float64) (float64, bool) {
+	if val == nil {
+		return 0, false
+	}
+	return *val, true
+}
+
 // Error wrapping helpers
 func ReflectCheckErrors(ent any) []error {
 	var errs []error
@@ -80,17 +87,25 @@ func ReflectCheckErrors(ent any) []error {
 		}
 
 		// Check range min/max
-		if fieldInfo.RangeMin != nil || fieldInfo.RangeMax != nil {
+		if fieldInfo.GreaterOrEqual != nil || fieldInfo.LessOrEqual != nil || fieldInfo.GreaterThan != nil || fieldInfo.LessThan != nil {
 			if fieldCheck, ok := fieldAddr.(canReflectCheckFloat); !ok {
 				errs = append(errs, fmt.Errorf("could not convert %T to float for range check", fieldAddr))
 			} else if fieldCheck.IsPresent() {
 				checkVal := fieldCheck.Float()
-				if fieldInfo.RangeMin != nil && checkVal < *fieldInfo.RangeMin {
-					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than %f", *fieldInfo.RangeMin))
+				if minVal, ok := checkFloat(fieldInfo.GreaterThan); ok && checkVal <= minVal {
+					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than or equal to %f", minVal))
 					errs = append(errs, checkErr)
 				}
-				if fieldInfo.RangeMax != nil && checkVal > *fieldInfo.RangeMax {
-					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than %f", *fieldInfo.RangeMax))
+				if maxVal, ok := checkFloat(fieldInfo.LessThan); ok && checkVal >= maxVal {
+					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than or equal to %f", maxVal))
+					errs = append(errs, checkErr)
+				}
+				if minVal, ok := checkFloat(fieldInfo.GreaterOrEqual); ok && checkVal < minVal {
+					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than %f", minVal))
+					errs = append(errs, checkErr)
+				}
+				if maxVal, ok := checkFloat(fieldInfo.LessOrEqual); ok && checkVal > maxVal {
+					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than %f", maxVal))
 					errs = append(errs, checkErr)
 				}
 			}

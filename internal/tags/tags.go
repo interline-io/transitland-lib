@@ -25,13 +25,15 @@ func ToSnakeCase(str string) string {
 
 // FieldInfo contains the parsed tag values for a single attribute.
 type FieldInfo struct {
-	Name       string
-	Required   bool
-	Target     string
-	Index      []int
-	RangeMin   *float64
-	RangeMax   *float64
-	EnumValues []int64
+	Name           string
+	Required       bool
+	Target         string
+	Index          []int
+	GreaterThan    *float64
+	LessThan       *float64
+	GreaterOrEqual *float64
+	LessOrEqual    *float64
+	EnumValues     []int64
 }
 
 // FieldMap contains all the parsed tags for a struct.
@@ -59,6 +61,15 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 	m, ok := c.typemap[t]
 	if !ok {
 		ctx := context.TODO()
+		logTag := func(key string, optVal string, err error) {
+			log.For(ctx).Error().Msgf(
+				"error constructing field map for type %T: could not parse tag '%s' with value '%s' as *float64: %s",
+				ent,
+				key,
+				optVal,
+				err.Error(),
+			)
+		}
 		m = FieldMap{}
 		fields := c.Mapper.TypeMap(reflect.TypeOf(ent))
 		for i, fi := range fields.Index {
@@ -78,31 +89,50 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 				Index:  fi.Index,
 				Target: fi.Field.Tag.Get("target"),
 			}
+
 			_, mfi.Required = fi.Options["required"]
+			if optVal := fi.Field.Tag.Get("gt"); optVal != "" {
+				if optParse, err := strconv.ParseFloat(optVal, 64); err != nil {
+					logTag("gt", optVal, err)
+				} else {
+					mfi.GreaterThan = &optParse
+				}
+			}
+			if optVal := fi.Field.Tag.Get("gte"); optVal != "" {
+				if optParse, err := strconv.ParseFloat(optVal, 64); err != nil {
+					logTag("gte", optVal, err)
+				} else {
+					mfi.GreaterOrEqual = &optParse
+				}
+			}
+			if optVal := fi.Field.Tag.Get("lt"); optVal != "" {
+				if optParse, err := strconv.ParseFloat(optVal, 64); err != nil {
+					logTag("lt", optVal, err)
+				} else {
+					mfi.LessThan = &optParse
+				}
+			}
+			if optVal := fi.Field.Tag.Get("lte"); optVal != "" {
+				if optParse, err := strconv.ParseFloat(optVal, 64); err != nil {
+					logTag("lte", optVal, err)
+				} else {
+					mfi.LessOrEqual = &optParse
+				}
+			}
 			if optVal := fi.Field.Tag.Get("range"); optVal != "" {
 				p := strings.Split(optVal, ",")
 				if len(p) > 0 && p[0] != "" {
 					if optParse, err := strconv.ParseFloat(p[0], 64); err != nil {
-						log.For(ctx).Error().Msgf(
-							"error constructing field map for type %T: could not parse tag 'range' with value '%s' as (*float64,*float64): %s",
-							ent,
-							optVal,
-							err.Error(),
-						)
+						logTag("range", optVal, err)
 					} else {
-						mfi.RangeMin = &optParse
+						mfi.GreaterOrEqual = &optParse
 					}
 				}
 				if len(p) > 1 && p[1] != "" {
 					if optParse, err := strconv.ParseFloat(p[1], 64); err != nil {
-						log.For(ctx).Error().Msgf(
-							"error constructing field map for type %T: could not parse tag 'range' with value '%s' as (*float64,*float64): %s",
-							ent,
-							optVal,
-							err.Error(),
-						)
+						logTag("range", optVal, err)
 					} else {
-						mfi.RangeMax = &optParse
+						mfi.LessOrEqual = &optParse
 					}
 				}
 			}

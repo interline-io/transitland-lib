@@ -14,11 +14,11 @@ type Pathway struct {
 	ToStopID            tt.String `csv:",required" target:"stops.txt"`
 	PathwayMode         tt.Int    `csv:",required" enum:"1,2,3,4,5,6,7"`
 	IsBidirectional     tt.Int    `csv:",required" enum:"0,1"`
-	Length              tt.Float  `range:"0,"`
-	TraversalTime       tt.Int    `range:"0,"`
+	Length              tt.Float  `gte:"0"`
+	TraversalTime       tt.Int    `gt:"0"`
+	MinWidth            tt.Float  `gt:"0"`
+	MaxSlope            tt.Float
 	StairCount          tt.Int
-	MaxSlope            tt.Float `range:"0,"`
-	MinWidth            tt.Float `range:"0,"`
 	SignpostedAs        tt.String
 	ReverseSignpostedAs tt.String
 	tt.BaseEntity
