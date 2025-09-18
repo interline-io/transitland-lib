@@ -5,11 +5,11 @@ import (
 	"errors"
 	"reflect"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
+	sq "github.com/irees/squirrel"
 )
 
 // Reader reads from a database.

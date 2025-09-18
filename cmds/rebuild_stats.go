@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	sq "github.com/Masterminds/squirrel"
+	sq "github.com/irees/squirrel"
 	"github.com/spf13/pflag"
 
 	"github.com/interline-io/log"

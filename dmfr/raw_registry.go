@@ -12,11 +12,10 @@ import (
 )
 
 type RawRegistry struct {
-	Schema                string            `json:"$schema,omitempty"`
-	Feeds                 []RawRegistryFeed `json:"feeds,omitempty"`
-	Operators             []Operator        `json:"operators,omitempty"`
-	Secrets               []Secret          `json:"secrets,omitempty"`
-	LicenseSpdxIdentifier string            `json:"license_spdx_identifier,omitempty"`
+	Schema    string            `json:"$schema,omitempty"`
+	Feeds     []RawRegistryFeed `json:"feeds,omitempty"`
+	Operators []Operator        `json:"operators,omitempty"`
+	Secrets   []Secret          `json:"secrets,omitempty"`
 }
 
 // feed.Operators should be loaded but not exported

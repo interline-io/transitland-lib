@@ -1,0 +1,149 @@
+# Directions API
+
+input DirectionRequest {
+  to: WaypointInput!
+  from: WaypointInput!
+  mode: StepMode!
+  depart_at: Time
+}
+
+input WaypointInput {
+  lon: Float!
+  lat: Float!
+  name: String
+}
+
+type Waypoint {
+  lon: Float!
+  lat: Float!
+  name: String
+  stop: WaypointStop
+}
+
+type WaypointStop {
+  lon: Float!
+  lat: Float!
+  departure: Time!
+  stop_id: String!
+  stop_name: String!
+  stop_code: String!
+  stop_onestop_id: String!
+}
+
+type WaypointDeparture {
+  lon: Float!
+  lat: Float!
+  departure: Time!
+  stop_id: String!
+  stop_name: String!
+  stop_code: String!
+  stop_onestop_id: String!
+  stop_index: Int
+  stop_sequence: Int
+}
+
+type LegTrip {
+  trip_id: String!
+  trip_short_name: String!
+  headsign: String!
+  feed_id: String!
+  feed_version_sha1: String!
+  route: LegRoute!
+}
+
+type LegRoute {
+  route_id: String!
+  route_short_name: String!
+  route_long_name: String!
+  route_onestop_id: String!
+  route_type: Int!
+  route_color: String
+  route_text_color: String
+  agency: LegRouteAgency!
+}
+
+type LegRouteAgency {
+  agency_id: String!
+  agency_name: String!
+  agency_onestop_id: String!
+}
+
+type Directions {
+  # metadata
+  success: Boolean!
+  exception: String
+  data_source: String
+  # input
+  origin: Waypoint
+  destination: Waypoint
+  # first itin summary
+  duration: Duration
+  distance: Distance
+  start_time: Time
+  end_time: Time
+  # itineraries
+  itineraries: [Itinerary!]
+}
+
+type Itinerary {
+  duration: Duration!
+  distance: Distance!
+  start_time: Time!
+  end_time: Time!
+  from: Waypoint!
+  to: Waypoint!
+  legs: [Leg!]
+}
+
+type Leg {
+  duration: Duration!
+  distance: Distance!
+  start_time: Time!
+  end_time: Time!
+  from: Waypoint
+  to: Waypoint
+  mode: StepMode
+  steps: [Step!]
+  stops: [WaypointDeparture!]
+  geometry: LineString!
+  trip: LegTrip
+}
+
+type Step {
+  duration: Duration!
+  distance: Distance!
+  start_time: Time!
+  end_time: Time!
+  to: Waypoint
+  mode: StepMode!
+  instruction: String!
+  geometry_offset: Int!
+}
+
+type Distance {
+  distance: Float!
+  units: DistanceUnit!
+}
+
+type Duration {
+  duration: Float!
+  units: DurationUnit!
+}
+
+enum DurationUnit {
+  SECONDS
+}
+
+enum DistanceUnit {
+  KILOMETERS
+  METERS
+  MILES
+}
+
+enum StepMode {
+  WALK
+  AUTO
+  BICYCLE
+  TRANSIT
+  LINE
+}

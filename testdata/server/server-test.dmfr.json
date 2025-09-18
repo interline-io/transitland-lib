@@ -1,0 +1,124 @@
+{
+  "$schema": "https://dmfr.transit.land/json-schema/dmfr.schema.json",
+  "feeds": [
+    {
+      "spec": "gtfs",
+      "id": "CT",
+      "name": "Caltrain",
+      "languages": [
+        "en-US"
+      ],
+      "urls": {
+        "static_current": "file://testdata/server/gtfs/caltrain.zip",
+        "static_historic": [
+          "https://caltrain.com/old_feed.zip"
+        ]
+      },
+      "license": {
+        "spdx_identifier": "test-unknown",
+        "url": "http://assets.511.org/pdf/nextgen/developers/511_Data_Agreement_Final.pdf",
+        "attribution_text": "test attribution text",
+        "attribution_instructions": "test attribution instructions",
+        "use_without_attribution": "unknown",
+        "create_derived_product": "unknown",
+        "redistribution_allowed": "unknown",
+        "commercial_use_allowed": "unknown",
+        "share_alike_optional": "unknown"
+      },
+      "operators": [
+        {
+          "name": "Caltrain",
+          "onestop_id": "o-9q9-caltrain",
+          "tags": {
+            "us_ntd_id": "90134"
+          },
+          "associated_feeds": [
+            {
+              "feed_onestop_id": "CT"
+            },            
+            {
+              "feed_onestop_id": "CT~rt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": "gbfs",
+      "id": "test-gbfs",
+      "urls": {
+        "gbfs_auto_discovery": "file://../../testdata/gbfs/gbfs.json"
+      }
+    },
+    {
+      "spec": "gtfs",
+      "id": "BA",
+      "tags": {
+        "test": "ok",
+        "foo": "bar"
+      },
+      "license": {
+        "spdx_identifier": "test-restrictive",
+        "use_without_attribution": "no",
+        "create_derived_product": "no",
+        "redistribution_allowed": "no",
+        "commercial_use_allowed": "no",
+        "share_alike_optional": "no"
+      }, 
+      "urls": {
+        "static_current": "file://testdata/server/gtfs/bart.zip"
+      }
+    },
+    {
+      "spec": "gtfs",
+      "id": "HA",  
+      "license": {
+        "spdx_identifier": "test-permissive",
+        "use_without_attribution": "yes",
+        "create_derived_product": "yes",
+        "redistribution_allowed": "yes",
+        "commercial_use_allowed": "yes",
+        "share_alike_optional": "yes"
+      },    
+      "urls": {
+        "static_current": "file://testdata/server/gtfs/hart.zip"
+      }
+    },    
+    {
+      "spec": "gtfs-rt",
+      "id": "BA~rt",
+      "urls": {
+        "realtime_trip_updates": "file://testdata/server/rt/BA.json"
+      }
+    },
+    {
+      "spec": "gtfs-rt",
+      "id": "CT~rt",
+      "urls": {
+        "realtime_trip_updates": "file://testdata/server/rt/CT.json"
+      }
+    },
+    {
+      "spec": "gtfs",
+      "id": "test",
+      "urls": {
+        "static_current": "http://domain.invalid/test.zip"
+      }
+    },
+    {
+      "spec": "gtfs",
+      "id": "EX",    
+      "urls": {
+        "static_current": "file://testdata/server/gtfs/example.zip"
+      }
+    },
+    {
+      "spec": "gtfs",
+      "id": "EG",    
+      "urls": {
+        "static_current": "file://testdata/server/gtfs/eg.zip"
+      }
+    }
+  ],
+  "license_spdx_identifier": "CC0-1.0"
+}

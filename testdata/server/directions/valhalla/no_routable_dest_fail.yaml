@@ -1,0 +1,15 @@
+---
+version: 1
+interactions:
+    - request:
+        body: '{"locations":[{"lat":37.789001,"lon":-122.401001},{"lat":37.703380457832374,"lon":-123.54949951171876}],"costing":"pedestrian"}'
+        form: {}
+        headers: {}
+        url: directions://valhalla
+        method: GET
+      response:
+        body: '{"error_code":171,"error":"No suitable edges near location","status_code":400,"status":"Bad Request"}'
+        headers: {}
+        status: 400 Bad Request
+        code: 400
+        duration: 391.588625ms

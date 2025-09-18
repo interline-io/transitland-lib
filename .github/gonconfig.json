@@ -1,10 +1,9 @@
 {
-    "source" : ["./cmd/transitland/transitland"],
-    "bundle_id" : "io.interline.transitland-lib",
-    "sign" :{
-        "application_identity" : "FD3469A002C0912BAF03B33248112670708E56AA"
-    },
-    "zip" :{
-        "output_path" : "transitland.zip"
-    }
+  "source": ["./cmd/transitland/transitland"],
+  "bundle_id": "io.interline.transitland-lib",
+  "sign": {},
+  "zip": {
+    "output_path": "transitland.zip"
+  }
 }
+  
