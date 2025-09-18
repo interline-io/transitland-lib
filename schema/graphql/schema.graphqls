@@ -681,7 +681,7 @@ type Level {
   "GTFS levels.level_name"
   level_name: String
   "An optional geometry describing the footprint of this level"
-  geometry: Polygon!
+  geometry: MultiPolygon!
   "Stops associated with this level"
   stops: [Stop!]
 }
@@ -2169,7 +2169,7 @@ input LevelSetInput {
   "Set GTFS level_index to this value"
   level_index: Float
   "Set level geometry to this value"
-  geometry: Polygon
+  geometry: MultiPolygon
   "Set level parent station to this stop"
   parent: StopSetInput
 }

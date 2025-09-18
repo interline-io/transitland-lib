@@ -567,7 +567,7 @@ type LevelSetInput struct {
 	// Set GTFS level_index to this value
 	LevelIndex *float64 `json:"level_index,omitempty"`
 	// Set level geometry to this value
-	Geometry *tt.Polygon `json:"geometry,omitempty"`
+	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
 	// Set level parent station to this stop
 	Parent *StopSetInput `json:"parent,omitempty"`
 }

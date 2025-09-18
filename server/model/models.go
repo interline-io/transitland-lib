@@ -137,7 +137,7 @@ type Shape struct {
 }
 
 type Level struct {
-	Geometry      tt.Polygon
+	Geometry      tt.MultiPolygon
 	ParentStation tt.Key
 	gtfs.Level
 }
