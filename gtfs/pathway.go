@@ -14,11 +14,11 @@ type Pathway struct {
 	ToStopID            tt.String `csv:",required" target:"stops.txt"`
 	PathwayMode         tt.Int    `csv:",required" enum:"1,2,3,4,5,6,7"`
 	IsBidirectional     tt.Int    `csv:",required" enum:"0,1"`
-	Length              tt.Float
-	TraversalTime       tt.Int
+	Length              tt.Float  `range:"0,"`
+	TraversalTime       tt.Int    `range:"0,"`
 	StairCount          tt.Int
-	MaxSlope            tt.Float
-	MinWidth            tt.Float
+	MaxSlope            tt.Float `range:"0,"`
+	MinWidth            tt.Float `range:"0,"`
 	SignpostedAs        tt.String
 	ReverseSignpostedAs tt.String
 	tt.BaseEntity
@@ -47,15 +47,6 @@ func (ent *Pathway) TableName() string {
 // ConditionalErrors returns validation errors for the Pathway entity.
 func (ent *Pathway) ConditionalErrors() []error {
 	var errs []error
-	if ent.Length.Valid && ent.Length.Float() < 0 {
-		errs = append(errs, causes.NewInvalidFieldError("length", ent.Length.String(), fmt.Errorf("must be non-negative when specified")))
-	}
-	if ent.MinWidth.Valid && ent.MinWidth.Float() <= 0 {
-		errs = append(errs, causes.NewInvalidFieldError("min_width", ent.MinWidth.String(), fmt.Errorf("must be positive when specified")))
-	}
-	if ent.StairCount.Valid && ent.StairCount.Int() < 0 {
-		errs = append(errs, causes.NewInvalidFieldError("stair_count", ent.StairCount.String(), fmt.Errorf("must be non-negative when specified")))
-	}
 	if ent.MaxSlope.Valid && ent.PathwayMode.Int() != 1 && ent.PathwayMode.Int() != 3 {
 		errs = append(errs, causes.NewInvalidFieldError("max_slope", ent.MaxSlope.String(), fmt.Errorf("should only be used with walkways (pathway_mode=1) and moving sidewalks (pathway_mode=3)")))
 	}
