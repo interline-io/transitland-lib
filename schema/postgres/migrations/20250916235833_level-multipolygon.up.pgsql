@@ -9,7 +9,7 @@ ALTER TABLE gtfs_levels
 UPDATE gtfs_levels
     SET geometry = CASE
         WHEN GeometryType(geometry_old) = 'MULTIPOLYGON' THEN geometry_old
-        WHEN GeometryType(geometry_old) = 'POLYGON' THEN ST_Multi(geometry_old::geometry)
+        WHEN GeometryType(geometry_old) = 'POLYGON' THEN ST_Multi(geometry_old::geometry)::geography
         ELSE NULL
     END;
 -- 4. Drop the old column
