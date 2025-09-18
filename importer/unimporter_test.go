@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
@@ -16,6 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
+	sq "github.com/irees/squirrel"
 	"github.com/stretchr/testify/assert"
 )
 

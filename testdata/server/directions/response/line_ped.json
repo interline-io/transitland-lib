@@ -1,0 +1,84 @@
+{
+    "success": true,
+    "data_source": "LINE",
+    "origin": {
+        "lon": -122.401001,
+        "lat": 37.789001
+    },
+    "destination": {
+        "lon": -122.446999,
+        "lat": 37.782001
+    },
+    "duration": {
+        "duration": 4116.4971546787765,
+        "units": "SECONDS"
+    },
+    "distance": {
+        "distance": 4.116497154678776,
+        "units": "KILOMETERS"
+    },
+    "start_time": "2009-02-13T23:31:30Z",
+    "end_time": "2009-02-14T00:40:06Z",
+    "itineraries": [
+        {
+            "duration": {
+                "duration": 4116.4971546787765,
+                "units": "SECONDS"
+            },
+            "distance": {
+                "distance": 4.116497154678776,
+                "units": "KILOMETERS"
+            },
+            "start_time": "2009-02-13T23:31:30Z",
+            "end_time": "2009-02-14T00:40:06Z",
+            "from": null,
+            "to": null,
+            "legs": [
+                {
+                    "duration": {
+                        "duration": 4116.4971546787765,
+                        "units": "SECONDS"
+                    },
+                    "distance": {
+                        "distance": 4.116497154678776,
+                        "units": "KILOMETERS"
+                    },
+                    "start_time": "2009-02-13T23:31:30Z",
+                    "end_time": "2009-02-14T00:40:06Z",
+                    "steps": [
+                        {
+                            "duration": {
+                                "duration": 4116.4971546787765,
+                                "units": "SECONDS"
+                            },
+                            "distance": {
+                                "distance": 4.116497154678776,
+                                "units": "KILOMETERS"
+                            },
+                            "start_time": "2009-02-13T23:31:30Z",
+                            "end_time": "2009-02-14T00:40:06Z",
+                            "mode": "",
+                            "instruction": "",
+                            "geometry_offset": 0
+                        }
+                    ],
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [
+                            [
+                                -122.401001,
+                                37.789001,
+                                0
+                            ],
+                            [
+                                -122.446999,
+                                37.782001,
+                                0
+                            ]
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -7,6 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/internal/graph"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // TODO: Use found map[graph.Node] bool values, not pointers
@@ -43,6 +44,11 @@ func (em *Marker) SetBbox(bbox string) error {
 func (em *Marker) Mark(filename string, eid string, val bool) {
 	n, _ := em.graph.Node(graph.NewNode(filename, eid))
 	em.found[n] = val
+}
+
+// Marked is a compatibility shim for copier.EntityMarker
+func (em *Marker) Marked(ent tt.Entity, emap *tt.EntityMap) bool {
+	return em.IsMarked(ent.Filename(), ent.EntityID())
 }
 
 // IsMarked returns if an Entity is marked.

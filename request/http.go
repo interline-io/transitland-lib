@@ -42,16 +42,17 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 	if err != nil {
 		return nil, 0, errors.New("could not parse url")
 	}
-	if auth.Type == "query_param" {
+	switch auth.Type {
+	case "query_param":
 		v, err := url.ParseQuery(u.RawQuery)
 		if err != nil {
 			return nil, 0, errors.New("could not parse query string")
 		}
 		v.Set(auth.ParamName, r.secret.Key)
 		u.RawQuery = v.Encode()
-	} else if auth.Type == "path_segment" {
+	case "path_segment":
 		u.Path = strings.ReplaceAll(u.Path, "{}", r.secret.Key)
-	} else if auth.Type == "replace_url" {
+	case "replace_url":
 		u, err = url.Parse(r.secret.ReplaceUrl)
 		if err != nil {
 			return nil, 0, errors.New("could not parse replacement query string")
@@ -66,9 +67,10 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 	}
 
 	// Set basic auth, if used
-	if auth.Type == "basic_auth" {
+	switch auth.Type {
+	case "basic_auth":
 		req.SetBasicAuth(r.secret.Username, r.secret.Password)
-	} else if auth.Type == "header" {
+	case "header":
 		req.Header.Add(auth.ParamName, r.secret.Key)
 	}
 

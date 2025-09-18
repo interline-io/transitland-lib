@@ -1,0 +1,47 @@
+model
+  schema 1.1
+type user
+type tenant
+  relations
+    define admin: [user]
+    define member: [user,user:*] or admin
+    define can_create_org: admin
+    define can_delete_org: admin
+    define can_edit: admin
+    define can_edit_members: admin
+    define can_view: member
+type org
+  relations
+    define parent: [tenant]
+    define manager: [user] or admin from parent
+    define editor: [user,tenant#member] or manager
+    define viewer: [user,tenant#member] or editor
+    define can_edit_members: manager
+    define can_create_feed: manager
+    define can_delete_feed: manager
+    define can_edit: editor
+    define can_view: viewer
+type feed
+  relations
+    define parent: [org]
+    define manager: manager from parent
+    define editor: editor from parent
+    define viewer: viewer from parent
+    define can_set_group: manager
+    define can_create_feed_version: editor
+    define can_delete_feed_version: editor
+    define can_edit: editor
+    define can_view: viewer
+type feed_version
+  relations
+    define parent: [feed]
+    define manager: manager from parent
+    define editor: [user,org#viewer,tenant#member] or manager or editor from parent
+    define viewer: [user,org#viewer,tenant#member] or editor or viewer from parent
+    define can_edit_members: manager
+    define can_edit: editor
+    define can_view: viewer
+    define can_view_entity: viewer
+    define can_edit_entity: editor
+    define can_create_entity: editor
+    define can_delete_entity: editor

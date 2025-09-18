@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	sq "github.com/Masterminds/squirrel"
+	sq "github.com/irees/squirrel"
 )
 
 var adapterFactories = map[string]func(string) Adapter{}

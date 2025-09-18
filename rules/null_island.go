@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"fmt"
-
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tt"
@@ -12,7 +10,7 @@ import (
 type ZeroCoordinateError struct{ bc }
 
 func (e *ZeroCoordinateError) Error() string {
-	return fmt.Sprintf("entity '%s' has coordinates that include (0,0)", e.EntityID)
+	return "entity has a zero coordinate"
 }
 
 // NullIslandCheck checks for ZeroCoordinateError.
@@ -26,13 +24,13 @@ func (e *NullIslandCheck) Validate(ent tt.Entity) []error {
 			return nil // allowed
 		}
 		coords := v.Coordinates()
-		if coords[0] == 0 && coords[1] == 0 {
-			return []error{&ZeroCoordinateError{bc: bc{Field: "stop_lat", EntityID: v.StopID.Val, Message: "stop has (0,0) coordinates"}}}
+		if coords[0] == 0 || coords[1] == 0 {
+			return []error{&ZeroCoordinateError{bc: bc{Field: "stop_lat", EntityID: v.StopID.Val}}}
 		}
 	case *service.ShapeLine:
 		for _, coords := range v.Geometry.Val.Coords() {
-			if coords[0] == 0 && coords[1] == 0 {
-				return []error{&ZeroCoordinateError{bc: bc{Field: "shape_pt_lon", EntityID: v.ShapeID.Val, Message: "shape has (0,0) coordinates"}}}
+			if coords[0] == 0 || coords[1] == 0 {
+				return []error{&ZeroCoordinateError{bc: bc{Field: "shape_pt_lon", EntityID: v.ShapeID.Val}}}
 			}
 		}
 	}

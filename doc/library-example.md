@@ -6,8 +6,7 @@
 - Entity: An `Entity` is entity as specified by GTFS, such as an Agency, Route, Stop, etc.
 - Reader: A `Reader` provides streams of GTFS entities over channels. The `tlcsv` and `tldb` modules provide CSV and PostgreSQL/SQLite support, respectively.
 - Writer: A `Writer` accepts GTFS entities. As above, `tlcsv` and `tldb` provide basic implementations. Custom writers can also be used to support non-GTFS outputs, such as building a routing graph.
-- Copier: A `Copier` reads a stream of GTFS entities from a `Reader`, checks each entity against a `Marker`, performs validation, applies any specified `Filters`, and sends to a `Writer`.
-- Marker: A `Marker` selects which GTFS entities will be processed by a `Copier`. For example, selecting only entities related to a single trip or route.
+- Copier: A `Copier` reads a stream of GTFS entities from a `Reader`, performs validation, applies any specified `Filters`, and sends to a `Writer`.
 - Filter: A `Filter` applies transformations to GTFS entities, such as converting extended route types to basic values, or modifying entity identifiers.
 - Extension: An `Extension` provides support for additional types of GTFS entities.
 

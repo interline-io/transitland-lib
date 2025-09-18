@@ -1,0 +1,227 @@
+name: "Release"
+on:
+  workflow_run:
+    workflows: ["Test Suite"]
+    types: [completed]
+    branches: [main] 
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+  actions: write
+  pull-requests: write
+
+jobs:
+  check-tests:
+    runs-on: ubuntu-latest
+    # Only run check-tests for release events, since workflow_run already means tests passed
+    if: ${{ github.event_name == 'release' }}
+    steps:
+    - name: Check Test Suite Status
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Use the release commit SHA instead of context.sha
+          const commitSha = github.event.release?.target_commitish || context.sha;          
+          const { data: workflows } = await github.rest.actions.listWorkflowRunsForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'test.yml',
+            head_sha: commitSha,
+            status: 'completed'
+          });
+          const testRun = workflows.workflow_runs.find(run => run.conclusion === 'success');
+          if (!testRun) {
+            core.setFailed('Test Suite workflow must pass before release can be built');
+          }
+
+  build-linux:
+    if: ${{ github.event_name == 'release' }}
+    needs: check-tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.24.2']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Build on Linux
+        working-directory: ${{ github.workspace }}/cmd/transitland
+        run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
+      - name: Store Linux binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: transitland-linux
+          path: ${{ github.workspace }}/cmd/transitland/transitland
+
+  build-macos-intel:
+    if: ${{ github.event_name == 'release' }}
+    needs: check-tests
+    runs-on: macos-15-large # macOS on Intel
+    strategy:
+      matrix:
+        go-version: ['1.24.2']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Build on macOS
+        working-directory: ${{ github.workspace }}/cmd/transitland
+        run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
+      - name: Import Code-Signing Certificates
+        uses: Apple-Actions/import-codesign-certs@11e1bb2d3771ad8ffa8459dfe527bc26b2dd4b62
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+      - name: Install gon via HomeBrew for code signing and app notarization
+        run: |
+          brew install Bearer/tap/gon
+      - name: Sign the mac binaries with Gon
+        timeout-minutes: 20
+        env:
+          AC_USERNAME: ${{ secrets.AC_USERNAME }}
+          AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
+          AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
+          AC_APPLICATION_IDENTITY: ${{ secrets.AC_APPLICATION_IDENTITY }}
+        run: |
+          gon -log-level=debug -log-json ./.github/gonconfig.json
+      - name: Store macOS binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: transitland-macos-intel
+          path: ${{ github.workspace }}/transitland.zip
+
+  build-macos-apple:
+    if: ${{ github.event_name == 'release' }}
+    needs: check-tests
+    runs-on: macos-15 # macOS on Apple Silicon
+    strategy:
+      matrix:
+        go-version: ['1.24.2']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Build on macOS
+        working-directory: ${{ github.workspace }}/cmd/transitland
+        run: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
+      - name: Import Code-Signing Certificates
+        uses: Apple-Actions/import-codesign-certs@11e1bb2d3771ad8ffa8459dfe527bc26b2dd4b62
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+      - name: Install gon via HomeBrew for code signing and app notarization
+        run: |
+          brew install Bearer/tap/gon
+      - name: Sign the mac binaries with Gon
+        timeout-minutes: 20
+        env:
+          AC_USERNAME: ${{ secrets.AC_USERNAME }}
+          AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
+          AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
+          AC_APPLICATION_IDENTITY: ${{ secrets.AC_APPLICATION_IDENTITY }}
+        run: |
+          gon -log-level=debug -log-json ./.github/gonconfig.json
+      - name: Store macOS binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: transitland-macos-apple
+          path: ${{ github.workspace }}/transitland.zip
+
+  release:
+    if: ${{ github.event_name == 'release' }}
+    needs: [build-linux, build-macos-intel, build-macos-apple]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: transitland-linux
+          path: transitland-linux
+      - name: Download macOS Intel binary
+        uses: actions/download-artifact@v4
+        with:
+          name: transitland-macos-intel
+          path: transitland-macos-intel
+      - name: Download macOS Apple Silicon binary
+        uses: actions/download-artifact@v4
+        with:
+          name: transitland-macos-apple
+          path: transitland-macos-apple
+      - name: Unzip and rename macOS Intel binary
+        run: |
+          unzip -j transitland-macos-intel/transitland.zip -d transitland-macos-intel/
+          mv transitland-macos-intel/transitland transitland-macos-intel/transitland-macos-intel
+      - name: Unzip and rename macOS Apple Silicon binary
+        run: |
+          unzip -j transitland-macos-apple/transitland.zip -d transitland-macos-apple/
+          mv transitland-macos-apple/transitland transitland-macos-apple/transitland-macos-apple
+      - name: Copy and rename Linux binary
+        run: cp transitland-linux/transitland transitland-linux/transitland-linux
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@fbadcc90e88ecface60a0a0d123795b784ceb239
+        with:
+          files: |
+            transitland-linux/transitland-linux
+            transitland-macos-intel/transitland-macos-intel
+            transitland-macos-apple/transitland-macos-apple
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+  release-notes:
+    needs: release
+    if: ${{ github.event_name == 'release' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - run: npm install github-release-notes -g
+      - run: gren release --override
+        env:
+          GREN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  trigger-homebrew-update:
+    needs: release
+    if: ${{ github.event_name == 'release' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Create GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+          owner: interline-io
+          repositories: homebrew-transitland-lib
+          permission-actions: write
+
+      - name: Trigger Homebrew Update
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'interline-io',
+              repo: 'homebrew-transitland-lib',
+              workflow_id: 'update-formula.yml',
+              ref: 'main',
+              inputs: {
+                version: '${{ github.event.release.tag_name }}'
+              }
+            });

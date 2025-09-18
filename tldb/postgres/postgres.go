@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/querylogger"
+	sq "github.com/irees/squirrel"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -47,14 +47,22 @@ func (adapter *PostgresAdapter) Open() error {
 	if adapter.db != nil {
 		return nil
 	}
-	pool, err := pgxpool.New(context.TODO(), adapter.DBURL)
+	db, err := adapter.OpenDB()
 	if err != nil {
 		return err
 	}
-	db := sqlx.NewDb(stdlib.OpenDBFromPool(pool), "pgx")
 	db.Mapper = MapperCache.Mapper
 	adapter.db = &QueryLogger{Ext: db.Unsafe()}
 	return nil
+}
+
+func (adapter *PostgresAdapter) OpenDB() (*sqlx.DB, error) {
+	pool, err := pgxpool.New(context.TODO(), adapter.DBURL)
+	if err != nil {
+		return nil, err
+	}
+	db := sqlx.NewDb(stdlib.OpenDBFromPool(pool), "pgx")
+	return db, nil
 }
 
 // Close the adapter.
