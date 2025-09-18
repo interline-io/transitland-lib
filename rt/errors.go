@@ -1,12 +1,13 @@
 package rt
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl/causes"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/tt"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -105,7 +106,7 @@ func withFieldAndJson(e RealtimeError, field string, groupKey string, value any,
 		var err error
 		e2.Value, err = tt.ToCsv(value)
 		if err != nil {
-			log.Error().Err(err).Msgf("could not convert value of type %T to string", value)
+			log.For(context.TODO()).Error().Err(err).Msgf("could not convert value of type %T to string", value)
 		}
 	}
 	if msg != "" {

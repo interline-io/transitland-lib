@@ -1,45 +1,65 @@
 package tldb
 
 import (
+	"context"
+	"database/sql"
 	"errors"
-	"fmt"
-	"strings"
+	"net/url"
+	"strconv"
 
 	"github.com/interline-io/transitland-lib/internal/tags"
+	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
+var bufferSize = 1000
+
 var MapperCache = tags.NewCache(reflectx.NewMapperFunc("db", tags.ToSnakeCase))
 
-type hasTableName interface {
+type Ext interface {
+	sqlx.Ext
+	sqlx.QueryerContext
+	sqlx.ExecerContext
+	// QueryRowContext is missing from sqlx.QueryerContext, despite having QueryRowContext
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
+}
+
+type CanBeginx interface {
+	Beginx() (*sqlx.Tx, error)
+}
+
+type CanClose interface {
+	Close() error
+}
+
+type HasTableName interface {
 	TableName() string
 }
 
-type canSetID interface {
+type CanSetID interface {
 	SetID(int)
 }
 
-type canGetID interface {
+type CanGetID interface {
 	GetID() int
 }
 
-type canUpdateTimestamps interface {
+type CanUpdateTimestamps interface {
 	UpdateTimestamps()
 }
 
-type canSetFeedVersion interface {
+type CanSetFeedVersion interface {
 	SetFeedVersionID(int)
 }
 
-func getTableName(ent interface{}) string {
-	if v, ok := ent.(hasTableName); ok {
+func GetTableName(ent interface{}) string {
+	if v, ok := ent.(HasTableName); ok {
 		return v.TableName()
 	}
-	s := strings.Split(fmt.Sprintf("%T", ent), ".")
-	return tags.ToSnakeCase(s[len(s)-1])
+	return ""
 }
 
-func contains(a string, b []string) bool {
+func Contains(a string, b []string) bool {
 	for _, v := range b {
 		if a == v {
 			return true
@@ -48,30 +68,30 @@ func contains(a string, b []string) bool {
 	return false
 }
 
-// find a single record.
-func find(adapter Adapter, dest interface{}) error {
+// Find a single record.
+func Find(ctx context.Context, adapter Adapter, dest interface{}) error {
 	entid := 0
-	if v, ok := dest.(canGetID); ok {
+	if v, ok := dest.(CanGetID); ok {
 		entid = v.GetID()
 	} else {
 		return errors.New("cannot get ID")
 	}
-	qstr, args, err := adapter.Sqrl().Select("*").From(getTableName(dest)).Where("id = ?", entid).ToSql()
+	qstr, args, err := adapter.Sqrl().Select("*").From(GetTableName(dest)).Where("id = ?", entid).ToSql()
 	if err != nil {
 		return err
 	}
-	return adapter.Get(dest, qstr, args...)
+	return adapter.Get(ctx, dest, qstr, args...)
 }
 
 // update a single record.
-func update(adapter Adapter, ent interface{}, columns ...string) error {
+func Update(ctx context.Context, adapter Adapter, ent interface{}, columns ...string) error {
 	entid := 0
-	if v, ok := ent.(canGetID); ok {
+	if v, ok := ent.(CanGetID); ok {
 		entid = v.GetID()
 	} else {
 		return errors.New("cannot get ID")
 	}
-	table := getTableName(ent)
+	table := GetTableName(ent)
 	header, err := MapperCache.GetHeader(ent)
 	if err != nil {
 		return err
@@ -82,15 +102,53 @@ func update(adapter Adapter, ent interface{}, columns ...string) error {
 	}
 	colmap := make(map[string]interface{})
 	for i, col := range header {
-		if len(columns) > 0 && !contains(col, columns) {
+		if len(columns) > 0 && !Contains(col, columns) {
 			continue
 		}
 		colmap[col] = vals[i]
 	}
-	_, err2 := adapter.Sqrl().
+	result, err := adapter.Sqrl().
 		Update(table).
 		Where("id = ?", entid).
+		Suffix("returning id").
 		SetMap(colmap).
-		Exec()
-	return err2
+		ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+	if n, err := result.RowsAffected(); err != nil {
+		return err
+	} else if n != 1 {
+		return errors.New("failed to update record")
+	}
+	return nil
+}
+
+// check for error and panic
+// TODO: don't do this. panic is bad.
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func getFvids(dburl string) ([]int, string, error) {
+	fvids := []int{}
+	u, err := url.Parse(dburl)
+	if err != nil {
+		return nil, "", err
+	}
+	vars := u.Query()
+	if a, ok := vars["fvid"]; ok {
+		for _, v := range a {
+			fvid, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, "", errors.New("invalid feed version id")
+			}
+			fvids = append(fvids, fvid)
+		}
+	}
+	delete(vars, "fvid")
+	u.RawQuery = vars.Encode()
+	return fvids, u.String(), nil
 }

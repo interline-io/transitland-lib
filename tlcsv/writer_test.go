@@ -1,19 +1,19 @@
 package tlcsv
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/stretchr/testify/assert"
 )
 
 // Round trip Writer test.
 func TestWriter(t *testing.T) {
 	fe, reader := testutil.NewMinimalTestFeed()
-	tmpdir, err := ioutil.TempDir("", "gtfs")
+	tmpdir, err := os.MkdirTemp("", "gtfs")
 	if err != nil {
 		t.Error(err)
 	}
@@ -21,7 +21,7 @@ func TestWriter(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	testutil.TestWriter(t, *fe, func() tl.Reader { return reader }, func() tl.Writer { return writer })
+	testutil.TestWriter(t, *fe, func() adapters.Reader { return reader }, func() adapters.Writer { return writer })
 	// Clean up and double check
 	if err := os.RemoveAll(tmpdir); err != nil {
 		t.Error(err)
@@ -32,7 +32,7 @@ func TestWriter(t *testing.T) {
 }
 
 func TestWriterExtraColumn(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "gtfs")
+	tmpdir, err := os.MkdirTemp("", "gtfs")
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,7 +47,7 @@ func TestWriterExtraColumn(t *testing.T) {
 	if err := writer.Create(); err != nil {
 		t.Error(err)
 	}
-	testEnt := tl.Stop{}
+	testEnt := gtfs.Stop{}
 	// test ordering on output
 	extraVals := []string{
 		"ok", "hello",

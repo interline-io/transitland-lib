@@ -3,6 +3,7 @@ package builders
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestRouteGeometryBuilder(t *testing.T) {
 			},
 		},
 		"TriMet-2Routes": {
-			testutil.RelPath("test/data/external/trimet-2routes.zip"),
+			testpath.RelPath("testdata/gtfs-external/trimet-2routes.zip"),
 			[]testcase{
 				{RouteID: "193", ExpectLength: 6452.065660, ExpectLineStrings: 4},
 				{RouteID: "200", ExpectLength: 23012.874312, ExpectLineStrings: 5},
@@ -59,14 +60,9 @@ func TestRouteGeometryBuilder(t *testing.T) {
 	}
 	for groupName, testGroup := range groups {
 		t.Run(groupName, func(t *testing.T) {
-			cp, writer, err := newMockCopier(testGroup.URL)
-			if err != nil {
-				t.Fatal(err)
-			}
 			e := NewRouteGeometryBuilder()
-			cp.AddExtension(e)
-			cpr := cp.Copy()
-			if cpr.WriteError != nil {
+			_, writer, err := newMockCopier(testGroup.URL, e)
+			if err != nil {
 				t.Fatal(err)
 			}
 			routeGeoms := map[string]*RouteGeometry{}
@@ -85,12 +81,12 @@ func TestRouteGeometryBuilder(t *testing.T) {
 					}
 
 					pts := []tlxy.Point{}
-					for _, c := range rg.Geometry.Coords() {
+					for _, c := range rg.Geometry.Val.Coords() {
 						pts = append(pts, tlxy.Point{Lon: c[0], Lat: c[1]})
 					}
 					length := tlxy.LengthHaversine(pts)
 					assert.InEpsilonf(t, length, tc.ExpectLength, 1.0, "got %f expect %f", length, tc.ExpectLength)
-					if mls, ok := rg.CombinedGeometry.Geometry.(*geom.MultiLineString); !ok {
+					if mls, ok := rg.CombinedGeometry.Val.(*geom.MultiLineString); !ok {
 						t.Errorf("not MultiLineString")
 					} else {
 						// t.Logf(`{RouteID:"%s", ExpectLength: %f, ExpectLineStrings: %d},`+"\n", tc.RouteID, length, mls.NumLineStrings())

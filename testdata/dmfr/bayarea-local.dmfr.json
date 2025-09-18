@@ -1,0 +1,19 @@
+{
+  "$schema": "https://dmfr.transit.land/json-schema/dmfr.schema.json",
+  "feeds": [
+    {
+      "spec": "gtfs",
+      "id": "CT",
+      "urls": {
+        "static_current": "../external/caltrain.zip"
+      }
+    },
+    {
+      "spec": "gtfs",
+      "id": "BA",
+      "urls": {
+        "static_current": "../external/bart.zip"
+      }
+    }
+  ]
+}

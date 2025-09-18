@@ -1,17 +1,19 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	_ "github.com/interline-io/transitland-lib/tldb/sqlite"
 )
 
-// var URL = "https://github.com/interline-io/transitland-lib/raw/master/test/data/external/bart.zip"
-var URL = "../../test/data/external/bart.zip"
+// var URL = "https://github.com/interline-io/transitland-lib/raw/master/testdata/gtfs-external/bart.zip"
+var URL = "../../testdata/gtfs-external/bart.zip"
 
 func TestExample1(t *testing.T) {
 	// Read stops from a GTFS url
@@ -29,7 +31,7 @@ func TestExample1(t *testing.T) {
 	}
 }
 
-func getReader() tl.Reader {
+func getReader() adapters.Reader {
 	reader, _ := tlcsv.NewReader(URL)
 	return reader
 }
@@ -79,15 +81,18 @@ func TestExample3(t *testing.T) {
 	if err != nil {
 		t.Fatalf("no writer available")
 	}
+
 	// Create a copier to stream, filter, and validate entities
-	cp, err := copier.NewCopier(reader, writer, copier.Options{})
+	result, err := copier.CopyWithOptions(
+		context.Background(),
+		reader,
+		writer,
+		copier.Options{},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := cp.Copy()
-	if result.WriteError != nil {
-		t.Fatalf("fatal copy error")
-	}
+
 	for _, err := range result.Errors {
 		fmt.Println("error:", err)
 	}

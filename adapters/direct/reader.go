@@ -3,38 +3,42 @@ package direct
 import (
 	"reflect"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 var bufferSize = 1000
 
 // Reader is a mocked up Reader used for testing.
 type Reader struct {
-	AgencyList           []tl.Agency
-	RouteList            []tl.Route
-	TripList             []tl.Trip
-	StopList             []tl.Stop
-	StopTimeList         []tl.StopTime
-	ShapeList            []tl.Shape
-	CalendarList         []tl.Calendar
-	CalendarDateList     []tl.CalendarDate
-	FeedInfoList         []tl.FeedInfo
-	FareRuleList         []tl.FareRule
-	FareAttributeList    []tl.FareAttribute
-	FrequencyList        []tl.Frequency
-	TransferList         []tl.Transfer
-	LevelList            []tl.Level
-	PathwayList          []tl.Pathway
-	AttributionList      []tl.Attribution
-	TranslationList      []tl.Translation
-	AreaList             []tl.Area
-	StopAreaList         []tl.StopArea
-	FareLegRuleList      []tl.FareLegRule
-	FareTransferRuleList []tl.FareTransferRule
-	FareMediaList        []tl.FareMedia
-	FareProductList      []tl.FareProduct
-	RiderCategoryList    []tl.RiderCategory
-	OtherList            []tl.Entity
+	AgencyList           []gtfs.Agency
+	RouteList            []gtfs.Route
+	TripList             []gtfs.Trip
+	StopList             []gtfs.Stop
+	StopTimeList         []gtfs.StopTime
+	ShapeList            []gtfs.Shape
+	CalendarList         []gtfs.Calendar
+	CalendarDateList     []gtfs.CalendarDate
+	FeedInfoList         []gtfs.FeedInfo
+	FareRuleList         []gtfs.FareRule
+	FareAttributeList    []gtfs.FareAttribute
+	FrequencyList        []gtfs.Frequency
+	TransferList         []gtfs.Transfer
+	LevelList            []gtfs.Level
+	PathwayList          []gtfs.Pathway
+	AttributionList      []gtfs.Attribution
+	TranslationList      []gtfs.Translation
+	AreaList             []gtfs.Area
+	StopAreaList         []gtfs.StopArea
+	FareLegRuleList      []gtfs.FareLegRule
+	FareTransferRuleList []gtfs.FareTransferRule
+	FareMediaList        []gtfs.FareMedia
+	FareProductList      []gtfs.FareProduct
+	RiderCategoryList    []gtfs.RiderCategory
+	TimeframeList        []gtfs.Timeframe
+	NetworkList          []gtfs.Network
+	RouteNetworkList     []gtfs.RouteNetwork
+	OtherList            []tt.Entity
 }
 
 // NewReader returns a new Reader.
@@ -62,12 +66,12 @@ func (mr *Reader) ValidateStructure() []error {
 }
 
 // StopTimesByTripID .
-func (mr *Reader) StopTimesByTripID(...string) chan []tl.StopTime {
-	out := make(chan []tl.StopTime, 1000)
+func (mr *Reader) StopTimesByTripID(...string) chan []gtfs.StopTime {
+	out := make(chan []gtfs.StopTime, 1000)
 	go func() {
-		sts := map[string][]tl.StopTime{}
+		sts := map[string][]gtfs.StopTime{}
 		for _, ent := range mr.StopTimeList {
-			sts[ent.TripID] = append(sts[ent.TripID], ent)
+			sts[ent.TripID.Val] = append(sts[ent.TripID.Val], ent)
 		}
 		for _, v := range sts {
 			out <- v
@@ -78,15 +82,24 @@ func (mr *Reader) StopTimesByTripID(...string) chan []tl.StopTime {
 }
 
 // ShapesByShapeID .
-func (mr *Reader) ShapesByShapeID(...string) chan []tl.Shape {
-	c := make(chan []tl.Shape, 1000)
-	close(c)
-	return c
+func (mr *Reader) ShapesByShapeID(...string) chan []gtfs.Shape {
+	out := make(chan []gtfs.Shape, 1000)
+	go func() {
+		ents := map[string][]gtfs.Shape{}
+		for _, ent := range mr.ShapeList {
+			ents[ent.ShapeID.Val] = append(ents[ent.ShapeID.Val], ent)
+		}
+		for _, v := range ents {
+			out <- v
+		}
+		close(out)
+	}()
+	return out
 }
 
 // ShapeLinesByShapeID .
-func (mr *Reader) ShapeLinesByShapeID(...string) chan tl.Shape {
-	out := make(chan tl.Shape, 1000)
+func (mr *Reader) ShapeLinesByShapeID(...string) chan gtfs.Shape {
+	out := make(chan gtfs.Shape, 1000)
 	go func() {
 		for _, ent := range mr.ShapeList {
 			out <- ent
@@ -107,8 +120,8 @@ func (mr *Reader) ReadEntities(c interface{}) error {
 }
 
 // Stops .
-func (mr *Reader) Stops() chan tl.Stop {
-	out := make(chan tl.Stop, bufferSize)
+func (mr *Reader) Stops() chan gtfs.Stop {
+	out := make(chan gtfs.Stop, bufferSize)
 	go func() {
 		for _, ent := range mr.StopList {
 			out <- ent
@@ -119,8 +132,8 @@ func (mr *Reader) Stops() chan tl.Stop {
 }
 
 // StopTimes .
-func (mr *Reader) StopTimes() chan tl.StopTime {
-	out := make(chan tl.StopTime, bufferSize)
+func (mr *Reader) StopTimes() chan gtfs.StopTime {
+	out := make(chan gtfs.StopTime, bufferSize)
 	go func() {
 		for _, ent := range mr.StopTimeList {
 			out <- ent
@@ -131,8 +144,8 @@ func (mr *Reader) StopTimes() chan tl.StopTime {
 }
 
 // Agencies .
-func (mr *Reader) Agencies() chan tl.Agency {
-	out := make(chan tl.Agency, bufferSize)
+func (mr *Reader) Agencies() chan gtfs.Agency {
+	out := make(chan gtfs.Agency, bufferSize)
 	go func() {
 		for _, ent := range mr.AgencyList {
 			out <- ent
@@ -143,8 +156,8 @@ func (mr *Reader) Agencies() chan tl.Agency {
 }
 
 // Calendars .
-func (mr *Reader) Calendars() chan tl.Calendar {
-	out := make(chan tl.Calendar, bufferSize)
+func (mr *Reader) Calendars() chan gtfs.Calendar {
+	out := make(chan gtfs.Calendar, bufferSize)
 	go func() {
 		for _, ent := range mr.CalendarList {
 			out <- ent
@@ -155,8 +168,8 @@ func (mr *Reader) Calendars() chan tl.Calendar {
 }
 
 // CalendarDates .
-func (mr *Reader) CalendarDates() chan tl.CalendarDate {
-	out := make(chan tl.CalendarDate, bufferSize)
+func (mr *Reader) CalendarDates() chan gtfs.CalendarDate {
+	out := make(chan gtfs.CalendarDate, bufferSize)
 	go func() {
 		for _, ent := range mr.CalendarDateList {
 			out <- ent
@@ -167,8 +180,8 @@ func (mr *Reader) CalendarDates() chan tl.CalendarDate {
 }
 
 // FareAttributes .
-func (mr *Reader) FareAttributes() chan tl.FareAttribute {
-	out := make(chan tl.FareAttribute, bufferSize)
+func (mr *Reader) FareAttributes() chan gtfs.FareAttribute {
+	out := make(chan gtfs.FareAttribute, bufferSize)
 	go func() {
 		for _, ent := range mr.FareAttributeList {
 			out <- ent
@@ -179,8 +192,8 @@ func (mr *Reader) FareAttributes() chan tl.FareAttribute {
 }
 
 // FareRules .
-func (mr *Reader) FareRules() chan tl.FareRule {
-	out := make(chan tl.FareRule, bufferSize)
+func (mr *Reader) FareRules() chan gtfs.FareRule {
+	out := make(chan gtfs.FareRule, bufferSize)
 	go func() {
 		for _, ent := range mr.FareRuleList {
 			out <- ent
@@ -191,8 +204,8 @@ func (mr *Reader) FareRules() chan tl.FareRule {
 }
 
 // FeedInfos .
-func (mr *Reader) FeedInfos() chan tl.FeedInfo {
-	out := make(chan tl.FeedInfo, bufferSize)
+func (mr *Reader) FeedInfos() chan gtfs.FeedInfo {
+	out := make(chan gtfs.FeedInfo, bufferSize)
 	go func() {
 		for _, ent := range mr.FeedInfoList {
 			out <- ent
@@ -203,8 +216,8 @@ func (mr *Reader) FeedInfos() chan tl.FeedInfo {
 }
 
 // Frequencies .
-func (mr *Reader) Frequencies() chan tl.Frequency {
-	out := make(chan tl.Frequency, bufferSize)
+func (mr *Reader) Frequencies() chan gtfs.Frequency {
+	out := make(chan gtfs.Frequency, bufferSize)
 	go func() {
 		for _, ent := range mr.FrequencyList {
 			out <- ent
@@ -215,8 +228,8 @@ func (mr *Reader) Frequencies() chan tl.Frequency {
 }
 
 // Routes .
-func (mr *Reader) Routes() chan tl.Route {
-	out := make(chan tl.Route, bufferSize)
+func (mr *Reader) Routes() chan gtfs.Route {
+	out := make(chan gtfs.Route, bufferSize)
 	go func() {
 		for _, ent := range mr.RouteList {
 			out <- ent
@@ -227,8 +240,8 @@ func (mr *Reader) Routes() chan tl.Route {
 }
 
 // Shapes .
-func (mr *Reader) Shapes() chan tl.Shape {
-	out := make(chan tl.Shape, bufferSize)
+func (mr *Reader) Shapes() chan gtfs.Shape {
+	out := make(chan gtfs.Shape, bufferSize)
 	go func() {
 		for _, ent := range mr.ShapeList {
 			out <- ent
@@ -239,8 +252,8 @@ func (mr *Reader) Shapes() chan tl.Shape {
 }
 
 // Transfers .
-func (mr *Reader) Transfers() chan tl.Transfer {
-	out := make(chan tl.Transfer, bufferSize)
+func (mr *Reader) Transfers() chan gtfs.Transfer {
+	out := make(chan gtfs.Transfer, bufferSize)
 	go func() {
 		for _, ent := range mr.TransferList {
 			out <- ent
@@ -251,8 +264,8 @@ func (mr *Reader) Transfers() chan tl.Transfer {
 }
 
 // Pathways .
-func (mr *Reader) Pathways() chan tl.Pathway {
-	out := make(chan tl.Pathway, bufferSize)
+func (mr *Reader) Pathways() chan gtfs.Pathway {
+	out := make(chan gtfs.Pathway, bufferSize)
 	go func() {
 		for _, ent := range mr.PathwayList {
 			out <- ent
@@ -263,8 +276,8 @@ func (mr *Reader) Pathways() chan tl.Pathway {
 }
 
 // Levels .
-func (mr *Reader) Levels() chan tl.Level {
-	out := make(chan tl.Level, bufferSize)
+func (mr *Reader) Levels() chan gtfs.Level {
+	out := make(chan gtfs.Level, bufferSize)
 	go func() {
 		for _, ent := range mr.LevelList {
 			out <- ent
@@ -275,8 +288,8 @@ func (mr *Reader) Levels() chan tl.Level {
 }
 
 // Trips .
-func (mr *Reader) Trips() chan tl.Trip {
-	out := make(chan tl.Trip, bufferSize)
+func (mr *Reader) Trips() chan gtfs.Trip {
+	out := make(chan gtfs.Trip, bufferSize)
 	go func() {
 		for _, ent := range mr.TripList {
 			out <- ent
@@ -287,8 +300,8 @@ func (mr *Reader) Trips() chan tl.Trip {
 }
 
 // Attributions .
-func (mr *Reader) Attributions() chan tl.Attribution {
-	out := make(chan tl.Attribution, bufferSize)
+func (mr *Reader) Attributions() chan gtfs.Attribution {
+	out := make(chan gtfs.Attribution, bufferSize)
 	go func() {
 		for _, ent := range mr.AttributionList {
 			out <- ent
@@ -299,8 +312,8 @@ func (mr *Reader) Attributions() chan tl.Attribution {
 }
 
 // Translations .
-func (mr *Reader) Translations() chan tl.Translation {
-	out := make(chan tl.Translation, bufferSize)
+func (mr *Reader) Translations() chan gtfs.Translation {
+	out := make(chan gtfs.Translation, bufferSize)
 	go func() {
 		for _, ent := range mr.TranslationList {
 			out <- ent
@@ -310,8 +323,8 @@ func (mr *Reader) Translations() chan tl.Translation {
 	return out
 }
 
-func (mr *Reader) Areas() chan tl.Area {
-	out := make(chan tl.Area, bufferSize)
+func (mr *Reader) Areas() chan gtfs.Area {
+	out := make(chan gtfs.Area, bufferSize)
 	go func() {
 		for _, ent := range mr.AreaList {
 			out <- ent
@@ -321,8 +334,8 @@ func (mr *Reader) Areas() chan tl.Area {
 	return out
 }
 
-func (mr *Reader) StopAreas() chan tl.StopArea {
-	out := make(chan tl.StopArea, bufferSize)
+func (mr *Reader) StopAreas() chan gtfs.StopArea {
+	out := make(chan gtfs.StopArea, bufferSize)
 	go func() {
 		for _, ent := range mr.StopAreaList {
 			out <- ent
@@ -332,8 +345,8 @@ func (mr *Reader) StopAreas() chan tl.StopArea {
 	return out
 }
 
-func (mr *Reader) FareLegRules() chan tl.FareLegRule {
-	out := make(chan tl.FareLegRule, bufferSize)
+func (mr *Reader) FareLegRules() chan gtfs.FareLegRule {
+	out := make(chan gtfs.FareLegRule, bufferSize)
 	go func() {
 		for _, ent := range mr.FareLegRuleList {
 			out <- ent
@@ -343,8 +356,8 @@ func (mr *Reader) FareLegRules() chan tl.FareLegRule {
 	return out
 }
 
-func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
-	out := make(chan tl.FareTransferRule, bufferSize)
+func (mr *Reader) FareTransferRules() chan gtfs.FareTransferRule {
+	out := make(chan gtfs.FareTransferRule, bufferSize)
 	go func() {
 		for _, ent := range mr.FareTransferRuleList {
 			out <- ent
@@ -354,8 +367,8 @@ func (mr *Reader) FareTransferRules() chan tl.FareTransferRule {
 	return out
 }
 
-func (mr *Reader) FareMedia() chan tl.FareMedia {
-	out := make(chan tl.FareMedia, bufferSize)
+func (mr *Reader) FareMedia() chan gtfs.FareMedia {
+	out := make(chan gtfs.FareMedia, bufferSize)
 	go func() {
 		for _, ent := range mr.FareMediaList {
 			out <- ent
@@ -365,8 +378,8 @@ func (mr *Reader) FareMedia() chan tl.FareMedia {
 	return out
 }
 
-func (mr *Reader) FareProducts() chan tl.FareProduct {
-	out := make(chan tl.FareProduct, bufferSize)
+func (mr *Reader) FareProducts() chan gtfs.FareProduct {
+	out := make(chan gtfs.FareProduct, bufferSize)
 	go func() {
 		for _, ent := range mr.FareProductList {
 			out <- ent
@@ -376,10 +389,43 @@ func (mr *Reader) FareProducts() chan tl.FareProduct {
 	return out
 }
 
-func (mr *Reader) RiderCategories() chan tl.RiderCategory {
-	out := make(chan tl.RiderCategory, bufferSize)
+func (mr *Reader) RiderCategories() chan gtfs.RiderCategory {
+	out := make(chan gtfs.RiderCategory, bufferSize)
 	go func() {
 		for _, ent := range mr.RiderCategoryList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) Timeframes() chan gtfs.Timeframe {
+	out := make(chan gtfs.Timeframe, bufferSize)
+	go func() {
+		for _, ent := range mr.TimeframeList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) Networks() chan gtfs.Network {
+	out := make(chan gtfs.Network, bufferSize)
+	go func() {
+		for _, ent := range mr.NetworkList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) RouteNetworks() chan gtfs.RouteNetwork {
+	out := make(chan gtfs.RouteNetwork, bufferSize)
+	go func() {
+		for _, ent := range mr.RouteNetworkList {
 			out <- ent
 		}
 		close(out)

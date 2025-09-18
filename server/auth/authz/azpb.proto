@@ -1,0 +1,332 @@
+syntax = "proto3";
+
+package azpb;
+
+service Checker {
+    rpc UserList (UserListRequest) returns (UserListResponse) {}
+    rpc User (UserRequest) returns (UserResponse) {}
+    rpc Me (MeRequest) returns (MeResponse) {}
+
+    rpc TenantList(TenantListRequest) returns (TenantListResponse) {}
+    rpc Tenant(TenantRequest) returns (TenantResponse) {}
+    rpc TenantPermissions(TenantRequest) returns (TenantPermissionsResponse) {}
+    rpc TenantSave(TenantSaveRequest) returns (TenantSaveResponse) {}
+    rpc TenantAddPermission(TenantModifyPermissionRequest) returns (TenantSaveResponse) {}
+    rpc TenantRemovePermission(TenantModifyPermissionRequest) returns (TenantSaveResponse) {}
+    rpc TenantCreate(TenantCreateRequest) returns (TenantSaveResponse) {}
+    rpc TenantCreateGroup(TenantCreateGroupRequest) returns (GroupSaveResponse) {}
+
+    rpc GroupList(GroupListRequest) returns (GroupListResponse) {}
+    rpc Group(GroupRequest) returns (GroupResponse) {}
+    rpc GroupPermissions(GroupRequest) returns (GroupPermissionsResponse) {}
+    rpc GroupSave(GroupSaveRequest) returns (GroupSaveResponse) {}
+    rpc GroupAddPermission(GroupModifyPermissionRequest) returns (GroupSaveResponse) {}
+    rpc GroupRemovePermission(GroupModifyPermissionRequest) returns (GroupSaveResponse) {}
+    rpc GroupSetTenant(GroupSetTenantRequest) returns (GroupSetTenantResponse) {}
+
+    rpc FeedList (FeedListRequest) returns (FeedListResponse) {}
+    rpc Feed (FeedRequest) returns (FeedResponse) {}
+    rpc FeedPermissions (FeedRequest) returns (FeedPermissionsResponse) {}
+    rpc FeedSetGroup(FeedSetGroupRequest) returns (FeedSaveResponse) {}
+
+    rpc FeedVersionList(FeedVersionListRequest) returns (FeedVersionListResponse) {}
+    rpc FeedVersion(FeedVersionRequest) returns (FeedVersionResponse) {}
+    rpc FeedVersionPermissions(FeedVersionRequest) returns (FeedVersionPermissionsResponse) {}
+    rpc FeedVersionAddPermission(FeedVersionModifyPermissionRequest) returns (FeedVersionSaveResponse) {}
+    rpc FeedVersionRemovePermission(FeedVersionModifyPermissionRequest) returns (FeedVersionSaveResponse) {}
+
+};
+
+enum Action {
+    empty_action = 0;
+	can_view = 1;
+	can_edit = 2;
+	can_edit_members = 3;
+	can_create_org = 4;
+	can_delete_org = 5;
+	can_create_feed_version = 6;
+	can_delete_feed_version = 7;
+	can_create_feed = 8;
+	can_delete_feed = 9;
+	can_set_group = 10;
+    can_set_tenant = 11;
+}
+
+enum ObjectType {
+    empty_object = 0;
+	tenant = 1;
+	org = 2;
+	feed = 3;
+	feed_version = 4;
+	user = 5;
+}
+
+enum Relation {
+    empty_relation = 0;
+	admin = 1;
+	member = 2;
+	manager = 3;
+	viewer = 4;
+	editor = 5;
+	parent = 6;
+}
+
+message EntityRelation {
+    ObjectType type = 1;
+    string id = 2;
+    string name = 3;
+    Relation ref_relation = 4;
+    Relation relation = 5;
+} 
+
+//////
+
+message User {
+    string id = 1;
+    string name = 2;
+    string email = 3;
+}
+
+message UserListRequest {
+    string q = 1;
+}
+
+message UserRequest {
+    string id = 1;
+}
+
+message UserListResponse {
+    repeated User users = 1;
+}
+
+message UserResponse {
+    User user = 1;
+}
+
+message MeRequest {}
+
+message MeResponse {
+    User user = 1;
+    repeated Group groups = 2;
+    repeated Group expanded_groups = 3;
+    map<string, string> external_data = 4;
+    repeated string roles = 5;
+}
+
+////// 
+
+message Tenant {
+    int64 id = 1;
+    string name = 2;
+}
+
+message TenantSaveRequest {
+    Tenant tenant = 1;
+}
+
+message TenantRequest {
+    int64 id = 1;
+}
+
+message TenantListRequest {}
+
+message TenantResponse {
+    Tenant tenant = 1;
+}
+
+message TenantListResponse {
+    repeated Tenant tenants = 1;
+}
+
+message TenantPermissionsResponse {
+    Tenant tenant = 1;
+    repeated Group groups = 2;
+    message Actions {
+        bool can_edit_members = 1;
+        bool can_view = 2;
+        bool can_edit = 3;
+        bool can_create_org = 4;
+        bool can_delete_org = 5;
+    }
+    Actions actions = 3;
+    message Users {
+        repeated EntityRelation admins = 1;
+        repeated EntityRelation members = 2;
+    }
+    Users users = 4;
+}
+
+message TenantCreateRequest {}
+
+message TenantCreateGroupRequest {
+    int64 id = 1;
+    Group group = 2;
+}
+
+message TenantCreateGroupResponse {
+    Group group = 1;
+}
+
+message TenantModifyPermissionRequest {
+    int64 id = 1;
+    EntityRelation entity_relation = 2;
+}
+
+
+message TenantSaveResponse {
+}
+
+//////
+
+message Group {
+    int64 id = 1;
+    string name = 2;
+}
+
+message GroupRequest {
+    int64 id = 1;
+}
+
+message GroupSaveRequest {
+    Group group = 1;
+}
+
+message GroupListRequest {}
+
+message GroupModifyPermissionRequest {
+    int64 id = 1;
+    EntityRelation entity_relation = 2;
+}
+
+message GroupResponse {
+    Group group = 1;
+}
+
+message GroupListResponse {
+    repeated Group groups = 1;
+}
+
+message GroupPermissionsResponse {
+    Group group = 1;
+    Tenant tenant = 2;
+    repeated Feed feeds = 3;
+    message Actions {
+        bool can_view = 1;
+        bool can_edit_members = 2;
+        bool can_create_feed = 3;
+        bool can_delete_feed = 4;
+        bool can_edit = 5;
+        bool can_set_tenant = 6;
+    } 
+    Actions actions = 4;
+    message Users {
+        repeated EntityRelation managers = 1;
+        repeated EntityRelation editors = 2;
+        repeated EntityRelation viewers = 3;
+    }
+    Users users = 5;
+}
+
+message GroupSaveResponse {
+    Group group = 1;
+}
+
+message GroupSetTenantRequest {
+    int64 id = 1;
+    int64 tenant_id = 2;
+}
+
+message GroupSetTenantResponse {}
+
+//////
+
+message Feed {
+    int64 id = 1;
+    string onestop_id = 2;
+    string name = 3;
+}
+
+message FeedRequest {
+    int64 id = 1;
+}
+
+message FeedListRequest {
+}
+
+message FeedPermissionsResponse {
+    Feed feed = 1;
+    Group group = 2;
+    message Actions {
+        bool can_view = 1;
+        bool can_edit = 2;
+        bool can_set_group = 3;
+        bool can_create_feed_version = 4;
+        bool can_delete_feed_version = 5;
+    }
+    Actions actions = 3;
+}
+
+message FeedResponse {
+    Feed feed = 1;
+}
+
+message FeedListResponse {
+    repeated Feed feeds = 1;
+}
+
+message FeedSetGroupRequest {
+    int64 id = 1;
+    int64 group_id = 2;
+}
+
+
+message FeedSaveResponse {
+}
+
+//////
+
+message FeedVersion {
+    int64 id = 1;
+    string name = 2;
+    string sha1 = 3;
+    int64 feed_id = 4;
+}
+
+message FeedVersionListRequest{}
+
+message FeedVersionResponse {
+    FeedVersion feed_version = 1;
+}
+
+message FeedVersionRequest {
+    int64 id = 1;
+}
+
+message FeedVersionListResponse {
+    repeated FeedVersion feed_versions = 1;
+}
+
+message FeedVersionPermissionsResponse {
+    FeedVersion feed_version = 1;
+    Feed feed = 2;
+    Group group = 3;
+    message Actions {
+        bool can_view = 1;
+        bool can_edit_members = 2;
+        bool can_edit = 3;
+    }
+    Actions actions = 4;
+    message Users {
+        repeated EntityRelation editors = 1;
+        repeated EntityRelation viewers = 2;
+    }
+    Users users = 5;
+}
+
+message FeedVersionModifyPermissionRequest {
+    int64 id = 1;
+    EntityRelation entity_relation = 2;
+}
+
+message FeedVersionSaveResponse {
+}

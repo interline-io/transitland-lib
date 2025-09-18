@@ -1,8 +1,9 @@
 package rules
 
 import (
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/causes"
+	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // RouteExtendedTypesCheck reports a Best Practices warning when extended route_type values are used.
@@ -10,9 +11,9 @@ import (
 type RouteExtendedTypesCheck struct{}
 
 // Validate .
-func (e *RouteExtendedTypesCheck) Validate(ent tl.Entity) []error {
-	if v, ok := ent.(*tl.Route); ok {
-		if v.RouteType > 12 {
+func (e *RouteExtendedTypesCheck) Validate(ent tt.Entity) []error {
+	if v, ok := ent.(*gtfs.Route); ok {
+		if v.RouteType.Val > 12 {
 			return []error{causes.NewValidationWarning("route_type", "extended route_types not universally supported")}
 		}
 	}

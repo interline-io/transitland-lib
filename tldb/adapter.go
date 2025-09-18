@@ -1,19 +1,16 @@
 package tldb
 
 import (
+	"context"
 	"net/url"
 
-	sq "github.com/Masterminds/squirrel"
-	"github.com/jmoiron/sqlx"
+	sq "github.com/irees/squirrel"
 )
 
-var adapters = map[string]func(string) Adapter{}
+var adapterFactories = map[string]func(string) Adapter{}
 
-func min(a, b int) int {
-	if a <= b {
-		return a
-	}
-	return b
+func RegisterAdapter(name string, fn func(string) Adapter) {
+	adapterFactories[name] = fn
 }
 
 // newAdapter returns a Adapter for the given dburl.
@@ -22,7 +19,7 @@ func newAdapter(dburl string) Adapter {
 	if err != nil {
 		return nil
 	}
-	fn, ok := adapters[u.Scheme]
+	fn, ok := adapterFactories[u.Scheme]
 	if !ok {
 		return nil
 	}
@@ -34,14 +31,14 @@ type Adapter interface {
 	Open() error
 	Close() error
 	Create() error
-	DBX() sqlx.Ext
+	DBX() Ext
 	Tx(func(Adapter) error) error
 	Sqrl() sq.StatementBuilderType
 	TableExists(string) (bool, error)
-	Insert(interface{}) (int, error)
-	Update(interface{}, ...string) error
-	Find(interface{}) error
-	Get(interface{}, string, ...interface{}) error
-	Select(interface{}, string, ...interface{}) error
-	MultiInsert([]interface{}) ([]int, error)
+	Insert(context.Context, interface{}) (int, error)
+	Update(context.Context, interface{}, ...string) error
+	Find(context.Context, interface{}) error
+	Get(context.Context, interface{}, string, ...interface{}) error
+	Select(context.Context, interface{}, string, ...interface{}) error
+	MultiInsert(context.Context, []interface{}) ([]int, error)
 }

@@ -1,11 +1,13 @@
 package testutil
 
 import (
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // AllEntities iterates through all Reader entities, calling the specified callback.
-func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
+func AllEntities(reader adapters.Reader, cb func(tt.Entity)) {
 	for ent := range reader.Agencies() {
 		cb(&ent)
 	}
@@ -15,17 +17,17 @@ func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
 
 	// stops
 	for ent := range reader.Stops() {
-		if ent.LocationType == 1 {
+		if ent.LocationType.Val == 1 {
 			cb(&ent)
 		}
 	}
 	for ent := range reader.Stops() {
-		if ent.LocationType == 0 || ent.LocationType == 2 || ent.LocationType == 3 {
+		if ent.LocationType.Val == 0 || ent.LocationType.Val == 2 || ent.LocationType.Val == 3 {
 			cb(&ent)
 		}
 	}
 	for ent := range reader.Stops() {
-		if ent.LocationType == 4 {
+		if ent.LocationType.Val == 4 {
 			cb(&ent)
 		}
 	}
@@ -36,9 +38,11 @@ func AllEntities(reader tl.Reader, cb func(tl.Entity)) {
 	}
 
 	// services
-	svcs := tl.NewServicesFromReader(reader)
+	svcs := service.NewServicesFromReader(reader)
 	for _, svc := range svcs {
-		cb(svc)
+		cal := svc.Calendar
+		cal.CalendarDates = svc.CalendarDates()
+		cb(&cal)
 	}
 	for cd := range reader.CalendarDates() {
 		cb(&cd)

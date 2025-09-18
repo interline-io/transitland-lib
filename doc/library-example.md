@@ -6,8 +6,7 @@
 - Entity: An `Entity` is entity as specified by GTFS, such as an Agency, Route, Stop, etc.
 - Reader: A `Reader` provides streams of GTFS entities over channels. The `tlcsv` and `tldb` modules provide CSV and PostgreSQL/SQLite support, respectively.
 - Writer: A `Writer` accepts GTFS entities. As above, `tlcsv` and `tldb` provide basic implementations. Custom writers can also be used to support non-GTFS outputs, such as building a routing graph.
-- Copier: A `Copier` reads a stream of GTFS entities from a `Reader`, checks each entity against a `Marker`, performs validation, applies any specified `Filters`, and sends to a `Writer`.
-- Marker: A `Marker` selects which GTFS entities will be processed by a `Copier`. For example, selecting only entities related to a single trip or route.
+- Copier: A `Copier` reads a stream of GTFS entities from a `Reader`, performs validation, applies any specified `Filters`, and sends to a `Writer`.
 - Filter: A `Filter` applies transformations to GTFS entities, such as converting extended route types to basic values, or modifying entity identifiers.
 - Extension: An `Extension` provides support for additional types of GTFS entities.
 
@@ -34,9 +33,12 @@ import (
 	"github.com/interline-io/transitland-lib/tl"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+
+	// Import a driver
+	_ "github.com/interline-io/transitland-lib/tldb/tlsqlite"
 )
 
-var URL = "https://github.com/interline-io/transitland-lib/raw/master/test/data/external/bart.zip"
+var URL = "https://github.com/interline-io/transitland-lib/raw/master/testdata/gtfs-external/bart.zip"
 
 func TestExample1(t *testing.T) {
 	// Read stops from a GTFS url
@@ -58,7 +60,7 @@ func TestExample1(t *testing.T) {
 Database support is handled similary:
 
 ```go
-func getReader() tl.Reader {
+func getReader() adapters.Reader {
 	reader, _ := tlcsv.NewReader(URL)
 	return reader
 }
@@ -113,9 +115,9 @@ func TestExample3(t *testing.T) {
 		t.Fatalf("no writer available")
 	}
 	// Create a copier to stream, filter, and validate entities
-	cp := copier.NewCopier(reader, writer)
-	result := cp.Copy()
-	if result.WriteError != nil {
+	cp := copier.NewCopier(reader, writer, copier.Options{})
+	result, err := cp.Copy()
+	if err != nil {
 		t.Fatalf("fatal copy error")
 	}
 	for _, err := range result.Errors {

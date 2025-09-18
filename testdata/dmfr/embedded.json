@@ -1,0 +1,67 @@
+{
+    "$schema": "https://raw.githubusercontent.com/transitland/distributed-mobility-feed-registry/master/json-schema/dmfr.schema.json",
+    "feeds": [
+        {
+            "spec": "gtfs",
+            "id": "f-other~feed",
+            "urls": {}
+        },
+        {
+            "spec": "gtfs",
+            "id": "f-with~implicit",
+            "urls": {},
+            "operators": [
+                {
+                    "onestop_id": "o-with~implicit"
+                }
+            ]
+        },
+        {
+            "spec": "gtfs",
+            "id": "f-with~explicit",
+            "urls": {},
+            "operators": [
+                {
+                    "onestop_id": "o-with~explicit",
+                    "associated_feeds": [
+                        {
+                            "feed_onestop_id": "f-with~explicit"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "spec": "gtfs",
+            "id": "f-with~explicit~mixed",
+            "urls": {},
+            "operators": [
+                {
+                    "onestop_id": "o-test",
+                    "associated_feeds": [
+                        {
+                            "feed_onestop_id": "f-other~feed"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "spec": "gtfs",
+            "id": "f-test2"
+        }
+    ],
+    "operators": [
+        {
+            "onestop_id": "o-toplevel~nofeed"
+        },
+        {
+            "onestop_id": "o-toplevel~onefeed",
+            "associated_feeds": [
+                {
+                    "feed_onestop_id": "f-test2"
+                }
+            ]
+        }
+    ]
+}

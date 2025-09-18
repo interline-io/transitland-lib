@@ -3,7 +3,9 @@ package testutil
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // ReaderTester contains information about the number and types of identities expected in a Reader.
@@ -18,7 +20,7 @@ type ReaderTester struct {
 }
 
 // TestReader tests implementations of the Reader interface.
-func TestReader(t *testing.T, fe ReaderTester, newReader func() tl.Reader) {
+func TestReader(t *testing.T, fe ReaderTester, newReader func() adapters.Reader) {
 	reader := newReader()
 	if reader == nil {
 		t.Error("no reader")
@@ -37,10 +39,10 @@ func TestReader(t *testing.T, fe ReaderTester, newReader func() tl.Reader) {
 	})
 	t.Run("ReadEntities", func(t *testing.T) {
 		tripids := map[string]int{}
-		out := make(chan tl.StopTime, 1000)
+		out := make(chan gtfs.StopTime, 1000)
 		reader.ReadEntities(out)
 		for ent := range out {
-			tripids[ent.TripID]++
+			tripids[ent.TripID.Val]++
 		}
 		expect, ok := fe.Counts["stop_times.txt"]
 		if c := msisum(tripids); ok && c != expect {
@@ -54,7 +56,7 @@ func TestReader(t *testing.T, fe ReaderTester, newReader func() tl.Reader) {
 		tripids := map[string]int{}
 		for ents := range reader.StopTimesByTripID() {
 			for _, ent := range ents {
-				tripids[ent.TripID]++
+				tripids[ent.TripID.Val]++
 			}
 		}
 		expect, ok := fe.Counts["stop_times.txt"]
@@ -71,7 +73,7 @@ func TestReader(t *testing.T, fe ReaderTester, newReader func() tl.Reader) {
 }
 
 // TestWriter tests implementations of the Writer interface.
-func TestWriter(t testing.TB, fe ReaderTester, newReader func() tl.Reader, newWriter func() tl.Writer) {
+func TestWriter(t testing.TB, fe ReaderTester, newReader func() adapters.Reader, newWriter func() adapters.Writer) {
 	// Open writer
 	writer := newWriter()
 	if writer == nil {
@@ -118,9 +120,9 @@ type hasEntityKey interface {
 }
 
 // CheckReader tests a reader against the ReaderTest description of the expected entities.
-func CheckReader(t testing.TB, fe ReaderTester, reader tl.Reader) {
+func CheckReader(t testing.TB, fe ReaderTester, reader adapters.Reader) {
 	ids := map[string]map[string]int{}
-	add := func(ent tl.Entity) {
+	add := func(ent tt.Entity) {
 		m, ok := ids[ent.Filename()]
 		if !ok {
 			m = map[string]int{}
@@ -149,15 +151,9 @@ func CheckReader(t testing.TB, fe ReaderTester, reader tl.Reader) {
 	}
 }
 
-func getfn(ent tl.Entity) string {
-	return ent.Filename()
-}
-
 func msisum(m map[string]int) int {
 	count := 0
-	keys := []string{}
-	for k, v := range m {
-		keys = append(keys, k)
+	for _, v := range m {
 		count += v
 	}
 	return count

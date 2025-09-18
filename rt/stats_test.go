@@ -1,34 +1,33 @@
 package rt
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTripUpdateStats(t *testing.T) {
-	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
+	r, err := tlcsv.NewReader(testpath.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-trip-stats.json"))
+	msg, err := ReadFile(testpath.RelPath("testdata/rt/ct-trip-stats.json"))
 	if err != nil {
 		t.Error(err)
 	}
-	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
-	if err != nil {
+	ex := NewValidator()
+	cpOpts := copier.Options{}
+	cpOpts.AddExtension(ex)
+	if _, err := copier.CopyWithOptions(context.Background(), r, &empty.Writer{}, cpOpts); err != nil {
 		t.Fatal(err)
 	}
-	ex := NewValidator()
-	cp.AddExtension(ex)
-	result := cp.Copy()
-	_ = result
 
 	// Tuesday, Nov 7 2023 17:30:00
 	tz, _ := time.LoadLocation("America/Los_Angeles")
@@ -117,22 +116,20 @@ func TestTripUpdateStats(t *testing.T) {
 }
 
 func TestVehiclePositionStats(t *testing.T) {
-	r, err := tlcsv.NewReader(testutil.RelPath("test/data/rt/ct.zip"))
+	r, err := tlcsv.NewReader(testpath.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ReadFile(testutil.RelPath("test/data/rt/ct-vehicle-stats.json"))
+	msg, err := ReadFile(testpath.RelPath("testdata/rt/ct-vehicle-stats.json"))
 	if err != nil {
 		t.Error(err)
 	}
-	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
-	if err != nil {
+	ex := NewValidator()
+	cpOpts := copier.Options{}
+	cpOpts.AddExtension(ex)
+	if _, err := copier.CopyWithOptions(context.Background(), r, &empty.Writer{}, cpOpts); err != nil {
 		t.Fatal(err)
 	}
-	ex := NewValidator()
-	cp.AddExtension(ex)
-	result := cp.Copy()
-	_ = result
 
 	// Tuesday, Nov 7 2023 17:30:00
 	tz, _ := time.LoadLocation("America/Los_Angeles")

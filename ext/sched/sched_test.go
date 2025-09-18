@@ -1,12 +1,13 @@
 package sched
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,20 +18,16 @@ func newTestScheduleSchecker(path string) (*ScheduleChecker, error) {
 	if err != nil {
 		return nil, err
 	}
-	cp, err := copier.NewCopier(r, &empty.Writer{}, copier.Options{})
-	if err != nil {
-		return nil, err
-	}
-	cp.AddExtension(ex)
-	cpResult := cp.Copy()
-	if cpResult.WriteError != nil {
+	cpOpts := copier.Options{}
+	cpOpts.AddExtension(ex)
+	if _, err := copier.CopyWithOptions(context.Background(), r, &empty.Writer{}, cpOpts); err != nil {
 		return nil, err
 	}
 	return ex, nil
 }
 
 func TestScheduleChecker(t *testing.T) {
-	ex, err := newTestScheduleSchecker(testutil.RelPath("test/data/rt/ct.zip"))
+	ex, err := newTestScheduleSchecker(testpath.RelPath("testdata/rt/ct.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +60,7 @@ func TestScheduleChecker(t *testing.T) {
 			assert.ElementsMatch(t, tc.exp, stats)
 		})
 	}
-	freqEx, err := newTestScheduleSchecker(testutil.RelPath("test/data/example.zip"))
+	freqEx, err := newTestScheduleSchecker(testpath.RelPath("testdata/gtfs-examples/example.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,9 @@
 package filters
 
-import "github.com/interline-io/transitland-lib/tl"
+import (
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
+)
 
 // ApplyParentTimezoneFilter sets timezone based on the default agency timezone or parent stop timezone
 // Can be used with NormalizeTimezoneFilter
@@ -9,26 +12,26 @@ type ApplyParentTimezoneFilter struct {
 	parentStopTimezones   map[string]string
 }
 
-func (e *ApplyParentTimezoneFilter) Filter(ent tl.Entity, emap *tl.EntityMap) error {
+func (e *ApplyParentTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	// Remember filter happens before UpdateKeys or final ID available
 	switch v := ent.(type) {
-	case *tl.Agency:
+	case *gtfs.Agency:
 		if e.defaultAgencyTimezone == "" {
-			e.defaultAgencyTimezone = v.AgencyTimezone
+			e.defaultAgencyTimezone = v.AgencyTimezone.Val
 		}
-	case *tl.Stop:
-		if v.StopTimezone == "" {
+	case *gtfs.Stop:
+		if v.StopTimezone.Val == "" {
 			// Use default agency timezone, unless a parent station provided a timezone
-			v.StopTimezone = e.defaultAgencyTimezone
+			v.StopTimezone.Set(e.defaultAgencyTimezone)
 			if ptz, ok := e.parentStopTimezones[v.ParentStation.Val]; ok {
-				v.StopTimezone = ptz
+				v.StopTimezone.Set(ptz)
 			}
 		}
-		if v.LocationType == 1 {
+		if v.LocationType.Val == 1 {
 			if e.parentStopTimezones == nil {
 				e.parentStopTimezones = map[string]string{}
 			}
-			e.parentStopTimezones[v.StopID] = v.StopTimezone
+			e.parentStopTimezones[v.StopID.Val] = v.StopTimezone.Val
 		}
 	}
 	return nil

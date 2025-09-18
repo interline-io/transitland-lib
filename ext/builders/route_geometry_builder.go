@@ -1,27 +1,29 @@
 package builders
 
 import (
+	"context"
 	"errors"
 	"sort"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
 )
 
 type RouteGeometry struct {
 	RouteID               string
 	Generated             bool
-	Geometry              tl.LineString
-	CombinedGeometry      tl.Geometry
-	Length                tl.Float
-	MaxSegmentLength      tl.Float
-	FirstPointMaxDistance tl.Float
-	tl.MinEntity
-	tl.FeedVersionEntity
+	Geometry              tt.LineString
+	CombinedGeometry      tt.Geometry
+	Length                tt.Float
+	MaxSegmentLength      tt.Float
+	FirstPointMaxDistance tt.Float
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *RouteGeometry) Filename() string {
@@ -59,11 +61,11 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 }
 
 // Counts the number of times a shape is used for each route,direction_id
-func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Shape:
-		pts := make([]tlxy.Point, v.Geometry.NumCoords())
-		for i, c := range v.Geometry.Coords() {
+	case *service.ShapeLine:
+		pts := make([]tlxy.Point, v.Geometry.Val.NumCoords())
+		for i, c := range v.Geometry.Val.Coords() {
 			pts[i] = tlxy.Point{Lon: c[0], Lat: c[1]}
 		}
 		// If we've already seen this line, re-use shapeInfo to reduce mem usage
@@ -102,31 +104,32 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.E
 			FirstPointMaxDistance: firstPointMaxDistance,
 			Line:                  pts,
 		}
-	case *tl.Trip:
+	case *gtfs.Trip:
 		// shapeCounts is layered by: route id, direction id, shape id
 		if v.ShapeID.Valid {
-			if _, ok := pp.shapeCounts[v.RouteID]; !ok {
-				pp.shapeCounts[v.RouteID] = map[int]map[string]int{}
+			if _, ok := pp.shapeCounts[v.RouteID.Val]; !ok {
+				pp.shapeCounts[v.RouteID.Val] = map[int]map[string]int{}
 			}
-			if _, ok := pp.shapeCounts[v.RouteID][v.DirectionID]; !ok {
-				pp.shapeCounts[v.RouteID][v.DirectionID] = map[string]int{}
+			if _, ok := pp.shapeCounts[v.RouteID.Val][v.DirectionID.Int()]; !ok {
+				pp.shapeCounts[v.RouteID.Val][v.DirectionID.Int()] = map[string]int{}
 			}
-			pp.shapeCounts[v.RouteID][v.DirectionID][v.ShapeID.Val]++
+			pp.shapeCounts[v.RouteID.Val][v.DirectionID.Int()][v.ShapeID.Val]++
 		}
 	}
 	return nil
 }
 
 // Collects and assembles the default shapes and writes to the database
-func (pp *RouteGeometryBuilder) Copy(copier *copier.Copier) error {
+func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
+	ctx := context.TODO()
 	// Process shapes for each route
 	for rid := range pp.shapeCounts {
 		ent, err := pp.buildRouteShape(rid)
 		if err != nil {
-			log.Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
+			log.For(ctx).Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
 			continue
 		}
-		if _, err := copier.CopyEntity(ent); err != nil {
+		if err := copier.CopyEntity(ent); err != nil {
 			return err
 		}
 	}
@@ -227,15 +230,15 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// Set to max selected shape length
 		if si.Length >= ent.Length.Val {
-			ent.Length = tt.NewFloat(si.Length)
+			ent.Length.Set(si.Length)
 		}
 		// Set to max first point max distance
 		if si.FirstPointMaxDistance >= ent.FirstPointMaxDistance.Val {
-			ent.FirstPointMaxDistance = tt.NewFloat(si.FirstPointMaxDistance)
+			ent.FirstPointMaxDistance.Set(si.FirstPointMaxDistance)
 		}
 		// Set to max selected shape segment length
 		if si.MaxSegmentLength >= ent.MaxSegmentLength.Val {
-			ent.MaxSegmentLength = tt.NewFloat(si.MaxSegmentLength)
+			ent.MaxSegmentLength.Set(si.MaxSegmentLength)
 		}
 		// OK
 		matches = append(matches, si.Line)
@@ -256,18 +259,18 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// Most frequent shape
 		if i == 0 {
-			ent.Geometry = tl.LineString{LineString: *sl, Valid: true}
+			ent.Geometry = tt.NewLineString(sl)
 		}
 		// Add to MultiLineString
 		if err := g.Push(sl); err != nil {
-			// log.Debugf("failed to build route geometry: %s", err.Error())
+			// log.For(ctx).Debug().Msgf("failed to build route geometry: %s", err.Error())
 		}
 	}
 	if g.NumLineStrings() == 0 || len(matches) == 0 {
 		// Skip entity
 		return nil, errors.New("no geometries")
 	} else {
-		ent.CombinedGeometry = tl.Geometry{Geometry: g, Valid: true}
+		ent.CombinedGeometry = tt.NewGeometry(g)
 	}
 	return &ent, nil
 }

@@ -3,6 +3,7 @@ package builders
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
@@ -49,7 +50,7 @@ func TestConvexHullBuilder(t *testing.T) {
 			},
 		},
 		"TriMet-2Routes": {
-			testutil.RelPath("test/data/external/trimet-2routes.zip"),
+			testpath.RelPath("testdata/gtfs-external/trimet-2routes.zip"),
 			[]testcase{
 				{
 					FeedVersionGeometry: []float64{-122.567769, 45.435721, -122.671376, 45.493891, -122.698688, 45.530612, -122.696445, 45.531308, -122.621367, 45.532957, -122.578437, 45.533478, -122.563627, 45.530839, -122.563602, 45.530554, -122.563578, 45.530269, -122.567769, 45.435721},
@@ -63,14 +64,9 @@ func TestConvexHullBuilder(t *testing.T) {
 	}
 	for groupName, testGroup := range groups {
 		t.Run(groupName, func(t *testing.T) {
-			cp, writer, err := newMockCopier(testGroup.URL)
-			if err != nil {
-				t.Fatal(err)
-			}
 			e := NewConvexHullBuilder()
-			cp.AddExtension(e)
-			cpr := cp.Copy()
-			if cpr.WriteError != nil {
+			_, writer, err := newMockCopier(testGroup.URL, e)
+			if err != nil {
 				t.Fatal(err)
 			}
 			fvGeoms := []*FeedVersionGeometry{}

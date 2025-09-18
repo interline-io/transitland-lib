@@ -2,14 +2,14 @@ package tlcsv
 
 import (
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 )
 
 func getTestAdapters() map[string]func() Adapter {
@@ -110,7 +110,7 @@ func TestZipAdapterNestedTwoFeeds(t *testing.T) {
 
 func TestZipAdapter_findInternalPrefix(t *testing.T) {
 	t.Run("single", func(t *testing.T) {
-		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-dir.zip")}
+		v := ZipAdapter{path: testpath.RelPath("testdata/gtfs-examples/example-nested-dir.zip")}
 		if err := v.Open(); err != nil {
 			t.Error(err)
 			return
@@ -125,7 +125,7 @@ func TestZipAdapter_findInternalPrefix(t *testing.T) {
 		}
 	})
 	t.Run("findInternalPrefix ambiguous", func(t *testing.T) {
-		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-dir-ambiguous.zip")}
+		v := ZipAdapter{path: testpath.RelPath("testdata/gtfs-examples/example-nested-dir-ambiguous.zip")}
 		p, err := v.findInternalPrefix()
 		if err == nil {
 			t.Errorf("expected Open error for ambiguous prefixes")
@@ -141,7 +141,7 @@ func TestZipAdapter_findInternalPrefix(t *testing.T) {
 		}
 	})
 	t.Run("findInternalPrefix ambiguous with two complete feeds", func(t *testing.T) {
-		v := ZipAdapter{path: testutil.RelPath("test/data/example-nested-two-dirs.zip")}
+		v := ZipAdapter{path: testpath.RelPath("testdata/gtfs-examples/example-nested-two-dirs.zip")}
 		p, err := v.findInternalPrefix()
 		if err == nil {
 			t.Errorf("expected Open error for ambiguous prefixes")
@@ -169,7 +169,7 @@ func TestZipAdapterNestedZip(t *testing.T) {
 
 func TestURLAdapter(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testutil.ExampleZip.URL)
+		buf, err := os.ReadFile(testutil.ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}
@@ -202,7 +202,7 @@ func TestZipWriterAdapter(t *testing.T) {
 	// creates temporary shadow directory
 	// removes temporary shadow directory
 	// creates zip file when closed
-	outf, err := ioutil.TempFile("", "zip")
+	outf, err := os.CreateTemp("", "zip")
 	outpath := outf.Name()
 	defer os.Remove(outpath)
 	if err != nil {
@@ -275,13 +275,13 @@ func testAdapter(t *testing.T, adapter Adapter) {
 	})
 	t.Run("ReadRows", func(t *testing.T) {
 		// TODO: more tests
-		ent := tl.StopTime{}
+		ent := gtfs.StopTime{}
 		m := map[string]int{}
 		total := 0
 		adapter.ReadRows(ent.Filename(), func(row Row) {
-			e := tl.StopTime{}
+			e := gtfs.StopTime{}
 			loadRow(&e, row)
-			m[e.StopID]++
+			m[e.StopID.Val]++
 			total++
 		})
 		expect := map[string]int{"EMSI": 2, "BULLFROG": 4, "STAGECOACH": 3}

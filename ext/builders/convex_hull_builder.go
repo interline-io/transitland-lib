@@ -1,9 +1,9 @@
 package builders
 
 import (
-	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/tl"
-	"github.com/interline-io/transitland-lib/tl/tt"
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/xy"
 )
@@ -11,10 +11,10 @@ import (
 //////////
 
 type AgencyGeometry struct {
-	AgencyID tl.Key
-	Geometry tl.Polygon
-	tl.MinEntity
-	tl.FeedVersionEntity
+	AgencyID tt.Key
+	Geometry tt.Polygon
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *AgencyGeometry) Filename() string {
@@ -28,9 +28,9 @@ func (ent *AgencyGeometry) TableName() string {
 //////////
 
 type FeedVersionGeometry struct {
-	Geometry tl.Polygon
-	tl.MinEntity
-	tl.FeedVersionEntity
+	Geometry tt.Polygon
+	tt.MinEntity
+	tt.FeedVersionEntity
 }
 
 func (ent *FeedVersionGeometry) Filename() string {
@@ -58,37 +58,37 @@ func NewConvexHullBuilder() *ConvexHullBuilder {
 }
 
 // AfterWrite keeps track of which routes/agencies visit which stops
-func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tl.Entity, emap *tl.EntityMap) error {
+func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *tl.Stop:
+	case *gtfs.Stop:
 		pp.stops[eid] = &stopGeom{
 			lon: v.Geometry.X(),
 			lat: v.Geometry.Y(),
 		}
-	case *tl.Route:
+	case *gtfs.Route:
 		pp.routeStopGeoms[eid] = &routeStopGeoms{
-			agency:    v.AgencyID,
+			agency:    v.AgencyID.Val,
 			stopGeoms: map[string]*stopGeom{},
 		}
-	case *tl.Trip:
-		pp.tripRoutes[eid] = v.RouteID
-	case *tl.StopTime:
-		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID]]
+	case *gtfs.Trip:
+		pp.tripRoutes[eid] = v.RouteID.Val
+	case *gtfs.StopTime:
+		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
 		if !ok {
-			// log.Debugf("no route:", v.TripID, pp.tripRoutes[v.TripID])
+			// log.For(ctx).Debug().Msgf("no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
-		s, ok := pp.stops[v.StopID]
+		s, ok := pp.stops[v.StopID.Val]
 		if !ok {
-			// log.Debugf("no stop:", v.StopID)
+			// log.For(ctx).Debug().Msgf("no stop:", v.StopID)
 			return nil
 		}
-		r.stopGeoms[v.StopID] = s
+		r.stopGeoms[v.StopID.Val] = s
 	}
 	return nil
 }
 
-func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
+func (pp *ConvexHullBuilder) Copy(copier adapters.EntityCopier) error {
 	// build feed version convex hulls
 	fvStops := map[int][]*stopGeom{}
 	for _, sg := range pp.stops {
@@ -103,13 +103,13 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		ch := xy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
-			// log.Debugf("feed version convex hull is not polygon:", fvid)
+			// log.For(ctx).Debug().Msgf("feed version convex hull is not polygon:", fvid)
 			continue
 		}
 		ent := FeedVersionGeometry{
-			Geometry: tl.Polygon{Valid: true, Polygon: *v},
+			Geometry: tt.NewPolygon(v),
 		}
-		if _, err := copier.CopyEntity(&ent); err != nil {
+		if err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}
@@ -133,14 +133,14 @@ func (pp *ConvexHullBuilder) Copy(copier *copier.Copier) error {
 		ch := xy.ConvexHullFlat(geom.XY, coords)
 		v, ok := ch.(*geom.Polygon)
 		if !ok {
-			// log.Debugf("agency convex hull is not polygon:", aid)
+			// log.For(ctx).Debug().Msgf("agency convex hull is not polygon:", aid)
 			continue
 		}
 		ent := AgencyGeometry{
 			AgencyID: tt.NewKey(aid),
-			Geometry: tl.Polygon{Valid: true, Polygon: *v},
+			Geometry: tt.NewPolygon(v),
 		}
-		if _, err := copier.CopyEntity(&ent); err != nil {
+		if err := copier.CopyEntity(&ent); err != nil {
 			return err
 		}
 	}

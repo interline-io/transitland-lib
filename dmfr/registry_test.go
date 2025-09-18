@@ -2,25 +2,22 @@ package dmfr
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadAndParseRegistry_from_file(t *testing.T) {
-	parsedContents, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/example.json"))
+	parsedContents, err := LoadAndParseRegistry(testpath.RelPath("testdata/dmfr/example.json"))
 	if err != nil {
 		t.Error(err)
 	}
 	if len(parsedContents.Feeds) != 2 {
 		t.Error("didn't load all 2 feeds")
-	}
-	if parsedContents.LicenseSpdxIdentifier != "CC0-1.0" {
-		t.Error("LicenseSpdxIdentifier is not equal to 'CC0-1.0'")
 	}
 	if len(parsedContents.Operators) != 1 {
 		t.Errorf("got %d operators in feed, expected %d", len(parsedContents.Operators), 1)
@@ -28,7 +25,7 @@ func TestLoadAndParseRegistry_from_file(t *testing.T) {
 }
 
 func TestParseOperators(t *testing.T) {
-	parsedContents, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/example.json"))
+	parsedContents, err := LoadAndParseRegistry(testpath.RelPath("testdata/dmfr/example.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +50,7 @@ func TestParseOperators(t *testing.T) {
 
 func TestLoadAndParseRegistry_from_URL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := ioutil.ReadFile(testutil.RelPath("test/data/dmfr/example.json"))
+		buf, err := os.ReadFile(testpath.RelPath("testdata/dmfr/example.json"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -67,13 +64,10 @@ func TestLoadAndParseRegistry_from_URL(t *testing.T) {
 	if len(parsedContents.Feeds) != 2 {
 		t.Error("didn't load all 2 feeds")
 	}
-	if parsedContents.LicenseSpdxIdentifier != "CC0-1.0" {
-		t.Error("LicenseSpdxIdentifier is not equal to 'CC0-1.0'")
-	}
 }
 
 func TestLoadAndParseRegistry_Secrets(t *testing.T) {
-	parsedContents, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/secrets.json"))
+	parsedContents, err := LoadAndParseRegistry(testpath.RelPath("testdata/dmfr/secrets.json"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -83,7 +77,7 @@ func TestLoadAndParseRegistry_Secrets(t *testing.T) {
 }
 
 func TestImplicitOperatorInFeed(t *testing.T) {
-	reg, err := LoadAndParseRegistry(testutil.RelPath("test/data/dmfr/embedded.json"))
+	reg, err := LoadAndParseRegistry(testpath.RelPath("testdata/dmfr/embedded.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,17 +133,17 @@ func TestRegistry_Write(t *testing.T) {
 		{
 			"feed",
 			`{"feeds":[{"id":"test","spec":"gtfs"}]}`,
-			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.0.json","feeds":[{"id":"test","spec":"gtfs"}]}`,
+			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.6.0.json","feeds":[{"id":"test","spec":"gtfs"}]}`,
 		},
 		{
 			"feed sorted",
 			`{"feeds":[{"id":"z","spec":"gtfs"},{"id":"a","spec":"gtfs"}]}`,
-			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.0.json","feeds":[{"id":"a","spec":"gtfs"},{"id":"z","spec":"gtfs"}]}`,
+			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.6.0.json","feeds":[{"id":"a","spec":"gtfs"},{"id":"z","spec":"gtfs"}]}`,
 		},
 		{
 			"nested operators moved to top level",
 			`{"feeds": [{"id": "z","spec": "gtfs","operators": [{"onestop_id": "o"}]}]}`,
-			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.5.0.json","feeds":[{"id":"z","spec":"gtfs"}],"operators":[{"onestop_id":"o","associated_feeds":[{"feed_onestop_id":"z"}]}]}`,
+			`{"$schema":"https://dmfr.transit.land/json-schema/dmfr.schema-v0.6.0.json","feeds":[{"id":"z","spec":"gtfs"}],"operators":[{"onestop_id":"o","associated_feeds":[{"feed_onestop_id":"z"}]}]}`,
 		},
 	}
 	for _, tc := range tcs {

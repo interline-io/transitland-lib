@@ -1,2 +1,0 @@
-area_id,stop_id,expect_error
-missing,FTVL,InvalidReferenceError:area_id

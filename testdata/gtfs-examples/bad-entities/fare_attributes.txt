@@ -1,0 +1,15 @@
+fare_id,price,currency_type,payment_method,transfers,agency_id,transfer_duration,expect_error
+ok,2.0,USD,1,1,ok,600,
+special_case_empty_transfers,2.0,USD,1,,,,
+,2.0,USD,1,1,,,RequiredFieldError:fare_id
+no_price,,USD,1,1,,,RequiredFieldError:price
+no_currency_type,2.0,,1,1,,,RequiredFieldError:currency_type
+no_payment_method,2.0,USD,,1,,,RequiredFieldError:payment_method
+parse_price,xyz,USD,1,1,,,FieldParseError:price|RequiredFieldError:price
+parse_payment_method,2.0,USD,xyz,1,,,FieldParseError:payment_method|RequiredFieldError:payment_method
+invalid_price,-1,USD,1,1,,,InvalidFieldError:price
+invalid_payment_method,2.0,USD,2,1,,,InvalidFieldError:payment_method
+invalid_transfers,2.0,USD,1,3,,,InvalidFieldError:transfers
+parse_transfer_duration,2.0,USD,1,1,,xyz,FieldParseError:transfer_duration
+invalid_transfer_duration,2.0,USD,1,1,,-1,InvalidFieldError:transfer_duration
+invalid_currency_type,2.0,xyz,1,1,,,InvalidFieldError:currency_type

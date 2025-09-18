@@ -7,15 +7,15 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/tl"
+	"github.com/interline-io/transitland-lib/adapters"
 )
 
 // Extension defines two methods that specify the entities in an Extension and how to Create the necessary output structures, e.g. in a database.
 type Extension interface {
 }
 
-type readerFactory func(dburl string) (tl.Reader, error)
-type writerFactory func(dburl string) (tl.Writer, error)
+type readerFactory func(dburl string) (adapters.Reader, error)
+type writerFactory func(dburl string) (adapters.Writer, error)
 type extensionFactory func(string) (Extension, error)
 
 var readerFactories = map[string]readerFactory{}
@@ -31,7 +31,7 @@ func RegisterReader(name string, factory readerFactory) error {
 	if registered {
 		return fmt.Errorf("reader '%s' already registered", name)
 	}
-	log.Tracef("Registering reader: %s", name)
+	log.Tracef("registering reader: %s", name)
 	readerFactories[name] = factory
 	return nil
 }
@@ -45,7 +45,7 @@ func RegisterWriter(name string, factory writerFactory) error {
 	if registered {
 		return fmt.Errorf("writer '%s' already registered", name)
 	}
-	log.Tracef("Registering writer: %s", name)
+	log.Tracef("registering writer: %s", name)
 	writerFactories[name] = factory
 	return nil
 }
@@ -62,7 +62,7 @@ func RegisterExtension(name string, factory extensionFactory) error {
 }
 
 // NewReader uses the scheme prefix as the driver name, defaulting to csv.
-func NewReader(addr string) (tl.Reader, error) {
+func NewReader(addr string) (adapters.Reader, error) {
 	scheme := strings.Split(addr, "://")
 	driver := "csv"
 	if len(scheme) > 1 {
@@ -75,7 +75,7 @@ func NewReader(addr string) (tl.Reader, error) {
 }
 
 // OpenReader returns an opened reader.
-func OpenReader(addr string) (tl.Reader, error) {
+func OpenReader(addr string) (adapters.Reader, error) {
 	r, err := NewReader(addr)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func OpenReader(addr string) (tl.Reader, error) {
 }
 
 // NewWriter uses the scheme prefix as the driver name, defaulting to csv.
-func NewWriter(addr string) (tl.Writer, error) {
+func NewWriter(addr string) (adapters.Writer, error) {
 	scheme := strings.Split(addr, "://")
 	driver := "csv"
 	if len(scheme) > 1 {
@@ -100,7 +100,7 @@ func NewWriter(addr string) (tl.Writer, error) {
 }
 
 // OpenWriter returns an opened writer.
-func OpenWriter(addr string, create bool) (tl.Writer, error) {
+func OpenWriter(addr string, create bool) (adapters.Writer, error) {
 	w, err := NewWriter(addr)
 	if err != nil {
 		return nil, err

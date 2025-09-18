@@ -1,12 +1,11 @@
 package tlcsv
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/internal/testutil"
-	"github.com/interline-io/transitland-lib/tl"
 )
 
 func BenchmarkWriter(b *testing.B) {
@@ -14,7 +13,7 @@ func BenchmarkWriter(b *testing.B) {
 	for k, fe := range testutil.ExternalTestFeeds {
 		b.Run(k, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				tmpdir, err := ioutil.TempDir("", "gtfs")
+				tmpdir, err := os.MkdirTemp("", "gtfs")
 				if err != nil {
 					b.Error(err)
 					return
@@ -23,13 +22,13 @@ func BenchmarkWriter(b *testing.B) {
 				if err != nil {
 					b.Error(err)
 				}
-				testutil.TestWriter(b, fe, func() tl.Reader {
+				testutil.TestWriter(b, fe, func() adapters.Reader {
 					a, err := NewReader(fe.URL)
 					if err != nil {
 						b.Error(err)
 					}
 					return a
-				}, func() tl.Writer {
+				}, func() adapters.Writer {
 					return writer
 				})
 				// Clean up and double check

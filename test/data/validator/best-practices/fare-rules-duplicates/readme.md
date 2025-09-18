@@ -1,1 +1,0 @@
-This feed contains fare_rules.txt entries with duplicate values for (route_id,origin_id,destination_id,contains_id).

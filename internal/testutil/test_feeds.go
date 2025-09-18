@@ -1,15 +1,17 @@
 package testutil
 
+import "github.com/interline-io/transitland-lib/internal/testpath"
+
 // ExampleDir .
 var ExampleDir = ReaderTester{
-	URL: RelPath("test/data/example"),
+	URL: testpath.RelPath("testdata/gtfs-examples/example"),
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"routes.txt":          5,
 		"trips.txt":           11,
 		"stops.txt":           9,
 		"stop_times.txt":      28,
-		"shapes.txt":          3,
+		"shapes.txt":          9,
 		"calendar.txt":        3, // this will be 3 because the simple DirectCopy copier does not filter out generated entities
 		"calendar_dates.txt":  2,
 		"feed_info.txt":       1,
@@ -32,7 +34,7 @@ var ExampleDir = ReaderTester{
 
 // ExampleZip .
 var ExampleZip = ReaderTester{
-	URL:     RelPath("test/data/example.zip"),
+	URL:     testpath.RelPath("testdata/gtfs-examples/example.zip"),
 	SHA1:    "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8",
 	DirSHA1: "7a5c69b5466746213eb3cb6d907a7004073eca4d",
 	Size:    4197,
@@ -42,7 +44,7 @@ var ExampleZip = ReaderTester{
 		"trips.txt":           11,
 		"stops.txt":           9,
 		"stop_times.txt":      28,
-		"shapes.txt":          3,
+		"shapes.txt":          9,
 		"calendar.txt":        3, // 1 generated
 		"calendar_dates.txt":  2,
 		"feed_info.txt":       1,
@@ -64,25 +66,25 @@ var ExampleZip = ReaderTester{
 
 // ExampleZipNestedDir .
 var ExampleZipNestedDir = ReaderTester{
-	URL: RelPath("test/data/example-nested-dir.zip#example-nested-dir/example"),
+	URL: testpath.RelPath("testdata/gtfs-examples/example-nested-dir.zip#example-nested-dir/example"),
 }
 
 var ExampleZipNestedTwoFeeds1 = ReaderTester{
-	URL: RelPath("test/data/example-nested-two-feeds.zip#example1"),
+	URL: testpath.RelPath("testdata/gtfs-examples/example-nested-two-feeds.zip#example1"),
 }
 
 var ExampleZipNestedTwoFeeds2 = ReaderTester{
-	URL: RelPath("test/data/example-nested-two-feeds.zip#example2"),
+	URL: testpath.RelPath("testdata/gtfs-examples/example-nested-two-feeds.zip#example2"),
 }
 
 // ExampleZipNestedZip .
 var ExampleZipNestedZip = ReaderTester{
-	URL: RelPath("test/data/example-nested-zip.zip#example-nested-zip/example.zip"),
+	URL: testpath.RelPath("testdata/gtfs-examples/example-nested-zip.zip#example-nested-zip/example.zip"),
 }
 
 // ExampleFeedBART - BART test feed
 var ExampleFeedBART = ReaderTester{
-	URL: RelPath("test/data/external/bart.zip"),
+	URL: testpath.RelPath("testdata/gtfs-external/bart.zip"),
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"calendar.txt":        3,
@@ -91,7 +93,7 @@ var ExampleFeedBART = ReaderTester{
 		"fare_rules.txt":      2304,
 		"feed_info.txt":       1,
 		"routes.txt":          6,
-		"shapes.txt":          12,
+		"shapes.txt":          25074,
 		"stop_times.txt":      33167,
 		"stops.txt":           50,
 		"transfers.txt":       8,
@@ -139,7 +141,7 @@ var ExampleFeedBART = ReaderTester{
 
 // ExampleFeedCaltrain - Caltrain test feed
 var ExampleFeedCaltrain = ReaderTester{
-	URL: RelPath("test/data/external/caltrain.zip"),
+	URL: testpath.RelPath("testdata/gtfs-external/caltrain.zip"),
 	Counts: map[string]int{
 		"agency.txt":          1,
 		"calendar.txt":        27, // 3 - 24 generated
@@ -148,7 +150,7 @@ var ExampleFeedCaltrain = ReaderTester{
 		"fare_rules.txt":      216,
 		"feed_info.txt":       0,
 		"routes.txt":          6,
-		"shapes.txt":          8,
+		"shapes.txt":          3008,
 		"stop_times.txt":      2853,
 		"stops.txt":           64,
 		"transfers.txt":       0,
@@ -157,7 +159,7 @@ var ExampleFeedCaltrain = ReaderTester{
 
 // MBTA
 var ExampleFeedMBTA = ReaderTester{
-	URL: RelPath("test/data/external/mbta.zip"),
+	URL: testpath.RelPath("testdata/gtfs-external/mbta.zip"),
 	Counts: map[string]int{
 		"agency.txt":         2,
 		"calendar.txt":       122,
@@ -232,7 +234,7 @@ var ExampleFeedMBTA = ReaderTester{
 }
 
 var ExampleFeedCDMX = ReaderTester{
-	URL: RelPath("test/data/external/cdmx.zip"),
+	URL: testpath.RelPath("testdata/gtfs-external/cdmx.zip"),
 	Counts: map[string]int{
 		"agency.txt":      8,
 		"calendar.txt":    99,
