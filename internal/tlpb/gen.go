@@ -42,11 +42,11 @@ func (cmd *GenGtfsCommand) Parse(args []string) error {
 	return nil
 }
 
-func (cmd *GenGtfsCommand) Run() error {
+func (cmd *GenGtfsCommand) Run(ctx context.Context) error {
 	compiler := protocompile.Compiler{
 		Resolver: &protocompile.SourceResolver{},
 	}
-	files, err := compiler.Compile(context.Background(), cmd.Protopath)
+	files, err := compiler.Compile(ctx, cmd.Protopath)
 	if err != nil {
 		return err
 	}
