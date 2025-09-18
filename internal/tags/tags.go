@@ -107,7 +107,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			}
 			if optVal := fi.Field.Tag.Get("lt"); optVal != "" {
 				if optParse, err := strconv.ParseFloat(optVal, 64); err != nil {
-					logTag("lte", optVal, err)
+					logTag("lt", optVal, err)
 				} else {
 					mfi.LessThan = &optParse
 				}
