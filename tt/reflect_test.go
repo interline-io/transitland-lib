@@ -36,6 +36,81 @@ func TestReflectCheckErrors(t *testing.T) {
 		entErr := firstError(ReflectCheckErrors(&ent))
 		assert.Nil(t, entErr)
 	})
+	// GT
+	t.Run("gt ok", func(t *testing.T) {
+		ent := struct {
+			Value Float `gt:"0"`
+		}{Value: NewFloat(1)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.Nil(t, entErr)
+	})
+	t.Run("gt error", func(t *testing.T) {
+		ent := struct {
+			Value Float `gt:"0"`
+		}{Value: NewFloat(0)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.IsType(t, &causes.InvalidFieldError{}, entErr)
+	})
+	t.Run("gt error", func(t *testing.T) {
+		ent := struct {
+			Value Float `gt:"0"`
+		}{Value: NewFloat(-1)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.IsType(t, &causes.InvalidFieldError{}, entErr)
+	})
+	// GTE
+	t.Run("gte ok", func(t *testing.T) {
+		ent := struct {
+			Value Float `gte:"0"`
+		}{Value: NewFloat(0)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.Nil(t, entErr)
+	})
+	t.Run("gte error", func(t *testing.T) {
+		ent := struct {
+			Value Float `gte:"0"`
+		}{Value: NewFloat(-1)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.IsType(t, &causes.InvalidFieldError{}, entErr)
+	})
+	// LT
+	t.Run("lt ok", func(t *testing.T) {
+		ent := struct {
+			Value Float `lt:"0"`
+		}{Value: NewFloat(-1)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.Nil(t, entErr)
+	})
+	t.Run("lt error", func(t *testing.T) {
+		ent := struct {
+			Value Float `lt:"0"`
+		}{Value: NewFloat(0)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.IsType(t, &causes.InvalidFieldError{}, entErr)
+	})
+	t.Run("lt error", func(t *testing.T) {
+		ent := struct {
+			Value Float `lt:"0"`
+		}{Value: NewFloat(1)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.IsType(t, &causes.InvalidFieldError{}, entErr)
+	})
+	// LTE
+	t.Run("lte ok", func(t *testing.T) {
+		ent := struct {
+			Value Float `lte:"0"`
+		}{Value: NewFloat(0)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.Nil(t, entErr)
+	})
+	t.Run("lte error", func(t *testing.T) {
+		ent := struct {
+			Value Float `lte:"0"`
+		}{Value: NewFloat(1)}
+		entErr := firstError(ReflectCheckErrors(&ent))
+		assert.IsType(t, &causes.InvalidFieldError{}, entErr)
+	})
+	// Range
 	t.Run("range min error", func(t *testing.T) {
 		ent := struct {
 			Value Float `range:"0,"`

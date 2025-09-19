@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/querylogger"
+	sq "github.com/irees/squirrel"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"

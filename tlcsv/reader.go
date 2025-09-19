@@ -69,7 +69,7 @@ func (reader *Reader) ValidateStructure() []error {
 	}
 	// Check if these files contain valid headers
 	// TODO: An error in the header should also stop a file from being opened for further CSV reading.
-	check := func(ent tt.Entity) []error {
+	check := func(ent tt.Entity, rowsRequired bool) []error {
 		fileerrs := []error{}
 		efn := ent.Filename()
 		err := reader.Adapter.OpenFile(efn, func(in io.Reader) {
@@ -86,7 +86,7 @@ func (reader *Reader) ValidateStructure() []error {
 				fileerrs = append(fileerrs, causes.NewFileUnreadableError(efn, readerr))
 				return
 			}
-			if rowcount == 0 {
+			if rowcount == 0 && rowsRequired {
 				fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
 				return
 			}
@@ -126,15 +126,15 @@ func (reader *Reader) ValidateStructure() []error {
 		}
 		return fileerrs
 	}
-	allerrs = append(allerrs, check(&gtfs.Stop{})...)
-	allerrs = append(allerrs, check(&gtfs.Route{})...)
-	allerrs = append(allerrs, check(&gtfs.Agency{})...)
-	allerrs = append(allerrs, check(&gtfs.Trip{})...)
-	allerrs = append(allerrs, check(&gtfs.StopTime{})...)
+	allerrs = append(allerrs, check(&gtfs.Stop{}, false)...)
+	allerrs = append(allerrs, check(&gtfs.Route{}, true)...)
+	allerrs = append(allerrs, check(&gtfs.Agency{}, true)...)
+	allerrs = append(allerrs, check(&gtfs.Trip{}, true)...)
+	allerrs = append(allerrs, check(&gtfs.StopTime{}, true)...)
 	cal := gtfs.Calendar{}
 	cd := gtfs.CalendarDate{}
-	calerrs := check(&cal)
-	cderrs := check(&cd)
+	calerrs := check(&cal, true)
+	cderrs := check(&cd, true)
 	if reader.ContainsFile(cal.Filename()) && reader.ContainsFile(cd.Filename()) {
 		if len(calerrs) > 0 && len(cderrs) > 0 {
 			allerrs = append(allerrs, calerrs...)

@@ -1,0 +1,39 @@
+{
+    "header": {
+        "gtfs_realtime_version": "1.0",
+        "incrementality": 0,
+        "timestamp": 1527719250
+    },
+    "entity": [
+        {
+            "id": "1031527WKDY",
+            "trip_update": {
+                "trip": {
+                    "trip_id": "1031527WKDY",
+                    "route_id": "05",
+                    "schedule_relationship": 0
+                },
+                "stop_time_update": [
+                    {
+                        "stop_sequence": 10,
+                        "stop_id": "WOAK",
+                        "departure": {
+                            "delay": 30,
+                            "uncertainty": 30,
+                            "time": 1527720810
+                        }
+                    },
+                    {
+                        "stop_sequence": 11,
+                        "stop_id": "LAKE",
+                        "departure": {
+                            "delay": 45,
+                            "uncertainty": 30,
+                            "time": 1527721110
+                        }
+                    }
+               ]
+            }
+        }
+    ]
+}

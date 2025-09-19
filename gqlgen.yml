@@ -1,0 +1,286 @@
+# Where are all the schema files located? globs are supported eg  src/**/*.graphqls
+schema:
+  - "schema/graphql/*.graphqls"
+
+# Where should the generated server code go?
+exec:
+  filename: internal/generated/gqlout/generated.go
+  package: gqlout
+
+# Where should any generated models go?
+model:
+  filename: server/model/models_gen.go
+  package: model
+
+# Where should the resolver implementations go?
+resolver:
+  layout: follow-schema
+  package: resolvers
+  filename_template: "{name}.gql.go"
+
+# struct_fields_always_pointers: false
+# resolvers_always_return_pointers: false
+# omit_slice_element_pointers: false
+
+autobind:
+  - "github.com/interline-io/transitland-lib/server/model"
+
+models:
+  String:
+    model:
+      - "github.com/99designs/gqlgen/graphql.String"
+      - "github.com/interline-io/transitland-lib/tt.String"
+  Time:
+    model:
+      - "github.com/99designs/gqlgen/graphql.Time"
+      - "github.com/interline-io/transitland-lib/tt.Time"
+  Int:
+    model:
+      - "github.com/99designs/gqlgen/graphql.Int"
+      - "github.com/99designs/gqlgen/graphql.Int64"
+      - "github.com/99designs/gqlgen/graphql.Int32"
+      - "github.com/interline-io/transitland-lib/tt.Int"
+  Float:
+    model:
+      - "github.com/99designs/gqlgen/graphql.Float"
+      - "github.com/interline-io/transitland-lib/tt.Float"
+  Boolean:
+    model:     
+      - "github.com/99designs/gqlgen/graphql.Boolean"
+      - "github.com/interline-io/transitland-lib/tt.Bool"      
+  TimeInput:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Time"
+  StringInput:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.String"      
+  IntInput:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Input"
+  FloatInput:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Float"
+  Bool:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Bool"
+  Key:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Key"
+  Strings:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Strings"
+  Counts:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Counts"
+  Tags:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Tags"
+  Polygon:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Polygon"
+  MultiPolygon:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.MultiPolygon"
+  LineString:
+    model:
+      - "github.com/interline-io/transitland-lib/tt.LineString"
+  Point:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Point"
+  Seconds:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Seconds"
+  Geometry:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Geometry"    
+  Date:
+    model:
+      - "github.com/interline-io/transitland-lib/tt.Date"
+  Map:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Map"
+  Color:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Color"      
+  Url:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Url" 
+  Email:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Email"      
+  Language:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Language"      
+  Currency:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.Currency"      
+  CurrencyAmount:
+    model: 
+      - "github.com/interline-io/transitland-lib/tt.CurrencyAmount"      
+  Timezone:
+    model:
+      - "github.com/interline-io/transitland-lib/tt.Timezone"
+  Feed:       
+    fields:
+      onestop_id:
+        fieldName: FeedID
+  # Force resolvers
+  StopObservation:
+    extraFields:
+      StopID:
+        type: int
+  RouteStop:
+    fields:
+      route:
+        resolver: true
+      stop:
+        resolver: true
+      agency:
+        resolver: true
+  FeedVersionServiceWindow:
+    extraFields:
+      FeedVersionID:
+        type: int
+  RouteHeadway:
+    fields:
+      stop:
+        resolver: true
+      departures:
+        resolver: true
+        fieldName: DeparturesUnused
+    extraFields:
+      DepartureInts:
+        type: "github.com/interline-io/transitland-lib/tt.Ints"
+        overrideTags: db:"departures"
+      RouteID:
+        type: int
+      SelectedStopID:
+        type: int
+  RouteStopPattern:
+    fields:
+      trips:
+        resolver: true
+    extraFields:
+      RouteID:
+        type: int
+  RouteGeometry:
+    extraFields:
+      RouteID:
+        type: int
+  AgencyPlace:
+    extraFields:
+      AgencyID:
+        type: int
+  RouteAttribute:
+    extraFields:
+      RouteID:
+        type: int
+  Segment:
+    fields:
+      segment_patterns:
+        resolver: true
+    extraFields:
+      WithRouteID: 
+        type: int
+      FeedVersionID:
+        type: int
+  SegmentPattern:
+    fields:
+      segment:
+        resolver: true
+      route:
+        resolver: true
+    extraFields:
+      RouteID:
+        type: int
+      SegmentID:
+        type: int
+  Place:
+    fields:
+      count:
+        resolver: true
+      operators:
+        resolver: true
+    extraFields:
+      AgencyIDs:
+        type: "github.com/interline-io/transitland-lib/tt.Ints"
+        overrideTags: db:"agency_ids"
+  ValidationReport:
+    extraFields:
+      FeedVersionID:
+        type: int
+  ValidationReportErrorGroup:        
+    extraFields:
+      ID:
+        type: int
+      ValidationReportID:
+        type: int
+  ValidationReportError:
+    extraFields:
+      ID:
+        type: int
+      ValidationReportErrorGroupID:
+        type: int
+  CensusDataset:
+    fields:
+      sources:
+        resolver: true
+      geographies:
+        resolver: true
+      tables:
+        resolver: true
+      layers:
+        resolver: true
+  CensusLayer:
+    fields:
+      geographies:
+        resolver: true
+    extraFields:
+      DatasetID:
+        type: int
+  CensusSource:
+    fields:
+      layers:
+        resolver: true
+      geographies:
+        resolver: true
+    extraFields:
+      DatasetID:
+        type: int
+  CensusGeography:
+    fields:
+      values:
+        resolver: true
+      layer:
+        resolver: true
+      source:
+        resolver: true
+    extraFields:
+      DatasetID:
+        type: int
+      LayerID:
+        type: int
+      SourceID:
+        type: int
+      MatchEntityID:
+        type: int      
+  CensusValue:
+    fields:
+      table:
+        resolver: true
+    extraFields:
+      GeographyID:
+        type: int
+      TableID:
+        type: int
+  CensusTable:
+    fields:
+      fields:
+        resolver: true
+    extraFields:
+      DatasetID:
+        type: int
+  CensusField:
+    extraFields:
+      TableID: 
+        type: int

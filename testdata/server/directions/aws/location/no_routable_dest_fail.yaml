@@ -1,0 +1,15 @@
+---
+version: 1
+interactions:
+    - request:
+        body: '{"DeparturePosition":[-122.401001,37.789001],"DestinationPosition":[-123.54949951171876,37.703380457832374],"DistanceUnit":"Kilometers","IncludeLegGeometry":true,"TravelMode":"Walking"}'
+        form: {}
+        headers: {}
+        url: directions://aws
+        method: POST
+      response:
+        body: '{"message":"Some positions in the request are unreachable","reason":"Other","fieldList":null}'
+        headers: {}
+        status: 400 Bad Request
+        code: 400
+        duration: 668.296167ms
