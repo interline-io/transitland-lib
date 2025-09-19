@@ -26,6 +26,7 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/querylogger"
 
+	"github.com/interline-io/transitland-lib/server/finders/actions"
 	"github.com/interline-io/transitland-lib/server/finders/dbfinder"
 	"github.com/interline-io/transitland-lib/server/finders/gbfsfinder"
 	"github.com/interline-io/transitland-lib/server/finders/rtfinder"
@@ -151,11 +152,14 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		gbfsFinder = gbfsfinder.NewFinder(nil)
 	}
 
+	var actionFinder model.Actions = &actions.Actions{}
+
 	// Setup config
 	cfg := model.Config{
 		Finder:                  dbFinder,
 		RTFinder:                rtFinder,
 		GbfsFinder:              gbfsFinder,
+		Actions:                 actionFinder,
 		Secrets:                 cmd.secrets,
 		Storage:                 cmd.Storage,
 		RTStorage:               cmd.RTStorage,
