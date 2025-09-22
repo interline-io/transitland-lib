@@ -11,9 +11,9 @@ func TestTripResolver(t *testing.T) {
 	testcases := []testcase{
 		{
 			name:   "basic fields",
-			query:  `query($trip_id: String!) {  trips(where:{trip_id:$trip_id}) {trip_id trip_headsign trip_short_name direction_id block_id wheelchair_accessible bikes_allowed stop_pattern_id }}`,
+			query:  `query($trip_id: String!) {  trips(where:{trip_id:$trip_id}) {trip_id trip_headsign trip_short_name direction_id block_id wheelchair_accessible bikes_allowed cars_allowed stop_pattern_id }}`,
 			vars:   vars,
-			expect: `{"trips":[{"bikes_allowed":1,"block_id":null,"direction_id":1,"stop_pattern_id":21,"trip_headsign":"Antioch","trip_id":"3850526WKDY","trip_short_name":null,"wheelchair_accessible":1}]}`,
+			expect: `{"trips":[{"bikes_allowed":1,"block_id":null,"cars_allowed":null,"direction_id":1,"stop_pattern_id":21,"trip_headsign":"Antioch","trip_id":"3850526WKDY","trip_short_name":null,"wheelchair_accessible":1}]}`,
 		},
 		{
 			name:   "calendar",

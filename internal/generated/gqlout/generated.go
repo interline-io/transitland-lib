@@ -1058,6 +1058,7 @@ type ComplexityRoot struct {
 		BikesAllowed         func(childComplexity int) int
 		BlockID              func(childComplexity int) int
 		Calendar             func(childComplexity int) int
+		CarsAllowed          func(childComplexity int) int
 		DirectionID          func(childComplexity int) int
 		FeedVersion          func(childComplexity int) int
 		Frequencies          func(childComplexity int, limit *int) int
@@ -6769,6 +6770,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Trip.Calendar(childComplexity), true
 
+	case "Trip.cars_allowed":
+		if e.complexity.Trip.CarsAllowed == nil {
+			break
+		}
+
+		return e.complexity.Trip.CarsAllowed(childComplexity), true
+
 	case "Trip.direction_id":
 		if e.complexity.Trip.DirectionID == nil {
 			break
@@ -8672,6 +8680,8 @@ type Trip {
   wheelchair_accessible: Int
   "GTFS trips.bikes_allowed"
   bikes_allowed: Int
+  "GTFS trips.cars_allowed"
+  cars_allowed: Int
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
   "Calendar for this trip"
@@ -21161,6 +21171,8 @@ func (ec *executionContext) fieldContext_FeedVersion_trips(ctx context.Context, 
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "cars_allowed":
+				return ec.fieldContext_Trip_cars_allowed(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -36772,6 +36784,8 @@ func (ec *executionContext) fieldContext_Query_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "cars_allowed":
+				return ec.fieldContext_Trip_cars_allowed(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -38918,6 +38932,8 @@ func (ec *executionContext) fieldContext_Route_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "cars_allowed":
+				return ec.fieldContext_Trip_cars_allowed(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -41229,6 +41245,8 @@ func (ec *executionContext) fieldContext_RouteStopPattern_trips(ctx context.Cont
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "cars_allowed":
+				return ec.fieldContext_Trip_cars_allowed(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -46181,6 +46199,8 @@ func (ec *executionContext) fieldContext_StopTime_trip(_ context.Context, field 
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "cars_allowed":
+				return ec.fieldContext_Trip_cars_allowed(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -47378,6 +47398,47 @@ func (ec *executionContext) _Trip_bikes_allowed(ctx context.Context, field graph
 }
 
 func (ec *executionContext) fieldContext_Trip_bikes_allowed(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Trip",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Trip_cars_allowed(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Trip_cars_allowed(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CarsAllowed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Trip_cars_allowed(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Trip",
 		Field:      field,
@@ -64938,6 +64999,8 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._Trip_wheelchair_accessible(ctx, field, obj)
 		case "bikes_allowed":
 			out.Values[i] = ec._Trip_bikes_allowed(ctx, field, obj)
+		case "cars_allowed":
+			out.Values[i] = ec._Trip_cars_allowed(ctx, field, obj)
 		case "stop_pattern_id":
 			out.Values[i] = ec._Trip_stop_pattern_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
