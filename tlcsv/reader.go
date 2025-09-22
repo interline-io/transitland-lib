@@ -426,6 +426,10 @@ func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
 	return ReadEntities[gtfs.RouteNetwork](reader, getFilename(&gtfs.RouteNetwork{}))
 }
 
+func (reader *Reader) FareLegJoinRules() (out chan gtfs.FareLegJoinRule) {
+	return ReadEntities[gtfs.FareLegJoinRule](reader, getFilename(&gtfs.FareLegJoinRule{}))
+}
+
 func ReadEntities[T any](reader *Reader, efn string) chan T {
 	eout := make(chan T, bufferSize)
 	go func(fn string, c chan T) {

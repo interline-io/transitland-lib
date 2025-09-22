@@ -727,6 +727,19 @@ CREATE TABLE gtfs_route_networks (
   foreign key(route_id) REFERENCES gtfs_routes(id)
 );
 
+CREATE TABLE gtfs_fare_leg_join_rules (
+  "id" integer primary key autoincrement,
+  "feed_version_id" int not null,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  --- interline extensions
+  from_network_id varchar(255),
+  to_network_id varchar(255),
+  from_stop_id varchar(255),
+  to_stop_id varchar(255),
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
+);
+
 CREATE TABLE tl_validation_reports (
   "id" integer primary key autoincrement,
   "feed_version_id" int not null,

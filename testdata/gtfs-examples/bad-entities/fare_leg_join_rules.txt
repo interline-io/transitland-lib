@@ -1,0 +1,7 @@
+from_network_id,to_network_id,from_stop_id,to_stop_id,expect_error
+ok,ok,ok,ok,
+,ok,ok,ok,RequiredFieldError:from_network_id
+ok,,ok,ok,RequiredFieldError:to_network_id
+ok,ok,,ok,
+ok,ok,ok,,
+ok,ok,ok,ok,
