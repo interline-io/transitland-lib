@@ -139,6 +139,10 @@ func (mr *Reader) RiderCategories() chan gtfs.RiderCategory {
 	return readNullEntities[gtfs.RiderCategory](mr)
 }
 
+func (mr *Reader) FareLegJoinRules() chan gtfs.FareLegJoinRule {
+	return readNullEntities[gtfs.FareLegJoinRule](mr)
+}
+
 func readNullEntities[T any](reader *Reader) chan T {
 	out := make(chan T, bufferSize)
 	go func() {
