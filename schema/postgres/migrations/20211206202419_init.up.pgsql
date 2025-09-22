@@ -1040,7 +1040,6 @@ CREATE TABLE public.gtfs_trips (
     block_id character varying NOT NULL,
     wheelchair_accessible integer NOT NULL,
     bikes_allowed integer NOT NULL,
-    cars_allowed integer NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     feed_version_id bigint NOT NULL,
