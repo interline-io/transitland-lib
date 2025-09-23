@@ -53,7 +53,7 @@ func (r *queryResolver) Agencies(ctx context.Context, limit *int, after *int, id
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindAgencies(ctx, checkLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindAgencies(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
 }
 
 func (r *queryResolver) Routes(ctx context.Context, limit *int, after *int, ids []int, where *model.RouteFilter) ([]*model.Route, error) {
@@ -64,7 +64,7 @@ func (r *queryResolver) Routes(ctx context.Context, limit *int, after *int, ids 
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindRoutes(ctx, checkLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindRoutes(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
 }
 
 func (r *queryResolver) Stops(ctx context.Context, limit *int, after *int, ids []int, where *model.StopFilter) ([]*model.Stop, error) {
@@ -75,13 +75,13 @@ func (r *queryResolver) Stops(ctx context.Context, limit *int, after *int, ids [
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindStops(ctx, checkLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindStops(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
 }
 
 func (r *queryResolver) Trips(ctx context.Context, limit *int, after *int, ids []int, where *model.TripFilter) ([]*model.Trip, error) {
 	cfg := model.ForContext(ctx)
 	ctx = addMetric(ctx, "trips")
-	return cfg.Finder.FindTrips(ctx, checkLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindTrips(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
 }
 
 func (r *queryResolver) FeedVersions(ctx context.Context, limit *int, after *int, ids []int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error) {
@@ -92,7 +92,7 @@ func (r *queryResolver) FeedVersions(ctx context.Context, limit *int, after *int
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindFeedVersions(ctx, checkLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindFeedVersions(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
 }
 
 func (r *queryResolver) Feeds(ctx context.Context, limit *int, after *int, ids []int, where *model.FeedFilter) ([]*model.Feed, error) {
@@ -103,7 +103,7 @@ func (r *queryResolver) Feeds(ctx context.Context, limit *int, after *int, ids [
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindFeeds(ctx, checkLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindFeeds(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
 }
 
 func (r *queryResolver) Operators(ctx context.Context, limit *int, after *int, ids []int, where *model.OperatorFilter) ([]*model.Operator, error) {
@@ -114,15 +114,15 @@ func (r *queryResolver) Operators(ctx context.Context, limit *int, after *int, i
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindOperators(ctx, checkLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindOperators(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
 }
 
 func (r *queryResolver) Places(ctx context.Context, limit *int, after *int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) ([]*model.Place, error) {
 	cfg := model.ForContext(ctx)
-	return cfg.Finder.FindPlaces(ctx, checkLimit(limit), checkCursor(after), nil, level, where)
+	return cfg.Finder.FindPlaces(ctx, resolverCheckLimit(limit), checkCursor(after), nil, level, where)
 }
 
 func (r *queryResolver) CensusDatasets(ctx context.Context, limit *int, after *int, ids []int, where *model.CensusDatasetFilter) ([]*model.CensusDataset, error) {
 	cfg := model.ForContext(ctx)
-	return cfg.Finder.FindCensusDatasets(ctx, checkLimit(limit), checkCursor(after), nil, where)
+	return cfg.Finder.FindCensusDatasets(ctx, resolverCheckLimit(limit), checkCursor(after), nil, where)
 }

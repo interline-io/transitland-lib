@@ -45,7 +45,7 @@ func (r *stopResolver) Parent(ctx context.Context, obj *model.Stop) (*model.Stop
 }
 
 func (r *stopResolver) Children(ctx context.Context, obj *model.Stop, limit *int) ([]*model.Stop, error) {
-	return LoaderFor(ctx).StopsByParentStopIDs.Load(ctx, stopLoaderParam{ParentStopID: obj.ID, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).StopsByParentStopIDs.Load(ctx, stopLoaderParam{ParentStopID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *stopResolver) Place(ctx context.Context, obj *model.Stop) (*model.StopPlace, error) {
@@ -54,15 +54,15 @@ func (r *stopResolver) Place(ctx context.Context, obj *model.Stop) (*model.StopP
 }
 
 func (r *stopResolver) RouteStops(ctx context.Context, obj *model.Stop, limit *int) ([]*model.RouteStop, error) {
-	return LoaderFor(ctx).RouteStopsByStopIDs.Load(ctx, routeStopLoaderParam{StopID: obj.ID, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).RouteStopsByStopIDs.Load(ctx, routeStopLoaderParam{StopID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *stopResolver) PathwaysFromStop(ctx context.Context, obj *model.Stop, limit *int) ([]*model.Pathway, error) {
-	return LoaderFor(ctx).PathwaysByFromStopIDs.Load(ctx, pathwayLoaderParam{FromStopID: obj.ID, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).PathwaysByFromStopIDs.Load(ctx, pathwayLoaderParam{FromStopID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *stopResolver) PathwaysToStop(ctx context.Context, obj *model.Stop, limit *int) ([]*model.Pathway, error) {
-	return LoaderFor(ctx).PathwaysByToStopID.Load(ctx, pathwayLoaderParam{ToStopID: obj.ID, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).PathwaysByToStopID.Load(ctx, pathwayLoaderParam{ToStopID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *stopResolver) ExternalReference(ctx context.Context, obj *model.Stop) (*model.StopExternalReference, error) {
@@ -70,7 +70,7 @@ func (r *stopResolver) ExternalReference(ctx context.Context, obj *model.Stop) (
 }
 
 func (r *stopResolver) Observations(ctx context.Context, obj *model.Stop, limit *int, where *model.StopObservationFilter) ([]*model.StopObservation, error) {
-	return LoaderFor(ctx).StopObservationsByStopIDs.Load(ctx, stopObservationLoaderParam{StopID: obj.ID, Where: where, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).StopObservationsByStopIDs.Load(ctx, stopObservationLoaderParam{StopID: obj.ID, Where: where, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *stopResolver) Departures(ctx context.Context, obj *model.Stop, limit *int, where *model.StopTimeFilter) ([]*model.StopTime, error) {
@@ -99,7 +99,7 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 	sts, err := (LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
 		StopID:        obj.ID,
 		FeedVersionID: obj.FeedVersionID,
-		Limit:         checkLimit(limit),
+		Limit:         resolverCheckLimit(limit),
 		Where:         where,
 	})())
 	if err != nil {
@@ -153,7 +153,7 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 }
 
 func (r *stopResolver) Alerts(ctx context.Context, obj *model.Stop, active *bool, limit *int) ([]*model.Alert, error) {
-	rtAlerts := model.ForContext(ctx).RTFinder.FindAlertsForStop(ctx, obj, checkLimit(limit), active)
+	rtAlerts := model.ForContext(ctx).RTFinder.FindAlertsForStop(ctx, obj, resolverCheckLimit(limit), active)
 	return rtAlerts, nil
 }
 
@@ -181,7 +181,7 @@ func (r *stopResolver) Directions(ctx context.Context, obj *model.Stop, from *mo
 func (r *stopResolver) NearbyStops(ctx context.Context, obj *model.Stop, limit *int, radius *float64) ([]*model.Stop, error) {
 	cfg := model.ForContext(ctx)
 	c := obj.Coordinates()
-	nearbyStops, err := model.ForContext(ctx).Finder.FindStops(ctx, checkLimit(limit), nil, nil, &model.StopFilter{Near: &model.PointRadius{Lon: c[0], Lat: c[1], Radius: checkFloat(radius, 0, cfg.MaxRadius)}})
+	nearbyStops, err := model.ForContext(ctx).Finder.FindStops(ctx, resolverCheckLimit(limit), nil, nil, &model.StopFilter{Near: &model.PointRadius{Lon: c[0], Lat: c[1], Radius: checkFloat(radius, 0, cfg.MaxRadius)}})
 	return nearbyStops, err
 }
 
