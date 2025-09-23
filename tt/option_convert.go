@@ -156,9 +156,17 @@ func convertAssign(dest any, src any) (bool, error) {
 	case *int:
 		switch s := src.(type) {
 		case string:
-			*d, err = strconv.Atoi(s)
+			if a, err := strconv.ParseFloat(s, 64); err != nil {
+				return false, err
+			} else {
+				*d = int(a)
+			}
 		case []byte:
-			*d, err = strconv.Atoi(string(s))
+			if a, err := strconv.ParseFloat(string(s), 64); err != nil {
+				return false, err
+			} else {
+				*d = int(a)
+			}
 		case int:
 			*d = int(s)
 		case int64:
@@ -173,9 +181,17 @@ func convertAssign(dest any, src any) (bool, error) {
 	case *int64:
 		switch s := src.(type) {
 		case string:
-			*d, err = strconv.ParseInt(s, 10, 64)
+			if a, err := strconv.ParseFloat(s, 64); err != nil {
+				return false, err
+			} else {
+				*d = int64(a)
+			}
 		case []byte:
-			*d, err = strconv.ParseInt(string(s), 10, 64)
+			if a, err := strconv.ParseFloat(string(s), 64); err != nil {
+				return false, err
+			} else {
+				*d = int64(a)
+			}
 		case int:
 			*d = int64(s)
 		case int64:

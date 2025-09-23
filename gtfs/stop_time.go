@@ -2,7 +2,6 @@ package gtfs
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
@@ -135,58 +134,32 @@ func (ent *StopTime) SetString(key, value string) error {
 			ent.DepartureTime = s
 		}
 	case "stop_sequence":
-		if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.StopSequence.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("stop_sequence", hi)
-		} else {
-			ent.StopSequence.Set(int64(a))
 		}
 	case "pickup_type":
-		if hi == "" {
-			ent.PickupType = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.PickupType.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
-		} else {
-			ent.PickupType.SetInt(a)
 		}
 	case "drop_off_type":
-		if hi == "" {
-			ent.DropOffType = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.DropOffType.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
-		} else {
-			ent.DropOffType.SetInt(a)
 		}
 	case "continuous_pickup":
-		if hi == "" {
-			ent.ContinuousPickup = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.ContinuousPickup.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_pickup", hi)
-		} else {
-			ent.ContinuousPickup.SetInt(a)
 		}
 	case "continuous_drop_off":
-		if hi == "" {
-			ent.ContinuousDropOff = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.ContinuousDropOff.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_drop_off", hi)
-		} else {
-			ent.ContinuousDropOff.SetInt(a)
 		}
 	case "shape_dist_traveled":
-		if hi == "" {
-			ent.ShapeDistTraveled = tt.Float{}
-		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
+		if err := ent.ShapeDistTraveled.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
-		} else {
-			ent.ShapeDistTraveled.Set(a)
 		}
 	case "timepoint":
-		if hi == "" {
-			ent.Timepoint = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.Timepoint.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
-		} else {
-			ent.Timepoint.SetInt(a)
 		}
 	default:
 		ent.SetExtra(key, hi)
