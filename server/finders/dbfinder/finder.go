@@ -17,8 +17,36 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-// Maximum query result limit
-var MAXLIMIT = 100_000
+// These limits have high maximums just for query safety
+// Normal request handler limits are set in the GraphQL resolver layer
+
+// Maximum query result limitss
+
+// Other maximum query limits
+const (
+	FINDER_DEFAULTLIMIT              = 100_000
+	FINDER_MAXLIMIT                  = 100_000
+	FINDER_FEED_MAXLIMIT             = 100_000
+	FINDER_CENSUS_MAXLIMIT           = 100_000
+	FINDER_STOP_OBSERVATION_MAXLIMIT = 100_000
+)
+
+func finderCheckLimit(limit *int) uint64 {
+	return finderCheckLimitMax(limit, FINDER_MAXLIMIT)
+}
+
+func finderCheckLimitMax(limit *int, maxLimit int) uint64 {
+	alim := FINDER_DEFAULTLIMIT
+	if limit != nil {
+		alim = *limit
+	}
+	if alim < 0 {
+		alim = 0
+	} else if alim >= maxLimit {
+		alim = maxLimit
+	}
+	return uint64(alim)
+}
 
 type Finder struct {
 	Clock      clock.Clock
@@ -135,14 +163,6 @@ func tzTruncate(s time.Time, loc *time.Location) *tt.Date {
 		loc = time.UTC
 	}
 	return ptr(tt.NewDate(time.Date(s.Year(), s.Month(), s.Day(), 0, 0, 0, 0, loc)))
-}
-
-func checkLimit(limit *int) uint64 {
-	return checkRange(limit, 0, MAXLIMIT)
-}
-
-func checkLimitMax(limit *int, max int) uint64 {
-	return checkRange(limit, 0, max)
 }
 
 func checkRange(limit *int, min, max int) uint64 {
@@ -267,7 +287,7 @@ func quickSelectOrder(table string, limit *int, after *model.Cursor, ids []int, 
 	q := sq.StatementBuilder.
 		Select("*").
 		From(table).
-		Limit(checkLimit(limit))
+		Limit(finderCheckLimit(limit))
 	if order != "" {
 		q = q.OrderBy(order)
 	}

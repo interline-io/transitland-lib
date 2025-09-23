@@ -88,7 +88,7 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, ke
 		Where(In("route_id", keys)).
 		GroupBy("route_id,direction_id,stop_pattern_id").
 		OrderBy("route_id,count desc").
-		Limit(1000)
+		Limit(finderCheckLimit(limit))
 	var ents []*model.RouteStopPattern
 	err := dbutil.Select(ctx,
 		f.db,
@@ -206,7 +206,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, active bool, permFi
 		Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		OrderBy("gtfs_routes.feed_version_id,gtfs_routes.id").
-		Limit(checkLimit(limit))
+		Limit(finderCheckLimit(limit))
 
 	// Handle previous OnestopIds
 	if where != nil {

@@ -42,7 +42,7 @@ func (f *Finder) StopObservationsByStopIDs(ctx context.Context, limit *int, wher
 		From("ext_performance_stop_observations obs").
 		Join("gtfs_stops on gtfs_stops.stop_id = obs.to_stop_id").
 		Where(In("gtfs_stops.id", keys)).
-		Limit(100000)
+		Limit(finderCheckLimitMax(limit, FINDER_STOP_OBSERVATION_MAXLIMIT))
 	if where != nil {
 		q = q.Where("obs.feed_version_id = ?", where.FeedVersionID)
 		q = q.Where("obs.trip_start_date = ?", where.TripStartDate)
@@ -259,7 +259,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		OrderBy("gtfs_stops.feed_version_id,gtfs_stops.id").
-		Limit(checkLimit(limit))
+		Limit(finderCheckLimit(limit))
 	distinct := false
 
 	// Handle previous OnestopIds

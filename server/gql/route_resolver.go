@@ -32,11 +32,11 @@ func (r *routeResolver) Geometry(ctx context.Context, obj *model.Route) (*tt.Geo
 }
 
 func (r *routeResolver) Geometries(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteGeometry, error) {
-	return LoaderFor(ctx).RouteGeometriesByRouteIDs.Load(ctx, routeGeometryLoaderParam{RouteID: obj.ID, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).RouteGeometriesByRouteIDs.Load(ctx, routeGeometryLoaderParam{RouteID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *routeResolver) Trips(ctx context.Context, obj *model.Route, limit *int, where *model.TripFilter) ([]*model.Trip, error) {
-	return LoaderFor(ctx).TripsByRouteIDs.Load(ctx, tripLoaderParam{RouteID: obj.ID, FeedVersionID: obj.FeedVersionID, Limit: checkLimit(limit), Where: where})()
+	return LoaderFor(ctx).TripsByRouteIDs.Load(ctx, tripLoaderParam{RouteID: obj.ID, FeedVersionID: obj.FeedVersionID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
 func (r *routeResolver) Agency(ctx context.Context, obj *model.Route) (*model.Agency, error) {
@@ -48,15 +48,15 @@ func (r *routeResolver) FeedVersion(ctx context.Context, obj *model.Route) (*mod
 }
 
 func (r *routeResolver) Stops(ctx context.Context, obj *model.Route, limit *int, where *model.StopFilter) ([]*model.Stop, error) {
-	return LoaderFor(ctx).StopsByRouteIDs.Load(ctx, stopLoaderParam{RouteID: obj.ID, Limit: checkLimit(limit), Where: where})()
+	return LoaderFor(ctx).StopsByRouteIDs.Load(ctx, stopLoaderParam{RouteID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
 func (r *routeResolver) RouteStops(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteStop, error) {
-	return LoaderFor(ctx).RouteStopsByRouteIDs.Load(ctx, routeStopLoaderParam{RouteID: obj.ID, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).RouteStopsByRouteIDs.Load(ctx, routeStopLoaderParam{RouteID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *routeResolver) Headways(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteHeadway, error) {
-	return LoaderFor(ctx).RouteHeadwaysByRouteIDs.Load(ctx, routeHeadwayLoaderParam{RouteID: obj.ID, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).RouteHeadwaysByRouteIDs.Load(ctx, routeHeadwayLoaderParam{RouteID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *routeResolver) RouteStopBuffer(ctx context.Context, obj *model.Route, radius *float64) (*model.RouteStopBuffer, error) {
@@ -72,7 +72,7 @@ func (r *routeResolver) RouteStopBuffer(ctx context.Context, obj *model.Route, r
 }
 
 func (r *routeResolver) Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int) ([]*model.Alert, error) {
-	return model.ForContext(ctx).RTFinder.FindAlertsForRoute(ctx, obj, checkLimit(limit), active), nil
+	return model.ForContext(ctx).RTFinder.FindAlertsForRoute(ctx, obj, resolverCheckLimit(limit), active), nil
 }
 
 func (r *routeResolver) Patterns(ctx context.Context, obj *model.Route) ([]*model.RouteStopPattern, error) {
@@ -84,11 +84,11 @@ func (r *routeResolver) RouteAttribute(ctx context.Context, obj *model.Route) (*
 }
 
 func (r *routeResolver) SegmentPatterns(ctx context.Context, obj *model.Route, limit *int, where *model.SegmentPatternFilter) ([]*model.SegmentPattern, error) {
-	return LoaderFor(ctx).SegmentPatternsByRouteIDs.Load(ctx, segmentPatternLoaderParam{RouteID: obj.ID, Where: where, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).SegmentPatternsByRouteIDs.Load(ctx, segmentPatternLoaderParam{RouteID: obj.ID, Where: where, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *routeResolver) Segments(ctx context.Context, obj *model.Route, limit *int, where *model.SegmentFilter) ([]*model.Segment, error) {
-	return LoaderFor(ctx).SegmentsByRouteIDs.Load(ctx, segmentLoaderParam{RouteID: obj.ID, Where: where, Limit: checkLimit(limit)})()
+	return LoaderFor(ctx).SegmentsByRouteIDs.Load(ctx, segmentLoaderParam{RouteID: obj.ID, Where: where, Limit: resolverCheckLimit(limit)})()
 }
 
 // ROUTE HEADWAYS
@@ -130,7 +130,7 @@ type routePatternResolver struct{ *Resolver }
 
 func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error) {
 	// TODO: N+1 query
-	trips, err := model.ForContext(ctx).Finder.FindTrips(ctx, checkLimit(limit), nil, nil, &model.TripFilter{StopPatternID: &obj.StopPatternID, RouteIds: []int{obj.RouteID}})
+	trips, err := model.ForContext(ctx).Finder.FindTrips(ctx, resolverCheckLimit(limit), nil, nil, &model.TripFilter{StopPatternID: &obj.StopPatternID, RouteIds: []int{obj.RouteID}})
 	return trips, err
 }
 

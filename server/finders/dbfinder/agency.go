@@ -126,7 +126,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, active bool, permF
 		JoinClause("left join tl_agency_geometries ON tl_agency_geometries.agency_id = gtfs_agencies.id").
 		JoinClause("left join current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
 		OrderBy("gtfs_agencies.feed_version_id,gtfs_agencies.id").
-		Limit(checkLimit(limit))
+		Limit(finderCheckLimit(limit))
 
 	if where != nil {
 		if where.FeedVersionSha1 != nil {
