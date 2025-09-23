@@ -64,13 +64,13 @@ func (r *feedVersionResolver) FeedInfos(ctx context.Context, obj *model.FeedVers
 // FEED VALIDATION REPORT
 
 func (r *feedVersionResolver) ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error) {
-	return LoaderFor(ctx).ValidationReportsByFeedVersionIDs.Load(ctx, validationReportLoaderParam{FeedVersionID: obj.ID, Where: where, Limit: limit})()
+	return LoaderFor(ctx).ValidationReportsByFeedVersionIDs.Load(ctx, validationReportLoaderParam{FeedVersionID: obj.ID, Where: where, Limit: checkLimit(limit)})()
 }
 
 // SEGMENTS
 
 func (r *feedVersionResolver) Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error) {
-	return LoaderFor(ctx).SegmentsByFeedVersionIDs.Load(ctx, segmentLoaderParam{FeedVersionID: obj.ID, Limit: limit})()
+	return LoaderFor(ctx).SegmentsByFeedVersionIDs.Load(ctx, segmentLoaderParam{FeedVersionID: obj.ID, Limit: checkLimit(limit)})()
 }
 
 // FEED VERSION GTFS IMPORT

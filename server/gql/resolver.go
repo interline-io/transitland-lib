@@ -15,7 +15,7 @@ import (
 const DEFAULTLIMIT = 100
 
 // MAXLIMIT is the API limit maximum
-var MAXLIMIT = 1_000
+var MAXLIMIT = 100_000
 
 // checkLimit checks the limit is positive and below the maximum limit.
 func checkLimit(limit *int) *int {
@@ -27,6 +27,20 @@ func checkLimit(limit *int) *int {
 		a = DEFAULTLIMIT
 	} else if a >= MAXLIMIT {
 		a = MAXLIMIT
+	}
+	return &a
+}
+
+// checkLimit checks the limit is positive and below the maximum limit.
+func checkLimitMax(limit *int, max int) *int {
+	a := 0
+	if limit != nil {
+		a = *limit
+	}
+	if a <= 0 {
+		a = DEFAULTLIMIT
+	} else if a >= max {
+		a = max
 	}
 	return &a
 }

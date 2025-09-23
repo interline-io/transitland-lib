@@ -12,11 +12,11 @@ import (
 type censusDatasetResolver struct{ *Resolver }
 
 func (r *censusDatasetResolver) Geographies(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusDatasetGeographyFilter) ([]*model.CensusGeography, error) {
-	return LoaderFor(ctx).CensusGeographiesByDatasetIDs.Load(ctx, censusDatasetGeographyLoaderParam{DatasetID: obj.ID, Limit: limit, Where: where})()
+	return LoaderFor(ctx).CensusGeographiesByDatasetIDs.Load(ctx, censusDatasetGeographyLoaderParam{DatasetID: obj.ID, Limit: checkLimit(limit), Where: where})()
 }
 
 func (r *censusDatasetResolver) Sources(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusSourceFilter) ([]*model.CensusSource, error) {
-	return LoaderFor(ctx).CensusSourcesByDatasetIDs.Load(ctx, censusSourceLoaderParam{DatasetID: obj.ID, Limit: limit, Where: where})()
+	return LoaderFor(ctx).CensusSourcesByDatasetIDs.Load(ctx, censusSourceLoaderParam{DatasetID: obj.ID, Limit: checkLimit(limit), Where: where})()
 }
 
 func (r *censusDatasetResolver) Tables(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusTableFilter) ([]*model.CensusTable, error) {
@@ -34,14 +34,14 @@ func (r *censusSourceResolver) Layers(ctx context.Context, obj *model.CensusSour
 }
 
 func (r *censusSourceResolver) Geographies(ctx context.Context, obj *model.CensusSource, limit *int, where *model.CensusSourceGeographyFilter) (ret []*model.CensusGeography, err error) {
-	return LoaderFor(ctx).CensusGeographiesBySourceIDs.Load(ctx, censusSourceGeographyLoaderParam{SourceID: obj.ID, Limit: limit, Where: where})()
+	return LoaderFor(ctx).CensusGeographiesBySourceIDs.Load(ctx, censusSourceGeographyLoaderParam{SourceID: obj.ID, Limit: checkLimit(limit), Where: where})()
 }
 
 type censusGeographyResolver struct{ *Resolver }
 
 func (r *censusGeographyResolver) Values(ctx context.Context, obj *model.CensusGeography, tableNames []string, datasetName *string, limit *int) ([]*model.CensusValue, error) {
 	// dataloader cant easily pass []string
-	return LoaderFor(ctx).CensusValuesByGeographyIDs.Load(ctx, censusValueLoaderParam{Dataset: datasetName, TableNames: strings.Join(tableNames, ","), Limit: limit, Geoid: *obj.Geoid})()
+	return LoaderFor(ctx).CensusValuesByGeographyIDs.Load(ctx, censusValueLoaderParam{Dataset: datasetName, TableNames: strings.Join(tableNames, ","), Limit: checkLimit(limit), Geoid: *obj.Geoid})()
 }
 
 func (r *censusGeographyResolver) Layer(ctx context.Context, obj *model.CensusGeography) (*model.CensusLayer, error) {
@@ -67,7 +67,7 @@ func (r *censusTableResolver) Fields(ctx context.Context, obj *model.CensusTable
 type censusLayerResolver struct{ *Resolver }
 
 func (r *censusLayerResolver) Geographies(ctx context.Context, obj *model.CensusLayer, limit *int, where *model.CensusSourceGeographyFilter) (ret []*model.CensusGeography, err error) {
-	return LoaderFor(ctx).CensusGeographiesByLayerIDs.Load(ctx, censusSourceGeographyLoaderParam{LayerID: obj.ID, Limit: limit, Where: where})()
+	return LoaderFor(ctx).CensusGeographiesByLayerIDs.Load(ctx, censusSourceGeographyLoaderParam{LayerID: obj.ID, Limit: checkLimit(limit), Where: where})()
 }
 
 // add geography resolvers to agency, route, stop
@@ -76,7 +76,7 @@ func (r *agencyResolver) CensusGeographies(ctx context.Context, obj *model.Agenc
 	return LoaderFor(ctx).CensusGeographiesByEntityIDs.Load(ctx, censusGeographyLoaderParam{
 		EntityType: "agency",
 		EntityID:   obj.ID,
-		Limit:      limit,
+		Limit:      checkLimit(limit),
 		Where:      where,
 	})()
 }
@@ -85,7 +85,7 @@ func (r *routeResolver) CensusGeographies(ctx context.Context, obj *model.Route,
 	return LoaderFor(ctx).CensusGeographiesByEntityIDs.Load(ctx, censusGeographyLoaderParam{
 		EntityType: "route",
 		EntityID:   obj.ID,
-		Limit:      limit,
+		Limit:      checkLimit(limit),
 		Where:      where,
 	})()
 }
@@ -94,7 +94,7 @@ func (r *stopResolver) CensusGeographies(ctx context.Context, obj *model.Stop, l
 	return LoaderFor(ctx).CensusGeographiesByEntityIDs.Load(ctx, censusGeographyLoaderParam{
 		EntityType: "stop",
 		EntityID:   obj.ID,
-		Limit:      limit,
+		Limit:      checkLimit(limit),
 		Where:      where,
 	})()
 }

@@ -558,7 +558,7 @@ func paramGroupQuery[
 
 			// Group using keyFunc and merge into output
 			limit := 1000
-			if a := checkLimit(pgroup.Limit); a != nil {
+			if a := checkLimitMax(pgroup.Limit, 100_000); a != nil {
 				limit = *a
 			}
 			for resultIdx, idx := range pgroup.Index {

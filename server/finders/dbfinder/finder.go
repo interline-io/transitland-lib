@@ -141,6 +141,10 @@ func checkLimit(limit *int) uint64 {
 	return checkRange(limit, 0, MAXLIMIT)
 }
 
+func checkLimitMax(limit *int, max int) uint64 {
+	return checkRange(limit, 0, max)
+}
+
 func checkRange(limit *int, min, max int) uint64 {
 	if limit == nil {
 		return uint64(max)
