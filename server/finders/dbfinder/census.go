@@ -373,6 +373,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		// qJoin must have a buffer and match_entity_id column
 		loc := where.Location
 		found := true
+		areaIntersection := true
 		var qJoin sq.SelectBuilder
 		if loc.Bbox != nil {
 			qJoin = sq.StatementBuilder.Select().
@@ -391,12 +392,12 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		} else if loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0 {
 			radius := checkFloat(loc.StopBuffer.Radius, 0, 1_000)
 			if radius == 0 {
+				areaIntersection = false
 				qJoin = sq.StatementBuilder.Select().
 					Column("gtfs_stops.geometry as buffer").
 					Column("gtfs_stops.id as match_entity_id").
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
-
 			} else {
 				qJoin = sq.StatementBuilder.Select().
 					Column("0 as match_entity_id").
@@ -409,8 +410,17 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		}
 		if found {
 			q = q.JoinClause(qJoin.Prefix("join (").Suffix(") as buffer on true")).
-				Where("ST_Intersects(tlcg.geometry, buffer.buffer)").
 				Column("buffer.match_entity_id as match_entity_id")
+
+			// Buffer radius > 0: use area approximation (better performance)
+			if areaIntersection {
+				q = q.Where(sq.And{
+					sq.Expr("tlcg.geometry && buffer.buffer"),
+					sq.Expr("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) > 0"),
+				})
+			} else {
+				q = q.Where(sq.Expr("ST_Intersects(tlcg.geometry, buffer.buffer)"))
+			}
 			if fields.intersectionArea {
 				q = q.Column("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) as intersection_area")
 			}
