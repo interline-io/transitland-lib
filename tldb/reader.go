@@ -313,6 +313,10 @@ func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
 	return ReadEntities[gtfs.RouteNetwork](reader, GetTableName(&gtfs.RouteNetwork{}))
 }
 
+func (reader *Reader) FareLegJoinRules() (out chan gtfs.FareLegJoinRule) {
+	return ReadEntities[gtfs.FareLegJoinRule](reader, GetTableName(&gtfs.FareLegJoinRule{}))
+}
+
 func ReadEntities[T tt.EntityWithID](reader *Reader, table string) chan T {
 	ctx := context.TODO()
 	out := make(chan T, bufferSize)

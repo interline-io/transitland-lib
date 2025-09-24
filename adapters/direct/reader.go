@@ -38,6 +38,7 @@ type Reader struct {
 	TimeframeList        []gtfs.Timeframe
 	NetworkList          []gtfs.Network
 	RouteNetworkList     []gtfs.RouteNetwork
+	FareLegJoinRuleList  []gtfs.FareLegJoinRule
 	OtherList            []tt.Entity
 }
 
@@ -426,6 +427,17 @@ func (mr *Reader) RouteNetworks() chan gtfs.RouteNetwork {
 	out := make(chan gtfs.RouteNetwork, bufferSize)
 	go func() {
 		for _, ent := range mr.RouteNetworkList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) FareLegJoinRules() chan gtfs.FareLegJoinRule {
+	out := make(chan gtfs.FareLegJoinRule, bufferSize)
+	go func() {
+		for _, ent := range mr.FareLegJoinRuleList {
 			out <- ent
 		}
 		close(out)
