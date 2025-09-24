@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -115,6 +116,9 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 		}
 		dt := trip.StopTimes[i].ArrivalTime.Int() - t.Int()
 		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
+		if dt <= 30 && dx > 0 && (speed > maxspeed || math.IsInf(speed, 0)) {
+			errs = append(errs, newFastTravelError(trip.TripID.Val, trip.StopTimes[i].StopSequence.Int(), s1, s2, dt, dx, speed, maxspeed))
+		}
 		if dt > 30 && speed > maxspeed {
 			errs = append(errs, newFastTravelError(trip.TripID.Val, trip.StopTimes[i].StopSequence.Int(), s1, s2, dt, dx, speed, maxspeed))
 		}
