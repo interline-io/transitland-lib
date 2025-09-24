@@ -257,6 +257,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_trips" (
   "shape_id" int,
   "wheelchair_accessible" integer,
   "bikes_allowed" integer,
+  "cars_allowed" integer,
   "stop_pattern_id" integer,
   "id" integer primary key autoincrement,
   "feed_version_id" integer NOT NULL,

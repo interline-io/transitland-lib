@@ -42,7 +42,7 @@ func getVersion() VersionInfo {
 }
 
 // GTFSVERSION is the commit for the spec reference.md file.
-var GTFSVERSION = "11a49075c1f50d0130b934833b7eeb3fe518961c"
+var GTFSVERSION = "4f0166688c980ee30e6457035616bf96aa21d91f" // NOTE: some intervening changes have not yet been added
 
 // GTFSRTVERSION is the commit for the gtfs-realtime.proto file.
 var GTFSRTVERSION = "7b9f229dfa0b539c3fcf461986638890024feb06"

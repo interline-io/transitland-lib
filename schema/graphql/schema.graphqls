@@ -704,6 +704,8 @@ type Trip {
   wheelchair_accessible: Int
   "GTFS trips.bikes_allowed"
   bikes_allowed: Int
+  "GTFS trips.cars_allowed"
+  cars_allowed: Int
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
   "Calendar for this trip"
