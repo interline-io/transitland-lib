@@ -43,7 +43,7 @@ func (f *Finder) FeedFetchesByFeedIDs(ctx context.Context, limit *int, where *mo
 	q := sq.StatementBuilder.
 		Select("*").
 		From("feed_fetches").
-		Limit(checkLimit(limit)).
+		Limit(finderCheckLimit(limit)).
 		OrderBy("feed_fetches.fetched_at desc")
 	if where != nil {
 		if where.Success != nil {
@@ -91,7 +91,7 @@ func feedSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.Pe
 		).
 		From("current_feeds").
 		OrderBy("current_feeds.id asc").
-		Limit(checkRange(limit, 0, 10_000))
+		Limit(finderCheckLimitMax(limit, FINDER_FEED_MAXLIMIT))
 
 	if where != nil {
 		if where.OnestopID != nil {

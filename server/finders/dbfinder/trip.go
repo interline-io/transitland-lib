@@ -129,7 +129,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		Join("feed_versions ON feed_versions.id = gtfs_trips.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		OrderBy("gtfs_trips.feed_version_id,gtfs_trips.id").
-		Limit(checkLimit(limit))
+		Limit(finderCheckLimit(limit))
 
 	// Process FVSW
 	if where != nil && fvsw != nil {

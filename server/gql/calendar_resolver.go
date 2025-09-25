@@ -12,7 +12,7 @@ import (
 type calendarResolver struct{ *Resolver }
 
 func (r *calendarResolver) AddedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*tt.Date, error) {
-	ents, err := LoaderFor(ctx).CalendarDatesByServiceIDs.Load(ctx, calendarDateLoaderParam{ServiceID: obj.ID, Limit: checkLimit(limit), Where: nil})()
+	ents, err := LoaderFor(ctx).CalendarDatesByServiceIDs.Load(ctx, calendarDateLoaderParam{ServiceID: obj.ID, Limit: resolverCheckLimit(limit), Where: nil})()
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func (r *calendarResolver) AddedDates(ctx context.Context, obj *model.Calendar, 
 }
 
 func (r *calendarResolver) RemovedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*tt.Date, error) {
-	ents, err := LoaderFor(ctx).CalendarDatesByServiceIDs.Load(ctx, calendarDateLoaderParam{ServiceID: obj.ID, Limit: checkLimit(limit), Where: nil})()
+	ents, err := LoaderFor(ctx).CalendarDatesByServiceIDs.Load(ctx, calendarDateLoaderParam{ServiceID: obj.ID, Limit: resolverCheckLimit(limit), Where: nil})()
 	if err != nil {
 		return nil, err
 	}

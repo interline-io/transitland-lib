@@ -22,7 +22,7 @@ import (
 func TestMain(m *testing.M) {
 	// Increase limit for test
 	MAXLIMIT = 100_000
-	gql.MAXLIMIT = MAXLIMIT
+	gql.RESOLVER_MAXLIMIT = MAXLIMIT
 	if a, ok := testutil.CheckTestDB(); !ok {
 		log.Print(a)
 		return
