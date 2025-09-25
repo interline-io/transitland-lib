@@ -103,7 +103,7 @@ func (r *queryResolver) Feeds(ctx context.Context, limit *int, after *int, ids [
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindFeeds(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindFeeds(ctx, resolverCheckLimitMax(limit, RESOLVER_FEED_MAXLIMIT), checkCursor(after), ids, where)
 }
 
 func (r *queryResolver) Operators(ctx context.Context, limit *int, after *int, ids []int, where *model.OperatorFilter) ([]*model.Operator, error) {
