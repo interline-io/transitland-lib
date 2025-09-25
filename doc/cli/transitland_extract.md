@@ -48,42 +48,44 @@ trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_t
 ### Options
 
 ```
-      --allow-entity-errors              Allow entities with errors to be copied
-      --allow-reference-errors           Allow entities with reference errors to be copied
-      --bbox string                      Extract bbox as (min lon, min lat, max lon, max lat), e.g. -122.276,37.794,-122.259,37.834
-      --create                           Create a basic database schema if none exists
-      --create-missing-shapes            Create missing Shapes from Trip stop-to-stop geometries
-      --deduplicate-stop-times           Deduplicate StopTimes using Journey Patterns
-      --error-limit int                  Max number of detailed errors per error group (default 10)
-      --exclude-agency stringArray       Exclude Agency
-      --exclude-calendar stringArray     Exclude Calendar
-      --exclude-route stringArray        Exclude Route
-      --exclude-route-type stringArray   Exclude Routes matching route_type
-      --exclude-stop stringArray         Exclude Stop
-      --exclude-trip stringArray         Exclude Trip
-      --ext stringArray                  Include GTFS Extension
-      --extract-agency stringArray       Extract Agency
-      --extract-calendar stringArray     Extract Calendar
-      --extract-route stringArray        Extract Route
-      --extract-route-type stringArray   Extract Routes matching route_type
-      --extract-stop stringArray         Extract Stop
-      --extract-trip stringArray         Extract Trip
-      --fvid int                         Specify FeedVersionID when writing to a database
-  -h, --help                             help for extract
-      --interpolate-stop-times           Interpolate missing StopTime arrival/departure values
-      --normalize-service-ids            Create any missing Calendar entities for CalendarDate service_id's
-      --normalize-timezones              Normalize timezones and apply default stop timezones based on agency and parent stops
-      --prefix string                    Prefix entities in this feed
-      --set stringArray                  Set values on output; format is filename,id,key,value
-      --simplify-calendars               Attempt to simplify CalendarDates into regular Calendars
-      --simplify-shapes float            Simplify shapes with this tolerance (ex. 0.000005)
-      --use-basic-route-types            Collapse extended route_type's into basic GTFS values
-      --write-extra-columns              Include extra columns in output
-      --write-extra-files                Copy additional files found in source to destination
+      --allow-entity-errors                Allow entities with errors to be copied
+      --allow-reference-errors             Allow entities with reference errors to be copied
+      --bbox string                        Extract bbox as (min lon, min lat, max lon, max lat), e.g. -122.276,37.794,-122.259,37.834
+      --create                             Create a basic database schema if none exists
+      --create-missing-shapes              Create missing Shapes from Trip stop-to-stop geometries
+      --deduplicate-stop-times             Deduplicate StopTimes using Journey Patterns
+      --error-limit int                    Max number of detailed errors per error group (default 10)
+      --exclude-agency stringArray         Exclude Agency
+      --exclude-calendar stringArray       Exclude Calendar
+      --exclude-route stringArray          Exclude Route
+      --exclude-route-type stringArray     Exclude Routes matching route_type
+      --exclude-stop stringArray           Exclude Stop
+      --exclude-trip stringArray           Exclude Trip
+      --ext stringArray                    Include GTFS Extension
+      --extract-agency stringArray         Extract Agency
+      --extract-calendar stringArray       Extract Calendar
+      --extract-route stringArray          Extract Route
+      --extract-route-type stringArray     Extract Routes matching route_type
+      --extract-stop stringArray           Extract Stop
+      --extract-trip stringArray           Extract Trip
+      --fvid int                           Specify FeedVersionID when writing to a database
+  -h, --help                               help for extract
+      --interpolate-stop-times             Interpolate missing StopTime arrival/departure values
+      --normalize-service-ids              Create any missing Calendar entities for CalendarDate service_id's
+      --normalize-timezones                Normalize timezones and apply default stop timezones based on agency and parent stops
+      --prefix string                      Prefix entities in this feed
+      --prefix-files-exclude stringArray   Prefix files to use for entity matching
+      --prefix-files-include stringArray   Prefix files to use for entity matching
+      --set stringArray                    Set values on output; format is filename,id,key,value
+      --simplify-calendars                 Attempt to simplify CalendarDates into regular Calendars
+      --simplify-shapes float              Simplify shapes with this tolerance (ex. 0.000005)
+      --use-basic-route-types              Collapse extended route_type's into basic GTFS values
+      --write-extra-columns                Include extra columns in output
+      --write-extra-files                  Copy additional files found in source to destination
 ```
 
 ### SEE ALSO
 
 * [transitland](transitland.md)	 - transitland-lib utilities
 
-###### Auto generated by spf13/cobra on 28-Aug-2025
+###### Auto generated by spf13/cobra on 25-Sep-2025
