@@ -91,7 +91,7 @@ func feedSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.Pe
 		).
 		From("current_feeds").
 		OrderBy("current_feeds.id asc").
-		Limit(finderCheckLimitMax(limit, FINDER_FEED_MAXLIMIT))
+		Limit(finderCheckLimit(limit))
 
 	if where != nil {
 		if where.OnestopID != nil {

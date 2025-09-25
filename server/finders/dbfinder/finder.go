@@ -24,11 +24,8 @@ import (
 
 // Other maximum query limits
 const (
-	FINDER_DEFAULTLIMIT              = 100_000
-	FINDER_MAXLIMIT                  = 100_000
-	FINDER_FEED_MAXLIMIT             = 100_000
-	FINDER_CENSUS_MAXLIMIT           = 100_000
-	FINDER_STOP_OBSERVATION_MAXLIMIT = 100_000
+	FINDER_MAXLIMIT     = 100_000
+	FINDER_DEFAULTLIMIT = 100_000
 )
 
 func finderCheckLimit(limit *int) uint64 {
