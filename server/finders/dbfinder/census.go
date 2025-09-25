@@ -192,17 +192,10 @@ func (f *Finder) CensusSourceLayersBySourceIDs(ctx context.Context, keys []int) 
 
 func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, p *model.CensusDatasetGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
 	var ents []*model.CensusGeography
-	q := censusDatasetGeographySelect(limit, p, getCensusGeographySelectFields(ctx))
+	q := censusDatasetGeographySelect(limit, p, getCensusGeographySelectFields(ctx)).Where(sq.Eq{"tlcd.id": keys})
 	err := dbutil.Select(ctx,
 		f.db,
-		lateralWrap(
-			q,
-			"tl_census_datasets",
-			"id",
-			"tlcd",
-			"id",
-			keys,
-		),
+		q,
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.DatasetID }), err
@@ -370,63 +363,79 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		Limit(finderCheckLimitMax(limit, FINDER_CENSUS_MAXLIMIT))
 
 	if where != nil && where.Location != nil {
-		// qJoin must have a buffer and match_entity_id column
-		loc := where.Location
-		found := true
-		areaIntersection := true
+		qBufferUse := false
 		var qBuffer sq.SelectBuilder
+		qPointsUse := false
+		var qPoints sq.SelectBuilder
+
+		loc := where.Location
 		if loc.Bbox != nil {
+			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().
 				Column("ST_MakeEnvelope(?,?,?,?,4326) as buffer", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat).
 				Column("0 as match_entity_id")
 		} else if loc.Within != nil && loc.Within.Valid {
 			jj, _ := geojson.Marshal(loc.Within.Val)
+			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().
 				Column("ST_GeomFromGeoJSON(?) as buffer", string(jj)).
 				Column("0 as match_entity_id")
 		} else if loc.Near != nil {
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
+			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().
 				Column("ST_Buffer(ST_MakePoint(?,?)::geography, ?) as buffer", loc.Near.Lon, loc.Near.Lat, radius).
 				Column("0 as match_entity_id")
 		} else if loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0 {
 			radius := checkFloat(loc.StopBuffer.Radius, 0, 1_000)
 			if radius == 0 {
-				areaIntersection = false
-				qBuffer = sq.StatementBuilder.Select().
+				qPointsUse = true
+				qPoints = sq.StatementBuilder.Select().
 					Column("gtfs_stops.geometry as buffer").
 					Column("gtfs_stops.id as match_entity_id").
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 			} else {
-				qBuffer = sq.StatementBuilder.Select().
-					Column("0 as match_entity_id").
-					Column("ST_Buffer(ST_Collect(ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry), 0) as buffer", radius).
+				// Add this as a pre-CTE
+				qBufferUse = true
+				qBufferOuter := sq.StatementBuilder.Select().
+					Column("ST_Union(ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry) as buffer", radius).
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+				qBuffer = sq.StatementBuilder.Select().
+					Column("0 as match_entity_id").
+					Column("(ST_Dump(buffer)).geom as buffer").
+					From("buffer_outer")
+				q = q.WithCTE(sq.CTE{
+					Alias:        "buffer_outer",
+					Materialized: true,
+					Expression:   qBufferOuter,
+				})
 			}
-		} else {
-			found = false
 		}
-		if found {
+		if qBufferUse {
 			q = q.WithCTE(sq.CTE{
 				Alias:        "buffer",
 				Materialized: true,
 				Expression:   qBuffer,
 			})
-			q = q.Join("buffer ON tlcg.geometry && buffer.buffer")
-			// Buffer radius > 0: use area approximation (better performance)
-			if areaIntersection {
-				q = q.Where(sq.Expr("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) > 0"))
-			} else {
-				q = q.Where(sq.Expr("ST_Intersects(tlcg.geometry, buffer.buffer)"))
-			}
+			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
+				Where(sq.Expr("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) > 0"))
 			if fields.intersectionArea {
 				q = q.Column("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) as intersection_area")
 			}
 			if fields.intersectionGeometry {
 				q = q.Column("ST_Intersection(tlcg.geometry, buffer.buffer) as intersection_geometry")
 			}
+		}
+		if qPointsUse {
+			q = q.WithCTE(sq.CTE{
+				Alias:        "buffer",
+				Materialized: true,
+				Expression:   qPoints,
+			})
+			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
+				Where(sq.Expr("ST_Intersects(tlcg.geometry, buffer.buffer)"))
 		}
 		if loc.Focus != nil {
 			orderBy = sq.Expr("ST_Distance(tlcg.geometry, ST_MakePoint(?,?))", loc.Focus.Lon, loc.Focus.Lat)
