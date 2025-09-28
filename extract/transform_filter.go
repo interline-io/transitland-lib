@@ -94,7 +94,7 @@ func (tx *TransformFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 			continue // Skip if function not found
 		}
 		// FIXME: This is not really a public API
-		header, err := tlcsv.MapperCache.GetHeader(ent.Filename())
+		header, err := tlcsv.MapperCache.GetHeader(ent)
 		if err != nil {
 			log.Error().Msgf("Failed to get header for '%s': %v", ent.Filename(), err)
 			continue
