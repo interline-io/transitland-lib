@@ -3,6 +3,7 @@ package extract
 import (
 	"os"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/graph"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
@@ -54,13 +55,22 @@ type hasEntityKey interface {
 
 // Filter overrides values on entities.
 func (tx *SetterFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
-	if v, ok := ent.(hasEntityKey); ok {
-		if entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), v.EntityKey())]; ok {
-			for k, v := range entv {
-				if err := tlcsv.SetString(ent, k, v); err != nil {
-					return err
-				}
-			}
+	v, ok := ent.(hasEntityKey)
+	if !ok {
+		return nil
+	}
+	entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), v.EntityKey())]
+	if !ok {
+		// Check for filters that apply to all entities
+		entv, ok = tx.nodes[*graph.NewNode(ent.Filename(), "*")]
+	}
+	if !ok {
+		return nil
+	}
+	for setterKey, newValue := range entv {
+		if err := tlcsv.SetString(ent, setterKey, newValue); err != nil {
+			log.Error().Msgf("Failed to set field '%s': %v", setterKey, err)
+			continue
 		}
 	}
 	return nil

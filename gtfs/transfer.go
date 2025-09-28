@@ -39,5 +39,10 @@ func (ent *Transfer) ConditionalErrors() (errs []error) {
 		errs = append(errs, tt.CheckConditionallyRequired("from_trip_id", ent.FromTripID.Val)...)
 		errs = append(errs, tt.CheckConditionallyRequired("to_trip_id", ent.ToTripID.Val)...)
 	}
+	if ent.TransferType.Val == 2 {
+		if !ent.MinTransferTime.Valid {
+			errs = append(errs, tt.CheckConditionallyRequired("min_transfer_time", "")...)
+		}
+	}
 	return errs
 }
