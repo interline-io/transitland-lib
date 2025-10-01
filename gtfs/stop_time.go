@@ -2,7 +2,6 @@ package gtfs
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
@@ -121,73 +120,23 @@ func (ent *StopTime) SetString(key, value string) error {
 	case "stop_id":
 		ent.StopID.Set(hi)
 	case "arrival_time":
-		if hi == "" {
-		} else if s, err := tt.NewSecondsFromString(hi); err != nil {
-			perr = causes.NewFieldParseError("arrival_time", hi)
-		} else {
-			ent.ArrivalTime = s
-		}
+		perr = ent.ArrivalTime.Scan(hi)
 	case "departure_time":
-		if hi == "" {
-		} else if s, err := tt.NewSecondsFromString(hi); err != nil {
-			perr = causes.NewFieldParseError("departure_time", hi)
-		} else {
-			ent.DepartureTime = s
-		}
+		perr = ent.DepartureTime.Scan(hi)
 	case "stop_sequence":
-		if a, err := strconv.Atoi(hi); err != nil {
-			perr = causes.NewFieldParseError("stop_sequence", hi)
-		} else {
-			ent.StopSequence.Set(int64(a))
-		}
+		perr = ent.StopSequence.Scan(hi)
 	case "pickup_type":
-		if hi == "" {
-			ent.PickupType = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
-			perr = causes.NewFieldParseError("pickup_type", hi)
-		} else {
-			ent.PickupType.SetInt(a)
-		}
+		perr = ent.PickupType.Scan(hi)
 	case "drop_off_type":
-		if hi == "" {
-			ent.DropOffType = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
-			perr = causes.NewFieldParseError("drop_off_type", hi)
-		} else {
-			ent.DropOffType.SetInt(a)
-		}
+		perr = ent.DropOffType.Scan(hi)
 	case "continuous_pickup":
-		if hi == "" {
-			ent.ContinuousPickup = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
-			perr = causes.NewFieldParseError("continuous_pickup", hi)
-		} else {
-			ent.ContinuousPickup.SetInt(a)
-		}
+		perr = ent.ContinuousPickup.Scan(hi)
 	case "continuous_drop_off":
-		if hi == "" {
-			ent.ContinuousDropOff = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
-			perr = causes.NewFieldParseError("continuous_drop_off", hi)
-		} else {
-			ent.ContinuousDropOff.SetInt(a)
-		}
+		perr = ent.ContinuousDropOff.Scan(hi)
 	case "shape_dist_traveled":
-		if hi == "" {
-			ent.ShapeDistTraveled = tt.Float{}
-		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
-			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
-		} else {
-			ent.ShapeDistTraveled.Set(a)
-		}
+		perr = ent.ShapeDistTraveled.Scan(hi)
 	case "timepoint":
-		if hi == "" {
-			ent.Timepoint = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
-			perr = causes.NewFieldParseError("timepoint", hi)
-		} else {
-			ent.Timepoint.SetInt(a)
-		}
+		perr = ent.Timepoint.Scan(hi)
 	default:
 		ent.SetExtra(key, hi)
 	}
