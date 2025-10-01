@@ -27,24 +27,25 @@ type ExtractCommand struct {
 	create        bool
 	extensionDefs []string
 	// extract specific arguments
-	Prefix            string
-	extractAgencies   []string
-	extractStops      []string
-	extractTrips      []string
-	extractCalendars  []string
-	extractRoutes     []string
-	extractRouteTypes []string
-	extractSet        []string
-	excludeAgencies   []string
-	excludeStops      []string
-	excludeTrips      []string
-	excludeCalendars  []string
-	excludeRoutes     []string
-	excludeRouteTypes []string
-	bbox              string
-	writeExtraColumns bool
-	readerPath        string
-	writerPath        string
+	Prefix              string
+	extractAgencies     []string
+	extractStops        []string
+	extractTrips        []string
+	extractCalendars    []string
+	extractRoutes       []string
+	extractRouteTypes   []string
+	extractSet          []string
+	excludeAgencies     []string
+	excludeStops        []string
+	excludeTrips        []string
+	excludeCalendars    []string
+	excludeRoutes       []string
+	excludeRouteTypes   []string
+	excludeUnusedRoutes bool
+	bbox                string
+	writeExtraColumns   bool
+	readerPath          string
+	writerPath          string
 }
 
 func (cmd *ExtractCommand) HelpDesc() (string, string) {
@@ -92,6 +93,7 @@ func (cmd *ExtractCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringArrayVar(&cmd.extensionDefs, "ext", nil, "Include GTFS Extension")
 	fl.IntVar(&cmd.fvid, "fvid", 0, "Specify FeedVersionID when writing to a database")
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
+
 	// Copy options
 	fl.Float64Var(&cmd.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance (ex. 0.000005)")
 	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
@@ -122,6 +124,7 @@ func (cmd *ExtractCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringArrayVar(&cmd.excludeCalendars, "exclude-calendar", nil, "Exclude Calendar")
 	fl.StringArrayVar(&cmd.excludeRoutes, "exclude-route", nil, "Exclude Route")
 	fl.StringArrayVar(&cmd.excludeRouteTypes, "exclude-route-type", nil, "Exclude Routes matching route_type")
+	fl.BoolVar(&cmd.excludeUnusedRoutes, "exclude-unused-routes", false, "Exclude routes that have no trips in the source data")
 
 	fl.StringVar(&cmd.bbox, "bbox", "", "Extract bbox as (min lon, min lat, max lon, max lat), e.g. -122.276,37.794,-122.259,37.834")
 
@@ -168,6 +171,20 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 		pfx.PrefixAll = true
 		pfx.SetPrefix(0, cmd.Prefix)
 		cmd.Options.AddExtension(pfx)
+	}
+
+	// Additional exclude
+	if cmd.excludeUnusedRoutes {
+		log.For(ctx).Debug().Msgf("Extract filter: excluding unused routes")
+		usedRoutes := map[string]bool{}
+		for trip := range reader.Trips() {
+			usedRoutes[trip.RouteID.Val] = true
+		}
+		for route := range reader.Routes() {
+			if _, used := usedRoutes[route.RouteID.Val]; !used {
+				cmd.excludeRoutes = append(cmd.excludeRoutes, route.RouteID.Val)
+			}
+		}
 	}
 
 	// Create SetterFilter
