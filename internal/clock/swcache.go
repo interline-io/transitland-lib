@@ -130,9 +130,19 @@ func (f *ServiceWindowCache) queryFvsl(ctx context.Context, fvid int) (ServiceWi
 		StartDate    tt.Time
 		EndDate      tt.Time
 		TotalService tt.Int
+		Monday       tt.Int
+		Tuesday      tt.Int
+		Wednesday    tt.Int
+		Thursday     tt.Int
+		Friday       tt.Int
+		Saturday     tt.Int
+		Sunday       tt.Int
 	}
 	fvslQuery := sq.StatementBuilder.
-		Select("fv.fetched_at", "fvsl.start_date", "fvsl.end_date", "monday + tuesday + wednesday + thursday + friday + saturday + sunday as total_service").
+		Select("fv.fetched_at", "fvsl.start_date", "fvsl.end_date",
+			"monday + tuesday + wednesday + thursday + friday + saturday + sunday as total_service",
+			"fvsl.monday", "fvsl.tuesday", "fvsl.wednesday", "fvsl.thursday",
+			"fvsl.friday", "fvsl.saturday", "fvsl.sunday").
 		From("feed_versions fv").
 		Join("feed_version_service_levels fvsl on fvsl.feed_version_id = fv.id").
 		Where(sq.Eq{"route_id": nil}).
@@ -205,13 +215,38 @@ func (f *ServiceWindowCache) queryFvsl(ctx context.Context, fvid int) (ServiceWi
 	// bestWeek must start with a Monday
 	bestWeek := fvslEnts[0].StartDate.Val
 	bestService := fvslEnts[0].TotalService.Val
-	for _, ent := range fvslEnts {
+	hasFullServiceWeek := false
+
+	// Helper function to check if a week falls within the service window
+	isWeekInWindow := func(ent fvslEnt) bool {
 		sd := ent.StartDate.Val
 		ed := ent.EndDate.Val
-		if (sd.Before(endDate) || sd.Equal(endDate)) && (ed.After(startDate) || ed.Equal(startDate)) {
-			if ent.TotalService.Val > bestService {
+		return (sd.Before(endDate) || sd.Equal(endDate)) && (ed.After(startDate) || ed.Equal(startDate))
+	}
+
+	// First pass: look for weeks with service on all days
+	for _, ent := range fvslEnts {
+		if isWeekInWindow(ent) {
+			// Check if this week has service on all days
+			hasFullService := ent.Monday.Val > 0 && ent.Tuesday.Val > 0 && ent.Wednesday.Val > 0 &&
+				ent.Thursday.Val > 0 && ent.Friday.Val > 0 && ent.Saturday.Val > 0 && ent.Sunday.Val > 0
+
+			if hasFullService && ent.TotalService.Val > bestService {
 				bestService = ent.TotalService.Val
 				bestWeek = ent.StartDate.Val
+				hasFullServiceWeek = true
+			}
+		}
+	}
+
+	// Second pass: if no full-service week found, fall back to any week with highest service
+	if !hasFullServiceWeek {
+		for _, ent := range fvslEnts {
+			if isWeekInWindow(ent) {
+				if ent.TotalService.Val > bestService {
+					bestService = ent.TotalService.Val
+					bestWeek = ent.StartDate.Val
+				}
 			}
 		}
 	}

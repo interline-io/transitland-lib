@@ -367,7 +367,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		Join("tl_census_sources tlcs on tlcs.id = tlcg.source_id").
 		Join("tl_census_datasets tlcd on tlcd.id = tlcs.dataset_id").
 		Join("tl_census_layers tlcl on tlcl.id = tlcg.layer_id").
-		Limit(finderCheckLimitMax(limit, FINDER_CENSUS_MAXLIMIT))
+		Limit(finderCheckLimit(limit))
 
 	if where != nil && where.Location != nil {
 		// qJoin must have a buffer and match_entity_id column
@@ -479,7 +479,7 @@ func censusValueSelect(limit *int, datasetName string, tnames []string, geoids [
 			"tlcd.name as dataset_name",
 		).
 		From("tl_census_values tlcv").
-		Limit(finderCheckLimitMax(limit, FINDER_CENSUS_MAXLIMIT)).
+		Limit(finderCheckLimit(limit)).
 		Join("tl_census_tables tlct ON tlct.id = tlcv.table_id").
 		Join("tl_census_sources tlcs on tlcs.id = tlcv.source_id").
 		Join("tl_census_datasets tlcd on tlcd.id = tlct.dataset_id").

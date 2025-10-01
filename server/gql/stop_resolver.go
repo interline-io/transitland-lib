@@ -70,7 +70,7 @@ func (r *stopResolver) ExternalReference(ctx context.Context, obj *model.Stop) (
 }
 
 func (r *stopResolver) Observations(ctx context.Context, obj *model.Stop, limit *int, where *model.StopObservationFilter) ([]*model.StopObservation, error) {
-	return LoaderFor(ctx).StopObservationsByStopIDs.Load(ctx, stopObservationLoaderParam{StopID: obj.ID, Where: where, Limit: resolverCheckLimit(limit)})()
+	return LoaderFor(ctx).StopObservationsByStopIDs.Load(ctx, stopObservationLoaderParam{StopID: obj.ID, Where: where, Limit: resolverCheckLimitMax(limit, RESOLVER_STOP_OBSERVATION_MAXLIMIT)})()
 }
 
 func (r *stopResolver) Departures(ctx context.Context, obj *model.Stop, limit *int, where *model.StopTimeFilter) ([]*model.StopTime, error) {
