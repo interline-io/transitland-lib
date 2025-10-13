@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_stops" (
   "level_id" integer,
   "tts_stop_name" text,
   "platform_code" text,
+  "stop_access" integer,
   "geometry" BLOB,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(parent_station) references gtfs_stops(id),
