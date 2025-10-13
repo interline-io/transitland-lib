@@ -120,23 +120,41 @@ func (ent *StopTime) SetString(key, value string) error {
 	case "stop_id":
 		ent.StopID.Set(hi)
 	case "arrival_time":
-		perr = ent.ArrivalTime.Scan(hi)
+		if err := ent.ArrivalTime.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("arrival_time", hi)
+		}
 	case "departure_time":
-		perr = ent.DepartureTime.Scan(hi)
+		if err := ent.DepartureTime.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("departure_time", hi)
+		}
 	case "stop_sequence":
-		perr = ent.StopSequence.Scan(hi)
+		if err := ent.StopSequence.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("stop_sequence", hi)
+		}
 	case "pickup_type":
-		perr = ent.PickupType.Scan(hi)
+		if err := ent.PickupType.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("pickup_type", hi)
+		}
 	case "drop_off_type":
-		perr = ent.DropOffType.Scan(hi)
+		if err := ent.DropOffType.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("drop_off_type", hi)
+		}
 	case "continuous_pickup":
-		perr = ent.ContinuousPickup.Scan(hi)
+		if err := ent.ContinuousPickup.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("continuous_pickup", hi)
+		}
 	case "continuous_drop_off":
-		perr = ent.ContinuousDropOff.Scan(hi)
+		if err := ent.ContinuousDropOff.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("continuous_drop_off", hi)
+		}
 	case "shape_dist_traveled":
-		perr = ent.ShapeDistTraveled.Scan(hi)
+		if err := ent.ShapeDistTraveled.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
+		}
 	case "timepoint":
-		perr = ent.Timepoint.Scan(hi)
+		if err := ent.Timepoint.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("timepoint", hi)
+		}
 	default:
 		ent.SetExtra(key, hi)
 	}
