@@ -17,6 +17,7 @@ type RequestInfo struct {
 	Path        string
 	Description string
 	Get         RequestOperation
+	Post        RequestOperation
 }
 
 type RequestOperation struct {
