@@ -162,17 +162,6 @@ func tzTruncate(s time.Time, loc *time.Location) *tt.Date {
 	return ptr(tt.NewDate(time.Date(s.Year(), s.Month(), s.Day(), 0, 0, 0, 0, loc)))
 }
 
-func checkRange(limit *int, min, max int) uint64 {
-	if limit == nil {
-		return uint64(max)
-	} else if *limit >= max {
-		return uint64(max)
-	} else if *limit < min {
-		return uint64(min)
-	}
-	return uint64(*limit)
-}
-
 func checkFloat(v *float64, min float64, max float64) float64 {
 	if v == nil || *v < min {
 		return min

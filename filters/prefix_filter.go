@@ -10,36 +10,40 @@ import (
 )
 
 type PrefixFilter struct {
-	PrefixAll   bool
-	prefixes    map[int]string
-	prefixFiles map[string]bool
+	prefixes          map[int]string
+	prefixFiles       map[string]bool
+	prefixFileDefault bool
 }
 
 func NewPrefixFilter() (*PrefixFilter, error) {
 	return &PrefixFilter{
-		prefixes:    map[int]string{},
-		prefixFiles: map[string]bool{},
+		prefixes:          map[int]string{},
+		prefixFiles:       map[string]bool{},
+		prefixFileDefault: true,
 	}, nil
 }
 
 func newPrefixFilterFromJson(args string) (*PrefixFilter, error) {
 	type prefixFilterOptions struct {
-		PrefixAll   bool
-		Prefixes    map[string]string
-		PrefixFiles []string
+		Prefixes      map[string]string
+		PrefixFiles   []string // backwards compat
+		PrefixInclude []string
+		PrefixExclude []string
 	}
 	pfx, _ := NewPrefixFilter()
 	opts := &prefixFilterOptions{}
 	if err := json.Unmarshal([]byte(args), opts); err != nil {
 		return nil, err
 	}
-	pfx.PrefixAll = opts.PrefixAll
 	for _, fn := range opts.PrefixFiles {
-		pfx.prefixFiles[fn] = true
+		pfx.setPrefixFile(fn, true)
 	}
-	// for k, v := range opts.Prefixes {
-	// 	pfx.SetPrefix(k, v)
-	// }
+	for _, fn := range opts.PrefixInclude {
+		pfx.setPrefixFile(fn, true)
+	}
+	for _, fn := range opts.PrefixExclude {
+		pfx.setPrefixFile(fn, false)
+	}
 	return pfx, nil
 }
 
@@ -47,14 +51,29 @@ func (filter *PrefixFilter) SetPrefix(fvid int, prefix string) {
 	filter.prefixes[fvid] = prefix
 }
 
+func (filter *PrefixFilter) setPrefixFile(fn string, state bool) {
+	filter.prefixFiles[fn] = state
+}
+
 func (filter *PrefixFilter) PrefixFile(fn string) {
-	filter.prefixFiles[fn] = true
+	filter.prefixFileDefault = false
+	filter.setPrefixFile(fn, true)
+}
+
+func (filter *PrefixFilter) UnprefixFile(fn string) {
+	filter.prefixFileDefault = true
+	filter.setPrefixFile(fn, false)
 }
 
 func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
-	if _, ok := filter.prefixFiles[ent.Filename()]; !(ok || filter.PrefixAll) {
+	ok := filter.prefixFileDefault
+	if prefixFile, prefixFileOk := filter.prefixFiles[ent.Filename()]; prefixFileOk {
+		ok = prefixFile
+	}
+	if !ok {
 		return nil
 	}
+
 	switch v := ent.(type) {
 	case *gtfs.Stop:
 		if prefix, ok := filter.getprefix(v.FeedVersionID); ok {
@@ -115,7 +134,9 @@ func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 			v.PathwayID.Set(fmt.Sprintf("%s%s", prefix, v.PathwayID.Val))
 		}
 	default:
+		return nil
 	}
+	// fmt.Println("prefixed:", ent.Filename(), ent.EntityID())
 	return nil
 }
 

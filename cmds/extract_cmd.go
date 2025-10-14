@@ -27,7 +27,10 @@ type ExtractCommand struct {
 	create        bool
 	extensionDefs []string
 	// extract specific arguments
+	excludeUnusedRoutes bool
 	Prefix              string
+	PrefixFilesInclude  []string
+	PrefixFilesExclude  []string
 	extractAgencies     []string
 	extractStops        []string
 	extractTrips        []string
@@ -41,7 +44,6 @@ type ExtractCommand struct {
 	excludeCalendars    []string
 	excludeRoutes       []string
 	excludeRouteTypes   []string
-	excludeUnusedRoutes bool
 	bbox                string
 	writeExtraColumns   bool
 	readerPath          string
@@ -129,6 +131,8 @@ func (cmd *ExtractCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.bbox, "bbox", "", "Extract bbox as (min lon, min lat, max lon, max lat), e.g. -122.276,37.794,-122.259,37.834")
 
 	fl.StringArrayVar(&cmd.extractSet, "set", nil, "Set values on output; format is filename,id,key,value")
+	fl.StringArrayVar(&cmd.PrefixFilesInclude, "prefix-files-include", nil, "Prefix files to use for entity matching")
+	fl.StringArrayVar(&cmd.PrefixFilesExclude, "prefix-files-exclude", nil, "Prefix files to use for entity matching")
 	fl.StringVar(&cmd.Prefix, "prefix", "", "Prefix entities in this feed")
 
 }
@@ -168,7 +172,12 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 	cmd.Options.ExtensionDefs = cmd.extensionDefs
 	if cmd.Prefix != "" {
 		pfx, _ := filters.NewPrefixFilter()
-		pfx.PrefixAll = true
+		for _, cmd := range cmd.PrefixFilesInclude {
+			pfx.PrefixFile(cmd)
+		}
+		for _, cmd := range cmd.PrefixFilesExclude {
+			pfx.UnprefixFile(cmd)
+		}
 		pfx.SetPrefix(0, cmd.Prefix)
 		cmd.Options.AddExtension(pfx)
 	}

@@ -72,6 +72,14 @@ func (tx *SetterFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 			log.Error().Msgf("Failed to set field '%s': %v", setterKey, err)
 			continue
 		}
+		// Handle "*"
+		if entv, ok := tx.nodes[*graph.NewNode(ent.Filename(), "*")]; ok {
+			for k, v := range entv {
+				if err := tlcsv.SetString(ent, k, v); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }
