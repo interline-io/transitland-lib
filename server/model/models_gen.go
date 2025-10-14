@@ -434,6 +434,8 @@ type FeedVersionFilter struct {
 	Within *tt.Polygon `json:"within,omitempty"`
 	// Search for feed versions within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
+	// Search for stops with these license details
+	License *LicenseFilter `json:"license,omitempty"`
 }
 
 // Result of feed version import operation
