@@ -16,8 +16,8 @@ type RequestAltPath struct {
 type RequestInfo struct {
 	Path        string
 	Description string
-	Get         RequestOperation
-	Post        RequestOperation
+	Get         *RequestOperation
+	Post        *RequestOperation
 }
 
 type RequestOperation struct {

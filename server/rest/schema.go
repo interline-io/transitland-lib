@@ -104,7 +104,10 @@ func GenerateOpenAPI(restPrefix string, opts ...SchemaOption) (*oa.T, error) {
 		pathItem := &oa.PathItem{}
 
 		// Helper function to process operation (GET or POST)
-		processOperation := func(reqOp RequestOperation) (*oa.Operation, error) {
+		processOperation := func(reqOp *RequestOperation) (*oa.Operation, error) {
+			if reqOp == nil {
+				return nil, nil
+			}
 			if reqOp.Operation == nil {
 				return nil, nil
 			}

@@ -49,7 +49,7 @@ func (r FeedVersionExportOpenAPIRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path:        "/feed_versions/export",
 		Description: `Export one or more feed versions as a GTFS zip file with optional transformations (ID prefixing, timezone normalization, shape simplification, etc.). Feed versions must be successfully imported before they can be exported. Available only using Transitland professional or enterprise plan API keys.`,
-		Post: RequestOperation{
+		Post: &RequestOperation{
 			Operation: &oa.Operation{
 				Summary: "Export feed versions with transformations",
 				Extensions: map[string]any{
