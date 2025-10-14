@@ -9896,6 +9896,8 @@ input StopBuffer {
 input CensusDatasetGeographyFilter {
   "Geographies with these integer IDs"
   ids: [Int!]
+  "Search within this dataset"
+  dataset: String
   "Search within this layer"
   layer: String
   "Search for geographies matching this string"
@@ -53821,7 +53823,7 @@ func (ec *executionContext) unmarshalInputCensusDatasetGeographyFilter(ctx conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"ids", "layer", "search", "location"}
+	fieldsInOrder := [...]string{"ids", "dataset", "layer", "search", "location"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -53835,6 +53837,13 @@ func (ec *executionContext) unmarshalInputCensusDatasetGeographyFilter(ctx conte
 				return it, err
 			}
 			it.Ids = data
+		case "dataset":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dataset"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Dataset = data
 		case "layer":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("layer"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)

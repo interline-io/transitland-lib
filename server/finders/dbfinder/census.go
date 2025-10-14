@@ -67,8 +67,9 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 	}
 	forStopids := func(stopIds []int) *model.CensusDatasetGeographyFilter {
 		return &model.CensusDatasetGeographyFilter{
-			Layer:  where.Layer,
-			Search: where.Search,
+			Dataset: where.Dataset,
+			Layer:   where.Layer,
+			Search:  where.Search,
 			Location: &model.CensusDatasetGeographyLocationFilter{
 				StopBuffer: &model.StopBuffer{
 					StopIds: stopIds,
@@ -435,6 +436,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				Expression:   qPoints,
 			})
 			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
+				Column("buffer.match_entity_id").
 				Where(sq.Expr("ST_Intersects(tlcg.geometry, buffer.buffer)"))
 		}
 		if loc.Focus != nil {
@@ -444,6 +446,9 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 
 	// Check layer, dataset
 	if where != nil {
+		if where.Dataset != nil {
+			q = q.Where(sq.Eq{"tlcd.name": *where.Dataset})
+		}
 		if where.Layer != nil {
 			q = q.Where(sq.Eq{"tlcl.name": where.Layer})
 		}

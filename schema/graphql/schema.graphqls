@@ -1928,6 +1928,8 @@ input StopBuffer {
 input CensusDatasetGeographyFilter {
   "Geographies with these integer IDs"
   ids: [Int!]
+  "Search within this dataset"
+  dataset: String
   "Search within this layer"
   layer: String
   "Search for geographies matching this string"
