@@ -63,7 +63,7 @@ type EntityLoader interface {
 	CensusSourceLayersBySourceIDs(context.Context, []int) ([][]*CensusLayer, []error)
 	CensusSourcesByDatasetIDs(context.Context, *int, *CensusSourceFilter, []int) ([][]*CensusSource, error)
 	CensusTableByIDs(context.Context, []int) ([]*CensusTable, []error)
-	CensusValuesByGeographyIDs(context.Context, *int, []string, []string) ([][]*CensusValue, error)
+	CensusValuesByGeographyIDs(context.Context, *int, string, []string, []string) ([][]*CensusValue, error)
 	FeedFetchesByFeedIDs(context.Context, *int, *FeedFetchFilter, []int) ([][]*FeedFetch, error)
 	FeedInfosByFeedVersionIDs(context.Context, *int, []int) ([][]*FeedInfo, error)
 	FeedsByIDs(context.Context, []int) ([]*Feed, []error)

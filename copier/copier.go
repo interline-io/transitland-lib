@@ -340,7 +340,7 @@ func NewCopier(ctx context.Context, reader adapters.Reader, writer adapters.Writ
 	// Add option extensions
 	for _, e := range addExtLevels {
 		if err := copier.addExtension(e.ext, e.level); err != nil {
-			return nil, fmt.Errorf("failed to add extension: %s", err.Error())
+			return nil, fmt.Errorf("failed to add extension '%T': %s", e.ext, err.Error())
 		}
 	}
 	return copier, nil

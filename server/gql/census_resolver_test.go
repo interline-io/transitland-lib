@@ -1,6 +1,7 @@
 package gql
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -310,13 +311,13 @@ func TestCensusResolver(t *testing.T) {
 		},
 		{
 			name:  "agency intersection areas - county",
-			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"county", radius:1000.0}) { name geometry_area intersection_geometry intersection_area } } }`,
+			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"county", radius:1000.0}) { name geoid geometry_area intersection_geometry intersection_area } } }`,
 			vars:  vars,
 			f: func(t *testing.T, jj string) {
 				testIntersectionArea(
 					t,
 					gjson.Get(jj, "agencies.0.census_geographies").Array(),
-					1,
+					18,
 					countyArea,
 					65341022.43,
 				)
@@ -324,13 +325,13 @@ func TestCensusResolver(t *testing.T) {
 		},
 		{
 			name:  "agency intersection areas - tract",
-			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"tract", radius:100.0}) { name geometry_area intersection_geometry intersection_area } } }`,
+			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"tract", radius:100.0}) { name geoid geometry_area intersection_geometry intersection_area } } }`,
 			vars:  vars,
 			f: func(t *testing.T, jj string) {
 				testIntersectionArea(
 					t,
 					gjson.Get(jj, "agencies.0.census_geographies").Array(),
-					37,
+					39,
 					73325034.5592,
 					687170.8023156085,
 				)
@@ -340,11 +341,17 @@ func TestCensusResolver(t *testing.T) {
 	queryTestcases(t, c, testcases)
 }
 func testIntersectionArea(t *testing.T, a []gjson.Result, expectCount int, expectGeometryArea float64, expectIntersectionArea float64) {
+	// Only count each geometry once
+	geometryAreas := map[string]float64{}
 	intersectionArea := 0.0
-	geometryArea := 0.0
 	for _, v := range a {
 		intersectionArea += v.Get("intersection_area").Float()
-		geometryArea += v.Get("geometry_area").Float()
+		geometryAreas[v.Get("geoid").String()] = v.Get("geometry_area").Float()
+	}
+	fmt.Printf("areas: %+v\n", geometryAreas)
+	geometryArea := 0.0
+	for _, v := range geometryAreas {
+		geometryArea += v
 	}
 	assert.InDelta(t, expectIntersectionArea, intersectionArea, 1.0, "expected intersection area")
 	assert.InDelta(t, expectGeometryArea, geometryArea, 1.0, "expected geometry area")
