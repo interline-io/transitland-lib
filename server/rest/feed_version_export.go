@@ -206,7 +206,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	var err error
 	req, err = CheckFeedVersionExportRequest(ctx, req, graphqlHandler)
 	if err != nil {
-		util.WriteJsonError(w, "invalid request: "+err.Error(), http.StatusInternalServerError)
+		util.WriteJsonError(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
