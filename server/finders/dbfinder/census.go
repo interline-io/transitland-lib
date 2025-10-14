@@ -358,9 +358,9 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 	q := sq.StatementBuilder.
 		Select(cols...).
 		From("tl_census_geographies tlcg").
-		Join("tl_census_sources tlcs on tlcs.id = tlcg.source_id").
-		Join("tl_census_datasets tlcd on tlcd.id = tlcs.dataset_id").
 		Join("tl_census_layers tlcl on tlcl.id = tlcg.layer_id").
+		Join("tl_census_datasets tlcd on tlcd.id = tlcl.dataset_id").
+		Join("tl_census_sources tlcs on tlcs.id = tlcg.source_id").
 		Limit(finderCheckLimit(limit))
 
 	if where != nil && where.Location != nil {
