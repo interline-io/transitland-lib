@@ -353,9 +353,10 @@ func makeRequest(ctx context.Context, graphqlHandler http.Handler, ent apiHandle
 				return nil, err
 			}
 		}
-		if format == "geojsonl" {
+		switch format {
+		case "geojsonl":
 			return renderGeojsonl(response)
-		} else if format == "png" {
+		case "png":
 			b, err := json.Marshal(response)
 			if err != nil {
 				return nil, err

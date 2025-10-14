@@ -136,9 +136,10 @@ func (r FeedRequest) Query(ctx context.Context) (string, map[string]interface{})
 	if r.TagKey != "" {
 		where["tags"] = hw{r.TagKey: r.TagValue}
 	}
-	if r.FetchError == "true" {
+	switch r.FetchError {
+	case "true":
 		where["fetch_error"] = true
-	} else if r.FetchError == "false" {
+	case "false":
 		where["fetch_error"] = false
 	}
 	if r.URL != "" || r.URLType != "" {

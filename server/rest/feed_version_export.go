@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -348,12 +349,10 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	var fvids []int
 	var fvSha1s []string
 	var feedOnestopIds []string
-
 	for _, fv := range feedVersionsJson.Array() {
 		fvid := int(fv.Get("id").Int())
 		sha1 := fv.Get("sha1").String()
 		feedOnestopId := fv.Get("feed.onestop_id").String()
-		redistAllowed := fv.Get("feed.license.redistribution_allowed").String()
 
 		// Check import status - export requires a successful, completed import
 		importRecord := fv.Get("feed_version_gtfs_import")
@@ -376,7 +375,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 			return
 		}
 
-		if redistAllowed == "no" {
+		if fv.Get("feed.license.redistribution_allowed").String() == "no" {
 			util.WriteJsonError(w, fmt.Sprintf("feed version %s does not allow redistribution", sha1), http.StatusForbidden)
 			return
 		}
@@ -402,6 +401,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 			FeedVersionIDs: []int{fvid},
 		}
 		if err := reader.Open(); err != nil {
+			log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("failed to open feed version reader")
 			util.WriteJsonError(w, "failed to open feed version reader: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -416,25 +416,32 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	} else {
 		reader = multireader.NewReader(readers...)
 		if err := reader.Open(); err != nil {
+			log.For(ctx).Error().Err(err).Msg("failed to open multireader")
 			util.WriteJsonError(w, "failed to open multireader: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		defer reader.Close()
 	}
 
-	// Set response headers for ZIP download
-	filename := generateExportFilename(feedOnestopIds, fvSha1s)
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
-	w.WriteHeader(http.StatusOK)
+	// Create CSV writer that writes to ZIP temporary file
+	tmpFilename := ""
+	if tmpfile, err := os.CreateTemp("", "*-export.zip"); err != nil {
+		log.For(ctx).Error().Err(err).Msg("failed to create temp file for zip")
+		util.WriteJsonError(w, "failed to create temp file for zip: "+err.Error(), http.StatusInternalServerError)
+		return
+	} else {
+		tmpFilename = tmpfile.Name()
+		tmpfile.Close()
+	}
+	// defer os.Remove(tmpFilename)
 
-	// Create ZIP writer that streams to response
-	zipWriter := zip.NewWriter(w)
-	defer zipWriter.Close()
-
-	// Create CSV writer that writes to ZIP
-	csvWriter := &tlcsv.Writer{}
-	csvWriter.WriterAdapter = &zipAdapter{zw: zipWriter}
+	log.For(ctx).Trace().Msgf("Starting export of %d feed versions to %s", len(fvids), tmpFilename)
+	csvWriter, err := tlcsv.NewWriter(tmpFilename)
+	if err != nil {
+		log.For(ctx).Error().Err(err).Msg("failed to create CSV writer")
+		util.WriteJsonError(w, "failed to create CSV writer: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Configure copier options with transformations
 	opts := copier.Options{
@@ -448,7 +455,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	if req.Transforms != nil {
 		if err := applyTransforms(&opts, req.Transforms, fvids); err != nil {
 			log.For(ctx).Error().Err(err).Msg("failed to apply transforms")
-			// Can't write error to response as headers are already sent
+			util.WriteJsonError(w, "failed to apply transforms: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -456,8 +463,38 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	// Perform the copy operation (streaming to ZIP)
 	result, err := copier.CopyWithOptions(ctx, reader, csvWriter, opts)
 	if err != nil {
-		log.For(ctx).Error().Err(err).Msg("export failed")
 		// Can't write error to response as headers are already sent
+		log.For(ctx).Error().Err(err).Msg("export failed")
+		util.WriteJsonError(w, "failed to create CSV writer: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.For(ctx).Trace().Msgf("Finished export to %s", tmpFilename)
+	if err := csvWriter.Close(); err != nil {
+		log.For(ctx).Error().Err(err).Msg("failed to close CSV writer")
+		util.WriteJsonError(w, "failed to create CSV writer: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set response headers for ZIP download
+	filename := generateExportFilename(feedOnestopIds, fvSha1s)
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	w.WriteHeader(http.StatusOK)
+
+	// Stream the ZIP file to response
+	log.For(ctx).Trace().Msgf("Sending file %s", tmpFilename)
+	zipData, err := os.Open(tmpFilename)
+	if err != nil {
+		log.For(ctx).Error().Err(err).Msg("failed to open zip file for streaming")
+		util.WriteJsonError(w, "failed to open zip file for streaming: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer zipData.Close()
+
+	if _, err := io.Copy(w, zipData); err != nil {
+		// Can't write error to response as headers are already sent
+		log.For(ctx).Error().Err(err).Msg("failed to stream zip file")
 		return
 	}
 
