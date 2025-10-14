@@ -124,6 +124,17 @@ func TryCsv(val any) string {
 	return a
 }
 
+func checkFloatInteger(s string) (float64, error) {
+	c, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return c, err
+	}
+	if c != math.Trunc(c) {
+		return c, fmt.Errorf("cannot convert non-integer float to int64")
+	}
+	return c, nil
+}
+
 func convertAssign(dest any, src any) (bool, error) {
 	if src == nil {
 		return false, nil
@@ -156,9 +167,17 @@ func convertAssign(dest any, src any) (bool, error) {
 	case *int:
 		switch s := src.(type) {
 		case string:
-			*d, err = strconv.Atoi(s)
+			c, e := checkFloatInteger(s)
+			if e != nil {
+				err = e
+			}
+			*d = int(c)
 		case []byte:
-			*d, err = strconv.Atoi(string(s))
+			c, e := checkFloatInteger(string(s))
+			if e != nil {
+				err = e
+			}
+			*d = int(c)
 		case int:
 			*d = int(s)
 		case int64:
@@ -173,9 +192,17 @@ func convertAssign(dest any, src any) (bool, error) {
 	case *int64:
 		switch s := src.(type) {
 		case string:
-			*d, err = strconv.ParseInt(s, 10, 64)
+			c, e := checkFloatInteger(s)
+			if e != nil {
+				err = e
+			}
+			*d = int64(c)
 		case []byte:
-			*d, err = strconv.ParseInt(string(s), 10, 64)
+			c, e := checkFloatInteger(string(s))
+			if e != nil {
+				err = e
+			}
+			*d = int64(c)
 		case int:
 			*d = int64(s)
 		case int64:
