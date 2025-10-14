@@ -110,12 +110,12 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 	return ret, nil
 }
 
-func (f *Finder) CensusValuesByGeographyIDs(ctx context.Context, limit *int, tableNames []string, keys []string) ([][]*model.CensusValue, error) {
+func (f *Finder) CensusValuesByGeographyIDs(ctx context.Context, limit *int, datasetName string, tableNames []string, keys []string) ([][]*model.CensusValue, error) {
 	var ents []*model.CensusValue
 	err := dbutil.Select(
 		ctx,
 		f.db,
-		censusValueSelect(limit, "", tableNames, keys),
+		censusValueSelect(limit, datasetName, tableNames, keys),
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.CensusValue) string { return ent.Geoid }), err
@@ -470,11 +470,12 @@ func getBufferStopIds(ctx context.Context, db tldb.Ext, entityType string, entit
 		Select("id").
 		Distinct().Options("on (gtfs_stops.id)").
 		From("gtfs_stops")
-	if entityType == "route" {
+	switch entityType {
+	case "route":
 		q = q.Join("tl_route_stops ON tl_route_stops.stop_id = gtfs_stops.id").Where(sq.Eq{"tl_route_stops.route_id": entityId})
-	} else if entityType == "agency" {
+	case "agency":
 		q = q.Join("tl_route_stops ON tl_route_stops.stop_id = gtfs_stops.id").Where(sq.Eq{"tl_route_stops.agency_id": entityId})
-	} else if entityType == "stop" {
+	case "stop":
 		// No need to query, just return the single stop ID
 		return []int{entityId}, nil
 	}
