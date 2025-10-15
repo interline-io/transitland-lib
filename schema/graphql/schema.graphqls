@@ -1897,7 +1897,10 @@ input CensusDatasetFilter {
   search: String
 }
 
-"""Search options for census geographies"""
+"""Search options for census geographies
+
+Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
+"""
 input CensusGeographyFilter {
   dataset: String
   layer: String
@@ -1905,26 +1908,10 @@ input CensusGeographyFilter {
   search: String
 }
 
-input CensusDatasetGeographyLocationFilter {
-  "Search within this bounding box"
-  bbox: BoundingBox
-  "Search within this geographic polygon"
-  within: Polygon
-  "Search within specified radius of a point"
-  near: PointRadius
-  "Focus search on this point; results will be sorted by distance"
-  focus: FocusPoint  
-  "Search based on a buffer around these stop ids"
-  stop_buffer: StopBuffer
-}
+"""Search options for census geographies within a specific dataset
 
-input StopBuffer {
-  "Search for geographies with these stop IDs"
-  stop_ids: [Int!]
-  "Stop ID search radius, in meters"
-  radius: Float
-}
-
+Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
+"""
 input CensusDatasetGeographyFilter {
   "Geographies with these integer IDs"
   ids: [Int!]
@@ -1938,6 +1925,10 @@ input CensusDatasetGeographyFilter {
   location: CensusDatasetGeographyLocationFilter
 }
 
+"""Search options for census geography sources
+
+Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
+"""
 input CensusSourceGeographyFilter {
   "Geographies with these integer IDs"
   ids: [Int!]
@@ -1945,6 +1936,37 @@ input CensusSourceGeographyFilter {
   search: String
   "Location search"
   location: CensusDatasetGeographyLocationFilter
+}
+
+
+"""Search options for census geographies
+
+Note: when using spatial searches (radius, stop_buffer, etc.), individual census geographies may appear multiple times in the result set, each representing a different intersection with the search area. For example:
+- Two stops with small radius buffers in the same census tract will return that tract twice, once for each buffer intersection
+- A complex polygon search that touches multiple disconnected areas of the same geography will return separate entries for each intersection
+- Each duplicate entry will have different `intersection_area` and `intersection_geometry` values representing the specific overlap
+
+Clients should aggregate or de-duplicate results as needed based on the `geoid` field if a single entry per geography is desired.
+"""
+input CensusDatasetGeographyLocationFilter {
+  "Search within this bounding box"
+  bbox: BoundingBox
+  "Search within this geographic polygon"
+  within: Polygon
+  "Search within specified radius of a point"
+  near: PointRadius
+  "Focus search on this point; results will be sorted by distance"
+  focus: FocusPoint  
+  "Search based on a buffer around these stop ids"
+  stop_buffer: StopBuffer
+}
+
+"""Search options for census geographies based on stop IDs"""
+input StopBuffer {
+  "Search for geographies with these stop IDs"
+  stop_ids: [Int!]
+  "Stop ID search radius, in meters"
+  radius: Float
 }
 
 input CensusTableFilter {
