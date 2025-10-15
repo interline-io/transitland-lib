@@ -138,6 +138,9 @@ type CensusDatasetFilter struct {
 	Search *string `json:"search,omitempty"`
 }
 
+// Search options for census geographies within a specific dataset
+//
+// Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusDatasetGeographyFilter struct {
 	// Geographies with these integer IDs
 	Ids []int `json:"ids,omitempty"`
@@ -151,6 +154,14 @@ type CensusDatasetGeographyFilter struct {
 	Location *CensusDatasetGeographyLocationFilter `json:"location,omitempty"`
 }
 
+// Search options for census geographies
+//
+// Note: when using spatial searches (radius, stop_buffer, etc.), individual census geographies may appear multiple times in the result set, each representing a different intersection with the search area. For example:
+// - Two stops with small radius buffers in the same census tract will return that tract twice, once for each buffer intersection
+// - A complex polygon search that touches multiple disconnected areas of the same geography will return separate entries for each intersection
+// - Each duplicate entry will have different `intersection_area` and `intersection_geometry` values representing the specific overlap
+//
+// Clients should aggregate or de-duplicate results as needed based on the `geoid` field if a single entry per geography is desired.
 type CensusDatasetGeographyLocationFilter struct {
 	// Search within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
@@ -222,6 +233,8 @@ type CensusGeography struct {
 }
 
 // Search options for census geographies
+//
+// Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusGeographyFilter struct {
 	Dataset *string  `json:"dataset,omitempty"`
 	Layer   *string  `json:"layer,omitempty"`
@@ -263,6 +276,9 @@ type CensusSourceFilter struct {
 	Search *string `json:"search,omitempty"`
 }
 
+// Search options for census geography sources
+//
+// Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusSourceGeographyFilter struct {
 	// Geographies with these integer IDs
 	Ids []int `json:"ids,omitempty"`
@@ -956,6 +972,7 @@ type Step struct {
 	GeometryOffset int       `json:"geometry_offset"`
 }
 
+// Search options for census geographies based on stop IDs
 type StopBuffer struct {
 	// Search for geographies with these stop IDs
 	StopIds []int `json:"stop_ids,omitempty"`
