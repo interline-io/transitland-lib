@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
+	"github.com/interline-io/transitland-lib/internal/materialized"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -35,7 +36,26 @@ func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, feedId int, fvid
 	}
 	// sqlite3 only supports "UPDATE ... FROM" in versions 3.33 and higher
 	_, err := atx.DBX().ExecContext(ctx, "UPDATE feed_states SET feed_version_id = $1 WHERE feed_id = (SELECT feed_id FROM feed_versions WHERE id = $2)", fvid, fvid)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Trigger materialized table refresh for this feed
+	refresher := materialized.NewRefresher(atx)
+	if err := refresher.RefreshSpecificFeed(ctx, feedId); err != nil {
+		log.For(ctx).Warn().Err(err).
+			Int("feed_id", feedId).
+			Int("feed_version_id", fvid).
+			Msg("Failed to refresh materialized tables for feed - continuing with activation")
+		// Don't fail the activation on materialized refresh failure
+	} else {
+		log.For(ctx).Info().
+			Int("feed_id", feedId).
+			Int("feed_version_id", fvid).
+			Msg("Successfully refreshed materialized tables for activated feed")
+	}
+
+	return nil
 }
 
 func MainImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
