@@ -241,7 +241,7 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 	// Add geometry column - full geometry for SQLite, simplified for PostGIS
 	routeFields["geometry_simplified"] = "tlrg.geometry"
 	if m.adapter.SupportsSpatialFunctions() {
-		routeFields["geometry_simplified"] = "ST_Simplify(tlrg.geometry, 0.01)"
+		routeFields["geometry_simplified"] = "ST_Simplify(tlrg.geometry::geometry, 0.01)"
 	}
 
 	// Extract columns and selects from the map, sorted for consistency
