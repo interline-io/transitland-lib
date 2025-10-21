@@ -263,7 +263,6 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		From(stopTable).
 		Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
-		OrderBy("gtfs_stops.feed_version_id,gtfs_stops.id").
 		Limit(finderCheckLimit(limit))
 	distinct := false
 
@@ -384,6 +383,9 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
 			q = q.Where("ST_DWithin(gtfs_stops.geometry, ST_MakePoint(?,?), ?)", loc.Near.Lon, loc.Near.Lat, radius)
 		}
+		if loc.Focus != nil {
+			q = q.OrderByClause(sq.Expr("gtfs_stops.geometry <-> ST_MakePoint(?,?)", loc.Focus.Lon, loc.Focus.Lat))
+		}
 	}
 
 	// Handle other clauses
@@ -485,10 +487,24 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		q = q.Where(In("gtfs_stops.id", ids))
 	}
 
+	// Default ordering
+	q = q.OrderBy("gtfs_stops.feed_version_id,gtfs_stops.id")
+
 	// Handle cursor
 	if after != nil && after.Valid && after.ID > 0 {
-		// first check helps improve query performance
-		if after.FeedVersionID == 0 {
+		if where != nil && where.Location != nil && where.Location.Focus != nil {
+			// Complex ordering with focus point
+			// When ordering by distance from focus, we need to find the distance
+			// of the 'after' stop to determine the minimum distance threshold for pagination
+			q = q.Where(sq.Expr(
+				"ST_Distance(gtfs_stops.geometry, ST_MakePoint(?,?)) > (select ST_Distance(geometry, ST_MakePoint(?,?)) from gtfs_stops where id = ?)",
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				after.ID))
+		} else if after.FeedVersionID == 0 {
+			// Fallback if no fvid is provided, get it from stop
 			q = q.
 				Where(sq.Expr("gtfs_stops.feed_version_id >= (select feed_version_id from gtfs_stops where id = ?)", after.ID)).
 				Where(sq.Expr("(gtfs_stops.feed_version_id, gtfs_stops.id) > (select feed_version_id,id from gtfs_stops where id = ?)", after.ID))

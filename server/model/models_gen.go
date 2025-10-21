@@ -24,12 +24,6 @@ type AgencyFilter struct {
 	AgencyID *string `json:"agency_id,omitempty"`
 	// Search for records with this GTFS agency_name
 	AgencyName *string `json:"agency_name,omitempty"`
-	// Search for agencies within this bounding box
-	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Search for agencies within this geographic polygon
-	Within *tt.Polygon `json:"within,omitempty"`
-	// Search for agencies within specified radius of a point
-	Near *PointRadius `json:"near,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
 	// Search for agencies by city name (provided by Natural Earth)
@@ -44,6 +38,23 @@ type AgencyFilter struct {
 	Adm1Iso *string `json:"adm1_iso,omitempty"`
 	// Search for agencies with these license details
 	License *LicenseFilter `json:"license,omitempty"`
+	// Search for agencies within this bounding box
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Search for agencies within this geographic polygon
+	Within *tt.Polygon `json:"within,omitempty"`
+	// Search for agencies within specified radius of a point
+	Near *PointRadius `json:"near,omitempty"`
+}
+
+type AgencyLocationFilter struct {
+	// Search for agencies within this bounding box
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Search for agencies within this geographic polygon
+	Polygon *tt.Polygon `json:"polygon,omitempty"`
+	// Search for agencies within specified radius of a point
+	Near *PointRadius `json:"near,omitempty"`
+	// Focus search on this point; results will be sorted by distance
+	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
 // Place associated with an agency
@@ -806,12 +817,6 @@ type RouteFilter struct {
 	RouteTypes []int `json:"route_types,omitempty"`
 	// Search for routes with 1 or more trips (true) or 0 or more trips (false or null)
 	Serviced *bool `json:"serviced,omitempty"`
-	// Search for routes within this bounding box
-	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Search for routes within this geographic polygon
-	Within *tt.Polygon `json:"within,omitempty"`
-	// Search for routes within specified radius of a point
-	Near *PointRadius `json:"near,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
 	// Search for routes operated by operators with this OnestopID
@@ -820,6 +825,14 @@ type RouteFilter struct {
 	License *LicenseFilter `json:"license,omitempty"`
 	// Search for routes with these agency integer IDs. Deprecated.
 	AgencyIds []int `json:"agency_ids,omitempty"`
+	// Location
+	Location *RouteLocationFilter `json:"location,omitempty"`
+	// Backwards compat:Search for routes within this bounding box
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Backwards compat: Search for routes within this geographic polygon
+	Within *tt.Polygon `json:"within,omitempty"`
+	// Backwards compat: Search for routes within specified radius of a point
+	Near *PointRadius `json:"near,omitempty"`
 }
 
 // Representative route geometries
@@ -858,6 +871,17 @@ type RouteHeadway struct {
 	DepartureInts    tt.Ints       `db:"departures"`
 	RouteID          int           `json:"-"`
 	SelectedStopID   int           `json:"-"`
+}
+
+type RouteLocationFilter struct {
+	// Search for routes within this bounding box
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Search for routes within this geographic polygon
+	Polygon *tt.Polygon `json:"polygon,omitempty"`
+	// Search for routes within specified radius of a point
+	Near *PointRadius `json:"near,omitempty"`
+	// Focus search on this point; results will be sorted by distance
+	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
 // RouteStops describe associations between stops, routes, and agencies.
@@ -1038,6 +1062,8 @@ type StopLocationFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 	// Search within these geography ids
 	GeographyIds []*int `json:"geography_ids,omitempty"`
+	// Focus search on this point; results will be sorted by distance
+	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
 // Measurements of observed arrival times based on GTFS-RT data
