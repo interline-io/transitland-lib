@@ -5,8 +5,6 @@ CREATE TABLE tl_materialized_active_routes (
     -- Primary route data
     id bigint NOT NULL,
     route_id text NOT NULL,
-    agency_id text,
-    agency_name text,
     route_short_name text,
     route_long_name text,
     route_desc text,
@@ -14,18 +12,23 @@ CREATE TABLE tl_materialized_active_routes (
     route_url text,
     route_color text,
     route_text_color text,
-    
-    -- Feed metadata
+    route_sort_order int,
+    agency_id bigint,
+    network_id text,
+    as_route integer,
+    continuous_pickup integer,
+    continuous_drop_off integer,
     feed_version_id bigint NOT NULL,
+
+    -- Derived
+    gtfs_agency_id text,
+    agency_name text,
     feed_id bigint NOT NULL,
     onestop_id text,
     
     -- Materialization metadata
     materialized_at timestamp without time zone DEFAULT now() NOT NULL,
-    
-    -- Geometry (from derived tables)
-    geometry geography(LineString,4326),
-    
+
     -- Search optimization
     textsearch tsvector,
     
@@ -39,7 +42,6 @@ CREATE INDEX ON tl_materialized_active_routes(route_id);
 CREATE INDEX ON tl_materialized_active_routes(feed_version_id);
 CREATE INDEX ON tl_materialized_active_routes(onestop_id);
 CREATE INDEX ON tl_materialized_active_routes USING gin(textsearch);
-CREATE INDEX ON tl_materialized_active_routes USING gist(geometry);
 
 -- Materialized active stops table
 CREATE TABLE tl_materialized_active_stops (
@@ -49,11 +51,19 @@ CREATE TABLE tl_materialized_active_stops (
     stop_code text,
     stop_name text,
     stop_desc text,
+    zone_id text,
     stop_url text,
     location_type integer,
+    stop_timezone text,
     parent_station bigint,
+    level_id bigint,
+    platform_code text,
+    tts_stop_name text,
+    area_id text,
+    wheelchair_boarding integer,
+    geometry geography(Point,4326),
     
-    -- Feed metadata
+    -- Derived
     feed_version_id bigint NOT NULL,
     feed_id bigint NOT NULL,
     onestop_id text,
@@ -61,15 +71,13 @@ CREATE TABLE tl_materialized_active_stops (
     -- Materialization metadata
     materialized_at timestamp without time zone DEFAULT now() NOT NULL,
     
-    -- Geometry
-    geometry geography(Point,4326),
-    
     -- Search optimization
     textsearch tsvector,
     
     FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
     FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
 );
+
 
 -- Indexes for tl_materialized_active_stops
 CREATE UNIQUE INDEX ON tl_materialized_active_stops(id);
@@ -100,9 +108,6 @@ CREATE TABLE tl_materialized_active_agencies (
     -- Materialization metadata
     materialized_at timestamp without time zone DEFAULT now() NOT NULL,
     
-    -- Geometry (from derived tables)
-    geometry geography,
-    
     -- Search optimization
     textsearch tsvector,
     
@@ -116,20 +121,5 @@ CREATE INDEX ON tl_materialized_active_agencies(agency_id);
 CREATE INDEX ON tl_materialized_active_agencies(feed_version_id);
 CREATE INDEX ON tl_materialized_active_agencies(onestop_id);
 CREATE INDEX ON tl_materialized_active_agencies USING gin(textsearch);
-CREATE INDEX ON tl_materialized_active_agencies USING gist(geometry);
-
--- Materialization state tracking table
-CREATE TABLE tl_materialized_index_state (
-    feed_id bigint PRIMARY KEY,
-    materialized_feed_version_id bigint NOT NULL,
-    last_materialized_at timestamp without time zone DEFAULT now() NOT NULL,
-    
-    FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
-    FOREIGN KEY (materialized_feed_version_id) REFERENCES feed_versions(id)
-);
-
--- Indexes for tl_materialized_index_state
-CREATE INDEX ON tl_materialized_index_state(materialized_feed_version_id);
-CREATE INDEX ON tl_materialized_index_state(last_materialized_at);
 
 COMMIT;

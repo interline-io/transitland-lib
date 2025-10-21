@@ -215,12 +215,12 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, fvid int) error {
 		as_route,
 		continuous_pickup,
 		continuous_drop_off,
-		agency_id, 
+		agency_id,
+		gtfs_agency_id, 
 		agency_name,
 		feed_version_id, 
 		feed_id, 
 		onestop_id, 
-		geometry, 
 		textsearch
 	)
 	SELECT 
@@ -238,18 +238,17 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, fvid int) error {
 		gtfs_routes.as_route,
 		gtfs_routes.continuous_pickup,
 		gtfs_routes.continuous_drop_off,
-		gtfs_agencies.agency_id, 
+		gtfs_routes.agency_id,
+		gtfs_agencies.agency_id as gtfs_agency_id, 
 		gtfs_agencies.agency_name,
 		feed_versions.id as feed_version_id,
 		feed_versions.feed_id,
 		osid.onestop_id, 
-		tl_route_geometries.geometry,
 		gtfs_routes.textsearch
 	FROM gtfs_routes
 	JOIN gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id
 	JOIN feed_versions ON feed_versions.id = gtfs_routes.feed_version_id
 	LEFT JOIN feed_version_route_onestop_ids osid ON osid.entity_id = gtfs_routes.route_id and osid.feed_version_id = feed_versions.id
-	LEFT JOIN tl_route_geometries ON tl_route_geometries.route_id = gtfs_routes.id
 	WHERE gtfs_routes.feed_version_id = $1
 	`
 
@@ -329,7 +328,6 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, fvid int) error {
 		feed_version_id, 
 		feed_id,
 		onestop_id, 
-		geometry, 
 		textsearch
 	)
 	SELECT 
@@ -345,12 +343,10 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, fvid int) error {
 		feed_versions.id as feed_version_id,
 		feed_versions.feed_id,
 		osid.onestop_id, 
-		tl_agency_geometries.geometry, 
 		gtfs_agencies.textsearch
 	FROM gtfs_agencies
 	JOIN feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id
 	LEFT JOIN feed_version_agency_onestop_ids osid ON osid.entity_id = gtfs_agencies.agency_id and osid.feed_version_id = feed_versions.id
-	LEFT JOIN tl_agency_geometries ON tl_agency_geometries.agency_id = gtfs_agencies.id
 	WHERE gtfs_agencies.feed_version_id = $1
 	`
 
