@@ -105,8 +105,7 @@ func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor
 
 func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
 	agencyTable := "gtfs_agencies"
-	active := useActive != nil && useActive.Active
-	if active && useActive != nil && useActive.UseMaterialized {
+	if useActive != nil && useActive.UseMaterialized {
 		agencyTable = "tl_materialized_active_agencies as gtfs_agencies"
 	}
 	distinct := false
@@ -201,7 +200,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_agencies.id", ids))
 	}
-	if active {
+	if useActive != nil && useActive.Active {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_agencies.feed_version_id")
 	}
 

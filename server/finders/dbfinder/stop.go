@@ -236,8 +236,7 @@ func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.
 
 func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {
 	stopTable := "gtfs_stops"
-	active := useActive != nil && useActive.Active
-	if active && useActive != nil && useActive.UseMaterialized {
+	if useActive != nil && useActive.UseMaterialized {
 		stopTable = "tl_materialized_active_stops as gtfs_stops"
 	}
 	q := sq.StatementBuilder.Select(
@@ -481,7 +480,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 	if distinct {
 		q = q.Distinct().Options("on (gtfs_stops.feed_version_id,gtfs_stops.id)")
 	}
-	if active {
+	if useActive != nil && useActive.Active {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_stops.feed_version_id")
 	}
 	if len(ids) > 0 {

@@ -184,8 +184,7 @@ func (f *Finder) ShapesByIDs(ctx context.Context, ids []int) ([]*model.Shape, []
 
 func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.RouteFilter) sq.SelectBuilder {
 	routeTable := "gtfs_routes"
-	active := useActive != nil && useActive.Active
-	if active && useActive != nil && useActive.UseMaterialized {
+	if useActive != nil && useActive.UseMaterialized {
 		routeTable = "tl_materialized_active_routes as gtfs_routes"
 	}
 	q := sq.StatementBuilder.Select(
@@ -311,7 +310,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			q = q.Column(rank).Where(wc)
 		}
 	}
-	if active {
+	if useActive != nil && useActive.Active {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_routes.feed_version_id")
 	}
 	if len(ids) > 0 {
