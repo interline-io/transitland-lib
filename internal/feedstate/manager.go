@@ -226,6 +226,8 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 			"feed_id",
 			"onestop_id",
 			"textsearch",
+			"geometry_centroid",
+			"geometry_simplified",
 		).
 		Select(m.adapter.Sqrl().
 			Select(
@@ -251,6 +253,10 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 				"osid.onestop_id",
 				"gtfs_routes.textsearch",
 			).
+			// Compute centroid from route geometry for fast distance ordering
+			Column(sq.Expr("(SELECT ST_Centroid(geometry) FROM tl_route_geometries WHERE route_id = gtfs_routes.id LIMIT 1)")).
+			// Compute simplified line geometry (max 50 points) for spatial queries
+			Column(sq.Expr("(SELECT ST_Simplify(geometry::geometry, 0.01) FROM tl_route_geometries WHERE route_id = gtfs_routes.id LIMIT 1)")).
 			From("gtfs_routes").
 			Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
 			Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
