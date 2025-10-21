@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/feedstate"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
@@ -57,10 +58,14 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 	if _, err := atx.Sqrl().Delete("feed_version_gtfs_imports").Where(where).ExecContext(ctx); err != nil {
 		return err
 	}
-	// Unset feed state
-	if _, err := atx.Sqrl().Update("feed_states").Set("feed_version_id", nil).Where(where).ExecContext(ctx); err != nil {
+	// Deactivate the feed version (handles both feed_states and materialized tables)
+	manager := feedstate.NewManager(atx)
+	if err := manager.DeactivateFeedVersion(ctx, id); err != nil {
+		// Log warning but don't fail the unimport
+		// The feed version data has already been removed from GTFS tables
 		return err
 	}
+
 	return nil
 }
 

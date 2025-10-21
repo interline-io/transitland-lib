@@ -9,8 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
-	"github.com/interline-io/transitland-lib/internal/materialized"
-	"github.com/interline-io/transitland-lib/stats"
+	"github.com/interline-io/transitland-lib/internal/feedstate"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
@@ -28,32 +27,26 @@ type Result struct {
 	FeedVersionImport dmfr.FeedVersionImport
 }
 
-// ActivateFeedVersion .
-func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, feedId int, fvid int) error {
-	// Check FeedState exists
-	if _, err := stats.GetFeedState(ctx, atx, feedId); err != nil {
-		return err
-	}
-	// sqlite3 only supports "UPDATE ... FROM" in versions 3.33 and higher
-	_, err := atx.DBX().ExecContext(ctx, "UPDATE feed_states SET feed_version_id = $1 WHERE feed_id = (SELECT feed_id FROM feed_versions WHERE id = $2)", fvid, fvid)
-	if err != nil {
+// ActivateFeedVersion sets the feed version as active and refreshes materialized tables
+func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error {
+	// Get the feed ID for this feed version
+	var feedId int
+	if err := atx.Get(ctx, &feedId, "SELECT feed_id FROM feed_versions WHERE id = ?", fvid); err != nil {
 		return err
 	}
 
-	// Trigger materialized table refresh for this feed
-	refresher := materialized.NewRefresher(atx)
-	if err := refresher.RefreshSpecificFeed(ctx, feedId); err != nil {
-		log.For(ctx).Warn().Err(err).
-			Int("feed_id", feedId).
-			Int("feed_version_id", fvid).
-			Msg("Failed to refresh materialized tables for feed - continuing with activation")
-		// Don't fail the activation on materialized refresh failure
-	} else {
-		log.For(ctx).Info().
-			Int("feed_id", feedId).
-			Int("feed_version_id", fvid).
-			Msg("Successfully refreshed materialized tables for activated feed")
+	// Use the feedstate system to handle activation
+	manager := feedstate.NewManager(atx)
+
+	// Activate this feed version (will automatically replace any existing version for this feed)
+	if err := manager.ActivateFeedVersion(ctx, fvid); err != nil {
+		return fmt.Errorf("failed to activate feed version via materialized system: %w", err)
 	}
+
+	log.For(ctx).Info().
+		Int("feed_id", feedId).
+		Int("feed_version_id", fvid).
+		Msg("Successfully activated feed version and refreshed materialized tables")
 
 	return nil
 }
@@ -110,7 +103,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		log.For(ctx).Info().Msgf("Finalizing import")
 		if opts.Activate {
 			log.For(ctx).Info().Msgf("Activating feed version")
-			if err := ActivateFeedVersion(ctx, atx, fv.FeedID, fv.ID); err != nil {
+			if err := ActivateFeedVersion(ctx, atx, fv.ID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
 		}
