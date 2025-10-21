@@ -29,24 +29,17 @@ type Result struct {
 
 // ActivateFeedVersion sets the feed version as active and refreshes materialized tables
 func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error {
-	// Get the feed ID for this feed version
-	var feedId int
-	if err := atx.Get(ctx, &feedId, "SELECT feed_id FROM feed_versions WHERE id = ?", fvid); err != nil {
-		return err
-	}
-
 	// Use the feedstate system to handle activation
 	manager := feedstate.NewManager(atx)
 
 	// Activate this feed version (will automatically replace any existing version for this feed)
 	if err := manager.ActivateFeedVersion(ctx, fvid); err != nil {
-		return fmt.Errorf("failed to activate feed version via materialized system: %w", err)
+		return fmt.Errorf("failed to activate feed version: %w", err)
 	}
 
 	log.For(ctx).Info().
-		Int("feed_id", feedId).
 		Int("feed_version_id", fvid).
-		Msg("Successfully activated feed version and refreshed materialized tables")
+		Msg("Successfully activated feed version")
 
 	return nil
 }

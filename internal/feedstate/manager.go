@@ -11,14 +11,6 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-// FeedVersionInfo contains metadata about a feed version
-type FeedVersionInfo struct {
-	FeedVersionID int
-	FeedID        int
-	OnestopID     string
-	FeedName      string
-}
-
 // Manager handles feed state and materialized table operations
 // NOTE: Methods do NOT handle transactions - the caller must manage transactions
 type Manager struct {
@@ -108,9 +100,8 @@ func (m *Manager) DeactivateFeedVersion(ctx context.Context, feedVersionID int) 
 		return fmt.Errorf("failed to get active feed states: %w", err)
 	}
 
-	currentFeedVersionID, feedIsActive := feedStates[feedID]
-
 	// If this feed version is not active, do nothing
+	currentFeedVersionID, feedIsActive := feedStates[feedID]
 	if !feedIsActive || currentFeedVersionID != feedVersionID {
 		log.For(ctx).Info().
 			Int("feed_version_id", feedVersionID).

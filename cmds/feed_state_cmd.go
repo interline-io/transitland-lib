@@ -78,22 +78,6 @@ func (cmd *FeedStateManagerCommand) Parse(args []string) error {
 	return nil
 }
 
-// showCurrentState displays the current feed state when no operations are specified
-func (cmd *FeedStateManagerCommand) showCurrentState(ctx context.Context, manager *feedstate.Manager) error {
-	activeFVIDs, err := manager.GetActiveFeedVersions(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get active feed versions: %w", err)
-	}
-
-	if len(activeFVIDs) == 0 {
-		log.For(ctx).Info().Msg("No feed versions are currently active")
-		return nil
-	}
-
-	log.For(ctx).Info().Ints("active_feed_version_ids", activeFVIDs).Msg("Currently active feed versions")
-	return nil
-}
-
 // Run the feed state management command
 func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 	if cmd.DBURL == "" {
@@ -110,23 +94,20 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 		defer cmd.Adapter.Close()
 	}
 
-	manager := feedstate.NewManager(cmd.Adapter)
-
 	// Check for operations that modify feed state
 	hasOperations := len(cmd.SetActiveFVIDs) > 0 || len(cmd.ActivateFVIDs) > 0 || len(cmd.DeactivateFVIDs) > 0 ||
 		len(cmd.ForceMaterialize) > 0 || len(cmd.ForceDematerialize) > 0 || len(cmd.ForceRematerialize) > 0
 
 	if hasOperations {
 		// Handle feed state operations
-		return cmd.handleFeedStateOperations(ctx, manager)
+		return cmd.handleFeedStateOperations(ctx)
 	}
 
-	// If no operations specified, show current state
-	return cmd.showCurrentState(ctx, manager)
+	return nil
 }
 
 // handleFeedStateOperations processes all feed state operations
-func (cmd *FeedStateManagerCommand) handleFeedStateOperations(ctx context.Context, manager *feedstate.Manager) error {
+func (cmd *FeedStateManagerCommand) handleFeedStateOperations(ctx context.Context) error {
 	// Parse feed version IDs
 	activateIDs, err := cmd.parseFeedVersionIDs(cmd.ActivateFVIDs)
 	if err != nil {

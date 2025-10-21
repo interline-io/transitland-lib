@@ -61,8 +61,6 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 	// Deactivate the feed version (handles both feed_states and materialized tables)
 	manager := feedstate.NewManager(atx)
 	if err := manager.DeactivateFeedVersion(ctx, id); err != nil {
-		// Log warning but don't fail the unimport
-		// The feed version data has already been removed from GTFS tables
 		return err
 	}
 
