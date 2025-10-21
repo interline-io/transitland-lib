@@ -860,6 +860,9 @@ CREATE TABLE tl_materialized_active_routes (
     -- Search optimization
     textsearch TEXT,
     
+    -- Spatial column (full geometry in SQLite, simplified in PostGIS)
+    geometry_simplified BLOB,
+    
     FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
     FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
 );
