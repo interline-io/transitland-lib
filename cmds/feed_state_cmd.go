@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/feedstate"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -77,6 +78,22 @@ func (cmd *FeedStateManagerCommand) Parse(args []string) error {
 	return nil
 }
 
+// showCurrentState displays the current feed state when no operations are specified
+func (cmd *FeedStateManagerCommand) showCurrentState(ctx context.Context, manager *feedstate.Manager) error {
+	activeFVIDs, err := manager.GetActiveFeedVersions(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get active feed versions: %w", err)
+	}
+
+	if len(activeFVIDs) == 0 {
+		log.For(ctx).Info().Msg("No feed versions are currently active")
+		return nil
+	}
+
+	log.For(ctx).Info().Ints("active_feed_version_ids", activeFVIDs).Msg("Currently active feed versions")
+	return nil
+}
+
 // Run the feed state management command
 func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 	if cmd.DBURL == "" {
@@ -104,7 +121,8 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 		return cmd.handleFeedStateOperations(ctx, manager)
 	}
 
-	return nil
+	// If no operations specified, show current state
+	return cmd.showCurrentState(ctx, manager)
 }
 
 // handleFeedStateOperations processes all feed state operations
@@ -147,24 +165,24 @@ func (cmd *FeedStateManagerCommand) handleFeedStateOperations(ctx context.Contex
 
 	// Dry run - show what would be done
 	if cmd.DryRun {
-		fmt.Printf("DRY RUN: Would execute the following operations:\n")
+		log.For(ctx).Info().Msg("DRY RUN: Would execute the following operations:")
 		if len(setActiveIDs) > 0 {
-			fmt.Printf("  SetActiveFeedVersions(%v)\n", setActiveIDs)
+			log.For(ctx).Info().Ints("feed_version_ids", setActiveIDs).Msg("Would call SetActiveFeedVersions")
 		}
 		if len(activateIDs) > 0 {
-			fmt.Printf("  ActivateFeedVersion for each: %v\n", activateIDs)
+			log.For(ctx).Info().Ints("feed_version_ids", activateIDs).Msg("Would call ActivateFeedVersion for each")
 		}
 		if len(deactivateIDs) > 0 {
-			fmt.Printf("  DeactivateFeedVersion for each: %v\n", deactivateIDs)
+			log.For(ctx).Info().Ints("feed_version_ids", deactivateIDs).Msg("Would call DeactivateFeedVersion for each")
 		}
 		if len(forceMaterializeIDs) > 0 {
-			fmt.Printf("  MaterializeFeedVersion for each: %v\n", forceMaterializeIDs)
+			log.For(ctx).Info().Ints("feed_version_ids", forceMaterializeIDs).Msg("Would call MaterializeFeedVersion for each")
 		}
 		if len(forceDematerializeIDs) > 0 {
-			fmt.Printf("  DematerializeFeedVersion for each: %v\n", forceDematerializeIDs)
+			log.For(ctx).Info().Ints("feed_version_ids", forceDematerializeIDs).Msg("Would call DematerializeFeedVersion for each")
 		}
 		if len(forceRematerializeIDs) > 0 {
-			fmt.Printf("  DematerializeFeedVersion + MaterializeFeedVersion for each: %v\n", forceRematerializeIDs)
+			log.For(ctx).Info().Ints("feed_version_ids", forceRematerializeIDs).Msg("Would call DematerializeFeedVersion + MaterializeFeedVersion for each")
 		}
 		return nil
 	}
@@ -174,16 +192,19 @@ func (cmd *FeedStateManagerCommand) handleFeedStateOperations(ctx context.Contex
 		txManager := feedstate.NewManager(atx)
 
 		if len(setActiveIDs) > 0 {
+			log.For(ctx).Info().Ints("feed_version_ids", setActiveIDs).Msg("Setting active feed versions")
 			return txManager.SetActiveFeedVersions(ctx, setActiveIDs)
 		}
 
 		for _, fvid := range deactivateIDs {
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Deactivating feed version")
 			if err := txManager.DeactivateFeedVersion(ctx, fvid); err != nil {
 				return err
 			}
 		}
 
 		for _, fvid := range activateIDs {
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Activating feed version")
 			if err := txManager.ActivateFeedVersion(ctx, fvid); err != nil {
 				return err
 			}
@@ -191,6 +212,7 @@ func (cmd *FeedStateManagerCommand) handleFeedStateOperations(ctx context.Contex
 
 		// Force dematerialize operations (need to get feed_id first)
 		for _, fvid := range forceDematerializeIDs {
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Force dematerializing feed version")
 			if err := txManager.DematerializeFeedVersion(ctx, fvid); err != nil {
 				return err
 			}
@@ -198,6 +220,7 @@ func (cmd *FeedStateManagerCommand) handleFeedStateOperations(ctx context.Contex
 
 		// Force materialize operations
 		for _, fvid := range forceMaterializeIDs {
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Force materializing feed version")
 			if err := txManager.MaterializeFeedVersion(ctx, fvid); err != nil {
 				return err
 			}
@@ -205,6 +228,7 @@ func (cmd *FeedStateManagerCommand) handleFeedStateOperations(ctx context.Contex
 
 		// Force rematerialize operations (dematerialize + materialize)
 		for _, fvid := range forceRematerializeIDs {
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Force rematerializing feed version")
 			if err := txManager.DematerializeFeedVersion(ctx, fvid); err != nil {
 				return err
 			}
@@ -213,6 +237,7 @@ func (cmd *FeedStateManagerCommand) handleFeedStateOperations(ctx context.Contex
 			}
 		}
 
+		log.For(ctx).Info().Msg("Feed state operations completed successfully")
 		return nil
 	})
 }
@@ -234,24 +259,47 @@ func (cmd *FeedStateManagerCommand) parseFeedVersionIDs(fvidStrings []string) ([
 func (cmd *FeedStateManagerCommand) Help() string {
 	return `Feed state management
 
-Manage which feed versions are active in the system.
+Manage which feed versions are active in the system and maintain materialized tables
+for improved query performance.
 
 BASIC OPERATIONS:
-  --activate <ids>         Activate feed versions
+  --activate <ids>         Activate feed versions (deactivates other versions of same feeds)
   --deactivate <ids>       Deactivate feed versions  
-  --set-active <ids>       Set complete active set (replaces all)
+  --set-active <ids>       Set complete active set (replaces all active versions)
+  --set-active-fvid-file   Read feed version IDs from file (one per line)
 
 MANUAL INTERVENTION:
-  --force-materialize <ids>    Force materialize feed versions
-  --force-dematerialize <ids>  Force dematerialize feed versions
+  --force-materialize <ids>    Force materialize feed versions (add to materialized tables)
+  --force-dematerialize <ids>  Force dematerialize feed versions (remove from materialized tables)
   --force-rematerialize <ids>  Force rematerialize (dematerialize + materialize)
 
 OPTIONS:
-  --dry-run               Show what would be done
+  --dry-run               Show what would be done without making changes
+  --dburl                 Database connection URL (or use TL_DATABASE_URL env var)
 
 EXAMPLES:
+  # Show current state
+  feed-state
+  
+  # Activate specific feed versions
   feed-state --activate 123,456
+  
+  # Set complete active set (deactivates all others)
   feed-state --set-active 123,456,789
+  
+  # Load active set from file
+  feed-state --set-active-fvid-file active_feeds.txt
+  
+  # Force rematerialize problematic feed version
   feed-state --force-rematerialize 789
+  
+  # Preview operations without changes
+  feed-state --dry-run --activate 123
+
+NOTES:
+  - All operations are executed in a single transaction
+  - Activating a feed version automatically deactivates other versions of the same feed
+  - Materialized tables contain denormalized data for faster queries
+  - Use force operations only when normal activation/deactivation fails
 `
 }
