@@ -3,6 +3,8 @@ package feedstate
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 
 	"github.com/interline-io/log"
@@ -365,6 +367,29 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 	}
 
 	return nil
+}
+
+func (m *Manager) GetMaterializedFeedVersions(ctx context.Context) ([]int, error) {
+	// Check all three tables, then dedup
+	feedVersionIds := map[int]bool{}
+	for _, table := range []string{
+		"tl_materialized_active_routes",
+		"tl_materialized_active_stops",
+		"tl_materialized_active_agencies",
+	} {
+		var ids []int
+		err := dbutil.Select(ctx, m.adapter.DBX(), m.adapter.Sqrl().
+			Select("feed_version_id").
+			Distinct().Options("on feed_version_id").
+			From(table), &ids)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get materialized feed versions from %s: %w", table, err)
+		}
+		for _, id := range ids {
+			feedVersionIds[id] = true
+		}
+	}
+	return slices.Collect(maps.Keys(feedVersionIds)), nil
 }
 
 // GetActiveFeedVersions returns a list of currently active feed version IDs

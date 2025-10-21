@@ -23,6 +23,7 @@ type FeedStateManagerCommand struct {
 	ForceMaterialize   []string
 	ForceDematerialize []string
 	ForceRematerialize []string
+	SyncActive         bool
 	DryRun             bool
 	Adapter            tldb.Adapter // allow for mocks
 }
@@ -44,6 +45,7 @@ func (cmd *FeedStateManagerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.ForceMaterialize, "force-materialize", nil, "Force materialize these feed version IDs (manual intervention)")
 	fl.StringSliceVar(&cmd.ForceDematerialize, "force-dematerialize", nil, "Force dematerialize these feed version IDs (manual intervention)")
 	fl.StringSliceVar(&cmd.ForceRematerialize, "force-rematerialize", nil, "Force rematerialize these feed version IDs (dematerialize + materialize)")
+	fl.BoolVar(&cmd.SyncActive, "sync-active", false, "Make materialized tables match current active feed versions")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Show what would be done without making changes")
 }
 
@@ -117,6 +119,41 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 	// Basic validation
 	if len(setActiveIDs) > 0 && (len(activateIDs) > 0 || len(deactivateIDs) > 0) {
 		return fmt.Errorf("--set-active cannot be used with --activate or --deactivate")
+	}
+
+	// Sync active feed versions to materialized tables
+	if cmd.SyncActive {
+		log.For(ctx).Info().Msg("Syncing materialized tables to match current active feed versions")
+		var materializedFeedVersions []int
+		var activeFeedVersions []int
+		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
+			txManager := feedstate.NewManager(atx)
+			materializedFeedVersions, err = txManager.GetMaterializedFeedVersions(ctx)
+			if err != nil {
+				return err
+			}
+			activeFeedVersions, err = txManager.GetActiveFeedVersions(ctx)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get current feed version states: %w", err)
+		}
+		// Determine which feed versions to materialize and dematerialize
+		materializedSet := toSet(materializedFeedVersions)
+		activeSet := toSet(activeFeedVersions)
+		for fvid := range activeSet {
+			if !materializedSet[fvid] {
+				forceMaterializeIDs = append(forceMaterializeIDs, fvid)
+			}
+		}
+		for fvid := range materializedSet {
+			if !activeSet[fvid] {
+				forceDematerializeIDs = append(forceDematerializeIDs, fvid)
+			}
+		}
 	}
 
 	// Dry run - show what would be done
@@ -258,4 +295,12 @@ NOTES:
   - Materialized tables contain denormalized data for faster queries
   - Use force operations only when normal activation/deactivation fails
 `
+}
+
+func toSet(ints []int) map[int]bool {
+	set := make(map[int]bool)
+	for _, v := range ints {
+		set[v] = true
+	}
+	return set
 }
