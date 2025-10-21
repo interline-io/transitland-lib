@@ -49,16 +49,9 @@ func (cmd *FeedStateManagerCommand) AddFlags(fl *pflag.FlagSet) {
 
 // Parse command line flags
 func (cmd *FeedStateManagerCommand) Parse(args []string) error {
-	fl := pflag.NewFlagSet("feed-state", pflag.ContinueOnError)
-	fl.Usage = func() {
-		fmt.Println("Usage: feed-state")
-		fl.PrintDefaults()
+	if cmd.DBURL == "" {
+		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	cmd.AddFlags(fl)
-	if err := fl.Parse(args); err != nil {
-		return err
-	}
-
 	// Process set-active-fvid-file if specified
 	if cmd.SetActiveFVIDFile != "" {
 		lines, err := tlcli.ReadFileLines(cmd.SetActiveFVIDFile)
@@ -74,15 +67,11 @@ func (cmd *FeedStateManagerCommand) Parse(args []string) error {
 			return fmt.Errorf("--set-active-fvid-file specified but no lines were read")
 		}
 	}
-
 	return nil
 }
 
 // Run the feed state management command
 func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
-	if cmd.DBURL == "" {
-		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
-	}
 
 	// Open database connection
 	if cmd.Adapter == nil {
@@ -94,20 +83,6 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 		defer cmd.Adapter.Close()
 	}
 
-	// Check for operations that modify feed state
-	hasOperations := len(cmd.SetActiveFVIDs) > 0 || len(cmd.ActivateFVIDs) > 0 || len(cmd.DeactivateFVIDs) > 0 ||
-		len(cmd.ForceMaterialize) > 0 || len(cmd.ForceDematerialize) > 0 || len(cmd.ForceRematerialize) > 0
-
-	if hasOperations {
-		// Handle feed state operations
-		return cmd.handleFeedStateOperations(ctx)
-	}
-
-	return nil
-}
-
-// handleFeedStateOperations processes all feed state operations
-func (cmd *FeedStateManagerCommand) handleFeedStateOperations(ctx context.Context) error {
 	// Parse feed version IDs
 	activateIDs, err := cmd.parseFeedVersionIDs(cmd.ActivateFVIDs)
 	if err != nil {
