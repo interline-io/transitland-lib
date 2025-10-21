@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/tldb"
 	sq "github.com/irees/squirrel"
 )
@@ -19,6 +20,7 @@ type FeedVersionInfo struct {
 }
 
 // Manager handles feed state and materialized table operations
+// NOTE: Methods do NOT handle transactions - the caller must manage transactions
 type Manager struct {
 	adapter tldb.Adapter
 }
@@ -45,9 +47,8 @@ func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) er
 		return fmt.Errorf("failed to get active feed states: %w", err)
 	}
 
-	currentFeedVersionID, feedIsActive := feedStates[feedID]
-
 	// If this feed version is already active, do nothing
+	currentFeedVersionID, feedIsActive := feedStates[feedID]
 	if feedIsActive && currentFeedVersionID == feedVersionID {
 		log.For(ctx).Info().
 			Int("feed_version_id", feedVersionID).
@@ -74,8 +75,12 @@ func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) er
 		Int("feed_id", feedID).
 		Msg("Activating feed version")
 
-	// Set in feed_states
-	_, err = m.adapter.DBX().ExecContext(ctx, "UPDATE feed_states SET feed_version_id = $1 WHERE feed_id = $2", feedVersionID, feedID)
+	// Set in feed_states using Squirrel
+	_, err = m.adapter.Sqrl().
+		Update("feed_states").
+		Set("feed_version_id", feedVersionID).
+		Where(sq.Eq{"feed_id": feedID}).
+		ExecContext(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to set feed version in feed_states: %w", err)
 	}
@@ -119,14 +124,18 @@ func (m *Manager) DeactivateFeedVersion(ctx context.Context, feedVersionID int) 
 		Int("feed_id", feedID).
 		Msg("Deactivating feed version")
 
-	// Unset in feed_states
-	_, err = m.adapter.DBX().ExecContext(ctx, "UPDATE feed_states SET feed_version_id = NULL WHERE feed_id = $1", feedID)
+	// Unset in feed_states using Squirrel
+	_, err = m.adapter.Sqrl().
+		Update("feed_states").
+		Set("feed_version_id", nil).
+		Where(sq.Eq{"feed_id": feedID}).
+		ExecContext(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to unset feed version in feed_states: %w", err)
 	}
 
 	// Remove from materialized tables
-	if err := m.DematerializeFeedVersion(ctx, feedID); err != nil {
+	if err := m.DematerializeFeedVersion(ctx, feedVersionID); err != nil {
 		return fmt.Errorf("failed to remove from materialized tables: %w", err)
 	}
 
@@ -136,223 +145,232 @@ func (m *Manager) DeactivateFeedVersion(ctx context.Context, feedVersionID int) 
 // GetFeedIDForFeedVersion gets the feed_id for a given feed_version_id (public version)
 func (m *Manager) GetFeedIDForFeedVersion(ctx context.Context, fvid int) (int, error) {
 	var feedID int
-	err := m.adapter.Get(ctx, &feedID, "SELECT feed_id FROM feed_versions WHERE id = $1", fvid)
+	err := dbutil.Get(ctx, m.adapter.DBX(), m.adapter.Sqrl().
+		Select("feed_id").
+		From("feed_versions").
+		Where(sq.Eq{"id": fvid}), &feedID)
 	return feedID, err
 }
 
 // getActiveFeedStates returns a map of feed_id to feed_version_id for all active feeds
 func (m *Manager) getActiveFeedStates(ctx context.Context) (map[int]int, error) {
-	rows, err := m.adapter.DBX().QueryxContext(ctx, "SELECT feed_id, feed_version_id FROM feed_states WHERE feed_version_id IS NOT NULL")
+	type feedState struct {
+		FeedID        int `db:"feed_id"`
+		FeedVersionID int `db:"feed_version_id"`
+	}
+
+	var states []feedState
+	err := dbutil.Select(ctx, m.adapter.DBX(), m.adapter.Sqrl().
+		Select("feed_id", "feed_version_id").
+		From("feed_states").
+		Where("feed_version_id IS NOT NULL"), &states)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query feed_states: %w", err)
 	}
-	defer rows.Close()
 
 	feedStates := make(map[int]int)
-	for rows.Next() {
-		var feedID, feedVersionID int
-		if err := rows.Scan(&feedID, &feedVersionID); err != nil {
-			return nil, fmt.Errorf("failed to scan feed_states row: %w", err)
-		}
-		feedStates[feedID] = feedVersionID
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating feed_states rows: %w", err)
+	for _, state := range states {
+		feedStates[state.FeedID] = state.FeedVersionID
 	}
 
 	return feedStates, nil
 }
 
 // DematerializeFeedVersion removes all routes/stops/agencies for a feed from materialized tables
-func (m *Manager) DematerializeFeedVersion(ctx context.Context, fvid int) error {
+func (m *Manager) DematerializeFeedVersion(ctx context.Context, feedVersionID int) error {
 	// Remove routes
 	_, err := m.adapter.Sqrl().
 		Delete("tl_materialized_active_routes").
-		Where(sq.Eq{"feed_version_id": fvid}).
+		Where(sq.Eq{"feed_version_id": feedVersionID}).
 		ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to remove routes for feed version %d: %w", fvid, err)
+		return fmt.Errorf("failed to remove routes for feed version %d: %w", feedVersionID, err)
 	}
 
 	// Remove stops
 	_, err = m.adapter.Sqrl().
 		Delete("tl_materialized_active_stops").
-		Where(sq.Eq{"feed_version_id": fvid}).
+		Where(sq.Eq{"feed_version_id": feedVersionID}).
 		ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to remove stops for feed version %d: %w", fvid, err)
+		return fmt.Errorf("failed to remove stops for feed version %d: %w", feedVersionID, err)
 	}
 
 	// Remove agencies
 	_, err = m.adapter.Sqrl().
 		Delete("tl_materialized_active_agencies").
-		Where(sq.Eq{"feed_version_id": fvid}).
+		Where(sq.Eq{"feed_version_id": feedVersionID}).
 		ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to remove agencies for feed version %d: %w", fvid, err)
+		return fmt.Errorf("failed to remove agencies for feed version %d: %w", feedVersionID, err)
 	}
 
 	return nil
 }
 
 // MaterializeFeedVersion inserts routes/stops/agencies for a feed version into materialized tables
-func (m *Manager) MaterializeFeedVersion(ctx context.Context, fvid int) error {
-	// Insert routes with derived data
-	routeInsert := `
-	INSERT INTO tl_materialized_active_routes (
-		id, 
-		route_id, 
-		route_short_name, 
-		route_long_name, 
-		route_desc, 
-		route_type, 
-		route_url, 
-		route_color, 
-		route_text_color,
-		route_sort_order,
-		network_id,
-		as_route,
-		continuous_pickup,
-		continuous_drop_off,
-		agency_id,
-		gtfs_agency_id, 
-		agency_name,
-		feed_version_id, 
-		feed_id, 
-		onestop_id, 
-		textsearch
-	)
-	SELECT 
-		gtfs_routes.id, 
-		gtfs_routes.route_id, 
-		gtfs_routes.route_short_name, 
-		gtfs_routes.route_long_name,
-		gtfs_routes.route_desc, 
-		gtfs_routes.route_type, 
-		gtfs_routes.route_url, 
-		gtfs_routes.route_color, 
-		gtfs_routes.route_text_color,
-		gtfs_routes.route_sort_order,
-		gtfs_routes.network_id,
-		gtfs_routes.as_route,
-		gtfs_routes.continuous_pickup,
-		gtfs_routes.continuous_drop_off,
-		gtfs_routes.agency_id,
-		gtfs_agencies.agency_id as gtfs_agency_id, 
-		gtfs_agencies.agency_name,
-		feed_versions.id as feed_version_id,
-		feed_versions.feed_id,
-		osid.onestop_id, 
-		gtfs_routes.textsearch
-	FROM gtfs_routes
-	JOIN gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id
-	JOIN feed_versions ON feed_versions.id = gtfs_routes.feed_version_id
-	LEFT JOIN feed_version_route_onestop_ids osid ON osid.entity_id = gtfs_routes.route_id and osid.feed_version_id = feed_versions.id
-	WHERE gtfs_routes.feed_version_id = $1
-	`
+func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int) error {
+	// Insert routes with derived data using Squirrel
+	routeQuery := m.adapter.Sqrl().
+		Insert("tl_materialized_active_routes").
+		Columns(
+			"id",
+			"route_id",
+			"route_short_name",
+			"route_long_name",
+			"route_desc",
+			"route_type",
+			"route_url",
+			"route_color",
+			"route_text_color",
+			"route_sort_order",
+			"network_id",
+			"as_route",
+			"continuous_pickup",
+			"continuous_drop_off",
+			"agency_id",
+			"gtfs_agency_id",
+			"agency_name",
+			"feed_version_id",
+			"feed_id",
+			"onestop_id",
+			"textsearch",
+		).
+		Select(m.adapter.Sqrl().
+			Select(
+				"gtfs_routes.id",
+				"gtfs_routes.route_id",
+				"gtfs_routes.route_short_name",
+				"gtfs_routes.route_long_name",
+				"gtfs_routes.route_desc",
+				"gtfs_routes.route_type",
+				"gtfs_routes.route_url",
+				"gtfs_routes.route_color",
+				"gtfs_routes.route_text_color",
+				"gtfs_routes.route_sort_order",
+				"gtfs_routes.network_id",
+				"gtfs_routes.as_route",
+				"gtfs_routes.continuous_pickup",
+				"gtfs_routes.continuous_drop_off",
+				"gtfs_routes.agency_id",
+				"gtfs_agencies.agency_id as gtfs_agency_id",
+				"gtfs_agencies.agency_name",
+				"feed_versions.id as feed_version_id",
+				"feed_versions.feed_id",
+				"osid.onestop_id",
+				"gtfs_routes.textsearch",
+			).
+			From("gtfs_routes").
+			Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
+			Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
+			LeftJoin("feed_version_route_onestop_ids osid ON osid.entity_id = gtfs_routes.route_id AND osid.feed_version_id = feed_versions.id").
+			Where(sq.Eq{"gtfs_routes.feed_version_id": feedVersionID}))
 
-	_, err := m.adapter.DBX().ExecContext(ctx, routeInsert, fvid)
+	_, err := routeQuery.ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to insert routes for feed version %d: %w", fvid, err)
+		return fmt.Errorf("failed to insert routes for feed version %d: %w", feedVersionID, err)
 	}
 
-	// Insert stops with derived data
-	stopInsert := `
-	INSERT INTO tl_materialized_active_stops (
-		id, 
-		stop_id, 
-		stop_code, 
-		stop_name, 
-		stop_desc, 
-		zone_id,
-		stop_url, 
-		location_type, 
-		stop_timezone,
-		wheelchair_boarding,
-		parent_station,
-		level_id,
-		area_id,
-		tts_stop_name,
-		platform_code,
-		feed_version_id, 
-		feed_id,
-		onestop_id, 
-		geometry, 
-		textsearch
-	)
-	SELECT 
-		gtfs_stops.id, 
-		gtfs_stops.stop_id, 
-		gtfs_stops.stop_code, 
-		gtfs_stops.stop_name, 
-		gtfs_stops.stop_desc, 
-		gtfs_stops.zone_id,
-		gtfs_stops.stop_url, 
-		gtfs_stops.location_type,
-		gtfs_stops.stop_timezone,
-		gtfs_stops.wheelchair_boarding,
-		gtfs_stops.parent_station,
-		gtfs_stops.level_id,
-		gtfs_stops.area_id,
-		gtfs_stops.tts_stop_name,
-		gtfs_stops.platform_code,
-		feed_versions.id as feed_version_id,
-		feed_versions.feed_id,
-		osid.onestop_id, 
-		gtfs_stops.geometry, 
-		gtfs_stops.textsearch
-	FROM gtfs_stops
-	JOIN feed_versions ON feed_versions.id = gtfs_stops.feed_version_id
-	LEFT JOIN feed_version_stop_onestop_ids osid ON osid.entity_id = gtfs_stops.stop_id and osid.feed_version_id = feed_versions.id
-	WHERE gtfs_stops.feed_version_id = $1
-	`
+	// Insert stops with derived data using Squirrel
+	stopQuery := m.adapter.Sqrl().
+		Insert("tl_materialized_active_stops").
+		Columns(
+			"id",
+			"stop_id",
+			"stop_code",
+			"stop_name",
+			"stop_desc",
+			"zone_id",
+			"stop_url",
+			"location_type",
+			"stop_timezone",
+			"wheelchair_boarding",
+			"parent_station",
+			"level_id",
+			"area_id",
+			"tts_stop_name",
+			"platform_code",
+			"feed_version_id",
+			"feed_id",
+			"onestop_id",
+			"geometry",
+			"textsearch",
+		).
+		Select(m.adapter.Sqrl().
+			Select(
+				"gtfs_stops.id",
+				"gtfs_stops.stop_id",
+				"gtfs_stops.stop_code",
+				"gtfs_stops.stop_name",
+				"gtfs_stops.stop_desc",
+				"gtfs_stops.zone_id",
+				"gtfs_stops.stop_url",
+				"gtfs_stops.location_type",
+				"gtfs_stops.stop_timezone",
+				"gtfs_stops.wheelchair_boarding",
+				"gtfs_stops.parent_station",
+				"gtfs_stops.level_id",
+				"gtfs_stops.area_id",
+				"gtfs_stops.tts_stop_name",
+				"gtfs_stops.platform_code",
+				"feed_versions.id as feed_version_id",
+				"feed_versions.feed_id",
+				"osid.onestop_id",
+				"gtfs_stops.geometry",
+				"gtfs_stops.textsearch",
+			).
+			From("gtfs_stops").
+			Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
+			LeftJoin("feed_version_stop_onestop_ids osid ON osid.entity_id = gtfs_stops.stop_id AND osid.feed_version_id = feed_versions.id").
+			Where(sq.Eq{"gtfs_stops.feed_version_id": feedVersionID}))
 
-	_, err = m.adapter.DBX().ExecContext(ctx, stopInsert, fvid)
+	_, err = stopQuery.ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to insert stops for feed version %d: %w", fvid, err)
+		return fmt.Errorf("failed to insert stops for feed version %d: %w", feedVersionID, err)
 	}
 
-	// Insert agencies with derived data
-	agencyInsert := `
-	INSERT INTO tl_materialized_active_agencies (
-		id, 
-		agency_id, 
-		agency_name, 
-		agency_url, 
-		agency_timezone, 
-		agency_lang, 
-		agency_phone, 
-		agency_fare_url, 
-		agency_email,
-		feed_version_id, 
-		feed_id,
-		onestop_id, 
-		textsearch
-	)
-	SELECT 
-		gtfs_agencies.id, 
-		gtfs_agencies.agency_id, 
-		gtfs_agencies.agency_name, 
-		gtfs_agencies.agency_url, 
-		gtfs_agencies.agency_timezone, 
-		gtfs_agencies.agency_lang, 
-		gtfs_agencies.agency_phone, 
-		gtfs_agencies.agency_fare_url, 
-		gtfs_agencies.agency_email,
-		feed_versions.id as feed_version_id,
-		feed_versions.feed_id,
-		osid.onestop_id, 
-		gtfs_agencies.textsearch
-	FROM gtfs_agencies
-	JOIN feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id
-	LEFT JOIN feed_version_agency_onestop_ids osid ON osid.entity_id = gtfs_agencies.agency_id and osid.feed_version_id = feed_versions.id
-	WHERE gtfs_agencies.feed_version_id = $1
-	`
+	// Insert agencies with derived data using Squirrel
+	agencyQuery := m.adapter.Sqrl().
+		Insert("tl_materialized_active_agencies").
+		Columns(
+			"id",
+			"agency_id",
+			"agency_name",
+			"agency_url",
+			"agency_timezone",
+			"agency_lang",
+			"agency_phone",
+			"agency_fare_url",
+			"agency_email",
+			"feed_version_id",
+			"feed_id",
+			"onestop_id",
+			"textsearch",
+		).
+		Select(m.adapter.Sqrl().
+			Select(
+				"gtfs_agencies.id",
+				"gtfs_agencies.agency_id",
+				"gtfs_agencies.agency_name",
+				"gtfs_agencies.agency_url",
+				"gtfs_agencies.agency_timezone",
+				"gtfs_agencies.agency_lang",
+				"gtfs_agencies.agency_phone",
+				"gtfs_agencies.agency_fare_url",
+				"gtfs_agencies.agency_email",
+				"feed_versions.id as feed_version_id",
+				"feed_versions.feed_id",
+				"osid.onestop_id",
+				"gtfs_agencies.textsearch",
+			).
+			From("gtfs_agencies").
+			Join("feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id").
+			LeftJoin("feed_version_agency_onestop_ids osid ON osid.entity_id = gtfs_agencies.agency_id AND osid.feed_version_id = feed_versions.id").
+			Where(sq.Eq{"gtfs_agencies.feed_version_id": feedVersionID}))
 
-	_, err = m.adapter.DBX().ExecContext(ctx, agencyInsert, fvid)
+	_, err = agencyQuery.ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to insert agencies for feed version %d: %w", fvid, err)
+		return fmt.Errorf("failed to insert agencies for feed version %d: %w", feedVersionID, err)
 	}
 
 	return nil
@@ -378,7 +396,6 @@ func (m *Manager) GetActiveFeedVersions(ctx context.Context) ([]int, error) {
 // SetActiveFeedVersions sets the complete active set of feed versions
 // Any currently active feed versions not in the specified set will be deactivated,
 // and all feed versions in the specified set will be activated.
-// NOTE: This method does NOT handle transactions - the caller must manage transactions
 func (m *Manager) SetActiveFeedVersions(ctx context.Context, feedVersionIDs []int) error {
 	log.For(ctx).Info().
 		Ints("target_feed_version_ids", feedVersionIDs).
