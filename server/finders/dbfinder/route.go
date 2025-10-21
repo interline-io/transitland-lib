@@ -180,6 +180,10 @@ func (f *Finder) ShapesByIDs(ctx context.Context, ids []int) ([]*model.Shape, []
 }
 
 func routeSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.RouteFilter) sq.SelectBuilder {
+	routeTable := "gtfs_routes"
+	if active {
+		routeTable = "tl_materialized_active_routes as gtfs_routes"
+	}
 	q := sq.StatementBuilder.Select(
 		"gtfs_routes.id",
 		"gtfs_routes.feed_version_id",
@@ -202,7 +206,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, active bool, permFi
 		"feed_versions.sha1 AS feed_version_sha1",
 		"coalesce(feed_version_route_onestop_ids.onestop_id, '') as onestop_id",
 	).
-		From("gtfs_routes").
+		From(routeTable).
 		Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		OrderBy("gtfs_routes.feed_version_id,gtfs_routes.id").

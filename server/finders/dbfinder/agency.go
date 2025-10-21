@@ -101,6 +101,10 @@ func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor
 }
 
 func agencySelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
+	agencyTable := "gtfs_agencies"
+	if active {
+		agencyTable = "tl_materialized_active_agencies as gtfs_agencies"
+	}
 	distinct := false
 	q := sq.StatementBuilder.
 		Select(
@@ -120,7 +124,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, active bool, permF
 			"coalesce (coif.resolved_onestop_id, '') as onestop_id",
 			"coif.id as coif_id",
 		).
-		From("gtfs_agencies").
+		From(agencyTable).
 		Join("feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		JoinClause("left join tl_agency_geometries ON tl_agency_geometries.agency_id = gtfs_agencies.id").

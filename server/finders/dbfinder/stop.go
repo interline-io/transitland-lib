@@ -232,6 +232,11 @@ func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.
 }
 
 func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {
+	stopTable := "gtfs_stops"
+	if active {
+		stopTable = "tl_materialized_active_stops as gtfs_stops"
+	}
+
 	q := sq.StatementBuilder.Select(
 		"gtfs_stops.id",
 		"gtfs_stops.feed_version_id",
@@ -255,7 +260,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		"feed_versions.sha1 AS feed_version_sha1",
 		"coalesce(feed_version_stop_onestop_ids.onestop_id, '') as onestop_id",
 	).
-		From("gtfs_stops").
+		From(stopTable).
 		Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		OrderBy("gtfs_stops.feed_version_id,gtfs_stops.id").
