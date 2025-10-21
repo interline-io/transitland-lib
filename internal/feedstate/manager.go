@@ -34,7 +34,7 @@ func NewManager(adapter tldb.Adapter) *Manager {
 // If another version of the same feed is currently active, it will be deactivated first
 func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) error {
 	// Get the feed_id for this feed version
-	feedID, err := m.getFeedIDForFeedVersion(ctx, feedVersionID)
+	feedID, err := m.GetFeedIDForFeedVersion(ctx, feedVersionID)
 	if err != nil {
 		return fmt.Errorf("failed to get feed_id for feed version %d: %w", feedVersionID, err)
 	}
@@ -63,7 +63,6 @@ func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) er
 			Int("new_feed_version_id", feedVersionID).
 			Int("feed_id", feedID).
 			Msg("Deactivating current feed version before activating new one")
-
 		if err := m.DeactivateFeedVersion(ctx, currentFeedVersionID); err != nil {
 			return fmt.Errorf("failed to deactivate current feed version %d: %w", currentFeedVersionID, err)
 		}
@@ -93,7 +92,7 @@ func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) er
 // If the feed version is not currently active, does nothing
 func (m *Manager) DeactivateFeedVersion(ctx context.Context, feedVersionID int) error {
 	// Get the feed_id for this feed version
-	feedID, err := m.getFeedIDForFeedVersion(ctx, feedVersionID)
+	feedID, err := m.GetFeedIDForFeedVersion(ctx, feedVersionID)
 	if err != nil {
 		return fmt.Errorf("failed to get feed_id for feed version %d: %w", feedVersionID, err)
 	}
@@ -134,8 +133,8 @@ func (m *Manager) DeactivateFeedVersion(ctx context.Context, feedVersionID int) 
 	return nil
 }
 
-// getFeedIDForFeedVersion gets the feed_id for a given feed_version_id
-func (m *Manager) getFeedIDForFeedVersion(ctx context.Context, fvid int) (int, error) {
+// GetFeedIDForFeedVersion gets the feed_id for a given feed_version_id (public version)
+func (m *Manager) GetFeedIDForFeedVersion(ctx context.Context, fvid int) (int, error) {
 	var feedID int
 	err := m.adapter.Get(ctx, &feedID, "SELECT feed_id FROM feed_versions WHERE id = $1", fvid)
 	return feedID, err
@@ -166,39 +165,39 @@ func (m *Manager) getActiveFeedStates(ctx context.Context) (map[int]int, error) 
 }
 
 // DematerializeFeedVersion removes all routes/stops/agencies for a feed from materialized tables
-func (m *Manager) DematerializeFeedVersion(ctx context.Context, feedID int) error {
+func (m *Manager) DematerializeFeedVersion(ctx context.Context, fvid int) error {
 	// Remove routes
 	_, err := m.adapter.Sqrl().
 		Delete("tl_materialized_active_routes").
-		Where(sq.Eq{"feed_id": feedID}).
+		Where(sq.Eq{"feed_version_id": fvid}).
 		ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to remove routes for feed %d: %w", feedID, err)
+		return fmt.Errorf("failed to remove routes for feed version %d: %w", fvid, err)
 	}
 
 	// Remove stops
 	_, err = m.adapter.Sqrl().
 		Delete("tl_materialized_active_stops").
-		Where(sq.Eq{"feed_id": feedID}).
+		Where(sq.Eq{"feed_version_id": fvid}).
 		ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to remove stops for feed %d: %w", feedID, err)
+		return fmt.Errorf("failed to remove stops for feed version %d: %w", fvid, err)
 	}
 
 	// Remove agencies
 	_, err = m.adapter.Sqrl().
 		Delete("tl_materialized_active_agencies").
-		Where(sq.Eq{"feed_id": feedID}).
+		Where(sq.Eq{"feed_version_id": fvid}).
 		ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to remove agencies for feed %d: %w", feedID, err)
+		return fmt.Errorf("failed to remove agencies for feed version %d: %w", fvid, err)
 	}
 
 	return nil
 }
 
 // MaterializeFeedVersion inserts routes/stops/agencies for a feed version into materialized tables
-func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int) error {
+func (m *Manager) MaterializeFeedVersion(ctx context.Context, fvid int) error {
 	// Insert routes with derived data
 	routeInsert := `
 	INSERT INTO tl_materialized_active_routes (
@@ -244,9 +243,9 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 	WHERE gtfs_routes.feed_version_id = $1
 	`
 
-	_, err := m.adapter.DBX().ExecContext(ctx, routeInsert, feedVersionID)
+	_, err := m.adapter.DBX().ExecContext(ctx, routeInsert, fvid)
 	if err != nil {
-		return fmt.Errorf("failed to insert routes for feed version %d: %w", feedVersionID, err)
+		return fmt.Errorf("failed to insert routes for feed version %d: %w", fvid, err)
 	}
 
 	// Insert stops with derived data
@@ -286,9 +285,9 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 	WHERE gtfs_stops.feed_version_id = $1
 	`
 
-	_, err = m.adapter.DBX().ExecContext(ctx, stopInsert, feedVersionID)
+	_, err = m.adapter.DBX().ExecContext(ctx, stopInsert, fvid)
 	if err != nil {
-		return fmt.Errorf("failed to insert stops for feed version %d: %w", feedVersionID, err)
+		return fmt.Errorf("failed to insert stops for feed version %d: %w", fvid, err)
 	}
 
 	// Insert agencies with derived data
@@ -331,9 +330,9 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 	WHERE gtfs_agencies.feed_version_id = $1
 	`
 
-	_, err = m.adapter.DBX().ExecContext(ctx, agencyInsert, feedVersionID)
+	_, err = m.adapter.DBX().ExecContext(ctx, agencyInsert, fvid)
 	if err != nil {
-		return fmt.Errorf("failed to insert agencies for feed version %d: %w", feedVersionID, err)
+		return fmt.Errorf("failed to insert agencies for feed version %d: %w", fvid, err)
 	}
 
 	return nil
