@@ -29,6 +29,7 @@ transitland server [flags]
       --secrets string                    DMFR file containing secrets
       --storage string                    Static storage backend
       --timeout int                        (default 60)
+      --use-materialized                  Use materialized views for active entities
       --validate-large-files              Allow validation of large files
 ```
 
