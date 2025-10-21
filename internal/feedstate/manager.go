@@ -380,7 +380,7 @@ func (m *Manager) GetMaterializedFeedVersions(ctx context.Context) ([]int, error
 		var ids []int
 		err := dbutil.Select(ctx, m.adapter.DBX(), m.adapter.Sqrl().
 			Select("feed_version_id").
-			Distinct().Options("on feed_version_id").
+			Distinct().Options("on (feed_version_id)").
 			From(table), &ids)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get materialized feed versions from %s: %w", table, err)
