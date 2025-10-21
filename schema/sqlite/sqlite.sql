@@ -80,7 +80,9 @@ CREATE TABLE IF NOT EXISTS "gtfs_stops" (
   "level_id" integer,
   "tts_stop_name" text,
   "platform_code" text,
+  "area_id" text,
   "geometry" BLOB,
+  "textsearch" TEXT,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(parent_station) references gtfs_stops(id),
   foreign key(level_id) references gtfs_levels(id)
@@ -287,6 +289,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_agencies" (
   "feed_version_id" integer NOT NULL,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "textsearch" TEXT,
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
 CREATE INDEX idx_gtfs_agencies_agency_id ON "gtfs_agencies"(agency_id);
@@ -373,6 +376,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_routes" (
   "as_route" integer,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "textsearch" TEXT,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(agency_id) references gtfs_agencies(id)
 );
@@ -823,3 +827,120 @@ CREATE TABLE feed_version_stop_onestop_ids (
   "onestop_id" varchar(255) not null,
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
+
+-- Materialized active routes table
+CREATE TABLE tl_materialized_active_routes (
+    -- Primary route data
+    id INTEGER NOT NULL,
+    route_id TEXT NOT NULL,
+    route_short_name TEXT,
+    route_long_name TEXT,
+    route_desc TEXT,
+    route_type INTEGER,
+    route_url TEXT,
+    route_color TEXT,
+    route_text_color TEXT,
+    route_sort_order INTEGER,
+    agency_id INTEGER,
+    network_id TEXT,
+    as_route INTEGER,
+    continuous_pickup INTEGER,
+    continuous_drop_off INTEGER,
+    feed_version_id INTEGER NOT NULL,
+
+    -- Derived
+    gtfs_agency_id TEXT,
+    agency_name TEXT,
+    feed_id INTEGER NOT NULL,
+    onestop_id TEXT,
+    
+    -- Materialization metadata
+    materialized_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    -- Search optimization
+    textsearch TEXT,
+    
+    FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
+    FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
+);
+
+-- Indexes for tl_materialized_active_routes
+CREATE UNIQUE INDEX tl_materialized_active_routes_id_idx ON tl_materialized_active_routes(id);
+CREATE INDEX tl_materialized_active_routes_route_id_idx ON tl_materialized_active_routes(route_id);
+CREATE INDEX tl_materialized_active_routes_feed_version_id_idx ON tl_materialized_active_routes(feed_version_id);
+CREATE INDEX tl_materialized_active_routes_onestop_id_idx ON tl_materialized_active_routes(onestop_id);
+
+-- Materialized active stops table
+CREATE TABLE tl_materialized_active_stops (
+    -- Primary stop data
+    id INTEGER NOT NULL,
+    stop_id TEXT NOT NULL,
+    stop_code TEXT,
+    stop_name TEXT,
+    stop_desc TEXT,
+    zone_id TEXT,
+    stop_url TEXT,
+    location_type INTEGER,
+    stop_timezone TEXT,
+    parent_station INTEGER,
+    level_id INTEGER,
+    platform_code TEXT,
+    tts_stop_name TEXT,
+    area_id TEXT,
+    wheelchair_boarding INTEGER,
+    geometry BLOB,
+    
+    -- Derived
+    feed_version_id INTEGER NOT NULL,
+    feed_id INTEGER NOT NULL,
+    onestop_id TEXT,
+    
+    -- Materialization metadata
+    materialized_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- Search optimization
+    textsearch TEXT,
+    
+    FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
+    FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
+);
+
+-- Indexes for tl_materialized_active_stops
+CREATE UNIQUE INDEX tl_materialized_active_stops_id_idx ON tl_materialized_active_stops(id);
+CREATE INDEX tl_materialized_active_stops_stop_id_idx ON tl_materialized_active_stops(stop_id);
+CREATE INDEX tl_materialized_active_stops_feed_version_id_idx ON tl_materialized_active_stops(feed_version_id);
+CREATE INDEX tl_materialized_active_stops_onestop_id_idx ON tl_materialized_active_stops(onestop_id);
+
+-- Materialized active agencies table
+CREATE TABLE tl_materialized_active_agencies (
+    -- Primary agency data
+    id INTEGER NOT NULL,
+    agency_id TEXT NOT NULL,
+    agency_name TEXT,
+    agency_url TEXT,
+    agency_timezone TEXT,
+    agency_lang TEXT,
+    agency_phone TEXT,
+    agency_fare_url TEXT,
+    agency_email TEXT,
+    
+    -- Feed metadata
+    feed_version_id INTEGER NOT NULL,
+    feed_id INTEGER NOT NULL,
+    onestop_id TEXT,
+    
+    -- Materialization metadata
+    materialized_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- Search optimization
+    textsearch TEXT,
+    
+    FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
+    FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
+);
+
+-- Indexes for tl_materialized_active_agencies
+CREATE UNIQUE INDEX tl_materialized_active_agencies_id_idx ON tl_materialized_active_agencies(id);
+CREATE INDEX tl_materialized_active_agencies_agency_id_idx ON tl_materialized_active_agencies(agency_id);
+CREATE INDEX tl_materialized_active_agencies_feed_version_id_idx ON tl_materialized_active_agencies(feed_version_id);
+CREATE INDEX tl_materialized_active_agencies_onestop_id_idx ON tl_materialized_active_agencies(onestop_id);
