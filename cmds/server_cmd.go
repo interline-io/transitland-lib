@@ -54,6 +54,7 @@ type ServerCommand struct {
 	RestPrefix              string
 	LoadAdmins              bool
 	ValidateLargeFiles      bool
+	UseMaterialized         bool
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
 	SecretsFile             string
@@ -88,6 +89,7 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.LoaderBatchSize, "loader-batch-size", 100, "GraphQL Loader batch size")
 	fl.IntVar(&cmd.LoaderStopTimeBatchSize, "loader-stop-time-batch-size", 1, "GraphQL Loader batch size for StopTimes")
 	fl.Float64Var(&cmd.MaxRadius, "max-radius", 100_000, "Maximum radius for nearby stops")
+	fl.BoolVar(&cmd.UseMaterialized, "use-materialized", false, "Use materialized views for active entities")
 }
 
 func (cmd *ServerCommand) Parse(args []string) error {
@@ -164,6 +166,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		Storage:                 cmd.Storage,
 		RTStorage:               cmd.RTStorage,
 		ValidateLargeFiles:      cmd.ValidateLargeFiles,
+		UseMaterialized:         cmd.UseMaterialized,
 		RestPrefix:              cmd.RestPrefix,
 		LoaderBatchSize:         cmd.LoaderBatchSize,
 		LoaderStopTimeBatchSize: cmd.LoaderStopTimeBatchSize,

@@ -285,3 +285,8 @@ func quickSelectOrder(table string, limit *int, after *model.Cursor, ids []int, 
 	}
 	return q
 }
+
+type UseActive struct {
+	Active          bool
+	UseMaterialized bool
+}
