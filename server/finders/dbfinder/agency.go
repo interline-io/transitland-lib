@@ -10,11 +10,14 @@ import (
 
 func (f *Finder) FindAgencies(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.AgencyFilter) ([]*model.Agency, error) {
 	var ents []*model.Agency
-	active := true
-	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
-		active = false
+	useActive := UseActive{
+		Active:       true,
+		Materialized: model.ForContext(ctx).UseMaterialized,
 	}
-	q := agencySelect(limit, after, ids, active, f.PermFilter(ctx), where)
+	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
+		useActive.Active = false
+	}
+	q := agencySelect(limit, after, ids, &useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -69,7 +72,7 @@ func (f *Finder) AgenciesByFeedVersionIDs(ctx context.Context, limit *int, where
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			agencySelect(limit, nil, nil, false, f.PermFilter(ctx), where),
+			agencySelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
 			"feed_versions",
 			"id",
 			"gtfs_agencies",
@@ -85,7 +88,7 @@ func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *mo
 	var ents []*model.Agency
 	err := dbutil.Select(ctx,
 		f.db,
-		agencySelect(limit, nil, nil, true, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
+		agencySelect(limit, nil, nil, &UseActive{Active: true}, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), err
@@ -100,11 +103,13 @@ func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor
 	return ents, nil
 }
 
-func agencySelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
+func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
 	agencyTable := "gtfs_agencies"
-	if active {
+	active := useActive != nil && useActive.Active
+	if active && useActive != nil && useActive.Materialized {
 		agencyTable = "tl_materialized_active_agencies as gtfs_agencies"
 	}
+
 	distinct := false
 	q := sq.StatementBuilder.
 		Select(

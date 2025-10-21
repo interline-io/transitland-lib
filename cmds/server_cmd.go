@@ -54,6 +54,7 @@ type ServerCommand struct {
 	RestPrefix              string
 	LoadAdmins              bool
 	ValidateLargeFiles      bool
+	UseMaterialized         bool
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
 	SecretsFile             string
@@ -168,6 +169,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		LoaderBatchSize:         cmd.LoaderBatchSize,
 		LoaderStopTimeBatchSize: cmd.LoaderStopTimeBatchSize,
 		MaxRadius:               cmd.MaxRadius,
+		UseMaterialized:         cmd.UseMaterialized,
 	}
 
 	// Setup router
