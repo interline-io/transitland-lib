@@ -41,4 +41,5 @@ type Adapter interface {
 	Get(context.Context, interface{}, string, ...interface{}) error
 	Select(context.Context, interface{}, string, ...interface{}) error
 	MultiInsert(context.Context, []interface{}) ([]int, error)
+	SupportsSpatialFunctions() bool
 }
