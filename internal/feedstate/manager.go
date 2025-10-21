@@ -169,6 +169,16 @@ func (m *Manager) getActiveFeedStates(ctx context.Context) (map[int]int, error) 
 	return feedStates, nil
 }
 
+// sortedColumnsAndSelects converts a map of column->expression into sorted parallel slices
+func sortedColumnsAndSelects(fields map[string]string) ([]string, []string) {
+	columns := slices.Sorted(maps.Keys(fields))
+	selects := make([]string, len(columns))
+	for i, col := range columns {
+		selects[i] = fields[col]
+	}
+	return columns, selects
+}
+
 // DematerializeFeedVersion removes all routes/stops/agencies for a feed from materialized tables
 func (m *Manager) DematerializeFeedVersion(ctx context.Context, feedVersionID int) error {
 	// Remove routes
@@ -203,60 +213,51 @@ func (m *Manager) DematerializeFeedVersion(ctx context.Context, feedVersionID in
 
 // MaterializeFeedVersion inserts routes/stops/agencies for a feed version into materialized tables
 func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int) error {
+	// Build route column mappings (destination column -> source expression)
+	routeFields := map[string]string{
+		"id":                  "gtfs_routes.id",
+		"route_id":            "gtfs_routes.route_id",
+		"route_short_name":    "gtfs_routes.route_short_name",
+		"route_long_name":     "gtfs_routes.route_long_name",
+		"route_desc":          "gtfs_routes.route_desc",
+		"route_type":          "gtfs_routes.route_type",
+		"route_url":           "gtfs_routes.route_url",
+		"route_color":         "gtfs_routes.route_color",
+		"route_text_color":    "gtfs_routes.route_text_color",
+		"route_sort_order":    "gtfs_routes.route_sort_order",
+		"network_id":          "gtfs_routes.network_id",
+		"as_route":            "gtfs_routes.as_route",
+		"continuous_pickup":   "gtfs_routes.continuous_pickup",
+		"continuous_drop_off": "gtfs_routes.continuous_drop_off",
+		"agency_id":           "gtfs_routes.agency_id",
+		"gtfs_agency_id":      "gtfs_agencies.agency_id",
+		"agency_name":         "gtfs_agencies.agency_name",
+		"feed_version_id":     "feed_versions.id",
+		"feed_id":             "feed_versions.feed_id",
+		"onestop_id":          "osid.onestop_id",
+		"textsearch":          "gtfs_routes.textsearch",
+	}
+
+	// Add geometry column - full geometry for SQLite, simplified for PostGIS
+	routeFields["geometry_simplified"] = "tlrg.geometry"
+	if m.adapter.SupportsSpatialFunctions() {
+		routeFields["geometry_simplified"] = "ST_Simplify(tlrg.geometry::geometry, 0.01)"
+	}
+
+	// Extract columns and selects from the map, sorted for consistency
+	routeColumns, routeSelects := sortedColumnsAndSelects(routeFields)
+
 	// Insert routes with derived data using Squirrel
 	routeQuery := m.adapter.Sqrl().
 		Insert("tl_materialized_active_routes").
-		Columns(
-			"id",
-			"route_id",
-			"route_short_name",
-			"route_long_name",
-			"route_desc",
-			"route_type",
-			"route_url",
-			"route_color",
-			"route_text_color",
-			"route_sort_order",
-			"network_id",
-			"as_route",
-			"continuous_pickup",
-			"continuous_drop_off",
-			"agency_id",
-			"gtfs_agency_id",
-			"agency_name",
-			"feed_version_id",
-			"feed_id",
-			"onestop_id",
-			"textsearch",
-		).
+		Columns(routeColumns...).
 		Select(m.adapter.Sqrl().
-			Select(
-				"gtfs_routes.id",
-				"gtfs_routes.route_id",
-				"gtfs_routes.route_short_name",
-				"gtfs_routes.route_long_name",
-				"gtfs_routes.route_desc",
-				"gtfs_routes.route_type",
-				"gtfs_routes.route_url",
-				"gtfs_routes.route_color",
-				"gtfs_routes.route_text_color",
-				"gtfs_routes.route_sort_order",
-				"gtfs_routes.network_id",
-				"gtfs_routes.as_route",
-				"gtfs_routes.continuous_pickup",
-				"gtfs_routes.continuous_drop_off",
-				"gtfs_routes.agency_id",
-				"gtfs_agencies.agency_id as gtfs_agency_id",
-				"gtfs_agencies.agency_name",
-				"feed_versions.id as feed_version_id",
-				"feed_versions.feed_id",
-				"osid.onestop_id",
-				"gtfs_routes.textsearch",
-			).
+			Select(routeSelects...).
 			From("gtfs_routes").
 			Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
 			Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
 			LeftJoin("feed_version_route_onestop_ids osid ON osid.entity_id = gtfs_routes.route_id AND osid.feed_version_id = feed_versions.id").
+			LeftJoin("tl_route_geometries tlrg ON tlrg.route_id = gtfs_routes.id").
 			Where(sq.Eq{"gtfs_routes.feed_version_id": feedVersionID}))
 
 	_, err := routeQuery.ExecContext(ctx)
@@ -264,54 +265,39 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 		return fmt.Errorf("failed to insert routes for feed version %d: %w", feedVersionID, err)
 	}
 
+	// Build stop column mappings (destination column -> source expression)
+	stopFields := map[string]string{
+		"id":                  "gtfs_stops.id",
+		"stop_id":             "gtfs_stops.stop_id",
+		"stop_code":           "gtfs_stops.stop_code",
+		"stop_name":           "gtfs_stops.stop_name",
+		"stop_desc":           "gtfs_stops.stop_desc",
+		"zone_id":             "gtfs_stops.zone_id",
+		"stop_url":            "gtfs_stops.stop_url",
+		"location_type":       "gtfs_stops.location_type",
+		"stop_timezone":       "gtfs_stops.stop_timezone",
+		"wheelchair_boarding": "gtfs_stops.wheelchair_boarding",
+		"parent_station":      "gtfs_stops.parent_station",
+		"level_id":            "gtfs_stops.level_id",
+		"area_id":             "gtfs_stops.area_id",
+		"tts_stop_name":       "gtfs_stops.tts_stop_name",
+		"platform_code":       "gtfs_stops.platform_code",
+		"feed_version_id":     "feed_versions.id",
+		"feed_id":             "feed_versions.feed_id",
+		"onestop_id":          "osid.onestop_id",
+		"geometry":            "gtfs_stops.geometry",
+		"textsearch":          "gtfs_stops.textsearch",
+	}
+
+	// Extract columns and selects from the map, sorted for consistency
+	stopColumns, stopSelects := sortedColumnsAndSelects(stopFields)
+
 	// Insert stops with derived data using Squirrel
 	stopQuery := m.adapter.Sqrl().
 		Insert("tl_materialized_active_stops").
-		Columns(
-			"id",
-			"stop_id",
-			"stop_code",
-			"stop_name",
-			"stop_desc",
-			"zone_id",
-			"stop_url",
-			"location_type",
-			"stop_timezone",
-			"wheelchair_boarding",
-			"parent_station",
-			"level_id",
-			"area_id",
-			"tts_stop_name",
-			"platform_code",
-			"feed_version_id",
-			"feed_id",
-			"onestop_id",
-			"geometry",
-			"textsearch",
-		).
+		Columns(stopColumns...).
 		Select(m.adapter.Sqrl().
-			Select(
-				"gtfs_stops.id",
-				"gtfs_stops.stop_id",
-				"gtfs_stops.stop_code",
-				"gtfs_stops.stop_name",
-				"gtfs_stops.stop_desc",
-				"gtfs_stops.zone_id",
-				"gtfs_stops.stop_url",
-				"gtfs_stops.location_type",
-				"gtfs_stops.stop_timezone",
-				"gtfs_stops.wheelchair_boarding",
-				"gtfs_stops.parent_station",
-				"gtfs_stops.level_id",
-				"gtfs_stops.area_id",
-				"gtfs_stops.tts_stop_name",
-				"gtfs_stops.platform_code",
-				"feed_versions.id as feed_version_id",
-				"feed_versions.feed_id",
-				"osid.onestop_id",
-				"gtfs_stops.geometry",
-				"gtfs_stops.textsearch",
-			).
+			Select(stopSelects...).
 			From("gtfs_stops").
 			Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
 			LeftJoin("feed_version_stop_onestop_ids osid ON osid.entity_id = gtfs_stops.stop_id AND osid.feed_version_id = feed_versions.id").
@@ -322,40 +308,32 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 		return fmt.Errorf("failed to insert stops for feed version %d: %w", feedVersionID, err)
 	}
 
+	// Build agency column mappings (destination column -> source expression)
+	agencyFields := map[string]string{
+		"id":              "gtfs_agencies.id",
+		"agency_id":       "gtfs_agencies.agency_id",
+		"agency_name":     "gtfs_agencies.agency_name",
+		"agency_url":      "gtfs_agencies.agency_url",
+		"agency_timezone": "gtfs_agencies.agency_timezone",
+		"agency_lang":     "gtfs_agencies.agency_lang",
+		"agency_phone":    "gtfs_agencies.agency_phone",
+		"agency_fare_url": "gtfs_agencies.agency_fare_url",
+		"agency_email":    "gtfs_agencies.agency_email",
+		"feed_version_id": "feed_versions.id",
+		"feed_id":         "feed_versions.feed_id",
+		"onestop_id":      "osid.onestop_id",
+		"textsearch":      "gtfs_agencies.textsearch",
+	}
+
+	// Extract columns and selects from the map, sorted for consistency
+	agencyColumns, agencySelects := sortedColumnsAndSelects(agencyFields)
+
 	// Insert agencies with derived data using Squirrel
 	agencyQuery := m.adapter.Sqrl().
 		Insert("tl_materialized_active_agencies").
-		Columns(
-			"id",
-			"agency_id",
-			"agency_name",
-			"agency_url",
-			"agency_timezone",
-			"agency_lang",
-			"agency_phone",
-			"agency_fare_url",
-			"agency_email",
-			"feed_version_id",
-			"feed_id",
-			"onestop_id",
-			"textsearch",
-		).
+		Columns(agencyColumns...).
 		Select(m.adapter.Sqrl().
-			Select(
-				"gtfs_agencies.id",
-				"gtfs_agencies.agency_id",
-				"gtfs_agencies.agency_name",
-				"gtfs_agencies.agency_url",
-				"gtfs_agencies.agency_timezone",
-				"gtfs_agencies.agency_lang",
-				"gtfs_agencies.agency_phone",
-				"gtfs_agencies.agency_fare_url",
-				"gtfs_agencies.agency_email",
-				"feed_versions.id as feed_version_id",
-				"feed_versions.feed_id",
-				"osid.onestop_id",
-				"gtfs_agencies.textsearch",
-			).
+			Select(agencySelects...).
 			From("gtfs_agencies").
 			Join("feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id").
 			LeftJoin("feed_version_agency_onestop_ids osid ON osid.entity_id = gtfs_agencies.agency_id AND osid.feed_version_id = feed_versions.id").
