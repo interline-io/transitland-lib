@@ -16,11 +16,14 @@ import (
 
 func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.StopFilter) ([]*model.Stop, error) {
 	var ents []*model.Stop
-	active := true
-	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
-		active = false
+	useActive := UseActive{
+		Active:          true,
+		UseMaterialized: model.ForContext(ctx).UseMaterialized,
 	}
-	q := stopSelect(limit, after, ids, active, f.PermFilter(ctx), where)
+	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
+		useActive.Active = false
+	}
+	q := stopSelect(limit, after, ids, &useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -65,7 +68,7 @@ func (f *Finder) StopsByIDs(ctx context.Context, ids []int) ([]*model.Stop, []er
 
 func (f *Finder) StopsByRouteIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []int) ([][]*model.Stop, error) {
 	var ents []*model.Stop
-	qso := stopSelect(limit, nil, nil, false, f.PermFilter(ctx), where)
+	qso := stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where)
 	qso = qso.Join("tl_route_stops on tl_route_stops.stop_id = gtfs_stops.id").Where(In("route_id", keys)).Column("route_id as with_route_id")
 	err := dbutil.Select(ctx,
 		f.db,
@@ -80,7 +83,7 @@ func (f *Finder) StopsByParentStopIDs(ctx context.Context, limit *int, where *mo
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			stopSelect(limit, nil, nil, false, f.PermFilter(ctx), where),
+			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
 			"gtfs_stops",
 			"id",
 			"gtfs_stops",
@@ -104,7 +107,7 @@ func (f *Finder) TargetStopsByStopIDs(ctx context.Context, ids []int) ([]*model.
 	var qents []*qlookup
 	q := sq.
 		Select("t.*", "tlse.stop_id as source_id").
-		FromSelect(stopSelect(nil, nil, nil, true, f.PermFilter(ctx), nil), "t").
+		FromSelect(stopSelect(nil, nil, nil, &UseActive{Active: true}, f.PermFilter(ctx), nil), "t").
 		Join("tl_stop_external_references tlse on tlse.target_feed_onestop_id = t.feed_onestop_id and tlse.target_stop_id = t.stop_id").
 		Where(In("tlse.stop_id", ids))
 	if err := dbutil.Select(ctx,
@@ -130,7 +133,7 @@ func (f *Finder) StopsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			stopSelect(limit, nil, nil, false, f.PermFilter(ctx), where),
+			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
 			"feed_versions",
 			"id",
 			"gtfs_stops",
@@ -147,7 +150,7 @@ func (f *Finder) StopsByLevelIDs(ctx context.Context, limit *int, where *model.S
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			stopSelect(limit, nil, nil, false, f.PermFilter(ctx), where),
+			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
 			"gtfs_levels",
 			"id",
 			"gtfs_stops",
@@ -231,7 +234,12 @@ func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.
 	return arrangeMap(ids, ents, func(ent result) (int, *model.StopPlace) { return ent.StopID, &ent.StopPlace }), nil
 }
 
-func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {
+func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {
+	stopTable := "gtfs_stops"
+	active := useActive != nil && useActive.Active
+	if active && useActive != nil && useActive.UseMaterialized {
+		stopTable = "tl_materialized_active_stops as gtfs_stops"
+	}
 	q := sq.StatementBuilder.Select(
 		"gtfs_stops.id",
 		"gtfs_stops.feed_version_id",
@@ -255,7 +263,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		"feed_versions.sha1 AS feed_version_sha1",
 		"coalesce(feed_version_stop_onestop_ids.onestop_id, '') as onestop_id",
 	).
-		From("gtfs_stops").
+		From(stopTable).
 		Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		OrderBy("gtfs_stops.feed_version_id,gtfs_stops.id").

@@ -10,11 +10,14 @@ import (
 
 func (f *Finder) FindRoutes(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.RouteFilter) ([]*model.Route, error) {
 	var ents []*model.Route
-	active := true
-	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
-		active = false
+	useActive := UseActive{
+		Active:          true,
+		UseMaterialized: model.ForContext(ctx).UseMaterialized,
 	}
-	q := routeSelect(limit, after, ids, active, f.PermFilter(ctx), where)
+	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
+		useActive.Active = false
+	}
+	q := routeSelect(limit, after, ids, &useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -120,7 +123,7 @@ func (f *Finder) RoutesByAgencyIDs(ctx context.Context, limit *int, where *model
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			routeSelect(limit, nil, nil, false, f.PermFilter(ctx), where),
+			routeSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
 			"gtfs_agencies",
 			"id",
 			"gtfs_routes",
@@ -137,7 +140,7 @@ func (f *Finder) RoutesByFeedVersionIDs(ctx context.Context, limit *int, where *
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			routeSelect(limit, nil, nil, false, f.PermFilter(ctx), where),
+			routeSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
 			"feed_versions",
 			"id",
 			"gtfs_routes",
@@ -179,7 +182,12 @@ func (f *Finder) ShapesByIDs(ctx context.Context, ids []int) ([]*model.Shape, []
 	return arrangeBy(ids, ents, func(ent *model.Shape) int { return ent.ID }), nil
 }
 
-func routeSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.RouteFilter) sq.SelectBuilder {
+func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.RouteFilter) sq.SelectBuilder {
+	routeTable := "gtfs_routes"
+	active := useActive != nil && useActive.Active
+	if active && useActive != nil && useActive.UseMaterialized {
+		routeTable = "tl_materialized_active_routes as gtfs_routes"
+	}
 	q := sq.StatementBuilder.Select(
 		"gtfs_routes.id",
 		"gtfs_routes.feed_version_id",
@@ -202,7 +210,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, active bool, permFi
 		"feed_versions.sha1 AS feed_version_sha1",
 		"coalesce(feed_version_route_onestop_ids.onestop_id, '') as onestop_id",
 	).
-		From("gtfs_routes").
+		From(routeTable).
 		Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		OrderBy("gtfs_routes.feed_version_id,gtfs_routes.id").
