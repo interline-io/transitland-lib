@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -517,6 +518,20 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 
 	bartStops := []string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "ASHB", "BALB", "BAYF", "CAST", "CIVC", "COLS", "COLM", "CONC", "DALY", "DBRK", "DUBL", "DELN", "PLZA", "EMBR", "FRMT", "FTVL", "GLEN", "HAYW", "LAFY", "LAKE", "MCAR", "MCAR_S", "MLBR", "MONT", "NBRK", "NCON", "OAKL", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "RICH", "ROCK", "SBRN", "SFIA", "SANL", "SHAY", "SSAN", "UCTY", "WCRK", "WARM", "WDUB", "WOAK"}
 
+	// Florida coordinates: approximately in the center of Tampa Bay area
+	// This should put HA stops (Tampa area) much closer than BA/CT stops (San Francisco Bay area)
+	floridaFocus := tlxy.Point{Lat: 27.9506, Lon: -82.4572}
+
+	// San Jose coordinates: approximately in downtown San Jose
+	// This should put CT stops (Caltrain San Jose area) much closer than HA stops (Florida)
+	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
+	sanJoseRadiusMeters := 10_000.0 // 10km
+	// Get integer stop ID for stop '70241' (Caltrain Santa Clara)
+	var stopSantaClaraID int
+	if err := cfg.Finder.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = $1`, "70241").Scan(&stopSantaClaraID); err != nil {
+		t.Errorf("could not get stop ID for test: %s", err.Error())
+	}
+
 	testcases := []testcase{
 		{
 			// just ensure this query completes successfully; checking coordinates is a pain and flaky.
@@ -632,6 +647,7 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 			f: func(t *testing.T, jj string) {
 			},
 		},
+
 		// this test is just for debugging purposes
 		{
 			name: "nearby stops check n+1 query",
@@ -646,6 +662,218 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 			vars:         hw{"radius": 1000},
 			selector:     "stops.#.stop_id",
 			selectExpect: bartStops,
+		},
+		// Focus test cases
+		{
+			name: "focus basic: Florida focus point returns HA stops first",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops(limit: 100, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+					feed_version {
+						feed {
+							onestop_id
+						}
+					}
+				}
+			}`,
+			vars: hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			f: func(t *testing.T, jj string) {
+				// Verify the first 10 stops are all from HA feed
+				feedIds := gjson.Get(jj, "stops.#.feed_version.feed.onestop_id").Array()
+				assert.GreaterOrEqual(t, len(feedIds), 10, "should return at least 10 stops")
+				for i := range 10 {
+					assert.Equal(t, "HA", feedIds[i].String(), "stop %d should be from HA feed", i)
+				}
+			},
+		},
+		{
+			name: "focus basic: San Jose focus point returns CT stops first",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops(limit: 100, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+					feed_version {
+						feed {
+							onestop_id
+						}
+					}
+				}
+			}`,
+			vars: hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			f: func(t *testing.T, jj string) {
+				// Verify the first 10 stops are all from CT feed
+				feedIds := gjson.Get(jj, "stops.#.feed_version.feed.onestop_id").Array()
+				assert.GreaterOrEqual(t, len(feedIds), 10, "should return at least 10 stops")
+				for i := range 10 {
+					assert.Equal(t, "CT", feedIds[i].String(), "stop %d should be from CT feed", i)
+				}
+			},
+		},
+		{
+			name: "focus with feed filter: HA stops only, ordered by distance",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops(limit: 10, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+					geometry
+				}
+			}`,
+			vars: hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			f: func(t *testing.T, jj string) {
+				// Verify the query returns stops
+				stopIds := gjson.Get(jj, "stops.#.stop_id").Array()
+				assert.Equal(t, 10, len(stopIds), "should return exactly 10 stops")
+
+				// Parse geometries and verify stops are sorted by increasing distance
+				var prevDistance float64
+				for i, stop := range gjson.Get(jj, "stops").Array() {
+					// Parse into tlxy.Point
+					coords := stop.Get("geometry.coordinates").Array()
+					stopPoint := tlxy.Point{
+						Lon: coords[0].Float(),
+						Lat: coords[1].Float(),
+					}
+
+					// Calculate distance from focus point
+					// Verify distance is increasing (or equal for stops at same location)
+					distance := tlxy.DistanceHaversine(floridaFocus, stopPoint)
+					if i > 0 {
+						assert.GreaterOrEqual(t, distance, prevDistance,
+							"stop index %d (stop_id=%s) at distance %.2f should be >= previous distance %.2f",
+							i, stop.Get("stop_id").String(), distance, prevDistance)
+					}
+					prevDistance = distance
+				}
+			},
+		},
+		{
+			name: "focus with pagination: second page maintains ordering",
+			query: `query($lat:Float!, $lon:Float!, $after:Int!) {
+				stops_all: stops(limit: 100, where: {feed_onestop_id: "CT", location: {focus: {lat: $lat, lon: $lon}}}) {
+					id
+					stop_id
+					geometry
+				}
+				stops_page2: stops(after: $after, limit: 10, where: {feed_onestop_id: "CT", location: {focus: {lat: $lat, lon: $lon}}}) {
+					id
+					stop_id
+					geometry
+				}
+			}`,
+			vars: hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": stopSantaClaraID},
+			f: func(t *testing.T, jj string) {
+				// Get all stops ordered by distance
+				allStops := gjson.Get(jj, "stops_all").Array()
+				assert.GreaterOrEqual(t, len(allStops), 11, "should return at least 11 stops")
+
+				// Find the index of stopSantaClaraID in the all stops list
+				cursorIndex := -1
+				for i, stop := range allStops {
+					if stop.Get("id").Int() == int64(stopSantaClaraID) {
+						cursorIndex = i
+						break
+					}
+				}
+				assert.GreaterOrEqual(t, cursorIndex, 0, "cursor stop should be found in all stops list")
+
+				// Get page 2 stops
+				page2Stops := gjson.Get(jj, "stops_page2").Array()
+				assert.GreaterOrEqual(t, len(page2Stops), 1, "should return at least 1 stop in page 2")
+
+				// Verify page 2 stops match the stops after the cursor in all stops
+				expectedStartIndex := cursorIndex + 1
+				assert.LessOrEqual(
+					t,
+					expectedStartIndex+len(page2Stops),
+					len(allStops),
+					"should have enough stops after cursor",
+				)
+				for i, page2Stop := range page2Stops {
+					expectedStop := allStops[expectedStartIndex+i]
+					assert.Equal(
+						t,
+						expectedStop.Get("id").Int(),
+						page2Stop.Get("id").Int(),
+						"page2 stop %d should match all stops at index %d",
+						i,
+						expectedStartIndex+i,
+					)
+				}
+			},
+		},
+		{
+			name: "focus ordering vs no focus: different order",
+			query: `query($lat:Float!, $lon:Float!) {
+				with_focus: stops(limit: 100, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+				}
+				without_focus: stops(limit: 100, where: {feed_onestop_id: "HA"}) {
+					stop_id
+				}
+			}`,
+			vars: hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			f: func(t *testing.T, jj string) {
+				withFocus := gjson.Get(jj, "with_focus.#.stop_id").Array()
+				withoutFocus := gjson.Get(jj, "without_focus.#.stop_id").Array()
+				assert.Equal(t, 100, len(withFocus), "should return 100 stops with focus")
+				assert.Equal(t, 100, len(withoutFocus), "should return 100 stops without focus")
+				// Just verify the orders are different
+				diffOrder := false
+				for i := range len(withFocus) {
+					if withFocus[i].String() != withoutFocus[i].String() {
+						diffOrder = true
+					}
+				}
+				if !diffOrder {
+					t.Errorf("stop orders are identical with and without focus, expected difference")
+				}
+			},
+		},
+		{
+			name: "focus with near filter: combined spatial queries",
+			query: `query($lat:Float!, $lon:Float!, $radius:Float!) {
+				stops(limit: 100, where: {
+					feed_onestop_id: "CT", 
+					location: {
+						focus: {lat: $lat, lon: $lon},
+						near: {lat: $lat, lon: $lon, radius: $radius}
+					}
+				}) {
+					stop_id
+					geometry
+				}
+			}`,
+			vars: hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "radius": sanJoseRadiusMeters},
+			f: func(t *testing.T, jj string) {
+				// Should return all CT stops within specified radius of San Jose, ordered by distance
+				stops := gjson.Get(jj, "stops").Array()
+				assert.GreaterOrEqual(t, len(stops), 10, "should return at least 10 stops within radius")
+
+				// Verify all stops are within the radius and sorted by distance
+				var prevDistance float64
+				for i, stop := range stops {
+					// Parse geometry
+					coords := stop.Get("geometry.coordinates").Array()
+					stopPoint := tlxy.Point{
+						Lon: coords[0].Float(),
+						Lat: coords[1].Float(),
+					}
+
+					// Calculate distance from San Jose focus point
+					distance := tlxy.DistanceHaversine(sanJoseFocus, stopPoint)
+
+					// Verify within radius
+					assert.LessOrEqual(t, distance, sanJoseRadiusMeters,
+						"stop %d (stop_id=%s) at distance %.2f should be within %f radius",
+						i, stop.Get("stop_id").String(), distance, sanJoseRadiusMeters)
+
+					// Verify increasing distance order
+					if i > 0 {
+						assert.GreaterOrEqual(t, distance, prevDistance,
+							"stop index %d (stop_id=%s) at distance %.2f should be >= previous distance %.2f",
+							i, stop.Get("stop_id").String(), distance, prevDistance)
+					}
+					prevDistance = distance
+				}
+			},
 		},
 	}
 	return testcases
@@ -690,7 +918,6 @@ func stopResolverCursorTestcases(t *testing.T, cfg model.Config) []testcase {
 			selector:     "stops.#.stop_id",
 			selectExpect: []string{},
 		},
-
 		// TODO: uncomment after schema changes
 		// {
 		// 	"no cursor",
