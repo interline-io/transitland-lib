@@ -274,7 +274,11 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 		if len(where.OnestopIds) > 0 && where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds {
 			// Use CTE for stop lookup optimization
 			sub := sq.StatementBuilder.
-				Select("feed_version_stop_onestop_ids.onestop_id", "feed_version_stop_onestop_ids.entity_id", "feed_versions.feed_id").
+				Select(
+					"feed_version_stop_onestop_ids.onestop_id",
+					"feed_version_stop_onestop_ids.entity_id",
+					"feed_versions.feed_id",
+				).
 				Distinct().Options("on (feed_version_stop_onestop_ids.onestop_id, feed_version_stop_onestop_ids.entity_id, feed_versions.feed_id)").
 				From("feed_version_stop_onestop_ids").
 				Join("feed_versions on feed_versions.id = feed_version_stop_onestop_ids.feed_version_id").
@@ -295,7 +299,10 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 			}
 		}
 	} else {
-		q = q.JoinClause(`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`)
+		q = q.JoinClause(useActive.UseTable(
+			`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`,
+			`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`,
+		))
 	}
 
 	// Handle geom search
