@@ -212,7 +212,6 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 		From(routeTable).
 		Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
-		OrderBy("gtfs_routes.feed_version_id,gtfs_routes.id").
 		Limit(finderCheckLimit(limit))
 
 	// Handle previous OnestopIds
@@ -273,28 +272,6 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 				q = q.Where(sq.Eq{"scount.route_id": nil})
 			}
 		}
-		if where.Bbox != nil {
-			q = q.JoinClause(`JOIN (
-				SELECT DISTINCT ON (tlrs.route_id) tlrs.route_id FROM gtfs_stops
-				JOIN tl_route_stops tlrs ON gtfs_stops.id = tlrs.stop_id
-				WHERE ST_Intersects(gtfs_stops.geometry, ST_MakeEnvelope(?,?,?,?,4326))
-			) tlrs_bbox on tlrs_bbox.route_id = gtfs_routes.id`, where.Bbox.MinLon, where.Bbox.MinLat, where.Bbox.MaxLon, where.Bbox.MaxLat)
-		}
-		if where.Within != nil && where.Within.Valid {
-			q = q.JoinClause(`JOIN (
-				SELECT DISTINCT ON (tlrs.route_id) tlrs.route_id FROM gtfs_stops
-				JOIN tl_route_stops tlrs ON gtfs_stops.id = tlrs.stop_id
-				WHERE ST_Intersects(gtfs_stops.geometry, ?)
-			) tlrs_within on tlrs_within.route_id = gtfs_routes.id`, where.Within)
-		}
-		if where.Near != nil {
-			radius := checkFloat(&where.Near.Radius, 0, 1_000_000)
-			q = q.JoinClause(`JOIN (
-				SELECT DISTINCT ON (tlrs.route_id) tlrs.route_id FROM gtfs_stops
-				JOIN tl_route_stops tlrs ON gtfs_stops.id = tlrs.stop_id
-				WHERE ST_DWithin(gtfs_stops.geometry, ST_MakePoint(?,?), ?)
-			) tlrs_near on tlrs_near.route_id = gtfs_routes.id`, where.Near.Lon, where.Near.Lat, radius)
-		}
 		if where.OperatorOnestopID != nil {
 			q = q.
 				Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
@@ -310,6 +287,46 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			q = q.Column(rank).Where(wc)
 		}
 	}
+
+	// Handle geom search
+	if where != nil {
+		loc := where.Location
+		if loc == nil {
+			loc = &model.RouteLocationFilter{
+				Bbox:    where.Bbox,
+				Near:    where.Near,
+				Polygon: where.Within,
+			}
+		}
+		if loc.Bbox != nil {
+			q = q.JoinClause(`JOIN (
+				SELECT DISTINCT ON (tlrs.route_id) tlrs.route_id FROM gtfs_stops
+				JOIN tl_route_stops tlrs ON gtfs_stops.id = tlrs.stop_id
+				WHERE ST_Intersects(gtfs_stops.geometry, ST_MakeEnvelope(?,?,?,?,4326))
+			) tlrs_bbox on tlrs_bbox.route_id = gtfs_routes.id`, loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat)
+		}
+		if loc.Polygon != nil && loc.Polygon.Valid {
+			q = q.JoinClause(`JOIN (
+				SELECT DISTINCT ON (tlrs.route_id) tlrs.route_id FROM gtfs_stops
+				JOIN tl_route_stops tlrs ON gtfs_stops.id = tlrs.stop_id
+				WHERE ST_Intersects(gtfs_stops.geometry, ?)
+			) tlrs_within on tlrs_within.route_id = gtfs_routes.id`, loc.Polygon)
+		}
+		if loc.Near != nil {
+			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
+			q = q.JoinClause(`JOIN (
+				SELECT DISTINCT ON (tlrs.route_id) tlrs.route_id FROM gtfs_stops
+				JOIN tl_route_stops tlrs ON gtfs_stops.id = tlrs.stop_id
+				WHERE ST_DWithin(gtfs_stops.geometry, ST_MakePoint(?,?), ?)
+			) tlrs_near on tlrs_near.route_id = gtfs_routes.id`, loc.Near.Lon, loc.Near.Lat, radius)
+		}
+		if loc.Focus != nil {
+			q = q.
+				Join("tl_route_geometries ON tl_route_geometries.route_id = gtfs_routes.id").
+				OrderByClause(sq.Expr("tl_route_geometries.geometry <-> ST_MakePoint(?,?)", loc.Focus.Lon, loc.Focus.Lat))
+		}
+	}
+
 	if useActive != nil && useActive.Active {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_routes.feed_version_id")
 	}
@@ -317,10 +334,20 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 		q = q.Where(In("gtfs_routes.id", ids))
 	}
 
+	// Default ordering
+	q = q.OrderBy("gtfs_routes.feed_version_id,gtfs_routes.id")
+
 	// Handle cursor
 	if after != nil && after.Valid && after.ID > 0 {
-		// first check helps improve query performance
-		if after.FeedVersionID == 0 {
+		if where != nil && where.Location != nil && where.Location.Focus != nil {
+			q = q.Where(sq.Expr(
+				"ST_Distance(tl_route_geometries.geometry, ST_MakePoint(?,?)) > (select ST_Distance(geometry, ST_MakePoint(?,?)) from tl_route_geometries where route_id = (select route_id from gtfs_routes where id = ?))",
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				after.ID))
+		} else if after.FeedVersionID == 0 {
 			q = q.
 				Where(sq.Expr("gtfs_routes.feed_version_id >= (select feed_version_id from gtfs_routes where id = ?)", after.ID)).
 				Where(sq.Expr("(gtfs_routes.feed_version_id, gtfs_routes.id) > (select feed_version_id,id from gtfs_routes where id = ?)", after.ID))
