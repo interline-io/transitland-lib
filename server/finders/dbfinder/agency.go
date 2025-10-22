@@ -147,17 +147,6 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		if where.OnestopID != nil {
 			q = q.Where(sq.Eq{"coif.resolved_onestop_id": *where.OnestopID})
 		}
-		// Spatial
-		if where.Bbox != nil {
-			q = q.Where("ST_Intersects(tl_agency_geometries.geometry, ST_MakeEnvelope(?,?,?,?,4326))", where.Bbox.MinLon, where.Bbox.MinLat, where.Bbox.MaxLon, where.Bbox.MaxLat)
-		}
-		if where.Within != nil && where.Within.Valid {
-			q = q.Where("ST_Intersects(tl_agency_geometries.geometry, ?)", where.Within)
-		}
-		if where.Near != nil {
-			radius := checkFloat(&where.Near.Radius, 0, 1_000_000)
-			q = q.Where("ST_DWithin(tl_agency_geometries.geometry, ST_MakePoint(?,?), ?)", where.Near.Lon, where.Near.Lat, radius)
-		}
 		// Places
 		if where.Adm0Iso != nil || where.Adm1Iso != nil || where.Adm0Name != nil || where.Adm1Name != nil || where.CityName != nil {
 			distinct = true
@@ -187,6 +176,29 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		if where.Search != nil && len(*where.Search) > 1 {
 			rank, wc := tsTableQuery("gtfs_agencies", *where.Search)
 			q = q.Column(rank).Where(wc)
+		}
+	}
+
+	// Handle geom search
+	if where != nil {
+		loc := where.Location
+		if loc == nil {
+			loc = &model.AgencyLocationFilter{
+				Bbox:    where.Bbox,
+				Near:    where.Near,
+				Polygon: where.Within,
+			}
+		}
+		// Spatial
+		if loc.Bbox != nil {
+			q = q.Where("ST_Intersects(tl_agency_geometries.geometry, ST_MakeEnvelope(?,?,?,?,4326))", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat)
+		}
+		if loc.Polygon != nil && loc.Polygon.Valid {
+			q = q.Where("ST_Intersects(tl_agency_geometries.geometry, ?)", loc.Polygon)
+		}
+		if loc.Near != nil {
+			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
+			q = q.Where("ST_DWithin(tl_agency_geometries.geometry, ST_MakePoint(?,?), ?)", loc.Near.Lon, loc.Near.Lat, radius)
 		}
 	}
 
