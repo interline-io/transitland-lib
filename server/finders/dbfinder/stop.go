@@ -235,7 +235,6 @@ func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.
 }
 
 func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {
-	stopTable := useActive.UseTable("gtfs_stops", "tl_materialized_active_stops as gtfs_stops")
 	q := sq.StatementBuilder.Select(
 		"gtfs_stops.id",
 		"gtfs_stops.feed_version_id",
@@ -257,9 +256,12 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 		"current_feeds.id AS feed_id",
 		"current_feeds.onestop_id AS feed_onestop_id",
 		"feed_versions.sha1 AS feed_version_sha1",
-		"coalesce(feed_version_stop_onestop_ids.onestop_id, '') as onestop_id",
+		useActive.UseTable(
+			"coalesce(feed_version_stop_onestop_ids.onestop_id, '') as onestop_id",
+			"gtfs_stops.onestop_id as onestop_id",
+		),
 	).
-		From(stopTable).
+		From(useActive.UseTable("gtfs_stops", "tl_materialized_active_stops as gtfs_stops")).
 		Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		Limit(finderCheckLimit(limit))
@@ -299,10 +301,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 			}
 		}
 	} else {
-		q = q.JoinClause(useActive.UseTable(
-			`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`,
-			`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`,
-		))
+		q = q.JoinClause(`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`)
 	}
 
 	// Handle geom search

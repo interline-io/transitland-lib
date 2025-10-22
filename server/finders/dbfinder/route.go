@@ -203,7 +203,10 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 		"current_feeds.id AS feed_id",
 		"current_feeds.onestop_id AS feed_onestop_id",
 		"feed_versions.sha1 AS feed_version_sha1",
-		"coalesce(feed_version_route_onestop_ids.onestop_id, '') as onestop_id",
+		useActive.UseTable(
+			"coalesce(feed_version_route_onestop_ids.onestop_id, '') as onestop_id",
+			"coalesce(gtfs_routes.onestop_id, '') as onestop_id",
+		),
 	).
 		From(useActive.UseTable("gtfs_routes", "tl_materialized_active_routes as gtfs_routes")).
 		Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
@@ -217,7 +220,11 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 		}
 		if len(where.OnestopIds) > 0 && where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds {
 			sub := sq.StatementBuilder.
-				Select("feed_version_route_onestop_ids.onestop_id", "feed_version_route_onestop_ids.entity_id", "feed_versions.feed_id").
+				Select(
+					"feed_version_route_onestop_ids.onestop_id",
+					"feed_version_route_onestop_ids.entity_id",
+					"feed_versions.feed_id",
+				).
 				Distinct().Options("on (feed_version_route_onestop_ids.onestop_id, feed_version_route_onestop_ids.entity_id, feed_versions.feed_id)").
 				From("feed_version_route_onestop_ids").
 				Join("feed_versions on feed_versions.id = feed_version_route_onestop_ids.feed_version_id").
