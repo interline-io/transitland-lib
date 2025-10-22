@@ -254,12 +254,9 @@ func TestRouteResolver_Location(t *testing.T) {
 	// San Jose coordinates: approximately in downtown San Jose
 	// This should put CT stops (Caltrain San Jose area) much closer than HA stops (Florida)
 	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
-	// sanJoseRadiusMeters := 10_000.0 // 10km
-
-	// Get integer route ID for BART
 	var testRouteId int
 	if err := cfg.Finder.DBX().
-		QueryRowx(`select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = 'BA' and route_id = $1`, "07").
+		QueryRowx(`select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = $1 and route_id = $2`, "HA", "96").
 		Scan(&testRouteId); err != nil {
 		t.Errorf("could not get route ID for test: %s", err.Error())
 	}
@@ -316,51 +313,26 @@ func TestRouteResolver_Location(t *testing.T) {
 		{
 			name: "focus basic: Florida focus point returns HA routes first",
 			query: `query($lat:Float!, $lon:Float!) {
-				routes(limit: 100, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+				routes(limit: 5, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
 					route_id
-					feed_version {
-						feed {
-							onestop_id
-						}
-					}
+					feed_version { feed { onestop_id } }
 				}
 			}`,
-			vars: hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
-			f: func(t *testing.T, jj string) {
-				// Verify the first 10 routes are all from HA feed
-				feedIds := gjson.Get(jj, "routes.#.feed_version.feed.onestop_id").Array()
-				assert.GreaterOrEqual(t, len(feedIds), 10, "should return at least 10 routes")
-				for i := range 10 {
-					assert.Equal(t, "HA", feedIds[i].String(), "route %d should be from HA feed", i)
-				}
-			},
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "routes.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"HA", "HA", "HA", "HA", "HA"},
 		},
 		{
 			name: "focus basic: San Jose focus point returns West Coast routes first",
 			query: `query($lat:Float!, $lon:Float!) {
-				routes(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+				routes(limit: 5, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
 					route_id
-					feed_version {
-						feed {
-							onestop_id
-						}
-					}
+					feed_version { feed { onestop_id } }
 				}
 			}`,
-			vars: hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
-			f: func(t *testing.T, jj string) {
-				// Verify the first 5 routes are all from CT feed
-				feedIds := gjson.Get(jj, "routes.#.feed_version.feed.onestop_id").Array()
-				assert.GreaterOrEqual(t, len(feedIds), 5, "should return at least 6 routes")
-				for i := range len(feedIds) {
-
-					// Can be BA or CT depending on exact focus distance calculations
-					feedId := feedIds[i].String()
-					if feedId != "CT" && feedId != "BA" {
-						t.Errorf("route %d should be from CT or BA feed, got %s", i, feedId)
-					}
-				}
-			},
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			selector:     "routes.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"CT", "CT", "CT", "CT", "CT"},
 		},
 		{
 			name: "focus with feed filter: HA routes only, ordered by distance",
@@ -370,112 +342,22 @@ func TestRouteResolver_Location(t *testing.T) {
 					geometry
 				}
 			}`,
-			vars: hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
-			f: func(t *testing.T, jj string) {
-				// Verify the query returns routes
-				routeIds := gjson.Get(jj, "routes.#.route_id").Array()
-				// Print results; we'll manually verify ordering for now
-				// for i, rid := range routeIds {
-				// 	t.Logf("HA route distance check: route %d: %s", i, rid.String())
-				// }
-				// Hard coded expected order based on known distances
-				expectedOrder := []string{"20", "51", "8", "400", "96", "97", "12", "9", "19", "30"}
-				assert.GreaterOrEqual(
-					t,
-					len(expectedOrder),
-					len(routeIds),
-					"expected order length should be at least returned routes length",
-					len(expectedOrder),
-				)
-				for i, rid := range routeIds {
-					assert.Equal(t, expectedOrder[i], rid.String(), "route %d should be %s", i, expectedOrder[i])
-				}
-			},
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"20", "51", "8", "400", "96", "97", "12", "9", "19", "30"},
 		},
 		{
-			name: "focus with pagination: second page maintains ordering",
-			query: `query($lat:Float!, $lon:Float!, $after:Int!) {
-				routes_all: routes(limit: 100, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
-					id
+			// Should start after "96" in above test
+			name: "focus with pagination",
+			query: `query($lat:Float!, $lon:Float!, $after: Int!) {
+				routes(after:$after,limit: 10, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
 					route_id
-					feed_version {feed{onestop_id}}
-				}
-				routes_page2: routes(after: $after, limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
-					id
-					route_id
-					feed_version {feed{onestop_id}}
+					geometry
 				}
 			}`,
-			vars: hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": testRouteId},
-			f: func(t *testing.T, jj string) {
-				// Get all routes ordered by distance
-				allRoutes := gjson.Get(jj, "routes_all").Array()
-				assert.GreaterOrEqual(t, len(allRoutes), 11, "should return at least 11 routes")
-				// fmt.Println("ALL ROUTES:", allRoutes)
-				// Find the index of stbaRouteID in the all route list
-				cursorIndex := -1
-				for i, route := range allRoutes {
-					if route.Get("id").Int() == int64(testRouteId) {
-						cursorIndex = i
-						break
-					}
-				}
-				assert.GreaterOrEqual(t, cursorIndex, 0, "cursor route should be found in all routes list")
-
-				// Get page 2 routes
-				page2Routes := gjson.Get(jj, "routes_page2").Array()
-				assert.GreaterOrEqual(t, len(page2Routes), 1, "should return at least 1 route in page 2")
-
-				// Verify page 2 stops match the stops after the cursor in all stops
-				expectedStartIndex := cursorIndex + 1
-				assert.LessOrEqual(
-					t,
-					expectedStartIndex+len(page2Routes),
-					len(allRoutes),
-					"should have enough routes after cursor",
-				)
-				for i, page2Route := range page2Routes {
-					expectedRoute := allRoutes[expectedStartIndex+i]
-					assert.Equal(
-						t,
-						expectedRoute.Get("id").Int(),
-						page2Route.Get("id").Int(),
-						"page2 route %d should match all routes at index %d",
-						i,
-						expectedStartIndex+i,
-					)
-				}
-			},
-		},
-		{
-			name: "focus ordering vs no focus: different order",
-			query: `query($lat:Float!, $lon:Float!) {
-				with_focus: routes(limit: 100, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
-					route_id
-				}
-				without_focus: routes(limit: 100, where: {feed_onestop_id: "HA"}) {
-					route_id
-				}
-			}`,
-			vars: hw{"lat": 27.9506, "lon": -82.4572}, // Tampa Bay area
-			f: func(t *testing.T, jj string) {
-				withFocus := gjson.Get(jj, "with_focus.#.route_id").Array()
-				withoutFocus := gjson.Get(jj, "without_focus.#.route_id").Array()
-				assert.GreaterOrEqual(t, len(withFocus), 10, "should return at least 10 routes with focus")
-				assert.GreaterOrEqual(t, len(withoutFocus), 10, "should return at least 10 routes without focus")
-
-				// Verify the orders are different
-				diffOrder := false
-				for i := range len(withFocus) {
-					if withFocus[i].String() != withoutFocus[i].String() {
-						diffOrder = true
-						break
-					}
-				}
-				if !diffOrder {
-					t.Errorf("route orders are identical with and without focus, expected difference")
-				}
-			},
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon, "after": testRouteId},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"97", "12", "9", "19", "30", "60", "7", "24", "25", "275"},
 		},
 	}
 	queryTestcases(t, c, testcases)

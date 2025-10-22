@@ -222,7 +222,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	if after != nil && after.Valid && after.ID > 0 {
 		if where != nil && where.Location != nil && where.Location.Focus != nil {
 			whereExpr := sq.Expr(
-				"(ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), gtfs_agencies.id) > (select ST_Distance(geometry, ST_MakePoint(?,?)), agency_id from tl_agency_geometries where agency_id = ?)",
+				"(ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), gtfs_agencies.id) > (select ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), agency_id from tl_agency_geometries where agency_id = ?)",
 				where.Location.Focus.Lon,
 				where.Location.Focus.Lat,
 				where.Location.Focus.Lon,
