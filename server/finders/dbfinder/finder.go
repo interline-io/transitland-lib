@@ -287,6 +287,19 @@ func quickSelectOrder(table string, limit *int, after *model.Cursor, ids []int, 
 }
 
 type UseActive struct {
-	Active          bool
-	UseMaterialized bool
+	active       bool
+	materialized bool
+}
+
+// Active returns true if u is non-nil and active is true
+func (u *UseActive) Active() bool {
+	return u != nil && u.active
+}
+
+// UseTable returns the materialized table name if conditions are met, otherwise returns the base table name
+func (u *UseActive) UseTable(baseTable, materializedTable string) string {
+	if u != nil && u.active && u.materialized {
+		return materializedTable
+	}
+	return baseTable
 }

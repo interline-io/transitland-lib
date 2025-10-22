@@ -16,14 +16,14 @@ import (
 
 func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.StopFilter) ([]*model.Stop, error) {
 	var ents []*model.Stop
-	useActive := UseActive{
-		Active:          true,
-		UseMaterialized: model.ForContext(ctx).UseMaterialized,
+	useActive := &UseActive{
+		active:       true,
+		materialized: model.ForContext(ctx).UseMaterialized,
 	}
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
-		useActive.Active = false
+		useActive.active = false
 	}
-	q := stopSelect(limit, after, ids, &useActive, f.PermFilter(ctx), where)
+	q := stopSelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -107,7 +107,7 @@ func (f *Finder) TargetStopsByStopIDs(ctx context.Context, ids []int) ([]*model.
 	var qents []*qlookup
 	q := sq.
 		Select("t.*", "tlse.stop_id as source_id").
-		FromSelect(stopSelect(nil, nil, nil, &UseActive{Active: true}, f.PermFilter(ctx), nil), "t").
+		FromSelect(stopSelect(nil, nil, nil, &UseActive{active: true}, f.PermFilter(ctx), nil), "t").
 		Join("tl_stop_external_references tlse on tlse.target_feed_onestop_id = t.feed_onestop_id and tlse.target_stop_id = t.stop_id").
 		Where(In("tlse.stop_id", ids))
 	if err := dbutil.Select(ctx,
@@ -235,10 +235,7 @@ func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.
 }
 
 func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {
-	stopTable := "gtfs_stops"
-	if useActive != nil && useActive.UseMaterialized {
-		stopTable = "tl_materialized_active_stops as gtfs_stops"
-	}
+	stopTable := useActive.UseTable("gtfs_stops", "tl_materialized_active_stops as gtfs_stops")
 	q := sq.StatementBuilder.Select(
 		"gtfs_stops.id",
 		"gtfs_stops.feed_version_id",
@@ -482,7 +479,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 	if distinct {
 		q = q.Distinct().Options("on (gtfs_stops.feed_version_id,gtfs_stops.id)")
 	}
-	if useActive != nil && useActive.Active {
+	if useActive.Active() {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_stops.feed_version_id")
 	}
 	if len(ids) > 0 {

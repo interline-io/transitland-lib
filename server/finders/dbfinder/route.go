@@ -10,14 +10,14 @@ import (
 
 func (f *Finder) FindRoutes(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.RouteFilter) ([]*model.Route, error) {
 	var ents []*model.Route
-	useActive := UseActive{
-		Active:          true,
-		UseMaterialized: model.ForContext(ctx).UseMaterialized,
+	useActive := &UseActive{
+		active:       true,
+		materialized: model.ForContext(ctx).UseMaterialized,
 	}
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
-		useActive.Active = false
+		useActive.active = false
 	}
-	q := routeSelect(limit, after, ids, &useActive, f.PermFilter(ctx), where)
+	q := routeSelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -183,10 +183,6 @@ func (f *Finder) ShapesByIDs(ctx context.Context, ids []int) ([]*model.Shape, []
 }
 
 func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.RouteFilter) sq.SelectBuilder {
-	routeTable := "gtfs_routes"
-	if useActive != nil && useActive.UseMaterialized {
-		routeTable = "tl_materialized_active_routes as gtfs_routes"
-	}
 	q := sq.StatementBuilder.Select(
 		"gtfs_routes.id",
 		"gtfs_routes.feed_version_id",
@@ -209,7 +205,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 		"feed_versions.sha1 AS feed_version_sha1",
 		"coalesce(feed_version_route_onestop_ids.onestop_id, '') as onestop_id",
 	).
-		From(routeTable).
+		From(useActive.UseTable("gtfs_routes", "tl_materialized_active_routes as gtfs_routes")).
 		Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		Limit(finderCheckLimit(limit))
@@ -321,13 +317,21 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			) tlrs_near on tlrs_near.route_id = gtfs_routes.id`, loc.Near.Lon, loc.Near.Lat, radius)
 		}
 		if loc.Focus != nil {
+			// Use materialized route geometries when requested
+			orderExpr := sq.Expr(
+				useActive.UseTable(
+					"tl_route_geometries.geometry <-> ST_MakePoint(?,?), gtfs_routes.id",
+					"gtfs_routes.geometry_simplified <-> ST_MakePoint(?,?), gtfs_routes.id",
+				),
+				loc.Focus.Lon,
+				loc.Focus.Lat)
 			q = q.
 				Join("tl_route_geometries ON tl_route_geometries.route_id = gtfs_routes.id").
-				OrderByClause(sq.Expr("tl_route_geometries.geometry <-> ST_MakePoint(?,?)", loc.Focus.Lon, loc.Focus.Lat))
+				OrderByClause(orderExpr)
 		}
 	}
 
-	if useActive != nil && useActive.Active {
+	if useActive.Active() {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_routes.feed_version_id")
 	}
 	if len(ids) > 0 {
@@ -340,13 +344,18 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 	// Handle cursor
 	if after != nil && after.Valid && after.ID > 0 {
 		if where != nil && where.Location != nil && where.Location.Focus != nil {
-			q = q.Where(sq.Expr(
-				"ST_Distance(tl_route_geometries.geometry, ST_MakePoint(?,?)) > (select ST_Distance(geometry, ST_MakePoint(?,?)) from tl_route_geometries where route_id = (select route_id from gtfs_routes where id = ?))",
+			// When materialized, we have tl_materialized_active_routes set as 'gtfs_routes', which has a 'geometry_simplified' column
+			whereExpr := sq.Expr(
+				useActive.UseTable(
+					"(ST_Distance(tl_route_geometries.geometry, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry, ST_MakePoint(?,?)), route_id from tl_route_geometries where route_id = ?)",
+					"(ST_Distance(gtfs_routes.geometry_simplified, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry, ST_MakePoint(?,?)), route_id from gtfs_routes where route_id = ?)",
+				),
 				where.Location.Focus.Lon,
 				where.Location.Focus.Lat,
 				where.Location.Focus.Lon,
 				where.Location.Focus.Lat,
-				after.ID))
+				after.ID)
+			q = q.Where(whereExpr)
 		} else if after.FeedVersionID == 0 {
 			q = q.
 				Where(sq.Expr("gtfs_routes.feed_version_id >= (select feed_version_id from gtfs_routes where id = ?)", after.ID)).

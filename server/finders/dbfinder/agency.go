@@ -10,14 +10,14 @@ import (
 
 func (f *Finder) FindAgencies(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.AgencyFilter) ([]*model.Agency, error) {
 	var ents []*model.Agency
-	useActive := UseActive{
-		Active:          true,
-		UseMaterialized: model.ForContext(ctx).UseMaterialized,
+	useActive := &UseActive{
+		active:       true,
+		materialized: model.ForContext(ctx).UseMaterialized,
 	}
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
-		useActive.Active = false
+		useActive.active = false
 	}
-	q := agencySelect(limit, after, ids, &useActive, f.PermFilter(ctx), where)
+	q := agencySelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -88,7 +88,7 @@ func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *mo
 	var ents []*model.Agency
 	err := dbutil.Select(ctx,
 		f.db,
-		agencySelect(limit, nil, nil, &UseActive{Active: true}, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
+		agencySelect(limit, nil, nil, &UseActive{active: true}, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), err
@@ -104,10 +104,6 @@ func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor
 }
 
 func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
-	agencyTable := "gtfs_agencies"
-	if useActive != nil && useActive.UseMaterialized {
-		agencyTable = "tl_materialized_active_agencies as gtfs_agencies"
-	}
 	distinct := false
 	q := sq.StatementBuilder.
 		Select(
@@ -127,7 +123,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 			"coalesce (coif.resolved_onestop_id, '') as onestop_id",
 			"coif.id as coif_id",
 		).
-		From(agencyTable).
+		From(useActive.UseTable("gtfs_agencies", "tl_materialized_active_agencies as gtfs_agencies")).
 		Join("feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		JoinClause("left join tl_agency_geometries ON tl_agency_geometries.agency_id = gtfs_agencies.id").
@@ -200,7 +196,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_agencies.id", ids))
 	}
-	if useActive != nil && useActive.Active {
+	if useActive.Active() {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_agencies.feed_version_id")
 	}
 
