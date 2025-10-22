@@ -128,7 +128,6 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		JoinClause("left join tl_agency_geometries ON tl_agency_geometries.agency_id = gtfs_agencies.id").
 		JoinClause("left join current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
-		OrderBy("gtfs_agencies.feed_version_id,gtfs_agencies.id").
 		Limit(finderCheckLimit(limit))
 
 	if where != nil {
@@ -200,6 +199,10 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
 			q = q.Where("ST_DWithin(tl_agency_geometries.geometry, ST_MakePoint(?,?), ?)", loc.Near.Lon, loc.Near.Lat, radius)
 		}
+		if loc.Focus != nil {
+			orderExpr := sq.Expr("tl_agency_geometries.geometry <-> ST_MakePoint(?,?), gtfs_agencies.id", loc.Focus.Lon, loc.Focus.Lat)
+			q = q.OrderByClause(orderExpr)
+		}
 	}
 
 	if distinct {
@@ -212,10 +215,21 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_agencies.feed_version_id")
 	}
 
+	// Default ordering
+	q = q.OrderBy("gtfs_agencies.feed_version_id,gtfs_agencies.id")
+
 	// Handle cursor
 	if after != nil && after.Valid && after.ID > 0 {
-		// first check helps improve query performance
-		if after.FeedVersionID == 0 {
+		if where != nil && where.Location != nil && where.Location.Focus != nil {
+			whereExpr := sq.Expr(
+				"(ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), gtfs_agencies.id) > (select ST_Distance(geometry, ST_MakePoint(?,?)), agency_id from tl_agency_geometries where agency_id = ?)",
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				after.ID)
+			q = q.Where(whereExpr)
+		} else if after.FeedVersionID == 0 {
 			q = q.
 				Where(sq.Expr("gtfs_agencies.feed_version_id >= (select feed_version_id from gtfs_agencies where id = ?)", after.ID)).
 				Where(sq.Expr("(gtfs_agencies.feed_version_id, gtfs_agencies.id) > (select feed_version_id,id from gtfs_agencies where id = ?)", after.ID))
