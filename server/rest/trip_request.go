@@ -34,7 +34,7 @@ type TripRequest struct {
 func (r TripRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/routes/{route_key}/trips",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: tripQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for trips`,
@@ -185,7 +185,7 @@ type TripEntityRequest struct {
 func (r TripEntityRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/routes/{route_key}/trips/{id}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: tripQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for trips`,

@@ -82,6 +82,7 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	r.HandleFunc("/feed_versions/{feed_version_key}", feedVersionHandler)
 	r.HandleFunc("/feeds/{feed_key}/feed_versions", feedVersionHandler)
 	r.Handle("/feed_versions/{feed_version_key}/download", usercheck.RoleRequired("tl_download_fv_historic")(makeHandlerFunc(graphqlHandler, "feedVersionDownload", feedVersionDownloadHandler)))
+	r.Method("POST", "/feed_versions/export", usercheck.RoleRequired("tl_export_feed_versions")(makeHandlerFunc(graphqlHandler, "feedVersionExport", feedVersionExportHandler)))
 
 	r.HandleFunc("/agencies.{format}", agencyHandler)
 	r.HandleFunc("/agencies", agencyHandler)
@@ -352,9 +353,10 @@ func makeRequest(ctx context.Context, graphqlHandler http.Handler, ent apiHandle
 				return nil, err
 			}
 		}
-		if format == "geojsonl" {
+		switch format {
+		case "geojsonl":
 			return renderGeojsonl(response)
-		} else if format == "png" {
+		case "png":
 			b, err := json.Marshal(response)
 			if err != nil {
 				return nil, err

@@ -40,6 +40,7 @@ var RestHandlersList = []RestHandlers{
 	// Download/special endpoints
 	&FeedDownloadLatestFeedVersionRequest{}, // /feeds/{feed_key}/download_latest_feed_version
 	&FeedVersionDownloadRequest{},           // /feed_versions/{feed_version_key}/download
+	&FeedVersionExportOpenAPIRequest{},      // /feed_versions/export
 	&FeedDownloadRtRequest{},                // /feeds/{feed_key}/download_latest_rt/{rt_type}.{format}
 	&OnestopIdEntityRedirectRequest{},       // /onestop_id/{onestop_id} - redirect to entity by Onestop ID
 }
@@ -100,24 +101,53 @@ func GenerateOpenAPI(restPrefix string, opts ...SchemaOption) (*oa.T, error) {
 	var handlers = RestHandlersList
 	for _, handler := range handlers {
 		requestInfo := handler.RequestInfo()
-		getOp := requestInfo.Get.Operation
-		getOp.Description = requestInfo.Description
-		if requestInfo.Get.Operation.Responses.Len() > 0 {
-			getOp.Responses = requestInfo.Get.Operation.Responses
-		} else {
-			oaResponse, err := queryToOAResponses(requestInfo.Get.Query)
-			if err != nil {
-				return outdoc, err
+		pathItem := &oa.PathItem{}
+
+		// Helper function to process operation (GET or POST)
+		processOperation := func(reqOp *RequestOperation) (*oa.Operation, error) {
+			if reqOp == nil {
+				return nil, nil
 			}
-			getOp.Responses = oaResponse
+			if reqOp.Operation == nil {
+				return nil, nil
+			}
+
+			op := reqOp.Operation
+			op.Description = requestInfo.Description
+
+			// Set responses if not already defined
+			if reqOp.Operation.Responses.Len() > 0 {
+				op.Responses = reqOp.Operation.Responses
+			} else if reqOp.Query != "" {
+				oaResponse, err := queryToOAResponses(reqOp.Query)
+				if err != nil {
+					return nil, err
+				}
+				op.Responses = oaResponse
+			}
+
+			// Apply custom security if provided
+			if config.GlobalSecurity != nil {
+				op.Security = config.GlobalSecurity
+			}
+
+			return op, nil
 		}
 
-		// Apply custom security if provided
-		if config.GlobalSecurity != nil {
-			getOp.Security = config.GlobalSecurity
+		// Handle GET operation
+		if getOp, err := processOperation(requestInfo.Get); err != nil {
+			return outdoc, err
+		} else if getOp != nil {
+			pathItem.Get = getOp
 		}
 
-		pathItem := &oa.PathItem{Get: getOp}
+		// Handle POST operation
+		if postOp, err := processOperation(requestInfo.Post); err != nil {
+			return outdoc, err
+		} else if postOp != nil {
+			pathItem.Post = postOp
+		}
+
 		pathOpts = append(pathOpts, oa.WithPath(requestInfo.Path, pathItem))
 	}
 	outdoc.Paths = oa.NewPaths(pathOpts...)

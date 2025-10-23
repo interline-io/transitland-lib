@@ -40,7 +40,7 @@ type StopRequest struct {
 func (r StopRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/stops",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: stopQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for stops`,
@@ -187,7 +187,7 @@ type StopEntityRequest struct {
 func (r StopEntityRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/stops/{stop_key}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: stopQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for stops`,

@@ -293,6 +293,9 @@ func feedVersionSelect(limit *int, after *model.Cursor, ids []int, permFilter *m
 			q = q.Join(`feed_version_gtfs_imports fvgi on fvgi.feed_version_id = feed_versions.id`).
 				Where(sq.Eq{"fvgi.success": checkSuccess}, sq.Eq{"fvgi.in_progress": checkInProgress})
 		}
+
+		// Handle license filtering
+		q = licenseFilter(where.License, q)
 	}
 	if len(ids) > 0 {
 		q = q.Where(In("feed_versions.id", ids))

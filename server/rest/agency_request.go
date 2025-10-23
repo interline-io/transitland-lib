@@ -40,7 +40,7 @@ type AgencyRequest struct {
 func (r AgencyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/agencies",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: agencyQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for agencies`,
@@ -181,7 +181,7 @@ type AgencyKeyRequest struct {
 func (r AgencyKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/agencies/{agency_key}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: agencyQuery,
 			Operation: &oa.Operation{
 				Summary: "Agencies",

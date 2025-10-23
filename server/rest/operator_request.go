@@ -37,7 +37,7 @@ type OperatorRequest struct {
 func (r OperatorRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/operators",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: operatorQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for operators`,
@@ -97,7 +97,7 @@ type OperatorKeyRequest struct {
 func (r OperatorKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/operators/{operator_key}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: operatorQuery,
 			Operation: &oa.Operation{
 				Summary: "Operators",

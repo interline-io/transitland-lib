@@ -41,7 +41,7 @@ type RouteRequest struct {
 func (r RouteRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/routes",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: routeQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for routes`,
@@ -222,7 +222,7 @@ type RouteKeyRequest struct {
 func (r RouteKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/routes/{route_key}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: routeQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for routes`,
@@ -267,7 +267,7 @@ func (r RouteKeyRequest) RequestInfo() RequestInfo {
 // 	}
 // 	return RequestInfo{
 // 		Path: "/agencies/{agency_key}/routes",
-// 		Get: RequestOperation{
+// 		Get: &RequestOperation{
 // 			Query: routeQuery,
 // 			Operation: &oa.Operation{
 // 				Summary:     "Routes",
