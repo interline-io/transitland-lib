@@ -74,7 +74,6 @@ func (cmd *FeedStateManagerCommand) Parse(args []string) error {
 
 // Run the feed state management command
 func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
-
 	// Open database connection
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
@@ -121,86 +120,70 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 		return fmt.Errorf("--set-active cannot be used with --activate or --deactivate")
 	}
 
-	// Sync active feed versions to materialized tables
-	if cmd.SyncActive {
-		log.For(ctx).Info().Msg("Syncing materialized tables to match current active feed versions")
-		var materializedFeedVersions []int
-		var activeFeedVersions []int
-		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-			txManager := feedstate.NewManager(atx)
+	// Execute in transaction
+	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
+		// Get current active feed versions to determine sync operations
+		log.Info().Msg("Getting current active feed versions")
+		txManager := feedstate.NewManager(atx)
+		activeFeedVersions, err := txManager.GetActiveFeedVersions(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get active feed versions: %w", err)
+		}
+		activeSet := toSet(activeFeedVersions)
+
+		// Sync active feed versions to materialized tables
+		if cmd.SyncActive {
+			log.For(ctx).Info().Msg("Getting materialized feed versions to sync active feed versions")
+			var materializedFeedVersions []int
 			materializedFeedVersions, err = txManager.GetMaterializedFeedVersions(ctx)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get materialized feed versions: %w", err)
 			}
-			activeFeedVersions, err = txManager.GetActiveFeedVersions(ctx)
-			if err != nil {
-				return err
+			// Determine which feed versions to materialize and dematerialize
+			materializedSet := toSet(materializedFeedVersions)
+			for fvid := range activeSet {
+				if !materializedSet[fvid] {
+					forceMaterializeIDs = append(forceMaterializeIDs, fvid)
+				}
 			}
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("failed to get current feed version states: %w", err)
-		}
-		// Determine which feed versions to materialize and dematerialize
-		materializedSet := toSet(materializedFeedVersions)
-		activeSet := toSet(activeFeedVersions)
-		for fvid := range activeSet {
-			if !materializedSet[fvid] {
-				forceMaterializeIDs = append(forceMaterializeIDs, fvid)
+			for fvid := range materializedSet {
+				if !activeSet[fvid] {
+					forceDematerializeIDs = append(forceDematerializeIDs, fvid)
+				}
 			}
 		}
-		for fvid := range materializedSet {
-			if !activeSet[fvid] {
-				forceDematerializeIDs = append(forceDematerializeIDs, fvid)
-			}
-		}
-	}
 
-	// Dry run - show what would be done
-	if cmd.DryRun {
-		log.For(ctx).Info().Msg("DRY RUN: Would execute the following operations:")
 		if len(setActiveIDs) > 0 {
-			log.For(ctx).Info().Ints("feed_version_ids", setActiveIDs).Msg("Would call SetActiveFeedVersions")
+			log.For(ctx).Info().Msg("Calculating set-active changes")
+			changes, err := txManager.CalculateSetActiveChanges(ctx, setActiveIDs)
+			if err != nil {
+				return fmt.Errorf("failed to calculate set-active changes: %w", err)
+			}
+			activateIDs = append(activateIDs, changes.ToActivate...)
+			deactivateIDs = append(deactivateIDs, changes.ToDeactivate...)
 		}
-		if len(activateIDs) > 0 {
-			log.For(ctx).Info().Ints("feed_version_ids", activateIDs).Msg("Would call ActivateFeedVersion for each")
-		}
-		if len(deactivateIDs) > 0 {
-			log.For(ctx).Info().Ints("feed_version_ids", deactivateIDs).Msg("Would call DeactivateFeedVersion for each")
+
+		log.For(ctx).Info().Msg("The following operations will be performed:")
+		if len(forceDematerializeIDs) > 0 {
+			log.For(ctx).Info().Ints("feed_version_ids", forceDematerializeIDs).Msgf("DematerializeFeedVersion for %d feed versions", len(forceDematerializeIDs))
 		}
 		if len(forceMaterializeIDs) > 0 {
-			log.For(ctx).Info().Ints("feed_version_ids", forceMaterializeIDs).Msg("Would call MaterializeFeedVersion for each")
-		}
-		if len(forceDematerializeIDs) > 0 {
-			log.For(ctx).Info().Ints("feed_version_ids", forceDematerializeIDs).Msg("Would call DematerializeFeedVersion for each")
+			log.For(ctx).Info().Ints("feed_version_ids", forceMaterializeIDs).Msgf("MaterializeFeedVersion for %d feed versions", len(forceMaterializeIDs))
 		}
 		if len(forceRematerializeIDs) > 0 {
-			log.For(ctx).Info().Ints("feed_version_ids", forceRematerializeIDs).Msg("Would call DematerializeFeedVersion + MaterializeFeedVersion for each")
+			log.For(ctx).Info().Ints("feed_version_ids", forceRematerializeIDs).Msgf("DematerializeFeedVersion + MaterializeFeedVersion for %d feed versions", len(forceRematerializeIDs))
 		}
-		return nil
-	}
-
-	// Execute in transaction - thin wrapper around manager methods
-	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-		txManager := feedstate.NewManager(atx)
-
-		if len(setActiveIDs) > 0 {
-			log.For(ctx).Info().Ints("feed_version_ids", setActiveIDs).Msg("Setting active feed versions")
-			return txManager.SetActiveFeedVersions(ctx, setActiveIDs)
+		if len(deactivateIDs) > 0 {
+			log.For(ctx).Info().Ints("feed_version_ids", deactivateIDs).Msgf("DeactivateFeedVersion for %d feed versions", len(deactivateIDs))
+		}
+		if len(activateIDs) > 0 {
+			log.For(ctx).Info().Ints("feed_version_ids", activateIDs).Msgf("ActivateFeedVersion for %d feed versions", len(activateIDs))
 		}
 
-		for _, fvid := range deactivateIDs {
-			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Deactivating feed version")
-			if err := txManager.DeactivateFeedVersion(ctx, fvid); err != nil {
-				return err
-			}
-		}
-
-		for _, fvid := range activateIDs {
-			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Activating feed version")
-			if err := txManager.ActivateFeedVersion(ctx, fvid); err != nil {
-				return err
-			}
+		// Dry run - show what would be done
+		if cmd.DryRun {
+			log.For(ctx).Info().Msg("Dry run enabled - no changes will be made")
+			return nil
 		}
 
 		// Force dematerialize operations (need to get feed_id first)
@@ -226,6 +209,22 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 				return err
 			}
 			if err := txManager.MaterializeFeedVersion(ctx, fvid); err != nil {
+				return err
+			}
+		}
+
+		// Deactivate operations
+		for _, fvid := range deactivateIDs {
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Deactivating feed version")
+			if err := txManager.DeactivateFeedVersion(ctx, fvid); err != nil {
+				return err
+			}
+		}
+
+		// Activate operations
+		for _, fvid := range activateIDs {
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Activating feed version")
+			if err := txManager.ActivateFeedVersion(ctx, fvid); err != nil {
 				return err
 			}
 		}
