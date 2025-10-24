@@ -387,18 +387,17 @@ func (m *Manager) GetActiveFeedVersions(ctx context.Context) ([]int, error) {
 	return feedVersionIDs, nil
 }
 
-// SetActiveFeedVersions sets the complete active set of feed versions
-// Any currently active feed versions not in the specified set will be deactivated,
-// and all feed versions in the specified set will be activated.
-func (m *Manager) SetActiveFeedVersions(ctx context.Context, feedVersionIDs []int) error {
-	log.For(ctx).Info().
-		Ints("target_feed_version_ids", feedVersionIDs).
-		Msg("Setting active feed versions")
+type FeedVersionChanges struct {
+	ToDeactivate []int
+	ToActivate   []int
+}
 
+func (m *Manager) CalculateSetActiveChanges(ctx context.Context, feedVersionIDs []int) (FeedVersionChanges, error) {
+	ret := FeedVersionChanges{}
 	// Get currently active feed versions
 	currentActive, err := m.GetActiveFeedVersions(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get current active feed versions: %w", err)
+		return ret, fmt.Errorf("failed to get current active feed versions: %w", err)
 	}
 
 	// Create sets for efficient comparison
@@ -412,35 +411,17 @@ func (m *Manager) SetActiveFeedVersions(ctx context.Context, feedVersionIDs []in
 		currentSet[fvid] = true
 	}
 
-	// Deactivate any feed versions that are currently active but not in the target set
+	var toDeactivate []int
 	for _, fvid := range currentActive {
 		if !targetSet[fvid] {
-			log.For(ctx).Info().
-				Int("feed_version_id", fvid).
-				Msg("Deactivating feed version (not in target set)")
-
-			if err := m.DeactivateFeedVersion(ctx, fvid); err != nil {
-				return fmt.Errorf("failed to deactivate feed version %d: %w", fvid, err)
-			}
+			toDeactivate = append(toDeactivate, fvid)
 		}
 	}
-
-	// Activate all feed versions in the target set
+	var toActivate []int
 	for _, fvid := range feedVersionIDs {
 		if !currentSet[fvid] {
-			log.For(ctx).Info().
-				Int("feed_version_id", fvid).
-				Msg("Activating feed version (new in target set)")
-		}
-
-		if err := m.ActivateFeedVersion(ctx, fvid); err != nil {
-			return fmt.Errorf("failed to activate feed version %d: %w", fvid, err)
+			toActivate = append(toActivate, fvid)
 		}
 	}
-
-	log.For(ctx).Info().
-		Ints("active_feed_version_ids", feedVersionIDs).
-		Msg("Successfully set active feed versions")
-
-	return nil
+	return FeedVersionChanges{ToDeactivate: toDeactivate, ToActivate: toActivate}, nil
 }
