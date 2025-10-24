@@ -425,3 +425,34 @@ func (m *Manager) CalculateSetActiveChanges(ctx context.Context, feedVersionIDs 
 	}
 	return FeedVersionChanges{ToDeactivate: toDeactivate, ToActivate: toActivate}, nil
 }
+
+// SetActiveFeedVersions activates the specified feed versions and deactivates all others
+// This replaces the entire set of active feed versions with the provided list
+func (m *Manager) SetActiveFeedVersions(ctx context.Context, feedVersionIDs []int) error {
+	changes, err := m.CalculateSetActiveChanges(ctx, feedVersionIDs)
+	if err != nil {
+		return fmt.Errorf("failed to calculate changes: %w", err)
+	}
+
+	// Deactivate feed versions that should no longer be active
+	for _, fvid := range changes.ToDeactivate {
+		log.For(ctx).Info().
+			Int("feed_version_id", fvid).
+			Msg("Deactivating feed version")
+		if err := m.DeactivateFeedVersion(ctx, fvid); err != nil {
+			return fmt.Errorf("failed to deactivate feed version %d: %w", fvid, err)
+		}
+	}
+
+	// Activate new feed versions
+	for _, fvid := range changes.ToActivate {
+		log.For(ctx).Info().
+			Int("feed_version_id", fvid).
+			Msg("Activating feed version")
+		if err := m.ActivateFeedVersion(ctx, fvid); err != nil {
+			return fmt.Errorf("failed to activate feed version %d: %w", fvid, err)
+		}
+	}
+
+	return nil
+}
