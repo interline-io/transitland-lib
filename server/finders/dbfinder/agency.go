@@ -10,14 +10,14 @@ import (
 
 func (f *Finder) FindAgencies(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.AgencyFilter) ([]*model.Agency, error) {
 	var ents []*model.Agency
-	useActive := UseActive{
-		Active:          true,
-		UseMaterialized: model.ForContext(ctx).UseMaterialized,
+	useActive := &UseActive{
+		active:       true,
+		materialized: model.ForContext(ctx).UseMaterialized,
 	}
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
-		useActive.Active = false
+		useActive.active = false
 	}
-	q := agencySelect(limit, after, ids, &useActive, f.PermFilter(ctx), where)
+	q := agencySelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -88,7 +88,7 @@ func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *mo
 	var ents []*model.Agency
 	err := dbutil.Select(ctx,
 		f.db,
-		agencySelect(limit, nil, nil, &UseActive{Active: true}, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
+		agencySelect(limit, nil, nil, &UseActive{active: true}, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), err
@@ -104,10 +104,6 @@ func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor
 }
 
 func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
-	agencyTable := "gtfs_agencies"
-	if useActive != nil && useActive.UseMaterialized {
-		agencyTable = "tl_materialized_active_agencies as gtfs_agencies"
-	}
 	distinct := false
 	q := sq.StatementBuilder.
 		Select(
@@ -127,12 +123,11 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 			"coalesce (coif.resolved_onestop_id, '') as onestop_id",
 			"coif.id as coif_id",
 		).
-		From(agencyTable).
+		From(useActive.UseTable("gtfs_agencies", "tl_materialized_active_agencies as gtfs_agencies")).
 		Join("feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		JoinClause("left join tl_agency_geometries ON tl_agency_geometries.agency_id = gtfs_agencies.id").
 		JoinClause("left join current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
-		OrderBy("gtfs_agencies.feed_version_id,gtfs_agencies.id").
 		Limit(finderCheckLimit(limit))
 
 	if where != nil {
@@ -150,17 +145,6 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		}
 		if where.OnestopID != nil {
 			q = q.Where(sq.Eq{"coif.resolved_onestop_id": *where.OnestopID})
-		}
-		// Spatial
-		if where.Bbox != nil {
-			q = q.Where("ST_Intersects(tl_agency_geometries.geometry, ST_MakeEnvelope(?,?,?,?,4326))", where.Bbox.MinLon, where.Bbox.MinLat, where.Bbox.MaxLon, where.Bbox.MaxLat)
-		}
-		if where.Within != nil && where.Within.Valid {
-			q = q.Where("ST_Intersects(tl_agency_geometries.geometry, ?)", where.Within)
-		}
-		if where.Near != nil {
-			radius := checkFloat(&where.Near.Radius, 0, 1_000_000)
-			q = q.Where("ST_DWithin(tl_agency_geometries.geometry, ST_MakePoint(?,?), ?)", where.Near.Lon, where.Near.Lat, radius)
 		}
 		// Places
 		if where.Adm0Iso != nil || where.Adm1Iso != nil || where.Adm0Name != nil || where.Adm1Name != nil || where.CityName != nil {
@@ -194,20 +178,58 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		}
 	}
 
+	// Handle geom search
+	if where != nil {
+		loc := where.Location
+		if loc == nil {
+			loc = &model.AgencyLocationFilter{
+				Bbox:    where.Bbox,
+				Near:    where.Near,
+				Polygon: where.Within,
+			}
+		}
+		// Spatial
+		if loc.Bbox != nil {
+			q = q.Where("ST_Intersects(tl_agency_geometries.geometry, ST_MakeEnvelope(?,?,?,?,4326))", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat)
+		}
+		if loc.Polygon != nil && loc.Polygon.Valid {
+			q = q.Where("ST_Intersects(tl_agency_geometries.geometry, ?)", loc.Polygon)
+		}
+		if loc.Near != nil {
+			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
+			q = q.Where("ST_DWithin(tl_agency_geometries.geometry, ST_MakePoint(?,?), ?)", loc.Near.Lon, loc.Near.Lat, radius)
+		}
+		if loc.Focus != nil {
+			orderExpr := sq.Expr("tl_agency_geometries.geometry <-> ST_MakePoint(?,?), gtfs_agencies.id", loc.Focus.Lon, loc.Focus.Lat)
+			q = q.OrderByClause(orderExpr)
+		}
+	}
+
 	if distinct {
 		q = q.Distinct().Options("on (gtfs_agencies.feed_version_id,gtfs_agencies.id)")
 	}
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_agencies.id", ids))
 	}
-	if useActive != nil && useActive.Active {
+	if useActive.Active() {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_agencies.feed_version_id")
 	}
 
+	// Default ordering
+	q = q.OrderBy("gtfs_agencies.feed_version_id,gtfs_agencies.id")
+
 	// Handle cursor
 	if after != nil && after.Valid && after.ID > 0 {
-		// first check helps improve query performance
-		if after.FeedVersionID == 0 {
+		if where != nil && where.Location != nil && where.Location.Focus != nil {
+			whereExpr := sq.Expr(
+				"(ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), gtfs_agencies.id) > (select ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), agency_id from tl_agency_geometries where agency_id = ?)",
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				after.ID)
+			q = q.Where(whereExpr)
+		} else if after.FeedVersionID == 0 {
 			q = q.
 				Where(sq.Expr("gtfs_agencies.feed_version_id >= (select feed_version_id from gtfs_agencies where id = ?)", after.ID)).
 				Where(sq.Expr("(gtfs_agencies.feed_version_id, gtfs_agencies.id) > (select feed_version_id,id from gtfs_agencies where id = ?)", after.ID))
