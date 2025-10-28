@@ -1,6 +1,6 @@
 #!/bin/sh
 # Set up a new postgres database and import Natural Earth data.
-set -ex -o pipefail
+set -ex
 SCRIPTDIR=$(dirname "$0")
 TL_TEST_STORAGE=$(dirname "$0")/tmp
 mkdir -p "${TL_TEST_STORAGE}"; rm -f ${TL_TEST_STORAGE}/*.zip 2>/dev/null || true

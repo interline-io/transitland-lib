@@ -15,6 +15,12 @@ func WriteJsonError(w http.ResponseWriter, msg string, statusCode int) {
 	w.Write(jj)
 }
 
+// HTTPStatusError interface for errors that have an associated HTTP status code
+type HTTPStatusError interface {
+	error
+	GetStatusCode() int
+}
+
 // HTTPError represents an error with an associated HTTP status code
 type HTTPError struct {
 	Message    string
@@ -31,6 +37,10 @@ func (e *HTTPError) Error() string {
 
 func (e *HTTPError) Unwrap() error {
 	return e.Cause
+}
+
+func (e *HTTPError) GetStatusCode() int {
+	return e.StatusCode
 }
 
 // NewHTTPError creates a new HTTPError
@@ -59,7 +69,7 @@ func NewInternalServerError(message string, cause error) *HTTPError {
 	return NewHTTPError(http.StatusInternalServerError, message, cause)
 }
 
-// WriteHTTPError writes an HTTPError to the response, using its status code
-func WriteHTTPError(w http.ResponseWriter, err *HTTPError) {
-	WriteJsonError(w, err.Message, err.StatusCode)
+// WriteStatusError writes any error that implements HTTPStatusError to the response
+func WriteStatusError(w http.ResponseWriter, err HTTPStatusError) {
+	WriteJsonError(w, err.Error(), err.GetStatusCode())
 }

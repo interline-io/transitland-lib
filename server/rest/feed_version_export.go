@@ -221,12 +221,13 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 		return
 	}
 
+	// Validate request
 	var err error
 	req, err = CheckFeedVersionExportRequest(ctx, req, graphqlHandler)
 	if err != nil {
-		// Check if it's an HTTP error with a specific status code
-		if httpErr, ok := err.(*util.HTTPError); ok {
-			util.WriteHTTPError(w, httpErr)
+		// Check if it's an HTTP status error
+		if httpErr, ok := err.(util.HTTPStatusError); ok {
+			util.WriteStatusError(w, httpErr)
 		} else {
 			// Fallback for unexpected error types
 			util.WriteJsonError(w, "invalid feed version export request", http.StatusBadRequest)
@@ -246,6 +247,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 		tmpfile.Close()
 	}
 
+	// Create CSV writer for ZIP output
 	csvWriter, err := tlcsv.NewWriter(tmpFilename)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Msg("failed to create CSV writer")
@@ -312,44 +314,6 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 		Msg("export completed successfully")
 }
 
-const feedVersionExportQuery = `
-query($ids: [Int!]) {
-	feed_versions(ids: $ids) {
-		id
-		sha1
-		feed {
-			onestop_id
-			license {
-				redistribution_allowed
-			}
-		}
-		feed_version_gtfs_import {
-			success
-			in_progress
-		}
-	}
-}
-`
-
-const feedVersionBySha1Query = `
-query($sha1: String!) {
-	feed_versions(where: {sha1: $sha1}) {
-		id
-		sha1
-		feed {
-			onestop_id
-			license {
-				redistribution_allowed
-			}
-		}
-		feed_version_gtfs_import {
-			success
-			in_progress
-		}
-	}
-}
-`
-
 func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRequest, graphqlHandler http.Handler) (*FeedVersionExportRequest, error) {
 	// Basic request validation
 	if err := validateExportRequest(req); err != nil {
@@ -396,6 +360,23 @@ func validateExportRequest(req *FeedVersionExportRequest) error {
 
 // resolveFeedVersionKeys converts feed version keys (IDs or SHA1s) to integer IDs
 func resolveFeedVersionKeys(ctx context.Context, keys []string, graphqlHandler http.Handler) ([]int, error) {
+	const feedVersionBySha1Query = `
+	query($sha1: String!) {
+		feed_versions(where: {sha1: $sha1}) {
+			id
+			sha1
+			feed {
+				onestop_id
+				license {
+					redistribution_allowed
+				}
+			}
+			feed_version_gtfs_import {
+				success
+				in_progress
+			}
+		}
+	}`
 	// Separate IDs and SHA1s
 	var allIds []int
 	var sha1s []string
@@ -431,6 +412,23 @@ func resolveFeedVersionKeys(ctx context.Context, keys []string, graphqlHandler h
 // validateFeedVersionsForExport checks import status and redistribution permissions
 func validateFeedVersionsForExport(ctx context.Context, ids []int, graphqlHandler http.Handler) ([]int, error) {
 	// Query all feed versions by IDs
+	const feedVersionExportQuery = `
+	query($ids: [Int!]) {
+		feed_versions(ids: $ids) {
+			id
+			sha1
+			feed {
+				onestop_id
+				license {
+					redistribution_allowed
+				}
+			}
+			feed_version_gtfs_import {
+				success
+				in_progress
+			}
+		}
+	}`
 	fvResponse, err := makeGraphQLRequest(ctx, graphqlHandler, feedVersionExportQuery, hw{"ids": ids})
 	if err != nil {
 		return nil, util.NewInternalServerError("failed to query feed versions", err)
