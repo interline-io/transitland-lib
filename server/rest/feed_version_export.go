@@ -14,7 +14,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	oa "github.com/getkin/kin-openapi/openapi3"
 	"github.com/interline-io/log"
@@ -250,7 +249,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	}
 
 	// Set response headers for ZIP download
-	filename := "export.zip" // generateExportFilename(feedOnestopIds, fvSha1s)
+	filename := "export.zip"
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 	w.WriteHeader(http.StatusOK)
@@ -290,19 +289,6 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 		Int("feed_versions", len(req.FeedVersionIDs)).
 		Str("format", req.Format).
 		Msg("export completed successfully")
-}
-
-// generateExportFilename creates a descriptive filename for the export
-func generateExportFilename(feedOnestopIds []string, sha1s []string) string {
-	timestamp := time.Now().Format("20060102-150405")
-
-	if len(feedOnestopIds) == 1 && len(sha1s) == 1 {
-		return fmt.Sprintf("%s-%s-%s.zip", feedOnestopIds[0], sha1s[0][:8], timestamp)
-	} else if len(feedOnestopIds) > 0 {
-		return fmt.Sprintf("export-%s-%d-feeds-%s.zip", feedOnestopIds[0], len(feedOnestopIds), timestamp)
-	}
-
-	return fmt.Sprintf("export-%s.zip", timestamp)
 }
 
 const feedVersionExportQuery = `
