@@ -46,7 +46,7 @@ parse_pg_url() {
 
 # Parse connection parameters from TL_TEST_DATABASE_URL
 parse_pg_url "$TL_TEST_DATABASE_URL"
-echo "PGHOST=$PGHOST PGPORT=$PGPORT PGDATABASE=$PGDATABASE"
+echo "PGHOST=$PGHOST PGPORT=$PGPORT PGDATABASE=$PGDATABASE PGUSER=$PGUSER PGPASSWORD=$PGPASSWORD"
 "${SCRIPTDIR}/wait-for-it.sh" -h "$PGHOST" -p "$PGPORT" -t 30
 
 # Drop and recreate database
@@ -63,7 +63,7 @@ transitland dbmigrate --dburl="$TL_TEST_DATABASE_URL" natural-earth
 
 # Extract database names from URLs for backwards compatibility
 parse_pg_url "$TL_TEST_SERVER_DATABASE_URL"
-echo "PGHOST=$PGHOST PGPORT=$PGPORT PGDATABASE=$PGDATABASE"
+echo "PGHOST=$PGHOST PGPORT=$PGPORT PGDATABASE=$PGDATABASE PGUSER=$PGUSER PGPASSWORD=$PGPASSWORD"
 "${SCRIPTDIR}/wait-for-it.sh" -h "$PGHOST" -p "$PGPORT" -t 30
 
 # Drop and recreate database
