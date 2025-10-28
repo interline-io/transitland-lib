@@ -36,7 +36,7 @@ type FeedRequest struct {
 func (r FeedRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/feeds",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: feedQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for feeds`,
@@ -136,9 +136,10 @@ func (r FeedRequest) Query(ctx context.Context) (string, map[string]interface{})
 	if r.TagKey != "" {
 		where["tags"] = hw{r.TagKey: r.TagValue}
 	}
-	if r.FetchError == "true" {
+	switch r.FetchError {
+	case "true":
 		where["fetch_error"] = true
-	} else if r.FetchError == "false" {
+	case "false":
 		where["fetch_error"] = false
 	}
 	if r.URL != "" || r.URLType != "" {
@@ -196,7 +197,7 @@ type FeedKeyRequest struct {
 func (r FeedKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/feeds/{feed_key}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: feedQuery,
 			Operation: &oa.Operation{
 				Summary: "Feeds",
@@ -221,12 +222,34 @@ func (r FeedDownloadLatestFeedVersionRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path:        "/feeds/{feed_key}/download_latest_feed_version",
 		Description: `Download the latest feed version GTFS zip for this feed, if redistribution is allowed by the source feed's license`,
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Operation: &oa.Operation{
 				Summary: "Download latest feed version",
 				Extensions: map[string]any{
 					"x-required-role": "tl_download_fv_current",
 				},
+				Responses: oa.NewResponses(
+					oa.WithStatus(200, &oa.ResponseRef{
+						Value: &oa.Response{
+							Description: toPtr("Success"),
+							Content: oa.Content{
+								"application/octet-stream": &oa.MediaType{
+									Schema: newSRVal("string", "binary", nil),
+								},
+							},
+						},
+					}),
+					oa.WithStatus(401, &oa.ResponseRef{
+						Value: &oa.Response{
+							Description: toPtr("Not authorized - feed redistribution not allowed"),
+						},
+					}),
+					oa.WithStatus(404, &oa.ResponseRef{
+						Value: &oa.Response{
+							Description: toPtr("Not found - feed not found"),
+						},
+					}),
+				),
 				Parameters: oa.Parameters{
 					&pref{Value: &param{
 						Name:        "feed_key",
@@ -254,7 +277,7 @@ func (r FeedDownloadRtRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path:        "/feeds/{feed_key}/download_latest_rt/{rt_type}.{format}",
 		Description: `Download the latest snapshot of the specified GTFS Realtime feed, if redistribution is allowed by the source feed's license. Returns 404 if feed or message not found, 401 if redistribution not allowed.`,
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Operation: &oa.Operation{
 				Summary: "Download latest GTFS Realtime feed data",
 				Parameters: oa.Parameters{

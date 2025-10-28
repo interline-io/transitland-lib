@@ -9549,6 +9549,8 @@ input FeedVersionFilter {
   within: Polygon
   "Search for feed versions within specified radius of a point"
   near: PointRadius
+  "Search for stops with these license details"
+  license: LicenseFilter
 }
 
 """Import status for a feed version"""
@@ -54451,7 +54453,7 @@ func (ec *executionContext) unmarshalInputFeedVersionFilter(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"ids", "import_status", "feed_onestop_id", "sha1", "file", "feed_ids", "covers", "bbox", "within", "near"}
+	fieldsInOrder := [...]string{"ids", "import_status", "feed_onestop_id", "sha1", "file", "feed_ids", "covers", "bbox", "within", "near", "license"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -54528,6 +54530,13 @@ func (ec *executionContext) unmarshalInputFeedVersionFilter(ctx context.Context,
 				return it, err
 			}
 			it.Near = data
+		case "license":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license"))
+			data, err := ec.unmarshalOLicenseFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLicenseFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.License = data
 		}
 	}
 

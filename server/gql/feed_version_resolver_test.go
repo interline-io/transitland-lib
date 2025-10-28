@@ -483,3 +483,161 @@ func TestFeedVersionResolver_Segments(t *testing.T) {
 	c, _ := newTestClient(t)
 	queryTestcases(t, c, testcases)
 }
+
+func TestFeedVersionResolver_License(t *testing.T) {
+	q := `query($lic:LicenseFilter) {feed_versions(where: {license: $lic}) {sha1 feed { onestop_id} }}`
+	baFvs := []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
+	haFvs := []string{"c969427f56d3a645195dd8365cde6d7feae7e99b"}
+	ctFvs := []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
+	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
+	testcases := []testcase{
+		// license: share_alike_optional
+		{
+			name:         "license filter: share_alike_optional = yes",
+			query:        q,
+			vars:         hw{"lic": hw{"share_alike_optional": "YES"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: haFvs,
+		},
+		{
+			name:         "license filter: share_alike_optional = no",
+			query:        q,
+			vars:         hw{"lic": hw{"share_alike_optional": "NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: baFvs,
+		},
+		{
+			name:         "license filter: share_alike_optional = unknown",
+			query:        q,
+			vars:         hw{"lic": hw{"share_alike_optional": "UNKNOWN"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: ctFvs,
+		},
+		{
+			name:         "license filter: share_alike_optional = exclude_no",
+			query:        q,
+			vars:         hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: HaCtExFvs,
+		},
+		// license: create_derived_product
+		{
+			name:         "license filter: create_derived_product = yes",
+			query:        q,
+			vars:         hw{"lic": hw{"create_derived_product": "YES"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: haFvs,
+		},
+		{
+			name:         "license filter: create_derived_product = no",
+			query:        q,
+			vars:         hw{"lic": hw{"create_derived_product": "NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: baFvs,
+		},
+		{
+			name:         "license filter: create_derived_product = unknown",
+			query:        q,
+			vars:         hw{"lic": hw{"create_derived_product": "UNKNOWN"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: ctFvs,
+		},
+		{
+			name:         "license filter: create_derived_product = exclude_no",
+			query:        q,
+			vars:         hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: HaCtExFvs,
+		},
+		// license: commercial_use_allowed
+		{
+			name:         "license filter: commercial_use_allowed = yes",
+			query:        q,
+			vars:         hw{"lic": hw{"commercial_use_allowed": "YES"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: haFvs,
+		},
+		{
+			name:         "license filter: commercial_use_allowed = no",
+			query:        q,
+			vars:         hw{"lic": hw{"commercial_use_allowed": "NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: baFvs,
+		},
+		{
+			name:         "license filter: commercial_use_allowed = unknown",
+			query:        q,
+			vars:         hw{"lic": hw{"commercial_use_allowed": "UNKNOWN"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"},
+		},
+		{
+			name:         "license filter: commercial_use_allowed = exclude_no",
+			query:        q,
+			vars:         hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: HaCtExFvs,
+		},
+		// license: redistribution_allowed
+		{
+			name:         "license filter: redistribution_allowed = yes",
+			query:        q,
+			vars:         hw{"lic": hw{"redistribution_allowed": "YES"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: haFvs,
+		},
+		{
+			name:         "license filter: redistribution_allowed = no",
+			query:        q,
+			vars:         hw{"lic": hw{"redistribution_allowed": "NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: baFvs,
+		},
+		{
+			name:         "license filter: redistribution_allowed = unknown",
+			query:        q,
+			vars:         hw{"lic": hw{"redistribution_allowed": "UNKNOWN"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: ctFvs,
+		},
+		{
+			name:         "license filter: redistribution_allowed = exclude_no",
+			query:        q,
+			vars:         hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: HaCtExFvs,
+		},
+
+		// license: use_without_attribution
+		{
+			name:         "license filter: use_without_attribution = yes",
+			query:        q,
+			vars:         hw{"lic": hw{"use_without_attribution": "YES"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: haFvs,
+		},
+		{
+			name:         "license filter: use_without_attribution = no",
+			query:        q,
+			vars:         hw{"lic": hw{"use_without_attribution": "NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: baFvs,
+		},
+		{
+			name:         "license filter: use_without_attribution = unknown",
+			query:        q,
+			vars:         hw{"lic": hw{"use_without_attribution": "UNKNOWN"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: ctFvs,
+		},
+		{
+			name:         "license filter: use_without_attribution = exclude_no",
+			query:        q,
+			vars:         hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: HaCtExFvs,
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}

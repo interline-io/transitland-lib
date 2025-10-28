@@ -1,7 +1,6 @@
 package gql
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -348,7 +347,6 @@ func testIntersectionArea(t *testing.T, a []gjson.Result, expectCount int, expec
 		intersectionArea += v.Get("intersection_area").Float()
 		geometryAreas[v.Get("geoid").String()] = v.Get("geometry_area").Float()
 	}
-	fmt.Printf("areas: %+v\n", geometryAreas)
 	geometryArea := 0.0
 	for _, v := range geometryAreas {
 		geometryArea += v
