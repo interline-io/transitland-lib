@@ -13,22 +13,41 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 
 	oa "github.com/getkin/kin-openapi/openapi3"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/adapters"
-	"github.com/interline-io/transitland-lib/adapters/multireader"
-	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/extract"
-	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/internal/util"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/tidwall/gjson"
 )
+
+// FeedVersionExportRequest defines the export request structure
+type FeedVersionExportRequest struct {
+	// Feed version IDs or SHA1 hashes to export
+	FeedVersionKeys []string `json:"feed_version_keys"`
+	FeedVersionIDs  []int    `json:"-"`
+	// Output format (default: gtfs_zip)
+	Format string `json:"format,omitempty"`
+	// Transformation options
+	Transforms *ExportTransforms `json:"transforms,omitempty"`
+}
+
+// ExportTransforms defines available transformations
+type ExportTransforms struct {
+	// ID prefix for namespacing
+	Prefix string `json:"prefix,omitempty"`
+	// Files to apply prefix to (default: all applicable files)
+	PrefixFiles []string `json:"prefix_files,omitempty"`
+	// Normalize timezones (e.g., US/Pacific -> America/Los_Angeles)
+	NormalizeTimezones bool `json:"normalize_timezones,omitempty"`
+	// Simplify shapes with this tolerance value
+	SimplifyShapes *float64 `json:"simplify_shapes,omitempty"`
+	// Use basic route types (convert extended to primitive)
+	UseBasicRouteTypes bool `json:"use_basic_route_types,omitempty"`
+	// Entity value overrides (filename.entity_id.field = value)
+	SetValues map[string]string `json:"set_values,omitempty"`
+}
 
 // FeedVersionExportOpenAPIRequest defines OpenAPI schema for export endpoint
 type FeedVersionExportOpenAPIRequest struct{}
@@ -235,7 +254,9 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	}
 
 	// DO THE THING
-	cpResult, err := ExportFeedVersions(ctx, req, csvWriter)
+	cfg := model.ForContext(ctx)
+	exporter := NewFeedVersionExporter(&cfg)
+	cpResult, err := exporter.Export(ctx, req.FeedVersionIDs, req.Transforms, csvWriter)
 	if err != nil {
 		util.WriteJsonError(w, "export operation failed", http.StatusInternalServerError)
 		return
@@ -330,9 +351,34 @@ query($sha1: String!) {
 `
 
 func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRequest, graphqlHandler http.Handler) (*FeedVersionExportRequest, error) {
-	// Validate request
+	// Basic request validation
+	if err := validateExportRequest(req); err != nil {
+		return nil, err
+	}
+
+	// Resolve feed version keys (IDs and SHA1s) to IDs
+	allIds, err := resolveFeedVersionKeys(ctx, req.FeedVersionKeys, graphqlHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate feed versions (import status, permissions, etc.)
+	fvids, err := validateFeedVersionsForExport(ctx, allIds, graphqlHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FeedVersionExportRequest{
+		FeedVersionIDs: fvids,
+		Transforms:     req.Transforms,
+		Format:         req.Format,
+	}, nil
+}
+
+// validateExportRequest performs basic request validation
+func validateExportRequest(req *FeedVersionExportRequest) error {
 	if len(req.FeedVersionKeys) == 0 {
-		return nil, util.NewBadRequestError("feed_version_keys is required and must not be empty", nil)
+		return util.NewBadRequestError("feed_version_keys is required and must not be empty", nil)
 	}
 
 	// Default format
@@ -342,13 +388,18 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 
 	// Only support gtfs_zip for now
 	if req.Format != "gtfs_zip" {
-		return nil, util.NewBadRequestError("only 'gtfs_zip' format is currently supported", nil)
+		return util.NewBadRequestError("only 'gtfs_zip' format is currently supported", nil)
 	}
 
-	// Separate IDs and SHA1s, then resolve SHA1s to IDs
+	return nil
+}
+
+// resolveFeedVersionKeys converts feed version keys (IDs or SHA1s) to integer IDs
+func resolveFeedVersionKeys(ctx context.Context, keys []string, graphqlHandler http.Handler) ([]int, error) {
+	// Separate IDs and SHA1s
 	var allIds []int
 	var sha1s []string
-	for _, key := range req.FeedVersionKeys {
+	for _, key := range keys {
 		if id, err := strconv.Atoi(key); err == nil {
 			allIds = append(allIds, id)
 		} else {
@@ -374,8 +425,13 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 		allIds = append(allIds, fvid)
 	}
 
+	return allIds, nil
+}
+
+// validateFeedVersionsForExport checks import status and redistribution permissions
+func validateFeedVersionsForExport(ctx context.Context, ids []int, graphqlHandler http.Handler) ([]int, error) {
 	// Query all feed versions by IDs
-	fvResponse, err := makeGraphQLRequest(ctx, graphqlHandler, feedVersionExportQuery, hw{"ids": allIds})
+	fvResponse, err := makeGraphQLRequest(ctx, graphqlHandler, feedVersionExportQuery, hw{"ids": ids})
 	if err != nil {
 		return nil, util.NewInternalServerError("failed to query feed versions", err)
 	}
@@ -399,13 +455,10 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 	//   - Add "define can_export: editor" (or viewer/manager) to feed_version in testdata/server/authz/tls.model
 	//   - Check permission: checker.checkActionOrError(ctx, CanExport, newEntityID(FeedVersionType, fvid), ctxTk)
 	//   This would enable per-feed-version export control in multi-tenant deployments
-	var fvids []int
-	var fvSha1s []string
-	var feedOnestopIds []string
+	var validFvids []int
 	for _, fv := range feedVersionsJson.Array() {
 		fvid := int(fv.Get("id").Int())
 		sha1 := fv.Get("sha1").String()
-		feedOnestopId := fv.Get("feed.onestop_id").String()
 
 		// Check import status - export requires a successful, completed import
 		importRecord := fv.Get("feed_version_gtfs_import")
@@ -430,161 +483,12 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 			return nil, util.NewForbiddenError(fmt.Sprintf("feed version %s does not allow redistribution", sha1), nil)
 		}
 
-		fvids = append(fvids, fvid)
-		fvSha1s = append(fvSha1s, sha1)
-		feedOnestopIds = append(feedOnestopIds, feedOnestopId)
+		validFvids = append(validFvids, fvid)
 	}
 
-	if len(fvids) == 0 {
+	if len(validFvids) == 0 {
 		return nil, util.NewNotFoundError("no valid feed versions found", nil)
 	}
-	return &FeedVersionExportRequest{
-		FeedVersionIDs: fvids,
-		Transforms:     req.Transforms,
-		Format:         req.Format,
-	}, nil
-}
 
-// FeedVersionExportRequest defines the export request structure
-type FeedVersionExportRequest struct {
-	// Feed version IDs or SHA1 hashes to export
-	FeedVersionKeys []string `json:"feed_version_keys"`
-	FeedVersionIDs  []int    `json:"-"`
-	// Output format (default: gtfs_zip)
-	Format string `json:"format,omitempty"`
-	// Transformation options
-	Transforms *ExportTransforms `json:"transforms,omitempty"`
-}
-
-// ExportTransforms defines available transformations
-type ExportTransforms struct {
-	// ID prefix for namespacing
-	Prefix string `json:"prefix,omitempty"`
-	// Files to apply prefix to (default: all applicable files)
-	PrefixFiles []string `json:"prefix_files,omitempty"`
-	// Normalize timezones (e.g., US/Pacific -> America/Los_Angeles)
-	NormalizeTimezones bool `json:"normalize_timezones,omitempty"`
-	// Simplify shapes with this tolerance value
-	SimplifyShapes *float64 `json:"simplify_shapes,omitempty"`
-	// Use basic route types (convert extended to primitive)
-	UseBasicRouteTypes bool `json:"use_basic_route_types,omitempty"`
-	// Entity value overrides (filename.entity_id.field = value)
-	SetValues map[string]string `json:"set_values,omitempty"`
-}
-
-func ExportFeedVersions(ctx context.Context, req *FeedVersionExportRequest, writer adapters.Writer) (*copier.Result, error) {
-	// Create database readers for each feed version
-	fvids := req.FeedVersionIDs
-	var readers []adapters.Reader
-	cfg := model.ForContext(ctx)
-	dbx := cfg.Finder.DBX()
-
-	for _, fvid := range req.FeedVersionIDs {
-		reader := &tldb.Reader{
-			Adapter:        postgres.NewPostgresAdapterFromDBX(dbx),
-			PageSize:       1_000,
-			FeedVersionIDs: []int{fvid},
-		}
-		if err := reader.Open(); err != nil {
-			log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("failed to open feed version reader")
-			return nil, fmt.Errorf("failed to open feed version reader for %d: %s", fvid, err.Error())
-		}
-		defer reader.Close()
-		readers = append(readers, reader)
-	}
-
-	// Use multireader if multiple feed versions, otherwise use single reader
-	var reader adapters.Reader
-	if len(readers) == 1 {
-		reader = readers[0]
-	} else {
-		reader = multireader.NewReader(readers...)
-		if err := reader.Open(); err != nil {
-			log.For(ctx).Error().Err(err).Msg("failed to open multireader")
-			return nil, fmt.Errorf("failed to open multireader: %s", err.Error())
-		}
-		defer reader.Close()
-	}
-
-	// Configure copier options with transformations
-	opts := copier.Options{
-		AllowEntityErrors:    true,
-		AllowReferenceErrors: false,
-		ErrorLimit:           100,
-		Quiet:                true,
-	}
-
-	// Apply transformations
-	if req.Transforms != nil {
-		if err := applyTransforms(&opts, req.Transforms, fvids); err != nil {
-			log.For(ctx).Error().Err(err).Msg("failed to apply transforms")
-			return nil, fmt.Errorf("failed to apply transforms: %s", err.Error())
-		}
-	}
-
-	// Perform the copy operation (streaming to ZIP)
-	result, err := copier.CopyWithOptions(ctx, reader, writer, opts)
-	if err != nil {
-		// Can't write error to response as headers are already sent
-		log.For(ctx).Error().Err(err).Msg("export failed")
-		return nil, fmt.Errorf("export failed: %s", err.Error())
-	}
-
-	return result, nil
-}
-
-// applyTransforms configures copier options based on transform request
-func applyTransforms(opts *copier.Options, transforms *ExportTransforms, fvids []int) error {
-	// ID prefix/namespacing
-	if transforms.Prefix != "" {
-		prefixFilter, err := filters.NewPrefixFilter()
-		if err != nil {
-			return fmt.Errorf("failed to create prefix filter: %w", err)
-		}
-
-		// Set prefix for each feed version
-		for _, fvid := range fvids {
-			prefixFilter.SetPrefix(fvid, transforms.Prefix)
-		}
-
-		// Configure which files to prefix
-		if len(transforms.PrefixFiles) > 0 {
-			for _, file := range transforms.PrefixFiles {
-				prefixFilter.PrefixFile(file)
-			}
-		}
-
-		opts.AddExtension(prefixFilter)
-	}
-
-	// Normalize timezones
-	if transforms.NormalizeTimezones {
-		opts.NormalizeTimezones = true
-	}
-
-	// Simplify shapes
-	if transforms.SimplifyShapes != nil && *transforms.SimplifyShapes > 0 {
-		opts.SimplifyShapes = *transforms.SimplifyShapes
-	}
-
-	// Use basic route types
-	if transforms.UseBasicRouteTypes {
-		opts.UseBasicRouteTypes = true
-	}
-
-	// Set specific values
-	if len(transforms.SetValues) > 0 {
-		setterFilter := extract.NewSetterFilter()
-		for key, value := range transforms.SetValues {
-			// Parse key format: "filename.entity_id.field"
-			parts := strings.SplitN(key, ".", 3)
-			if len(parts) != 3 {
-				return fmt.Errorf("invalid set_values key format: %s (expected: filename.entity_id.field)", key)
-			}
-			setterFilter.AddValue(parts[0], parts[1], parts[2], value)
-		}
-		opts.AddExtension(setterFilter)
-	}
-
-	return nil
+	return validFvids, nil
 }
