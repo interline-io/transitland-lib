@@ -69,7 +69,12 @@ func NewInternalServerError(message string, cause error) *HTTPError {
 	return NewHTTPError(http.StatusInternalServerError, message, cause)
 }
 
-// WriteStatusError writes any error that implements HTTPStatusError to the response
-func WriteStatusError(w http.ResponseWriter, err HTTPStatusError) {
-	WriteJsonError(w, err.Error(), err.GetStatusCode())
+// WriteError writes any error to the response, checking for HTTPStatusError interface
+// If the error implements HTTPStatusError, uses its status code, otherwise uses defaultStatusCode
+func WriteError(w http.ResponseWriter, err error, defaultStatusCode int) {
+	if statusErr, ok := err.(HTTPStatusError); ok {
+		WriteJsonError(w, err.Error(), statusErr.GetStatusCode())
+	} else {
+		WriteJsonError(w, err.Error(), defaultStatusCode)
+	}
 }

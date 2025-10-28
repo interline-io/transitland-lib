@@ -21,16 +21,16 @@ parse_pg_url() {
     local url="$1"
     if echo "$url" | grep -q "@"; then
         # URL has user:pass@ - extract all components
-        PGUSER=$(echo "$url" | awk -F'[/:]' '{print $3}')
-        PGPASSWORD=$(echo "$url" | awk -F'[:@]' '{print $4}')
-        PGHOST=$(echo "$url" | awk -F'[@/]' '{print $4}' | awk -F':' '{print $1}')
-        PGPORT=$(echo "$url" | awk -F'[@/]' '{print $4}' | awk -F':' '{print $2}')
-        PGDATABASE=$(echo "$url" | awk -F'[@/]' '{print $5}' | awk -F'[?]' '{print $1}')
+        export PGUSER=$(echo "$url" | awk -F'[/:]' '{print $3}')
+        export PGPASSWORD=$(echo "$url" | awk -F'[:@]' '{print $4}')
+        export PGHOST=$(echo "$url" | awk -F'[@/]' '{print $4}' | awk -F':' '{print $1}')
+        export PGPORT=$(echo "$url" | awk -F'[@/]' '{print $4}' | awk -F':' '{print $2}')
+        export PGDATABASE=$(echo "$url" | awk -F'[@/]' '{print $5}' | awk -F'[?]' '{print $1}')
     else
         # URL has no auth - extract host:port:dbname after postgres://
-        PGHOST=$(echo "$url" | awk -F'[/:]' '{print $4}')
-        PGPORT=$(echo "$url" | awk -F'[/:]' '{print $5}')
-        PGDATABASE=$(echo "$url" | awk -F'[/:]' '{print $6}' | awk -F'[?]' '{print $1}')
+        export PGHOST=$(echo "$url" | awk -F'[/:]' '{print $4}')
+        export PGPORT=$(echo "$url" | awk -F'[/:]' '{print $5}')
+        export PGDATABASE=$(echo "$url" | awk -F'[/:]' '{print $6}' | awk -F'[?]' '{print $1}')
     fi
 }
 

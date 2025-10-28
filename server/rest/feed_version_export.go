@@ -225,13 +225,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	var err error
 	req, err = CheckFeedVersionExportRequest(ctx, req, graphqlHandler)
 	if err != nil {
-		// Check if it's an HTTP status error
-		if httpErr, ok := err.(util.HTTPStatusError); ok {
-			util.WriteStatusError(w, httpErr)
-		} else {
-			// Fallback for unexpected error types
-			util.WriteJsonError(w, "invalid feed version export request", http.StatusBadRequest)
-		}
+		util.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
