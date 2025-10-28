@@ -90,7 +90,7 @@ transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_ST
 transitland sync --dburl="$TL_TEST_SERVER_DATABASE_URL" "$SCRIPTDIR/server/server-test.dmfr.json"
 
 # Supplemental data
-psql "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/test_supplement.pgsql"
+psql -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/test_supplement.pgsql"
 
 # Load census data
-psql "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/census/census.pgsql"
+psql -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/census/census.pgsql"
