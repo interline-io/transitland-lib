@@ -206,7 +206,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	var err error
 	req, err = CheckFeedVersionExportRequest(ctx, req, graphqlHandler)
 	if err != nil {
-		util.WriteJsonError(w, "invalid request: "+err.Error(), http.StatusBadRequest)
+		util.WriteJsonErr(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -214,7 +214,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	tmpFilename := ""
 	if tmpfile, err := os.CreateTemp("", "*-export.zip"); err != nil {
 		log.For(ctx).Error().Err(err).Msg("failed to create temp file for zip")
-		util.WriteJsonError(w, "failed to create temp file for zip: "+err.Error(), http.StatusInternalServerError)
+		util.WriteJsonError(w, "failed to create temp file for zip", http.StatusInternalServerError)
 		return
 	} else {
 		defer os.Remove(tmpFilename)
@@ -225,21 +225,21 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	csvWriter, err := tlcsv.NewWriter(tmpFilename)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Msg("failed to create CSV writer")
-		util.WriteJsonError(w, "failed to create CSV writer: "+err.Error(), http.StatusInternalServerError)
+		util.WriteJsonError(w, "failed to create CSV writer", http.StatusInternalServerError)
 		return
 	}
 
 	// DO THE THING
 	cpResult, err := ExportFeedVersions(ctx, req, csvWriter)
 	if err != nil {
-		util.WriteJsonError(w, "export failed: "+err.Error(), http.StatusInternalServerError)
+		util.WriteJsonError(w, "export operation failed", http.StatusInternalServerError)
 		return
 	}
 	_ = cpResult
 
 	if err := csvWriter.Close(); err != nil {
 		log.For(ctx).Error().Err(err).Msg("failed to close CSV writer")
-		util.WriteJsonError(w, "failed to close CSV writer: "+err.Error(), http.StatusInternalServerError)
+		util.WriteJsonError(w, "failed to close CSV writer", http.StatusInternalServerError)
 		return
 	}
 
@@ -254,7 +254,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	zipData, err := os.Open(tmpFilename)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Msg("failed to open zip file for streaming")
-		util.WriteJsonError(w, "failed to open zip file for streaming: "+err.Error(), http.StatusInternalServerError)
+		util.WriteJsonError(w, "failed to open zip file for streaming", http.StatusInternalServerError)
 		return
 	}
 	defer zipData.Close()
@@ -297,15 +297,6 @@ func generateExportFilename(feedOnestopIds []string, sha1s []string) string {
 	}
 
 	return fmt.Sprintf("export-%s.zip", timestamp)
-}
-
-// sumEntityCounts sums all entity counts from the result
-func sumEntityCounts(result *copier.Result) int {
-	total := 0
-	for _, count := range result.EntityCount {
-		total += count
-	}
-	return total
 }
 
 const feedVersionExportQuery = `
