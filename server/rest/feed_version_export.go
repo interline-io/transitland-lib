@@ -206,7 +206,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	var err error
 	req, err = CheckFeedVersionExportRequest(ctx, req, graphqlHandler)
 	if err != nil {
-		util.WriteJsonErr(w, err, http.StatusBadRequest)
+		util.WriteJsonError(w, fmt.Errorf("invalid feed version export request: %w", err).Error(), http.StatusBadRequest)
 		return
 	}
 
