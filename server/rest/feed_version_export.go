@@ -206,7 +206,13 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	var err error
 	req, err = CheckFeedVersionExportRequest(ctx, req, graphqlHandler)
 	if err != nil {
-		util.WriteJsonError(w, fmt.Errorf("invalid feed version export request: %w", err).Error(), http.StatusBadRequest)
+		// Check if it's an HTTP error with a specific status code
+		if httpErr, ok := err.(*util.HTTPError); ok {
+			util.WriteHTTPError(w, httpErr)
+		} else {
+			// Fallback for unexpected error types
+			util.WriteJsonError(w, "invalid feed version export request", http.StatusBadRequest)
+		}
 		return
 	}
 
@@ -340,7 +346,7 @@ query($sha1: String!) {
 func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRequest, graphqlHandler http.Handler) (*FeedVersionExportRequest, error) {
 	// Validate request
 	if len(req.FeedVersionKeys) == 0 {
-		return nil, fmt.Errorf("feed_version_keys is required and must not be empty")
+		return nil, util.NewBadRequestError("feed_version_keys is required and must not be empty", nil)
 	}
 
 	// Default format
@@ -350,7 +356,7 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 
 	// Only support gtfs_zip for now
 	if req.Format != "gtfs_zip" {
-		return nil, fmt.Errorf("only 'gtfs_zip' format is currently supported")
+		return nil, util.NewBadRequestError("only 'gtfs_zip' format is currently supported", nil)
 	}
 
 	// Separate IDs and SHA1s, then resolve SHA1s to IDs
@@ -368,13 +374,13 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 	for _, sha1 := range sha1s {
 		sha1Response, err := makeGraphQLRequest(ctx, graphqlHandler, feedVersionBySha1Query, hw{"sha1": sha1})
 		if err != nil {
-			return nil, fmt.Errorf("failed to query feed version %s: %s", sha1, err.Error())
+			return nil, util.NewInternalServerError("failed to query feed version", err)
 		}
 
 		sha1Json, _ := json.Marshal(sha1Response)
 		fvs := gjson.Get(string(sha1Json), "feed_versions")
 		if !fvs.Exists() || len(fvs.Array()) == 0 {
-			return nil, fmt.Errorf("feed version not found: %s", sha1)
+			return nil, util.NewNotFoundError(fmt.Sprintf("feed version not found: %s", sha1), nil)
 		}
 
 		// Add the ID from this SHA1 lookup
@@ -385,18 +391,18 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 	// Query all feed versions by IDs
 	fvResponse, err := makeGraphQLRequest(ctx, graphqlHandler, feedVersionExportQuery, hw{"ids": allIds})
 	if err != nil {
-		return nil, fmt.Errorf("failed to query feed versions: %s", err.Error())
+		return nil, util.NewInternalServerError("failed to query feed versions", err)
 	}
 
 	// Parse response
 	responseJson, err := json.Marshal(fvResponse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal feed version response: %s", err.Error())
+		return nil, util.NewInternalServerError("failed to marshal feed version response", err)
 	}
 
 	feedVersionsJson := gjson.Get(string(responseJson), "feed_versions")
 	if !feedVersionsJson.Exists() || len(feedVersionsJson.Array()) == 0 {
-		return nil, fmt.Errorf("no feed versions found for the provided keys")
+		return nil, util.NewNotFoundError("no feed versions found for the provided keys", nil)
 	}
 
 	// Check import status, redistribution permissions, and collect feed version info
@@ -418,7 +424,7 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 		// Check import status - export requires a successful, completed import
 		importRecord := fv.Get("feed_version_gtfs_import")
 		if !importRecord.Exists() {
-			return nil, fmt.Errorf("feed version %s has not been imported (export requires a successful import)", sha1)
+			return nil, util.NewBadRequestError(fmt.Sprintf("feed version %s has not been imported (export requires a successful import)", sha1), nil)
 		}
 
 		importSuccess := importRecord.Get("success").Bool()
@@ -431,11 +437,11 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 			} else if !importSuccess {
 				status = "import failed"
 			}
-			return nil, fmt.Errorf("feed version %s cannot be exported: %s (export requires a successful import)", sha1, status)
+			return nil, util.NewBadRequestError(fmt.Sprintf("feed version %s cannot be exported: %s (export requires a successful import)", sha1, status), nil)
 		}
 
 		if fv.Get("feed.license.redistribution_allowed").String() == "no" {
-			return nil, fmt.Errorf("feed version %s does not allow redistribution", sha1)
+			return nil, util.NewForbiddenError(fmt.Sprintf("feed version %s does not allow redistribution", sha1), nil)
 		}
 
 		fvids = append(fvids, fvid)
@@ -444,7 +450,7 @@ func CheckFeedVersionExportRequest(ctx context.Context, req *FeedVersionExportRe
 	}
 
 	if len(fvids) == 0 {
-		return nil, fmt.Errorf("no valid feed versions found")
+		return nil, util.NewNotFoundError("no valid feed versions found", nil)
 	}
 	return &FeedVersionExportRequest{
 		FeedVersionIDs: fvids,
