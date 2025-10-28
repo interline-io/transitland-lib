@@ -19,19 +19,28 @@ fi
 # Format: postgres://[user:pass@]host:port/dbname?params
 parse_pg_url() {
     local url="$1"
-    if echo "$url" | grep -q "@"; then
+    # Remove scheme (postgres:// or postgresql://)
+    local url_without_scheme=$(echo "$url" | awk -F'://' '{print $2}')
+    
+    if echo "$url_without_scheme" | grep -q "@"; then
         # URL has user:pass@ - extract all components
-        export PGUSER=$(echo "$url" | awk -F'[/:]' '{print $3}')
-        export PGPASSWORD=$(echo "$url" | awk -F'[:@]' '{print $4}')
-        export PGHOST=$(echo "$url" | awk -F'[@/]' '{print $4}' | awk -F':' '{print $1}')
-        export PGPORT=$(echo "$url" | awk -F'[@/]' '{print $4}' | awk -F':' '{print $2}')
-        export PGDATABASE=$(echo "$url" | awk -F'[@/]' '{print $5}' | awk -F'[?]' '{print $1}')
+        # user:pass@host:port/dbname
+        local auth_part=$(echo "$url_without_scheme" | awk -F'@' '{print $1}')
+        local host_part=$(echo "$url_without_scheme" | awk -F'@' '{print $2}')
+        
+        export PGUSER=$(echo "$auth_part" | awk -F':' '{print $1}')
+        export PGPASSWORD=$(echo "$auth_part" | awk -F':' '{print $2}')
+        export PGHOST=$(echo "$host_part" | awk -F'[:./]' '{print $1}')
+        export PGPORT=$(echo "$host_part" | awk -F'[:./]' '{print $2}')
+        export PGDATABASE=$(echo "$host_part" | awk -F'[/]' '{print $2}' | awk -F'[?]' '{print $1}')
     else
-        # URL has no auth - extract host:port:dbname after postgres://
-        export PGHOST=$(echo "$url" | awk -F'[/:]' '{print $4}')
-        export PGPORT=$(echo "$url" | awk -F'[/:]' '{print $5}')
-        export PGDATABASE=$(echo "$url" | awk -F'[/:]' '{print $6}' | awk -F'[?]' '{print $1}')
+        # URL has no auth - extract host:port:dbname
+        # host:port/dbname
+        export PGHOST=$(echo "$url_without_scheme" | awk -F'[:./]' '{print $1}')
+        export PGPORT=$(echo "$url_without_scheme" | awk -F'[:./]' '{print $2}')
+        export PGDATABASE=$(echo "$url_without_scheme" | awk -F'[/]' '{print $2}' | awk -F'[?]' '{print $1}')
     fi
+    echo "PGHOST=$PGHOST PGPORT=$PGPORT PGDATABASE=$PGDATABASE PGUSER=$PGUSER"
 }
 
 #########################
@@ -46,7 +55,6 @@ parse_pg_url() {
 
 # Parse connection parameters from TL_TEST_DATABASE_URL
 parse_pg_url "$TL_TEST_DATABASE_URL"
-echo "PGHOST=$PGHOST PGPORT=$PGPORT PGDATABASE=$PGDATABASE PGUSER=$PGUSER PGPASSWORD=$PGPASSWORD"
 "${SCRIPTDIR}/wait-for-it.sh" -h "$PGHOST" -p "$PGPORT" -t 30
 
 # Drop and recreate database
@@ -63,7 +71,6 @@ transitland dbmigrate --dburl="$TL_TEST_DATABASE_URL" natural-earth
 
 # Extract database names from URLs for backwards compatibility
 parse_pg_url "$TL_TEST_SERVER_DATABASE_URL"
-echo "PGHOST=$PGHOST PGPORT=$PGPORT PGDATABASE=$PGDATABASE PGUSER=$PGUSER PGPASSWORD=$PGPASSWORD"
 "${SCRIPTDIR}/wait-for-it.sh" -h "$PGHOST" -p "$PGPORT" -t 30
 
 # Drop and recreate database
