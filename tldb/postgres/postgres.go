@@ -83,6 +83,11 @@ func (adapter *PostgresAdapter) DBX() Ext {
 	return adapter.db
 }
 
+// SupportsSpatialFunctions returns true as PostgreSQL with PostGIS supports spatial functions like ST_Centroid and ST_Simplify.
+func (adapter *PostgresAdapter) SupportsSpatialFunctions() bool {
+	return true
+}
+
 // Tx runs a callback inside a transaction.
 func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	var err error

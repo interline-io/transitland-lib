@@ -86,6 +86,11 @@ func (adapter *SQLiteAdapter) DBX() Ext {
 	return adapter.db
 }
 
+// SupportsSpatialFunctions returns false as SQLite does not support PostGIS spatial functions.
+func (adapter *SQLiteAdapter) SupportsSpatialFunctions() bool {
+	return false
+}
+
 // Sqrl returns a properly configured Squirrel StatementBuilder.
 func (adapter *SQLiteAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db)

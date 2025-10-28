@@ -121,9 +121,10 @@ func (pp *RouteHeadwayBuilder) Copy(copier adapters.EntityCopier) error {
 			d, _ := time.Parse("2006-01-02", day)
 			dow := d.Weekday()
 			dowCat := 1
-			if dow == time.Saturday {
+			switch dow {
+			case time.Saturday:
 				dowCat = 6
-			} else if dow == time.Sunday {
+			case time.Sunday:
 				dowCat = 7
 			}
 			if _, ok := dowCatDay[dowCat]; !ok {
