@@ -293,7 +293,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 			}
 			q = q.
 				WithCTE(stopLookupCte).
-				Join("feed_version_stop_onestop_ids on feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_id = feed_versions.feed_id")
+				Join("feed_version_stop_onestop_ids on feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_id = feed_versions.feed_id and gtfs_stops.feed_version_id in (feed_version_stop_onestop_ids.feed_version_id)")
 		} else {
 			q = q.JoinClause(`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`)
 			if len(where.OnestopIds) > 0 {
