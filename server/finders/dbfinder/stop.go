@@ -280,7 +280,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 					"feed_version_stop_onestop_ids.onestop_id",
 					"feed_version_stop_onestop_ids.entity_id",
 					"feed_versions.feed_id",
-				).
+					"feed_version_stop_onestop_ids.feed_version_id").
 				Distinct().Options("on (feed_version_stop_onestop_ids.onestop_id, feed_version_stop_onestop_ids.entity_id, feed_versions.feed_id)").
 				From("feed_version_stop_onestop_ids").
 				Join("feed_versions on feed_versions.id = feed_version_stop_onestop_ids.feed_version_id").
