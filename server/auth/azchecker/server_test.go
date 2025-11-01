@@ -434,7 +434,7 @@ func checkHttpExpectError(t testing.TB, tk testCase, rr *httptest.ResponseRecord
 
 }
 
-func responseGetNames(t testing.TB, data []byte, path string, key string) []string {
+func responseGetNames(_ testing.TB, data []byte, path string, key string) []string {
 	a := gjson.ParseBytes(data).Get(path)
 	var ret []string
 	for _, b := range a.Array() {
