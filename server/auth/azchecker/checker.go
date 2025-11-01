@@ -242,10 +242,6 @@ func (c *Checker) Me(ctx context.Context, req *authz.MeRequest) (*authz.MeRespon
 	return ret, nil
 }
 
-func (c *Checker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
-	return c.checkGlobalAdmin(authn.ForContext(ctx)), nil
-}
-
 func (c *Checker) hydrateEntityRels(ctx context.Context, ers []*authz.EntityRelation) ([]*authz.EntityRelation, error) {
 	// This is awful :( :(
 	for i, v := range ers {
@@ -552,7 +548,17 @@ func (c *Checker) getFeeds(ctx context.Context, ids []int64) ([]*authz.Feed, err
 	return getEntities[*authz.Feed](ctx, c.db, ids, "current_feeds", "id", "onestop_id", "coalesce(name,'') as name")
 }
 
+func (c *Checker) getAllFeeds(ctx context.Context) ([]*authz.Feed, error) {
+	return getAllEntities[*authz.Feed](ctx, c.db, "current_feeds", "id", "onestop_id", "coalesce(name,'') as name")
+}
+
 func (c *Checker) FeedList(ctx context.Context, req *authz.FeedListRequest) (*authz.FeedListResponse, error) {
+	// Global admins can see all feeds
+	if c.ctxIsGlobalAdmin(ctx) {
+		t, err := c.getAllFeeds(ctx)
+		return &authz.FeedListResponse{Feeds: t}, err
+	}
+
 	feedIds, err := c.listCtxObjects(ctx, FeedType, CanView)
 	if err != nil {
 		return nil, err
@@ -623,7 +629,17 @@ func (c *Checker) getFeedVersions(ctx context.Context, ids []int64) ([]*authz.Fe
 	return getEntities[*authz.FeedVersion](ctx, c.db, ids, "feed_versions", "id", "feed_id", "sha1", "coalesce(name,'') as name")
 }
 
+func (c *Checker) getAllFeedVersions(ctx context.Context) ([]*authz.FeedVersion, error) {
+	return getAllEntities[*authz.FeedVersion](ctx, c.db, "feed_versions", "id", "feed_id", "sha1", "coalesce(name,'') as name")
+}
+
 func (c *Checker) FeedVersionList(ctx context.Context, req *authz.FeedVersionListRequest) (*authz.FeedVersionListResponse, error) {
+	// Global admins can see all feed versions
+	if c.ctxIsGlobalAdmin(ctx) {
+		t, err := c.getAllFeedVersions(ctx)
+		return &authz.FeedVersionListResponse{FeedVersions: t}, err
+	}
+
 	fvids, err := c.listCtxObjects(ctx, FeedVersionType, CanView)
 	if err != nil {
 		return nil, err
@@ -789,15 +805,23 @@ func (c *Checker) checkAction(ctx context.Context, checkAction Action, obj Entit
 	if checkUser == nil {
 		return false, nil
 	}
+
+	// Check if we're authorized to perform the action
 	userName := checkUser.ID()
-	if c.checkGlobalAdmin(checkUser) {
-		log.For(ctx).Debug().Str("check_user", userName).Str("obj", obj.String()).Str("check_action", checkAction.String()).Msg("global admin action")
-		return true, nil
-	}
 	checkTk := authz.NewTupleKey().WithUser(userName).WithObject(obj.Type, obj.Name).WithAction(checkAction)
 	ret, err := c.fgaClient.Check(ctx, checkTk, ctxtk...)
+
+	// If we lack permission, check for global admin override
+	if !ret && c.checkGlobalAdmin(checkUser) {
+		log.For(ctx).Debug().Str("check_user", userName).Str("obj", obj.String()).Str("check_action", checkAction.String()).Msg("global admin action")
+		ret = true
+	}
 	log.For(ctx).Trace().Str("tk", checkTk.String()).Bool("result", ret).Err(err).Msg("checkAction")
 	return ret, err
+}
+
+func (c *Checker) CheckGlobalAdmin(ctx context.Context) bool {
+	return c.ctxIsGlobalAdmin(ctx)
 }
 
 func (c *Checker) ctxIsGlobalAdmin(ctx context.Context) bool {
@@ -814,9 +838,6 @@ func (c *Checker) checkGlobalAdmin(checkUser authn.User) bool {
 	}
 	if checkUser == nil {
 		return false
-	}
-	if checkUser.HasRole("admin") {
-		return true
 	}
 	userName := checkUser.ID()
 	for _, v := range c.globalAdmins {
@@ -857,6 +878,16 @@ func getEntities[T hasId](ctx context.Context, db sqlx.Ext, ids []int64, table s
 		return nil, err
 	}
 	if err := checkIds(t, ids); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func getAllEntities[T hasId](ctx context.Context, db sqlx.Ext, table string, cols ...string) ([]T, error) {
+	var t []T
+	q := sq.StatementBuilder.Select(cols...).From(table)
+	if err := dbutil.Select(ctx, db, q, &t); err != nil {
+		log.For(ctx).Trace().Err(err)
 		return nil, err
 	}
 	return t, nil

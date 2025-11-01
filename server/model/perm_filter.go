@@ -2,8 +2,10 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 )
 
@@ -57,24 +59,11 @@ func AddPerms(checker Checker) func(http.Handler) http.Handler {
 	}
 }
 
-type canCheckGlobalAdmin interface {
-	CheckGlobalAdmin(context.Context) (bool, error)
-}
-
 func checkActive(ctx context.Context, checker Checker) (*PermFilter, error) {
 	active := &PermFilter{}
 	if checker == nil {
-		// log.For(ctx).Trace().Msg("checkActive: no checker")
+		log.For(ctx).Trace().Msg("checkActive: no checker")
 		return active, nil
-	}
-
-	// TODO: Make this part of actual checker interface
-	if c, ok := checker.(canCheckGlobalAdmin); ok {
-		if a, err := c.CheckGlobalAdmin(ctx); err != nil {
-			return nil, err
-		} else if a {
-			return nil, nil
-		}
 	}
 
 	okFeeds, err := checker.FeedList(ctx, &authz.FeedListRequest{})
@@ -91,6 +80,6 @@ func checkActive(ctx context.Context, checker Checker) (*PermFilter, error) {
 	for _, fv := range okFvids.FeedVersions {
 		active.AllowedFeedVersions = append(active.AllowedFeedVersions, int(fv.Id))
 	}
-	// fmt.Println("active allowed feeds:", active.AllowedFeeds, "fvs:", active.AllowedFeedVersions)
+	fmt.Println("active allowed feeds:", active.AllowedFeeds, "fvs:", active.AllowedFeedVersions)
 	return active, nil
 }
