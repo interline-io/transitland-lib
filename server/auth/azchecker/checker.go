@@ -446,13 +446,14 @@ func (c *Checker) GroupPermissions(ctx context.Context, req *authz.GroupRequest)
 	}
 
 	// Actions
+	user := authn.ForContext(ctx)
 	entKey := newEntityID(GroupType, groupId)
 	ret.Actions.CanView, _ = c.checkAction(ctx, CanView, entKey)
 	ret.Actions.CanEditMembers, _ = c.checkAction(ctx, CanEditMembers, entKey)
 	ret.Actions.CanEdit, _ = c.checkAction(ctx, CanEdit, entKey)
 	ret.Actions.CanCreateFeed, _ = c.checkAction(ctx, CanCreateFeed, entKey)
 	ret.Actions.CanDeleteFeed, _ = c.checkAction(ctx, CanDeleteFeed, entKey)
-	ret.Actions.CanSetTenant, _ = c.checkAction(ctx, CanSetTenant, entKey)
+	ret.Actions.CanSetTenant = c.checkGlobalAdmin(user) // Only available to global admin (not in auth model)
 
 	// Get feeds
 	feedIds, _ := c.listSubjectRelations(ctx, entKey, FeedType, ParentRelation)
