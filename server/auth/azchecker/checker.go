@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,6 +17,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/fga"
 	"github.com/interline-io/transitland-lib/server/dbutil"
+	"github.com/interline-io/transitland-lib/server/model"
 )
 
 // For less typing
@@ -81,14 +81,12 @@ type CheckerConfig struct {
 	FGAEndpoint       string
 	FGALoadModelFile  string
 	FGALoadTestData   []TupleKey
-	GlobalAdmin       string
 }
 
 type Checker struct {
-	userClient   UserProvider
-	fgaClient    FGAProvider
-	db           sqlx.Ext
-	globalAdmins []string
+	userClient UserProvider
+	fgaClient  FGAProvider
+	db         sqlx.Ext
 	authz.UnsafeCheckerServer
 }
 
@@ -142,9 +140,6 @@ func NewCheckerFromConfig(ctx context.Context, cfg CheckerConfig, db sqlx.Ext) (
 	}
 
 	checker := NewChecker(userClient, fgaClient, db)
-	if cfg.GlobalAdmin != "" {
-		checker.globalAdmins = append(checker.globalAdmins, cfg.GlobalAdmin)
-	}
 	return checker, nil
 }
 
@@ -446,14 +441,13 @@ func (c *Checker) GroupPermissions(ctx context.Context, req *authz.GroupRequest)
 	}
 
 	// Actions
-	user := authn.ForContext(ctx)
 	entKey := newEntityID(GroupType, groupId)
 	ret.Actions.CanView, _ = c.checkAction(ctx, CanView, entKey)
 	ret.Actions.CanEditMembers, _ = c.checkAction(ctx, CanEditMembers, entKey)
 	ret.Actions.CanEdit, _ = c.checkAction(ctx, CanEdit, entKey)
 	ret.Actions.CanCreateFeed, _ = c.checkAction(ctx, CanCreateFeed, entKey)
 	ret.Actions.CanDeleteFeed, _ = c.checkAction(ctx, CanDeleteFeed, entKey)
-	ret.Actions.CanSetTenant = c.checkGlobalAdmin(user) // Only available to global admin (not in auth model)
+	ret.Actions.CanSetTenant = c.checkGlobalAdmin(ctx) // Only available to global admin (not in auth model)
 
 	// Get feeds
 	feedIds, _ := c.listSubjectRelations(ctx, entKey, FeedType, ParentRelation)
@@ -573,7 +567,7 @@ func (c *Checker) FeedList(ctx context.Context, req *authz.FeedListRequest) (*au
 	}
 
 	// Global admins also get access to all non-public feeds
-	if c.checkGlobalAdmin(authn.ForContext(ctx)) {
+	if c.checkGlobalAdmin(ctx) {
 		privateFeedIds, err := c.getPrivateFeedIds(ctx)
 		if err != nil {
 			return nil, err
@@ -669,7 +663,7 @@ func (c *Checker) FeedVersionList(ctx context.Context, req *authz.FeedVersionLis
 	}
 
 	// Global admins also get access to all non-public feed versions
-	if c.checkGlobalAdmin(authn.ForContext(ctx)) {
+	if c.checkGlobalAdmin(ctx) {
 		privateFvids, err := c.getPrivateFeedVersionIds(ctx)
 		if err != nil {
 			return nil, err
@@ -814,7 +808,7 @@ func (c *Checker) listSubjectRelations(ctx context.Context, sub EntityKey, objec
 	return ret, nil
 }
 
-func (c *Checker) getObjectTuples(ctx context.Context, obj EntityKey, ctxtk ...TupleKey) ([]TupleKey, error) {
+func (c *Checker) getObjectTuples(ctx context.Context, obj EntityKey, _ ...TupleKey) ([]TupleKey, error) {
 	return c.fgaClient.GetObjectTuples(ctx, authz.NewTupleKey().WithObject(obj.Type, obj.Name))
 }
 
@@ -841,7 +835,7 @@ func (c *Checker) checkAction(ctx context.Context, checkAction Action, obj Entit
 	ret, err := c.fgaClient.Check(ctx, checkTk, ctxtk...)
 
 	// If we lack permission, check for global admin override
-	if !ret && c.checkGlobalAdmin(checkUser) {
+	if !ret && c.checkGlobalAdmin(ctx) {
 		log.For(ctx).Debug().Str("check_user", userName).Str("obj", obj.String()).Str("check_action", checkAction.String()).Msg("checkAction: allowed via global admin")
 		ret = true
 	}
@@ -849,15 +843,13 @@ func (c *Checker) checkAction(ctx context.Context, checkAction Action, obj Entit
 	return ret, err
 }
 
-func (c *Checker) checkGlobalAdmin(checkUser authn.User) bool {
-	if c == nil {
+func (c *Checker) checkGlobalAdmin(ctx context.Context) bool {
+	checkUser := authn.ForContext(ctx)
+	if c == nil || checkUser == nil {
 		return false
 	}
-	if checkUser == nil {
-		return false
-	}
-	userName := checkUser.ID()
-	return slices.Contains(c.globalAdmins, userName)
+	cfg := model.ForContext(ctx)
+	return checkUser.HasRole(cfg.Roles.AdminRole)
 }
 
 // Helpers

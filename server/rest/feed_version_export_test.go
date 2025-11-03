@@ -16,7 +16,6 @@ import (
 	sq "github.com/irees/squirrel"
 
 	"github.com/interline-io/transitland-lib/internal/testconfig"
-	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/testdata"
@@ -48,16 +47,10 @@ func TestFeedVersionExportRequest(t *testing.T) {
 	bartFv := "e535eb2b3b9ac3ef15d82c56575e914575e732e0" // no redistribution
 
 	// Common middleware setups
-	asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
-	asUserWithoutRole := usercheck.NewUserDefaultMiddleware(func() authn.User {
-		return authn.NewCtxUser("testuser", "", "").WithRoles("some_other_role")
-	})(restSrv)
-	asUserWithDownloadRole := usercheck.NewUserDefaultMiddleware(func() authn.User {
-		return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_historic")
-	})(restSrv)
-	asUserWithExportRole := usercheck.NewUserDefaultMiddleware(func() authn.User {
-		return authn.NewCtxUser("testuser", "", "").WithRoles("tl_export_feed_versions")
-	})(restSrv)
+	asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
+	asUserWithoutRole := usercheck.UseDefaultUserMiddleware("testuser", "some_other_role")(restSrv)
+	asUserWithDownloadRole := usercheck.UseDefaultUserMiddleware("testuser", cfg.Roles.DownloadHistoricFeedVersionRole)(restSrv)
+	asUserWithExportRole := usercheck.UseDefaultUserMiddleware("testuser", cfg.Roles.ExportFeedVersionRole)(restSrv)
 
 	t.Run("basic export single feed version", func(t *testing.T) {
 		reqBody := FeedVersionExportRequest{
@@ -324,7 +317,7 @@ func TestFeedVersionExportRequest(t *testing.T) {
 	// t.Run("method not allowed - GET request", func(t *testing.T) {
 	// 	req, _ := http.NewRequest("GET", "/feed_versions/export", nil)
 	// 	rr := httptest.NewRecorder()
-	// 	asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+	// 	asAdmin := usercheck.UserDefaultMiddleware("test")(restSrv)
 	// 	asAdmin.ServeHTTP(rr, req)
 
 	// 	assert.Equal(t, 405, rr.Result().StatusCode, "should be method not allowed for GET")

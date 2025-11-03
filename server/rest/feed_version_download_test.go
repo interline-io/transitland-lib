@@ -9,7 +9,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/stretchr/testify/assert"
@@ -17,14 +16,14 @@ import (
 )
 
 func TestFeedVersionDownloadRequest(t *testing.T) {
-	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
+	_, restSrv, cfg := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 200 {
 			t.Errorf("got status code %d, expected 200", sc)
@@ -45,9 +44,7 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 	t.Run("not authorized as user, missing role", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
 		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
-		})(restSrv)
+		asUser := usercheck.UseDefaultUserMiddleware("testuser")(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 401 {
 			t.Errorf("got status code %d, expected 401", sc)
@@ -56,9 +53,7 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 	t.Run("not authorized as user, only current download role", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
 		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_current")
-		})(restSrv)
+		asUser := usercheck.UseDefaultUserMiddleware("testuser", cfg.Roles.DownloadCurrentFeedVersionRole)(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 401 {
 			t.Errorf("got status code %d, expected 401", sc)
@@ -67,9 +62,7 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 	t.Run("authorized as user", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
 		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_historic")
-		})(restSrv)
+		asUser := usercheck.UseDefaultUserMiddleware("testuser", cfg.Roles.DownloadHistoricFeedVersionRole)(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 200 {
 			t.Errorf("got status code %d, expected 200", sc)
@@ -90,9 +83,7 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 	t.Run("not authorized as user, not redistributable", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/dd7aca4a8e4c90908fd3603c097fabee75fea907/download", nil)
 		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_historic")
-		})(restSrv)
+		asUser := usercheck.UseDefaultUserMiddleware("testuser", cfg.Roles.DownloadHistoricFeedVersionRole)(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 401 {
 			t.Errorf("got status code %d, expected 401", sc)
@@ -101,7 +92,7 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/asdxyz/download", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 404 {
 			t.Errorf("got status code %d, expected 404", sc)
@@ -110,14 +101,14 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 }
 
 func TestFeedDownloadLatestRequest(t *testing.T) {
-	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
+	_, restSrv, cfg := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 	})
 
 	t.Run("ok", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/CT/download_latest_feed_version", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 200 {
 			t.Errorf("got status code %d, expected 200", sc)
@@ -129,9 +120,7 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 	t.Run("ok as user", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/CT/download_latest_feed_version", nil)
 		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_current")
-		})(restSrv)
+		asUser := usercheck.UseDefaultUserMiddleware("testuser", cfg.Roles.DownloadCurrentFeedVersionRole)(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 200 {
 			t.Errorf("got status code %d, expected 200", sc)
@@ -152,9 +141,7 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 	t.Run("not authorized as user, missing role", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/CT/download_latest_feed_version", nil)
 		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
-		})(restSrv)
+		asUser := usercheck.UseDefaultUserMiddleware("testuser")(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 401 {
 			t.Errorf("got status code %d, expected 401", sc)
@@ -163,9 +150,7 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 	t.Run("not authorized as user, not redistributable", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA/download_latest_feed_version", nil)
 		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("download_latest_feed_version")
-		})(restSrv)
+		asUser := usercheck.UseDefaultUserMiddleware("testuser", cfg.Roles.DownloadCurrentFeedVersionRole)(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 401 {
 			t.Errorf("got status code %d, expected 401", sc)
@@ -175,7 +160,7 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/asdxyz/download_latest_feed_version", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 404 {
 			t.Errorf("got status code %d, expected 404", sc)
@@ -184,7 +169,7 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 }
 
 func TestFeedDownloadRtLatestRequest(t *testing.T) {
-	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
+	_, restSrv, cfg := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 		RTJsons: []testconfig.RTJsonFile{
 			{Feed: "BA~rt", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
@@ -194,9 +179,7 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 	t.Run("ok as user", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA~rt/download_latest_rt/alerts.json", nil)
 		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_current")
-		})(restSrv)
+		asUser := usercheck.UseDefaultUserMiddleware("testuser", cfg.Roles.DownloadHistoricFeedVersionRole)(restSrv)
 		asUser.ServeHTTP(rr, req)
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
 	})
@@ -210,7 +193,7 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 	t.Run("alerts ok json", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA~rt/download_latest_rt/alerts.json", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		assert.Equal(t, "application/json", rr.Header().Get("content-type"), "content-type")
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
@@ -227,7 +210,7 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 	t.Run("alerts ok pb", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA~rt/download_latest_rt/alerts.pb", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		assert.Equal(t, "application/octet-stream", rr.Header().Get("content-type"), "content-type")
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
@@ -241,7 +224,7 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 	t.Run("trip_updates ok json", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA~rt/download_latest_rt/trip_updates.json", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		assert.Equal(t, "application/json", rr.Header().Get("content-type"), "content-type")
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
@@ -258,7 +241,7 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 	t.Run("trip_updates ok pb", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA~rt/download_latest_rt/trip_updates.pb", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		assert.Equal(t, "application/octet-stream", rr.Header().Get("content-type"), "content-type")
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
@@ -273,14 +256,14 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 	t.Run("geojson format only for vehicle_positions", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA~rt/download_latest_rt/alerts.geojson", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		assert.Equal(t, 400, rr.Result().StatusCode, "should return 400 for non-vehicle positions")
 	})
 	t.Run("feed not found", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/asdxyz/download_latest_rt/alerts.json", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		assert.Equal(t, "application/json", rr.Header().Get("content-type"), "content-type")
 		assert.Equal(t, 404, rr.Result().StatusCode, "status code")
@@ -288,7 +271,7 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 	t.Run("message not found", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA~rt/download_latest_rt/asd.json", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		assert.Equal(t, "application/json", rr.Header().Get("content-type"), "content-type")
 		assert.Equal(t, 404, rr.Result().StatusCode, "status code")
@@ -296,7 +279,7 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 }
 
 func TestFeedDownloadRtVehiclePositions(t *testing.T) {
-	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
+	_, restSrv, cfg := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 		RTJsons: []testconfig.RTJsonFile{
 			{Feed: "CT~rt", Ftype: "realtime_vehicle_positions", Fname: "ct-vehicle-positions.pb.json"},
@@ -306,7 +289,7 @@ func TestFeedDownloadRtVehiclePositions(t *testing.T) {
 	t.Run("vehicle_positions geojson with data", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/CT~rt/download_latest_rt/vehicle_positions.geojson", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		assert.Equal(t, "application/geo+json", rr.Header().Get("content-type"), "content-type")
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
@@ -346,7 +329,7 @@ func TestFeedDownloadRtVehiclePositions(t *testing.T) {
 	t.Run("vehicle_positions geojsonl with data", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/CT~rt/download_latest_rt/vehicle_positions.geojsonl", nil)
 		rr := httptest.NewRecorder()
-		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin := usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(restSrv)
 		asAdmin.ServeHTTP(rr, req)
 		assert.Equal(t, "application/geo+json-seq", rr.Header().Get("content-type"), "content-type")
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")

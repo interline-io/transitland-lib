@@ -184,6 +184,7 @@ func TestStopRequest(t *testing.T) {
 }
 
 func TestStopRequest_IncludeRoutes(t *testing.T) {
+	cfg := testconfig.Config(t, testconfig.Options{})
 	testcases := []testCase{
 		{
 			name:         "no auth",
@@ -192,12 +193,12 @@ func TestStopRequest_IncludeRoutes(t *testing.T) {
 			expectLength: 0,
 		},
 		{
-			name:         "with tl_user_pro",
+			name:         "with extended user role",
 			h:            StopRequest{StopID: "70011", IncludeRoutes: true},
 			selector:     "stops.0.route_stops",
 			expectLength: 5,
 			user:         "test",
-			userRoles:    []string{"tl_user_pro"},
+			userRoles:    []string{cfg.Roles.ExtendedUserRole},
 		},
 	}
 	for _, tc := range testcases {

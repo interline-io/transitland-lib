@@ -8,7 +8,6 @@ import (
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
-	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
@@ -72,10 +71,7 @@ func newTestClientWithOpts(t testing.TB, opts testconfig.Options) (*client.Clien
 	cfg := testconfig.Config(t, opts)
 	srv, _ := NewServer()
 	graphqlServer := model.AddConfigAndPerms(cfg, srv)
-	srvMiddleware := usercheck.NewUserDefaultMiddleware(func() authn.User {
-		return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
-	})
-	return client.New(srvMiddleware(graphqlServer)), cfg
+	return client.New(usercheck.UseDefaultUserMiddleware("testuser", "testrole")(graphqlServer)), cfg
 }
 
 func toJson(m map[string]interface{}) string {

@@ -21,19 +21,19 @@ func TestUser_HasRole(t *testing.T) {
 	}{
 		{"anon", NewCtxUser("", "", ""), RoleAnon, true},
 		{"anon", NewCtxUser("test", "", ""), RoleAnon, true},
-		{"anon", NewCtxUser("test", "", "").WithRoles("admin"), RoleAnon, true},
+		{"anon", NewCtxUser("test", "", "").WithRoles(string(RoleAdmin)), RoleAnon, true},
 
 		{"user", NewCtxUser("", "", ""), RoleUser, false},
 		{"user", NewCtxUser("test", "", ""), RoleUser, true},
-		{"user", NewCtxUser("test", "", "").WithRoles("admin"), RoleUser, true},
+		{"user", NewCtxUser("test", "", "").WithRoles(string(RoleAnon)), RoleUser, true},
 
 		{"admin", NewCtxUser("", "", ""), RoleAdmin, false},
 		{"admin", NewCtxUser("", "", ""), RoleAdmin, false},
 		{"admin", NewCtxUser("test", "", ""), RoleAdmin, false},
 		{"admin", NewCtxUser("test", "", ""), RoleAdmin, false},
-		{"admin", NewCtxUser("test", "", "").WithRoles("admin"), RoleAdmin, true},
+		{"admin", NewCtxUser("test", "", "").WithRoles(string(RoleAdmin)), RoleAdmin, true},
 
-		{"other roles", NewCtxUser("test", "", "").WithRoles("tlv2-admin"), Role("tlv2-admin"), true},
+		{"other roles", NewCtxUser("test", "", "").WithRoles(string(Role("tlv2-admin"))), Role("tlv2-admin"), true},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
