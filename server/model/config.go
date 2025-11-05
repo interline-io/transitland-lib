@@ -20,6 +20,7 @@ type Config struct {
 	Secrets                 []dmfr.Secret
 	ValidateLargeFiles      bool
 	DisableImage            bool
+	UseMaterialized         bool
 	RestPrefix              string
 	Storage                 string
 	RTStorage               string

@@ -12,7 +12,7 @@ func (f *Finder) ValidationReportsByFeedVersionIDs(ctx context.Context, limit *i
 	q := sq.StatementBuilder.
 		Select("*").
 		From("tl_validation_reports").
-		Limit(checkLimit(limit)).
+		Limit(finderCheckLimit(limit)).
 		OrderBy("tl_validation_reports.created_at desc, tl_validation_reports.id desc")
 	if where != nil {
 		if len(where.ReportIds) > 0 {

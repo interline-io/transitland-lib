@@ -49,7 +49,7 @@ type testcaseWithClock struct {
 
 func TestMain(m *testing.M) {
 	// Increase default limit for testing purposes
-	MAXLIMIT = 100_000
+	RESOLVER_MAXLIMIT = 100_000
 	if a, ok := testutil.CheckTestDB(); !ok {
 		log.Print(a)
 		return

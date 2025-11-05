@@ -69,13 +69,14 @@ func (c *PolylinesCommand) Run(ctx context.Context) error {
 
 	log.Info().Msgf("Reading %s from %s, output: %s\n", c.InputType, c.Input, c.OutputPath)
 	var err error
-	if c.InputType == "geojson" {
+	switch c.InputType {
+	case "geojson":
 		err = c.CreateFromGeojson()
-	} else if c.InputType == "zipgeojson" {
+	case "zipgeojson":
 		err = c.CreateFromZipGeojson()
-	} else if c.InputType == "shapefile" {
+	case "shapefile":
 		err = c.CreateFromShapefile()
-	} else {
+	default:
 		return fmt.Errorf("unknown format: %s", c.InputType)
 	}
 	return err

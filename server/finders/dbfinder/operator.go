@@ -194,7 +194,7 @@ func operatorSelect(limit *int, after *model.Cursor, ids []int, permFilter *mode
 	q = pfJoinCheck(q, permFilter)
 
 	// Outer query - support pagination
-	qView := sq.StatementBuilder.Select("t.*").FromSelect(q, "t").OrderBy("id").Limit(checkLimit(limit))
+	qView := sq.StatementBuilder.Select("t.*").FromSelect(q, "t").OrderBy("id").Limit(finderCheckLimit(limit))
 	if after != nil && after.Valid && after.ID > 0 {
 		qView = qView.Where(sq.Gt{"t.id": after.ID})
 	}

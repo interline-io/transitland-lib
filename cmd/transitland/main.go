@@ -67,6 +67,7 @@ func init() {
 		tlcli.CobraHelper(&cmds.ServerCommand{}, pc, "server"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		tlcli.CobraHelper(&cmds.DBMigrateCommand{}, pc, "dbmigrate"),
+		tlcli.CobraHelper(&cmds.FeedStateManagerCommand{}, pc, "feed-state"),
 		genDocCommand,
 		dmfrCommand,
 	)

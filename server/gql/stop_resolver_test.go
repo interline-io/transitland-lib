@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -517,6 +518,15 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 
 	bartStops := []string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "ASHB", "BALB", "BAYF", "CAST", "CIVC", "COLS", "COLM", "CONC", "DALY", "DBRK", "DUBL", "DELN", "PLZA", "EMBR", "FRMT", "FTVL", "GLEN", "HAYW", "LAFY", "LAKE", "MCAR", "MCAR_S", "MLBR", "MONT", "NBRK", "NCON", "OAKL", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "RICH", "ROCK", "SBRN", "SFIA", "SANL", "SHAY", "SSAN", "UCTY", "WCRK", "WARM", "WDUB", "WOAK"}
 
+	floridaFocus := tlxy.Point{Lat: 27.9506, Lon: -82.4572}
+	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
+	sanJoseRadiusMeters := 10_000.0 // 10km
+
+	var testStopID int
+	if err := cfg.Finder.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = $1`, "70252").Scan(&testStopID); err != nil {
+		t.Errorf("could not get stop ID for test: %s", err.Error())
+	}
+
 	testcases := []testcase{
 		{
 			// just ensure this query completes successfully; checking coordinates is a pain and flaky.
@@ -632,6 +642,7 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 			f: func(t *testing.T, jj string) {
 			},
 		},
+
 		// this test is just for debugging purposes
 		{
 			name: "nearby stops check n+1 query",
@@ -646,6 +657,108 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 			vars:         hw{"radius": 1000},
 			selector:     "stops.#.stop_id",
 			selectExpect: bartStops,
+		},
+		// Focus test cases
+		{
+			name: "focus basic: Florida focus point returns HA stops first",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "stops.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA"},
+		},
+		{
+			name: "focus basic: San Jose focus point returns CT stops first",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			selector:     "stops.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT"},
+		},
+		{
+			name: "focus with feed filter: HA stops only, ordered by distance",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops(limit: 10, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+					geometry
+				}
+			}`,
+			vars: hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			f: func(t *testing.T, jj string) {
+				// Verify the query returns stops
+				stopIds := gjson.Get(jj, "stops.#.stop_id").Array()
+				assert.Equal(t, 10, len(stopIds), "should return exactly 10 stops")
+
+				// Parse geometries and verify stops are sorted by increasing distance
+				var prevDistance float64
+				for i, stop := range gjson.Get(jj, "stops").Array() {
+					// Parse into tlxy.Point
+					coords := stop.Get("geometry.coordinates").Array()
+					stopPoint := tlxy.Point{
+						Lon: coords[0].Float(),
+						Lat: coords[1].Float(),
+					}
+
+					// Calculate distance from focus point
+					// Verify distance is increasing (or equal for stops at same location)
+					distance := tlxy.DistanceHaversine(floridaFocus, stopPoint)
+					if i > 0 {
+						assert.GreaterOrEqual(t, distance, prevDistance,
+							"stop index %d (stop_id=%s) at distance %.2f should be >= previous distance %.2f",
+							i, stop.Get("stop_id").String(), distance, prevDistance)
+					}
+					prevDistance = distance
+				}
+			},
+		},
+		{
+			name: "focus with pagination: first page",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops: stops(limit: 10, where: {feed_onestop_id: "CT", location: {focus: {lat: $lat, lon: $lon}}}) {
+					id
+					stop_id
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"777402", "70261", "70262", "70251", "70252", "70272", "70271", "777403", "70241", "70242"},
+		},
+		{
+			name: "focus with pagination: second page maintains ordering",
+			query: `query($lat:Float!, $lon:Float!, $after:Int!) {
+				stops: stops(after: $after, limit: 10, where: {feed_onestop_id: "CT", location: {focus: {lat: $lat, lon: $lon}}}) {
+					id
+					stop_id
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": testStopID},
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"70272", "70271", "777403", "70241", "70242", "70282", "70281", "70232", "70231", "70291"},
+		},
+		{
+			name: "focus with near filter: combined spatial queries",
+			query: `query($lat:Float!, $lon:Float!, $radius:Float!) {
+				stops(limit: 100, where: {
+					feed_onestop_id: "CT",
+					location: {
+						focus: {lat: $lat, lon: $lon},
+						near: {lat: $lat, lon: $lon, radius: $radius}
+					}
+				}) {
+					stop_id
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "radius": sanJoseRadiusMeters},
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"777402", "70261", "70262", "70251", "70252", "70272", "70271", "777403", "70241", "70242", "70282", "70281"},
 		},
 	}
 	return testcases
@@ -690,7 +803,6 @@ func stopResolverCursorTestcases(t *testing.T, cfg model.Config) []testcase {
 			selector:     "stops.#.stop_id",
 			selectExpect: []string{},
 		},
-
 		// TODO: uncomment after schema changes
 		// {
 		// 	"no cursor",
@@ -759,7 +871,7 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			}
 		  }
 		}
-	  }	  
+	  }
 	`
 	testcases := []testcase{
 		// license: share_alike_optional

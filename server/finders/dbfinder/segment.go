@@ -44,7 +44,7 @@ func (f *Finder) SegmentsByRouteIDs(ctx context.Context, limit *int, where *mode
 		From("gtfs_routes").
 		JoinClause(
 			`join lateral (select distinct on (tl_segments.id, tl_segment_patterns.route_id) tl_segments.id, tl_segments.way_id, tl_segments.geometry, tl_segment_patterns.route_id from tl_segments join tl_segment_patterns on tl_segment_patterns.segment_id = tl_segments.id where tl_segment_patterns.route_id = gtfs_routes.id limit ?) s on true`,
-			checkLimit(limit),
+			finderCheckLimit(limit),
 		).
 		Where(In("gtfs_routes.id", keys))
 	err := dbutil.Select(ctx,

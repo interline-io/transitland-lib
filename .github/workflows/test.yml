@@ -24,11 +24,7 @@ jobs:
         go-version: ['1.24.2']    
     runs-on: ${{ matrix.os }}
     env:
-      PGDATABASE: tlv2_test_server
-      PGUSER: root
-      PGPASSWORD: for_testing
-      PGHOST: localhost
-      PGPORT: 5432
+      TL_TEST_DATABASE_URL: postgres://root:for_testing@localhost:5432/tlv2_test?sslmode=disable
       TL_TEST_SERVER_DATABASE_URL: postgres://root:for_testing@localhost:5432/tlv2_test_server?sslmode=disable
       TL_REDIS_URL: redis://localhost    
     services:
@@ -62,9 +58,8 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
       id: go
-    - run: dropdb --if-exists ${PGDATABASE}
     - run: (cd cmd/transitland && go version && go install .)
-    - run: ./testdata/server/test_setup.sh
+    - run: ./testdata/test_setup.sh
     - name: Run tests
       run: go test -v -coverprofile c.out ./...
     - name: Produce coverage report

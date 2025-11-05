@@ -16,11 +16,14 @@ import (
 
 func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.StopFilter) ([]*model.Stop, error) {
 	var ents []*model.Stop
-	active := true
-	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
-		active = false
+	useActive := &UseActive{
+		active:       true,
+		materialized: model.ForContext(ctx).UseMaterialized,
 	}
-	q := stopSelect(limit, after, ids, active, f.PermFilter(ctx), where)
+	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
+		useActive.active = false
+	}
+	q := stopSelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -42,7 +45,7 @@ func (f *Finder) StopObservationsByStopIDs(ctx context.Context, limit *int, wher
 		From("ext_performance_stop_observations obs").
 		Join("gtfs_stops on gtfs_stops.stop_id = obs.to_stop_id").
 		Where(In("gtfs_stops.id", keys)).
-		Limit(100000)
+		Limit(finderCheckLimit(limit))
 	if where != nil {
 		q = q.Where("obs.feed_version_id = ?", where.FeedVersionID)
 		q = q.Where("obs.trip_start_date = ?", where.TripStartDate)
@@ -65,7 +68,7 @@ func (f *Finder) StopsByIDs(ctx context.Context, ids []int) ([]*model.Stop, []er
 
 func (f *Finder) StopsByRouteIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []int) ([][]*model.Stop, error) {
 	var ents []*model.Stop
-	qso := stopSelect(limit, nil, nil, false, f.PermFilter(ctx), where)
+	qso := stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where)
 	qso = qso.Join("tl_route_stops on tl_route_stops.stop_id = gtfs_stops.id").Where(In("route_id", keys)).Column("route_id as with_route_id")
 	err := dbutil.Select(ctx,
 		f.db,
@@ -80,7 +83,7 @@ func (f *Finder) StopsByParentStopIDs(ctx context.Context, limit *int, where *mo
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			stopSelect(limit, nil, nil, false, f.PermFilter(ctx), where),
+			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
 			"gtfs_stops",
 			"id",
 			"gtfs_stops",
@@ -104,7 +107,7 @@ func (f *Finder) TargetStopsByStopIDs(ctx context.Context, ids []int) ([]*model.
 	var qents []*qlookup
 	q := sq.
 		Select("t.*", "tlse.stop_id as source_id").
-		FromSelect(stopSelect(nil, nil, nil, true, f.PermFilter(ctx), nil), "t").
+		FromSelect(stopSelect(nil, nil, nil, &UseActive{active: true}, f.PermFilter(ctx), nil), "t").
 		Join("tl_stop_external_references tlse on tlse.target_feed_onestop_id = t.feed_onestop_id and tlse.target_stop_id = t.stop_id").
 		Where(In("tlse.stop_id", ids))
 	if err := dbutil.Select(ctx,
@@ -130,7 +133,7 @@ func (f *Finder) StopsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			stopSelect(limit, nil, nil, false, f.PermFilter(ctx), where),
+			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
 			"feed_versions",
 			"id",
 			"gtfs_stops",
@@ -147,7 +150,7 @@ func (f *Finder) StopsByLevelIDs(ctx context.Context, limit *int, where *model.S
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			stopSelect(limit, nil, nil, false, f.PermFilter(ctx), where),
+			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
 			"gtfs_levels",
 			"id",
 			"gtfs_stops",
@@ -231,7 +234,7 @@ func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.
 	return arrangeMap(ids, ents, func(ent result) (int, *model.StopPlace) { return ent.StopID, &ent.StopPlace }), nil
 }
 
-func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {
+func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_stops.id",
 		"gtfs_stops.feed_version_id",
@@ -253,13 +256,15 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		"current_feeds.id AS feed_id",
 		"current_feeds.onestop_id AS feed_onestop_id",
 		"feed_versions.sha1 AS feed_version_sha1",
-		"coalesce(feed_version_stop_onestop_ids.onestop_id, '') as onestop_id",
+		useActive.UseTable(
+			"coalesce(feed_version_stop_onestop_ids.onestop_id, '') as onestop_id",
+			"gtfs_stops.onestop_id as onestop_id",
+		),
 	).
-		From("gtfs_stops").
+		From(useActive.UseTable("gtfs_stops", "tl_materialized_active_stops as gtfs_stops")).
 		Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
-		OrderBy("gtfs_stops.feed_version_id,gtfs_stops.id").
-		Limit(checkLimit(limit))
+		Limit(finderCheckLimit(limit))
 	distinct := false
 
 	// Handle previous OnestopIds
@@ -271,7 +276,11 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		if len(where.OnestopIds) > 0 && where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds {
 			// Use CTE for stop lookup optimization
 			sub := sq.StatementBuilder.
-				Select("feed_version_stop_onestop_ids.onestop_id", "feed_version_stop_onestop_ids.entity_id", "feed_versions.feed_id").
+				Select(
+					"feed_version_stop_onestop_ids.onestop_id",
+					"feed_version_stop_onestop_ids.entity_id",
+					"feed_versions.feed_id",
+				).
 				Distinct().Options("on (feed_version_stop_onestop_ids.onestop_id, feed_version_stop_onestop_ids.entity_id, feed_versions.feed_id)").
 				From("feed_version_stop_onestop_ids").
 				Join("feed_versions on feed_versions.id = feed_version_stop_onestop_ids.feed_version_id").
@@ -379,6 +388,9 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
 			q = q.Where("ST_DWithin(gtfs_stops.geometry, ST_MakePoint(?,?), ?)", loc.Near.Lon, loc.Near.Lat, radius)
 		}
+		if loc.Focus != nil {
+			q = q.OrderByClause(sq.Expr("gtfs_stops.geometry <-> ST_MakePoint(?,?)", loc.Focus.Lon, loc.Focus.Lat))
+		}
 	}
 
 	// Handle other clauses
@@ -473,17 +485,30 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 	if distinct {
 		q = q.Distinct().Options("on (gtfs_stops.feed_version_id,gtfs_stops.id)")
 	}
-	if active {
+	if useActive.Active() {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_stops.feed_version_id")
 	}
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_stops.id", ids))
 	}
 
+	// Default ordering
+	q = q.OrderBy("gtfs_stops.feed_version_id,gtfs_stops.id")
+
 	// Handle cursor
 	if after != nil && after.Valid && after.ID > 0 {
-		// first check helps improve query performance
-		if after.FeedVersionID == 0 {
+		if where != nil && where.Location != nil && where.Location.Focus != nil {
+			// Complex ordering with focus point
+			// When ordering by distance from focus, we need to find the distance
+			// of the 'after' stop to determine the minimum distance threshold for pagination
+			q = q.Where(sq.Expr(
+				"ST_Distance(gtfs_stops.geometry, ST_MakePoint(?,?)) > (select ST_Distance(geometry, ST_MakePoint(?,?)) from gtfs_stops where id = ?)",
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				where.Location.Focus.Lon,
+				where.Location.Focus.Lat,
+				after.ID))
+		} else if after.FeedVersionID == 0 {
 			q = q.
 				Where(sq.Expr("gtfs_stops.feed_version_id >= (select feed_version_id from gtfs_stops where id = ?)", after.ID)).
 				Where(sq.Expr("(gtfs_stops.feed_version_id, gtfs_stops.id) > (select feed_version_id,id from gtfs_stops where id = ?)", after.ID))

@@ -2635,6 +2635,134 @@
         ]
       }
     },
+    "/feed_versions/export": {
+      "post": {
+        "description": "Export one or more feed versions as a GTFS zip file with optional transformations (ID prefixing, timezone normalization, shape simplification, etc.). Feed versions must be successfully imported before they can be exported. Available only using Transitland professional or enterprise plan API keys.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "feed_version_keys": [
+                  "dd7aca4a8e4c90908fd3603c097fabee75fea907",
+                  "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
+                ],
+                "format": "gtfs_zip",
+                "transforms": {
+                  "normalize_timezones": true,
+                  "prefix": "agency1_",
+                  "prefix_files": [
+                    "routes.txt",
+                    "trips.txt"
+                  ],
+                  "set_values": {
+                    "agency.txt.*.agency_url": "https://example.com"
+                  },
+                  "simplify_shapes": 10,
+                  "use_basic_route_types": true
+                }
+              },
+              "schema": {
+                "properties": {
+                  "feed_version_keys": {
+                    "description": "Array of feed version IDs or SHA1 hashes to export",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "format": {
+                    "default": "gtfs_zip",
+                    "description": "Output format (default: gtfs_zip)",
+                    "enum": [
+                      "gtfs_zip"
+                    ],
+                    "type": "string"
+                  },
+                  "transforms": {
+                    "description": "Optional transformations to apply",
+                    "properties": {
+                      "normalize_timezones": {
+                        "description": "Normalize timezone names (e.g., US/Pacific -\u003e America/Los_Angeles)",
+                        "type": "boolean"
+                      },
+                      "prefix": {
+                        "description": "Prefix to add to entity IDs for namespacing (e.g., 'bart_' prefixes all IDs)",
+                        "type": "string"
+                      },
+                      "prefix_files": {
+                        "description": "Specific files to apply prefix to (e.g., ['routes.txt', 'trips.txt']). If omitted, prefix is applied to all entity types. Useful when merging feeds with shared stops or zones.",
+                        "items": {
+                          "enum": [
+                            "agency.txt",
+                            "routes.txt",
+                            "trips.txt",
+                            "stops.txt",
+                            "shapes.txt",
+                            "calendar.txt",
+                            "fare_attributes.txt",
+                            "fare_rules.txt",
+                            "levels.txt",
+                            "pathways.txt"
+                          ],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "set_values": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Override specific entity field values. Format: 'filename.entity_id.field' = 'value' (e.g., 'agency.txt.BART.agency_url' = 'https://new-url.com'). Use '*' as entity_id to apply to all entities in a file.",
+                        "type": "object"
+                      },
+                      "simplify_shapes": {
+                        "description": "Tolerance value for shape simplification (in meters)",
+                        "type": "number"
+                      },
+                      "use_basic_route_types": {
+                        "description": "Convert extended route types to basic GTFS route types",
+                        "type": "boolean"
+                      }
+                    },
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "feed_version_keys"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Export request with feed version keys and optional transformations",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful export - returns GTFS zip file"
+          },
+          "400": {
+            "description": "Bad request - invalid parameters or feed version not imported"
+          },
+          "403": {
+            "description": "Forbidden - feed version does not allow redistribution"
+          },
+          "404": {
+            "description": "Not found - no feed versions found"
+          }
+        },
+        "summary": "Export feed versions with transformations",
+        "x-required-role": "tl_export_feed_versions"
+      }
+    },
     "/feed_versions/{feed_version_key}": {
       "get": {
         "parameters": [
@@ -3088,43 +3216,20 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
+              "application/octet-stream": {
                 "schema": {
-                  "title": "data"
+                  "format": "binary",
+                  "type": "string"
                 }
               }
             },
-            "description": "ok"
+            "description": "Success"
           },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Bad request - invalid parameters"
+          "401": {
+            "description": "Not authorized - feed redistribution not allowed"
           },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Internal server error"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Unexpected error"
+          "404": {
+            "description": "Not found - feed not found"
           }
         },
         "summary": "Download feed version",
@@ -4188,43 +4293,20 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
+              "application/octet-stream": {
                 "schema": {
-                  "title": "data"
+                  "format": "binary",
+                  "type": "string"
                 }
               }
             },
-            "description": "ok"
+            "description": "Success"
           },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Bad request - invalid parameters"
+          "401": {
+            "description": "Not authorized - feed redistribution not allowed"
           },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Internal server error"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Unexpected error"
+          "404": {
+            "description": "Not found - feed not found"
           }
         },
         "summary": "Download latest feed version",

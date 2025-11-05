@@ -11,22 +11,34 @@ import (
 	"github.com/interline-io/transitland-lib/tlxy"
 )
 
-// DEFAULTLIMIT is the default API limit
-const DEFAULTLIMIT = 100
+// RESOLVER_DEFAULT_LIMIT is the default API limit
+const (
+	RESOLVER_DEFAULT_LIMIT             = 100
+	RESOLVER_FEED_MAXLIMIT             = 100_000
+	RESOLVER_CENSUS_MAXLIMIT           = 100_000
+	RESOLVER_STOP_OBSERVATION_MAXLIMIT = 100_000
+)
 
-// MAXLIMIT is the API limit maximum
-var MAXLIMIT = 1_000
+// RESOLVER_MAXLIMIT is the API limit maximum
+var RESOLVER_MAXLIMIT = 1_000
+
+// resolverCheckLimit checks the limit is positive and below the maximum limit.
+func resolverCheckLimit(limit *int) *int {
+	return resolverCheckLimitMax(limit, RESOLVER_MAXLIMIT)
+}
 
 // checkLimit checks the limit is positive and below the maximum limit.
-func checkLimit(limit *int) *int {
-	a := 0
-	if limit != nil {
+func resolverCheckLimitMax(limit *int, maxLimit int) *int {
+	a := RESOLVER_DEFAULT_LIMIT
+	if limit == nil {
+		return &a
+	} else {
 		a = *limit
 	}
-	if a <= 0 {
-		a = DEFAULTLIMIT
-	} else if a >= MAXLIMIT {
-		a = MAXLIMIT
+	if a < 0 {
+		a = 0
+	} else if a >= maxLimit {
+		a = maxLimit
 	}
 	return &a
 }

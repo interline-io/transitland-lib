@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/tlcli"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/spf13/pflag"
 )
 
@@ -64,6 +65,39 @@ func (cmd *MergeCommand) Run(ctx context.Context) error {
 	defer writer.Close()
 
 	// Setup copier
+	marker := &skipDuplicateIds{
+		duplicates: tt.NewEntityMap(),
+	}
+	cmd.Options.ErrorLimit = 10
+	cmd.Options.AddExtension(marker)
 	_, err = copier.CopyWithOptions(ctx, reader, writer, cmd.Options)
 	return err
+}
+
+// skipDuplicateIds is a copier.EntityMarker that skips previously written entities
+// Note: AfterValidator is used because AfterWrite is only called at the end of a batch
+type skipDuplicateIds struct {
+	duplicates *tt.EntityMap
+}
+
+func (em *skipDuplicateIds) Marked(ent tt.Entity, emap *tt.EntityMap) bool {
+	eid := ent.EntityID()
+	if eid == "" {
+		return true
+	}
+	if _, ok := em.duplicates.Get(ent.Filename(), ent.EntityID()); ok {
+		// log.Info().Msgf("skipping duplicate entity %s '%s'", ent.Filename(), ent.EntityID())
+		return false
+	}
+	// log.Info().Msgf("marking entity %s '%s'", ent.Filename(), ent.EntityID())
+	return true
+}
+
+func (em *skipDuplicateIds) AfterValidator(ent tt.Entity, emap *tt.EntityMap) error {
+	eid := ent.EntityID()
+	if eid != "" {
+		// log.Info().Msgf("...wrote: %s '%s'", ent.Filename(), eid)
+		em.duplicates.Set(ent.Filename(), eid, eid)
+	}
+	return nil
 }

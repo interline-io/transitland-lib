@@ -6,6 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -157,53 +158,7 @@ func TestRouteResolver(t *testing.T) {
 			selector:     "routes.#.route_id",
 			selectExpect: []string{"Bu-130"},
 		},
-		// just ensure geometry queries complete successfully; checking coordinates is a pain and flaky.
-		{
-			name:         "where near 100m",
-			query:        `query {routes(where:{near:{lon:-122.407974,lat:37.784471,radius:100.0}}) {route_id route_long_name}}`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"01", "05", "07", "11"},
-		},
-		{
-			name:         "where near 10000m",
-			query:        `query {routes(where:{near:{lon:-122.407974,lat:37.784471,radius:10000.0}}) {route_id route_long_name}}`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
-		},
-		{
-			name:         "where within polygon",
-			query:        `query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.396,37.8],[-122.408,37.79],[-122.393,37.778],[-122.38,37.787],[-122.396,37.8]]]}}){id route_id}}`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"01", "05", "07", "11"},
-		},
-		{
-			name:         "where within polygon big",
-			query:        `query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.39481925964355,37.80151060070086],[-122.41653442382812,37.78652126637423],[-122.39662170410156,37.76847577247014],[-122.37301826477051,37.784757615348575],[-122.39481925964355,37.80151060070086]]]}}){id route_id}}`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
-		},
-		{
-			name:         "where bbox 1",
-			query:        `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
-			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"01", "03", "07"},
-		},
-		{
-			name:         "where bbox 2",
-			query:        `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
-			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
-			selector:     "routes.#.route_id",
-			selectExpect: []string{},
-		},
-		{
-			name:        "where bbox too large",
-			query:       `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
-			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
-		},
+
 		// route patterns
 		{
 			name: "route patterns",
@@ -286,6 +241,125 @@ func TestRouteResolver(t *testing.T) {
 		// TODO: census_geographies
 	}
 	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
+func TestRouteResolver_Location(t *testing.T) {
+	c, cfg := newTestClient(t)
+
+	// Florida coordinates: approximately in the center of Tampa Bay area
+	// This should put HA stops (Tampa area) much closer than BA/CT stops (San Francisco Bay area)
+	floridaFocus := tlxy.Point{Lat: 27.9506, Lon: -82.4572}
+
+	// San Jose coordinates: approximately in downtown San Jose
+	// This should put CT stops (Caltrain San Jose area) much closer than HA stops (Florida)
+	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
+	var testRouteId int
+	if err := cfg.Finder.DBX().
+		QueryRowx(`select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = $1 and route_id = $2`, "HA", "96").
+		Scan(&testRouteId); err != nil {
+		t.Errorf("could not get route ID for test: %s", err.Error())
+	}
+
+	testcases := []testcase{
+		// just ensure geometry queries complete successfully; checking coordinates is a pain and flaky.
+		{
+			name:         "where near 100m",
+			query:        `query {routes(where:{near:{lon:-122.407974,lat:37.784471,radius:100.0}}) {route_id route_long_name}}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"01", "05", "07", "11"},
+		},
+		{
+			name:         "where near 10000m",
+			query:        `query {routes(where:{near:{lon:-122.407974,lat:37.784471,radius:10000.0}}) {route_id route_long_name}}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
+		},
+		{
+			name:         "where within polygon",
+			query:        `query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.396,37.8],[-122.408,37.79],[-122.393,37.778],[-122.38,37.787],[-122.396,37.8]]]}}){id route_id}}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"01", "05", "07", "11"},
+		},
+		{
+			name:         "where within polygon big",
+			query:        `query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.39481925964355,37.80151060070086],[-122.41653442382812,37.78652126637423],[-122.39662170410156,37.76847577247014],[-122.37301826477051,37.784757615348575],[-122.39481925964355,37.80151060070086]]]}}){id route_id}}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
+		},
+		{
+			name:         "where bbox 1",
+			query:        `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
+			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"01", "03", "07"},
+		},
+		{
+			name:         "where bbox 2",
+			query:        `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
+			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{},
+		},
+		{
+			name:        "where bbox too large",
+			query:       `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
+			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
+			expectError: true,
+			f: func(t *testing.T, jj string) {
+			},
+		},
+		// Focus test cases
+		{
+			name: "focus basic: Florida focus point returns HA routes first",
+			query: `query($lat:Float!, $lon:Float!) {
+				routes(limit: 5, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					route_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "routes.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"HA", "HA", "HA", "HA", "HA"},
+		},
+		{
+			name: "focus basic: San Jose focus point returns West Coast routes first",
+			query: `query($lat:Float!, $lon:Float!) {
+				routes(limit: 5, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					route_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			selector:     "routes.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"CT", "CT", "CT", "CT", "CT"},
+		},
+		{
+			name: "focus with feed filter: HA routes only, ordered by distance",
+			query: `query($lat:Float!, $lon:Float!) {
+				routes(limit: 10, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
+					route_id
+					geometry
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"20", "51", "8", "400", "96", "97", "12", "9", "19", "30"},
+		},
+		{
+			// Should start after "96" in above test
+			name: "focus with pagination",
+			query: `query($lat:Float!, $lon:Float!, $after: Int!) {
+				routes(after:$after,limit: 10, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
+					route_id
+					geometry
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon, "after": testRouteId},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"97", "12", "9", "19", "30", "60", "7", "24", "25", "275"},
+		},
+	}
 	queryTestcases(t, c, testcases)
 }
 

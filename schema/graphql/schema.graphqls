@@ -1579,6 +1579,8 @@ input FeedVersionFilter {
   within: Polygon
   "Search for feed versions within specified radius of a point"
   near: PointRadius
+  "Search for stops with these license details"
+  license: LicenseFilter
 }
 
 """Import status for a feed version"""
@@ -1691,12 +1693,6 @@ input AgencyFilter {
   agency_id: String
   "Search for records with this GTFS agency_name"
   agency_name: String
-  "Search for agencies within this bounding box"
-  bbox: BoundingBox
-  "Search for agencies within this geographic polygon"
-  within: Polygon
-  "Search for agencies within specified radius of a point"
-  near: PointRadius
   "Full text search"
   search: String
   "Search for agencies by city name (provided by Natural Earth)"
@@ -1711,6 +1707,25 @@ input AgencyFilter {
   adm1_iso: String
   "Search for agencies with these license details"
   license: LicenseFilter
+  "Location"
+  location: AgencyLocationFilter
+  "Backwards compat: Search for agencies within this bounding box"
+  bbox: BoundingBox
+  "Backwards compat: Search for agencies within this geographic polygon"
+  within: Polygon
+  "Backwards compat: Search for agencies within specified radius of a point"
+  near: PointRadius
+}
+
+input AgencyLocationFilter {
+  "Search for agencies within this bounding box"
+  bbox: BoundingBox
+  "Search for agencies within this geographic polygon"
+  polygon: Polygon
+  "Search for agencies within specified radius of a point"
+  near: PointRadius
+  "Focus search on this point; results will be sorted by distance"
+  focus: FocusPoint
 }
 
 """Search options for routes"""
@@ -1733,12 +1748,6 @@ input RouteFilter {
   route_types: [Int!]
   "Search for routes with 1 or more trips (true) or 0 or more trips (false or null)"
   serviced: Boolean
-  "Search for routes within this bounding box"
-  bbox: BoundingBox
-  "Search for routes within this geographic polygon"
-  within: Polygon
-  "Search for routes within specified radius of a point"
-  near: PointRadius
   "Full text search"
   search: String
   "Search for routes operated by operators with this OnestopID"
@@ -1747,6 +1756,26 @@ input RouteFilter {
   license: LicenseFilter
   "Search for routes with these agency integer IDs. Deprecated."
   agency_ids: [Int!]
+  "Location"
+  location: RouteLocationFilter
+  "Backwards compat:Search for routes within this bounding box"
+  bbox: BoundingBox
+  "Backwards compat: Search for routes within this geographic polygon"
+  within: Polygon
+  "Backwards compat: Search for routes within specified radius of a point"
+  near: PointRadius
+
+}
+
+input RouteLocationFilter {
+  "Search for routes within this bounding box"
+  bbox: BoundingBox
+  "Search for routes within this geographic polygon"
+  polygon: Polygon
+  "Search for routes within specified radius of a point"
+  near: PointRadius
+  "Focus search on this point; results will be sorted by distance"
+  focus: FocusPoint
 }
 
 input Feature {
@@ -1767,6 +1796,8 @@ input StopLocationFilter {
   near: PointRadius
   "Search within these geography ids"
   geography_ids: [Int]
+  "Focus search on this point; results will be sorted by distance"
+  focus: FocusPoint  
 }
 
 """Search options for stops"""
@@ -1897,7 +1928,10 @@ input CensusDatasetFilter {
   search: String
 }
 
-"""Search options for census geographies"""
+"""Search options for census geographies
+
+Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
+"""
 input CensusGeographyFilter {
   dataset: String
   layer: String
@@ -1905,6 +1939,46 @@ input CensusGeographyFilter {
   search: String
 }
 
+"""Search options for census geographies within a specific dataset
+
+Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
+"""
+input CensusDatasetGeographyFilter {
+  "Geographies with these integer IDs"
+  ids: [Int!]
+  "Search within this dataset"
+  dataset: String
+  "Search within this layer"
+  layer: String
+  "Search for geographies matching this string"
+  search: String
+  "Location search"
+  location: CensusDatasetGeographyLocationFilter
+}
+
+"""Search options for census geography sources
+
+Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
+"""
+input CensusSourceGeographyFilter {
+  "Geographies with these integer IDs"
+  ids: [Int!]
+  "Search for geographies matching this string"
+  search: String
+  "Location search"
+  location: CensusDatasetGeographyLocationFilter
+}
+
+
+"""Search options for census geographies
+
+Note: when using spatial searches (radius, stop_buffer, etc.), individual census geographies may appear multiple times in the result set, each representing a different intersection with the search area. For example:
+- Two stops with small radius buffers in the same census tract will return that tract twice, once for each buffer intersection
+- A complex polygon search that touches multiple disconnected areas of the same geography will return separate entries for each intersection
+- Each duplicate entry will have different `intersection_area` and `intersection_geometry` values representing the specific overlap
+
+Clients should aggregate or de-duplicate results as needed based on the `geoid` field if a single entry per geography is desired.
+"""
 input CensusDatasetGeographyLocationFilter {
   "Search within this bounding box"
   bbox: BoundingBox
@@ -1918,31 +1992,12 @@ input CensusDatasetGeographyLocationFilter {
   stop_buffer: StopBuffer
 }
 
+"""Search options for census geographies based on stop IDs"""
 input StopBuffer {
   "Search for geographies with these stop IDs"
   stop_ids: [Int!]
   "Stop ID search radius, in meters"
   radius: Float
-}
-
-input CensusDatasetGeographyFilter {
-  "Geographies with these integer IDs"
-  ids: [Int!]
-  "Search within this layer"
-  layer: String
-  "Search for geographies matching this string"
-  search: String
-  "Location search"
-  location: CensusDatasetGeographyLocationFilter
-}
-
-input CensusSourceGeographyFilter {
-  "Geographies with these integer IDs"
-  ids: [Int!]
-  "Search for geographies matching this string"
-  search: String
-  "Location search"
-  location: CensusDatasetGeographyLocationFilter
 }
 
 input CensusTableFilter {

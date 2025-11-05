@@ -24,12 +24,6 @@ type AgencyFilter struct {
 	AgencyID *string `json:"agency_id,omitempty"`
 	// Search for records with this GTFS agency_name
 	AgencyName *string `json:"agency_name,omitempty"`
-	// Search for agencies within this bounding box
-	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Search for agencies within this geographic polygon
-	Within *tt.Polygon `json:"within,omitempty"`
-	// Search for agencies within specified radius of a point
-	Near *PointRadius `json:"near,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
 	// Search for agencies by city name (provided by Natural Earth)
@@ -44,6 +38,25 @@ type AgencyFilter struct {
 	Adm1Iso *string `json:"adm1_iso,omitempty"`
 	// Search for agencies with these license details
 	License *LicenseFilter `json:"license,omitempty"`
+	// Location
+	Location *AgencyLocationFilter `json:"location,omitempty"`
+	// Backwards compat: Search for agencies within this bounding box
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Backwards compat: Search for agencies within this geographic polygon
+	Within *tt.Polygon `json:"within,omitempty"`
+	// Backwards compat: Search for agencies within specified radius of a point
+	Near *PointRadius `json:"near,omitempty"`
+}
+
+type AgencyLocationFilter struct {
+	// Search for agencies within this bounding box
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Search for agencies within this geographic polygon
+	Polygon *tt.Polygon `json:"polygon,omitempty"`
+	// Search for agencies within specified radius of a point
+	Near *PointRadius `json:"near,omitempty"`
+	// Focus search on this point; results will be sorted by distance
+	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
 // Place associated with an agency
@@ -138,9 +151,14 @@ type CensusDatasetFilter struct {
 	Search *string `json:"search,omitempty"`
 }
 
+// Search options for census geographies within a specific dataset
+//
+// Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusDatasetGeographyFilter struct {
 	// Geographies with these integer IDs
 	Ids []int `json:"ids,omitempty"`
+	// Search within this dataset
+	Dataset *string `json:"dataset,omitempty"`
 	// Search within this layer
 	Layer *string `json:"layer,omitempty"`
 	// Search for geographies matching this string
@@ -149,6 +167,14 @@ type CensusDatasetGeographyFilter struct {
 	Location *CensusDatasetGeographyLocationFilter `json:"location,omitempty"`
 }
 
+// Search options for census geographies
+//
+// Note: when using spatial searches (radius, stop_buffer, etc.), individual census geographies may appear multiple times in the result set, each representing a different intersection with the search area. For example:
+// - Two stops with small radius buffers in the same census tract will return that tract twice, once for each buffer intersection
+// - A complex polygon search that touches multiple disconnected areas of the same geography will return separate entries for each intersection
+// - Each duplicate entry will have different `intersection_area` and `intersection_geometry` values representing the specific overlap
+//
+// Clients should aggregate or de-duplicate results as needed based on the `geoid` field if a single entry per geography is desired.
 type CensusDatasetGeographyLocationFilter struct {
 	// Search within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
@@ -220,6 +246,8 @@ type CensusGeography struct {
 }
 
 // Search options for census geographies
+//
+// Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusGeographyFilter struct {
 	Dataset *string  `json:"dataset,omitempty"`
 	Layer   *string  `json:"layer,omitempty"`
@@ -261,6 +289,9 @@ type CensusSourceFilter struct {
 	Search *string `json:"search,omitempty"`
 }
 
+// Search options for census geography sources
+//
+// Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusSourceGeographyFilter struct {
 	// Geographies with these integer IDs
 	Ids []int `json:"ids,omitempty"`
@@ -432,6 +463,8 @@ type FeedVersionFilter struct {
 	Within *tt.Polygon `json:"within,omitempty"`
 	// Search for feed versions within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
+	// Search for stops with these license details
+	License *LicenseFilter `json:"license,omitempty"`
 }
 
 // Result of feed version import operation
@@ -788,12 +821,6 @@ type RouteFilter struct {
 	RouteTypes []int `json:"route_types,omitempty"`
 	// Search for routes with 1 or more trips (true) or 0 or more trips (false or null)
 	Serviced *bool `json:"serviced,omitempty"`
-	// Search for routes within this bounding box
-	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Search for routes within this geographic polygon
-	Within *tt.Polygon `json:"within,omitempty"`
-	// Search for routes within specified radius of a point
-	Near *PointRadius `json:"near,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
 	// Search for routes operated by operators with this OnestopID
@@ -802,6 +829,14 @@ type RouteFilter struct {
 	License *LicenseFilter `json:"license,omitempty"`
 	// Search for routes with these agency integer IDs. Deprecated.
 	AgencyIds []int `json:"agency_ids,omitempty"`
+	// Location
+	Location *RouteLocationFilter `json:"location,omitempty"`
+	// Backwards compat:Search for routes within this bounding box
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Backwards compat: Search for routes within this geographic polygon
+	Within *tt.Polygon `json:"within,omitempty"`
+	// Backwards compat: Search for routes within specified radius of a point
+	Near *PointRadius `json:"near,omitempty"`
 }
 
 // Representative route geometries
@@ -840,6 +875,17 @@ type RouteHeadway struct {
 	DepartureInts    tt.Ints       `db:"departures"`
 	RouteID          int           `json:"-"`
 	SelectedStopID   int           `json:"-"`
+}
+
+type RouteLocationFilter struct {
+	// Search for routes within this bounding box
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Search for routes within this geographic polygon
+	Polygon *tt.Polygon `json:"polygon,omitempty"`
+	// Search for routes within specified radius of a point
+	Near *PointRadius `json:"near,omitempty"`
+	// Focus search on this point; results will be sorted by distance
+	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
 // RouteStops describe associations between stops, routes, and agencies.
@@ -954,6 +1000,7 @@ type Step struct {
 	GeometryOffset int       `json:"geometry_offset"`
 }
 
+// Search options for census geographies based on stop IDs
 type StopBuffer struct {
 	// Search for geographies with these stop IDs
 	StopIds []int `json:"stop_ids,omitempty"`
@@ -1019,6 +1066,8 @@ type StopLocationFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 	// Search within these geography ids
 	GeographyIds []*int `json:"geography_ids,omitempty"`
+	// Focus search on this point; results will be sorted by distance
+	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
 // Measurements of observed arrival times based on GTFS-RT data

@@ -179,7 +179,7 @@ func feedVersionSelect(limit *int, after *model.Cursor, ids []int, permFilter *m
 		).
 		From("feed_versions").
 		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
-		Limit(checkLimit(limit)).
+		Limit(finderCheckLimit(limit)).
 		OrderBy("feed_versions.fetched_at desc, feed_versions.id desc")
 
 	if where != nil {
@@ -293,6 +293,9 @@ func feedVersionSelect(limit *int, after *model.Cursor, ids []int, permFilter *m
 			q = q.Join(`feed_version_gtfs_imports fvgi on fvgi.feed_version_id = feed_versions.id`).
 				Where(sq.Eq{"fvgi.success": checkSuccess}, sq.Eq{"fvgi.in_progress": checkInProgress})
 		}
+
+		// Handle license filtering
+		q = licenseFilter(where.License, q)
 	}
 	if len(ids) > 0 {
 		q = q.Where(In("feed_versions.id", ids))
@@ -323,7 +326,7 @@ func feedVersionServiceLevelSelect(limit *int, after *model.Cursor, ids []int, _
 			"feed_version_service_levels.sunday",
 		).
 		From("feed_version_service_levels").
-		Limit(checkLimit(limit)).
+		Limit(finderCheckLimit(limit)).
 		OrderBy("feed_version_service_levels.id")
 
 	q = q.Where(sq.Eq{"route_id": nil})

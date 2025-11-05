@@ -34,7 +34,7 @@ type StopDepartureRequest struct {
 func (r StopDepartureRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/stops/{stop_key}/departures",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: stopDepartureQuery,
 			Operation: &oa.Operation{
 				Summary: `Departures from a given stop based on static and real-time data`,
