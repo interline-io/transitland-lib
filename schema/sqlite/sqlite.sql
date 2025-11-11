@@ -947,3 +947,63 @@ CREATE UNIQUE INDEX tl_materialized_active_agencies_id_idx ON tl_materialized_ac
 CREATE INDEX tl_materialized_active_agencies_agency_id_idx ON tl_materialized_active_agencies(agency_id);
 CREATE INDEX tl_materialized_active_agencies_feed_version_id_idx ON tl_materialized_active_agencies(feed_version_id);
 CREATE INDEX tl_materialized_active_agencies_onestop_id_idx ON tl_materialized_active_agencies(onestop_id);
+
+-- Job runs table: optional context for artifacts, tracks workflow execution
+CREATE TABLE IF NOT EXISTS "job_runs" (
+  "id" integer primary key autoincrement,
+  "job_type" text NOT NULL,
+  "job_args" BLOB NOT NULL DEFAULT '{}',  -- Job arguments (map[string]any)
+  "status" text NOT NULL CHECK (status IN ('pending', 'running', 'success', 'failed', 'cancelled')),
+  "started_at" datetime,
+  "completed_at" datetime,
+  "metadata" BLOB NOT NULL DEFAULT '{}',
+  "metrics" BLOB NOT NULL DEFAULT '{}',
+  "log_summary" text,
+  "error_message" text,
+  "created_by" text,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- Artifacts table: tracks derived data products, exports, and analyses
+CREATE TABLE IF NOT EXISTS "artifacts" (
+  "id" integer primary key autoincrement,
+  "name" text NOT NULL,
+  "artifact_type" text NOT NULL,
+  "storage_type" text NOT NULL CHECK (storage_type IN ('inline', 's3', 'azure')),
+  "inline_json_data" BLOB,  -- For inline storage of small artifacts (JSONB/BLOB for structured data)
+  "storage_url" text,  -- Full storage URL: s3://bucket.s3.region.amazonaws.com/path or az://account/container/path
+  "content_type" text,
+  "size_bytes" integer,
+  "metadata" BLOB NOT NULL DEFAULT '{}',
+  "job_run_id" integer,  -- Optional: artifact belongs to at most one job run
+  "created_by" text,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  FOREIGN KEY (job_run_id) REFERENCES job_runs(id) ON DELETE SET NULL
+);
+
+-- Link artifacts to feed versions for lineage tracking
+CREATE TABLE IF NOT EXISTS "artifacts_feed_versions" (
+  "artifact_id" integer NOT NULL,
+  "feed_version_id" integer NOT NULL,
+  "relationship_type" text NOT NULL CHECK (relationship_type IN ('input', 'output')),
+  PRIMARY KEY (artifact_id, feed_version_id, relationship_type),
+  FOREIGN KEY (artifact_id) REFERENCES artifacts(id) ON DELETE CASCADE,
+  FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id) ON DELETE CASCADE
+);
+
+-- Indexes for artifacts
+CREATE INDEX idx_artifacts_artifact_type ON "artifacts"(artifact_type, created_at DESC);
+CREATE INDEX idx_artifacts_created_by ON "artifacts"(created_by, created_at DESC);
+CREATE INDEX idx_artifacts_storage_url ON "artifacts"(storage_url);
+CREATE INDEX idx_artifacts_job_run_id ON "artifacts"(job_run_id);
+
+-- Indexes for job_runs
+CREATE INDEX idx_job_runs_status ON "job_runs"(status, created_at DESC);
+CREATE INDEX idx_job_runs_job_type ON "job_runs"(job_type, created_at DESC);
+CREATE INDEX idx_job_runs_created_by ON "job_runs"(created_by, created_at DESC);
+
+-- Indexes for join tables
+CREATE INDEX idx_artifacts_feed_versions_artifact_id ON "artifacts_feed_versions"(artifact_id);
+CREATE INDEX idx_artifacts_feed_versions_feed_version_id ON "artifacts_feed_versions"(feed_version_id);

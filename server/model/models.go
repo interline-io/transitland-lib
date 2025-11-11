@@ -168,6 +168,124 @@ type FeedVersionServiceLevel struct {
 	dmfr.FeedVersionServiceLevel
 }
 
+type JobRun struct {
+	ID           int          `json:"id"`
+	JobType      string       `json:"job_type"`
+	JobArgs      tt.Map       `json:"job_args"`
+	Status       JobRunStatus `json:"status"`
+	StartedAt    *time.Time   `json:"started_at,omitempty"`
+	CompletedAt  *time.Time   `json:"completed_at,omitempty"`
+	Metadata     tt.Map       `json:"metadata"`
+	Metrics      tt.Map       `json:"metrics"`
+	LogSummary   *string      `json:"log_summary,omitempty"`
+	ErrorMessage *string      `json:"error_message,omitempty"`
+	CreatedBy    *string      `json:"created_by,omitempty"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
+	Artifacts    []*Artifact  `json:"artifacts,omitempty"`
+}
+
+type Artifact struct {
+	ID             int            `json:"id"`
+	Name           string         `json:"name"`
+	ArtifactType   string         `json:"artifact_type"`
+	StorageType    StorageType    `json:"storage_type"`
+	InlineJsonData *tt.Map        `json:"inline_json_data,omitempty"`
+	StorageURL     *string        `json:"storage_url,omitempty"`
+	ContentType    *string        `json:"content_type,omitempty"`
+	SizeBytes      *int64         `json:"size_bytes,omitempty"`
+	Metadata       tt.Map         `json:"metadata"`
+	JobRunID       *int           `json:"job_run_id,omitempty"`
+	CreatedBy      *string        `json:"created_by,omitempty"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	JobRun         *JobRun        `json:"job_run,omitempty"`
+	FeedVersions   []*FeedVersion `json:"feed_versions,omitempty"`
+}
+
+// JobRunStatus represents the status of a job run
+type JobRunStatus string
+
+const (
+	JobRunStatusPending   JobRunStatus = "pending"
+	JobRunStatusRunning   JobRunStatus = "running"
+	JobRunStatusSuccess   JobRunStatus = "success"
+	JobRunStatusFailed    JobRunStatus = "failed"
+	JobRunStatusCancelled JobRunStatus = "cancelled"
+)
+
+var AllJobRunStatus = []JobRunStatus{
+	JobRunStatusPending,
+	JobRunStatusRunning,
+	JobRunStatusSuccess,
+	JobRunStatusFailed,
+	JobRunStatusCancelled,
+}
+
+func (e JobRunStatus) IsValid() bool {
+	switch e {
+	case JobRunStatusPending, JobRunStatusRunning, JobRunStatusSuccess, JobRunStatusFailed, JobRunStatusCancelled:
+		return true
+	}
+	return false
+}
+
+func (e JobRunStatus) String() string {
+	return string(e)
+}
+
+// StorageType represents where an artifact is stored
+type StorageType string
+
+const (
+	StorageTypeInline StorageType = "inline"
+	StorageTypeS3     StorageType = "s3"
+	StorageTypeAzure  StorageType = "azure"
+)
+
+var AllStorageType = []StorageType{
+	StorageTypeInline,
+	StorageTypeS3,
+	StorageTypeAzure,
+}
+
+func (e StorageType) IsValid() bool {
+	switch e {
+	case StorageTypeInline, StorageTypeS3, StorageTypeAzure:
+		return true
+	}
+	return false
+}
+
+func (e StorageType) String() string {
+	return string(e)
+}
+
+// ArtifactRelationshipType represents the relationship between an artifact and feed version
+type ArtifactRelationshipType string
+
+const (
+	ArtifactRelationshipTypeInput  ArtifactRelationshipType = "input"
+	ArtifactRelationshipTypeOutput ArtifactRelationshipType = "output"
+)
+
+var AllArtifactRelationshipType = []ArtifactRelationshipType{
+	ArtifactRelationshipTypeInput,
+	ArtifactRelationshipTypeOutput,
+}
+
+func (e ArtifactRelationshipType) IsValid() bool {
+	switch e {
+	case ArtifactRelationshipTypeInput, ArtifactRelationshipTypeOutput:
+		return true
+	}
+	return false
+}
+
+func (e ArtifactRelationshipType) String() string {
+	return string(e)
+}
+
 // Some enum helpers
 
 var specTypeMap = map[string]FeedSpecTypes{
