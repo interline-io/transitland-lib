@@ -952,6 +952,7 @@ CREATE INDEX tl_materialized_active_agencies_onestop_id_idx ON tl_materialized_a
 CREATE TABLE IF NOT EXISTS "job_runs" (
   "id" integer primary key autoincrement,
   "job_type" text NOT NULL,
+  "job_args" BLOB NOT NULL DEFAULT '{}',  -- Job arguments (map[string]any)
   "status" text NOT NULL CHECK (status IN ('pending', 'running', 'success', 'failed', 'cancelled')),
   "started_at" datetime,
   "completed_at" datetime,

@@ -4,6 +4,7 @@ BEGIN;
 CREATE TABLE job_runs (
     id bigserial PRIMARY KEY,
     job_type text NOT NULL,
+    job_args jsonb NOT NULL DEFAULT '{}',  -- Job arguments (map[string]any)
     status text NOT NULL CHECK (status IN ('pending', 'running', 'success', 'failed', 'cancelled')),
     started_at timestamptz,
     completed_at timestamptz,
@@ -69,6 +70,7 @@ CREATE INDEX artifacts_metadata_idx ON artifacts USING GIN(metadata);
 CREATE INDEX job_runs_status_idx ON job_runs(status, created_at DESC);
 CREATE INDEX job_runs_job_type_idx ON job_runs(job_type, created_at DESC);
 CREATE INDEX job_runs_created_by_idx ON job_runs(created_by, created_at DESC) WHERE created_by IS NOT NULL;
+CREATE INDEX job_runs_job_args_idx ON job_runs USING GIN(job_args);
 CREATE INDEX job_runs_metadata_idx ON job_runs USING GIN(metadata);
 CREATE INDEX job_runs_metrics_idx ON job_runs USING GIN(metrics);
 

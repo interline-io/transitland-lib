@@ -171,6 +171,7 @@ type FeedVersionServiceLevel struct {
 type JobRun struct {
 	ID           int          `json:"id"`
 	JobType      string       `json:"job_type"`
+	JobArgs      tt.Map       `json:"job_args"`
 	Status       JobRunStatus `json:"status"`
 	StartedAt    *time.Time   `json:"started_at,omitempty"`
 	CompletedAt  *time.Time   `json:"completed_at,omitempty"`
