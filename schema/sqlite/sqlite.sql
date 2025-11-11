@@ -965,7 +965,7 @@ CREATE TABLE IF NOT EXISTS "job_runs" (
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
--- Artifacts table: tracks files, reports, and analysis results
+-- Artifacts table: tracks derived data products, exports, and analyses
 CREATE TABLE IF NOT EXISTS "artifacts" (
   "id" integer primary key autoincrement,
   "name" text NOT NULL,

@@ -23,7 +23,7 @@ CREATE TABLE job_runs (
     )
 );
 
--- Artifacts table: tracks files, reports, and analysis results
+-- Artifacts table: tracks derived data products, exports, and analyses
 CREATE TABLE artifacts (
     id bigserial PRIMARY KEY,
     name text NOT NULL,
