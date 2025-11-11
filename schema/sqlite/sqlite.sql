@@ -970,7 +970,7 @@ CREATE TABLE IF NOT EXISTS "artifacts" (
   "name" text NOT NULL,
   "artifact_type" text NOT NULL,
   "storage_type" text NOT NULL CHECK (storage_type IN ('inline', 's3', 'azure')),
-  "data" text,  -- For inline storage of small artifacts
+  "inline_json_data" BLOB,  -- For inline storage of small artifacts (JSONB/BLOB for structured data)
   "storage_url" text,  -- Full storage URL: s3://bucket.s3.region.amazonaws.com/path or az://account/container/path
   "content_type" text,
   "size_bytes" integer,

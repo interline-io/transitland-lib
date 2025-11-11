@@ -28,7 +28,7 @@ CREATE TABLE artifacts (
     name text NOT NULL,
     artifact_type text NOT NULL,
     storage_type text NOT NULL CHECK (storage_type IN ('inline', 's3', 'azure')),
-    data text,  -- For inline storage of small artifacts
+    inline_json_data jsonb,  -- For inline storage of small artifacts (JSONB for structured data)
     storage_url text,  -- Full storage URL: s3://bucket.s3.region.amazonaws.com/path or az://account/container/path
     content_type text,
     size_bytes bigint,
@@ -37,15 +37,15 @@ CREATE TABLE artifacts (
     created_by text,
     created_at timestamptz NOT NULL DEFAULT NOW(),
     
-    -- Ensure either data (inline) or storage_url (external) is set
+    -- Ensure either inline_json_data (inline) or storage_url (external) is set
     CONSTRAINT artifacts_storage_check CHECK (
-        (storage_type = 'inline' AND data IS NOT NULL AND storage_url IS NULL) OR
-        (storage_type IN ('s3', 'azure') AND storage_url IS NOT NULL AND data IS NULL)
+        (storage_type = 'inline' AND inline_json_data IS NOT NULL AND storage_url IS NULL) OR
+        (storage_type IN ('s3', 'azure') AND storage_url IS NOT NULL AND inline_json_data IS NULL)
     ),
     
     -- Size limit for inline storage (10MB default, configurable)
     CONSTRAINT artifacts_inline_size_check CHECK (
-        storage_type != 'inline' OR length(data) <= 10485760
+        storage_type != 'inline' OR pg_column_size(inline_json_data) <= 10485760
     )
 );
 

@@ -185,20 +185,20 @@ type JobRun struct {
 }
 
 type Artifact struct {
-	ID           int            `json:"id"`
-	Name         string         `json:"name"`
-	ArtifactType string         `json:"artifact_type"`
-	StorageType  StorageType    `json:"storage_type"`
-	Data         *string        `json:"data,omitempty"`
-	StorageURL   *string        `json:"storage_url,omitempty"`
-	ContentType  *string        `json:"content_type,omitempty"`
-	SizeBytes    *int64         `json:"size_bytes,omitempty"`
-	Metadata     tt.Map         `json:"metadata"`
-	JobRunID     *int           `json:"job_run_id,omitempty"`
-	CreatedBy    *string        `json:"created_by,omitempty"`
-	CreatedAt    time.Time      `json:"created_at"`
-	JobRun       *JobRun        `json:"job_run,omitempty"`
-	FeedVersions []*FeedVersion `json:"feed_versions,omitempty"`
+	ID             int            `json:"id"`
+	Name           string         `json:"name"`
+	ArtifactType   string         `json:"artifact_type"`
+	StorageType    StorageType    `json:"storage_type"`
+	InlineJsonData *tt.Map        `json:"inline_json_data,omitempty"`
+	StorageURL     *string        `json:"storage_url,omitempty"`
+	ContentType    *string        `json:"content_type,omitempty"`
+	SizeBytes      *int64         `json:"size_bytes,omitempty"`
+	Metadata       tt.Map         `json:"metadata"`
+	JobRunID       *int           `json:"job_run_id,omitempty"`
+	CreatedBy      *string        `json:"created_by,omitempty"`
+	CreatedAt      time.Time      `json:"created_at"`
+	JobRun         *JobRun        `json:"job_run,omitempty"`
+	FeedVersions   []*FeedVersion `json:"feed_versions,omitempty"`
 }
 
 // JobRunStatus represents the status of a job run
