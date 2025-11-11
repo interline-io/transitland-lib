@@ -978,6 +978,7 @@ CREATE TABLE IF NOT EXISTS "artifacts" (
   "job_run_id" integer,  -- Optional: artifact belongs to at most one job run
   "created_by" text,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
   FOREIGN KEY (job_run_id) REFERENCES job_runs(id) ON DELETE SET NULL
 );
 

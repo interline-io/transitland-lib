@@ -197,6 +197,7 @@ type Artifact struct {
 	JobRunID       *int           `json:"job_run_id,omitempty"`
 	CreatedBy      *string        `json:"created_by,omitempty"`
 	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 	JobRun         *JobRun        `json:"job_run,omitempty"`
 	FeedVersions   []*FeedVersion `json:"feed_versions,omitempty"`
 }
@@ -212,6 +213,26 @@ const (
 	JobRunStatusCancelled JobRunStatus = "cancelled"
 )
 
+var AllJobRunStatus = []JobRunStatus{
+	JobRunStatusPending,
+	JobRunStatusRunning,
+	JobRunStatusSuccess,
+	JobRunStatusFailed,
+	JobRunStatusCancelled,
+}
+
+func (e JobRunStatus) IsValid() bool {
+	switch e {
+	case JobRunStatusPending, JobRunStatusRunning, JobRunStatusSuccess, JobRunStatusFailed, JobRunStatusCancelled:
+		return true
+	}
+	return false
+}
+
+func (e JobRunStatus) String() string {
+	return string(e)
+}
+
 // StorageType represents where an artifact is stored
 type StorageType string
 
@@ -221,6 +242,24 @@ const (
 	StorageTypeAzure  StorageType = "azure"
 )
 
+var AllStorageType = []StorageType{
+	StorageTypeInline,
+	StorageTypeS3,
+	StorageTypeAzure,
+}
+
+func (e StorageType) IsValid() bool {
+	switch e {
+	case StorageTypeInline, StorageTypeS3, StorageTypeAzure:
+		return true
+	}
+	return false
+}
+
+func (e StorageType) String() string {
+	return string(e)
+}
+
 // ArtifactRelationshipType represents the relationship between an artifact and feed version
 type ArtifactRelationshipType string
 
@@ -228,6 +267,23 @@ const (
 	ArtifactRelationshipTypeInput  ArtifactRelationshipType = "input"
 	ArtifactRelationshipTypeOutput ArtifactRelationshipType = "output"
 )
+
+var AllArtifactRelationshipType = []ArtifactRelationshipType{
+	ArtifactRelationshipTypeInput,
+	ArtifactRelationshipTypeOutput,
+}
+
+func (e ArtifactRelationshipType) IsValid() bool {
+	switch e {
+	case ArtifactRelationshipTypeInput, ArtifactRelationshipTypeOutput:
+		return true
+	}
+	return false
+}
+
+func (e ArtifactRelationshipType) String() string {
+	return string(e)
+}
 
 // Some enum helpers
 

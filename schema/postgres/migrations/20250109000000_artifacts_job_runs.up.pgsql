@@ -36,6 +36,7 @@ CREATE TABLE artifacts (
     job_run_id bigint REFERENCES job_runs(id) ON DELETE SET NULL,  -- Optional: artifact belongs to at most one job run
     created_by text,
     created_at timestamptz NOT NULL DEFAULT NOW(),
+    updated_at timestamptz NOT NULL DEFAULT NOW(),
     
     -- Ensure either inline_json_data (inline) or storage_url (external) is set
     CONSTRAINT artifacts_storage_check CHECK (
