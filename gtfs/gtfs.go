@@ -39,4 +39,5 @@ type Reader interface {
 	Timeframes() chan Timeframe
 	Networks() chan Network
 	RouteNetworks() chan RouteNetwork
+	FareLegJoinRules() chan FareLegJoinRule
 }

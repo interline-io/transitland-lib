@@ -176,6 +176,10 @@ func (mr *Reader) RouteNetworks() chan gtfs.RouteNetwork {
 	return readEntities(mr, func(r adapters.Reader) chan gtfs.RouteNetwork { return r.RouteNetworks() }, setFv[*gtfs.RouteNetwork])
 }
 
+func (mr *Reader) FareLegJoinRules() chan gtfs.FareLegJoinRule {
+	return readEntities(mr, func(r adapters.Reader) chan gtfs.FareLegJoinRule { return r.FareLegJoinRules() }, setFv[*gtfs.FareLegJoinRule])
+}
+
 type canSetFV interface {
 	SetFeedVersionID(int)
 }

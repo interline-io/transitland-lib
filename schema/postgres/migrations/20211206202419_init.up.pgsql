@@ -724,6 +724,23 @@ CREATE SEQUENCE public.gtfs_fare_rules_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE public.gtfs_fare_rules_id_seq OWNED BY public.gtfs_fare_rules.id;
+CREATE TABLE public.gtfs_fare_leg_join_rules (
+    id bigint NOT NULL,
+    feed_version_id bigint NOT NULL,
+    from_network_id character varying NOT NULL,
+    to_network_id character varying NOT NULL,
+    from_stop_id character varying,
+    to_stop_id character varying,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+CREATE SEQUENCE public.gtfs_fare_leg_join_rules_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public.gtfs_fare_leg_join_rules_id_seq OWNED BY public.gtfs_fare_leg_join_rules.id;
 CREATE TABLE public.gtfs_feed_infos (
     id bigint NOT NULL,
     feed_publisher_name character varying NOT NULL,
@@ -1453,6 +1470,7 @@ ALTER TABLE ONLY public.gtfs_calendar_dates ALTER COLUMN id SET DEFAULT nextval(
 ALTER TABLE ONLY public.gtfs_calendars ALTER COLUMN id SET DEFAULT nextval('public.gtfs_calendars_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_fare_attributes ALTER COLUMN id SET DEFAULT nextval('public.gtfs_fare_attributes_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_fare_rules ALTER COLUMN id SET DEFAULT nextval('public.gtfs_fare_rules_id_seq'::regclass);
+ALTER TABLE ONLY public.gtfs_fare_leg_join_rules ALTER COLUMN id SET DEFAULT nextval('public.gtfs_fare_leg_join_rules_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_feed_infos ALTER COLUMN id SET DEFAULT nextval('public.gtfs_feed_infos_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_frequencies ALTER COLUMN id SET DEFAULT nextval('public.gtfs_frequencies_id_seq'::regclass);
 ALTER TABLE ONLY public.gtfs_levels ALTER COLUMN id SET DEFAULT nextval('public.gtfs_levels_id_seq'::regclass);
@@ -1539,6 +1557,8 @@ ALTER TABLE ONLY public.gtfs_fare_attributes
     ADD CONSTRAINT gtfs_fare_attributes_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_fare_rules
     ADD CONSTRAINT gtfs_fare_rules_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.gtfs_fare_leg_join_rules
+    ADD CONSTRAINT gtfs_fare_leg_join_rules_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_feed_infos
     ADD CONSTRAINT gtfs_feed_infos_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.gtfs_frequencies
@@ -2006,6 +2026,8 @@ ALTER TABLE ONLY public.gtfs_fare_rules
     ADD CONSTRAINT fk_rails_bd7d178423 FOREIGN KEY (fare_id) REFERENCES public.gtfs_fare_attributes(id);
 ALTER TABLE ONLY public.gtfs_fare_rules
     ADD CONSTRAINT fk_rails_c336ea9f1a FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
+ALTER TABLE ONLY public.gtfs_fare_leg_join_rules
+    ADD CONSTRAINT fk_rails_fare_leg_join_rules_feed_version_id FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.gtfs_levels
     ADD CONSTRAINT fk_rails_c5fba46e47 FOREIGN KEY (feed_version_id) REFERENCES public.feed_versions(id);
 ALTER TABLE ONLY public.tl_route_geometries
