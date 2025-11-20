@@ -16,6 +16,7 @@ type Trip struct {
 	ShapeID              tt.Key     `target:"shapes.txt"`
 	WheelchairAccessible tt.Int     `enum:"0,1,2"`
 	BikesAllowed         tt.Int     `enum:"0,1,2"`
+	CarsAllowed          tt.Int     `enum:"0,1,2"`
 	JourneyPatternID     tt.String  `csv:"-"`
 	JourneyPatternOffset tt.Int     `csv:"-"`
 	StopPatternID        tt.Int     `csv:"-"`

@@ -1,14 +1,16 @@
-trip_id,route_id,service_id,trip_short_name,trip_headsign,direction_id,block_id,shape_id,wheelchair_accessible,bikes_allowed,expect_error
-ok,ok,ok,valid,valid,0,0,ok,1,1,
-,ok,ok,no trip_id,,,,,,,RequiredFieldError:trip_id
+trip_id,route_id,service_id,trip_short_name,trip_headsign,direction_id,block_id,shape_id,wheelchair_accessible,bikes_allowed,cars_allowed,expect_error
+ok,ok,ok,valid,valid,0,0,ok,1,1,1,
+,ok,ok,no trip_id,,,,,,,,RequiredFieldError:trip_id
 no_route_id,,ok,no route_id,,,,,,,RequiredFieldError:route_id
 no_service_id,ok,,no service_id,,,,,,,RequiredFieldError:service_id
-parse_direction_id,ok,ok,parse direction_id,,xyz,,,,,FieldParseError:direction_id
-invalid_direction_id,ok,ok,invalid direction_id,,100,,,,,InvalidFieldError:direction_id
-parse_wheelchair_accessible,ok,ok,parse wheelchair_accessible,,,,,xyz,,FieldParseError:wheelchair_accessible
-invalid_wheelchair_access,ok,ok,invalid wheelchair_access,,,,,100,,InvalidFieldError:wheelchair_accessible
-parse_bikes_allowed,ok,ok,parse bikes_allowed,,,,,,xyz,FieldParseError:bikes_allowed
-invalid_bikes_allowed,ok,ok,invalid bikes_allowed,,,,,,100,InvalidFieldError:bikes_allowed
+parse_direction_id,ok,ok,parse direction_id,,xyz,,,,,,FieldParseError:direction_id
+invalid_direction_id,ok,ok,invalid direction_id,,100,,,,,,InvalidFieldError:direction_id
+parse_wheelchair_accessible,ok,ok,parse wheelchair_accessible,,,,,xyz,,,FieldParseError:wheelchair_accessible
+invalid_wheelchair_access,ok,ok,invalid wheelchair_access,,,,,100,,,InvalidFieldError:wheelchair_accessible
+parse_bikes_allowed,ok,ok,parse bikes_allowed,,,,,,xyz,,FieldParseError:bikes_allowed
+invalid_bikes_allowed,ok,ok,invalid bikes_allowed,,,,,,100,,InvalidFieldError:bikes_allowed
+parse_cars_allowed,ok,ok,parse cars_allowed,,,,,,,xyz,FieldParseError:cars_allowed
+invalid_cars_allowed,ok,ok,invalid cars_allowed,,,,,,,100,InvalidFieldError:cars_allowed
 parse_arrival_time,ok,ok,for stop_times.txt
 parse_departure_time,ok,ok,for stop_times.txt
 parse_stop_sequence,ok,ok,for stop_times.txt
