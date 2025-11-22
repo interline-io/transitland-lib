@@ -1,0 +1,2 @@
+error,field,filename,entity_id
+FlexGeographyIDDuplicateError,,location_groups.txt,stop1

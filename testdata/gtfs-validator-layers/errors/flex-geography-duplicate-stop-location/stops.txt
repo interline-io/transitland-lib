@@ -1,0 +1,3 @@
+stop_id,stop_name,stop_lat,stop_lon
+stop1,Test Stop for Duplicate Check,37.7749,-122.4194
+
