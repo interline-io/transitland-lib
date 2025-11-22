@@ -291,6 +291,12 @@ func NewCopier(ctx context.Context, reader adapters.Reader, writer adapters.Writ
 			&rules.CalendarDuplicateDates{},
 			&rules.FareProductRiderCategoryDefaultCheck{},
 			&rules.TransferStopLocationTypeCheck{},
+			// GTFS-Flex validators
+			&rules.FlexGeographyIDUniqueCheck{},
+			&rules.FlexStopLocationTypeCheck{},
+			&rules.FlexLocationGroupEmptyCheck{},
+			&rules.FlexLocationGeometryCheck{},
+			&rules.FlexZoneIDConditionalCheck{},
 		)
 	}
 
@@ -612,6 +618,11 @@ func (copier *Copier) Copy(ctx context.Context) (*Result, error) {
 			)
 		},
 		copier.copyCalendars,
+		// GTFS-Flex entities (must come before stop_times for proper reference validation)
+		func() error { return batchCopy(copier, batchChan(r.BookingRules(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Locations(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.LocationGroups(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.LocationGroupStops(), bs, nil)) },
 		copier.copyTripsAndStopTimes,
 		func() error { return batchCopy(copier, batchChan(r.Pathways(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.FareAttributes(), bs, nil)) },

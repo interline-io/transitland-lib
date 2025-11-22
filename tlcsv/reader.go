@@ -426,6 +426,38 @@ func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
 	return ReadEntities[gtfs.RouteNetwork](reader, getFilename(&gtfs.RouteNetwork{}))
 }
 
+func (reader *Reader) LocationGroups() (out chan gtfs.LocationGroup) {
+	return ReadEntities[gtfs.LocationGroup](reader, getFilename(&gtfs.LocationGroup{}))
+}
+
+func (reader *Reader) LocationGroupStops() (out chan gtfs.LocationGroupStop) {
+	return ReadEntities[gtfs.LocationGroupStop](reader, getFilename(&gtfs.LocationGroupStop{}))
+}
+
+func (reader *Reader) BookingRules() (out chan gtfs.BookingRule) {
+	return ReadEntities[gtfs.BookingRule](reader, getFilename(&gtfs.BookingRule{}))
+}
+
+func (reader *Reader) Locations() (out chan gtfs.Location) {
+	// GTFS-Flex: locations.geojson uses GeoJSON format, not CSV
+	// Try to read locations.geojson first
+	out = make(chan gtfs.Location, bufferSize)
+	go func() {
+		defer close(out)
+		
+		locs, err := reader.readLocationsGeoJSON("locations.geojson")
+		if err != nil {
+			// File doesn't exist or error reading - just return empty
+			return
+		}
+		
+		for _, loc := range locs {
+			out <- loc
+		}
+	}()
+	return out
+}
+
 func ReadEntities[T any](reader *Reader, efn string) chan T {
 	eout := make(chan T, bufferSize)
 	go func(fn string, c chan T) {

@@ -22,6 +22,17 @@ type StopTime struct {
 	ShapeDistTraveled tt.Float
 	Timepoint         tt.Int
 	Interpolated      tt.Int `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
+	// GTFS-Flex fields (officially adopted)
+	StartPickupDropOffWindow tt.Seconds
+	EndPickupDropOffWindow   tt.Seconds
+	PickupBookingRuleID      tt.Key `target:"booking_rules.txt"`
+	DropOffBookingRuleID     tt.Key `target:"booking_rules.txt"`
+	// GTFS-Flex proposed fields (not yet formally adopted, may change)
+	// See: https://github.com/MobilityData/gtfs-flex/blob/master/spec/reference.md
+	MeanDurationFactor tt.Float // proposed gtfs-flex
+	MeanDurationOffset tt.Float // proposed gtfs-flex
+	SafeDurationFactor tt.Float // proposed gtfs-flex
+	SafeDurationOffset tt.Float // proposed gtfs-flex
 	tt.MinEntity
 	tt.ErrorEntity
 	tt.ExtraEntity
@@ -61,12 +72,20 @@ func (ent *StopTime) Errors() []error {
 	return errs
 }
 
+// ConditionalErrors for StopTime - includes GTFS-Flex validation
+func (ent *StopTime) ConditionalErrors() (errs []error) {
+	errs = append(errs, ent.conditionalErrorsFlex()...)
+	return errs
+}
+
 // UpdateKeys updates Entity references.
 func (ent *StopTime) UpdateKeys(emap *tt.EntityMap) error {
 	// Don't use reflection based path
 	return tt.FirstError(
 		tt.TrySetField(emap.UpdateKey(&ent.TripID, "trips.txt"), "trip_id"),
 		tt.TrySetField(emap.UpdateKey(&ent.StopID, "stops.txt"), "stop_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.PickupBookingRuleID, "booking_rules.txt"), "pickup_booking_rule_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.DropOffBookingRuleID, "booking_rules.txt"), "drop_off_booking_rule_id"),
 	)
 }
 
@@ -101,6 +120,30 @@ func (ent *StopTime) GetString(key string) (string, error) {
 		v = ent.ContinuousPickup.String()
 	case "continuous_drop_off":
 		v = ent.ContinuousDropOff.String()
+	case "start_pickup_drop_off_window":
+		v = ent.StartPickupDropOffWindow.String()
+	case "end_pickup_drop_off_window":
+		v = ent.EndPickupDropOffWindow.String()
+	case "pickup_booking_rule_id":
+		v = ent.PickupBookingRuleID.Val
+	case "drop_off_booking_rule_id":
+		v = ent.DropOffBookingRuleID.Val
+	case "mean_duration_factor":
+		if ent.MeanDurationFactor.Valid {
+			v = fmt.Sprintf("%0.5f", ent.MeanDurationFactor.Val)
+		}
+	case "mean_duration_offset":
+		if ent.MeanDurationOffset.Valid {
+			v = fmt.Sprintf("%0.5f", ent.MeanDurationOffset.Val)
+		}
+	case "safe_duration_factor":
+		if ent.SafeDurationFactor.Valid {
+			v = fmt.Sprintf("%0.5f", ent.SafeDurationFactor.Val)
+		}
+	case "safe_duration_offset":
+		if ent.SafeDurationOffset.Valid {
+			v = fmt.Sprintf("%0.5f", ent.SafeDurationOffset.Val)
+		}
 	default:
 		return v, fmt.Errorf("unknown key: %s", key)
 	}
@@ -154,6 +197,34 @@ func (ent *StopTime) SetString(key, value string) error {
 	case "timepoint":
 		if err := ent.Timepoint.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
+		}
+	case "start_pickup_drop_off_window":
+		if err := ent.StartPickupDropOffWindow.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("start_pickup_drop_off_window", hi)
+		}
+	case "end_pickup_drop_off_window":
+		if err := ent.EndPickupDropOffWindow.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("end_pickup_drop_off_window", hi)
+		}
+	case "pickup_booking_rule_id":
+		ent.PickupBookingRuleID.Set(hi)
+	case "drop_off_booking_rule_id":
+		ent.DropOffBookingRuleID.Set(hi)
+	case "mean_duration_factor":
+		if err := ent.MeanDurationFactor.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("mean_duration_factor", hi)
+		}
+	case "mean_duration_offset":
+		if err := ent.MeanDurationOffset.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("mean_duration_offset", hi)
+		}
+	case "safe_duration_factor":
+		if err := ent.SafeDurationFactor.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("safe_duration_factor", hi)
+		}
+	case "safe_duration_offset":
+		if err := ent.SafeDurationOffset.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("safe_duration_offset", hi)
 		}
 	default:
 		ent.SetExtra(key, hi)

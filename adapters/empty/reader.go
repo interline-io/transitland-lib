@@ -139,6 +139,34 @@ func (mr *Reader) RiderCategories() chan gtfs.RiderCategory {
 	return readNullEntities[gtfs.RiderCategory](mr)
 }
 
+func (mr *Reader) Timeframes() chan gtfs.Timeframe {
+	return readNullEntities[gtfs.Timeframe](mr)
+}
+
+func (mr *Reader) Networks() chan gtfs.Network {
+	return readNullEntities[gtfs.Network](mr)
+}
+
+func (mr *Reader) RouteNetworks() chan gtfs.RouteNetwork {
+	return readNullEntities[gtfs.RouteNetwork](mr)
+}
+
+func (mr *Reader) LocationGroups() chan gtfs.LocationGroup {
+	return readNullEntities[gtfs.LocationGroup](mr)
+}
+
+func (mr *Reader) LocationGroupStops() chan gtfs.LocationGroupStop {
+	return readNullEntities[gtfs.LocationGroupStop](mr)
+}
+
+func (mr *Reader) BookingRules() chan gtfs.BookingRule {
+	return readNullEntities[gtfs.BookingRule](mr)
+}
+
+func (mr *Reader) Locations() chan gtfs.Location {
+	return readNullEntities[gtfs.Location](mr)
+}
+
 func readNullEntities[T any](reader *Reader) chan T {
 	out := make(chan T, bufferSize)
 	go func() {
