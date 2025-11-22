@@ -1,3 +1,0 @@
-location_group_id,stop_id
-stop1,stop2
-

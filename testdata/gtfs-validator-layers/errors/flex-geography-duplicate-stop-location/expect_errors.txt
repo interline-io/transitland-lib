@@ -1,2 +1,0 @@
-error,field,filename,entity_id
-FlexGeographyIDDuplicateError,,locations.geojson,stop1

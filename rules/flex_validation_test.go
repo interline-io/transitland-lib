@@ -213,3 +213,106 @@ func TestFlexZoneIDConditionalCheck(t *testing.T) {
 		})
 	}
 }
+
+func TestFlexGeographyIDUniqueCheckIntegration(t *testing.T) {
+	emap := tt.NewEntityMap()
+
+	t.Run("duplicate stop_id with location_group_id", func(t *testing.T) {
+		check := &FlexGeographyIDUniqueCheck{}
+
+		// Create a stop
+		stop := &gtfs.Stop{
+			StopID:   tt.NewString("stop1"),
+			StopName: tt.NewString("Test Stop"),
+		}
+		stop.ID = 1
+
+		// Create a location_group with the same ID
+		locationGroup := &gtfs.LocationGroup{
+			LocationGroupID:   tt.NewString("stop1"),
+			LocationGroupName: tt.NewString("Duplicate ID"),
+		}
+		locationGroup.ID = 2
+
+		// Process entities
+		check.AfterWrite("1", stop, emap)
+		check.AfterWrite("2", locationGroup, emap)
+
+		// Validate - should detect duplicate
+		errs := check.Validate(locationGroup)
+		assert.NotEmpty(t, errs, "Expected duplicate geography ID error")
+		if len(errs) > 0 {
+			_, ok := errs[0].(*FlexGeographyIDDuplicateError)
+			assert.True(t, ok, "Expected FlexGeographyIDDuplicateError")
+			assert.Contains(t, errs[0].Error(), "stop1")
+			assert.Contains(t, errs[0].Error(), "stops.txt")
+			assert.Contains(t, errs[0].Error(), "location_groups.txt")
+		}
+	})
+
+	t.Run("duplicate stop_id with location_id", func(t *testing.T) {
+		check := &FlexGeographyIDUniqueCheck{}
+
+		// Create a stop
+		stop := &gtfs.Stop{
+			StopID:   tt.NewString("area_1"),
+			StopName: tt.NewString("Test Stop"),
+		}
+		stop.ID = 1
+
+		// Create a location with the same ID
+		location := &gtfs.Location{
+			LocationID: tt.NewString("area_1"),
+			StopName:   tt.NewString("Duplicate ID"),
+		}
+		location.ID = 2
+
+		// Process entities
+		check.AfterWrite("1", stop, emap)
+		check.AfterWrite("2", location, emap)
+
+		// Validate - should detect duplicate
+		errs := check.Validate(location)
+		assert.NotEmpty(t, errs, "Expected duplicate geography ID error")
+		if len(errs) > 0 {
+			_, ok := errs[0].(*FlexGeographyIDDuplicateError)
+			assert.True(t, ok, "Expected FlexGeographyIDDuplicateError")
+			assert.Contains(t, errs[0].Error(), "area_1")
+			assert.Contains(t, errs[0].Error(), "stops.txt")
+			assert.Contains(t, errs[0].Error(), "locations.geojson")
+		}
+	})
+
+	t.Run("duplicate location_group_id with location_id", func(t *testing.T) {
+		check := &FlexGeographyIDUniqueCheck{}
+
+		// Create a location_group
+		locationGroup := &gtfs.LocationGroup{
+			LocationGroupID:   tt.NewString("zone_1"),
+			LocationGroupName: tt.NewString("Zone 1"),
+		}
+		locationGroup.ID = 1
+
+		// Create a location with the same ID
+		location := &gtfs.Location{
+			LocationID: tt.NewString("zone_1"),
+			StopName:   tt.NewString("Duplicate ID"),
+		}
+		location.ID = 2
+
+		// Process entities
+		check.AfterWrite("1", locationGroup, emap)
+		check.AfterWrite("2", location, emap)
+
+		// Validate - should detect duplicate
+		errs := check.Validate(location)
+		assert.NotEmpty(t, errs, "Expected duplicate geography ID error")
+		if len(errs) > 0 {
+			_, ok := errs[0].(*FlexGeographyIDDuplicateError)
+			assert.True(t, ok, "Expected FlexGeographyIDDuplicateError")
+			assert.Contains(t, errs[0].Error(), "zone_1")
+			assert.Contains(t, errs[0].Error(), "location_groups.txt")
+			assert.Contains(t, errs[0].Error(), "locations.geojson")
+		}
+	})
+}

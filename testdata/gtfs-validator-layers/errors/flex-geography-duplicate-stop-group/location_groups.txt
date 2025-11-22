@@ -1,3 +1,0 @@
-location_group_id,location_group_name
-stop1,Duplicate with stop_id
-
