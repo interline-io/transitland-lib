@@ -25,7 +25,7 @@ func TestFlexStopLocationTypeCheck(t *testing.T) {
 				LocationType: tt.NewInt(0),
 			},
 			stopTime: &gtfs.StopTime{
-				StopID:     tt.NewString("stop1"),
+				StopID:     tt.NewKey("stop1"),
 				PickupType: tt.NewInt(2), // flex service
 			},
 			expectError: false,
@@ -37,7 +37,7 @@ func TestFlexStopLocationTypeCheck(t *testing.T) {
 				LocationType: tt.NewInt(1),
 			},
 			stopTime: &gtfs.StopTime{
-				StopID:     tt.NewString("stop2"),
+				StopID:     tt.NewKey("stop2"),
 				PickupType: tt.NewInt(2),
 			},
 			expectError: true,
@@ -49,7 +49,7 @@ func TestFlexStopLocationTypeCheck(t *testing.T) {
 				LocationType: tt.NewInt(1),
 			},
 			stopTime: &gtfs.StopTime{
-				StopID:     tt.NewString("stop3"),
+				StopID:     tt.NewKey("stop3"),
 				PickupType: tt.NewInt(0), // regular service
 			},
 			expectError: false,

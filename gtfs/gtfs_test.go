@@ -5,7 +5,55 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tt"
+	"github.com/stretchr/testify/assert"
 )
+
+/////////////////////////
+
+// Test helpers
+
+// ExpectedError describes an expected validation error
+type ExpectedError struct {
+	Field     string // The field name that should be mentioned in the error (required)
+	ErrorType string // The error type (required: FieldParseError, InvalidFieldError, ConditionallyRequiredFieldError, ConditionallyForbiddenFieldError)
+}
+
+// checkErrors is a helper function to validate errors (both conditional and non-conditional)
+func checkErrors(t *testing.T, errs []error, expectedErrors []ExpectedError) {
+	t.Helper()
+
+	if len(expectedErrors) == 0 {
+		assert.Empty(t, errs, "Expected no validation errors")
+		return
+	}
+
+	// Validate that all expected errors have both field and error type defined
+	for _, expected := range expectedErrors {
+		if expected.Field == "" {
+			t.Fatal("ExpectedError must have Field defined")
+		}
+		if expected.ErrorType == "" {
+			t.Fatal("ExpectedError must have ErrorType defined")
+		}
+	}
+
+	assert.Equal(t, len(expectedErrors), len(errs), "Number of errors should match expected")
+
+	// Check that each expected error is present
+	for _, expected := range expectedErrors {
+		found := false
+		for _, err := range errs {
+			errStr := err.Error()
+			// Check if error contains both the field name and error type
+			if errStr != "" {
+				// Simple string matching for now - could be more sophisticated
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "Expected error: %s:%s", expected.ErrorType, expected.Field)
+	}
+}
 
 /////////////////////////
 

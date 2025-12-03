@@ -400,6 +400,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_stop_times" (
   "interpolated" integer,
   "feed_version_id" integer NOT NULL,
   -- GTFS-Flex fields
+  "location_group_id" integer,
+  "location_id" integer,
   "start_pickup_drop_off_window" integer,
   "end_pickup_drop_off_window" integer,
   "pickup_booking_rule_id" integer,
@@ -411,6 +413,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_stop_times" (
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(trip_id) references gtfs_trips(id),
   foreign key(stop_id) references gtfs_stops(id),
+  foreign key(location_group_id) references gtfs_location_groups(id),
+  foreign key(location_id) references gtfs_locations(id),
   foreign key(pickup_booking_rule_id) references gtfs_booking_rules(id),
   foreign key(drop_off_booking_rule_id) references gtfs_booking_rules(id)
 );

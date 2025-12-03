@@ -41,6 +41,11 @@ func (ent *BookingRule) TableName() string {
 	return "gtfs_booking_rules"
 }
 
+// UpdateKeys updates Entity references.
+func (ent *BookingRule) UpdateKeys(emap *tt.EntityMap) error {
+	return tt.TrySetField(emap.UpdateKey(&ent.PriorNoticeServiceID, "calendar.txt"), "prior_notice_service_id")
+}
+
 // ConditionalErrors for this Entity.
 func (ent *BookingRule) ConditionalErrors() (errs []error) {
 	bookingType := ent.BookingType.Val
@@ -97,4 +102,3 @@ func (ent *BookingRule) ConditionalErrors() (errs []error) {
 
 	return errs
 }
-

@@ -10,7 +10,9 @@ import (
 // StopTime stop_times.txt
 type StopTime struct {
 	TripID            tt.String `csv:",required" target:"trips.txt"`
-	StopID            tt.String `csv:",required" target:"stops.txt"`
+	StopID            tt.Key    `target:"stops.txt"`
+	LocationGroupID   tt.Key    `target:"location_groups.txt"`
+	LocationID        tt.Key    `target:"locations.txt"`
 	StopSequence      tt.Int    `csv:",required"`
 	StopHeadsign      tt.String
 	ArrivalTime       tt.Seconds
@@ -54,7 +56,8 @@ func (ent *StopTime) Errors() []error {
 	// Don't use reflection based path
 	errs := []error{}
 	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID.Val)...)
-	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
+	// Note: stop_id is conditionally required - validated in ConditionalErrors()
+	// It's required if location_group_id AND location_id are NOT defined
 	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("pickup_type", ent.PickupType.Val, 0, 3)...)
 	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Val, 0, 3)...)
@@ -74,7 +77,205 @@ func (ent *StopTime) Errors() []error {
 
 // ConditionalErrors for StopTime - includes GTFS-Flex validation
 func (ent *StopTime) ConditionalErrors() (errs []error) {
-	errs = append(errs, ent.conditionalErrorsFlex()...)
+	// Check which location identifier is used
+	hasStopID := ent.StopID.IsPresent()
+	hasLocationGroupID := ent.LocationGroupID.IsPresent()
+	hasLocationID := ent.LocationID.IsPresent()
+	hasTimeWindow := (ent.StartPickupDropOffWindow.Valid && ent.StartPickupDropOffWindow.Val > 0) || (ent.EndPickupDropOffWindow.Valid && ent.EndPickupDropOffWindow.Val > 0)
+
+	// 1. Mutual exclusion: stop_id, location_id, location_group_id
+	// Exactly one of these must be defined
+	if !hasStopID && !hasLocationGroupID && !hasLocationID {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_id"))
+	}
+
+	if hasStopID && hasLocationGroupID {
+		errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+			"location_group_id",
+			ent.LocationGroupID.Val,
+			"location_group_id is forbidden when stop_id is defined",
+		))
+	}
+	if hasStopID && hasLocationID {
+		errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+			"location_id",
+			ent.LocationID.Val,
+			"location_id is forbidden when stop_id is defined",
+		))
+	}
+	if hasLocationGroupID && hasLocationID {
+		errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+			"location_id",
+			ent.LocationID.Val,
+			"location_id is forbidden when location_group_id is defined",
+		))
+	}
+
+	// 2. Time windows required if location_group_id or location_id is defined
+	if hasLocationGroupID || hasLocationID {
+		if !ent.StartPickupDropOffWindow.Valid {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("start_pickup_drop_off_window"))
+		}
+		if !ent.EndPickupDropOffWindow.Valid {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("end_pickup_drop_off_window"))
+		}
+	}
+
+	// 3. Time windows consistency
+	hasStartWindow := ent.StartPickupDropOffWindow.Valid
+	hasEndWindow := ent.EndPickupDropOffWindow.Valid
+
+	if hasStartWindow && !hasEndWindow {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("end_pickup_drop_off_window"))
+	}
+	if hasEndWindow && !hasStartWindow {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("start_pickup_drop_off_window"))
+	}
+
+	// 4. If both windows are present, end must be >= start
+	if hasStartWindow && hasEndWindow {
+		if ent.EndPickupDropOffWindow.Val < ent.StartPickupDropOffWindow.Val {
+			errs = append(errs, causes.NewInvalidFieldError(
+				"end_pickup_drop_off_window",
+				fmt.Sprintf("%d", ent.EndPickupDropOffWindow.Val),
+				fmt.Errorf("must be greater than or equal to start_pickup_drop_off_window (%d)", ent.StartPickupDropOffWindow.Val),
+			))
+		}
+	}
+
+	// 5. Time windows vs fixed times
+	// If using time windows, arrival_time and departure_time are forbidden
+	if hasTimeWindow {
+		if ent.ArrivalTime.Valid && ent.ArrivalTime.Int() > 0 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"arrival_time",
+				ent.ArrivalTime.String(),
+				"arrival_time is forbidden when start_pickup_drop_off_window or end_pickup_drop_off_window are defined",
+			))
+		}
+		if ent.DepartureTime.Valid && ent.DepartureTime.Int() > 0 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"departure_time",
+				ent.DepartureTime.String(),
+				"departure_time is forbidden when start_pickup_drop_off_window or end_pickup_drop_off_window are defined",
+			))
+		}
+	}
+
+	// 6. pickup_type restrictions with time windows
+	// pickup_type=0 (regularly scheduled) is forbidden if time windows are defined
+	// pickup_type=3 (coordinate with driver) is forbidden if time windows are defined
+	if hasTimeWindow && ent.PickupType.Valid {
+		if ent.PickupType.Val == 0 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"pickup_type",
+				fmt.Sprintf("%d", ent.PickupType.Val),
+				"pickup_type=0 (regularly scheduled) is forbidden when time windows are defined",
+			))
+		}
+		if ent.PickupType.Val == 3 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"pickup_type",
+				fmt.Sprintf("%d", ent.PickupType.Val),
+				"pickup_type=3 (coordinate with driver) is forbidden when time windows are defined",
+			))
+		}
+	}
+
+	// 7. drop_off_type restrictions with time windows
+	// drop_off_type=0 (regularly scheduled) is forbidden if time windows are defined
+	if hasTimeWindow && ent.DropOffType.Valid && ent.DropOffType.Val == 0 {
+		errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+			"drop_off_type",
+			fmt.Sprintf("%d", ent.DropOffType.Val),
+			"drop_off_type=0 (regularly scheduled) is forbidden when time windows are defined",
+		))
+	}
+
+	// 8. continuous_pickup restrictions with time windows
+	// Any value other than 1 or empty is forbidden if time windows are defined
+	if hasTimeWindow && ent.ContinuousPickup.Valid {
+		if ent.ContinuousPickup.Val != 1 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"continuous_pickup",
+				fmt.Sprintf("%d", ent.ContinuousPickup.Val),
+				"continuous_pickup must be 1 (no continuous pickup) or empty when time windows are defined",
+			))
+		}
+	}
+
+	// 9. continuous_drop_off restrictions with time windows
+	// Any value other than 1 or empty is forbidden if time windows are defined
+	if hasTimeWindow && ent.ContinuousDropOff.Valid {
+		if ent.ContinuousDropOff.Val != 1 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"continuous_drop_off",
+				fmt.Sprintf("%d", ent.ContinuousDropOff.Val),
+				"continuous_drop_off must be 1 (no continuous drop off) or empty when time windows are defined",
+			))
+		}
+	}
+
+	// 10. Validate booking rules are only used with appropriate pickup/drop_off types
+	// pickup_booking_rule_id is recommended when pickup_type = 2
+	if ent.PickupBookingRuleID.IsPresent() {
+		if !ent.PickupType.Valid || ent.PickupType.Val != 2 {
+			errs = append(errs, causes.NewInvalidFieldError(
+				"pickup_booking_rule_id",
+				ent.PickupBookingRuleID.Val,
+				fmt.Errorf("pickup_booking_rule_id should only be used when pickup_type = 2 (must phone agency)"),
+			))
+		}
+	}
+
+	// drop_off_booking_rule_id is recommended when drop_off_type = 2
+	if ent.DropOffBookingRuleID.IsPresent() {
+		if !ent.DropOffType.Valid || ent.DropOffType.Val != 2 {
+			errs = append(errs, causes.NewInvalidFieldError(
+				"drop_off_booking_rule_id",
+				ent.DropOffBookingRuleID.Val,
+				fmt.Errorf("drop_off_booking_rule_id should only be used when drop_off_type = 2 (must phone agency)"),
+			))
+		}
+	}
+
+	// 11. Validate mean/safe duration factor/offset
+	// mean_duration_factor and mean_duration_offset work together
+	if ent.MeanDurationFactor.Valid && !ent.MeanDurationOffset.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("mean_duration_offset"))
+	}
+	if ent.MeanDurationOffset.Valid && !ent.MeanDurationFactor.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("mean_duration_factor"))
+	}
+
+	// safe_duration_factor and safe_duration_offset work together
+	if ent.SafeDurationFactor.Valid && !ent.SafeDurationOffset.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("safe_duration_offset"))
+	}
+	if ent.SafeDurationOffset.Valid && !ent.SafeDurationFactor.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("safe_duration_factor"))
+	}
+
+	// mean_duration_factor should be positive
+	if ent.MeanDurationFactor.Valid && ent.MeanDurationFactor.Val <= 0 {
+		errs = append(errs, causes.NewInvalidFieldError(
+			"mean_duration_factor",
+			fmt.Sprintf("%f", ent.MeanDurationFactor.Val),
+			fmt.Errorf("must be positive"),
+		))
+	}
+
+	// safe_duration_factor should be >= mean_duration_factor if both present
+	if ent.MeanDurationFactor.Valid && ent.SafeDurationFactor.Valid {
+		if ent.SafeDurationFactor.Val < ent.MeanDurationFactor.Val {
+			errs = append(errs, causes.NewInvalidFieldError(
+				"safe_duration_factor",
+				fmt.Sprintf("%f", ent.SafeDurationFactor.Val),
+				fmt.Errorf("must be greater than or equal to mean_duration_factor (%f)", ent.MeanDurationFactor.Val),
+			))
+		}
+	}
+
 	return errs
 }
 
@@ -84,8 +285,10 @@ func (ent *StopTime) UpdateKeys(emap *tt.EntityMap) error {
 	return tt.FirstError(
 		tt.TrySetField(emap.UpdateKey(&ent.TripID, "trips.txt"), "trip_id"),
 		tt.TrySetField(emap.UpdateKey(&ent.StopID, "stops.txt"), "stop_id"),
-		tt.TrySetField(emap.UpdateKey(&ent.PickupBookingRuleID, "booking_rules.txt"), "booking_rule_id"),
-		tt.TrySetField(emap.UpdateKey(&ent.DropOffBookingRuleID, "booking_rules.txt"), "booking_rule_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.LocationGroupID, "location_groups.txt"), "location_group_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.LocationID, "locations.txt"), "location_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.PickupBookingRuleID, "booking_rules.txt"), "pickup_booking_rule_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.DropOffBookingRuleID, "booking_rules.txt"), "drop_off_booking_rule_id"),
 	)
 }
 
@@ -100,6 +303,10 @@ func (ent *StopTime) GetString(key string) (string, error) {
 		v = ent.StopHeadsign.Val
 	case "stop_id":
 		v = ent.StopID.Val
+	case "location_group_id":
+		v = ent.LocationGroupID.Val
+	case "location_id":
+		v = ent.LocationID.Val
 	case "arrival_time":
 		v = ent.ArrivalTime.String()
 	case "departure_time":
@@ -162,6 +369,10 @@ func (ent *StopTime) SetString(key, value string) error {
 		ent.StopHeadsign.Set(hi)
 	case "stop_id":
 		ent.StopID.Set(hi)
+	case "location_group_id":
+		ent.LocationGroupID.Set(hi)
+	case "location_id":
+		ent.LocationID.Set(hi)
 	case "arrival_time":
 		if err := ent.ArrivalTime.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("arrival_time", hi)

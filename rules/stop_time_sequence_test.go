@@ -20,7 +20,7 @@ func expectTripToStopTime(e expectTrip) []gtfs.StopTime {
 	for i := range e.ArrivalTime {
 		ret = append(ret, gtfs.StopTime{
 			TripID:            tt.NewString("1"),
-			StopID:            tt.NewString(strconv.Itoa(i)),
+			StopID:            tt.NewKey(strconv.Itoa(i)),
 			StopSequence:      tt.NewInt(i),
 			ArrivalTime:       tt.NewSeconds(e.ArrivalTime[i]),
 			DepartureTime:     tt.NewSeconds(e.DepartureTime[i]),

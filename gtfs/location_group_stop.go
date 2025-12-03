@@ -19,3 +19,10 @@ func (ent *LocationGroupStop) TableName() string {
 	return "gtfs_location_group_stops"
 }
 
+// UpdateKeys updates Entity references.
+func (ent *LocationGroupStop) UpdateKeys(emap *tt.EntityMap) error {
+	return tt.FirstError(
+		tt.TrySetField(emap.UpdateKey(&ent.LocationGroupID, "location_groups.txt"), "location_group_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.StopID, "stops.txt"), "stop_id"),
+	)
+}

@@ -79,14 +79,20 @@ CREATE INDEX ON gtfs_locations USING GIST(geometry);
 
 -- GTFS-Flex: Add new fields to stop_times
 ALTER TABLE public.gtfs_stop_times 
+    ADD COLUMN location_group_id bigint REFERENCES gtfs_location_groups(id),
+    ADD COLUMN location_id bigint REFERENCES gtfs_locations(id),
     ADD COLUMN start_pickup_drop_off_window integer,
     ADD COLUMN end_pickup_drop_off_window integer,
-    ADD COLUMN pickup_booking_rule_id bigint,
-    ADD COLUMN drop_off_booking_rule_id bigint,
+    ADD COLUMN pickup_booking_rule_id bigint REFERENCES gtfs_booking_rules(id),
+    ADD COLUMN drop_off_booking_rule_id bigint REFERENCES gtfs_booking_rules(id),
     ADD COLUMN mean_duration_factor double precision,
     ADD COLUMN mean_duration_offset double precision,
     ADD COLUMN safe_duration_factor double precision,
     ADD COLUMN safe_duration_offset double precision;
+
+-- GTFS-Flex: Drop not-null constraint on stop_id (now conditionally required)
+ALTER TABLE public.gtfs_stop_times 
+    ALTER COLUMN stop_id DROP NOT NULL;
 
 COMMIT;
 
