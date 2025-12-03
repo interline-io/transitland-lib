@@ -41,13 +41,9 @@ func ValidateStopTimes(stoptimes []gtfs.StopTime) []error {
 		errs = append(errs, causes.NewEmptyTripError(len(stoptimes)))
 	}
 
-	// 2. First stop validation: Must have departure_time OR time window
-	firstSt := stoptimes[0]
-	if firstSt.DepartureTime.Int() <= 0 && !hasTimeWindow(firstSt) {
-		errs = append(errs, causes.NewSequenceError("departure_time", "missing on first stop (required unless time window present)"))
-	}
-
-	// 3. Last stop validation: Must have arrival_time OR time window
+	// 2. Last stop validation: Must have arrival_time OR time window
+	// Note: First stop departure_time is not required by GTFS spec
+	// (arrival time is meaningless at start of trip, departure time is meaningless at end of trip)
 	lastSt := stoptimes[len(stoptimes)-1]
 	if lastSt.ArrivalTime.Int() <= 0 && !hasTimeWindow(lastSt) {
 		errs = append(errs, causes.NewSequenceError("arrival_time", "missing on last stop (required unless time window present)"))
@@ -58,16 +54,16 @@ func ValidateStopTimes(stoptimes []gtfs.StopTime) []error {
 	lastScheduledTime := stoptimes[0].DepartureTime // Track time only for scheduled stops
 	lastSequence := stoptimes[0].StopSequence
 
-	// 4-6. Validate stop sequences, time progression, and shape distances
+	// 3-5. Validate stop sequences, time progression, and shape distances
 	for _, st := range stoptimes[1:] {
-		// 4. Stop sequence validation: No duplicates, must increase
+		// 3. Stop sequence validation: No duplicates, must increase
 		if st.StopSequence == lastSequence {
 			errs = append(errs, causes.NewSequenceError("stop_sequence", st.StopSequence.String()))
 		} else {
 			lastSequence = st.StopSequence
 		}
 
-		// 5. Time progression validation (only for scheduled stops, skip flex stops)
+		// 4. Time progression validation (only for scheduled stops, skip flex stops)
 		if !hasTimeWindow(st) {
 			// This is a scheduled stop with arrival/departure times
 			if st.ArrivalTime.Int() > 0 && lastScheduledTime.Int() > 0 && st.ArrivalTime.Int() < lastScheduledTime.Int() {
@@ -85,7 +81,7 @@ func ValidateStopTimes(stoptimes []gtfs.StopTime) []error {
 		}
 		// else: Flex stop with time window - skip time progression validation
 
-		// 6. Shape distance validation: Must increase when present
+		// 5. Shape distance validation: Must increase when present
 		if st.ShapeDistTraveled.Valid && lastDist.Valid && st.ShapeDistTraveled.Val < lastDist.Val {
 			errs = append(errs, causes.NewSequenceError("shape_dist_traveled", st.ShapeDistTraveled.String()))
 		}

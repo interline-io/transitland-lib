@@ -105,33 +105,21 @@ func TestStopTime_Errors(t *testing.T) {
 			},
 			expectedErrors: ParseExpectErrors("InvalidFieldError:continuous_drop_off"),
 		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			errs := tc.stopTime.Errors()
-			CheckErrors(tc.expectedErrors, errs, t)
-		})
-	}
-}
-
-func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
-	tests := []struct {
-		name           string
-		stopTime       *StopTime
-		expectedErrors []ExpectError
-	}{
-		// Location field mutual exclusion tests
+		// ConditionalErrors - Location field mutual exclusion tests
 		{
 			name: "Valid: Only stop_id present",
 			stopTime: &StopTime{
-				StopID: tt.NewKey("stop1"),
+				TripID:       tt.NewString("trip1"),
+				StopID:       tt.NewKey("stop1"),
+				StopSequence: tt.NewInt(1),
 			},
 			expectedErrors: nil,
 		},
 		{
 			name: "Valid: Only location_group_id present with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				LocationGroupID:          tt.NewKey("lg1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -141,6 +129,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: Only location_id present with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				LocationID:               tt.NewKey("loc1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -150,6 +140,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: No location identifier",
 			stopTime: &StopTime{
+				TripID:       tt.NewString("trip1"),
 				StopSequence: tt.NewInt(1),
 			},
 			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:stop_id"),
@@ -157,6 +148,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: stop_id and location_group_id both present",
 			stopTime: &StopTime{
+				TripID:          tt.NewString("trip1"),
+				StopSequence:    tt.NewInt(1),
 				StopID:          tt.NewKey("stop1"),
 				LocationGroupID: tt.NewKey("lg1"),
 			},
@@ -169,8 +162,10 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: stop_id and location_id both present",
 			stopTime: &StopTime{
-				StopID:     tt.NewKey("stop1"),
-				LocationID: tt.NewKey("loc1"),
+				TripID:       tt.NewString("trip1"),
+				StopSequence: tt.NewInt(1),
+				StopID:       tt.NewKey("stop1"),
+				LocationID:   tt.NewKey("loc1"),
 			},
 			expectedErrors: ParseExpectErrors(
 				"ConditionallyForbiddenFieldError:location_id",
@@ -181,6 +176,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: location_group_id and location_id both present",
 			stopTime: &StopTime{
+				TripID:          tt.NewString("trip1"),
+				StopSequence:    tt.NewInt(1),
 				LocationGroupID: tt.NewKey("lg1"),
 				LocationID:      tt.NewKey("loc1"),
 			},
@@ -193,6 +190,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: location_group_id without time windows",
 			stopTime: &StopTime{
+				TripID:          tt.NewString("trip1"),
+				StopSequence:    tt.NewInt(1),
 				LocationGroupID: tt.NewKey("lg1"),
 			},
 			expectedErrors: ParseExpectErrors(
@@ -203,7 +202,9 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: location_id without time windows",
 			stopTime: &StopTime{
-				LocationID: tt.NewKey("loc1"),
+				TripID:       tt.NewString("trip1"),
+				StopSequence: tt.NewInt(1),
+				LocationID:   tt.NewKey("loc1"),
 			},
 			expectedErrors: ParseExpectErrors(
 				"ConditionallyRequiredFieldError:start_pickup_drop_off_window",
@@ -213,6 +214,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: Both time windows present and consistent",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -222,6 +225,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: Only start window present",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 			},
@@ -230,6 +235,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: Only end window present",
 			stopTime: &StopTime{
+				TripID:                 tt.NewString("trip1"),
+				StopSequence:           tt.NewInt(1),
 				StopID:                 tt.NewKey("stop1"),
 				EndPickupDropOffWindow: tt.NewSeconds(7200),
 			},
@@ -238,6 +245,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: End window before start window",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(7200),
 				EndPickupDropOffWindow:   tt.NewSeconds(3600),
@@ -247,6 +256,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: Time window with arrival_time",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -257,6 +268,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: Time window with departure_time",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -268,6 +281,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: pickup_type=0 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -278,6 +293,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: pickup_type=3 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -288,6 +305,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: pickup_type=2 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -298,6 +317,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: drop_off_type=0 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -308,6 +329,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: drop_off_type=2 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -319,6 +342,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: continuous_pickup=0 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -329,6 +354,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: continuous_pickup=2 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -339,6 +366,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: continuous_pickup=1 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -349,6 +378,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: continuous_drop_off=0 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -359,6 +390,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: continuous_drop_off=1 with time windows",
 			stopTime: &StopTime{
+				TripID:                   tt.NewString("trip1"),
+				StopSequence:             tt.NewInt(1),
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
@@ -369,6 +402,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: pickup_booking_rule_id with pickup_type=2",
 			stopTime: &StopTime{
+				TripID:              tt.NewString("trip1"),
+				StopSequence:        tt.NewInt(1),
 				StopID:              tt.NewKey("stop1"),
 				PickupBookingRuleID: tt.NewKey("rule1"),
 				PickupType:          tt.NewInt(2),
@@ -378,6 +413,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: pickup_booking_rule_id with pickup_type=0",
 			stopTime: &StopTime{
+				TripID:              tt.NewString("trip1"),
+				StopSequence:        tt.NewInt(1),
 				StopID:              tt.NewKey("stop1"),
 				PickupBookingRuleID: tt.NewKey("rule1"),
 				PickupType:          tt.NewInt(0),
@@ -387,6 +424,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: drop_off_booking_rule_id with drop_off_type=2",
 			stopTime: &StopTime{
+				TripID:               tt.NewString("trip1"),
+				StopSequence:         tt.NewInt(1),
 				StopID:               tt.NewKey("stop1"),
 				DropOffBookingRuleID: tt.NewKey("rule1"),
 				DropOffType:          tt.NewInt(2),
@@ -396,6 +435,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: drop_off_booking_rule_id with drop_off_type=0",
 			stopTime: &StopTime{
+				TripID:               tt.NewString("trip1"),
+				StopSequence:         tt.NewInt(1),
 				StopID:               tt.NewKey("stop1"),
 				DropOffBookingRuleID: tt.NewKey("rule1"),
 				DropOffType:          tt.NewInt(0),
@@ -405,6 +446,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: Both mean_duration fields present",
 			stopTime: &StopTime{
+				TripID:             tt.NewString("trip1"),
+				StopSequence:       tt.NewInt(1),
 				StopID:             tt.NewKey("stop1"),
 				MeanDurationFactor: tt.NewFloat(1.5),
 				MeanDurationOffset: tt.NewFloat(300),
@@ -414,6 +457,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: Only mean_duration_factor present",
 			stopTime: &StopTime{
+				TripID:             tt.NewString("trip1"),
+				StopSequence:       tt.NewInt(1),
 				StopID:             tt.NewKey("stop1"),
 				MeanDurationFactor: tt.NewFloat(1.5),
 			},
@@ -422,6 +467,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: Only mean_duration_offset present",
 			stopTime: &StopTime{
+				TripID:             tt.NewString("trip1"),
+				StopSequence:       tt.NewInt(1),
 				StopID:             tt.NewKey("stop1"),
 				MeanDurationOffset: tt.NewFloat(300),
 			},
@@ -430,6 +477,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Invalid: mean_duration_factor is negative",
 			stopTime: &StopTime{
+				TripID:             tt.NewString("trip1"),
+				StopSequence:       tt.NewInt(1),
 				StopID:             tt.NewKey("stop1"),
 				MeanDurationFactor: tt.NewFloat(-1.5),
 				MeanDurationOffset: tt.NewFloat(300),
@@ -439,6 +488,8 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 		{
 			name: "Valid: safe_duration_factor with mean_duration_factor",
 			stopTime: &StopTime{
+				TripID:             tt.NewString("trip1"),
+				StopSequence:       tt.NewInt(1),
 				StopID:             tt.NewKey("stop1"),
 				MeanDurationFactor: tt.NewFloat(1.5),
 				MeanDurationOffset: tt.NewFloat(300),
@@ -451,7 +502,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			errs := tc.stopTime.ConditionalErrors()
+			errs := tt.CheckErrors(tc.stopTime)
 			CheckErrors(tc.expectedErrors, errs, t)
 		})
 	}

@@ -193,16 +193,6 @@ func TestValidateStopTimes(t *testing.T) {
 			expectedErrors: testutil.ParseExpectErrors("EmptyTripError"),
 		},
 
-		// ===== ERRORS: FIRST STOP =====
-		{
-			name: "error_first_stop_no_departure_or_window",
-			stopTimes: []gtfs.StopTime{
-				makeStopTime(0, 1000, 0), // missing departure_time and no time window
-				makeStopTime(1, 2000, 2000),
-			},
-			expectedErrors: testutil.ParseExpectErrors("SequenceError:departure_time"),
-		},
-
 		// ===== ERRORS: LAST STOP =====
 		{
 			name: "error_last_stop_no_arrival_or_window",
@@ -345,12 +335,11 @@ func TestValidateStopTimes(t *testing.T) {
 		{
 			name: "error_all_validation_types",
 			stopTimes: []gtfs.StopTime{
-				withShapeDist(makeStopTime(1, 1000, 0), 10.0),                     // missing departure_time
+				withShapeDist(makeStopTime(1, 1000, 1000), 10.0),                  // first stop is valid now
 				withShapeDist(makeStopTime(1, 2000, 2000), 5.0),                   // duplicate sequence + shape decreases
-				withShapeDist(withStopSequence(makeStopTime(2, 0, 3000), 1), 3.0), // another duplicate sequence + missing arrival + shape decreases
+				withShapeDist(withStopSequence(makeStopTime(2, 0, 3000), 1), 3.0), // another duplicate sequence + missing arrival (last stop) + shape decreases
 			},
 			expectedErrors: testutil.ParseExpectErrors(
-				"SequenceError:departure_time",
 				"SequenceError:arrival_time",
 				"SequenceError:stop_sequence",
 				"SequenceError:shape_dist_traveled",
