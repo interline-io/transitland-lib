@@ -87,6 +87,7 @@ func GetFeedVersionTables() FeedVersionTables {
 			"gtfs_fare_rules",
 			"gtfs_attributions",
 			"gtfs_translations",
+			"gtfs_location_group_stops",
 		},
 		GtfsEntityTables: []string{
 			"gtfs_fare_media",
@@ -102,6 +103,9 @@ func GetFeedVersionTables() FeedVersionTables {
 			"gtfs_fare_attributes",
 			"gtfs_trips",
 			"gtfs_shapes",
+			"gtfs_booking_rules",
+			"gtfs_location_groups",
+			"gtfs_locations",
 			"gtfs_calendars",
 			"gtfs_stops",
 			"gtfs_levels",
