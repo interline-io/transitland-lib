@@ -216,30 +216,7 @@ func (ent *StopTime) ConditionalErrors() (errs []error) {
 		}
 	}
 
-	// 10. Validate booking rules are only used with appropriate pickup/drop_off types
-	// pickup_booking_rule_id is recommended when pickup_type = 2
-	if ent.PickupBookingRuleID.IsPresent() {
-		if !ent.PickupType.Valid || ent.PickupType.Val != 2 {
-			errs = append(errs, causes.NewInvalidFieldError(
-				"pickup_booking_rule_id",
-				ent.PickupBookingRuleID.Val,
-				fmt.Errorf("pickup_booking_rule_id should only be used when pickup_type = 2 (must phone agency)"),
-			))
-		}
-	}
-
-	// drop_off_booking_rule_id is recommended when drop_off_type = 2
-	if ent.DropOffBookingRuleID.IsPresent() {
-		if !ent.DropOffType.Valid || ent.DropOffType.Val != 2 {
-			errs = append(errs, causes.NewInvalidFieldError(
-				"drop_off_booking_rule_id",
-				ent.DropOffBookingRuleID.Val,
-				fmt.Errorf("drop_off_booking_rule_id should only be used when drop_off_type = 2 (must phone agency)"),
-			))
-		}
-	}
-
-	// 11. Validate mean/safe duration factor/offset
+	// 10. Validate mean/safe duration factor/offset
 	// mean_duration_factor and mean_duration_offset work together
 	if ent.MeanDurationFactor.Valid && !ent.MeanDurationOffset.Valid {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("mean_duration_offset"))
@@ -263,17 +240,6 @@ func (ent *StopTime) ConditionalErrors() (errs []error) {
 			fmt.Sprintf("%f", ent.MeanDurationFactor.Val),
 			fmt.Errorf("must be positive"),
 		))
-	}
-
-	// safe_duration_factor should be >= mean_duration_factor if both present
-	if ent.MeanDurationFactor.Valid && ent.SafeDurationFactor.Valid {
-		if ent.SafeDurationFactor.Val < ent.MeanDurationFactor.Val {
-			errs = append(errs, causes.NewInvalidFieldError(
-				"safe_duration_factor",
-				fmt.Sprintf("%f", ent.SafeDurationFactor.Val),
-				fmt.Errorf("must be greater than or equal to mean_duration_factor (%f)", ent.MeanDurationFactor.Val),
-			))
-		}
 	}
 
 	return errs

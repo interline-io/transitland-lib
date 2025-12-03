@@ -376,20 +376,11 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 			expectedErrors: nil,
 		},
 		{
-			name: "Invalid: pickup_booking_rule_id without pickup_type=2",
+			name: "Valid: pickup_booking_rule_id with pickup_type=0",
 			stopTime: &StopTime{
 				StopID:              tt.NewKey("stop1"),
 				PickupBookingRuleID: tt.NewKey("rule1"),
 				PickupType:          tt.NewInt(0),
-			},
-			expectedErrors: expectErrors("InvalidFieldError pickup_booking_rule_id"),
-		},
-		{
-			name: "Valid: empty pickup_booking_rule_id with pickup_type=2",
-			stopTime: &StopTime{
-				StopID:              tt.NewKey("stop1"),
-				PickupBookingRuleID: tt.NewKey(""), // Empty is valid (no booking required)
-				PickupType:          tt.NewInt(2),
 			},
 			expectedErrors: nil,
 		},
@@ -403,13 +394,13 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 			expectedErrors: nil,
 		},
 		{
-			name: "Invalid: drop_off_booking_rule_id without drop_off_type=2",
+			name: "Valid: drop_off_booking_rule_id with drop_off_type=0",
 			stopTime: &StopTime{
 				StopID:               tt.NewKey("stop1"),
 				DropOffBookingRuleID: tt.NewKey("rule1"),
 				DropOffType:          tt.NewInt(0),
 			},
-			expectedErrors: expectErrors("InvalidFieldError drop_off_booking_rule_id"),
+			expectedErrors: nil,
 		},
 		{
 			name: "Valid: Both mean_duration fields present",
@@ -446,18 +437,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 			expectedErrors: expectErrors("ConditionallyRequiredFieldError mean_duration_factor"),
 		},
 		{
-			name: "Invalid: safe_duration_factor < mean_duration_factor",
-			stopTime: &StopTime{
-				StopID:             tt.NewKey("stop1"),
-				MeanDurationFactor: tt.NewFloat(2.0),
-				MeanDurationOffset: tt.NewFloat(300),
-				SafeDurationFactor: tt.NewFloat(1.5),
-				SafeDurationOffset: tt.NewFloat(400),
-			},
-			expectedErrors: expectErrors("InvalidFieldError safe_duration_factor"),
-		},
-		{
-			name: "Valid: safe_duration_factor >= mean_duration_factor",
+			name: "Valid: safe_duration_factor with mean_duration_factor",
 			stopTime: &StopTime{
 				StopID:             tt.NewKey("stop1"),
 				MeanDurationFactor: tt.NewFloat(1.5),
