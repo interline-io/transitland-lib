@@ -16,6 +16,27 @@ import (
 type ExpectedError struct {
 	Field     string // The field name that should be mentioned in the error (required)
 	ErrorType string // The error type (required: FieldParseError, InvalidFieldError, ConditionallyRequiredFieldError, ConditionallyForbiddenFieldError)
+	Filename  string // The filename where the error occurred (optional)
+	EntityID  string // The entity ID where the error occurred (optional)
+}
+
+// expectErrors converts string tuples into ExpectedError structs.
+// Each string should be in the format "<error_type> <field_name> <filename> <entity_id>".
+// Filename and entity_id are optional and can be empty strings.
+// Example: expectErrors("InvalidFieldError stop_sequence", "ConditionallyRequiredFieldError stop_id stops.txt stop1")
+func expectErrors(errorStrings ...string) []ExpectedError {
+	var errors []ExpectedError
+	for _, s := range errorStrings {
+		var errType, field, filename, entityID string
+		fmt.Sscanf(s, "%s %s %s %s", &errType, &field, &filename, &entityID)
+		errors = append(errors, ExpectedError{
+			ErrorType: errType,
+			Field:     field,
+			Filename:  filename,
+			EntityID:  entityID,
+		})
+	}
+	return errors
 }
 
 // checkErrors is a helper function to validate errors (both conditional and non-conditional)
