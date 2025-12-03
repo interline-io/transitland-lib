@@ -10,7 +10,7 @@ func TestStopTime_Errors(t *testing.T) {
 	tests := []struct {
 		name           string
 		stopTime       *StopTime
-		expectedErrors []ExpectedError
+		expectedErrors []ExpectError
 	}{
 		{
 			name: "Valid: Basic stop time",
@@ -32,7 +32,7 @@ func TestStopTime_Errors(t *testing.T) {
 				ArrivalTime:   tt.NewSeconds(3600),
 				DepartureTime: tt.NewSeconds(3630),
 			},
-			expectedErrors: expectErrors("InvalidFieldError stop_sequence"),
+			expectedErrors: ParseExpectErrors("InvalidFieldError:stop_sequence"),
 		},
 		{
 			name: "Invalid: pickup_type out of range",
@@ -44,7 +44,7 @@ func TestStopTime_Errors(t *testing.T) {
 				DepartureTime: tt.NewSeconds(3630),
 				PickupType:    tt.NewInt(4),
 			},
-			expectedErrors: expectErrors("InvalidFieldError pickup_type"),
+			expectedErrors: ParseExpectErrors("InvalidFieldError:pickup_type"),
 		},
 		{
 			name: "Invalid: drop_off_type out of range",
@@ -56,7 +56,7 @@ func TestStopTime_Errors(t *testing.T) {
 				DepartureTime: tt.NewSeconds(3630),
 				DropOffType:   tt.NewInt(4),
 			},
-			expectedErrors: expectErrors("InvalidFieldError drop_off_type"),
+			expectedErrors: ParseExpectErrors("InvalidFieldError:drop_off_type"),
 		},
 		{
 			name: "Invalid: timepoint out of range",
@@ -68,7 +68,7 @@ func TestStopTime_Errors(t *testing.T) {
 				DepartureTime: tt.NewSeconds(3630),
 				Timepoint:     tt.NewInt(2),
 			},
-			expectedErrors: expectErrors("InvalidFieldError timepoint"),
+			expectedErrors: ParseExpectErrors("InvalidFieldError:timepoint"),
 		},
 		{
 			name: "Invalid: departure_time before arrival_time",
@@ -79,7 +79,7 @@ func TestStopTime_Errors(t *testing.T) {
 				ArrivalTime:   tt.NewSeconds(3600),
 				DepartureTime: tt.NewSeconds(1800),
 			},
-			expectedErrors: expectErrors("InvalidFieldError departure_time"),
+			expectedErrors: ParseExpectErrors("InvalidFieldError:departure_time"),
 		},
 		{
 			name: "Invalid: continuous_pickup out of range",
@@ -91,7 +91,7 @@ func TestStopTime_Errors(t *testing.T) {
 				DepartureTime:    tt.NewSeconds(3690),
 				ContinuousPickup: tt.NewInt(100),
 			},
-			expectedErrors: expectErrors("InvalidFieldError continuous_pickup"),
+			expectedErrors: ParseExpectErrors("InvalidFieldError:continuous_pickup"),
 		},
 		{
 			name: "Invalid: continuous_drop_off out of range",
@@ -103,14 +103,14 @@ func TestStopTime_Errors(t *testing.T) {
 				DepartureTime:     tt.NewSeconds(3690),
 				ContinuousDropOff: tt.NewInt(100),
 			},
-			expectedErrors: expectErrors("InvalidFieldError continuous_drop_off"),
+			expectedErrors: ParseExpectErrors("InvalidFieldError:continuous_drop_off"),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			errs := tc.stopTime.Errors()
-			checkErrors(t, errs, tc.expectedErrors)
+			CheckErrors(tc.expectedErrors, errs, t)
 		})
 	}
 }
@@ -119,7 +119,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 	tests := []struct {
 		name           string
 		stopTime       *StopTime
-		expectedErrors []ExpectedError
+		expectedErrors []ExpectError
 	}{
 		// Location field mutual exclusion tests
 		{
@@ -152,7 +152,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 			stopTime: &StopTime{
 				StopSequence: tt.NewInt(1),
 			},
-			expectedErrors: expectErrors("ConditionallyRequiredFieldError stop_id"),
+			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:stop_id"),
 		},
 		{
 			name: "Invalid: stop_id and location_group_id both present",
@@ -160,10 +160,10 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				StopID:          tt.NewKey("stop1"),
 				LocationGroupID: tt.NewKey("lg1"),
 			},
-			expectedErrors: expectErrors(
-				"ConditionallyForbiddenFieldError location_group_id",
-				"ConditionallyRequiredFieldError start_pickup_drop_off_window",
-				"ConditionallyRequiredFieldError end_pickup_drop_off_window",
+			expectedErrors: ParseExpectErrors(
+				"ConditionallyForbiddenFieldError:location_group_id",
+				"ConditionallyRequiredFieldError:start_pickup_drop_off_window",
+				"ConditionallyRequiredFieldError:end_pickup_drop_off_window",
 			),
 		},
 		{
@@ -172,10 +172,10 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				StopID:     tt.NewKey("stop1"),
 				LocationID: tt.NewKey("loc1"),
 			},
-			expectedErrors: expectErrors(
-				"ConditionallyForbiddenFieldError location_id",
-				"ConditionallyRequiredFieldError start_pickup_drop_off_window",
-				"ConditionallyRequiredFieldError end_pickup_drop_off_window",
+			expectedErrors: ParseExpectErrors(
+				"ConditionallyForbiddenFieldError:location_id",
+				"ConditionallyRequiredFieldError:start_pickup_drop_off_window",
+				"ConditionallyRequiredFieldError:end_pickup_drop_off_window",
 			),
 		},
 		{
@@ -184,10 +184,10 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				LocationGroupID: tt.NewKey("lg1"),
 				LocationID:      tt.NewKey("loc1"),
 			},
-			expectedErrors: expectErrors(
-				"ConditionallyForbiddenFieldError location_id",
-				"ConditionallyRequiredFieldError start_pickup_drop_off_window",
-				"ConditionallyRequiredFieldError end_pickup_drop_off_window",
+			expectedErrors: ParseExpectErrors(
+				"ConditionallyForbiddenFieldError:location_id",
+				"ConditionallyRequiredFieldError:start_pickup_drop_off_window",
+				"ConditionallyRequiredFieldError:end_pickup_drop_off_window",
 			),
 		},
 		{
@@ -195,9 +195,9 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 			stopTime: &StopTime{
 				LocationGroupID: tt.NewKey("lg1"),
 			},
-			expectedErrors: expectErrors(
-				"ConditionallyRequiredFieldError start_pickup_drop_off_window",
-				"ConditionallyRequiredFieldError end_pickup_drop_off_window",
+			expectedErrors: ParseExpectErrors(
+				"ConditionallyRequiredFieldError:start_pickup_drop_off_window",
+				"ConditionallyRequiredFieldError:end_pickup_drop_off_window",
 			),
 		},
 		{
@@ -205,9 +205,9 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 			stopTime: &StopTime{
 				LocationID: tt.NewKey("loc1"),
 			},
-			expectedErrors: expectErrors(
-				"ConditionallyRequiredFieldError start_pickup_drop_off_window",
-				"ConditionallyRequiredFieldError end_pickup_drop_off_window",
+			expectedErrors: ParseExpectErrors(
+				"ConditionallyRequiredFieldError:start_pickup_drop_off_window",
+				"ConditionallyRequiredFieldError:end_pickup_drop_off_window",
 			),
 		},
 		{
@@ -225,7 +225,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				StopID:                   tt.NewKey("stop1"),
 				StartPickupDropOffWindow: tt.NewSeconds(3600),
 			},
-			expectedErrors: expectErrors("ConditionallyRequiredFieldError end_pickup_drop_off_window"),
+			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:end_pickup_drop_off_window"),
 		},
 		{
 			name: "Invalid: Only end window present",
@@ -233,7 +233,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				StopID:                 tt.NewKey("stop1"),
 				EndPickupDropOffWindow: tt.NewSeconds(7200),
 			},
-			expectedErrors: expectErrors("ConditionallyRequiredFieldError start_pickup_drop_off_window"),
+			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:start_pickup_drop_off_window"),
 		},
 		{
 			name: "Invalid: End window before start window",
@@ -242,7 +242,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				StartPickupDropOffWindow: tt.NewSeconds(7200),
 				EndPickupDropOffWindow:   tt.NewSeconds(3600),
 			},
-			expectedErrors: expectErrors("ConditionallyRequiredFieldError end_pickup_drop_off_window"),
+			expectedErrors: ParseExpectErrors("InvalidFieldError:end_pickup_drop_off_window"),
 		},
 		{
 			name: "Invalid: Time window with arrival_time",
@@ -252,7 +252,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
 				ArrivalTime:              tt.NewSeconds(10800),
 			},
-			expectedErrors: expectErrors("ConditionallyForbiddenFieldError arrival_time"),
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:arrival_time"),
 		},
 		{
 			name: "Invalid: Time window with departure_time",
@@ -262,7 +262,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
 				DepartureTime:            tt.NewSeconds(10800),
 			},
-			expectedErrors: expectErrors("ConditionallyForbiddenFieldError departure_time"),
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:departure_time"),
 		},
 		// pickup_type and drop_off_type with time windows
 		{
@@ -273,7 +273,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
 				PickupType:               tt.NewInt(0),
 			},
-			expectedErrors: expectErrors("ConditionallyForbiddenFieldError pickup_type"),
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:pickup_type"),
 		},
 		{
 			name: "Invalid: pickup_type=3 with time windows",
@@ -283,7 +283,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
 				PickupType:               tt.NewInt(3),
 			},
-			expectedErrors: expectErrors("ConditionallyForbiddenFieldError pickup_type"),
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:pickup_type"),
 		},
 		{
 			name: "Valid: pickup_type=2 with time windows",
@@ -303,7 +303,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
 				DropOffType:              tt.NewInt(0),
 			},
-			expectedErrors: expectErrors("ConditionallyForbiddenFieldError drop_off_type"),
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:drop_off_type"),
 		},
 		{
 			name: "Valid: drop_off_type=2 with time windows",
@@ -324,7 +324,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
 				ContinuousPickup:         tt.NewInt(0),
 			},
-			expectedErrors: expectErrors("ConditionallyForbiddenFieldError continuous_pickup"),
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:continuous_pickup"),
 		},
 		{
 			name: "Invalid: continuous_pickup=2 with time windows",
@@ -334,7 +334,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
 				ContinuousPickup:         tt.NewInt(2),
 			},
-			expectedErrors: expectErrors("ConditionallyForbiddenFieldError continuous_pickup"),
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:continuous_pickup"),
 		},
 		{
 			name: "Valid: continuous_pickup=1 with time windows",
@@ -354,7 +354,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				EndPickupDropOffWindow:   tt.NewSeconds(7200),
 				ContinuousDropOff:        tt.NewInt(0),
 			},
-			expectedErrors: expectErrors("ConditionallyForbiddenFieldError continuous_drop_off"),
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:continuous_drop_off"),
 		},
 		{
 			name: "Valid: continuous_drop_off=1 with time windows",
@@ -417,7 +417,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				StopID:             tt.NewKey("stop1"),
 				MeanDurationFactor: tt.NewFloat(1.5),
 			},
-			expectedErrors: expectErrors("ConditionallyRequiredFieldError mean_duration_offset"),
+			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:mean_duration_offset"),
 		},
 		{
 			name: "Invalid: Only mean_duration_offset present",
@@ -425,7 +425,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				StopID:             tt.NewKey("stop1"),
 				MeanDurationOffset: tt.NewFloat(300),
 			},
-			expectedErrors: expectErrors("ConditionallyRequiredFieldError mean_duration_factor"),
+			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:mean_duration_factor"),
 		},
 		{
 			name: "Invalid: mean_duration_factor is negative",
@@ -434,7 +434,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 				MeanDurationFactor: tt.NewFloat(-1.5),
 				MeanDurationOffset: tt.NewFloat(300),
 			},
-			expectedErrors: expectErrors("ConditionallyRequiredFieldError mean_duration_factor"),
+			expectedErrors: ParseExpectErrors("InvalidFieldError:mean_duration_factor"),
 		},
 		{
 			name: "Valid: safe_duration_factor with mean_duration_factor",
@@ -452,7 +452,7 @@ func TestStopTime_ConditionalErrorsFlex(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			errs := tc.stopTime.ConditionalErrors()
-			checkErrors(t, errs, tc.expectedErrors)
+			CheckErrors(tc.expectedErrors, errs, t)
 		})
 	}
 }

@@ -2,77 +2,84 @@ package gtfs
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tt"
-	"github.com/stretchr/testify/assert"
 )
 
 /////////////////////////
 
-// Test helpers
+// Test helpers - local implementations to avoid import cycle with internal/testutil
 
-// ExpectedError describes an expected validation error
-type ExpectedError struct {
-	Field     string // The field name that should be mentioned in the error (required)
-	ErrorType string // The error type (required: FieldParseError, InvalidFieldError, ConditionallyRequiredFieldError, ConditionallyForbiddenFieldError)
-	Filename  string // The filename where the error occurred (optional)
-	EntityID  string // The entity ID where the error occurred (optional)
+// ExpectError describes an expected validation error (matches testutil.ExpectError interface)
+type ExpectError struct {
+	Field     string
+	ErrorType string
+	Filename  string
+	EntityID  string
 }
 
-// expectErrors converts string tuples into ExpectedError structs.
-// Each string should be in the format "<error_type> <field_name> <filename> <entity_id>".
-// Filename and entity_id are optional and can be empty strings.
-// Example: expectErrors("InvalidFieldError stop_sequence", "ConditionallyRequiredFieldError stop_id stops.txt stop1")
-func expectErrors(errorStrings ...string) []ExpectedError {
-	var errors []ExpectedError
+// ParseExpectErrors converts shorthand error strings to ExpectError structs
+// Format: "ErrorType:Field:Filename:EntityID" (Filename and EntityID are optional)
+func ParseExpectErrors(errorStrings ...string) []ExpectError {
+	var errors []ExpectError
 	for _, s := range errorStrings {
-		var errType, field, filename, entityID string
-		fmt.Sscanf(s, "%s %s %s %s", &errType, &field, &filename, &entityID)
-		errors = append(errors, ExpectedError{
-			ErrorType: errType,
-			Field:     field,
-			Filename:  filename,
-			EntityID:  entityID,
+		parts := strings.Split(s, ":")
+		// Pad to 4 parts
+		for len(parts) < 4 {
+			parts = append(parts, "")
+		}
+		errors = append(errors, ExpectError{
+			ErrorType: parts[0],
+			Field:     parts[1],
+			Filename:  parts[2],
+			EntityID:  parts[3],
 		})
 	}
 	return errors
 }
 
-// checkErrors is a helper function to validate errors (both conditional and non-conditional)
-func checkErrors(t *testing.T, errs []error, expectedErrors []ExpectedError) {
+// CheckErrors validates that actual errors match expected errors
+func CheckErrors(expectedErrors []ExpectError, errs []error, t *testing.T) {
 	t.Helper()
 
-	if len(expectedErrors) == 0 {
-		assert.Empty(t, errs, "Expected no validation errors")
+	if len(expectedErrors) == 0 && len(errs) == 0 {
 		return
 	}
 
-	// Validate that all expected errors have both field and error type defined
-	for _, expected := range expectedErrors {
-		if expected.Field == "" {
-			t.Fatal("ExpectedError must have Field defined")
+	if len(expectedErrors) != len(errs) {
+		t.Errorf("Expected %d errors, got %d", len(expectedErrors), len(errs))
+		for _, err := range errs {
+			t.Logf("  Actual error: %v", err)
 		}
-		if expected.ErrorType == "" {
-			t.Fatal("ExpectedError must have ErrorType defined")
-		}
+		return
 	}
 
-	assert.Equal(t, len(expectedErrors), len(errs), "Number of errors should match expected")
-
-	// Check that each expected error is present
-	for _, expected := range expectedErrors {
-		found := false
-		for _, err := range errs {
-			errStr := err.Error()
-			// Check if error contains both the field name and error type
-			if errStr != "" {
-				// Simple string matching for now - could be more sophisticated
-				found = true
-				break
-			}
+	// Check that each expected error matches an actual error
+	for i, expected := range expectedErrors {
+		if i >= len(errs) {
+			break
 		}
-		assert.True(t, found, "Expected error: %s:%s", expected.ErrorType, expected.Field)
+		errStr := errs[i].Error()
+		errType := fmt.Sprintf("%T", errs[i])
+
+		// Extract just the type name without package path
+		if idx := strings.LastIndex(errType, "."); idx >= 0 {
+			errType = errType[idx+1:]
+		}
+		// Remove pointer marker
+		errType = strings.TrimPrefix(errType, "*")
+
+		// Check that error string contains the expected field
+		if expected.Field != "" && !strings.Contains(errStr, expected.Field) {
+			t.Errorf("Error %d: expected field %q not found in error: %v", i, expected.Field, errStr)
+		}
+
+		// Check error type matches
+		if expected.ErrorType != "" && errType != expected.ErrorType {
+			t.Errorf("Error %d: expected error type %q, got %q in error: %v", i, expected.ErrorType, errType, errStr)
+		}
 	}
 }
 
