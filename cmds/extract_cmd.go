@@ -11,9 +11,9 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext"
+	"github.com/interline-io/transitland-lib/ext/filters"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
 	"github.com/interline-io/transitland-lib/extract"
-	"github.com/interline-io/transitland-lib/filters"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/spf13/pflag"
 )
