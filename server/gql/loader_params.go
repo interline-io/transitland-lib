@@ -227,3 +227,19 @@ type validationReportErrorGroupLoaderParam struct {
 	ValidationReportID int
 	Limit              *int
 }
+
+type bookingRuleLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+}
+
+type locationGroupLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+}
+
+type locationLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+	Where         *model.LocationFilter
+}

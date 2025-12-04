@@ -347,6 +347,7 @@ type ComplexityRoot struct {
 
 	FeedVersion struct {
 		Agencies              func(childComplexity int, limit *int, where *model.AgencyFilter) int
+		BookingRules          func(childComplexity int, limit *int) int
 		CreatedBy             func(childComplexity int) int
 		Description           func(childComplexity int) int
 		EarliestCalendarDate  func(childComplexity int) int
@@ -359,6 +360,7 @@ type ComplexityRoot struct {
 		Geometry              func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		LatestCalendarDate    func(childComplexity int) int
+		LocationGroups        func(childComplexity int, limit *int) int
 		Locations             func(childComplexity int, limit *int, where *model.LocationFilter) int
 		Name                  func(childComplexity int) int
 		Routes                func(childComplexity int, limit *int, where *model.RouteFilter) int
@@ -1335,6 +1337,8 @@ type FeedVersionResolver interface {
 	Stops(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.StopFilter) ([]*model.Stop, error)
 	Trips(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.TripFilter) ([]*model.Trip, error)
 	Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error)
+	BookingRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.BookingRule, error)
+	LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.LocationGroup, error)
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
 	Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error)
@@ -2984,6 +2988,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.FeedVersion.Agencies(childComplexity, args["limit"].(*int), args["where"].(*model.AgencyFilter)), true
 
+	case "FeedVersion.booking_rules":
+		if e.complexity.FeedVersion.BookingRules == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_booking_rules_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.FeedVersion.BookingRules(childComplexity, args["limit"].(*int)), true
+
 	case "FeedVersion.created_by":
 		if e.complexity.FeedVersion.CreatedBy == nil {
 			break
@@ -3077,6 +3093,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.FeedVersion.LatestCalendarDate(childComplexity), true
+
+	case "FeedVersion.location_groups":
+		if e.complexity.FeedVersion.LocationGroups == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_location_groups_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.FeedVersion.LocationGroups(childComplexity, args["limit"].(*int)), true
 
 	case "FeedVersion.locations":
 		if e.complexity.FeedVersion.Locations == nil {
@@ -8937,6 +8965,10 @@ type FeedVersion {
   trips(limit: Int, where: TripFilter): [Trip!]!
   "Locations associated with this feed version, if imported"
   locations(limit: Int, where: LocationFilter): [Location!]!
+  "Booking rules associated with this feed version, if imported"
+  booking_rules(limit: Int): [BookingRule!]!
+  "Location groups associated with this feed version, if imported"
+  location_groups(limit: Int): [LocationGroup!]!
   "Feed infos associated with this feed version, if imported"
   feed_infos(limit: Int): [FeedInfo!]!
   "Validation reports associated with this feed version"
@@ -11272,6 +11304,17 @@ func (ec *executionContext) field_FeedVersion_agencies_args(ctx context.Context,
 	return args, nil
 }
 
+func (ec *executionContext) field_FeedVersion_booking_rules_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_FeedVersion_feed_infos_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -11284,6 +11327,17 @@ func (ec *executionContext) field_FeedVersion_feed_infos_args(ctx context.Contex
 }
 
 func (ec *executionContext) field_FeedVersion_files_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_location_groups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
@@ -13101,6 +13155,10 @@ func (ec *executionContext) fieldContext_Agency_feed_version(_ context.Context, 
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -15172,6 +15230,10 @@ func (ec *executionContext) fieldContext_BookingRule_feed_version(_ context.Cont
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -19931,6 +19993,10 @@ func (ec *executionContext) fieldContext_Feed_feed_versions(ctx context.Context,
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -21401,6 +21467,10 @@ func (ec *executionContext) fieldContext_FeedState_feed_version(_ context.Contex
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -23153,6 +23223,174 @@ func (ec *executionContext) fieldContext_FeedVersion_locations(ctx context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _FeedVersion_booking_rules(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FeedVersion().BookingRules(rctx, obj, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.BookingRule)
+	fc.Result = res
+	return ec.marshalNBookingRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRuleᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FeedVersion_booking_rules(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_BookingRule_id(ctx, field)
+			case "booking_rule_id":
+				return ec.fieldContext_BookingRule_booking_rule_id(ctx, field)
+			case "booking_type":
+				return ec.fieldContext_BookingRule_booking_type(ctx, field)
+			case "prior_notice_duration_min":
+				return ec.fieldContext_BookingRule_prior_notice_duration_min(ctx, field)
+			case "prior_notice_duration_max":
+				return ec.fieldContext_BookingRule_prior_notice_duration_max(ctx, field)
+			case "prior_notice_last_day":
+				return ec.fieldContext_BookingRule_prior_notice_last_day(ctx, field)
+			case "prior_notice_last_time":
+				return ec.fieldContext_BookingRule_prior_notice_last_time(ctx, field)
+			case "prior_notice_start_day":
+				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
+			case "prior_notice_start_time":
+				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
+			case "prior_notice_service_id":
+				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
+			case "prior_notice_service":
+				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
+			case "message":
+				return ec.fieldContext_BookingRule_message(ctx, field)
+			case "pickup_message":
+				return ec.fieldContext_BookingRule_pickup_message(ctx, field)
+			case "drop_off_message":
+				return ec.fieldContext_BookingRule_drop_off_message(ctx, field)
+			case "phone_number":
+				return ec.fieldContext_BookingRule_phone_number(ctx, field)
+			case "info_url":
+				return ec.fieldContext_BookingRule_info_url(ctx, field)
+			case "booking_url":
+				return ec.fieldContext_BookingRule_booking_url(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_BookingRule_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_BookingRule_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_BookingRule_feed_version(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BookingRule", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_booking_rules_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_location_groups(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FeedVersion_location_groups(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FeedVersion().LocationGroups(rctx, obj, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.LocationGroup)
+	fc.Result = res
+	return ec.marshalNLocationGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FeedVersion_location_groups(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_LocationGroup_id(ctx, field)
+			case "location_group_id":
+				return ec.fieldContext_LocationGroup_location_group_id(ctx, field)
+			case "location_group_name":
+				return ec.fieldContext_LocationGroup_location_group_name(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_LocationGroup_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_LocationGroup_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_LocationGroup_feed_version(ctx, field)
+			case "stops":
+				return ec.fieldContext_LocationGroup_stops(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type LocationGroup", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_location_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _FeedVersion_feed_infos(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 	if err != nil {
@@ -23496,6 +23734,10 @@ func (ec *executionContext) fieldContext_FeedVersionFetchResult_feed_version(_ c
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -36861,6 +37103,10 @@ func (ec *executionContext) fieldContext_Location_feed_version(_ context.Context
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -37277,6 +37523,10 @@ func (ec *executionContext) fieldContext_LocationGroup_feed_version(_ context.Co
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -38016,6 +38266,10 @@ func (ec *executionContext) fieldContext_Mutation_feed_version_update(ctx contex
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -40748,6 +41002,10 @@ func (ec *executionContext) fieldContext_Query_feed_versions(ctx context.Context
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -43166,6 +43424,10 @@ func (ec *executionContext) fieldContext_Route_feed_version(_ context.Context, f
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -47423,6 +47685,10 @@ func (ec *executionContext) fieldContext_Stop_feed_version(_ context.Context, fi
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -52521,6 +52787,10 @@ func (ec *executionContext) fieldContext_Trip_feed_version(_ context.Context, fi
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
 			case "locations":
 				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "booking_rules":
+				return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_FeedVersion_location_groups(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -64113,6 +64383,78 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "booking_rules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_booking_rules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "location_groups":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_location_groups(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "feed_infos":
 			field := field
 
@@ -72533,6 +72875,60 @@ func (ec *executionContext) marshalNAlert2ᚖgithubᚗcomᚋinterlineᚑioᚋtra
 		return graphql.Null
 	}
 	return ec._Alert(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNBookingRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRuleᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.BookingRule) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx context.Context, sel ast.SelectionSet, v *model.BookingRule) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._BookingRule(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v any) (bool, error) {

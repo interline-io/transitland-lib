@@ -430,3 +430,74 @@ func pairKeys(spairs []model.FVPair) ([]int, []int) {
 	}
 	return ueids, ufvids
 }
+
+func (f *Finder) FlexStopTimesByTripIDs(ctx context.Context, limit *int, where *model.TripStopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
+	var ents []*model.FlexStopTime
+	err := dbutil.Select(ctx,
+		f.db,
+		stopTimeSelect(keys, nil, where),
+		&ents,
+	)
+	return arrangeGroup(keys, ents, func(ent *model.FlexStopTime) model.FVPair {
+		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.TripID.Int()}
+	}), err
+}
+
+func (f *Finder) FlexStopTimesByStopIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
+	// // We need to split by feed version id to extract service window
+	// // Fields must be public
+	pairGroups := map[int][]model.FVPair{}
+	for _, v := range keys {
+		pairGroups[v.FeedVersionID] = append(pairGroups[v.FeedVersionID], v)
+	}
+	var ents []*model.FlexStopTime
+	for fvid, stopPairs := range pairGroups {
+		fvsw, err := f.FindFeedVersionServiceWindow(ctx, fvid)
+		if err != nil {
+			return nil, err
+		}
+		// Run separate queries for each possible service day
+		for _, w := range stopTimeFilterExpand(where, fvsw) {
+			var serviceDate *tt.Date
+			if w != nil && w.ServiceDate != nil {
+				serviceDate = w.ServiceDate
+			}
+			var sts []*model.FlexStopTime
+			var q sq.SelectBuilder
+			if serviceDate != nil {
+				// Get stops on a specified day
+				var stopKeys []int
+				for _, k := range stopPairs {
+					stopKeys = append(stopKeys, k.EntityID)
+				}
+				q = stopDeparturesSelect(fvid, stopKeys, w)
+			} else {
+				// Otherwise get all stop_times for stop
+				q = stopTimeSelect(nil, stopPairs, nil)
+			}
+			// Run query
+			if err := dbutil.Select(ctx,
+				f.db,
+				q,
+				&sts,
+			); err != nil {
+				return nil, err
+			}
+			// Set service date based on StopTimeFilter, and adjust calendar date if needed
+			if serviceDate != nil {
+				for _, ent := range sts {
+					ent.ServiceDate.Set(serviceDate.Val)
+					if ent.ArrivalTime.Val > 24*60*60 {
+						ent.Date.Set(serviceDate.Val.AddDate(0, 0, 1))
+					} else {
+						ent.Date.Set(serviceDate.Val)
+					}
+				}
+			}
+			ents = append(ents, sts...)
+		}
+	}
+	return arrangeGroup(keys, ents, func(ent *model.FlexStopTime) model.FVPair {
+		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.StopID.Int()}
+	}), nil
+}

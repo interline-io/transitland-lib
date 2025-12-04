@@ -319,6 +319,10 @@ type FeedVersion {
   trips(limit: Int, where: TripFilter): [Trip!]!
   "Locations associated with this feed version, if imported"
   locations(limit: Int, where: LocationFilter): [Location!]!
+  "Booking rules associated with this feed version, if imported"
+  booking_rules(limit: Int): [BookingRule!]!
+  "Location groups associated with this feed version, if imported"
+  location_groups(limit: Int): [LocationGroup!]!
   "Feed infos associated with this feed version, if imported"
   feed_infos(limit: Int): [FeedInfo!]!
   "Validation reports associated with this feed version"
