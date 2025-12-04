@@ -28,10 +28,10 @@ func locationGroupSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBu
 	q := sq.StatementBuilder.Select(
 		"gtfs_location_groups.*",
 		"feed_versions.sha1 AS feed_version_sha1",
-		"feeds.onestop_id AS feed_onestop_id",
+		"current_feeds.onestop_id AS feed_onestop_id",
 	).From("gtfs_location_groups").
 		Join("feed_versions ON feed_versions.id = gtfs_location_groups.feed_version_id").
-		Join("feeds ON feeds.id = feed_versions.feed_id")
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
 
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_location_groups.id", ids))
