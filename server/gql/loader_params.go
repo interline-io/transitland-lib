@@ -149,6 +149,11 @@ type calendarDateLoaderParam struct {
 	Where     *model.CalendarDateFilter
 }
 
+type calendarServiceLoaderParam struct {
+	FeedVersionID int
+	ServiceID     string
+}
+
 type censusGeographyLoaderParam struct {
 	EntityType string
 	EntityID   int

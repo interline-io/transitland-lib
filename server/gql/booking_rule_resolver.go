@@ -17,6 +17,11 @@ func (r *bookingRuleResolver) PriorNoticeServiceID(ctx context.Context, obj *mod
 }
 
 func (r *bookingRuleResolver) PriorNoticeService(ctx context.Context, obj *model.BookingRule) (*model.Calendar, error) {
-	// TODO: Implement loader for Calendar by ServiceID
-	return nil, nil
+	if !obj.PriorNoticeServiceID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).CalendarsByServiceIDs.Load(ctx, calendarServiceLoaderParam{
+		FeedVersionID: obj.FeedVersionID,
+		ServiceID:     obj.PriorNoticeServiceID.Val,
+	})()
 }

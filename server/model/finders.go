@@ -17,6 +17,12 @@ type FVPair struct {
 	EntityID      int
 }
 
+// FVServicePair is used for looking up entities by feed_version_id + service_id (string)
+type FVServicePair struct {
+	FeedVersionID int
+	ServiceID     string
+}
+
 // Finder provides all necessary database methods
 type Finder interface {
 	PermFinder
@@ -54,6 +60,7 @@ type EntityLoader interface {
 	BookingRulesByIDs(context.Context, []int) ([]*BookingRule, []error)
 	CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error)
 	CalendarsByIDs(context.Context, []int) ([]*Calendar, []error)
+	CalendarsByServiceIDs(context.Context, []FVServicePair) ([]*Calendar, []error)
 	CensusDatasetLayersByDatasetIDs(context.Context, []int) ([][]*CensusLayer, []error)
 	CensusFieldsByTableIDs(context.Context, *int, []int) ([][]*CensusField, error)
 	CensusGeographiesByDatasetIDs(context.Context, *int, *CensusDatasetGeographyFilter, []int) ([][]*CensusGeography, error)
