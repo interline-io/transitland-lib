@@ -32,7 +32,7 @@ var MAXLIMIT = 1_000
 const MAXRADIUS = 100 * 1000.0
 
 // NewServer .
-func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
+func NewServer(cfg model.Config, graphqlHandler http.Handler) (http.Handler, error) {
 	r := chi.NewRouter()
 
 	feedHandler := makeHandler(graphqlHandler, "feeds", func() apiHandler { return &FeedRequest{} })
@@ -55,7 +55,6 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 
 	// OpenAPI Schema endpoint
 	r.HandleFunc("/openapi.json", func(w http.ResponseWriter, r *http.Request) {
-		cfg := model.ForContext(r.Context())
 		schema, err := GenerateOpenAPI(cfg.RestPrefix)
 		if err != nil {
 			http.Error(w, "Failed to generate schema", http.StatusInternalServerError)
@@ -72,7 +71,7 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	r.HandleFunc("/feeds", feedHandler)
 	r.HandleFunc("/feeds/{feed_key}.{format}", feedHandler)
 	r.HandleFunc("/feeds/{feed_key}", feedHandler)
-	r.Handle("/feeds/{feed_key}/download_latest_feed_version", usercheck.RoleRequired("tl_download_fv_current")(makeHandlerFunc(graphqlHandler, "feedVersionDownloadLatest", feedVersionDownloadLatestHandler)))
+	r.Handle("/feeds/{feed_key}/download_latest_feed_version", usercheck.RoleRequired(cfg.Roles.DownloadCurrentFeedVersionRole)(makeHandlerFunc(graphqlHandler, "feedVersionDownloadLatest", feedVersionDownloadLatestHandler)))
 
 	r.Handle("/feeds/{feed_key}/download_latest_rt/{rt_type}.{format}", makeHandlerFunc(graphqlHandler, "feedDownloadRtHelper", feedDownloadRtHelper))
 
@@ -81,8 +80,8 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	r.HandleFunc("/feed_versions/{feed_version_key}.{format}", feedVersionHandler)
 	r.HandleFunc("/feed_versions/{feed_version_key}", feedVersionHandler)
 	r.HandleFunc("/feeds/{feed_key}/feed_versions", feedVersionHandler)
-	r.Handle("/feed_versions/{feed_version_key}/download", usercheck.RoleRequired("tl_download_fv_historic")(makeHandlerFunc(graphqlHandler, "feedVersionDownload", feedVersionDownloadHandler)))
-	r.Method("POST", "/feed_versions/export", usercheck.RoleRequired("tl_export_feed_versions")(makeHandlerFunc(graphqlHandler, "feedVersionExport", feedVersionExportHandler)))
+	r.Handle("/feed_versions/{feed_version_key}/download", usercheck.RoleRequired(cfg.Roles.DownloadHistoricFeedVersionRole)(makeHandlerFunc(graphqlHandler, "feedVersionDownload", feedVersionDownloadHandler)))
+	r.Method("POST", "/feed_versions/export", usercheck.RoleRequired(cfg.Roles.ExportFeedVersionRole)(makeHandlerFunc(graphqlHandler, "feedVersionExport", feedVersionExportHandler)))
 
 	r.HandleFunc("/agencies.{format}", agencyHandler)
 	r.HandleFunc("/agencies", agencyHandler)

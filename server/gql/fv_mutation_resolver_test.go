@@ -28,7 +28,7 @@ func TestFeedVersionFetchResolver(t *testing.T) {
 		testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 			srv, _ := NewServer()
 			srv = model.AddConfigAndPerms(cfg, srv)
-			srv = usercheck.AdminDefaultMiddleware("test")(srv) // Run all requests as admin
+			srv = usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole)(srv) // Run all requests as admin
 			// Run all requests as admin
 			c := client.New(srv)
 			resp := make(map[string]interface{})
@@ -148,7 +148,7 @@ func TestValidateGtfsResolver(t *testing.T) {
 			testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 				srv, _ := NewServer()
 				srv = model.AddConfigAndPerms(cfg, srv)
-				srv = usercheck.UserDefaultMiddleware("test")(srv) // Run all requests as user
+				srv = usercheck.UseDefaultUserMiddleware("test")(srv) // Run all requests as user
 				c := client.New(srv)
 				queryTestcase(t, c, tc)
 			})

@@ -291,7 +291,7 @@ func TestAgencyResolver_Authz(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			c := client.New(usercheck.UserDefaultMiddleware(tc.user)(srv))
+			c := client.New(usercheck.UseDefaultUserMiddleware(tc.user)(srv))
 			queryTestcase(t, c, tc)
 		})
 	}

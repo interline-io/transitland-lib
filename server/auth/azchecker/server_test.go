@@ -414,7 +414,7 @@ func TestServer(t *testing.T) {
 
 func testServerWithUser(c *Checker, tk testCase) http.Handler {
 	srv, _ := NewServer(c)
-	srv = usercheck.UserDefaultMiddleware(stringOr(tk.CheckAsUser, tk.Subject.Name))(srv)
+	srv = usercheck.UseDefaultUserMiddleware(stringOr(tk.CheckAsUser, tk.Subject.Name))(srv)
 	return srv
 }
 
@@ -434,7 +434,7 @@ func checkHttpExpectError(t testing.TB, tk testCase, rr *httptest.ResponseRecord
 
 }
 
-func responseGetNames(t testing.TB, data []byte, path string, key string) []string {
+func responseGetNames(_ testing.TB, data []byte, path string, key string) []string {
 	a := gjson.ParseBytes(data).Get(path)
 	var ret []string
 	for _, b := range a.Array() {

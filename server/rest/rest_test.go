@@ -49,7 +49,7 @@ func testHandlersWithOptions(t testing.TB, opts testconfig.Options) (http.Handle
 	if err != nil {
 		t.Fatal(err)
 	}
-	restHandler, err := NewServer(graphqlHandler)
+	restHandler, err := NewServer(cfg, graphqlHandler)
 	if err != nil {
 		t.Fatal(err)
 	}

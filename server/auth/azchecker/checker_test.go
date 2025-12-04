@@ -58,34 +58,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-var checkerGetTests = []testCase{
-	{
-		Subject: EntityKey{
-			Type: 0,
-			Name: "",
-		},
-		Object: newEntityKey(TenantType, "tl-tenant"),
-
-		Expect: "user:tl-tenant-admin:admin user:ian:member user:drew:member user:tl-tenant-member:member",
-	},
-	{
-		Subject: EntityKey{
-			Type: 0,
-			Name: "",
-		},
-		Object: newEntityKey(FeedVersionType, "e535eb2b3b9ac3ef15d82c56575e914575e732e0"),
-		Expect: "feed:BA:parent user:tl-tenant-member:viewer",
-	},
-	{
-		Subject: EntityKey{
-			Type: 0,
-			Name: "",
-		},
-		Object: newEntityKey(FeedType, "CT"),
-		Expect: "org:tl-tenant:parent",
-	},
-}
-
 func TestChecker(t *testing.T) {
 	fgaUrl, a, ok := testutil.CheckEnv("TL_TEST_FGA_ENDPOINT")
 	if !ok {
@@ -1810,7 +1782,6 @@ func newTestChecker(t testing.TB, url string, testData []testCase) *Checker {
 	cfg := CheckerConfig{
 		FGAEndpoint:      url,
 		FGALoadModelFile: testdata.Path("server/authz/tls.json"),
-		GlobalAdmin:      "global_admin",
 	}
 
 	checker, err := NewCheckerFromConfig(ctx, cfg, dbx)

@@ -171,6 +171,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		LoaderBatchSize:         cmd.LoaderBatchSize,
 		LoaderStopTimeBatchSize: cmd.LoaderStopTimeBatchSize,
 		MaxRadius:               cmd.MaxRadius,
+		Roles:                   model.DefaultConfigRoles(),
 	}
 
 	// Setup router
@@ -186,7 +187,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	root.Use(model.AddConfig(cfg))
 
 	// This server only supports admin access
-	root.Use(usercheck.AdminDefaultMiddleware("admin"))
+	root.Use(usercheck.UseDefaultUserMiddleware("test", cfg.Roles.AdminRole))
 
 	// Add logging middleware - must be after auth
 	root.Use(log.RequestIDMiddleware)
@@ -222,7 +223,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	}
 
 	// REST API
-	restServer, err := rest.NewServer(graphqlServer)
+	restServer, err := rest.NewServer(cfg, graphqlServer)
 	if err != nil {
 		return err
 	} else {

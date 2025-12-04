@@ -7,18 +7,13 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 )
 
-// AdminDefaultMiddleware uses a default "admin" context.
-func AdminDefaultMiddleware(defaultName string) func(http.Handler) http.Handler {
-	return NewUserDefaultMiddleware(func() authn.User { return authn.NewCtxUser(defaultName, "", "").WithRoles("admin") })
+// UseDefaultUserMiddleware uses a default "user" context.
+func UseDefaultUserMiddleware(defaultName string, roles ...string) func(http.Handler) http.Handler {
+	return newInjectUserMiddleware(func() authn.User { return authn.NewCtxUser(defaultName, "", "").WithRoles(roles...) })
 }
 
-// UserDefaultMiddleware uses a default "user" context.
-func UserDefaultMiddleware(defaultName string) func(http.Handler) http.Handler {
-	return NewUserDefaultMiddleware(func() authn.User { return authn.NewCtxUser(defaultName, "", "") })
-}
-
-// NewUserDefaultMiddleware uses a default "user" context.
-func NewUserDefaultMiddleware(cb func() authn.User) func(http.Handler) http.Handler {
+// NewInjectUserMiddleware uses a default "user" context.
+func newInjectUserMiddleware(cb func() authn.User) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user := cb()
@@ -26,16 +21,6 @@ func NewUserDefaultMiddleware(cb func() authn.User) func(http.Handler) http.Hand
 			next.ServeHTTP(w, r)
 		})
 	}
-}
-
-// AdminRequired limits a request to admin privileges.
-func AdminRequired(next http.Handler) http.Handler {
-	return RoleRequired("admin")(next)
-}
-
-// UserRequired limits a request to user privileges.
-func UserRequired(next http.Handler) http.Handler {
-	return RoleRequired("user")(next)
 }
 
 func RoleRequired(role string) func(http.Handler) http.Handler {

@@ -17,6 +17,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/fga"
 	"github.com/interline-io/transitland-lib/server/dbutil"
+	"github.com/interline-io/transitland-lib/server/model"
 )
 
 // For less typing
@@ -80,14 +81,12 @@ type CheckerConfig struct {
 	FGAEndpoint       string
 	FGALoadModelFile  string
 	FGALoadTestData   []TupleKey
-	GlobalAdmin       string
 }
 
 type Checker struct {
-	userClient   UserProvider
-	fgaClient    FGAProvider
-	db           sqlx.Ext
-	globalAdmins []string
+	userClient UserProvider
+	fgaClient  FGAProvider
+	db         sqlx.Ext
 	authz.UnsafeCheckerServer
 }
 
@@ -141,9 +140,6 @@ func NewCheckerFromConfig(ctx context.Context, cfg CheckerConfig, db sqlx.Ext) (
 	}
 
 	checker := NewChecker(userClient, fgaClient, db)
-	if cfg.GlobalAdmin != "" {
-		checker.globalAdmins = append(checker.globalAdmins, cfg.GlobalAdmin)
-	}
 	return checker, nil
 }
 
@@ -242,22 +238,19 @@ func (c *Checker) Me(ctx context.Context, req *authz.MeRequest) (*authz.MeRespon
 	return ret, nil
 }
 
-func (c *Checker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
-	return c.checkGlobalAdmin(authn.ForContext(ctx)), nil
-}
-
 func (c *Checker) hydrateEntityRels(ctx context.Context, ers []*authz.EntityRelation) ([]*authz.EntityRelation, error) {
 	// This is awful :( :(
 	for i, v := range ers {
-		if v.Type == TenantType {
+		switch v.Type {
+		case TenantType:
 			if t, _ := c.getTenants(ctx, []int64{v.Int64()}); len(t) > 0 && t[0] != nil {
 				ers[i].Name = t[0].Name
 			}
-		} else if v.Type == GroupType {
+		case GroupType:
 			if t, _ := c.getGroups(ctx, []int64{v.Int64()}); len(t) > 0 && t[0] != nil {
 				ers[i].Name = t[0].Name
 			}
-		} else if v.Type == UserType {
+		case UserType:
 			if t, err := c.User(ctx, &authz.UserRequest{Id: v.Id}); err == nil && t != nil && t.User != nil {
 				ers[i].Name = t.User.Name
 			}
@@ -454,7 +447,7 @@ func (c *Checker) GroupPermissions(ctx context.Context, req *authz.GroupRequest)
 	ret.Actions.CanEdit, _ = c.checkAction(ctx, CanEdit, entKey)
 	ret.Actions.CanCreateFeed, _ = c.checkAction(ctx, CanCreateFeed, entKey)
 	ret.Actions.CanDeleteFeed, _ = c.checkAction(ctx, CanDeleteFeed, entKey)
-	ret.Actions.CanSetTenant = c.ctxIsGlobalAdmin(ctx)
+	ret.Actions.CanSetTenant = c.checkGlobalAdmin(ctx) // Only available to global admin (not in auth model)
 
 	// Get feeds
 	feedIds, _ := c.listSubjectRelations(ctx, entKey, FeedType, ParentRelation)
@@ -552,11 +545,36 @@ func (c *Checker) getFeeds(ctx context.Context, ids []int64) ([]*authz.Feed, err
 	return getEntities[*authz.Feed](ctx, c.db, ids, "current_feeds", "id", "onestop_id", "coalesce(name,'') as name")
 }
 
+func (c *Checker) getPrivateFeedIds(ctx context.Context) ([]int64, error) {
+	// Return IDs of non-public feeds since public feeds are implicitly readable
+	var ids []int64
+	q := sq.StatementBuilder.
+		Select("current_feeds.id").
+		From("current_feeds").
+		Join("feed_states ON feed_states.feed_id = current_feeds.id").
+		Where(sq.Eq{"feed_states.public": false})
+	if err := dbutil.Select(ctx, c.db, q, &ids); err != nil {
+		log.For(ctx).Trace().Err(err)
+		return nil, err
+	}
+	return ids, nil
+}
+
 func (c *Checker) FeedList(ctx context.Context, req *authz.FeedListRequest) (*authz.FeedListResponse, error) {
 	feedIds, err := c.listCtxObjects(ctx, FeedType, CanView)
 	if err != nil {
 		return nil, err
 	}
+
+	// Global admins also get access to all non-public feeds
+	if c.checkGlobalAdmin(ctx) {
+		privateFeedIds, err := c.getPrivateFeedIds(ctx)
+		if err != nil {
+			return nil, err
+		}
+		feedIds = mergeUniqueIds(feedIds, privateFeedIds)
+	}
+
 	t, err := c.getFeeds(ctx, feedIds)
 	return &authz.FeedListResponse{Feeds: t}, err
 }
@@ -623,11 +641,36 @@ func (c *Checker) getFeedVersions(ctx context.Context, ids []int64) ([]*authz.Fe
 	return getEntities[*authz.FeedVersion](ctx, c.db, ids, "feed_versions", "id", "feed_id", "sha1", "coalesce(name,'') as name")
 }
 
+func (c *Checker) getPrivateFeedVersionIds(ctx context.Context) ([]int64, error) {
+	// Return IDs of non-public feed versions since public ones are implicitly readable
+	var ids []int64
+	q := sq.StatementBuilder.
+		Select("feed_versions.id").
+		From("feed_versions").
+		Join("feed_states ON feed_states.feed_id = feed_versions.feed_id").
+		Where(sq.Eq{"feed_states.public": false})
+	if err := dbutil.Select(ctx, c.db, q, &ids); err != nil {
+		log.For(ctx).Trace().Err(err)
+		return nil, err
+	}
+	return ids, nil
+}
+
 func (c *Checker) FeedVersionList(ctx context.Context, req *authz.FeedVersionListRequest) (*authz.FeedVersionListResponse, error) {
 	fvids, err := c.listCtxObjects(ctx, FeedVersionType, CanView)
 	if err != nil {
 		return nil, err
 	}
+
+	// Global admins also get access to all non-public feed versions
+	if c.checkGlobalAdmin(ctx) {
+		privateFvids, err := c.getPrivateFeedVersionIds(ctx)
+		if err != nil {
+			return nil, err
+		}
+		fvids = mergeUniqueIds(fvids, privateFvids)
+	}
+
 	t, err := c.getFeedVersions(ctx, fvids)
 	return &authz.FeedVersionListResponse{FeedVersions: t}, err
 }
@@ -765,11 +808,7 @@ func (c *Checker) listSubjectRelations(ctx context.Context, sub EntityKey, objec
 	return ret, nil
 }
 
-func (c *Checker) getSubjectTuples(ctx context.Context, obj EntityKey, ctxtk ...TupleKey) ([]TupleKey, error) {
-	return c.fgaClient.GetObjectTuples(ctx, authz.NewTupleKey().WithSubject(obj.Type, obj.Name))
-}
-
-func (c *Checker) getObjectTuples(ctx context.Context, obj EntityKey, ctxtk ...TupleKey) ([]TupleKey, error) {
+func (c *Checker) getObjectTuples(ctx context.Context, obj EntityKey, _ ...TupleKey) ([]TupleKey, error) {
 	return c.fgaClient.GetObjectTuples(ctx, authz.NewTupleKey().WithObject(obj.Type, obj.Name))
 }
 
@@ -789,45 +828,53 @@ func (c *Checker) checkAction(ctx context.Context, checkAction Action, obj Entit
 	if checkUser == nil {
 		return false, nil
 	}
+
+	// Check if we're authorized to perform the action
 	userName := checkUser.ID()
-	if c.checkGlobalAdmin(checkUser) {
-		log.For(ctx).Debug().Str("check_user", userName).Str("obj", obj.String()).Str("check_action", checkAction.String()).Msg("global admin action")
-		return true, nil
-	}
 	checkTk := authz.NewTupleKey().WithUser(userName).WithObject(obj.Type, obj.Name).WithAction(checkAction)
 	ret, err := c.fgaClient.Check(ctx, checkTk, ctxtk...)
+
+	// If we lack permission, check for global admin override
+	if !ret && c.checkGlobalAdmin(ctx) {
+		log.For(ctx).Debug().Str("check_user", userName).Str("obj", obj.String()).Str("check_action", checkAction.String()).Msg("checkAction: allowed via global admin")
+		ret = true
+	}
 	log.For(ctx).Trace().Str("tk", checkTk.String()).Bool("result", ret).Err(err).Msg("checkAction")
 	return ret, err
 }
 
-func (c *Checker) ctxIsGlobalAdmin(ctx context.Context) bool {
+func (c *Checker) checkGlobalAdmin(ctx context.Context) bool {
 	checkUser := authn.ForContext(ctx)
-	if checkUser == nil {
+	if c == nil || checkUser == nil {
 		return false
 	}
-	return c.checkGlobalAdmin(checkUser)
-}
-
-func (c *Checker) checkGlobalAdmin(checkUser authn.User) bool {
-	if c == nil {
-		return false
-	}
-	if checkUser == nil {
-		return false
-	}
-	if checkUser.HasRole("admin") {
-		return true
-	}
-	userName := checkUser.ID()
-	for _, v := range c.globalAdmins {
-		if v == userName {
-			return true
-		}
-	}
-	return false
+	cfg := model.ForContext(ctx)
+	return checkUser.HasRole(cfg.Roles.AdminRole)
 }
 
 // Helpers
+
+// mergeUniqueIds merges two slices of int64 IDs into a unique set
+func mergeUniqueIds(ids1, ids2 []int64) []int64 {
+	seen := make(map[int64]bool, len(ids1)+len(ids2))
+	result := make([]int64, 0, len(ids1)+len(ids2))
+
+	for _, id := range ids1 {
+		if !seen[id] {
+			seen[id] = true
+			result = append(result, id)
+		}
+	}
+
+	for _, id := range ids2 {
+		if !seen[id] {
+			seen[id] = true
+			result = append(result, id)
+		}
+	}
+
+	return result
+}
 
 type hasId interface {
 	GetId() int64

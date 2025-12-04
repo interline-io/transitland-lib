@@ -27,6 +27,27 @@ type Config struct {
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
 	MaxRadius               float64
+	Roles                   ConfigRoles
+}
+
+type ConfigRoles struct {
+	AdminRole                       string
+	UserRole                        string
+	ExtendedUserRole                string
+	DownloadCurrentFeedVersionRole  string
+	DownloadHistoricFeedVersionRole string
+	ExportFeedVersionRole           string
+}
+
+func DefaultConfigRoles() ConfigRoles {
+	return ConfigRoles{
+		AdminRole:                       "tl_admin",
+		UserRole:                        "tl_user",
+		ExtendedUserRole:                "tl_user_pro",
+		DownloadCurrentFeedVersionRole:  "tl_download_fv_current",
+		DownloadHistoricFeedVersionRole: "tl_download_fv_historic",
+		ExportFeedVersionRole:           "tl_export_feed_versions",
+	}
 }
 
 var finderCtxKey = &contextKey{"finderConfig"}
