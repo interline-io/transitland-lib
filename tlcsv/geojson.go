@@ -20,10 +20,12 @@ type GeoJSONFeatureParser[T any] func(*geojson.Feature) (T, bool)
 // file format into GTFS entities.
 func readGeoJSON[T any](reader *Reader, filename string, parser GeoJSONFeatureParser[T]) ([]T, error) {
 	var entities []T
+	var parseErr error
 
 	err := reader.Adapter.OpenFile(filename, func(in io.Reader) {
 		var fc geojson.FeatureCollection
 		if err := json.NewDecoder(in).Decode(&fc); err != nil {
+			parseErr = err
 			return
 		}
 
@@ -36,6 +38,9 @@ func readGeoJSON[T any](reader *Reader, filename string, parser GeoJSONFeaturePa
 
 	if err != nil {
 		return nil, err
+	}
+	if parseErr != nil {
+		return nil, parseErr
 	}
 
 	return entities, nil

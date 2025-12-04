@@ -45,7 +45,7 @@ CREATE TABLE public.gtfs_booking_rules (
     prior_notice_last_time integer,
     prior_notice_start_day integer,
     prior_notice_start_time integer,
-    prior_notice_service_id text,
+    prior_notice_service_id bigint REFERENCES gtfs_calendars(id),
     message text,
     pickup_message text,
     drop_off_message text,
@@ -93,6 +93,12 @@ ALTER TABLE public.gtfs_stop_times
 -- GTFS-Flex: Drop not-null constraint on stop_id (now conditionally required)
 ALTER TABLE public.gtfs_stop_times 
     ALTER COLUMN stop_id DROP NOT NULL;
+
+-- GTFS-Flex: Add indexes on new foreign keys in stop_times for efficient queries and cascading deletes
+CREATE INDEX ON gtfs_stop_times(location_group_id) WHERE location_group_id IS NOT NULL;
+CREATE INDEX ON gtfs_stop_times(location_id) WHERE location_id IS NOT NULL;
+CREATE INDEX ON gtfs_stop_times(pickup_booking_rule_id) WHERE pickup_booking_rule_id IS NOT NULL;
+CREATE INDEX ON gtfs_stop_times(drop_off_booking_rule_id) WHERE drop_off_booking_rule_id IS NOT NULL;
 
 COMMIT;
 

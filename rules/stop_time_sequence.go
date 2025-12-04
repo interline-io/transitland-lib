@@ -73,11 +73,13 @@ func ValidateStopTimes(stoptimes []gtfs.StopTime) []error {
 				errs = append(errs, causes.NewSequenceError("departure_time", st.DepartureTime.String()))
 			}
 			// Update last scheduled time for next comparison
+			// Only update if this stop has explicit times (not interpolated/missing)
 			if st.DepartureTime.Int() > 0 {
 				lastScheduledTime = st.DepartureTime
 			} else if st.ArrivalTime.Int() > 0 {
 				lastScheduledTime = st.ArrivalTime
 			}
+			// If both times are 0/missing, keep previous lastScheduledTime for next scheduled stop comparison
 		}
 		// else: Flex stop with time window - skip time progression validation
 

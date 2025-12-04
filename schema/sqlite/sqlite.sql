@@ -421,6 +421,10 @@ CREATE TABLE IF NOT EXISTS "gtfs_stop_times" (
 CREATE INDEX idx_stop_times_trip_id ON "gtfs_stop_times"(trip_id);
 CREATE INDEX idx_gtfs_stop_times_stop_id ON "gtfs_stop_times"(stop_id);
 CREATE INDEX idx_gtfs_stop_times_feed_version_id ON "gtfs_stop_times"(feed_version_id);
+CREATE INDEX idx_gtfs_stop_times_location_group_id ON "gtfs_stop_times"(location_group_id) WHERE location_group_id IS NOT NULL;
+CREATE INDEX idx_gtfs_stop_times_location_id ON "gtfs_stop_times"(location_id) WHERE location_id IS NOT NULL;
+CREATE INDEX idx_gtfs_stop_times_pickup_booking_rule_id ON "gtfs_stop_times"(pickup_booking_rule_id) WHERE pickup_booking_rule_id IS NOT NULL;
+CREATE INDEX idx_gtfs_stop_times_drop_off_booking_rule_id ON "gtfs_stop_times"(drop_off_booking_rule_id) WHERE drop_off_booking_rule_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS "gtfs_fare_rules" (
   "fare_id" integer NOT NULL,
   "route_id" int,
@@ -1007,14 +1011,15 @@ CREATE TABLE IF NOT EXISTS "gtfs_booking_rules" (
   "prior_notice_last_time" integer,
   "prior_notice_start_day" integer,
   "prior_notice_start_time" integer,
-  "prior_notice_service_id" varchar(255),
+  "prior_notice_service_id" integer,
   "message" text,
   "pickup_message" text,
   "drop_off_message" text,
   "phone_number" varchar(255),
   "info_url" text,
   "booking_url" text,
-  foreign key(feed_version_id) REFERENCES feed_versions(id)
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(prior_notice_service_id) references gtfs_calendars(id)
 );
 CREATE INDEX idx_gtfs_booking_rules_feed_version_id ON "gtfs_booking_rules"(feed_version_id);
 CREATE UNIQUE INDEX idx_gtfs_booking_rules_fv_id ON "gtfs_booking_rules"(feed_version_id, booking_rule_id);
