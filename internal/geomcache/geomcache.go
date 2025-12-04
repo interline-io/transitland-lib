@@ -140,13 +140,16 @@ func (g *GeomCache) setStopTimeDists(shapeId string, patternId int64, sts []gtfs
 	stopPositionInfo, ok := g.stopPositions[stopPositionsKey]
 	if !ok {
 		// Generate the stop-to-stop geometry
-		stopLine := make([]tlxy.Point, len(sts))
+		stopLine := make([]tlxy.Point, 0, len(sts))
 		for i := 0; i < len(sts); i++ {
+			if !sts[i].StopID.Valid {
+				continue
+			}
 			point, ok := g.stops[sts[i].StopID.Val]
 			if !ok {
 				return fmt.Errorf("stop '%s' not in cache", sts[i].StopID)
 			}
-			stopLine[i] = point
+			stopLine = append(stopLine, point)
 		}
 
 		// Get the known shape line and known shape distance

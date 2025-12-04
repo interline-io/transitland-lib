@@ -5,7 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/graph"
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
@@ -18,7 +18,7 @@ func nn(filename, eid string) node {
 
 func TestExtract_Filter_BART(t *testing.T) {
 	em := NewMarker()
-	reader, err := tlcsv.NewReader(testutil.ExampleFeedBART.URL)
+	reader, err := tlcsv.NewReader(testreader.ExampleFeedBART.URL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -41,7 +41,7 @@ func TestExtract_Filter_BART(t *testing.T) {
 func TestExtract_Bbox(t *testing.T) {
 	em := NewMarker()
 	em.bbox = "-122.276929,37.794923,-122.259099,37.834413"
-	reader, err := tlcsv.NewReader(testutil.ExampleFeedBART.URL)
+	reader, err := tlcsv.NewReader(testreader.ExampleFeedBART.URL)
 	if err != nil {
 		t.Error(err)
 	}

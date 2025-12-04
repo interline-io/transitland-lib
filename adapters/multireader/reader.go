@@ -176,6 +176,22 @@ func (mr *Reader) RouteNetworks() chan gtfs.RouteNetwork {
 	return readEntities(mr, func(r adapters.Reader) chan gtfs.RouteNetwork { return r.RouteNetworks() }, setFv[*gtfs.RouteNetwork])
 }
 
+func (mr *Reader) LocationGroups() chan gtfs.LocationGroup {
+	return readEntities(mr, func(r adapters.Reader) chan gtfs.LocationGroup { return r.LocationGroups() }, setFv[*gtfs.LocationGroup])
+}
+
+func (mr *Reader) LocationGroupStops() chan gtfs.LocationGroupStop {
+	return readEntities(mr, func(r adapters.Reader) chan gtfs.LocationGroupStop { return r.LocationGroupStops() }, setFv[*gtfs.LocationGroupStop])
+}
+
+func (mr *Reader) BookingRules() chan gtfs.BookingRule {
+	return readEntities(mr, func(r adapters.Reader) chan gtfs.BookingRule { return r.BookingRules() }, setFv[*gtfs.BookingRule])
+}
+
+func (mr *Reader) Locations() chan gtfs.Location {
+	return readEntities(mr, func(r adapters.Reader) chan gtfs.Location { return r.Locations() }, setFv[*gtfs.Location])
+}
+
 type canSetFV interface {
 	SetFeedVersionID(int)
 }

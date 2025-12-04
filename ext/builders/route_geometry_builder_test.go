@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/twpayne/go-geom"
@@ -34,14 +34,14 @@ func TestRouteGeometryBuilder(t *testing.T) {
 	}
 	groups := map[string]testgroup{
 		"Caltrain": {
-			testutil.ExampleFeedCaltrain.URL,
+			testreader.ExampleFeedCaltrain.URL,
 			[]testcase{
 				{RouteID: "Bu-130", ExpectLength: 75274.982973, ExpectLineStrings: 4},
 				{RouteID: "Lo-130", ExpectLength: 75274.982973, ExpectLineStrings: 4},
 			},
 		},
 		"BART": {
-			testutil.ExampleFeedBART.URL,
+			testreader.ExampleFeedBART.URL,
 			[]testcase{
 				{RouteID: "07", ExpectLength: 58890.123340, ExpectLineStrings: 2},
 				{RouteID: "03", ExpectLength: 65574.875547, ExpectLineStrings: 2},

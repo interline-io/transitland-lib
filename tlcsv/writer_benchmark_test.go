@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/adapters"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 )
 
 func BenchmarkWriter(b *testing.B) {
 	b.SetParallelism(1)
-	for k, fe := range testutil.ExternalTestFeeds {
+	for k, fe := range testreader.ExternalTestFeeds {
 		b.Run(k, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				tmpdir, err := os.MkdirTemp("", "gtfs")
@@ -22,7 +22,7 @@ func BenchmarkWriter(b *testing.B) {
 				if err != nil {
 					b.Error(err)
 				}
-				testutil.TestWriter(b, fe, func() adapters.Reader {
+				testreader.TestWriter(b, fe, func() adapters.Reader {
 					a, err := NewReader(fe.URL)
 					if err != nil {
 						b.Error(err)

@@ -379,6 +379,8 @@ func (v *Validator) copierOptions() copier.Options {
 		cpOpts.AddExtensionWithLevel(&rules.ShapeMaxSegmentLengthCheck{
 			MaxAllowedDistance: 1_000_000, // 1000 km
 		}, 1)
+		// GTFS-Flex best practice: location groups should have stops
+		cpOpts.AddExtensionWithLevel(&rules.FlexLocationGroupEmptyCheck{}, 1)
 	}
 	return cpOpts
 }

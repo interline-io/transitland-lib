@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
 
 func TestGeomCache(t *testing.T) {
-	r, err := tlcsv.NewReader(testutil.ExampleDir.URL)
+	r, err := tlcsv.NewReader(testreader.ExampleDir.URL)
 	if err != nil {
 		t.Error(err)
 	}

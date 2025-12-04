@@ -1,0 +1,24 @@
+booking_rule_id,booking_type,prior_notice_duration_min,prior_notice_duration_max,prior_notice_last_day,prior_notice_last_time,prior_notice_start_day,prior_notice_start_time,prior_notice_service_id,message,pickup_message,drop_off_message,phone_number,info_url,booking_url,expect_error,expect_error,comment
+ok_type0,0,,,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,,Valid booking rule type 0 (real-time)
+ok_type1,1,,,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,,Valid booking rule type 1 (up to same day)
+ok_type2,2,30,,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,,Valid booking rule type 2 (advance notice)
+missing_id,,0,,,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,RequiredFieldError:booking_rule_id,booking_rule_id is required
+parse_booking_type,ok1,xyz,,,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,FieldParseError:booking_type,Non-integer booking_type value
+invalid_booking_type,ok1,3,,,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,InvalidFieldError:booking_type,booking_type must be 0-2
+parse_prior_notice_min,ok1,2,xyz,,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,FieldParseError:prior_notice_duration_min,Non-integer prior_notice_duration_min value
+parse_prior_notice_max,ok1,2,30,xyz,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,FieldParseError:prior_notice_duration_max,Non-integer prior_notice_duration_max value
+parse_prior_notice_last_day,ok1,2,30,,xyz,,,,,,,,555-1234,https://example.com/info,https://example.com/book,FieldParseError:prior_notice_last_day,Non-integer prior_notice_last_day value
+parse_prior_notice_start_day,ok1,2,30,,,,,xyz,,,,,555-1234,https://example.com/info,https://example.com/book,FieldParseError:prior_notice_start_day,Non-integer prior_notice_start_day value
+type2_missing_min,ok2,2,,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyRequiredFieldError:prior_notice_duration_min,booking_type=2 requires prior_notice_duration_min
+type2_forbidden_max,ok2,2,30,60,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyForbiddenFieldError:prior_notice_duration_max,booking_type=2 forbids prior_notice_duration_max
+type2_forbidden_last_day,ok2,2,30,,1,,,,,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyForbiddenFieldError:prior_notice_last_day,booking_type=2 forbids prior_notice_last_day
+type2_forbidden_last_time,ok2,2,30,,,12:00:00,,,,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyForbiddenFieldError:prior_notice_last_time,booking_type=2 forbids prior_notice_last_time
+type2_forbidden_start_day,ok2,2,30,,,,,1,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyForbiddenFieldError:prior_notice_start_day,booking_type=2 forbids prior_notice_start_day
+type2_forbidden_start_time,ok2,2,30,,,,,,08:00:00,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyForbiddenFieldError:prior_notice_start_time,booking_type=2 forbids prior_notice_start_time
+type2_forbidden_service_id,ok2,2,30,,,,,,,svc1,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyForbiddenFieldError:prior_notice_service_id,booking_type=2 forbids prior_notice_service_id
+type01_forbidden_min,ok1,1,30,,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyForbiddenFieldError:prior_notice_duration_min,booking_type=0/1 forbids prior_notice_duration_min
+last_time_without_day,ok1,0,,,,12:00:00,,,,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyRequiredFieldError:prior_notice_last_day,prior_notice_last_time requires prior_notice_last_day
+last_day_without_time,ok1,0,,,1,,,,,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyRequiredFieldError:prior_notice_last_time,prior_notice_last_day requires prior_notice_last_time
+start_time_without_day,ok1,0,,,,,,,08:00:00,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyRequiredFieldError:prior_notice_start_day,prior_notice_start_time requires prior_notice_start_day
+start_day_without_time,ok1,0,,,,,,1,,,,,555-1234,https://example.com/info,https://example.com/book,ConditionallyRequiredFieldError:prior_notice_start_time,prior_notice_start_day requires prior_notice_start_time
+max_less_than_min,ok1,0,30,15,,,,,,,,,555-1234,https://example.com/info,https://example.com/book,InvalidFieldError:prior_notice_duration_max,prior_notice_duration_max must be >= prior_notice_duration_min

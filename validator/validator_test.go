@@ -12,6 +12,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -67,7 +68,7 @@ func TestEntityErrors(t *testing.T) {
 	if err := reader.Open(); err != nil {
 		t.Error(err)
 	}
-	testutil.AllEntities(reader, func(ent tt.Entity) {
+	testreader.AllEntities(reader, func(ent tt.Entity) {
 		t.Run(fmt.Sprintf("%s:%s", ent.Filename(), ent.EntityID()), func(t *testing.T) {
 			errs := tt.CheckErrors(ent)
 			expecterrs := testutil.GetExpectErrors(ent)

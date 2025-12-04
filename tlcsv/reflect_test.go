@@ -11,7 +11,7 @@ import (
 func TestGetString(t *testing.T) {
 	ent := gtfs.StopTime{
 		TripID:            tt.NewString("123"),
-		StopID:            tt.NewString("456"),
+		StopID:            tt.NewKey("456"),
 		ArrivalTime:       tt.NewSeconds(3600),
 		DepartureTime:     tt.NewSeconds(7200),
 		ShapeDistTraveled: tt.NewFloat(123.456),

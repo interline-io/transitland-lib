@@ -11,34 +11,38 @@ var bufferSize = 1000
 
 // Reader is a mocked up Reader used for testing.
 type Reader struct {
-	AgencyList           []gtfs.Agency
-	RouteList            []gtfs.Route
-	TripList             []gtfs.Trip
-	StopList             []gtfs.Stop
-	StopTimeList         []gtfs.StopTime
-	ShapeList            []gtfs.Shape
-	CalendarList         []gtfs.Calendar
-	CalendarDateList     []gtfs.CalendarDate
-	FeedInfoList         []gtfs.FeedInfo
-	FareRuleList         []gtfs.FareRule
-	FareAttributeList    []gtfs.FareAttribute
-	FrequencyList        []gtfs.Frequency
-	TransferList         []gtfs.Transfer
-	LevelList            []gtfs.Level
-	PathwayList          []gtfs.Pathway
-	AttributionList      []gtfs.Attribution
-	TranslationList      []gtfs.Translation
-	AreaList             []gtfs.Area
-	StopAreaList         []gtfs.StopArea
-	FareLegRuleList      []gtfs.FareLegRule
-	FareTransferRuleList []gtfs.FareTransferRule
-	FareMediaList        []gtfs.FareMedia
-	FareProductList      []gtfs.FareProduct
-	RiderCategoryList    []gtfs.RiderCategory
-	TimeframeList        []gtfs.Timeframe
-	NetworkList          []gtfs.Network
-	RouteNetworkList     []gtfs.RouteNetwork
-	OtherList            []tt.Entity
+	AgencyList            []gtfs.Agency
+	RouteList             []gtfs.Route
+	TripList              []gtfs.Trip
+	StopList              []gtfs.Stop
+	StopTimeList          []gtfs.StopTime
+	ShapeList             []gtfs.Shape
+	CalendarList          []gtfs.Calendar
+	CalendarDateList      []gtfs.CalendarDate
+	FeedInfoList          []gtfs.FeedInfo
+	FareRuleList          []gtfs.FareRule
+	FareAttributeList     []gtfs.FareAttribute
+	FrequencyList         []gtfs.Frequency
+	TransferList          []gtfs.Transfer
+	LevelList             []gtfs.Level
+	PathwayList           []gtfs.Pathway
+	AttributionList       []gtfs.Attribution
+	TranslationList       []gtfs.Translation
+	AreaList              []gtfs.Area
+	StopAreaList          []gtfs.StopArea
+	FareLegRuleList       []gtfs.FareLegRule
+	FareTransferRuleList  []gtfs.FareTransferRule
+	FareMediaList         []gtfs.FareMedia
+	FareProductList       []gtfs.FareProduct
+	RiderCategoryList     []gtfs.RiderCategory
+	TimeframeList         []gtfs.Timeframe
+	NetworkList           []gtfs.Network
+	RouteNetworkList      []gtfs.RouteNetwork
+	LocationGroupList     []gtfs.LocationGroup
+	LocationGroupStopList []gtfs.LocationGroupStop
+	BookingRuleList       []gtfs.BookingRule
+	LocationList          []gtfs.Location
+	OtherList             []tt.Entity
 }
 
 // NewReader returns a new Reader.
@@ -426,6 +430,50 @@ func (mr *Reader) RouteNetworks() chan gtfs.RouteNetwork {
 	out := make(chan gtfs.RouteNetwork, bufferSize)
 	go func() {
 		for _, ent := range mr.RouteNetworkList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) LocationGroups() chan gtfs.LocationGroup {
+	out := make(chan gtfs.LocationGroup, bufferSize)
+	go func() {
+		for _, ent := range mr.LocationGroupList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) LocationGroupStops() chan gtfs.LocationGroupStop {
+	out := make(chan gtfs.LocationGroupStop, bufferSize)
+	go func() {
+		for _, ent := range mr.LocationGroupStopList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) BookingRules() chan gtfs.BookingRule {
+	out := make(chan gtfs.BookingRule, bufferSize)
+	go func() {
+		for _, ent := range mr.BookingRuleList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) Locations() chan gtfs.Location {
+	out := make(chan gtfs.Location, bufferSize)
+	go func() {
+		for _, ent := range mr.LocationList {
 			out <- ent
 		}
 		close(out)

@@ -7,7 +7,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
@@ -46,7 +46,7 @@ func TestRedateFilter(t *testing.T) {
 		{"no target days", "2018-06-04", "2022-01-03", 7, 0, true, service.Service{}},
 		{"different weekday", "2018-06-04", "2022-01-04", 7, 7, true, service.Service{}},
 	}
-	reader, err := tlcsv.NewReader(testutil.ExampleFeedBART.URL)
+	reader, err := tlcsv.NewReader(testreader.ExampleFeedBART.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestRedateFilter(t *testing.T) {
 			}
 			// rf.AllowInactive = true
 			w := direct.NewWriter()
-			cp, err := testutil.NewDirectCopier(reader, w, testutil.DirectCopierOptions{})
+			cp, err := testreader.NewDirectCopier(reader, w, testreader.DirectCopierOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}

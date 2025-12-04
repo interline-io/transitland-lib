@@ -1,0 +1,146 @@
+package tlcsv
+
+import (
+	"encoding/json"
+	"io"
+
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
+	geom "github.com/twpayne/go-geom"
+	"github.com/twpayne/go-geom/encoding/geojson"
+)
+
+// GeoJSONFeatureParser is a callback function for parsing a GeoJSON feature
+// into a GTFS entity. It receives the feature and should return the parsed
+// entity and whether it was successfully parsed.
+type GeoJSONFeatureParser[T any] func(*geojson.Feature) (T, bool)
+
+// readGeoJSON reads and parses a GeoJSON FeatureCollection file using a
+// provided parser function. This provides a generic way to read any GeoJSON
+// file format into GTFS entities.
+func readGeoJSON[T any](reader *Reader, filename string, parser GeoJSONFeatureParser[T]) ([]T, error) {
+	var entities []T
+	var parseErr error
+
+	err := reader.Adapter.OpenFile(filename, func(in io.Reader) {
+		var fc geojson.FeatureCollection
+		if err := json.NewDecoder(in).Decode(&fc); err != nil {
+			parseErr = err
+			return
+		}
+
+		for _, feature := range fc.Features {
+			if entity, ok := parser(feature); ok {
+				entities = append(entities, entity)
+			}
+		}
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if parseErr != nil {
+		return nil, parseErr
+	}
+
+	return entities, nil
+}
+
+// parseLocationFeature parses a GeoJSON feature into a gtfs.Location.
+// This is used for locations.geojson (GTFS-Flex extension).
+func parseLocationFeature(feature *geojson.Feature) (gtfs.Location, bool) {
+	loc := gtfs.Location{}
+
+	// The ID is at the feature level, not in properties
+	if feature.ID != "" {
+		loc.LocationID = tt.NewString(feature.ID)
+	}
+
+	// Parse properties
+	if feature.Properties != nil {
+		if v, ok := feature.Properties["stop_name"].(string); ok {
+			loc.StopName = tt.NewString(v)
+		}
+		if v, ok := feature.Properties["stop_desc"].(string); ok {
+			loc.StopDesc = tt.NewString(v)
+		}
+		if v, ok := feature.Properties["zone_id"].(string); ok {
+			loc.ZoneID = tt.NewString(v)
+		}
+		if v, ok := feature.Properties["stop_url"].(string); ok {
+			loc.StopURL = tt.NewUrl(v)
+		}
+	}
+
+	// Parse geometry - must be Polygon or MultiPolygon for locations
+	if feature.Geometry != nil {
+		switch g := feature.Geometry.(type) {
+		case *geom.Polygon:
+			g.SetSRID(4326)
+			loc.Geometry = tt.NewGeometry(g)
+		case *geom.MultiPolygon:
+			g.SetSRID(4326)
+			loc.Geometry = tt.NewGeometry(g)
+		default:
+			// Invalid geometry type for location - skip
+			return loc, false
+		}
+	}
+
+	return loc, true
+}
+
+// readLocationsGeoJSON reads and parses locations.geojson from the adapter.
+// This is a GTFS-Flex extension that defines zones using GeoJSON Polygon
+// or MultiPolygon geometries where riders can request pickups or drop-offs.
+func (reader *Reader) readLocationsGeoJSON(filename string) ([]gtfs.Location, error) {
+	return readGeoJSON(reader, filename, parseLocationFeature)
+}
+
+// Example: To add support for level.geojson in the future, create a parser function:
+//
+//   func parseLevelFeature(feature *geojson.Feature) (gtfs.Level, bool) {
+//       level := gtfs.Level{}
+//       if feature.ID != "" {
+//           level.LevelID = tt.NewString(feature.ID)
+//       }
+//       if feature.Properties != nil {
+//           if v, ok := feature.Properties["level_name"].(string); ok {
+//               level.LevelName = tt.NewString(v)
+//           }
+//           if v, ok := feature.Properties["level_index"].(float64); ok {
+//               level.LevelIndex = tt.NewFloat(v)
+//           }
+//       }
+//       // Parse geometry (Polygon or MultiPolygon)
+//       if feature.Geometry != nil {
+//           switch g := feature.Geometry.(type) {
+//           case *geom.Polygon, *geom.MultiPolygon:
+//               g.SetSRID(4326)
+//               level.Geometry = tt.NewGeometry(g)
+//           default:
+//               return level, false
+//           }
+//       }
+//       return level, true
+//   }
+//
+// Then in reader.go, add:
+//
+//   func (reader *Reader) Levels() chan gtfs.Level {
+//       out := make(chan gtfs.Level, bufferSize)
+//       go func() {
+//           defer close(out)
+//           // Try GeoJSON first
+//           levels, err := readGeoJSON(reader, "levels.geojson", parseLevelFeature)
+//           if err == nil {
+//               for _, level := range levels {
+//                   out <- level
+//               }
+//               return
+//           }
+//           // Fall back to CSV
+//           ReadEntities[gtfs.Level](reader, "levels.txt")
+//       }()
+//       return out
+//   }

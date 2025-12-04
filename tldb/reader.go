@@ -313,6 +313,22 @@ func (reader *Reader) RouteNetworks() (out chan gtfs.RouteNetwork) {
 	return ReadEntities[gtfs.RouteNetwork](reader, GetTableName(&gtfs.RouteNetwork{}))
 }
 
+func (reader *Reader) LocationGroups() (out chan gtfs.LocationGroup) {
+	return ReadEntities[gtfs.LocationGroup](reader, GetTableName(&gtfs.LocationGroup{}))
+}
+
+func (reader *Reader) LocationGroupStops() (out chan gtfs.LocationGroupStop) {
+	return ReadEntities[gtfs.LocationGroupStop](reader, GetTableName(&gtfs.LocationGroupStop{}))
+}
+
+func (reader *Reader) BookingRules() (out chan gtfs.BookingRule) {
+	return ReadEntities[gtfs.BookingRule](reader, GetTableName(&gtfs.BookingRule{}))
+}
+
+func (reader *Reader) Locations() (out chan gtfs.Location) {
+	return ReadEntities[gtfs.Location](reader, GetTableName(&gtfs.Location{}))
+}
+
 func ReadEntities[T tt.EntityWithID](reader *Reader, table string) chan T {
 	ctx := context.TODO()
 	out := make(chan T, bufferSize)

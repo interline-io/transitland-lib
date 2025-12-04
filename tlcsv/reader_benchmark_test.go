@@ -3,12 +3,12 @@ package tlcsv
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 )
 
 func BenchmarkReader(b *testing.B) {
 	b.SetParallelism(1)
-	for k, fe := range testutil.ExternalTestFeeds {
+	for k, fe := range testreader.ExternalTestFeeds {
 		b.Run(k, func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				reader, err := NewReader(fe.URL)
@@ -18,7 +18,7 @@ func BenchmarkReader(b *testing.B) {
 				if err := reader.Open(); err != nil {
 					b.Error(err)
 				}
-				testutil.CheckReader(b, fe, reader)
+				testreader.CheckReader(b, fe, reader)
 				if err := reader.Close(); err != nil {
 					b.Error(err)
 				}

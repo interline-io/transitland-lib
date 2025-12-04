@@ -39,4 +39,8 @@ type Reader interface {
 	Timeframes() chan Timeframe
 	Networks() chan Network
 	RouteNetworks() chan RouteNetwork
+	LocationGroups() chan LocationGroup
+	LocationGroupStops() chan LocationGroupStop
+	BookingRules() chan BookingRule
+	Locations() chan Location
 }

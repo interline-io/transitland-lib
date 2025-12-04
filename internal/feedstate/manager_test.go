@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -135,7 +135,7 @@ func verifyFeedState(t *testing.T, adapter tldb.Adapter, feedID int, expectedFee
 }
 
 func TestManager_ActivateFeedVersion(t *testing.T) {
-	adapter, feedID, feedVersionID := setupTestDB(t, testFeedOnestopID, testutil.ExampleZip.URL)
+	adapter, feedID, feedVersionID := setupTestDB(t, testFeedOnestopID, testreader.ExampleZip.URL)
 	defer adapter.Close()
 
 	manager := NewManager(adapter)
@@ -157,7 +157,7 @@ func TestManager_ActivateFeedVersion(t *testing.T) {
 }
 
 func TestManager_DeactivateFeedVersion(t *testing.T) {
-	adapter, feedID, feedVersionID := setupTestDB(t, testFeedOnestopID, testutil.ExampleZip.URL)
+	adapter, feedID, feedVersionID := setupTestDB(t, testFeedOnestopID, testreader.ExampleZip.URL)
 	defer adapter.Close()
 
 	manager := NewManager(adapter)
@@ -190,7 +190,7 @@ func TestManager_DeactivateFeedVersion(t *testing.T) {
 }
 
 func TestManager_GetActiveFeedVersions(t *testing.T) {
-	adapter, _, feedVersionID := setupTestDB(t, testFeedOnestopID, testutil.ExampleZip.URL)
+	adapter, _, feedVersionID := setupTestDB(t, testFeedOnestopID, testreader.ExampleZip.URL)
 	defer adapter.Close()
 
 	manager := NewManager(adapter)
@@ -213,7 +213,7 @@ func TestManager_GetActiveFeedVersions(t *testing.T) {
 }
 
 func TestManager_SetActiveFeedVersions(t *testing.T) {
-	adapter, _, feedVersionID := setupTestDB(t, testFeedOnestopID, testutil.ExampleZip.URL)
+	adapter, _, feedVersionID := setupTestDB(t, testFeedOnestopID, testreader.ExampleZip.URL)
 	defer adapter.Close()
 
 	manager := NewManager(adapter)
@@ -249,7 +249,7 @@ func TestManager_SetActiveFeedVersions(t *testing.T) {
 	feedVersionID2 := feedVersionID + 1
 
 	// Import data for second feed (copy the same GTFS data with different feed_id)
-	reader, err := tlcsv.NewReader(testutil.ExampleFeedCaltrain.URL)
+	reader, err := tlcsv.NewReader(testreader.ExampleFeedCaltrain.URL)
 	require.NoError(t, err, "failed to create GTFS reader for second feed")
 
 	writer, err := tldb.NewWriter("sqlite3://:memory:")
@@ -300,7 +300,7 @@ func TestManager_SetActiveFeedVersions(t *testing.T) {
 }
 
 func TestManager_MaterializedDataIntegrity(t *testing.T) {
-	adapter, _, feedVersionID := setupTestDB(t, testFeedOnestopID, testutil.ExampleZip.URL)
+	adapter, _, feedVersionID := setupTestDB(t, testFeedOnestopID, testreader.ExampleZip.URL)
 	defer adapter.Close()
 
 	manager := NewManager(adapter)
@@ -375,7 +375,7 @@ func TestManager_MaterializedDataIntegrity(t *testing.T) {
 }
 
 func TestManager_GetFeedIDForFeedVersion(t *testing.T) {
-	adapter, feedID, feedVersionID := setupTestDB(t, testFeedOnestopID, testutil.ExampleZip.URL)
+	adapter, feedID, feedVersionID := setupTestDB(t, testFeedOnestopID, testreader.ExampleZip.URL)
 	defer adapter.Close()
 
 	manager := NewManager(adapter)

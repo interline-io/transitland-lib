@@ -6,13 +6,13 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/stretchr/testify/assert"
 )
 
 // Round trip Writer test.
 func TestWriter(t *testing.T) {
-	fe, reader := testutil.NewMinimalTestFeed()
+	fe, reader := testreader.NewMinimalTestFeed()
 	tmpdir, err := os.MkdirTemp("", "gtfs")
 	if err != nil {
 		t.Error(err)
@@ -21,7 +21,7 @@ func TestWriter(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	testutil.TestWriter(t, *fe, func() adapters.Reader { return reader }, func() adapters.Writer { return writer })
+	testreader.TestWriter(t, *fe, func() adapters.Reader { return reader }, func() adapters.Writer { return writer })
 	// Clean up and double check
 	if err := os.RemoveAll(tmpdir); err != nil {
 		t.Error(err)

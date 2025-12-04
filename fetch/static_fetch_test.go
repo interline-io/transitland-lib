@@ -11,12 +11,12 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/stretchr/testify/assert"
 )
 
-var ExampleZip = testutil.ExampleZip
+var ExampleZip = testreader.ExampleZip
 
 func TestStaticFetch(t *testing.T) {
 	basedir := ""

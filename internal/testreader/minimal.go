@@ -1,4 +1,4 @@
-package testutil
+package testreader
 
 import (
 	"time"
@@ -25,8 +25,8 @@ func NewMinimalTestFeed() (*ReaderTester, *direct.Reader) {
 			{StopID: tt.NewString("stop2"), StopName: tt.NewString("Stop 2"), Geometry: tt.NewPoint(3, 4)},
 		},
 		StopTimeList: []gtfs.StopTime{
-			{StopID: tt.NewString("stop1"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(1), ArrivalTime: tt.NewSeconds(0), DepartureTime: tt.NewSeconds(5)},
-			{StopID: tt.NewString("stop2"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(2), ArrivalTime: tt.NewSeconds(10), DepartureTime: tt.NewSeconds(15)},
+			{StopID: tt.NewKey("stop1"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(1), ArrivalTime: tt.NewSeconds(0), DepartureTime: tt.NewSeconds(5)},
+			{StopID: tt.NewKey("stop2"), TripID: tt.NewString("trip1"), StopSequence: tt.NewInt(2), ArrivalTime: tt.NewSeconds(10), DepartureTime: tt.NewSeconds(15)},
 		},
 		ShapeList: []gtfs.Shape{
 			{ShapeID: tt.NewString("shape1"), ShapePtLon: tt.NewFloat(1), ShapePtLat: tt.NewFloat(2), ShapePtSequence: tt.NewInt(0)},

@@ -10,6 +10,12 @@ func NewString(v string) String {
 	return String{Option: NewOption(v)}
 }
 
+// TODO: Consider restricting valid to non-empty strings
+// func (r *String) Set(v string) {
+// 	r.Val = v
+// 	r.Valid = r.Val != ""
+// }
+
 func (r String) String() string {
 	return r.Val
 }

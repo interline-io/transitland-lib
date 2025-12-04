@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +19,7 @@ func TestConvexHullBuilder(t *testing.T) {
 	}
 	groups := map[string]testgroup{
 		"ExampleFeed": {
-			testutil.ExampleZip.URL,
+			testreader.ExampleZip.URL,
 			[]testcase{
 				{
 					FeedVersionGeometry: []float64{-117.133162, 36.425288, -116.81797, 36.88108, -116.76821, 36.914893, -116.751677, 36.915682, -116.40094, 36.641496, -117.133162, 36.425288},
@@ -30,7 +30,7 @@ func TestConvexHullBuilder(t *testing.T) {
 			},
 		},
 		"Caltrain": {
-			testutil.ExampleFeedCaltrain.URL,
+			testreader.ExampleFeedCaltrain.URL,
 			[]testcase{{
 				FeedVersionGeometry: []float64{-121.566225, 37.003485, -122.232, 37.486101, -122.386832, 37.599797, -122.412076, 37.631108, -122.394992, 37.77639, -122.394935, 37.776348, -121.650244, 37.129363, -121.610936, 37.086653, -121.610049, 37.085225, -121.566088, 37.003538, -121.566225, 37.003485},
 				AgencyGeoms: map[string][]float64{
@@ -39,7 +39,7 @@ func TestConvexHullBuilder(t *testing.T) {
 			}},
 		},
 		"BART": {
-			testutil.ExampleFeedBART.URL,
+			testreader.ExampleFeedBART.URL,
 			[]testcase{
 				{
 					FeedVersionGeometry: []float64{-121.939313, 37.502171, -122.386702, 37.600271, -122.466233, 37.684638, -122.469081, 37.706121, -122.353099, 37.936853, -122.024653, 38.003193, -121.945154, 38.018914, -121.889457, 38.016941, -121.78042, 37.995388, -121.939313, 37.502171},

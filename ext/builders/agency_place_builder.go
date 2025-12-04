@@ -62,6 +62,9 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Ent
 	case *gtfs.Trip:
 		pp.tripAgency[eid] = pp.routeAgency[v.RouteID.Val]
 	case *gtfs.StopTime:
+		if !v.StopID.Valid {
+			return nil
+		}
 		aid := pp.tripAgency[v.TripID.Val]
 		if sg, ok := pp.stops[v.StopID.Val]; ok {
 			if v, ok := pp.agencyStops[aid]; ok {
