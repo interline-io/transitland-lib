@@ -17,7 +17,7 @@ func TestFeedRequest(t *testing.T) {
 			h:            &FeedRequest{},
 			format:       "",
 			selector:     "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "test-gbfs", "BA", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			expectSelect: []string{"CT", "f-c20-ctran", "test-gbfs", "BA", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name:         "onestop_id",
@@ -38,7 +38,7 @@ func TestFeedRequest(t *testing.T) {
 			h:            &FeedRequest{Spec: "gtfs"},
 			format:       "",
 			selector:     "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "BA", "HA", "test", "EX"},
+			expectSelect: []string{"CT", "f-c20-ctran", "BA", "HA", "test", "EX"},
 		},
 		{
 			name:         "spec lower case dash",
@@ -67,7 +67,7 @@ func TestFeedRequest(t *testing.T) {
 			h:            &FeedRequest{FetchError: "false"},
 			format:       "",
 			selector:     "feeds.#.onestop_id",
-			expectSelect: []string{"BA", "CT", "HA", "EX"},
+			expectSelect: []string{"CT", "f-c20-ctran", "BA", "HA", "EX"},
 		},
 		{
 			name:         "tags test=ok",
@@ -195,7 +195,7 @@ func TestFeedRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional exclude_no",
 			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}}, selector: "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			expectSelect: []string{"CT", "f-c20-ctran", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name: "license:commercial_use_allowed yes",
@@ -210,7 +210,7 @@ func TestFeedRequest_License(t *testing.T) {
 		{
 			name: "license:commercial_use_allowed exclude_no",
 			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}}, selector: "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			expectSelect: []string{"CT", "f-c20-ctran", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name: "license:create_derived_product yes",
@@ -225,7 +225,7 @@ func TestFeedRequest_License(t *testing.T) {
 		{
 			name: "license:create_derived_product exclude_no",
 			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}}, selector: "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			expectSelect: []string{"CT", "f-c20-ctran", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 	}
 	for _, tc := range testcases {

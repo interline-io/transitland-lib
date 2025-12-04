@@ -41,6 +41,7 @@ func locationSelect(limit *int, after *model.Cursor, ids []int, where *model.Loc
 			q = q.Where(In("location_id", where.LocationID))
 		}
 	}
+	q = q.OrderBy("gtfs_locations.id ASC")
 	q = q.Limit(finderCheckLimit(limit))
 	return q
 }

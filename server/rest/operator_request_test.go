@@ -12,7 +12,7 @@ func TestOperatorRequest(t *testing.T) {
 			name:         "basic",
 			h:            OperatorRequest{},
 			selector:     "operators.#.onestop_id",
-			expectSelect: []string{"o-9q9-caltrain", "o-9q9-bayarearapidtransit", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
+			expectSelect: []string{"o-9q9-caltrain", "o-c20-ctran-c~tran", "o-9q9-bayarearapidtransit", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
 		},
 		{
 			name:         "feed_onestop_id",
@@ -153,7 +153,7 @@ func TestOperatorRequest_Pagination(t *testing.T) {
 			name:         "limit:1000",
 			h:            OperatorRequest{WithCursor: WithCursor{Limit: 1000}},
 			selector:     "operators.#.onestop_id",
-			expectLength: 4,
+			expectLength: 5,
 		},
 	}
 	for _, tc := range testcases {
@@ -181,7 +181,7 @@ func TestOperatorRequest_License(t *testing.T) {
 			name:         "license:share_alike_optional exclude_no",
 			h:            OperatorRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}},
 			selector:     "operators.#.onestop_id",
-			expectSelect: []string{"o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
+			expectSelect: []string{"o-9q9-caltrain", "o-c20-ctran-c~tran", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
 		},
 		{
 			name:         "license:commercial_use_allowed yes",
@@ -199,7 +199,7 @@ func TestOperatorRequest_License(t *testing.T) {
 			name:         "license:commercial_use_allowed exclude_no",
 			h:            OperatorRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}},
 			selector:     "operators.#.onestop_id",
-			expectSelect: []string{"o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
+			expectSelect: []string{"o-9q9-caltrain", "o-c20-ctran-c~tran", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
 		},
 		{
 			name:         "license:create_derived_product yes",
@@ -217,7 +217,7 @@ func TestOperatorRequest_License(t *testing.T) {
 			name:         "license:create_derived_product exclude_no",
 			h:            OperatorRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}},
 			selector:     "operators.#.onestop_id",
-			expectSelect: []string{"o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
+			expectSelect: []string{"o-9q9-caltrain", "o-c20-ctran-c~tran", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
 		},
 	}
 	for _, tc := range testcases {

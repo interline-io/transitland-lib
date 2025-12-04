@@ -18,7 +18,7 @@ func TestAgencyRequest(t *testing.T) {
 			name:         "basic",
 			h:            AgencyRequest{},
 			selector:     "agencies.#.agency_id",
-			expectSelect: []string{"caltrain-ca-us", "BART", ""},
+			expectSelect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "BART", ""},
 		},
 		// this used to be caltrain but now bart is imported first.
 		{
@@ -260,7 +260,7 @@ func TestAgencyRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional exclude_no",
 			h:    AgencyRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}}, selector: "agencies.#.agency_id",
-			expectSelect: []string{"caltrain-ca-us", ""},
+			expectSelect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", ""},
 		},
 		{
 			name: "license:commercial_use_allowed yes",
@@ -275,7 +275,7 @@ func TestAgencyRequest_License(t *testing.T) {
 		{
 			name: "license:commercial_use_allowed exclude_no",
 			h:    AgencyRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}}, selector: "agencies.#.agency_id",
-			expectSelect: []string{"caltrain-ca-us", ""},
+			expectSelect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", ""},
 		},
 		{
 			name: "license:create_derived_product yes",
@@ -290,7 +290,7 @@ func TestAgencyRequest_License(t *testing.T) {
 		{
 			name: "license:create_derived_product exclude_no",
 			h:    AgencyRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}}, selector: "agencies.#.agency_id",
-			expectSelect: []string{"caltrain-ca-us", ""},
+			expectSelect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", ""},
 		},
 	}
 	for _, tc := range testcases {
