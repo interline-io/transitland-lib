@@ -252,7 +252,7 @@ func (ent *StopTime) UpdateKeys(emap *tt.EntityMap) error {
 		tt.TrySetField(emap.UpdateKey(&ent.TripID, "trips.txt"), "trip_id"),
 		tt.TrySetField(emap.UpdateKey(&ent.StopID, "stops.txt"), "stop_id"),
 		tt.TrySetField(emap.UpdateKey(&ent.LocationGroupID, "location_groups.txt"), "location_group_id"),
-		tt.TrySetField(emap.UpdateKey(&ent.LocationID, "locations.txt"), "location_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.LocationID, "locations.geojson"), "location_id"),
 		tt.TrySetField(emap.UpdateKey(&ent.PickupBookingRuleID, "booking_rules.txt"), "pickup_booking_rule_id"),
 		tt.TrySetField(emap.UpdateKey(&ent.DropOffBookingRuleID, "booking_rules.txt"), "drop_off_booking_rule_id"),
 	)
