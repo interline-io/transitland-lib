@@ -1,11 +1,11 @@
 package builders
 
 import (
-	"regexp"
-	"strings"
+"regexp"
+"strings"
 
-	"github.com/interline-io/transitland-lib/tlxy"
-	"github.com/mmcloughlin/geohash"
+"github.com/interline-io/transitland-lib/tlxy"
+"github.com/mmcloughlin/geohash"
 )
 
 // Support methods and types
@@ -17,12 +17,6 @@ type stopGeom struct {
 	fvid int
 	lon  float64
 	lat  float64
-}
-
-type locationGeom struct {
-	fvid   int
-	coords []float64
-	stride int
 }
 
 type routeStopGeoms struct {
