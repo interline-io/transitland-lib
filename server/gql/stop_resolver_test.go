@@ -896,8 +896,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  2706,
 		},
 		// license: create_derived_product
 		{
@@ -921,8 +921,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  2706,
 		},
 		// license: commercial_use_allowed
 		{
@@ -946,8 +946,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  2706,
 		},
 		// license: redistribution_allowed
 		{
@@ -971,8 +971,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  2706,
 		},
 		// license: use_without_attribution
 		{
@@ -996,8 +996,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  2706,
 		},
 	}
 	return testcases
