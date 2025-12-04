@@ -59,6 +59,7 @@ type Loaders struct {
 	FeedVersionServiceWindowByFeedVersionIDs                      *dataloader.Loader[int, *model.FeedVersionServiceWindow]
 	FlexStopTimesByTripIDs                                        *dataloader.Loader[tripStopTimeLoaderParam, []*model.FlexStopTime]
 	FlexStopTimesByStopIDs                                        *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
+	FlexStopTimesByLocationIDs                                    *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
 	FrequenciesByTripIDs                                          *dataloader.Loader[frequencyLoaderParam, []*model.Frequency]
 	LevelsByIDs                                                   *dataloader.Loader[int, *model.Level]
 	LevelsByParentStationIDs                                      *dataloader.Loader[levelLoaderParam, []*model.Level]
@@ -256,6 +257,11 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		FlexStopTimesByStopIDs: withWaitAndCapacityGroup(waitTime, stopTimeBatchSize, dbf.FlexStopTimesByStopIDs,
 			func(p stopTimeLoaderParam) (model.FVPair, *model.StopTimeFilter, *int) {
 				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.StopID}, p.Where, p.Limit
+			},
+		),
+		FlexStopTimesByLocationIDs: withWaitAndCapacityGroup(waitTime, stopTimeBatchSize, dbf.FlexStopTimesByLocationIDs,
+			func(p stopTimeLoaderParam) (model.FVPair, *model.StopTimeFilter, *int) {
+				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.LocationID}, p.Where, p.Limit
 			},
 		),
 		FrequenciesByTripIDs: withWaitAndCapacityGroup(waitTime, batchSize,

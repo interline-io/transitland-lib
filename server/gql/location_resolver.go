@@ -13,9 +13,9 @@ func (r *locationResolver) FeedVersion(ctx context.Context, obj *model.Location)
 }
 
 func (r *locationResolver) StopTimes(ctx context.Context, obj *model.Location, limit *int, where *model.StopTimeFilter) ([]*model.FlexStopTime, error) {
-	return LoaderFor(ctx).FlexStopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
+	return LoaderFor(ctx).FlexStopTimesByLocationIDs.Load(ctx, stopTimeLoaderParam{
 		FeedVersionID: obj.FeedVersionID,
-		StopID:        obj.ID,
+		LocationID:    obj.ID,
 		Limit:         resolverCheckLimit(limit),
 		Where:         where,
 	})()

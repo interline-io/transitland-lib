@@ -45,6 +45,7 @@ type pathwayLoaderParam struct {
 type stopTimeLoaderParam struct {
 	TripID        int
 	StopID        int
+	LocationID    int
 	FeedVersionID int
 	Limit         *int
 	Where         *model.StopTimeFilter
