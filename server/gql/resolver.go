@@ -184,6 +184,23 @@ func (r *Resolver) Trip() gqlout.TripResolver { return &tripResolver{r} }
 // StopTime .
 func (r *Resolver) StopTime() gqlout.StopTimeResolver { return &stopTimeResolver{r} }
 
+// FlexStopTime .
+func (r *Resolver) FlexStopTime() gqlout.FlexStopTimeResolver { return &flexStopTimeResolver{r} }
+
+// Location .
+func (r *Resolver) Location() gqlout.LocationResolver { return &locationResolver{r} }
+
+// BookingRule .
+func (r *Resolver) BookingRule() gqlout.BookingRuleResolver { return &bookingRuleResolver{r} }
+
+// LocationGroup .
+func (r *Resolver) LocationGroup() gqlout.LocationGroupResolver { return &locationGroupResolver{r} }
+
+// LocationGroupStop .
+func (r *Resolver) LocationGroupStop() gqlout.LocationGroupStopResolver {
+	return &locationGroupStopResolver{r}
+}
+
 // Operator .
 func (r *Resolver) Operator() gqlout.OperatorResolver { return &operatorResolver{r} }
 

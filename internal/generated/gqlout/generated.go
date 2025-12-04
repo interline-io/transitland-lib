@@ -41,6 +41,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	Agency() AgencyResolver
+	BookingRule() BookingRuleResolver
 	Calendar() CalendarResolver
 	CensusDataset() CensusDatasetResolver
 	CensusGeography() CensusGeographyResolver
@@ -52,7 +53,11 @@ type ResolverRoot interface {
 	FeedState() FeedStateResolver
 	FeedVersion() FeedVersionResolver
 	FeedVersionGtfsImport() FeedVersionGtfsImportResolver
+	FlexStopTime() FlexStopTimeResolver
 	Level() LevelResolver
+	Location() LocationResolver
+	LocationGroup() LocationGroupResolver
+	LocationGroupStop() LocationGroupStopResolver
 	Mutation() MutationResolver
 	Operator() OperatorResolver
 	Pathway() PathwayResolver
@@ -118,6 +123,29 @@ type ComplexityRoot struct {
 		TtsDescriptionText func(childComplexity int) int
 		TtsHeaderText      func(childComplexity int) int
 		URL                func(childComplexity int) int
+	}
+
+	BookingRule struct {
+		BookingRuleID          func(childComplexity int) int
+		BookingType            func(childComplexity int) int
+		BookingURL             func(childComplexity int) int
+		DropOffMessage         func(childComplexity int) int
+		FeedOnestopID          func(childComplexity int) int
+		FeedVersion            func(childComplexity int) int
+		FeedVersionSHA1        func(childComplexity int) int
+		ID                     func(childComplexity int) int
+		InfoURL                func(childComplexity int) int
+		Message                func(childComplexity int) int
+		PhoneNumber            func(childComplexity int) int
+		PickupMessage          func(childComplexity int) int
+		PriorNoticeDurationMax func(childComplexity int) int
+		PriorNoticeDurationMin func(childComplexity int) int
+		PriorNoticeLastDay     func(childComplexity int) int
+		PriorNoticeLastTime    func(childComplexity int) int
+		PriorNoticeService     func(childComplexity int) int
+		PriorNoticeServiceID   func(childComplexity int) int
+		PriorNoticeStartDay    func(childComplexity int) int
+		PriorNoticeStartTime   func(childComplexity int) int
 	}
 
 	Calendar struct {
@@ -331,6 +359,7 @@ type ComplexityRoot struct {
 		Geometry              func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		LatestCalendarDate    func(childComplexity int) int
+		Locations             func(childComplexity int, limit *int, where *model.LocationFilter) int
 		Name                  func(childComplexity int) int
 		Routes                func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SHA1                  func(childComplexity int) int
@@ -413,6 +442,32 @@ type ComplexityRoot struct {
 
 	FeedVersionUnimportResult struct {
 		Success func(childComplexity int) int
+	}
+
+	FlexStopTime struct {
+		Arrival                  func(childComplexity int) int
+		ArrivalTime              func(childComplexity int) int
+		ContinuousDropOff        func(childComplexity int) int
+		ContinuousPickup         func(childComplexity int) int
+		Date                     func(childComplexity int) int
+		Departure                func(childComplexity int) int
+		DepartureTime            func(childComplexity int) int
+		DropOffBookingRule       func(childComplexity int) int
+		DropOffType              func(childComplexity int) int
+		EndPickupDropOffWindow   func(childComplexity int) int
+		Interpolated             func(childComplexity int) int
+		Location                 func(childComplexity int) int
+		LocationGroup            func(childComplexity int) int
+		PickupBookingRule        func(childComplexity int) int
+		PickupType               func(childComplexity int) int
+		ScheduleRelationship     func(childComplexity int) int
+		ServiceDate              func(childComplexity int) int
+		ShapeDistTraveled        func(childComplexity int) int
+		StartPickupDropOffWindow func(childComplexity int) int
+		StopHeadsign             func(childComplexity int) int
+		StopSequence             func(childComplexity int) int
+		Timepoint                func(childComplexity int) int
+		Trip                     func(childComplexity int) int
 	}
 
 	Frequency struct {
@@ -725,6 +780,36 @@ type ComplexityRoot struct {
 		Stops      func(childComplexity int) int
 	}
 
+	Location struct {
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		Geometry        func(childComplexity int) int
+		ID              func(childComplexity int) int
+		LocationID      func(childComplexity int) int
+		StopDesc        func(childComplexity int) int
+		StopName        func(childComplexity int) int
+		StopTimes       func(childComplexity int, limit *int, where *model.StopTimeFilter) int
+		StopURL         func(childComplexity int) int
+		ZoneID          func(childComplexity int) int
+	}
+
+	LocationGroup struct {
+		FeedOnestopID     func(childComplexity int) int
+		FeedVersion       func(childComplexity int) int
+		FeedVersionSHA1   func(childComplexity int) int
+		ID                func(childComplexity int) int
+		LocationGroupID   func(childComplexity int) int
+		LocationGroupName func(childComplexity int) int
+		Stops             func(childComplexity int, limit *int) int
+	}
+
+	LocationGroupStop struct {
+		ID            func(childComplexity int) int
+		LocationGroup func(childComplexity int) int
+		Stop          func(childComplexity int) int
+	}
+
 	Me struct {
 		Email        func(childComplexity int) int
 		ExternalData func(childComplexity int) int
@@ -959,6 +1044,7 @@ type ComplexityRoot struct {
 		Geometry           func(childComplexity int) int
 		ID                 func(childComplexity int) int
 		Level              func(childComplexity int) int
+		LocationGroups     func(childComplexity int, limit *int) int
 		LocationType       func(childComplexity int) int
 		NearbyStops        func(childComplexity int, limit *int, radius *float64) int
 		Observations       func(childComplexity int, limit *int, where *model.StopObservationFilter) int
@@ -1016,24 +1102,28 @@ type ComplexityRoot struct {
 	}
 
 	StopTime struct {
-		Arrival              func(childComplexity int) int
-		ArrivalTime          func(childComplexity int) int
-		ContinuousDropOff    func(childComplexity int) int
-		ContinuousPickup     func(childComplexity int) int
-		Date                 func(childComplexity int) int
-		Departure            func(childComplexity int) int
-		DepartureTime        func(childComplexity int) int
-		DropOffType          func(childComplexity int) int
-		Interpolated         func(childComplexity int) int
-		PickupType           func(childComplexity int) int
-		ScheduleRelationship func(childComplexity int) int
-		ServiceDate          func(childComplexity int) int
-		ShapeDistTraveled    func(childComplexity int) int
-		Stop                 func(childComplexity int) int
-		StopHeadsign         func(childComplexity int) int
-		StopSequence         func(childComplexity int) int
-		Timepoint            func(childComplexity int) int
-		Trip                 func(childComplexity int) int
+		Arrival                  func(childComplexity int) int
+		ArrivalTime              func(childComplexity int) int
+		ContinuousDropOff        func(childComplexity int) int
+		ContinuousPickup         func(childComplexity int) int
+		Date                     func(childComplexity int) int
+		Departure                func(childComplexity int) int
+		DepartureTime            func(childComplexity int) int
+		DropOffBookingRule       func(childComplexity int) int
+		DropOffType              func(childComplexity int) int
+		EndPickupDropOffWindow   func(childComplexity int) int
+		Interpolated             func(childComplexity int) int
+		PickupBookingRule        func(childComplexity int) int
+		PickupType               func(childComplexity int) int
+		ScheduleRelationship     func(childComplexity int) int
+		ServiceDate              func(childComplexity int) int
+		ShapeDistTraveled        func(childComplexity int) int
+		StartPickupDropOffWindow func(childComplexity int) int
+		Stop                     func(childComplexity int) int
+		StopHeadsign             func(childComplexity int) int
+		StopSequence             func(childComplexity int) int
+		Timepoint                func(childComplexity int) int
+		Trip                     func(childComplexity int) int
 	}
 
 	StopTimeEvent struct {
@@ -1060,6 +1150,7 @@ type ComplexityRoot struct {
 		Calendar             func(childComplexity int) int
 		DirectionID          func(childComplexity int) int
 		FeedVersion          func(childComplexity int) int
+		FlexibleStopTimes    func(childComplexity int, limit *int, where *model.TripStopTimeFilter) int
 		Frequencies          func(childComplexity int, limit *int) int
 		ID                   func(childComplexity int) int
 		Route                func(childComplexity int) int
@@ -1181,6 +1272,12 @@ type AgencyResolver interface {
 	CensusGeographies(ctx context.Context, obj *model.Agency, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error)
 }
+type BookingRuleResolver interface {
+	PriorNoticeServiceID(ctx context.Context, obj *model.BookingRule) (*string, error)
+	PriorNoticeService(ctx context.Context, obj *model.BookingRule) (*model.Calendar, error)
+
+	FeedVersion(ctx context.Context, obj *model.BookingRule) (*model.FeedVersion, error)
+}
 type CalendarResolver interface {
 	AddedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*tt.Date, error)
 	RemovedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*tt.Date, error)
@@ -1237,6 +1334,7 @@ type FeedVersionResolver interface {
 	Routes(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.RouteFilter) ([]*model.Route, error)
 	Stops(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.StopFilter) ([]*model.Stop, error)
 	Trips(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.TripFilter) ([]*model.Trip, error)
+	Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error)
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
 	Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error)
@@ -1249,8 +1347,31 @@ type FeedVersionGtfsImportResolver interface {
 	SkipEntityFilterCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
 	SkipEntityMarkedCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
 }
+type FlexStopTimeResolver interface {
+	PickupBookingRule(ctx context.Context, obj *model.FlexStopTime) (*model.BookingRule, error)
+	DropOffBookingRule(ctx context.Context, obj *model.FlexStopTime) (*model.BookingRule, error)
+	Location(ctx context.Context, obj *model.FlexStopTime) (*model.Location, error)
+	LocationGroup(ctx context.Context, obj *model.FlexStopTime) (*model.LocationGroup, error)
+	Trip(ctx context.Context, obj *model.FlexStopTime) (*model.Trip, error)
+	Arrival(ctx context.Context, obj *model.FlexStopTime) (*model.StopTimeEvent, error)
+	Departure(ctx context.Context, obj *model.FlexStopTime) (*model.StopTimeEvent, error)
+
+	ScheduleRelationship(ctx context.Context, obj *model.FlexStopTime) (*model.ScheduleRelationship, error)
+}
 type LevelResolver interface {
 	Stops(ctx context.Context, obj *model.Level) ([]*model.Stop, error)
+}
+type LocationResolver interface {
+	FeedVersion(ctx context.Context, obj *model.Location) (*model.FeedVersion, error)
+	StopTimes(ctx context.Context, obj *model.Location, limit *int, where *model.StopTimeFilter) ([]*model.FlexStopTime, error)
+}
+type LocationGroupResolver interface {
+	FeedVersion(ctx context.Context, obj *model.LocationGroup) (*model.FeedVersion, error)
+	Stops(ctx context.Context, obj *model.LocationGroup, limit *int) ([]*model.Stop, error)
+}
+type LocationGroupStopResolver interface {
+	LocationGroup(ctx context.Context, obj *model.LocationGroupStop) (*model.LocationGroup, error)
+	Stop(ctx context.Context, obj *model.LocationGroupStop) (*model.Stop, error)
 }
 type MutationResolver interface {
 	ValidateGtfs(ctx context.Context, file *graphql.Upload, url *string, realtimeUrls []string) (*model.ValidationReport, error)
@@ -1338,6 +1459,7 @@ type SegmentPatternResolver interface {
 }
 type StopResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Stop) (*model.FeedVersion, error)
+	LocationGroups(ctx context.Context, obj *model.Stop, limit *int) ([]*model.LocationGroup, error)
 	Level(ctx context.Context, obj *model.Stop) (*model.Level, error)
 	Parent(ctx context.Context, obj *model.Stop) (*model.Stop, error)
 	ExternalReference(ctx context.Context, obj *model.Stop) (*model.StopExternalReference, error)
@@ -1361,6 +1483,8 @@ type StopExternalReferenceResolver interface {
 	TargetActiveStop(ctx context.Context, obj *model.StopExternalReference) (*model.Stop, error)
 }
 type StopTimeResolver interface {
+	PickupBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error)
+	DropOffBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error)
 	Stop(ctx context.Context, obj *model.StopTime) (*model.Stop, error)
 	Trip(ctx context.Context, obj *model.StopTime) (*model.Trip, error)
 	Arrival(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error)
@@ -1374,6 +1498,7 @@ type TripResolver interface {
 	Shape(ctx context.Context, obj *model.Trip) (*model.Shape, error)
 	FeedVersion(ctx context.Context, obj *model.Trip) (*model.FeedVersion, error)
 	StopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.StopTime, error)
+	FlexibleStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.FlexStopTime, error)
 	Frequencies(ctx context.Context, obj *model.Trip, limit *int) ([]*model.Frequency, error)
 	Alerts(ctx context.Context, obj *model.Trip, active *bool, limit *int) ([]*model.Alert, error)
 	ScheduleRelationship(ctx context.Context, obj *model.Trip) (*model.ScheduleRelationship, error)
@@ -1671,6 +1796,146 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Alert.URL(childComplexity), true
+
+	case "BookingRule.booking_rule_id":
+		if e.complexity.BookingRule.BookingRuleID == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.BookingRuleID(childComplexity), true
+
+	case "BookingRule.booking_type":
+		if e.complexity.BookingRule.BookingType == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.BookingType(childComplexity), true
+
+	case "BookingRule.booking_url":
+		if e.complexity.BookingRule.BookingURL == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.BookingURL(childComplexity), true
+
+	case "BookingRule.drop_off_message":
+		if e.complexity.BookingRule.DropOffMessage == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.DropOffMessage(childComplexity), true
+
+	case "BookingRule.feed_onestop_id":
+		if e.complexity.BookingRule.FeedOnestopID == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.FeedOnestopID(childComplexity), true
+
+	case "BookingRule.feed_version":
+		if e.complexity.BookingRule.FeedVersion == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.FeedVersion(childComplexity), true
+
+	case "BookingRule.feed_version_sha1":
+		if e.complexity.BookingRule.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.FeedVersionSHA1(childComplexity), true
+
+	case "BookingRule.id":
+		if e.complexity.BookingRule.ID == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.ID(childComplexity), true
+
+	case "BookingRule.info_url":
+		if e.complexity.BookingRule.InfoURL == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.InfoURL(childComplexity), true
+
+	case "BookingRule.message":
+		if e.complexity.BookingRule.Message == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.Message(childComplexity), true
+
+	case "BookingRule.phone_number":
+		if e.complexity.BookingRule.PhoneNumber == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PhoneNumber(childComplexity), true
+
+	case "BookingRule.pickup_message":
+		if e.complexity.BookingRule.PickupMessage == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PickupMessage(childComplexity), true
+
+	case "BookingRule.prior_notice_duration_max":
+		if e.complexity.BookingRule.PriorNoticeDurationMax == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PriorNoticeDurationMax(childComplexity), true
+
+	case "BookingRule.prior_notice_duration_min":
+		if e.complexity.BookingRule.PriorNoticeDurationMin == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PriorNoticeDurationMin(childComplexity), true
+
+	case "BookingRule.prior_notice_last_day":
+		if e.complexity.BookingRule.PriorNoticeLastDay == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PriorNoticeLastDay(childComplexity), true
+
+	case "BookingRule.prior_notice_last_time":
+		if e.complexity.BookingRule.PriorNoticeLastTime == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PriorNoticeLastTime(childComplexity), true
+
+	case "BookingRule.prior_notice_service":
+		if e.complexity.BookingRule.PriorNoticeService == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PriorNoticeService(childComplexity), true
+
+	case "BookingRule.prior_notice_service_id":
+		if e.complexity.BookingRule.PriorNoticeServiceID == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PriorNoticeServiceID(childComplexity), true
+
+	case "BookingRule.prior_notice_start_day":
+		if e.complexity.BookingRule.PriorNoticeStartDay == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PriorNoticeStartDay(childComplexity), true
+
+	case "BookingRule.prior_notice_start_time":
+		if e.complexity.BookingRule.PriorNoticeStartTime == nil {
+			break
+		}
+
+		return e.complexity.BookingRule.PriorNoticeStartTime(childComplexity), true
 
 	case "Calendar.added_dates":
 		if e.complexity.Calendar.AddedDates == nil {
@@ -2813,6 +3078,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.FeedVersion.LatestCalendarDate(childComplexity), true
 
+	case "FeedVersion.locations":
+		if e.complexity.FeedVersion.Locations == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_locations_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.FeedVersion.Locations(childComplexity, args["limit"].(*int), args["where"].(*model.LocationFilter)), true
+
 	case "FeedVersion.name":
 		if e.complexity.FeedVersion.Name == nil {
 			break
@@ -3248,6 +3525,167 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.FeedVersionUnimportResult.Success(childComplexity), true
+
+	case "FlexStopTime.arrival":
+		if e.complexity.FlexStopTime.Arrival == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.Arrival(childComplexity), true
+
+	case "FlexStopTime.arrival_time":
+		if e.complexity.FlexStopTime.ArrivalTime == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.ArrivalTime(childComplexity), true
+
+	case "FlexStopTime.continuous_drop_off":
+		if e.complexity.FlexStopTime.ContinuousDropOff == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.ContinuousDropOff(childComplexity), true
+
+	case "FlexStopTime.continuous_pickup":
+		if e.complexity.FlexStopTime.ContinuousPickup == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.ContinuousPickup(childComplexity), true
+
+	case "FlexStopTime.date":
+		if e.complexity.FlexStopTime.Date == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.Date(childComplexity), true
+
+	case "FlexStopTime.departure":
+		if e.complexity.FlexStopTime.Departure == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.Departure(childComplexity), true
+
+	case "FlexStopTime.departure_time":
+		if e.complexity.FlexStopTime.DepartureTime == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.DepartureTime(childComplexity), true
+
+	case "FlexStopTime.drop_off_booking_rule":
+		if e.complexity.FlexStopTime.DropOffBookingRule == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.DropOffBookingRule(childComplexity), true
+
+	case "FlexStopTime.drop_off_type":
+		if e.complexity.FlexStopTime.DropOffType == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.DropOffType(childComplexity), true
+
+	case "FlexStopTime.end_pickup_drop_off_window":
+		if e.complexity.FlexStopTime.EndPickupDropOffWindow == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.EndPickupDropOffWindow(childComplexity), true
+
+	case "FlexStopTime.interpolated":
+		if e.complexity.FlexStopTime.Interpolated == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.Interpolated(childComplexity), true
+
+	case "FlexStopTime.location":
+		if e.complexity.FlexStopTime.Location == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.Location(childComplexity), true
+
+	case "FlexStopTime.location_group":
+		if e.complexity.FlexStopTime.LocationGroup == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.LocationGroup(childComplexity), true
+
+	case "FlexStopTime.pickup_booking_rule":
+		if e.complexity.FlexStopTime.PickupBookingRule == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.PickupBookingRule(childComplexity), true
+
+	case "FlexStopTime.pickup_type":
+		if e.complexity.FlexStopTime.PickupType == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.PickupType(childComplexity), true
+
+	case "FlexStopTime.schedule_relationship":
+		if e.complexity.FlexStopTime.ScheduleRelationship == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.ScheduleRelationship(childComplexity), true
+
+	case "FlexStopTime.service_date":
+		if e.complexity.FlexStopTime.ServiceDate == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.ServiceDate(childComplexity), true
+
+	case "FlexStopTime.shape_dist_traveled":
+		if e.complexity.FlexStopTime.ShapeDistTraveled == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.ShapeDistTraveled(childComplexity), true
+
+	case "FlexStopTime.start_pickup_drop_off_window":
+		if e.complexity.FlexStopTime.StartPickupDropOffWindow == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.StartPickupDropOffWindow(childComplexity), true
+
+	case "FlexStopTime.stop_headsign":
+		if e.complexity.FlexStopTime.StopHeadsign == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.StopHeadsign(childComplexity), true
+
+	case "FlexStopTime.stop_sequence":
+		if e.complexity.FlexStopTime.StopSequence == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.StopSequence(childComplexity), true
+
+	case "FlexStopTime.timepoint":
+		if e.complexity.FlexStopTime.Timepoint == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.Timepoint(childComplexity), true
+
+	case "FlexStopTime.trip":
+		if e.complexity.FlexStopTime.Trip == nil {
+			break
+		}
+
+		return e.complexity.FlexStopTime.Trip(childComplexity), true
 
 	case "Frequency.end_time":
 		if e.complexity.Frequency.EndTime == nil {
@@ -4747,6 +5185,163 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Level.Stops(childComplexity), true
 
+	case "Location.feed_onestop_id":
+		if e.complexity.Location.FeedOnestopID == nil {
+			break
+		}
+
+		return e.complexity.Location.FeedOnestopID(childComplexity), true
+
+	case "Location.feed_version":
+		if e.complexity.Location.FeedVersion == nil {
+			break
+		}
+
+		return e.complexity.Location.FeedVersion(childComplexity), true
+
+	case "Location.feed_version_sha1":
+		if e.complexity.Location.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.complexity.Location.FeedVersionSHA1(childComplexity), true
+
+	case "Location.geometry":
+		if e.complexity.Location.Geometry == nil {
+			break
+		}
+
+		return e.complexity.Location.Geometry(childComplexity), true
+
+	case "Location.id":
+		if e.complexity.Location.ID == nil {
+			break
+		}
+
+		return e.complexity.Location.ID(childComplexity), true
+
+	case "Location.location_id":
+		if e.complexity.Location.LocationID == nil {
+			break
+		}
+
+		return e.complexity.Location.LocationID(childComplexity), true
+
+	case "Location.stop_desc":
+		if e.complexity.Location.StopDesc == nil {
+			break
+		}
+
+		return e.complexity.Location.StopDesc(childComplexity), true
+
+	case "Location.stop_name":
+		if e.complexity.Location.StopName == nil {
+			break
+		}
+
+		return e.complexity.Location.StopName(childComplexity), true
+
+	case "Location.stop_times":
+		if e.complexity.Location.StopTimes == nil {
+			break
+		}
+
+		args, err := ec.field_Location_stop_times_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Location.StopTimes(childComplexity, args["limit"].(*int), args["where"].(*model.StopTimeFilter)), true
+
+	case "Location.stop_url":
+		if e.complexity.Location.StopURL == nil {
+			break
+		}
+
+		return e.complexity.Location.StopURL(childComplexity), true
+
+	case "Location.zone_id":
+		if e.complexity.Location.ZoneID == nil {
+			break
+		}
+
+		return e.complexity.Location.ZoneID(childComplexity), true
+
+	case "LocationGroup.feed_onestop_id":
+		if e.complexity.LocationGroup.FeedOnestopID == nil {
+			break
+		}
+
+		return e.complexity.LocationGroup.FeedOnestopID(childComplexity), true
+
+	case "LocationGroup.feed_version":
+		if e.complexity.LocationGroup.FeedVersion == nil {
+			break
+		}
+
+		return e.complexity.LocationGroup.FeedVersion(childComplexity), true
+
+	case "LocationGroup.feed_version_sha1":
+		if e.complexity.LocationGroup.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.complexity.LocationGroup.FeedVersionSHA1(childComplexity), true
+
+	case "LocationGroup.id":
+		if e.complexity.LocationGroup.ID == nil {
+			break
+		}
+
+		return e.complexity.LocationGroup.ID(childComplexity), true
+
+	case "LocationGroup.location_group_id":
+		if e.complexity.LocationGroup.LocationGroupID == nil {
+			break
+		}
+
+		return e.complexity.LocationGroup.LocationGroupID(childComplexity), true
+
+	case "LocationGroup.location_group_name":
+		if e.complexity.LocationGroup.LocationGroupName == nil {
+			break
+		}
+
+		return e.complexity.LocationGroup.LocationGroupName(childComplexity), true
+
+	case "LocationGroup.stops":
+		if e.complexity.LocationGroup.Stops == nil {
+			break
+		}
+
+		args, err := ec.field_LocationGroup_stops_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.LocationGroup.Stops(childComplexity, args["limit"].(*int)), true
+
+	case "LocationGroupStop.id":
+		if e.complexity.LocationGroupStop.ID == nil {
+			break
+		}
+
+		return e.complexity.LocationGroupStop.ID(childComplexity), true
+
+	case "LocationGroupStop.location_group":
+		if e.complexity.LocationGroupStop.LocationGroup == nil {
+			break
+		}
+
+		return e.complexity.LocationGroupStop.LocationGroup(childComplexity), true
+
+	case "LocationGroupStop.stop":
+		if e.complexity.LocationGroupStop.Stop == nil {
+			break
+		}
+
+		return e.complexity.LocationGroupStop.Stop(childComplexity), true
+
 	case "Me.email":
 		if e.complexity.Me.Email == nil {
 			break
@@ -6167,6 +6762,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Stop.Level(childComplexity), true
 
+	case "Stop.location_groups":
+		if e.complexity.Stop.LocationGroups == nil {
+			break
+		}
+
+		args, err := ec.field_Stop_location_groups_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Stop.LocationGroups(childComplexity, args["limit"].(*int)), true
+
 	case "Stop.location_type":
 		if e.complexity.Stop.LocationType == nil {
 			break
@@ -6561,6 +7168,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.StopTime.DepartureTime(childComplexity), true
 
+	case "StopTime.drop_off_booking_rule":
+		if e.complexity.StopTime.DropOffBookingRule == nil {
+			break
+		}
+
+		return e.complexity.StopTime.DropOffBookingRule(childComplexity), true
+
 	case "StopTime.drop_off_type":
 		if e.complexity.StopTime.DropOffType == nil {
 			break
@@ -6568,12 +7182,26 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.StopTime.DropOffType(childComplexity), true
 
+	case "StopTime.end_pickup_drop_off_window":
+		if e.complexity.StopTime.EndPickupDropOffWindow == nil {
+			break
+		}
+
+		return e.complexity.StopTime.EndPickupDropOffWindow(childComplexity), true
+
 	case "StopTime.interpolated":
 		if e.complexity.StopTime.Interpolated == nil {
 			break
 		}
 
 		return e.complexity.StopTime.Interpolated(childComplexity), true
+
+	case "StopTime.pickup_booking_rule":
+		if e.complexity.StopTime.PickupBookingRule == nil {
+			break
+		}
+
+		return e.complexity.StopTime.PickupBookingRule(childComplexity), true
 
 	case "StopTime.pickup_type":
 		if e.complexity.StopTime.PickupType == nil {
@@ -6602,6 +7230,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.StopTime.ShapeDistTraveled(childComplexity), true
+
+	case "StopTime.start_pickup_drop_off_window":
+		if e.complexity.StopTime.StartPickupDropOffWindow == nil {
+			break
+		}
+
+		return e.complexity.StopTime.StartPickupDropOffWindow(childComplexity), true
 
 	case "StopTime.stop":
 		if e.complexity.StopTime.Stop == nil {
@@ -6782,6 +7417,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Trip.FeedVersion(childComplexity), true
+
+	case "Trip.flexible_stop_times":
+		if e.complexity.Trip.FlexibleStopTimes == nil {
+			break
+		}
+
+		args, err := ec.field_Trip_flexible_stop_times_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Trip.FlexibleStopTimes(childComplexity, args["limit"].(*int), args["where"].(*model.TripStopTimeFilter)), true
 
 	case "Trip.frequencies":
 		if e.complexity.Trip.Frequencies == nil {
@@ -7441,6 +8088,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputGbfsDockRequest,
 		ec.unmarshalInputLevelSetInput,
 		ec.unmarshalInputLicenseFilter,
+		ec.unmarshalInputLocationFilter,
 		ec.unmarshalInputOperatorFilter,
 		ec.unmarshalInputPathwayFilter,
 		ec.unmarshalInputPathwaySetInput,
@@ -8287,6 +8935,8 @@ type FeedVersion {
   stops(limit: Int, where: StopFilter): [Stop!]!
   "Trips associated with this feed version, if imported"
   trips(limit: Int, where: TripFilter): [Trip!]!
+  "Locations associated with this feed version, if imported"
+  locations(limit: Int, where: LocationFilter): [Location!]!
   "Feed infos associated with this feed version, if imported"
   feed_infos(limit: Int): [FeedInfo!]!
   "Validation reports associated with this feed version"
@@ -8570,6 +9220,8 @@ type Stop {
   feed_onestop_id: String!
   "Feed version"
   feed_version: FeedVersion!
+  "Location groups associated with this stop"
+  location_groups(limit: Int): [LocationGroup!]!
   "Stop level"
   level: Level
   "Stop parent station"
@@ -8686,6 +9338,8 @@ type Trip {
   feed_version: FeedVersion!
   "Stop times for this trip"
   stop_times(limit: Int, where: TripStopTimeFilter): [StopTime]!
+  "Flexible stop times for this trip (Locations and Location Groups)"
+  flexible_stop_times(limit: Int, where: TripStopTimeFilter): [FlexStopTime!]!
   "Frequencies for this trip"
   frequencies(limit: Int): [Frequency!]!
   "GTFS-RT alerts for this trip"
@@ -8779,8 +9433,69 @@ type StopTime {
   shape_dist_traveled: Float
   "Set if this arrival/departure time was interpolated during import"
   interpolated: Int
+  "GTFS stop_times.start_pickup_drop_off_window"
+  start_pickup_drop_off_window: Seconds
+  "GTFS stop_times.end_pickup_drop_off_window"
+  end_pickup_drop_off_window: Seconds
+  "GTFS stop_times.pickup_booking_rule_id"
+  pickup_booking_rule: BookingRule
+  "GTFS stop_times.drop_off_booking_rule_id"
+  drop_off_booking_rule: BookingRule
   "Stop associated with this stop time"
   stop: Stop!
+  "Trip associated with this stop time"
+  trip: Trip!
+  "Detailed arrival information, including GTFS-RT updates and estimates"
+  arrival: StopTimeEvent!
+  "Detailed departure information, including GTFS-RT updates and estimates"
+  departure: StopTimeEvent!
+  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  service_date: Date
+  "If part of an arrival/departure query, the calendar date for this scheduled stop time"
+  date: Date
+  """A status flag for real-time information about this trip.
+
+  If no real-time information is available, the value will be STATIC and the estimated arrival/departure times will be empty. A trip with real-time information available will be SCHEDULED; a canceled trip will be CANCELED, and an added trip that is not present in the static GTFS will be ADDED.
+  """
+  schedule_relationship: ScheduleRelationship
+}
+
+"""Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file, representing a service at a Location or Location Group."""
+type FlexStopTime {
+  "GTFS stop_times.arrival_time"
+  arrival_time: Seconds
+  "GTFS stop_times.departure_time"
+  departure_time: Seconds
+  "GTFS stop_times.stop_sequence"
+  stop_sequence: Int!
+  "GTFS stop_times.stop_headsign"
+  stop_headsign: String
+  "GTFS stop_times.pickup_type"
+  pickup_type: Int
+  "GTFS stop_times.drop_off_type"
+  drop_off_type: Int
+  "GTFS stop_times.timepoint"
+  timepoint: Int
+  "GTFS stop_times.continuous_drop_off"
+  continuous_drop_off: Int
+  "GTFS stop_times.continuous_pickup"
+  continuous_pickup: Int
+  "GTFS stop_times.shape_dist_traveled"
+  shape_dist_traveled: Float
+  "Set if this arrival/departure time was interpolated during import"
+  interpolated: Int
+  "GTFS stop_times.start_pickup_drop_off_window"
+  start_pickup_drop_off_window: Seconds
+  "GTFS stop_times.end_pickup_drop_off_window"
+  end_pickup_drop_off_window: Seconds
+  "GTFS stop_times.pickup_booking_rule_id"
+  pickup_booking_rule: BookingRule
+  "GTFS stop_times.drop_off_booking_rule_id"
+  drop_off_booking_rule: BookingRule
+  "Location associated with this stop time"
+  location: Location
+  "Location Group associated with this stop time"
+  location_group: LocationGroup
   "Trip associated with this stop time"
   trip: Trip!
   "Detailed arrival information, including GTFS-RT updates and estimates"
@@ -8820,6 +9535,104 @@ type FeedInfo {
   feed_contact_email: Email
   "GTFS feed_info.feed_contact_url"
   feed_contact_url: Url
+}
+
+"""Record from a static GTFS [locations.geojson](https://gtfs.org/schedule/reference/#locationsgeojson) file."""
+type Location {
+  "Internal integer ID"
+  id: Int!
+  "GTFS locations.location_id"
+  location_id: String!
+  "GTFS locations.stop_name"
+  stop_name: String
+  "GTFS locations.stop_desc"
+  stop_desc: String
+  "GTFS locations.zone_id"
+  zone_id: String
+  "GTFS locations.stop_url"
+  stop_url: Url
+  "Geometry for this location"
+  geometry: Geometry!
+  "Feed version SHA1 identifier"
+  feed_version_sha1: String!
+  "Feed OnestopID"
+  feed_onestop_id: String!
+  "Feed version"
+  feed_version: FeedVersion!
+  "Stop times associated with this location"
+  stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
+}
+
+"""Record from a static GTFS [booking_rules.txt](https://gtfs.org/schedule/reference/#booking_rulestxt) file."""
+type BookingRule {
+  "Internal integer ID"
+  id: Int!
+  "GTFS booking_rules.booking_rule_id"
+  booking_rule_id: String!
+  "GTFS booking_rules.booking_type"
+  booking_type: Int!
+  "GTFS booking_rules.prior_notice_duration_min"
+  prior_notice_duration_min: Int
+  "GTFS booking_rules.prior_notice_duration_max"
+  prior_notice_duration_max: Int
+  "GTFS booking_rules.prior_notice_last_day"
+  prior_notice_last_day: Int
+  "GTFS booking_rules.prior_notice_last_time"
+  prior_notice_last_time: Seconds
+  "GTFS booking_rules.prior_notice_start_day"
+  prior_notice_start_day: Int
+  "GTFS booking_rules.prior_notice_start_time"
+  prior_notice_start_time: Seconds
+  "GTFS booking_rules.prior_notice_service_id"
+  prior_notice_service_id: String
+  "Prior notice service calendar"
+  prior_notice_service: Calendar
+  "GTFS booking_rules.message"
+  message: String
+  "GTFS booking_rules.pickup_message"
+  pickup_message: String
+  "GTFS booking_rules.drop_off_message"
+  drop_off_message: String
+  "GTFS booking_rules.phone_number"
+  phone_number: String
+  "GTFS booking_rules.info_url"
+  info_url: Url
+  "GTFS booking_rules.booking_url"
+  booking_url: Url
+  "Feed version SHA1 identifier"
+  feed_version_sha1: String!
+  "Feed OnestopID"
+  feed_onestop_id: String!
+  "Feed version"
+  feed_version: FeedVersion!
+}
+
+"""Record from a static GTFS [location_groups.txt](https://gtfs.org/schedule/reference/#location_groupstxt) file."""
+type LocationGroup {
+  "Internal integer ID"
+  id: Int!
+  "GTFS location_groups.location_group_id"
+  location_group_id: String!
+  "GTFS location_groups.location_group_name"
+  location_group_name: String
+  "Feed version SHA1 identifier"
+  feed_version_sha1: String!
+  "Feed OnestopID"
+  feed_onestop_id: String!
+  "Feed version"
+  feed_version: FeedVersion!
+  "Stops associated with this location group"
+  stops(limit: Int): [Stop!]!
+}
+
+"""Record from a static GTFS [location_group_stops.txt](https://gtfs.org/schedule/reference/#location_group_stopstxt) file."""
+type LocationGroupStop {
+  "Internal integer ID"
+  id: Int!
+  "Location group"
+  location_group: LocationGroup!
+  "Stop"
+  stop: Stop!
 }
 
 # Archived observed stop-times
@@ -9551,6 +10364,14 @@ input FeedVersionFilter {
   near: PointRadius
   "Search for stops with these license details"
   license: LicenseFilter
+}
+
+"""Search options for locations"""
+input LocationFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for locations with this location_id"
+  location_id: [String!]
 }
 
 """Import status for a feed version"""
@@ -10473,6 +11294,22 @@ func (ec *executionContext) field_FeedVersion_files_args(ctx context.Context, ra
 	return args, nil
 }
 
+func (ec *executionContext) field_FeedVersion_locations_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOLocationFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_FeedVersion_routes_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -10589,6 +11426,33 @@ func (ec *executionContext) field_Feed_feed_versions_args(ctx context.Context, r
 	}
 	args["limit"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOFeedVersionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_LocationGroup_stops_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Location_stop_times_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOStopTimeFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -11348,6 +12212,17 @@ func (ec *executionContext) field_Stop_directions_args(ctx context.Context, rawA
 	return args, nil
 }
 
+func (ec *executionContext) field_Stop_location_groups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Stop_nearby_stops_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -11442,6 +12317,22 @@ func (ec *executionContext) field_Trip_alerts_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["limit"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Trip_flexible_stop_times_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOTripStopTimeFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripStopTimeFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -12208,6 +13099,8 @@ func (ec *executionContext) fieldContext_Agency_feed_version(_ context.Context, 
 				return ec.fieldContext_FeedVersion_stops(ctx, field)
 			case "trips":
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -13369,6 +14262,924 @@ func (ec *executionContext) fieldContext_Alert_severity_level(_ context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_id(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_booking_rule_id(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_booking_rule_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BookingRuleID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_booking_rule_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_booking_type(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_booking_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BookingType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_booking_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_prior_notice_duration_min(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_prior_notice_duration_min(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PriorNoticeDurationMin, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_prior_notice_duration_min(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_prior_notice_duration_max(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_prior_notice_duration_max(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PriorNoticeDurationMax, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_prior_notice_duration_max(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_prior_notice_last_day(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_prior_notice_last_day(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PriorNoticeLastDay, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_prior_notice_last_day(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_prior_notice_last_time(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_prior_notice_last_time(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PriorNoticeLastTime, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Seconds)
+	fc.Result = res
+	return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_prior_notice_last_time(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Seconds does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_prior_notice_start_day(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PriorNoticeStartDay, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_prior_notice_start_day(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_prior_notice_start_time(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PriorNoticeStartTime, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Seconds)
+	fc.Result = res
+	return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_prior_notice_start_time(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Seconds does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_prior_notice_service_id(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.BookingRule().PriorNoticeServiceID(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_prior_notice_service_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_prior_notice_service(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.BookingRule().PriorNoticeService(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Calendar)
+	fc.Result = res
+	return ec.marshalOCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_prior_notice_service(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Calendar_id(ctx, field)
+			case "service_id":
+				return ec.fieldContext_Calendar_service_id(ctx, field)
+			case "start_date":
+				return ec.fieldContext_Calendar_start_date(ctx, field)
+			case "end_date":
+				return ec.fieldContext_Calendar_end_date(ctx, field)
+			case "monday":
+				return ec.fieldContext_Calendar_monday(ctx, field)
+			case "tuesday":
+				return ec.fieldContext_Calendar_tuesday(ctx, field)
+			case "wednesday":
+				return ec.fieldContext_Calendar_wednesday(ctx, field)
+			case "thursday":
+				return ec.fieldContext_Calendar_thursday(ctx, field)
+			case "friday":
+				return ec.fieldContext_Calendar_friday(ctx, field)
+			case "saturday":
+				return ec.fieldContext_Calendar_saturday(ctx, field)
+			case "sunday":
+				return ec.fieldContext_Calendar_sunday(ctx, field)
+			case "added_dates":
+				return ec.fieldContext_Calendar_added_dates(ctx, field)
+			case "removed_dates":
+				return ec.fieldContext_Calendar_removed_dates(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Calendar", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_message(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_message(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Message, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_pickup_message(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_pickup_message(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PickupMessage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_pickup_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_drop_off_message(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_drop_off_message(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DropOffMessage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_drop_off_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_phone_number(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_phone_number(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PhoneNumber, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_phone_number(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_info_url(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_info_url(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.InfoURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Url)
+	fc.Result = res
+	return ec.marshalOUrl2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐUrl(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_info_url(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Url does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_booking_url(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_booking_url(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BookingURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Url)
+	fc.Result = res
+	return ec.marshalOUrl2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐUrl(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_booking_url(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Url does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_feed_version_sha1(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FeedVersionSHA1, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_feed_onestop_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FeedOnestopID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingRule_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BookingRule_feed_version(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.BookingRule().FeedVersion(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.FeedVersion)
+	fc.Result = res
+	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BookingRule_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_FeedVersion_id(ctx, field)
+			case "sha1":
+				return ec.fieldContext_FeedVersion_sha1(ctx, field)
+			case "fetched_at":
+				return ec.fieldContext_FeedVersion_fetched_at(ctx, field)
+			case "url":
+				return ec.fieldContext_FeedVersion_url(ctx, field)
+			case "earliest_calendar_date":
+				return ec.fieldContext_FeedVersion_earliest_calendar_date(ctx, field)
+			case "latest_calendar_date":
+				return ec.fieldContext_FeedVersion_latest_calendar_date(ctx, field)
+			case "created_by":
+				return ec.fieldContext_FeedVersion_created_by(ctx, field)
+			case "updated_by":
+				return ec.fieldContext_FeedVersion_updated_by(ctx, field)
+			case "name":
+				return ec.fieldContext_FeedVersion_name(ctx, field)
+			case "description":
+				return ec.fieldContext_FeedVersion_description(ctx, field)
+			case "file":
+				return ec.fieldContext_FeedVersion_file(ctx, field)
+			case "geometry":
+				return ec.fieldContext_FeedVersion_geometry(ctx, field)
+			case "feed":
+				return ec.fieldContext_FeedVersion_feed(ctx, field)
+			case "feed_version_gtfs_import":
+				return ec.fieldContext_FeedVersion_feed_version_gtfs_import(ctx, field)
+			case "files":
+				return ec.fieldContext_FeedVersion_files(ctx, field)
+			case "service_levels":
+				return ec.fieldContext_FeedVersion_service_levels(ctx, field)
+			case "service_window":
+				return ec.fieldContext_FeedVersion_service_window(ctx, field)
+			case "agencies":
+				return ec.fieldContext_FeedVersion_agencies(ctx, field)
+			case "routes":
+				return ec.fieldContext_FeedVersion_routes(ctx, field)
+			case "stops":
+				return ec.fieldContext_FeedVersion_stops(ctx, field)
+			case "trips":
+				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "feed_infos":
+				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
+			case "validation_reports":
+				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
+			case "segments":
+				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
 	}
 	return fc, nil
@@ -18118,6 +19929,8 @@ func (ec *executionContext) fieldContext_Feed_feed_versions(ctx context.Context,
 				return ec.fieldContext_FeedVersion_stops(ctx, field)
 			case "trips":
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -19586,6 +21399,8 @@ func (ec *executionContext) fieldContext_FeedState_feed_version(_ context.Contex
 				return ec.fieldContext_FeedVersion_stops(ctx, field)
 			case "trips":
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -21106,6 +22921,8 @@ func (ec *executionContext) fieldContext_FeedVersion_stops(ctx context.Context, 
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -21229,6 +23046,8 @@ func (ec *executionContext) fieldContext_FeedVersion_trips(ctx context.Context, 
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
+			case "flexible_stop_times":
+				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -21249,6 +23068,85 @@ func (ec *executionContext) fieldContext_FeedVersion_trips(ctx context.Context, 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_FeedVersion_trips_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_locations(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FeedVersion_locations(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FeedVersion().Locations(rctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.LocationFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Location)
+	fc.Result = res
+	return ec.marshalNLocation2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FeedVersion_locations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Location_id(ctx, field)
+			case "location_id":
+				return ec.fieldContext_Location_location_id(ctx, field)
+			case "stop_name":
+				return ec.fieldContext_Location_stop_name(ctx, field)
+			case "stop_desc":
+				return ec.fieldContext_Location_stop_desc(ctx, field)
+			case "zone_id":
+				return ec.fieldContext_Location_zone_id(ctx, field)
+			case "stop_url":
+				return ec.fieldContext_Location_stop_url(ctx, field)
+			case "geometry":
+				return ec.fieldContext_Location_geometry(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_Location_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_Location_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_Location_feed_version(ctx, field)
+			case "stop_times":
+				return ec.fieldContext_Location_stop_times(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Location", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_locations_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -21596,6 +23494,8 @@ func (ec *executionContext) fieldContext_FeedVersionFetchResult_feed_version(_ c
 				return ec.fieldContext_FeedVersion_stops(ctx, field)
 			case "trips":
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -23536,6 +25436,1185 @@ func (ec *executionContext) fieldContext_FeedVersionUnimportResult_success(_ con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_arrival_time(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_arrival_time(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ArrivalTime, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Seconds)
+	fc.Result = res
+	return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_arrival_time(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Seconds does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_departure_time(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_departure_time(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DepartureTime, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Seconds)
+	fc.Result = res
+	return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_departure_time(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Seconds does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_stop_sequence(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_stop_sequence(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StopSequence, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_stop_sequence(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_stop_headsign(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_stop_headsign(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StopHeadsign, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_stop_headsign(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_pickup_type(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_pickup_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PickupType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_pickup_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_drop_off_type(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_drop_off_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DropOffType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_drop_off_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_timepoint(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_timepoint(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Timepoint, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_timepoint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_continuous_drop_off(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_continuous_drop_off(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ContinuousDropOff, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_continuous_drop_off(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_continuous_pickup(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_continuous_pickup(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ContinuousPickup, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_continuous_pickup(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_shape_dist_traveled(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_shape_dist_traveled(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ShapeDistTraveled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Float)
+	fc.Result = res
+	return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_shape_dist_traveled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_interpolated(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_interpolated(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Interpolated, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Int)
+	fc.Result = res
+	return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_interpolated(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_start_pickup_drop_off_window(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_start_pickup_drop_off_window(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartPickupDropOffWindow, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Seconds)
+	fc.Result = res
+	return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_start_pickup_drop_off_window(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Seconds does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_end_pickup_drop_off_window(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_end_pickup_drop_off_window(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndPickupDropOffWindow, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Seconds)
+	fc.Result = res
+	return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_end_pickup_drop_off_window(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Seconds does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_pickup_booking_rule(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_pickup_booking_rule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FlexStopTime().PickupBookingRule(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.BookingRule)
+	fc.Result = res
+	return ec.marshalOBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_pickup_booking_rule(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_BookingRule_id(ctx, field)
+			case "booking_rule_id":
+				return ec.fieldContext_BookingRule_booking_rule_id(ctx, field)
+			case "booking_type":
+				return ec.fieldContext_BookingRule_booking_type(ctx, field)
+			case "prior_notice_duration_min":
+				return ec.fieldContext_BookingRule_prior_notice_duration_min(ctx, field)
+			case "prior_notice_duration_max":
+				return ec.fieldContext_BookingRule_prior_notice_duration_max(ctx, field)
+			case "prior_notice_last_day":
+				return ec.fieldContext_BookingRule_prior_notice_last_day(ctx, field)
+			case "prior_notice_last_time":
+				return ec.fieldContext_BookingRule_prior_notice_last_time(ctx, field)
+			case "prior_notice_start_day":
+				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
+			case "prior_notice_start_time":
+				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
+			case "prior_notice_service_id":
+				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
+			case "prior_notice_service":
+				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
+			case "message":
+				return ec.fieldContext_BookingRule_message(ctx, field)
+			case "pickup_message":
+				return ec.fieldContext_BookingRule_pickup_message(ctx, field)
+			case "drop_off_message":
+				return ec.fieldContext_BookingRule_drop_off_message(ctx, field)
+			case "phone_number":
+				return ec.fieldContext_BookingRule_phone_number(ctx, field)
+			case "info_url":
+				return ec.fieldContext_BookingRule_info_url(ctx, field)
+			case "booking_url":
+				return ec.fieldContext_BookingRule_booking_url(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_BookingRule_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_BookingRule_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_BookingRule_feed_version(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BookingRule", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_drop_off_booking_rule(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_drop_off_booking_rule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FlexStopTime().DropOffBookingRule(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.BookingRule)
+	fc.Result = res
+	return ec.marshalOBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_drop_off_booking_rule(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_BookingRule_id(ctx, field)
+			case "booking_rule_id":
+				return ec.fieldContext_BookingRule_booking_rule_id(ctx, field)
+			case "booking_type":
+				return ec.fieldContext_BookingRule_booking_type(ctx, field)
+			case "prior_notice_duration_min":
+				return ec.fieldContext_BookingRule_prior_notice_duration_min(ctx, field)
+			case "prior_notice_duration_max":
+				return ec.fieldContext_BookingRule_prior_notice_duration_max(ctx, field)
+			case "prior_notice_last_day":
+				return ec.fieldContext_BookingRule_prior_notice_last_day(ctx, field)
+			case "prior_notice_last_time":
+				return ec.fieldContext_BookingRule_prior_notice_last_time(ctx, field)
+			case "prior_notice_start_day":
+				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
+			case "prior_notice_start_time":
+				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
+			case "prior_notice_service_id":
+				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
+			case "prior_notice_service":
+				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
+			case "message":
+				return ec.fieldContext_BookingRule_message(ctx, field)
+			case "pickup_message":
+				return ec.fieldContext_BookingRule_pickup_message(ctx, field)
+			case "drop_off_message":
+				return ec.fieldContext_BookingRule_drop_off_message(ctx, field)
+			case "phone_number":
+				return ec.fieldContext_BookingRule_phone_number(ctx, field)
+			case "info_url":
+				return ec.fieldContext_BookingRule_info_url(ctx, field)
+			case "booking_url":
+				return ec.fieldContext_BookingRule_booking_url(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_BookingRule_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_BookingRule_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_BookingRule_feed_version(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BookingRule", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_location(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_location(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FlexStopTime().Location(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Location)
+	fc.Result = res
+	return ec.marshalOLocation2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocation(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_location(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Location_id(ctx, field)
+			case "location_id":
+				return ec.fieldContext_Location_location_id(ctx, field)
+			case "stop_name":
+				return ec.fieldContext_Location_stop_name(ctx, field)
+			case "stop_desc":
+				return ec.fieldContext_Location_stop_desc(ctx, field)
+			case "zone_id":
+				return ec.fieldContext_Location_zone_id(ctx, field)
+			case "stop_url":
+				return ec.fieldContext_Location_stop_url(ctx, field)
+			case "geometry":
+				return ec.fieldContext_Location_geometry(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_Location_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_Location_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_Location_feed_version(ctx, field)
+			case "stop_times":
+				return ec.fieldContext_Location_stop_times(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Location", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_location_group(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_location_group(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FlexStopTime().LocationGroup(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.LocationGroup)
+	fc.Result = res
+	return ec.marshalOLocationGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroup(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_location_group(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_LocationGroup_id(ctx, field)
+			case "location_group_id":
+				return ec.fieldContext_LocationGroup_location_group_id(ctx, field)
+			case "location_group_name":
+				return ec.fieldContext_LocationGroup_location_group_name(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_LocationGroup_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_LocationGroup_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_LocationGroup_feed_version(ctx, field)
+			case "stops":
+				return ec.fieldContext_LocationGroup_stops(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type LocationGroup", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_trip(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_trip(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FlexStopTime().Trip(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Trip)
+	fc.Result = res
+	return ec.marshalNTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_trip(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Trip_id(ctx, field)
+			case "trip_id":
+				return ec.fieldContext_Trip_trip_id(ctx, field)
+			case "trip_headsign":
+				return ec.fieldContext_Trip_trip_headsign(ctx, field)
+			case "trip_short_name":
+				return ec.fieldContext_Trip_trip_short_name(ctx, field)
+			case "direction_id":
+				return ec.fieldContext_Trip_direction_id(ctx, field)
+			case "block_id":
+				return ec.fieldContext_Trip_block_id(ctx, field)
+			case "wheelchair_accessible":
+				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
+			case "bikes_allowed":
+				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "stop_pattern_id":
+				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
+			case "calendar":
+				return ec.fieldContext_Trip_calendar(ctx, field)
+			case "route":
+				return ec.fieldContext_Trip_route(ctx, field)
+			case "shape":
+				return ec.fieldContext_Trip_shape(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_Trip_feed_version(ctx, field)
+			case "stop_times":
+				return ec.fieldContext_Trip_stop_times(ctx, field)
+			case "flexible_stop_times":
+				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
+			case "frequencies":
+				return ec.fieldContext_Trip_frequencies(ctx, field)
+			case "alerts":
+				return ec.fieldContext_Trip_alerts(ctx, field)
+			case "schedule_relationship":
+				return ec.fieldContext_Trip_schedule_relationship(ctx, field)
+			case "timestamp":
+				return ec.fieldContext_Trip_timestamp(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Trip", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_arrival(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_arrival(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FlexStopTime().Arrival(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.StopTimeEvent)
+	fc.Result = res
+	return ec.marshalNStopTimeEvent2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeEvent(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_arrival(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "stop_timezone":
+				return ec.fieldContext_StopTimeEvent_stop_timezone(ctx, field)
+			case "estimated_utc":
+				return ec.fieldContext_StopTimeEvent_estimated_utc(ctx, field)
+			case "estimated_unix":
+				return ec.fieldContext_StopTimeEvent_estimated_unix(ctx, field)
+			case "estimated_local":
+				return ec.fieldContext_StopTimeEvent_estimated_local(ctx, field)
+			case "estimated_delay":
+				return ec.fieldContext_StopTimeEvent_estimated_delay(ctx, field)
+			case "estimated":
+				return ec.fieldContext_StopTimeEvent_estimated(ctx, field)
+			case "scheduled_utc":
+				return ec.fieldContext_StopTimeEvent_scheduled_utc(ctx, field)
+			case "scheduled_unix":
+				return ec.fieldContext_StopTimeEvent_scheduled_unix(ctx, field)
+			case "scheduled_local":
+				return ec.fieldContext_StopTimeEvent_scheduled_local(ctx, field)
+			case "scheduled":
+				return ec.fieldContext_StopTimeEvent_scheduled(ctx, field)
+			case "time_utc":
+				return ec.fieldContext_StopTimeEvent_time_utc(ctx, field)
+			case "time_unix":
+				return ec.fieldContext_StopTimeEvent_time_unix(ctx, field)
+			case "delay":
+				return ec.fieldContext_StopTimeEvent_delay(ctx, field)
+			case "uncertainty":
+				return ec.fieldContext_StopTimeEvent_uncertainty(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type StopTimeEvent", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_departure(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_departure(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FlexStopTime().Departure(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.StopTimeEvent)
+	fc.Result = res
+	return ec.marshalNStopTimeEvent2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeEvent(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_departure(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "stop_timezone":
+				return ec.fieldContext_StopTimeEvent_stop_timezone(ctx, field)
+			case "estimated_utc":
+				return ec.fieldContext_StopTimeEvent_estimated_utc(ctx, field)
+			case "estimated_unix":
+				return ec.fieldContext_StopTimeEvent_estimated_unix(ctx, field)
+			case "estimated_local":
+				return ec.fieldContext_StopTimeEvent_estimated_local(ctx, field)
+			case "estimated_delay":
+				return ec.fieldContext_StopTimeEvent_estimated_delay(ctx, field)
+			case "estimated":
+				return ec.fieldContext_StopTimeEvent_estimated(ctx, field)
+			case "scheduled_utc":
+				return ec.fieldContext_StopTimeEvent_scheduled_utc(ctx, field)
+			case "scheduled_unix":
+				return ec.fieldContext_StopTimeEvent_scheduled_unix(ctx, field)
+			case "scheduled_local":
+				return ec.fieldContext_StopTimeEvent_scheduled_local(ctx, field)
+			case "scheduled":
+				return ec.fieldContext_StopTimeEvent_scheduled(ctx, field)
+			case "time_utc":
+				return ec.fieldContext_StopTimeEvent_time_utc(ctx, field)
+			case "time_unix":
+				return ec.fieldContext_StopTimeEvent_time_unix(ctx, field)
+			case "delay":
+				return ec.fieldContext_StopTimeEvent_delay(ctx, field)
+			case "uncertainty":
+				return ec.fieldContext_StopTimeEvent_uncertainty(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type StopTimeEvent", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_service_date(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_service_date(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ServiceDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Date)
+	fc.Result = res
+	return ec.marshalODate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_service_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Date does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_date(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_date(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Date, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Date)
+	fc.Result = res
+	return ec.marshalODate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Date does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FlexStopTime_schedule_relationship(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FlexStopTime_schedule_relationship(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FlexStopTime().ScheduleRelationship(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.ScheduleRelationship)
+	fc.Result = res
+	return ec.marshalOScheduleRelationship2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐScheduleRelationship(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FlexStopTime_schedule_relationship(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FlexStopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ScheduleRelationship does not have child fields")
 		},
 	}
 	return fc, nil
@@ -33268,6 +36347,1259 @@ func (ec *executionContext) fieldContext_Level_stops(_ context.Context, field gr
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
+			case "level":
+				return ec.fieldContext_Stop_level(ctx, field)
+			case "parent":
+				return ec.fieldContext_Stop_parent(ctx, field)
+			case "external_reference":
+				return ec.fieldContext_Stop_external_reference(ctx, field)
+			case "observations":
+				return ec.fieldContext_Stop_observations(ctx, field)
+			case "children":
+				return ec.fieldContext_Stop_children(ctx, field)
+			case "route_stops":
+				return ec.fieldContext_Stop_route_stops(ctx, field)
+			case "child_levels":
+				return ec.fieldContext_Stop_child_levels(ctx, field)
+			case "pathways_from_stop":
+				return ec.fieldContext_Stop_pathways_from_stop(ctx, field)
+			case "pathways_to_stop":
+				return ec.fieldContext_Stop_pathways_to_stop(ctx, field)
+			case "stop_times":
+				return ec.fieldContext_Stop_stop_times(ctx, field)
+			case "departures":
+				return ec.fieldContext_Stop_departures(ctx, field)
+			case "arrivals":
+				return ec.fieldContext_Stop_arrivals(ctx, field)
+			case "search_rank":
+				return ec.fieldContext_Stop_search_rank(ctx, field)
+			case "place":
+				return ec.fieldContext_Stop_place(ctx, field)
+			case "census_geographies":
+				return ec.fieldContext_Stop_census_geographies(ctx, field)
+			case "directions":
+				return ec.fieldContext_Stop_directions(ctx, field)
+			case "nearby_stops":
+				return ec.fieldContext_Stop_nearby_stops(ctx, field)
+			case "alerts":
+				return ec.fieldContext_Stop_alerts(ctx, field)
+			case "within_features":
+				return ec.fieldContext_Stop_within_features(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_id(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_location_id(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_location_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LocationID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_location_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_stop_name(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_stop_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StopName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_stop_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_stop_desc(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_stop_desc(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StopDesc, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_stop_desc(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_zone_id(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_zone_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ZoneID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_zone_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_stop_url(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_stop_url(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StopURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Url)
+	fc.Result = res
+	return ec.marshalOUrl2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐUrl(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_stop_url(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Url does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_geometry(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_geometry(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Geometry, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(tt.Geometry)
+	fc.Result = res
+	return ec.marshalNGeometry2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐGeometry(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_geometry(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Geometry does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_feed_version_sha1(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FeedVersionSHA1, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_feed_onestop_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FeedOnestopID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_feed_version(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Location().FeedVersion(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.FeedVersion)
+	fc.Result = res
+	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_FeedVersion_id(ctx, field)
+			case "sha1":
+				return ec.fieldContext_FeedVersion_sha1(ctx, field)
+			case "fetched_at":
+				return ec.fieldContext_FeedVersion_fetched_at(ctx, field)
+			case "url":
+				return ec.fieldContext_FeedVersion_url(ctx, field)
+			case "earliest_calendar_date":
+				return ec.fieldContext_FeedVersion_earliest_calendar_date(ctx, field)
+			case "latest_calendar_date":
+				return ec.fieldContext_FeedVersion_latest_calendar_date(ctx, field)
+			case "created_by":
+				return ec.fieldContext_FeedVersion_created_by(ctx, field)
+			case "updated_by":
+				return ec.fieldContext_FeedVersion_updated_by(ctx, field)
+			case "name":
+				return ec.fieldContext_FeedVersion_name(ctx, field)
+			case "description":
+				return ec.fieldContext_FeedVersion_description(ctx, field)
+			case "file":
+				return ec.fieldContext_FeedVersion_file(ctx, field)
+			case "geometry":
+				return ec.fieldContext_FeedVersion_geometry(ctx, field)
+			case "feed":
+				return ec.fieldContext_FeedVersion_feed(ctx, field)
+			case "feed_version_gtfs_import":
+				return ec.fieldContext_FeedVersion_feed_version_gtfs_import(ctx, field)
+			case "files":
+				return ec.fieldContext_FeedVersion_files(ctx, field)
+			case "service_levels":
+				return ec.fieldContext_FeedVersion_service_levels(ctx, field)
+			case "service_window":
+				return ec.fieldContext_FeedVersion_service_window(ctx, field)
+			case "agencies":
+				return ec.fieldContext_FeedVersion_agencies(ctx, field)
+			case "routes":
+				return ec.fieldContext_FeedVersion_routes(ctx, field)
+			case "stops":
+				return ec.fieldContext_FeedVersion_stops(ctx, field)
+			case "trips":
+				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "feed_infos":
+				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
+			case "validation_reports":
+				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
+			case "segments":
+				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_stop_times(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_stop_times(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Location().StopTimes(rctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.StopTimeFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.FlexStopTime)
+	fc.Result = res
+	return ec.marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTimeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_stop_times(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "arrival_time":
+				return ec.fieldContext_FlexStopTime_arrival_time(ctx, field)
+			case "departure_time":
+				return ec.fieldContext_FlexStopTime_departure_time(ctx, field)
+			case "stop_sequence":
+				return ec.fieldContext_FlexStopTime_stop_sequence(ctx, field)
+			case "stop_headsign":
+				return ec.fieldContext_FlexStopTime_stop_headsign(ctx, field)
+			case "pickup_type":
+				return ec.fieldContext_FlexStopTime_pickup_type(ctx, field)
+			case "drop_off_type":
+				return ec.fieldContext_FlexStopTime_drop_off_type(ctx, field)
+			case "timepoint":
+				return ec.fieldContext_FlexStopTime_timepoint(ctx, field)
+			case "continuous_drop_off":
+				return ec.fieldContext_FlexStopTime_continuous_drop_off(ctx, field)
+			case "continuous_pickup":
+				return ec.fieldContext_FlexStopTime_continuous_pickup(ctx, field)
+			case "shape_dist_traveled":
+				return ec.fieldContext_FlexStopTime_shape_dist_traveled(ctx, field)
+			case "interpolated":
+				return ec.fieldContext_FlexStopTime_interpolated(ctx, field)
+			case "start_pickup_drop_off_window":
+				return ec.fieldContext_FlexStopTime_start_pickup_drop_off_window(ctx, field)
+			case "end_pickup_drop_off_window":
+				return ec.fieldContext_FlexStopTime_end_pickup_drop_off_window(ctx, field)
+			case "pickup_booking_rule":
+				return ec.fieldContext_FlexStopTime_pickup_booking_rule(ctx, field)
+			case "drop_off_booking_rule":
+				return ec.fieldContext_FlexStopTime_drop_off_booking_rule(ctx, field)
+			case "location":
+				return ec.fieldContext_FlexStopTime_location(ctx, field)
+			case "location_group":
+				return ec.fieldContext_FlexStopTime_location_group(ctx, field)
+			case "trip":
+				return ec.fieldContext_FlexStopTime_trip(ctx, field)
+			case "arrival":
+				return ec.fieldContext_FlexStopTime_arrival(ctx, field)
+			case "departure":
+				return ec.fieldContext_FlexStopTime_departure(ctx, field)
+			case "service_date":
+				return ec.fieldContext_FlexStopTime_service_date(ctx, field)
+			case "date":
+				return ec.fieldContext_FlexStopTime_date(ctx, field)
+			case "schedule_relationship":
+				return ec.fieldContext_FlexStopTime_schedule_relationship(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type FlexStopTime", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Location_stop_times_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroup_id(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroup) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroup_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroup_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroup",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroup_location_group_id(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroup) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroup_location_group_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LocationGroupID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroup_location_group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroup",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroup_location_group_name(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroup) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroup_location_group_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LocationGroupName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.String)
+	fc.Result = res
+	return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroup_location_group_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroup",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroup_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroup) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroup_feed_version_sha1(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FeedVersionSHA1, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroup_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroup",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroup_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroup) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroup_feed_onestop_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FeedOnestopID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroup_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroup",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroup_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroup) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroup_feed_version(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.LocationGroup().FeedVersion(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.FeedVersion)
+	fc.Result = res
+	return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroup_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroup",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_FeedVersion_id(ctx, field)
+			case "sha1":
+				return ec.fieldContext_FeedVersion_sha1(ctx, field)
+			case "fetched_at":
+				return ec.fieldContext_FeedVersion_fetched_at(ctx, field)
+			case "url":
+				return ec.fieldContext_FeedVersion_url(ctx, field)
+			case "earliest_calendar_date":
+				return ec.fieldContext_FeedVersion_earliest_calendar_date(ctx, field)
+			case "latest_calendar_date":
+				return ec.fieldContext_FeedVersion_latest_calendar_date(ctx, field)
+			case "created_by":
+				return ec.fieldContext_FeedVersion_created_by(ctx, field)
+			case "updated_by":
+				return ec.fieldContext_FeedVersion_updated_by(ctx, field)
+			case "name":
+				return ec.fieldContext_FeedVersion_name(ctx, field)
+			case "description":
+				return ec.fieldContext_FeedVersion_description(ctx, field)
+			case "file":
+				return ec.fieldContext_FeedVersion_file(ctx, field)
+			case "geometry":
+				return ec.fieldContext_FeedVersion_geometry(ctx, field)
+			case "feed":
+				return ec.fieldContext_FeedVersion_feed(ctx, field)
+			case "feed_version_gtfs_import":
+				return ec.fieldContext_FeedVersion_feed_version_gtfs_import(ctx, field)
+			case "files":
+				return ec.fieldContext_FeedVersion_files(ctx, field)
+			case "service_levels":
+				return ec.fieldContext_FeedVersion_service_levels(ctx, field)
+			case "service_window":
+				return ec.fieldContext_FeedVersion_service_window(ctx, field)
+			case "agencies":
+				return ec.fieldContext_FeedVersion_agencies(ctx, field)
+			case "routes":
+				return ec.fieldContext_FeedVersion_routes(ctx, field)
+			case "stops":
+				return ec.fieldContext_FeedVersion_stops(ctx, field)
+			case "trips":
+				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
+			case "feed_infos":
+				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
+			case "validation_reports":
+				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
+			case "segments":
+				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroup_stops(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroup) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroup_stops(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.LocationGroup().Stops(rctx, obj, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Stop)
+	fc.Result = res
+	return ec.marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroup_stops(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroup",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Stop_id(ctx, field)
+			case "onestop_id":
+				return ec.fieldContext_Stop_onestop_id(ctx, field)
+			case "location_type":
+				return ec.fieldContext_Stop_location_type(ctx, field)
+			case "stop_code":
+				return ec.fieldContext_Stop_stop_code(ctx, field)
+			case "stop_desc":
+				return ec.fieldContext_Stop_stop_desc(ctx, field)
+			case "stop_id":
+				return ec.fieldContext_Stop_stop_id(ctx, field)
+			case "stop_name":
+				return ec.fieldContext_Stop_stop_name(ctx, field)
+			case "stop_timezone":
+				return ec.fieldContext_Stop_stop_timezone(ctx, field)
+			case "stop_url":
+				return ec.fieldContext_Stop_stop_url(ctx, field)
+			case "wheelchair_boarding":
+				return ec.fieldContext_Stop_wheelchair_boarding(ctx, field)
+			case "zone_id":
+				return ec.fieldContext_Stop_zone_id(ctx, field)
+			case "platform_code":
+				return ec.fieldContext_Stop_platform_code(ctx, field)
+			case "tts_stop_name":
+				return ec.fieldContext_Stop_tts_stop_name(ctx, field)
+			case "geometry":
+				return ec.fieldContext_Stop_geometry(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_Stop_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
+			case "level":
+				return ec.fieldContext_Stop_level(ctx, field)
+			case "parent":
+				return ec.fieldContext_Stop_parent(ctx, field)
+			case "external_reference":
+				return ec.fieldContext_Stop_external_reference(ctx, field)
+			case "observations":
+				return ec.fieldContext_Stop_observations(ctx, field)
+			case "children":
+				return ec.fieldContext_Stop_children(ctx, field)
+			case "route_stops":
+				return ec.fieldContext_Stop_route_stops(ctx, field)
+			case "child_levels":
+				return ec.fieldContext_Stop_child_levels(ctx, field)
+			case "pathways_from_stop":
+				return ec.fieldContext_Stop_pathways_from_stop(ctx, field)
+			case "pathways_to_stop":
+				return ec.fieldContext_Stop_pathways_to_stop(ctx, field)
+			case "stop_times":
+				return ec.fieldContext_Stop_stop_times(ctx, field)
+			case "departures":
+				return ec.fieldContext_Stop_departures(ctx, field)
+			case "arrivals":
+				return ec.fieldContext_Stop_arrivals(ctx, field)
+			case "search_rank":
+				return ec.fieldContext_Stop_search_rank(ctx, field)
+			case "place":
+				return ec.fieldContext_Stop_place(ctx, field)
+			case "census_geographies":
+				return ec.fieldContext_Stop_census_geographies(ctx, field)
+			case "directions":
+				return ec.fieldContext_Stop_directions(ctx, field)
+			case "nearby_stops":
+				return ec.fieldContext_Stop_nearby_stops(ctx, field)
+			case "alerts":
+				return ec.fieldContext_Stop_alerts(ctx, field)
+			case "within_features":
+				return ec.fieldContext_Stop_within_features(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_LocationGroup_stops_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroupStop_id(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroupStop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroupStop_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroupStop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroupStop",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroupStop_location_group(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroupStop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroupStop_location_group(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.LocationGroupStop().LocationGroup(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.LocationGroup)
+	fc.Result = res
+	return ec.marshalNLocationGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroup(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroupStop_location_group(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroupStop",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_LocationGroup_id(ctx, field)
+			case "location_group_id":
+				return ec.fieldContext_LocationGroup_location_group_id(ctx, field)
+			case "location_group_name":
+				return ec.fieldContext_LocationGroup_location_group_name(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_LocationGroup_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_LocationGroup_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_LocationGroup_feed_version(ctx, field)
+			case "stops":
+				return ec.fieldContext_LocationGroup_stops(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type LocationGroup", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _LocationGroupStop_stop(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroupStop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroupStop_stop(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.LocationGroupStop().Stop(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Stop)
+	fc.Result = res
+	return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroupStop_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroupStop",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Stop_id(ctx, field)
+			case "onestop_id":
+				return ec.fieldContext_Stop_onestop_id(ctx, field)
+			case "location_type":
+				return ec.fieldContext_Stop_location_type(ctx, field)
+			case "stop_code":
+				return ec.fieldContext_Stop_stop_code(ctx, field)
+			case "stop_desc":
+				return ec.fieldContext_Stop_stop_desc(ctx, field)
+			case "stop_id":
+				return ec.fieldContext_Stop_stop_id(ctx, field)
+			case "stop_name":
+				return ec.fieldContext_Stop_stop_name(ctx, field)
+			case "stop_timezone":
+				return ec.fieldContext_Stop_stop_timezone(ctx, field)
+			case "stop_url":
+				return ec.fieldContext_Stop_stop_url(ctx, field)
+			case "wheelchair_boarding":
+				return ec.fieldContext_Stop_wheelchair_boarding(ctx, field)
+			case "zone_id":
+				return ec.fieldContext_Stop_zone_id(ctx, field)
+			case "platform_code":
+				return ec.fieldContext_Stop_platform_code(ctx, field)
+			case "tts_stop_name":
+				return ec.fieldContext_Stop_tts_stop_name(ctx, field)
+			case "geometry":
+				return ec.fieldContext_Stop_geometry(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_Stop_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -33682,6 +38014,8 @@ func (ec *executionContext) fieldContext_Mutation_feed_version_update(ctx contex
 				return ec.fieldContext_FeedVersion_stops(ctx, field)
 			case "trips":
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -34018,6 +38352,8 @@ func (ec *executionContext) fieldContext_Mutation_stop_create(ctx context.Contex
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -34147,6 +38483,8 @@ func (ec *executionContext) fieldContext_Mutation_stop_update(ctx context.Contex
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -35762,6 +40100,8 @@ func (ec *executionContext) fieldContext_Pathway_from_stop(_ context.Context, fi
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -35880,6 +40220,8 @@ func (ec *executionContext) fieldContext_Pathway_to_stop(_ context.Context, fiel
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -36404,6 +40746,8 @@ func (ec *executionContext) fieldContext_Query_feed_versions(ctx context.Context
 				return ec.fieldContext_FeedVersion_stops(ctx, field)
 			case "trips":
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -36717,6 +41061,8 @@ func (ec *executionContext) fieldContext_Query_stops(ctx context.Context, field 
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -36840,6 +41186,8 @@ func (ec *executionContext) fieldContext_Query_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
+			case "flexible_stop_times":
+				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -38816,6 +43164,8 @@ func (ec *executionContext) fieldContext_Route_feed_version(_ context.Context, f
 				return ec.fieldContext_FeedVersion_stops(ctx, field)
 			case "trips":
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -38986,6 +43336,8 @@ func (ec *executionContext) fieldContext_Route_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
+			case "flexible_stop_times":
+				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -39085,6 +43437,8 @@ func (ec *executionContext) fieldContext_Route_stops(ctx context.Context, field 
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -40199,6 +44553,8 @@ func (ec *executionContext) fieldContext_RouteHeadway_stop(_ context.Context, fi
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -40847,6 +45203,8 @@ func (ec *executionContext) fieldContext_RouteStop_stop(_ context.Context, field
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -41297,6 +45655,8 @@ func (ec *executionContext) fieldContext_RouteStopPattern_trips(ctx context.Cont
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
+			case "flexible_stop_times":
+				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -43061,6 +47421,8 @@ func (ec *executionContext) fieldContext_Stop_feed_version(_ context.Context, fi
 				return ec.fieldContext_FeedVersion_stops(ctx, field)
 			case "trips":
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -43070,6 +47432,77 @@ func (ec *executionContext) fieldContext_Stop_feed_version(_ context.Context, fi
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Stop_location_groups(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Stop_location_groups(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Stop().LocationGroups(rctx, obj, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.LocationGroup)
+	fc.Result = res
+	return ec.marshalNLocationGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Stop_location_groups(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Stop",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_LocationGroup_id(ctx, field)
+			case "location_group_id":
+				return ec.fieldContext_LocationGroup_location_group_id(ctx, field)
+			case "location_group_name":
+				return ec.fieldContext_LocationGroup_location_group_name(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_LocationGroup_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_LocationGroup_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_LocationGroup_feed_version(ctx, field)
+			case "stops":
+				return ec.fieldContext_LocationGroup_stops(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type LocationGroup", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Stop_location_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -43199,6 +47632,8 @@ func (ec *executionContext) fieldContext_Stop_parent(_ context.Context, field gr
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -43449,6 +47884,8 @@ func (ec *executionContext) fieldContext_Stop_children(ctx context.Context, fiel
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -43872,6 +48309,14 @@ func (ec *executionContext) fieldContext_Stop_stop_times(ctx context.Context, fi
 				return ec.fieldContext_StopTime_shape_dist_traveled(ctx, field)
 			case "interpolated":
 				return ec.fieldContext_StopTime_interpolated(ctx, field)
+			case "start_pickup_drop_off_window":
+				return ec.fieldContext_StopTime_start_pickup_drop_off_window(ctx, field)
+			case "end_pickup_drop_off_window":
+				return ec.fieldContext_StopTime_end_pickup_drop_off_window(ctx, field)
+			case "pickup_booking_rule":
+				return ec.fieldContext_StopTime_pickup_booking_rule(ctx, field)
+			case "drop_off_booking_rule":
+				return ec.fieldContext_StopTime_drop_off_booking_rule(ctx, field)
 			case "stop":
 				return ec.fieldContext_StopTime_stop(ctx, field)
 			case "trip":
@@ -43965,6 +48410,14 @@ func (ec *executionContext) fieldContext_Stop_departures(ctx context.Context, fi
 				return ec.fieldContext_StopTime_shape_dist_traveled(ctx, field)
 			case "interpolated":
 				return ec.fieldContext_StopTime_interpolated(ctx, field)
+			case "start_pickup_drop_off_window":
+				return ec.fieldContext_StopTime_start_pickup_drop_off_window(ctx, field)
+			case "end_pickup_drop_off_window":
+				return ec.fieldContext_StopTime_end_pickup_drop_off_window(ctx, field)
+			case "pickup_booking_rule":
+				return ec.fieldContext_StopTime_pickup_booking_rule(ctx, field)
+			case "drop_off_booking_rule":
+				return ec.fieldContext_StopTime_drop_off_booking_rule(ctx, field)
 			case "stop":
 				return ec.fieldContext_StopTime_stop(ctx, field)
 			case "trip":
@@ -44058,6 +48511,14 @@ func (ec *executionContext) fieldContext_Stop_arrivals(ctx context.Context, fiel
 				return ec.fieldContext_StopTime_shape_dist_traveled(ctx, field)
 			case "interpolated":
 				return ec.fieldContext_StopTime_interpolated(ctx, field)
+			case "start_pickup_drop_off_window":
+				return ec.fieldContext_StopTime_start_pickup_drop_off_window(ctx, field)
+			case "end_pickup_drop_off_window":
+				return ec.fieldContext_StopTime_end_pickup_drop_off_window(ctx, field)
+			case "pickup_booking_rule":
+				return ec.fieldContext_StopTime_pickup_booking_rule(ctx, field)
+			case "drop_off_booking_rule":
+				return ec.fieldContext_StopTime_drop_off_booking_rule(ctx, field)
 			case "stop":
 				return ec.fieldContext_StopTime_stop(ctx, field)
 			case "trip":
@@ -44421,6 +48882,8 @@ func (ec *executionContext) fieldContext_Stop_nearby_stops(ctx context.Context, 
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -44827,6 +49290,8 @@ func (ec *executionContext) fieldContext_StopExternalReference_target_active_sto
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -46064,6 +50529,254 @@ func (ec *executionContext) fieldContext_StopTime_interpolated(_ context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _StopTime_start_pickup_drop_off_window(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_StopTime_start_pickup_drop_off_window(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartPickupDropOffWindow, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Seconds)
+	fc.Result = res
+	return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_StopTime_start_pickup_drop_off_window(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Seconds does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StopTime_end_pickup_drop_off_window(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_StopTime_end_pickup_drop_off_window(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndPickupDropOffWindow, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Seconds)
+	fc.Result = res
+	return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_StopTime_end_pickup_drop_off_window(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StopTime",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Seconds does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StopTime_pickup_booking_rule(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_StopTime_pickup_booking_rule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.StopTime().PickupBookingRule(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.BookingRule)
+	fc.Result = res
+	return ec.marshalOBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_StopTime_pickup_booking_rule(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_BookingRule_id(ctx, field)
+			case "booking_rule_id":
+				return ec.fieldContext_BookingRule_booking_rule_id(ctx, field)
+			case "booking_type":
+				return ec.fieldContext_BookingRule_booking_type(ctx, field)
+			case "prior_notice_duration_min":
+				return ec.fieldContext_BookingRule_prior_notice_duration_min(ctx, field)
+			case "prior_notice_duration_max":
+				return ec.fieldContext_BookingRule_prior_notice_duration_max(ctx, field)
+			case "prior_notice_last_day":
+				return ec.fieldContext_BookingRule_prior_notice_last_day(ctx, field)
+			case "prior_notice_last_time":
+				return ec.fieldContext_BookingRule_prior_notice_last_time(ctx, field)
+			case "prior_notice_start_day":
+				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
+			case "prior_notice_start_time":
+				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
+			case "prior_notice_service_id":
+				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
+			case "prior_notice_service":
+				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
+			case "message":
+				return ec.fieldContext_BookingRule_message(ctx, field)
+			case "pickup_message":
+				return ec.fieldContext_BookingRule_pickup_message(ctx, field)
+			case "drop_off_message":
+				return ec.fieldContext_BookingRule_drop_off_message(ctx, field)
+			case "phone_number":
+				return ec.fieldContext_BookingRule_phone_number(ctx, field)
+			case "info_url":
+				return ec.fieldContext_BookingRule_info_url(ctx, field)
+			case "booking_url":
+				return ec.fieldContext_BookingRule_booking_url(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_BookingRule_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_BookingRule_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_BookingRule_feed_version(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BookingRule", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StopTime_drop_off_booking_rule(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_StopTime_drop_off_booking_rule(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.StopTime().DropOffBookingRule(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.BookingRule)
+	fc.Result = res
+	return ec.marshalOBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_StopTime_drop_off_booking_rule(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StopTime",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_BookingRule_id(ctx, field)
+			case "booking_rule_id":
+				return ec.fieldContext_BookingRule_booking_rule_id(ctx, field)
+			case "booking_type":
+				return ec.fieldContext_BookingRule_booking_type(ctx, field)
+			case "prior_notice_duration_min":
+				return ec.fieldContext_BookingRule_prior_notice_duration_min(ctx, field)
+			case "prior_notice_duration_max":
+				return ec.fieldContext_BookingRule_prior_notice_duration_max(ctx, field)
+			case "prior_notice_last_day":
+				return ec.fieldContext_BookingRule_prior_notice_last_day(ctx, field)
+			case "prior_notice_last_time":
+				return ec.fieldContext_BookingRule_prior_notice_last_time(ctx, field)
+			case "prior_notice_start_day":
+				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
+			case "prior_notice_start_time":
+				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
+			case "prior_notice_service_id":
+				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
+			case "prior_notice_service":
+				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
+			case "message":
+				return ec.fieldContext_BookingRule_message(ctx, field)
+			case "pickup_message":
+				return ec.fieldContext_BookingRule_pickup_message(ctx, field)
+			case "drop_off_message":
+				return ec.fieldContext_BookingRule_drop_off_message(ctx, field)
+			case "phone_number":
+				return ec.fieldContext_BookingRule_phone_number(ctx, field)
+			case "info_url":
+				return ec.fieldContext_BookingRule_info_url(ctx, field)
+			case "booking_url":
+				return ec.fieldContext_BookingRule_booking_url(ctx, field)
+			case "feed_version_sha1":
+				return ec.fieldContext_BookingRule_feed_version_sha1(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_BookingRule_feed_onestop_id(ctx, field)
+			case "feed_version":
+				return ec.fieldContext_BookingRule_feed_version(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BookingRule", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _StopTime_stop(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_StopTime_stop(ctx, field)
 	if err != nil {
@@ -46137,6 +50850,8 @@ func (ec *executionContext) fieldContext_StopTime_stop(_ context.Context, field 
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -46249,6 +50964,8 @@ func (ec *executionContext) fieldContext_StopTime_trip(_ context.Context, field 
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
+			case "flexible_stop_times":
+				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -47802,6 +52519,8 @@ func (ec *executionContext) fieldContext_Trip_feed_version(_ context.Context, fi
 				return ec.fieldContext_FeedVersion_stops(ctx, field)
 			case "trips":
 				return ec.fieldContext_FeedVersion_trips(ctx, field)
+			case "locations":
+				return ec.fieldContext_FeedVersion_locations(ctx, field)
 			case "feed_infos":
 				return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 			case "validation_reports":
@@ -47876,6 +52595,14 @@ func (ec *executionContext) fieldContext_Trip_stop_times(ctx context.Context, fi
 				return ec.fieldContext_StopTime_shape_dist_traveled(ctx, field)
 			case "interpolated":
 				return ec.fieldContext_StopTime_interpolated(ctx, field)
+			case "start_pickup_drop_off_window":
+				return ec.fieldContext_StopTime_start_pickup_drop_off_window(ctx, field)
+			case "end_pickup_drop_off_window":
+				return ec.fieldContext_StopTime_end_pickup_drop_off_window(ctx, field)
+			case "pickup_booking_rule":
+				return ec.fieldContext_StopTime_pickup_booking_rule(ctx, field)
+			case "drop_off_booking_rule":
+				return ec.fieldContext_StopTime_drop_off_booking_rule(ctx, field)
 			case "stop":
 				return ec.fieldContext_StopTime_stop(ctx, field)
 			case "trip":
@@ -47902,6 +52629,109 @@ func (ec *executionContext) fieldContext_Trip_stop_times(ctx context.Context, fi
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Trip_stop_times_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Trip_flexible_stop_times(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Trip_flexible_stop_times(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Trip().FlexibleStopTimes(rctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.TripStopTimeFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.FlexStopTime)
+	fc.Result = res
+	return ec.marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTimeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Trip_flexible_stop_times(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Trip",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "arrival_time":
+				return ec.fieldContext_FlexStopTime_arrival_time(ctx, field)
+			case "departure_time":
+				return ec.fieldContext_FlexStopTime_departure_time(ctx, field)
+			case "stop_sequence":
+				return ec.fieldContext_FlexStopTime_stop_sequence(ctx, field)
+			case "stop_headsign":
+				return ec.fieldContext_FlexStopTime_stop_headsign(ctx, field)
+			case "pickup_type":
+				return ec.fieldContext_FlexStopTime_pickup_type(ctx, field)
+			case "drop_off_type":
+				return ec.fieldContext_FlexStopTime_drop_off_type(ctx, field)
+			case "timepoint":
+				return ec.fieldContext_FlexStopTime_timepoint(ctx, field)
+			case "continuous_drop_off":
+				return ec.fieldContext_FlexStopTime_continuous_drop_off(ctx, field)
+			case "continuous_pickup":
+				return ec.fieldContext_FlexStopTime_continuous_pickup(ctx, field)
+			case "shape_dist_traveled":
+				return ec.fieldContext_FlexStopTime_shape_dist_traveled(ctx, field)
+			case "interpolated":
+				return ec.fieldContext_FlexStopTime_interpolated(ctx, field)
+			case "start_pickup_drop_off_window":
+				return ec.fieldContext_FlexStopTime_start_pickup_drop_off_window(ctx, field)
+			case "end_pickup_drop_off_window":
+				return ec.fieldContext_FlexStopTime_end_pickup_drop_off_window(ctx, field)
+			case "pickup_booking_rule":
+				return ec.fieldContext_FlexStopTime_pickup_booking_rule(ctx, field)
+			case "drop_off_booking_rule":
+				return ec.fieldContext_FlexStopTime_drop_off_booking_rule(ctx, field)
+			case "location":
+				return ec.fieldContext_FlexStopTime_location(ctx, field)
+			case "location_group":
+				return ec.fieldContext_FlexStopTime_location_group(ctx, field)
+			case "trip":
+				return ec.fieldContext_FlexStopTime_trip(ctx, field)
+			case "arrival":
+				return ec.fieldContext_FlexStopTime_arrival(ctx, field)
+			case "departure":
+				return ec.fieldContext_FlexStopTime_departure(ctx, field)
+			case "service_date":
+				return ec.fieldContext_FlexStopTime_service_date(ctx, field)
+			case "date":
+				return ec.fieldContext_FlexStopTime_date(ctx, field)
+			case "schedule_relationship":
+				return ec.fieldContext_FlexStopTime_schedule_relationship(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type FlexStopTime", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Trip_flexible_stop_times_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -49394,6 +54224,8 @@ func (ec *executionContext) fieldContext_ValidationReportDetails_stops(ctx conte
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -50599,6 +55431,8 @@ func (ec *executionContext) fieldContext_VehiclePosition_stop_id(_ context.Conte
 				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
 			case "feed_version":
 				return ec.fieldContext_Stop_feed_version(ctx, field)
+			case "location_groups":
+				return ec.fieldContext_Stop_location_groups(ctx, field)
 			case "level":
 				return ec.fieldContext_Stop_level(ctx, field)
 			case "parent":
@@ -54857,6 +59691,40 @@ func (ec *executionContext) unmarshalInputLicenseFilter(ctx context.Context, obj
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputLocationFilter(ctx context.Context, obj any) (model.LocationFilter, error) {
+	var it model.LocationFilter
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"ids", "location_id"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ids = data
+		case "location_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("location_id"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LocationID = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputOperatorFilter(ctx context.Context, obj any) (model.OperatorFilter, error) {
 	var it model.OperatorFilter
 	asMap := map[string]any{}
@@ -56707,6 +61575,191 @@ func (ec *executionContext) _Alert(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Alert_url(ctx, field, obj)
 		case "severity_level":
 			out.Values[i] = ec._Alert_severity_level(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var bookingRuleImplementors = []string{"BookingRule"}
+
+func (ec *executionContext) _BookingRule(ctx context.Context, sel ast.SelectionSet, obj *model.BookingRule) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, bookingRuleImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("BookingRule")
+		case "id":
+			out.Values[i] = ec._BookingRule_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "booking_rule_id":
+			out.Values[i] = ec._BookingRule_booking_rule_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "booking_type":
+			out.Values[i] = ec._BookingRule_booking_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "prior_notice_duration_min":
+			out.Values[i] = ec._BookingRule_prior_notice_duration_min(ctx, field, obj)
+		case "prior_notice_duration_max":
+			out.Values[i] = ec._BookingRule_prior_notice_duration_max(ctx, field, obj)
+		case "prior_notice_last_day":
+			out.Values[i] = ec._BookingRule_prior_notice_last_day(ctx, field, obj)
+		case "prior_notice_last_time":
+			out.Values[i] = ec._BookingRule_prior_notice_last_time(ctx, field, obj)
+		case "prior_notice_start_day":
+			out.Values[i] = ec._BookingRule_prior_notice_start_day(ctx, field, obj)
+		case "prior_notice_start_time":
+			out.Values[i] = ec._BookingRule_prior_notice_start_time(ctx, field, obj)
+		case "prior_notice_service_id":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._BookingRule_prior_notice_service_id(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "prior_notice_service":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._BookingRule_prior_notice_service(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "message":
+			out.Values[i] = ec._BookingRule_message(ctx, field, obj)
+		case "pickup_message":
+			out.Values[i] = ec._BookingRule_pickup_message(ctx, field, obj)
+		case "drop_off_message":
+			out.Values[i] = ec._BookingRule_drop_off_message(ctx, field, obj)
+		case "phone_number":
+			out.Values[i] = ec._BookingRule_phone_number(ctx, field, obj)
+		case "info_url":
+			out.Values[i] = ec._BookingRule_info_url(ctx, field, obj)
+		case "booking_url":
+			out.Values[i] = ec._BookingRule_booking_url(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._BookingRule_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._BookingRule_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._BookingRule_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -59024,6 +64077,42 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "locations":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_locations(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "feed_infos":
 			field := field
 
@@ -59768,6 +64857,346 @@ func (ec *executionContext) _FeedVersionUnimportResult(ctx context.Context, sel 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var flexStopTimeImplementors = []string{"FlexStopTime"}
+
+func (ec *executionContext) _FlexStopTime(ctx context.Context, sel ast.SelectionSet, obj *model.FlexStopTime) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, flexStopTimeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FlexStopTime")
+		case "arrival_time":
+			out.Values[i] = ec._FlexStopTime_arrival_time(ctx, field, obj)
+		case "departure_time":
+			out.Values[i] = ec._FlexStopTime_departure_time(ctx, field, obj)
+		case "stop_sequence":
+			out.Values[i] = ec._FlexStopTime_stop_sequence(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "stop_headsign":
+			out.Values[i] = ec._FlexStopTime_stop_headsign(ctx, field, obj)
+		case "pickup_type":
+			out.Values[i] = ec._FlexStopTime_pickup_type(ctx, field, obj)
+		case "drop_off_type":
+			out.Values[i] = ec._FlexStopTime_drop_off_type(ctx, field, obj)
+		case "timepoint":
+			out.Values[i] = ec._FlexStopTime_timepoint(ctx, field, obj)
+		case "continuous_drop_off":
+			out.Values[i] = ec._FlexStopTime_continuous_drop_off(ctx, field, obj)
+		case "continuous_pickup":
+			out.Values[i] = ec._FlexStopTime_continuous_pickup(ctx, field, obj)
+		case "shape_dist_traveled":
+			out.Values[i] = ec._FlexStopTime_shape_dist_traveled(ctx, field, obj)
+		case "interpolated":
+			out.Values[i] = ec._FlexStopTime_interpolated(ctx, field, obj)
+		case "start_pickup_drop_off_window":
+			out.Values[i] = ec._FlexStopTime_start_pickup_drop_off_window(ctx, field, obj)
+		case "end_pickup_drop_off_window":
+			out.Values[i] = ec._FlexStopTime_end_pickup_drop_off_window(ctx, field, obj)
+		case "pickup_booking_rule":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FlexStopTime_pickup_booking_rule(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "drop_off_booking_rule":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FlexStopTime_drop_off_booking_rule(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "location":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FlexStopTime_location(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "location_group":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FlexStopTime_location_group(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "trip":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FlexStopTime_trip(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "arrival":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FlexStopTime_arrival(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "departure":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FlexStopTime_departure(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "service_date":
+			out.Values[i] = ec._FlexStopTime_service_date(ctx, field, obj)
+		case "date":
+			out.Values[i] = ec._FlexStopTime_date(ctx, field, obj)
+		case "schedule_relationship":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FlexStopTime_schedule_relationship(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -61394,6 +66823,384 @@ func (ec *executionContext) _Level(ctx context.Context, sel ast.SelectionSet, ob
 					}
 				}()
 				res = ec._Level_stops(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var locationImplementors = []string{"Location"}
+
+func (ec *executionContext) _Location(ctx context.Context, sel ast.SelectionSet, obj *model.Location) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, locationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Location")
+		case "id":
+			out.Values[i] = ec._Location_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "location_id":
+			out.Values[i] = ec._Location_location_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "stop_name":
+			out.Values[i] = ec._Location_stop_name(ctx, field, obj)
+		case "stop_desc":
+			out.Values[i] = ec._Location_stop_desc(ctx, field, obj)
+		case "zone_id":
+			out.Values[i] = ec._Location_zone_id(ctx, field, obj)
+		case "stop_url":
+			out.Values[i] = ec._Location_stop_url(ctx, field, obj)
+		case "geometry":
+			out.Values[i] = ec._Location_geometry(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version_sha1":
+			out.Values[i] = ec._Location_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._Location_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Location_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "stop_times":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Location_stop_times(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var locationGroupImplementors = []string{"LocationGroup"}
+
+func (ec *executionContext) _LocationGroup(ctx context.Context, sel ast.SelectionSet, obj *model.LocationGroup) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, locationGroupImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("LocationGroup")
+		case "id":
+			out.Values[i] = ec._LocationGroup_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "location_group_id":
+			out.Values[i] = ec._LocationGroup_location_group_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "location_group_name":
+			out.Values[i] = ec._LocationGroup_location_group_name(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._LocationGroup_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._LocationGroup_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._LocationGroup_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "stops":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._LocationGroup_stops(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var locationGroupStopImplementors = []string{"LocationGroupStop"}
+
+func (ec *executionContext) _LocationGroupStop(ctx context.Context, sel ast.SelectionSet, obj *model.LocationGroupStop) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, locationGroupStopImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("LocationGroupStop")
+		case "id":
+			out.Values[i] = ec._LocationGroupStop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "location_group":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._LocationGroupStop_location_group(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "stop":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._LocationGroupStop_stop(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -63993,6 +69800,42 @@ func (ec *executionContext) _Stop(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "location_groups":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Stop_location_groups(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "level":
 			field := field
 
@@ -64823,6 +70666,76 @@ func (ec *executionContext) _StopTime(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._StopTime_shape_dist_traveled(ctx, field, obj)
 		case "interpolated":
 			out.Values[i] = ec._StopTime_interpolated(ctx, field, obj)
+		case "start_pickup_drop_off_window":
+			out.Values[i] = ec._StopTime_start_pickup_drop_off_window(ctx, field, obj)
+		case "end_pickup_drop_off_window":
+			out.Values[i] = ec._StopTime_end_pickup_drop_off_window(ctx, field, obj)
+		case "pickup_booking_rule":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StopTime_pickup_booking_rule(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "drop_off_booking_rule":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StopTime_drop_off_booking_rule(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "stop":
 			field := field
 
@@ -65281,6 +71194,42 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._Trip_stop_times(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "flexible_stop_times":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Trip_flexible_stop_times(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -67252,6 +73201,60 @@ func (ec *executionContext) marshalNFeedVersionUnimportResult2ᚖgithubᚗcomᚋ
 	return ec._FeedVersionUnimportResult(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTimeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FlexStopTime) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNFlexStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTime(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNFlexStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTime(ctx context.Context, sel ast.SelectionSet, v *model.FlexStopTime) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._FlexStopTime(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNFloat2float64(ctx context.Context, v any) (float64, error) {
 	res, err := graphql.UnmarshalFloat(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -67452,6 +73455,16 @@ func (ec *executionContext) marshalNGbfsVehicleTypeAvailable2ᚖgithubᚗcomᚋi
 	return ec._GbfsVehicleTypeAvailable(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNGeometry2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐGeometry(ctx context.Context, v any) (tt.Geometry, error) {
+	var res tt.Geometry
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNGeometry2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐGeometry(ctx context.Context, sel ast.SelectionSet, v tt.Geometry) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx context.Context, v any) (tt.Int, error) {
 	var res tt.Int
 	err := res.UnmarshalGQL(v)
@@ -67615,6 +73628,118 @@ func (ec *executionContext) unmarshalNLineString2githubᚗcomᚋinterlineᚑio�
 
 func (ec *executionContext) marshalNLineString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐLineString(ctx context.Context, sel ast.SelectionSet, v tt.LineString) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNLocation2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Location) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNLocation2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocation(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNLocation2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocation(ctx context.Context, sel ast.SelectionSet, v *model.Location) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Location(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNLocationGroup2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroup(ctx context.Context, sel ast.SelectionSet, v model.LocationGroup) graphql.Marshaler {
+	return ec._LocationGroup(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNLocationGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.LocationGroup) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNLocationGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroup(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNLocationGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroup(ctx context.Context, sel ast.SelectionSet, v *model.LocationGroup) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._LocationGroup(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNMap2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMap(ctx context.Context, v any) (tt.Map, error) {
@@ -69106,6 +75231,13 @@ func (ec *executionContext) marshalOAny2interface(ctx context.Context, sel ast.S
 	return res
 }
 
+func (ec *executionContext) marshalOBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx context.Context, sel ast.SelectionSet, v *model.BookingRule) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._BookingRule(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOBool2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐBool(ctx context.Context, v any) (tt.Bool, error) {
 	var res tt.Bool
 	err := res.UnmarshalGQL(v)
@@ -69162,6 +75294,13 @@ func (ec *executionContext) unmarshalOBoundingBox2ᚖgithubᚗcomᚋinterlineᚑ
 	}
 	res, err := ec.unmarshalInputBoundingBox(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v *model.Calendar) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Calendar(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOCensusDataset2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusDatasetᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CensusDataset) graphql.Marshaler {
@@ -70917,6 +77056,28 @@ func (ec *executionContext) marshalOLineString2ᚖgithubᚗcomᚋinterlineᚑio�
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) marshalOLocation2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocation(ctx context.Context, sel ast.SelectionSet, v *model.Location) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Location(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOLocationFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationFilter(ctx context.Context, v any) (*model.LocationFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputLocationFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOLocationGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroup(ctx context.Context, sel ast.SelectionSet, v *model.LocationGroup) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._LocationGroup(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOMap2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMap(ctx context.Context, v any) (*tt.Map, error) {

@@ -619,6 +619,14 @@ type LicenseFilter struct {
 	RedistributionAllowed *LicenseValue `json:"redistribution_allowed,omitempty"`
 }
 
+// Search options for locations
+type LocationFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for locations with this location_id
+	LocationID []string `json:"location_id,omitempty"`
+}
+
 // Current user metadata
 type Me struct {
 	// Internal identifier
