@@ -20,6 +20,16 @@ func (r *stopTimeResolver) Stop(ctx context.Context, obj *model.StopTime) (*mode
 	return LoaderFor(ctx).StopsByIDs.Load(ctx, obj.StopID.Int())()
 }
 
+func (r *stopTimeResolver) PickupBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error) {
+	// TODO
+	return nil, nil
+}
+
+func (r *stopTimeResolver) DropOffBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error) {
+	// TODO
+	return nil, nil
+}
+
 func (r *stopTimeResolver) ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error) {
 	stu := obj.RTStopTimeUpdate
 	// Use StopTimeUpdate ScheduleRelationship value if explicitly provided

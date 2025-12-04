@@ -61,6 +61,11 @@ func (r *feedVersionResolver) FeedInfos(ctx context.Context, obj *model.FeedVers
 	return LoaderFor(ctx).FeedInfosByFeedVersionIDs.Load(ctx, feedInfoLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
+func (r *feedVersionResolver) Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error) {
+	// TODO: Implement loader
+	return nil, nil
+}
+
 // FEED VALIDATION REPORT
 
 func (r *feedVersionResolver) ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error) {

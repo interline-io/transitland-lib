@@ -50,6 +50,11 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 	return sts, err
 }
 
+func (r *tripResolver) FlexibleStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.FlexStopTime, error) {
+	// TODO
+	return nil, nil
+}
+
 func (r *tripResolver) Frequencies(ctx context.Context, obj *model.Trip, limit *int) ([]*model.Frequency, error) {
 	return LoaderFor(ctx).FrequenciesByTripIDs.Load(ctx, frequencyLoaderParam{TripID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }

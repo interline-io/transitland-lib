@@ -12,6 +12,10 @@ func (r *bookingRuleResolver) FeedVersion(ctx context.Context, obj *model.Bookin
 	return LoaderFor(ctx).FeedVersionsByIDs.Load(ctx, obj.FeedVersionID)()
 }
 
+func (r *bookingRuleResolver) PriorNoticeServiceID(ctx context.Context, obj *model.BookingRule) (*string, error) {
+	return obj.PriorNoticeServiceID.Ptr(), nil
+}
+
 func (r *bookingRuleResolver) PriorNoticeService(ctx context.Context, obj *model.BookingRule) (*model.Calendar, error) {
 	// TODO: Implement loader for Calendar by ServiceID
 	return nil, nil
