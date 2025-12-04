@@ -19,6 +19,12 @@ type stopGeom struct {
 	lat  float64
 }
 
+type locationGeom struct {
+	fvid   int
+	coords []float64
+	stride int
+}
+
 type routeStopGeoms struct {
 	agency    string
 	name      string
