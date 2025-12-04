@@ -56,6 +56,9 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tt.Entity) []error {
 	}
 	var errs []error
 	for _, st := range v.StopTimes {
+		if !st.StopID.Valid {
+			continue
+		}
 		// Check the cache
 		if e.checked[shapeid][st.StopID.Val] {
 			continue

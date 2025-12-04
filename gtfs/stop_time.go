@@ -56,8 +56,6 @@ func (ent *StopTime) Errors() []error {
 	// Don't use reflection based path
 	errs := []error{}
 	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID.Val)...)
-	// Note: stop_id is conditionally required - validated in ConditionalErrors()
-	// It's required if location_group_id AND location_id are NOT defined
 	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("pickup_type", ent.PickupType.Val, 0, 3)...)
 	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Val, 0, 3)...)

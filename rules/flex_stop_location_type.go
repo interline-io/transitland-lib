@@ -55,7 +55,7 @@ func (e *FlexStopLocationTypeCheck) AfterWrite(eid string, ent tt.Entity, emap *
 			st.PickupBookingRuleID.Valid ||
 			st.DropOffBookingRuleID.Valid
 
-		if isFlex {
+		if isFlex && st.StopID.Valid {
 			e.flexStops[st.StopID.Val] = true
 		}
 	}

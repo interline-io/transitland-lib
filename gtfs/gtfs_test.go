@@ -10,8 +10,6 @@ import (
 
 /////////////////////////
 
-// Test helpers - wrappers to avoid import cycle with internal/testutil
-
 // ExpectError is an alias to testutil.ExpectError
 type ExpectError = testutil.ExpectError
 

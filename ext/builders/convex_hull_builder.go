@@ -73,6 +73,9 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 	case *gtfs.Trip:
 		pp.tripRoutes[eid] = v.RouteID.Val
 	case *gtfs.StopTime:
+		if !v.StopID.Valid {
+			return nil
+		}
 		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
 		if !ok {
 			// log.For(ctx).Debug().Msgf("no route:", v.TripID, pp.tripRoutes[v.TripID])

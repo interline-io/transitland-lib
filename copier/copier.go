@@ -1025,6 +1025,9 @@ func (copier *Copier) logCount(ent tt.Entity) {
 func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTime) (string, error) {
 	stopids := []string{}
 	for _, st := range stoptimes {
+		if !st.StopID.Valid {
+			continue
+		}
 		stopids = append(stopids, st.StopID.Val)
 	}
 	line, dists, err := copier.geomCache.MakeShape(stopids...)
