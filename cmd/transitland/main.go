@@ -15,8 +15,8 @@ import (
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlxy"
 
+	_ "github.com/interline-io/transitland-lib/ext/filters"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
-	_ "github.com/interline-io/transitland-lib/filters"
 	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
 	_ "github.com/interline-io/transitland-lib/tldb/postgres"

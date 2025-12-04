@@ -13,9 +13,9 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/ext/bestpractices"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt"
-	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -356,31 +356,31 @@ func (v *Validator) copierOptions() copier.Options {
 
 	// Best practices extension
 	if v.Options.BestPractices {
-		cpOpts.AddExtensionWithLevel(&rules.NoScheduledServiceCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.StopTooCloseCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.StopTooFarCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.DuplicateRouteNameCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.FrequencyOverlapCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.StopTooFarFromShapeCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.StopTimeFastTravelCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.BlockOverlapCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.AgencyIDRecommendedCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.DescriptionEqualsName{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.RouteExtendedTypesCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.InsufficientColorContrastCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.RouteShortNameTooLongCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.ShortServiceCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.ServiceAllDaysEmptyCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.NullIslandCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.FrequencyDurationCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.MinTransferTimeCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.RouteNamesPrefixCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.RouteNamesCharactersCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.ShapeMaxSegmentLengthCheck{
+		cpOpts.AddExtensionWithLevel(&bestpractices.NoScheduledServiceCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.StopTooCloseCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.StopTooFarCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.DuplicateRouteNameCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.FrequencyOverlapCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.StopTooFarFromShapeCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.StopTimeFastTravelCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.BlockOverlapCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.AgencyIDRecommendedCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.DescriptionEqualsName{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.RouteExtendedTypesCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.InsufficientColorContrastCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.RouteShortNameTooLongCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.ShortServiceCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.ServiceAllDaysEmptyCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.NullIslandCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.FrequencyDurationCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.MinTransferTimeCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.RouteNamesPrefixCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.RouteNamesCharactersCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.ShapeMaxSegmentLengthCheck{
 			MaxAllowedDistance: 1_000_000, // 1000 km
 		}, 1)
 		// GTFS-Flex best practice: location groups should have stops
-		cpOpts.AddExtensionWithLevel(&rules.FlexLocationGroupEmptyCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.FlexLocationGroupEmptyCheck{}, 1)
 	}
 	return cpOpts
 }
