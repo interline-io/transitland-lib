@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
@@ -78,7 +78,7 @@ func TestService_Simplify(t *testing.T) {
 	}
 	// get more examples from feeds
 	feedchecks := []string{}
-	for _, v := range testutil.ExternalTestFeeds {
+	for _, v := range testreader.ExternalTestFeeds {
 		feedchecks = append(feedchecks, v.URL)
 	}
 	for _, path := range feedchecks {

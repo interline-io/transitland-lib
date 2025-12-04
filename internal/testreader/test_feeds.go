@@ -1,4 +1,4 @@
-package testutil
+package testreader
 
 import "github.com/interline-io/transitland-lib/internal/testpath"
 

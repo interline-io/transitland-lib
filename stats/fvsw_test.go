@@ -3,7 +3,7 @@ package stats
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +20,7 @@ func TestNewFeedVersionServiceWindowsFromReader(t *testing.T) {
 	}{
 		{
 			"example",
-			testutil.ExampleZip.URL,
+			testreader.ExampleZip.URL,
 			pd(""),
 			pd(""),
 			pd("2007-01-01"),
@@ -28,7 +28,7 @@ func TestNewFeedVersionServiceWindowsFromReader(t *testing.T) {
 		},
 		{
 			"bart",
-			testutil.ExampleFeedBART.URL,
+			testreader.ExampleFeedBART.URL,
 			pd("2018-05-26"),
 			pd("2019-07-01"),
 			pd("2018-06-04"),
@@ -36,7 +36,7 @@ func TestNewFeedVersionServiceWindowsFromReader(t *testing.T) {
 		},
 		{
 			"caltrain",
-			testutil.ExampleFeedCaltrain.URL,
+			testreader.ExampleFeedCaltrain.URL,
 			pd(""),
 			pd(""),
 			pd("2018-06-18"),

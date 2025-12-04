@@ -12,7 +12,7 @@ import (
 
 // Test helpers - local implementations to avoid import cycle with internal/testutil
 
-// ExpectError describes an expected validation error (matches testutil.ExpectError interface)
+// ExpectError describes an expected validation error (matches testreader.ExpectError interface)
 type ExpectError struct {
 	Field     string
 	ErrorType string

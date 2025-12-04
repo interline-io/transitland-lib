@@ -3,7 +3,7 @@ package builders
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +19,7 @@ func TestOnestopIDBuilder(t *testing.T) {
 	}
 	groups := map[string]testgroup{
 		"ExampleFeed": {
-			testutil.ExampleZip.URL,
+			testreader.ExampleZip.URL,
 			[]testcase{
 				{"o-9qs-demotransitauthority", hw{"o-9qs-demotransitauthority": []string{"DTA"}}},
 				{"r-9qsb-20", hw{"r-9qsb-20": []string{"BFC"}}},
@@ -39,7 +39,7 @@ func TestOnestopIDBuilder(t *testing.T) {
 			},
 		},
 		"Caltrain": {
-			testutil.ExampleFeedCaltrain.URL,
+			testreader.ExampleFeedCaltrain.URL,
 			[]testcase{
 				{"o-9q9-caltrain", hw{"o-9q9-caltrain": []string{"caltrain-ca-us"}}},
 				{"r-9q9-limited", hw{"r-9q9-limited": []string{"Li-130"}}},
@@ -57,7 +57,7 @@ func TestOnestopIDBuilder(t *testing.T) {
 			},
 		},
 		"BART": {
-			testutil.ExampleFeedBART.URL,
+			testreader.ExampleFeedBART.URL,
 			[]testcase{
 				{"o-9q9-bayarearapidtransit", hw{"o-9q9-bayarearapidtransit": []string{"BART"}}},
 				{"r-9q8y-richmond~dalycity~millbrae", hw{"r-9q8y-richmond~dalycity~millbrae": []string{"07"}}},

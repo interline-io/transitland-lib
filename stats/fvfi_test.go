@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -17,7 +17,7 @@ func TestNewFeedVersionFileInfosFromReader(t *testing.T) {
 	}{
 		{
 			"example",
-			testutil.ExampleZip.URL,
+			testreader.ExampleZip.URL,
 			[]dmfr.FeedVersionFileInfo{
 				{
 					Name:    "agency.txt",
@@ -266,7 +266,7 @@ func TestNewFeedVersionFileInfosFromReader(t *testing.T) {
 		},
 		{
 			"bart",
-			testutil.ExampleFeedBART.URL,
+			testreader.ExampleFeedBART.URL,
 			[]dmfr.FeedVersionFileInfo{
 				{
 					Name:    "agency.txt",

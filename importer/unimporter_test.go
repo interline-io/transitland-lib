@@ -10,7 +10,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -33,14 +33,14 @@ func setupImport(ctx context.Context, t *testing.T, atx tldb.Adapter) int {
 	feed := dmfr.Feed{}
 	feed.FeedID = fmt.Sprintf("feed-%d", time.Now().UnixNano())
 	feedid := testdb.ShouldInsert(t, atx, &feed)
-	fv := dmfr.FeedVersion{File: testutil.ExampleZip.URL}
+	fv := dmfr.FeedVersion{File: testreader.ExampleZip.URL}
 	fv.FeedID = feedid
 	fv.EarliestCalendarDate = tt.NewDate(time.Now())
 	fv.LatestCalendarDate = tt.NewDate(time.Now())
 	fvid := testdb.ShouldInsert(t, atx, &fv)
 	fv.ID = fvid
 	// Generate stats
-	tlreader, err := tlcsv.NewReader(testutil.ExampleZip.URL)
+	tlreader, err := tlcsv.NewReader(testreader.ExampleZip.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -25,7 +25,7 @@ func TestImportFeedVersion(t *testing.T) {
 	}
 	t.Run("Success", func(t *testing.T) {
 		testdb.TempSqlite(func(atx tldb.Adapter) error {
-			fvid := setup(atx, testutil.ExampleZip.URL)
+			fvid := setup(atx, testreader.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := ImportFeedVersion(ctx, &atx2, Options{Activate: true, FeedVersionID: fvid, Storage: "/"})
 			if err != nil {
@@ -44,7 +44,7 @@ func TestImportFeedVersion(t *testing.T) {
 				t.Errorf("expected in_progress = false")
 			}
 			count := 0
-			expstops := testutil.ExampleZip.Counts["stops.txt"]
+			expstops := testreader.ExampleZip.Counts["stops.txt"]
 			testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 			if count != expstops {
 				t.Errorf("got %d stops, expect %d stops", count, expstops)
@@ -88,7 +88,7 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create FV
-		fv := dmfr.FeedVersion{File: testutil.ExampleZip.URL}
+		fv := dmfr.FeedVersion{File: testreader.ExampleZip.URL}
 		fv.EarliestCalendarDate = tt.NewDate(time.Now())
 		fv.LatestCalendarDate = tt.NewDate(time.Now())
 		fvid := testdb.ShouldInsert(t, atx, &fv)
@@ -100,7 +100,7 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 		}
 		// Check
 		count := 0
-		expstops := testutil.ExampleZip.Counts["stops.txt"]
+		expstops := testreader.ExampleZip.Counts["stops.txt"]
 		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 		if count != expstops {
 			t.Errorf("expect %d stops, got %d", count, expstops)
