@@ -498,6 +498,44 @@ func TestStopTime_Errors(t *testing.T) {
 			},
 			expectedErrors: nil,
 		},
+		{
+			name: "Invalid: Missing trip_id",
+			stopTime: &StopTime{
+				StopID:       tt.NewKey("stop1"),
+				StopSequence: tt.NewInt(1),
+			},
+			expectedErrors: ParseExpectErrors("RequiredFieldError:trip_id"),
+		},
+		{
+			name: "Invalid: shape_dist_traveled negative",
+			stopTime: &StopTime{
+				TripID:            tt.NewString("trip1"),
+				StopID:            tt.NewKey("stop1"),
+				StopSequence:      tt.NewInt(1),
+				ShapeDistTraveled: tt.NewFloat(-1.0),
+			},
+			expectedErrors: ParseExpectErrors("InvalidFieldError:shape_dist_traveled"),
+		},
+		{
+			name: "Invalid: Only safe_duration_factor present",
+			stopTime: &StopTime{
+				TripID:             tt.NewString("trip1"),
+				StopSequence:       tt.NewInt(1),
+				StopID:             tt.NewKey("stop1"),
+				SafeDurationFactor: tt.NewFloat(1.5),
+			},
+			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:safe_duration_offset"),
+		},
+		{
+			name: "Invalid: Only safe_duration_offset present",
+			stopTime: &StopTime{
+				TripID:             tt.NewString("trip1"),
+				StopSequence:       tt.NewInt(1),
+				StopID:             tt.NewKey("stop1"),
+				SafeDurationOffset: tt.NewFloat(300),
+			},
+			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:safe_duration_factor"),
+		},
 	}
 
 	for _, tc := range tests {
