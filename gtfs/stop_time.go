@@ -79,7 +79,7 @@ func (ent *StopTime) ConditionalErrors() (errs []error) {
 	hasStopID := ent.StopID.IsPresent()
 	hasLocationGroupID := ent.LocationGroupID.IsPresent()
 	hasLocationID := ent.LocationID.IsPresent()
-	hasTimeWindow := (ent.StartPickupDropOffWindow.Valid && ent.StartPickupDropOffWindow.Val > 0) || (ent.EndPickupDropOffWindow.Valid && ent.EndPickupDropOffWindow.Val > 0)
+	hasTimeWindow := ent.StartPickupDropOffWindow.Valid || ent.EndPickupDropOffWindow.Valid
 
 	// 1. Mutual exclusion: stop_id, location_id, location_group_id
 	// Exactly one of these must be defined

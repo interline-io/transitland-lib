@@ -27,6 +27,7 @@ type ValidatorCommand struct {
 	SaveValidationReport    bool
 	ValidationReportStorage string
 	readerPath              string
+	errorThresholds         []string
 }
 
 func (cmd *ValidatorCommand) HelpDesc() (string, string) {
@@ -51,6 +52,7 @@ func (cmd *ValidatorCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.FVID, "save-fvid", 0, "Save report to feed version ID")
 	fl.StringSliceVar(&cmd.rtFiles, "rt", nil, "Include GTFS-RT proto message in validation report")
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
+	fl.StringSliceVar(&cmd.errorThresholds, "error-threshold", nil, "Fail validation if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')")
 }
 
 func (cmd *ValidatorCommand) Parse(args []string) error {
@@ -65,6 +67,13 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles
 	cmd.Options.ExtensionDefs = cmd.extensionDefs
 	cmd.Options.EvaluateAt = time.Now().In(time.UTC)
+	if len(cmd.errorThresholds) > 0 {
+		thresholds, err := parseErrorThresholds(cmd.errorThresholds)
+		if err != nil {
+			return err
+		}
+		cmd.Options.ErrorThreshold = thresholds
+	}
 	return nil
 }
 

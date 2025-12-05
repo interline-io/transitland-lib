@@ -131,6 +131,153 @@ type Result struct {
 	ErrorLimit                int
 }
 
+// ErrorThresholdResult contains the result of checking error thresholds per file.
+type ErrorThresholdResult struct {
+	OK      bool
+	Details map[string]ErrorThresholdFileResult
+}
+
+// ErrorThresholdFileResult contains threshold check results for a single file.
+type ErrorThresholdFileResult struct {
+	TotalCount   int
+	ErrorCount   int
+	ErrorPercent float64
+	Threshold    float64
+	OK           bool
+}
+
+// CheckErrorThreshold checks if any file exceeds its error threshold percentage.
+// Thresholds are specified as 0-100 (e.g., 5 means 5%, 10 means 10%).
+// A threshold of 0 means any error is a failure. Files are only checked if they
+// have an explicit threshold or a default "*" threshold is set.
+// The thresholds map uses filename as key (e.g., "stops.txt") with "*" as the default.
+// The error rate is calculated as (entity errors + reference errors) / total entities * 100.
+// Entities skipped by filters or markers do not count toward the error rate.
+func (cr *Result) CheckErrorThreshold(thresholds map[string]float64) ErrorThresholdResult {
+	result := ErrorThresholdResult{
+		OK:      true,
+		Details: map[string]ErrorThresholdFileResult{},
+	}
+	if len(thresholds) == 0 {
+		return result
+	}
+
+	// Get default threshold (check presence, not just value)
+	defaultThreshold, hasDefault := thresholds["*"]
+
+	// Collect all filenames from all count maps
+	filenameSet := map[string]bool{}
+	for fn := range cr.EntityCount {
+		filenameSet[fn] = true
+	}
+	for fn := range cr.SkipEntityErrorCount {
+		filenameSet[fn] = true
+	}
+	for fn := range cr.SkipEntityReferenceCount {
+		filenameSet[fn] = true
+	}
+
+	// Sort filenames for deterministic order
+	filenames := make([]string, 0, len(filenameSet))
+	for fn := range filenameSet {
+		filenames = append(filenames, fn)
+	}
+	sort.Strings(filenames)
+
+	for _, fn := range filenames {
+		// Get threshold for this file, falling back to default
+		threshold, hasThreshold := thresholds[fn]
+		if !hasThreshold {
+			if !hasDefault {
+				continue // No threshold for this file
+			}
+			threshold = defaultThreshold
+		}
+
+		entityCount := cr.EntityCount[fn]
+		errorCount := cr.SkipEntityErrorCount[fn]
+		refErrorCount := cr.SkipEntityReferenceCount[fn]
+		totalErrors := errorCount + refErrorCount
+		totalCount := entityCount + totalErrors
+
+		var errorPercent float64
+		if totalCount > 0 {
+			errorPercent = float64(totalErrors) / float64(totalCount) * 100
+		}
+
+		// threshold of 0 means any error is a failure (use > for positive thresholds, >= for zero)
+		var ok bool
+		if threshold == 0 {
+			ok = totalErrors == 0
+		} else {
+			ok = errorPercent <= threshold
+		}
+
+		result.Details[fn] = ErrorThresholdFileResult{
+			TotalCount:   totalCount,
+			ErrorCount:   totalErrors,
+			ErrorPercent: errorPercent,
+			Threshold:    threshold,
+			OK:           ok,
+		}
+		if !ok {
+			result.OK = false
+		}
+	}
+
+	return result
+}
+
+// RequiredMinEntitiesResult contains the result of checking required minimum entity counts per file.
+type RequiredMinEntitiesResult struct {
+	OK      bool
+	Details map[string]RequiredMinEntitiesFileResult
+}
+
+// RequiredMinEntitiesFileResult contains the check result for a single file.
+type RequiredMinEntitiesFileResult struct {
+	TotalCount int
+	Required   int
+	OK         bool
+}
+
+// CheckRequiredMinEntities checks if files meet their required minimum entity counts.
+// The requirements map uses filename as key (e.g., "agency.txt") and minimum count as value.
+// Returns a result indicating which files failed and why.
+func (cr *Result) CheckRequiredMinEntities(requirements map[string]int) RequiredMinEntitiesResult {
+	result := RequiredMinEntitiesResult{
+		OK:      true,
+		Details: map[string]RequiredMinEntitiesFileResult{},
+	}
+	if len(requirements) == 0 {
+		return result
+	}
+
+	// Sort filenames for deterministic order
+	filenames := make([]string, 0, len(requirements))
+	for fn := range requirements {
+		filenames = append(filenames, fn)
+	}
+	sort.Strings(filenames)
+
+	for _, fn := range filenames {
+		required := requirements[fn]
+		entityCount := cr.EntityCount[fn]
+		ok := entityCount >= required
+
+		result.Details[fn] = RequiredMinEntitiesFileResult{
+			TotalCount: entityCount,
+			Required:   required,
+			OK:         ok,
+		}
+		if !ok {
+			result.OK = false
+		}
+	}
+
+	return result
+}
+
 // NewResult returns a new Result.
 func NewResult(errorLimit int) *Result {
 	if errorLimit < 0 {
