@@ -133,8 +133,8 @@ type Result struct {
 
 // ErrorThresholdResult contains the result of checking error thresholds per file.
 type ErrorThresholdResult struct {
-	Exceeded bool
-	Details  map[string]ErrorThresholdFileResult
+	OK      bool
+	Details map[string]ErrorThresholdFileResult
 }
 
 // ErrorThresholdFileResult contains threshold check results for a single file.
@@ -143,7 +143,7 @@ type ErrorThresholdFileResult struct {
 	ErrorCount   int
 	ErrorPercent float64
 	Threshold    float64
-	Exceeded     bool
+	OK           bool
 }
 
 // CheckErrorThreshold checks if any file exceeds its error threshold percentage.
@@ -155,8 +155,8 @@ type ErrorThresholdFileResult struct {
 // Entities skipped by filters or markers do not count toward the error rate.
 func (cr *Result) CheckErrorThreshold(thresholds map[string]float64) ErrorThresholdResult {
 	result := ErrorThresholdResult{
-		Exceeded: false,
-		Details:  map[string]ErrorThresholdFileResult{},
+		OK:      true,
+		Details: map[string]ErrorThresholdFileResult{},
 	}
 	if len(thresholds) == 0 {
 		return result
@@ -206,11 +206,11 @@ func (cr *Result) CheckErrorThreshold(thresholds map[string]float64) ErrorThresh
 		}
 
 		// threshold of 0 means any error is a failure (use > for positive thresholds, >= for zero)
-		var exceeded bool
+		var ok bool
 		if threshold == 0 {
-			exceeded = totalErrors > 0
+			ok = totalErrors == 0
 		} else {
-			exceeded = errorPercent > threshold
+			ok = errorPercent <= threshold
 		}
 
 		result.Details[fn] = ErrorThresholdFileResult{
@@ -218,10 +218,60 @@ func (cr *Result) CheckErrorThreshold(thresholds map[string]float64) ErrorThresh
 			ErrorCount:   totalErrors,
 			ErrorPercent: errorPercent,
 			Threshold:    threshold,
-			Exceeded:     exceeded,
+			OK:           ok,
 		}
-		if exceeded {
-			result.Exceeded = true
+		if !ok {
+			result.OK = false
+		}
+	}
+
+	return result
+}
+
+// RequiredMinEntitiesResult contains the result of checking required minimum entity counts per file.
+type RequiredMinEntitiesResult struct {
+	OK      bool
+	Details map[string]RequiredMinEntitiesFileResult
+}
+
+// RequiredMinEntitiesFileResult contains the check result for a single file.
+type RequiredMinEntitiesFileResult struct {
+	TotalCount int
+	Required   int
+	OK         bool
+}
+
+// CheckRequiredMinEntities checks if files meet their required minimum entity counts.
+// The requirements map uses filename as key (e.g., "agency.txt") and minimum count as value.
+// Returns a result indicating which files failed and why.
+func (cr *Result) CheckRequiredMinEntities(requirements map[string]int) RequiredMinEntitiesResult {
+	result := RequiredMinEntitiesResult{
+		OK:      true,
+		Details: map[string]RequiredMinEntitiesFileResult{},
+	}
+	if len(requirements) == 0 {
+		return result
+	}
+
+	// Sort filenames for deterministic order
+	filenames := make([]string, 0, len(requirements))
+	for fn := range requirements {
+		filenames = append(filenames, fn)
+	}
+	sort.Strings(filenames)
+
+	for _, fn := range filenames {
+		required := requirements[fn]
+		entityCount := cr.EntityCount[fn]
+		ok := entityCount >= required
+
+		result.Details[fn] = RequiredMinEntitiesFileResult{
+			TotalCount: entityCount,
+			Required:   required,
+			OK:         ok,
+		}
+		if !ok {
+			result.OK = false
 		}
 	}
 

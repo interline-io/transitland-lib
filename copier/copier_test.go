@@ -283,13 +283,14 @@ func TestResult_CheckErrorThreshold(t *testing.T) {
 
 			thresholdResult := result.CheckErrorThreshold(tc.thresholds)
 
-			assert.Equal(t, tc.expectExceeded, thresholdResult.Exceeded, "Exceeded mismatch")
+			expectOK := !tc.expectExceeded
+			assert.Equal(t, expectOK, thresholdResult.OK, "OK mismatch")
 
 			if tc.expectExceeded {
 				for _, fn := range tc.expectFiles {
 					detail, ok := thresholdResult.Details[fn]
 					assert.True(t, ok, "Expected file %s in details", fn)
-					assert.True(t, detail.Exceeded, "Expected file %s to exceed threshold", fn)
+					assert.False(t, detail.OK, "Expected file %s to exceed threshold", fn)
 				}
 			}
 		})

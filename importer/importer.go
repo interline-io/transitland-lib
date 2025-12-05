@@ -175,10 +175,10 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 	// Check error threshold
 	if len(opts.ErrorThreshold) > 0 {
 		thresholdResult := cpResult.CheckErrorThreshold(opts.ErrorThreshold)
-		if thresholdResult.Exceeded {
+		if !thresholdResult.OK {
 			var exceededFiles []string
 			for fn, detail := range thresholdResult.Details {
-				if detail.Exceeded {
+				if !detail.OK {
 					log.For(ctx).Error().Str("filename", fn).Float64("error_percent", detail.ErrorPercent).Float64("threshold", detail.Threshold).Int("error_count", detail.ErrorCount).Int("total_count", detail.TotalCount).Msg("file exceeded error threshold")
 					exceededFiles = append(exceededFiles, fn)
 				}
@@ -193,12 +193,24 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 		}
 	}
 
-	// Check required files have at least one entity
-	required := []string{"agency.txt", "routes.txt", "stops.txt"}
-	for _, fn := range required {
-		if c := cpResult.EntityCount[fn]; c == 0 {
-			return fvi, fmt.Errorf("failed to import any entities from required file '%s'", fn)
+	// Check required files have at least minimum entities
+	requiredMinEntities := map[string]int{"agency.txt": 1, "routes.txt": 1}
+	minEntitiesResult := cpResult.CheckRequiredMinEntities(requiredMinEntities)
+	if !minEntitiesResult.OK {
+		var failedFiles []string
+		for fn, detail := range minEntitiesResult.Details {
+			if !detail.OK {
+				log.For(ctx).Error().Str("filename", fn).Int("total_count", detail.TotalCount).Int("required", detail.Required).Msg("file did not meet required minimum entities")
+				failedFiles = append(failedFiles, fn)
+			}
 		}
+		sort.Strings(failedFiles)
+		var errMsgs []string
+		for _, fn := range failedFiles {
+			detail := minEntitiesResult.Details[fn]
+			errMsgs = append(errMsgs, fmt.Sprintf("%s: %d entities (required: %d)", fn, detail.TotalCount, detail.Required))
+		}
+		return fvi, fmt.Errorf("required minimum entities not met: %s", strings.Join(errMsgs, "; "))
 	}
 
 	// Save feed version import
