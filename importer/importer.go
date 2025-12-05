@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/copier"
@@ -174,11 +176,20 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 	if len(opts.ErrorThreshold) > 0 {
 		thresholdResult := cpResult.CheckErrorThreshold(opts.ErrorThreshold)
 		if thresholdResult.Exceeded {
+			var exceededFiles []string
 			for fn, detail := range thresholdResult.Details {
 				if detail.Exceeded {
-					return fvi, fmt.Errorf("file '%s' exceeded error threshold: %.2f%% errors (threshold: %.2f%%)", fn, detail.ErrorPercent, detail.Threshold)
+					log.For(ctx).Error().Str("filename", fn).Float64("error_percent", detail.ErrorPercent).Float64("threshold", detail.Threshold).Int("error_count", detail.ErrorCount).Int("total_count", detail.TotalCount).Msg("file exceeded error threshold")
+					exceededFiles = append(exceededFiles, fn)
 				}
 			}
+			sort.Strings(exceededFiles)
+			var errMsgs []string
+			for _, fn := range exceededFiles {
+				detail := thresholdResult.Details[fn]
+				errMsgs = append(errMsgs, fmt.Sprintf("%s: %.2f%% errors (threshold: %.2f%%)", fn, detail.ErrorPercent, detail.Threshold))
+			}
+			return fvi, fmt.Errorf("error threshold exceeded: %s", strings.Join(errMsgs, "; "))
 		}
 	}
 

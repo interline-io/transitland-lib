@@ -23,6 +23,12 @@ func parseErrorThresholds(thresholds []string) (map[string]float64, error) {
 		}
 		filename := strings.TrimSpace(parts[0])
 		percentStr := strings.TrimSpace(parts[1])
+		if filename == "" {
+			return nil, fmt.Errorf("invalid error threshold '%s': filename cannot be empty", t)
+		}
+		if percentStr == "" {
+			return nil, fmt.Errorf("invalid error threshold '%s': percentage cannot be empty", t)
+		}
 		percent, err := strconv.ParseFloat(percentStr, 64)
 		if err != nil {
 			return nil, fmt.Errorf("invalid error threshold percentage '%s': %w", percentStr, err)

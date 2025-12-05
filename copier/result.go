@@ -148,6 +148,8 @@ type ErrorThresholdFileResult struct {
 
 // CheckErrorThreshold checks if any file exceeds its error threshold percentage.
 // Thresholds are specified as 0-100 (e.g., 5 means 5%, 10 means 10%).
+// A threshold of 0 means any error is a failure. Files are only checked if they
+// have an explicit threshold or a default "*" threshold is set.
 // The thresholds map uses filename as key (e.g., "stops.txt") with "*" as the default.
 // The error rate is calculated as (entity errors + reference errors) / total entities * 100.
 // Entities skipped by filters or markers do not count toward the error rate.
@@ -160,29 +162,36 @@ func (cr *Result) CheckErrorThreshold(thresholds map[string]float64) ErrorThresh
 		return result
 	}
 
-	// Get default threshold
-	defaultThreshold := thresholds["*"]
+	// Get default threshold (check presence, not just value)
+	defaultThreshold, hasDefault := thresholds["*"]
 
 	// Collect all filenames from all count maps
-	filenames := map[string]bool{}
+	filenameSet := map[string]bool{}
 	for fn := range cr.EntityCount {
-		filenames[fn] = true
+		filenameSet[fn] = true
 	}
 	for fn := range cr.SkipEntityErrorCount {
-		filenames[fn] = true
+		filenameSet[fn] = true
 	}
 	for fn := range cr.SkipEntityReferenceCount {
-		filenames[fn] = true
+		filenameSet[fn] = true
 	}
 
-	for fn := range filenames {
+	// Sort filenames for deterministic order
+	filenames := make([]string, 0, len(filenameSet))
+	for fn := range filenameSet {
+		filenames = append(filenames, fn)
+	}
+	sort.Strings(filenames)
+
+	for _, fn := range filenames {
 		// Get threshold for this file, falling back to default
-		threshold, ok := thresholds[fn]
-		if !ok {
+		threshold, hasThreshold := thresholds[fn]
+		if !hasThreshold {
+			if !hasDefault {
+				continue // No threshold for this file
+			}
 			threshold = defaultThreshold
-		}
-		if threshold <= 0 {
-			continue // Skip files with no threshold
 		}
 
 		entityCount := cr.EntityCount[fn]
@@ -196,7 +205,14 @@ func (cr *Result) CheckErrorThreshold(thresholds map[string]float64) ErrorThresh
 			errorPercent = float64(totalErrors) / float64(totalCount) * 100
 		}
 
-		exceeded := errorPercent > threshold
+		// threshold of 0 means any error is a failure (use > for positive thresholds, >= for zero)
+		var exceeded bool
+		if threshold == 0 {
+			exceeded = totalErrors > 0
+		} else {
+			exceeded = errorPercent > threshold
+		}
+
 		result.Details[fn] = ErrorThresholdFileResult{
 			TotalCount:   totalCount,
 			ErrorCount:   totalErrors,

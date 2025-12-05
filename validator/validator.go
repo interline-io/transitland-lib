@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/interline-io/log"
@@ -244,12 +246,21 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	if len(v.Options.ErrorThreshold) > 0 {
 		thresholdResult := cpResult.CheckErrorThreshold(v.Options.ErrorThreshold)
 		if thresholdResult.Exceeded {
+			var exceededFiles []string
 			for fn, detail := range thresholdResult.Details {
 				if detail.Exceeded {
-					result.FailureReason.Set(fmt.Sprintf("file '%s' exceeded error threshold: %.2f%% errors (threshold: %.2f%%)", fn, detail.ErrorPercent, detail.Threshold))
-					return result, nil
+					log.For(context.TODO()).Error().Str("filename", fn).Float64("error_percent", detail.ErrorPercent).Float64("threshold", detail.Threshold).Int("error_count", detail.ErrorCount).Int("total_count", detail.TotalCount).Msg("file exceeded error threshold")
+					exceededFiles = append(exceededFiles, fn)
 				}
 			}
+			sort.Strings(exceededFiles)
+			var errMsgs []string
+			for _, fn := range exceededFiles {
+				detail := thresholdResult.Details[fn]
+				errMsgs = append(errMsgs, fmt.Sprintf("%s: %.2f%% errors (threshold: %.2f%%)", fn, detail.ErrorPercent, detail.Threshold))
+			}
+			result.FailureReason.Set(fmt.Sprintf("error threshold exceeded: %s", strings.Join(errMsgs, "; ")))
+			return result, nil
 		}
 	}
 

@@ -229,6 +229,49 @@ func TestResult_CheckErrorThreshold(t *testing.T) {
 			expectExceeded: true,
 			expectFiles:    []string{"stops.txt"}, // trips.txt has no threshold so not checked
 		},
+		{
+			name:           "zero threshold with errors",
+			entityCount:    map[string]int{"stops.txt": 100},
+			errorCount:     map[string]int{"stops.txt": 1},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 0}, // any error is failure
+			expectExceeded: true,
+			expectFiles:    []string{"stops.txt"},
+		},
+		{
+			name:           "zero threshold with no errors",
+			entityCount:    map[string]int{"stops.txt": 100},
+			errorCount:     map[string]int{},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 0}, // any error is failure
+			expectExceeded: false,
+		},
+		{
+			name:           "zero threshold for specific file",
+			entityCount:    map[string]int{"stops.txt": 100, "trips.txt": 100},
+			errorCount:     map[string]int{"stops.txt": 0, "trips.txt": 1},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"stops.txt": 0, "trips.txt": 10}, // stops.txt has zero tolerance
+			expectExceeded: false,                                               // stops has 0 errors, trips has 1% < 10%
+		},
+		{
+			name:           "zero threshold for specific file with error",
+			entityCount:    map[string]int{"stops.txt": 100, "trips.txt": 100},
+			errorCount:     map[string]int{"stops.txt": 1, "trips.txt": 5},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"stops.txt": 0, "trips.txt": 10}, // stops.txt has zero tolerance
+			expectExceeded: true,
+			expectFiles:    []string{"stops.txt"}, // stops has 1 error with 0 threshold
+		},
+		{
+			name:           "multiple files over threshold",
+			entityCount:    map[string]int{"stops.txt": 80, "trips.txt": 80, "routes.txt": 80},
+			errorCount:     map[string]int{"stops.txt": 20, "trips.txt": 20, "routes.txt": 5},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 10},
+			expectExceeded: true,
+			expectFiles:    []string{"stops.txt", "trips.txt"}, // both exceed, routes.txt is under
+		},
 	}
 
 	for _, tc := range testCases {
