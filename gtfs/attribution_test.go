@@ -28,7 +28,7 @@ func TestAttribution_Errors(t *testing.T) {
 	testcases := []struct {
 		name           string
 		entity         *Attribution
-		expectedErrors []testutil.ExpectError
+		expectedErrors []ExpectError
 	}{
 		{
 			name:           "Valid attribution",

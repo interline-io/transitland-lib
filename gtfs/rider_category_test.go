@@ -26,7 +26,7 @@ func TestRiderCategory_Errors(t *testing.T) {
 	testcases := []struct {
 		name           string
 		entity         *RiderCategory
-		expectedErrors []testutil.ExpectError
+		expectedErrors []ExpectError
 	}{
 		{
 			name:           "Valid rider_category",

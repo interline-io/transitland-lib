@@ -25,7 +25,7 @@ func TestTranslation_Errors(t *testing.T) {
 	testcases := []struct {
 		name           string
 		entity         *Translation
-		expectedErrors []testutil.ExpectError
+		expectedErrors []ExpectError
 	}{
 		{
 			name:           "Valid translation",

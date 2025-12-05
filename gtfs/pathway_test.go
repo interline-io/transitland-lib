@@ -32,7 +32,7 @@ func TestPathway_Errors(t *testing.T) {
 	testcases := []struct {
 		name           string
 		entity         *Pathway
-		expectedErrors []testutil.ExpectError
+		expectedErrors []ExpectError
 	}{
 		{
 			name:           "Valid pathway",

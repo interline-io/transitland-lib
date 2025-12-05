@@ -31,7 +31,7 @@ func TestFeedInfo_Errors(t *testing.T) {
 	testcases := []struct {
 		name           string
 		entity         *FeedInfo
-		expectedErrors []testutil.ExpectError
+		expectedErrors []ExpectError
 	}{
 		{
 			name:           "Valid feed_info",

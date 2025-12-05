@@ -22,7 +22,7 @@ func TestStopArea_Errors(t *testing.T) {
 	testcases := []struct {
 		name           string
 		entity         *StopArea
-		expectedErrors []testutil.ExpectError
+		expectedErrors []ExpectError
 	}{
 		{
 			name:           "Valid stop_area",

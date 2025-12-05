@@ -25,7 +25,7 @@ func TestFrequency_Errors(t *testing.T) {
 	testcases := []struct {
 		name           string
 		entity         *Frequency
-		expectedErrors []testutil.ExpectError
+		expectedErrors []ExpectError
 	}{
 		{
 			name:           "Valid frequency",

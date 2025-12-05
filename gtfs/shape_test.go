@@ -25,7 +25,7 @@ func TestShape_Errors(t *testing.T) {
 	testcases := []struct {
 		name           string
 		entity         *Shape
-		expectedErrors []testutil.ExpectError
+		expectedErrors []ExpectError
 	}{
 		{
 			name:           "Valid shape",
