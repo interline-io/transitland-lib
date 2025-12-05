@@ -27,8 +27,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "transitland",
-	Short: "transitland-lib utilities",
+	Use:               "transitland",
+	Short:             "transitland-lib utilities",
+	DisableAutoGenTag: true,
 }
 
 func init() {
