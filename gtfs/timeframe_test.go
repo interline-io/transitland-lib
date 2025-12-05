@@ -35,14 +35,14 @@ func TestTimeframe_Errors(t *testing.T) {
 			timeframe: newTimeframe(func(tf *Timeframe) {
 				tf.TimeframeGroupID = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:timeframe_group_id"),
+			expectedErrors: PE("RequiredFieldError:timeframe_group_id"),
 		},
 		{
 			name: "Missing service_id",
 			timeframe: newTimeframe(func(tf *Timeframe) {
 				tf.ServiceID = tt.Key{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:service_id"),
+			expectedErrors: PE("RequiredFieldError:service_id"),
 		},
 		{
 			name: "Valid without start_time",
@@ -64,7 +64,7 @@ func TestTimeframe_Errors(t *testing.T) {
 				tf.StartTime = tt.NewSeconds(7200)
 				tf.EndTime = tt.NewSeconds(3600)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:end_time"),
+			expectedErrors: PE("InvalidFieldError:end_time"),
 		},
 	}
 

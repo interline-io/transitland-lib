@@ -56,14 +56,14 @@ func TestTranslation_Errors(t *testing.T) {
 			entity: newTranslation(func(t *Translation) {
 				t.TableNameValue = tt.NewString("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:table_name"),
+			expectedErrors: PE("InvalidFieldError:table_name"),
 		},
 		{
 			name: "Invalid language",
 			entity: newTranslation(func(t *Translation) {
 				t.Language = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:language"),
+			expectedErrors: PE("InvalidFieldError:language"),
 		},
 		{
 			name: "record_id required when field_value empty",
@@ -71,7 +71,7 @@ func TestTranslation_Errors(t *testing.T) {
 				t.RecordID = tt.String{}
 				t.FieldValue = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:record_id"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:record_id"),
 		},
 		{
 			name: "record_sub_id required for stop_times",
@@ -81,7 +81,7 @@ func TestTranslation_Errors(t *testing.T) {
 				t.RecordID = tt.NewString("ok")
 				t.RecordSubID = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:record_sub_id"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:record_sub_id"),
 		},
 		{
 			name: "record_id forbidden for feed_info",
@@ -90,7 +90,7 @@ func TestTranslation_Errors(t *testing.T) {
 				t.FieldName = tt.NewString("feed_publisher_name")
 				t.RecordID = tt.NewString("ok")
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:record_id"),
+			expectedErrors: PE("ConditionallyForbiddenFieldError:record_id"),
 		},
 		{
 			name: "record_id and record_sub_id forbidden for feed_info",
@@ -100,7 +100,7 @@ func TestTranslation_Errors(t *testing.T) {
 				t.RecordID = tt.NewString("ok")
 				t.RecordSubID = tt.NewString("ok")
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:record_id", "ConditionallyForbiddenFieldError:record_sub_id"),
+			expectedErrors: PE("ConditionallyForbiddenFieldError:record_id", "ConditionallyForbiddenFieldError:record_sub_id"),
 		},
 		{
 			name: "field_value forbidden for feed_info",
@@ -110,7 +110,7 @@ func TestTranslation_Errors(t *testing.T) {
 				t.RecordID = tt.String{}
 				t.FieldValue = tt.NewString("asd")
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:field_value"),
+			expectedErrors: PE("ConditionallyForbiddenFieldError:field_value"),
 		},
 		{
 			name: "record_id exclusive with field_value",
@@ -118,7 +118,7 @@ func TestTranslation_Errors(t *testing.T) {
 				t.RecordID = tt.NewString("ok")
 				t.FieldValue = tt.NewString("asd")
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:field_value"),
+			expectedErrors: PE("ConditionallyForbiddenFieldError:field_value"),
 		},
 	}
 

@@ -41,7 +41,7 @@ func TestFareProduct_Errors(t *testing.T) {
 				Amount:   tt.NewCurrencyAmount(0),
 				Currency: tt.NewCurrency("USD"),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:fare_product_id"),
+			expectedErrors: PE("RequiredFieldError:fare_product_id"),
 		},
 		{
 			name: "Invalid: missing amount",
@@ -49,7 +49,7 @@ func TestFareProduct_Errors(t *testing.T) {
 				FareProductID: tt.NewString("product3"),
 				Currency:      tt.NewCurrency("USD"),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:amount"),
+			expectedErrors: PE("RequiredFieldError:amount"),
 		},
 		{
 			name: "Invalid: missing currency",
@@ -57,7 +57,7 @@ func TestFareProduct_Errors(t *testing.T) {
 				FareProductID: tt.NewString("product4"),
 				Amount:        tt.NewCurrencyAmount(0),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:currency"),
+			expectedErrors: PE("RequiredFieldError:currency"),
 		},
 		{
 			name: "Invalid: invalid duration_start",
@@ -67,7 +67,7 @@ func TestFareProduct_Errors(t *testing.T) {
 				Currency:      tt.NewCurrency("USD"),
 				DurationStart: tt.NewInt(-1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:duration_start"),
+			expectedErrors: PE("InvalidFieldError:duration_start"),
 		},
 		{
 			name: "Invalid: invalid duration_amount (< 0)",
@@ -78,7 +78,7 @@ func TestFareProduct_Errors(t *testing.T) {
 				DurationAmount: tt.NewFloat(-1),
 				DurationType:   tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:duration_amount"),
+			expectedErrors: PE("InvalidFieldError:duration_amount"),
 		},
 		{
 			name: "Invalid: invalid duration_unit",
@@ -88,7 +88,7 @@ func TestFareProduct_Errors(t *testing.T) {
 				Currency:      tt.NewCurrency("USD"),
 				DurationUnit:  tt.NewInt(-1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:duration_unit"),
+			expectedErrors: PE("InvalidFieldError:duration_unit"),
 		},
 		{
 			name: "Invalid: invalid duration_type",
@@ -99,7 +99,7 @@ func TestFareProduct_Errors(t *testing.T) {
 				DurationAmount: tt.NewFloat(30),
 				DurationType:   tt.NewInt(0),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:duration_type"),
+			expectedErrors: PE("InvalidFieldError:duration_type"),
 		},
 		{
 			name: "Invalid: duration_type required if duration_amount present",
@@ -109,7 +109,7 @@ func TestFareProduct_Errors(t *testing.T) {
 				Currency:       tt.NewCurrency("USD"),
 				DurationAmount: tt.NewFloat(30),
 			},
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:duration_type"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:duration_type"),
 		},
 		{
 			name: "Invalid: duration_amount required if duration_type present",
@@ -119,7 +119,7 @@ func TestFareProduct_Errors(t *testing.T) {
 				Currency:      tt.NewCurrency("USD"),
 				DurationType:  tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:duration_amount"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:duration_amount"),
 		},
 	}
 

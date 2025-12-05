@@ -34,14 +34,14 @@ func TestLevel_Errors(t *testing.T) {
 			level: newLevel(func(l *Level) {
 				l.LevelID = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:level_id"),
+			expectedErrors: PE("RequiredFieldError:level_id"),
 		},
 		{
 			name: "Missing level_index",
 			level: newLevel(func(l *Level) {
 				l.LevelIndex = tt.Float{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:level_index"),
+			expectedErrors: PE("RequiredFieldError:level_index"),
 		},
 	}
 

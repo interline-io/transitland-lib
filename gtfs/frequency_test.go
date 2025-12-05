@@ -38,42 +38,42 @@ func TestFrequency_Errors(t *testing.T) {
 				f.StartTime = tt.NewSeconds(3600) // 01:00:00
 				f.EndTime = tt.NewSeconds(1800)   // 00:30:00
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:end_time"),
+			expectedErrors: PE("InvalidFieldError:end_time"),
 		},
 		{
 			name: "Missing headway_secs",
 			entity: newFrequency(func(f *Frequency) {
 				f.HeadwaySecs = tt.Int{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:headway_secs"),
+			expectedErrors: PE("RequiredFieldError:headway_secs"),
 		},
 		{
 			name: "Missing start_time",
 			entity: newFrequency(func(f *Frequency) {
 				f.StartTime = tt.Seconds{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:start_time"),
+			expectedErrors: PE("RequiredFieldError:start_time"),
 		},
 		{
 			name: "Missing end_time",
 			entity: newFrequency(func(f *Frequency) {
 				f.EndTime = tt.Seconds{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:end_time"),
+			expectedErrors: PE("RequiredFieldError:end_time"),
 		},
 		{
 			name: "Invalid headway_secs (zero)",
 			entity: newFrequency(func(f *Frequency) {
 				f.HeadwaySecs = tt.NewInt(0)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:headway_secs"),
+			expectedErrors: PE("InvalidFieldError:headway_secs"),
 		},
 		{
 			name: "Invalid exact_times",
 			entity: newFrequency(func(f *Frequency) {
 				f.ExactTimes = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:exact_times"),
+			expectedErrors: PE("InvalidFieldError:exact_times"),
 		},
 	}
 

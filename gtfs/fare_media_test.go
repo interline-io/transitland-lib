@@ -27,7 +27,7 @@ func TestFareMedia_Errors(t *testing.T) {
 				FareMediaName: tt.NewString("Clipper"),
 				FareMediaType: tt.NewInt(2),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:fare_media_id"),
+			expectedErrors: PE("RequiredFieldError:fare_media_id"),
 		},
 		{
 			name: "Invalid: missing fare_media_name",
@@ -35,7 +35,7 @@ func TestFareMedia_Errors(t *testing.T) {
 				FareMediaID:   tt.NewString("media1"),
 				FareMediaType: tt.NewInt(2),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:fare_media_name"),
+			expectedErrors: PE("RequiredFieldError:fare_media_name"),
 		},
 		{
 			name: "Invalid: missing fare_media_type",
@@ -43,7 +43,7 @@ func TestFareMedia_Errors(t *testing.T) {
 				FareMediaID:   tt.NewString("media1"),
 				FareMediaName: tt.NewString("Clipper"),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:fare_media_type"),
+			expectedErrors: PE("RequiredFieldError:fare_media_type"),
 		},
 		{
 			name: "Invalid: invalid fare_media_type",
@@ -52,7 +52,7 @@ func TestFareMedia_Errors(t *testing.T) {
 				FareMediaName: tt.NewString("Clipper"),
 				FareMediaType: tt.NewInt(99),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:fare_media_type"),
+			expectedErrors: PE("InvalidFieldError:fare_media_type"),
 		},
 	}
 

@@ -33,14 +33,14 @@ func TestRouteNetwork_Errors(t *testing.T) {
 			rn: newRouteNetwork(func(rn *RouteNetwork) {
 				rn.NetworkID = tt.Key{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:network_id"),
+			expectedErrors: PE("RequiredFieldError:network_id"),
 		},
 		{
 			name: "Missing route_id",
 			rn: newRouteNetwork(func(rn *RouteNetwork) {
 				rn.RouteID = tt.Key{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:route_id"),
+			expectedErrors: PE("RequiredFieldError:route_id"),
 		},
 	}
 

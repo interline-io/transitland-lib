@@ -24,7 +24,7 @@ func TestFareTransferRule_Errors(t *testing.T) {
 			fareTransferRule: &FareTransferRule{
 				FareProductID: tt.NewString("product1"),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:fare_transfer_type"),
+			expectedErrors: PE("RequiredFieldError:fare_transfer_type"),
 		},
 		{
 			name: "Invalid: transfer_count required if from_leg_group_id == to_leg_group_id",
@@ -34,7 +34,7 @@ func TestFareTransferRule_Errors(t *testing.T) {
 				FareProductID:    tt.NewString("test"),
 				FareTransferType: tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:transfer_count"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:transfer_count"),
 		},
 		{
 			name: "Invalid: transfer_count forbidden if from_leg_group_id != to_leg_group_id (implicit)",
@@ -47,7 +47,7 @@ func TestFareTransferRule_Errors(t *testing.T) {
 				FareTransferType: tt.NewInt(1),
 				TransferCount:    tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:transfer_count"),
+			expectedErrors: PE("ConditionallyForbiddenFieldError:transfer_count"),
 		},
 		{
 			name: "Invalid: duration_limit required (actually duration_limit_type missing)",
@@ -57,7 +57,7 @@ func TestFareTransferRule_Errors(t *testing.T) {
 				FareTransferType: tt.NewInt(1),
 				DurationLimit:    tt.NewInt(3600),
 			},
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:duration_limit"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:duration_limit"),
 		},
 		{
 			name: "Invalid: duration_limit forbidden (actually duration_limit missing but type present)",
@@ -67,21 +67,21 @@ func TestFareTransferRule_Errors(t *testing.T) {
 				FareTransferType:  tt.NewInt(1),
 				DurationLimitType: tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:duration_limit"),
+			expectedErrors: PE("ConditionallyForbiddenFieldError:duration_limit"),
 		},
 		{
 			name: "Invalid: invalid fare_transfer_type (-1)",
 			fareTransferRule: &FareTransferRule{
 				FareTransferType: tt.NewInt(-1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:fare_transfer_type"),
+			expectedErrors: PE("InvalidFieldError:fare_transfer_type"),
 		},
 		{
 			name: "Invalid: invalid fare_transfer_type (3)",
 			fareTransferRule: &FareTransferRule{
 				FareTransferType: tt.NewInt(3), // Enum 0,1,2
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:fare_transfer_type"),
+			expectedErrors: PE("InvalidFieldError:fare_transfer_type"),
 		},
 		{
 			name: "Invalid: invalid transfer_count (-2)",
@@ -91,7 +91,7 @@ func TestFareTransferRule_Errors(t *testing.T) {
 				FareTransferType: tt.NewInt(1),
 				TransferCount:    tt.NewInt(-2), // Range -1,
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:transfer_count"),
+			expectedErrors: PE("InvalidFieldError:transfer_count"),
 		},
 		{
 			name: "Invalid: invalid duration_limit (-1)",
@@ -101,7 +101,7 @@ func TestFareTransferRule_Errors(t *testing.T) {
 				DurationLimit:     tt.NewInt(-1),
 				DurationLimitType: tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:duration_limit"),
+			expectedErrors: PE("InvalidFieldError:duration_limit"),
 		},
 		{
 			name: "Invalid: invalid duration_limit_type (-1)",
@@ -111,7 +111,7 @@ func TestFareTransferRule_Errors(t *testing.T) {
 				DurationLimit:     tt.NewInt(3600),
 				DurationLimitType: tt.NewInt(-1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:duration_limit_type"),
+			expectedErrors: PE("InvalidFieldError:duration_limit_type"),
 		},
 		{
 			name: "Invalid: invalid duration_limit_type (4)",
@@ -121,7 +121,7 @@ func TestFareTransferRule_Errors(t *testing.T) {
 				DurationLimit:     tt.NewInt(3600),
 				DurationLimitType: tt.NewInt(4), // Enum 0,1,2,3
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:duration_limit_type"),
+			expectedErrors: PE("InvalidFieldError:duration_limit_type"),
 		},
 	}
 

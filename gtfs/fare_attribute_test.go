@@ -43,7 +43,7 @@ func TestFareAttribute_Errors(t *testing.T) {
 				PaymentMethod: tt.NewInt(1),
 				Transfers:     tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:fare_id"),
+			expectedErrors: PE("RequiredFieldError:fare_id"),
 		},
 		{
 			name: "Invalid: missing price",
@@ -53,7 +53,7 @@ func TestFareAttribute_Errors(t *testing.T) {
 				PaymentMethod: tt.NewInt(1),
 				Transfers:     tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:price"),
+			expectedErrors: PE("RequiredFieldError:price"),
 		},
 		{
 			name: "Invalid: missing currency_type",
@@ -63,7 +63,7 @@ func TestFareAttribute_Errors(t *testing.T) {
 				PaymentMethod: tt.NewInt(1),
 				Transfers:     tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:currency_type"),
+			expectedErrors: PE("RequiredFieldError:currency_type"),
 		},
 		{
 			name: "Invalid: missing payment_method",
@@ -73,7 +73,7 @@ func TestFareAttribute_Errors(t *testing.T) {
 				CurrencyType: tt.NewCurrency("USD"),
 				Transfers:    tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:payment_method"),
+			expectedErrors: PE("RequiredFieldError:payment_method"),
 		},
 		{
 			name: "Invalid: invalid price (< 0)",
@@ -84,7 +84,7 @@ func TestFareAttribute_Errors(t *testing.T) {
 				PaymentMethod: tt.NewInt(1),
 				Transfers:     tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:price"),
+			expectedErrors: PE("InvalidFieldError:price"),
 		},
 		{
 			name: "Invalid: invalid payment_method (2)",
@@ -95,7 +95,7 @@ func TestFareAttribute_Errors(t *testing.T) {
 				PaymentMethod: tt.NewInt(2),
 				Transfers:     tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:payment_method"),
+			expectedErrors: PE("InvalidFieldError:payment_method"),
 		},
 		{
 			name: "Invalid: invalid transfers (3)",
@@ -106,7 +106,7 @@ func TestFareAttribute_Errors(t *testing.T) {
 				PaymentMethod: tt.NewInt(1),
 				Transfers:     tt.NewInt(3),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:transfers"),
+			expectedErrors: PE("InvalidFieldError:transfers"),
 		},
 		{
 			name: "Invalid: invalid transfer_duration (< 0)",
@@ -118,7 +118,7 @@ func TestFareAttribute_Errors(t *testing.T) {
 				Transfers:        tt.NewInt(1),
 				TransferDuration: tt.NewInt(-1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:transfer_duration"),
+			expectedErrors: PE("InvalidFieldError:transfer_duration"),
 		},
 		// Note: Currency validation might depend on external libraries or strictness settings.
 		// The bad-entities test expects InvalidFieldError:currency_type for "xyz".
@@ -133,7 +133,7 @@ func TestFareAttribute_Errors(t *testing.T) {
 				PaymentMethod: tt.NewInt(1),
 				Transfers:     tt.NewInt(1),
 			},
-			expectedErrors: ParseExpectErrors("InvalidFieldError:currency_type"),
+			expectedErrors: PE("InvalidFieldError:currency_type"),
 		},
 	}
 

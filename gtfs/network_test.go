@@ -33,7 +33,7 @@ func TestNetwork_Errors(t *testing.T) {
 			network: newNetwork(func(n *Network) {
 				n.NetworkID = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:network_id"),
+			expectedErrors: PE("RequiredFieldError:network_id"),
 		},
 	}
 

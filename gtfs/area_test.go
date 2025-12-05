@@ -33,7 +33,7 @@ func TestArea_Errors(t *testing.T) {
 			area: newArea(func(a *Area) {
 				a.AreaID = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:area_id"),
+			expectedErrors: PE("RequiredFieldError:area_id"),
 		},
 	}
 

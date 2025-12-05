@@ -28,7 +28,7 @@ func TestFareLegRule_Errors(t *testing.T) {
 			fareLegRule: &FareLegRule{
 				LegGroupID: tt.NewString("lg1"),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:fare_product_id"),
+			expectedErrors: PE("RequiredFieldError:fare_product_id"),
 		},
 	}
 

@@ -44,7 +44,7 @@ func TestRoute_Errors(t *testing.T) {
 			route: newRoute(func(r *Route) {
 				r.RouteID = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:route_id"),
+			expectedErrors: PE("RequiredFieldError:route_id"),
 		},
 		{
 			name: "Missing route_short_name and route_long_name",
@@ -52,56 +52,56 @@ func TestRoute_Errors(t *testing.T) {
 				r.RouteShortName = tt.String{}
 				r.RouteLongName = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:route_short_name"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:route_short_name"),
 		},
 		{
 			name: "Invalid route_type (negative)",
 			route: newRoute(func(r *Route) {
 				r.RouteType = tt.NewInt(-1)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:route_type"),
+			expectedErrors: PE("InvalidFieldError:route_type"),
 		},
 		{
 			name: "Invalid route_type (too large)",
 			route: newRoute(func(r *Route) {
 				r.RouteType = tt.NewInt(1234567)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:route_type"),
+			expectedErrors: PE("InvalidFieldError:route_type"),
 		},
 		{
 			name: "Invalid route_url",
 			route: newRoute(func(r *Route) {
 				r.RouteURL = tt.NewUrl("abcxyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:route_url"),
+			expectedErrors: PE("InvalidFieldError:route_url"),
 		},
 		{
 			name: "Invalid route_color",
 			route: newRoute(func(r *Route) {
 				r.RouteColor = tt.NewColor("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:route_color"),
+			expectedErrors: PE("InvalidFieldError:route_color"),
 		},
 		{
 			name: "Invalid route_text_color",
 			route: newRoute(func(r *Route) {
 				r.RouteTextColor = tt.NewColor("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:route_text_color"),
+			expectedErrors: PE("InvalidFieldError:route_text_color"),
 		},
 		{
 			name: "Invalid continuous_pickup",
 			route: newRoute(func(r *Route) {
 				r.ContinuousPickup = tt.NewInt(100)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:continuous_pickup"),
+			expectedErrors: PE("InvalidFieldError:continuous_pickup"),
 		},
 		{
 			name: "Invalid continuous_drop_off",
 			route: newRoute(func(r *Route) {
 				r.ContinuousDropOff = tt.NewInt(100)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:continuous_drop_off"),
+			expectedErrors: PE("InvalidFieldError:continuous_drop_off"),
 		},
 	}
 

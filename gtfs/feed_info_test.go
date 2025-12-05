@@ -43,35 +43,35 @@ func TestFeedInfo_Errors(t *testing.T) {
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.FeedPublisherName = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:feed_publisher_name"),
+			expectedErrors: PE("RequiredFieldError:feed_publisher_name"),
 		},
 		{
 			name: "Missing feed_publisher_url",
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.FeedPublisherURL = tt.Url{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:feed_publisher_url"),
+			expectedErrors: PE("RequiredFieldError:feed_publisher_url"),
 		},
 		{
 			name: "Missing feed_lang",
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.FeedLang = tt.Language{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:feed_lang"),
+			expectedErrors: PE("RequiredFieldError:feed_lang"),
 		},
 		{
 			name: "Invalid feed_publisher_url",
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.FeedPublisherURL = tt.NewUrl("abcxyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:feed_publisher_url"),
+			expectedErrors: PE("InvalidFieldError:feed_publisher_url"),
 		},
 		{
 			name: "Invalid feed_lang",
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.FeedLang = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:feed_lang"),
+			expectedErrors: PE("InvalidFieldError:feed_lang"),
 		},
 		{
 			name: "feed_end_date before feed_start_date",
@@ -81,28 +81,28 @@ func TestFeedInfo_Errors(t *testing.T) {
 				f.FeedStartDate = startDate
 				f.FeedEndDate = endDate
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:feed_end_date"),
+			expectedErrors: PE("InvalidFieldError:feed_end_date"),
 		},
 		{
 			name: "Invalid default_lang",
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.DefaultLang = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:default_lang"),
+			expectedErrors: PE("InvalidFieldError:default_lang"),
 		},
 		{
 			name: "Invalid feed_contact_email",
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.FeedContactEmail = tt.NewEmail("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:feed_contact_email"),
+			expectedErrors: PE("InvalidFieldError:feed_contact_email"),
 		},
 		{
 			name: "Invalid feed_contact_url",
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.FeedContactURL = tt.NewUrl("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:feed_contact_url"),
+			expectedErrors: PE("InvalidFieldError:feed_contact_url"),
 		},
 	}
 

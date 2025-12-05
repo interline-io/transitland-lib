@@ -44,21 +44,21 @@ func TestPathway_Errors(t *testing.T) {
 			entity: newPathway(func(p *Pathway) {
 				p.Length = tt.NewFloat(-2.0)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:length"),
+			expectedErrors: PE("InvalidFieldError:length"),
 		},
 		{
 			name: "Invalid negative min_width",
 			entity: newPathway(func(p *Pathway) {
 				p.MinWidth = tt.NewFloat(-1.0)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:min_width"),
+			expectedErrors: PE("InvalidFieldError:min_width"),
 		},
 		{
 			name: "Invalid zero min_width",
 			entity: newPathway(func(p *Pathway) {
 				p.MinWidth = tt.NewFloat(0.0)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:min_width"),
+			expectedErrors: PE("InvalidFieldError:min_width"),
 		},
 
 		{
@@ -67,7 +67,7 @@ func TestPathway_Errors(t *testing.T) {
 				p.PathwayMode = tt.NewInt(2)
 				p.MaxSlope = tt.NewFloat(0.05)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:max_slope"),
+			expectedErrors: PE("InvalidFieldError:max_slope"),
 		},
 		{
 			name: "Invalid max_slope for elevator (pathway_mode=4)",
@@ -75,7 +75,7 @@ func TestPathway_Errors(t *testing.T) {
 				p.PathwayMode = tt.NewInt(4)
 				p.MaxSlope = tt.NewFloat(0.05)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:max_slope"),
+			expectedErrors: PE("InvalidFieldError:max_slope"),
 		},
 		{
 			name: "Invalid pathway_mode zero",
@@ -83,7 +83,7 @@ func TestPathway_Errors(t *testing.T) {
 				p.PathwayMode = tt.NewInt(0)
 				p.MaxSlope = tt.Float{} // Clear max_slope to avoid conditional error
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:pathway_mode"),
+			expectedErrors: PE("InvalidFieldError:pathway_mode"),
 		},
 		{
 			name: "Invalid pathway_mode eight",
@@ -91,7 +91,7 @@ func TestPathway_Errors(t *testing.T) {
 				p.PathwayMode = tt.NewInt(8)
 				p.MaxSlope = tt.Float{} // Clear max_slope to avoid conditional error
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:pathway_mode"),
+			expectedErrors: PE("InvalidFieldError:pathway_mode"),
 		},
 		{
 			name: "Invalid pathway_mode negative",
@@ -99,14 +99,14 @@ func TestPathway_Errors(t *testing.T) {
 				p.PathwayMode = tt.NewInt(-1)
 				p.MaxSlope = tt.Float{} // Clear max_slope to avoid conditional error
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:pathway_mode"),
+			expectedErrors: PE("InvalidFieldError:pathway_mode"),
 		},
 		{
 			name: "Invalid is_bidirectional value",
 			entity: newPathway(func(p *Pathway) {
 				p.IsBidirectional = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:is_bidirectional"),
+			expectedErrors: PE("InvalidFieldError:is_bidirectional"),
 		},
 		{
 			name: "Exit gate (pathway_mode=7) cannot be bidirectional",
@@ -115,7 +115,7 @@ func TestPathway_Errors(t *testing.T) {
 				p.IsBidirectional = tt.NewInt(1)
 				p.MaxSlope = tt.Float{} // Clear max_slope to avoid conditional error
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:is_bidirectional"),
+			expectedErrors: PE("InvalidFieldError:is_bidirectional"),
 		},
 		{
 			name: "Multiple invalid fields",
@@ -123,7 +123,7 @@ func TestPathway_Errors(t *testing.T) {
 				p.Length = tt.NewFloat(-2.0)
 				p.MinWidth = tt.NewFloat(-1.0)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:length", "InvalidFieldError:min_width"),
+			expectedErrors: PE("InvalidFieldError:length", "InvalidFieldError:min_width"),
 		},
 	}
 

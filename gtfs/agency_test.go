@@ -39,21 +39,21 @@ func TestAgency_Errors(t *testing.T) {
 			agency: newAgency(func(a *Agency) {
 				a.AgencyURL = tt.NewUrl("abcxyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:agency_url"),
+			expectedErrors: PE("InvalidFieldError:agency_url"),
 		},
 		{
 			name: "Missing agency_timezone (required field)",
 			agency: newAgency(func(a *Agency) {
 				a.AgencyTimezone = tt.Timezone{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:agency_timezone"),
+			expectedErrors: PE("RequiredFieldError:agency_timezone"),
 		},
 		{
 			name: "Invalid agency_lang",
 			agency: newAgency(func(a *Agency) {
 				a.AgencyLang = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:agency_lang"),
+			expectedErrors: PE("InvalidFieldError:agency_lang"),
 		},
 	}
 

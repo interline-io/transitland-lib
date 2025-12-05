@@ -41,42 +41,42 @@ func TestTrip_Errors(t *testing.T) {
 			trip: newTrip(func(t *Trip) {
 				t.TripID = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:trip_id"),
+			expectedErrors: PE("RequiredFieldError:trip_id"),
 		},
 		{
 			name: "Missing route_id (required field)",
 			trip: newTrip(func(t *Trip) {
 				t.RouteID = tt.Key{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:route_id"),
+			expectedErrors: PE("RequiredFieldError:route_id"),
 		},
 		{
 			name: "Missing service_id (required field)",
 			trip: newTrip(func(t *Trip) {
 				t.ServiceID = tt.Key{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:service_id"),
+			expectedErrors: PE("RequiredFieldError:service_id"),
 		},
 		{
 			name: "Invalid direction_id",
 			trip: newTrip(func(t *Trip) {
 				t.DirectionID = tt.NewInt(100)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:direction_id"),
+			expectedErrors: PE("InvalidFieldError:direction_id"),
 		},
 		{
 			name: "Invalid wheelchair_accessible",
 			trip: newTrip(func(t *Trip) {
 				t.WheelchairAccessible = tt.NewInt(100)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:wheelchair_accessible"),
+			expectedErrors: PE("InvalidFieldError:wheelchair_accessible"),
 		},
 		{
 			name: "Invalid bikes_allowed",
 			trip: newTrip(func(t *Trip) {
 				t.BikesAllowed = tt.NewInt(100)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:bikes_allowed"),
+			expectedErrors: PE("InvalidFieldError:bikes_allowed"),
 		},
 	}
 

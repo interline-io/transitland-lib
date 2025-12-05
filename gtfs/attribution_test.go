@@ -40,7 +40,7 @@ func TestAttribution_Errors(t *testing.T) {
 			entity: newAttribution(func(a *Attribution) {
 				a.OrganizationName = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:organization_name"),
+			expectedErrors: PE("RequiredFieldError:organization_name"),
 		},
 		{
 			name: "Missing is_producer (no role specified)",
@@ -49,42 +49,42 @@ func TestAttribution_Errors(t *testing.T) {
 				a.IsOperator = tt.NewInt(0)
 				a.IsAuthority = tt.NewInt(0)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:is_producer"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:is_producer"),
 		},
 		{
 			name: "Invalid is_producer value",
 			entity: newAttribution(func(a *Attribution) {
 				a.IsProducer = tt.NewInt(100)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:is_producer"),
+			expectedErrors: PE("InvalidFieldError:is_producer"),
 		},
 		{
 			name: "Invalid is_operator value",
 			entity: newAttribution(func(a *Attribution) {
 				a.IsOperator = tt.NewInt(100)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:is_operator"),
+			expectedErrors: PE("InvalidFieldError:is_operator"),
 		},
 		{
 			name: "Invalid is_authority value",
 			entity: newAttribution(func(a *Attribution) {
 				a.IsAuthority = tt.NewInt(100)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:is_authority"),
+			expectedErrors: PE("InvalidFieldError:is_authority"),
 		},
 		{
 			name: "Invalid attribution_email",
 			entity: newAttribution(func(a *Attribution) {
 				a.AttributionEmail = tt.NewEmail("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:attribution_email"),
+			expectedErrors: PE("InvalidFieldError:attribution_email"),
 		},
 		{
 			name: "Invalid attribution_url",
 			entity: newAttribution(func(a *Attribution) {
 				a.AttributionURL = tt.NewUrl("xyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:attribution_url"),
+			expectedErrors: PE("InvalidFieldError:attribution_url"),
 		},
 		{
 			name: "agency_id conflicts with route_id",
@@ -92,7 +92,7 @@ func TestAttribution_Errors(t *testing.T) {
 				a.AgencyID = tt.NewKey("agency")
 				a.RouteID = tt.NewKey("route")
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:route_id"),
+			expectedErrors: PE("ConditionallyForbiddenFieldError:route_id"),
 		},
 		{
 			name: "agency_id conflicts with trip_id",
@@ -100,7 +100,7 @@ func TestAttribution_Errors(t *testing.T) {
 				a.AgencyID = tt.NewKey("agency")
 				a.TripID = tt.NewKey("trip")
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:trip_id"),
+			expectedErrors: PE("ConditionallyForbiddenFieldError:trip_id"),
 		},
 		{
 			name: "route_id conflicts with trip_id",
@@ -108,7 +108,7 @@ func TestAttribution_Errors(t *testing.T) {
 				a.RouteID = tt.NewKey("route")
 				a.TripID = tt.NewKey("trip")
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:trip_id"),
+			expectedErrors: PE("ConditionallyForbiddenFieldError:trip_id"),
 		},
 	}
 

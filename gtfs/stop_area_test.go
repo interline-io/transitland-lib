@@ -34,14 +34,14 @@ func TestStopArea_Errors(t *testing.T) {
 			entity: newStopArea(func(sa *StopArea) {
 				sa.AreaID = tt.Key{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:area_id"),
+			expectedErrors: PE("RequiredFieldError:area_id"),
 		},
 		{
 			name: "Missing stop_id",
 			entity: newStopArea(func(sa *StopArea) {
 				sa.StopID = tt.Key{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:stop_id"),
+			expectedErrors: PE("RequiredFieldError:stop_id"),
 		},
 	}
 

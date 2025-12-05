@@ -38,28 +38,28 @@ func TestRiderCategory_Errors(t *testing.T) {
 			entity: newRiderCategory(func(rc *RiderCategory) {
 				rc.RiderCategoryID = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:rider_category_id"),
+			expectedErrors: PE("RequiredFieldError:rider_category_id"),
 		},
 		{
 			name: "Missing rider_category_name",
 			entity: newRiderCategory(func(rc *RiderCategory) {
 				rc.RiderCategoryName = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:rider_category_name"),
+			expectedErrors: PE("RequiredFieldError:rider_category_name"),
 		},
 		{
 			name: "Invalid min_age (negative)",
 			entity: newRiderCategory(func(rc *RiderCategory) {
 				rc.MinAge = tt.NewInt(-1)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:min_age"),
+			expectedErrors: PE("InvalidFieldError:min_age"),
 		},
 		{
 			name: "Invalid max_age (negative)",
 			entity: newRiderCategory(func(rc *RiderCategory) {
 				rc.MaxAge = tt.NewInt(-1)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:max_age"),
+			expectedErrors: PE("InvalidFieldError:max_age"),
 		},
 		{
 			name: "max_age less than min_age",
@@ -67,21 +67,21 @@ func TestRiderCategory_Errors(t *testing.T) {
 				rc.MinAge = tt.NewInt(10)
 				rc.MaxAge = tt.NewInt(5)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:max_age"),
+			expectedErrors: PE("InvalidFieldError:max_age"),
 		},
 		{
 			name: "Invalid eligibility_url",
 			entity: newRiderCategory(func(rc *RiderCategory) {
 				rc.EligibilityURL = tt.NewUrl("asd")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:eligibility_url"),
+			expectedErrors: PE("InvalidFieldError:eligibility_url"),
 		},
 		{
 			name: "Invalid is_default_fare_category",
 			entity: newRiderCategory(func(rc *RiderCategory) {
 				rc.IsDefaultFareCategory = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:is_default_fare_category"),
+			expectedErrors: PE("InvalidFieldError:is_default_fare_category"),
 		},
 	}
 

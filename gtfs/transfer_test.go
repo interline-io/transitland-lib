@@ -37,7 +37,7 @@ func TestTransfer_Errors(t *testing.T) {
 				t.ToTripID = tt.NewKey("ok")
 				t.TransferType = tt.NewInt(1)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:from_stop_id"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:from_stop_id"),
 		},
 		{
 			name: "Missing to_stop_id for transfer_type=1",
@@ -46,7 +46,7 @@ func TestTransfer_Errors(t *testing.T) {
 				t.FromTripID = tt.NewKey("ok")
 				t.TransferType = tt.NewInt(1)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:to_stop_id"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:to_stop_id"),
 		},
 		{
 			name: "Missing from_trip_id for transfer_type=4",
@@ -54,7 +54,7 @@ func TestTransfer_Errors(t *testing.T) {
 				t.ToTripID = tt.NewKey("ok")
 				t.TransferType = tt.NewInt(4)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:from_trip_id"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:from_trip_id"),
 		},
 		{
 			name: "Missing to_trip_id for transfer_type=4",
@@ -62,7 +62,7 @@ func TestTransfer_Errors(t *testing.T) {
 				t.FromTripID = tt.NewKey("ok")
 				t.TransferType = tt.NewInt(4)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:to_trip_id"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:to_trip_id"),
 		},
 		{
 			name: "Missing from_trip_id for transfer_type=5",
@@ -70,7 +70,7 @@ func TestTransfer_Errors(t *testing.T) {
 				t.ToTripID = tt.NewKey("ok")
 				t.TransferType = tt.NewInt(5)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:from_trip_id"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:from_trip_id"),
 		},
 		{
 			name: "Missing to_trip_id for transfer_type=5",
@@ -78,21 +78,21 @@ func TestTransfer_Errors(t *testing.T) {
 				t.FromTripID = tt.NewKey("ok")
 				t.TransferType = tt.NewInt(5)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:to_trip_id"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:to_trip_id"),
 		},
 		{
 			name: "Invalid transfer_type (negative)",
 			transfer: newTransfer(func(t *Transfer) {
 				t.TransferType = tt.NewInt(-1)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:transfer_type"),
+			expectedErrors: PE("InvalidFieldError:transfer_type"),
 		},
 		{
 			name: "Invalid transfer_type (too large)",
 			transfer: newTransfer(func(t *Transfer) {
 				t.TransferType = tt.NewInt(6)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:transfer_type"),
+			expectedErrors: PE("InvalidFieldError:transfer_type"),
 		},
 		{
 			name: "Invalid min_transfer_time (negative)",
@@ -100,7 +100,7 @@ func TestTransfer_Errors(t *testing.T) {
 				t.TransferType = tt.NewInt(2)
 				t.MinTransferTime = tt.NewInt(-1)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:min_transfer_time"),
+			expectedErrors: PE("InvalidFieldError:min_transfer_time"),
 		},
 	}
 

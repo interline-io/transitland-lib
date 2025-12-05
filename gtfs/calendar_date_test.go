@@ -44,7 +44,7 @@ func TestCalendarDate_Errors(t *testing.T) {
 			calendarDate: newCalendarDate(func(cd *CalendarDate) {
 				cd.ExceptionType = tt.NewInt(3)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:exception_type"),
+			expectedErrors: PE("InvalidFieldError:exception_type"),
 		},
 	}
 

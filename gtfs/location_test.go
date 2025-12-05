@@ -45,14 +45,14 @@ func TestLocation_Errors(t *testing.T) {
 			location: &Location{
 				Geometry: tt.NewGeometry(poly),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:location_id"),
+			expectedErrors: PE("RequiredFieldError:location_id"),
 		},
 		{
 			name: "Invalid: missing geometry",
 			location: &Location{
 				LocationID: tt.NewString("loc3"),
 			},
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:geometry"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:geometry"),
 		},
 	}
 

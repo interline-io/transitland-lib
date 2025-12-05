@@ -28,7 +28,7 @@ func TestFareRule_Errors(t *testing.T) {
 			fareRule: &FareRule{
 				RouteID: tt.NewKey("route1"),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:fare_id"),
+			expectedErrors: PE("RequiredFieldError:fare_id"),
 		},
 	}
 

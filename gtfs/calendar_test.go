@@ -55,98 +55,98 @@ func TestCalendar_Errors(t *testing.T) {
 			calendar: newCalendar(func(c *Calendar) {
 				c.Monday = tt.Int{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:monday"),
+			expectedErrors: PE("RequiredFieldError:monday"),
 		},
 		{
 			name: "Missing tuesday (required field)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Tuesday = tt.Int{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:tuesday"),
+			expectedErrors: PE("RequiredFieldError:tuesday"),
 		},
 		{
 			name: "Missing wednesday (required field)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Wednesday = tt.Int{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:wednesday"),
+			expectedErrors: PE("RequiredFieldError:wednesday"),
 		},
 		{
 			name: "Missing thursday (required field)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Thursday = tt.Int{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:thursday"),
+			expectedErrors: PE("RequiredFieldError:thursday"),
 		},
 		{
 			name: "Missing friday (required field)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Friday = tt.Int{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:friday"),
+			expectedErrors: PE("RequiredFieldError:friday"),
 		},
 		{
 			name: "Missing saturday (required field)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Saturday = tt.Int{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:saturday"),
+			expectedErrors: PE("RequiredFieldError:saturday"),
 		},
 		{
 			name: "Missing sunday (required field)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Sunday = tt.Int{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:sunday"),
+			expectedErrors: PE("RequiredFieldError:sunday"),
 		},
 		{
 			name: "Invalid monday (value > 1)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Monday = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:monday"),
+			expectedErrors: PE("InvalidFieldError:monday"),
 		},
 		{
 			name: "Invalid tuesday (value > 1)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Tuesday = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:tuesday"),
+			expectedErrors: PE("InvalidFieldError:tuesday"),
 		},
 		{
 			name: "Invalid wednesday (value > 1)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Wednesday = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:wednesday"),
+			expectedErrors: PE("InvalidFieldError:wednesday"),
 		},
 		{
 			name: "Invalid thursday (value > 1)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Thursday = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:thursday"),
+			expectedErrors: PE("InvalidFieldError:thursday"),
 		},
 		{
 			name: "Invalid friday (value > 1)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Friday = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:friday"),
+			expectedErrors: PE("InvalidFieldError:friday"),
 		},
 		{
 			name: "Invalid saturday (value > 1)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Saturday = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:saturday"),
+			expectedErrors: PE("InvalidFieldError:saturday"),
 		},
 		{
 			name: "Invalid sunday (value > 1)",
 			calendar: newCalendar(func(c *Calendar) {
 				c.Sunday = tt.NewInt(2)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:sunday"),
+			expectedErrors: PE("InvalidFieldError:sunday"),
 		},
 		{
 			name: "Start date after end date",
@@ -156,7 +156,7 @@ func TestCalendar_Errors(t *testing.T) {
 				c.StartDate = startDate
 				c.EndDate = endDate
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:end_date"),
+			expectedErrors: PE("InvalidFieldError:end_date"),
 		},
 	}
 

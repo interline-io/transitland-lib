@@ -49,14 +49,14 @@ func TestStop_Errors(t *testing.T) {
 			stop: newStop(func(s *Stop) {
 				s.StopID = tt.String{}
 			}),
-			expectedErrors: ParseExpectErrors("RequiredFieldError:stop_id"),
+			expectedErrors: PE("RequiredFieldError:stop_id"),
 		},
 		{
 			name: "Invalid stop_url",
 			stop: newStop(func(s *Stop) {
 				s.StopURL = tt.NewUrl("abcxyz")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:stop_url"),
+			expectedErrors: PE("InvalidFieldError:stop_url"),
 		},
 		{
 			name: "Missing stop_name for stop/platform (location_type=0)",
@@ -64,7 +64,7 @@ func TestStop_Errors(t *testing.T) {
 				s.StopName = tt.String{}
 				s.LocationType = tt.NewInt(0)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:stop_name"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:stop_name"),
 		},
 		{
 			name: "Valid: no stop_name for node (location_type=3)",
@@ -89,28 +89,28 @@ func TestStop_Errors(t *testing.T) {
 			stop: newStop(func(s *Stop) {
 				s.StopLat = tt.NewFloat(-91.0)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:stop_lat"),
+			expectedErrors: PE("InvalidFieldError:stop_lat"),
 		},
 		{
 			name: "Invalid stop_lon < -180",
 			stop: newStop(func(s *Stop) {
 				s.StopLon = tt.NewFloat(-181.0)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:stop_lon"),
+			expectedErrors: PE("InvalidFieldError:stop_lon"),
 		},
 		{
 			name: "Invalid stop_lat > 90",
 			stop: newStop(func(s *Stop) {
 				s.StopLat = tt.NewFloat(91.0)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:stop_lat"),
+			expectedErrors: PE("InvalidFieldError:stop_lat"),
 		},
 		{
 			name: "Invalid stop_lon > 180",
 			stop: newStop(func(s *Stop) {
 				s.StopLon = tt.NewFloat(181.0)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:stop_lon"),
+			expectedErrors: PE("InvalidFieldError:stop_lon"),
 		},
 		{
 			name: "Valid: stop_lat = 0 for node (location_type=3)",
@@ -153,14 +153,14 @@ func TestStop_Errors(t *testing.T) {
 			stop: newStop(func(s *Stop) {
 				s.LocationType = tt.NewInt(6)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:location_type"),
+			expectedErrors: PE("InvalidFieldError:location_type"),
 		},
 		{
 			name: "Invalid wheelchair_boarding > 2",
 			stop: newStop(func(s *Stop) {
 				s.WheelchairBoarding = tt.NewInt(3)
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:wheelchair_boarding"),
+			expectedErrors: PE("InvalidFieldError:wheelchair_boarding"),
 		},
 		{
 			name: "Missing parent_station for entrance (location_type=2)",
@@ -168,7 +168,7 @@ func TestStop_Errors(t *testing.T) {
 				s.LocationType = tt.NewInt(2)
 				s.ParentStation = tt.Key{}
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:parent_station"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:parent_station"),
 		},
 		{
 			name: "Station (location_type=1) with parent_station",
@@ -176,7 +176,7 @@ func TestStop_Errors(t *testing.T) {
 				s.LocationType = tt.NewInt(1)
 				s.ParentStation = tt.NewKey("station")
 			}),
-			expectedErrors: ParseExpectErrors("InvalidFieldError:parent_station"),
+			expectedErrors: PE("InvalidFieldError:parent_station"),
 		},
 		{
 			name: "Missing stop_lat for stop (location_type=0) - NaN equivalent",
@@ -184,7 +184,7 @@ func TestStop_Errors(t *testing.T) {
 				s.StopLat = tt.Float{}
 				s.LocationType = tt.NewInt(0)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:stop_lat"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:stop_lat"),
 		},
 		{
 			name: "Missing stop_lon for stop (location_type=0) - NaN equivalent",
@@ -192,7 +192,7 @@ func TestStop_Errors(t *testing.T) {
 				s.StopLon = tt.Float{}
 				s.LocationType = tt.NewInt(0)
 			}),
-			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:stop_lon"),
+			expectedErrors: PE("ConditionallyRequiredFieldError:stop_lon"),
 		},
 	}
 
