@@ -32,7 +32,7 @@ func TestLocationGroup_Errors(t *testing.T) {
 			locationGroup: &LocationGroup{
 				LocationGroupName: tt.NewString("Transit Mall"),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:location_group_id"),
+			expectedErrors: PE("RequiredFieldError:location_group_id"),
 		},
 		{
 			name: "Valid: location_group with special characters in ID",
