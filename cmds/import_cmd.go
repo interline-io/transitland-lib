@@ -38,8 +38,9 @@ type ImportCommand struct {
 	Results      []ImportCommandResult
 	Adapter      tldb.Adapter // allow for mocks
 	// internal
-	fvidfile   string
-	fvsha1file string
+	fvidfile        string
+	fvsha1file      string
+	errorThresholds []string
 }
 
 func (cmd *ImportCommand) HelpDesc() (string, string) {
@@ -73,6 +74,7 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
 	fl.BoolVar(&cmd.Options.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
 	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
+	fl.StringSliceVar(&cmd.errorThresholds, "error-threshold", nil, "Fail import if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')")
 }
 
 // Parse command line flags
@@ -109,6 +111,13 @@ func (cmd *ImportCommand) Parse(args []string) error {
 		if len(cmd.FVSHA1) == 0 {
 			return errors.New("--fv-sha1-file specified but no lines were read")
 		}
+	}
+	if len(cmd.errorThresholds) > 0 {
+		thresholds, err := parseErrorThresholds(cmd.errorThresholds)
+		if err != nil {
+			return err
+		}
+		cmd.Options.ErrorThreshold = thresholds
 	}
 	return nil
 }

@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/interline-io/log"
@@ -49,6 +51,11 @@ type Options struct {
 	MaxRTMessageSize         uint64
 	EvaluateAt               time.Time
 	EvaluateAtTimezone       string
+	// ErrorThreshold sets the maximum error percentage (0-100) allowed per file.
+	// The key is the filename (e.g., "stops.txt") or "*" for the default threshold.
+	// If any file exceeds its threshold, the validation is considered failed.
+	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
+	ErrorThreshold map[string]float64
 	copier.Options
 }
 
@@ -233,6 +240,49 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	}
 	for k, v := range cpResult.Warnings {
 		result.Warnings[k] = copierEgToValidationEg(v)
+	}
+
+	// Check error threshold
+	if len(v.Options.ErrorThreshold) > 0 {
+		thresholdResult := cpResult.CheckErrorThreshold(v.Options.ErrorThreshold)
+		if !thresholdResult.OK {
+			var exceededFiles []string
+			for fn, detail := range thresholdResult.Details {
+				if !detail.OK {
+					log.For(context.TODO()).Error().Str("filename", fn).Float64("error_percent", detail.ErrorPercent).Float64("threshold", detail.Threshold).Int("error_count", detail.ErrorCount).Int("total_count", detail.TotalCount).Msg("file exceeded error threshold")
+					exceededFiles = append(exceededFiles, fn)
+				}
+			}
+			sort.Strings(exceededFiles)
+			var errMsgs []string
+			for _, fn := range exceededFiles {
+				detail := thresholdResult.Details[fn]
+				errMsgs = append(errMsgs, fmt.Sprintf("%s: %.2f%% errors (threshold: %.2f%%)", fn, detail.ErrorPercent, detail.Threshold))
+			}
+			result.FailureReason.Set(fmt.Sprintf("error threshold exceeded: %s", strings.Join(errMsgs, "; ")))
+			return result, nil
+		}
+	}
+
+	// Check required files have at least minimum entities
+	requiredMinEntities := map[string]int{"agency.txt": 1, "routes.txt": 1}
+	minEntitiesResult := cpResult.CheckRequiredMinEntities(requiredMinEntities)
+	if !minEntitiesResult.OK {
+		var failedFiles []string
+		for fn, detail := range minEntitiesResult.Details {
+			if !detail.OK {
+				log.For(context.TODO()).Error().Str("filename", fn).Int("total_count", detail.TotalCount).Int("required", detail.Required).Msg("file did not meet required minimum entities")
+				failedFiles = append(failedFiles, fn)
+			}
+		}
+		sort.Strings(failedFiles)
+		var errMsgs []string
+		for _, fn := range failedFiles {
+			detail := minEntitiesResult.Details[fn]
+			errMsgs = append(errMsgs, fmt.Sprintf("%s: %d entities (required: %d)", fn, detail.TotalCount, detail.Required))
+		}
+		result.FailureReason.Set(fmt.Sprintf("required minimum entities not met: %s", strings.Join(errMsgs, "; ")))
+		return result, nil
 	}
 
 	// Return
