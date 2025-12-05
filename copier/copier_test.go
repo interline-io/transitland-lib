@@ -132,3 +132,123 @@ func testWtfWriteEntities(ents []tt.Entity) {
 	_ = b
 	_ = ents
 }
+
+func TestResult_CheckErrorThreshold(t *testing.T) {
+	testCases := []struct {
+		name           string
+		entityCount    map[string]int
+		errorCount     map[string]int
+		refErrorCount  map[string]int
+		thresholds     map[string]float64
+		expectExceeded bool
+		expectFiles    []string // files that should exceed threshold
+	}{
+		{
+			name:           "no errors",
+			entityCount:    map[string]int{"stops.txt": 100},
+			errorCount:     map[string]int{},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 10},
+			expectExceeded: false,
+		},
+		{
+			name:           "under threshold",
+			entityCount:    map[string]int{"stops.txt": 95},
+			errorCount:     map[string]int{"stops.txt": 5},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 10},
+			expectExceeded: false, // 5/100 = 5%
+		},
+		{
+			name:           "over threshold",
+			entityCount:    map[string]int{"stops.txt": 80},
+			errorCount:     map[string]int{"stops.txt": 20},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 10},
+			expectExceeded: true, // 20/100 = 20%
+			expectFiles:    []string{"stops.txt"},
+		},
+		{
+			name:           "combined entity and reference errors",
+			entityCount:    map[string]int{"trips.txt": 85},
+			errorCount:     map[string]int{"trips.txt": 10},
+			refErrorCount:  map[string]int{"trips.txt": 5},
+			thresholds:     map[string]float64{"*": 10},
+			expectExceeded: true, // 15/100 = 15%
+			expectFiles:    []string{"trips.txt"},
+		},
+		{
+			name:           "one file over one under with default threshold",
+			entityCount:    map[string]int{"stops.txt": 95, "trips.txt": 80},
+			errorCount:     map[string]int{"stops.txt": 5, "trips.txt": 20},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 10},
+			expectExceeded: true,
+			expectFiles:    []string{"trips.txt"},
+		},
+		{
+			name:           "per-file threshold stricter",
+			entityCount:    map[string]int{"stops.txt": 95, "trips.txt": 85},
+			errorCount:     map[string]int{"stops.txt": 5, "trips.txt": 15},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 20, "stops.txt": 3}, // stops.txt has stricter threshold
+			expectExceeded: true,
+			expectFiles:    []string{"stops.txt"}, // 5% > 3%
+		},
+		{
+			name:           "per-file threshold more lenient",
+			entityCount:    map[string]int{"stops.txt": 80, "trips.txt": 85},
+			errorCount:     map[string]int{"stops.txt": 20, "trips.txt": 15},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 10, "stops.txt": 25}, // stops.txt has more lenient threshold
+			expectExceeded: true,
+			expectFiles:    []string{"trips.txt"}, // trips.txt uses default 10%, 15% > 10%
+		},
+		{
+			name:           "empty thresholds",
+			entityCount:    map[string]int{"stops.txt": 50},
+			errorCount:     map[string]int{"stops.txt": 50},
+			refErrorCount:  map[string]int{},
+			thresholds:     nil,
+			expectExceeded: false, // disabled
+		},
+		{
+			name:           "exactly at threshold",
+			entityCount:    map[string]int{"stops.txt": 90},
+			errorCount:     map[string]int{"stops.txt": 10},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"*": 10},
+			expectExceeded: false, // 10% is not > 10%
+		},
+		{
+			name:           "file-specific only no default",
+			entityCount:    map[string]int{"stops.txt": 80, "trips.txt": 80},
+			errorCount:     map[string]int{"stops.txt": 20, "trips.txt": 20},
+			refErrorCount:  map[string]int{},
+			thresholds:     map[string]float64{"stops.txt": 10}, // only stops.txt has threshold
+			expectExceeded: true,
+			expectFiles:    []string{"stops.txt"}, // trips.txt has no threshold so not checked
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := NewResult(10)
+			result.EntityCount = tc.entityCount
+			result.SkipEntityErrorCount = tc.errorCount
+			result.SkipEntityReferenceCount = tc.refErrorCount
+
+			thresholdResult := result.CheckErrorThreshold(tc.thresholds)
+
+			assert.Equal(t, tc.expectExceeded, thresholdResult.Exceeded, "Exceeded mismatch")
+
+			if tc.expectExceeded {
+				for _, fn := range tc.expectFiles {
+					detail, ok := thresholdResult.Details[fn]
+					assert.True(t, ok, "Expected file %s in details", fn)
+					assert.True(t, detail.Exceeded, "Expected file %s to exceed threshold", fn)
+				}
+			}
+		})
+	}
+}

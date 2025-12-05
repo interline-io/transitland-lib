@@ -19,6 +19,11 @@ type Options struct {
 	FeedVersionID int
 	Storage       string
 	Activate      bool
+	// ErrorThreshold sets the maximum error percentage (0-100) allowed per file.
+	// The key is the filename (e.g., "stops.txt") or "*" for the default threshold.
+	// If any file exceeds its threshold, the import is considered failed.
+	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
+	ErrorThreshold map[string]float64
 	copier.Options
 }
 
@@ -85,12 +90,6 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		fviresult, err = importFeedVersionTx(ctx, atx, fv, opts)
 		if err != nil {
 			return err
-		}
-		required := []string{"agency.txt", "routes.txt", "stops.txt"}
-		for _, fn := range required {
-			if c := fviresult.EntityCount[fn]; c == 0 {
-				return fmt.Errorf("failed to import any entities from required file '%s'", fn)
-			}
 		}
 		// Update route_stops, agency_geometries, etc...
 		log.For(ctx).Info().Msgf("Finalizing import")
@@ -169,6 +168,26 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 	}
 	if cpResult == nil {
 		return fvi, fmt.Errorf("copier returned nil result")
+	}
+
+	// Check error threshold
+	if len(opts.ErrorThreshold) > 0 {
+		thresholdResult := cpResult.CheckErrorThreshold(opts.ErrorThreshold)
+		if thresholdResult.Exceeded {
+			for fn, detail := range thresholdResult.Details {
+				if detail.Exceeded {
+					return fvi, fmt.Errorf("file '%s' exceeded error threshold: %.2f%% errors (threshold: %.2f%%)", fn, detail.ErrorPercent, detail.Threshold)
+				}
+			}
+		}
+	}
+
+	// Check required files have at least one entity
+	required := []string{"agency.txt", "routes.txt", "stops.txt"}
+	for _, fn := range required {
+		if c := cpResult.EntityCount[fn]; c == 0 {
+			return fvi, fmt.Errorf("failed to import any entities from required file '%s'", fn)
+		}
 	}
 
 	// Save feed version import

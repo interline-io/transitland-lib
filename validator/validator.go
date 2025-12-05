@@ -49,6 +49,11 @@ type Options struct {
 	MaxRTMessageSize         uint64
 	EvaluateAt               time.Time
 	EvaluateAtTimezone       string
+	// ErrorThreshold sets the maximum error percentage (0-100) allowed per file.
+	// The key is the filename (e.g., "stops.txt") or "*" for the default threshold.
+	// If any file exceeds its threshold, the validation is considered failed.
+	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
+	ErrorThreshold map[string]float64
 	copier.Options
 }
 
@@ -233,6 +238,19 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	}
 	for k, v := range cpResult.Warnings {
 		result.Warnings[k] = copierEgToValidationEg(v)
+	}
+
+	// Check error threshold
+	if len(v.Options.ErrorThreshold) > 0 {
+		thresholdResult := cpResult.CheckErrorThreshold(v.Options.ErrorThreshold)
+		if thresholdResult.Exceeded {
+			for fn, detail := range thresholdResult.Details {
+				if detail.Exceeded {
+					result.FailureReason.Set(fmt.Sprintf("file '%s' exceeded error threshold: %.2f%% errors (threshold: %.2f%%)", fn, detail.ErrorPercent, detail.Threshold))
+					return result, nil
+				}
+			}
+		}
 	}
 
 	// Return
