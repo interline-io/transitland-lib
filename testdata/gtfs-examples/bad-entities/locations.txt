@@ -1,5 +1,0 @@
-location_id,location_name,location_lat,location_lon,expect_error,expect_error,comment
-loc1,Flex Zone A,37.7749,-122.4194,,Valid location with coordinates
-missing_id,,Valid Zone Name,37.7749,-122.4194,RequiredFieldError:location_id,location_id is required
-parse_lat,loc2,Valid Zone,xyz,-122.4194,FieldParseError:location_lat,Non-numeric location_lat value
-parse_lon,loc3,Valid Zone,37.7749,xyz,FieldParseError:location_lon,Non-numeric location_lon value

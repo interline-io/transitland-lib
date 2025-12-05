@@ -36,9 +36,21 @@ func (ent *Shape) Filename() string {
 func (ent *Shape) Errors() (errs []error) {
 	// Defer on moving this to reflect path for now
 	errs = append(errs, tt.CheckPresent("shape_id", ent.ShapeID.Val)...)
-	errs = append(errs, tt.CheckInsideRange("shape_pt_lat", ent.ShapePtLat.Val, -90.0, 90.0)...)
-	errs = append(errs, tt.CheckInsideRange("shape_pt_lon", ent.ShapePtLon.Val, -180.0, 180.0)...)
-	errs = append(errs, tt.CheckPositiveInt("shape_pt_sequence", ent.ShapePtSequence.Val)...)
+	if !ent.ShapePtLat.IsPresent() {
+		errs = append(errs, causes.NewRequiredFieldError("shape_pt_lat"))
+	} else {
+		errs = append(errs, tt.CheckInsideRange("shape_pt_lat", ent.ShapePtLat.Val, -90.0, 90.0)...)
+	}
+	if !ent.ShapePtLon.IsPresent() {
+		errs = append(errs, causes.NewRequiredFieldError("shape_pt_lon"))
+	} else {
+		errs = append(errs, tt.CheckInsideRange("shape_pt_lon", ent.ShapePtLon.Val, -180.0, 180.0)...)
+	}
+	if !ent.ShapePtSequence.IsPresent() {
+		errs = append(errs, causes.NewRequiredFieldError("shape_pt_sequence"))
+	} else {
+		errs = append(errs, tt.CheckPositiveInt("shape_pt_sequence", ent.ShapePtSequence.Val)...)
+	}
 	errs = append(errs, tt.CheckPositive("shape_dist_traveled", ent.ShapeDistTraveled.Val)...)
 	return errs
 }

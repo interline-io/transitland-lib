@@ -33,6 +33,25 @@ func TestTranslation_Errors(t *testing.T) {
 			expectedErrors: nil,
 		},
 		{
+			name: "Valid stop_times translation",
+			entity: newTranslation(func(t *Translation) {
+				t.TableNameValue = tt.NewString("stop_times")
+				t.FieldName = tt.NewString("stop_headsign")
+				t.RecordID = tt.NewString("ok")
+				t.RecordSubID = tt.NewString("1")
+			}),
+			expectedErrors: nil,
+		},
+		{
+			name: "Valid feed_info translation",
+			entity: newTranslation(func(t *Translation) {
+				t.TableNameValue = tt.NewString("feed_info")
+				t.FieldName = tt.NewString("feed_publisher_name")
+				t.RecordID = tt.String{}
+			}),
+			expectedErrors: nil,
+		},
+		{
 			name: "Invalid table_name",
 			entity: newTranslation(func(t *Translation) {
 				t.TableNameValue = tt.NewString("xyz")

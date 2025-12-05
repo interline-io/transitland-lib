@@ -56,6 +56,11 @@ func (ent *BookingRule) ConditionalErrors() (errs []error) {
 			errs = append(errs, causes.NewConditionallyRequiredFieldError("prior_notice_duration_min"))
 		}
 		// prior_notice_duration_max is optional for booking_type=1
+	} else {
+		// prior_notice_duration_min is forbidden for booking_type=0 and 2
+		if ent.PriorNoticeDurationMin.Valid {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("prior_notice_duration_min", ent.PriorNoticeDurationMin.String(), "prior_notice_duration_min is forbidden for booking_type!=1"))
+		}
 	}
 
 	// booking_type=2: prior_notice_last_day is required
@@ -66,6 +71,11 @@ func (ent *BookingRule) ConditionalErrors() (errs []error) {
 		// prior_notice_duration_max is forbidden for booking_type=2
 		if ent.PriorNoticeDurationMax.Valid {
 			errs = append(errs, causes.NewConditionallyForbiddenFieldError("prior_notice_duration_max", ent.PriorNoticeDurationMax.String(), "prior_notice_duration_max is forbidden for booking_type=2"))
+		}
+	} else {
+		// prior_notice_last_day is forbidden for booking_type=0 and 1
+		if ent.PriorNoticeLastDay.Valid {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError("prior_notice_last_day", ent.PriorNoticeLastDay.String(), "prior_notice_last_day is forbidden for booking_type!=2"))
 		}
 	}
 
@@ -84,10 +94,18 @@ func (ent *BookingRule) ConditionalErrors() (errs []error) {
 	if ent.PriorNoticeLastTime.Valid && !ent.PriorNoticeLastDay.Valid {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("prior_notice_last_day"))
 	}
+	// prior_notice_last_day requires prior_notice_last_time
+	if ent.PriorNoticeLastDay.Valid && !ent.PriorNoticeLastTime.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("prior_notice_last_time"))
+	}
 
 	// prior_notice_start_time requires prior_notice_start_day
 	if ent.PriorNoticeStartTime.Valid && !ent.PriorNoticeStartDay.Valid {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("prior_notice_start_day"))
+	}
+	// prior_notice_start_day requires prior_notice_start_time
+	if ent.PriorNoticeStartDay.Valid && !ent.PriorNoticeStartTime.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("prior_notice_start_time"))
 	}
 
 	// prior_notice_service_id is forbidden except for booking_type=2

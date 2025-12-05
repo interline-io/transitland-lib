@@ -1,4 +1,0 @@
-location_group_id,stop_id,expect_error,expect_error,comment
-lg1,stop1,,Valid location group stop association
-missing_location_group,,stop1,RequiredFieldError:location_group_id,location_group_id is required
-missing_stop,lg1,,RequiredFieldError:stop_id,stop_id is required

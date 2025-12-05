@@ -33,6 +33,27 @@ func TestShape_Errors(t *testing.T) {
 			expectedErrors: nil,
 		},
 		{
+			name: "Missing shape_pt_lat",
+			entity: newShape(func(s *Shape) {
+				s.ShapePtLat = tt.Float{}
+			}),
+			expectedErrors: ParseExpectErrors("RequiredFieldError:shape_pt_lat"),
+		},
+		{
+			name: "Missing shape_pt_lon",
+			entity: newShape(func(s *Shape) {
+				s.ShapePtLon = tt.Float{}
+			}),
+			expectedErrors: ParseExpectErrors("RequiredFieldError:shape_pt_lon"),
+		},
+		{
+			name: "Missing shape_pt_sequence",
+			entity: newShape(func(s *Shape) {
+				s.ShapePtSequence = tt.Int{}
+			}),
+			expectedErrors: ParseExpectErrors("RequiredFieldError:shape_pt_sequence"),
+		},
+		{
 			name: "Invalid shape_pt_lat (too low)",
 			entity: newShape(func(s *Shape) {
 				s.ShapePtLat = tt.NewFloat(-91.0)

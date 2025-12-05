@@ -16,18 +16,25 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 		{
 			name: "Valid: booking_type=0 with minimal fields",
 			bookingRule: &BookingRule{
-				BookingRuleID:          tt.NewString("rule1"),
+				BookingRuleID: tt.NewString("rule1"),
+				BookingType:   tt.NewInt(0),
+			},
+			expectedErrors: nil,
+		},
+		{
+			name: "Invalid: booking_type=0 with prior_notice_duration_min",
+			bookingRule: &BookingRule{
+				BookingRuleID:          tt.NewString("rule1_invalid"),
 				BookingType:            tt.NewInt(0),
 				PriorNoticeDurationMin: tt.NewInt(15),
 			},
-			expectedErrors: nil,
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:prior_notice_duration_min"),
 		},
 		{
 			name: "Invalid: booking_type=0 with prior_notice_duration_max",
 			bookingRule: &BookingRule{
 				BookingRuleID:          tt.NewString("rule2"),
 				BookingType:            tt.NewInt(0),
-				PriorNoticeDurationMin: tt.NewInt(15),
 				PriorNoticeDurationMax: tt.NewInt(60),
 			},
 			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:prior_notice_duration_max"),
@@ -35,10 +42,10 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 		{
 			name: "Invalid: booking_type=0 with prior_notice_start_day",
 			bookingRule: &BookingRule{
-				BookingRuleID:          tt.NewString("rule3"),
-				BookingType:            tt.NewInt(0),
-				PriorNoticeDurationMin: tt.NewInt(15),
-				PriorNoticeStartDay:    tt.NewInt(1),
+				BookingRuleID:        tt.NewString("rule3"),
+				BookingType:          tt.NewInt(0),
+				PriorNoticeStartDay:  tt.NewInt(1),
+				PriorNoticeStartTime: tt.NewSeconds(3600),
 			},
 			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:prior_notice_start_day"),
 		},
@@ -47,9 +54,9 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 			bookingRule: &BookingRule{
 				BookingRuleID:          tt.NewString("rule4"),
 				BookingType:            tt.NewInt(0),
-				PriorNoticeDurationMin: tt.NewInt(15),
 				PriorNoticeDurationMax: tt.NewInt(60),
 				PriorNoticeStartDay:    tt.NewInt(1),
+				PriorNoticeStartTime:   tt.NewSeconds(3600),
 			},
 			expectedErrors: ParseExpectErrors(
 				"ConditionallyForbiddenFieldError:prior_notice_duration_max",
@@ -102,6 +109,7 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 				PriorNoticeDurationMin: tt.NewInt(30),
 				PriorNoticeDurationMax: tt.NewInt(120),
 				PriorNoticeStartDay:    tt.NewInt(1),
+				PriorNoticeStartTime:   tt.NewSeconds(3600),
 			},
 			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:prior_notice_start_day"),
 		},
@@ -112,6 +120,7 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 				BookingType:            tt.NewInt(1),
 				PriorNoticeDurationMin: tt.NewInt(30),
 				PriorNoticeStartDay:    tt.NewInt(1),
+				PriorNoticeStartTime:   tt.NewSeconds(3600),
 			},
 			expectedErrors: nil,
 		},
@@ -125,6 +134,17 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 			},
 			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:prior_notice_service_id"),
 		},
+		{
+			name: "Invalid: booking_type=1 with prior_notice_last_day",
+			bookingRule: &BookingRule{
+				BookingRuleID:          tt.NewString("rule11_last_day"),
+				BookingType:            tt.NewInt(1),
+				PriorNoticeDurationMin: tt.NewInt(30),
+				PriorNoticeLastDay:     tt.NewInt(1),
+				PriorNoticeLastTime:    tt.NewSeconds(3600),
+			},
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:prior_notice_last_day"),
+		},
 
 		// ===== BOOKING_TYPE=2 TESTS =====
 		{
@@ -136,11 +156,23 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 			expectedErrors: ParseExpectErrors("ConditionallyRequiredFieldError:prior_notice_last_day"),
 		},
 		{
+			name: "Invalid: booking_type=2 with prior_notice_duration_min",
+			bookingRule: &BookingRule{
+				BookingRuleID:          tt.NewString("rule12_min"),
+				BookingType:            tt.NewInt(2),
+				PriorNoticeLastDay:     tt.NewInt(1),
+				PriorNoticeLastTime:    tt.NewSeconds(3600),
+				PriorNoticeDurationMin: tt.NewInt(30),
+			},
+			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:prior_notice_duration_min"),
+		},
+		{
 			name: "Valid: booking_type=2 with required fields",
 			bookingRule: &BookingRule{
-				BookingRuleID:      tt.NewString("rule13"),
-				BookingType:        tt.NewInt(2),
-				PriorNoticeLastDay: tt.NewInt(1),
+				BookingRuleID:       tt.NewString("rule13"),
+				BookingType:         tt.NewInt(2),
+				PriorNoticeLastDay:  tt.NewInt(1),
+				PriorNoticeLastTime: tt.NewSeconds(3600),
 			},
 			expectedErrors: nil,
 		},
@@ -150,6 +182,7 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 				BookingRuleID:          tt.NewString("rule14"),
 				BookingType:            tt.NewInt(2),
 				PriorNoticeLastDay:     tt.NewInt(1),
+				PriorNoticeLastTime:    tt.NewSeconds(3600),
 				PriorNoticeDurationMax: tt.NewInt(120),
 			},
 			expectedErrors: ParseExpectErrors("ConditionallyForbiddenFieldError:prior_notice_duration_max"),
@@ -160,6 +193,7 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 				BookingRuleID:        tt.NewString("rule15"),
 				BookingType:          tt.NewInt(2),
 				PriorNoticeLastDay:   tt.NewInt(1),
+				PriorNoticeLastTime:  tt.NewSeconds(3600),
 				PriorNoticeServiceID: tt.NewKey("service1"),
 			},
 			expectedErrors: nil,
@@ -181,13 +215,24 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 		{
 			name: "Invalid: prior_notice_last_time without prior_notice_last_day",
 			bookingRule: &BookingRule{
-				BookingRuleID:       tt.NewString("rule17"),
-				BookingType:         tt.NewInt(1),
-				PriorNoticeLastTime: tt.NewSeconds(3600),
+				BookingRuleID:          tt.NewString("rule17"),
+				BookingType:            tt.NewInt(1),
+				PriorNoticeDurationMin: tt.NewInt(30),
+				PriorNoticeLastTime:    tt.NewSeconds(3600),
 			},
 			expectedErrors: ParseExpectErrors(
-				"ConditionallyRequiredFieldError:prior_notice_duration_min",
 				"ConditionallyRequiredFieldError:prior_notice_last_day",
+			),
+		},
+		{
+			name: "Invalid: prior_notice_last_day without prior_notice_last_time",
+			bookingRule: &BookingRule{
+				BookingRuleID:      tt.NewString("rule17_missing_time"),
+				BookingType:        tt.NewInt(2),
+				PriorNoticeLastDay: tt.NewInt(1),
+			},
+			expectedErrors: ParseExpectErrors(
+				"ConditionallyRequiredFieldError:prior_notice_last_time",
 			),
 		},
 		{
@@ -203,13 +248,25 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 		{
 			name: "Invalid: prior_notice_start_time without prior_notice_start_day",
 			bookingRule: &BookingRule{
-				BookingRuleID:        tt.NewString("rule19"),
-				BookingType:          tt.NewInt(1),
-				PriorNoticeStartTime: tt.NewSeconds(7200),
+				BookingRuleID:          tt.NewString("rule19"),
+				BookingType:            tt.NewInt(1),
+				PriorNoticeDurationMin: tt.NewInt(30),
+				PriorNoticeStartTime:   tt.NewSeconds(7200),
 			},
 			expectedErrors: ParseExpectErrors(
-				"ConditionallyRequiredFieldError:prior_notice_duration_min",
 				"ConditionallyRequiredFieldError:prior_notice_start_day",
+			),
+		},
+		{
+			name: "Invalid: prior_notice_start_day without prior_notice_start_time",
+			bookingRule: &BookingRule{
+				BookingRuleID:          tt.NewString("rule19_missing_time"),
+				BookingType:            tt.NewInt(1),
+				PriorNoticeDurationMin: tt.NewInt(30),
+				PriorNoticeStartDay:    tt.NewInt(1),
+			},
+			expectedErrors: ParseExpectErrors(
+				"ConditionallyRequiredFieldError:prior_notice_start_time",
 			),
 		},
 		{
@@ -256,12 +313,12 @@ func TestBookingRule_ConditionalErrors(t *testing.T) {
 		{
 			name: "Valid: booking_type=0 with all compatible optional fields",
 			bookingRule: &BookingRule{
-				BookingRuleID:          tt.NewString("rule23"),
-				BookingType:            tt.NewInt(0),
-				PriorNoticeDurationMin: tt.NewInt(10),
-				Message:                tt.NewString("Same-day service"),
-				InfoURL:                tt.NewUrl("https://example.com/info"),
-				BookingURL:             tt.NewUrl("https://example.com/book"),
+				BookingRuleID: tt.NewString("rule23"),
+				BookingType:   tt.NewInt(0),
+				// PriorNoticeDurationMin removed as it is forbidden for type 0
+				Message:    tt.NewString("Same-day service"),
+				InfoURL:    tt.NewUrl("https://example.com/info"),
+				BookingURL: tt.NewUrl("https://example.com/book"),
 			},
 			expectedErrors: nil,
 		},

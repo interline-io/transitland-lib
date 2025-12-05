@@ -1,3 +1,0 @@
-location_group_id,location_group_name,expect_error,expect_error,comment
-ok,Downtown Zone,,Valid location group
-missing_id,,Valid Zone Name,RequiredFieldError:location_group_id,location_group_id is required
