@@ -26,7 +26,16 @@ func (f *Finder) LocationsByIDs(ctx context.Context, ids []int) ([]*model.Locati
 
 func locationSelect(limit *int, after *model.Cursor, ids []int, where *model.LocationFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
-		"gtfs_locations.*",
+		"gtfs_locations.id",
+		"gtfs_locations.feed_version_id",
+		"gtfs_locations.created_at",
+		"gtfs_locations.updated_at",
+		"gtfs_locations.location_id",
+		"gtfs_locations.stop_name",
+		"gtfs_locations.stop_desc",
+		"gtfs_locations.zone_id",
+		"gtfs_locations.stop_url",
+		"gtfs_locations.geometry",
 		"feed_versions.sha1 AS feed_version_sha1",
 		"current_feeds.onestop_id AS feed_onestop_id",
 	).From("gtfs_locations").

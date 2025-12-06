@@ -26,7 +26,12 @@ func (f *Finder) LocationGroupsByIDs(ctx context.Context, ids []int) ([]*model.L
 
 func locationGroupSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
-		"gtfs_location_groups.*",
+		"gtfs_location_groups.id",
+		"gtfs_location_groups.feed_version_id",
+		"gtfs_location_groups.created_at",
+		"gtfs_location_groups.updated_at",
+		"gtfs_location_groups.location_group_id",
+		"gtfs_location_groups.location_group_name",
 		"feed_versions.sha1 AS feed_version_sha1",
 		"current_feeds.onestop_id AS feed_onestop_id",
 	).From("gtfs_location_groups").

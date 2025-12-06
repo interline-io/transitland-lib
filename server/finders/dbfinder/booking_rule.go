@@ -26,7 +26,25 @@ func (f *Finder) BookingRulesByIDs(ctx context.Context, ids []int) ([]*model.Boo
 
 func bookingRuleSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
-		"gtfs_booking_rules.*",
+		"gtfs_booking_rules.id",
+		"gtfs_booking_rules.feed_version_id",
+		"gtfs_booking_rules.created_at",
+		"gtfs_booking_rules.updated_at",
+		"gtfs_booking_rules.booking_rule_id",
+		"gtfs_booking_rules.booking_type",
+		"gtfs_booking_rules.prior_notice_duration_min",
+		"gtfs_booking_rules.prior_notice_duration_max",
+		"gtfs_booking_rules.prior_notice_last_day",
+		"gtfs_booking_rules.prior_notice_last_time",
+		"gtfs_booking_rules.prior_notice_start_day",
+		"gtfs_booking_rules.prior_notice_start_time",
+		"gtfs_booking_rules.prior_notice_service_id",
+		"gtfs_booking_rules.message",
+		"gtfs_booking_rules.pickup_message",
+		"gtfs_booking_rules.drop_off_message",
+		"gtfs_booking_rules.phone_number",
+		"gtfs_booking_rules.info_url",
+		"gtfs_booking_rules.booking_url",
 		"feed_versions.sha1 AS feed_version_sha1",
 		"current_feeds.onestop_id AS feed_onestop_id",
 	).From("gtfs_booking_rules").

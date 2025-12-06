@@ -61,7 +61,7 @@ func TestConvexHullBuilder(t *testing.T) {
 				},
 			},
 		},
-		"C-Tran-Flex": {
+		"ctran-flex": {
 			testpath.RelPath("testdata/gtfs-external/ctran-flex.zip"),
 			[]testcase{
 				{

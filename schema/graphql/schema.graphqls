@@ -317,11 +317,11 @@ type FeedVersion {
   stops(limit: Int, where: StopFilter): [Stop!]!
   "Trips associated with this feed version, if imported"
   trips(limit: Int, where: TripFilter): [Trip!]!
-  "Locations associated with this feed version, if imported"
+  "GTFS Flex locations associated with this feed version, if imported"
   locations(limit: Int, where: LocationFilter): [Location!]!
-  "Booking rules associated with this feed version, if imported"
+  "GTFS Flex booking rules associated with this feed version, if imported"
   booking_rules(limit: Int): [BookingRule!]!
-  "Location groups associated with this feed version, if imported"
+  "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int): [LocationGroup!]!
   "Feed infos associated with this feed version, if imported"
   feed_infos(limit: Int): [FeedInfo!]!
@@ -606,7 +606,7 @@ type Stop {
   feed_onestop_id: String!
   "Feed version"
   feed_version: FeedVersion!
-  "Location groups associated with this stop"
+  "GTFS Flex location groups associated with this stop"
   location_groups(limit: Int): [LocationGroup!]!
   "Stop level"
   level: Level
@@ -724,8 +724,8 @@ type Trip {
   feed_version: FeedVersion!
   "Stop times for this trip"
   stop_times(limit: Int, where: TripStopTimeFilter): [StopTime]!
-  "Flexible stop times for this trip (Locations and Location Groups)"
-  flexible_stop_times(limit: Int, where: TripStopTimeFilter): [FlexStopTime!]!
+  "GTFS Flex stop times for this trip (Locations and Location Groups)"
+  flex_stop_times(limit: Int, where: TripStopTimeFilter): [FlexStopTime!]!
   "Frequencies for this trip"
   frequencies(limit: Int): [Frequency!]!
   "GTFS-RT alerts for this trip"

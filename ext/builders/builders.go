@@ -1,11 +1,11 @@
 package builders
 
 import (
-"regexp"
-"strings"
+	"regexp"
+	"strings"
 
-"github.com/interline-io/transitland-lib/tlxy"
-"github.com/mmcloughlin/geohash"
+	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/mmcloughlin/geohash"
 )
 
 // Support methods and types
