@@ -28,7 +28,7 @@ func (f *Finder) CalendarsByServiceIDs(ctx context.Context, keys []model.FVServi
 	}
 
 	// Group by feed_version_id for more efficient querying
-	groups := map[int][]string{}
+	groups := map[int][]int{}
 	for _, key := range keys {
 		groups[key.FeedVersionID] = append(groups[key.FeedVersionID], key.ServiceID)
 	}
@@ -67,7 +67,7 @@ func (f *Finder) CalendarsByServiceIDs(ctx context.Context, keys []model.FVServi
 
 	// Arrange results to match input order
 	return arrangeBy(keys, ents, func(ent *model.Calendar) model.FVServicePair {
-		return model.FVServicePair{FeedVersionID: ent.FeedVersionID, ServiceID: ent.ServiceID.Val}
+		return model.FVServicePair{FeedVersionID: ent.FeedVersionID, ServiceID: ent.ServiceID.Int()}
 	}), nil
 }
 

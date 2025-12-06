@@ -143,7 +143,6 @@ type ComplexityRoot struct {
 		PriorNoticeLastDay     func(childComplexity int) int
 		PriorNoticeLastTime    func(childComplexity int) int
 		PriorNoticeService     func(childComplexity int) int
-		PriorNoticeServiceID   func(childComplexity int) int
 		PriorNoticeStartDay    func(childComplexity int) int
 		PriorNoticeStartTime   func(childComplexity int) int
 	}
@@ -1152,7 +1151,7 @@ type ComplexityRoot struct {
 		Calendar             func(childComplexity int) int
 		DirectionID          func(childComplexity int) int
 		FeedVersion          func(childComplexity int) int
-		FlexibleStopTimes    func(childComplexity int, limit *int, where *model.TripStopTimeFilter) int
+		FlexStopTimes        func(childComplexity int, limit *int, where *model.TripStopTimeFilter) int
 		Frequencies          func(childComplexity int, limit *int) int
 		ID                   func(childComplexity int) int
 		Route                func(childComplexity int) int
@@ -1275,7 +1274,6 @@ type AgencyResolver interface {
 	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error)
 }
 type BookingRuleResolver interface {
-	PriorNoticeServiceID(ctx context.Context, obj *model.BookingRule) (*string, error)
 	PriorNoticeService(ctx context.Context, obj *model.BookingRule) (*model.Calendar, error)
 
 	FeedVersion(ctx context.Context, obj *model.BookingRule) (*model.FeedVersion, error)
@@ -1502,7 +1500,7 @@ type TripResolver interface {
 	Shape(ctx context.Context, obj *model.Trip) (*model.Shape, error)
 	FeedVersion(ctx context.Context, obj *model.Trip) (*model.FeedVersion, error)
 	StopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.StopTime, error)
-	FlexibleStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.FlexStopTime, error)
+	FlexStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.FlexStopTime, error)
 	Frequencies(ctx context.Context, obj *model.Trip, limit *int) ([]*model.Frequency, error)
 	Alerts(ctx context.Context, obj *model.Trip, active *bool, limit *int) ([]*model.Alert, error)
 	ScheduleRelationship(ctx context.Context, obj *model.Trip) (*model.ScheduleRelationship, error)
@@ -1919,13 +1917,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.BookingRule.PriorNoticeService(childComplexity), true
-
-	case "BookingRule.prior_notice_service_id":
-		if e.complexity.BookingRule.PriorNoticeServiceID == nil {
-			break
-		}
-
-		return e.complexity.BookingRule.PriorNoticeServiceID(childComplexity), true
 
 	case "BookingRule.prior_notice_start_day":
 		if e.complexity.BookingRule.PriorNoticeStartDay == nil {
@@ -7446,17 +7437,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Trip.FeedVersion(childComplexity), true
 
-	case "Trip.flexible_stop_times":
-		if e.complexity.Trip.FlexibleStopTimes == nil {
+	case "Trip.flex_stop_times":
+		if e.complexity.Trip.FlexStopTimes == nil {
 			break
 		}
 
-		args, err := ec.field_Trip_flexible_stop_times_args(ctx, rawArgs)
+		args, err := ec.field_Trip_flex_stop_times_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Trip.FlexibleStopTimes(childComplexity, args["limit"].(*int), args["where"].(*model.TripStopTimeFilter)), true
+		return e.complexity.Trip.FlexStopTimes(childComplexity, args["limit"].(*int), args["where"].(*model.TripStopTimeFilter)), true
 
 	case "Trip.frequencies":
 		if e.complexity.Trip.Frequencies == nil {
@@ -8963,11 +8954,11 @@ type FeedVersion {
   stops(limit: Int, where: StopFilter): [Stop!]!
   "Trips associated with this feed version, if imported"
   trips(limit: Int, where: TripFilter): [Trip!]!
-  "Locations associated with this feed version, if imported"
+  "GTFS Flex locations associated with this feed version, if imported"
   locations(limit: Int, where: LocationFilter): [Location!]!
-  "Booking rules associated with this feed version, if imported"
+  "GTFS Flex booking rules associated with this feed version, if imported"
   booking_rules(limit: Int): [BookingRule!]!
-  "Location groups associated with this feed version, if imported"
+  "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int): [LocationGroup!]!
   "Feed infos associated with this feed version, if imported"
   feed_infos(limit: Int): [FeedInfo!]!
@@ -9252,7 +9243,7 @@ type Stop {
   feed_onestop_id: String!
   "Feed version"
   feed_version: FeedVersion!
-  "Location groups associated with this stop"
+  "GTFS Flex location groups associated with this stop"
   location_groups(limit: Int): [LocationGroup!]!
   "Stop level"
   level: Level
@@ -9370,8 +9361,8 @@ type Trip {
   feed_version: FeedVersion!
   "Stop times for this trip"
   stop_times(limit: Int, where: TripStopTimeFilter): [StopTime]!
-  "Flexible stop times for this trip (Locations and Location Groups)"
-  flexible_stop_times(limit: Int, where: TripStopTimeFilter): [FlexStopTime!]!
+  "GTFS Flex stop times for this trip (Locations and Location Groups)"
+  flex_stop_times(limit: Int, where: TripStopTimeFilter): [FlexStopTime!]!
   "Frequencies for this trip"
   frequencies(limit: Int): [Frequency!]!
   "GTFS-RT alerts for this trip"
@@ -9615,8 +9606,6 @@ type BookingRule {
   prior_notice_start_day: Int
   "GTFS booking_rules.prior_notice_start_time"
   prior_notice_start_time: Seconds
-  "GTFS booking_rules.prior_notice_service_id"
-  prior_notice_service_id: String
   "Prior notice service calendar"
   prior_notice_service: Calendar
   "GTFS booking_rules.message"
@@ -12374,7 +12363,7 @@ func (ec *executionContext) field_Trip_alerts_args(ctx context.Context, rawArgs 
 	return args, nil
 }
 
-func (ec *executionContext) field_Trip_flexible_stop_times_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Trip_flex_stop_times_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
@@ -14698,47 +14687,6 @@ func (ec *executionContext) fieldContext_BookingRule_prior_notice_start_time(_ c
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Seconds does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BookingRule_prior_notice_service_id(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.BookingRule().PriorNoticeServiceID(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*string)
-	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_BookingRule_prior_notice_service_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BookingRule",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -23116,8 +23064,8 @@ func (ec *executionContext) fieldContext_FeedVersion_trips(ctx context.Context, 
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
-			case "flexible_stop_times":
-				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
+			case "flex_stop_times":
+				return ec.fieldContext_Trip_flex_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -23280,8 +23228,6 @@ func (ec *executionContext) fieldContext_FeedVersion_booking_rules(ctx context.C
 				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
 			case "prior_notice_start_time":
 				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
-			case "prior_notice_service_id":
-				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
 			case "prior_notice_service":
 				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
 			case "message":
@@ -26273,8 +26219,6 @@ func (ec *executionContext) fieldContext_FlexStopTime_pickup_booking_rule(_ cont
 				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
 			case "prior_notice_start_time":
 				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
-			case "prior_notice_service_id":
-				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
 			case "prior_notice_service":
 				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
 			case "message":
@@ -26356,8 +26300,6 @@ func (ec *executionContext) fieldContext_FlexStopTime_drop_off_booking_rule(_ co
 				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
 			case "prior_notice_start_time":
 				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
-			case "prior_notice_service_id":
-				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
 			case "prior_notice_service":
 				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
 			case "message":
@@ -26574,8 +26516,8 @@ func (ec *executionContext) fieldContext_FlexStopTime_trip(_ context.Context, fi
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
-			case "flexible_stop_times":
-				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
+			case "flex_stop_times":
+				return ec.fieldContext_Trip_flex_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -41444,8 +41386,8 @@ func (ec *executionContext) fieldContext_Query_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
-			case "flexible_stop_times":
-				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
+			case "flex_stop_times":
+				return ec.fieldContext_Trip_flex_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -43598,8 +43540,8 @@ func (ec *executionContext) fieldContext_Route_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
-			case "flexible_stop_times":
-				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
+			case "flex_stop_times":
+				return ec.fieldContext_Trip_flex_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -45917,8 +45859,8 @@ func (ec *executionContext) fieldContext_RouteStopPattern_trips(ctx context.Cont
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
-			case "flexible_stop_times":
-				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
+			case "flex_stop_times":
+				return ec.fieldContext_Trip_flex_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -50931,8 +50873,6 @@ func (ec *executionContext) fieldContext_StopTime_pickup_booking_rule(_ context.
 				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
 			case "prior_notice_start_time":
 				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
-			case "prior_notice_service_id":
-				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
 			case "prior_notice_service":
 				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
 			case "message":
@@ -51014,8 +50954,6 @@ func (ec *executionContext) fieldContext_StopTime_drop_off_booking_rule(_ contex
 				return ec.fieldContext_BookingRule_prior_notice_start_day(ctx, field)
 			case "prior_notice_start_time":
 				return ec.fieldContext_BookingRule_prior_notice_start_time(ctx, field)
-			case "prior_notice_service_id":
-				return ec.fieldContext_BookingRule_prior_notice_service_id(ctx, field)
 			case "prior_notice_service":
 				return ec.fieldContext_BookingRule_prior_notice_service(ctx, field)
 			case "message":
@@ -51230,8 +51168,8 @@ func (ec *executionContext) fieldContext_StopTime_trip(_ context.Context, field 
 				return ec.fieldContext_Trip_feed_version(ctx, field)
 			case "stop_times":
 				return ec.fieldContext_Trip_stop_times(ctx, field)
-			case "flexible_stop_times":
-				return ec.fieldContext_Trip_flexible_stop_times(ctx, field)
+			case "flex_stop_times":
+				return ec.fieldContext_Trip_flex_stop_times(ctx, field)
 			case "frequencies":
 				return ec.fieldContext_Trip_frequencies(ctx, field)
 			case "alerts":
@@ -52905,8 +52843,8 @@ func (ec *executionContext) fieldContext_Trip_stop_times(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Trip_flexible_stop_times(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Trip_flexible_stop_times(ctx, field)
+func (ec *executionContext) _Trip_flex_stop_times(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Trip_flex_stop_times(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -52919,7 +52857,7 @@ func (ec *executionContext) _Trip_flexible_stop_times(ctx context.Context, field
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Trip().FlexibleStopTimes(rctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.TripStopTimeFilter))
+		return ec.resolvers.Trip().FlexStopTimes(rctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.TripStopTimeFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -52936,7 +52874,7 @@ func (ec *executionContext) _Trip_flexible_stop_times(ctx context.Context, field
 	return ec.marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTimeᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Trip_flexible_stop_times(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Trip_flex_stop_times(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Trip",
 		Field:      field,
@@ -53001,7 +52939,7 @@ func (ec *executionContext) fieldContext_Trip_flexible_stop_times(ctx context.Co
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Trip_flexible_stop_times_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Trip_flex_stop_times_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -61906,39 +61844,6 @@ func (ec *executionContext) _BookingRule(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._BookingRule_prior_notice_start_day(ctx, field, obj)
 		case "prior_notice_start_time":
 			out.Values[i] = ec._BookingRule_prior_notice_start_time(ctx, field, obj)
-		case "prior_notice_service_id":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._BookingRule_prior_notice_service_id(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "prior_notice_service":
 			field := field
 
@@ -71562,7 +71467,7 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "flexible_stop_times":
+		case "flex_stop_times":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -71571,7 +71476,7 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Trip_flexible_stop_times(ctx, field, obj)
+				res = ec._Trip_flex_stop_times(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

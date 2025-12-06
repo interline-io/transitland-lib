@@ -20,7 +20,7 @@ type FVPair struct {
 // FVServicePair is used for looking up entities by feed_version_id + service_id (string)
 type FVServicePair struct {
 	FeedVersionID int
-	ServiceID     string
+	ServiceID     int
 }
 
 // Finder provides all necessary database methods

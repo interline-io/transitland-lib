@@ -316,7 +316,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "f-c20-ctran", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		// license: create_derived_product
 		{
@@ -345,7 +345,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "f-c20-ctran", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		// license: commercial_use_allowed
 		{
@@ -374,7 +374,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "f-c20-ctran", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		// license: redistribution_allowed
 		{
@@ -403,7 +403,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "f-c20-ctran", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 
 		// license: use_without_attribution
@@ -433,7 +433,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "f-c20-ctran", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 	}
 	c, _ := newTestClient(t)

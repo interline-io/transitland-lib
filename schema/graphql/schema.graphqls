@@ -969,8 +969,6 @@ type BookingRule {
   prior_notice_start_day: Int
   "GTFS booking_rules.prior_notice_start_time"
   prior_notice_start_time: Seconds
-  "GTFS booking_rules.prior_notice_service_id"
-  prior_notice_service_id: String
   "Prior notice service calendar"
   prior_notice_service: Calendar
   "GTFS booking_rules.message"

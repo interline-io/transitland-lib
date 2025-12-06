@@ -638,7 +638,7 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "f-c20-ctran"},
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
 			selectExpectCount:  57,
 		},
 		// license: create_derived_product
@@ -663,7 +663,7 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "f-c20-ctran"},
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
 			selectExpectCount:  57,
 		},
 		// license: commercial_use_allowed
@@ -688,7 +688,7 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "f-c20-ctran"},
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
 			selectExpectCount:  57,
 		},
 		// license: redistribution_allowed
@@ -713,7 +713,7 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "f-c20-ctran"},
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
 			selectExpectCount:  57,
 		},
 		// license: use_without_attribution
@@ -738,7 +738,7 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "f-c20-ctran"},
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
 			selectExpectCount:  57,
 		},
 	}

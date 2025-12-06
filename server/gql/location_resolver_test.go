@@ -59,7 +59,7 @@ func TestLocationResolver(t *testing.T) {
 					}
 				}
 			}`,
-			expect: `{"feed_versions":[{"locations":[{"stop_times":[]}]}]}`,
+			expect: `{"feed_versions":[{"locations":[{"stop_times":[{"arrival_time":null}]}]}]}`,
 		},
 	}
 	c, _ := newTestClient(t)

@@ -151,7 +151,7 @@ type calendarDateLoaderParam struct {
 
 type calendarServiceLoaderParam struct {
 	FeedVersionID int
-	ServiceID     string
+	ServiceID     int
 }
 
 type censusGeographyLoaderParam struct {
