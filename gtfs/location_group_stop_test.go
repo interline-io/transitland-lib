@@ -33,19 +33,19 @@ func TestLocationGroupStop_Errors(t *testing.T) {
 			locationGroupStop: &LocationGroupStop{
 				StopID: tt.NewKey("stop1"),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:location_group_id"),
+			expectedErrors: PE("RequiredFieldError:location_group_id"),
 		},
 		{
 			name: "Invalid: missing stop_id",
 			locationGroupStop: &LocationGroupStop{
 				LocationGroupID: tt.NewKey("lg1"),
 			},
-			expectedErrors: ParseExpectErrors("RequiredFieldError:stop_id"),
+			expectedErrors: PE("RequiredFieldError:stop_id"),
 		},
 		{
 			name:              "Invalid: missing both required fields",
 			locationGroupStop: &LocationGroupStop{},
-			expectedErrors:    ParseExpectErrors("RequiredFieldError:location_group_id", "RequiredFieldError:stop_id"),
+			expectedErrors:    PE("RequiredFieldError:location_group_id", "RequiredFieldError:stop_id"),
 		},
 		{
 			name: "Valid: location_group_stop with mixed case IDs",

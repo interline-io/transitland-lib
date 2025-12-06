@@ -13,8 +13,8 @@ import (
 // ExpectError is an alias to testutil.ExpectError
 type ExpectError = testutil.ExpectError
 
-// ParseExpectErrors wraps testutil.ParseExpectErrors
-func ParseExpectErrors(errorStrings ...string) []ExpectError {
+// PE wraps testutil.PE
+func PE(errorStrings ...string) []ExpectError {
 	return testutil.ParseExpectErrors(errorStrings...)
 }
 
