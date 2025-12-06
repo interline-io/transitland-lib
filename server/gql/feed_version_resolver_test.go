@@ -22,7 +22,7 @@ func TestFeedVersionResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query {  feed_versions {sha1} }`,
 			selector:     "feed_versions.#.sha1",
-			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d"},
+			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"},
 		},
 		{
 			name:   "basic fields",
@@ -105,6 +105,12 @@ func TestFeedVersionResolver(t *testing.T) {
 			vars:         vars,
 			selector:     "feed_versions.0.stops.#.stop_id",
 			selectExpect: []string{"70011", "70012", "70021", "70022", "70031", "70032", "70041", "70042", "70051", "70052", "70061", "70062", "70071", "70072", "70081", "70082", "70091", "70092", "70101", "70102", "70111", "70112", "70121", "70122", "70131", "70132", "70141", "70142", "70151", "70152", "70161", "70162", "70171", "70172", "70191", "70192", "70201", "70202", "70211", "70212", "70221", "70222", "70231", "70232", "70241", "70242", "70251", "70252", "70261", "70262", "70271", "70272", "70281", "70282", "70291", "70292", "70301", "70302", "70311", "70312", "70321", "70322", "777402", "777403"},
+		},
+		{
+			name:         "locations",
+			query:        `query { feed_versions(where:{sha1:"e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}) {locations(limit:1000) {location_id}} }`,
+			selector:     "feed_versions.0.locations.#.location_id",
+			selectExpect: []string{"location_id__75e0de0d-d90c-4f15-a6cc-001f734e0f13", "location_id__8d41f4d3-7760-457e-94e1-6f7980cb3c20", "location_id__ac79ba5e-31ae-4879-a455-a053862dbe59", "location_id__2a077a44-c1e9-44c6-8b26-6ece58b64db6", "location_id__43ca2d5b-a235-4669-a27e-371a7c528cca", "location_id__bb80cf18-9fa7-498a-b22f-1f66eb4214a6", "location_id__11f830d0-adec-468a-a8d6-513184e476a1", "location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"},
 		},
 		// where
 		{
@@ -489,7 +495,7 @@ func TestFeedVersionResolver_License(t *testing.T) {
 	baFvs := []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
 	haFvs := []string{"c969427f56d3a645195dd8365cde6d7feae7e99b"}
 	ctFvs := []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
-	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
+	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}
 	testcases := []testcase{
 		// license: share_alike_optional
 		{

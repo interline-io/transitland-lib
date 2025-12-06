@@ -45,6 +45,7 @@ type pathwayLoaderParam struct {
 type stopTimeLoaderParam struct {
 	TripID        int
 	StopID        int
+	LocationID    int
 	FeedVersionID int
 	Limit         *int
 	Where         *model.StopTimeFilter
@@ -148,6 +149,11 @@ type calendarDateLoaderParam struct {
 	Where     *model.CalendarDateFilter
 }
 
+type calendarServiceLoaderParam struct {
+	FeedVersionID int
+	ServiceID     int
+}
+
 type censusGeographyLoaderParam struct {
 	EntityType string
 	EntityID   int
@@ -226,4 +232,20 @@ type validationReportErrorExemplarLoaderParam struct {
 type validationReportErrorGroupLoaderParam struct {
 	ValidationReportID int
 	Limit              *int
+}
+
+type bookingRuleLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+}
+
+type locationGroupLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+}
+
+type locationLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+	Where         *model.LocationFilter
 }

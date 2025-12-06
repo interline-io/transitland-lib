@@ -26,6 +26,11 @@ func (r *stopResolver) FeedVersion(ctx context.Context, obj *model.Stop) (*model
 	return LoaderFor(ctx).FeedVersionsByIDs.Load(ctx, obj.FeedVersionID)()
 }
 
+func (r *stopResolver) LocationGroups(ctx context.Context, obj *model.Stop, limit *int) ([]*model.LocationGroup, error) {
+	// TODO
+	return nil, nil
+}
+
 func (r *stopResolver) Level(ctx context.Context, obj *model.Stop) (*model.Level, error) {
 	if !obj.LevelID.Valid {
 		return nil, nil

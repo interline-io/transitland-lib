@@ -222,8 +222,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  14903,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  16292,
 		},
 		// license: create_derived_product
 		{
@@ -247,8 +247,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  14903,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  16292,
 		},
 		// license: commercial_use_allowed
 		{
@@ -272,8 +272,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  14903,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  16292,
 		},
 		// license: redistribution_allowed
 		{
@@ -297,8 +297,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  14903,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  16292,
 		},
 		// license: use_without_attribution
 		{
@@ -322,8 +322,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  14903,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  16292,
 		},
 	}
 	c, _ := newTestClient(t)

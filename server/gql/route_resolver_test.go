@@ -18,7 +18,7 @@ func TestRouteResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query {  routes { route_id } }`,
 			selector:     "routes.#.route_id",
-			selectExpect: []string{"1", "12", "14", "15", "16", "17", "19", "20", "24", "25", "275", "30", "31", "32", "33", "34", "35", "36", "360", "37", "38", "39", "400", "42", "45", "46", "48", "5", "51", "6", "60", "7", "75", "8", "9", "96", "97", "570", "571", "572", "573", "574", "800", "PWT", "SKY", "01", "03", "05", "07", "11", "19", "Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
+			selectExpect: []string{"1", "12", "14", "15", "16", "17", "19", "20", "24", "25", "275", "30", "31", "32", "33", "34", "35", "36", "360", "37", "38", "39", "400", "42", "45", "46", "48", "5", "51", "6", "60", "7", "75", "8", "9", "96", "97", "570", "571", "572", "573", "574", "800", "PWT", "SKY", "01", "03", "05", "07", "11", "19", "Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130", "2bc6804f-9e24-4b91-8947-c73a2363e7b6", "68456f6e-2a04-4fcb-971b-fd57348e2ed7", "3dce5414-260d-4cdb-b3d8-b256802d35c5", "0553af3e-53b8-4f98-ba47-0fc03d2404de", "fb93d53e-bf9a-426b-adb2-c913e4d5ecfd", "424421e5-c7c4-4307-8893-5ab9c913cecf"},
 		},
 		{
 			name:   "basic fields",
@@ -638,8 +638,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  57,
 		},
 		// license: create_derived_product
 		{
@@ -663,8 +663,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  57,
 		},
 		// license: commercial_use_allowed
 		{
@@ -688,8 +688,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  57,
 		},
 		// license: redistribution_allowed
 		{
@@ -713,8 +713,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  57,
 		},
 		// license: use_without_attribution
 		{
@@ -738,8 +738,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
+			selectExpectCount:  57,
 		},
 	}
 	c, _ := newTestClient(t)

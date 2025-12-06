@@ -168,6 +168,36 @@ type FeedVersionServiceLevel struct {
 	dmfr.FeedVersionServiceLevel
 }
 
+type Location struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.Location
+}
+
+type BookingRule struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.BookingRule
+}
+
+type LocationGroup struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.LocationGroup
+}
+
+type LocationGroupStop struct {
+	gtfs.LocationGroupStop
+}
+
+type FlexStopTime struct {
+	ServiceDate      tt.Date
+	Date             tt.Date
+	RTTripID         string            // internal: for ADDED trips
+	RTStopTimeUpdate *RTStopTimeUpdate // internal
+	gtfs.StopTime
+}
+
 // Some enum helpers
 
 var specTypeMap = map[string]FeedSpecTypes{

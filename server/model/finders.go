@@ -17,6 +17,12 @@ type FVPair struct {
 	EntityID      int
 }
 
+// FVServicePair is used for looking up entities by feed_version_id + service_id (string)
+type FVServicePair struct {
+	FeedVersionID int
+	ServiceID     int
+}
+
 // Finder provides all necessary database methods
 type Finder interface {
 	PermFinder
@@ -50,8 +56,11 @@ type EntityLoader interface {
 	AgenciesByIDs(context.Context, []int) ([]*Agency, []error)
 	AgenciesByOnestopIDs(context.Context, *int, *AgencyFilter, []string) ([][]*Agency, error)
 	AgencyPlacesByAgencyIDs(context.Context, *int, *AgencyPlaceFilter, []int) ([][]*AgencyPlace, error)
+	BookingRulesByFeedVersionIDs(context.Context, *int, []int) ([][]*BookingRule, error)
+	BookingRulesByIDs(context.Context, []int) ([]*BookingRule, []error)
 	CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error)
 	CalendarsByIDs(context.Context, []int) ([]*Calendar, []error)
+	CalendarsByServiceIDs(context.Context, []FVServicePair) ([]*Calendar, []error)
 	CensusDatasetLayersByDatasetIDs(context.Context, []int) ([][]*CensusLayer, []error)
 	CensusFieldsByTableIDs(context.Context, *int, []int) ([][]*CensusField, error)
 	CensusGeographiesByDatasetIDs(context.Context, *int, *CensusDatasetGeographyFilter, []int) ([][]*CensusGeography, error)
@@ -76,9 +85,16 @@ type EntityLoader interface {
 	FeedVersionsByIDs(context.Context, []int) ([]*FeedVersion, []error)
 	FeedVersionServiceLevelsByFeedVersionIDs(context.Context, *int, *FeedVersionServiceLevelFilter, []int) ([][]*FeedVersionServiceLevel, error)
 	FeedVersionServiceWindowByFeedVersionIDs(context.Context, []int) ([]*FeedVersionServiceWindow, []error)
+	FlexStopTimesByStopIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
+	FlexStopTimesByLocationIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
+	FlexStopTimesByTripIDs(context.Context, *int, *TripStopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
 	FrequenciesByTripIDs(context.Context, *int, []int) ([][]*Frequency, error)
 	LevelsByIDs(context.Context, []int) ([]*Level, []error)
 	LevelsByParentStationIDs(context.Context, *int, []int) ([][]*Level, error)
+	LocationGroupsByFeedVersionIDs(context.Context, *int, []int) ([][]*LocationGroup, error)
+	LocationGroupsByIDs(context.Context, []int) ([]*LocationGroup, []error)
+	LocationsByFeedVersionIDs(context.Context, *int, *LocationFilter, []int) ([][]*Location, error)
+	LocationsByIDs(context.Context, []int) ([]*Location, []error)
 	OperatorsByAgencyIDs(context.Context, []int) ([]*Operator, []error)
 	OperatorsByCOIFs(context.Context, []int) ([]*Operator, []error)
 	OperatorsByFeedIDs(context.Context, *int, *OperatorFilter, []int) ([][]*Operator, error)
