@@ -67,6 +67,7 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 			lat: v.Geometry.Y(),
 		}
 	case *gtfs.Location:
+		// Include location geometries in feed version convex hull
 		pp.locationGeometries = append(pp.locationGeometries, v.Geometry)
 	case *gtfs.Route:
 		pp.routeStopGeoms[eid] = &routeStopGeoms{

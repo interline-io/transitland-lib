@@ -48,7 +48,7 @@ GraphQL Query → Resolver → Loader → Finder → Database
 
 ## Step-by-Step: Adding a New Entity
 
-This guide uses `BookingRule` as the example entity. Follow these steps to add any new GTFS entity to the GraphQL API.
+This guide uses `Stop` as the example entity, demonstrating relationships with `Trip` and `StopTime`. Follow these steps to add any new GTFS entity to the GraphQL API.
 
 ### Step 1: Define the Finder Interface Methods
 
@@ -60,11 +60,11 @@ Add two methods to the `EntityLoader` interface:
 type EntityLoader interface {
     // ... existing methods ...
     
-    // Fetch multiple BookingRules by their IDs (primary key lookup)
-    BookingRulesByIDs(context.Context, []int) ([]*BookingRule, []error)
+    // Fetch multiple Stops by their IDs (primary key lookup)
+    StopsByIDs(context.Context, []int) ([]*Stop, []error)
     
-    // Fetch all BookingRules grouped by FeedVersion (one-to-many)
-    BookingRulesByFeedVersionIDs(context.Context, *int, []int) ([][]*BookingRule, error)
+    // Fetch all Stops grouped by FeedVersion (one-to-many)
+    StopsByFeedVersionIDs(context.Context, *int, []int) ([][]*Stop, error)
 }
 ```
 
@@ -74,7 +74,7 @@ type EntityLoader interface {
 
 ### Step 2: Implement Database Finder Methods
 
-**File**: `server/finders/dbfinder/booking_rule.go` (create new file)
+**File**: `server/finders/dbfinder/stop.go` (create new file)
 
 ```go
 package dbfinder
@@ -87,45 +87,54 @@ import (
     sq "github.com/irees/squirrel"
 )
 
-// BookingRulesByFeedVersionIDs loads BookingRules grouped by feed_version_id
-func (f *Finder) BookingRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.BookingRule, error) {
-    var ents []*model.BookingRule
-    q := bookingRuleSelect(limit, nil, nil).Where(In("gtfs_booking_rules.feed_version_id", keys))
+// StopsByFeedVersionIDs loads Stops grouped by feed_version_id
+func (f *Finder) StopsByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Stop, error) {
+    var ents []*model.Stop
+    q := stopSelect(limit, nil, nil).Where(In("gtfs_stops.feed_version_id", keys))
     err := dbutil.Select(ctx, f.db, q, &ents)
-    return arrangeGroup(keys, ents, func(ent *model.BookingRule) int { return ent.FeedVersionID }), err
+    return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.FeedVersionID }), err
 }
 
-// BookingRulesByIDs loads specific BookingRules by their primary keys
-func (f *Finder) BookingRulesByIDs(ctx context.Context, ids []int) ([]*model.BookingRule, []error) {
-    var ents []*model.BookingRule
-    q := bookingRuleSelect(nil, nil, ids)
+// StopsByIDs loads specific Stops by their primary keys
+func (f *Finder) StopsByIDs(ctx context.Context, ids []int) ([]*model.Stop, []error) {
+    var ents []*model.Stop
+    q := stopSelect(nil, nil, ids)
     if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
         return nil, []error{err}
     }
-    return arrangeBy(ids, ents, func(ent *model.BookingRule) int { return ent.ID }), nil
+    return arrangeBy(ids, ents, func(ent *model.Stop) int { return ent.ID }), nil
 }
 
-// bookingRuleSelect builds the base SELECT query with explicit field enumeration
-func bookingRuleSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder {
+// stopSelect builds the base SELECT query with explicit field enumeration
+func stopSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder {
     q := sq.StatementBuilder.Select(
         // IMPORTANT: Enumerate all fields explicitly (security policy)
-        "gtfs_booking_rules.id",
-        "gtfs_booking_rules.feed_version_id",
-        "gtfs_booking_rules.created_at",
-        "gtfs_booking_rules.updated_at",
-        "gtfs_booking_rules.booking_rule_id",
-        "gtfs_booking_rules.booking_type",
-        "gtfs_booking_rules.prior_notice_duration_min",
-        "gtfs_booking_rules.prior_notice_duration_max",
+        "gtfs_stops.id",
+        "gtfs_stops.feed_version_id",
+        "gtfs_stops.created_at",
+        "gtfs_stops.updated_at",
+        "gtfs_stops.stop_id",
+        "gtfs_stops.stop_name",
+        "gtfs_stops.stop_lat",
+        "gtfs_stops.stop_lon",
+        "gtfs_stops.stop_code",
+        "gtfs_stops.stop_desc",
+        "gtfs_stops.zone_id",
+        "gtfs_stops.stop_url",
+        "gtfs_stops.location_type",
+        "gtfs_stops.parent_station",
+        "gtfs_stops.stop_timezone",
+        "gtfs_stops.wheelchair_boarding",
+        "gtfs_stops.platform_code",
         // ... all other fields ...
         "feed_versions.sha1 AS feed_version_sha1",
         "current_feeds.onestop_id AS feed_onestop_id",
-    ).From("gtfs_booking_rules").
-        Join("feed_versions ON feed_versions.id = gtfs_booking_rules.feed_version_id").
+    ).From("gtfs_stops").
+        Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
         Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
 
     if len(ids) > 0 {
-        q = q.Where(In("gtfs_booking_rules.id", ids))
+        q = q.Where(In("gtfs_stops.id", ids))
     }
     q = q.Limit(finderCheckLimit(limit))
     return q
@@ -149,8 +158,8 @@ func bookingRuleSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuil
 type Loaders struct {
     // ... existing loaders ...
     
-    BookingRulesByIDs            *dataloader.Loader[int, *model.BookingRule]
-    BookingRulesByFeedVersionIDs *dataloader.Loader[int, []*model.BookingRule]
+    StopsByIDs            *dataloader.Loader[int, *model.Stop]
+    StopsByFeedVersionIDs *dataloader.Loader[int, []*model.Stop]
 }
 ```
 
@@ -161,12 +170,12 @@ func NewLoaders(ctx context.Context, finder model.Finder) *Loaders {
     return &Loaders{
         // ... existing loaders ...
         
-        BookingRulesByIDs: withWaitAndCapacity(func(ctx context.Context, ids []int) ([]*model.BookingRule, []error) {
-            return finder.BookingRulesByIDs(ctx, ids)
+        StopsByIDs: withWaitAndCapacity(func(ctx context.Context, ids []int) ([]*model.Stop, []error) {
+            return finder.StopsByIDs(ctx, ids)
         }),
         
-        BookingRulesByFeedVersionIDs: withWaitAndCapacityGroup(func(ctx context.Context, ids []int) ([][]*model.BookingRule, error) {
-            return finder.BookingRulesByFeedVersionIDs(ctx, nil, ids)
+        StopsByFeedVersionIDs: withWaitAndCapacityGroup(func(ctx context.Context, ids []int) ([][]*model.Stop, error) {
+            return finder.StopsByFeedVersionIDs(ctx, nil, ids)
         }),
     }
 }
@@ -181,7 +190,7 @@ func NewLoaders(ctx context.Context, finder model.Finder) *Loaders {
 
 ### Step 4: Create GraphQL Resolver
 
-**File**: `server/gql/booking_rule_resolver.go` (create new file)
+**File**: `server/gql/stop_resolver.go` (create new file)
 
 ```go
 package gql
@@ -192,24 +201,28 @@ import (
     "github.com/interline-io/transitland-lib/server/model"
 )
 
-type bookingRuleResolver struct{ *Resolver }
+type stopResolver struct{ *Resolver }
 
-// FeedVersion returns the parent FeedVersion for this BookingRule
-func (r *bookingRuleResolver) FeedVersion(ctx context.Context, obj *model.BookingRule) (*model.FeedVersion, error) {
+// FeedVersion returns the parent FeedVersion for this Stop
+func (r *stopResolver) FeedVersion(ctx context.Context, obj *model.Stop) (*model.FeedVersion, error) {
     return LoaderFor(ctx).FeedVersionsByIDs.Load(ctx, obj.FeedVersionID)()
 }
 
-// PriorNoticeServiceID returns the service_id as a GraphQL String (nullable)
-func (r *bookingRuleResolver) PriorNoticeServiceID(ctx context.Context, obj *model.BookingRule) (*string, error) {
-    return obj.PriorNoticeServiceID.Ptr(), nil
-}
-
-// PriorNoticeService resolves the Calendar entity referenced by prior_notice_calendar_id
-func (r *bookingRuleResolver) PriorNoticeService(ctx context.Context, obj *model.BookingRule) (*model.Calendar, error) {
-    if !obj.PriorNoticeCalendarID.Valid {
+// ParentStation returns the parent stop (for stations)
+func (r *stopResolver) ParentStation(ctx context.Context, obj *model.Stop) (*model.Stop, error) {
+    if !obj.ParentStation.Valid {
         return nil, nil
     }
-    return LoaderFor(ctx).CalendarsByIDs.Load(ctx, int(obj.PriorNoticeCalendarID.Val))()
+    return LoaderFor(ctx).StopsByIDs.Load(ctx, obj.ParentStation.Int())()
+}
+
+// StopTimes returns all StopTimes for this Stop
+func (r *stopResolver) StopTimes(ctx context.Context, obj *model.Stop, limit *int) ([]*model.StopTime, error) {
+    return LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
+        FeedVersionID: obj.FeedVersionID,
+        StopID:        obj.ID,
+        Limit:         limit,
+    })()
 }
 ```
 
@@ -220,25 +233,25 @@ func (r *bookingRuleResolver) PriorNoticeService(ctx context.Context, obj *model
    return LoaderFor(ctx).FeedVersionsByIDs.Load(ctx, obj.FeedVersionID)()
    ```
 
-2. **Nullable Fields** (e.g., `PriorNoticeServiceID`):
+2. **Nullable Fields** (e.g., `ParentStation`):
    ```go
-   return obj.PriorNoticeServiceID.Ptr(), nil
-   ```
-
-3. **Composite Keys** (e.g., `PriorNoticeService`):
-   ```go
-   if !obj.PriorNoticeServiceID.Valid {
+   if !obj.ParentStation.Valid {
        return nil, nil  // Handle null case
    }
-   return LoaderFor(ctx).CalendarsByServiceIDs.Load(ctx, calendarServiceLoaderParam{
+   return LoaderFor(ctx).StopsByIDs.Load(ctx, obj.ParentStation.Int())()
+   ```
+
+3. **One-to-Many** (e.g., `StopTimes` for a Stop):
+   ```go
+   return LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
        FeedVersionID: obj.FeedVersionID,
-       ServiceID:     obj.PriorNoticeServiceID.Val,
+       StopID:        obj.ID,
    })()
    ```
 
-4. **One-to-Many** (e.g., on FeedVersion resolver):
+4. **One-to-Many on FeedVersion** (e.g., all Stops):
    ```go
-   return LoaderFor(ctx).BookingRulesByFeedVersionIDs.Load(ctx, obj.ID)()
+   return LoaderFor(ctx).StopsByFeedVersionIDs.Load(ctx, obj.ID)()
    ```
 
 ### Step 5: Register Resolver with GraphQL
@@ -248,8 +261,8 @@ func (r *bookingRuleResolver) PriorNoticeService(ctx context.Context, obj *model
 Add a method to return your resolver:
 
 ```go
-func (r *Resolver) BookingRule() gqlout.BookingRuleResolver { 
-    return &bookingRuleResolver{r} 
+func (r *Resolver) Stop() gqlout.StopResolver { 
+    return &stopResolver{r} 
 }
 ```
 
@@ -257,18 +270,18 @@ This connects the GraphQL type to your resolver implementation.
 
 ### Step 6: Add GraphQL Query Resolvers (Optional)
 
-If you want top-level queries (e.g., `query { bookingRules { ... } }`), add to the Query resolver:
+If you want top-level queries (e.g., `query { stops { ... } }`), add to the Query resolver:
 
 **File**: `server/gql/query_resolver.go`
 
 ```go
-func (r *queryResolver) BookingRules(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.BookingRuleFilter) ([]*model.BookingRule, error) {
-    // Use FindBookingRules from EntityFinder interface
-    return r.finder.FindBookingRules(ctx, limit, after, ids, where)
+func (r *queryResolver) Stops(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.StopFilter) ([]*model.Stop, error) {
+    // Use FindStops from EntityFinder interface
+    return r.finder.FindStops(ctx, limit, after, ids, where)
 }
 ```
 
-**Note**: This requires implementing `FindBookingRules()` in the `EntityFinder` interface and dbfinder.
+**Note**: This requires implementing `FindStops()` in the `EntityFinder` interface and dbfinder.
 
 ## Loader Patterns Reference
 
@@ -310,7 +323,7 @@ return LoaderFor(ctx).RoutesByAgencyIDs.Load(ctx, obj.ID)()
 
 ### Pattern 3: Composite Key Lookup
 
-**Use Case**: Looking up by multiple fields (e.g., feed_version_id + entity_id)
+**Use Case**: Looking up by multiple fields (e.g., feed_version_id + stop_id)
 
 ```go
 // Define key type for stop times within a specific feed version
@@ -342,41 +355,70 @@ return LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
 })()
 ```
 
-### Pattern 4: Parameterized Group Queries
+### Pattern 4: Trip → StopTimes → Stops Relationship
 
-**Use Case**: One-to-many with filters (e.g., stop_times with min/max constraints)
+**Use Case**: The classic GTFS pattern - getting stops for a trip via stop_times
+
+```go
+// StopTime resolver - get the Stop for a StopTime
+func (r *stopTimeResolver) Stop(ctx context.Context, obj *model.StopTime) (*model.Stop, error) {
+    return LoaderFor(ctx).StopsByIDs.Load(ctx, obj.StopID)()
+}
+
+// Trip resolver - get all StopTimes for a Trip
+func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *int) ([]*model.StopTime, error) {
+    return LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, stopTimeLoaderParam{
+        FeedVersionID: obj.FeedVersionID,
+        TripID:        obj.ID,
+        Limit:         limit,
+    })()
+}
+
+// Stop resolver - get all StopTimes at this Stop
+func (r *stopResolver) StopTimes(ctx context.Context, obj *model.Stop, limit *int) ([]*model.StopTime, error) {
+    return LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
+        FeedVersionID: obj.FeedVersionID,
+        StopID:        obj.ID,
+        Limit:         limit,
+    })()
+}
+```
+
+### Pattern 5: Parameterized Group Queries
+
+**Use Case**: One-to-many with filters (e.g., stop_times with limit)
 
 ```go
 type stopTimeLoaderParam struct {
     FeedVersionID int
-    StopID        int
+    TripID        int
     Limit         *int
 }
 
 type Loaders struct {
-    StopTimesByStopIDs *dataloader.Loader[stopTimeLoaderParam, []*model.StopTime]
+    StopTimesByTripIDs *dataloader.Loader[stopTimeLoaderParam, []*model.StopTime]
 }
 
 // In NewLoaders():
-StopTimesByStopIDs: dataloader.NewBatchedLoader(
+StopTimesByTripIDs: dataloader.NewBatchedLoader(
     func(ctx context.Context, params []stopTimeLoaderParam) []Result[[]*model.StopTime] {
         return paramGroupQuery(ctx, params, 
-            func(param stopTimeLoaderParam) int { return param.StopID },
+            func(param stopTimeLoaderParam) int { return param.TripID },
             func(ctx context.Context, group []stopTimeLoaderParam) ([][]*model.StopTime, error) {
                 ids := groupingIds(group, func(param stopTimeLoaderParam) int { 
-                    return param.StopID 
+                    return param.TripID 
                 })
                 fvpairs := make([]model.FVPair, len(group))
                 for i, p := range group {
                     fvpairs[i] = model.FVPair{
                         FeedVersionID: p.FeedVersionID,
-                        EntityID:      p.StopID,
+                        EntityID:      p.TripID,
                     }
                 }
                 limit := anyLimit(group, func(param stopTimeLoaderParam) *int { 
                     return param.Limit 
                 })
-                return finder.StopTimesByStopIDs(ctx, limit, nil, fvpairs)
+                return finder.StopTimesByTripIDs(ctx, limit, nil, fvpairs)
             },
         )
     },
@@ -385,9 +427,9 @@ StopTimesByStopIDs: dataloader.NewBatchedLoader(
 )
 
 // In resolver:
-return LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
+return LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, stopTimeLoaderParam{
     FeedVersionID: obj.FeedVersionID,
-    StopID:        obj.ID,
+    TripID:        obj.ID,
     Limit:         limit,
 })()
 ```
@@ -398,6 +440,7 @@ return LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
 
 - **Default**: 2ms wait time
   - Good for most entities (routes, agencies, calendars)
+
 - **Large entities**: 10ms wait time
   - Use for stop_times, shapes (entities with many records per parent)
 
@@ -586,10 +629,11 @@ When adding a new entity to GraphQL:
 
 ## Additional Resources
 
-- **GraphQL Spec**: See `server/gql/FLEX-SCHEMA.md` for entity relationship design
+- **GraphQL Schema**: See `server/gql/schema/*.graphql` for entity relationship design
 - **DataLoader Library**: https://github.com/graph-gophers/dataloader
 - **Squirrel Query Builder**: https://github.com/Masterminds/squirrel (note: using irees fork)
 
 ---
 
 *This guide is a living document. If you find steps unclear or discover patterns not covered here, please update this file.*
+
