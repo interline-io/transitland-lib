@@ -108,7 +108,7 @@ type BookingRuleFilter struct {
 	// Restrict to specific ids
 	Ids []int `json:"ids,omitempty"`
 	// Search for booking rules with this booking_rule_id
-	BookingRuleID []string `json:"booking_rule_id,omitempty"`
+	BookingRuleID *string `json:"booking_rule_id,omitempty"`
 }
 
 // Search for entities within a specified bounding box
@@ -631,7 +631,7 @@ type LocationFilter struct {
 	// Restrict to specific ids
 	Ids []int `json:"ids,omitempty"`
 	// Search for locations with this location_id
-	LocationID []string `json:"location_id,omitempty"`
+	LocationID *string `json:"location_id,omitempty"`
 }
 
 // Search options for location groups
@@ -639,7 +639,7 @@ type LocationGroupFilter struct {
 	// Restrict to specific ids
 	Ids []int `json:"ids,omitempty"`
 	// Search for location groups with this location_group_id
-	LocationGroupID []string `json:"location_group_id,omitempty"`
+	LocationGroupID *string `json:"location_group_id,omitempty"`
 }
 
 // Current user metadata

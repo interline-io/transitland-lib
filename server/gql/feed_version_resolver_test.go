@@ -504,8 +504,8 @@ func TestFeedVersionResolver_Locations(t *testing.T) {
 		},
 		{
 			name:   "location filter by id",
-			query:  `query($sha1: String!, $location_id: [String!]) { feed_versions(where:{sha1:$sha1}) { locations(where:{location_id:$location_id}) { location_id stop_name } }}`,
-			vars:   hw{"sha1": ctranFlexSha1, "location_id": []string{"location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"}},
+			query:  `query($sha1: String!, $location_id: String) { feed_versions(where:{sha1:$sha1}) { locations(where:{location_id:$location_id}) { location_id stop_name } }}`,
+			vars:   hw{"sha1": ctranFlexSha1, "location_id": "location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"},
 			expect: `{"feed_versions":[{"locations":[{"location_id":"location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59","stop_name":"Rose Village"}]}]}`,
 		},
 	}
@@ -536,8 +536,8 @@ func TestFeedVersionResolver_LocationGroups(t *testing.T) {
 		},
 		{
 			name:   "location group filter by id",
-			query:  `query($sha1: String!, $location_group_id: [String!]) { feed_versions(where:{sha1:$sha1}) { location_groups(where:{location_group_id:$location_group_id}) { location_group_id location_group_name } }}`,
-			vars:   hw{"sha1": ctranFlexSha1, "location_group_id": []string{"location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e"}},
+			query:  `query($sha1: String!, $location_group_id: String) { feed_versions(where:{sha1:$sha1}) { location_groups(where:{location_group_id:$location_group_id}) { location_group_id location_group_name } }}`,
+			vars:   hw{"sha1": ctranFlexSha1, "location_group_id": "location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e"},
 			expect: `{"feed_versions":[{"location_groups":[{"location_group_id":"location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e","location_group_name":"VA Medical Center (fixed route stop)"}]}]}`,
 		},
 	}
@@ -559,8 +559,8 @@ func TestFeedVersionResolver_BookingRules(t *testing.T) {
 		},
 		{
 			name:   "booking rule filter by id",
-			query:  `query($sha1: String!, $booking_rule_id: [String!]) { feed_versions(where:{sha1:$sha1}) { booking_rules(where:{booking_rule_id:$booking_rule_id}) { booking_rule_id booking_type } }}`,
-			vars:   hw{"sha1": ctranFlexSha1, "booking_rule_id": []string{"booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a"}},
+			query:  `query($sha1: String!, $booking_rule_id: String) { feed_versions(where:{sha1:$sha1}) { booking_rules(where:{booking_rule_id:$booking_rule_id}) { booking_rule_id booking_type } }}`,
+			vars:   hw{"sha1": ctranFlexSha1, "booking_rule_id": "booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a"},
 			expect: `{"feed_versions":[{"booking_rules":[{"booking_rule_id":"booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a","booking_type":1}]}]}`,
 		},
 	}

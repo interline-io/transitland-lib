@@ -10394,14 +10394,14 @@ input LocationFilter {
   "Restrict to specific ids"
   ids: [Int!]
   "Search for locations with this location_id"
-  location_id: [String!]
+  location_id: String
 }
 
 input BookingRuleFilter {
   "Restrict to specific ids"
   ids: [Int!]
   "Search for booking rules with this booking_rule_id"
-  booking_rule_id: [String!]
+  booking_rule_id: String
 }
 
 """Search options for location groups"""
@@ -10409,7 +10409,7 @@ input LocationGroupFilter {
   "Restrict to specific ids"
   ids: [Int!]
   "Search for location groups with this location_group_id"
-  location_group_id: [String!]
+  location_group_id: String
 }
 
 """Import status for a feed version"""
@@ -58901,7 +58901,7 @@ func (ec *executionContext) unmarshalInputBookingRuleFilter(ctx context.Context,
 			it.Ids = data
 		case "booking_rule_id":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("booking_rule_id"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -59983,7 +59983,7 @@ func (ec *executionContext) unmarshalInputLocationFilter(ctx context.Context, ob
 			it.Ids = data
 		case "location_id":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("location_id"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -60017,7 +60017,7 @@ func (ec *executionContext) unmarshalInputLocationGroupFilter(ctx context.Contex
 			it.Ids = data
 		case "location_group_id":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("location_group_id"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}

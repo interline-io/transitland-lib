@@ -10,26 +10,21 @@ import (
 
 func (f *Finder) BookingRulesByFeedVersionIDs(ctx context.Context, limit *int, where *model.BookingRuleFilter, keys []int) ([][]*model.BookingRule, error) {
 	var ents []*model.BookingRule
-	q := bookingRuleSelect(limit, nil, nil).Where(In("gtfs_booking_rules.feed_version_id", keys))
-	if where != nil {
-		if len(where.BookingRuleID) > 0 {
-			q = q.Where(In("gtfs_booking_rules.booking_rule_id", where.BookingRuleID))
-		}
-	}
+	q := bookingRuleSelect(limit, nil, nil, where).Where(In("gtfs_booking_rules.feed_version_id", keys))
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.BookingRule) int { return ent.FeedVersionID }), err
 }
 
 func (f *Finder) BookingRulesByIDs(ctx context.Context, ids []int) ([]*model.BookingRule, []error) {
 	var ents []*model.BookingRule
-	q := bookingRuleSelect(nil, nil, ids)
+	q := bookingRuleSelect(nil, nil, ids, nil)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, []error{err}
 	}
 	return arrangeBy(ids, ents, func(ent *model.BookingRule) int { return ent.ID }), nil
 }
 
-func bookingRuleSelect(limit *int, _ *model.Cursor, ids []int) sq.SelectBuilder {
+func bookingRuleSelect(limit *int, _ *model.Cursor, ids []int, where *model.BookingRuleFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_booking_rules.id",
 		"gtfs_booking_rules.feed_version_id",
@@ -59,6 +54,12 @@ func bookingRuleSelect(limit *int, _ *model.Cursor, ids []int) sq.SelectBuilder 
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_booking_rules.id", ids))
 	}
+	if where != nil {
+		if where.BookingRuleID != nil && *where.BookingRuleID != "" {
+			q = q.Where(sq.Eq{"gtfs_booking_rules.booking_rule_id": *where.BookingRuleID})
+		}
+	}
+	q = q.OrderBy("gtfs_booking_rules.id ASC")
 	q = q.Limit(finderCheckLimit(limit))
 	return q
 }

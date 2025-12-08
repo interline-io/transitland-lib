@@ -46,8 +46,8 @@ func locationSelect(limit *int, _ *model.Cursor, ids []int, where *model.Locatio
 		q = q.Where(In("gtfs_locations.id", ids))
 	}
 	if where != nil {
-		if len(where.LocationID) > 0 {
-			q = q.Where(In("location_id", where.LocationID))
+		if where.LocationID != nil && *where.LocationID != "" {
+			q = q.Where(sq.Eq{"location_id": *where.LocationID})
 		}
 	}
 	q = q.OrderBy("gtfs_locations.id ASC")
