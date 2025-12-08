@@ -14,7 +14,7 @@ func (f *Finder) StopTimesByTripIDs(ctx context.Context, limit *int, where *mode
 	var ents []*model.StopTime
 	err := dbutil.Select(ctx,
 		f.db,
-		stopTimeSelect(keys, nil, where),
+		stopTimeSelect(keys, stopTimeEntityTrip, where),
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.StopTime) model.FVPair {
@@ -23,14 +23,48 @@ func (f *Finder) StopTimesByTripIDs(ctx context.Context, limit *int, where *mode
 }
 
 func (f *Finder) StopTimesByStopIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.StopTime, error) {
-	// // We need to split by feed version id to extract service window
-	// // Fields must be public
+	ents, err := f.stopTimesByEntityIDs(ctx, stopTimeEntityStop, where, keys)
+	if err != nil {
+		return nil, err
+	}
+	return arrangeGroup(keys, ents, func(ent *model.StopTime) model.FVPair {
+		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.StopID.Int()}
+	}), nil
+}
+
+// FlexStopTimesByTripIDs returns flex stop times for the given trip IDs.
+// Since FlexStopTime is an alias for StopTime, this just delegates to StopTimesByTripIDs.
+func (f *Finder) FlexStopTimesByTripIDs(ctx context.Context, limit *int, where *model.TripStopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
+	return f.StopTimesByTripIDs(ctx, limit, where, keys)
+}
+
+// FlexStopTimesByStopIDs returns flex stop times for the given stop IDs.
+// Since FlexStopTime is an alias for StopTime, this just delegates to StopTimesByStopIDs.
+func (f *Finder) FlexStopTimesByStopIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
+	return f.StopTimesByStopIDs(ctx, limit, where, keys)
+}
+
+// FlexStopTimesByLocationIDs returns flex stop times for the given location IDs.
+// Used by the Location resolver to get stop_times for flex service areas.
+func (f *Finder) FlexStopTimesByLocationIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
+	ents, err := f.stopTimesByEntityIDs(ctx, stopTimeEntityLocation, where, keys)
+	if err != nil {
+		return nil, err
+	}
+	return arrangeGroup(keys, ents, func(ent *model.StopTime) model.FVPair {
+		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.LocationID.Int()}
+	}), nil
+}
+
+// stopTimesByEntityIDs is the internal method that fetches stop_times for any entity type.
+// Public methods call this and arrange results by the appropriate grouping key.
+func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEntityType, where *model.StopTimeFilter, keys []model.FVPair) ([]*model.StopTime, error) {
 	pairGroups := map[int][]model.FVPair{}
 	for _, v := range keys {
 		pairGroups[v.FeedVersionID] = append(pairGroups[v.FeedVersionID], v)
 	}
 	var ents []*model.StopTime
-	for fvid, stopPairs := range pairGroups {
+	for fvid, entityPairs := range pairGroups {
 		fvsw, err := f.FindFeedVersionServiceWindow(ctx, fvid)
 		if err != nil {
 			return nil, err
@@ -44,22 +78,18 @@ func (f *Finder) StopTimesByStopIDs(ctx context.Context, limit *int, where *mode
 			var sts []*model.StopTime
 			var q sq.SelectBuilder
 			if serviceDate != nil {
-				// Get stops on a specified day
-				var stopKeys []int
-				for _, k := range stopPairs {
-					stopKeys = append(stopKeys, k.EntityID)
+				// Get stop_times on a specified day
+				var entityKeys []int
+				for _, k := range entityPairs {
+					entityKeys = append(entityKeys, k.EntityID)
 				}
-				q = stopDeparturesSelect(fvid, stopKeys, w)
+				q = stopDeparturesSelect(fvid, entityKeys, entityType, w)
 			} else {
-				// Otherwise get all stop_times for stop
-				q = stopTimeSelect(nil, stopPairs, nil)
+				// Otherwise get all stop_times for entity
+				q = stopTimeSelect(entityPairs, entityType, nil)
 			}
 			// Run query
-			if err := dbutil.Select(ctx,
-				f.db,
-				q,
-				&sts,
-			); err != nil {
+			if err := dbutil.Select(ctx, f.db, q, &sts); err != nil {
 				return nil, err
 			}
 			// Set service date based on StopTimeFilter, and adjust calendar date if needed
@@ -76,18 +106,28 @@ func (f *Finder) StopTimesByStopIDs(ctx context.Context, limit *int, where *mode
 			ents = append(ents, sts...)
 		}
 	}
-	return arrangeGroup(keys, ents, func(ent *model.StopTime) model.FVPair {
-		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.StopID.Int()}
-	}), nil
+	return ents, nil
 }
 
-func stopTimeSelect(tpairs []model.FVPair, spairs []model.FVPair, where *model.TripStopTimeFilter) sq.SelectBuilder {
+// stopTimeEntityType specifies which entity type to filter stop_times by
+type stopTimeEntityType int
+
+const (
+	stopTimeEntityTrip stopTimeEntityType = iota
+	stopTimeEntityStop
+	stopTimeEntityLocation
+	stopTimeEntityLocationGroup
+)
+
+func stopTimeSelect(pairs []model.FVPair, entityType stopTimeEntityType, where *model.TripStopTimeFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_trips.journey_pattern_id",
 		"gtfs_trips.journey_pattern_offset",
 		"gtfs_trips.id AS trip_id",
 		"gtfs_trips.feed_version_id",
 		"sts.stop_id",
+		"sts.location_id",
+		"sts.location_group_id",
 		"sts.arrival_time + gtfs_trips.journey_pattern_offset AS arrival_time",
 		"sts.departure_time + gtfs_trips.journey_pattern_offset AS departure_time",
 		"sts.stop_sequence",
@@ -99,6 +139,10 @@ func stopTimeSelect(tpairs []model.FVPair, spairs []model.FVPair, where *model.T
 		"sts.stop_headsign",
 		"sts.continuous_pickup",
 		"sts.continuous_drop_off",
+		"sts.start_pickup_drop_off_window",
+		"sts.end_pickup_drop_off_window",
+		"sts.pickup_booking_rule_id",
+		"sts.drop_off_booking_rule_id",
 	).
 		From("gtfs_trips").
 		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
@@ -115,20 +159,19 @@ func stopTimeSelect(tpairs []model.FVPair, spairs []model.FVPair, where *model.T
 			q = q.Where(sq.LtOrEq{"sts.arrival_time + gtfs_trips.journey_pattern_offset": where.End.Int()})
 		}
 	}
-	if len(tpairs) > 0 {
-		eids, fvids := pairKeys(tpairs)
-		q = q.Where(
-			In("gtfs_trips.id", eids),
-			In("sts.feed_version_id", fvids),
-			In("gtfs_trips.feed_version_id", fvids),
-		)
-	}
-	if len(spairs) > 0 {
-		eids, fvids := pairKeys(spairs)
-		q = q.Where(
-			In("sts.stop_id", eids),
-			In("sts.feed_version_id", fvids),
-		)
+	if len(pairs) > 0 {
+		eids, fvids := pairKeys(pairs)
+		q = q.Where(In("sts.feed_version_id", fvids))
+		switch entityType {
+		case stopTimeEntityTrip:
+			q = q.Where(In("gtfs_trips.id", eids), In("gtfs_trips.feed_version_id", fvids))
+		case stopTimeEntityStop:
+			q = q.Where(In("sts.stop_id", eids))
+		case stopTimeEntityLocation:
+			q = q.Where(In("sts.location_id", eids))
+		case stopTimeEntityLocationGroup:
+			q = q.Where(In("sts.location_group_id", eids))
+		}
 	}
 	return q
 }
@@ -166,8 +209,9 @@ func activeServicesCTE(fvid int, serviceDate time.Time) sq.CTE {
 	}
 }
 
-// this now operates on a single feed version at a time...
-func stopDeparturesSelect(fvid int, sids []int, where *model.StopTimeFilter) sq.SelectBuilder {
+// stopDeparturesSelect returns stop_times for a specific date.
+// Filters by the entity IDs based on entityType (stop_id, location_id, or location_group_id).
+func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityType, where *model.StopTimeFilter) sq.SelectBuilder {
 	// Where must already be set for local service date and timezone
 	serviceDate := time.Now()
 	if where != nil && where.ServiceDate != nil {
@@ -181,6 +225,8 @@ func stopDeparturesSelect(fvid int, sids []int, where *model.StopTimeFilter) sq.
 		"gtfs_trips.id AS trip_id",
 		"gtfs_trips.feed_version_id",
 		"sts.stop_id",
+		"sts.location_id",
+		"sts.location_group_id",
 		"sts.arrival_time_freq AS arrival_time",
 		"sts.departure_time_freq AS departure_time",
 		"sts.stop_sequence",
@@ -192,6 +238,10 @@ func stopDeparturesSelect(fvid int, sids []int, where *model.StopTimeFilter) sq.
 		"sts.stop_headsign",
 		"sts.continuous_pickup",
 		"sts.continuous_drop_off",
+		"sts.start_pickup_drop_off_window",
+		"sts.end_pickup_drop_off_window",
+		"sts.pickup_booking_rule_id",
+		"sts.drop_off_booking_rule_id",
 	).
 		WithCTE(activeServicesCTE(fvid, serviceDate)).
 		From("gtfs_trips").
@@ -226,11 +276,20 @@ func stopDeparturesSelect(fvid int, sids []int, where *model.StopTimeFilter) sq.
 			from gtfs_stop_times sts
 			where sts.trip_id = base_trip.id and sts.feed_version_id = base_trip.feed_version_id		
 			) sts on true`).
-		Where(
-			In("sts.stop_id", sids),
-			sq.Eq{"sts.feed_version_id": fvid},
-		).
+		Where(sq.Eq{"sts.feed_version_id": fvid}).
 		OrderBy("sts.departure_time_freq", "sts.trip_id") // base + offset
+
+	// Filter by entity type
+	if len(entityIDs) > 0 {
+		switch entityType {
+		case stopTimeEntityStop:
+			q = q.Where(In("sts.stop_id", entityIDs))
+		case stopTimeEntityLocation:
+			q = q.Where(In("sts.location_id", entityIDs))
+		case stopTimeEntityLocationGroup:
+			q = q.Where(In("sts.location_group_id", entityIDs))
+		}
+	}
 
 	if where != nil {
 		if where.ExcludeFirst != nil && *where.ExcludeFirst {
@@ -428,265 +487,4 @@ func pairKeys(spairs []model.FVPair) ([]int, []int) {
 		ufvids = append(ufvids, k)
 	}
 	return ueids, ufvids
-}
-
-func (f *Finder) FlexStopTimesByTripIDs(ctx context.Context, limit *int, where *model.TripStopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
-	var ents []*model.FlexStopTime
-	err := dbutil.Select(ctx,
-		f.db,
-		stopTimeSelect(keys, nil, where),
-		&ents,
-	)
-	return arrangeGroup(keys, ents, func(ent *model.FlexStopTime) model.FVPair {
-		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.TripID.Int()}
-	}), err
-}
-
-func (f *Finder) FlexStopTimesByStopIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
-	// // We need to split by feed version id to extract service window
-	// // Fields must be public
-	pairGroups := map[int][]model.FVPair{}
-	for _, v := range keys {
-		pairGroups[v.FeedVersionID] = append(pairGroups[v.FeedVersionID], v)
-	}
-	var ents []*model.FlexStopTime
-	for fvid, stopPairs := range pairGroups {
-		fvsw, err := f.FindFeedVersionServiceWindow(ctx, fvid)
-		if err != nil {
-			return nil, err
-		}
-		// Run separate queries for each possible service day
-		for _, w := range stopTimeFilterExpand(where, fvsw) {
-			var serviceDate *tt.Date
-			if w != nil && w.ServiceDate != nil {
-				serviceDate = w.ServiceDate
-			}
-			var sts []*model.FlexStopTime
-			var q sq.SelectBuilder
-			if serviceDate != nil {
-				// Get stops on a specified day
-				var stopKeys []int
-				for _, k := range stopPairs {
-					stopKeys = append(stopKeys, k.EntityID)
-				}
-				q = stopDeparturesSelect(fvid, stopKeys, w)
-			} else {
-				// Otherwise get all stop_times for stop
-				q = stopTimeSelect(nil, stopPairs, nil)
-			}
-			// Run query
-			if err := dbutil.Select(ctx,
-				f.db,
-				q,
-				&sts,
-			); err != nil {
-				return nil, err
-			}
-			// Set service date based on StopTimeFilter, and adjust calendar date if needed
-			if serviceDate != nil {
-				for _, ent := range sts {
-					ent.ServiceDate.Set(serviceDate.Val)
-					if ent.ArrivalTime.Val > 24*60*60 {
-						ent.Date.Set(serviceDate.Val.AddDate(0, 0, 1))
-					} else {
-						ent.Date.Set(serviceDate.Val)
-					}
-				}
-			}
-			ents = append(ents, sts...)
-		}
-	}
-	return arrangeGroup(keys, ents, func(ent *model.FlexStopTime) model.FVPair {
-		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.StopID.Int()}
-	}), nil
-}
-
-// FlexStopTimesByLocationIDs returns flex stop times for the given location IDs.
-// This is similar to FlexStopTimesByStopIDs but filters by location_id instead of stop_id.
-// Used by the Location resolver to get stop_times for flex service areas.
-func (f *Finder) FlexStopTimesByLocationIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
-	pairGroups := map[int][]model.FVPair{}
-	for _, v := range keys {
-		pairGroups[v.FeedVersionID] = append(pairGroups[v.FeedVersionID], v)
-	}
-	var ents []*model.FlexStopTime
-	for fvid, locationPairs := range pairGroups {
-		fvsw, err := f.FindFeedVersionServiceWindow(ctx, fvid)
-		if err != nil {
-			return nil, err
-		}
-		// Run separate queries for each possible service day
-		for _, w := range stopTimeFilterExpand(where, fvsw) {
-			var serviceDate *tt.Date
-			if w != nil && w.ServiceDate != nil {
-				serviceDate = w.ServiceDate
-			}
-			var sts []*model.FlexStopTime
-			var q sq.SelectBuilder
-			if serviceDate != nil {
-				// Get stop_times on a specified day for locations
-				var locationKeys []int
-				for _, k := range locationPairs {
-					locationKeys = append(locationKeys, k.EntityID)
-				}
-				q = locationDeparturesSelect(fvid, locationKeys, w)
-			} else {
-				// Otherwise get all stop_times for location
-				q = locationStopTimeSelect(locationPairs)
-			}
-			// Run query
-			if err := dbutil.Select(ctx,
-				f.db,
-				q,
-				&sts,
-			); err != nil {
-				return nil, err
-			}
-			// Set service date based on StopTimeFilter, and adjust calendar date if needed
-			if serviceDate != nil {
-				for _, ent := range sts {
-					ent.ServiceDate.Set(serviceDate.Val)
-					if ent.ArrivalTime.Val > 24*60*60 {
-						ent.Date.Set(serviceDate.Val.AddDate(0, 0, 1))
-					} else {
-						ent.Date.Set(serviceDate.Val)
-					}
-				}
-			}
-			ents = append(ents, sts...)
-		}
-	}
-	return arrangeGroup(keys, ents, func(ent *model.FlexStopTime) model.FVPair {
-		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.LocationID.Int()}
-	}), nil
-}
-
-// locationStopTimeSelect returns stop_times filtered by location_id (for flex areas)
-func locationStopTimeSelect(lpairs []model.FVPair) sq.SelectBuilder {
-	q := sq.StatementBuilder.Select(
-		"gtfs_trips.journey_pattern_id",
-		"gtfs_trips.journey_pattern_offset",
-		"gtfs_trips.id AS trip_id",
-		"gtfs_trips.feed_version_id",
-		"sts.stop_id",
-		"sts.location_id",
-		"sts.arrival_time + gtfs_trips.journey_pattern_offset AS arrival_time",
-		"sts.departure_time + gtfs_trips.journey_pattern_offset AS departure_time",
-		"sts.stop_sequence",
-		"sts.shape_dist_traveled",
-		"sts.pickup_type",
-		"sts.drop_off_type",
-		"sts.timepoint",
-		"sts.interpolated",
-		"sts.stop_headsign",
-		"sts.continuous_pickup",
-		"sts.continuous_drop_off",
-		"sts.start_pickup_drop_off_window",
-		"sts.end_pickup_drop_off_window",
-		"sts.pickup_booking_rule_id",
-		"sts.drop_off_booking_rule_id",
-	).
-		From("gtfs_trips").
-		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
-		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
-		Join("gtfs_trips t2 ON t2.trip_id::text = gtfs_trips.journey_pattern_id AND gtfs_trips.feed_version_id = t2.feed_version_id").
-		Join("gtfs_stop_times sts ON sts.trip_id = t2.id AND sts.feed_version_id = t2.feed_version_id").
-		Where("sts.location_id IS NOT NULL").
-		OrderBy("sts.stop_sequence, sts.arrival_time")
-
-	if len(lpairs) > 0 {
-		eids, fvids := pairKeys(lpairs)
-		q = q.Where(
-			In("sts.location_id", eids),
-			In("sts.feed_version_id", fvids),
-		)
-	}
-	return q
-}
-
-// locationDeparturesSelect returns stop_times for a specific date filtered by location_id
-func locationDeparturesSelect(fvid int, locationIds []int, where *model.StopTimeFilter) sq.SelectBuilder {
-	serviceDate := time.Now()
-	if where != nil && where.ServiceDate != nil {
-		serviceDate = where.ServiceDate.Val
-	}
-
-	// Build main query with CTEs - same structure as stopDeparturesSelect but with location_id filter
-	q := sq.StatementBuilder.Select(
-		"gtfs_trips.journey_pattern_id",
-		"gtfs_trips.journey_pattern_offset",
-		"gtfs_trips.id AS trip_id",
-		"gtfs_trips.feed_version_id",
-		"sts.stop_id",
-		"sts.location_id",
-		"sts.arrival_time_freq AS arrival_time",
-		"sts.departure_time_freq AS departure_time",
-		"sts.stop_sequence",
-		"sts.shape_dist_traveled",
-		"sts.pickup_type",
-		"sts.drop_off_type",
-		"sts.timepoint",
-		"sts.interpolated",
-		"sts.stop_headsign",
-		"sts.continuous_pickup",
-		"sts.continuous_drop_off",
-		"sts.start_pickup_drop_off_window",
-		"sts.end_pickup_drop_off_window",
-		"sts.pickup_booking_rule_id",
-		"sts.drop_off_booking_rule_id",
-	).
-		WithCTE(activeServicesCTE(fvid, serviceDate)).
-		From("gtfs_trips").
-		Join("active_services gc on gc.id = gtfs_trips.service_id").
-		Join("gtfs_trips base_trip ON base_trip.trip_id::text = gtfs_trips.journey_pattern_id AND gtfs_trips.feed_version_id = base_trip.feed_version_id").
-		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
-		JoinClause(`left join lateral (
-			select
-				generate_series(start_time, end_time, headway_secs) freq_start
-			from gtfs_frequencies
-			where gtfs_frequencies.trip_id = gtfs_trips.id
-			) freq on true`).
-		JoinClause(`join lateral (
-			select 
-				min(sts2.departure_time) first_departure_time,
-				min(sts2.stop_sequence) stop_sequence_min, 
-				max(sts2.stop_sequence) stop_sequence_max 
-			from gtfs_stop_times sts2 
-			where sts2.trip_id = base_trip.id and sts2.feed_version_id = base_trip.feed_version_id
-			) trip_stop_sequence on true`).
-		JoinClause(`join lateral (
-			select 
-				sts.*,
-				sts.arrival_time + gtfs_trips.journey_pattern_offset + coalesce(
-					- trip_stop_sequence.first_departure_time + freq.freq_start,
-					0
-				) AS arrival_time_freq,
-				sts.departure_time + gtfs_trips.journey_pattern_offset + coalesce(
-					- trip_stop_sequence.first_departure_time + freq.freq_start,
-					0
-				) AS departure_time_freq
-			from gtfs_stop_times sts
-			where sts.trip_id = base_trip.id and sts.feed_version_id = base_trip.feed_version_id		
-			) sts on true`).
-		Where(
-			In("sts.location_id", locationIds),
-			sq.Eq{"sts.feed_version_id": fvid},
-		).
-		OrderBy("sts.departure_time_freq", "sts.trip_id")
-
-	if where != nil {
-		if where.ExcludeFirst != nil && *where.ExcludeFirst {
-			q = q.Where("sts.stop_sequence > trip_stop_sequence.stop_sequence_min")
-		}
-		if where.ExcludeLast != nil && *where.ExcludeLast {
-			q = q.Where("sts.stop_sequence < trip_stop_sequence.stop_sequence_max")
-		}
-		if where.StartTime != nil {
-			q = q.Where(sq.GtOrEq{"sts.departure_time_freq": *where.StartTime})
-		}
-		if where.EndTime != nil {
-			q = q.Where(sq.LtOrEq{"sts.arrival_time_freq": *where.EndTime})
-		}
-	}
-	return q
 }

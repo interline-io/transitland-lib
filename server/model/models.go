@@ -190,13 +190,10 @@ type LocationGroupStop struct {
 	gtfs.LocationGroupStop
 }
 
-type FlexStopTime struct {
-	ServiceDate      tt.Date
-	Date             tt.Date
-	RTTripID         string            // internal: for ADDED trips
-	RTStopTimeUpdate *RTStopTimeUpdate // internal
-	gtfs.StopTime
-}
+// FlexStopTime is an alias for StopTime.
+// Both types represent stop_times records and share the same underlying model (gtfs.StopTime).
+// The separation exists only for GraphQL schema purposes where they have different resolvers.
+type FlexStopTime = StopTime
 
 // Some enum helpers
 
