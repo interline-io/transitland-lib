@@ -1007,6 +1007,8 @@ type LocationGroup {
   feed_version: FeedVersion!
   "Stops associated with this location group"
   stops(limit: Int): [Stop!]!
+  "Stop times associated with this location group"
+  stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
 }
 
 """Record from a static GTFS [location_group_stops.txt](https://gtfs.org/schedule/reference/#location_group_stopstxt) file."""

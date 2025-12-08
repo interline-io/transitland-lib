@@ -56,6 +56,18 @@ func (f *Finder) FlexStopTimesByLocationIDs(ctx context.Context, limit *int, whe
 	}), nil
 }
 
+// FlexStopTimesByLocationGroupIDs returns flex stop times for the given location group IDs.
+// Used by the LocationGroup resolver to get stop_times for flex service location groups.
+func (f *Finder) FlexStopTimesByLocationGroupIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
+	ents, err := f.stopTimesByEntityIDs(ctx, stopTimeEntityLocationGroup, where, keys)
+	if err != nil {
+		return nil, err
+	}
+	return arrangeGroup(keys, ents, func(ent *model.StopTime) model.FVPair {
+		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.LocationGroupID.Int()}
+	}), nil
+}
+
 // stopTimesByEntityIDs is the internal method that fetches stop_times for any entity type.
 // Public methods call this and arrange results by the appropriate grouping key.
 func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEntityType, where *model.StopTimeFilter, keys []model.FVPair) ([]*model.StopTime, error) {

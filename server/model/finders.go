@@ -17,12 +17,6 @@ type FVPair struct {
 	EntityID      int
 }
 
-// FVServicePair is used for looking up entities by feed_version_id + service_id (string)
-type FVServicePair struct {
-	FeedVersionID int
-	ServiceID     int
-}
-
 // Finder provides all necessary database methods
 type Finder interface {
 	PermFinder
@@ -86,6 +80,7 @@ type EntityLoader interface {
 	FeedVersionServiceWindowByFeedVersionIDs(context.Context, []int) ([]*FeedVersionServiceWindow, []error)
 	FlexStopTimesByStopIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
 	FlexStopTimesByLocationIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
+	FlexStopTimesByLocationGroupIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
 	FlexStopTimesByTripIDs(context.Context, *int, *TripStopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
 	FrequenciesByTripIDs(context.Context, *int, []int) ([][]*Frequency, error)
 	LevelsByIDs(context.Context, []int) ([]*Level, []error)

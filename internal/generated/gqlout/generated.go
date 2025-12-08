@@ -802,6 +802,7 @@ type ComplexityRoot struct {
 		ID                func(childComplexity int) int
 		LocationGroupID   func(childComplexity int) int
 		LocationGroupName func(childComplexity int) int
+		StopTimes         func(childComplexity int, limit *int, where *model.StopTimeFilter) int
 		Stops             func(childComplexity int, limit *int) int
 	}
 
@@ -1370,6 +1371,7 @@ type LocationResolver interface {
 type LocationGroupResolver interface {
 	FeedVersion(ctx context.Context, obj *model.LocationGroup) (*model.FeedVersion, error)
 	Stops(ctx context.Context, obj *model.LocationGroup, limit *int) ([]*model.Stop, error)
+	StopTimes(ctx context.Context, obj *model.LocationGroup, limit *int, where *model.StopTimeFilter) ([]*model.StopTime, error)
 }
 type LocationGroupStopResolver interface {
 	LocationGroup(ctx context.Context, obj *model.LocationGroupStop) (*model.LocationGroup, error)
@@ -5327,6 +5329,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.LocationGroup.LocationGroupName(childComplexity), true
+
+	case "LocationGroup.stop_times":
+		if e.complexity.LocationGroup.StopTimes == nil {
+			break
+		}
+
+		args, err := ec.field_LocationGroup_stop_times_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.LocationGroup.StopTimes(childComplexity, args["limit"].(*int), args["where"].(*model.StopTimeFilter)), true
 
 	case "LocationGroup.stops":
 		if e.complexity.LocationGroup.Stops == nil {
@@ -9646,6 +9660,8 @@ type LocationGroup {
   feed_version: FeedVersion!
   "Stops associated with this location group"
   stops(limit: Int): [Stop!]!
+  "Stop times associated with this location group"
+  stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
 }
 
 """Record from a static GTFS [location_group_stops.txt](https://gtfs.org/schedule/reference/#location_group_stopstxt) file."""
@@ -11496,6 +11512,22 @@ func (ec *executionContext) field_Feed_feed_versions_args(ctx context.Context, r
 	}
 	args["limit"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOFeedVersionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_LocationGroup_stop_times_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOStopTimeFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -23346,6 +23378,8 @@ func (ec *executionContext) fieldContext_FeedVersion_location_groups(ctx context
 				return ec.fieldContext_LocationGroup_feed_version(ctx, field)
 			case "stops":
 				return ec.fieldContext_LocationGroup_stops(ctx, field)
+			case "stop_times":
+				return ec.fieldContext_LocationGroup_stop_times(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type LocationGroup", field.Name)
 		},
@@ -26469,6 +26503,8 @@ func (ec *executionContext) fieldContext_FlexStopTime_location_group(_ context.C
 				return ec.fieldContext_LocationGroup_feed_version(ctx, field)
 			case "stops":
 				return ec.fieldContext_LocationGroup_stops(ctx, field)
+			case "stop_times":
+				return ec.fieldContext_LocationGroup_stop_times(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type LocationGroup", field.Name)
 		},
@@ -37640,6 +37676,109 @@ func (ec *executionContext) fieldContext_LocationGroup_stops(ctx context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _LocationGroup_stop_times(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroup) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_LocationGroup_stop_times(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.LocationGroup().StopTimes(rctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.StopTimeFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.StopTime)
+	fc.Result = res
+	return ec.marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_LocationGroup_stop_times(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "LocationGroup",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "arrival_time":
+				return ec.fieldContext_FlexStopTime_arrival_time(ctx, field)
+			case "departure_time":
+				return ec.fieldContext_FlexStopTime_departure_time(ctx, field)
+			case "stop_sequence":
+				return ec.fieldContext_FlexStopTime_stop_sequence(ctx, field)
+			case "stop_headsign":
+				return ec.fieldContext_FlexStopTime_stop_headsign(ctx, field)
+			case "pickup_type":
+				return ec.fieldContext_FlexStopTime_pickup_type(ctx, field)
+			case "drop_off_type":
+				return ec.fieldContext_FlexStopTime_drop_off_type(ctx, field)
+			case "timepoint":
+				return ec.fieldContext_FlexStopTime_timepoint(ctx, field)
+			case "continuous_drop_off":
+				return ec.fieldContext_FlexStopTime_continuous_drop_off(ctx, field)
+			case "continuous_pickup":
+				return ec.fieldContext_FlexStopTime_continuous_pickup(ctx, field)
+			case "shape_dist_traveled":
+				return ec.fieldContext_FlexStopTime_shape_dist_traveled(ctx, field)
+			case "interpolated":
+				return ec.fieldContext_FlexStopTime_interpolated(ctx, field)
+			case "start_pickup_drop_off_window":
+				return ec.fieldContext_FlexStopTime_start_pickup_drop_off_window(ctx, field)
+			case "end_pickup_drop_off_window":
+				return ec.fieldContext_FlexStopTime_end_pickup_drop_off_window(ctx, field)
+			case "pickup_booking_rule":
+				return ec.fieldContext_FlexStopTime_pickup_booking_rule(ctx, field)
+			case "drop_off_booking_rule":
+				return ec.fieldContext_FlexStopTime_drop_off_booking_rule(ctx, field)
+			case "location":
+				return ec.fieldContext_FlexStopTime_location(ctx, field)
+			case "location_group":
+				return ec.fieldContext_FlexStopTime_location_group(ctx, field)
+			case "trip":
+				return ec.fieldContext_FlexStopTime_trip(ctx, field)
+			case "arrival":
+				return ec.fieldContext_FlexStopTime_arrival(ctx, field)
+			case "departure":
+				return ec.fieldContext_FlexStopTime_departure(ctx, field)
+			case "service_date":
+				return ec.fieldContext_FlexStopTime_service_date(ctx, field)
+			case "date":
+				return ec.fieldContext_FlexStopTime_date(ctx, field)
+			case "schedule_relationship":
+				return ec.fieldContext_FlexStopTime_schedule_relationship(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type FlexStopTime", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_LocationGroup_stop_times_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _LocationGroupStop_id(ctx context.Context, field graphql.CollectedField, obj *model.LocationGroupStop) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_LocationGroupStop_id(ctx, field)
 	if err != nil {
@@ -37737,6 +37876,8 @@ func (ec *executionContext) fieldContext_LocationGroupStop_location_group(_ cont
 				return ec.fieldContext_LocationGroup_feed_version(ctx, field)
 			case "stops":
 				return ec.fieldContext_LocationGroup_stops(ctx, field)
+			case "stop_times":
+				return ec.fieldContext_LocationGroup_stop_times(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type LocationGroup", field.Name)
 		},
@@ -47724,6 +47865,8 @@ func (ec *executionContext) fieldContext_Stop_location_groups(ctx context.Contex
 				return ec.fieldContext_LocationGroup_feed_version(ctx, field)
 			case "stops":
 				return ec.fieldContext_LocationGroup_stops(ctx, field)
+			case "stop_times":
+				return ec.fieldContext_LocationGroup_stop_times(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type LocationGroup", field.Name)
 		},
@@ -67429,6 +67572,42 @@ func (ec *executionContext) _LocationGroup(ctx context.Context, sel ast.Selectio
 					}
 				}()
 				res = ec._LocationGroup_stops(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "stop_times":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._LocationGroup_stop_times(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

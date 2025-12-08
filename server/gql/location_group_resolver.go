@@ -16,3 +16,12 @@ func (r *locationGroupResolver) Stops(ctx context.Context, obj *model.LocationGr
 	// TODO: Implement
 	return nil, nil
 }
+
+func (r *locationGroupResolver) StopTimes(ctx context.Context, obj *model.LocationGroup, limit *int, where *model.StopTimeFilter) ([]*model.FlexStopTime, error) {
+	return LoaderFor(ctx).FlexStopTimesByLocationGroupIDs.Load(ctx, stopTimeLoaderParam{
+		FeedVersionID:   obj.FeedVersionID,
+		LocationGroupID: obj.ID,
+		Limit:           resolverCheckLimit(limit),
+		Where:           where,
+	})()
+}
