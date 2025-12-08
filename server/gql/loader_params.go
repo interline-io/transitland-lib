@@ -228,6 +228,7 @@ type validationReportErrorGroupLoaderParam struct {
 type bookingRuleLoaderParam struct {
 	FeedVersionID int
 	Limit         *int
+	Where         *model.BookingRuleFilter
 }
 
 type locationGroupLoaderParam struct {

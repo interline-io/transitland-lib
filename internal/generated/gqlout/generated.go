@@ -346,7 +346,7 @@ type ComplexityRoot struct {
 
 	FeedVersion struct {
 		Agencies              func(childComplexity int, limit *int, where *model.AgencyFilter) int
-		BookingRules          func(childComplexity int, limit *int) int
+		BookingRules          func(childComplexity int, limit *int, where *model.BookingRuleFilter) int
 		CreatedBy             func(childComplexity int) int
 		Description           func(childComplexity int) int
 		EarliestCalendarDate  func(childComplexity int) int
@@ -1335,7 +1335,7 @@ type FeedVersionResolver interface {
 	Stops(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.StopFilter) ([]*model.Stop, error)
 	Trips(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.TripFilter) ([]*model.Trip, error)
 	Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error)
-	BookingRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.BookingRule, error)
+	BookingRules(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.BookingRuleFilter) ([]*model.BookingRule, error)
 	LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.LocationGroup, error)
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
@@ -2989,7 +2989,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.FeedVersion.BookingRules(childComplexity, args["limit"].(*int)), true
+		return e.complexity.FeedVersion.BookingRules(childComplexity, args["limit"].(*int), args["where"].(*model.BookingRuleFilter)), true
 
 	case "FeedVersion.created_by":
 		if e.complexity.FeedVersion.CreatedBy == nil {
@@ -8084,6 +8084,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAgencyFilter,
 		ec.unmarshalInputAgencyLocationFilter,
 		ec.unmarshalInputAgencyPlaceFilter,
+		ec.unmarshalInputBookingRuleFilter,
 		ec.unmarshalInputBoundingBox,
 		ec.unmarshalInputCalendarDateFilter,
 		ec.unmarshalInputCensusDatasetFilter,
@@ -8957,7 +8958,7 @@ type FeedVersion {
   "GTFS Flex locations associated with this feed version, if imported"
   locations(limit: Int, where: LocationFilter): [Location!]!
   "GTFS Flex booking rules associated with this feed version, if imported"
-  booking_rules(limit: Int): [BookingRule!]!
+  booking_rules(limit: Int, where: BookingRuleFilter): [BookingRule!]!
   "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int): [LocationGroup!]!
   "Feed infos associated with this feed version, if imported"
@@ -10395,6 +10396,13 @@ input LocationFilter {
   location_id: [String!]
 }
 
+input BookingRuleFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for booking rules with this booking_rule_id"
+  booking_rule_id: [String!]
+}
+
 """Import status for a feed version"""
 enum ImportStatus {
   "Imported successfully"
@@ -11301,6 +11309,11 @@ func (ec *executionContext) field_FeedVersion_booking_rules_args(ctx context.Con
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOBookingRuleFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRuleFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -23185,7 +23198,7 @@ func (ec *executionContext) _FeedVersion_booking_rules(ctx context.Context, fiel
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.FeedVersion().BookingRules(rctx, obj, fc.Args["limit"].(*int))
+		return ec.resolvers.FeedVersion().BookingRules(rctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.BookingRuleFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -58851,6 +58864,40 @@ func (ec *executionContext) unmarshalInputAgencyPlaceFilter(ctx context.Context,
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputBookingRuleFilter(ctx context.Context, obj any) (model.BookingRuleFilter, error) {
+	var it model.BookingRuleFilter
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"ids", "booking_rule_id"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ids = data
+		case "booking_rule_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("booking_rule_id"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BookingRuleID = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputBoundingBox(ctx context.Context, obj any) (model.BoundingBox, error) {
 	var it model.BoundingBox
 	asMap := map[string]any{}
@@ -75537,6 +75584,14 @@ func (ec *executionContext) marshalOBookingRule2ᚖgithubᚗcomᚋinterlineᚑio
 		return graphql.Null
 	}
 	return ec._BookingRule(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOBookingRuleFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRuleFilter(ctx context.Context, v any) (*model.BookingRuleFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputBookingRuleFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOBool2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐBool(ctx context.Context, v any) (tt.Bool, error) {

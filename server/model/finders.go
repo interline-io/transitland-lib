@@ -56,7 +56,7 @@ type EntityLoader interface {
 	AgenciesByIDs(context.Context, []int) ([]*Agency, []error)
 	AgenciesByOnestopIDs(context.Context, *int, *AgencyFilter, []string) ([][]*Agency, error)
 	AgencyPlacesByAgencyIDs(context.Context, *int, *AgencyPlaceFilter, []int) ([][]*AgencyPlace, error)
-	BookingRulesByFeedVersionIDs(context.Context, *int, []int) ([][]*BookingRule, error)
+	BookingRulesByFeedVersionIDs(context.Context, *int, *BookingRuleFilter, []int) ([][]*BookingRule, error)
 	BookingRulesByIDs(context.Context, []int) ([]*BookingRule, []error)
 	CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error)
 	CalendarsByIDs(context.Context, []int) ([]*Calendar, []error)

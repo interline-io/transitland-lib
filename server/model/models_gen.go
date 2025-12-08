@@ -104,6 +104,13 @@ type Alert struct {
 	SeverityLevel *string `json:"severity_level,omitempty"`
 }
 
+type BookingRuleFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for booking rules with this booking_rule_id
+	BookingRuleID []string `json:"booking_rule_id,omitempty"`
+}
+
 // Search for entities within a specified bounding box
 type BoundingBox struct {
 	// Minimum longitude

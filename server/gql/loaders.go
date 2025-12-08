@@ -138,9 +138,9 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 		BookingRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			paramGroupAdapter(dbf.BookingRulesByFeedVersionIDs),
-			func(p bookingRuleLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
+			dbf.BookingRulesByFeedVersionIDs,
+			func(p bookingRuleLoaderParam) (int, *model.BookingRuleFilter, *int) {
+				return p.FeedVersionID, p.Where, p.Limit
 			},
 		),
 		BookingRulesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.BookingRulesByIDs),

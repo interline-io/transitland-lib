@@ -8,9 +8,14 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-func (f *Finder) BookingRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.BookingRule, error) {
+func (f *Finder) BookingRulesByFeedVersionIDs(ctx context.Context, limit *int, where *model.BookingRuleFilter, keys []int) ([][]*model.BookingRule, error) {
 	var ents []*model.BookingRule
 	q := bookingRuleSelect(limit, nil, nil).Where(In("gtfs_booking_rules.feed_version_id", keys))
+	if where != nil {
+		if len(where.BookingRuleID) > 0 {
+			q = q.Where(In("gtfs_booking_rules.booking_rule_id", where.BookingRuleID))
+		}
+	}
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.BookingRule) int { return ent.FeedVersionID }), err
 }
