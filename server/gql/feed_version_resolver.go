@@ -69,8 +69,8 @@ func (r *feedVersionResolver) BookingRules(ctx context.Context, obj *model.FeedV
 	return LoaderFor(ctx).BookingRulesByFeedVersionIDs.Load(ctx, bookingRuleLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
-func (r *feedVersionResolver) LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.LocationGroup, error) {
-	return LoaderFor(ctx).LocationGroupsByFeedVersionIDs.Load(ctx, locationGroupLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit)})()
+func (r *feedVersionResolver) LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationGroupFilter) ([]*model.LocationGroup, error) {
+	return LoaderFor(ctx).LocationGroupsByFeedVersionIDs.Load(ctx, locationGroupLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
 // FEED VALIDATION REPORT

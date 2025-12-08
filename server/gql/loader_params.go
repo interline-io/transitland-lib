@@ -234,6 +234,7 @@ type bookingRuleLoaderParam struct {
 type locationGroupLoaderParam struct {
 	FeedVersionID int
 	Limit         *int
+	Where         *model.LocationGroupFilter
 }
 
 type locationLoaderParam struct {

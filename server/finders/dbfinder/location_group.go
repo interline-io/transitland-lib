@@ -8,23 +8,23 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-func (f *Finder) LocationGroupsByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.LocationGroup, error) {
+func (f *Finder) LocationGroupsByFeedVersionIDs(ctx context.Context, limit *int, where *model.LocationGroupFilter, keys []int) ([][]*model.LocationGroup, error) {
 	var ents []*model.LocationGroup
-	q := locationGroupSelect(limit, nil, nil).Where(In("gtfs_location_groups.feed_version_id", keys))
+	q := locationGroupSelect(limit, nil, nil, where).Where(In("gtfs_location_groups.feed_version_id", keys))
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.LocationGroup) int { return ent.FeedVersionID }), err
 }
 
 func (f *Finder) LocationGroupsByIDs(ctx context.Context, ids []int) ([]*model.LocationGroup, []error) {
 	var ents []*model.LocationGroup
-	q := locationGroupSelect(nil, nil, ids)
+	q := locationGroupSelect(nil, nil, ids, nil)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, []error{err}
 	}
 	return arrangeBy(ids, ents, func(ent *model.LocationGroup) int { return ent.ID }), nil
 }
 
-func locationGroupSelect(limit *int, _ *model.Cursor, ids []int) sq.SelectBuilder {
+func locationGroupSelect(limit *int, _ *model.Cursor, ids []int, where *model.LocationGroupFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_location_groups.id",
 		"gtfs_location_groups.feed_version_id",
@@ -41,6 +41,12 @@ func locationGroupSelect(limit *int, _ *model.Cursor, ids []int) sq.SelectBuilde
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_location_groups.id", ids))
 	}
+	if where != nil {
+		if len(where.LocationGroupID) > 0 {
+			q = q.Where(In("location_group_id", where.LocationGroupID))
+		}
+	}
+	q = q.OrderBy("gtfs_location_groups.id ASC")
 	q = q.Limit(finderCheckLimit(limit))
 	return q
 }

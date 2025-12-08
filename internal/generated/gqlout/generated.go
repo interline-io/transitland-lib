@@ -359,7 +359,7 @@ type ComplexityRoot struct {
 		Geometry              func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		LatestCalendarDate    func(childComplexity int) int
-		LocationGroups        func(childComplexity int, limit *int) int
+		LocationGroups        func(childComplexity int, limit *int, where *model.LocationGroupFilter) int
 		Locations             func(childComplexity int, limit *int, where *model.LocationFilter) int
 		Name                  func(childComplexity int) int
 		Routes                func(childComplexity int, limit *int, where *model.RouteFilter) int
@@ -1336,7 +1336,7 @@ type FeedVersionResolver interface {
 	Trips(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.TripFilter) ([]*model.Trip, error)
 	Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error)
 	BookingRules(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.BookingRuleFilter) ([]*model.BookingRule, error)
-	LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.LocationGroup, error)
+	LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationGroupFilter) ([]*model.LocationGroup, error)
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
 	Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error)
@@ -3095,7 +3095,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.FeedVersion.LocationGroups(childComplexity, args["limit"].(*int)), true
+		return e.complexity.FeedVersion.LocationGroups(childComplexity, args["limit"].(*int), args["where"].(*model.LocationGroupFilter)), true
 
 	case "FeedVersion.locations":
 		if e.complexity.FeedVersion.Locations == nil {
@@ -8109,6 +8109,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputLevelSetInput,
 		ec.unmarshalInputLicenseFilter,
 		ec.unmarshalInputLocationFilter,
+		ec.unmarshalInputLocationGroupFilter,
 		ec.unmarshalInputOperatorFilter,
 		ec.unmarshalInputPathwayFilter,
 		ec.unmarshalInputPathwaySetInput,
@@ -8960,7 +8961,7 @@ type FeedVersion {
   "GTFS Flex booking rules associated with this feed version, if imported"
   booking_rules(limit: Int, where: BookingRuleFilter): [BookingRule!]!
   "GTFS Flex location groups associated with this feed version, if imported"
-  location_groups(limit: Int): [LocationGroup!]!
+  location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
   "Feed infos associated with this feed version, if imported"
   feed_infos(limit: Int): [FeedInfo!]!
   "Validation reports associated with this feed version"
@@ -10403,6 +10404,14 @@ input BookingRuleFilter {
   booking_rule_id: [String!]
 }
 
+"""Search options for location groups"""
+input LocationGroupFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for location groups with this location_group_id"
+  location_group_id: [String!]
+}
+
 """Import status for a feed version"""
 enum ImportStatus {
   "Imported successfully"
@@ -11347,6 +11356,11 @@ func (ec *executionContext) field_FeedVersion_location_groups_args(ctx context.C
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOLocationGroupFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -23293,7 +23307,7 @@ func (ec *executionContext) _FeedVersion_location_groups(ctx context.Context, fi
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.FeedVersion().LocationGroups(rctx, obj, fc.Args["limit"].(*int))
+		return ec.resolvers.FeedVersion().LocationGroups(rctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.LocationGroupFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -59980,6 +59994,40 @@ func (ec *executionContext) unmarshalInputLocationFilter(ctx context.Context, ob
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputLocationGroupFilter(ctx context.Context, obj any) (model.LocationGroupFilter, error) {
+	var it model.LocationGroupFilter
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"ids", "location_group_id"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ids = data
+		case "location_group_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("location_group_id"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LocationGroupID = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputOperatorFilter(ctx context.Context, obj any) (model.OperatorFilter, error) {
 	var it model.OperatorFilter
 	asMap := map[string]any{}
@@ -77434,6 +77482,14 @@ func (ec *executionContext) marshalOLocationGroup2ᚖgithubᚗcomᚋinterlineᚑ
 		return graphql.Null
 	}
 	return ec._LocationGroup(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOLocationGroupFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupFilter(ctx context.Context, v any) (*model.LocationGroupFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputLocationGroupFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOMap2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMap(ctx context.Context, v any) (*tt.Map, error) {

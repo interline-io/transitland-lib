@@ -279,10 +279,9 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 
-		LocationGroupsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			paramGroupAdapter(dbf.LocationGroupsByFeedVersionIDs),
-			func(p locationGroupLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
+		LocationGroupsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.LocationGroupsByFeedVersionIDs,
+			func(p locationGroupLoaderParam) (int, *model.LocationGroupFilter, *int) {
+				return p.FeedVersionID, p.Where, p.Limit
 			},
 		),
 		LocationGroupsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.LocationGroupsByIDs),

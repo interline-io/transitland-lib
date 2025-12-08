@@ -329,3 +329,85 @@ func TestTripResolver_License(t *testing.T) {
 	c, _ := newTestClient(t)
 	queryTestcases(t, c, testcases)
 }
+
+func TestTripResolver_FlexStopTimes(t *testing.T) {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	// A specific trip_id from the C-TRAN flex feed for deterministic testing
+	ctranFlexTripID := "trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>"
+	testcases := []testcase{
+		{
+			name: "flex stop times via trip",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						trip_id
+						flex_stop_times {
+							stop_sequence
+						}
+					}
+				}
+			}`,
+			vars:         hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			selector:     "feed_versions.0.trips.0.flex_stop_times.#.stop_sequence",
+			selectExpect: []string{"1", "2"},
+		},
+		{
+			name: "flex stop times fields with pickup window",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						flex_stop_times {
+							stop_sequence
+							start_pickup_drop_off_window
+							end_pickup_drop_off_window
+							pickup_type
+							drop_off_type
+						}
+					}
+				}
+			}`,
+			vars:         hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			selector:     "feed_versions.0.trips.0.flex_stop_times.#.start_pickup_drop_off_window",
+			selectExpect: []string{"05:30:00", "05:30:00"},
+		},
+		{
+			name: "flex stop times with location group",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						flex_stop_times {
+							stop_sequence
+							location_group {
+								location_group_id
+							}
+						}
+					}
+				}
+			}`,
+			vars:         hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			selector:     "feed_versions.0.trips.0.flex_stop_times.#.location_group.location_group_id",
+			selectExpect: []string{"location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e", "location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e"},
+		},
+		{
+			name: "flex stop times with booking rule",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						flex_stop_times {
+							stop_sequence
+							pickup_booking_rule {
+								booking_rule_id
+								booking_type
+							}
+						}
+					}
+				}
+			}`,
+			vars:         hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			selector:     "feed_versions.0.trips.0.flex_stop_times.#.pickup_booking_rule.booking_rule_id",
+			selectExpect: []string{"booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a", "booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a"},
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}

@@ -2,6 +2,9 @@ package gql
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/gjson"
 )
 
 func TestLocationResolver(t *testing.T) {
@@ -68,4 +71,41 @@ func TestLocationResolver(t *testing.T) {
 			queryTestcase(t, c, tc)
 		})
 	}
+}
+
+func TestLocationResolver_StopTimes(t *testing.T) {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	testcases := []testcase{
+		{
+			name: "location stop times with trip",
+			query: `query($sha1: String!, $location_id: [String!]) {
+				feed_versions(where:{sha1:$sha1}) {
+					locations(where:{location_id:$location_id}) {
+						location_id
+						stop_times(limit: 1) {
+							stop_sequence
+							trip {
+								trip_id
+							}
+						}
+					}
+				}
+			}`,
+			vars: hw{"sha1": ctranFlexSha1, "location_id": []string{"location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"}},
+			f: func(t *testing.T, jj string) {
+				locs := gjson.Get(jj, "feed_versions.0.locations").Array()
+				if len(locs) == 0 {
+					t.Fatal("expected locations")
+				}
+				loc := locs[0]
+				assert.Equal(t, "location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59", loc.Get("location_id").String())
+				sts := loc.Get("stop_times").Array()
+				if len(sts) > 0 {
+					assert.NotEmpty(t, sts[0].Get("trip.trip_id").String(), "expected trip_id on stop time")
+				}
+			},
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
 }

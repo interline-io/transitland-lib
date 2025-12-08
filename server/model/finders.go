@@ -90,7 +90,7 @@ type EntityLoader interface {
 	FrequenciesByTripIDs(context.Context, *int, []int) ([][]*Frequency, error)
 	LevelsByIDs(context.Context, []int) ([]*Level, []error)
 	LevelsByParentStationIDs(context.Context, *int, []int) ([][]*Level, error)
-	LocationGroupsByFeedVersionIDs(context.Context, *int, []int) ([][]*LocationGroup, error)
+	LocationGroupsByFeedVersionIDs(context.Context, *int, *LocationGroupFilter, []int) ([][]*LocationGroup, error)
 	LocationGroupsByIDs(context.Context, []int) ([]*LocationGroup, []error)
 	LocationsByFeedVersionIDs(context.Context, *int, *LocationFilter, []int) ([][]*Location, error)
 	LocationsByIDs(context.Context, []int) ([]*Location, []error)

@@ -322,7 +322,7 @@ type FeedVersion {
   "GTFS Flex booking rules associated with this feed version, if imported"
   booking_rules(limit: Int, where: BookingRuleFilter): [BookingRule!]!
   "GTFS Flex location groups associated with this feed version, if imported"
-  location_groups(limit: Int): [LocationGroup!]!
+  location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
   "Feed infos associated with this feed version, if imported"
   feed_infos(limit: Int): [FeedInfo!]!
   "Validation reports associated with this feed version"
@@ -1763,6 +1763,14 @@ input BookingRuleFilter {
   ids: [Int!]
   "Search for booking rules with this booking_rule_id"
   booking_rule_id: [String!]
+}
+
+"""Search options for location groups"""
+input LocationGroupFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for location groups with this location_group_id"
+  location_group_id: [String!]
 }
 
 """Import status for a feed version"""

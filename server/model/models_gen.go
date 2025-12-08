@@ -634,6 +634,14 @@ type LocationFilter struct {
 	LocationID []string `json:"location_id,omitempty"`
 }
 
+// Search options for location groups
+type LocationGroupFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for location groups with this location_group_id
+	LocationGroupID []string `json:"location_group_id,omitempty"`
+}
+
 // Current user metadata
 type Me struct {
 	// Internal identifier
