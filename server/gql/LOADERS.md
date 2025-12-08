@@ -159,34 +159,48 @@ type Loaders struct {
     // ... existing loaders ...
     
     StopsByIDs            *dataloader.Loader[int, *model.Stop]
-    StopsByFeedVersionIDs *dataloader.Loader[int, []*model.Stop]
+    StopsByFeedVersionIDs *dataloader.Loader[stopLoaderParam, []*model.Stop]
+}
+
+// Define the loader param struct for group loaders
+type stopLoaderParam struct {
+    FeedVersionID int
+    Limit         *int
+    Where         *model.StopFilter
+    // Add other ID fields as needed (e.g., RouteID, LevelID)
 }
 ```
 
 #### 3b. Initialize Loaders in NewLoaders()
 
 ```go
-func NewLoaders(ctx context.Context, finder model.Finder) *Loaders {
+func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders {
+    // batchSize defaults to maxBatch (100) if 0
+    // stopTimeBatchSize defaults to maxBatch (100) if 0
     return &Loaders{
         // ... existing loaders ...
         
-        StopsByIDs: withWaitAndCapacity(func(ctx context.Context, ids []int) ([]*model.Stop, []error) {
-            return finder.StopsByIDs(ctx, ids)
-        }),
+        StopsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.StopsByIDs),
         
-        StopsByFeedVersionIDs: withWaitAndCapacityGroup(func(ctx context.Context, ids []int) ([][]*model.Stop, error) {
-            return finder.StopsByFeedVersionIDs(ctx, nil, ids)
-        }),
+        StopsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, 
+            dbf.StopsByFeedVersionIDs,
+            func(p stopLoaderParam) (int, *model.StopFilter, *int) {
+                return p.FeedVersionID, p.Where, p.Limit
+            },
+        ),
     }
 }
 ```
 
 **Loader Configuration**:
-- `withWaitAndCapacity()`: For byID loaders
-  - Default: 2ms wait time, 100 entity batch size
-- `withWaitAndCapacityGroup()`: For byParentID loaders
-  - Same defaults as above
-- Custom configuration: `withWaitAndCapacityGroup(batchFn, 10*time.Millisecond, 500)`
+- **Constants defined in loaders.go**:
+  - `waitTime = 2 * time.Millisecond`
+  - `maxBatch = 100`
+  - `stopTimeBatchWaitTime = 10 * time.Millisecond`
+- `withWaitAndCapacity(waitTime, batchSize, batchFn)`: For byID loaders
+- `withWaitAndCapacityGroup(waitTime, batchSize, queryFn, paramFn)`: For byParentID loaders
+  - `queryFn`: The finder method signature
+  - `paramFn`: Extracts (key, where, limit) from the loader param struct
 
 ### Step 4: Create GraphQL Resolver
 
@@ -246,12 +260,18 @@ func (r *stopResolver) StopTimes(ctx context.Context, obj *model.Stop, limit *in
    return LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
        FeedVersionID: obj.FeedVersionID,
        StopID:        obj.ID,
+       Where:         where,
+       Limit:         limit,
    })()
    ```
 
 4. **One-to-Many on FeedVersion** (e.g., all Stops):
    ```go
-   return LoaderFor(ctx).StopsByFeedVersionIDs.Load(ctx, obj.ID)()
+   return LoaderFor(ctx).StopsByFeedVersionIDs.Load(ctx, stopLoaderParam{
+       FeedVersionID: obj.ID,
+       Where:         where,
+       Limit:         limit,
+   })()
    ```
 
 ### Step 5: Register Resolver with GraphQL
@@ -295,9 +315,7 @@ type Loaders struct {
 }
 
 // In NewLoaders():
-AgenciesByIDs: withWaitAndCapacity(func(ctx context.Context, ids []int) ([]*model.Agency, []error) {
-    return finder.AgenciesByIDs(ctx, ids)
-})
+AgenciesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.AgenciesByIDs),
 
 // In resolver:
 return LoaderFor(ctx).AgenciesByIDs.Load(ctx, obj.AgencyID)()
@@ -309,16 +327,23 @@ return LoaderFor(ctx).AgenciesByIDs.Load(ctx, obj.AgencyID)()
 
 ```go
 type Loaders struct {
-    RoutesByAgencyIDs *dataloader.Loader[int, []*model.Route]
+    RoutesByAgencyIDs *dataloader.Loader[routeLoaderParam, []*model.Route]
 }
 
 // In NewLoaders():
-RoutesByAgencyIDs: withWaitAndCapacityGroup(func(ctx context.Context, ids []int) ([][]*model.Route, error) {
-    return finder.RoutesByAgencyIDs(ctx, nil, nil, ids)
-})
+RoutesByAgencyIDs: withWaitAndCapacityGroup(waitTime, batchSize, 
+    dbf.RoutesByAgencyIDs,
+    func(p routeLoaderParam) (int, *model.RouteFilter, *int) {
+        return p.AgencyID, p.Where, p.Limit
+    },
+),
 
 // In resolver:
-return LoaderFor(ctx).RoutesByAgencyIDs.Load(ctx, obj.ID)()
+return LoaderFor(ctx).RoutesByAgencyIDs.Load(ctx, routeLoaderParam{
+    AgencyID: obj.ID,
+    Limit:    limit,
+    Where:    where,
+})()
 ```
 
 ### Pattern 3: Composite Key Lookup
@@ -330,6 +355,8 @@ return LoaderFor(ctx).RoutesByAgencyIDs.Load(ctx, obj.ID)()
 type stopTimeLoaderParam struct {
     FeedVersionID int
     StopID        int
+    Limit         *int
+    Where         *model.StopTimeFilter
 }
 
 type Loaders struct {
@@ -337,21 +364,20 @@ type Loaders struct {
 }
 
 // In NewLoaders():
-StopTimesByStopIDs: withWaitAndCapacityGroup(func(ctx context.Context, params []stopTimeLoaderParam) ([][]*model.StopTime, error) {
-    fvpairs := make([]model.FVPair, len(params))
-    for i, p := range params {
-        fvpairs[i] = model.FVPair{
-            FeedVersionID: p.FeedVersionID,
-            EntityID:      p.StopID,
-        }
-    }
-    return finder.StopTimesByStopIDs(ctx, nil, nil, fvpairs)
-})
+// Note: stopTimeBatchWaitTime (10ms) is used for large entity batches
+StopTimesByStopIDs: withWaitAndCapacityGroup(stopTimeBatchWaitTime, stopTimeBatchSize, 
+    dbf.StopTimesByStopIDs,
+    func(p stopTimeLoaderParam) (model.FVPair, *model.StopTimeFilter, *int) {
+        return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.StopID}, p.Where, p.Limit
+    },
+),
 
 // In resolver:
 return LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
     FeedVersionID: obj.FeedVersionID,
     StopID:        obj.ID,
+    Where:         where,
+    Limit:         limit,
 })()
 ```
 
@@ -393,43 +419,27 @@ type stopTimeLoaderParam struct {
     FeedVersionID int
     TripID        int
     Limit         *int
+    Where         *model.TripStopTimeFilter
 }
 
 type Loaders struct {
-    StopTimesByTripIDs *dataloader.Loader[stopTimeLoaderParam, []*model.StopTime]
+    StopTimesByTripIDs *dataloader.Loader[tripStopTimeLoaderParam, []*model.StopTime]
 }
 
 // In NewLoaders():
-StopTimesByTripIDs: dataloader.NewBatchedLoader(
-    func(ctx context.Context, params []stopTimeLoaderParam) []Result[[]*model.StopTime] {
-        return paramGroupQuery(ctx, params, 
-            func(param stopTimeLoaderParam) int { return param.TripID },
-            func(ctx context.Context, group []stopTimeLoaderParam) ([][]*model.StopTime, error) {
-                ids := groupingIds(group, func(param stopTimeLoaderParam) int { 
-                    return param.TripID 
-                })
-                fvpairs := make([]model.FVPair, len(group))
-                for i, p := range group {
-                    fvpairs[i] = model.FVPair{
-                        FeedVersionID: p.FeedVersionID,
-                        EntityID:      p.TripID,
-                    }
-                }
-                limit := anyLimit(group, func(param stopTimeLoaderParam) *int { 
-                    return param.Limit 
-                })
-                return finder.StopTimesByTripIDs(ctx, limit, nil, fvpairs)
-            },
-        )
+// The withWaitAndCapacityGroup helper handles all the batching/grouping complexity
+StopTimesByTripIDs: withWaitAndCapacityGroup(waitTime, batchSize, 
+    dbf.StopTimesByTripIDs,
+    func(p tripStopTimeLoaderParam) (model.FVPair, *model.TripStopTimeFilter, *int) {
+        return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.TripID}, p.Where, p.Limit
     },
-    dataloader.WithWait[[]*model.StopTime](10*time.Millisecond),
-    dataloader.WithBatchCapacity[[]*model.StopTime](500),
-)
+),
 
 // In resolver:
-return LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, stopTimeLoaderParam{
+return LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
     FeedVersionID: obj.FeedVersionID,
     TripID:        obj.ID,
+    Where:         where,
     Limit:         limit,
 })()
 ```
@@ -438,10 +448,10 @@ return LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, stopTimeLoaderParam{
 
 ### Batch Timing
 
-- **Default**: 2ms wait time
+- **Default**: 2ms wait time (`waitTime` constant)
   - Good for most entities (routes, agencies, calendars)
 
-- **Large entities**: 10ms wait time
+- **Large entities**: 10ms wait time (`stopTimeBatchWaitTime` constant)
   - Use for stop_times, shapes (entities with many records per parent)
 
 ### Batch Size
@@ -456,16 +466,16 @@ return LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, stopTimeLoaderParam{
 
 ```go
 // Default configuration (most cases)
-withWaitAndCapacity(batchFn)
+withWaitAndCapacity(waitTime, batchSize, dbf.EntityByIDs)
 
-// Custom timing and size (large entities)
-withWaitAndCapacityGroup(batchFn, 10*time.Millisecond, 500)
+// Custom timing and size (large entities like stop_times)
+withWaitAndCapacityGroup(stopTimeBatchWaitTime, stopTimeBatchSize, queryFn, paramFn)
 
 // Full manual control
 dataloader.NewBatchedLoader(
-    batchFn,
-    dataloader.WithWait[T](5*time.Millisecond),
-    dataloader.WithBatchCapacity[T](1000),
+    unwrapResult(batchFn),
+    dataloader.WithWait[ParamT, T](5*time.Millisecond),
+    dataloader.WithBatchCapacity[ParamT, T](1000),
 )
 ```
 
@@ -535,9 +545,7 @@ return arrangeBy(ids, ents, func(ent *model.Entity) int { return ent.ID }), nil
 
 **Solution**: Add loader initialization in `server/gql/loaders.go`:
 ```go
-MyEntityByIDs: withWaitAndCapacity(func(ctx context.Context, ids []int) ([]*model.MyEntity, []error) {
-    return finder.MyEntityByIDs(ctx, ids)
-})
+MyEntityByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.MyEntityByIDs),
 ```
 
 ### Problem: "SELECT * security violation"
