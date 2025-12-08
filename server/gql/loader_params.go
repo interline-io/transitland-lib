@@ -149,11 +149,6 @@ type calendarDateLoaderParam struct {
 	Where     *model.CalendarDateFilter
 }
 
-type calendarServiceLoaderParam struct {
-	FeedVersionID int
-	ServiceID     int
-}
-
 type censusGeographyLoaderParam struct {
 	EntityType string
 	EntityID   int
@@ -182,10 +177,6 @@ type censusValueLoaderParam struct {
 	Geoid      string
 	TableNames string // these have to be comma joined for now, []string cant be used as map key
 	Limit      *int
-}
-
-type censusTableLoaderParam struct {
-	Limit *int
 }
 
 type censusFieldLoaderParam struct {

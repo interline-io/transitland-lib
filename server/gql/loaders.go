@@ -33,7 +33,6 @@ type Loaders struct {
 	BookingRulesByIDs                                             *dataloader.Loader[int, *model.BookingRule]
 	CalendarDatesByServiceIDs                                     *dataloader.Loader[calendarDateLoaderParam, []*model.CalendarDate]
 	CalendarsByIDs                                                *dataloader.Loader[int, *model.Calendar]
-	CalendarsByServiceIDs                                         *dataloader.Loader[calendarServiceLoaderParam, *model.Calendar]
 	CensusDatasetLayersByDatasetIDs                               *dataloader.Loader[int, []*model.CensusLayer]
 	CensusSourceLayersBySourceIDs                                 *dataloader.Loader[int, []*model.CensusLayer]
 	CensusFieldsByTableIDs                                        *dataloader.Loader[censusFieldLoaderParam, []*model.CensusField]
@@ -150,16 +149,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.ServiceID, p.Where, p.Limit
 			},
 		),
-		CalendarsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.CalendarsByIDs),
-		CalendarsByServiceIDs: withWaitAndCapacity(waitTime, batchSize,
-			func(ctx context.Context, params []calendarServiceLoaderParam) ([]*model.Calendar, []error) {
-				keys := make([]model.FVServicePair, len(params))
-				for i, p := range params {
-					keys[i] = model.FVServicePair{FeedVersionID: p.FeedVersionID, ServiceID: p.ServiceID}
-				}
-				return dbf.CalendarsByServiceIDs(ctx, keys)
-			},
-		),
+		CalendarsByIDs:                  withWaitAndCapacity(waitTime, batchSize, dbf.CalendarsByIDs),
 		CensusDatasetLayersByDatasetIDs: withWaitAndCapacity(waitTime, batchSize, dbf.CensusDatasetLayersByDatasetIDs),
 		CensusSourceLayersBySourceIDs:   withWaitAndCapacity(waitTime, batchSize, dbf.CensusSourceLayersBySourceIDs),
 		CensusFieldsByTableIDs: withWaitAndCapacityGroup(waitTime, batchSize,

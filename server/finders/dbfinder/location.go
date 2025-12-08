@@ -24,7 +24,7 @@ func (f *Finder) LocationsByIDs(ctx context.Context, ids []int) ([]*model.Locati
 	return arrangeBy(ids, ents, func(ent *model.Location) int { return ent.ID }), nil
 }
 
-func locationSelect(limit *int, after *model.Cursor, ids []int, where *model.LocationFilter) sq.SelectBuilder {
+func locationSelect(limit *int, _ *model.Cursor, ids []int, where *model.LocationFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_locations.id",
 		"gtfs_locations.feed_version_id",

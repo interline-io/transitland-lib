@@ -24,7 +24,7 @@ func (f *Finder) BookingRulesByIDs(ctx context.Context, ids []int) ([]*model.Boo
 	return arrangeBy(ids, ents, func(ent *model.BookingRule) int { return ent.ID }), nil
 }
 
-func bookingRuleSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder {
+func bookingRuleSelect(limit *int, _ *model.Cursor, ids []int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_booking_rules.id",
 		"gtfs_booking_rules.feed_version_id",

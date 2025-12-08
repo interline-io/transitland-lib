@@ -99,6 +99,9 @@ func (f *Finder) TripsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 			),
 			&q,
 		)
+		if err != nil {
+			return nil, err
+		}
 		ents = append(ents, q...)
 	}
 	return arrangeGroup(keys, ents, func(ent *model.Trip) int { return ent.FeedVersionID }), nil
