@@ -1350,22 +1350,22 @@ type FeedVersionGtfsImportResolver interface {
 	SkipEntityMarkedCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
 }
 type FlexStopTimeResolver interface {
-	PickupBookingRule(ctx context.Context, obj *model.FlexStopTime) (*model.BookingRule, error)
-	DropOffBookingRule(ctx context.Context, obj *model.FlexStopTime) (*model.BookingRule, error)
-	Location(ctx context.Context, obj *model.FlexStopTime) (*model.Location, error)
-	LocationGroup(ctx context.Context, obj *model.FlexStopTime) (*model.LocationGroup, error)
-	Trip(ctx context.Context, obj *model.FlexStopTime) (*model.Trip, error)
-	Arrival(ctx context.Context, obj *model.FlexStopTime) (*model.StopTimeEvent, error)
-	Departure(ctx context.Context, obj *model.FlexStopTime) (*model.StopTimeEvent, error)
+	PickupBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error)
+	DropOffBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error)
+	Location(ctx context.Context, obj *model.StopTime) (*model.Location, error)
+	LocationGroup(ctx context.Context, obj *model.StopTime) (*model.LocationGroup, error)
+	Trip(ctx context.Context, obj *model.StopTime) (*model.Trip, error)
+	Arrival(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error)
+	Departure(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error)
 
-	ScheduleRelationship(ctx context.Context, obj *model.FlexStopTime) (*model.ScheduleRelationship, error)
+	ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error)
 }
 type LevelResolver interface {
 	Stops(ctx context.Context, obj *model.Level) ([]*model.Stop, error)
 }
 type LocationResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Location) (*model.FeedVersion, error)
-	StopTimes(ctx context.Context, obj *model.Location, limit *int, where *model.StopTimeFilter) ([]*model.FlexStopTime, error)
+	StopTimes(ctx context.Context, obj *model.Location, limit *int, where *model.StopTimeFilter) ([]*model.StopTime, error)
 }
 type LocationGroupResolver interface {
 	FeedVersion(ctx context.Context, obj *model.LocationGroup) (*model.FeedVersion, error)
@@ -1500,7 +1500,7 @@ type TripResolver interface {
 	Shape(ctx context.Context, obj *model.Trip) (*model.Shape, error)
 	FeedVersion(ctx context.Context, obj *model.Trip) (*model.FeedVersion, error)
 	StopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.StopTime, error)
-	FlexStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.FlexStopTime, error)
+	FlexStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.StopTime, error)
 	Frequencies(ctx context.Context, obj *model.Trip, limit *int) ([]*model.Frequency, error)
 	Alerts(ctx context.Context, obj *model.Trip, active *bool, limit *int) ([]*model.Alert, error)
 	ScheduleRelationship(ctx context.Context, obj *model.Trip) (*model.ScheduleRelationship, error)
@@ -25629,7 +25629,7 @@ func (ec *executionContext) fieldContext_FeedVersionUnimportResult_success(_ con
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_arrival_time(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_arrival_time(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_arrival_time(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -25670,7 +25670,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_arrival_time(_ context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_departure_time(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_departure_time(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_departure_time(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -25711,7 +25711,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_departure_time(_ context.C
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_stop_sequence(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_stop_sequence(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_stop_sequence(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -25755,7 +25755,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_stop_sequence(_ context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_stop_headsign(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_stop_headsign(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_stop_headsign(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -25796,7 +25796,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_stop_headsign(_ context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_pickup_type(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_pickup_type(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_pickup_type(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -25837,7 +25837,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_pickup_type(_ context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_drop_off_type(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_drop_off_type(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_drop_off_type(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -25878,7 +25878,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_drop_off_type(_ context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_timepoint(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_timepoint(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_timepoint(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -25919,7 +25919,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_timepoint(_ context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_continuous_drop_off(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_continuous_drop_off(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_continuous_drop_off(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -25960,7 +25960,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_continuous_drop_off(_ cont
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_continuous_pickup(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_continuous_pickup(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_continuous_pickup(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26001,7 +26001,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_continuous_pickup(_ contex
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_shape_dist_traveled(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_shape_dist_traveled(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_shape_dist_traveled(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26042,7 +26042,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_shape_dist_traveled(_ cont
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_interpolated(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_interpolated(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_interpolated(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26083,7 +26083,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_interpolated(_ context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_start_pickup_drop_off_window(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_start_pickup_drop_off_window(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_start_pickup_drop_off_window(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26124,7 +26124,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_start_pickup_drop_off_wind
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_end_pickup_drop_off_window(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_end_pickup_drop_off_window(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_end_pickup_drop_off_window(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26165,7 +26165,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_end_pickup_drop_off_window
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_pickup_booking_rule(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_pickup_booking_rule(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_pickup_booking_rule(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26246,7 +26246,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_pickup_booking_rule(_ cont
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_drop_off_booking_rule(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_drop_off_booking_rule(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_drop_off_booking_rule(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26327,7 +26327,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_drop_off_booking_rule(_ co
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_location(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_location(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_location(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26392,7 +26392,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_location(_ context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_location_group(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_location_group(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_location_group(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26449,7 +26449,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_location_group(_ context.C
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_trip(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_trip(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_trip(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26533,7 +26533,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_trip(_ context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_arrival(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_arrival(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_arrival(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26607,7 +26607,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_arrival(_ context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_departure(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_departure(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_departure(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26681,7 +26681,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_departure(_ context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_service_date(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_service_date(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_service_date(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26722,7 +26722,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_service_date(_ context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_date(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_date(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_date(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -26763,7 +26763,7 @@ func (ec *executionContext) fieldContext_FlexStopTime_date(_ context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _FlexStopTime_schedule_relationship(ctx context.Context, field graphql.CollectedField, obj *model.FlexStopTime) (ret graphql.Marshaler) {
+func (ec *executionContext) _FlexStopTime_schedule_relationship(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FlexStopTime_schedule_relationship(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -37088,9 +37088,9 @@ func (ec *executionContext) _Location_stop_times(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.FlexStopTime)
+	res := resTmp.([]*model.StopTime)
 	fc.Result = res
-	return ec.marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTimeᚄ(ctx, field.Selections, res)
+	return ec.marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Location_stop_times(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -52869,9 +52869,9 @@ func (ec *executionContext) _Trip_flex_stop_times(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.FlexStopTime)
+	res := resTmp.([]*model.StopTime)
 	fc.Result = res
-	return ec.marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTimeᚄ(ctx, field.Selections, res)
+	return ec.marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Trip_flex_stop_times(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -65129,7 +65129,7 @@ func (ec *executionContext) _FeedVersionUnimportResult(ctx context.Context, sel 
 
 var flexStopTimeImplementors = []string{"FlexStopTime"}
 
-func (ec *executionContext) _FlexStopTime(ctx context.Context, sel ast.SelectionSet, obj *model.FlexStopTime) graphql.Marshaler {
+func (ec *executionContext) _FlexStopTime(ctx context.Context, sel ast.SelectionSet, obj *model.StopTime) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, flexStopTimeImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -73502,7 +73502,7 @@ func (ec *executionContext) marshalNFeedVersionUnimportResult2ᚖgithubᚗcomᚋ
 	return ec._FeedVersionUnimportResult(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTimeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FlexStopTime) graphql.Marshaler {
+func (ec *executionContext) marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTimeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.StopTime) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -73526,7 +73526,7 @@ func (ec *executionContext) marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterline�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNFlexStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTime(ctx, sel, v[i])
+			ret[i] = ec.marshalNFlexStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTime(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -73546,7 +73546,7 @@ func (ec *executionContext) marshalNFlexStopTime2ᚕᚖgithubᚗcomᚋinterline�
 	return ret
 }
 
-func (ec *executionContext) marshalNFlexStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFlexStopTime(ctx context.Context, sel ast.SelectionSet, v *model.FlexStopTime) graphql.Marshaler {
+func (ec *executionContext) marshalNFlexStopTime2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopTime(ctx context.Context, sel ast.SelectionSet, v *model.StopTime) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
