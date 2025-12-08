@@ -10,7 +10,7 @@ func TestLocationGroupResolver(t *testing.T) {
 			name: "location groups for ctran",
 			query: `query {
 				feed_versions(where: {sha1: "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}) {
-					location_groups(limit: 1) {
+					location_groups(where: {location_group_id: "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"}, limit: 1) {
 						location_group_id
 						location_group_name
 						feed_version {

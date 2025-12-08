@@ -44,7 +44,7 @@ func TestLocationResolver(t *testing.T) {
 			name: "location filter by id",
 			query: `query {
 				feed_versions(where: {sha1: "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}) {
-					locations(where: {location_id: ["location_id__11f830d0-adec-468a-a8d6-513184e476a1"]}) {
+					locations(where: {location_id: "location_id__11f830d0-adec-468a-a8d6-513184e476a1"}) {
 						location_id
 					}
 				}
@@ -78,7 +78,7 @@ func TestLocationResolver_StopTimes(t *testing.T) {
 	testcases := []testcase{
 		{
 			name: "location stop times with trip",
-			query: `query($sha1: String!, $location_id: [String!]) {
+			query: `query($sha1: String!, $location_id: String) {
 				feed_versions(where:{sha1:$sha1}) {
 					locations(where:{location_id:$location_id}) {
 						location_id
@@ -91,7 +91,7 @@ func TestLocationResolver_StopTimes(t *testing.T) {
 					}
 				}
 			}`,
-			vars: hw{"sha1": ctranFlexSha1, "location_id": []string{"location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"}},
+			vars: hw{"sha1": ctranFlexSha1, "location_id": "location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"},
 			f: func(t *testing.T, jj string) {
 				locs := gjson.Get(jj, "feed_versions.0.locations").Array()
 				if len(locs) == 0 {
