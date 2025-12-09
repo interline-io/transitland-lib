@@ -21,13 +21,17 @@ func (r *stopTimeResolver) Stop(ctx context.Context, obj *model.StopTime) (*mode
 }
 
 func (r *stopTimeResolver) PickupBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error) {
-	// TODO
-	return nil, nil
+	if !obj.PickupBookingRuleID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).BookingRulesByIDs.Load(ctx, obj.PickupBookingRuleID.Int())()
 }
 
 func (r *stopTimeResolver) DropOffBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error) {
-	// TODO
-	return nil, nil
+	if !obj.DropOffBookingRuleID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).BookingRulesByIDs.Load(ctx, obj.DropOffBookingRuleID.Int())()
 }
 
 func (r *stopTimeResolver) ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error) {

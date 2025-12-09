@@ -243,6 +243,11 @@ type stopsByLocationGroupLoaderParam struct {
 	Limit           *int
 }
 
+type locationGroupsByStopLoaderParam struct {
+	StopID int
+	Limit  *int
+}
+
 type locationLoaderParam struct {
 	FeedVersionID int
 	Limit         *int

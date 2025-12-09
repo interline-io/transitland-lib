@@ -27,8 +27,7 @@ func (r *stopResolver) FeedVersion(ctx context.Context, obj *model.Stop) (*model
 }
 
 func (r *stopResolver) LocationGroups(ctx context.Context, obj *model.Stop, limit *int) ([]*model.LocationGroup, error) {
-	// TODO
-	return nil, nil
+	return LoaderFor(ctx).LocationGroupsByStopIDs.Load(ctx, locationGroupsByStopLoaderParam{StopID: obj.ID, Limit: limit})()
 }
 
 func (r *stopResolver) Level(ctx context.Context, obj *model.Stop) (*model.Level, error) {

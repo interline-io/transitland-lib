@@ -46,6 +46,9 @@ func locationSelect(limit *int, _ *model.Cursor, ids []int, where *model.Locatio
 		q = q.Where(In("gtfs_locations.id", ids))
 	}
 	if where != nil {
+		if len(where.Ids) > 0 {
+			q = q.Where(In("gtfs_locations.id", where.Ids))
+		}
 		if where.LocationID != nil && *where.LocationID != "" {
 			q = q.Where(sq.Eq{"gtfs_locations.location_id": *where.LocationID})
 		}

@@ -87,6 +87,7 @@ type EntityLoader interface {
 	LevelsByParentStationIDs(context.Context, *int, []int) ([][]*Level, error)
 	LocationGroupsByFeedVersionIDs(context.Context, *int, *LocationGroupFilter, []int) ([][]*LocationGroup, error)
 	LocationGroupsByIDs(context.Context, []int) ([]*LocationGroup, []error)
+	LocationGroupsByStopIDs(context.Context, *int, []int) ([][]*LocationGroup, error)
 	LocationsByFeedVersionIDs(context.Context, *int, *LocationFilter, []int) ([][]*Location, error)
 	LocationsByIDs(context.Context, []int) ([]*Location, []error)
 	OperatorsByAgencyIDs(context.Context, []int) ([]*Operator, []error)
@@ -155,6 +156,7 @@ type RTFinder interface {
 	FindStopTimeUpdate(context.Context, *Trip, *StopTime) (*RTStopTimeUpdate, bool)
 	// lookup cache methods
 	StopTimezone(context.Context, int, string) (*time.Location, bool)
+	FeedVersionTimezone(context.Context, int) (*time.Location, bool)
 	GetGtfsTripID(context.Context, int) (string, bool)
 	GetMessage(context.Context, string, string) (*pb.FeedMessage, bool)
 }

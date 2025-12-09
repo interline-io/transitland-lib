@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"time"
 
 	"github.com/interline-io/transitland-lib/server/model"
 )
@@ -41,11 +42,14 @@ func (r *flexStopTimeResolver) Trip(ctx context.Context, obj *model.FlexStopTime
 }
 
 func (r *flexStopTimeResolver) Arrival(ctx context.Context, obj *model.FlexStopTime) (*model.StopTimeEvent, error) {
-	// TODO: Handle timezone for Location/LocationGroup
-	if !obj.StopID.Valid {
-		return nil, nil
+	var loc *time.Location
+	var ok bool
+	if obj.StopID.Valid {
+		loc, ok = model.ForContext(ctx).RTFinder.StopTimezone(ctx, obj.StopID.Int(), "")
+	} else if obj.LocationID.Valid || obj.LocationGroupID.Valid {
+		// For Location/LocationGroup, use the feed version's agency timezone
+		loc, ok = model.ForContext(ctx).RTFinder.FeedVersionTimezone(ctx, obj.FeedVersionID)
 	}
-	loc, ok := model.ForContext(ctx).RTFinder.StopTimezone(ctx, obj.StopID.Int(), "")
 	if loc == nil || !ok {
 		return nil, nil
 	}
@@ -53,11 +57,14 @@ func (r *flexStopTimeResolver) Arrival(ctx context.Context, obj *model.FlexStopT
 }
 
 func (r *flexStopTimeResolver) Departure(ctx context.Context, obj *model.FlexStopTime) (*model.StopTimeEvent, error) {
-	// TODO: Handle timezone for Location/LocationGroup
-	if !obj.StopID.Valid {
-		return nil, nil
+	var loc *time.Location
+	var ok bool
+	if obj.StopID.Valid {
+		loc, ok = model.ForContext(ctx).RTFinder.StopTimezone(ctx, obj.StopID.Int(), "")
+	} else if obj.LocationID.Valid || obj.LocationGroupID.Valid {
+		// For Location/LocationGroup, use the feed version's agency timezone
+		loc, ok = model.ForContext(ctx).RTFinder.FeedVersionTimezone(ctx, obj.FeedVersionID)
 	}
-	loc, ok := model.ForContext(ctx).RTFinder.StopTimezone(ctx, obj.StopID.Int(), "")
 	if loc == nil || !ok {
 		return nil, nil
 	}

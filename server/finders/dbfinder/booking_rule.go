@@ -55,6 +55,9 @@ func bookingRuleSelect(limit *int, _ *model.Cursor, ids []int, where *model.Book
 		q = q.Where(In("gtfs_booking_rules.id", ids))
 	}
 	if where != nil {
+		if len(where.Ids) > 0 {
+			q = q.Where(In("gtfs_booking_rules.id", where.Ids))
+		}
 		if where.BookingRuleID != nil && *where.BookingRuleID != "" {
 			q = q.Where(sq.Eq{"gtfs_booking_rules.booking_rule_id": *where.BookingRuleID})
 		}
