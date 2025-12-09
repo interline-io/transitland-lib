@@ -47,7 +47,7 @@ func locationSelect(limit *int, _ *model.Cursor, ids []int, where *model.Locatio
 	}
 	if where != nil {
 		if where.LocationID != nil && *where.LocationID != "" {
-			q = q.Where(sq.Eq{"location_id": *where.LocationID})
+			q = q.Where(sq.Eq{"gtfs_locations.location_id": *where.LocationID})
 		}
 	}
 	q = q.OrderBy("gtfs_locations.id ASC")
