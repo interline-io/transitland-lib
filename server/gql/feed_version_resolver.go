@@ -62,7 +62,7 @@ func (r *feedVersionResolver) FeedInfos(ctx context.Context, obj *model.FeedVers
 }
 
 func (r *feedVersionResolver) Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error) {
-	return LoaderFor(ctx).LocationsByFeedVersionIDs.Load(ctx, locationLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
+	return LoaderFor(ctx).LocationsByFeedVersionIDs.Load(ctx, locationLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_LOCATION_MAXLIMIT), Where: where})()
 }
 
 func (r *feedVersionResolver) BookingRules(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.BookingRuleFilter) ([]*model.BookingRule, error) {
