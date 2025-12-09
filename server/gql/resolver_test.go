@@ -29,21 +29,26 @@ type testcaseSelector struct {
 	expectUniqueCount int
 }
 
+// testcase defines a GraphQL test case. See RESOLVER_TEST_GUIDE.md for full documentation.
 type testcase struct {
-	name                    string
-	query                   string
-	vars                    hw
-	expect                  string
-	user                    string
-	selector                string
-	expectError             bool
-	selectExpect            []string
-	selectExpectUnique      []string
-	selectExpectContains    []string
-	selectExpectCount       int
-	selectExpectUniqueCount int
-	sel                     []testcaseSelector
-	f                       func(*testing.T, string)
+	name        string
+	query       string
+	vars        hw
+	expect      string
+	user        string
+	expectError bool
+	// sel allows multiple selector checks against the same query result
+	sel []testcaseSelector
+	// f is a custom test function for complex assertions
+	f func(*testing.T, string)
+	// Convenience fields: these wrap to sel with a single testcaseSelector.
+	// Use these for simple single-selector tests; use sel[] for multiple checks.
+	selector                string   // convenience: wraps to sel[].selector
+	selectExpect            []string // convenience: wraps to sel[].expect
+	selectExpectUnique      []string // convenience: wraps to sel[].expectUnique
+	selectExpectContains    []string // convenience: wraps to sel[].expectContains
+	selectExpectCount       int      // convenience: wraps to sel[].expectCount
+	selectExpectUniqueCount int      // convenience: wraps to sel[].expectUniqueCount
 }
 
 type testcaseWithClock struct {
