@@ -66,6 +66,7 @@ type Loaders struct {
 	LevelsByParentStationIDs                                      *dataloader.Loader[levelLoaderParam, []*model.Level]
 	LocationGroupsByFeedVersionIDs                                *dataloader.Loader[locationGroupLoaderParam, []*model.LocationGroup]
 	LocationGroupsByIDs                                           *dataloader.Loader[int, *model.LocationGroup]
+	StopsByLocationGroupIDs                                       *dataloader.Loader[stopsByLocationGroupLoaderParam, []*model.Stop]
 	LocationsByFeedVersionIDs                                     *dataloader.Loader[locationLoaderParam, []*model.Location]
 	LocationsByIDs                                                *dataloader.Loader[int, *model.Location]
 	OperatorsByAgencyIDs                                          *dataloader.Loader[int, *model.Operator]
@@ -291,6 +292,12 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 		LocationGroupsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.LocationGroupsByIDs),
+		StopsByLocationGroupIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			paramGroupAdapter(dbf.StopsByLocationGroupIDs),
+			func(p stopsByLocationGroupLoaderParam) (int, bool, *int) {
+				return p.LocationGroupID, false, p.Limit
+			},
+		),
 		LocationsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.LocationsByFeedVersionIDs,
 			func(p locationLoaderParam) (int, *model.LocationFilter, *int) {
 				return p.FeedVersionID, p.Where, p.Limit

@@ -13,8 +13,10 @@ func (r *locationGroupResolver) FeedVersion(ctx context.Context, obj *model.Loca
 }
 
 func (r *locationGroupResolver) Stops(ctx context.Context, obj *model.LocationGroup, limit *int) ([]*model.Stop, error) {
-	// TODO: Implement
-	return nil, nil
+	return LoaderFor(ctx).StopsByLocationGroupIDs.Load(ctx, stopsByLocationGroupLoaderParam{
+		LocationGroupID: obj.ID,
+		Limit:           resolverCheckLimit(limit),
+	})()
 }
 
 func (r *locationGroupResolver) StopTimes(ctx context.Context, obj *model.LocationGroup, limit *int, where *model.StopTimeFilter) ([]*model.FlexStopTime, error) {

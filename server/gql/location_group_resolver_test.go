@@ -8,24 +8,90 @@ import (
 )
 
 func TestLocationGroupResolver(t *testing.T) {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	fairgroundsLocationGroupID := "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"
+	vaMedicalCenterLocationGroupID := "location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e"
 	testcases := []testcase{
 		{
-			name: "location groups for ctran",
-			query: `query {
-				feed_versions(where: {sha1: "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}) {
-					location_groups(where: {location_group_id: "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"}, limit: 1) {
+			name: "location groups basic fields",
+			query: `query($sha1: String!, $location_group_id: String) {
+				feed_versions(where: {sha1: $sha1}) {
+					location_groups(where: {location_group_id: $location_group_id}, limit: 1) {
 						location_group_id
 						location_group_name
 						feed_version {
 							sha1
 						}
+					}
+				}
+			}`,
+			vars: hw{"sha1": ctranFlexSha1, "location_group_id": fairgroundsLocationGroupID},
+			f: func(t *testing.T, jj string) {
+				lgs := gjson.Get(jj, "feed_versions.0.location_groups").Array()
+				if len(lgs) == 0 {
+					t.Fatal("expected location_groups")
+				}
+				lg := lgs[0]
+				assert.Equal(t, fairgroundsLocationGroupID, lg.Get("location_group_id").String())
+				assert.Equal(t, "Clark County Fairgroun...", lg.Get("location_group_name").String())
+				assert.Equal(t, ctranFlexSha1, lg.Get("feed_version.sha1").String())
+			},
+		},
+		{
+			name: "location group with stops",
+			query: `query($sha1: String!, $location_group_id: String) {
+				feed_versions(where: {sha1: $sha1}) {
+					location_groups(where: {location_group_id: $location_group_id}) {
+						location_group_id
+						stops {
+							stop_id
+							stop_name
+						}
+					}
+				}
+			}`,
+			vars: hw{"sha1": ctranFlexSha1, "location_group_id": fairgroundsLocationGroupID},
+			f: func(t *testing.T, jj string) {
+				lgs := gjson.Get(jj, "feed_versions.0.location_groups").Array()
+				if len(lgs) == 0 {
+					t.Fatal("expected location_groups")
+				}
+				lg := lgs[0]
+				stops := lg.Get("stops").Array()
+				// Fairgrounds location group has 12 stops
+				assert.Equal(t, 12, len(stops), "expected 12 stops for Fairgrounds location group")
+				// Verify stops have expected fields
+				for _, stop := range stops {
+					assert.NotEmpty(t, stop.Get("stop_id").String(), "expected stop_id")
+				}
+			},
+		},
+		{
+			name: "location group stops count for VA Medical Center",
+			query: `query($sha1: String!, $location_group_id: String) {
+				feed_versions(where: {sha1: $sha1}) {
+					location_groups(where: {location_group_id: $location_group_id}) {
+						location_group_id
+						location_group_name
 						stops {
 							stop_id
 						}
 					}
 				}
 			}`,
-			expect: `{"feed_versions":[{"location_groups":[{"feed_version":{"sha1":"e8bc76c3c8602cad745f41a49ed5c5627ad6904c"},"location_group_id":"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a","location_group_name":"Clark County Fairgroun...","stops":[]}]}]}`,
+			vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
+			f: func(t *testing.T, jj string) {
+				lgs := gjson.Get(jj, "feed_versions.0.location_groups").Array()
+				if len(lgs) == 0 {
+					t.Fatal("expected location_groups")
+				}
+				lg := lgs[0]
+				assert.Equal(t, vaMedicalCenterLocationGroupID, lg.Get("location_group_id").String())
+				assert.Equal(t, "VA Medical Center (fixed route stop)", lg.Get("location_group_name").String())
+				stops := lg.Get("stops").Array()
+				// VA Medical Center location group has 7 stops
+				assert.Equal(t, 7, len(stops), "expected 7 stops for VA Medical Center location group")
+			},
 		},
 	}
 	c, _ := newTestClient(t)

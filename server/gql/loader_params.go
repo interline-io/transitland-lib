@@ -238,6 +238,11 @@ type locationGroupLoaderParam struct {
 	Where         *model.LocationGroupFilter
 }
 
+type stopsByLocationGroupLoaderParam struct {
+	LocationGroupID int
+	Limit           *int
+}
+
 type locationLoaderParam struct {
 	FeedVersionID int
 	Limit         *int
