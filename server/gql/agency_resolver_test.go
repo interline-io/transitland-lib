@@ -351,8 +351,6 @@ func TestAgencyResolver_Location(t *testing.T) {
 			query:       `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
 			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
 			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
 		},
 		// Focus tests
 		{

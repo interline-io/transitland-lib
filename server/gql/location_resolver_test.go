@@ -2,9 +2,6 @@ package gql
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/tidwall/gjson"
 )
 
 func TestLocationResolver(t *testing.T) {
@@ -128,7 +125,7 @@ func TestLocationResolver_StopTimes(t *testing.T) {
 				feed_versions(where:{sha1:$sha1}) {
 					locations(where:{location_id:$location_id}) {
 						location_id
-						stop_times(limit: 1) {
+						stop_times(limit: 1000) {
 							stop_sequence
 							start_pickup_drop_off_window
 							end_pickup_drop_off_window
@@ -139,22 +136,32 @@ func TestLocationResolver_StopTimes(t *testing.T) {
 				}
 			}`,
 			vars: hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID},
-			f: func(t *testing.T, jj string) {
-				locs := gjson.Get(jj, "feed_versions.0.locations").Array()
-				if len(locs) == 0 {
-					t.Fatal("expected locations")
-				}
-				sts := locs[0].Get("stop_times").Array()
-				if len(sts) == 0 {
-					t.Fatal("expected stop_times")
-				}
-				st := sts[0]
-				// Flex stop_times have pickup/drop-off windows instead of arrival/departure times
-				assert.True(t, st.Get("start_pickup_drop_off_window").Exists(), "expected start_pickup_drop_off_window")
-				assert.True(t, st.Get("end_pickup_drop_off_window").Exists(), "expected end_pickup_drop_off_window")
-				// Verify pickup/drop_off types are set (2=must coordinate, 1=no pickup/drop-off)
-				assert.True(t, st.Get("pickup_type").Exists(), "expected pickup_type")
-				assert.True(t, st.Get("drop_off_type").Exists(), "expected drop_off_type")
+			sel: []testcaseSelector{
+				{
+					selector:          "feed_versions.0.locations.0.stop_times.#.stop_sequence",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
+				{
+					selector:          "feed_versions.0.locations.0.stop_times.#.start_pickup_drop_off_window",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
+				{
+					selector:          "feed_versions.0.locations.0.stop_times.#.end_pickup_drop_off_window",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
+				{
+					selector:          "feed_versions.0.locations.0.stop_times.#.pickup_type",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
+				{
+					selector:          "feed_versions.0.locations.0.stop_times.#.drop_off_type",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
 			},
 		},
 		{

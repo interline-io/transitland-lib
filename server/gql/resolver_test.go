@@ -101,7 +101,7 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 	}
 	if err := c.Post(tc.query, &resp, opts...); err != nil {
 		if tc.expectError {
-			// ok
+			tested = true // expectError counts as a test
 		} else {
 			t.Error(err)
 			return

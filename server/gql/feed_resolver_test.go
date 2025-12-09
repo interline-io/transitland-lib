@@ -240,10 +240,7 @@ func TestFeedResolver(t *testing.T) {
 			name:        "bbox too large",
 			query:       `query($bbox:BoundingBox) {feeds(where: {bbox:$bbox}) {onestop_id}}`,
 			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			selector:    "feeds.#.onestop_id",
 			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
 		},
 		// TODO: authorization,
 		// TODO: associated_operators

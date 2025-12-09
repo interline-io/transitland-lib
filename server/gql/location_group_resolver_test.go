@@ -2,9 +2,6 @@ package gql
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/tidwall/gjson"
 )
 
 func TestLocationGroupResolver(t *testing.T) {
@@ -103,7 +100,7 @@ func TestLocationGroupResolver_StopTimes(t *testing.T) {
 				feed_versions(where:{sha1:$sha1}) {
 					location_groups(where:{location_group_id:$location_group_id}) {
 						location_group_id
-						stop_times(limit: 1) {
+						stop_times(limit: 1000) {
 							stop_sequence
 							start_pickup_drop_off_window
 							end_pickup_drop_off_window
@@ -114,21 +111,32 @@ func TestLocationGroupResolver_StopTimes(t *testing.T) {
 				}
 			}`,
 			vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
-			f: func(t *testing.T, jj string) {
-				lgs := gjson.Get(jj, "feed_versions.0.location_groups").Array()
-				if len(lgs) == 0 {
-					t.Fatal("expected location_groups")
-				}
-				sts := lgs[0].Get("stop_times").Array()
-				if len(sts) == 0 {
-					t.Fatal("expected stop_times")
-				}
-				st := sts[0]
-				// Flex stop_times have pickup/drop-off windows instead of arrival/departure times
-				assert.True(t, st.Get("start_pickup_drop_off_window").Exists(), "expected start_pickup_drop_off_window")
-				assert.True(t, st.Get("end_pickup_drop_off_window").Exists(), "expected end_pickup_drop_off_window")
-				assert.True(t, st.Get("pickup_type").Exists(), "expected pickup_type")
-				assert.True(t, st.Get("drop_off_type").Exists(), "expected drop_off_type")
+			sel: []testcaseSelector{
+				{
+					selector:          "feed_versions.0.location_groups.0.stop_times.#.stop_sequence",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
+				{
+					selector:          "feed_versions.0.location_groups.0.stop_times.#.start_pickup_drop_off_window",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
+				{
+					selector:          "feed_versions.0.location_groups.0.stop_times.#.end_pickup_drop_off_window",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
+				{
+					selector:          "feed_versions.0.location_groups.0.stop_times.#.pickup_type",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
+				{
+					selector:          "feed_versions.0.location_groups.0.stop_times.#.drop_off_type",
+					expectCount:       150,
+					expectUniqueCount: 2,
+				},
 			},
 		},
 		{
@@ -137,8 +145,7 @@ func TestLocationGroupResolver_StopTimes(t *testing.T) {
 				feed_versions(where:{sha1:$sha1}) {
 					location_groups(where:{location_group_id:$location_group_id}) {
 						location_group_id
-						stop_times(limit: 1) {
-							stop_sequence
+						stop_times(limit: 1000) {
 							pickup_booking_rule {
 								booking_rule_id
 								booking_type
@@ -148,18 +155,17 @@ func TestLocationGroupResolver_StopTimes(t *testing.T) {
 				}
 			}`,
 			vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
-			f: func(t *testing.T, jj string) {
-				lgs := gjson.Get(jj, "feed_versions.0.location_groups").Array()
-				if len(lgs) == 0 {
-					t.Fatal("expected location_groups")
-				}
-				sts := lgs[0].Get("stop_times").Array()
-				if len(sts) == 0 {
-					t.Fatal("expected stop_times")
-				}
-				pickupRule := sts[0].Get("pickup_booking_rule")
-				assert.True(t, pickupRule.Exists(), "expected pickup_booking_rule")
-				assert.NotEmpty(t, pickupRule.Get("booking_rule_id").String(), "expected booking_rule_id")
+			sel: []testcaseSelector{
+				{
+					selector:          "feed_versions.0.location_groups.0.stop_times.#.pickup_booking_rule.booking_rule_id",
+					expectCount:       150,
+					expectUniqueCount: 6,
+				},
+				{
+					selector:          "feed_versions.0.location_groups.0.stop_times.#.pickup_booking_rule.booking_type",
+					expectCount:       150,
+					expectUniqueCount: 1,
+				},
 			},
 		},
 		{
@@ -168,8 +174,7 @@ func TestLocationGroupResolver_StopTimes(t *testing.T) {
 				feed_versions(where:{sha1:$sha1}) {
 					location_groups(where:{location_group_id:$location_group_id}) {
 						location_group_id
-						stop_times(limit: 1) {
-							stop_sequence
+						stop_times(limit: 1000) {
 							location_group {
 								location_group_id
 								location_group_name
@@ -179,19 +184,17 @@ func TestLocationGroupResolver_StopTimes(t *testing.T) {
 				}
 			}`,
 			vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
-			f: func(t *testing.T, jj string) {
-				lgs := gjson.Get(jj, "feed_versions.0.location_groups").Array()
-				if len(lgs) == 0 {
-					t.Fatal("expected location_groups")
-				}
-				sts := lgs[0].Get("stop_times").Array()
-				if len(sts) == 0 {
-					t.Fatal("expected stop_times")
-				}
-				// The stop_time's location_group should point back to the same location_group
-				stLg := sts[0].Get("location_group")
-				assert.Equal(t, vaMedicalCenterLocationGroupID, stLg.Get("location_group_id").String())
-				assert.Equal(t, "VA Medical Center (fixed route stop)", stLg.Get("location_group_name").String())
+			sel: []testcaseSelector{
+				{
+					selector:     "feed_versions.0.location_groups.0.stop_times.#.location_group.location_group_id",
+					expectCount:  150,
+					expectUnique: []string{vaMedicalCenterLocationGroupID},
+				},
+				{
+					selector:     "feed_versions.0.location_groups.0.stop_times.#.location_group.location_group_name",
+					expectCount:  150,
+					expectUnique: []string{"VA Medical Center (fixed route stop)"},
+				},
 			},
 		},
 	}

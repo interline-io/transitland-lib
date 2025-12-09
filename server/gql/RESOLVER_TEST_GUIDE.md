@@ -170,6 +170,8 @@ Use for complex validations that can't be expressed with simple matchers.
 - Numeric comparisons on counts
 - Iterating over results with validation
 
+**AVOID** using `f:` tests unless the check cannot be performed without custom logic.
+
 ---
 
 ### Pattern 5: Unique Values (`selectExpectUnique`)

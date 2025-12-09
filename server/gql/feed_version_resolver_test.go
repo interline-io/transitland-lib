@@ -68,7 +68,6 @@ func TestFeedVersionResolver(t *testing.T) {
 			vars:     vars,
 			selector: "feed_versions.0.files.#.name",
 			f: func(t *testing.T, jj string) {
-
 				for _, fvfile := range gjson.Get(jj, "feed_versions.0.files").Array() {
 					if fvfile.Get("name").String() != "trips.txt" {
 						continue
@@ -149,7 +148,6 @@ func TestFeedVersionResolver(t *testing.T) {
 			// selector:     "ok.#.sha1",
 			// selectExpect: []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"},
 			f: func(t *testing.T, jj string) {
-
 				exp := []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
 				var empty []string
 				assert.Equal(t, exp, astr(gjson.Get(jj, "feeds.0.all.#.sha1").Array()))
@@ -324,10 +322,7 @@ func TestFeedVersionResolver(t *testing.T) {
 			name:        "bbox too large",
 			query:       `query($bbox:BoundingBox) {feed_versions(where: {bbox:$bbox}) {sha1}}`,
 			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			selector:    "feed_versions.#.sha1",
 			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
 		},
 	}
 	c, _ := newTestClient(t)

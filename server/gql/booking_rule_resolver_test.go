@@ -2,9 +2,6 @@ package gql
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/tidwall/gjson"
 )
 
 func TestBookingRuleResolver(t *testing.T) {
@@ -20,12 +17,9 @@ func TestBookingRuleResolver(t *testing.T) {
 					}
 				}
 			}`,
-			vars:     hw{"sha1": ctranFlexSha1},
-			selector: "feed_versions.0.booking_rules.#.booking_rule_id",
-			f: func(t *testing.T, jj string) {
-				count := len(gjson.Get(jj, "feed_versions.0.booking_rules").Array())
-				assert.Equal(t, 128, count, "expected 128 booking rules")
-			},
+			vars:              hw{"sha1": ctranFlexSha1},
+			selector:          "feed_versions.0.booking_rules.#.booking_rule_id",
+			selectExpectCount: 128,
 		},
 		// Test empty result for non-existent booking_rule_id
 		{
@@ -92,12 +86,11 @@ func TestBookingRuleResolver_FeedVersion(t *testing.T) {
 				}
 			}`,
 			vars: hw{"sha1": ctranFlexSha1, "brid": brid},
-			f: func(t *testing.T, jj string) {
-				rule := gjson.Get(jj, "feed_versions.0.booking_rules.0")
-				assert.Equal(t, brid, rule.Get("booking_rule_id").String())
-				assert.Equal(t, "ctran-flex", rule.Get("feed_onestop_id").String())
-				assert.Equal(t, ctranFlexSha1, rule.Get("feed_version_sha1").String())
-				assert.Equal(t, ctranFlexSha1, rule.Get("feed_version.sha1").String())
+			sel: []testcaseSelector{
+				{selector: "feed_versions.0.booking_rules.0.booking_rule_id", expectUnique: []string{brid}},
+				{selector: "feed_versions.0.booking_rules.0.feed_onestop_id", expectUnique: []string{"ctran-flex"}},
+				{selector: "feed_versions.0.booking_rules.0.feed_version_sha1", expectUnique: []string{ctranFlexSha1}},
+				{selector: "feed_versions.0.booking_rules.0.feed_version.sha1", expectUnique: []string{ctranFlexSha1}},
 			},
 		},
 	}
@@ -125,11 +118,10 @@ func TestBookingRuleResolver_PriorNoticeService(t *testing.T) {
 				}
 			}`,
 			vars: hw{"sha1": ctranFlexSha1, "brid": brid},
-			f: func(t *testing.T, jj string) {
-				rule := gjson.Get(jj, "feed_versions.0.booking_rules.0")
-				assert.Equal(t, brid, rule.Get("booking_rule_id").String())
-				// prior_notice_service should be null for this booking rule
-				assert.True(t, rule.Get("prior_notice_service").Type == gjson.Null, "expected prior_notice_service to be null")
+			sel: []testcaseSelector{
+				{selector: "feed_versions.0.booking_rules.0.booking_rule_id", expectUnique: []string{brid}},
+				// prior_notice_service should be null for this booking rule, so service_id selector returns empty
+				{selector: "feed_versions.0.booking_rules.0.prior_notice_service.service_id", expect: []string{}},
 			},
 		},
 	}
