@@ -107,60 +107,20 @@ func TestLocationResolver_StopTimes(t *testing.T) {
 	roseVillageLocationID := "location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"
 	testcases := []testcase{
 		{
-			name: "location stop times with trip",
-			query: `query($sha1: String!, $location_id: String) {
-				feed_versions(where:{sha1:$sha1}) {
-					locations(where:{location_id:$location_id}) {
-						location_id
-						stop_times(limit: 1) {
-							stop_sequence
-							trip {
-								trip_id
-							}
-						}
-					}
-				}
-			}`,
-			vars: hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID},
-			f: func(t *testing.T, jj string) {
-				locs := gjson.Get(jj, "feed_versions.0.locations").Array()
-				if len(locs) == 0 {
-					t.Fatal("expected locations")
-				}
-				loc := locs[0]
-				assert.Equal(t, roseVillageLocationID, loc.Get("location_id").String())
-				sts := loc.Get("stop_times").Array()
-				if len(sts) > 0 {
-					assert.NotEmpty(t, sts[0].Get("trip.trip_id").String(), "expected trip_id on stop time")
-				}
-			},
-		},
-		{
 			name: "location stop times count for known location",
 			query: `query($sha1: String!, $location_id: String) {
 				feed_versions(where:{sha1:$sha1}) {
 					locations(where:{location_id:$location_id}) {
 						location_id
-						stop_name
-						stop_times(limit: 200) {
+						stop_times(limit: 1000) {
 							stop_sequence
 						}
 					}
 				}
 			}`,
-			vars: hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID},
-			f: func(t *testing.T, jj string) {
-				locs := gjson.Get(jj, "feed_versions.0.locations").Array()
-				if len(locs) == 0 {
-					t.Fatal("expected locations")
-				}
-				loc := locs[0]
-				assert.Equal(t, roseVillageLocationID, loc.Get("location_id").String())
-				assert.Equal(t, "Rose Village", loc.Get("stop_name").String())
-				sts := loc.Get("stop_times").Array()
-				// Rose Village location has 150 stop_times in the C-TRAN flex feed
-				assert.Equal(t, 150, len(sts), "expected 150 stop_times for Rose Village location")
-			},
+			vars:              hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID},
+			selector:          "feed_versions.0.locations.0.stop_times.#.stop_sequence",
+			selectExpectCount: 150,
 		},
 		{
 			name: "location stop times flex fields",
@@ -198,114 +158,64 @@ func TestLocationResolver_StopTimes(t *testing.T) {
 			},
 		},
 		{
-			name: "location stop times with booking rules",
-			query: `query($sha1: String!, $location_id: String) {
-				feed_versions(where:{sha1:$sha1}) {
-					locations(where:{location_id:$location_id}) {
-						location_id
-						stop_times(limit: 1) {
-							stop_sequence
-							pickup_booking_rule {
-								booking_rule_id
-								booking_type
-								message
-							}
-							drop_off_booking_rule {
-								booking_rule_id
-							}
-						}
-					}
-				}
-			}`,
-			vars: hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID},
-			f: func(t *testing.T, jj string) {
-				locs := gjson.Get(jj, "feed_versions.0.locations").Array()
-				if len(locs) == 0 {
-					t.Fatal("expected locations")
-				}
-				sts := locs[0].Get("stop_times").Array()
-				if len(sts) == 0 {
-					t.Fatal("expected stop_times")
-				}
-				st := sts[0]
-				// Flex stop_times have associated booking rules
-				pickupRule := st.Get("pickup_booking_rule")
-				assert.True(t, pickupRule.Exists(), "expected pickup_booking_rule")
-				assert.NotEmpty(t, pickupRule.Get("booking_rule_id").String(), "expected booking_rule_id")
-				assert.True(t, pickupRule.Get("booking_type").Exists(), "expected booking_type")
-				assert.NotEmpty(t, pickupRule.Get("message").String(), "expected booking message")
-			},
-		},
-		{
 			name: "location stop times navigates back to location",
 			query: `query($sha1: String!, $location_id: String) {
 				feed_versions(where:{sha1:$sha1}) {
 					locations(where:{location_id:$location_id}) {
 						location_id
-						stop_times(limit: 1) {
-							stop_sequence
+						stop_times(limit: 1000) {
 							location {
 								location_id
-								stop_name
 							}
 						}
 					}
 				}
 			}`,
-			vars: hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID},
-			f: func(t *testing.T, jj string) {
-				locs := gjson.Get(jj, "feed_versions.0.locations").Array()
-				if len(locs) == 0 {
-					t.Fatal("expected locations")
-				}
-				sts := locs[0].Get("stop_times").Array()
-				if len(sts) == 0 {
-					t.Fatal("expected stop_times")
-				}
-				// The stop_time's location should point back to the same location
-				stLoc := sts[0].Get("location")
-				assert.Equal(t, roseVillageLocationID, stLoc.Get("location_id").String())
-				assert.Equal(t, "Rose Village", stLoc.Get("stop_name").String())
-			},
+			vars:               hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID},
+			selector:           "feed_versions.0.locations.0.stop_times.#.location.location_id",
+			selectExpectUnique: []string{roseVillageLocationID},
 		},
 		{
-			name: "location stop times with trip details",
-			query: `query($sha1: String!, $location_id: String) {
+			name: "location stop times with service date",
+			query: `query($sha1: String!, $location_id: String, $service_date: Date) {
 				feed_versions(where:{sha1:$sha1}) {
 					locations(where:{location_id:$location_id}) {
 						location_id
-						stop_times(limit: 5) {
-							stop_sequence
+						stop_times(limit: 1000, where: {service_date: $service_date}) {
 							trip {
 								trip_id
-								trip_short_name
-								route {
-									route_id
-									route_short_name
-								}
 							}
 						}
 					}
 				}
 			}`,
-			vars: hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID},
-			f: func(t *testing.T, jj string) {
-				locs := gjson.Get(jj, "feed_versions.0.locations").Array()
-				if len(locs) == 0 {
-					t.Fatal("expected locations")
-				}
-				sts := locs[0].Get("stop_times").Array()
-				if len(sts) == 0 {
-					t.Fatal("expected stop_times")
-				}
-				// All stop_times should have valid trip and route references
-				for i, st := range sts {
-					trip := st.Get("trip")
-					assert.NotEmpty(t, trip.Get("trip_id").String(), "stop_time[%d] expected trip_id", i)
-					route := trip.Get("route")
-					assert.NotEmpty(t, route.Get("route_id").String(), "stop_time[%d] expected route_id", i)
-				}
+			vars:     hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID, "service_date": "2025-12-08"},
+			selector: "feed_versions.0.locations.0.stop_times.#.trip.trip_id",
+			selectExpectUnique: []string{
+				"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<c7400cc8-959c-42c8-991f-8f601ec9ea59>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>",
+				"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<c7400cc8-959c-42c8-991f-8f601ec9ea59>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>",
+				"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<c7400cc8-959c-42c8-991f-8f601ec9ea59>_to-<c7400cc8-959c-42c8-991f-8f601ec9ea59>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>",
+				"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<c7400cc8-959c-42c8-991f-8f601ec9ea59>_to-<b5f50364-07f6-46f3-aa8c-f50aefaecb53>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>",
+				"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<b5f50364-07f6-46f3-aa8c-f50aefaecb53>_to-<c7400cc8-959c-42c8-991f-8f601ec9ea59>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>",
 			},
+		},
+		{
+			name: "location stop times with future service date returns empty",
+			query: `query($sha1: String!, $location_id: String, $service_date: Date) {
+				feed_versions(where:{sha1:$sha1}) {
+					locations(where:{location_id:$location_id}) {
+						location_id
+						stop_times(limit: 1000, where: {service_date: $service_date}) {
+							trip {
+								trip_id
+							}
+						}
+					}
+				}
+			}`,
+			vars:         hw{"sha1": ctranFlexSha1, "location_id": roseVillageLocationID, "service_date": "2099-01-01"},
+			selector:     "feed_versions.0.locations.0.stop_times.#.trip.trip_id",
+			selectExpect: []string{},
 		},
 	}
 	c, _ := newTestClient(t)

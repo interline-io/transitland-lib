@@ -21,25 +21,29 @@ const DEFAULT_WHEN = "2022-09-01T00:00:00Z"
 type hw = map[string]interface{}
 
 type testcaseSelector struct {
-	selector     string
-	expect       []string
-	expectUnique []string
-	expectCount  int
+	selector          string
+	expect            []string
+	expectUnique      []string
+	expectContains    []string
+	expectCount       int
+	expectUniqueCount int
 }
 
 type testcase struct {
-	name               string
-	query              string
-	vars               hw
-	expect             string
-	user               string
-	selector           string
-	expectError        bool
-	selectExpect       []string
-	selectExpectUnique []string
-	selectExpectCount  int
-	sel                []testcaseSelector
-	f                  func(*testing.T, string)
+	name                    string
+	query                   string
+	vars                    hw
+	expect                  string
+	user                    string
+	selector                string
+	expectError             bool
+	selectExpect            []string
+	selectExpectUnique      []string
+	selectExpectContains    []string
+	selectExpectCount       int
+	selectExpectUniqueCount int
+	sel                     []testcaseSelector
+	f                       func(*testing.T, string)
 }
 
 type testcaseWithClock struct {
@@ -113,10 +117,12 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 	}
 	if tc.selector != "" {
 		tc.sel = append(tc.sel, testcaseSelector{
-			selector:     tc.selector,
-			expect:       tc.selectExpect,
-			expectCount:  tc.selectExpectCount,
-			expectUnique: tc.selectExpectUnique,
+			selector:          tc.selector,
+			expect:            tc.selectExpect,
+			expectCount:       tc.selectExpectCount,
+			expectUnique:      tc.selectExpectUnique,
+			expectContains:    tc.selectExpectContains,
+			expectUniqueCount: tc.selectExpectUniqueCount,
 		})
 	}
 	for _, sel := range tc.sel {
@@ -128,6 +134,16 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 			tested = true
 			if len(a) != sel.expectCount {
 				t.Errorf("selector returned %d elements, expected %d", len(a), sel.expectCount)
+			}
+		}
+		if sel.expectUniqueCount != 0 {
+			tested = true
+			mm := map[string]int{}
+			for _, v := range a {
+				mm[v] += 1
+			}
+			if len(mm) != sel.expectUniqueCount {
+				t.Errorf("selector returned %d unique elements, expected %d", len(mm), sel.expectUniqueCount)
 			}
 		}
 		if sel.expectUnique != nil {
@@ -146,6 +162,18 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 			tested = true
 			if !assert.ElementsMatch(t, sel.expect, a) {
 				t.Errorf("got %#v -- expect %#v\n\n", a, sel.expect)
+			}
+		}
+		if sel.expectContains != nil {
+			tested = true
+			mm := map[string]bool{}
+			for _, v := range a {
+				mm[v] = true
+			}
+			for _, v := range sel.expectContains {
+				if !mm[v] {
+					t.Errorf("expected result to contain %q", v)
+				}
 			}
 		}
 	}
