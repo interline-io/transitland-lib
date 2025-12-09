@@ -13,7 +13,7 @@ func TestFeedResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query { feeds {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "BA", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "BA", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name:   "basic fields",
@@ -88,7 +88,7 @@ func TestFeedResolver(t *testing.T) {
 			name:         "where spec=gtfs",
 			query:        `query { feeds(where:{spec:[GTFS]}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "BA", "test", "HA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "test", "EX"},
 		},
 		{
 			name:         "where spec=gtfs-rt",
@@ -106,13 +106,13 @@ func TestFeedResolver(t *testing.T) {
 			name:         "where fetch_error=false",
 			query:        `query { feeds(where:{fetch_error:false}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA", "CT", "HA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "EX"},
 		},
 		{
 			name:         "where import_status=success",
 			query:        `query { feeds(where:{import_status:SUCCESS}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA", "CT", "HA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "EX"},
 		},
 		{
 			name:         "where import_status=in_progress", // TODO: mock an in-progress import
@@ -240,10 +240,7 @@ func TestFeedResolver(t *testing.T) {
 			name:        "bbox too large",
 			query:       `query($bbox:BoundingBox) {feeds(where: {bbox:$bbox}) {onestop_id}}`,
 			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			selector:    "feeds.#.onestop_id",
 			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
 		},
 		// TODO: authorization,
 		// TODO: associated_operators
@@ -316,7 +313,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		// license: create_derived_product
 		{
@@ -345,7 +342,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		// license: commercial_use_allowed
 		{
@@ -374,7 +371,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		// license: redistribution_allowed
 		{
@@ -403,7 +400,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 
 		// license: use_without_attribution
@@ -433,7 +430,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 	}
 	c, _ := newTestClient(t)

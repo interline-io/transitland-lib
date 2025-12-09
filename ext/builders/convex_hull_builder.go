@@ -44,9 +44,10 @@ func (ent *FeedVersionGeometry) TableName() string {
 //////////
 
 type ConvexHullBuilder struct {
-	stops          map[string]*stopGeom
-	tripRoutes     map[string]string
-	routeStopGeoms map[string]*routeStopGeoms
+	stops              map[string]*stopGeom
+	tripRoutes         map[string]string
+	routeStopGeoms     map[string]*routeStopGeoms
+	locationGeometries []tt.Geometry
 }
 
 func NewConvexHullBuilder() *ConvexHullBuilder {
@@ -65,6 +66,9 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 			lon: v.Geometry.X(),
 			lat: v.Geometry.Y(),
 		}
+	case *gtfs.Location:
+		// Include location geometries in feed version convex hull
+		pp.locationGeometries = append(pp.locationGeometries, v.Geometry)
 	case *gtfs.Route:
 		pp.routeStopGeoms[eid] = &routeStopGeoms{
 			agency:    v.AgencyID.Val,
@@ -93,22 +97,15 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 
 func (pp *ConvexHullBuilder) Copy(copier adapters.EntityCopier) error {
 	// build feed version convex hulls
-	fvStops := map[int][]*stopGeom{}
-	for _, sg := range pp.stops {
-		fvStops[sg.fvid] = append(fvStops[sg.fvid], sg)
+	coords := []float64{}
+	for _, v := range pp.stops {
+		coords = append(coords, v.lon, v.lat)
 	}
-	for fvid, v := range fvStops {
-		_ = fvid
-		coords := []float64{}
-		for _, coord := range v {
-			coords = append(coords, coord.lon, coord.lat)
-		}
-		ch := xy.ConvexHullFlat(geom.XY, coords)
-		v, ok := ch.(*geom.Polygon)
-		if !ok {
-			// log.For(ctx).Debug().Msgf("feed version convex hull is not polygon:", fvid)
-			continue
-		}
+	for _, v := range pp.locationGeometries {
+		coords = append(coords, v.FlatCoords()...)
+	}
+	ch := xy.ConvexHullFlat(geom.XY, coords)
+	if v, ok := ch.(*geom.Polygon); ok {
 		ent := FeedVersionGeometry{
 			Geometry: tt.NewPolygon(v),
 		}
@@ -116,6 +113,7 @@ func (pp *ConvexHullBuilder) Copy(copier adapters.EntityCopier) error {
 			return err
 		}
 	}
+
 	// now build agency convex hulls
 	agencyStops := map[string]map[string]*stopGeom{}
 	for _, rsg := range pp.routeStopGeoms {

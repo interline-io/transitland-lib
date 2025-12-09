@@ -22,7 +22,7 @@ func TestFeedVersionResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query {  feed_versions {sha1} }`,
 			selector:     "feed_versions.#.sha1",
-			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d"},
+			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"},
 		},
 		{
 			name:   "basic fields",
@@ -68,7 +68,6 @@ func TestFeedVersionResolver(t *testing.T) {
 			vars:     vars,
 			selector: "feed_versions.0.files.#.name",
 			f: func(t *testing.T, jj string) {
-
 				for _, fvfile := range gjson.Get(jj, "feed_versions.0.files").Array() {
 					if fvfile.Get("name").String() != "trips.txt" {
 						continue
@@ -105,6 +104,12 @@ func TestFeedVersionResolver(t *testing.T) {
 			vars:         vars,
 			selector:     "feed_versions.0.stops.#.stop_id",
 			selectExpect: []string{"70011", "70012", "70021", "70022", "70031", "70032", "70041", "70042", "70051", "70052", "70061", "70062", "70071", "70072", "70081", "70082", "70091", "70092", "70101", "70102", "70111", "70112", "70121", "70122", "70131", "70132", "70141", "70142", "70151", "70152", "70161", "70162", "70171", "70172", "70191", "70192", "70201", "70202", "70211", "70212", "70221", "70222", "70231", "70232", "70241", "70242", "70251", "70252", "70261", "70262", "70271", "70272", "70281", "70282", "70291", "70292", "70301", "70302", "70311", "70312", "70321", "70322", "777402", "777403"},
+		},
+		{
+			name:         "locations",
+			query:        `query { feed_versions(where:{sha1:"e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}) {locations(limit:1000) {location_id}} }`,
+			selector:     "feed_versions.0.locations.#.location_id",
+			selectExpect: []string{"location_id__75e0de0d-d90c-4f15-a6cc-001f734e0f13", "location_id__8d41f4d3-7760-457e-94e1-6f7980cb3c20", "location_id__ac79ba5e-31ae-4879-a455-a053862dbe59", "location_id__2a077a44-c1e9-44c6-8b26-6ece58b64db6", "location_id__43ca2d5b-a235-4669-a27e-371a7c528cca", "location_id__bb80cf18-9fa7-498a-b22f-1f66eb4214a6", "location_id__11f830d0-adec-468a-a8d6-513184e476a1", "location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"},
 		},
 		// where
 		{
@@ -143,7 +148,6 @@ func TestFeedVersionResolver(t *testing.T) {
 			// selector:     "ok.#.sha1",
 			// selectExpect: []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"},
 			f: func(t *testing.T, jj string) {
-
 				exp := []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
 				var empty []string
 				assert.Equal(t, exp, astr(gjson.Get(jj, "feeds.0.all.#.sha1").Array()))
@@ -318,10 +322,7 @@ func TestFeedVersionResolver(t *testing.T) {
 			name:        "bbox too large",
 			query:       `query($bbox:BoundingBox) {feed_versions(where: {bbox:$bbox}) {sha1}}`,
 			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			selector:    "feed_versions.#.sha1",
 			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
 		},
 	}
 	c, _ := newTestClient(t)
@@ -484,12 +485,90 @@ func TestFeedVersionResolver_Segments(t *testing.T) {
 	queryTestcases(t, c, testcases)
 }
 
+func TestFeedVersionResolver_Locations(t *testing.T) {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	testcases := []testcase{
+		{
+			name:  "locations",
+			query: `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { locations { location_id } }}`,
+			vars:  hw{"sha1": ctranFlexSha1},
+			f: func(t *testing.T, jj string) {
+				locs := gjson.Get(jj, "feed_versions.0.locations").Array()
+				assert.Greater(t, len(locs), 0, "expected at least one location")
+			},
+		},
+		{
+			name:   "location filter by id",
+			query:  `query($sha1: String!, $location_id: String) { feed_versions(where:{sha1:$sha1}) { locations(where:{location_id:$location_id}) { location_id stop_name } }}`,
+			vars:   hw{"sha1": ctranFlexSha1, "location_id": "location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"},
+			expect: `{"feed_versions":[{"locations":[{"location_id":"location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59","stop_name":"Rose Village"}]}]}`,
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
+func TestFeedVersionResolver_LocationGroups(t *testing.T) {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	testcases := []testcase{
+		{
+			name:  "location groups",
+			query: `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { location_groups { location_group_id location_group_name } }}`,
+			vars:  hw{"sha1": ctranFlexSha1},
+			f: func(t *testing.T, jj string) {
+				lgs := gjson.Get(jj, "feed_versions.0.location_groups").Array()
+				assert.Greater(t, len(lgs), 0, "expected at least one location group")
+			},
+		},
+		{
+			name:  "location groups with limit",
+			query: `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { location_groups(limit:2) { location_group_id } }}`,
+			vars:  hw{"sha1": ctranFlexSha1},
+			f: func(t *testing.T, jj string) {
+				lgs := gjson.Get(jj, "feed_versions.0.location_groups").Array()
+				assert.LessOrEqual(t, len(lgs), 2, "expected at most 2 location groups with limit:2")
+			},
+		},
+		{
+			name:   "location group filter by id",
+			query:  `query($sha1: String!, $location_group_id: String) { feed_versions(where:{sha1:$sha1}) { location_groups(where:{location_group_id:$location_group_id}) { location_group_id location_group_name } }}`,
+			vars:   hw{"sha1": ctranFlexSha1, "location_group_id": "location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e"},
+			expect: `{"feed_versions":[{"location_groups":[{"location_group_id":"location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e","location_group_name":"VA Medical Center (fixed route stop)"}]}]}`,
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
+func TestFeedVersionResolver_BookingRules(t *testing.T) {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	testcases := []testcase{
+		{
+			name:  "booking rules",
+			query: `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { booking_rules { booking_rule_id booking_type prior_notice_start_day } }}`,
+			vars:  hw{"sha1": ctranFlexSha1},
+			f: func(t *testing.T, jj string) {
+				brs := gjson.Get(jj, "feed_versions.0.booking_rules").Array()
+				assert.Greater(t, len(brs), 0, "expected at least one booking rule")
+			},
+		},
+		{
+			name:   "booking rule filter by id",
+			query:  `query($sha1: String!, $booking_rule_id: String) { feed_versions(where:{sha1:$sha1}) { booking_rules(where:{booking_rule_id:$booking_rule_id}) { booking_rule_id booking_type } }}`,
+			vars:   hw{"sha1": ctranFlexSha1, "booking_rule_id": "booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a"},
+			expect: `{"feed_versions":[{"booking_rules":[{"booking_rule_id":"booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a","booking_type":1}]}]}`,
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
 func TestFeedVersionResolver_License(t *testing.T) {
 	q := `query($lic:LicenseFilter) {feed_versions(where: {license: $lic}) {sha1 feed { onestop_id} }}`
 	baFvs := []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
 	haFvs := []string{"c969427f56d3a645195dd8365cde6d7feae7e99b"}
 	ctFvs := []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
-	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
+	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}
 	testcases := []testcase{
 		// license: share_alike_optional
 		{

@@ -153,6 +153,23 @@ func (f *lookupCache) StopTimezone(ctx context.Context, id int, known string) (*
 	return loc, ok
 }
 
+// FeedVersionTimezone looks up the timezone for a feed version using the first agency's timezone
+func (f *lookupCache) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Location, bool) {
+	// Use a special key for feed version timezones (negative to avoid collision with stop IDs)
+	cacheKey := -fvid
+	if loc, ok := f.tzCache.Get(cacheKey); ok {
+		return loc, ok
+	}
+	q := `SELECT agency_timezone FROM gtfs_agencies WHERE feed_version_id = $1 LIMIT 1`
+	tz := ""
+	if err := sqlx.Get(f.db, &tz, q, fvid); err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("tz: feed version timezone lookup failed")
+		return nil, false
+	}
+	loc, ok := f.tzCache.Add(cacheKey, tz)
+	return loc, ok
+}
+
 // Lookup time.Location by name
 func (f *lookupCache) Location(tz string) (*time.Location, bool) {
 	return f.tzCache.Location(tz)

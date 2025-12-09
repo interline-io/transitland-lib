@@ -317,6 +317,12 @@ type FeedVersion {
   stops(limit: Int, where: StopFilter): [Stop!]!
   "Trips associated with this feed version, if imported"
   trips(limit: Int, where: TripFilter): [Trip!]!
+  "GTFS Flex locations associated with this feed version, if imported"
+  locations(limit: Int, where: LocationFilter): [Location!]!
+  "GTFS Flex booking rules associated with this feed version, if imported"
+  booking_rules(limit: Int, where: BookingRuleFilter): [BookingRule!]!
+  "GTFS Flex location groups associated with this feed version, if imported"
+  location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
   "Feed infos associated with this feed version, if imported"
   feed_infos(limit: Int): [FeedInfo!]!
   "Validation reports associated with this feed version"
@@ -600,6 +606,8 @@ type Stop {
   feed_onestop_id: String!
   "Feed version"
   feed_version: FeedVersion!
+  "GTFS Flex location groups associated with this stop"
+  location_groups(limit: Int): [LocationGroup!]!
   "Stop level"
   level: Level
   "Stop parent station"
@@ -716,6 +724,8 @@ type Trip {
   feed_version: FeedVersion!
   "Stop times for this trip"
   stop_times(limit: Int, where: TripStopTimeFilter): [StopTime]!
+  "GTFS Flex stop times for this trip (Locations and Location Groups)"
+  flex_stop_times(limit: Int, where: TripStopTimeFilter): [FlexStopTime!]!
   "Frequencies for this trip"
   frequencies(limit: Int): [Frequency!]!
   "GTFS-RT alerts for this trip"
@@ -809,8 +819,69 @@ type StopTime {
   shape_dist_traveled: Float
   "Set if this arrival/departure time was interpolated during import"
   interpolated: Int
+  "GTFS stop_times.start_pickup_drop_off_window"
+  start_pickup_drop_off_window: Seconds
+  "GTFS stop_times.end_pickup_drop_off_window"
+  end_pickup_drop_off_window: Seconds
+  "GTFS stop_times.pickup_booking_rule_id"
+  pickup_booking_rule: BookingRule
+  "GTFS stop_times.drop_off_booking_rule_id"
+  drop_off_booking_rule: BookingRule
   "Stop associated with this stop time"
   stop: Stop!
+  "Trip associated with this stop time"
+  trip: Trip!
+  "Detailed arrival information, including GTFS-RT updates and estimates"
+  arrival: StopTimeEvent!
+  "Detailed departure information, including GTFS-RT updates and estimates"
+  departure: StopTimeEvent!
+  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  service_date: Date
+  "If part of an arrival/departure query, the calendar date for this scheduled stop time"
+  date: Date
+  """A status flag for real-time information about this trip.
+
+  If no real-time information is available, the value will be STATIC and the estimated arrival/departure times will be empty. A trip with real-time information available will be SCHEDULED; a canceled trip will be CANCELED, and an added trip that is not present in the static GTFS will be ADDED.
+  """
+  schedule_relationship: ScheduleRelationship
+}
+
+"""Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file, representing a service at a Location or Location Group."""
+type FlexStopTime {
+  "GTFS stop_times.arrival_time"
+  arrival_time: Seconds
+  "GTFS stop_times.departure_time"
+  departure_time: Seconds
+  "GTFS stop_times.stop_sequence"
+  stop_sequence: Int!
+  "GTFS stop_times.stop_headsign"
+  stop_headsign: String
+  "GTFS stop_times.pickup_type"
+  pickup_type: Int
+  "GTFS stop_times.drop_off_type"
+  drop_off_type: Int
+  "GTFS stop_times.timepoint"
+  timepoint: Int
+  "GTFS stop_times.continuous_drop_off"
+  continuous_drop_off: Int
+  "GTFS stop_times.continuous_pickup"
+  continuous_pickup: Int
+  "GTFS stop_times.shape_dist_traveled"
+  shape_dist_traveled: Float
+  "Set if this arrival/departure time was interpolated during import"
+  interpolated: Int
+  "GTFS stop_times.start_pickup_drop_off_window"
+  start_pickup_drop_off_window: Seconds
+  "GTFS stop_times.end_pickup_drop_off_window"
+  end_pickup_drop_off_window: Seconds
+  "GTFS stop_times.pickup_booking_rule_id"
+  pickup_booking_rule: BookingRule
+  "GTFS stop_times.drop_off_booking_rule_id"
+  drop_off_booking_rule: BookingRule
+  "Location associated with this stop time"
+  location: Location
+  "Location Group associated with this stop time"
+  location_group: LocationGroup
   "Trip associated with this stop time"
   trip: Trip!
   "Detailed arrival information, including GTFS-RT updates and estimates"
@@ -850,6 +921,104 @@ type FeedInfo {
   feed_contact_email: Email
   "GTFS feed_info.feed_contact_url"
   feed_contact_url: Url
+}
+
+"""Record from a static GTFS [locations.geojson](https://gtfs.org/schedule/reference/#locationsgeojson) file."""
+type Location {
+  "Internal integer ID"
+  id: Int!
+  "GTFS locations.location_id"
+  location_id: String!
+  "GTFS locations.stop_name"
+  stop_name: String
+  "GTFS locations.stop_desc"
+  stop_desc: String
+  "GTFS locations.zone_id"
+  zone_id: String
+  "GTFS locations.stop_url"
+  stop_url: Url
+  "Geometry for this location"
+  geometry: Geometry!
+  "Feed version SHA1 identifier"
+  feed_version_sha1: String!
+  "Feed OnestopID"
+  feed_onestop_id: String!
+  "Feed version"
+  feed_version: FeedVersion!
+  "Stop times associated with this location"
+  stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
+}
+
+"""Record from a static GTFS [booking_rules.txt](https://gtfs.org/schedule/reference/#booking_rulestxt) file."""
+type BookingRule {
+  "Internal integer ID"
+  id: Int!
+  "GTFS booking_rules.booking_rule_id"
+  booking_rule_id: String!
+  "GTFS booking_rules.booking_type"
+  booking_type: Int!
+  "GTFS booking_rules.prior_notice_duration_min"
+  prior_notice_duration_min: Int
+  "GTFS booking_rules.prior_notice_duration_max"
+  prior_notice_duration_max: Int
+  "GTFS booking_rules.prior_notice_last_day"
+  prior_notice_last_day: Int
+  "GTFS booking_rules.prior_notice_last_time"
+  prior_notice_last_time: Seconds
+  "GTFS booking_rules.prior_notice_start_day"
+  prior_notice_start_day: Int
+  "GTFS booking_rules.prior_notice_start_time"
+  prior_notice_start_time: Seconds
+  "Prior notice service calendar"
+  prior_notice_service: Calendar
+  "GTFS booking_rules.message"
+  message: String
+  "GTFS booking_rules.pickup_message"
+  pickup_message: String
+  "GTFS booking_rules.drop_off_message"
+  drop_off_message: String
+  "GTFS booking_rules.phone_number"
+  phone_number: String
+  "GTFS booking_rules.info_url"
+  info_url: Url
+  "GTFS booking_rules.booking_url"
+  booking_url: Url
+  "Feed version SHA1 identifier"
+  feed_version_sha1: String!
+  "Feed OnestopID"
+  feed_onestop_id: String!
+  "Feed version"
+  feed_version: FeedVersion!
+}
+
+"""Record from a static GTFS [location_groups.txt](https://gtfs.org/schedule/reference/#location_groupstxt) file."""
+type LocationGroup {
+  "Internal integer ID"
+  id: Int!
+  "GTFS location_groups.location_group_id"
+  location_group_id: String!
+  "GTFS location_groups.location_group_name"
+  location_group_name: String
+  "Feed version SHA1 identifier"
+  feed_version_sha1: String!
+  "Feed OnestopID"
+  feed_onestop_id: String!
+  "Feed version"
+  feed_version: FeedVersion!
+  "Stops associated with this location group"
+  stops(limit: Int): [Stop!]!
+  "Stop times associated with this location group"
+  stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
+}
+
+"""Record from a static GTFS [location_group_stops.txt](https://gtfs.org/schedule/reference/#location_group_stopstxt) file."""
+type LocationGroupStop {
+  "Internal integer ID"
+  id: Int!
+  "Location group"
+  location_group: LocationGroup!
+  "Stop"
+  stop: Stop!
 }
 
 # Archived observed stop-times
@@ -1581,6 +1750,29 @@ input FeedVersionFilter {
   near: PointRadius
   "Search for stops with these license details"
   license: LicenseFilter
+}
+
+"""Search options for locations"""
+input LocationFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for locations with this location_id"
+  location_id: String
+}
+
+input BookingRuleFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for booking rules with this booking_rule_id"
+  booking_rule_id: String
+}
+
+"""Search options for location groups"""
+input LocationGroupFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for location groups with this location_group_id"
+  location_group_id: String
 }
 
 """Import status for a feed version"""

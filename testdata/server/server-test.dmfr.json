@@ -44,6 +44,13 @@
       ]
     },
     {
+      "spec": "gtfs",
+      "id": "ctran-flex",
+      "urls": {
+        "static_current": "file://testdata/gtfs-external/ctran-flex.zip"
+      }
+    },
+    {
       "spec": "gbfs",
       "id": "test-gbfs",
       "urls": {

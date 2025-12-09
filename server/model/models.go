@@ -168,6 +168,33 @@ type FeedVersionServiceLevel struct {
 	dmfr.FeedVersionServiceLevel
 }
 
+type Location struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.Location
+}
+
+type BookingRule struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.BookingRule
+}
+
+type LocationGroup struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.LocationGroup
+}
+
+type LocationGroupStop struct {
+	gtfs.LocationGroupStop
+}
+
+// FlexStopTime is an alias for StopTime.
+// Both types represent stop_times records and share the same underlying model (gtfs.StopTime).
+// The separation exists only for GraphQL schema purposes where they have different resolvers.
+type FlexStopTime = StopTime
+
 // Some enum helpers
 
 var specTypeMap = map[string]FeedSpecTypes{

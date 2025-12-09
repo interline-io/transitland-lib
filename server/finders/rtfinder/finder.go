@@ -50,6 +50,10 @@ func (f *Finder) StopTimezone(ctx context.Context, id int, known string) (*time.
 	return f.lc.StopTimezone(ctx, id, known)
 }
 
+func (f *Finder) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Location, bool) {
+	return f.lc.FeedVersionTimezone(ctx, fvid)
+}
+
 func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
 	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
 	for _, topic := range topics {

@@ -21,25 +21,34 @@ const DEFAULT_WHEN = "2022-09-01T00:00:00Z"
 type hw = map[string]interface{}
 
 type testcaseSelector struct {
-	selector     string
-	expect       []string
-	expectUnique []string
-	expectCount  int
+	selector          string
+	expect            []string
+	expectUnique      []string
+	expectContains    []string
+	expectCount       int
+	expectUniqueCount int
 }
 
+// testcase defines a GraphQL test case. See RESOLVER_TEST_GUIDE.md for full documentation.
 type testcase struct {
-	name               string
-	query              string
-	vars               hw
-	expect             string
-	user               string
-	selector           string
-	expectError        bool
-	selectExpect       []string
-	selectExpectUnique []string
-	selectExpectCount  int
-	sel                []testcaseSelector
-	f                  func(*testing.T, string)
+	name        string
+	query       string
+	vars        hw
+	expect      string
+	user        string
+	expectError bool
+	// sel allows multiple selector checks against the same query result
+	sel []testcaseSelector
+	// f is a custom test function for complex assertions
+	f func(*testing.T, string)
+	// Convenience fields: these wrap to sel with a single testcaseSelector.
+	// Use these for simple single-selector tests; use sel[] for multiple checks.
+	selector                string   // convenience: wraps to sel[].selector
+	selectExpect            []string // convenience: wraps to sel[].expect
+	selectExpectUnique      []string // convenience: wraps to sel[].expectUnique
+	selectExpectContains    []string // convenience: wraps to sel[].expectContains
+	selectExpectCount       int      // convenience: wraps to sel[].expectCount
+	selectExpectUniqueCount int      // convenience: wraps to sel[].expectUniqueCount
 }
 
 type testcaseWithClock struct {
@@ -92,7 +101,7 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 	}
 	if err := c.Post(tc.query, &resp, opts...); err != nil {
 		if tc.expectError {
-			// ok
+			tested = true // expectError counts as a test
 		} else {
 			t.Error(err)
 			return
@@ -113,10 +122,12 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 	}
 	if tc.selector != "" {
 		tc.sel = append(tc.sel, testcaseSelector{
-			selector:     tc.selector,
-			expect:       tc.selectExpect,
-			expectCount:  tc.selectExpectCount,
-			expectUnique: tc.selectExpectUnique,
+			selector:          tc.selector,
+			expect:            tc.selectExpect,
+			expectCount:       tc.selectExpectCount,
+			expectUnique:      tc.selectExpectUnique,
+			expectContains:    tc.selectExpectContains,
+			expectUniqueCount: tc.selectExpectUniqueCount,
 		})
 	}
 	for _, sel := range tc.sel {
@@ -128,6 +139,16 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 			tested = true
 			if len(a) != sel.expectCount {
 				t.Errorf("selector returned %d elements, expected %d", len(a), sel.expectCount)
+			}
+		}
+		if sel.expectUniqueCount != 0 {
+			tested = true
+			mm := map[string]int{}
+			for _, v := range a {
+				mm[v] += 1
+			}
+			if len(mm) != sel.expectUniqueCount {
+				t.Errorf("selector returned %d unique elements, expected %d", len(mm), sel.expectUniqueCount)
 			}
 		}
 		if sel.expectUnique != nil {
@@ -146,6 +167,18 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 			tested = true
 			if !assert.ElementsMatch(t, sel.expect, a) {
 				t.Errorf("got %#v -- expect %#v\n\n", a, sel.expect)
+			}
+		}
+		if sel.expectContains != nil {
+			tested = true
+			mm := map[string]bool{}
+			for _, v := range a {
+				mm[v] = true
+			}
+			for _, v := range sel.expectContains {
+				if !mm[v] {
+					t.Errorf("expected result to contain %q", v)
+				}
 			}
 		}
 	}

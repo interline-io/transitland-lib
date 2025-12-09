@@ -16,7 +16,7 @@ func ptr[T any](v T) *T {
 }
 
 func TestRouteRequest(t *testing.T) {
-	routeIds := []string{"1", "12", "14", "15", "16", "17", "19", "20", "24", "25", "275", "30", "31", "32", "33", "34", "35", "36", "360", "37", "38", "39", "400", "42", "45", "46", "48", "5", "51", "6", "60", "7", "75", "8", "9", "96", "97", "570", "571", "572", "573", "574", "800", "PWT", "SKY", "01", "03", "05", "07", "11", "19", "Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"}
+	routeIds := []string{"1", "12", "14", "15", "16", "17", "19", "20", "24", "25", "275", "30", "31", "32", "33", "34", "35", "36", "360", "37", "38", "39", "400", "42", "45", "46", "48", "5", "51", "6", "60", "7", "75", "8", "9", "96", "97", "570", "571", "572", "573", "574", "800", "PWT", "SKY", "01", "03", "05", "07", "11", "19", "Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130", "2bc6804f-9e24-4b91-8947-c73a2363e7b6", "68456f6e-2a04-4fcb-971b-fd57348e2ed7", "3dce5414-260d-4cdb-b3d8-b256802d35c5", "0553af3e-53b8-4f98-ba47-0fc03d2404de", "fb93d53e-bf9a-426b-adb2-c913e4d5ecfd", "424421e5-c7c4-4307-8893-5ab9c913cecf"}
 	fv := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
 	testcases := []testCase{
 		{
@@ -180,7 +180,7 @@ func TestRouteRequest_Pagination(t *testing.T) {
 			h:            RouteRequest{WithCursor: WithCursor{Limit: 100}},
 			selector:     "routes.#.route_id",
 			expectSelect: nil,
-			expectLength: 57,
+			expectLength: 63,
 		},
 		{
 			name:         "pagination exists",
@@ -224,7 +224,7 @@ func TestRouteRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional exclude_no",
 			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}}, selector: "routes.#.route_id",
-			expectLength: 51,
+			expectLength: 57,
 		},
 		{
 			name: "license:commercial_use_allowed yes",
@@ -239,7 +239,7 @@ func TestRouteRequest_License(t *testing.T) {
 		{
 			name: "license:commercial_use_allowed exclude_no",
 			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}}, selector: "routes.#.route_id",
-			expectLength: 51,
+			expectLength: 57,
 		},
 		{
 			name: "license:create_derived_product yes",
@@ -254,7 +254,7 @@ func TestRouteRequest_License(t *testing.T) {
 		{
 			name: "license:create_derived_product exclude_no",
 			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}}, selector: "routes.#.route_id",
-			expectLength: 51,
+			expectLength: 57,
 		},
 	}
 	for _, tc := range testcases {
