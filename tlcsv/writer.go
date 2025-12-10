@@ -7,18 +7,21 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
+	"github.com/twpayne/go-geom/encoding/geojson"
 )
 
 type hasEntityKey interface {
 	EntityKey() string
 }
 
-// Writer implements a GTFS CSV Writer.
+// Writer implements a GTFS Writer that supports both CSV and GeoJSON file formats.
+// The format is automatically determined by the entity's Filename() method.
 type Writer struct {
 	WriterAdapter
 	writeExtraColumns bool
 	headers           map[string][]string
 	extraHeaders      map[string][]string
+	geojsonFeatures   map[string][]*geojson.Feature
 }
 
 // NewWriter returns a new Writer.
@@ -30,9 +33,10 @@ func NewWriter(path string) (*Writer, error) {
 		a = NewDirAdapter(path)
 	}
 	return &Writer{
-		WriterAdapter: a,
-		headers:       map[string][]string{},
-		extraHeaders:  map[string][]string{},
+		WriterAdapter:   a,
+		headers:         map[string][]string{},
+		extraHeaders:    map[string][]string{},
+		geojsonFeatures: map[string][]*geojson.Feature{},
 	}, nil
 }
 
@@ -123,6 +127,12 @@ func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
 		}
 	}
 
+	// Check if this is a GeoJSON file
+	if strings.HasSuffix(efn, ".geojson") {
+		return writer.addBatchGeoJSON(ents, efn)
+	}
+
+	// CSV writing path
 	extraHeader := writer.extraHeaders[efn]
 	header, ok := writer.headers[efn]
 	if !ok {
@@ -164,6 +174,45 @@ func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
 	}
 	err := writer.WriterAdapter.WriteRows(efn, rows)
 	return eids, err
+}
+
+// addBatchGeoJSON handles writing entities to GeoJSON files.
+func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]string, error) {
+	var eids []string
+	var newFeatures []*geojson.Feature
+
+	// Handle different entity types for GeoJSON
+	switch filename {
+	case "locations.geojson":
+		// Convert to Location entities
+		for _, ent := range ents {
+			if loc, ok := ent.(*gtfs.Location); ok {
+				if feature, ok := writeLocationFeature(*loc); ok {
+					newFeatures = append(newFeatures, feature)
+				}
+				if v, ok := ent.(hasEntityKey); ok {
+					eids = append(eids, v.EntityKey())
+				}
+			}
+		}
+	// TODO in future: Add support for levels.geojson
+	default:
+		return nil, errors.New("unsupported GeoJSON file: " + filename)
+	}
+
+	// Accumulate features for this file
+	if len(newFeatures) > 0 {
+		writer.geojsonFeatures[filename] = append(writer.geojsonFeatures[filename], newFeatures...)
+
+		// Write complete FeatureCollection with all accumulated features
+		fc := geojson.FeatureCollection{
+			Features: writer.geojsonFeatures[filename],
+		}
+		err := writer.WriterAdapter.WriteGeoJSON(filename, &fc)
+		return eids, err
+	}
+
+	return eids, nil
 }
 
 type canFlatten interface {
