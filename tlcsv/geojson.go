@@ -15,6 +15,11 @@ import (
 // entity and whether it was successfully parsed.
 type GeoJSONFeatureParser[T any] func(*geojson.Feature) (T, bool)
 
+// GeoJSONFeatureWriter is a callback function for converting a GTFS entity
+// into a GeoJSON feature. It receives the entity and should return the feature
+// and whether it was successfully converted.
+type GeoJSONFeatureWriter[T any] func(T) (*geojson.Feature, bool)
+
 // readGeoJSON reads and parses a GeoJSON FeatureCollection file using a
 // provided parser function. This provides a generic way to read any GeoJSON
 // file format into GTFS entities.
@@ -97,50 +102,51 @@ func (reader *Reader) readLocationsGeoJSON(filename string) ([]gtfs.Location, er
 	return readGeoJSON(reader, filename, parseLocationFeature)
 }
 
-// Example: To add support for level.geojson in the future, create a parser function:
-//
-//   func parseLevelFeature(feature *geojson.Feature) (gtfs.Level, bool) {
-//       level := gtfs.Level{}
-//       if feature.ID != "" {
-//           level.LevelID = tt.NewString(feature.ID)
-//       }
-//       if feature.Properties != nil {
-//           if v, ok := feature.Properties["level_name"].(string); ok {
-//               level.LevelName = tt.NewString(v)
-//           }
-//           if v, ok := feature.Properties["level_index"].(float64); ok {
-//               level.LevelIndex = tt.NewFloat(v)
-//           }
-//       }
-//       // Parse geometry (Polygon or MultiPolygon)
-//       if feature.Geometry != nil {
-//           switch g := feature.Geometry.(type) {
-//           case *geom.Polygon, *geom.MultiPolygon:
-//               g.SetSRID(4326)
-//               level.Geometry = tt.NewGeometry(g)
-//           default:
-//               return level, false
-//           }
-//       }
-//       return level, true
-//   }
-//
-// Then in reader.go, add:
-//
-//   func (reader *Reader) Levels() chan gtfs.Level {
-//       out := make(chan gtfs.Level, bufferSize)
-//       go func() {
-//           defer close(out)
-//           // Try GeoJSON first
-//           levels, err := readGeoJSON(reader, "levels.geojson", parseLevelFeature)
-//           if err == nil {
-//               for _, level := range levels {
-//                   out <- level
-//               }
-//               return
-//           }
-//           // Fall back to CSV
-//           ReadEntities[gtfs.Level](reader, "levels.txt")
-//       }()
-//       return out
-//   }
+// writeLocationFeature converts a gtfs.Location entity to a GeoJSON feature.
+// This is used for locations.geojson (GTFS-Flex extension).
+func writeLocationFeature(loc gtfs.Location) (*geojson.Feature, bool) {
+	feature := &geojson.Feature{}
+
+	// Set feature ID from LocationID
+	if loc.LocationID.Val != "" {
+		feature.ID = loc.LocationID.Val
+	}
+
+	// Set properties
+	properties := make(map[string]any)
+	if loc.StopName.Val != "" {
+		properties["stop_name"] = loc.StopName.Val
+	}
+	if loc.StopDesc.Val != "" {
+		properties["stop_desc"] = loc.StopDesc.Val
+	}
+	if loc.ZoneID.Val != "" {
+		properties["zone_id"] = loc.ZoneID.Val
+	}
+	if loc.StopURL.Val != "" {
+		properties["stop_url"] = loc.StopURL.Val
+	}
+	if len(properties) > 0 {
+		feature.Properties = properties
+	}
+
+	// Set geometry - must be Polygon or MultiPolygon for locations
+	if !loc.Geometry.Valid {
+		return nil, false
+	}
+
+	// Ensure SRID is set
+	switch g := loc.Geometry.Val.(type) {
+	case *geom.Polygon:
+		g.SetSRID(4326)
+		feature.Geometry = g
+	case *geom.MultiPolygon:
+		g.SetSRID(4326)
+		feature.Geometry = g
+	default:
+		// Invalid geometry type for location - skip
+		return nil, false
+	}
+
+	return feature, true
+}

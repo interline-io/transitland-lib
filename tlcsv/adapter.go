@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/request"
+	"github.com/twpayne/go-geom/encoding/geojson"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.
@@ -35,6 +37,7 @@ type Adapter interface {
 // WriterAdapter provides a writing interface.
 type WriterAdapter interface {
 	WriteRows(string, [][]string) error
+	WriteGeoJSON(string, *geojson.FeatureCollection) error
 	Adapter
 }
 
@@ -545,6 +548,31 @@ func (adapter *DirAdapter) WriteRows(filename string, rows [][]string) error {
 	if err := w.Error(); err != nil {
 		return err
 	}
+	return nil
+}
+
+// WriteGeoJSON writes a GeoJSON FeatureCollection to a file.
+func (adapter *DirAdapter) WriteGeoJSON(filename string, fc *geojson.FeatureCollection) error {
+	// Close existing file if open (we need to overwrite, not append)
+	if in, ok := adapter.files[filename]; ok {
+		in.Close()
+		delete(adapter.files, filename)
+	}
+
+	// Create new file (this will overwrite if it exists)
+	in, err := os.Create(filepath.Join(adapter.path, filename))
+	if err != nil {
+		return err
+	}
+	adapter.files[filename] = in
+
+	// Encode GeoJSON
+	encoder := json.NewEncoder(in)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(fc); err != nil {
+		return err
+	}
+
 	return nil
 }
 

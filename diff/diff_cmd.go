@@ -17,6 +17,7 @@ import (
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/spf13/pflag"
+	"github.com/twpayne/go-geom/encoding/geojson"
 )
 
 type Command struct {
@@ -33,7 +34,9 @@ type Command struct {
 
 func (cmd *Command) HelpDesc() (string, string) {
 	a := "Calculate difference between two feeds, writing output in a GTFS-like format"
-	b := "This command is experimental; it may provide incorrect results or crash on large feeds."
+	b := `This command is experimental; it may provide incorrect results or crash on large feeds.
+
+Note: This command only processes CSV files; GeoJSON files (such as locations.geojson) are not included in the diff comparison.`
 	return a, b
 }
 
@@ -331,6 +334,11 @@ func (adapter *diffAdapter) WriteRows(efn string, rows [][]string) error {
 			adapter.ents[key] = diffEnt{row: row}
 		}
 	}
+	return nil
+}
+
+func (adapter *diffAdapter) WriteGeoJSON(filename string, fc *geojson.FeatureCollection) error {
+	// diffAdapter only handles CSV files, so GeoJSON is ignored
 	return nil
 }
 
