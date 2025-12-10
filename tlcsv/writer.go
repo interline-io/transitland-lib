@@ -189,9 +189,9 @@ func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]stri
 			if loc, ok := ent.(*gtfs.Location); ok {
 				if feature, ok := writeLocationFeature(*loc); ok {
 					newFeatures = append(newFeatures, feature)
-				}
-				if v, ok := ent.(hasEntityKey); ok {
-					eids = append(eids, v.EntityKey())
+					if v, ok := ent.(hasEntityKey); ok {
+						eids = append(eids, v.EntityKey())
+					}
 				}
 			}
 		}
