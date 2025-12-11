@@ -35,9 +35,7 @@ jobs:
           }
 
   build-linux:
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'release')
+    if: ${{ github.event_name == 'release' }}
     needs: check-tests
     runs-on: ubuntu-latest
     strategy:
@@ -46,6 +44,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -66,9 +66,7 @@ jobs:
           path: ${{ github.workspace }}/cmd/transitland/transitland
 
   build-macos-intel:
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'release')
+    if: ${{ github.event_name == 'release' }}
     needs: check-tests
     runs-on: macos-15-large
     strategy:
@@ -114,9 +112,7 @@ jobs:
           path: ${{ github.workspace }}/transitland.zip
 
   build-macos-apple:
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'release')
+    if: ${{ github.event_name == 'release' }}
     needs: check-tests
     runs-on: macos-15
     strategy:
@@ -162,9 +158,7 @@ jobs:
           path: ${{ github.workspace }}/transitland.zip
 
   release:
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'release')
+    if: ${{ github.event_name == 'release' }}
     needs: [build-linux, build-macos-intel, build-macos-apple]
     runs-on: ubuntu-latest
     steps:
@@ -205,16 +199,13 @@ jobs:
           
   release-notes:
     needs: release
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'release')
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
       - run: npm install -g github-release-notes
       - run: gren release --override
         env:
@@ -222,9 +213,7 @@ jobs:
   
   trigger-homebrew-update:
     needs: release
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'release')
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
