@@ -68,7 +68,7 @@ jobs:
   build-macos-intel:
     if: ${{ github.event_name == 'release' }}
     needs: check-tests
-    runs-on: macos-15-large
+    runs-on: macos-15-large # macOS on Intel
     strategy:
       matrix:
         go-version: ['1.24.2']
@@ -114,7 +114,7 @@ jobs:
   build-macos-apple:
     if: ${{ github.event_name == 'release' }}
     needs: check-tests
-    runs-on: macos-15
+    runs-on: macos-15 # macOS on Apple Silicon
     strategy:
       matrix:
         go-version: ['1.24.2']
