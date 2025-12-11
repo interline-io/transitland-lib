@@ -12,8 +12,7 @@ on:
       - '*'
 
 permissions:
-  contents: write
-  actions: write
+  contents: read
   pull-requests: write
 
 jobs:
@@ -57,7 +56,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
-      id: go
+        cache-dependency-path: go.sum
     - run: (cd cmd/transitland && go version && go install .)
     - run: ./testdata/test_setup.sh
     - name: Run tests
