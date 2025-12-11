@@ -14,10 +14,10 @@ permissions:
 
 jobs:
   check-tests:
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     steps:
     - name: Check Test Suite Status
-      if: ${{ github.event_name == 'release' }}
       uses: actions/github-script@v7
       with:
         script: |
@@ -35,7 +35,6 @@ jobs:
           }
 
   build-linux:
-    if: ${{ github.event_name == 'release' }}
     needs: check-tests
     runs-on: ubuntu-latest
     strategy:
@@ -66,7 +65,6 @@ jobs:
           path: ${{ github.workspace }}/cmd/transitland/transitland
 
   build-macos-intel:
-    if: ${{ github.event_name == 'release' }}
     needs: check-tests
     runs-on: macos-15-large # macOS on Intel
     strategy:
@@ -112,7 +110,6 @@ jobs:
           path: ${{ github.workspace }}/transitland.zip
 
   build-macos-apple:
-    if: ${{ github.event_name == 'release' }}
     needs: check-tests
     runs-on: macos-15 # macOS on Apple Silicon
     strategy:
@@ -158,7 +155,6 @@ jobs:
           path: ${{ github.workspace }}/transitland.zip
 
   release:
-    if: ${{ github.event_name == 'release' }}
     needs: [build-linux, build-macos-intel, build-macos-apple]
     runs-on: ubuntu-latest
     steps:
@@ -199,7 +195,6 @@ jobs:
           
   release-notes:
     needs: release
-    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -213,7 +208,6 @@ jobs:
   
   trigger-homebrew-update:
     needs: release
-    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
