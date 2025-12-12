@@ -1030,6 +1030,10 @@ func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTi
 		}
 		stopids = append(stopids, st.StopID.Val)
 	}
+	// Skip creating shapes for trips with no valid stops (e.g., flex trips using only location_id/location_group_id)
+	if len(stopids) == 0 {
+		return "", errors.New("no valid stops to create shape (trip may use flex locations)")
+	}
 	line, dists, err := copier.geomCache.MakeShape(stopids...)
 	if err != nil {
 		return "", err
