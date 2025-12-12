@@ -1,0 +1,4 @@
+trip_id,route_id,service_id,shape_id
+trip_regular,route1,service1,
+trip_flex,route1,service1,
+trip_with_shape,route1,service1,existing_shape

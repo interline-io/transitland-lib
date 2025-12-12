@@ -909,8 +909,8 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 					trip.ShapeID.Set(shapeid)
 				} else {
 					if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
-						copier.log.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
-						trip.AddWarning(err)
+						// Debug level: flex trips using location_id won't have shapes, this is expected
+						copier.log.Debug().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("skipping shape generation")
 					} else {
 						// Set ShapeID
 						stopPatternShapeIDs[trip.StopPatternID.Int()] = shapeid
@@ -1023,16 +1023,17 @@ func (copier *Copier) logCount(ent tt.Entity) {
 }
 
 func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTime) (string, error) {
-	stopids := []string{}
+	// Only create shapes when ALL stop_times have stop_id set
+	// Fallback shape is undefined for location/location_group based stops
+	stopids := make([]string, 0, len(stoptimes))
 	for _, st := range stoptimes {
 		if !st.StopID.Valid {
-			continue
+			return "", errors.New("cannot create shape: not all stop_times have stop_id (trip may use flex locations)")
 		}
 		stopids = append(stopids, st.StopID.Val)
 	}
-	// Skip creating shapes for trips with no valid stops (e.g., flex trips using only location_id/location_group_id)
 	if len(stopids) == 0 {
-		return "", errors.New("no valid stops to create shape (trip may use flex locations)")
+		return "", errors.New("cannot create shape: no stop_times")
 	}
 	line, dists, err := copier.geomCache.MakeShape(stopids...)
 	if err != nil {
