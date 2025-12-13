@@ -50,7 +50,7 @@ func (cmd *CopyCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.writeExtraColumns, "write-extra-columns", false, "Include extra columns in output")
 	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
 	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
-	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
+	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 10, "Max number of detailed errors per error group (-1 for unlimited)")
 }
 
 func (cmd *CopyCommand) Parse(args []string) error {

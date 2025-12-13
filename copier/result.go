@@ -278,10 +278,19 @@ func (cr *Result) CheckRequiredMinEntities(requirements map[string]int) Required
 	return result
 }
 
+// Default error limit per error group
+const DefaultErrorLimit = 10
+
 // NewResult returns a new Result.
+// errorLimit controls how many individual errors are stored per error group:
+//   - negative values mean unlimited
+//   - 0 means use default (1000)
+//   - positive values are used as-is
 func NewResult(errorLimit int) *Result {
 	if errorLimit < 0 {
 		errorLimit = math.MaxInt
+	} else if errorLimit == 0 {
+		errorLimit = DefaultErrorLimit
 	}
 	return &Result{
 		EntityCount:              map[string]int{},

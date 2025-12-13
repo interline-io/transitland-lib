@@ -63,7 +63,7 @@ func (e *FeedVersionExporter) Export(ctx context.Context, fvids []int, transform
 	opts := copier.Options{
 		AllowEntityErrors:    true,
 		AllowReferenceErrors: false,
-		ErrorLimit:           100,
+		ErrorLimit:           1000,
 		Quiet:                true,
 	}
 

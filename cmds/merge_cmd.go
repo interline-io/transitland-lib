@@ -68,7 +68,6 @@ func (cmd *MergeCommand) Run(ctx context.Context) error {
 	marker := &skipDuplicateIds{
 		duplicates: tt.NewEntityMap(),
 	}
-	cmd.Options.ErrorLimit = 10
 	cmd.Options.AddExtension(marker)
 	_, err = copier.CopyWithOptions(ctx, reader, writer, cmd.Options)
 	return err

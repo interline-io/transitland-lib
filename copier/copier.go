@@ -199,8 +199,7 @@ type Copier struct {
 // Quiet copy
 func QuietCopy(ctx context.Context, reader adapters.Reader, writer adapters.Writer, optfns ...func(*Options)) (*Result, error) {
 	opts := Options{
-		ErrorLimit: -1,
-		Quiet:      true,
+		Quiet: true,
 	}
 	for _, f := range optfns {
 		f(&opts)
@@ -241,11 +240,12 @@ func NewCopier(ctx context.Context, reader adapters.Reader, writer adapters.Writ
 	copier.reader = reader
 	copier.writer = writer
 
-	// Logging
+	// Logging - inherits any fields already set on the context logger (e.g., source identifiers)
+	logCtx := log.For(ctx).With().Str("reader", reader.String()).Str("writer", writer.String())
 	if opts.Quiet {
-		copier.log = log.For(ctx).Level(zerolog.ErrorLevel).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+		copier.log = logCtx.Logger().Level(zerolog.ErrorLevel)
 	} else {
-		copier.log = log.For(ctx).With().Str("reader", reader.String()).Str("writer", writer.String()).Logger()
+		copier.log = logCtx.Logger()
 	}
 
 	// Result

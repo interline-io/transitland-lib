@@ -142,7 +142,6 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 
 	// Create a validation report
 	validatorOptions := opts.ValidatorOptions
-	validatorOptions.ErrorLimit = 10
 	v, err := validator.NewValidator(reader, validatorOptions)
 	if err != nil {
 		// Fatal error

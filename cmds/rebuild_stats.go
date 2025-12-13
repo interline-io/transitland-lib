@@ -226,7 +226,6 @@ func createFeedValidationReport(ctx context.Context, atx tldb.Adapter, reader *t
 	// Create new report
 	_ = fetchedAt
 	opts := validator.Options{}
-	opts.ErrorLimit = 10
 	v, err := validator.NewValidator(reader, opts)
 	if err != nil {
 		return nil, err

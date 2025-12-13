@@ -135,6 +135,10 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
+
+	// Add source context to logger for better identification in multi-feed imports
+	ctx = log.WithLogger(ctx, log.For(ctx).With().Str("source", fv.File).Int("feed_version_id", fv.ID).Logger())
+
 	// Get Reader
 	tladapter, err := tlcsv.NewStoreAdapter(ctx, opts.Storage, fv.File, fv.Fragment.Val)
 	if err != nil {
