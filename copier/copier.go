@@ -894,8 +894,12 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			trip.StopTimes = sts
 
 			// Set StopPattern
+			// Empty key means flex trip - assign unique pattern ID without caching
 			patkey := stopPatternKey(trip.StopTimes)
-			if pat, ok := stopPatterns[patkey]; ok {
+			if patkey == "" {
+				trip.StopPatternID.SetInt(len(stopPatterns))
+				stopPatterns[trip.TripID.Val] = trip.StopPatternID.Int() // Use trip ID as unique key
+			} else if pat, ok := stopPatterns[patkey]; ok {
 				trip.StopPatternID.SetInt(pat)
 			} else {
 				trip.StopPatternID.SetInt(len(stopPatterns))
@@ -928,8 +932,12 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 			}
 
 			// Set JourneyPattern
+			// Empty key means flex trip - don't deduplicate
 			jkey := copier.options.JourneyPatternKey(trip)
-			if jpat, ok := journeyPatterns[jkey]; ok {
+			if jkey == "" {
+				trip.JourneyPatternID.Set(trip.TripID.Val)
+				trip.JourneyPatternOffset.Set(0)
+			} else if jpat, ok := journeyPatterns[jkey]; ok {
 				trip.JourneyPatternID.Set(jpat.key)
 				trip.JourneyPatternOffset.SetInt(trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival)
 				tripOffsets[trip.TripID.Val] = trip.JourneyPatternOffset.Int() // do not write stop times for this trip
@@ -1024,15 +1032,15 @@ func (copier *Copier) logCount(ent tt.Entity) {
 func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTime) (string, error) {
 	// Only create shapes when ALL stop_times have stop_id set
 	// Fallback shape is undefined for location/location_group based stops
+	if !gtfs.CheckFlexStopTimes(stoptimes).CanUseStopBasedGeometry() {
+		return "", errors.New("cannot create shape: not all stop_times have stop_id (trip may use flex locations)")
+	}
+	if len(stoptimes) == 0 {
+		return "", errors.New("cannot create shape: no stop_times")
+	}
 	stopids := make([]string, 0, len(stoptimes))
 	for _, st := range stoptimes {
-		if !st.StopID.Valid {
-			return "", errors.New("cannot create shape: not all stop_times have stop_id (trip may use flex locations)")
-		}
 		stopids = append(stopids, st.StopID.Val)
-	}
-	if len(stopids) == 0 {
-		return "", errors.New("cannot create shape: no stop_times")
 	}
 	line, dists, err := copier.geomCache.MakeShape(stopids...)
 	if err != nil {
