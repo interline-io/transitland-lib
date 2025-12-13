@@ -166,6 +166,10 @@ func BuildGraph(reader adapters.Reader) (*EntityGraph, error) {
 
 	// Stop Times
 	for ent := range reader.StopTimes() {
+		// Skip flex stop_times that reference locations instead of stops
+		if !ent.StopID.Valid {
+			continue
+		}
 		t, _ := eg.Node(NewNode("trips.txt", ent.TripID.Val))
 		s, _ := eg.Node(NewNode("stops.txt", ent.StopID.Val))
 		eg.AddEdge(s, t)

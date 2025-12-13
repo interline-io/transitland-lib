@@ -68,6 +68,10 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 		for i, c := range v.Geometry.Val.Coords() {
 			pts[i] = tlxy.Point{Lon: c[0], Lat: c[1]}
 		}
+		// Skip shapes with no coordinates (invalid shapes)
+		if len(pts) == 0 {
+			return nil
+		}
 		// If we've already seen this line, re-use shapeInfo to reduce mem usage
 		for _, si := range pp.shapeInfos {
 			// Match on generated value too

@@ -111,6 +111,11 @@ func (g *GeomCache) InterpolateStopTimes(trip *gtfs.Trip) ([]gtfs.StopTime, erro
 		return sts, nil
 	}
 
+	// Skip flex trips that cannot use stop-based geometry
+	if !gtfs.CheckFlexStopTimes(sts).CanUseStopBasedGeometry() {
+		return sts, nil
+	}
+
 	// Do we have valid ShapeDistTraveled values?
 	validDists := true
 	if sts[len(sts)-1].ShapeDistTraveled.Val-sts[0].ShapeDistTraveled.Val <= 0 {
@@ -142,9 +147,6 @@ func (g *GeomCache) setStopTimeDists(shapeId string, patternId int64, sts []gtfs
 		// Generate the stop-to-stop geometry
 		stopLine := make([]tlxy.Point, 0, len(sts))
 		for i := 0; i < len(sts); i++ {
-			if !sts[i].StopID.Valid {
-				continue
-			}
 			point, ok := g.stops[sts[i].StopID.Val]
 			if !ok {
 				return fmt.Errorf("stop '%s' not in cache", sts[i].StopID)

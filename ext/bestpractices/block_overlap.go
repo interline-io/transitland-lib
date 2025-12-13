@@ -52,6 +52,12 @@ func (e *BlockOverlapCheck) Validate(ent tt.Entity) []error {
 	if !ok || !trip.BlockID.Valid || len(trip.StopTimes) < 2 {
 		return nil
 	}
+	// Skip flex trips - block overlap check requires fixed arrival/departure times
+	// Flex trips use time windows instead and don't have meaningful overlap semantics
+	flexInfo := gtfs.CheckFlexStopTimes(trip.StopTimes)
+	if flexInfo.IsFlexTrip() {
+		return nil
+	}
 	if e.blocks == nil {
 		e.blocks = map[string][]*tripBlockInfo{}
 	}

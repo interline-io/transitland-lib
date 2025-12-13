@@ -7,6 +7,8 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/internal/testpath"
+	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
@@ -295,4 +297,48 @@ func TestResult_CheckErrorThreshold(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCopier_CreateMissingShapes_FlexTrips(t *testing.T) {
+	// Test that CreateMissingShapes only creates shapes when ALL stop_times have stop_id
+	// Feed contains:
+	// - trip_regular: all stop_times have stop_id -> should get generated shape
+	// - trip_flex: one stop_time uses location_id instead of stop_id -> should NOT get shape
+	// - trip_with_shape: has existing shape -> should keep it
+	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/gtfs-builders/flex-trip-create-shapes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writer := direct.NewWriter()
+	cpOpts := Options{
+		CreateMissingShapes: true,
+	}
+
+	cpResult, err := CopyWithOptions(context.Background(), reader, writer, cpOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify results
+	wreader, _ := writer.NewReader()
+
+	// Collect trips and their shape IDs
+	tripShapes := map[string]string{}
+	for trip := range wreader.Trips() {
+		tripShapes[trip.TripID.Val] = trip.ShapeID.Val
+	}
+
+	// Trip with all stop_ids should have a generated shape
+	assert.NotEmpty(t, tripShapes["trip_regular"], "regular trip should have a shape")
+	assert.Contains(t, tripShapes["trip_regular"], "generated", "regular trip should have a generated shape")
+
+	// Flex trip should NOT have a shape (no shape generated because not all stop_times have stop_id)
+	assert.Empty(t, tripShapes["trip_flex"], "flex trip should not have a shape")
+
+	// Trip with existing shape should keep it
+	assert.Equal(t, "existing_shape", tripShapes["trip_with_shape"], "trip with existing shape should keep it")
+
+	// Verify generated shapes count
+	assert.Equal(t, 1, cpResult.GeneratedCount["shapes.txt"], "should have generated exactly 1 shape")
 }

@@ -97,15 +97,13 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 	}
 	// todo: cache for trip pattern?
 	var errs []error
-	if len(trip.StopTimes) == 0 || !trip.StopTimes[0].StopID.Valid {
+	// Skip flex trips that cannot use stop-based geometry
+	if len(trip.StopTimes) == 0 || !gtfs.CheckFlexStopTimes(trip.StopTimes).CanUseStopBasedGeometry() {
 		return errs
 	}
 	s1 := trip.StopTimes[0].StopID.Val
 	t := trip.StopTimes[0].DepartureTime
 	for i := 1; i < len(trip.StopTimes); i++ {
-		if !trip.StopTimes[i].StopID.Valid {
-			continue
-		}
 		s2 := trip.StopTimes[i].StopID.Val
 		key := s1 + ":" + s2 // todo: use a real separator...
 		dx, ok := e.stopDist[key]
