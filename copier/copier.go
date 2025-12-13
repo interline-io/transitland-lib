@@ -909,7 +909,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 					trip.ShapeID.Set(shapeid)
 				} else {
 					if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
-						// Debug level: flex trips using location_id won't have shapes, this is expected
 						copier.log.Debug().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("skipping shape generation")
 					} else {
 						// Set ShapeID
