@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	_ "embed"
 	"log"
 	"os"
-	"runtime/debug"
-	"strings"
 	_ "time/tzdata"
 
 	tl "github.com/interline-io/transitland-lib"
@@ -82,36 +79,12 @@ func main() {
 	}
 }
 
-////////////
+var tag string
 
-// Read version from compiled in git details
-var Version VersionInfo
-
-type VersionInfo struct {
-	Tag        string
-	Commit     string
-	CommitTime string
-}
-
-func getVersion() VersionInfo {
-	ret := VersionInfo{}
-	info, _ := debug.ReadBuildInfo()
-	tagPrefix := "main.tag="
-	for _, kv := range info.Settings {
-		switch kv.Key {
-		case "vcs.revision":
-			ret.Commit = kv.Value
-		case "vcs.time":
-			ret.CommitTime = kv.Value
-		case "-ldflags":
-			for _, ss := range strings.Split(kv.Value, " ") {
-				if strings.HasPrefix(ss, tagPrefix) {
-					ret.Tag = strings.TrimPrefix(ss, tagPrefix)
-				}
-			}
-		}
+func init() {
+	if tag != "" {
+		tl.Version.Tag = tag
 	}
-	return ret
 }
 
 type versionCommand struct{}
@@ -127,7 +100,7 @@ func (cmd *versionCommand) Parse(args []string) error {
 }
 
 func (cmd *versionCommand) Run(context.Context) error {
-	vi := getVersion()
+	vi := tl.Version
 	log.Printf("transitland-lib version: %s\n", vi.Tag)
 	log.Printf("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)\n", vi.Commit, vi.CommitTime)
 	log.Printf("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md\n", tl.GTFSVERSION)
