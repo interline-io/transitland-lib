@@ -99,5 +99,15 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 		resp.Body.Close()
 		return nil, resp.StatusCode, fmt.Errorf("response status code: %d", resp.StatusCode)
 	}
-	return resp.Body, resp.StatusCode, nil
+	// Wrap response body to preserve Content-Length for verification
+	return &httpResponseReader{
+		ReadCloser:    resp.Body,
+		ContentLength: resp.ContentLength,
+	}, resp.StatusCode, nil
+}
+
+// httpResponseReader wraps http.Response.Body to preserve Content-Length
+type httpResponseReader struct {
+	io.ReadCloser
+	ContentLength int64
 }

@@ -109,13 +109,7 @@ func (adapter *URLAdapter) Open() error {
 		return nil // already open
 	}
 	// Remove and keep internal path prefix
-	url := adapter.url
-	fragment := ""
-	split := strings.SplitN(adapter.url, "#", 2)
-	if len(split) > 1 {
-		url = split[0]
-		fragment = split[1]
-	}
+	url, fragment, _ := strings.Cut(adapter.url, "#")
 	// Download to temporary file
 	tmpfile, fr, err := request.AuthenticatedRequestDownload(context.TODO(), url, adapter.reqOpts...)
 	if err != nil {
@@ -179,9 +173,9 @@ func (adapter *ZipAdapter) String() string {
 // Open the adapter. Return an error if the file does not exist.
 func (adapter *ZipAdapter) Open() error {
 	// Split fragment
-	if spliturl := strings.SplitN(adapter.path, "#", 2); len(spliturl) > 1 {
-		adapter.path = spliturl[0]
-		adapter.internalPrefix = spliturl[1]
+	if path, prefix, ok := strings.Cut(adapter.path, "#"); ok {
+		adapter.path = path
+		adapter.internalPrefix = prefix
 	}
 	if !adapter.Exists() {
 		return errors.New("file does not exist or invalid data")
