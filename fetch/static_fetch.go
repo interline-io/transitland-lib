@@ -1,11 +1,13 @@
 package fetch
 
 import (
+	"archive/zip"
 	"context"
 	"database/sql"
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/interline-io/log"
@@ -73,10 +75,17 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 	// Open reader
 	fragment := ""
 	readerPath := fn
-	if a := strings.SplitN(opts.FeedURL, "#", 2); len(a) > 1 {
-		readerPath = readerPath + "#" + a[1]
-		fragment = a[1]
+	if _, frag, ok := strings.Cut(opts.FeedURL, "#"); ok {
+		readerPath = readerPath + "#" + frag
+		fragment = frag
 	}
+
+	// Verify ZIP file integrity before validation
+	if err := verifyZipIntegrity(readerPath); err != nil {
+		fetchValidationResult.Error = fmt.Errorf("ZIP file integrity check failed: %w", err)
+		return fetchValidationResult, nil
+	}
+
 	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewZipAdapter(readerPath))
 	if err != nil {
 		fetchValidationResult.Error = err
@@ -246,4 +255,91 @@ func copyFileContents(dst, src string) (err error) {
 	}
 	err = out.Sync()
 	return
+}
+
+// verifyZipFile verifies a ZIP file can be opened and all files can be read.
+// This catches ZIP corruption early by attempting to read each file.
+func verifyZipFile(path string) error {
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		return fmt.Errorf("failed to open ZIP file: %w", err)
+	}
+	defer r.Close()
+	return verifyZipFiles(r.File)
+}
+
+// verifyZipIntegrity attempts to read all files in the ZIP archive to verify they're not corrupted.
+// This catches ZIP corruption early, before expensive GTFS validation.
+// For nested ZIPs (fragment ending in .zip), also verifies the nested ZIP's internal structure.
+func verifyZipIntegrity(readerPath string) error {
+	// Remove fragment if present
+	path, fragment, _ := strings.Cut(readerPath, "#")
+
+	// Open outer ZIP once and verify it
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		return fmt.Errorf("failed to open ZIP file: %w", err)
+	}
+	defer r.Close()
+
+	// Verify outer ZIP files can be read
+	if err := verifyZipFiles(r.File); err != nil {
+		return err
+	}
+
+	// If fragment points to a nested ZIP, verify it too
+	if fragment != "" && strings.HasSuffix(fragment, ".zip") {
+		// Find the nested ZIP file in the outer ZIP
+		nestedZipIdx := slices.IndexFunc(r.File, func(f *zip.File) bool {
+			return f.Name == fragment
+		})
+		if nestedZipIdx == -1 {
+			return fmt.Errorf("nested ZIP file not found: %s", fragment)
+		}
+		nestedZipFile := r.File[nestedZipIdx]
+
+		// Extract nested ZIP to temp file and verify it
+		rc, err := nestedZipFile.Open()
+		if err != nil {
+			return fmt.Errorf("cannot open nested ZIP %s: %w", fragment, err)
+		}
+		defer rc.Close()
+
+		tmpfile, err := os.CreateTemp("", "verify-nested-*.zip")
+		if err != nil {
+			return fmt.Errorf("cannot create temp file: %w", err)
+		}
+		defer os.Remove(tmpfile.Name())
+		defer tmpfile.Close()
+
+		if _, err := io.Copy(tmpfile, rc); err != nil {
+			return fmt.Errorf("cannot extract nested ZIP %s: %w", fragment, err)
+		}
+		tmpfile.Close()
+
+		// Verify nested ZIP using the same helper
+		if err := verifyZipFile(tmpfile.Name()); err != nil {
+			return fmt.Errorf("nested ZIP %s: %w", fragment, err)
+		}
+	}
+
+	return nil
+}
+
+// verifyZipFiles verifies that all files in a ZIP archive can be opened and read.
+func verifyZipFiles(files []*zip.File) error {
+	for _, f := range files {
+		rc, err := f.Open()
+		if err != nil {
+			return fmt.Errorf("cannot open %s: %w", f.Name, err)
+		}
+		// Read a small amount to verify decompression works
+		buf := make([]byte, 1024)
+		_, err = rc.Read(buf)
+		rc.Close()
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("cannot read %s: %w", f.Name, err)
+		}
+	}
+	return nil
 }

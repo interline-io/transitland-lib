@@ -124,6 +124,9 @@ func (r S3) ListKeys(ctx context.Context, prefix string) ([]string, error) {
 }
 
 func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
+	if key == "" {
+		return errors.New("key must not be empty")
+	}
 	// Create client
 	client, err := awsConfig(ctx, r.secret)
 	if err != nil {

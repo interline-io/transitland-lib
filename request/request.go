@@ -165,16 +165,24 @@ func AuthenticatedRequest(ctx context.Context, out io.Writer, address string, op
 	fr := FetchResponse{}
 	req := NewRequest(address, opts...)
 	var r io.ReadCloser
+	var expectedSize int64 = -1
 	r, fr.ResponseCode, fr.FetchError = req.Request(ctx)
 	if fr.FetchError != nil {
 		return fr, nil
 	}
 	defer r.Close()
 
+	// Get expected size from Content-Length header if available
+	if httpRespReader, ok := r.(*httpResponseReader); ok && httpRespReader != nil {
+		if httpRespReader.ContentLength > 0 {
+			expectedSize = httpRespReader.ContentLength
+		}
+	}
+
 	// Write response
 	var err error
 	fr.ResponseTtfbMs = int(time.Since(t) / time.Millisecond)
-	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(out, r, req.MaxSize)
+	fr.ResponseSize, fr.ResponseSHA1, err = copyToWithSizeCheck(out, r, req.MaxSize, expectedSize)
 	fr.ResponseTimeMs = int(time.Since(t) / time.Millisecond)
 
 	// Check for canceled
@@ -191,24 +199,49 @@ func AuthenticatedRequest(ctx context.Context, out io.Writer, address string, op
 }
 
 func copyTo(dst io.Writer, src io.Reader, maxSize uint64) (int, string, error) {
+	return copyToWithSizeCheck(dst, src, maxSize, -1)
+}
+
+func copyToWithSizeCheck(dst io.Writer, src io.Reader, maxSize uint64, expectedSize int64) (int, string, error) {
 	size := 0
 	h := sha1.New()
 	buf := make([]byte, 1024*1024)
 	for {
 		n, err := src.Read(buf)
 		if err != nil && err != io.EOF {
-			return 0, "", err
+			return 0, "", fmt.Errorf("read error at offset %d: %w", size, err)
 		}
 		if n == 0 {
+			if err == nil {
+				// Unexpected EOF - connection closed without error
+				return 0, "", fmt.Errorf("unexpected EOF at offset %d", size)
+			}
 			break
 		}
 		size += n
 		if maxSize > 0 && size > int(maxSize) {
-			return 0, "", errors.New("exceeded max size")
+			return 0, "", fmt.Errorf("exceeded max size at offset %d: %d > %d", size-n, size, maxSize)
 		}
 		h.Write(buf[:n])
-		if _, err := dst.Write(buf[:n]); err != nil {
-			return 0, "", err
+		written, err := dst.Write(buf[:n])
+		if err != nil {
+			return 0, "", fmt.Errorf("write error at offset %d: %w", size-n, err)
+		}
+		if written != n {
+			return 0, "", fmt.Errorf("partial write at offset %d: wrote %d of %d bytes", size-n, written, n)
+		}
+	}
+	// Verify size matches Content-Length if provided
+	// Note: We log warnings for mismatches but don't fail, as some servers misconfigure Content-Length
+	// However, if downloaded size is LESS than Content-Length, that indicates truncation
+	if expectedSize > 0 {
+		if size < int(expectedSize) {
+			// Downloaded less than Content-Length - this indicates truncation, fail
+			return 0, "", fmt.Errorf("download truncated: expected %d bytes (Content-Length), got %d bytes", expectedSize, size)
+		} else if size > int(expectedSize) {
+			// Downloaded more than Content-Length - server misconfiguration, but file may be valid
+			// Log warning but allow (server may have incorrect Content-Length header)
+			log.Debug().Msgf("Content-Length mismatch (server may be misconfigured): expected %d bytes, got %d bytes", expectedSize, size)
 		}
 	}
 	return size, fmt.Sprintf("%x", h.Sum(nil)), nil
