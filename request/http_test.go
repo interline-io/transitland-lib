@@ -2,6 +2,7 @@ package request
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -74,8 +75,11 @@ func TestParseRetryAfter_HTTPDate(t *testing.T) {
 
 func TestHttp_calculateBackoff(t *testing.T) {
 	h := &Http{
-		InitialBackoff: 1 * time.Second,
-		MaxBackoff:     30 * time.Second,
+		BackoffSchedule: []time.Duration{
+			1 * time.Second,
+			3 * time.Second,
+			9 * time.Second,
+		},
 	}
 
 	testcases := []struct {
@@ -90,42 +94,42 @@ func TestHttp_calculateBackoff(t *testing.T) {
 			attempt:    0,
 			retryAfter: 0,
 			minBackoff: 1 * time.Second,
-			maxBackoff: 2 * time.Second, // 1s + up to 25% jitter
+			maxBackoff: 1250 * time.Millisecond, // 1s + up to 25% jitter
 		},
 		{
 			name:       "attempt 1 without retry-after",
 			attempt:    1,
 			retryAfter: 0,
-			minBackoff: 2 * time.Second,
-			maxBackoff: 3 * time.Second, // 2s + up to 25% jitter
+			minBackoff: 3 * time.Second,
+			maxBackoff: 3750 * time.Millisecond, // 3s + up to 25% jitter
 		},
 		{
 			name:       "attempt 2 without retry-after",
 			attempt:    2,
 			retryAfter: 0,
-			minBackoff: 4 * time.Second,
-			maxBackoff: 5 * time.Second, // 4s + up to 25% jitter
+			minBackoff: 9 * time.Second,
+			maxBackoff: 11250 * time.Millisecond, // 9s + up to 25% jitter
 		},
 		{
-			name:       "with retry-after header",
+			name:       "attempt beyond schedule uses last value",
+			attempt:    10,
+			retryAfter: 0,
+			minBackoff: 9 * time.Second,
+			maxBackoff: 11250 * time.Millisecond, // 9s + up to 25% jitter
+		},
+		{
+			name:       "retry-after greater than scheduled backoff",
 			attempt:    0,
 			retryAfter: 5 * time.Second,
 			minBackoff: 5 * time.Second,
-			maxBackoff: 5 * time.Second, // No jitter when using Retry-After
+			maxBackoff: 6250 * time.Millisecond, // 5s + up to 25% jitter
 		},
 		{
-			name:       "retry-after exceeds max backoff",
-			attempt:    0,
-			retryAfter: 60 * time.Second,
-			minBackoff: 30 * time.Second, // Capped at MaxBackoff
-			maxBackoff: 30 * time.Second,
-		},
-		{
-			name:       "high attempt capped at max backoff",
-			attempt:    10,
-			retryAfter: 0,
-			minBackoff: 30 * time.Second, // Capped at MaxBackoff
-			maxBackoff: 38 * time.Second, // 30s + up to 25% jitter
+			name:       "retry-after less than scheduled backoff uses schedule",
+			attempt:    2,
+			retryAfter: 2 * time.Second,
+			minBackoff: 9 * time.Second,
+			maxBackoff: 11250 * time.Millisecond, // 9s + up to 25% jitter
 		},
 	}
 
@@ -140,29 +144,38 @@ func TestHttp_calculateBackoff(t *testing.T) {
 	}
 }
 
-func TestHttp_calculateBackoff_OverflowProtection(t *testing.T) {
-	h := &Http{
-		InitialBackoff: 1 * time.Second,
-		MaxBackoff:     24 * time.Hour, // Very high max to test overflow protection
-	}
-
-	// High attempt number that would overflow without protection
-	result := h.calculateBackoff(100, 0)
-	// Should not panic and should return a reasonable value
-	assert.True(t, result > 0, "backoff should be positive")
-	// Backoff can include up to 25% jitter on top of maxBackoff
-	assert.True(t, result <= 24*time.Hour+6*time.Hour, "backoff should be capped at max + jitter")
-}
-
 func TestHttp_calculateBackoff_SmallBackoff(t *testing.T) {
 	h := &Http{
-		InitialBackoff: 1 * time.Nanosecond, // Very small to test jitter protection
-		MaxBackoff:     1 * time.Second,
+		BackoffSchedule: []time.Duration{1 * time.Nanosecond}, // Very small to test jitter protection
 	}
 
 	// Should not panic when backoff/4 == 0
 	result := h.calculateBackoff(0, 0)
 	assert.True(t, result >= 1*time.Nanosecond, "backoff should be at least initial")
+}
+
+func TestIsRetryableStatus(t *testing.T) {
+	testcases := []struct {
+		statusCode int
+		retryable  bool
+	}{
+		{200, false},
+		{400, false},
+		{401, false},
+		{403, false},
+		{404, false},
+		{429, true},  // Too Many Requests
+		{500, false}, // Internal Server Error - not retryable
+		{502, true},  // Bad Gateway
+		{503, true},  // Service Unavailable
+		{504, true},  // Gateway Timeout
+	}
+
+	for _, tc := range testcases {
+		t.Run(fmt.Sprintf("status_%d", tc.statusCode), func(t *testing.T) {
+			assert.Equal(t, tc.retryable, isRetryableStatus(tc.statusCode))
+		})
+	}
 }
 
 func TestHttp_DownloadAuth_429Retry(t *testing.T) {
@@ -183,9 +196,8 @@ func TestHttp_DownloadAuth_429Retry(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:     5,
-		InitialBackoff: 10 * time.Millisecond, // Short for testing
-		MaxBackoff:     100 * time.Millisecond,
+		MaxRetries:      3,
+		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
 	}
 
 	ctx := context.Background()
@@ -200,6 +212,39 @@ func TestHttp_DownloadAuth_429Retry(t *testing.T) {
 	assert.Equal(t, int32(3), atomic.LoadInt32(&requestCount), "should have made 3 requests")
 }
 
+func TestHttp_DownloadAuth_503Retry(t *testing.T) {
+	var requestCount int32
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count := atomic.AddInt32(&requestCount, 1)
+		if count < 2 {
+			// Return 503 for first request
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		// Success on second request
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("success"))
+	}))
+	defer ts.Close()
+
+	h := &Http{
+		MaxRetries:      3,
+		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+	}
+
+	ctx := context.Background()
+	body, statusCode, err := h.DownloadAuth(ctx, ts.URL, dmfr.FeedAuthorization{})
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.NotNil(t, body)
+	if body != nil {
+		body.Close()
+	}
+	assert.Equal(t, int32(2), atomic.LoadInt32(&requestCount), "should have made 2 requests")
+}
+
 func TestHttp_DownloadAuth_429MaxRetriesExceeded(t *testing.T) {
 	var requestCount int32
 
@@ -212,9 +257,8 @@ func TestHttp_DownloadAuth_429MaxRetriesExceeded(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:     2,
-		InitialBackoff: 10 * time.Millisecond,
-		MaxBackoff:     100 * time.Millisecond,
+		MaxRetries:      2,
+		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond},
 	}
 
 	ctx := context.Background()
@@ -244,9 +288,8 @@ func TestHttp_DownloadAuth_429WithRetryAfterHeader(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:     5,
-		InitialBackoff: 10 * time.Millisecond,
-		MaxBackoff:     5 * time.Second,
+		MaxRetries:      3,
+		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
 	}
 
 	ctx := context.Background()
@@ -275,9 +318,8 @@ func TestHttp_DownloadAuth_ContextCancellation(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:     5,
-		InitialBackoff: 1 * time.Second,
-		MaxBackoff:     5 * time.Second,
+		MaxRetries:      3,
+		BackoffSchedule: []time.Duration{1 * time.Second, 2 * time.Second, 3 * time.Second},
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -297,9 +339,8 @@ func TestHttp_DownloadAuth_NonRetryableError(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:     5,
-		InitialBackoff: 10 * time.Millisecond,
-		MaxBackoff:     100 * time.Millisecond,
+		MaxRetries:      3,
+		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
 	}
 
 	ctx := context.Background()
@@ -314,18 +355,16 @@ func TestHttp_DefaultValues(t *testing.T) {
 	h := &Http{}
 
 	assert.Equal(t, defaultMaxRetries, h.getMaxRetries())
-	assert.Equal(t, defaultInitialBackoff, h.getInitialBackoff())
-	assert.Equal(t, defaultMaxBackoff, h.getMaxBackoff())
+	assert.Equal(t, defaultBackoffSchedule, h.getBackoffSchedule())
 }
 
 func TestHttp_CustomValues(t *testing.T) {
+	customSchedule := []time.Duration{5 * time.Second, 15 * time.Second, 45 * time.Second}
 	h := &Http{
-		MaxRetries:     10,
-		InitialBackoff: 5 * time.Second,
-		MaxBackoff:     10 * time.Minute,
+		MaxRetries:      10,
+		BackoffSchedule: customSchedule,
 	}
 
 	assert.Equal(t, 10, h.getMaxRetries())
-	assert.Equal(t, 5*time.Second, h.getInitialBackoff())
-	assert.Equal(t, 10*time.Minute, h.getMaxBackoff())
+	assert.Equal(t, customSchedule, h.getBackoffSchedule())
 }

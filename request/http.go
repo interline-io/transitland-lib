@@ -22,32 +22,31 @@ func init() {
 }
 
 const (
-	// Default retry configuration for HTTP 429 responses.
-	// With 5 retries and exponential backoff starting at 10s:
+	// Default retry configuration for transient HTTP errors (429, 502, 503, 504).
+	// Retry schedule:
 	//   Attempt 1: immediate
-	//   Attempt 2: after ~10s  (10s + jitter)
-	//   Attempt 3: after ~20s  (20s + jitter)
-	//   Attempt 4: after ~40s  (40s + jitter)
-	//   Attempt 5: after ~80s  (80s + jitter)
-	//   Attempt 6: after ~160s (160s + jitter)
-	// Total max wait time: ~310s (~5 minutes)
-	defaultMaxRetries     = 5
-	defaultInitialBackoff = 10 * time.Second
-	defaultMaxBackoff     = 5 * time.Minute
+	//   Attempt 2: after ~10s (10s + jitter)
+	//   Attempt 3: after ~30s (30s + jitter)
+	//   Attempt 4: after ~90s (90s + jitter)
+	// Total max wait time: ~130s (~2 minutes)
+	defaultMaxRetries = 3
 )
+
+// defaultBackoffSchedule defines the backoff duration for each retry attempt.
+var defaultBackoffSchedule = []time.Duration{
+	10 * time.Second,
+	30 * time.Second,
+	90 * time.Second,
+}
 
 type Http struct {
 	secret dmfr.Secret
 	// MaxRetries sets the maximum number of retry attempts for a request.
 	// If MaxRetries is zero or negative, a default value (defaultMaxRetries) is used.
 	MaxRetries int
-	// InitialBackoff is the starting delay before the first retry in the
-	// exponential backoff sequence. If InitialBackoff is zero, a default
-	// value (defaultInitialBackoff) is used.
-	InitialBackoff time.Duration
-	// MaxBackoff caps the maximum delay between retry attempts. If MaxBackoff
-	// is zero, a default value (defaultMaxBackoff) is used.
-	MaxBackoff time.Duration
+	// BackoffSchedule defines the backoff duration for each retry attempt.
+	// If nil or empty, defaultBackoffSchedule is used.
+	BackoffSchedule []time.Duration
 }
 
 func (r *Http) SetSecret(secret dmfr.Secret) error {
@@ -62,18 +61,24 @@ func (r *Http) getMaxRetries() int {
 	return defaultMaxRetries
 }
 
-func (r *Http) getInitialBackoff() time.Duration {
-	if r.InitialBackoff > 0 {
-		return r.InitialBackoff
+func (r *Http) getBackoffSchedule() []time.Duration {
+	if len(r.BackoffSchedule) > 0 {
+		return r.BackoffSchedule
 	}
-	return defaultInitialBackoff
+	return defaultBackoffSchedule
 }
 
-func (r *Http) getMaxBackoff() time.Duration {
-	if r.MaxBackoff > 0 {
-		return r.MaxBackoff
+// isRetryableStatus returns true for HTTP status codes that indicate
+// transient errors worth retrying.
+func isRetryableStatus(statusCode int) bool {
+	switch statusCode {
+	case http.StatusTooManyRequests, // 429
+		http.StatusBadGateway,         // 502
+		http.StatusServiceUnavailable, // 503
+		http.StatusGatewayTimeout:     // 504
+		return true
 	}
-	return defaultMaxBackoff
+	return false
 }
 
 // parseRetryAfter parses the Retry-After header value.
@@ -103,30 +108,19 @@ func parseRetryAfter(value string) time.Duration {
 }
 
 // calculateBackoff returns the backoff duration for the given attempt.
-// It uses exponential backoff with jitter.
+// It uses the backoff schedule with jitter, or the Retry-After header if provided.
 func (r *Http) calculateBackoff(attempt int, retryAfter time.Duration) time.Duration {
-	maxBackoff := r.getMaxBackoff()
-	if retryAfter > 0 {
-		// Use Retry-After header if provided, but cap at maxBackoff
-		if retryAfter > maxBackoff {
-			return maxBackoff
-		}
-		return retryAfter
+	schedule := r.getBackoffSchedule()
+	// Get the base backoff from schedule, capping at the last value
+	var backoff time.Duration
+	if attempt < len(schedule) {
+		backoff = schedule[attempt]
+	} else if len(schedule) > 0 {
+		backoff = schedule[len(schedule)-1]
 	}
-	// Exponential backoff: initialBackoff * 2^attempt
-	// Cap the shift amount to prevent overflow (max 30 to safely stay within int64 range
-	// when multiplied by typical InitialBackoff values in nanoseconds)
-	shiftAmount := attempt
-	if shiftAmount > 30 {
-		shiftAmount = 30
-	}
-	backoff := r.getInitialBackoff() * (1 << shiftAmount)
-	// Handle potential overflow: if backoff is negative or zero after multiplication, use maxBackoff
-	if backoff <= 0 {
-		backoff = maxBackoff
-	}
-	if backoff > maxBackoff {
-		backoff = maxBackoff
+	// Use Retry-After header if provided and greater than scheduled backoff
+	if retryAfter > backoff {
+		backoff = retryAfter
 	}
 	// Add jitter: random value between 0 and 25% of backoff.
 	// Guard against very small backoff values that would make backoff/4 == 0
@@ -222,18 +216,19 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 			return resp.Body, resp.StatusCode, nil
 		}
 
-		// Handle rate limiting (429 Too Many Requests)
-		if resp.StatusCode == http.StatusTooManyRequests && attempt < maxRetries {
+		// Handle retryable errors (429, 502, 503, 504)
+		if isRetryableStatus(resp.StatusCode) && attempt < maxRetries {
 			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
 			backoff := r.calculateBackoff(attempt, retryAfter)
 
 			log.Info().
 				Str("url", ustr).
+				Int("status_code", resp.StatusCode).
 				Int("attempt", attempt+1).
 				Int("max_retries", maxRetries).
 				Dur("backoff", backoff).
 				Str("retry_after", resp.Header.Get("Retry-After")).
-				Msg("rate limited, retrying")
+				Msg("transient error, retrying")
 
 			resp.Body.Close()
 
