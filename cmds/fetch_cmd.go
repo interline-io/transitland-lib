@@ -25,6 +25,13 @@ type FetchCommandResult struct {
 	FatalError                 error
 }
 
+// FetchJob specifies a single feed fetch operation.
+// This allows programmatic specification of multiple fetches with different URLs.
+type FetchJob struct {
+	FeedID  string // Feed identifier (onestop_id)
+	FeedURL string // URL to fetch from (optional; if empty, looks up from database)
+}
+
 // FetchCommand fetches feeds defined a DMFR database.
 type FetchCommand struct {
 	Options     fetch.StaticFetchOptions
@@ -36,6 +43,7 @@ type FetchCommand struct {
 	DBURL       string
 	DryRun      bool
 	FeedIDs     []string
+	FetchJobs   []FetchJob // Programmatic list of fetch operations; takes precedence over FeedIDs
 	Results     []FetchCommandResult
 	Adapter     tldb.Adapter // allow for mocks
 	fetchedAt   string
@@ -104,7 +112,7 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 		return errors.New("you must specify exactly one feed_id when using -fetch-url")
 	}
 
-	// Get feeds
+	// Get adapter
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -113,55 +121,76 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
-	if len(cmd.FeedIDs) == 0 {
-		q := cmd.Adapter.Sqrl().
-			Select("*").
-			From("current_feeds").
-			Where("deleted_at IS NULL").
-			Where("spec = ?", "gtfs")
-		if cmd.Limit > 0 {
-			q = q.Limit(uint64(cmd.Limit))
-		}
-		qstr, qargs, err := q.ToSql()
-		if err != nil {
-			return err
-		}
-		feeds := []dmfr.Feed{}
-		err = cmd.Adapter.Select(ctx, &feeds, qstr, qargs...)
-		if err != nil {
-			return err
-		}
-		for _, feed := range feeds {
-			if feed.URLs.StaticCurrent != "" {
-				cmd.FeedIDs = append(cmd.FeedIDs, feed.FeedID)
+	adapter := cmd.Adapter
+
+	// Populate FetchJobs from various input sources
+	// Priority: FetchJobs > FeedIDs > database query
+	if len(cmd.FetchJobs) == 0 {
+		if len(cmd.FeedIDs) > 0 {
+			// FeedIDs provided, convert to FetchJobs
+			for _, feedID := range cmd.FeedIDs {
+				job := FetchJob{FeedID: feedID}
+				// If single FeedURL specified via options, apply it to the single feed
+				if cmd.Options.FeedURL != "" {
+					job.FeedURL = cmd.Options.FeedURL
+				}
+				cmd.FetchJobs = append(cmd.FetchJobs, job)
+			}
+		} else {
+			// No FetchJobs or FeedIDs, query database for all feeds
+			q := adapter.Sqrl().
+				Select("*").
+				From("current_feeds").
+				Where("deleted_at IS NULL").
+				Where("spec = ?", "gtfs")
+			if cmd.Limit > 0 {
+				q = q.Limit(uint64(cmd.Limit))
+			}
+			qstr, qargs, err := q.ToSql()
+			if err != nil {
+				return err
+			}
+			feeds := []dmfr.Feed{}
+			err = adapter.Select(ctx, &feeds, qstr, qargs...)
+			if err != nil {
+				return err
+			}
+			for _, feed := range feeds {
+				if feed.URLs.StaticCurrent != "" {
+					cmd.FetchJobs = append(cmd.FetchJobs, FetchJob{
+						FeedID:  feed.FeedID,
+						FeedURL: feed.URLs.StaticCurrent,
+					})
+				}
 			}
 		}
 	}
 
-	// Check feeds
-	adapter := cmd.Adapter
+	// Convert FetchJobs to internal fetchJob queue with full options
 	var toFetch []fetchJob
-	for _, osid := range cmd.FeedIDs {
-		// Get feed, create if not present and FeedCreate is specified
+	for _, job := range cmd.FetchJobs {
+		// Get feed, create if not present and CreateFeed is specified
 		feed := dmfr.Feed{}
-		if err := adapter.Get(ctx, &feed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, osid); err == sql.ErrNoRows && cmd.CreateFeed {
-			feed.FeedID = osid
+		if err := adapter.Get(ctx, &feed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, job.FeedID); err == sql.ErrNoRows && cmd.CreateFeed {
+			feed.FeedID = job.FeedID
 			feed.Spec = "gtfs"
 			if feed.ID, err = adapter.Insert(ctx, &feed); err != nil {
 				return err
 			}
 		} else if err != nil {
-			return fmt.Errorf("problem with feed '%s': %s", osid, err.Error())
+			return fmt.Errorf("problem with feed '%s': %s", job.FeedID, err.Error())
 		}
 		// Create feed state if not exists
 		if _, err := stats.GetFeedState(ctx, adapter, feed.ID); err != nil {
 			return err
 		}
 		// Prepare options for this fetch
-		opts := cmd.Options // copy
+		opts := cmd.Options // copy global options
 		opts.FeedID = feed.ID
-		opts.URLType = "manual"
-		if opts.FeedURL == "" {
+		if job.FeedURL != "" {
+			opts.URLType = "manual"
+			opts.FeedURL = job.FeedURL
+		} else {
 			opts.URLType = "static_current"
 			opts.FeedURL = feed.URLs.StaticCurrent
 		}
@@ -170,9 +199,9 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 
 	///////////////
 	// Here we go
-	log.For(ctx).Info().Msgf("Fetching %d feeds", len(cmd.FeedIDs))
-	jobs := make(chan fetchJob, len(cmd.FeedIDs))
-	results := make(chan FetchCommandResult, len(cmd.FeedIDs))
+	log.For(ctx).Info().Msgf("Fetching %d feeds", len(cmd.FetchJobs))
+	jobs := make(chan fetchJob, len(cmd.FetchJobs))
+	results := make(chan FetchCommandResult, len(cmd.FetchJobs))
 	for _, opts := range toFetch {
 		jobs <- opts
 	}
