@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -37,10 +37,17 @@ const (
 )
 
 type Http struct {
-	secret         dmfr.Secret
-	MaxRetries     int
+	secret dmfr.Secret
+	// MaxRetries sets the maximum number of retry attempts for a request.
+	// If MaxRetries is zero or negative, a default value (defaultMaxRetries) is used.
+	MaxRetries int
+	// InitialBackoff is the starting delay before the first retry in the
+	// exponential backoff sequence. If InitialBackoff is zero, a default
+	// value (defaultInitialBackoff) is used.
 	InitialBackoff time.Duration
-	MaxBackoff     time.Duration
+	// MaxBackoff caps the maximum delay between retry attempts. If MaxBackoff
+	// is zero, a default value (defaultMaxBackoff) is used.
+	MaxBackoff time.Duration
 }
 
 func (r *Http) SetSecret(secret dmfr.Secret) error {
@@ -77,11 +84,20 @@ func parseRetryAfter(value string) time.Duration {
 	}
 	// Try parsing as seconds first
 	if seconds, err := strconv.Atoi(value); err == nil {
+		if seconds < 0 {
+			// Per RFC 7231, delay-seconds must be a non-negative decimal integer.
+			// Treat negative values as invalid and fall back to default logic.
+			return 0
+		}
 		return time.Duration(seconds) * time.Second
 	}
-	// Try parsing as HTTP-date (RFC 1123)
-	if t, err := time.Parse(time.RFC1123, value); err == nil {
-		return time.Until(t)
+	// Try parsing as HTTP-date (supports RFC 1123, RFC 850, and ANSI C asctime)
+	if t, err := http.ParseTime(value); err == nil {
+		d := time.Until(t)
+		if d < 0 {
+			return 0
+		}
+		return d
 	}
 	return 0
 }
@@ -89,22 +105,36 @@ func parseRetryAfter(value string) time.Duration {
 // calculateBackoff returns the backoff duration for the given attempt.
 // It uses exponential backoff with jitter.
 func (r *Http) calculateBackoff(attempt int, retryAfter time.Duration) time.Duration {
+	maxBackoff := r.getMaxBackoff()
 	if retryAfter > 0 {
 		// Use Retry-After header if provided, but cap at maxBackoff
-		maxBackoff := r.getMaxBackoff()
 		if retryAfter > maxBackoff {
 			return maxBackoff
 		}
 		return retryAfter
 	}
 	// Exponential backoff: initialBackoff * 2^attempt
-	backoff := r.getInitialBackoff() * (1 << attempt)
-	maxBackoff := r.getMaxBackoff()
+	// Cap the shift amount to prevent overflow (max 30 to safely stay within int64 range
+	// when multiplied by typical InitialBackoff values in nanoseconds)
+	shiftAmount := attempt
+	if shiftAmount > 30 {
+		shiftAmount = 30
+	}
+	backoff := r.getInitialBackoff() * (1 << shiftAmount)
+	// Handle potential overflow: if backoff is negative or zero after multiplication, use maxBackoff
+	if backoff <= 0 {
+		backoff = maxBackoff
+	}
 	if backoff > maxBackoff {
 		backoff = maxBackoff
 	}
-	// Add jitter: random value between 0 and 25% of backoff
-	jitter := time.Duration(rand.Int63n(int64(backoff / 4)))
+	// Add jitter: random value between 0 and 25% of backoff.
+	// Guard against very small backoff values that would make backoff/4 == 0
+	maxJitter := backoff / 4
+	if maxJitter <= 0 {
+		return backoff
+	}
+	jitter := rand.N(maxJitter)
 	return backoff + jitter
 }
 
