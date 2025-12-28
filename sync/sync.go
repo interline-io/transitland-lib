@@ -14,6 +14,7 @@ import (
 // Options sets options for a sync operation.
 type Options struct {
 	Filenames           []string
+	Registries          []*dmfr.Registry // Pre-parsed registries (e.g., from stdin)
 	HideUnseen          bool
 	HideUnseenOperators bool
 }
@@ -33,7 +34,15 @@ func MainSync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, erro
 
 func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 	sr := Result{}
-	// Load Feeds
+
+	// Collect all registries to process
+	type regSource struct {
+		name string
+		reg  *dmfr.Registry
+	}
+	var regs []regSource
+
+	// Load from filenames
 	for _, fn := range opts.Filenames {
 		reg, err := dmfr.LoadAndParseRegistry(fn)
 		if err != nil {
@@ -41,50 +50,54 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 			sr.Errors = append(sr.Errors, err)
 			continue
 		}
-		for _, rfeed := range reg.Feeds {
+		regs = append(regs, regSource{name: filepath.Base(fn), reg: reg})
+	}
+
+	// Add pre-parsed registries
+	for _, reg := range opts.Registries {
+		regs = append(regs, regSource{name: "stdin", reg: reg})
+	}
+
+	// Load Feeds
+	for _, rs := range regs {
+		for _, rfeed := range rs.reg.Feeds {
 			fsid := rfeed.FeedID
-			rfeed.File = filepath.Base(fn)
+			rfeed.File = rs.name
 			rfeed.DeletedAt = tt.Time{}
 			feedid, found, updated, err := UpdateFeed(ctx, atx, rfeed)
 			if err != nil {
-				log.For(ctx).Error().Msgf("%s: error on feed %d: %s", fn, feedid, err)
+				log.For(ctx).Error().Msgf("%s: error on feed %d: %s", rs.name, feedid, err)
 				sr.Errors = append(sr.Errors, err)
 				continue
 			}
 			if found && updated {
-				log.For(ctx).Info().Msgf("%s: updated feed %s (id:%d)", fn, fsid, feedid)
+				log.For(ctx).Info().Msgf("%s: updated feed %s (id:%d)", rs.name, fsid, feedid)
 			} else if found {
-				log.For(ctx).Info().Msgf("%s: no changes for feed %s (id:%d)", fn, fsid, feedid)
+				log.For(ctx).Info().Msgf("%s: no changes for feed %s (id:%d)", rs.name, fsid, feedid)
 			} else {
-				log.For(ctx).Info().Msgf("%s: new feed %s (id:%d)", fn, fsid, feedid)
+				log.For(ctx).Info().Msgf("%s: new feed %s (id:%d)", rs.name, fsid, feedid)
 			}
 			sr.FeedIDs = append(sr.FeedIDs, feedid)
 		}
 	}
 	// Load Operators
-	for _, fn := range opts.Filenames {
-		reg, err := dmfr.LoadAndParseRegistry(fn)
-		if err != nil {
-			log.For(ctx).Error().Msgf("%s: Error parsing DMFR: %s", fn, err.Error())
-			sr.Errors = append(sr.Errors, err)
-			continue
-		}
-		for _, operator := range reg.Operators {
+	for _, rs := range regs {
+		for _, operator := range rs.reg.Operators {
 			osid := operator.OnestopID.Val
-			operator.File.Set(filepath.Base(fn))
+			operator.File.Set(rs.name)
 			operator.DeletedAt.Unset()
 			operatorid, found, updated, err := UpdateOperator(ctx, atx, operator)
 			if err != nil {
-				log.For(ctx).Error().Msgf("%s: error on operator %s: %s", fn, osid, err)
+				log.For(ctx).Error().Msgf("%s: error on operator %s: %s", rs.name, osid, err)
 				sr.Errors = append(sr.Errors, err)
 				continue
 			}
 			if found && updated {
-				log.For(ctx).Info().Msgf("%s: updated operator %s (id:%d)", fn, osid, operatorid)
+				log.For(ctx).Info().Msgf("%s: updated operator %s (id:%d)", rs.name, osid, operatorid)
 			} else if found {
-				log.For(ctx).Info().Msgf("%s: no changes for operator %s (id:%d)", fn, osid, operatorid)
+				log.For(ctx).Info().Msgf("%s: no changes for operator %s (id:%d)", rs.name, osid, operatorid)
 			} else {
-				log.For(ctx).Info().Msgf("%s: new operator %s (id:%d)", fn, osid, operatorid)
+				log.For(ctx).Info().Msgf("%s: new operator %s (id:%d)", rs.name, osid, operatorid)
 			}
 			sr.OperatorIDs = append(sr.OperatorIDs, operatorid)
 		}

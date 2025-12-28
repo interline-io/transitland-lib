@@ -1,9 +1,12 @@
 package cmds
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"os"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/sync"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
@@ -17,11 +20,21 @@ type SyncCommand struct {
 }
 
 func (cmd *SyncCommand) HelpDesc() (string, string) {
-	return "Sync DMFR files to database", ""
+	return "Sync DMFR files to database", "Use '-' to read from stdin."
 }
 
 func (cmd *SyncCommand) HelpArgs() string {
 	return "[flags] <filenames...>"
+}
+
+func (cmd *SyncCommand) HelpExample() string {
+	return `
+  # Sync from a file
+  {{.ParentCommand}} {{.Command}} feeds.dmfr
+
+  # Sync from a directory of GTFS files
+  {{.ParentCommand}} dmfr from-dir ./gtfs-files/ | {{.ParentCommand}} {{.Command}} -
+`
 }
 
 func (cmd *SyncCommand) AddFlags(fl *pflag.FlagSet) {
@@ -32,9 +45,24 @@ func (cmd *SyncCommand) AddFlags(fl *pflag.FlagSet) {
 
 // Parse command line options.
 func (cmd *SyncCommand) Parse(args []string) error {
-	cmd.Filenames = args
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
+	}
+	// Handle stdin via "-"
+	for _, arg := range args {
+		if arg == "-" {
+			data, err := io.ReadAll(os.Stdin)
+			if err != nil {
+				return err
+			}
+			reg, err := dmfr.ReadRegistry(bytes.NewReader(data))
+			if err != nil {
+				return err
+			}
+			cmd.Registries = append(cmd.Registries, reg)
+		} else {
+			cmd.Filenames = append(cmd.Filenames, arg)
+		}
 	}
 	return nil
 }

@@ -39,6 +39,7 @@ type FetchCommand struct {
 	Results     []FetchCommandResult
 	Adapter     tldb.Adapter // allow for mocks
 	fetchedAt   string
+	dmfrFile    string
 }
 
 func (cmd *FetchCommand) HelpDesc() (string, string) {
@@ -66,6 +67,7 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
 	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
+	fl.StringVar(&cmd.dmfrFile, "dmfr", "", "Filter by feed IDs in DMFR file; equivalent to specifying feed IDs as arguments")
 }
 
 func (cmd *FetchCommand) Parse(args []string) error {
@@ -73,6 +75,16 @@ func (cmd *FetchCommand) Parse(args []string) error {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
 	cmd.FeedIDs = args
+	// Load feed IDs from DMFR file
+	if cmd.dmfrFile != "" {
+		reg, err := dmfr.LoadAndParseRegistry(cmd.dmfrFile)
+		if err != nil {
+			return err
+		}
+		for _, feed := range reg.Feeds {
+			cmd.FeedIDs = append(cmd.FeedIDs, feed.FeedID)
+		}
+	}
 	return nil
 }
 
