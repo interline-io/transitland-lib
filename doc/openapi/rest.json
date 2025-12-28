@@ -3414,25 +3414,25 @@
                                 "description": "Website to visit to sign up for an account",
                                 "title": "info_url",
                                 "type": "string",
-                                "x-order": 55
+                                "x-order": 57
                               },
                               "param_name": {
                                 "description": "When `type=query_param`, this specifies the name of the query parameter. When `type=header`, this specifies the name of the header",
                                 "title": "param_name",
                                 "type": "string",
-                                "x-order": 53
+                                "x-order": 55
                               },
                               "type": {
                                 "description": "Method for inserting authorization secret into request",
                                 "title": "type",
                                 "type": "string",
-                                "x-order": 51
+                                "x-order": 53
                               }
                             },
                             "title": "authorization",
                             "type": "object",
                             "x-graphql-type": "FeedAuthorization",
-                            "x-order": 56
+                            "x-order": 58
                           },
                           "feed_state": {
                             "description": "Current feed state",
@@ -3450,31 +3450,31 @@
                                         "description": "Exception log if any errors occurred during import",
                                         "title": "exception_log",
                                         "type": "string",
-                                        "x-order": 77
+                                        "x-order": 79
                                       },
                                       "id": {
                                         "description": "Internal integer ID",
                                         "title": "id",
                                         "type": "integer",
-                                        "x-order": 71
+                                        "x-order": 73
                                       },
                                       "in_progress": {
                                         "description": "Is the import currently in-progress",
                                         "title": "in_progress",
                                         "type": "boolean",
-                                        "x-order": 73
+                                        "x-order": 75
                                       },
                                       "success": {
                                         "description": "Did the import complete successfully",
                                         "title": "success",
                                         "type": "boolean",
-                                        "x-order": 75
+                                        "x-order": 77
                                       }
                                     },
                                     "title": "feed_version_gtfs_import",
                                     "type": "object",
                                     "x-graphql-type": "FeedVersionGtfsImport",
-                                    "x-order": 78
+                                    "x-order": 80
                                   },
                                   "fetched_at": {
                                     "description": "Time when the file was fetched from the url",
@@ -3482,44 +3482,44 @@
                                     "format": "datetime",
                                     "title": "fetched_at",
                                     "type": "string",
-                                    "x-order": 66
+                                    "x-order": 68
                                   },
                                   "geometry": {
                                     "description": "Convex hull around all active stops in the feed version",
                                     "nullable": true,
                                     "title": "geometry",
-                                    "x-order": 68
+                                    "x-order": 70
                                   },
                                   "id": {
                                     "description": "Internal integer ID",
                                     "title": "id",
                                     "type": "integer",
-                                    "x-order": 60
+                                    "x-order": 62
                                   },
                                   "sha1": {
                                     "description": "SHA1 hash of the zip file",
                                     "example": "ab5bdc8b6cedd06792d42186a9b542504c5eef9a",
                                     "title": "sha1",
                                     "type": "string",
-                                    "x-order": 62
+                                    "x-order": 64
                                   },
                                   "url": {
                                     "description": "URL used to fetch the file",
                                     "title": "url",
                                     "type": "string",
-                                    "x-order": 64
+                                    "x-order": 66
                                   }
                                 },
                                 "title": "feed_version",
                                 "type": "object",
                                 "x-graphql-type": "FeedVersion",
-                                "x-order": 79
+                                "x-order": 81
                               }
                             },
                             "title": "feed_state",
                             "type": "object",
                             "x-graphql-type": "FeedState",
-                            "x-order": 80
+                            "x-order": 82
                           },
                           "feed_versions": {
                             "description": "Versions of this feed that have been fetched, archived, and imported",
@@ -3531,7 +3531,7 @@
                                   "format": "date",
                                   "title": "earliest_calendar_date",
                                   "type": "string",
-                                  "x-order": 91
+                                  "x-order": 93
                                 },
                                 "fetched_at": {
                                   "description": "Time when the file was fetched from the url",
@@ -3539,13 +3539,13 @@
                                   "format": "datetime",
                                   "title": "fetched_at",
                                   "type": "string",
-                                  "x-order": 87
+                                  "x-order": 89
                                 },
                                 "id": {
                                   "description": "Internal integer ID",
                                   "title": "id",
                                   "type": "integer",
-                                  "x-order": 83
+                                  "x-order": 85
                                 },
                                 "latest_calendar_date": {
                                   "description": "The latest date with scheduled service",
@@ -3553,30 +3553,30 @@
                                   "format": "date",
                                   "title": "latest_calendar_date",
                                   "type": "string",
-                                  "x-order": 93
+                                  "x-order": 95
                                 },
                                 "sha1": {
                                   "description": "SHA1 hash of the zip file",
                                   "example": "ab5bdc8b6cedd06792d42186a9b542504c5eef9a",
                                   "title": "sha1",
                                   "type": "string",
-                                  "x-order": 85
+                                  "x-order": 87
                                 },
                                 "url": {
                                   "description": "URL used to fetch the file",
                                   "title": "url",
                                   "type": "string",
-                                  "x-order": 89
+                                  "x-order": 91
                                 }
                               },
                               "type": "object",
                               "x-graphql-type": "FeedVersion",
-                              "x-order": 94
+                              "x-order": 96
                             },
                             "title": "feed_versions",
                             "type": "array",
                             "x-graphql-type": "FeedVersion",
-                            "x-order": 94
+                            "x-order": 96
                           },
                           "id": {
                             "description": "Internal integer ID",
@@ -3605,61 +3605,61 @@
                                 "description": "Feed consumers must follow these instructions for how to provide attribution",
                                 "title": "attribution_instructions",
                                 "type": "string",
-                                "x-order": 47
+                                "x-order": 49
                               },
                               "attribution_text": {
                                 "description": "Feed consumers must include this particular text when using this feed",
                                 "title": "attribution_text",
                                 "type": "string",
-                                "x-order": 45
+                                "x-order": 47
                               },
                               "commercial_use_allowed": {
                                 "description": "Are feed consumers allowed to use the feed for commercial purposes?",
                                 "title": "commercial_use_allowed",
                                 "type": "string",
-                                "x-order": 41
+                                "x-order": 43
                               },
                               "create_derived_product": {
                                 "description": "Are feed consumers allowed to create and share derived products from the feed?",
                                 "title": "create_derived_product",
                                 "type": "string",
-                                "x-order": 37
+                                "x-order": 39
                               },
                               "redistribution_allowed": {
                                 "description": "Are feed consumers allowed to redistribute the feed in its entirety?",
                                 "title": "redistribution_allowed",
                                 "type": "string",
-                                "x-order": 39
+                                "x-order": 41
                               },
                               "share_alike_optional": {
                                 "description": "Are feed consumers allowed to keep their modifications of this feed private?",
                                 "title": "share_alike_optional",
                                 "type": "string",
-                                "x-order": 43
+                                "x-order": 45
                               },
                               "spdx_identifier": {
                                 "description": "SPDX identifier for a common license. See https://spdx.org/licenses/",
                                 "title": "spdx_identifier",
                                 "type": "string",
-                                "x-order": 31
+                                "x-order": 33
                               },
                               "url": {
                                 "description": "URL for a custom license",
                                 "title": "url",
                                 "type": "string",
-                                "x-order": 33
+                                "x-order": 35
                               },
                               "use_without_attribution": {
                                 "description": "Are feed consumers allowed to use the feed contents without including attribution text in their app or map?",
                                 "title": "use_without_attribution",
                                 "type": "string",
-                                "x-order": 35
+                                "x-order": 37
                               }
                             },
                             "title": "license",
                             "type": "object",
                             "x-graphql-type": "FeedLicense",
-                            "x-order": 48
+                            "x-order": 50
                           },
                           "name": {
                             "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
@@ -3688,6 +3688,13 @@
                             "x-graphql-type": "FeedSpecTypes",
                             "x-order": 4
                           },
+                          "tags": {
+                            "description": "Source DMFR tags for this feed",
+                            "nullable": true,
+                            "title": "tags",
+                            "type": "object",
+                            "x-order": 12
+                          },
                           "urls": {
                             "description": "URLs associated with this feed",
                             "nullable": true,
@@ -3696,77 +3703,77 @@
                                 "description": "URL for GBFS feed `gbfs.json` auto-discovery file",
                                 "title": "gbfs_auto_discovery",
                                 "type": "string",
-                                "x-order": 25
+                                "x-order": 27
                               },
                               "mds_provider": {
                                 "description": "URL for MDS feed provider endpoint",
                                 "title": "mds_provider",
                                 "type": "string",
-                                "x-order": 27
+                                "x-order": 29
                               },
                               "realtime_alerts": {
                                 "description": "URL for GTFS-RT Alert messages",
                                 "title": "realtime_alerts",
                                 "type": "string",
-                                "x-order": 23
+                                "x-order": 25
                               },
                               "realtime_trip_updates": {
                                 "description": "URL for GTFS-RT TripUpdate messages",
                                 "title": "realtime_trip_updates",
                                 "type": "string",
-                                "x-order": 21
+                                "x-order": 23
                               },
                               "realtime_vehicle_positions": {
                                 "description": "URL for GTFS-RT VehiclePosition messages",
                                 "title": "realtime_vehicle_positions",
                                 "type": "string",
-                                "x-order": 19
+                                "x-order": 21
                               },
                               "static_current": {
                                 "description": "URL for the static feed that represents today's service",
                                 "title": "static_current",
                                 "type": "string",
-                                "x-order": 13
+                                "x-order": 15
                               },
                               "static_historic": {
                                 "description": "URLs for static feeds that represent past service that is no longer in effect",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "String",
-                                  "x-order": 15
+                                  "x-order": 17
                                 },
                                 "title": "static_historic",
                                 "type": "array",
                                 "x-graphql-type": "String",
-                                "x-order": 15
+                                "x-order": 17
                               },
                               "static_planned": {
                                 "description": "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect few weeks or months in the future",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "String",
-                                  "x-order": 17
+                                  "x-order": 19
                                 },
                                 "title": "static_planned",
                                 "type": "array",
                                 "x-graphql-type": "String",
-                                "x-order": 17
+                                "x-order": 19
                               }
                             },
                             "title": "urls",
                             "type": "object",
                             "x-graphql-type": "FeedUrls",
-                            "x-order": 28
+                            "x-order": 30
                           }
                         },
                         "type": "object",
                         "x-graphql-type": "Feed",
-                        "x-order": 95
+                        "x-order": 97
                       },
                       "title": "feeds",
                       "type": "array",
                       "x-graphql-type": "Feed",
-                      "x-order": 95
+                      "x-order": 97
                     }
                   },
                   "title": "data"
@@ -3881,25 +3888,25 @@
                                 "description": "Website to visit to sign up for an account",
                                 "title": "info_url",
                                 "type": "string",
-                                "x-order": 55
+                                "x-order": 57
                               },
                               "param_name": {
                                 "description": "When `type=query_param`, this specifies the name of the query parameter. When `type=header`, this specifies the name of the header",
                                 "title": "param_name",
                                 "type": "string",
-                                "x-order": 53
+                                "x-order": 55
                               },
                               "type": {
                                 "description": "Method for inserting authorization secret into request",
                                 "title": "type",
                                 "type": "string",
-                                "x-order": 51
+                                "x-order": 53
                               }
                             },
                             "title": "authorization",
                             "type": "object",
                             "x-graphql-type": "FeedAuthorization",
-                            "x-order": 56
+                            "x-order": 58
                           },
                           "feed_state": {
                             "description": "Current feed state",
@@ -3917,31 +3924,31 @@
                                         "description": "Exception log if any errors occurred during import",
                                         "title": "exception_log",
                                         "type": "string",
-                                        "x-order": 77
+                                        "x-order": 79
                                       },
                                       "id": {
                                         "description": "Internal integer ID",
                                         "title": "id",
                                         "type": "integer",
-                                        "x-order": 71
+                                        "x-order": 73
                                       },
                                       "in_progress": {
                                         "description": "Is the import currently in-progress",
                                         "title": "in_progress",
                                         "type": "boolean",
-                                        "x-order": 73
+                                        "x-order": 75
                                       },
                                       "success": {
                                         "description": "Did the import complete successfully",
                                         "title": "success",
                                         "type": "boolean",
-                                        "x-order": 75
+                                        "x-order": 77
                                       }
                                     },
                                     "title": "feed_version_gtfs_import",
                                     "type": "object",
                                     "x-graphql-type": "FeedVersionGtfsImport",
-                                    "x-order": 78
+                                    "x-order": 80
                                   },
                                   "fetched_at": {
                                     "description": "Time when the file was fetched from the url",
@@ -3949,44 +3956,44 @@
                                     "format": "datetime",
                                     "title": "fetched_at",
                                     "type": "string",
-                                    "x-order": 66
+                                    "x-order": 68
                                   },
                                   "geometry": {
                                     "description": "Convex hull around all active stops in the feed version",
                                     "nullable": true,
                                     "title": "geometry",
-                                    "x-order": 68
+                                    "x-order": 70
                                   },
                                   "id": {
                                     "description": "Internal integer ID",
                                     "title": "id",
                                     "type": "integer",
-                                    "x-order": 60
+                                    "x-order": 62
                                   },
                                   "sha1": {
                                     "description": "SHA1 hash of the zip file",
                                     "example": "ab5bdc8b6cedd06792d42186a9b542504c5eef9a",
                                     "title": "sha1",
                                     "type": "string",
-                                    "x-order": 62
+                                    "x-order": 64
                                   },
                                   "url": {
                                     "description": "URL used to fetch the file",
                                     "title": "url",
                                     "type": "string",
-                                    "x-order": 64
+                                    "x-order": 66
                                   }
                                 },
                                 "title": "feed_version",
                                 "type": "object",
                                 "x-graphql-type": "FeedVersion",
-                                "x-order": 79
+                                "x-order": 81
                               }
                             },
                             "title": "feed_state",
                             "type": "object",
                             "x-graphql-type": "FeedState",
-                            "x-order": 80
+                            "x-order": 82
                           },
                           "feed_versions": {
                             "description": "Versions of this feed that have been fetched, archived, and imported",
@@ -3998,7 +4005,7 @@
                                   "format": "date",
                                   "title": "earliest_calendar_date",
                                   "type": "string",
-                                  "x-order": 91
+                                  "x-order": 93
                                 },
                                 "fetched_at": {
                                   "description": "Time when the file was fetched from the url",
@@ -4006,13 +4013,13 @@
                                   "format": "datetime",
                                   "title": "fetched_at",
                                   "type": "string",
-                                  "x-order": 87
+                                  "x-order": 89
                                 },
                                 "id": {
                                   "description": "Internal integer ID",
                                   "title": "id",
                                   "type": "integer",
-                                  "x-order": 83
+                                  "x-order": 85
                                 },
                                 "latest_calendar_date": {
                                   "description": "The latest date with scheduled service",
@@ -4020,30 +4027,30 @@
                                   "format": "date",
                                   "title": "latest_calendar_date",
                                   "type": "string",
-                                  "x-order": 93
+                                  "x-order": 95
                                 },
                                 "sha1": {
                                   "description": "SHA1 hash of the zip file",
                                   "example": "ab5bdc8b6cedd06792d42186a9b542504c5eef9a",
                                   "title": "sha1",
                                   "type": "string",
-                                  "x-order": 85
+                                  "x-order": 87
                                 },
                                 "url": {
                                   "description": "URL used to fetch the file",
                                   "title": "url",
                                   "type": "string",
-                                  "x-order": 89
+                                  "x-order": 91
                                 }
                               },
                               "type": "object",
                               "x-graphql-type": "FeedVersion",
-                              "x-order": 94
+                              "x-order": 96
                             },
                             "title": "feed_versions",
                             "type": "array",
                             "x-graphql-type": "FeedVersion",
-                            "x-order": 94
+                            "x-order": 96
                           },
                           "id": {
                             "description": "Internal integer ID",
@@ -4072,61 +4079,61 @@
                                 "description": "Feed consumers must follow these instructions for how to provide attribution",
                                 "title": "attribution_instructions",
                                 "type": "string",
-                                "x-order": 47
+                                "x-order": 49
                               },
                               "attribution_text": {
                                 "description": "Feed consumers must include this particular text when using this feed",
                                 "title": "attribution_text",
                                 "type": "string",
-                                "x-order": 45
+                                "x-order": 47
                               },
                               "commercial_use_allowed": {
                                 "description": "Are feed consumers allowed to use the feed for commercial purposes?",
                                 "title": "commercial_use_allowed",
                                 "type": "string",
-                                "x-order": 41
+                                "x-order": 43
                               },
                               "create_derived_product": {
                                 "description": "Are feed consumers allowed to create and share derived products from the feed?",
                                 "title": "create_derived_product",
                                 "type": "string",
-                                "x-order": 37
+                                "x-order": 39
                               },
                               "redistribution_allowed": {
                                 "description": "Are feed consumers allowed to redistribute the feed in its entirety?",
                                 "title": "redistribution_allowed",
                                 "type": "string",
-                                "x-order": 39
+                                "x-order": 41
                               },
                               "share_alike_optional": {
                                 "description": "Are feed consumers allowed to keep their modifications of this feed private?",
                                 "title": "share_alike_optional",
                                 "type": "string",
-                                "x-order": 43
+                                "x-order": 45
                               },
                               "spdx_identifier": {
                                 "description": "SPDX identifier for a common license. See https://spdx.org/licenses/",
                                 "title": "spdx_identifier",
                                 "type": "string",
-                                "x-order": 31
+                                "x-order": 33
                               },
                               "url": {
                                 "description": "URL for a custom license",
                                 "title": "url",
                                 "type": "string",
-                                "x-order": 33
+                                "x-order": 35
                               },
                               "use_without_attribution": {
                                 "description": "Are feed consumers allowed to use the feed contents without including attribution text in their app or map?",
                                 "title": "use_without_attribution",
                                 "type": "string",
-                                "x-order": 35
+                                "x-order": 37
                               }
                             },
                             "title": "license",
                             "type": "object",
                             "x-graphql-type": "FeedLicense",
-                            "x-order": 48
+                            "x-order": 50
                           },
                           "name": {
                             "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
@@ -4155,6 +4162,13 @@
                             "x-graphql-type": "FeedSpecTypes",
                             "x-order": 4
                           },
+                          "tags": {
+                            "description": "Source DMFR tags for this feed",
+                            "nullable": true,
+                            "title": "tags",
+                            "type": "object",
+                            "x-order": 12
+                          },
                           "urls": {
                             "description": "URLs associated with this feed",
                             "nullable": true,
@@ -4163,77 +4177,77 @@
                                 "description": "URL for GBFS feed `gbfs.json` auto-discovery file",
                                 "title": "gbfs_auto_discovery",
                                 "type": "string",
-                                "x-order": 25
+                                "x-order": 27
                               },
                               "mds_provider": {
                                 "description": "URL for MDS feed provider endpoint",
                                 "title": "mds_provider",
                                 "type": "string",
-                                "x-order": 27
+                                "x-order": 29
                               },
                               "realtime_alerts": {
                                 "description": "URL for GTFS-RT Alert messages",
                                 "title": "realtime_alerts",
                                 "type": "string",
-                                "x-order": 23
+                                "x-order": 25
                               },
                               "realtime_trip_updates": {
                                 "description": "URL for GTFS-RT TripUpdate messages",
                                 "title": "realtime_trip_updates",
                                 "type": "string",
-                                "x-order": 21
+                                "x-order": 23
                               },
                               "realtime_vehicle_positions": {
                                 "description": "URL for GTFS-RT VehiclePosition messages",
                                 "title": "realtime_vehicle_positions",
                                 "type": "string",
-                                "x-order": 19
+                                "x-order": 21
                               },
                               "static_current": {
                                 "description": "URL for the static feed that represents today's service",
                                 "title": "static_current",
                                 "type": "string",
-                                "x-order": 13
+                                "x-order": 15
                               },
                               "static_historic": {
                                 "description": "URLs for static feeds that represent past service that is no longer in effect",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "String",
-                                  "x-order": 15
+                                  "x-order": 17
                                 },
                                 "title": "static_historic",
                                 "type": "array",
                                 "x-graphql-type": "String",
-                                "x-order": 15
+                                "x-order": 17
                               },
                               "static_planned": {
                                 "description": "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect few weeks or months in the future",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "String",
-                                  "x-order": 17
+                                  "x-order": 19
                                 },
                                 "title": "static_planned",
                                 "type": "array",
                                 "x-graphql-type": "String",
-                                "x-order": 17
+                                "x-order": 19
                               }
                             },
                             "title": "urls",
                             "type": "object",
                             "x-graphql-type": "FeedUrls",
-                            "x-order": 28
+                            "x-order": 30
                           }
                         },
                         "type": "object",
                         "x-graphql-type": "Feed",
-                        "x-order": 95
+                        "x-order": 97
                       },
                       "title": "feeds",
                       "type": "array",
                       "x-graphql-type": "Feed",
-                      "x-order": 95
+                      "x-order": 97
                     }
                   },
                   "title": "data"
