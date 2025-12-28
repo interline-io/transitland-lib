@@ -196,7 +196,8 @@ type FeedKeyRequest struct {
 
 func (r FeedKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
-		Path: "/feeds/{feed_key}",
+		Path:         "/feeds/{feed_key}",
+		SingleEntity: true,
 		Get: &RequestOperation{
 			Query: feedQuery,
 			Operation: &oa.Operation{

@@ -164,3 +164,47 @@ func TestRootRedirect(t *testing.T) {
 		}
 	})
 }
+
+func TestSingleEntityNotFound(t *testing.T) {
+	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
+		Storage: testdata.Path("server", "tmp"),
+	})
+
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus int
+	}{
+		// Single entity requests that don't exist should return 404
+		{"feed not found", "/feeds/f-nonexistent", http.StatusNotFound},
+		{"route not found", "/routes/r-nonexistent", http.StatusNotFound},
+		{"stop not found", "/stops/s-nonexistent", http.StatusNotFound},
+		{"agency not found", "/agencies/o-nonexistent", http.StatusNotFound},
+		{"operator not found", "/operators/o-nonexistent", http.StatusNotFound},
+		{"feed_version not found", "/feed_versions/nonexistent-sha1", http.StatusNotFound},
+
+		// Single entity requests that exist should return 200
+		{"feed exists", "/feeds/BA", http.StatusOK},
+		{"feed exists by id", "/feeds/1", http.StatusOK},
+
+		// Collection requests with no results should return 200 with empty array
+		{"feeds collection empty filter", "/feeds?onestop_id=nonexistent", http.StatusOK},
+		{"routes collection empty filter", "/routes?onestop_id=nonexistent", http.StatusOK},
+
+		// GeoJSON format should also return 404 for not found
+		{"feed not found geojson", "/feeds/f-nonexistent.geojson", http.StatusNotFound},
+		{"feed exists geojson", "/feeds/BA.geojson", http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", tt.path, nil)
+			rr := httptest.NewRecorder()
+			restSrv.ServeHTTP(rr, req)
+
+			if sc := rr.Result().StatusCode; sc != tt.wantStatus {
+				t.Errorf("got status %d, want %d for path %s", sc, tt.wantStatus, tt.path)
+			}
+		})
+	}
+}

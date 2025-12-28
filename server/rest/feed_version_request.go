@@ -170,7 +170,8 @@ type FeedVersionKeyRequest struct {
 
 func (r FeedVersionKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
-		Path: "/feed_versions/{feed_version_key}",
+		Path:         "/feed_versions/{feed_version_key}",
+		SingleEntity: true,
 		Get: &RequestOperation{
 			Query: feedVersionQuery,
 			Operation: &oa.Operation{

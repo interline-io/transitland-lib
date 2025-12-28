@@ -175,6 +175,34 @@ type hasResponseKey interface {
 	ResponseKey() string
 }
 
+// checkEmptyResponse returns true if the response is empty for the given format
+func checkEmptyResponse(response []byte, format string, responseKey string) bool {
+	// For geojsonl format, check if response bytes are empty
+	if format == "geojsonl" {
+		return len(response) == 0 || len(strings.TrimSpace(string(response))) == 0
+	}
+
+	// For other formats, parse JSON and check structure
+	var responseData map[string]interface{}
+	if err := json.Unmarshal(response, &responseData); err != nil {
+		return false
+	}
+
+	// Check for GeoJSON format (has "features" array)
+	if format == "geojson" {
+		if features, ok := responseData["features"].([]interface{}); ok {
+			return len(features) == 0
+		}
+		return false
+	}
+
+	// Check for regular JSON format (has response key array)
+	if entities, ok := responseData[responseKey].([]interface{}); ok {
+		return len(entities) == 0
+	}
+	return false
+}
+
 // Alias for map string interface
 type hw = map[string]interface{}
 
@@ -287,6 +315,16 @@ func makeHandler(graphqlHandler http.Handler, handlerName string, f func() apiHa
 		if err != nil {
 			util.WriteJsonError(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		// Return 404 for single-entity requests that returned empty results
+		if info, ok := handler.(interface{ RequestInfo() RequestInfo }); ok && info.RequestInfo().SingleEntity {
+			if h, ok := handler.(hasResponseKey); ok {
+				if checkEmptyResponse(response, format, h.ResponseKey()) {
+					util.WriteJsonError(w, "not found", http.StatusNotFound)
+					return
+				}
+			}
 		}
 
 		// Write the output data
