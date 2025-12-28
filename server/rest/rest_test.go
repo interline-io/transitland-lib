@@ -194,6 +194,9 @@ func TestSingleEntityNotFound(t *testing.T) {
 		// GeoJSON format should also return 404 for not found
 		{"feed not found geojson", "/feeds/f-nonexistent.geojson", http.StatusNotFound},
 		{"feed exists geojson", "/feeds/BA.geojson", http.StatusOK},
+
+		// PNG format should also return 404 for not found
+		{"route not found png", "/routes/r-nonexistent.png", http.StatusNotFound},
 	}
 
 	for _, tt := range tests {

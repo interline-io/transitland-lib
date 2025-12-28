@@ -177,6 +177,11 @@ type hasResponseKey interface {
 
 // checkEmptyResponse returns true if the response is empty for the given format
 func checkEmptyResponse(response []byte, format string, responseKey string) bool {
+	// For PNG format, nil response indicates empty results (checked in makeRequest)
+	if format == "png" {
+		return response == nil
+	}
+
 	// For geojsonl format, check if response bytes are empty
 	if format == "geojsonl" {
 		return len(response) == 0 || len(strings.TrimSpace(string(response))) == 0
@@ -393,6 +398,10 @@ func makeRequest(ctx context.Context, graphqlHandler http.Handler, ent apiHandle
 		case "geojsonl":
 			return renderGeojsonl(response)
 		case "png":
+			// Return nil for empty results so caller can return 404
+			if features, ok := response["features"].([]map[string]any); ok && len(features) == 0 {
+				return nil, nil
+			}
 			b, err := json.Marshal(response)
 			if err != nil {
 				return nil, err
