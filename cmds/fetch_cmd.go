@@ -252,19 +252,25 @@ type fetchJob struct {
 
 func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-chan fetchJob, results chan<- FetchCommandResult, wg *sync.WaitGroup) {
 	for job := range jobs {
-		// Start
-		log.For(ctx).Info().Msgf("Feed %s: start", job.OnestopID)
+		jobLog := log.For(ctx).With().
+			Str("feed_onestop_id", job.OnestopID).
+			Int("feed_id", job.Options.FeedID).
+			Str("url", job.FeedURL).
+			Logger()
+
+		jobLog.Info().Msg("start")
 		if DryRun {
-			log.For(ctx).Info().Msgf("Feed %s: dry-run", job.OnestopID)
+			jobLog.Info().Msg("dry-run")
 			continue
 		}
 
 		// Fetch
+		jobCtx := log.WithLogger(ctx, jobLog)
 		var result fetch.StaticFetchResult
 		t := time.Now()
 		fatalError := adapter.Tx(func(atx tldb.Adapter) error {
 			var fatalError error
-			result, fatalError = fetch.StaticFetch(ctx, atx, job.StaticFetchOptions)
+			result, fatalError = fetch.StaticFetch(jobCtx, atx, job.StaticFetchOptions)
 			return fatalError
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
@@ -272,15 +278,23 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		// Log result
 		fv := result.FeedVersion
 		if fatalError != nil {
-			log.For(ctx).Error().Err(fatalError).Msgf("Feed %s (id:%d): url: %s critical error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, fatalError.Error(), t2)
+			jobLog.Error().Err(fatalError).Float64("duration", t2).Msg("critical error")
 		} else if result.FetchError != nil {
-			log.For(ctx).Error().Err(result.FetchError).Msgf("Feed %s (id:%d): url: %s fetch error: %s (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, result.FetchError.Error(), t2)
+			jobLog.Error().Err(result.FetchError).Float64("duration", t2).Msg("fetch error")
 		} else if fv != nil && result.Found {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): url: %s found sha1: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
+			jobLog.Info().
+				Float64("duration", t2).
+				Str("sha1", fv.SHA1).
+				Int("feed_version_id", fv.ID).
+				Msg("found existing")
 		} else if fv != nil {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): url: %s new: %s (id:%d) (t:%0.2fs)", job.OnestopID, job.Options.FeedID, fv.URL, fv.SHA1, fv.ID, t2)
+			jobLog.Info().
+				Float64("duration", t2).
+				Str("sha1", fv.SHA1).
+				Int("feed_version_id", fv.ID).
+				Msg("new feed version")
 		} else {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): url: %s invalid result (t:%0.2fs)", job.OnestopID, job.Options.FeedID, result.URL, t2)
+			jobLog.Error().Float64("duration", t2).Msg("invalid result")
 		}
 		results <- FetchCommandResult{
 			Result:                     result.Result,
