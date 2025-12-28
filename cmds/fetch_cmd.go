@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/stats"
+	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
 	"github.com/spf13/pflag"
@@ -42,11 +44,11 @@ type FetchCommand struct {
 	Limit       int
 	DBURL       string
 	DryRun      bool
-	FeedIDs     []string
-	FetchJobs   []FetchJob // Programmatic list of fetch operations; takes precedence over FeedIDs
+	FetchJobs   []FetchJob // List of fetch operations
 	Results     []FetchCommandResult
 	Adapter     tldb.Adapter // allow for mocks
 	fetchedAt   string
+	jobsFile    string
 }
 
 func (cmd *FetchCommand) HelpDesc() (string, string) {
@@ -58,29 +60,55 @@ func (cmd *FetchCommand) HelpArgs() string {
 }
 
 func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
+	// FetchCommand options
 	fl.BoolVar(&cmd.CreateFeed, "create-feed", false, "Create feed record if not found")
-	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
-	fl.StringVar(&cmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
-	fl.StringVar(&cmd.SecretsFile, "secrets", "", "Path to DMFR Secrets file")
-	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
-	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
-	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Dry run; print feeds that would be imported and exit")
-	fl.BoolVar(&cmd.Options.StrictValidation, "strict", false, "Reject feeds with validation errors")
+	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
+	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
+	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
+	fl.StringVar(&cmd.SecretsFile, "secrets", "", "Path to DMFR Secrets file")
+	fl.StringVar(&cmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
+	fl.StringVar(&cmd.jobsFile, "jobs-file", "", "Specify fetch jobs in file, one per line as 'feed_id <tab> url'")
+	// StaticFetchOptions
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
-	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
 	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
+	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
-	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
+	fl.BoolVar(&cmd.Options.StrictValidation, "strict", false, "Reject feeds with validation errors")
+	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
+	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
 }
 
 func (cmd *FetchCommand) Parse(args []string) error {
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	cmd.FeedIDs = args
+	if cmd.Options.FeedURL != "" && len(args) != 1 {
+		return errors.New("you must specify exactly one feed_id when using -feed-url")
+	}
+	for _, feedID := range args {
+		cmd.FetchJobs = append(cmd.FetchJobs, FetchJob{FeedID: feedID, FeedURL: cmd.Options.FeedURL})
+	}
+	// Read jobs file: each line is "feed_id<tab>url"
+	if cmd.jobsFile != "" {
+		lines, err := tlcli.ReadFileLines(cmd.jobsFile)
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			parts := strings.SplitN(line, "\t", 2)
+			if len(parts) == 0 || parts[0] == "" {
+				continue
+			}
+			job := FetchJob{FeedID: parts[0]}
+			if len(parts) > 1 {
+				job.FeedURL = parts[1]
+			}
+			cmd.FetchJobs = append(cmd.FetchJobs, job)
+		}
+	}
 	return nil
 }
 
@@ -108,9 +136,6 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 		cmd.Options.FetchedAt = time.Now()
 	}
 	cmd.Options.FetchedAt = cmd.Options.FetchedAt.UTC()
-	if cmd.Options.FeedURL != "" && len(cmd.FeedIDs) != 1 {
-		return errors.New("you must specify exactly one feed_id when using -fetch-url")
-	}
 
 	// Get adapter
 	if cmd.Adapter == nil {
@@ -123,53 +148,42 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 	}
 	adapter := cmd.Adapter
 
-	// Populate FetchJobs from various input sources
-	// FetchJobs and FeedIDs are additive; database query only when neither is specified
-	if len(cmd.FeedIDs) > 0 {
-		// FeedIDs provided, convert to FetchJobs
-		for _, feedID := range cmd.FeedIDs {
-			job := FetchJob{FeedID: feedID}
-			// If single FeedURL specified via options, apply it to the single feed
-			if cmd.Options.FeedURL != "" {
-				job.FeedURL = cmd.Options.FeedURL
-			}
-			cmd.FetchJobs = append(cmd.FetchJobs, job)
-		}
-	}
+	// Populate FetchJobs from database if none specified
 	if len(cmd.FetchJobs) == 0 {
-		// No FetchJobs or FeedIDs, query database for all feeds
 		q := adapter.Sqrl().
 			Select("*").
 			From("current_feeds").
 			Where("deleted_at IS NULL").
 			Where("spec = ?", "gtfs")
-		if cmd.Limit > 0 {
-			q = q.Limit(uint64(cmd.Limit))
-		}
 		qstr, qargs, err := q.ToSql()
 		if err != nil {
 			return err
 		}
-		feeds := []dmfr.Feed{}
-		err = adapter.Select(ctx, &feeds, qstr, qargs...)
-		if err != nil {
+		var feeds []dmfr.Feed
+		if err = adapter.Select(ctx, &feeds, qstr, qargs...); err != nil {
 			return err
 		}
 		for _, feed := range feeds {
-			if feed.URLs.StaticCurrent != "" {
-				cmd.FetchJobs = append(cmd.FetchJobs, FetchJob{
-					FeedID:  feed.FeedID,
-					FeedURL: feed.URLs.StaticCurrent,
-				})
+			if feed.URLs.StaticCurrent == "" {
+				continue
 			}
+			cmd.FetchJobs = append(cmd.FetchJobs, FetchJob{
+				FeedID:  feed.FeedID,
+				FeedURL: feed.URLs.StaticCurrent,
+			})
 		}
 	}
 
 	// Convert FetchJobs to internal fetchJob queue with full options
+	// Apply limit if specified
+	fetchJobs := cmd.FetchJobs
+	if cmd.Limit > 0 && len(fetchJobs) > cmd.Limit {
+		fetchJobs = fetchJobs[:cmd.Limit]
+	}
 	var toFetch []fetchJob
-	for _, job := range cmd.FetchJobs {
+	for _, job := range fetchJobs {
 		// Get feed, create if not present and CreateFeed is specified
-		feed := dmfr.Feed{}
+		var feed dmfr.Feed
 		if err := adapter.Get(ctx, &feed, `SELECT * FROM current_feeds WHERE onestop_id = ?`, job.FeedID); err == sql.ErrNoRows && cmd.CreateFeed {
 			feed.FeedID = job.FeedID
 			feed.Spec = "gtfs"
