@@ -2,9 +2,9 @@ package cmds
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -21,23 +21,27 @@ type ImportCommandResult struct {
 	FatalError error
 }
 
+// ImportJob specifies a single feed version import operation.
+type ImportJob struct {
+	FeedVersionID int
+}
+
 // ImportCommand imports FeedVersions into a database.
 type ImportCommand struct {
-	Options      importer.Options
-	Workers      int
-	Limit        int
-	Fail         bool
-	DBURL        string
-	CoverDate    string
-	FetchedSince string
-	Latest       bool
-	DryRun       bool
-	FeedIDs      []string
-	FVIDs        []string
-	FVSHA1       []string
-	Results      []ImportCommandResult
-	Adapter      tldb.Adapter // allow for mocks
+	FeedIDs    []string    // Filter by feed onestop_id
+	FVSHA1     []string    // Filter by feed version SHA1
+	ImportJobs []ImportJob // Programmatic list of import operations
+	Options    importer.Options
+	Workers    int
+	Limit      int
+	Fail       bool
+	DBURL      string
+	Latest     bool
+	DryRun     bool
+	Results    []ImportCommandResult
+	Adapter    tldb.Adapter // allow for mocks
 	// internal
+	fvids           []string
 	fvidfile        string
 	fvsha1file      string
 	errorThresholds []string
@@ -53,7 +57,7 @@ func (cmd *ImportCommand) HelpArgs() string {
 
 func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.Options.ExtensionDefs, "ext", nil, "Include GTFS Extension")
-	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Import specific feed version ID")
+	fl.StringSliceVar(&cmd.fvids, "fvid", nil, "Import specific feed version ID")
 	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
 	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
 	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
@@ -62,8 +66,6 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage location; can be s3://... az://... or path to a directory")
-	fl.StringVar(&cmd.CoverDate, "date", "", "Service on date")
-	fl.StringVar(&cmd.FetchedSince, "fetched-since", "", "Fetched since")
 	fl.BoolVar(&cmd.Latest, "latest", false, "Only import latest feed version available for each feed")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.Activate, "activate", false, "Set as active feed version after import")
@@ -84,6 +86,7 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
+	// Read fvid file and add to fvids
 	if cmd.fvidfile != "" {
 		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
 		if err != nil {
@@ -91,13 +94,19 @@ func (cmd *ImportCommand) Parse(args []string) error {
 		}
 		for _, line := range lines {
 			if line != "" {
-				cmd.FVIDs = append(cmd.FVIDs, line)
+				cmd.fvids = append(cmd.fvids, line)
 			}
 		}
-		if len(cmd.FVIDs) == 0 {
-			return errors.New("--fvid-file specified but no lines were read")
-		}
 	}
+	// Convert fvids to ImportJobs
+	for _, fvidStr := range cmd.fvids {
+		fvid, err := strconv.Atoi(fvidStr)
+		if err != nil {
+			return fmt.Errorf("invalid feed version ID '%s': %w", fvidStr, err)
+		}
+		cmd.ImportJobs = append(cmd.ImportJobs, ImportJob{FeedVersionID: fvid})
+	}
+	// Read fvsha1 file
 	if cmd.fvsha1file != "" {
 		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
 		if err != nil {
@@ -107,9 +116,6 @@ func (cmd *ImportCommand) Parse(args []string) error {
 			if line != "" {
 				cmd.FVSHA1 = append(cmd.FVSHA1, line)
 			}
-		}
-		if len(cmd.FVSHA1) == 0 {
-			return errors.New("--fv-sha1-file specified but no lines were read")
 		}
 	}
 	if len(cmd.errorThresholds) > 0 {
@@ -135,66 +141,70 @@ func (cmd *ImportCommand) Run(ctx context.Context) error {
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
-	// Query to get FVs to import
-	q := cmd.Adapter.Sqrl().
-		Select("feed_versions.id").
-		From("feed_versions").
-		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
-		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
-		Where("feed_version_gtfs_imports.id IS NULL").
-		Where("feed_versions.sha1 <> ''").
-		Where("feed_versions.file <> ''").
-		OrderBy("feed_versions.id desc")
-	if cmd.Latest {
-		// Only fetch latest feed version for each feed
-		q = q.
-			Join("(SELECT id, created_at, ROW_NUMBER() OVER (PARTITION BY feed_id ORDER BY created_at DESC) AS rank FROM feed_versions) latest ON latest.id = feed_versions.id").
-			Where("latest.rank = 1")
-	}
-	if len(cmd.FeedIDs) > 0 {
-		// Limit to specified feeds
-		q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})
-	}
-	if cmd.FetchedSince != "" {
-		// Limit to feeds fetched since a given date
-		q = q.Where(sq.GtOrEq{"feed_versions.fetched_at": cmd.FetchedSince})
-	}
-	if cmd.CoverDate != "" {
-		// Limit to service date
-		q = q.
-			Where(sq.LtOrEq{"feed_versions.earliest_calendar_date": cmd.CoverDate}).
-			Where(sq.GtOrEq{"feed_versions.latest_calendar_date": cmd.CoverDate})
-	}
-	if len(cmd.FVIDs) > 0 {
-		// Explicitly specify fvids
-		q = q.Where(sq.Eq{"feed_versions.id": cmd.FVIDs})
-	}
+
+	// Resolve SHA1s to ImportJobs
 	if len(cmd.FVSHA1) > 0 {
-		// Explicitly specify fv sha1
-		q = q.Where(sq.Eq{"feed_versions.sha1": cmd.FVSHA1})
+		qstr, qargs, err := cmd.Adapter.Sqrl().
+			Select("id").
+			From("feed_versions").
+			Where(sq.Eq{"sha1": cmd.FVSHA1}).
+			ToSql()
+		if err != nil {
+			return err
+		}
+		var fvids []int
+		if err := cmd.Adapter.Select(ctx, &fvids, qstr, qargs...); err != nil {
+			return err
+		}
+		for _, fvid := range fvids {
+			cmd.ImportJobs = append(cmd.ImportJobs, ImportJob{FeedVersionID: fvid})
+		}
 	}
-	if cmd.Limit > 0 {
-		// Max feeds
-		q = q.Limit(uint64(cmd.Limit))
-	}
-	qstr, qargs, err := q.ToSql()
-	if err != nil {
-		return err
-	}
-	qrs := []int{}
-	err = cmd.Adapter.Select(ctx, &qrs, qstr, qargs...)
-	if err != nil {
-		return err
+
+	// If no ImportJobs specified, query database for feed versions to import
+	// FeedIDs are additive with existing ImportJobs
+	if len(cmd.FeedIDs) > 0 || len(cmd.ImportJobs) == 0 {
+		q := cmd.Adapter.Sqrl().
+			Select("feed_versions.id").
+			From("feed_versions").
+			Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+			LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
+			Where("feed_version_gtfs_imports.id IS NULL").
+			Where("feed_versions.sha1 <> ''").
+			Where("feed_versions.file <> ''").
+			OrderBy("feed_versions.id desc")
+		if cmd.Latest {
+			q = q.
+				Join("(SELECT id, created_at, ROW_NUMBER() OVER (PARTITION BY feed_id ORDER BY created_at DESC) AS rank FROM feed_versions) latest ON latest.id = feed_versions.id").
+				Where("latest.rank = 1")
+		}
+		if len(cmd.FeedIDs) > 0 {
+			q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})
+		}
+		if cmd.Limit > 0 {
+			q = q.Limit(uint64(cmd.Limit))
+		}
+		qstr, qargs, err := q.ToSql()
+		if err != nil {
+			return err
+		}
+		var qrs []int
+		if err := cmd.Adapter.Select(ctx, &qrs, qstr, qargs...); err != nil {
+			return err
+		}
+		for _, fvid := range qrs {
+			cmd.ImportJobs = append(cmd.ImportJobs, ImportJob{FeedVersionID: fvid})
+		}
 	}
 
 	///////////////
 	// Here we go
-	log.For(ctx).Info().Msgf("Importing %d feed versions", len(qrs))
-	jobs := make(chan importer.Options, len(qrs))
-	results := make(chan ImportCommandResult, len(qrs))
-	for _, fvid := range qrs {
+	log.For(ctx).Info().Msgf("Importing %d feed versions", len(cmd.ImportJobs))
+	jobs := make(chan importer.Options, len(cmd.ImportJobs))
+	results := make(chan ImportCommandResult, len(cmd.ImportJobs))
+	for _, job := range cmd.ImportJobs {
 		jobs <- importer.Options{
-			FeedVersionID: fvid,
+			FeedVersionID: job.FeedVersionID,
 			Storage:       cmd.Options.Storage,
 			Activate:      cmd.Options.Activate,
 			Options:       cmd.Options.Options,

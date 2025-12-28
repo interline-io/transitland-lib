@@ -124,44 +124,43 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 	adapter := cmd.Adapter
 
 	// Populate FetchJobs from various input sources
-	// Priority: FetchJobs > FeedIDs > database query
+	// FetchJobs and FeedIDs are additive; database query only when neither is specified
+	if len(cmd.FeedIDs) > 0 {
+		// FeedIDs provided, convert to FetchJobs
+		for _, feedID := range cmd.FeedIDs {
+			job := FetchJob{FeedID: feedID}
+			// If single FeedURL specified via options, apply it to the single feed
+			if cmd.Options.FeedURL != "" {
+				job.FeedURL = cmd.Options.FeedURL
+			}
+			cmd.FetchJobs = append(cmd.FetchJobs, job)
+		}
+	}
 	if len(cmd.FetchJobs) == 0 {
-		if len(cmd.FeedIDs) > 0 {
-			// FeedIDs provided, convert to FetchJobs
-			for _, feedID := range cmd.FeedIDs {
-				job := FetchJob{FeedID: feedID}
-				// If single FeedURL specified via options, apply it to the single feed
-				if cmd.Options.FeedURL != "" {
-					job.FeedURL = cmd.Options.FeedURL
-				}
-				cmd.FetchJobs = append(cmd.FetchJobs, job)
-			}
-		} else {
-			// No FetchJobs or FeedIDs, query database for all feeds
-			q := adapter.Sqrl().
-				Select("*").
-				From("current_feeds").
-				Where("deleted_at IS NULL").
-				Where("spec = ?", "gtfs")
-			if cmd.Limit > 0 {
-				q = q.Limit(uint64(cmd.Limit))
-			}
-			qstr, qargs, err := q.ToSql()
-			if err != nil {
-				return err
-			}
-			feeds := []dmfr.Feed{}
-			err = adapter.Select(ctx, &feeds, qstr, qargs...)
-			if err != nil {
-				return err
-			}
-			for _, feed := range feeds {
-				if feed.URLs.StaticCurrent != "" {
-					cmd.FetchJobs = append(cmd.FetchJobs, FetchJob{
-						FeedID:  feed.FeedID,
-						FeedURL: feed.URLs.StaticCurrent,
-					})
-				}
+		// No FetchJobs or FeedIDs, query database for all feeds
+		q := adapter.Sqrl().
+			Select("*").
+			From("current_feeds").
+			Where("deleted_at IS NULL").
+			Where("spec = ?", "gtfs")
+		if cmd.Limit > 0 {
+			q = q.Limit(uint64(cmd.Limit))
+		}
+		qstr, qargs, err := q.ToSql()
+		if err != nil {
+			return err
+		}
+		feeds := []dmfr.Feed{}
+		err = adapter.Select(ctx, &feeds, qstr, qargs...)
+		if err != nil {
+			return err
+		}
+		for _, feed := range feeds {
+			if feed.URLs.StaticCurrent != "" {
+				cmd.FetchJobs = append(cmd.FetchJobs, FetchJob{
+					FeedID:  feed.FeedID,
+					FeedURL: feed.URLs.StaticCurrent,
+				})
 			}
 		}
 	}
