@@ -6,10 +6,22 @@ Sync DMFR files to database
 
 Sync DMFR files to database
 
-
+Use '-' to read from stdin.
 
 ```
 transitland sync [flags] <filenames...>
+```
+
+### Examples
+
+```
+
+  # Sync from a file
+  transitland sync feeds.dmfr
+
+  # Sync from a directory of GTFS files
+  transitland dmfr from-dir ./gtfs-files/ | transitland sync -
+
 ```
 
 ### Options
