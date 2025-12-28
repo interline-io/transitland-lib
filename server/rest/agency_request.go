@@ -180,8 +180,7 @@ type AgencyKeyRequest struct {
 
 func (r AgencyKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
-		Path:         "/agencies/{agency_key}",
-		SingleEntity: true,
+		Path: "/agencies/{agency_key}",
 		Get: &RequestOperation{
 			Query: agencyQuery,
 			Operation: &oa.Operation{

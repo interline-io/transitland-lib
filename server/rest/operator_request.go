@@ -96,8 +96,7 @@ type OperatorKeyRequest struct {
 
 func (r OperatorKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
-		Path:         "/operators/{operator_key}",
-		SingleEntity: true,
+		Path: "/operators/{operator_key}",
 		Get: &RequestOperation{
 			Query: operatorQuery,
 			Operation: &oa.Operation{

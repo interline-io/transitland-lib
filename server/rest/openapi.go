@@ -14,11 +14,10 @@ type RequestAltPath struct {
 }
 
 type RequestInfo struct {
-	Path         string
-	Description  string
-	SingleEntity bool // If true, return 404 when no results are found
-	Get          *RequestOperation
-	Post         *RequestOperation
+	Path        string
+	Description string
+	Get         *RequestOperation
+	Post        *RequestOperation
 }
 
 type RequestOperation struct {

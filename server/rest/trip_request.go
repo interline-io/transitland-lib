@@ -184,8 +184,7 @@ type TripEntityRequest struct {
 
 func (r TripEntityRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
-		Path:         "/routes/{route_key}/trips/{id}",
-		SingleEntity: true,
+		Path: "/routes/{route_key}/trips/{id}",
 		Get: &RequestOperation{
 			Query: tripQuery,
 			Operation: &oa.Operation{

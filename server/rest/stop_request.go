@@ -186,8 +186,7 @@ type StopEntityRequest struct {
 
 func (r StopEntityRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
-		Path:         "/stops/{stop_key}",
-		SingleEntity: true,
+		Path: "/stops/{stop_key}",
 		Get: &RequestOperation{
 			Query: stopQuery,
 			Operation: &oa.Operation{

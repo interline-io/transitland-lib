@@ -318,12 +318,10 @@ func makeHandler(graphqlHandler http.Handler, handlerName string, f func() apiHa
 		}
 
 		// Return 404 for single-entity requests that returned empty results
-		if info, ok := handler.(interface{ RequestInfo() RequestInfo }); ok && info.RequestInfo().SingleEntity {
-			if h, ok := handler.(hasResponseKey); ok {
-				if checkEmptyResponse(response, format, h.ResponseKey()) {
-					util.WriteJsonError(w, "not found", http.StatusNotFound)
-					return
-				}
+		if h, ok := handler.(hasResponseKey); ok && hasEntityKey(opts) {
+			if checkEmptyResponse(response, format, h.ResponseKey()) {
+				util.WriteJsonError(w, "not found", http.StatusNotFound)
+				return
 			}
 		}
 

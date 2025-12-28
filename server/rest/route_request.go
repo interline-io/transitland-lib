@@ -221,8 +221,7 @@ type RouteKeyRequest struct {
 
 func (r RouteKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
-		Path:         "/routes/{route_key}",
-		SingleEntity: true,
+		Path: "/routes/{route_key}",
 		Get: &RequestOperation{
 			Query: routeQuery,
 			Operation: &oa.Operation{
