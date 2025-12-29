@@ -13,7 +13,7 @@ import (
 )
 
 // UpdateFeed .
-func UpdateFeed(ctx context.Context, atx tldb.Adapter, rfeed dmfr.Feed) (int, bool, bool, error) {
+func UpdateFeed(ctx context.Context, atx tldb.Adapter, rfeed dmfr.Feed, setPublic *bool) (int, bool, bool, error) {
 	// Check if we have the existing Feed
 	feedid := 0
 	found := false
@@ -37,8 +37,10 @@ func UpdateFeed(ctx context.Context, atx tldb.Adapter, rfeed dmfr.Feed) (int, bo
 		// Error
 		errTx = err
 	}
-	// Create feed state if not exists
-	if _, err := stats.GetFeedState(ctx, atx, feedid); err != nil {
+	// Create or update feed state
+	// For new feeds (not found): default to public=true unless setPublic is explicitly false
+	// For existing feeds: only update if setPublic is explicitly set
+	if _, err := stats.UpdateFeedStatePublic(ctx, atx, feedid, !found, setPublic); err != nil {
 		errTx = err
 	}
 	return feedid, found, updated, errTx

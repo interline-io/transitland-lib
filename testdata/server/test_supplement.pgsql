@@ -80,6 +80,7 @@ insert into tl_segment_patterns(feed_version_id,segment_id,route_id,shape_id,sto
 update feed_states set feed_version_id = null where feed_id = (select id from current_feeds where onestop_id = 'EX');
 
 -- set public
+update feed_states set public = false;
 update feed_states set public = true where id in (select id from current_feeds where onestop_id != 'EG');
 
 insert into tl_tenants(tenant_name) values ('tl-tenant');
