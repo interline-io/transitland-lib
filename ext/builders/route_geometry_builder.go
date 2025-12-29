@@ -8,7 +8,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/service"
+	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
@@ -36,78 +36,36 @@ func (ent *RouteGeometry) TableName() string {
 
 ///////
 
-type shapeInfo struct {
-	Line                  []tlxy.Point
-	Generated             bool
-	Length                float64
-	MaxSegmentLength      float64
-	FirstPointMaxDistance float64
+// shapeGeomCache is the interface for accessing shape geometry data
+type shapeGeomCache interface {
+	GetShapeInfoOk(string) (geomcache.ShapeInfo, bool)
+	GetShapeInfo(string) geomcache.ShapeInfo
 }
-
-////////
 
 // RouteGeometryBuilder creates default shapes for routes.
 type RouteGeometryBuilder struct {
-	shapeInfos  map[string]shapeInfo
+	geomCache   shapeGeomCache
 	shapeCounts map[string]map[int]map[string]int
 }
 
 // NewRouteGeometryBuilder returns a new RouteGeometryBuilder.
 func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 	return &RouteGeometryBuilder{
-		shapeInfos:  map[string]shapeInfo{},
 		shapeCounts: map[string]map[int]map[string]int{},
+	}
+}
+
+// SetGeomCache sets the shared geometry cache.
+func (pp *RouteGeometryBuilder) SetGeomCache(g tlxy.GeomCache) {
+	// The geomCache should implement our shapeGeomCache interface
+	if gc, ok := g.(shapeGeomCache); ok {
+		pp.geomCache = gc
 	}
 }
 
 // Counts the number of times a shape is used for each route,direction_id
 func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *service.ShapeLine:
-		pts := make([]tlxy.Point, v.Geometry.Val.NumCoords())
-		for i, c := range v.Geometry.Val.Coords() {
-			pts[i] = tlxy.Point{Lon: c[0], Lat: c[1]}
-		}
-		// Skip shapes with no coordinates (invalid shapes)
-		if len(pts) == 0 {
-			return nil
-		}
-		// If we've already seen this line, re-use shapeInfo to reduce mem usage
-		for _, si := range pp.shapeInfos {
-			// Match on generated value too
-			if tlxy.LineEquals(pts, si.Line) && si.Generated == v.Generated {
-				// Add to shape cache
-				pp.shapeInfos[eid] = si
-				return nil
-			}
-		}
-		// Get distances
-		maxSegmentLength := 0.0
-		length := 0.0
-		firstPoint := pts[0]
-		firstPointMaxDistance := 0.0
-		prevPoint := tlxy.Point{}
-		for i, pt := range pts {
-			if i > 0 {
-				d := tlxy.DistanceHaversine(prevPoint, pt)
-				length += d
-				if d > maxSegmentLength {
-					maxSegmentLength = d
-				}
-				if d2 := tlxy.DistanceHaversine(firstPoint, pt); d2 > firstPointMaxDistance {
-					firstPointMaxDistance = d2
-				}
-			}
-			prevPoint = pt
-		}
-		// Add to shape cache
-		pp.shapeInfos[eid] = shapeInfo{
-			Generated:             v.Generated,
-			Length:                length,
-			MaxSegmentLength:      maxSegmentLength,
-			FirstPointMaxDistance: firstPointMaxDistance,
-			Line:                  pts,
-		}
 	case *gtfs.Trip:
 		// shapeCounts is layered by: route id, direction id, shape id
 		if v.ShapeID.Valid {
@@ -141,6 +99,9 @@ func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
 }
 
 func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, error) {
+	if pp.geomCache == nil {
+		return nil, errors.New("geomCache not set")
+	}
 	// Trip counts and selected shapes for this route
 	candidateShapes := map[string]int{}
 	// Process shapes for each direction
@@ -153,23 +114,23 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		// (most trips wins for equal length).
 		for _, shapeId := range sortMap(dirShapes) {
 			// Check shape info and if this is the longest shape
-			if si, ok := pp.shapeInfos[shapeId]; ok {
+			if si, ok := pp.geomCache.GetShapeInfoOk(shapeId); ok {
 				dirCount += dirShapes[shapeId]
-				if si.Length > longestShapeLength {
+				if si.DistLength > longestShapeLength {
 					longestShape = shapeId
-					longestShapeLength = si.Length
+					longestShapeLength = si.DistLength
 				}
 			}
 		}
 		for shapeId, v := range dirShapes {
 			// Ensure we have full shape info
-			si, ok := pp.shapeInfos[shapeId]
+			si, ok := pp.geomCache.GetShapeInfoOk(shapeId)
 			if !ok {
 				continue
 			}
 			// Ignore if any point is 0,0
 			valid := true
-			for _, pt := range si.Line {
+			for _, pt := range si.Line() {
 				if pt.Lon == 0 || pt.Lat == 0 {
 					valid = false
 				}
@@ -194,7 +155,8 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 	var routeSelectedReal []string
 	var routeSelectedGenerated []string
 	for _, v := range sortMap(candidateShapes) {
-		if pp.shapeInfos[v].Generated {
+		si := pp.geomCache.GetShapeInfo(v)
+		if si.Generated {
 			routeSelectedGenerated = append(routeSelectedGenerated, v)
 		} else {
 			routeSelectedReal = append(routeSelectedReal, v)
@@ -214,7 +176,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 	ent := RouteGeometry{RouteID: rid}
 	matches := [][]tlxy.Point{}
 	for _, shapeId := range routeSelectedShapes {
-		si, ok := pp.shapeInfos[shapeId]
+		si, ok := pp.geomCache.GetShapeInfoOk(shapeId)
 		if !ok {
 			continue
 		}
@@ -223,8 +185,9 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		// instead of most frequent to least frequent.
 		// A line will only be skipped if it's contained in a more frequent shape.
 		// TODO: TopoJson style only store unique segments.
+		siLine := si.Line()
 		for _, match := range matches {
-			if tlxy.LineContains(si.Line, match) {
+			if tlxy.LineContains(siLine, match) {
 				continue
 			}
 		}
@@ -233,8 +196,8 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 			ent.Generated = true
 		}
 		// Set to max selected shape length
-		if si.Length >= ent.Length.Val {
-			ent.Length.Set(si.Length)
+		if si.DistLength >= ent.Length.Val {
+			ent.Length.Set(si.DistLength)
 		}
 		// Set to max first point max distance
 		if si.FirstPointMaxDistance >= ent.FirstPointMaxDistance.Val {
@@ -245,7 +208,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 			ent.MaxSegmentLength.Set(si.MaxSegmentLength)
 		}
 		// OK
-		matches = append(matches, si.Line)
+		matches = append(matches, siLine)
 	}
 
 	// Build geom

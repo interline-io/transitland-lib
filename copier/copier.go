@@ -1211,7 +1211,7 @@ func (e *geomCacheFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	case *service.ShapeLine:
 		if !e.NoShapeCache {
 			lm := v.Geometry.ToLineM()
-			e.GeomCache.AddShapeGeom(v.EntityID(), lm.Coords, lm.Data)
+			e.GeomCache.AddShapeGeomGenerated(v.EntityID(), lm.Coords, lm.Data, v.Generated)
 		}
 	}
 	return nil
