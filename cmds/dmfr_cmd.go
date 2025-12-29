@@ -6,9 +6,7 @@ import (
 )
 
 // DmfrCommand is the parent command for DMFR subcommands.
-type DmfrCommand struct {
-	cobraCmd *cobra.Command
-}
+type DmfrCommand struct{}
 
 func NewDmfrCommand(pc string) *cobra.Command {
 	dmfrCmd := &cobra.Command{

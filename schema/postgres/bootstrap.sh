@@ -27,9 +27,12 @@ for arg in "$@"; do
     if [ -d "$arg" ]; then
         echo "Importing GTFS feeds from directory: $arg"
         mkdir -p "$TL_STORAGE"
-        transitland dmfr from-dir "$arg" | transitland sync -
-        transitland fetch --allow-local-fetch --storage="$TL_STORAGE" --workers="$WORKERS"
-        transitland import --latest --workers="$WORKERS"
+        tmp_dmfr="$(mktemp)"
+        transitland dmfr from-dir "$arg" > "$tmp_dmfr"
+        transitland sync "$tmp_dmfr"
+        transitland fetch --dmfr "$tmp_dmfr" --allow-local-fetch --storage="$TL_STORAGE" --workers="$WORKERS"
+        transitland import --dmfr "$tmp_dmfr" --latest --workers="$WORKERS"
+        rm -f "$tmp_dmfr"
     elif [ -f "$arg" ]; then
         echo "Importing GTFS feeds from DMFR: $arg"
         mkdir -p "$TL_STORAGE"

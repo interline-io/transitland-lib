@@ -3,6 +3,7 @@ package cmds
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"os"
 
@@ -49,8 +50,13 @@ func (cmd *SyncCommand) Parse(args []string) error {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
 	// Handle stdin via "-"
+	var stdinRead bool
 	for _, arg := range args {
 		if arg == "-" {
+			if stdinRead {
+				return errors.New("stdin ('-') can only be specified once")
+			}
+			stdinRead = true
 			data, err := io.ReadAll(os.Stdin)
 			if err != nil {
 				return err
