@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,6 +30,7 @@ type FetchCommandResult struct {
 type FetchCommand struct {
 	Options     fetch.StaticFetchOptions
 	SecretsFile string
+	SecretEnv   []string
 	CreateFeed  bool
 	Workers     int
 	Fail        bool
@@ -39,6 +41,7 @@ type FetchCommand struct {
 	Results     []FetchCommandResult
 	Adapter     tldb.Adapter // allow for mocks
 	fetchedAt   string
+	dmfrFile    string
 }
 
 func (cmd *FetchCommand) HelpDesc() (string, string) {
@@ -54,6 +57,7 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
 	fl.StringVar(&cmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
 	fl.StringVar(&cmd.SecretsFile, "secrets", "", "Path to DMFR Secrets file")
+	fl.StringArrayVar(&cmd.SecretEnv, "secret-env", nil, "Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Maximum number of feeds to fetch")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
@@ -66,6 +70,7 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
 	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
+	fl.StringVar(&cmd.dmfrFile, "dmfr", "", "Filter by feed IDs in DMFR file; equivalent to specifying feed IDs as arguments")
 }
 
 func (cmd *FetchCommand) Parse(args []string) error {
@@ -73,6 +78,16 @@ func (cmd *FetchCommand) Parse(args []string) error {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
 	cmd.FeedIDs = args
+	// Load feed IDs from DMFR file
+	if cmd.dmfrFile != "" {
+		reg, err := dmfr.LoadAndParseRegistry(cmd.dmfrFile)
+		if err != nil {
+			return err
+		}
+		for _, feed := range reg.Feeds {
+			cmd.FeedIDs = append(cmd.FeedIDs, feed.FeedID)
+		}
+	}
 	return nil
 }
 
@@ -95,6 +110,14 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			return err
 		}
 		cmd.Options.Secrets = r.Secrets
+	}
+	// Parse --secret-env arguments
+	for _, se := range cmd.SecretEnv {
+		secret, err := parseSecretEnv(se)
+		if err != nil {
+			return err
+		}
+		cmd.Options.Secrets = append(cmd.Options.Secrets, secret)
 	}
 	if cmd.Options.FetchedAt.IsZero() {
 		cmd.Options.FetchedAt = time.Now()
@@ -262,4 +285,30 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		}
 	}
 	wg.Done()
+}
+
+// parseSecretEnv parses a secret-env argument in the format "target:ENV_VAR"
+// where target is either a feed_id or a filename (detected by .json suffix).
+// The secret key value is read from the environment variable.
+func parseSecretEnv(arg string) (dmfr.Secret, error) {
+	parts := strings.SplitN(arg, ":", 2)
+	if len(parts) != 2 {
+		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: expected target:ENV_VAR", arg)
+	}
+	target := parts[0]
+	envVar := parts[1]
+	if target == "" || envVar == "" {
+		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: target and ENV_VAR must not be empty", arg)
+	}
+	key := os.Getenv(envVar)
+	if key == "" {
+		return dmfr.Secret{}, fmt.Errorf("environment variable %q is not set or empty", envVar)
+	}
+	secret := dmfr.Secret{Key: key}
+	if strings.HasSuffix(target, ".json") {
+		secret.Filename = target
+	} else {
+		secret.FeedID = target
+	}
+	return secret, nil
 }

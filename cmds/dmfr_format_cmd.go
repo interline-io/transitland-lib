@@ -13,33 +13,33 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// FormatCommand formats a DMFR file.
-type FormatCommand struct {
+// DmfrFormatCommand formats a DMFR file.
+type DmfrFormatCommand struct {
 	Filename string
 	Save     bool
 }
 
-func (cmd *FormatCommand) HelpDesc() (string, string) {
+func (cmd *DmfrFormatCommand) HelpDesc() (string, string) {
 	return "Format a DMFR file", ""
 }
 
-func (cmd *FormatCommand) HelpArgs() string {
+func (cmd *DmfrFormatCommand) HelpArgs() string {
 	return "[flags] <filename>"
 }
 
-func (cmd *FormatCommand) AddFlags(fl *pflag.FlagSet) {
+func (cmd *DmfrFormatCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Save, "save", false, "Save the formatted output back to the file")
 }
 
 // Parse command line options.
-func (cmd *FormatCommand) Parse(args []string) error {
+func (cmd *DmfrFormatCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	cmd.Filename = fl.Arg(0)
 	return nil
 }
 
 // Run this command.
-func (cmd *FormatCommand) Run(ctx context.Context) error {
+func (cmd *DmfrFormatCommand) Run(ctx context.Context) error {
 	filename := cmd.Filename
 	if filename == "" {
 		return errors.New("must specify filename")

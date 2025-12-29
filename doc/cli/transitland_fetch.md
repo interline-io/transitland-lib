@@ -20,12 +20,14 @@ transitland fetch [flags] [feeds...]
       --allow-s3-fetch                     Allow fetching from S3 urls
       --create-feed                        Create feed record if not found
       --dburl string                       Database URL (default: $TL_DATABASE_URL)
+      --dmfr string                        Filter by feed IDs in DMFR file; equivalent to specifying feed IDs as arguments
       --dry-run                            Dry run; print feeds that would be imported and exit
       --fail                               Exit with error code if any fetch is not successful
       --feed-url string                    Manually fetch a single URL; you must specify exactly one feed_id
       --fetched-at string                  Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z
   -h, --help                               help for fetch
       --limit int                          Maximum number of feeds to fetch
+      --secret-env stringArray             Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR
       --secrets string                     Path to DMFR Secrets file
       --storage string                     Storage destination; can be s3://... az://... or path to a directory (default ".")
       --strict                             Reject feeds with validation errors

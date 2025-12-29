@@ -20,6 +20,7 @@ transitland import [flags] [feeds...]
       --date string               Service on date
       --dburl string              Database URL (default: $TL_DATABASE_URL)
       --deduplicate-stop-times    Deduplicate StopTimes using Journey Patterns
+      --dmfr string               Filter by feed IDs in DMFR file; equivalent to specifying feed IDs as arguments
       --dryrun                    Dry run; print feeds that would be imported and exit
       --error-threshold strings   Fail import if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')
       --ext strings               Include GTFS Extension
