@@ -916,7 +916,7 @@
                                 "x-order": 29
                               },
                               "tags": {
-                                "description": "Source DMFR tag data",
+                                "description": "Optional tags defined in Transitlant Atlas providing more info about this operator",
                                 "nullable": true,
                                 "title": "tags",
                                 "type": "object",
@@ -1737,7 +1737,7 @@
                                 "x-order": 29
                               },
                               "tags": {
-                                "description": "Source DMFR tag data",
+                                "description": "Optional tags defined in Transitlant Atlas providing more info about this operator",
                                 "nullable": true,
                                 "title": "tags",
                                 "type": "object",
@@ -3689,7 +3689,7 @@
                             "x-order": 4
                           },
                           "tags": {
-                            "description": "Source DMFR tags for this feed",
+                            "description": "Optional tags defined in Transitlant Atlas providing more info about this feed",
                             "nullable": true,
                             "title": "tags",
                             "type": "object",
@@ -4163,7 +4163,7 @@
                             "x-order": 4
                           },
                           "tags": {
-                            "description": "Source DMFR tags for this feed",
+                            "description": "Optional tags defined in Transitlant Atlas providing more info about this feed",
                             "nullable": true,
                             "title": "tags",
                             "type": "object",
@@ -4949,7 +4949,7 @@
                             "x-order": 8
                           },
                           "tags": {
-                            "description": "Source DMFR tag data",
+                            "description": "Optional tags defined in Transitlant Atlas providing more info about this operator",
                             "nullable": true,
                             "title": "tags",
                             "type": "object",
@@ -5442,7 +5442,7 @@
                             "x-order": 8
                           },
                           "tags": {
-                            "description": "Source DMFR tag data",
+                            "description": "Optional tags defined in Transitlant Atlas providing more info about this operator",
                             "nullable": true,
                             "title": "tags",
                             "type": "object",
