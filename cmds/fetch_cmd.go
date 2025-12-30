@@ -177,7 +177,7 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			return fmt.Errorf("problem with feed '%s': %s", osid, err.Error())
 		}
 		// Create feed state if not exists
-		if _, err := stats.GetFeedState(ctx, adapter, feed.ID); err != nil {
+		if _, err := stats.EnsureFeedState(ctx, adapter, feed.ID); err != nil {
 			return err
 		}
 		// Prepare options for this fetch

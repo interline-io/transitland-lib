@@ -37,11 +37,15 @@ func UpdateFeed(ctx context.Context, atx tldb.Adapter, rfeed dmfr.Feed, setPubli
 		// Error
 		errTx = err
 	}
-	// Create or update feed state
-	// For new feeds (not found): default to public=true unless setPublic is explicitly false
-	// For existing feeds: only update if setPublic is explicitly set
-	if _, err := stats.UpdateFeedStatePublic(ctx, atx, feedid, setPublic); err != nil && errTx == nil {
+	// Ensure feed state exists
+	if _, err := stats.EnsureFeedState(ctx, atx, feedid); err != nil && errTx == nil {
 		errTx = err
+	}
+	// Optionally update public flag
+	if setPublic != nil && errTx == nil {
+		if err := stats.SetFeedStatePublic(ctx, atx, feedid, *setPublic); err != nil {
+			errTx = err
+		}
 	}
 	return feedid, found, updated, errTx
 }

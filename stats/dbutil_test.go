@@ -9,16 +9,14 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-func TestUpdateFeedStatePublic(t *testing.T) {
+func TestEnsureFeedState(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("new feed state with nil setPublic defaults to public=true", func(t *testing.T) {
+	t.Run("creates new feed state with public=true by default", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-			// Create a feed first
 			feed := testdb.CreateTestFeed(atx, "test-feed")
 
-			// Call with nil setPublic
-			fs, err := UpdateFeedStatePublic(ctx, atx, feed.ID, nil)
+			fs, err := EnsureFeedState(ctx, atx, feed.ID)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -29,25 +27,8 @@ func TestUpdateFeedStatePublic(t *testing.T) {
 			if fs.FeedID != feed.ID {
 				t.Errorf("expected FeedID=%d, got %d", feed.ID, fs.FeedID)
 			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	t.Run("new feed state with setPublic=true", func(t *testing.T) {
-		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-			feed := testdb.CreateTestFeed(atx, "test-feed")
-
-			setPublic := true
-			fs, err := UpdateFeedStatePublic(ctx, atx, feed.ID, &setPublic)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if !fs.Public {
-				t.Errorf("expected public=true, got %v", fs.Public)
+			if fs.ID == 0 {
+				t.Errorf("expected ID to be set after insert")
 			}
 			return nil
 		})
@@ -56,51 +37,7 @@ func TestUpdateFeedStatePublic(t *testing.T) {
 		}
 	})
 
-	t.Run("new feed state with setPublic=false", func(t *testing.T) {
-		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-			feed := testdb.CreateTestFeed(atx, "test-feed")
-
-			setPublic := false
-			fs, err := UpdateFeedStatePublic(ctx, atx, feed.ID, &setPublic)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if fs.Public {
-				t.Errorf("expected public=false, got %v", fs.Public)
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	t.Run("existing feed state with nil setPublic remains unchanged (public)", func(t *testing.T) {
-		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-			feed := testdb.CreateTestFeed(atx, "test-feed")
-
-			// Create existing feed state with public=true
-			existingFs := dmfr.FeedState{FeedID: feed.ID, Public: true}
-			existingFs.ID = testdb.MustInsert(atx, &existingFs)
-
-			// Call with nil setPublic
-			fs, err := UpdateFeedStatePublic(ctx, atx, feed.ID, nil)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if !fs.Public {
-				t.Errorf("expected public to remain true, got %v", fs.Public)
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	t.Run("existing feed state with nil setPublic remains unchanged (private)", func(t *testing.T) {
+	t.Run("returns existing feed state without modification", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			feed := testdb.CreateTestFeed(atx, "test-feed")
 
@@ -108,8 +45,8 @@ func TestUpdateFeedStatePublic(t *testing.T) {
 			existingFs := dmfr.FeedState{FeedID: feed.ID, Public: false}
 			existingFs.ID = testdb.MustInsert(atx, &existingFs)
 
-			// Call with nil setPublic
-			fs, err := UpdateFeedStatePublic(ctx, atx, feed.ID, nil)
+			// EnsureFeedState should return existing state unchanged
+			fs, err := EnsureFeedState(ctx, atx, feed.ID)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -117,6 +54,9 @@ func TestUpdateFeedStatePublic(t *testing.T) {
 			if fs.Public {
 				t.Errorf("expected public to remain false, got %v", fs.Public)
 			}
+			if fs.ID != existingFs.ID {
+				t.Errorf("expected same ID=%d, got %d", existingFs.ID, fs.ID)
+			}
 			return nil
 		})
 		if err != nil {
@@ -124,30 +64,53 @@ func TestUpdateFeedStatePublic(t *testing.T) {
 		}
 	})
 
-	t.Run("existing feed state updated when setPublic differs (false to true)", func(t *testing.T) {
+	t.Run("is idempotent", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			feed := testdb.CreateTestFeed(atx, "test-feed")
 
-			// Create existing feed state with public=false
-			existingFs := dmfr.FeedState{FeedID: feed.ID, Public: false}
-			existingFs.ID = testdb.MustInsert(atx, &existingFs)
-
-			// Call with setPublic=true
-			setPublic := true
-			fs, err := UpdateFeedStatePublic(ctx, atx, feed.ID, &setPublic)
+			fs1, err := EnsureFeedState(ctx, atx, feed.ID)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if !fs.Public {
-				t.Errorf("expected public to be updated to true, got %v", fs.Public)
+			fs2, err := EnsureFeedState(ctx, atx, feed.ID)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if fs1.ID != fs2.ID {
+				t.Errorf("expected same ID on repeated calls, got %d and %d", fs1.ID, fs2.ID)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestSetFeedStatePublic(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("sets public=true on existing feed state", func(t *testing.T) {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+			feed := testdb.CreateTestFeed(atx, "test-feed")
+
+			// Create feed state with public=false
+			existingFs := dmfr.FeedState{FeedID: feed.ID, Public: false}
+			existingFs.ID = testdb.MustInsert(atx, &existingFs)
+
+			// Set to public
+			err := SetFeedStatePublic(ctx, atx, feed.ID, true)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 
 			// Verify in database
 			var dbFs dmfr.FeedState
 			testdb.MustGet(atx, &dbFs, "SELECT * FROM feed_states WHERE feed_id = ?", feed.ID)
 			if !dbFs.Public {
-				t.Errorf("expected database public to be true, got %v", dbFs.Public)
+				t.Errorf("expected public=true, got %v", dbFs.Public)
 			}
 			return nil
 		})
@@ -156,30 +119,25 @@ func TestUpdateFeedStatePublic(t *testing.T) {
 		}
 	})
 
-	t.Run("existing feed state updated when setPublic differs (true to false)", func(t *testing.T) {
+	t.Run("sets public=false on existing feed state", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			feed := testdb.CreateTestFeed(atx, "test-feed")
 
-			// Create existing feed state with public=true
+			// Create feed state with public=true
 			existingFs := dmfr.FeedState{FeedID: feed.ID, Public: true}
 			existingFs.ID = testdb.MustInsert(atx, &existingFs)
 
-			// Call with setPublic=false
-			setPublic := false
-			fs, err := UpdateFeedStatePublic(ctx, atx, feed.ID, &setPublic)
+			// Set to private
+			err := SetFeedStatePublic(ctx, atx, feed.ID, false)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if fs.Public {
-				t.Errorf("expected public to be updated to false, got %v", fs.Public)
 			}
 
 			// Verify in database
 			var dbFs dmfr.FeedState
 			testdb.MustGet(atx, &dbFs, "SELECT * FROM feed_states WHERE feed_id = ?", feed.ID)
 			if dbFs.Public {
-				t.Errorf("expected database public to be false, got %v", dbFs.Public)
+				t.Errorf("expected public=false, got %v", dbFs.Public)
 			}
 			return nil
 		})
@@ -188,31 +146,42 @@ func TestUpdateFeedStatePublic(t *testing.T) {
 		}
 	})
 
-	t.Run("existing feed state not updated when setPublic matches current value", func(t *testing.T) {
+	t.Run("no-op when value already matches", func(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			feed := testdb.CreateTestFeed(atx, "test-feed")
 
-			// Create existing feed state with public=true
+			// Create feed state with public=true
 			existingFs := dmfr.FeedState{FeedID: feed.ID, Public: true}
 			existingFs.ID = testdb.MustInsert(atx, &existingFs)
 			originalUpdatedAt := existingFs.UpdatedAt
 
-			// Call with setPublic=true (same value)
-			setPublic := true
-			fs, err := UpdateFeedStatePublic(ctx, atx, feed.ID, &setPublic)
+			// Set to same value
+			err := SetFeedStatePublic(ctx, atx, feed.ID, true)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if !fs.Public {
-				t.Errorf("expected public to remain true, got %v", fs.Public)
-			}
-
-			// Verify UpdatedAt hasn't changed (no unnecessary update)
+			// Verify UpdatedAt hasn't changed
 			var dbFs dmfr.FeedState
 			testdb.MustGet(atx, &dbFs, "SELECT * FROM feed_states WHERE feed_id = ?", feed.ID)
 			if !dbFs.UpdatedAt.Equal(originalUpdatedAt) {
 				t.Errorf("expected UpdatedAt to remain unchanged when value matches")
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("returns error if feed state does not exist", func(t *testing.T) {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+			feed := testdb.CreateTestFeed(atx, "test-feed")
+			// Don't create feed state
+
+			err := SetFeedStatePublic(ctx, atx, feed.ID, true)
+			if err == nil {
+				t.Error("expected error when feed state does not exist")
 			}
 			return nil
 		})
