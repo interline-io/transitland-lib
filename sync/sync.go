@@ -17,6 +17,7 @@ type Options struct {
 	Registries          []*dmfr.Registry // Pre-parsed registries (e.g., from stdin)
 	HideUnseen          bool
 	HideUnseenOperators bool
+	SetPublic           *bool // nil=default (new feeds public, existing unchanged), true=force public, false=force private
 }
 
 // Result is the result of a sync operation.
@@ -64,7 +65,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 			fsid := rfeed.FeedID
 			rfeed.File = rs.name
 			rfeed.DeletedAt = tt.Time{}
-			feedid, found, updated, err := UpdateFeed(ctx, atx, rfeed)
+			feedid, found, updated, err := UpdateFeed(ctx, atx, rfeed, opts.SetPublic)
 			if err != nil {
 				log.For(ctx).Error().Msgf("%s: error on feed %d: %s", rs.name, feedid, err)
 				sr.Errors = append(sr.Errors, err)

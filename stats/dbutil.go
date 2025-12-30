@@ -29,10 +29,12 @@ func FeedVersionTableDelete(ctx context.Context, atx tldb.Adapter, table string,
 	return nil
 }
 
-func GetFeedState(ctx context.Context, atx tldb.Adapter, feedId int) (dmfr.FeedState, error) {
-	// Get state, create if necessary
+// EnsureFeedState gets or creates a feed state.
+// New feed states default to public=true.
+func EnsureFeedState(ctx context.Context, atx tldb.Adapter, feedId int) (dmfr.FeedState, error) {
 	fs := dmfr.FeedState{FeedID: feedId}
 	if err := atx.Get(ctx, &fs, `SELECT * FROM feed_states WHERE feed_id = ?`, feedId); err == sql.ErrNoRows {
+		fs.Public = true // Default: new feeds are public
 		fs.ID, err = atx.Insert(ctx, &fs)
 		if err != nil {
 			return fs, err
@@ -41,4 +43,17 @@ func GetFeedState(ctx context.Context, atx tldb.Adapter, feedId int) (dmfr.FeedS
 		return fs, err
 	}
 	return fs, nil
+}
+
+// SetFeedStatePublic sets the public flag on an existing feed state.
+func SetFeedStatePublic(ctx context.Context, atx tldb.Adapter, feedId int, public bool) error {
+	fs := dmfr.FeedState{}
+	if err := atx.Get(ctx, &fs, `SELECT * FROM feed_states WHERE feed_id = ?`, feedId); err != nil {
+		return err
+	}
+	if fs.Public != public {
+		fs.Public = public
+		return atx.Update(ctx, &fs)
+	}
+	return nil
 }
