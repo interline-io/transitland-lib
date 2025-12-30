@@ -44,9 +44,9 @@ func GetFeedState(ctx context.Context, atx tldb.Adapter, feedId int) (dmfr.FeedS
 }
 
 // UpdateFeedStatePublic creates or updates a feed state's public flag.
-// For new feeds (isNew=true): default to public=true unless setPublic is explicitly false
-// For existing feeds: only update public flag if setPublic is explicitly set (non-nil)
-func UpdateFeedStatePublic(ctx context.Context, atx tldb.Adapter, feedId int, isNew bool, setPublic *bool) (dmfr.FeedState, error) {
+// For feeds without an existing feed_state row: default to public=true unless setPublic is explicitly false.
+// For feeds with an existing feed_state row: only update public flag if setPublic is explicitly set (non-nil).
+func UpdateFeedStatePublic(ctx context.Context, atx tldb.Adapter, feedId int, setPublic *bool) (dmfr.FeedState, error) {
 	fs := dmfr.FeedState{FeedID: feedId}
 	if err := atx.Get(ctx, &fs, `SELECT * FROM feed_states WHERE feed_id = ?`, feedId); err == sql.ErrNoRows {
 		// New feed state - default to public unless explicitly set to private
