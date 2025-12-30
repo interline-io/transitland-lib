@@ -44,8 +44,8 @@ func (cmd *SyncCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")
 	fl.BoolVar(&cmd.HideUnseenOperators, "hide-unseen-operators", false, "Hide unseen operators")
-	fl.BoolVar(&cmd.setPublic, "set-public", false, "Force all synced feeds to public (overrides default for existing feeds)")
-	fl.BoolVar(&cmd.setPrivate, "set-private", false, "Force all synced feeds to private (overrides default for new and existing feeds)")
+	fl.BoolVar(&cmd.setPublic, "set-public", false, "Force all synced feeds to public")
+	fl.BoolVar(&cmd.setPrivate, "set-private", false, "Force all synced feeds to private")
 }
 
 // Parse command line options.

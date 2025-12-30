@@ -31,8 +31,8 @@ transitland sync [flags] <filenames...>
   -h, --help                    help for sync
       --hide-unseen             Hide unseen feeds
       --hide-unseen-operators   Hide unseen operators
-      --set-private             Force all synced feeds to private (overrides default for new and existing feeds)
-      --set-public              Force all synced feeds to public (overrides default for existing feeds)
+      --set-private             Force all synced feeds to private
+      --set-public              Force all synced feeds to public
 ```
 
 ### SEE ALSO
