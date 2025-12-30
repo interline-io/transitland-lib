@@ -9,6 +9,36 @@ import (
 type GeomCache interface {
 	GetStop(string) Point
 	GetShape(eid string) []Point
+	GetShapeInfo(eid string) (ShapeInfo, bool)
+}
+
+// ShapeInfo contains cached shape geometry and metadata.
+type ShapeInfo struct {
+	encodedLine           []byte
+	DistLength            float64
+	Generated             bool
+	MaxSegmentLength      float64
+	FirstPointMaxDistance float64
+}
+
+// NewShapeInfo creates a new ShapeInfo with encoded polyline.
+func NewShapeInfo(line []Point, distLength float64, generated bool, maxSegmentLength, firstPointMaxDistance float64) ShapeInfo {
+	return ShapeInfo{
+		encodedLine:           EncodePolyline(line),
+		DistLength:            distLength,
+		Generated:             generated,
+		MaxSegmentLength:      maxSegmentLength,
+		FirstPointMaxDistance: firstPointMaxDistance,
+	}
+}
+
+// Line decodes and returns the shape geometry as a slice of points.
+func (s ShapeInfo) Line() []Point {
+	if len(s.encodedLine) == 0 {
+		return nil
+	}
+	pts, _ := DecodePolyline(s.encodedLine)
+	return pts
 }
 
 // Simple XY geometry helper functions.

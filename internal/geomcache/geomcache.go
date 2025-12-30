@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tlxy"
 )
@@ -23,23 +24,6 @@ func arePositionsSorted(a []float64) bool {
 	return true
 }
 
-type ShapeInfo struct {
-	encodedLine           []byte
-	DistLength            float64
-	Generated             bool
-	MaxSegmentLength      float64
-	FirstPointMaxDistance float64
-}
-
-// Line decodes and returns the shape geometry as a slice of points.
-func (s ShapeInfo) Line() []tlxy.Point {
-	if len(s.encodedLine) == 0 {
-		return nil
-	}
-	pts, _ := tlxy.DecodePolyline(s.encodedLine)
-	return pts
-}
-
 type stopPositionInfo struct {
 	Positions  []float64
 	DistLength float64
@@ -48,7 +32,7 @@ type stopPositionInfo struct {
 // GeomCache helps speed up StopTime interpolating by caching various results
 type GeomCache struct {
 	stops         map[string]tlxy.Point
-	shapes        map[string]ShapeInfo
+	shapes        map[string]tlxy.ShapeInfo
 	stopPositions map[string]stopPositionInfo
 }
 
@@ -56,7 +40,7 @@ type GeomCache struct {
 func NewGeomCache() *GeomCache {
 	return &GeomCache{
 		stops:         map[string]tlxy.Point{},
-		shapes:        map[string]ShapeInfo{},
+		shapes:        map[string]tlxy.ShapeInfo{},
 		stopPositions: map[string]stopPositionInfo{},
 	}
 }
@@ -76,13 +60,15 @@ func (g *GeomCache) GetShape(eid string) []tlxy.Point {
 	return g.shapes[eid].Line()
 }
 
-func (g *GeomCache) GetShapeInfo(eid string) ShapeInfo {
-	return g.shapes[eid]
-}
-
-// GetShapeInfoOk returns the ShapeInfo for the given shape ID and whether it exists.
-func (g *GeomCache) GetShapeInfoOk(eid string) (ShapeInfo, bool) {
+func (g *GeomCache) GetShapeInfo(eid string) (tlxy.ShapeInfo, bool) {
 	si, ok := g.shapes[eid]
+	if !ok {
+		log.Info().Msgf("shape '%s' not in cache", eid)
+		// Show shapes that are in the cache
+		for k := range g.shapes {
+			log.Info().Msgf("  shape in cache: %s", k)
+		}
+	}
 	return si, ok
 }
 
@@ -103,23 +89,14 @@ func (g *GeomCache) AddShapeGeomGenerated(eid string, line []tlxy.Point, dists [
 	if len(line) == 0 {
 		return
 	}
-	// Create shapeInfo with encoded polyline for memory efficiency
-	si := ShapeInfo{
-		encodedLine: tlxy.EncodePolyline(line),
-		Generated:   generated,
-	}
-	// Validate ShapeDistTraveled values
-	if len(dists) > 0 && len(dists) == len(line) && dists[len(dists)-1]-dists[0] > 0 {
-		si.DistLength = dists[len(dists)-1]
-	}
 	// Calculate length, max segment length, and first point max distance
-	var length float64
+	var distLength float64
 	var maxSegmentLength float64
 	var firstPointMaxDistance float64
 	firstPoint := line[0]
 	for i := 1; i < len(line); i++ {
 		d := tlxy.DistanceHaversine(line[i-1], line[i])
-		length += d
+		distLength += d
 		if d > maxSegmentLength {
 			maxSegmentLength = d
 		}
@@ -127,13 +104,12 @@ func (g *GeomCache) AddShapeGeomGenerated(eid string, line []tlxy.Point, dists [
 			firstPointMaxDistance = d2
 		}
 	}
-	si.MaxSegmentLength = maxSegmentLength
-	si.FirstPointMaxDistance = firstPointMaxDistance
-	// If we don't have ShapeDistTraveled values, use calculated length
-	if si.DistLength == 0 {
-		si.DistLength = length
+	// Validate ShapeDistTraveled values - use provided if valid
+	if len(dists) > 0 && len(dists) == len(line) && dists[len(dists)-1]-dists[0] > 0 {
+		distLength = dists[len(dists)-1]
 	}
-	g.shapes[eid] = si
+	// Create shapeInfo with encoded polyline for memory efficiency
+	g.shapes[eid] = tlxy.NewShapeInfo(line, distLength, generated, maxSegmentLength, firstPointMaxDistance)
 }
 
 // MakeShape returns geometry for the given stops.

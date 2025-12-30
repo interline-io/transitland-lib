@@ -1204,13 +1204,16 @@ type geomCacheFilter struct {
 	*geomcache.GeomCache
 }
 
-func (e *geomCacheFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *geomCacheFilter) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Stop:
-		e.GeomCache.AddStopGeom(v.EntityID(), v.ToPoint())
+		// Use EntityKey (GTFS stop_id) for cache key because stop_times reference by GTFS ID
+		e.GeomCache.AddStopGeom(v.EntityKey(), v.ToPoint())
 	case *service.ShapeLine:
 		if !e.NoShapeCache {
 			lm := v.Geometry.ToLineM()
+			// Use EntityKey (GTFS shape_id) not EntityID (numeric ID) for cache key
+			// because trips reference shapes by GTFS shape_id
 			e.GeomCache.AddShapeGeomGenerated(v.EntityID(), lm.Coords, lm.Data, v.Generated)
 		}
 	}

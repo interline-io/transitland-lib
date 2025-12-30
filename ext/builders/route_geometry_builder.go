@@ -8,7 +8,6 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
@@ -36,15 +35,9 @@ func (ent *RouteGeometry) TableName() string {
 
 ///////
 
-// shapeGeomCache is the interface for accessing shape geometry data
-type shapeGeomCache interface {
-	GetShapeInfoOk(string) (geomcache.ShapeInfo, bool)
-	GetShapeInfo(string) geomcache.ShapeInfo
-}
-
 // RouteGeometryBuilder creates default shapes for routes.
 type RouteGeometryBuilder struct {
-	geomCache   shapeGeomCache
+	geomCache   tlxy.GeomCache
 	shapeCounts map[string]map[int]map[string]int
 }
 
@@ -57,10 +50,7 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 
 // SetGeomCache sets the shared geometry cache.
 func (pp *RouteGeometryBuilder) SetGeomCache(g tlxy.GeomCache) {
-	// The geomCache should implement our shapeGeomCache interface
-	if gc, ok := g.(shapeGeomCache); ok {
-		pp.geomCache = gc
-	}
+	pp.geomCache = g
 }
 
 // Counts the number of times a shape is used for each route,direction_id
@@ -114,7 +104,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		// (most trips wins for equal length).
 		for _, shapeId := range sortMap(dirShapes) {
 			// Check shape info and if this is the longest shape
-			if si, ok := pp.geomCache.GetShapeInfoOk(shapeId); ok {
+			if si, ok := pp.geomCache.GetShapeInfo(shapeId); ok {
 				dirCount += dirShapes[shapeId]
 				if si.DistLength > longestShapeLength {
 					longestShape = shapeId
@@ -124,7 +114,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		for shapeId, v := range dirShapes {
 			// Ensure we have full shape info
-			si, ok := pp.geomCache.GetShapeInfoOk(shapeId)
+			si, ok := pp.geomCache.GetShapeInfo(shapeId)
 			if !ok {
 				continue
 			}
@@ -155,7 +145,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 	var routeSelectedReal []string
 	var routeSelectedGenerated []string
 	for _, v := range sortMap(candidateShapes) {
-		si := pp.geomCache.GetShapeInfo(v)
+		si, _ := pp.geomCache.GetShapeInfo(v)
 		if si.Generated {
 			routeSelectedGenerated = append(routeSelectedGenerated, v)
 		} else {
@@ -176,7 +166,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 	ent := RouteGeometry{RouteID: rid}
 	matches := [][]tlxy.Point{}
 	for _, shapeId := range routeSelectedShapes {
-		si, ok := pp.geomCache.GetShapeInfoOk(shapeId)
+		si, ok := pp.geomCache.GetShapeInfo(shapeId)
 		if !ok {
 			continue
 		}
