@@ -182,6 +182,7 @@ func TestSingleEntityNotFound(t *testing.T) {
 		{"agency not found", "/agencies/o-nonexistent", http.StatusNotFound},
 		{"operator not found", "/operators/o-nonexistent", http.StatusNotFound},
 		{"feed_version not found", "/feed_versions/nonexistent-sha1", http.StatusNotFound},
+		{"trip not found", "/routes/r-9q9-bu~1u-e535e4/trips/99999999", http.StatusNotFound},
 
 		// Single entity requests that exist should return 200
 		{"feed exists", "/feeds/BA", http.StatusOK},
@@ -190,6 +191,7 @@ func TestSingleEntityNotFound(t *testing.T) {
 		// Collection requests with no results should return 200 with empty array
 		{"feeds collection empty filter", "/feeds?onestop_id=nonexistent", http.StatusOK},
 		{"routes collection empty filter", "/routes?onestop_id=nonexistent", http.StatusOK},
+		{"trips collection for route", "/routes/r-9q9-bu~1u-e535e4/trips", http.StatusOK},
 
 		// GeoJSON format should also return 404 for not found
 		{"feed not found geojson", "/feeds/f-nonexistent.geojson", http.StatusNotFound},

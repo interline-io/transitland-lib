@@ -45,28 +45,6 @@ var RestHandlersList = []RestHandlers{
 	&OnestopIdEntityRedirectRequest{},       // /onestop_id/{onestop_id} - redirect to entity by Onestop ID
 }
 
-// entityKeyParams lists URL parameters that indicate a single-entity lookup request.
-// When a request includes one of these parameters and returns no results, the API
-// returns 404 Not Found instead of 200 with an empty array.
-var entityKeyParams = []string{
-	"feed_key",         // /feeds/{feed_key}
-	"feed_version_key", // /feed_versions/{feed_version_key}
-	"agency_key",       // /agencies/{agency_key}
-	"route_key",        // /routes/{route_key}
-	"stop_key",         // /stops/{stop_key}
-	"operator_key",     // /operators/{operator_key}
-}
-
-// hasEntityKey returns true if any single-entity key parameter is present in the request options.
-func hasEntityKey(opts map[string]string) bool {
-	for _, keyParam := range entityKeyParams {
-		if v, exists := opts[keyParam]; exists && v != "" {
-			return true
-		}
-	}
-	return false
-}
-
 func GenerateOpenAPI(restPrefix string, opts ...SchemaOption) (*oa.T, error) {
 	// Apply options
 	config := &SchemaConfig{}
