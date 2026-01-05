@@ -1242,6 +1242,16 @@
             },
             "description": "Bad request - invalid parameters"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -1273,12 +1283,12 @@
           {
             "method": "GET",
             "path": "/agencies/{agency_key}",
-            "summary": "Request an agency"
+            "summary": "Request an agency by ID or Onestop ID"
           },
           {
             "method": "GET",
-            "path": "/agencies/{agency_key}.format",
-            "summary": "Request an agency in a specified format"
+            "path": "/agencies/{agency_key}.{format}",
+            "summary": "Request an agency by ID or Onestop ID in specified format"
           }
         ]
       }
@@ -2063,6 +2073,16 @@
             },
             "description": "Bad request - invalid parameters"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -2589,6 +2609,16 @@
             },
             "description": "Bad request - invalid parameters"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -2624,8 +2654,8 @@
           },
           {
             "method": "GET",
-            "path": "/feed_versions/{feed_version_key}.format",
-            "summary": "Request a feed version by ID or SHA1 in specifed format"
+            "path": "/feed_versions/{feed_version_key}.{format}",
+            "summary": "Request a feed version by ID or SHA1 in specified format"
           },
           {
             "method": "GET",
@@ -3174,6 +3204,16 @@
               }
             },
             "description": "Bad request - invalid parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
           },
           "500": {
             "content": {
@@ -3785,6 +3825,16 @@
             },
             "description": "Bad request - invalid parameters"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -3820,8 +3870,8 @@
           },
           {
             "method": "GET",
-            "path": "/feeds/{feed_key}.format",
-            "summary": "Request a feed by ID or Onestop ID in specifed format"
+            "path": "/feeds/{feed_key}.{format}",
+            "summary": "Request a feed by ID or Onestop ID in specified format"
           }
         ]
       }
@@ -4251,6 +4301,16 @@
               }
             },
             "description": "Bad request - invalid parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
           },
           "500": {
             "content": {
@@ -4975,6 +5035,16 @@
             },
             "description": "Bad request - invalid parameters"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -5005,13 +5075,13 @@
           },
           {
             "method": "GET",
-            "path": "/operators/{onestop_id}",
-            "summary": "Request an operator by Onestop ID"
+            "path": "/operators/{operator_key}",
+            "summary": "Request an operator by ID or Onestop ID"
           },
           {
             "method": "GET",
-            "path": "/operators/{onestop_id}.format",
-            "summary": "Request an operator by Onestop ID in specified format"
+            "path": "/operators/{operator_key}.{format}",
+            "summary": "Request an operator by ID or Onestop ID in specified format"
           }
         ]
       }
@@ -5467,6 +5537,16 @@
               }
             },
             "description": "Bad request - invalid parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
           },
           "500": {
             "content": {
@@ -6604,6 +6684,16 @@
             },
             "description": "Bad request - invalid parameters"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -6639,7 +6729,7 @@
           },
           {
             "method": "GET",
-            "path": "/routes/{route_key}.format",
+            "path": "/routes/{route_key}.{format}",
             "summary": "Request a route by ID or Onestop ID in specified format"
           }
         ]
@@ -7563,6 +7653,16 @@
               }
             },
             "description": "Bad request - invalid parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
           },
           "500": {
             "content": {
@@ -9097,6 +9197,16 @@
             },
             "description": "Bad request - invalid parameters"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -9132,7 +9242,7 @@
           },
           {
             "method": "GET",
-            "path": "/routes/{route_key}/trips/{id}.format",
+            "path": "/routes/{route_key}/trips/{id}.{format}",
             "summary": "Request a trip by ID in specified format"
           }
         ]
@@ -10555,6 +10665,16 @@
             },
             "description": "Bad request - invalid parameters"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -11475,6 +11595,16 @@
             },
             "description": "Bad request - invalid parameters"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -11505,12 +11635,12 @@
           },
           {
             "method": "GET",
-            "path": "/stops/{route_key}",
+            "path": "/stops/{stop_key}",
             "summary": "Request a stop by ID or Onestop ID"
           },
           {
             "method": "GET",
-            "path": "/stops/{route_key}.format",
+            "path": "/stops/{stop_key}.{format}",
             "summary": "Request a stop by ID or Onestop ID in specified format"
           }
         ]
@@ -12262,6 +12392,16 @@
               }
             },
             "description": "Bad request - invalid parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
           },
           "500": {
             "content": {
@@ -17556,6 +17696,16 @@
               }
             },
             "description": "Bad request - invalid parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
           },
           "500": {
             "content": {
