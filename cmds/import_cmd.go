@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/importer"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -44,6 +45,7 @@ type ImportCommand struct {
 	fvids           []string
 	fvidfile        string
 	fvsha1file      string
+	dmfrFile        string
 	errorThresholds []string
 }
 
@@ -69,6 +71,7 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Latest, "latest", false, "Only import latest feed version available for each feed")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.Activate, "activate", false, "Set as active feed version after import")
+	fl.StringVar(&cmd.dmfrFile, "dmfr", "", "Filter by feed IDs in DMFR file; equivalent to specifying feed IDs as arguments")
 	// Copy options
 	fl.Float64Var(&cmd.Options.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance (ex. 0.000005)")
 	fl.BoolVar(&cmd.Options.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
@@ -85,6 +88,16 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
+	}
+	// Load feed IDs from DMFR file
+	if cmd.dmfrFile != "" {
+		reg, err := dmfr.LoadAndParseRegistry(cmd.dmfrFile)
+		if err != nil {
+			return err
+		}
+		for _, feed := range reg.Feeds {
+			cmd.FeedIDs = append(cmd.FeedIDs, feed.FeedID)
+		}
 	}
 	// Read fvid file and add to fvids
 	if cmd.fvidfile != "" {

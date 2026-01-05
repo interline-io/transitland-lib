@@ -16,8 +16,7 @@ transitland-lib utilities
 * [transitland dbmigrate](transitland_dbmigrate.md)	 - Perform database migrations and load Natural Earth geographies
 * [transitland delete](transitland_delete.md)	 - Delete feed versions
 * [transitland diff](transitland_diff.md)	 - Calculate difference between two feeds, writing output in a GTFS-like format
-* [transitland dmfr-format](transitland_dmfr-format.md)	 - Format a DMFR file
-* [transitland dmfr-lint](transitland_dmfr-lint.md)	 - Lint DMFR files
+* [transitland dmfr](transitland_dmfr.md)	 - DMFR commands
 * [transitland extract](transitland_extract.md)	 - Extract a subset of a GTFS feed
 * [transitland feed-state](transitland_feed-state.md)	 - Manage feed state and materialized tables
 * [transitland fetch](transitland_fetch.md)	 - Fetch GTFS data and create feed versions
