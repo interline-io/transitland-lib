@@ -355,7 +355,7 @@ func TestRouteResolver_Location(t *testing.T) {
 			}`,
 			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon, "after": testRouteId},
 			selector:     "routes.#.route_id",
-			selectExpect: []string{"97", "12", "9", "19", "30", "60", "7", "24", "25", "275"},
+			selectExpect: []string{"97", "12", "9", "19", "30", "60", "7", "24", "25", "400"},
 		},
 	}
 	queryTestcases(t, c, testcases)
