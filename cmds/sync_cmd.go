@@ -15,13 +15,15 @@ import (
 
 // SyncCommand syncs a DMFR to a database.
 type SyncCommand struct {
-	DBURL   string
-	Adapter tldb.Adapter
+	DBURL      string
+	Adapter    tldb.Adapter
+	setPublic  bool
+	setPrivate bool
 	sync.Options
 }
 
 func (cmd *SyncCommand) HelpDesc() (string, string) {
-	return "Sync DMFR files to database", "Use '-' to read from stdin."
+	return "Sync DMFR files to database", "Use '-' to read from stdin. New feeds are set to public by default; existing feeds retain their current public/private state unless --set-public or --set-private is specified."
 }
 
 func (cmd *SyncCommand) HelpArgs() string {
@@ -42,12 +44,26 @@ func (cmd *SyncCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.HideUnseen, "hide-unseen", false, "Hide unseen feeds")
 	fl.BoolVar(&cmd.HideUnseenOperators, "hide-unseen-operators", false, "Hide unseen operators")
+	fl.BoolVar(&cmd.setPublic, "set-public", false, "Force all synced feeds to public")
+	fl.BoolVar(&cmd.setPrivate, "set-private", false, "Force all synced feeds to private")
 }
 
 // Parse command line options.
 func (cmd *SyncCommand) Parse(args []string) error {
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
+	}
+	// Validate mutually exclusive flags
+	if cmd.setPublic && cmd.setPrivate {
+		return errors.New("--set-public and --set-private are mutually exclusive")
+	}
+	// Set the pointer based on flags
+	if cmd.setPublic {
+		v := true
+		cmd.Options.SetPublic = &v
+	} else if cmd.setPrivate {
+		v := false
+		cmd.Options.SetPublic = &v
 	}
 	// Handle stdin via "-"
 	var stdinRead bool

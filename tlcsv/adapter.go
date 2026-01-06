@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/request"
+	"github.com/twpayne/go-geom/encoding/geojson"
 )
 
 // Adapter provides an interface for working with various kinds of GTFS sources: zip, directory, url.
@@ -35,6 +37,7 @@ type Adapter interface {
 // WriterAdapter provides a writing interface.
 type WriterAdapter interface {
 	WriteRows(string, [][]string) error
+	WriteFeatures(string, []*geojson.Feature) error
 	Adapter
 }
 
@@ -109,13 +112,7 @@ func (adapter *URLAdapter) Open() error {
 		return nil // already open
 	}
 	// Remove and keep internal path prefix
-	url := adapter.url
-	fragment := ""
-	split := strings.SplitN(adapter.url, "#", 2)
-	if len(split) > 1 {
-		url = split[0]
-		fragment = split[1]
-	}
+	url, fragment, _ := strings.Cut(adapter.url, "#")
 	// Download to temporary file
 	tmpfile, fr, err := request.AuthenticatedRequestDownload(context.TODO(), url, adapter.reqOpts...)
 	if err != nil {
@@ -179,9 +176,9 @@ func (adapter *ZipAdapter) String() string {
 // Open the adapter. Return an error if the file does not exist.
 func (adapter *ZipAdapter) Open() error {
 	// Split fragment
-	if spliturl := strings.SplitN(adapter.path, "#", 2); len(spliturl) > 1 {
-		adapter.path = spliturl[0]
-		adapter.internalPrefix = spliturl[1]
+	if path, prefix, ok := strings.Cut(adapter.path, "#"); ok {
+		adapter.path = path
+		adapter.internalPrefix = prefix
 	}
 	if !adapter.Exists() {
 		return errors.New("file does not exist or invalid data")
@@ -387,15 +384,17 @@ func (adapter *ZipAdapter) findInternalPrefix() (string, error) {
 
 // DirAdapter supports plain directories of CSV files.
 type DirAdapter struct {
-	path  string
-	files map[string]*os.File
+	path            string
+	files           map[string]*os.File
+	geojsonFeatures map[string][]*geojson.Feature
 }
 
 // NewDirAdapter returns an initialized DirAdapter.
 func NewDirAdapter(path string) *DirAdapter {
 	return &DirAdapter{
-		path:  strings.TrimPrefix(path, "file://"),
-		files: map[string]*os.File{},
+		path:            strings.TrimPrefix(path, "file://"),
+		files:           map[string]*os.File{},
+		geojsonFeatures: map[string][]*geojson.Feature{},
 	}
 }
 
@@ -463,8 +462,19 @@ func (adapter *DirAdapter) Open() error {
 	return nil
 }
 
-// Close the adapter.
+// Close the adapter. Flushes any buffered GeoJSON files before closing.
 func (adapter *DirAdapter) Close() error {
+	// Flush all buffered GeoJSON files
+	for filename, features := range adapter.geojsonFeatures {
+		if len(features) > 0 {
+			if err := adapter.flushGeoJSON(filename, features); err != nil {
+				return err
+			}
+		}
+	}
+	adapter.geojsonFeatures = map[string][]*geojson.Feature{}
+
+	// Close all file handles
 	for _, f := range adapter.files {
 		if err := f.Close(); err != nil {
 			return err
@@ -548,6 +558,40 @@ func (adapter *DirAdapter) WriteRows(filename string, rows [][]string) error {
 	return nil
 }
 
+// WriteFeatures buffers GeoJSON features to be written when the adapter is closed.
+// This mirrors how CSV rows are buffered and written.
+func (adapter *DirAdapter) WriteFeatures(filename string, features []*geojson.Feature) error {
+	if len(features) == 0 {
+		return nil
+	}
+	adapter.geojsonFeatures[filename] = append(adapter.geojsonFeatures[filename], features...)
+	return nil
+}
+
+// flushGeoJSON writes all buffered features for a file as a FeatureCollection.
+func (adapter *DirAdapter) flushGeoJSON(filename string, features []*geojson.Feature) error {
+	// Close existing file if open (we need to overwrite, not append)
+	if in, ok := adapter.files[filename]; ok {
+		in.Close()
+		delete(adapter.files, filename)
+	}
+
+	// Create new file
+	in, err := os.Create(filepath.Join(adapter.path, filename))
+	if err != nil {
+		return err
+	}
+	adapter.files[filename] = in
+
+	// Write FeatureCollection
+	fc := geojson.FeatureCollection{
+		Features: features,
+	}
+	encoder := json.NewEncoder(in)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(&fc)
+}
+
 /////////////////////
 
 // ZipWriterAdapter functions the same as DirAdapter, but writes to a temporary directory, and creates a zip archive when closed.
@@ -570,6 +614,16 @@ func NewZipWriterAdapter(path string) *ZipWriterAdapter {
 
 // Close creates a zip archive of all the written files at the specified destination.
 func (adapter *ZipWriterAdapter) Close() error {
+	// Flush any buffered GeoJSON files first
+	for filename, features := range adapter.DirAdapter.geojsonFeatures {
+		if len(features) > 0 {
+			if err := adapter.DirAdapter.flushGeoJSON(filename, features); err != nil {
+				return err
+			}
+		}
+	}
+	adapter.DirAdapter.geojsonFeatures = map[string][]*geojson.Feature{}
+
 	out, err := os.Create(adapter.outpath)
 	if err != nil {
 		return nil

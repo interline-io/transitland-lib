@@ -37,7 +37,7 @@ func FeedVersionImport(ctx context.Context, fvid int) (*model.FeedVersionImportR
 		},
 	}
 	db := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
-	fr, fe := importer.MainImportFeedVersion(ctx, db, opts)
+	fr, fe := importer.ImportFeedVersion(ctx, db, opts)
 	if fe != nil {
 		return nil, fe
 	}

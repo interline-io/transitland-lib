@@ -17,7 +17,6 @@ transitland import [flags] [feeds...]
 ```
       --activate                  Set as active feed version after import
       --create-missing-shapes     Create missing Shapes from Trip stop-to-stop geometries
-      --date string               Service on date
       --dburl string              Database URL (default: $TL_DATABASE_URL)
       --deduplicate-stop-times    Deduplicate StopTimes using Journey Patterns
       --dmfr string               Filter by feed IDs in DMFR file; equivalent to specifying feed IDs as arguments
@@ -25,7 +24,6 @@ transitland import [flags] [feeds...]
       --error-threshold strings   Fail import if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')
       --ext strings               Include GTFS Extension
       --fail                      Exit with error code if any fetch is not successful
-      --fetched-since string      Fetched since
       --fv-sha1 strings           Feed version SHA1
       --fv-sha1-file string       Specify feed version IDs by SHA1 in file, one per line
       --fvid strings              Import specific feed version ID

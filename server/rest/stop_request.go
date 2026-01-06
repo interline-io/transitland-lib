@@ -47,8 +47,8 @@ func (r StopRequest) RequestInfo() RequestInfo {
 				Extensions: map[string]any{
 					"x-alternates": []RequestAltPath{
 						{"GET", "/stops.{format}", "Request stops in specified format"},
-						{"GET", "/stops/{route_key}", "Request a stop by ID or Onestop ID"},
-						{"GET", "/stops/{route_key}.format", "Request a stop by ID or Onestop ID in specified format"},
+						{"GET", "/stops/{stop_key}", "Request a stop by ID or Onestop ID"},
+						{"GET", "/stops/{stop_key}.{format}", "Request a stop by ID or Onestop ID in specified format"},
 					},
 				},
 				Parameters: oa.Parameters{
