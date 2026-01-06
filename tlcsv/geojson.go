@@ -104,7 +104,10 @@ func (reader *Reader) readLocationsGeoJSON(filename string) ([]gtfs.Location, er
 
 // writeLocationFeature converts a gtfs.Location entity to a GeoJSON feature.
 // This is used for locations.geojson (GTFS-Flex extension).
-func writeLocationFeature(loc gtfs.Location) (*geojson.Feature, bool) {
+func writeLocationFeature(loc *gtfs.Location) (*geojson.Feature, bool) {
+	if loc == nil {
+		return nil, false
+	}
 	feature := &geojson.Feature{}
 
 	// Set feature ID from LocationID

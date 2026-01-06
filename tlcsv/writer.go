@@ -177,6 +177,7 @@ func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
 }
 
 // addBatchGeoJSON handles writing entities to GeoJSON files.
+// Features are buffered and written when the Writer is closed.
 func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]string, error) {
 	var eids []string
 	var newFeatures []*geojson.Feature
@@ -187,7 +188,7 @@ func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]stri
 		// Convert to Location entities
 		for _, ent := range ents {
 			if loc, ok := ent.(*gtfs.Location); ok {
-				if feature, ok := writeLocationFeature(*loc); ok {
+				if feature, ok := writeLocationFeature(loc); ok {
 					newFeatures = append(newFeatures, feature)
 					if v, ok := ent.(hasEntityKey); ok {
 						eids = append(eids, v.EntityKey())
@@ -200,19 +201,32 @@ func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]stri
 		return nil, errors.New("unsupported GeoJSON file: " + filename)
 	}
 
-	// Accumulate features for this file
+	// Accumulate features for this file (will be written on Close)
 	if len(newFeatures) > 0 {
 		writer.geojsonFeatures[filename] = append(writer.geojsonFeatures[filename], newFeatures...)
-
-		// Write complete FeatureCollection with all accumulated features
-		fc := geojson.FeatureCollection{
-			Features: writer.geojsonFeatures[filename],
-		}
-		err := writer.WriterAdapter.WriteGeoJSON(filename, &fc)
-		return eids, err
 	}
 
 	return eids, nil
+}
+
+// Close flushes any buffered GeoJSON files and closes the underlying adapter.
+func (writer *Writer) Close() error {
+	// Write all accumulated GeoJSON files
+	for filename, features := range writer.geojsonFeatures {
+		if len(features) > 0 {
+			fc := geojson.FeatureCollection{
+				Features: features,
+			}
+			if err := writer.WriterAdapter.WriteGeoJSON(filename, &fc); err != nil {
+				return err
+			}
+		}
+	}
+	// Clear the buffer
+	writer.geojsonFeatures = map[string][]*geojson.Feature{}
+
+	// Close the underlying adapter
+	return writer.WriterAdapter.Close()
 }
 
 type canFlatten interface {
