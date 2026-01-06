@@ -176,6 +176,15 @@ func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
 
 // addBatchGeoJSON handles writing entities to GeoJSON files.
 // Features are buffered in the adapter and written when the adapter is closed.
+//
+// TODO: The current approach of special-casing each entity type is not sustainable.
+// Consider either:
+//   - A generic method that uses the JSON representation of the entity for feature
+//     properties (excluding geometry fields), similar to how CSV uses struct tags
+//   - A new entity interface method (e.g., ToGeoJSONFeature) that entities implement
+//     to define their own GeoJSON serialization
+//
+// This would allow new GeoJSON entity types to be added without modifying the writer.
 func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]string, error) {
 	var eids []string
 	var newFeatures []*geojson.Feature
