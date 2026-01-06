@@ -112,22 +112,17 @@ func (cmd *FetchCommand) Parse(args []string) error {
 			cmd.FetchJobs = append(cmd.FetchJobs, FetchJob{FeedID: feed.FeedID})
 		}
 	}
-	// Read jobs file: each line is "feed_id<tab>url"
+	// Read jobs file: each line is "feed_id <whitespace> url"
 	if cmd.jobsFile != "" {
-		lines, err := tlcli.ReadFileLines(cmd.jobsFile)
+		lines, err := tlcli.ReadFileTwoFields(cmd.jobsFile)
 		if err != nil {
 			return err
 		}
 		for _, line := range lines {
-			parts := strings.SplitN(line, "\t", 2)
-			if len(parts) == 0 || parts[0] == "" {
-				continue
-			}
-			job := FetchJob{FeedID: parts[0]}
-			if len(parts) > 1 {
-				job.FeedURL = parts[1]
-			}
-			cmd.FetchJobs = append(cmd.FetchJobs, job)
+			cmd.FetchJobs = append(cmd.FetchJobs, FetchJob{
+				FeedID:  line.Field1,
+				FeedURL: line.Field2,
+			})
 		}
 	}
 	return nil
