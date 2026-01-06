@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	_ "time/tzdata"
 
+	"github.com/interline-io/log"
 	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/cmds"
 	"github.com/interline-io/transitland-lib/diff"
@@ -97,9 +97,9 @@ func (cmd *versionCommand) Parse(args []string) error {
 
 func (cmd *versionCommand) Run(context.Context) error {
 	vi := tl.Version
-	log.Printf("transitland-lib version: %s\n", vi.Tag)
-	log.Printf("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)\n", vi.Commit, vi.CommitTime)
-	log.Printf("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md\n", tl.GTFSVERSION)
-	log.Printf("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto\n", tl.GTFSRTVERSION)
+	log.Print("transitland-lib version: %s", vi.Tag)
+	log.Print("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)", vi.Commit, vi.CommitTime)
+	log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
+	log.Print("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto", tl.GTFSRTVERSION)
 	return nil
 }
