@@ -2,6 +2,7 @@ package request
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"io"
 	"net/url"
@@ -124,6 +125,9 @@ func (r S3) ListKeys(ctx context.Context, prefix string) ([]string, error) {
 }
 
 func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
+	if key == "" {
+		return errors.New("key must not be empty")
+	}
 	// Create client
 	client, err := awsConfig(ctx, r.secret)
 	if err != nil {
@@ -147,13 +151,22 @@ func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		acl = types.ObjectCannedACLPrivate
 	}
 
+	// Calculate MD5 for server-side verification if reader is seekable
+	var contentMD5 *string
+	if md5sum := md5FromReader(uploadFile); md5sum != nil {
+		encoded := base64.StdEncoding.EncodeToString(md5sum)
+		contentMD5 = &encoded
+		log.Trace().Str("key", key).Msg("s3 upload: calculated MD5 for integrity verification")
+	}
+
 	// Save object
 	log.Debug().Msgf("s3 store: uploading to key '%s', full key is '%s'", key, r.getFullKey(key))
 	result, err := client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(r.Bucket),
-		Key:    aws.String(r.getFullKey(key)),
-		Body:   uploadFile,
-		ACL:    acl,
+		Bucket:     aws.String(r.Bucket),
+		Key:        aws.String(r.getFullKey(key)),
+		Body:       uploadFile,
+		ACL:        acl,
+		ContentMD5: contentMD5,
 	})
 	_ = result
 	return err

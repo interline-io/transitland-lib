@@ -213,7 +213,11 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 
 		// Success
 		if resp.StatusCode < 400 {
-			return resp.Body, resp.StatusCode, nil
+			// Wrap response body to preserve Content-Length for verification
+			return &httpResponseReader{
+				ReadCloser:    resp.Body,
+				ContentLength: resp.ContentLength,
+			}, resp.StatusCode, nil
 		}
 
 		// Handle retryable errors (429, 502, 503, 504)
@@ -250,4 +254,10 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 	}
 
 	return nil, lastStatusCode, lastErr
+}
+
+// httpResponseReader wraps http.Response.Body to preserve Content-Length
+type httpResponseReader struct {
+	io.ReadCloser
+	ContentLength int64
 }

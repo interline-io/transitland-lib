@@ -73,10 +73,11 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 	// Open reader
 	fragment := ""
 	readerPath := fn
-	if a := strings.SplitN(opts.FeedURL, "#", 2); len(a) > 1 {
-		readerPath = readerPath + "#" + a[1]
-		fragment = a[1]
+	if _, frag, ok := strings.Cut(opts.FeedURL, "#"); ok {
+		readerPath = readerPath + "#" + frag
+		fragment = frag
 	}
+
 	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewZipAdapter(readerPath))
 	if err != nil {
 		fetchValidationResult.Error = err
