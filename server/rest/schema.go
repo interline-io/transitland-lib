@@ -216,6 +216,16 @@ func queryToOAResponses(queryString string) (*oa.Responses, error) {
 		},
 	})
 
+	notFoundDesc := "Not found"
+	ret.Set("404", &oa.ResponseRef{
+		Value: &oa.Response{
+			Description: &notFoundDesc,
+			Content: oa.NewContentWithJSONSchema(&oa.Schema{
+				Type: &oa.Types{"object"},
+			}),
+		},
+	})
+
 	serverErrorDesc := "Internal server error"
 	ret.Set("500", &oa.ResponseRef{
 		Value: &oa.Response{

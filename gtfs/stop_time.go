@@ -406,3 +406,67 @@ func (ent *StopTime) SetString(key, value string) error {
 	}
 	return perr
 }
+
+// FlexInfo contains information about flex characteristics of a trip's stop times
+type FlexInfo struct {
+	HasFlexStopTimes     bool // Any StopTime uses Location or LocationGroup instead of StopID
+	HasFlexTimeWindows   bool // Any StopTime uses pickup/dropoff time windows
+	HasMixedStopTypes    bool // Mix of regular stops and flex locations
+	AllStopsHaveStopID   bool // All StopTimes have a valid StopID
+	FlexStopTimeCount    int  // Number of StopTimes with flex characteristics
+	RegularStopTimeCount int  // Number of StopTimes with regular StopID
+}
+
+// IsFlexTrip returns true if any StopTime has flex characteristics
+func (f FlexInfo) IsFlexTrip() bool {
+	return f.HasFlexStopTimes || f.HasFlexTimeWindows
+}
+
+// CanUseStopBasedGeometry returns true if the trip can use stop-based geometry calculations
+// (i.e., all StopTimes have valid StopIDs)
+func (f FlexInfo) CanUseStopBasedGeometry() bool {
+	return f.AllStopsHaveStopID
+}
+
+// CheckFlexStopTimes analyzes a slice of StopTimes and returns information about
+// whether they represent fixed-route service or flex service.
+func CheckFlexStopTimes(stoptimes []StopTime) FlexInfo {
+	info := FlexInfo{
+		AllStopsHaveStopID: true,
+	}
+
+	for i := 0; i < len(stoptimes); i++ {
+		st := stoptimes[i]
+
+		// Check for flex location types
+		hasLocationID := st.LocationID.Valid && st.LocationID.Val != ""
+		hasLocationGroupID := st.LocationGroupID.Valid && st.LocationGroupID.Val != ""
+		hasStopID := st.StopID.Valid && st.StopID.Val != ""
+
+		// Check for flex time windows
+		hasTimeWindow := (st.StartPickupDropOffWindow.Valid && st.StartPickupDropOffWindow.Val > 0) ||
+			(st.EndPickupDropOffWindow.Valid && st.EndPickupDropOffWindow.Val > 0)
+
+		if hasLocationID || hasLocationGroupID {
+			info.HasFlexStopTimes = true
+			info.FlexStopTimeCount++
+		}
+
+		if hasTimeWindow {
+			info.HasFlexTimeWindows = true
+		}
+
+		if hasStopID {
+			info.RegularStopTimeCount++
+		} else {
+			info.AllStopsHaveStopID = false
+		}
+	}
+
+	// Mixed if we have both regular stops and flex locations
+	if info.RegularStopTimeCount > 0 && info.FlexStopTimeCount > 0 {
+		info.HasMixedStopTypes = true
+	}
+
+	return info
+}

@@ -171,7 +171,7 @@ type Feed {
   spec: FeedSpecTypes
   "Language(s) included in this feed"
   languages: [String!]
-  "Source DMFR tags for this feed"
+  "Optional tags defined in Transitlant Atlas providing more info about this feed"
   tags: Tags
   "Authorization metadata for fetching data from this feed"
   authorization: FeedAuthorization
@@ -448,7 +448,7 @@ type Operator {
   short_name: String
   "Operator website, if available"
   website: String
-  "Source DMFR tag data"
+  "Optional tags defined in Transitlant Atlas providing more info about this operator"
   tags: Tags
   "Search rank: internal"
   search_rank: String

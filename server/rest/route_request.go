@@ -49,7 +49,7 @@ func (r RouteRequest) RequestInfo() RequestInfo {
 					"x-alternates": []RequestAltPath{
 						{"GET", "/routes.{format}", "Request routes in specified format"},
 						{"GET", "/routes/{route_key}", "Request a route by ID or Onestop ID"},
-						{"GET", "/routes/{route_key}.format", "Request a route by ID or Onestop ID in specified format"},
+						{"GET", "/routes/{route_key}.{format}", "Request a route by ID or Onestop ID in specified format"},
 					},
 				},
 				Parameters: oa.Parameters{

@@ -1,0 +1,9 @@
+trip_id,stop_id,location_id,stop_sequence,arrival_time,departure_time,start_pickup_drop_off_window,end_pickup_drop_off_window
+trip_regular,stop1,,1,08:00:00,08:00:00,,
+trip_regular,stop2,,2,08:10:00,08:10:00,,
+trip_regular,stop3,,3,08:20:00,08:20:00,,
+trip_flex,stop1,,1,08:00:00,08:00:00,,
+trip_flex,,loc1,2,,,08:00:00,08:30:00
+trip_flex,stop3,,3,08:20:00,08:20:00,,
+trip_with_shape,stop1,,1,08:00:00,08:00:00,,
+trip_with_shape,stop2,,2,08:10:00,08:10:00,,

@@ -44,8 +44,8 @@ func (r OperatorRequest) RequestInfo() RequestInfo {
 				Extensions: map[string]any{
 					"x-alternates": []RequestAltPath{
 						{"GET", "/operators.{format}", "Request operators in specified format"},
-						{"GET", "/operators/{onestop_id}", "Request an operator by Onestop ID"},
-						{"GET", "/operators/{onestop_id}.format", "Request an operator by Onestop ID in specified format"},
+						{"GET", "/operators/{operator_key}", "Request an operator by ID or Onestop ID"},
+						{"GET", "/operators/{operator_key}.{format}", "Request an operator by ID or Onestop ID in specified format"},
 					},
 				},
 				Parameters: oa.Parameters{
