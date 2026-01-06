@@ -43,7 +43,7 @@ require (
 	github.com/snabb/isoweek v1.0.1
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/rtree v1.10.0
 	github.com/tidwall/tinylru v1.2.1

@@ -9,11 +9,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
@@ -94,8 +98,18 @@ func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 	if err != nil {
 		return err
 	}
-	// Upload the file to the specified container and blob name
-	_, err = client.UploadStream(ctx, r.Container, r.getFullKey(key), uploadFile, nil)
+
+	// Calculate MD5 for server-side verification if reader is seekable
+	var uploadOptions *azblob.UploadStreamOptions
+	if contentMD5 := md5FromReader(uploadFile); contentMD5 != nil {
+		log.Trace().Str("key", key).Msg("az upload: calculated MD5 for integrity verification")
+		uploadOptions = &azblob.UploadStreamOptions{
+			TransactionalValidation: blob.TransferValidationTypeMD5(contentMD5),
+		}
+	}
+
+	// Upload the file; Azure SDK handles retries internally (configured in getAzBlobClient)
+	_, err = client.UploadStream(ctx, r.Container, r.getFullKey(key), uploadFile, uploadOptions)
 	return err
 }
 
@@ -146,7 +160,7 @@ func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 func (r Az) getFullKey(key string) string {
 	azKey := strings.TrimPrefix(key, "/")
 	if r.KeyPrefix != "" {
-		azKey = r.KeyPrefix + "/" + strings.TrimPrefix(key, "/")
+		azKey = r.KeyPrefix + "/" + azKey
 	}
 	return azKey
 }
@@ -157,7 +171,16 @@ func getAzBlobClient(account string) (*azidentity.DefaultAzureCredential, *azblo
 		return nil, nil, err
 	}
 	accountUrl := fmt.Sprintf("https://%s", strings.TrimPrefix(account, "az://"))
-	client, err := azblob.NewClient(accountUrl, credential, nil)
+	// Configure client with explicit retry policy (3 retries with exponential backoff)
+	client, err := azblob.NewClient(accountUrl, credential, &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Retry: policy.RetryOptions{
+				MaxRetries:    3,
+				RetryDelay:    4 * time.Second,
+				MaxRetryDelay: 120 * time.Second,
+			},
+		},
+	})
 	if err != nil {
 		return nil, nil, err
 	}
