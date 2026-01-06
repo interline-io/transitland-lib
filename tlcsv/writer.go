@@ -7,7 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
-	"github.com/twpayne/go-geom/encoding/geojson"
+	geojson "github.com/twpayne/go-geom/encoding/geojson"
 )
 
 type hasEntityKey interface {
@@ -21,7 +21,6 @@ type Writer struct {
 	writeExtraColumns bool
 	headers           map[string][]string
 	extraHeaders      map[string][]string
-	geojsonFeatures   map[string][]*geojson.Feature
 }
 
 // NewWriter returns a new Writer.
@@ -33,10 +32,9 @@ func NewWriter(path string) (*Writer, error) {
 		a = NewDirAdapter(path)
 	}
 	return &Writer{
-		WriterAdapter:   a,
-		headers:         map[string][]string{},
-		extraHeaders:    map[string][]string{},
-		geojsonFeatures: map[string][]*geojson.Feature{},
+		WriterAdapter: a,
+		headers:       map[string][]string{},
+		extraHeaders:  map[string][]string{},
 	}, nil
 }
 
@@ -177,7 +175,7 @@ func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
 }
 
 // addBatchGeoJSON handles writing entities to GeoJSON files.
-// Features are buffered and written when the Writer is closed.
+// Features are buffered in the adapter and written when the adapter is closed.
 func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]string, error) {
 	var eids []string
 	var newFeatures []*geojson.Feature
@@ -201,32 +199,14 @@ func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]stri
 		return nil, errors.New("unsupported GeoJSON file: " + filename)
 	}
 
-	// Accumulate features for this file (will be written on Close)
+	// Write features to adapter (adapter buffers until Close)
 	if len(newFeatures) > 0 {
-		writer.geojsonFeatures[filename] = append(writer.geojsonFeatures[filename], newFeatures...)
+		if err := writer.WriterAdapter.WriteFeatures(filename, newFeatures); err != nil {
+			return nil, err
+		}
 	}
 
 	return eids, nil
-}
-
-// Close flushes any buffered GeoJSON files and closes the underlying adapter.
-func (writer *Writer) Close() error {
-	// Write all accumulated GeoJSON files
-	for filename, features := range writer.geojsonFeatures {
-		if len(features) > 0 {
-			fc := geojson.FeatureCollection{
-				Features: features,
-			}
-			if err := writer.WriterAdapter.WriteGeoJSON(filename, &fc); err != nil {
-				return err
-			}
-		}
-	}
-	// Clear the buffer
-	writer.geojsonFeatures = map[string][]*geojson.Feature{}
-
-	// Close the underlying adapter
-	return writer.WriterAdapter.Close()
 }
 
 type canFlatten interface {

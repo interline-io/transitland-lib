@@ -337,7 +337,7 @@ func (adapter *diffAdapter) WriteRows(efn string, rows [][]string) error {
 	return nil
 }
 
-func (adapter *diffAdapter) WriteGeoJSON(filename string, fc *geojson.FeatureCollection) error {
+func (adapter *diffAdapter) WriteFeatures(filename string, features []*geojson.Feature) error {
 	// diffAdapter only handles CSV files, so GeoJSON is ignored
 	return nil
 }
