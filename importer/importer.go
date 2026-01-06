@@ -51,10 +51,6 @@ func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error 
 	return nil
 }
 
-func MainImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
-	return ImportFeedVersion(ctx, adapter, opts)
-}
-
 // ImportFeedVersion create FVI and run Copier inside a Tx.
 func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV

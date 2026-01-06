@@ -26,6 +26,7 @@ transitland fetch [flags] [feeds...]
       --feed-url string                    Manually fetch a single URL; you must specify exactly one feed_id
       --fetched-at string                  Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z
   -h, --help                               help for fetch
+      --jobs-file string                   Specify fetch jobs in file, one per line as 'feed_id <tab> url'
       --limit int                          Maximum number of feeds to fetch
       --secret-env stringArray             Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR
       --secrets string                     Path to DMFR Secrets file
