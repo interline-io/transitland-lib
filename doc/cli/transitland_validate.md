@@ -16,6 +16,7 @@ transitland validate [flags] <reader>
 
 ```
 % transitland validate "https://www.bart.gov/dev/schedules/google_transit.zip"
+% transitland validate -o - --include-entities "http://developer.trimet.org/schedule/gtfs.zip"
 ```
 
 ### Options
@@ -26,7 +27,11 @@ transitland validate [flags] <reader>
       --error-threshold strings            Fail validation if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')
       --ext strings                        Include GTFS Extension
   -h, --help                               help for validate
-      --o string                           Write validation report as JSON to file
+      --include-entities                   Include GTFS entities in JSON output
+      --include-route-geometries           Include route geometries in JSON output
+      --include-service-levels             Include service levels in JSON output
+  -o, --out string                         Write validation report as JSON to file; use '-' for stdout (implies -q)
+  -q, --quiet                              Suppress log output
       --rt strings                         Include GTFS-RT proto message in validation report
       --rt-json                            Include GTFS-RT proto messages as JSON in validation report
       --save-fvid int                      Save report to feed version ID
