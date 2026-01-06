@@ -8,6 +8,8 @@ Calculate difference between two feeds, writing output in a GTFS-like format
 
 This command is experimental; it may provide incorrect results or crash on large feeds.
 
+Note: This command only processes CSV files; GeoJSON files (such as locations.geojson) are not included in the diff comparison.
+
 ```
 transitland diff [flags] <feed1> <feed2> <output>
 ```
