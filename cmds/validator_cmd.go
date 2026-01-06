@@ -93,6 +93,7 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 	}
 
 	// Suppress logs when quiet mode is enabled
+	// TODO: Remove direct zerolog import once log package exports level constants
 	if cmd.Quiet {
 		log.SetLevel(zerolog.FatalLevel)
 	}
