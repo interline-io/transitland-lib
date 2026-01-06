@@ -198,10 +198,6 @@ func AuthenticatedRequest(ctx context.Context, out io.Writer, address string, op
 	return fr, nil
 }
 
-func copyTo(dst io.Writer, src io.Reader, maxSize uint64) (int, string, error) {
-	return copyToWithSizeCheck(dst, src, maxSize, -1)
-}
-
 func copyToWithSizeCheck(dst io.Writer, src io.Reader, maxSize uint64, expectedSize int64) (int, string, error) {
 	size := 0
 	h := sha1.New()
