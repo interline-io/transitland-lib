@@ -203,28 +203,28 @@ func copyToWithSizeCheck(dst io.Writer, src io.Reader, maxSize uint64, expectedS
 	h := sha1.New()
 	buf := make([]byte, 1024*1024)
 	for {
-		n, err := src.Read(buf)
-		if err != nil && err != io.EOF {
-			return 0, "", fmt.Errorf("read error at offset %d: %w", size, err)
-		}
-		if n == 0 {
-			if err == nil {
-				// Unexpected EOF - connection closed without error
-				return 0, "", fmt.Errorf("unexpected EOF at offset %d", size)
+		n, readErr := src.Read(buf)
+		// Process any data that was read, even if there's also an error
+		if n > 0 {
+			size += n
+			if maxSize > 0 && size > int(maxSize) {
+				return 0, "", fmt.Errorf("exceeded max size at offset %d: %d > %d", size-n, size, maxSize)
 			}
+			h.Write(buf[:n])
+			written, writeErr := dst.Write(buf[:n])
+			if writeErr != nil {
+				return 0, "", fmt.Errorf("write error at offset %d: %w", size-n, writeErr)
+			}
+			if written != n {
+				return 0, "", fmt.Errorf("partial write at offset %d: wrote %d of %d bytes", size-n, written, n)
+			}
+		}
+		// Check for end of stream
+		if readErr == io.EOF {
 			break
 		}
-		size += n
-		if maxSize > 0 && size > int(maxSize) {
-			return 0, "", fmt.Errorf("exceeded max size at offset %d: %d > %d", size-n, size, maxSize)
-		}
-		h.Write(buf[:n])
-		written, err := dst.Write(buf[:n])
-		if err != nil {
-			return 0, "", fmt.Errorf("write error at offset %d: %w", size-n, err)
-		}
-		if written != n {
-			return 0, "", fmt.Errorf("partial write at offset %d: wrote %d of %d bytes", size-n, written, n)
+		if readErr != nil {
+			return 0, "", fmt.Errorf("read error at offset %d: %w", size, readErr)
 		}
 	}
 	// Verify size matches Content-Length if provided

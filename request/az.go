@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 	"github.com/avast/retry-go/v4"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
@@ -99,19 +100,25 @@ func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		return err
 	}
 
-	// Get file seeker for retry capability and calculate MD5 for server-side verification
-	var fileSeeker io.ReadSeeker
+	// Get file for retry capability and calculate MD5 for server-side verification
+	var file *os.File
 	var contentMD5 []byte
-	if file, ok := uploadFile.(*os.File); ok {
-		fileSeeker = file
+	if f, ok := uploadFile.(*os.File); ok {
+		file = f
 		// Calculate MD5 for server-side verification (Azure verifies this during upload)
 		// This allows us to verify integrity without a second request
-		if _, err := file.Seek(0, io.SeekStart); err == nil {
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			log.Info().Err(err).Msg("az upload: failed to seek file for MD5 calculation, continuing without MD5")
+		} else {
 			md5Hash := md5.New()
-			if _, err := io.Copy(md5Hash, file); err == nil {
+			if _, err := io.Copy(md5Hash, file); err != nil {
+				log.Info().Err(err).Msg("az upload: failed to calculate MD5, continuing without MD5")
+			} else {
 				contentMD5 = md5Hash.Sum(nil)
 			}
-			file.Seek(0, io.SeekStart) // Reset for upload
+			if _, err := file.Seek(0, io.SeekStart); err != nil {
+				log.Error().Err(err).Msg("az upload: failed to reset file position after MD5 calculation")
+			}
 		}
 	}
 
@@ -123,34 +130,28 @@ func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		}
 	}
 
-	// Upload function - extracted to avoid duplication
-	uploadFn := func() error {
+	// Upload with retry if file is seekable, single attempt otherwise
+	if file == nil {
+		// Can't retry if we can't seek back to beginning - single attempt only
 		_, err := client.UploadStream(ctx, r.Container, r.getFullKey(key), uploadFile, uploadOptions)
 		return err
 	}
 
-	// Upload with retry if file is seekable, single attempt otherwise
-	if fileSeeker == nil {
-		// Can't retry if we can't seek back to beginning - single attempt only
-		return uploadFn()
-	}
-
 	// Retry upload up to 3 times for transient errors
-	uploadErr := retry.Do(
-		uploadFn,
+	return retry.Do(
+		func() error {
+			_, err := client.UploadStream(ctx, r.Container, r.getFullKey(key), file, uploadOptions)
+			return err
+		},
+		retry.Context(ctx),
 		retry.Attempts(3),
 		retry.Delay(1*time.Second),
 		retry.OnRetry(func(n uint, err error) {
+			log.Info().Err(err).Uint("attempt", n+1).Msg("az upload: retrying after error")
 			// Reset file position for retry
-			fileSeeker.Seek(0, io.SeekStart)
+			file.Seek(0, io.SeekStart)
 		}),
 	)
-
-	if uploadErr != nil {
-		return fmt.Errorf("upload failed: %w", uploadErr)
-	}
-
-	return nil
 }
 
 func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition string) (string, error) {
