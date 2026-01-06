@@ -44,7 +44,7 @@ func (r FeedRequest) RequestInfo() RequestInfo {
 					"x-alternates": []RequestAltPath{
 						{"GET", "/feeds.{format}", "Request feeds in specified format"},
 						{"GET", "/feeds/{feed_key}", "Request a feed by ID or Onestop ID"},
-						{"GET", "/feeds/{feed_key}.format", "Request a feed by ID or Onestop ID in specifed format"},
+						{"GET", "/feeds/{feed_key}.{format}", "Request a feed by ID or Onestop ID in specified format"},
 					},
 				},
 				Parameters: oa.Parameters{

@@ -31,28 +31,22 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	pc := "transitland"
-	dmfrCommand := &cobra.Command{
-		Use:    "dmfr",
-		Short:  "DMFR subcommands",
-		Long:   "DMFR Subcommands. Deprecated. Use dmfr-format, dmfr-lint, etc. instead.",
-		Hidden: true,
-	}
-	dmfrCommand.AddCommand(
-		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "lint"),
-		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "format"),
-	)
 
 	genDocCommand := tlcli.CobraHelper(&tlcli.GenDocCommand{Command: rootCmd}, pc, "gendoc")
 	genDocCommand.Hidden = true
+
+	// Hidden aliases for backwards compatibility
+	dmfrFormatCommand := tlcli.CobraHelper(&cmds.DmfrFormatCommand{}, pc, "dmfr-format")
+	dmfrFormatCommand.Hidden = true
+	dmfrLintCommand := tlcli.CobraHelper(&cmds.DmfrLintCommand{}, pc, "dmfr-lint")
+	dmfrLintCommand.Hidden = true
 
 	rootCmd.AddCommand(
 		tlcli.CobraHelper(&cmds.CopyCommand{}, pc, "copy"),
 		tlcli.CobraHelper(&cmds.ExtractCommand{}, pc, "extract"),
 		tlcli.CobraHelper(&cmds.FetchCommand{}, pc, "fetch"),
-		tlcli.CobraHelper(&cmds.FormatCommand{}, pc, "dmfr-format"),
 		tlcli.CobraHelper(&cmds.ImportCommand{}, pc, "import"),
 		tlcli.CobraHelper(&cmds.ChecksumCommand{}, pc, "checksum"),
-		tlcli.CobraHelper(&cmds.LintCommand{}, pc, "dmfr-lint"),
 		tlcli.CobraHelper(&cmds.MergeCommand{}, pc, "merge"),
 		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
 		tlcli.CobraHelper(&cmds.SyncCommand{}, pc, "sync"),
@@ -66,8 +60,10 @@ func init() {
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		tlcli.CobraHelper(&cmds.DBMigrateCommand{}, pc, "dbmigrate"),
 		tlcli.CobraHelper(&cmds.FeedStateManagerCommand{}, pc, "feed-state"),
+		cmds.NewDmfrCommand(pc),
+		dmfrFormatCommand,
+		dmfrLintCommand,
 		genDocCommand,
-		dmfrCommand,
 	)
 
 }

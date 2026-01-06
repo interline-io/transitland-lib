@@ -42,7 +42,7 @@ func (r TripRequest) RequestInfo() RequestInfo {
 					"x-alternates": []RequestAltPath{
 						{"GET", "/routes/{route_key}/trips.{format}", "Request trips in specified format"},
 						{"GET", "/routes/{route_key}/trips/{id}", "Request a trip by ID"},
-						{"GET", "/routes/{route_key}/trips/{id}.format", "Request a trip by ID in specified format"},
+						{"GET", "/routes/{route_key}/trips/{id}.{format}", "Request a trip by ID in specified format"},
 					},
 				},
 				Parameters: oa.Parameters{

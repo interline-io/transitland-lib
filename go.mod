@@ -28,7 +28,7 @@ require (
 	github.com/graph-gophers/dataloader/v7 v7.1.0
 	github.com/hypirion/go-filecache v0.0.0-20160810125507-e3e6ef6981f0
 	github.com/iancoleman/orderedmap v0.2.0
-	github.com/interline-io/log v0.0.0-20250611220650-b7683730abe1
+	github.com/interline-io/log v0.0.0-20251225123935-444ca68b7bc8
 	github.com/irees/squirrel v0.0.0-20250822021440-28034b47d2f4
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/jellydator/ttlcache/v2 v2.11.1
@@ -125,7 +125,8 @@ require (
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
