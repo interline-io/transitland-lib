@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"runtime/debug"
-	"strings"
 	"time"
 	_ "time/tzdata"
 
@@ -16,7 +14,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-redis/redis/v8"
 	"github.com/interline-io/log"
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
@@ -246,57 +243,4 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		ReadTimeout:  2 * timeOut,
 	}
 	return srv.ListenAndServe()
-}
-
-////////////
-
-// Read version from compiled in git details
-var Version VersionInfo
-
-type VersionInfo struct {
-	Tag        string
-	Commit     string
-	CommitTime string
-}
-
-func getVersion() VersionInfo {
-	ret := VersionInfo{}
-	info, _ := debug.ReadBuildInfo()
-	tagPrefix := "main.tag="
-	for _, kv := range info.Settings {
-		switch kv.Key {
-		case "vcs.revision":
-			ret.Commit = kv.Value
-		case "vcs.time":
-			ret.CommitTime = kv.Value
-		case "-ldflags":
-			for _, ss := range strings.Split(kv.Value, " ") {
-				if strings.HasPrefix(ss, tagPrefix) {
-					ret.Tag = strings.TrimPrefix(ss, tagPrefix)
-				}
-			}
-		}
-	}
-	return ret
-}
-
-type versionCommand struct{}
-
-func (cmd *versionCommand) AddFlags(fl *pflag.FlagSet) {}
-
-func (cmd *versionCommand) HelpDesc() (string, string) {
-	return "Program version and supported GTFS and GTFS-RT versions", ""
-}
-
-func (cmd *versionCommand) Parse(args []string) error {
-	return nil
-}
-
-func (cmd *versionCommand) Run(context.Context) error {
-	vi := getVersion()
-	log.Print("transitland-lib version: %s", vi.Tag)
-	log.Print("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)", vi.Commit, vi.CommitTime)
-	log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
-	log.Print("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto", tl.GTFSRTVERSION)
-	return nil
 }

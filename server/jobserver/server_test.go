@@ -1,10 +1,10 @@
 package jobserver
 
 import (
-	"log"
 	"os"
 	"testing"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/testutil"
 )
 
