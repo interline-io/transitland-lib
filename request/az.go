@@ -2,22 +2,21 @@ package request
 
 import (
 	"context"
-	"crypto/md5"
 	"errors"
 	"fmt"
 	"io"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
-	"github.com/avast/retry-go/v4"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
@@ -100,58 +99,18 @@ func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		return err
 	}
 
-	// Get file for retry capability and calculate MD5 for server-side verification
-	var file *os.File
-	var contentMD5 []byte
-	if f, ok := uploadFile.(*os.File); ok {
-		file = f
-		// Calculate MD5 for server-side verification (Azure verifies this during upload)
-		// This allows us to verify integrity without a second request
-		if _, err := file.Seek(0, io.SeekStart); err != nil {
-			log.Info().Err(err).Msg("az upload: failed to seek file for MD5 calculation, continuing without MD5")
-		} else {
-			md5Hash := md5.New()
-			if _, err := io.Copy(md5Hash, file); err != nil {
-				log.Info().Err(err).Msg("az upload: failed to calculate MD5, continuing without MD5")
-			} else {
-				contentMD5 = md5Hash.Sum(nil)
-			}
-			if _, err := file.Seek(0, io.SeekStart); err != nil {
-				log.Error().Err(err).Msg("az upload: failed to reset file position after MD5 calculation")
-			}
-		}
-	}
-
-	// Prepare upload options with Content-MD5 for server-side verification
+	// Calculate MD5 for server-side verification if reader is seekable
 	var uploadOptions *azblob.UploadStreamOptions
-	if len(contentMD5) > 0 {
+	if contentMD5 := md5FromReader(uploadFile); contentMD5 != nil {
+		log.Trace().Str("key", key).Msg("az upload: calculated MD5 for integrity verification")
 		uploadOptions = &azblob.UploadStreamOptions{
 			TransactionalValidation: blob.TransferValidationTypeMD5(contentMD5),
 		}
 	}
 
-	// Upload with retry if file is seekable, single attempt otherwise
-	if file == nil {
-		// Can't retry if we can't seek back to beginning - single attempt only
-		_, err := client.UploadStream(ctx, r.Container, r.getFullKey(key), uploadFile, uploadOptions)
-		return err
-	}
-
-	// Retry upload up to 3 times for transient errors
-	return retry.Do(
-		func() error {
-			_, err := client.UploadStream(ctx, r.Container, r.getFullKey(key), file, uploadOptions)
-			return err
-		},
-		retry.Context(ctx),
-		retry.Attempts(3),
-		retry.Delay(1*time.Second),
-		retry.OnRetry(func(n uint, err error) {
-			log.Info().Err(err).Uint("attempt", n+1).Msg("az upload: retrying after error")
-			// Reset file position for retry
-			file.Seek(0, io.SeekStart)
-		}),
-	)
+	// Upload the file; Azure SDK handles retries internally (configured in getAzBlobClient)
+	_, err = client.UploadStream(ctx, r.Container, r.getFullKey(key), uploadFile, uploadOptions)
+	return err
 }
 
 func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition string) (string, error) {
@@ -212,7 +171,16 @@ func getAzBlobClient(account string) (*azidentity.DefaultAzureCredential, *azblo
 		return nil, nil, err
 	}
 	accountUrl := fmt.Sprintf("https://%s", strings.TrimPrefix(account, "az://"))
-	client, err := azblob.NewClient(accountUrl, credential, nil)
+	// Configure client with explicit retry policy (3 retries with exponential backoff)
+	client, err := azblob.NewClient(accountUrl, credential, &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Retry: policy.RetryOptions{
+				MaxRetries:    3,
+				RetryDelay:    4 * time.Second,
+				MaxRetryDelay: 120 * time.Second,
+			},
+		},
+	})
 	if err != nil {
 		return nil, nil, err
 	}

@@ -2,6 +2,7 @@ package request
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/sha1"
 	"errors"
 	"fmt"
@@ -15,6 +16,31 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
+
+// md5FromReader calculates MD5 hash from a reader if it supports seeking.
+// Returns nil if the reader is not seekable or if an error occurs.
+// The reader position is reset to the beginning after calculation.
+func md5FromReader(r io.Reader) []byte {
+	seeker, ok := r.(io.ReadSeeker)
+	if !ok {
+		log.Trace().Msg("md5FromReader: reader is not seekable, skipping MD5 calculation")
+		return nil
+	}
+	if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+		log.Info().Err(err).Msg("md5FromReader: failed to seek to start")
+		return nil
+	}
+	h := md5.New()
+	if _, err := io.Copy(h, seeker); err != nil {
+		log.Info().Err(err).Msg("md5FromReader: failed to calculate MD5")
+		return nil
+	}
+	if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+		log.Error().Err(err).Msg("md5FromReader: failed to reset position after MD5 calculation")
+		return nil
+	}
+	return h.Sum(nil)
+}
 
 type Downloader interface {
 	Download(context.Context, string) (io.ReadCloser, int, error)
@@ -198,6 +224,11 @@ func AuthenticatedRequest(ctx context.Context, out io.Writer, address string, op
 	return fr, nil
 }
 
+// copyToWithSizeCheck copies from src to dst while computing SHA1 hash and checking size limits.
+// It provides limited integrity checking for truncated downloads only when the expected size is known
+// (e.g., from HTTP Content-Length header). This check is not comprehensive: servers may not set
+// Content-Length, may set it incorrectly, or use chunked transfer encoding. The SHA1 hash returned
+// provides the primary integrity verification mechanism for comparing subsequent fetches.
 func copyToWithSizeCheck(dst io.Writer, src io.Reader, maxSize uint64, expectedSize int64) (int, string, error) {
 	size := 0
 	h := sha1.New()
