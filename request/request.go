@@ -2,6 +2,7 @@ package request
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/sha1"
 	"errors"
 	"fmt"
@@ -15,6 +16,31 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
+
+// md5FromReader calculates MD5 hash from a reader if it supports seeking.
+// Returns nil if the reader is not seekable or if an error occurs.
+// The reader position is reset to the beginning after calculation.
+func md5FromReader(r io.Reader) []byte {
+	seeker, ok := r.(io.ReadSeeker)
+	if !ok {
+		log.Trace().Msg("md5FromReader: reader is not seekable, skipping MD5 calculation")
+		return nil
+	}
+	if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+		log.Info().Err(err).Msg("md5FromReader: failed to seek to start")
+		return nil
+	}
+	h := md5.New()
+	if _, err := io.Copy(h, seeker); err != nil {
+		log.Info().Err(err).Msg("md5FromReader: failed to calculate MD5")
+		return nil
+	}
+	if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+		log.Error().Err(err).Msg("md5FromReader: failed to reset position after MD5 calculation")
+		return nil
+	}
+	return h.Sum(nil)
+}
 
 type Downloader interface {
 	Download(context.Context, string) (io.ReadCloser, int, error)
@@ -165,16 +191,24 @@ func AuthenticatedRequest(ctx context.Context, out io.Writer, address string, op
 	fr := FetchResponse{}
 	req := NewRequest(address, opts...)
 	var r io.ReadCloser
+	var expectedSize int64 = -1
 	r, fr.ResponseCode, fr.FetchError = req.Request(ctx)
 	if fr.FetchError != nil {
 		return fr, nil
 	}
 	defer r.Close()
 
+	// Get expected size from Content-Length header if available
+	if httpRespReader, ok := r.(*httpResponseReader); ok && httpRespReader != nil {
+		if httpRespReader.ContentLength > 0 {
+			expectedSize = httpRespReader.ContentLength
+		}
+	}
+
 	// Write response
 	var err error
 	fr.ResponseTtfbMs = int(time.Since(t) / time.Millisecond)
-	fr.ResponseSize, fr.ResponseSHA1, err = copyTo(out, r, req.MaxSize)
+	fr.ResponseSize, fr.ResponseSHA1, err = copyToWithSizeCheck(out, r, req.MaxSize, expectedSize)
 	fr.ResponseTimeMs = int(time.Since(t) / time.Millisecond)
 
 	// Check for canceled
@@ -190,25 +224,51 @@ func AuthenticatedRequest(ctx context.Context, out io.Writer, address string, op
 	return fr, nil
 }
 
-func copyTo(dst io.Writer, src io.Reader, maxSize uint64) (int, string, error) {
+// copyToWithSizeCheck copies from src to dst while computing SHA1 hash and checking size limits.
+// It provides limited integrity checking for truncated downloads only when the expected size is known
+// (e.g., from HTTP Content-Length header). This check is not comprehensive: servers may not set
+// Content-Length, may set it incorrectly, or use chunked transfer encoding. The SHA1 hash returned
+// provides the primary integrity verification mechanism for comparing subsequent fetches.
+func copyToWithSizeCheck(dst io.Writer, src io.Reader, maxSize uint64, expectedSize int64) (int, string, error) {
 	size := 0
 	h := sha1.New()
 	buf := make([]byte, 1024*1024)
 	for {
-		n, err := src.Read(buf)
-		if err != nil && err != io.EOF {
-			return 0, "", err
+		n, readErr := src.Read(buf)
+		// Process any data that was read, even if there's also an error
+		if n > 0 {
+			size += n
+			if maxSize > 0 && size > int(maxSize) {
+				return 0, "", fmt.Errorf("exceeded max size at offset %d: %d > %d", size-n, size, maxSize)
+			}
+			h.Write(buf[:n])
+			written, writeErr := dst.Write(buf[:n])
+			if writeErr != nil {
+				return 0, "", fmt.Errorf("write error at offset %d: %w", size-n, writeErr)
+			}
+			if written != n {
+				return 0, "", fmt.Errorf("partial write at offset %d: wrote %d of %d bytes", size-n, written, n)
+			}
 		}
-		if n == 0 {
+		// Check for end of stream
+		if readErr == io.EOF {
 			break
 		}
-		size += n
-		if maxSize > 0 && size > int(maxSize) {
-			return 0, "", errors.New("exceeded max size")
+		if readErr != nil {
+			return 0, "", fmt.Errorf("read error at offset %d: %w", size, readErr)
 		}
-		h.Write(buf[:n])
-		if _, err := dst.Write(buf[:n]); err != nil {
-			return 0, "", err
+	}
+	// Verify size matches Content-Length if provided
+	// Note: We log warnings for mismatches but don't fail, as some servers misconfigure Content-Length
+	// However, if downloaded size is LESS than Content-Length, that indicates truncation
+	if expectedSize > 0 {
+		if size < int(expectedSize) {
+			// Downloaded less than Content-Length - this indicates truncation, fail
+			return 0, "", fmt.Errorf("download truncated: expected %d bytes (Content-Length), got %d bytes", expectedSize, size)
+		} else if size > int(expectedSize) {
+			// Downloaded more than Content-Length - server misconfiguration, but file may be valid
+			// Log warning but allow (server may have incorrect Content-Length header)
+			log.Debug().Msgf("Content-Length mismatch (server may be misconfigured): expected %d bytes, got %d bytes", expectedSize, size)
 		}
 	}
 	return size, fmt.Sprintf("%x", h.Sum(nil)), nil

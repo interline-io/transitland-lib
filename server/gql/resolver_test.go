@@ -2,11 +2,11 @@ package gql
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"

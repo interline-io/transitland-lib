@@ -1,10 +1,14 @@
 package builders
 
 import (
+	"context"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters/direct"
+	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/twpayne/go-geom"
@@ -96,4 +100,23 @@ func TestRouteGeometryBuilder(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRouteGeometryBuilder_FlexFeed(t *testing.T) {
+	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/gtfs-external/ctran-flex.zip"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := direct.NewWriter()
+	cpOpts := copier.Options{
+		CreateMissingShapes: true,
+	}
+	cpOpts.AddExtension(NewRouteGeometryBuilder())
+
+	cpResult, err := copier.CopyWithOptions(context.Background(), reader, writer, cpOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NotNil(t, cpResult)
 }

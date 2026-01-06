@@ -15,24 +15,24 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// LintCommand lints a DMFR file.
-type LintCommand struct {
+// DmfrLintCommand lints a DMFR file.
+type DmfrLintCommand struct {
 	Filenames []string
 }
 
-func (cmd *LintCommand) HelpDesc() (string, string) {
+func (cmd *DmfrLintCommand) HelpDesc() (string, string) {
 	return "Lint DMFR files", ""
 }
 
-func (cmd *LintCommand) HelpArgs() string {
+func (cmd *DmfrLintCommand) HelpArgs() string {
 	return "[flags] <filenames...>"
 }
 
-func (cmd *LintCommand) AddFlags(fl *pflag.FlagSet) {
+func (cmd *DmfrLintCommand) AddFlags(fl *pflag.FlagSet) {
 }
 
 // Parse command line options.
-func (cmd *LintCommand) Parse(args []string) error {
+func (cmd *DmfrLintCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	if fl.NArg() == 0 {
 		return errors.New("at least one file required")
@@ -42,7 +42,7 @@ func (cmd *LintCommand) Parse(args []string) error {
 }
 
 // Run this command.
-func (cmd *LintCommand) Run(ctx context.Context) error {
+func (cmd *DmfrLintCommand) Run(ctx context.Context) error {
 	var fileErrors []string
 	for _, filename := range cmd.Filenames {
 		// first validate DMFR

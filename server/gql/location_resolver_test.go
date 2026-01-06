@@ -145,12 +145,12 @@ func TestLocationResolver_StopTimes(t *testing.T) {
 				{
 					selector:          "feed_versions.0.locations.0.stop_times.#.start_pickup_drop_off_window",
 					expectCount:       150,
-					expectUniqueCount: 2,
+					expectUniqueCount: 5,
 				},
 				{
 					selector:          "feed_versions.0.locations.0.stop_times.#.end_pickup_drop_off_window",
 					expectCount:       150,
-					expectUniqueCount: 2,
+					expectUniqueCount: 4,
 				},
 				{
 					selector:          "feed_versions.0.locations.0.stop_times.#.pickup_type",

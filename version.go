@@ -2,12 +2,10 @@
 package tl
 
 import (
-	_ "embed"
 	"runtime/debug"
 	"strings"
 )
 
-// Read version from compiled in git details
 var Version VersionInfo
 
 func init() {
@@ -23,17 +21,26 @@ type VersionInfo struct {
 func getVersion() VersionInfo {
 	ret := VersionInfo{}
 	info, _ := debug.ReadBuildInfo()
-	tagPrefix := "main.tag="
-	for _, kv := range info.Settings {
-		switch kv.Key {
-		case "vcs.revision":
-			ret.Commit = kv.Value
-		case "vcs.time":
-			ret.CommitTime = kv.Value
-		case "-ldflags":
-			for _, ss := range strings.Split(kv.Value, " ") {
-				if strings.HasPrefix(ss, tagPrefix) {
-					ret.Tag = strings.TrimPrefix(ss, tagPrefix)
+	if info != nil {
+		if info.Main.Version != "" && info.Main.Version != "(devel)" {
+			ret.Tag = info.Main.Version
+		}
+		for _, kv := range info.Settings {
+			switch kv.Key {
+			case "vcs.revision":
+				ret.Commit = kv.Value
+			case "vcs.time":
+				ret.CommitTime = kv.Value
+			case "-ldflags":
+				if idx := strings.Index(kv.Value, "-X main.tag="); idx != -1 {
+					start := idx + len("-X main.tag=")
+					end := start
+					for end < len(kv.Value) && kv.Value[end] != ' ' {
+						end++
+					}
+					if ret.Tag == "" {
+						ret.Tag = kv.Value[start:end]
+					}
 				}
 			}
 		}
