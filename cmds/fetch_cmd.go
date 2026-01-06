@@ -34,7 +34,7 @@ type FetchJob struct {
 	FeedURL string // URL to fetch from (optional; if empty, looks up from database)
 }
 
-// FetchCommand fetches feeds defined a DMFR database.
+// FetchCommand fetches feeds defined in a DMFR database.
 type FetchCommand struct {
 	Options     fetch.StaticFetchOptions
 	SecretsFile string
@@ -89,8 +89,15 @@ func (cmd *FetchCommand) Parse(args []string) error {
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	if cmd.Options.FeedURL != "" && len(args) != 1 {
-		return errors.New("you must specify exactly one feed_id when using -feed-url")
+	// When using --feed-url, it must be mutually exclusive with --dmfr and --jobs-file,
+	// and exactly one positional feed_id must be provided.
+	if cmd.Options.FeedURL != "" {
+		if cmd.dmfrFile != "" || cmd.jobsFile != "" {
+			return errors.New("the --feed-url flag cannot be used together with --dmfr or --jobs-file")
+		}
+		if len(args) != 1 {
+			return errors.New("you must specify exactly one feed_id when using --feed-url")
+		}
 	}
 	for _, feedID := range args {
 		cmd.FetchJobs = append(cmd.FetchJobs, FetchJob{FeedID: feedID, FeedURL: cmd.Options.FeedURL})
@@ -234,9 +241,9 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 
 	///////////////
 	// Here we go
-	log.For(ctx).Info().Msgf("Fetching %d feeds", len(cmd.FetchJobs))
-	jobs := make(chan fetchJob, len(cmd.FetchJobs))
-	results := make(chan FetchCommandResult, len(cmd.FetchJobs))
+	log.For(ctx).Info().Msgf("Fetching %d feeds", len(toFetch))
+	jobs := make(chan fetchJob, len(toFetch))
+	results := make(chan FetchCommandResult, len(toFetch))
 	for _, opts := range toFetch {
 		jobs <- opts
 	}

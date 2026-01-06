@@ -182,7 +182,9 @@ func (cmd *ImportCommand) Run(ctx context.Context) error {
 			From("feed_versions").
 			Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 			Where("current_feeds.deleted_at IS NULL").
-			Where("feed_versions.deleted_at IS NULL")
+			Where("feed_versions.deleted_at IS NULL").
+			Where("feed_versions.sha1 <> ''").
+			Where("feed_versions.file <> ''")
 		if len(cmd.FeedIDs) > 0 {
 			q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})
 		}
