@@ -131,20 +131,22 @@ func TestE2E(t *testing.T) {
 
 			// Fetch
 			feedName := tc.name
-			fetch := FetchCommand{
+			fetchCmd := FetchCommand{
 				CreateFeed: true,
-				FeedIDs:    []string{feedName},
-				Workers:    1,
-				Adapter:    atx,
+				FetchJobs: []FetchJob{{
+					FeedID:  feedName,
+					FeedURL: ts.URL + "/" + tc.fn,
+				}},
+				Workers: 1,
+				Adapter: atx,
 				Options: fetch.StaticFetchOptions{
 					Options: fetch.Options{
-						FeedURL:   ts.URL + "/" + tc.fn,
 						Storage:   tmpdir,
 						FetchedAt: time.Now(),
 					},
 				},
 			}
-			if err := fetch.Run(ctx); err != nil {
+			if err := fetchCmd.Run(ctx); err != nil {
 				t.Fatal(err)
 			}
 

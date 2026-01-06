@@ -142,3 +142,81 @@ func TestFetchCommand(t *testing.T) {
 		})
 	}
 }
+
+func TestFetchCommand_FetchJobs(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := os.ReadFile(testpath.RelPath(filepath.Join("testdata", r.URL.Path)))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+
+	ctx := context.TODO()
+	t.Run("multiple feeds via FetchJobs", func(t *testing.T) {
+		adapter := testdb.TempSqliteAdapter()
+
+		// Create feed records first (feeds must exist)
+		f1 := dmfr.Feed{FeedID: "f-job1", Spec: "gtfs"}
+		f2 := dmfr.Feed{FeedID: "f-job2", Spec: "gtfs"}
+		testdb.ShouldInsert(t, adapter, &f1)
+		testdb.ShouldInsert(t, adapter, &f2)
+
+		c := FetchCommand{}
+		c.Adapter = adapter
+		tmpDir := t.TempDir()
+		c.Options.Storage = tmpDir
+		// Provide URLs via FetchJobs instead of FeedIDs or database lookup
+		c.FetchJobs = []FetchJob{
+			{FeedID: "f-job1", FeedURL: fmt.Sprintf("%s/gtfs-examples/example.zip", ts.URL)},
+			{FeedID: "f-job2", FeedURL: fmt.Sprintf("%s/gtfs-examples/example.zip", ts.URL)},
+		}
+		if err := c.Run(ctx); err != nil {
+			t.Fatal(err)
+		}
+
+		// Both jobs processed, but same SHA1 means only 1 feed version created
+		// (second one is found as existing)
+		fvs := []dmfr.FeedVersion{}
+		testdb.ShouldSelect(t, adapter, &fvs, "SELECT * FROM feed_versions")
+		if len(fvs) != 1 {
+			t.Errorf("got %d feed versions, expect 1", len(fvs))
+		}
+		if len(c.Results) != 2 {
+			t.Errorf("got %d results, expect 2", len(c.Results))
+		}
+	})
+
+	t.Run("FetchJobs with CreateFeed", func(t *testing.T) {
+		adapter := testdb.TempSqliteAdapter()
+
+		c := FetchCommand{}
+		c.Adapter = adapter
+		c.CreateFeed = true
+		tmpDir := t.TempDir()
+		c.Options.Storage = tmpDir
+		// Provide a feed that doesn't exist yet
+		c.FetchJobs = []FetchJob{
+			{FeedID: "f-new-feed", FeedURL: fmt.Sprintf("%s/gtfs-examples/example.zip", ts.URL)},
+		}
+		if err := c.Run(ctx); err != nil {
+			t.Fatal(err)
+		}
+
+		// Verify feed was created
+		feeds := []dmfr.Feed{}
+		testdb.ShouldSelect(t, adapter, &feeds, "SELECT * FROM current_feeds WHERE onestop_id = 'f-new-feed'")
+		if len(feeds) != 1 {
+			t.Errorf("got %d feeds, expect 1", len(feeds))
+		}
+
+		// Verify feed version was created
+		fvs := []dmfr.FeedVersion{}
+		testdb.ShouldSelect(t, adapter, &fvs, "SELECT * FROM feed_versions")
+		if len(fvs) != 1 {
+			t.Errorf("got %d feed versions, expect 1", len(fvs))
+		}
+	})
+}
