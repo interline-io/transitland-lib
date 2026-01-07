@@ -31,7 +31,7 @@ type ParentStationLocationTypeCheck struct {
 	locationTypes map[string]int
 }
 
-func (e *ParentStationLocationTypeCheck) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (e *ParentStationLocationTypeCheck) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	if e.locationTypes == nil {
 		e.locationTypes = map[string]int{}
 	}

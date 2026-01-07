@@ -76,7 +76,7 @@ func newRedateFilterFromJson(args string) (*RedateFilter, error) {
 	return NewRedateFilter(opts.SourceDate.Val, opts.TargetDate.Val, int(a), int(b), opts.DOWAlign.Val)
 }
 
-func (tf *RedateFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (tf *RedateFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	ctx := context.TODO()
 	switch v := ent.(type) {
 	case *gtfs.Trip:
