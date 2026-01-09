@@ -206,6 +206,10 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuilder {
 	q = q.Join("feed_states fsp on fsp.feed_id = current_feeds.id").
 		Where(sq.Eq{"current_feeds.deleted_at": nil})
+	// Global admins bypass permission filtering
+	if permFilter != nil && permFilter.IsGlobalAdmin {
+		return q
+	}
 	sqOr := sq.Or{}
 	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
 	sqOr = append(sqOr, In("fsp.feed_id", permFilter.GetAllowedFeeds()))
@@ -216,6 +220,10 @@ func pfJoinCheckFv(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBu
 	q = q.Join("feed_states fsp on fsp.feed_id = feed_versions.feed_id").
 		Where(sq.Eq{"current_feeds.deleted_at": nil}).
 		Where(sq.Eq{"feed_versions.deleted_at": nil})
+	// Global admins bypass permission filtering
+	if permFilter != nil && permFilter.IsGlobalAdmin {
+		return q
+	}
 	sqOr := sq.Or{}
 	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
 	sqOr = append(sqOr, In("feed_versions.feed_id", permFilter.GetAllowedFeeds()))

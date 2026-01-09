@@ -4,12 +4,14 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 )
 
 type PermFilter struct {
 	AllowedFeeds        []int
 	AllowedFeedVersions []int
+	IsGlobalAdmin       bool
 }
 
 func (pf *PermFilter) GetAllowedFeeds() []int {
@@ -73,7 +75,9 @@ func checkActive(ctx context.Context, checker Checker) (*PermFilter, error) {
 		if a, err := c.CheckGlobalAdmin(ctx); err != nil {
 			return nil, err
 		} else if a {
-			return nil, nil
+			log.For(ctx).Trace().Msg("checkActive: global admin, bypassing permission filter")
+			active.IsGlobalAdmin = true
+			return active, nil
 		}
 	}
 
