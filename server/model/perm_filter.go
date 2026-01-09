@@ -8,8 +8,16 @@ import (
 )
 
 type PermFilter struct {
+	GlobalAdmin         bool
 	AllowedFeeds        []int
 	AllowedFeedVersions []int
+}
+
+func (pf *PermFilter) IsGlobalAdmin() bool {
+	if pf == nil {
+		return false
+	}
+	return pf.GlobalAdmin
 }
 
 func (pf *PermFilter) GetAllowedFeeds() []int {
@@ -73,7 +81,7 @@ func checkActive(ctx context.Context, checker Checker) (*PermFilter, error) {
 		if a, err := c.CheckGlobalAdmin(ctx); err != nil {
 			return nil, err
 		} else if a {
-			return nil, nil
+			active.GlobalAdmin = true
 		}
 	}
 
