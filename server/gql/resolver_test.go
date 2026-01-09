@@ -80,7 +80,7 @@ func newTestClientWithOpts(t testing.TB, opts testconfig.Options) (*client.Clien
 	}
 	cfg := testconfig.Config(t, opts)
 	srv, _ := NewServer()
-	graphqlServer := model.AddConfigAndPerms(cfg, srv)
+	graphqlServer := model.AddConfigAndPerms(cfg, nil, srv)
 	srvMiddleware := usercheck.NewUserDefaultMiddleware(func() authn.User {
 		return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
 	})

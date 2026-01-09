@@ -58,6 +58,6 @@ func AddConfig(cfg Config) func(http.Handler) http.Handler {
 	}
 }
 
-func AddConfigAndPerms(cfg Config, next http.Handler) http.Handler {
-	return AddPerms(cfg.Checker)(AddConfig(cfg)(next))
+func AddConfigAndPerms(cfg Config, permFilterCache *PermFilterCache, next http.Handler) http.Handler {
+	return AddPerms(cfg.Checker, permFilterCache)(AddConfig(cfg)(next))
 }

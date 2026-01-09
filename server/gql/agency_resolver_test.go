@@ -271,7 +271,7 @@ func TestAgencyResolver_Authz(t *testing.T) {
 	}
 
 	// Add config and perms middleware
-	srv = model.AddConfigAndPerms(cfg, srv)
+	srv = model.AddConfigAndPerms(cfg, nil, srv)
 
 	testcases := []testcase{
 		{

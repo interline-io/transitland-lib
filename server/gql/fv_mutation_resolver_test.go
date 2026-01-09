@@ -27,7 +27,7 @@ func TestFeedVersionFetchResolver(t *testing.T) {
 	t.Run("found sha1", func(t *testing.T) {
 		testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 			srv, _ := NewServer()
-			srv = model.AddConfigAndPerms(cfg, srv)
+			srv = model.AddConfigAndPerms(cfg, nil, srv)
 			srv = usercheck.AdminDefaultMiddleware("test")(srv) // Run all requests as admin
 			// Run all requests as admin
 			c := client.New(srv)
@@ -147,7 +147,7 @@ func TestValidateGtfsResolver(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 				srv, _ := NewServer()
-				srv = model.AddConfigAndPerms(cfg, srv)
+				srv = model.AddConfigAndPerms(cfg, nil, srv)
 				srv = usercheck.UserDefaultMiddleware("test")(srv) // Run all requests as user
 				c := client.New(srv)
 				queryTestcase(t, c, tc)

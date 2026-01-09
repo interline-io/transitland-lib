@@ -53,8 +53,8 @@ func testHandlersWithOptions(t testing.TB, opts testconfig.Options) (http.Handle
 	if err != nil {
 		t.Fatal(err)
 	}
-	return model.AddConfigAndPerms(cfg, graphqlHandler),
-		model.AddConfigAndPerms(cfg, restHandler),
+	return model.AddConfigAndPerms(cfg, nil, graphqlHandler),
+		model.AddConfigAndPerms(cfg, nil, restHandler),
 		cfg
 }
 

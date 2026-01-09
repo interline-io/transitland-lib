@@ -195,8 +195,9 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		return ""
 	}))
 
-	// PermFilter context
-	root.Use(model.AddPerms(cfg.Checker))
+	// PermFilter context with caching
+	permFilterCache := model.NewPermFilterCache(nil, model.DefaultPermFilterCacheTTL)
+	root.Use(model.AddPerms(cfg.Checker, permFilterCache))
 
 	// Profiling
 	root.HandleFunc("/debug/pprof/", pprof.Index)
