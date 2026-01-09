@@ -16,6 +16,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
+	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/meters"
@@ -52,6 +53,7 @@ type ServerCommand struct {
 	LoadAdmins              bool
 	ValidateLargeFiles      bool
 	UseMaterialized         bool
+	DisableAuth             bool
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
 	SecretsFile             string
@@ -87,6 +89,7 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.LoaderStopTimeBatchSize, "loader-stop-time-batch-size", 1, "GraphQL Loader batch size for StopTimes")
 	fl.Float64Var(&cmd.MaxRadius, "max-radius", 100_000, "Maximum radius for nearby stops")
 	fl.BoolVar(&cmd.UseMaterialized, "use-materialized", false, "Use materialized views for active entities")
+	fl.BoolVar(&cmd.DisableAuth, "disable-auth", false, "Disable feed authorization checks (treat all feeds as public)")
 }
 
 func (cmd *ServerCommand) Parse(args []string) error {
@@ -170,6 +173,11 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		MaxRadius:               cmd.MaxRadius,
 	}
 
+	// Disable auth if requested
+	if cmd.DisableAuth {
+		cfg.Checker = &globalAdminChecker{}
+	}
+
 	// Setup router
 	root := chi.NewRouter()
 	root.Use(cors.Handler(cors.Options{
@@ -243,4 +251,14 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		ReadTimeout:  2 * timeOut,
 	}
 	return srv.ListenAndServe()
+}
+
+// globalAdminChecker is a simple checker that always returns true for CheckGlobalAdmin,
+// effectively disabling all feed authorization checks.
+type globalAdminChecker struct {
+	authz.UnimplementedCheckerServer
+}
+
+func (c *globalAdminChecker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
+	return true, nil
 }
