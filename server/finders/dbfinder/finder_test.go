@@ -2,10 +2,13 @@ package dbfinder
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/tldb/querylogger"
+	sq "github.com/irees/squirrel"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -135,4 +138,76 @@ func Test_az09(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_pfJoinCheck_GlobalAdmin(t *testing.T) {
+	baseQuery := sq.StatementBuilder.Select("*").From("current_feeds")
+
+	t.Run("nil permFilter applies restrictions", func(t *testing.T) {
+		// nil permFilter should still apply the public filter (fail closed)
+		q := pfJoinCheck(baseQuery, nil)
+		sql, _, _ := q.ToSql()
+		// Should contain the public check
+		assert.Contains(t, sql, "fsp.public = true")
+		// Should contain empty IN clause (1=0 equivalent)
+		assert.Contains(t, sql, "fsp.feed_id")
+	})
+
+	t.Run("empty permFilter applies restrictions", func(t *testing.T) {
+		// Empty permFilter (no allowed feeds) should restrict to public only
+		pf := &model.PermFilter{}
+		q := pfJoinCheck(baseQuery, pf)
+		sql, _, _ := q.ToSql()
+		assert.Contains(t, sql, "fsp.public = true")
+	})
+
+	t.Run("permFilter with allowed feeds includes them", func(t *testing.T) {
+		pf := &model.PermFilter{AllowedFeeds: []int{1, 2, 3}}
+		q := pfJoinCheck(baseQuery, pf)
+		sql, args, _ := q.ToSql()
+		assert.Contains(t, sql, "fsp.public = true")
+		assert.Contains(t, sql, "fsp.feed_id = ANY")
+		// Check that feed IDs are in args
+		found := false
+		for _, arg := range args {
+			if ids, ok := arg.([]int); ok && len(ids) == 3 {
+				found = true
+			}
+		}
+		assert.True(t, found, "expected feed IDs in query args")
+	})
+
+	t.Run("global admin bypasses permission filter", func(t *testing.T) {
+		// IsGlobalAdmin should bypass the permission filter entirely
+		pf := &model.PermFilter{IsGlobalAdmin: true}
+		q := pfJoinCheck(baseQuery, pf)
+		sql, _, _ := q.ToSql()
+		// Should still join feed_states (for deleted_at check)
+		assert.Contains(t, sql, "feed_states fsp")
+		// Should NOT contain the public/permission OR clause
+		assert.False(t, strings.Contains(sql, "fsp.public = true"), "global admin should not have public filter")
+	})
+}
+
+func Test_pfJoinCheckFv_GlobalAdmin(t *testing.T) {
+	baseQuery := sq.StatementBuilder.Select("*").From("feed_versions").Join("current_feeds on current_feeds.id = feed_versions.feed_id")
+
+	t.Run("global admin bypasses permission filter", func(t *testing.T) {
+		pf := &model.PermFilter{IsGlobalAdmin: true}
+		q := pfJoinCheckFv(baseQuery, pf)
+		sql, _, _ := q.ToSql()
+		// Should still join feed_states
+		assert.Contains(t, sql, "feed_states fsp")
+		// Should NOT contain the public/permission OR clause
+		assert.False(t, strings.Contains(sql, "fsp.public = true"), "global admin should not have public filter")
+	})
+
+	t.Run("non-admin applies restrictions", func(t *testing.T) {
+		pf := &model.PermFilter{AllowedFeeds: []int{1}, AllowedFeedVersions: []int{10}}
+		q := pfJoinCheckFv(baseQuery, pf)
+		sql, _, _ := q.ToSql()
+		assert.Contains(t, sql, "fsp.public = true")
+		assert.Contains(t, sql, "feed_versions.feed_id = ANY")
+		assert.Contains(t, sql, "feed_versions.id = ANY")
+	})
 }
