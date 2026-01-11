@@ -20,7 +20,7 @@ func (r *censusDatasetResolver) Sources(ctx context.Context, obj *model.CensusDa
 }
 
 func (r *censusDatasetResolver) Tables(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusTableFilter) ([]*model.CensusTable, error) {
-	return nil, nil
+	return LoaderFor(ctx).CensusTablesByDatasetIDs.Load(ctx, censusTableLoaderParam{DatasetID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
 func (r *censusDatasetResolver) Layers(ctx context.Context, obj *model.CensusDataset) (ret []*model.CensusLayer, err error) {

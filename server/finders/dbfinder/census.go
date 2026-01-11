@@ -267,6 +267,34 @@ func (f *Finder) CensusFieldsByTableIDs(ctx context.Context, limit *int, keys []
 	return arrangeGroup(keys, ents, func(ent *model.CensusField) int { return ent.TableID }), err
 }
 
+func (f *Finder) CensusTablesByDatasetIDs(ctx context.Context, limit *int, where *model.CensusTableFilter, keys []int) ([][]*model.CensusTable, error) {
+	q := censusTableSelect(limit, where)
+	var ents []*model.CensusTable
+	err := dbutil.Select(ctx,
+		f.db,
+		lateralWrap(
+			q,
+			"tl_census_datasets",
+			"id",
+			"tl_census_tables",
+			"dataset_id",
+			keys,
+		),
+		&ents,
+	)
+	return arrangeGroup(keys, ents, func(ent *model.CensusTable) int { return ent.DatasetID }), err
+}
+
+// FindCensusValues finds census values by geoid pattern and optional filters
+func (f *Finder) FindCensusValues(ctx context.Context, limit *int, after *model.Cursor, where *model.CensusValueFilter) ([]*model.CensusValue, error) {
+	var ents []*model.CensusValue
+	q := censusValueFilterSelect(limit, where)
+	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
+		return nil, logErr(ctx, err)
+	}
+	return ents, nil
+}
+
 func censusDatasetSelect(_ *int, _ *model.Cursor, _ []int, where *model.CensusDatasetFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select("*").
@@ -503,6 +531,49 @@ func censusValueSelect(limit *int, datasetName string, tnames []string, geoids [
 		OrderBy("tlcv.table_id")
 	if datasetName != "" {
 		q = q.Where(sq.Eq{"tlcd.name": datasetName})
+	}
+	return q
+}
+
+func censusTableSelect(limit *int, where *model.CensusTableFilter) sq.SelectBuilder {
+	q := quickSelectOrder("tl_census_tables", limit, nil, nil, "id")
+	if where != nil {
+		if where.Search != nil {
+			q = q.Where(sq.ILike{"table_name": fmt.Sprintf("%%%s%%", *where.Search)})
+		}
+	}
+	return q
+}
+
+func censusValueFilterSelect(limit *int, where *model.CensusValueFilter) sq.SelectBuilder {
+	q := sq.StatementBuilder.
+		Select(
+			"tlcv.table_values as values",
+			"tlcv.geoid",
+			"tlcv.table_id",
+			"tlcs.name as source_name",
+			"tlcd.name as dataset_name",
+		).
+		From("tl_census_values tlcv").
+		Limit(finderCheckLimit(limit)).
+		Join("tl_census_tables tlct ON tlct.id = tlcv.table_id").
+		Join("tl_census_sources tlcs on tlcs.id = tlcv.source_id").
+		Join("tl_census_datasets tlcd on tlcd.id = tlct.dataset_id").
+		OrderBy("tlcv.geoid", "tlcv.table_id")
+
+	if where != nil {
+		if where.Dataset != nil {
+			q = q.Where(sq.Eq{"tlcd.name": *where.Dataset})
+		}
+		if where.Table != nil {
+			q = q.Where(sq.Eq{"tlct.table_name": *where.Table})
+		}
+		if where.Geoid != nil {
+			q = q.Where(sq.Eq{"tlcv.geoid": *where.Geoid})
+		}
+		if where.GeoidPrefix != nil {
+			q = q.Where(sq.Like{"tlcv.geoid": fmt.Sprintf("%s%%", *where.GeoidPrefix)})
+		}
 	}
 	return q
 }

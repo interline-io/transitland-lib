@@ -345,6 +345,18 @@ type CensusValue struct {
 	TableID     int    `json:"-"`
 }
 
+// Search options for census values
+type CensusValueFilter struct {
+	// Filter by dataset name
+	Dataset *string `json:"dataset,omitempty"`
+	// Filter by table name
+	Table *string `json:"table,omitempty"`
+	// Filter by exact geoid
+	Geoid *string `json:"geoid,omitempty"`
+	// Filter by geoid prefix (e.g. 'ntd:00001' to find all values for NTD agency 00001)
+	GeoidPrefix *string `json:"geoid_prefix,omitempty"`
+}
+
 type DirectionRequest struct {
 	To       *WaypointInput `json:"to"`
 	From     *WaypointInput `json:"from"`

@@ -94,6 +94,8 @@ type Query {
   me: Me!
   """Census datasets"""
   census_datasets(limit: Int, after: Int, ids: [Int!], where: CensusDatasetFilter): [CensusDataset!]
+  """Census values - query by geoid, dataset, or table"""
+  census_values(limit: Int, where: CensusValueFilter): [CensusValue!]!
 }
 
 # Root mutation
@@ -2194,6 +2196,18 @@ input StopBuffer {
 
 input CensusTableFilter {
   search: String
+}
+
+"""Search options for census values"""
+input CensusValueFilter {
+  "Filter by dataset name"
+  dataset: String
+  "Filter by table name"
+  table: String
+  "Filter by exact geoid"
+  geoid: String
+  "Filter by geoid prefix (e.g. 'ntd:00001' to find all values for NTD agency 00001)"
+  geoid_prefix: String
 }
 
 input CensusSourceFilter {

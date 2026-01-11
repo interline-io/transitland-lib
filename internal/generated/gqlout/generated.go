@@ -880,6 +880,7 @@ type ComplexityRoot struct {
 		Agencies       func(childComplexity int, limit *int, after *int, ids []int, where *model.AgencyFilter) int
 		Bikes          func(childComplexity int, limit *int, where *model.GbfsBikeRequest) int
 		CensusDatasets func(childComplexity int, limit *int, after *int, ids []int, where *model.CensusDatasetFilter) int
+		CensusValues   func(childComplexity int, limit *int, where *model.CensusValueFilter) int
 		Directions     func(childComplexity int, where model.DirectionRequest) int
 		Docks          func(childComplexity int, limit *int, where *model.GbfsDockRequest) int
 		FeedVersions   func(childComplexity int, limit *int, after *int, ids []int, where *model.FeedVersionFilter) int
@@ -1420,6 +1421,7 @@ type QueryResolver interface {
 	Docks(ctx context.Context, limit *int, where *model.GbfsDockRequest) ([]*model.GbfsStationInformation, error)
 	Me(ctx context.Context) (*model.Me, error)
 	CensusDatasets(ctx context.Context, limit *int, after *int, ids []int, where *model.CensusDatasetFilter) ([]*model.CensusDataset, error)
+	CensusValues(ctx context.Context, limit *int, where *model.CensusValueFilter) ([]*model.CensusValue, error)
 }
 type RouteResolver interface {
 	Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error)
@@ -5834,6 +5836,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.CensusDatasets(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.CensusDatasetFilter)), true
 
+	case "Query.census_values":
+		if e.complexity.Query.CensusValues == nil {
+			break
+		}
+
+		args, err := ec.field_Query_census_values_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.CensusValues(childComplexity, args["limit"].(*int), args["where"].(*model.CensusValueFilter)), true
+
 	case "Query.directions":
 		if e.complexity.Query.Directions == nil {
 			break
@@ -8108,6 +8122,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCensusSourceFilter,
 		ec.unmarshalInputCensusSourceGeographyFilter,
 		ec.unmarshalInputCensusTableFilter,
+		ec.unmarshalInputCensusValueFilter,
 		ec.unmarshalInputDirectionRequest,
 		ec.unmarshalInputFeature,
 		ec.unmarshalInputFeedFetchFilter,
@@ -8747,6 +8762,8 @@ type Query {
   me: Me!
   """Census datasets"""
   census_datasets(limit: Int, after: Int, ids: [Int!], where: CensusDatasetFilter): [CensusDataset!]
+  """Census values - query by geoid, dataset, or table"""
+  census_values(limit: Int, where: CensusValueFilter): [CensusValue!]!
 }
 
 # Root mutation
@@ -10849,6 +10866,18 @@ input CensusTableFilter {
   search: String
 }
 
+"""Search options for census values"""
+input CensusValueFilter {
+  "Filter by dataset name"
+  dataset: String
+  "Filter by table name"
+  table: String
+  "Filter by exact geoid"
+  geoid: String
+  "Filter by geoid prefix (e.g. 'ntd:00001' to find all values for NTD agency 00001)"
+  geoid_prefix: String
+}
+
 input CensusSourceFilter {
   name: String
   search: String
@@ -11839,6 +11868,22 @@ func (ec *executionContext) field_Query_census_datasets_args(ctx context.Context
 		return nil, err
 	}
 	args["where"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_census_values_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOCensusValueFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -42033,6 +42078,73 @@ func (ec *executionContext) fieldContext_Query_census_datasets(ctx context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_census_values(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_census_values(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().CensusValues(rctx, fc.Args["limit"].(*int), fc.Args["where"].(*model.CensusValueFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.CensusValue)
+	fc.Result = res
+	return ec.marshalNCensusValue2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_census_values(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "dataset_name":
+				return ec.fieldContext_CensusValue_dataset_name(ctx, field)
+			case "source_name":
+				return ec.fieldContext_CensusValue_source_name(ctx, field)
+			case "table":
+				return ec.fieldContext_CensusValue_table(ctx, field)
+			case "values":
+				return ec.fieldContext_CensusValue_values(ctx, field)
+			case "geoid":
+				return ec.fieldContext_CensusValue_geoid(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CensusValue", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_census_values_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query___type(ctx, field)
 	if err != nil {
@@ -59431,6 +59543,54 @@ func (ec *executionContext) unmarshalInputCensusTableFilter(ctx context.Context,
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCensusValueFilter(ctx context.Context, obj any) (model.CensusValueFilter, error) {
+	var it model.CensusValueFilter
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"dataset", "table", "geoid", "geoid_prefix"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "dataset":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dataset"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Dataset = data
+		case "table":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("table"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Table = data
+		case "geoid":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geoid"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Geoid = data
+		case "geoid_prefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geoid_prefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GeoidPrefix = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputDirectionRequest(ctx context.Context, obj any) (model.DirectionRequest, error) {
 	var it model.DirectionRequest
 	asMap := map[string]any{}
@@ -68622,6 +68782,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "census_values":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_census_values(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -73286,6 +73468,60 @@ func (ec *executionContext) marshalNCensusValue2ᚕᚖgithubᚗcomᚋinterline�
 	return ret
 }
 
+func (ec *executionContext) marshalNCensusValue2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CensusValue) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCensusValue2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValue(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNCensusValue2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValue(ctx context.Context, sel ast.SelectionSet, v *model.CensusValue) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CensusValue(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNCounts2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCounts(ctx context.Context, v any) (tt.Counts, error) {
 	var res tt.Counts
 	err := res.UnmarshalGQL(v)
@@ -76196,6 +76432,14 @@ func (ec *executionContext) marshalOCensusValue2ᚖgithubᚗcomᚋinterlineᚑio
 		return graphql.Null
 	}
 	return ec._CensusValue(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOCensusValueFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueFilter(ctx context.Context, v any) (*model.CensusValueFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputCensusValueFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOColor2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐColor(ctx context.Context, v any) (tt.Color, error) {

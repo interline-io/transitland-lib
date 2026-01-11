@@ -126,3 +126,8 @@ func (r *queryResolver) CensusDatasets(ctx context.Context, limit *int, after *i
 	cfg := model.ForContext(ctx)
 	return cfg.Finder.FindCensusDatasets(ctx, resolverCheckLimit(limit), checkCursor(after), nil, where)
 }
+
+func (r *queryResolver) CensusValues(ctx context.Context, limit *int, where *model.CensusValueFilter) ([]*model.CensusValue, error) {
+	cfg := model.ForContext(ctx)
+	return cfg.Finder.FindCensusValues(ctx, resolverCheckLimit(limit), nil, where)
+}

@@ -40,6 +40,7 @@ type EntityFinder interface {
 	FindOperators(context.Context, *int, *Cursor, []int, *OperatorFilter) ([]*Operator, error)
 	FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter) ([]*Place, error)
 	FindCensusDatasets(context.Context, *int, *Cursor, []int, *CensusDatasetFilter) ([]*CensusDataset, error)
+	FindCensusValues(context.Context, *int, *Cursor, *CensusValueFilter) ([]*CensusValue, error)
 	RouteStopBuffer(context.Context, *int, *float64, int) ([]*RouteStopBuffer, error)
 	FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error)
 	DBX() tldb.Ext // escape hatch, for now
@@ -64,6 +65,7 @@ type EntityLoader interface {
 	CensusSourcesByIDs(context.Context, []int) ([]*CensusSource, []error)
 	CensusSourceLayersBySourceIDs(context.Context, []int) ([][]*CensusLayer, []error)
 	CensusSourcesByDatasetIDs(context.Context, *int, *CensusSourceFilter, []int) ([][]*CensusSource, error)
+	CensusTablesByDatasetIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error)
 	CensusTableByIDs(context.Context, []int) ([]*CensusTable, []error)
 	CensusValuesByGeographyIDs(context.Context, *int, string, []string, []string) ([][]*CensusValue, error)
 	FeedFetchesByFeedIDs(context.Context, *int, *FeedFetchFilter, []int) ([][]*FeedFetch, error)
