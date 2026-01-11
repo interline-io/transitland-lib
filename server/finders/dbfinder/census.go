@@ -285,10 +285,12 @@ func (f *Finder) CensusTablesByDatasetIDs(ctx context.Context, limit *int, where
 	return arrangeGroup(keys, ents, func(ent *model.CensusTable) int { return ent.DatasetID }), err
 }
 
-// FindCensusValues finds census values by geoid pattern and optional filters
-func (f *Finder) FindCensusValues(ctx context.Context, limit *int, after *model.Cursor, where *model.CensusValueFilter) ([]*model.CensusValue, error) {
+// FindCensusValues finds census values by geoid pattern and optional filters.
+// Supports Relay-style cursor pagination for large result sets (e.g., querying all NTD agencies).
+// Cursor encodes composite key (geoid, table_id) to enable proper pagination.
+func (f *Finder) FindCensusValues(ctx context.Context, limit *int, after model.CensusCursor, where *model.CensusValueFilter) ([]*model.CensusValue, error) {
 	var ents []*model.CensusValue
-	q := censusValueFilterSelect(limit, where)
+	q := censusValueFilterSelect(limit, after, where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -545,7 +547,7 @@ func censusTableSelect(limit *int, where *model.CensusTableFilter) sq.SelectBuil
 	return q
 }
 
-func censusValueFilterSelect(limit *int, where *model.CensusValueFilter) sq.SelectBuilder {
+func censusValueFilterSelect(limit *int, after model.CensusCursor, where *model.CensusValueFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select(
 			"tlcv.table_values as values",
@@ -560,6 +562,19 @@ func censusValueFilterSelect(limit *int, where *model.CensusValueFilter) sq.Sele
 		Join("tl_census_sources tlcs on tlcs.id = tlcv.source_id").
 		Join("tl_census_datasets tlcd on tlcd.id = tlct.dataset_id").
 		OrderBy("tlcv.geoid", "tlcv.table_id")
+
+	// Composite key cursor pagination using (geoid, table_id)
+	// Implements: WHERE (geoid, table_id) > (last_geoid, last_table_id)
+	// SQL: WHERE geoid > last_geoid OR (geoid = last_geoid AND table_id > last_table_id)
+	if after.Valid {
+		q = q.Where(sq.Or{
+			sq.Gt{"tlcv.geoid": after.Geoid},
+			sq.And{
+				sq.Eq{"tlcv.geoid": after.Geoid},
+				sq.Gt{"tlcv.table_id": after.TableID},
+			},
+		})
+	}
 
 	if where != nil {
 		if where.Dataset != nil {

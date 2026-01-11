@@ -94,8 +94,8 @@ type Query {
   me: Me!
   """Census datasets"""
   census_datasets(limit: Int, after: Int, ids: [Int!], where: CensusDatasetFilter): [CensusDataset!]
-  """Census values - query by geoid, dataset, or table"""
-  census_values(limit: Int, where: CensusValueFilter): [CensusValue!]!
+  """Census values - query by geoid, dataset, or table. Supports cursor-based pagination for large result sets."""
+  census_values(first: Int, after: String, where: CensusValueFilter): CensusValueConnection!
 }
 
 # Root mutation
@@ -1372,6 +1372,26 @@ type CensusValue {
   values: Map!
   "GEOID of associated census geography"
   geoid: String!
+}
+
+"""Relay connection for census values"""
+type CensusValueConnection {
+  edges: [CensusValueEdge!]!
+  pageInfo: PageInfo!
+}
+
+"""Edge in census values connection"""
+type CensusValueEdge {
+  node: CensusValue!
+  cursor: String!
+}
+
+"""Pagination information"""
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
 }
 
 """Census table metadata"""
