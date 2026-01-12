@@ -94,3 +94,13 @@ func checkActive(ctx context.Context, checker Checker) (*PermFilter, error) {
 	// fmt.Println("active allowed feeds:", active.AllowedFeeds, "fvs:", active.AllowedFeedVersions)
 	return active, nil
 }
+
+// WithPermFilter stores a PermFilter directly in context.
+// Use this when you need to set permissions without going through a Checker,
+// such as when populating AllowedFeeds from an external source like gatekeeper.
+func WithPermFilter(ctx context.Context, pf *PermFilter) context.Context {
+	if pf == nil {
+		pf = &PermFilter{}
+	}
+	return context.WithValue(ctx, pfCtxKey, pf)
+}
