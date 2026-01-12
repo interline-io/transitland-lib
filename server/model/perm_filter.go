@@ -38,13 +38,22 @@ func PermsForContext(ctx context.Context) *PermFilter {
 }
 
 func WithPerms(ctx context.Context, checker Checker) context.Context {
-	pf, err := checkActive(ctx, checker)
+	checkerPf, err := checkActive(ctx, checker)
 	if err != nil {
 		panic(err)
 	}
-	//	log.For(ctx).Trace().Msgf("WithPerms: %#v", pf)
-	r := context.WithValue(ctx, pfCtxKey, pf)
-	return r
+	// Check if there's an existing PermFilter in context (e.g., set via WithPermFilter)
+	// If so, merge the checker results into it rather than replacing the pointer
+	if existing, ok := ctx.Value(pfCtxKey).(*PermFilter); ok && existing != nil {
+		if checkerPf != nil {
+			existing.AllowedFeeds = append(existing.AllowedFeeds, checkerPf.AllowedFeeds...)
+			existing.AllowedFeedVersions = append(existing.AllowedFeedVersions, checkerPf.AllowedFeedVersions...)
+		}
+		// Keep existing context as-is since we modified the existing PermFilter in place
+		return ctx
+	}
+	// No existing PermFilter, set the new one
+	return context.WithValue(ctx, pfCtxKey, checkerPf)
 }
 
 func AddPerms(checker Checker) func(http.Handler) http.Handler {
