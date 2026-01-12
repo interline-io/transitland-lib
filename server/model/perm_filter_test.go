@@ -355,6 +355,24 @@ func TestWithPerms(t *testing.T) {
 			t.Errorf("expected feeds [1, 2], got %v", pf.AllowedFeeds)
 		}
 	})
+
+	t.Run("existing admin + non-admin checker preserves admin", func(t *testing.T) {
+		ctx := context.Background()
+		existing := &PermFilter{IsGlobalAdmin: true}
+		ctx = WithPermFilter(ctx, existing)
+
+		checker := &mockChecker{feeds: []int{1, 2}} // non-admin checker
+		ctx = WithPerms(ctx, checker)
+
+		pf := PermsForContext(ctx)
+		if !pf.IsGlobalAdmin {
+			t.Error("expected IsGlobalAdmin to remain true after merge with non-admin checker")
+		}
+		// Should also have the feeds from checker
+		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2}) {
+			t.Errorf("expected feeds [1, 2], got %v", pf.AllowedFeeds)
+		}
+	})
 }
 
 func TestWithPerms_ThreadSafety(t *testing.T) {
