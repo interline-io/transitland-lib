@@ -285,12 +285,12 @@ func (f *Finder) CensusTablesByDatasetIDs(ctx context.Context, limit *int, where
 	return arrangeGroup(keys, ents, func(ent *model.CensusTable) int { return ent.DatasetID }), err
 }
 
-// FindCensusValues finds census values by geoid pattern and optional filters.
+// FindCensusValuesByDatasetID finds census values by dataset ID with optional filters.
 // Supports Relay-style cursor pagination for large result sets (e.g., querying all NTD agencies).
 // Cursor encodes composite key (geoid, table_id) to enable proper pagination.
-func (f *Finder) FindCensusValues(ctx context.Context, limit *int, after model.CensusCursor, where *model.CensusValueFilter) ([]*model.CensusValue, error) {
+func (f *Finder) FindCensusValuesByDatasetID(ctx context.Context, limit *int, after model.CensusCursor, datasetID int, where *model.CensusDatasetValueFilter) ([]*model.CensusValue, error) {
 	var ents []*model.CensusValue
-	q := censusValueFilterSelect(limit, after, where)
+	q := censusValueFilterSelect(limit, after, datasetID, where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -547,7 +547,7 @@ func censusTableSelect(limit *int, where *model.CensusTableFilter) sq.SelectBuil
 	return q
 }
 
-func censusValueFilterSelect(limit *int, after model.CensusCursor, where *model.CensusValueFilter) sq.SelectBuilder {
+func censusValueFilterSelect(limit *int, after model.CensusCursor, datasetID int, where *model.CensusDatasetValueFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select(
 			"tlcv.table_values as values",
@@ -561,6 +561,7 @@ func censusValueFilterSelect(limit *int, after model.CensusCursor, where *model.
 		Join("tl_census_tables tlct ON tlct.id = tlcv.table_id").
 		Join("tl_census_sources tlcs on tlcs.id = tlcv.source_id").
 		Join("tl_census_datasets tlcd on tlcd.id = tlct.dataset_id").
+		Where(sq.Eq{"tlcd.id": datasetID}).
 		OrderBy("tlcv.geoid", "tlcv.table_id")
 
 	// Composite key cursor pagination using (geoid, table_id)
@@ -577,9 +578,6 @@ func censusValueFilterSelect(limit *int, after model.CensusCursor, where *model.
 	}
 
 	if where != nil {
-		if where.Dataset != nil {
-			q = q.Where(sq.Eq{"tlcd.name": *where.Dataset})
-		}
 		if where.Table != nil {
 			q = q.Where(sq.Eq{"tlct.table_name": *where.Table})
 		}

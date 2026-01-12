@@ -94,8 +94,6 @@ type Query {
   me: Me!
   """Census datasets"""
   census_datasets(limit: Int, after: Int, ids: [Int!], where: CensusDatasetFilter): [CensusDataset!]
-  """Census values - query by geoid, dataset, or table. Supports cursor-based pagination for large result sets."""
-  census_values(first: Int, after: String, where: CensusValueFilter): CensusValueConnection!
 }
 
 # Root mutation
@@ -1285,7 +1283,10 @@ type CensusDataset {
   geographies(limit: Int, where: CensusDatasetGeographyFilter): [CensusGeography!]
   # Census tables in this dataset
   tables(limit: Int, where: CensusTableFilter): [CensusTable!]
+  # Layers in this dataset
   layers: [CensusLayer!]
+  """Census values in this dataset with cursor pagination. Query by geoid, geoid_prefix, or table."""
+  values(first: Int, after: String, where: CensusDatasetValueFilter): CensusValueConnection
 }
 
 type CensusSource {
@@ -2218,10 +2219,8 @@ input CensusTableFilter {
   search: String
 }
 
-"""Search options for census values"""
-input CensusValueFilter {
-  "Filter by dataset name"
-  dataset: String
+"""Search options for census values within a dataset"""
+input CensusDatasetValueFilter {
   "Filter by table name"
   table: String
   "Filter by exact geoid"

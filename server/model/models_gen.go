@@ -148,6 +148,8 @@ type CensusDataset struct {
 	Geographies []*CensusGeography `json:"geographies,omitempty"`
 	Tables      []*CensusTable     `json:"tables,omitempty"`
 	Layers      []*CensusLayer     `json:"layers,omitempty"`
+	// Census values in this dataset with cursor pagination. Query by geoid, geoid_prefix, or table.
+	Values *CensusValueConnection `json:"values,omitempty"`
 }
 
 // Search options for census datasets
@@ -193,6 +195,16 @@ type CensusDatasetGeographyLocationFilter struct {
 	Focus *FocusPoint `json:"focus,omitempty"`
 	// Search based on a buffer around these stop ids
 	StopBuffer *StopBuffer `json:"stop_buffer,omitempty"`
+}
+
+// Search options for census values within a dataset
+type CensusDatasetValueFilter struct {
+	// Filter by table name
+	Table *string `json:"table,omitempty"`
+	// Filter by exact geoid
+	Geoid *string `json:"geoid,omitempty"`
+	// Filter by geoid prefix (e.g. 'ntd:00001' to find all values for NTD agency 00001)
+	GeoidPrefix *string `json:"geoid_prefix,omitempty"`
 }
 
 type CensusField struct {
@@ -343,18 +355,6 @@ type CensusValue struct {
 	Geoid       string `json:"geoid"`
 	GeographyID int    `json:"-"`
 	TableID     int    `json:"-"`
-}
-
-// Search options for census values
-type CensusValueFilter struct {
-	// Filter by dataset name
-	Dataset *string `json:"dataset,omitempty"`
-	// Filter by table name
-	Table *string `json:"table,omitempty"`
-	// Filter by exact geoid
-	Geoid *string `json:"geoid,omitempty"`
-	// Filter by geoid prefix (e.g. 'ntd:00001' to find all values for NTD agency 00001)
-	GeoidPrefix *string `json:"geoid_prefix,omitempty"`
 }
 
 type DirectionRequest struct {
