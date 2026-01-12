@@ -86,9 +86,19 @@ func WithPerms(ctx context.Context, checker Checker) context.Context {
 	// If there's an existing filter, merge with checker results into a new PermFilter
 	// We create a new instance to avoid mutating the original (thread safety)
 	if hasExisting && existing != nil {
+		// Copy slices explicitly to avoid append mutating the original's underlying array
+		// (append can write to the original if it has spare capacity)
+		mergedFeeds := make([]int, 0, len(existing.AllowedFeeds)+len(checkerPf.AllowedFeeds))
+		mergedFeeds = append(mergedFeeds, existing.AllowedFeeds...)
+		mergedFeeds = append(mergedFeeds, checkerPf.AllowedFeeds...)
+
+		mergedFvs := make([]int, 0, len(existing.AllowedFeedVersions)+len(checkerPf.AllowedFeedVersions))
+		mergedFvs = append(mergedFvs, existing.AllowedFeedVersions...)
+		mergedFvs = append(mergedFvs, checkerPf.AllowedFeedVersions...)
+
 		merged := &PermFilter{
-			AllowedFeeds:        dedupeInts(append(existing.AllowedFeeds, checkerPf.AllowedFeeds...)),
-			AllowedFeedVersions: dedupeInts(append(existing.AllowedFeedVersions, checkerPf.AllowedFeedVersions...)),
+			AllowedFeeds:        dedupeInts(mergedFeeds),
+			AllowedFeedVersions: dedupeInts(mergedFvs),
 			IsGlobalAdmin:       existing.IsGlobalAdmin || checkerPf.IsGlobalAdmin,
 		}
 		return context.WithValue(ctx, pfCtxKey, merged)
