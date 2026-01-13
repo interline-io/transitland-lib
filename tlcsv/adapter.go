@@ -616,20 +616,18 @@ func NewZipWriterAdapter(path string) *ZipWriterAdapter {
 // sortOrder should be "asc" for ascending or "desc" for descending.
 // Only sorts .txt files that were actually written to the adapter.
 func (adapter *ZipWriterAdapter) SortCSVFiles(sortOrder string) error {
-	// Collect filenames before closing files
+	// Collect .txt filenames and close only those files
 	var filenamesToSort []string
-	for filename := range adapter.DirAdapter.files {
+	for filename, f := range adapter.DirAdapter.files {
 		if strings.HasSuffix(filename, ".txt") {
 			filenamesToSort = append(filenamesToSort, filename)
+			// Close .txt files so we can read and rewrite them
+			if err := f.Close(); err != nil {
+				return fmt.Errorf("failed to close file %s: %w", filename, err)
+			}
+			delete(adapter.DirAdapter.files, filename)
 		}
-	}
-
-	// Close all open files first
-	for filename, f := range adapter.DirAdapter.files {
-		if err := f.Close(); err != nil {
-			return fmt.Errorf("failed to close file %s: %w", filename, err)
-		}
-		delete(adapter.DirAdapter.files, filename)
+		// Non-.txt files (like GeoJSON) remain in the map and will be handled by Close()
 	}
 
 	// Sort each CSV file that was written
@@ -690,6 +688,13 @@ func (adapter *ZipWriterAdapter) SortCSVFiles(sortOrder string) error {
 			return fmt.Errorf("failed to flush writer for %s: %w", filename, err)
 		}
 		file.Close()
+
+		// Re-open the sorted file and add it back to the files map so Close() can zip it
+		reopenedFile, err := os.Open(fullPath)
+		if err != nil {
+			return fmt.Errorf("failed to re-open sorted file %s: %w", filename, err)
+		}
+		adapter.DirAdapter.files[filename] = reopenedFile
 	}
 
 	return nil
