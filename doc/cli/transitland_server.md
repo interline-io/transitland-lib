@@ -16,6 +16,7 @@ transitland server [flags]
 
 ```
       --dburl string                      Database URL (default: $TL_DATABASE_URL)
+      --disable-auth                      Disable feed authorization checks (treat all feeds as public)
   -h, --help                              help for server
       --load-admins                       Load admin polygons from database into memory
       --loader-batch-size int             GraphQL Loader batch size (default 100)
