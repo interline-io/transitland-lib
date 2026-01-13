@@ -209,8 +209,8 @@ func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuil
 	sqOr := sq.Or{}
 	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
 	sqOr = append(sqOr, In("fsp.feed_id", permFilter.GetAllowedFeeds()))
-	if permFilter.IsGlobalAdmin() {
-		sqOr = append(sqOr, sq.Expr("true"))
+	if permFilter.GetIsGlobalAdmin() {
+		sqOr = append(sqOr, sq.Expr("1=1")) // Global admin: allow all rows
 	}
 	return q.Where(sqOr)
 }
@@ -223,8 +223,8 @@ func pfJoinCheckFv(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBu
 	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
 	sqOr = append(sqOr, In("feed_versions.feed_id", permFilter.GetAllowedFeeds()))
 	sqOr = append(sqOr, In("feed_versions.id", permFilter.GetAllowedFeedVersions()))
-	if permFilter.IsGlobalAdmin() {
-		sqOr = append(sqOr, sq.Expr("true"))
+	if permFilter.GetIsGlobalAdmin() {
+		sqOr = append(sqOr, sq.Expr("1=1")) // Global admin: allow all rows
 	}
 	return q.Where(sqOr)
 }
