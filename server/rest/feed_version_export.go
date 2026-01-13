@@ -47,6 +47,8 @@ type ExportTransforms struct {
 	UseBasicRouteTypes bool `json:"use_basic_route_types,omitempty"`
 	// Entity value overrides (filename.entity_id.field = value)
 	SetValues map[string]string `json:"set_values,omitempty"`
+	// Lexicographic sort order for CSV files ("asc" or "desc"). If set, all CSV files will be sorted lexicographically before zipping.
+	LexicographicSort string `json:"lexicographic_sort,omitempty"`
 }
 
 // FeedVersionExportOpenAPIRequest defines OpenAPI schema for export endpoint
@@ -143,6 +145,13 @@ func (r FeedVersionExportOpenAPIRequest) RequestInfo() RequestInfo {
 																		},
 																	},
 																},
+															},
+														},
+														"lexicographic_sort": &oa.SchemaRef{
+															Value: &oa.Schema{
+																Type:        &oa.Types{"string"},
+																Description: "Sort all CSV files lexicographically before zipping. Use 'asc' for ascending or 'desc' for descending order.",
+																Enum:        []any{"asc", "desc"},
 															},
 														},
 													},
@@ -259,6 +268,17 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	}
 	_ = cpResult
 
+	// Apply lexicographic sort if requested
+	if req.Transforms != nil && req.Transforms.LexicographicSort != "" {
+		if zipAdapter, ok := csvWriter.WriterAdapter.(*tlcsv.ZipWriterAdapter); ok {
+			if err := zipAdapter.SortCSVFiles(req.Transforms.LexicographicSort); err != nil {
+				log.For(ctx).Error().Err(err).Msg("failed to sort CSV files")
+				util.WriteJsonError(w, "failed to sort CSV files", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
 	if err := csvWriter.Close(); err != nil {
 		log.For(ctx).Error().Err(err).Msg("failed to close CSV writer")
 		util.WriteJsonError(w, "failed to close CSV writer", http.StatusInternalServerError)
@@ -347,6 +367,13 @@ func validateExportRequest(req *FeedVersionExportRequest) error {
 	// Only support gtfs_zip for now
 	if req.Format != "gtfs_zip" {
 		return util.NewBadRequestError("only 'gtfs_zip' format is currently supported", nil)
+	}
+
+	// Validate lexicographic sort order if provided
+	if req.Transforms != nil && req.Transforms.LexicographicSort != "" {
+		if req.Transforms.LexicographicSort != "asc" && req.Transforms.LexicographicSort != "desc" {
+			return util.NewBadRequestError(fmt.Sprintf("invalid lexicographic_sort value: %s (must be 'asc' or 'desc')", req.Transforms.LexicographicSort), nil)
+		}
 	}
 
 	return nil

@@ -2711,6 +2711,14 @@
                   "transforms": {
                     "description": "Optional transformations to apply",
                     "properties": {
+                      "lexicographic_sort": {
+                        "description": "Sort all CSV files lexicographically before zipping. Use 'asc' for ascending or 'desc' for descending order.",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ],
+                        "type": "string"
+                      },
                       "normalize_timezones": {
                         "description": "Normalize timezone names (e.g., US/Pacific -\u003e America/Los_Angeles)",
                         "type": "boolean"

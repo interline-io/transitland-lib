@@ -612,6 +612,115 @@ func NewZipWriterAdapter(path string) *ZipWriterAdapter {
 	}
 }
 
+// SortCSVFiles sorts all CSV files in the temporary directory lexicographically.
+// sortOrder should be "asc" for ascending or "desc" for descending.
+// Only sorts .txt files that were actually written to the adapter.
+func (adapter *ZipWriterAdapter) SortCSVFiles(sortOrder string) error {
+	// Collect filenames before closing files
+	var filenamesToSort []string
+	for filename := range adapter.DirAdapter.files {
+		if strings.HasSuffix(filename, ".txt") {
+			filenamesToSort = append(filenamesToSort, filename)
+		}
+	}
+
+	// Close all open files first
+	for filename, f := range adapter.DirAdapter.files {
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("failed to close file %s: %w", filename, err)
+		}
+		delete(adapter.DirAdapter.files, filename)
+	}
+
+	// Sort each CSV file that was written
+	for _, filename := range filenamesToSort {
+
+		fullPath := filepath.Join(adapter.DirAdapter.path, filename)
+
+		// Read all rows
+		file, err := os.Open(fullPath)
+		if err != nil {
+			return fmt.Errorf("failed to open file %s: %w", filename, err)
+		}
+
+		reader := csv.NewReader(file)
+		allRows, err := reader.ReadAll()
+		file.Close()
+		if err != nil {
+			return fmt.Errorf("failed to read file %s: %w", filename, err)
+		}
+
+		if len(allRows) == 0 {
+			continue
+		}
+
+		// Separate header from data rows
+		header := allRows[0]
+		dataRows := allRows[1:]
+
+		// Sort data rows lexicographically (by first column, then second, etc.)
+		if sortOrder == "desc" {
+			sort.Slice(dataRows, func(i, j int) bool {
+				return compareRowsLexicographic(dataRows[j], dataRows[i]) < 0
+			})
+		} else {
+			sort.Slice(dataRows, func(i, j int) bool {
+				return compareRowsLexicographic(dataRows[i], dataRows[j]) < 0
+			})
+		}
+
+		// Write sorted rows back to file
+		file, err = os.Create(fullPath)
+		if err != nil {
+			return fmt.Errorf("failed to create file %s: %w", filename, err)
+		}
+
+		writer := csv.NewWriter(file)
+		if err := writer.Write(header); err != nil {
+			file.Close()
+			return fmt.Errorf("failed to write header to %s: %w", filename, err)
+		}
+		if err := writer.WriteAll(dataRows); err != nil {
+			file.Close()
+			return fmt.Errorf("failed to write rows to %s: %w", filename, err)
+		}
+		writer.Flush()
+		if err := writer.Error(); err != nil {
+			file.Close()
+			return fmt.Errorf("failed to flush writer for %s: %w", filename, err)
+		}
+		file.Close()
+	}
+
+	return nil
+}
+
+// compareRowsLexicographic compares two CSV rows lexicographically.
+// Returns -1 if row1 < row2, 0 if row1 == row2, 1 if row1 > row2.
+func compareRowsLexicographic(row1, row2 []string) int {
+	maxLen := len(row1)
+	if len(row2) > maxLen {
+		maxLen = len(row2)
+	}
+	for i := 0; i < maxLen; i++ {
+		val1 := ""
+		val2 := ""
+		if i < len(row1) {
+			val1 = row1[i]
+		}
+		if i < len(row2) {
+			val2 = row2[i]
+		}
+		if val1 < val2 {
+			return -1
+		}
+		if val1 > val2 {
+			return 1
+		}
+	}
+	return 0
+}
+
 // Close creates a zip archive of all the written files at the specified destination.
 func (adapter *ZipWriterAdapter) Close() error {
 	// Flush any buffered GeoJSON files first
