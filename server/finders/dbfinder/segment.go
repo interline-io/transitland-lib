@@ -10,16 +10,24 @@ import (
 
 func (f *Finder) SegmentsByFeedVersionIDs(ctx context.Context, limit *int, where *model.SegmentFilter, keys []int) ([][]*model.Segment, error) {
 	var ents []*model.Segment
+	// Use a subquery with row_number to get limit per feed_version_id
+	subq := sq.StatementBuilder.
+		Select(
+			"tl_segments.id",
+			"tl_segments.feed_version_id",
+			"tl_segments.way_id",
+			"tl_segments.geometry",
+			"row_number() over (partition by tl_segments.feed_version_id order by tl_segments.id) as rn",
+		).
+		From("tl_segments").
+		Where(In("tl_segments.feed_version_id", keys))
+	q := sq.StatementBuilder.
+		Select("id", "feed_version_id", "way_id", "geometry").
+		FromSelect(subq, "t").
+		Where(sq.LtOrEq{"rn": finderCheckLimit(limit)})
 	err := dbutil.Select(ctx,
 		f.db,
-		lateralWrap(
-			quickSelect("tl_segments", limit, nil, nil),
-			"feed_versions",
-			"id",
-			"tl_segments",
-			"feed_version_id",
-			keys,
-		),
+		q,
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.Segment) int { return ent.FeedVersionID }), err
@@ -29,7 +37,7 @@ func (f *Finder) SegmentsByIDs(ctx context.Context, ids []int) ([]*model.Segment
 	var ents []*model.Segment
 	err := dbutil.Select(ctx,
 		f.db,
-		quickSelect("tl_segments", nil, nil, ids),
+		segmentSelect(nil, nil, ids),
 		&ents,
 	)
 	if err != nil {
@@ -87,4 +95,24 @@ func (f *Finder) SegmentPatternsBySegmentIDs(ctx context.Context, limit *int, wh
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.SegmentPattern) int { return ent.SegmentID }), err
+}
+
+func segmentSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder {
+	q := sq.StatementBuilder.
+		Select(
+			"tl_segments.id",
+			"tl_segments.feed_version_id",
+			"tl_segments.way_id",
+			"tl_segments.geometry",
+		).
+		From("tl_segments").
+		OrderBy("tl_segments.id").
+		Limit(finderCheckLimit(limit))
+	if len(ids) > 0 {
+		q = q.Where(In("tl_segments.id", ids))
+	}
+	if after != nil && after.Valid && after.ID > 0 {
+		q = q.Where(sq.Gt{"tl_segments.id": after.ID})
+	}
+	return q
 }
