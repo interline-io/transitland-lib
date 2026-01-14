@@ -17,6 +17,17 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
+// md5FromStream calculates MD5 hash from a stream (non-seekable reader).
+// Returns nil if an error occurs during reading.
+func md5FromStream(r io.Reader) []byte {
+	h := md5.New()
+	if _, err := io.Copy(h, r); err != nil {
+		log.Info().Err(err).Msg("md5FromStream: failed to calculate MD5")
+		return nil
+	}
+	return h.Sum(nil)
+}
+
 // md5FromReader calculates MD5 hash from a reader if it supports seeking.
 // Returns nil if the reader is not seekable or if an error occurs.
 // The reader position is reset to the beginning after calculation.
@@ -30,16 +41,15 @@ func md5FromReader(r io.Reader) []byte {
 		log.Info().Err(err).Msg("md5FromReader: failed to seek to start")
 		return nil
 	}
-	h := md5.New()
-	if _, err := io.Copy(h, seeker); err != nil {
-		log.Info().Err(err).Msg("md5FromReader: failed to calculate MD5")
+	result := md5FromStream(seeker)
+	if result == nil {
 		return nil
 	}
 	if _, err := seeker.Seek(0, io.SeekStart); err != nil {
 		log.Error().Err(err).Msg("md5FromReader: failed to reset position after MD5 calculation")
 		return nil
 	}
-	return h.Sum(nil)
+	return result
 }
 
 type Downloader interface {
