@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -101,13 +102,7 @@ func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		return err
 	}
 
-	// Upload the file; Azure SDK handles retries internally (configured in getAzBlobClient)
-	_, err = client.UploadStream(ctx, r.Container, r.getFullKey(key), uploadFile, nil)
-	if err != nil {
-		return err
-	}
-
-	// Calculate MD5 if verification is enabled and reader is seekable.
+	// Calculate MD5 before upload if verification is enabled and reader is seekable.
 	// Note: Azure SDK provides TransactionalValidation for server-side MD5 verification:
 	//   &azblob.UploadStreamOptions{
 	//       TransactionalValidation: blob.TransferValidationTypeMD5(contentMD5),
@@ -121,6 +116,12 @@ func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		if uploadMD5 != nil {
 			log.Trace().Str("key", key).Str("md5", hex.EncodeToString(uploadMD5)).Msg("az upload: calculated MD5 before upload")
 		}
+	}
+
+	// Upload the file; Azure SDK handles retries internally (configured in getAzBlobClient)
+	_, err = client.UploadStream(ctx, r.Container, r.getFullKey(key), uploadFile, nil)
+	if err != nil {
+		return err
 	}
 
 	// Verify upload by downloading and comparing MD5 if we were able to calculate it
@@ -137,7 +138,7 @@ func (r Az) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 			return errors.New("upload verification failed: could not calculate MD5 of downloaded file")
 		}
 
-		if !md5Equal(uploadMD5, downloadMD5) {
+		if !bytes.Equal(uploadMD5, downloadMD5) {
 			return fmt.Errorf("upload verification failed: MD5 mismatch between uploaded (%s) and downloaded (%s) file", hex.EncodeToString(uploadMD5), hex.EncodeToString(downloadMD5))
 		}
 		log.Trace().Str("key", key).Str("md5", hex.EncodeToString(downloadMD5)).Msg("az upload: MD5 verification successful")

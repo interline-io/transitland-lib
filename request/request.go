@@ -52,19 +52,6 @@ func md5FromReader(r io.Reader) []byte {
 	return result
 }
 
-// md5Equal compares two MD5 hashes for equality.
-func md5Equal(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
 type Downloader interface {
 	Download(context.Context, string) (io.ReadCloser, int, error)
 	DownloadAuth(context.Context, string, dmfr.FeedAuthorization) (io.ReadCloser, int, error)
