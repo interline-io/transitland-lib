@@ -1,137 +1,238 @@
 # Scalar types
 
-"""Counts of entities by filename"""
+"""
+Unordered map of entity counts by filename.
+Example: `{"stops.txt": 5, "routes.txt": 2}`.
+Structure matches the source GTFS filenames.
+"""
 scalar Counts
 
-"""String key/value pairs"""
+"""
+Unordered map of string key/value pairs.
+Used for [Transitland Atlas](https://github.com/transitland/transitland-atlas) tags and other variable metadata.
+"""
 scalar Tags
 
-"""GeoJSON style geometry"""
+"""
+Geometry in [GeoJSON](https://geojson.org/) format.
+Coordinates are in WGS84 (EPSG:4326).
+"""
 scalar Geometry
 
-"""Date with time, in UTC"""
+"""
+Date with time, in UTC (RFC3339).
+"""
 scalar Time
 
-"""Date"""
+"""
+Date string (YYYY-MM-DD).
+"""
 scalar Date
 
-"""Geographic point (longitude,latitude)"""
+"""
+Geographic point in [GeoJSON](https://geojson.org/) format.
+Coordinates are [longitude, latitude] in WGS84 (EPSG:4326).
+"""
 scalar Point
 
-"""Geographic points comprising a line"""
+"""
+Geographic linestring in [GeoJSON](https://geojson.org/) format.
+Coordinates are in WGS84 (EPSG:4326).
+"""
 scalar LineString
 
-"""Geographic polygon"""
+"""
+Geographic polygon in [GeoJSON](https://geojson.org/) format.
+Coordinates are in WGS84 (EPSG:4326).
+"""
 scalar Polygon
 
-"""Geographic MultiPolygon"""
+"""
+Geographic multipolygon in [GeoJSON](https://geojson.org/) format.
+Coordinates are in WGS84 (EPSG:4326).
+"""
 scalar MultiPolygon
 
-"""Local time since midnight, in HH:MM:SS. May also be input as integer seconds."""
+"""
+Local time since midnight, in `HH:MM:SS` format.
+Can also be input as integer seconds since midnight.
+Note: GTFS times can exceed 24 hours (e.g., `25:00:00`) for service extending into the next day.
+"""
 scalar Seconds
 
-"""Map with arbitrary keys and values"""
+"""
+Map with arbitrary keys and values.
+"""
 scalar Map
 
-"""Any value"""
+"""
+Any value (scalar, object, etc.).
+"""
 scalar Any
 
-"""File upload"""
+"""
+File upload.
+"""
 scalar Upload
 
-"""Entity key"""
+"""
+Entity key.
+"""
 scalar Key
 
-"""Boolean (true, false, null)"""
+"""
+Boolean value. Can be `true`, `false`, or `null`.
+"""
 scalar Bool
 
-"""Array of strings"""
+"""
+Array of strings.
+"""
 scalar Strings
 
-"""A color"""
+"""
+A color in hex format (e.g., `#FF0000`).
+"""
 scalar Color
 
-"""A Language"""
+"""
+A BCP 47 language tag (e.g., `en`, `fr-CA`).
+"""
 scalar Language
 
-"""URL"""
+"""
+A valid URL string.
+"""
 scalar Url
 
-"""Email"""
+"""
+A valid email address string.
+"""
 scalar Email
 
-"""Timezone"""
+"""
+A valid timezone string (e.g., `America/Los_Angeles`).
+"""
 scalar Timezone
 
 # Force resolver
 directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
 # Root query
+"""
+Root Query type.
+
+**Authorization**: Some queries generally available to all users.
+Management queries (e.g., specific user data) may be restricted based on user roles.
+"""
 type Query {
-  "Feeds"
+  "List or search for Feeds (metadata about data sources)."
   feeds(limit: Int, after: Int, ids: [Int!], where: FeedFilter): [Feed!]!
-  "Operators"
+  
+  "List or search for Operators (agencies provided by feeds)."
   operators(limit: Int, after: Int, ids: [Int!], where: OperatorFilter): [Operator!]!
-  "Feed versions"
+  
+  "List or search for FeedVersions (specific archived import of a Feed)."
   feed_versions(limit: Int, after: Int, ids: [Int!], where: FeedVersionFilter): [FeedVersion!]!
-  "Currently imported agencies. If no feed version is specified, defaults to active feed versions."
+  
+  """
+  List or search for Agencies from currently imported feeds. 
+  Each Agency represents a `agency.txt` record from a specific FeedVersion.
+  If no feed version is specified, defaults to active feed versions.
+  """
   agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
-  "Currently imported routes. If no feed version is specified, defaults to active feed versions."
+  
+  """
+  List or search for Routes.
+  If no feed version is specified, defaults to active feed versions.
+  """
   routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
-  "Currently imported stops. If no feed version is specified, defaults to active feed versions."
+  
+  """
+  List or search for Stops.
+  If no feed version is specified, defaults to active feed versions.
+  """
   stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
-  "Currently imported trips. If no feed version is specified, defaults to active feed versions."
+  
+  """
+  List or search for Trips.
+  If no feed version is specified, defaults to active feed versions.
+  """
   trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
-  "Operator counts by administrative place"
+  
+  "Aggregate operator counts by administrative place (City, State, Country)."
   places(limit: Int,after: Int, level: PlaceAggregationLevel, where: PlaceFilter): [Place!]
-  "Directions requests API"
+  
+  "Directions requests API (routing)."
   directions(where: DirectionRequest!): Directions!
-  "Current GBFS floating bike data"
+  
+  "Current GBFS floating bike data (Free Bike Status)."
   bikes(limit: Int, where: GbfsBikeRequest): [GbfsFreeBikeStatus!]
-  "Current GBFS dock data"
+  
+  "Current GBFS dock data (Station Information)."
   docks(limit: Int, where: GbfsDockRequest): [GbfsStationInformation!]
-  "Current user metadata"
+  
+  "Current user metadata. Requires authentication."
   me: Me!
-  """Census datasets"""
+  
+  """
+  List or search for Census Datasets, generic containers for various datasets including US Census Bureau ACS, TIGER/Line, and US FTA NTD.
+  """
   census_datasets(limit: Int, after: Int, ids: [Int!], where: CensusDatasetFilter): [CensusDataset!]
 }
 
 # Root mutation
+"""
+Root Mutation type.
+
+**Authorization**: Most mutations require specific user roles and permissions (e.g. `editor`, `admin`).
+"""
 type Mutation {
-  "Validate GTFS"
+  "Validate a GTFS feed from a URL or upload."
   validate_gtfs(file: Upload, url: String, realtime_urls: [String!]): ValidationReport
-  "Update a feed version"
+  
+  "Update a feed version's metadata."
   feed_version_update(set: FeedVersionSetInput!): FeedVersion
-  "Fetch a feed version"
+  
+  "Trigger a fetch for a feed version."
   feed_version_fetch(file: Upload, url: String, feed_onestop_id: String!): FeedVersionFetchResult
-  "Import a feed version"
+  
+  "Manually trigger an import for a feed version."
   feed_version_import(id: Int!): FeedVersionImportResult!
-  "Unimport a feed version"
+  
+  "Un-import (delete imported data) for a feed version."
   feed_version_unimport(id: Int!): FeedVersionUnimportResult!
-  "Delete a feed version"
+  
+  "Permanently delete a feed version."
   feed_version_delete(id: Int!): FeedVersionDeleteResult!
 
-  "Create a stop"
+  "Create a new Stop."
   stop_create(set: StopSetInput!): Stop!
-  "Update a stop"
+  
+  "Update an existing Stop."
   stop_update(set: StopSetInput!): Stop!
-  "Delete a stop"
+  
+  "Delete a Stop."
   stop_delete(id: Int!): EntityDeleteResult!
 
   # levels
-  "Create a level"
+  "Create a new Level."
   level_create(set: LevelSetInput!): Level!
-  "Update a level"
+  
+  "Update an existing Level."
   level_update(set: LevelSetInput!): Level!
-  "Delete a level"
+  
+  "Delete a Level."
   level_delete(id: Int!): EntityDeleteResult!
 
   # pathways
-  "Create a pathway"
+  "Create a new Pathway."
   pathway_create(set: PathwaySetInput!): Pathway!
-  "Update a pathway"
+  
+  "Update an existing Pathway."
   pathway_update(set: PathwaySetInput!): Pathway!
-  "Delete a pathway"
+  
+  "Delete a Pathway."
   pathway_delete(id: Int!): EntityDeleteResult!
 }
 
@@ -155,99 +256,150 @@ type Me {
   external_data: Map!
 }
 
-"""Feeds contain details on how to access transit information, including URLs to data sources in various formats (GTFS, GTFS-RT, GBFS, etc), license information, related feeds, details on how to make authorized requests, and current and archived feed versions.
+"""
+Feeds contain details on how to access transit information, including URLs to data sources in various formats (GTFS, GTFS-RT, GBFS, etc), license information, related feeds, details on how to make authorized requests, and current and archived feed versions.
 
-Feed versions are archived (as `.zip` files) and imported into the database for querying agencies, stops, routes, trips, etc."""
+A `Feed` represents the source itself (registered in the [Transitland Atlas](https://github.com/transitland/transitland-atlas)), while `FeedVersion`s represent specific, immutable snapshots of the data fetched from that source over time.
+
+See [Concepts: Source Feeds](https://www.transit.land/documentation/concepts/source-feeds).
+"""
 type Feed {
   "Internal integer ID"
   id: Int!
-  "OnestopID for this feed"
+  
+  """
+  Onestop ID for this feed.
+  Format: `f-geohash-name`.
+  Example: `f-9q9-bart`.
+  """
   onestop_id: String!
-  "A common name for this feed. Optional. Alternatively use `associated_operators[].name`"
+  
+  "A common name for this feed. Optional. Alternatively use `associated_operators[].name`."
   name: String
-  "Source DMFR file for this feed"
+  
+  "Source DMFR file for this feed in the [Transitland Atlas](https://github.com/transitland/transitland-atlas)."
   file: String!
-  "Type of feed"
+  
+  "Type of feed (e.g., `gtfs`, `gtfs-rt`, `gbfs`, `mds`)."
   spec: FeedSpecTypes
-  "Language(s) included in this feed"
+  
+  "Language(s) included in this feed (BCP 47 tags)."
   languages: [String!]
-  "Optional tags defined in Transitlant Atlas providing more info about this feed"
+  
+  "Optional tags defined in Transitland Atlas providing more info about this feed."
   tags: Tags
-  "Authorization metadata for fetching data from this feed"
+  
+  "Authorization metadata for fetching data from this feed (e.g., API keys, headers)."
   authorization: FeedAuthorization
-  "URLs associated with this feed"
+  
+  "URLs associated with this feed (static, realtime, etc.)."
   urls: FeedUrls
-  "Feed license metadata"
+  
+  "Feed license metadata."
   license: FeedLicense
-  "Search rank: internal"
-  search_rank: String # only for search results
-  "Operators associated with this feed"
+  
+  "Search rank: internal usage for search result ordering."
+  search_rank: String 
+  
+  "Operators associated with this feed."
   associated_operators: [Operator!]
-  "Current feed state"
+  
+  "Current feed state (active version, last fetch status)."
   feed_state: FeedState
-  "Fetch attempts for this feed"
+  
+  "Fetch attempts for this feed (history of downloads)."
   feed_fetches(limit: Int, where: FeedFetchFilter): [FeedFetch!]
-  "Versions of this feed that have been fetched, archived, and imported"
+  
+  "Versions of this feed that have been fetched, archived, and imported."
   feed_versions(limit: Int, where: FeedVersionFilter): [FeedVersion!]!
 }
 
-"""Details on the current state of this feed, such as active version, last fetch time, etc."""
+"""
+Details on the current state of this feed, such as active version, last fetch time, etc.
+"""
 type FeedState {
   "Internal integer ID"
   id: Int!
-  "The active feed version for this feed"
+  
+  "The active feed version for this feed. This is the version currently used for queries."
   feed_version: FeedVersion
 }
 
-"""Record of a feed fetch operation"""
+"""
+Record of a feed fetch operation.
+Tracks individual attempts to download data from the feed URL.
+"""
 type FeedFetch {
   "Internal integer ID"
   id: Int!
-  "URL type, e.g. static_current, realtime_alerts..."
+  
+  "URL type, e.g. `static_current`, `realtime_alerts`, `realtime_trip_updates`."
   url_type: String
-  "URL fetched"
+  
+  "URL fetched."
   url: String
+  
   "Was the request successful?"
   success: Boolean
-  "Fetched at"
+  
+  "Timestamp when the fetch occurred."
   fetched_at: Time
-  "Exception log if the fetch did not succeed"
+  
+  "Exception log if the fetch did not succeed."
   fetch_error: String
-  "Server response size, in bytes"
+  
+  "Server response size, in bytes."
   response_size: Int
-  "Server response code (if HTTP)"
+  
+  "Server response code (if HTTP)."
   response_code: Int
-  "SHA1 sum of the server response"
+  
+  "SHA1 sum of the server response body."
   response_sha1: String
 }
 
-"""Details on how to construct an HTTP request to access a protected resource"""
+"""
+Details on how to construct an HTTP request to access a protected resource.
+Defined in the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) spec.
+"""
 type FeedAuthorization {
-  "Method for inserting authorization secret into request"
+  "Method for inserting authorization secret into request (e.g., `query_param`, `header`)."
   type: String!
-  "When `type=query_param`, this specifies the name of the query parameter. When `type=header`, this specifies the name of the header"
+  
+  "When `type=query_param`, this specifies the name of the query parameter. When `type=header`, this specifies the name of the header."
   param_name: String!
-  "Website to visit to sign up for an account"
+  
+  "Website to visit to sign up for an account."
   info_url: String!
 }
 
-"""License information for this feed, curated by Interline and contributors to the Transitland Atlas feed registry. Note that this does not constitute legal advice. Users are advised to review and confirm any terms and conditions attached to a source feed."""
+"""
+License information for this feed, curated by Interline and contributors to the [Transitland Atlas](https://github.com/transitland/transitland-atlas) feed registry.
+Note that this does not constitute legal advice. Users are advised to review and confirm any terms and conditions attached to a source feed.
+"""
 type FeedLicense {
-  "SPDX identifier for a common license. See https://spdx.org/licenses/"
+  "SPDX identifier for a common license. See https://spdx.org/licenses/."
   spdx_identifier: String!
-  "URL for a custom license"
+  
+  "URL for a custom license."
   url: String!
+  
   "Are feed consumers allowed to use the feed contents without including attribution text in their app or map?"
   use_without_attribution: String!
+  
   "Are feed consumers allowed to create and share derived products from the feed?"
   create_derived_product: String!
+  
   "Are feed consumers allowed to redistribute the feed in its entirety?"
   redistribution_allowed: String!
+  
   "Are feed consumers allowed to use the feed for commercial purposes?"
   commercial_use_allowed: String!
+  
   "Are feed consumers allowed to keep their modifications of this feed private?"
   share_alike_optional: String!
-  "Feed consumers must include this particular text when using this feed"
+  
+  "Feed consumers must include this particular text when using this feed."
   attribution_text: String!
   "Feed consumers must follow these instructions for how to provide attribution"
   attribution_instructions: String!
@@ -273,61 +425,91 @@ type FeedUrls {
   mds_provider: String!
 }
 
-"""Feed versions represent a specific static GTFS file that was published at a particular point in time, and are generally accessed and referenced using the [SHA1 checksum](https://en.wikipedia.org/wiki/SHA-1) of the GTFS archive."""
+"""
+Feed versions represent a specific static GTFS file that was published at a particular point in time, and are generally accessed and referenced using the [SHA1 checksum](https://en.wikipedia.org/wiki/SHA-1) of the GTFS archive.
+
+See [Concepts: Static GTFS Feed Versions](https://www.transit.land/documentation/concepts/static-gtfs-feed-versions).
+"""
 type FeedVersion {
   "Internal integer ID"
   id: Int!
-  "SHA1 hash of the zip file [example:ab5bdc8b6cedd06792d42186a9b542504c5eef9a]"
+  
+  "SHA1 hash of the zip file [example:ab5bdc8b6cedd06792d42186a9b542504c5eef9a]."
   sha1: String!
-  "Time when the file was fetched from the url [example:2021-07-09T05:11:00Z]"
+  
+  "Time when the file was fetched from the url [example:2021-07-09T05:11:00Z]."
   fetched_at: Time!
-  "URL used to fetch the file"
+  
+  "URL used to fetch the file."
   url: String!
-  "The earliest date with scheduled service [example:2020-01-01]"
+  
+  "The earliest date with scheduled service [example:2020-01-01]."
   earliest_calendar_date: Date!
-  "The latest date with scheduled service [example:2020-12-31]"
+  
+  "The latest date with scheduled service [example:2020-12-31]."
   latest_calendar_date: Date!
-  "Record created by user"
+  
+  "Record created by user (email)."
   created_by: String
-  "Record updated by user"
+  
+  "Record updated by user (email)."
   updated_by: String
-  "An optional name for this feed version"
+  
+  "An optional name for this feed version."
   name: String
-  "An optional description for this feed version"
+  
+  "An optional description for this feed version."
   description: String
-  "Reference to file storage location"
+  
+  "Reference to file storage location."
   file: String
-  "Convex hull around all active stops in the feed version"
+  
+  "Convex hull around all active stops in the feed version."
   geometry: Polygon
-  "Feed associated with this feed version"
+  
+  "Feed associated with this feed version."
   feed: Feed!
-  "Current database import status of this feed version"
+  
+  "Current database import status of this feed version."
   feed_version_gtfs_import: FeedVersionGtfsImport
-  "Metadata for each text file present in the main directory of the zip archive"
+  
+  "Metadata for each text file present in the main directory of the zip archive."
   files(limit: Int): [FeedVersionFileInfo!]!
-  "Service levels (in seconds per day) for this feed version"
+  
+  "Service levels (in seconds per day) for this feed version."
   service_levels(limit: Int, where: FeedVersionServiceLevelFilter): [FeedVersionServiceLevel!]!
-  "Summary details on service dates for this feed version"
+  
+  "Summary details on service dates for this feed version."
   service_window: FeedVersionServiceWindow
-  "Agencies associated with this feed version, if imported"
+  
+  "Agencies associated with this feed version, if imported."
   agencies(limit: Int, where: AgencyFilter): [Agency!]!
-  "Routes associated with this feed version, if imported"
+  
+  "Routes associated with this feed version, if imported."
   routes(limit: Int, where: RouteFilter): [Route!]!
-  "Stops associated with this feed version, if imported"
+  
+  "Stops associated with this feed version, if imported."
   stops(limit: Int, where: StopFilter): [Stop!]!
-  "Trips associated with this feed version, if imported"
+  
+  "Trips associated with this feed version, if imported."
   trips(limit: Int, where: TripFilter): [Trip!]!
-  "GTFS Flex locations associated with this feed version, if imported"
+  
+  "GTFS Flex locations associated with this feed version, if imported."
   locations(limit: Int, where: LocationFilter): [Location!]!
-  "GTFS Flex booking rules associated with this feed version, if imported"
+  
+  "GTFS Flex booking rules associated with this feed version, if imported."
   booking_rules(limit: Int, where: BookingRuleFilter): [BookingRule!]!
-  "GTFS Flex location groups associated with this feed version, if imported"
+  
+  "GTFS Flex location groups associated with this feed version, if imported."
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
-  "Feed infos associated with this feed version, if imported"
+  
+  "Feed infos associated with this feed version, if imported."
   feed_infos(limit: Int): [FeedInfo!]!
-  "Validation reports associated with this feed version"
+  
+  "Validation reports associated with this feed version."
   validation_reports(limit: Int, where: ValidationReportFilter): [ValidationReport!]
-  "Normalized route segment data associated with this feed version, if available"
+  
+  "Normalized route segment data associated with this feed version, if available."
   segments(limit: Int): [Segment!]
 }
 
@@ -431,689 +613,1025 @@ type FeedVersionServiceLevel {
 """
 An agency represents a single GTFS `agencies.txt` entity that was imported from a single feed version. The metadata, routes, etc., for an agency include only the data for that specific agency in that specific feed version.
 
-Operators are a higher-level abstraction over agencies, with each operator defined by an entry in the [Transitland Atlas](/documentation/atlas). Operators provide a method for enriching the basic GTFS agency data, as well as grouping agencies that span across multiple source feeds. Operators are matched with GTFS agencies using `associated_feeds`, a simple list of Feed OnestopIDs and GTFS `agency_id`s. For instance, the [Atlas operator record](https://github.com/transitland/transitland-atlas/blob/master/operators/o-dr5r-nyct.json) for the [New York City MTA](/operators/o-dr5r-nyct) has `associated_feeds` values for 8 different GTFS feeds. A query for this operator OnestopID thus represents the union of data from all 8 feeds, and includes routes for the subway, bus service for all 5 boroughs, commuter rail agencies, etc., operated by the MTA. This record also includes additional metadata about the MTA, such as the United States National Transit Database ID, Wikidata IDs, and alternate names for the agency. Operator records are created and maintained through pull requests to the Atlas json files and synchronized with the Transitland database on each commit.
+Operators are a higher-level abstraction over agencies, with each operator defined by an entry in the [Transitland Atlas](https://github.com/transitland/transitland-atlas). Operators provide a method for enriching the basic GTFS agency data, as well as grouping agencies that span across multiple source feeds. Operators are matched with GTFS agencies using `associated_feeds`, a simple list of Feed Onestop IDs and GTFS `agency_id`s.
+
+For instance, the [Atlas operator record](https://github.com/transitland/transitland-atlas/blob/master/operators/o-dr5r-nyct.json) for the [New York City MTA](https://www.transit.land/operators/o-dr5r-nyct) has `associated_feeds` values for 8 different GTFS feeds. A query for this operator Onestop ID thus represents the union of data from all 8 feeds, and includes routes for the subway, bus service for all 5 boroughs, commuter rail agencies, etc., operated by the MTA. This record also includes additional metadata about the MTA, such as the United States National Transit Database ID, Wikidata IDs, and alternate names for the agency. Operator records are created and maintained through pull requests to the Atlas json files and synchronized with the Transitland database on each commit.
+
+See [Concepts: Agencies and Operators](https://www.transit.land/documentation/concepts/agencies-and-operators).
 """
 type Operator {
   "Internal integer ID"
   id: Int!
-  "Was this operator generated automatically from GTFS data"
+  
+  "Was this operator generated automatically from GTFS data."
   generated: Boolean!
-  "Source DMFR file for this operator"
+  
+  "Source DMFR file for this operator in the [Transitland Atlas](https://github.com/transitland/transitland-atlas)."
   file: String
-  "OnestopID for this operator"
+  
+  """
+  Onestop ID for this operator.
+  Format: `o-geohash-name`.
+  Example: `o-dr5r-nyct`.
+  """
   onestop_id: String
-  "Operator name"
+  
+  "Operator name."
   name: String
-  "Operator short name, if available"
+  
+  "Operator short name, if available."
   short_name: String
-  "Operator website, if available"
+  
+  "Operator website, if available."
   website: String
-  "Optional tags defined in Transitlant Atlas providing more info about this operator"
+  
+  "Optional tags defined in Transitland Atlas providing more info about this operator."
   tags: Tags
-  "Search rank: internal"
+  
+  "Search rank: internal usage for search result ordering."
   search_rank: String
-  "Currently imported and active agencies associated with this operator"
+  
+  "Currently imported and active agencies associated with this operator."
   agencies: [Agency!]
-  "Feeds associated with this operator"
+  
+  "Feeds associated with this operator."
   feeds(limit: Int, where: FeedFilter): [Feed!]
 }
 
 # GTFS Entities
 
-"""Record from a static GTFS [agency.txt](https://gtfs.org/reference/static/#agencytxt)"""
+"""
+Record from a static GTFS [agency.txt](https://gtfs.org/reference/static/#agencytxt).
+
+See [Concepts: Agencies and Operators](https://www.transit.land/documentation/concepts/agencies-and-operators).
+"""
 type Agency {
   "Internal integer ID"
   id: Int!
-  "OnestopID for this agency (or its associated operator)"
+  
+  "Onestop ID for this agency (or its associated operator)."
   onestop_id: String!
-  "GTFS agency.agency_email"
+  
+  "GTFS `agency.agency_email`."
   agency_email: Email
-  "GTFS agency.agency_fare_url"
+  
+  "GTFS `agency.agency_fare_url`."
   agency_fare_url: Url
-  "GTFS agency.agency_id"
+  
+  "GTFS `agency.agency_id`."
   agency_id: String!
-  "GTFS agency.agency_lang"
+  
+  "GTFS `agency.agency_lang`."
   agency_lang: Language
-  "GTFS agency.agency_name"
+  
+  "GTFS `agency.agency_name`."
   agency_name: String!
-  "GTFS agency.agency_phone"
+  
+  "GTFS `agency.agency_phone`."
   agency_phone: String
-  "GTFS agency.agency_timezone"
+  
+  "GTFS `agency.agency_timezone`."
   agency_timezone: Timezone!
-  "GTFS agency.agency_url"
+  
+  "GTFS `agency.agency_url`."
   agency_url: Url!
-  "Feed version SHA1 associated with this entity"
+  
+  "Feed version SHA1 associated with this entity."
   feed_version_sha1: String
-  "Feed OnestopID associated with this entity"
+  
+  "Feed Onestop ID associated with this entity."
   feed_onestop_id: String
-  "Source feed version for this entity"
+  
+  "Source feed version for this entity."
   feed_version: FeedVersion!
-  "Geometry for this agency, generated as the convex hull of all stops"
+  
+  "Geometry for this agency, generated as the convex hull of all stops."
   geometry: Polygon
-  "Search rank: internal"
+  
+  "Search rank: internal usage for search result ordering."
   search_rank: String
-  "Operator associated with this agency"
+  
+  "Operator associated with this agency."
   operator: Operator
-  "Places associated with this agency through a matching process"
+  
+  "Places associated with this agency through a matching process."
   places(limit: Int, where: AgencyPlaceFilter): [AgencyPlace!]
-  "Routes associated with this agency"
+  
+  "Routes associated with this agency."
   routes(limit: Int, where: RouteFilter): [Route!]!
-  "Census geographies associated with this agency"
+  
+  "Census geographies associated with this agency."
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
-  "GTFS-RT alerts for this agency"
+  
+  "GTFS-RT alerts for this agency."
   alerts(active: Boolean, limit: Int): [Alert!]
 }
 
-"""Record from a static GTFS [routes.txt](https://gtfs.org/reference/static/#routestxt)"""
+"""
+Record from a static GTFS [routes.txt](https://gtfs.org/reference/static/#routestxt).
+
+See [Concepts: Routes](https://www.transit.land/documentation/concepts/routes).
+"""
 type Route {
   "Internal integer ID"
   id: Int!
-  "OnestopID for this route"
+  
+  "Onestop ID for this route."
   onestop_id: String
-  "GTFS routes.route_id"
+  
+  "GTFS `routes.route_id`."
   route_id: String!
-  "GTFS routes.route_short_name"
+  
+  "GTFS `routes.route_short_name`."
   route_short_name: String
-  "GTFS routes.route_long_name"
+  
+  "GTFS `routes.route_long_name`."
   route_long_name: String
-  "GTFS routes.route_type"
+  
+  "GTFS `routes.route_type`."
   route_type: Int!
-  "GTFS routes.route_color"
+  
+  "GTFS `routes.route_color`."
   route_color: Color
-  "GTFS routes.route_text_color"
+  
+  "GTFS `routes.route_text_color`."
   route_text_color: Color
-  "GTFS routes.route_sort_order"
+  
+  "GTFS `routes.route_sort_order`."
   route_sort_order: Int
-  "GTFS routes.route_url"
+  
+  "GTFS `routes.route_url`."
   route_url: Url
-  "GTFS routes.route_desc"
+  
+  "GTFS `routes.route_desc`."
   route_desc: String
-  "GTFS routes.continuous_pickup"
+  
+  "GTFS `routes.continuous_pickup`."
   continuous_pickup: Int
-  "GTFS routes.continuous_drop_off"
+  
+  "GTFS `routes.continuous_drop_off`."
   continuous_drop_off: Int
-  "Representative geometry for this route"
+  
+  "Representative geometry for this route."
   geometry: Geometry @goField(forceResolver: true)
-  "Agency associated with this route"
+  
+  "Agency associated with this route."
   agency: Agency!
-  "Feed version SHA1 associated with this entity"
+  
+  "Feed version SHA1 associated with this entity."
   feed_version_sha1: String
-  "Feed OnestopID associated with this entity"
+  
+  "Feed Onestop ID associated with this entity."
   feed_onestop_id: String
-  "Source feed version for this entity"
+  
+  "Source feed version for this entity."
   feed_version: FeedVersion!
-  "Search rank: internal"
+  
+  "Search rank: internal usage for search result ordering."
   search_rank: String
-  "Extended route attributes, based on MTC GTFS+ extension"
+  
+  "Extended route attributes, based on MTC GTFS+ extension."
   route_attribute: RouteAttribute
-  "Trips associated with this route"
+  
+  "Trips associated with this route."
   trips(limit: Int, where: TripFilter): [Trip!]!
-  "Stops associated with this route"
+  
+  "Stops associated with this route."
   stops(limit: Int, where: StopFilter): [Stop!]!
-  "Stops associated with this route"
+  
+  "Stops associated with this route."
   route_stops(limit: Int): [RouteStop!]!
-  "Calculated headways for this route"
+  
+  "Calculated headways for this route."
   headways(limit: Int): [RouteHeadway!]!
-  "Representative geometries for this route"
+  
+  "Representative geometries for this route."
   geometries(limit: Int): [RouteGeometry!]!
-  "Census geographies associated with this route"
+  
+  "Census geographies associated with this route."
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
-  "Calculated spatial buffer geometry around this route"
+  
+  "Calculated spatial buffer geometry around this route."
   route_stop_buffer(radius: Float): RouteStopBuffer!
-  "Stop patterns for this route"
+  
+  "Stop patterns for this route."
   patterns: [RouteStopPattern!]
-  "GTFS-RT alerts for this route"
+  
+  "GTFS-RT alerts for this route."
   alerts(active: Boolean, limit: Int): [Alert!]
-  "Normalized route segment data for this route, if available"
+  
+  "Normalized route segment data for this route, if available."
   segments(limit: Int, where: SegmentFilter): [Segment!]
-  "Normalized route segment patterns for this route, if available"
+  
+  "Normalized route segment patterns for this route, if available."
   segment_patterns(limit: Int, where: SegmentPatternFilter): [SegmentPattern!]
 }
 
-"""Record from a static GTFS [stops.txt](https://gtfs.org/reference/static/#stopstxt)"""
+"""
+Record from a static GTFS [stops.txt](https://gtfs.org/reference/static/#stopstxt).
+
+See [Concepts: Stops](https://www.transit.land/documentation/concepts/stops).
+"""
 type Stop {
   "Internal integer ID"
   id: Int!
-  "OnestopID for this stop, if available [example:s-dr5ruvgnyk-madisonav~e69st]"
+  
+  "Onestop ID for this stop, if available [example:s-dr5ruvgnyk-madisonav~e69st]."
   onestop_id: String!
-  "GTFS stops.location_type; this is optional in GTFS spec [enum:0,1,2,3,4]"
+  
+  "GTFS `stops.location_type`; this is optional in GTFS spec [enum:`0,1,2,3,4`]."
   location_type: Int!
-  "GTFS stops.stop_code"
+  
+  "GTFS `stops.stop_code`."
   stop_code: String
-  "GTFS stops.stop_desc [example:NW Corner of Broadway and 14th]"
+  
+  "GTFS `stops.stop_desc` [example:NW Corner of Broadway and 14th]."
   stop_desc: String
-  "GTFS stops.stop_id [example:400029]"
+  
+  "GTFS `stops.stop_id` [example:400029]."
   stop_id: String!
-  "GTFS stops.stop_name [example:MADISON AV/E 68 ST]"
+  
+  "GTFS `stops.stop_name` [example:MADISON AV/E 68 ST]."
   stop_name: String
-  "GTFS stops.stop_timezone; if overriding agency/route timezone [example:America/Los_Angeles]"
+  
+  "GTFS `stops.stop_timezone`; if overriding agency/route timezone [example:America/Los_Angeles]."
   stop_timezone: Timezone
-  "GTFS stops.stop_url [example:https://www.bart.gov/stations/ftvl]"
+  
+  "GTFS `stops.stop_url` [example:https://www.bart.gov/stations/ftvl]."
   stop_url: Url
-  "GTFS stops.wheelchair_boarding [enum:0,1,2]"
+  
+  "GTFS `stops.wheelchair_boarding` [enum:`0,1,2`]."
   wheelchair_boarding: Int
-  "GTFS stops.zone_id"
+  
+  "GTFS `stops.zone_id`."
   zone_id: String
-  "GTFS stops.platform_code"
+  
+  "GTFS `stops.platform_code`."
   platform_code: String
-  "GTFS stops.tts_stop_name"
+  
+  "GTFS `stops.tts_stop_name`."
   tts_stop_name: String
-  "Stop geometry"
+  
+  "Stop geometry."
   geometry: Point!
-  "Feed version SHA1 identifier"
+  
+  "Feed version SHA1 identifier."
   feed_version_sha1: String!
-  "Feed OnestopID"
+  
+  "Feed Onestop ID."
   feed_onestop_id: String!
-  "Feed version"
+  
+  "Feed version."
   feed_version: FeedVersion!
-  "GTFS Flex location groups associated with this stop"
+  
+  "GTFS Flex location groups associated with this stop."
   location_groups(limit: Int): [LocationGroup!]!
-  "Stop level"
+  
+  "Stop level."
   level: Level
-  "Stop parent station"
+  
+  "Stop parent station."
   parent: Stop
-  "Stop external reference"
+  
+  "Stop external reference."
   external_reference: StopExternalReference
-  "Stop observations"
+  
+  "Stop observations."
   observations(limit: Int, where: StopObservationFilter): [StopObservation!]
-  "Stop children"
+  
+  "Stop children."
   children(limit: Int): [Stop!]
-  "Associated routes"
+  
+  "Associated routes."
   route_stops(limit: Int): [RouteStop!]!
-  "Dependent levels"
+  
+  "Dependent levels."
   child_levels(limit: Int): [Level!]!
-  "Pathways from this stop"
+  
+  "Pathways from this stop."
   pathways_from_stop(limit: Int): [Pathway!]!
-  "Pathways to this stop"
+  
+  "Pathways to this stop."
   pathways_to_stop(limit: Int): [Pathway!]!
-  "Stop times for this stop"
+  
+  "Stop times for this stop."
   stop_times(limit: Int, where: StopTimeFilter): [StopTime!]!
-  "Departures from this stop for a given date and time"
+  
+  "Departures from this stop for a given date and time."
   departures(limit: Int, where: StopTimeFilter): [StopTime!]!
-  "Arrivals from this stop for a given date and time"
+  
+  "Arrivals from this stop for a given date and time."
   arrivals(limit: Int, where: StopTimeFilter): [StopTime!]!
-  "Search Rank: Internal"
+  
+  "Search Rank: Internal usage for search result ordering."
   search_rank: String
-  "State/Province associated with this stop"
+  
+  "State/Province associated with this stop."
   place: StopPlace
-  "Census geographies associated with this stop"
+  
+  "Census geographies associated with this stop."
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
-  "Directions from this stop"
+  
+  "Directions from this stop."
   directions(to:WaypointInput, from: WaypointInput, mode: StepMode, depart_at: Time): Directions!
-  "Stops within a specified radius of this stop"
+  
+  "Stops within a specified radius of this stop."
   nearby_stops(limit: Int, radius: Float): [Stop!]
-  "GTFS-RT Alerts for this stop"
+  
+  "GTFS-RT Alerts for this stop."
   alerts(active: Boolean, limit: Int): [Alert!]
-  "Matching feature ids from polygon search"
+  
+  "Matching feature ids from polygon search."
   within_features: Strings
 }
 
-"""Record from a static GTFS [pathways.txt](https://gtfs.org/reference/static/#pathwaysstxt). Pathways are a graph representation of a subway or train station, with nodes (entrances, platforms, etc) and edges (the pathways). See https://gtfs.org/reference/static/#pathwaystxt"""
+"""
+Record from a static GTFS [pathways.txt](https://gtfs.org/reference/static/#pathwaystxt).
+Pathways are a graph representation of a subway or train station, with nodes (entrances, platforms, etc) and edges (the pathways).
+"""
 type Pathway {
   "Internal integer ID"
   id: Int!
-  "GTFS pathways.pathway_id"
+  
+  "GTFS `pathways.pathway_id`."
   pathway_id: String!
-  "GTFS pathways.pathway_mode"
+  
+  "GTFS `pathways.pathway_mode`."
   pathway_mode: Int!
-  "GTFS pathways.is_bidirectional"
+  
+  "GTFS `pathways.is_bidirectional`."
   is_bidirectional: Int!
-  "GTFS pathways.length"
+  
+  "GTFS `pathways.length`."
   length: Float
-  "GTFS pathways.traversal_time"
+  
+  "GTFS `pathways.traversal_time`."
   traversal_time: Int
-  "GTFS pathways.stair_count"
+  
+  "GTFS `pathways.stair_count`."
   stair_count: Int
-  "GTFS pathways.max_slope"
+  
+  "GTFS `pathways.max_slope`."
   max_slope: Float
-  "GTFS pathways.min_width"
+  
+  "GTFS `pathways.min_width`."
   min_width: Float
-  "GTFS pathways.signposted_ss"
+  
+  "GTFS `pathways.signposted_as`."
   signposted_as: String
-  "GTFS pathways.reverse_signposted_as"
+  
+  "GTFS `pathways.reverse_signposted_as`."
   reverse_signposted_as: String
-  "Pathway begins at this stop"
+  
+  "Pathway begins at this stop."
   from_stop: Stop!
-  "Pathway ends at this stop"
+  
+  "Pathway ends at this stop."
   to_stop: Stop!
 }
 
-"""Record from a static GTFS [levels.txt](https://gtfs.org/reference/static/#levelstxt). Levels describes different levels of a station; used in conjunction with pathways."""
+"""
+Record from a static GTFS [levels.txt](https://gtfs.org/reference/static/#levelstxt).
+Levels describes different levels of a station; used in conjunction with pathways.
+"""
 type Level {
   "Internal integer ID"
   id: Int!
-  "GTFS levels.level_id"
+  
+  "GTFS `levels.level_id`."
   level_id: String!
-  "GTFS levels.level_index"
+  
+  "GTFS `levels.level_index`."
   level_index: Float!
-  "GTFS levels.level_name"
+  
+  "GTFS `levels.level_name`."
   level_name: String
-  "An optional geometry describing the footprint of this level"
+  
+  "An optional geometry describing the footprint of this level."
   geometry: MultiPolygon!
-  "Stops associated with this level"
+  
+  "Stops associated with this level."
   stops: [Stop!]
 }
 
-"""Record from a static GTFS [trips.txt](https://gtfs.org/schedule/reference/#tripstxt) file optionally enriched with by GTFS Realtime [TripUpdate](https://gtfs.org/reference/realtime/v2/#message-tripupdate) and [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) messages."""
+"""
+Record from a static GTFS [trips.txt](https://gtfs.org/schedule/reference/#tripstxt) file optionally enriched with by GTFS Realtime [TripUpdate](https://gtfs.org/reference/realtime/v2/#message-tripupdate) and [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) messages.
+
+See [Concepts: Trips & Schedules](https://www.transit.land/documentation/concepts/trips-schedules).
+"""
 type Trip {
   "Internal integer ID"
   id: Int!
-  "GTFS trips.trip_id"
+  
+  "GTFS `trips.trip_id`."
   trip_id: String!
-  "GTFS trips.trip_headsign"
+  
+  "GTFS `trips.trip_headsign`."
   trip_headsign: String
-  "GTFS trips.trip_short_name"
+  
+  "GTFS `trips.trip_short_name`."
   trip_short_name: String
-  "GTFS trips.direction_id"
+  
+  "GTFS `trips.direction_id`."
   direction_id: Int
-  "GTFS trips.block_id"
+  
+  "GTFS `trips.block_id`."
   block_id: String
-  "GTFS trips.wheelchair_accessible"
+  
+  "GTFS `trips.wheelchair_accessible`."
   wheelchair_accessible: Int
-  "GTFS trips.bikes_allowed"
+  
+  "GTFS `trips.bikes_allowed`."
   bikes_allowed: Int
-  "Calculated stop pattern ID; an integer scoped to the feed version"
+  
+  "Calculated stop pattern ID; an integer scoped to the feed version."
   stop_pattern_id: Int!
-  "Calendar for this trip"
+  
+  "Calendar for this trip."
   calendar: Calendar!
-  "Route for this trip"
+  
+  "Route for this trip."
   route: Route!
-  "Shape for this trip"
+  
+  "Shape for this trip."
   shape: Shape
-  "Feed version for this entity"
+  
+  "Feed version for this entity."
   feed_version: FeedVersion!
-  "Stop times for this trip"
+  
+  "Stop times for this trip."
   stop_times(limit: Int, where: TripStopTimeFilter): [StopTime]!
-  "GTFS Flex stop times for this trip (Locations and Location Groups)"
+  
+  "GTFS Flex stop times for this trip (Locations and Location Groups)."
   flex_stop_times(limit: Int, where: TripStopTimeFilter): [FlexStopTime!]!
-  "Frequencies for this trip"
+  
+  "Frequencies for this trip."
   frequencies(limit: Int): [Frequency!]!
-  "GTFS-RT alerts for this trip"
+  
+  "GTFS-RT alerts for this trip."
   alerts(active: Boolean, limit: Int): [Alert!]
-  """A status flag for real-time information about this trip.
+  
+  """
+  A status flag for real-time information about this trip.
 
-  If no real-time information is available, the value will be STATIC and the estimated arrival/departure times will be empty. A trip with real-time information available will be SCHEDULED; a canceled trip will be CANCELED, and an added trip that is not present in the static GTFS will be ADDED.
+  If no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.
   """
   schedule_relationship: ScheduleRelationship
-  "GTFS-RT TripUpdate timestamp"
+  
+  "GTFS-RT TripUpdate timestamp."
   timestamp: Time
 }
 
-"""Record from a static GTFS [calendars.txt](https://gtfs.org/schedule/reference/#calendarstxt) file, plus associated [calendar_dates.txt](https://gtfs.org/schedule/reference/#calendar_datestxt)."""
+"""
+Record from a static GTFS [calendars.txt](https://gtfs.org/schedule/reference/#calendarstxt) file, plus associated [calendar_dates.txt](https://gtfs.org/schedule/reference/#calendar_datestxt).
+
+See [Concepts: Trips & Schedules](https://www.transit.land/documentation/concepts/trips-schedules).
+"""
 type Calendar {
   "Internal integer ID"
   id: Int!
-  "GTFS calendar.service_id"
+  
+  "GTFS `calendar.service_id`."
   service_id: String!
-  "GTFS calendar.start_date"
+  
+  "GTFS `calendar.start_date`."
   start_date: Date!
-  "GTFS calendar.end_date"
+  
+  "GTFS `calendar.end_date`."
   end_date: Date!
-  "GTFS calendar.monday"
+  
+  "GTFS `calendar.monday`."
   monday: Int!
-  "GTFS calendar.tuesday"
+  
+  "GTFS `calendar.tuesday`."
   tuesday: Int!
-  "GTFS calendar.wednesday"
+  
+  "GTFS `calendar.wednesday`."
   wednesday: Int!
-  "GTFS calendar.thursday"
+  
+  "GTFS `calendar.thursday`."
   thursday: Int!
-  "GTFS calendar.friday"
+  
+  "GTFS `calendar.friday`."
   friday: Int!
-  "GTFS calendar.saturday"
+  
+  "GTFS `calendar.saturday`."
   saturday: Int!
-  "GTFS calendar.sunday"
+  
+  "GTFS `calendar.sunday`."
   sunday: Int!
-  "Added dates, derived from GTFS calendar_dates"
+  
+  "Added dates, derived from GTFS `calendar_dates`."
   added_dates(limit: Int): [Date!]!
-  "Removed dates, derived from GTFS calendar_dates"
+  
+  "Removed dates, derived from GTFS `calendar_dates`."
   removed_dates(limit: Int): [Date!]!
 }
 
-"""Record from a static GTFS [shapes.txt](https://gtfs.org/schedule/reference/#shapestxt) file."""
+"""
+Record from a static GTFS [shapes.txt](https://gtfs.org/schedule/reference/#shapestxt) file.
+"""
 type Shape {
   "Internal integer ID"
   id: Int!
-  "GTFS shapes.shape_id"
+  
+  "GTFS `shapes.shape_id`."
   shape_id: String!
-  "Geometry for this shape"
+  
+  "Geometry for this shape."
   geometry: LineString!
+  
   "Was this geometry automatically generated from stop locations?"
   generated: Boolean!
 }
 
-"""Record from a static GTFS [frequencies.txt](https://gtfs.org/schedule/reference/#frequenciestxt) file."""
+"""
+Record from a static GTFS [frequencies.txt](https://gtfs.org/schedule/reference/#frequenciestxt) file.
+"""
 type Frequency {
   "Internal integer ID"
   id: Int!
-  "GTFS frequencies.start_time"
+  
+  "GTFS `frequencies.start_time`."
   start_time: Seconds!
-  "GTFS frequencies.end_time"
+  
+  "GTFS `frequencies.end_time`."
   end_time: Seconds!
-  "GTFS frequencies.headway_secs"
+  
+  "GTFS `frequencies.headway_secs`."
   headway_secs: Int!
-  "GTFS frequencies.exact_times"
+  
+  "GTFS `frequencies.exact_times`."
   exact_times: Int
 }
 
-"""Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file."""
+"""
+Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file.
+"""
 type StopTime {
-  "GTFS stop_times.arrival_time"
+  "GTFS `stop_times.arrival_time`."
   arrival_time: Seconds
-  "GTFS stop_times.departure_time"
+  
+  "GTFS `stop_times.departure_time`."
   departure_time: Seconds
-  "GTFS stop_times.stop_sequence"
+  
+  "GTFS `stop_times.stop_sequence`."
   stop_sequence: Int!
-  "GTFS stop_times.stop_headsign"
+  
+  "GTFS `stop_times.stop_headsign`."
   stop_headsign: String
-  "GTFS stop_times.pickup_type"
+  
+  "GTFS `stop_times.pickup_type`."
   pickup_type: Int
-  "GTFS stop_times.drop_off_type"
+  
+  "GTFS `stop_times.drop_off_type`."
   drop_off_type: Int
-  "GTFS stop_times.timepoint"
+  
+  "GTFS `stop_times.timepoint`."
   timepoint: Int
-  "GTFS stop_times.continuous_drop_off"
+  
+  "GTFS `stop_times.continuous_drop_off`."
   continuous_drop_off: Int
-  "GTFS stop_times.continuous_pickup"
+  
+  "GTFS `stop_times.continuous_pickup`."
   continuous_pickup: Int
-  "GTFS stop_times.shape_dist_traveled"
+  
+  "GTFS `stop_times.shape_dist_traveled`."
   shape_dist_traveled: Float
-  "Set if this arrival/departure time was interpolated during import"
+  
+  "Set if this arrival/departure time was interpolated during import."
   interpolated: Int
-  "GTFS stop_times.start_pickup_drop_off_window"
+  
+  "GTFS `stop_times.start_pickup_drop_off_window`."
   start_pickup_drop_off_window: Seconds
-  "GTFS stop_times.end_pickup_drop_off_window"
+  
+  "GTFS `stop_times.end_pickup_drop_off_window`."
   end_pickup_drop_off_window: Seconds
-  "GTFS stop_times.pickup_booking_rule_id"
+  
+  "GTFS `stop_times.pickup_booking_rule_id`."
   pickup_booking_rule: BookingRule
-  "GTFS stop_times.drop_off_booking_rule_id"
+  
+  "GTFS `stop_times.drop_off_booking_rule_id`."
   drop_off_booking_rule: BookingRule
-  "Stop associated with this stop time"
+  
+  "Stop associated with this stop time."
   stop: Stop!
-  "Trip associated with this stop time"
+  
+  "Trip associated with this stop time."
   trip: Trip!
-  "Detailed arrival information, including GTFS-RT updates and estimates"
+  
+  "Detailed arrival information, including GTFS-RT updates and estimates."
   arrival: StopTimeEvent!
-  "Detailed departure information, including GTFS-RT updates and estimates"
+  
+  "Detailed departure information, including GTFS-RT updates and estimates."
   departure: StopTimeEvent!
-  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  
+  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time."
   service_date: Date
-  "If part of an arrival/departure query, the calendar date for this scheduled stop time"
+  
+  "If part of an arrival/departure query, the calendar date for this scheduled stop time."
   date: Date
-  """A status flag for real-time information about this trip.
+  
+  """
+  A status flag for real-time information about this trip.
 
-  If no real-time information is available, the value will be STATIC and the estimated arrival/departure times will be empty. A trip with real-time information available will be SCHEDULED; a canceled trip will be CANCELED, and an added trip that is not present in the static GTFS will be ADDED.
+  If no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.
   """
   schedule_relationship: ScheduleRelationship
 }
 
-"""Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file, representing a service at a Location or Location Group."""
+"""
+Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file, representing a service at a Location or Location Group.
+"""
 type FlexStopTime {
-  "GTFS stop_times.arrival_time"
+  "GTFS `stop_times.arrival_time`."
   arrival_time: Seconds
-  "GTFS stop_times.departure_time"
+  
+  "GTFS `stop_times.departure_time`."
   departure_time: Seconds
-  "GTFS stop_times.stop_sequence"
+  
+  "GTFS `stop_times.stop_sequence`."
   stop_sequence: Int!
-  "GTFS stop_times.stop_headsign"
+  
+  "GTFS `stop_times.stop_headsign`."
   stop_headsign: String
-  "GTFS stop_times.pickup_type"
+  
+  "GTFS `stop_times.pickup_type`."
   pickup_type: Int
-  "GTFS stop_times.drop_off_type"
+  
+  "GTFS `stop_times.drop_off_type`."
   drop_off_type: Int
-  "GTFS stop_times.timepoint"
+  
+  "GTFS `stop_times.timepoint`."
   timepoint: Int
-  "GTFS stop_times.continuous_drop_off"
+  
+  "GTFS `stop_times.continuous_drop_off`."
   continuous_drop_off: Int
-  "GTFS stop_times.continuous_pickup"
+  
+  "GTFS `stop_times.continuous_pickup`."
   continuous_pickup: Int
-  "GTFS stop_times.shape_dist_traveled"
+  
+  "GTFS `stop_times.shape_dist_traveled`."
   shape_dist_traveled: Float
-  "Set if this arrival/departure time was interpolated during import"
+  
+  "Set if this arrival/departure time was interpolated during import."
   interpolated: Int
-  "GTFS stop_times.start_pickup_drop_off_window"
+  
+  "GTFS `stop_times.start_pickup_drop_off_window`."
   start_pickup_drop_off_window: Seconds
-  "GTFS stop_times.end_pickup_drop_off_window"
+  
+  "GTFS `stop_times.end_pickup_drop_off_window`."
   end_pickup_drop_off_window: Seconds
-  "GTFS stop_times.pickup_booking_rule_id"
+  
+  "GTFS `stop_times.pickup_booking_rule_id`."
   pickup_booking_rule: BookingRule
-  "GTFS stop_times.drop_off_booking_rule_id"
+  
+  "GTFS `stop_times.drop_off_booking_rule_id`."
   drop_off_booking_rule: BookingRule
-  "Location associated with this stop time"
+  
+  "Location associated with this stop time."
   location: Location
-  "Location Group associated with this stop time"
+  
+  "Location Group associated with this stop time."
   location_group: LocationGroup
-  "Trip associated with this stop time"
+  
+  "Trip associated with this stop time."
   trip: Trip!
-  "Detailed arrival information, including GTFS-RT updates and estimates"
+  
+  "Detailed arrival information, including GTFS-RT updates and estimates."
   arrival: StopTimeEvent!
-  "Detailed departure information, including GTFS-RT updates and estimates"
+  
+  "Detailed departure information, including GTFS-RT updates and estimates."
   departure: StopTimeEvent!
-  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  
+  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time."
   service_date: Date
-  "If part of an arrival/departure query, the calendar date for this scheduled stop time"
+  
+  "If part of an arrival/departure query, the calendar date for this scheduled stop time."
   date: Date
-  """A status flag for real-time information about this trip.
+  
+  """
+  A status flag for real-time information about this trip.
 
-  If no real-time information is available, the value will be STATIC and the estimated arrival/departure times will be empty. A trip with real-time information available will be SCHEDULED; a canceled trip will be CANCELED, and an added trip that is not present in the static GTFS will be ADDED.
+  If no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.
   """
   schedule_relationship: ScheduleRelationship
 }
 
-"""Record from a static GTFS [feed_info.txt](https://gtfs.org/schedule/reference/#feed_infotxt) file."""
+"""
+Record from a static GTFS [feed_info.txt](https://gtfs.org/schedule/reference/#feed_infotxt) file.
+"""
 type FeedInfo {
   "Internal integer ID"
   id: Int!
-  "GTFS feed_info.feed_publisher_name"
+  
+  "GTFS `feed_info.feed_publisher_name`."
   feed_publisher_name: String!
-  "GTFS feed_info.feed_publisher_url"
+  
+  "GTFS `feed_info.feed_publisher_url`."
   feed_publisher_url: Url!
-  "GTFS feed_info.feed_lang"
+  
+  "GTFS `feed_info.feed_lang`."
   feed_lang: Language!
-  "GTFS feed_info.default_lang"
+  
+  "GTFS `feed_info.default_lang`."
   default_lang: Language
-  "GTFS feed_info.feed_version"
+  
+  "GTFS `feed_info.feed_version`."
   feed_version: String
-  "GTFS feed_info.feed_start_date"
+  
+  "GTFS `feed_info.feed_start_date`."
   feed_start_date: Date
-  "GTFS feed_info.feed_end_date"
+  
+  "GTFS `feed_info.feed_end_date`."
   feed_end_date: Date
-  "GTFS feed_info.feed_contact_email"
+  
+  "GTFS `feed_info.feed_contact_email`."
   feed_contact_email: Email
-  "GTFS feed_info.feed_contact_url"
+  
+  "GTFS `feed_info.feed_contact_url`."
   feed_contact_url: Url
 }
 
-"""Record from a static GTFS [locations.geojson](https://gtfs.org/schedule/reference/#locationsgeojson) file."""
+"""
+Record from a static GTFS [locations.geojson](https://gtfs.org/schedule/reference/#locationsgeojson) file.
+"""
 type Location {
   "Internal integer ID"
   id: Int!
-  "GTFS locations.location_id"
+  
+  "GTFS `locations.location_id`."
   location_id: String!
-  "GTFS locations.stop_name"
+  
+  "GTFS `locations.stop_name`."
   stop_name: String
-  "GTFS locations.stop_desc"
+  
+  "GTFS `locations.stop_desc`."
   stop_desc: String
-  "GTFS locations.zone_id"
+  
+  "GTFS `locations.zone_id`."
   zone_id: String
-  "GTFS locations.stop_url"
+  
+  "GTFS `locations.stop_url`."
   stop_url: Url
-  "Geometry for this location"
+  
+  "Geometry for this location."
   geometry: Geometry!
-  "Feed version SHA1 identifier"
+  
+  "Feed version SHA1 identifier."
   feed_version_sha1: String!
-  "Feed OnestopID"
+  
+  "Feed Onestop ID."
   feed_onestop_id: String!
-  "Feed version"
+  
+  "Feed version."
   feed_version: FeedVersion!
-  "Stop times associated with this location"
+  
+  "Stop times associated with this location."
   stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
 }
 
-"""Record from a static GTFS [booking_rules.txt](https://gtfs.org/schedule/reference/#booking_rulestxt) file."""
+"""
+Record from a static GTFS [booking_rules.txt](https://gtfs.org/schedule/reference/#booking_rulestxt) file.
+"""
 type BookingRule {
   "Internal integer ID"
   id: Int!
-  "GTFS booking_rules.booking_rule_id"
+  
+  "GTFS `booking_rules.booking_rule_id`."
   booking_rule_id: String!
-  "GTFS booking_rules.booking_type"
+  
+  "GTFS `booking_rules.booking_type`."
   booking_type: Int!
-  "GTFS booking_rules.prior_notice_duration_min"
+  
+  "GTFS `booking_rules.prior_notice_duration_min`."
   prior_notice_duration_min: Int
-  "GTFS booking_rules.prior_notice_duration_max"
+  
+  "GTFS `booking_rules.prior_notice_duration_max`."
   prior_notice_duration_max: Int
-  "GTFS booking_rules.prior_notice_last_day"
+  
+  "GTFS `booking_rules.prior_notice_last_day`."
   prior_notice_last_day: Int
-  "GTFS booking_rules.prior_notice_last_time"
+  
+  "GTFS `booking_rules.prior_notice_last_time`."
   prior_notice_last_time: Seconds
-  "GTFS booking_rules.prior_notice_start_day"
+  
+  "GTFS `booking_rules.prior_notice_start_day`."
   prior_notice_start_day: Int
-  "GTFS booking_rules.prior_notice_start_time"
+  
+  "GTFS `booking_rules.prior_notice_start_time`."
   prior_notice_start_time: Seconds
-  "Prior notice service calendar"
+  
+  "Prior notice service calendar."
   prior_notice_service: Calendar
-  "GTFS booking_rules.message"
+  
+  "GTFS `booking_rules.message`."
   message: String
-  "GTFS booking_rules.pickup_message"
+  
+  "GTFS `booking_rules.pickup_message`."
   pickup_message: String
-  "GTFS booking_rules.drop_off_message"
+  
+  "GTFS `booking_rules.drop_off_message`."
   drop_off_message: String
-  "GTFS booking_rules.phone_number"
+  
+  "GTFS `booking_rules.phone_number`."
   phone_number: String
-  "GTFS booking_rules.info_url"
+  
+  "GTFS `booking_rules.info_url`."
   info_url: Url
-  "GTFS booking_rules.booking_url"
+  
+  "GTFS `booking_rules.booking_url`."
   booking_url: Url
-  "Feed version SHA1 identifier"
+  
+  "Feed version SHA1 identifier."
   feed_version_sha1: String!
-  "Feed OnestopID"
+  
+  "Feed Onestop ID."
   feed_onestop_id: String!
-  "Feed version"
+  
+  "Feed version."
   feed_version: FeedVersion!
 }
 
-"""Record from a static GTFS [location_groups.txt](https://gtfs.org/schedule/reference/#location_groupstxt) file."""
+"""
+Record from a static GTFS [location_groups.txt](https://gtfs.org/schedule/reference/#location_groupstxt) file.
+"""
 type LocationGroup {
   "Internal integer ID"
   id: Int!
-  "GTFS location_groups.location_group_id"
+  
+  "GTFS `location_groups.location_group_id`."
   location_group_id: String!
-  "GTFS location_groups.location_group_name"
+  
+  "GTFS `location_groups.location_group_name`."
   location_group_name: String
-  "Feed version SHA1 identifier"
+  
+  "Feed version SHA1 identifier."
   feed_version_sha1: String!
-  "Feed OnestopID"
+  
+  "Feed Onestop ID."
   feed_onestop_id: String!
-  "Feed version"
+  
+  "Feed version."
   feed_version: FeedVersion!
-  "Stops associated with this location group"
+  
+  "Stops associated with this location group."
   stops(limit: Int): [Stop!]!
-  "Stop times associated with this location group"
+  
+  "Stop times associated with this location group."
   stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
 }
 
-"""Record from a static GTFS [location_group_stops.txt](https://gtfs.org/schedule/reference/#location_group_stopstxt) file."""
+"""
+Record from a static GTFS [location_group_stops.txt](https://gtfs.org/schedule/reference/#location_group_stopstxt) file.
+"""
 type LocationGroupStop {
   "Internal integer ID"
   id: Int!
-  "Location group"
+  
+  "Location group."
   location_group: LocationGroup!
-  "Stop"
+  
+  "Stop."
   stop: Stop!
 }
 
 # Archived observed stop-times
 
-"""Measurements of observed arrival times based on GTFS-RT data"""
+"""
+Measurements of observed arrival times based on GTFS-RT data.
+"""
 type StopObservation {
-  "GTFS-RT TripUpdate schedule relationship"
+  "GTFS-RT TripUpdate schedule relationship."
   schedule_relationship: String
-  "GTFS-RT TripUpdate trip start date"
+  
+  "GTFS-RT TripUpdate trip start date."
   trip_start_date: Date
-  "GTFS-RT TripUpdate trip start time"
+  
+  "GTFS-RT TripUpdate trip start time."
   trip_start_time: Seconds
-  "GTFS static origin stop id"
+  
+  "GTFS static origin stop id."
   from_stop_id: String
-  "GTFS static destination stop id"
+  
+  "GTFS static destination stop id."
   to_stop_id: String
-  "Agency ID for route"
+  
+  "Agency ID for route."
   agency_id: String
-  "Route ID for trip"
+  
+  "Route ID for trip."
   route_id: String
-  "Trip ID"
+  
+  "Trip ID."
   trip_id: String
-  "Stop sequence for origin stop"
+  
+  "Stop sequence for origin stop."
   stop_sequence: Int
+  
   "Source data used to calculate this stop observation. Can be trip update or vehicle positions."
   source: String
-  "GTFS static scheduled arrival time"
+  
+  "GTFS static scheduled arrival time."
   scheduled_arrival_time: Seconds
-  "GTFS static scheduled departure time"
+  
+  "GTFS static scheduled departure time."
   scheduled_departure_time: Seconds
-  "GTFS-RT calculated arrival time"
+  
+  "GTFS-RT calculated arrival time."
   observed_arrival_time: Seconds
-  "GTFS-RT calculated departure time"
+  
+  "GTFS-RT calculated departure time."
   observed_departure_time: Seconds
 }
 
 # GTFS Support Entities
 
-"""Additional metadata for a stop to reference an externally defined stop"""
+"""
+Additional metadata for a stop to reference an externally defined stop.
+"""
 type StopExternalReference {
   "Internal integer ID"
   id: Int!
-  "Target stop's feed OnestopID"
+  
+  "Target stop's feed Onestop ID."
   target_feed_onestop_id: String
-  "Target stop's stop_id"
+  
+  "Target stop's stop_id."
   target_stop_id: String
-  "Is this reference active"
+  
+  "Is this reference active."
   inactive: Boolean
-  "Resolved target stop, if matched and available"
+  
+  "Resolved target stop, if matched and available."
   target_active_stop: Stop
 }
 
-"""Place associated with a stop"""
+"""
+Place associated with a stop.
+"""
 type StopPlace {
-  "Best-matched state or province name"
+  "Best-matched state or province name."
   adm1_name: String
-  "Best-matched state or province ISO code"
+  
+  "Best-matched state or province ISO code."
   adm1_iso: String
-  "Best-matched country name"
+  
+  "Best-matched country name."
   adm0_name: String
-  "Best-mached country ISO code"
+  
+  "Best-mached country ISO code."
   adm0_iso: String
 }
 
-"""Place associated with an agency"""
+"""
+Place associated with an agency.
+"""
 type AgencyPlace {
-  "Best-matched city name"
+  "Best-matched city name."
   city_name: String
-  "Best-matched state or province name"
+  
+  "Best-matched state or province name."
   adm1_name: String
-  "Best-matched state or province ISO code"
+  
+  "Best-matched state or province ISO code."
   adm1_iso: String
-  "Best-matched country name"
+  
+  "Best-matched country name."
   adm0_name: String
-  "Best-mached country ISO code"
+  
+  "Best-mached country ISO code."
   adm0_iso: String
-  "Relative weight of this place association"
+  
+  "Relative weight of this place association."
   rank: Float
 }
 
-"""Place name and associated operators"""
+"""
+Place name and associated operators.
+
+See [Concepts: Places](https://www.transit.land/documentation/concepts/places).
+"""
 type Place {
-  "Country name"
+  "Country name."
   adm0_name: String
-  "State or province name"
+  
+  "State or province name."
   adm1_name: String
-  "City name"
+  
+  "City name."
   city_name: String
-  "Number of associated operators"
+  
+  "Number of associated operators."
   count: Int!
-  "Operators associated with this place"
+  
+  "Operators associated with this place."
   operators: [Operator!]
 }
 
-"""RelativeDate specifies a calendar date relative to the current local time"""
+"""
+RelativeDate specifies a calendar date relative to the current local time.
+"""
 enum RelativeDate {
   "The current date"
   TODAY
@@ -1147,7 +1665,9 @@ enum RelativeDate {
   NEXT_SUNDAY
 }
 
-"""PlaceAggregationLevel controls the level of aggregation in a places query"""
+"""
+PlaceAggregationLevel controls the level of aggregation in a places query.
+"""
 enum PlaceAggregationLevel {
   "Aggregate places based on country"
   ADM0
@@ -1164,237 +1684,349 @@ enum PlaceAggregationLevel {
 }
 
 
-"""RouteStops describe associations between stops, routes, and agencies."""
+"""
+RouteStops describe associations between stops, routes, and agencies.
+"""
 type RouteStop {
   "Internal integer ID"
   id: Int!
-  "Internal integer ID for this associated stop"
+  
+  "Internal integer ID for this associated stop."
   stop_id: Int!
-  "Internal integer ID for this associated route"
+  
+  "Internal integer ID for this associated route."
   route_id: Int!
-  "Internal integer ID for this associated agency"
+  
+  "Internal integer ID for this associated agency."
   agency_id: Int!
-  "Associated route"
+  
+  "Associated route."
   route: Route!
-  "Associated stop"
+  
+  "Associated stop."
   stop: Stop!
-  "Associated agency"
+  
+  "Associated agency."
   agency: Agency!
 }
 
-"""RouteStopPattern describes a unique pattern of stops for a route"""
+"""
+RouteStopPattern describes a unique pattern of stops for a route.
+"""
 type RouteStopPattern {
-  "An identifier for this stop pattern; an integer scoped to this particular feed version"
+  "An identifier for this stop pattern; an integer scoped to this particular feed version."
   stop_pattern_id: Int!
-  "Direction ID of the trip"
+  
+  "Direction ID of the trip."
   direction_id: Int!
-  "Count of trips for this stop pattern"
+  
+  "Count of trips for this stop pattern."
   count: Int!
-  "Trips for this stop pattern"
+  
+  "Trips for this stop pattern."
   trips(limit: Int): [Trip!]
 }
 
-"""Representative route geometries"""
+"""
+Representative route geometries.
+"""
 type RouteGeometry {
   "If true, the source GTFS feed provides no shapes. This route geometry is based on straight lines between stop points."
   generated: Boolean!
-  "A single LineString of this most common shape"
+  
+  "A single LineString of this most common shape."
   geometry: LineString
-  "MultiLineString ensemble of the most common shapes for each direction"
+  
+  "MultiLineString ensemble of the most common shapes for each direction."
   combined_geometry: Geometry
-  "Length (in meters) of the simple geometry"
+  
+  "Length (in meters) of the simple geometry."
   length: Float
-  "Maximum point-to-point distance in the geometry"
+  
+  "Maximum point-to-point distance in the geometry."
   max_segment_length: Float
-  "First point max distance"
+  
+  "First point max distance."
   first_point_max_distance: Float
 }
 
-"""Calculated route headways"""
+"""
+Calculated route headways.
+"""
 type RouteHeadway {
-  "Stop used for the headway calculation"
+  "Stop used for the headway calculation."
   stop: Stop!
-  "Day of week category; 1=Weekday, 6=Saturday, 7=Sunday"
+  
+  "Day of week category; 1=Weekday, 6=Saturday, 7=Sunday."
   dow_category: Int
-  "Trip direction"
+  
+  "Trip direction."
   direction_id: Int
-  "Typical number of seconds between departing trips at this stop in this direction on this day of the week"
+  
+  "Typical number of seconds between departing trips at this stop in this direction on this day of the week."
   headway_secs: Int
-  "Date used for the headway calculation"
+  
+  "Date used for the headway calculation."
   service_date: Date
-  "Number of departures on this stop, day, and direction"
+  
+  "Number of departures on this stop, day, and direction."
   stop_trip_count: Int
-  "Actual departure times on this stop, day, and direction"
+  
+  "Actual departure times on this stop, day, and direction."
   departures: [Seconds!]
 }
 
-"""Normalized route segment patterns"""
+"""
+Normalized route segment patterns.
+"""
 type SegmentPattern {
   "Internal integer ID"
   id: Int!
-  "Route for this segment pattern"
+  
+  "Route for this segment pattern."
   route: Route!
-  "Stop pattern for this segment pattern"
+  
+  "Stop pattern for this segment pattern."
   stop_pattern_id: Int!
-  "Segment geometry for this pattern"
+  
+  "Segment geometry for this pattern."
   segment: Segment!
 }
 
-"""Normalized route segments"""
+"""
+Normalized route segments.
+"""
 type Segment {
   "Internal integer ID"
   id: Int!
-  "OSM Way ID, if any, associated with this segment"
+  
+  "OSM Way ID, if any, associated with this segment."
   way_id: Int!
-  "Geometry for this segment"
+  
+  "Geometry for this segment."
   geometry: LineString!
-  "Routes and stop patterns associated with this segment"
+  
+  "Routes and stop patterns associated with this segment."
   segment_patterns: [SegmentPattern!]
 }
 
-"""MTC GTFS+ Extension: route_attributes.txt"""
+"""
+MTC GTFS+ Extension: `route_attributes.txt`.
+"""
 type RouteAttribute {
   "Route category"
   category: Int
+  
   "Route subcategory"
   subcategory: Int
+  
   "Route running way category"
   running_way: Int
 }
 
 # Census entities
 
+"""
+Generic container for various datasets including Census ACS, TIGER, and NTD.
+Contains relational data tables and geographic layers.
+"""
 type CensusDataset {
   "Internal integer ID"
   id: Int!
-  "Dataset name, e.g. acsdt5y2022"
+  
+  "Dataset name, e.g. `acsdt5y2022`, `ntd-annual`."
   name: String!
+  
   "Dataset description"
   description: String
+  
   "Dataset url"
   url: Url
+  
   "Minimum year of data in this dataset"
   year_min: Int
+  
   "Maximum year of data in this dataset"
   year_max: Int
-  # Sources in this dataset
+  
+  "Sources in this dataset"
   sources(limit: Int, where: CensusSourceFilter): [CensusSource!]
-  # Census geographies in this dataset
+  
+  "Census geographies in this dataset"
   geographies(limit: Int, where: CensusDatasetGeographyFilter): [CensusGeography!]
-  # Census tables in this dataset
+  
+  "Census tables in this dataset"
   tables(limit: Int, where: CensusTableFilter): [CensusTable!]
+  
+  "Layers in this dataset"
   layers: [CensusLayer!]
 }
 
+"""
+A specific source file or archive within a dataset (e.g., a specific year's TIGER shapefile or ACS data release).
+"""
 type CensusSource {
   "Internal integer ID"
   id: Int!
-  "Source name, e.g. tl_2024_01_tract.zip"
+  
+  "Source name, e.g. `tl_2024_01_tract.zip`."
   name: String!
+  
   "Source description"
   description: String
+  
   "Source url"
   url: Url!
+  
   "Source checksum"
   sha1: String!
-  # Census geographies in this layer
+  
+  "Census geographies in this layer"
   geographies(limit: Int, where: CensusSourceGeographyFilter): [CensusGeography!]
-  # Census tables in this source
+  
+  "Census tables in this source"
   tables(limit: Int): [CensusTable!]
-  # Layers
+  
+  "Layers"
   layers: [CensusLayer!]
 }
 
-""""Census layer metadata"""
+"""
+A geographic layer within a dataset, defining a collection of related geometries (e.g., census tracts, states, UZAs).
+"""
 type CensusLayer {
   "Internal integer ID"
   id: Int!
-  "Layer name, e.g. tl_2024_01_tract"
+  
+  "Layer name, e.g. `tl_2024_01_tract`."
   name: String!
+  
   "Layer description"
   description: String
-  # Census geographies in this layer
+  
+  "Census geographies in this layer"
   geographies(limit: Int, where: CensusSourceGeographyFilter): [CensusGeography!]
 }
 
-"""Census geography data"""
+"""
+A specific spatial unit within a layer (e.g., a specific Census Tract, a State, or a derived NTD entity).
+Can be linked to data values.
+"""
 type CensusGeography {
   "Internal integer ID"
   id: Int!
-  "Dataset name, e.g. acsdt5y2022"
+  
+  "Dataset name, e.g. `acsdt5y2022`."
   dataset_name: String!
-  "Source name, e.g. tl_2024_01_tract.zip"
+  
+  "Source name, e.g. `tl_2024_01_tract.zip`."
   source_name: String!
+  
   "Census geography source layer"
   layer_name: String!
-  "Census geography GEOID"
+  
+  "Unique identifier for this geography (e.g., FIPS code, NTD ID)."
   geoid: String
+  
   "Census geography name"
   name: String
+  
   "Geometry total area, in square meters"
   geometry_area: Float
+  
   "Land area, in square meters"
   aland: Float
+  
   "Water area, in square meters"
   awater: Float
+  
   "State or province name"
   adm1_name: String
+  
   "State or province ISO code"
   adm1_iso: String
+  
   "Country name"
   adm0_name: String
+  
   "Country ISO code"
   adm0_iso: String
+  
   "Census geography polygon"
   geometry: MultiPolygon
+  
   "Intersection area with a given geometry, in square meters"
   intersection_area: Float
+  
+  "Intersection geometry with a given geometry"
   intersection_geometry: Geometry
+  
   "Census tables containing data for this geography"
   values(table_names: [String!]!, dataset: String, limit: Int): [CensusValue]!
+  
   "Layer"
   layer: CensusLayer
+  
   "Source"
   source: CensusSource
 }
 
-"""Census values"""
+"""
+Data values associated with a specific geography and table (e.g., population count, vehicle revenue miles).
+"""
 type CensusValue {
-  "Dataset name, e.g. acsdt5y2022"
+  "Dataset name, e.g. `acsdt5y2022`."
   dataset_name: String!
-  "Source name, e.g. tl_2024_01_tract.zip"
+  
+  "Source name, e.g. `tl_2024_01_tract.zip`."
   source_name: String!
+  
   "Source table"
   table: CensusTable!
-  "Column:Value for this table"
+  
+  "Map of column names to values for this table."
   values: Map!
+  
   "GEOID of associated census geography"
   geoid: String!
 }
 
-"""Census table metadata"""
+"""
+Metadata definition for a table of data values.
+"""
 type CensusTable {
   "Internal integer ID"
   id: Int!
+  
   "Census table name"
   table_name: String!
+  
   "Census table title"
   table_title: String!
+  
   "Census table group"
   table_group: String
+  
   "Additional details, e.g. population universe"
   table_details: String
+  
   "Individial field definitions for this table"
   fields: [CensusField!]!
 }
 
+"""
+Metadata definition for a single column/field within a table.
+"""
 type CensusField {
   "Internal integer ID"
   id: Int!
+  
   "Census field name"
   field_name: String!
+  
   "Census field title"
   field_title: String!
+  
   "Census field column order"
   column_order: Float
 }
@@ -1679,9 +2311,9 @@ type ValidationReportError {
 input OperatorFilter {
   "Merge multiple agency-operator associations into single operator results"
   merged: Boolean
-  "Search for operators with this OnestopID"
+  "Search for operators with this Onestop ID"
   onestop_id: String
-  "Search for operators with this feed OnestopID"
+  "Search for operators with this feed Onestop ID"
   feed_onestop_id: String
   "Search for operators with agencies having this GTFS agency_id"
   agency_id: String
@@ -1732,7 +2364,7 @@ input FeedVersionFilter {
   ids: [Int!]
   "Search for feed versions with the specified import status"
   import_status: ImportStatus
-  "Search for feed versions with this feed OnestopID"
+  "Search for feed versions with this feed Onestop ID"
   feed_onestop_id: String
   "Search for feed versions with this SHA1 hash"
   sha1: String
@@ -1799,7 +2431,7 @@ enum LicenseValue {
 
 """Search options for feeds"""
 input FeedFilter {
-  "Search for feed with a specific OnestopID"
+  "Search for feed with a specific Onestop ID"
   onestop_id: String
   "Search for feeds of certain data types"
   spec: [FeedSpecTypes!]
@@ -1875,11 +2507,11 @@ enum FeedSpecTypes {
 
 """Search options for agencies"""
 input AgencyFilter {
-  "Search for agencies with this operator OnestopID"
+  "Search for agencies with this operator Onestop ID"
   onestop_id: String
   "Search for agencies with this feed version SHA1 hash"
   feed_version_sha1: String
-  "Search for agencies with this feed OnestopID"
+  "Search for agencies with this feed Onestop ID"
   feed_onestop_id: String
   "Search for agencies with this GTFS agency_id"
   agency_id: String
@@ -1922,15 +2554,15 @@ input AgencyLocationFilter {
 
 """Search options for routes"""
 input RouteFilter {
-  "Search for routes with this OnestopID"
+  "Search for routes with this Onestop ID"
   onestop_id: String
-  "Search for routes with these OnestopIDs"
+  "Search for routes with these Onestop IDs"
   onestop_ids: [String!]
-  "Include previously used OnestopIDs that match the same (feed,route_id)"
+  "Include previously used Onestop IDs that match the same (feed,route_id)"
   allow_previous_onestop_ids: Boolean
   "Search for routes with this feed version SHA1 hash"
   feed_version_sha1: String
-  "Search for routes with this feed OnestopID"
+  "Search for routes with this feed Onestop ID"
   feed_onestop_id: String
   "Search for routes with this GTFS route_id"
   route_id: String
@@ -1942,7 +2574,7 @@ input RouteFilter {
   serviced: Boolean
   "Full text search"
   search: String
-  "Search for routes operated by operators with this OnestopID"
+  "Search for routes operated by operators with this Onestop ID"
   operator_onestop_id: String
   "Search for routes with these license details"
   license: LicenseFilter
@@ -1994,15 +2626,15 @@ input StopLocationFilter {
 
 """Search options for stops"""
 input StopFilter {
-  "Search for stops with this OnestopID"
+  "Search for stops with this Onestop ID"
   onestop_id: String
-  "Search for stops with these OnestopIDs"
+  "Search for stops with these Onestop IDs"
   onestop_ids: [String!]
-  "Include previous used OnestopIDs that match the same (feed,stop_id)"
+  "Include previous used Onestop IDs that match the same (feed,stop_id)"
   allow_previous_onestop_ids: Boolean
   "Search for stops with this feed version SHA1 hash"
   feed_version_sha1: String
-  "Search for stops with this feed OnestopID"
+  "Search for stops with this feed Onestop ID"
   feed_onestop_id: String
   "Search for stops with this GTFS stop_id"
   stop_id: String
@@ -2016,7 +2648,7 @@ input StopFilter {
   search: String
   "Search for stops with these license details"
   license: LicenseFilter
-  "Search for stops with service by routes or operators with these OnestopIDs"
+  "Search for stops with service by routes or operators with these Onestop IDs"
   served_by_onestop_ids: [String!]
   "Search for stopswith service by routes with the specified GTFS route_type"
   served_by_route_type: Int
@@ -2054,9 +2686,9 @@ input StopTimeFilter {
   end: Seconds
   "Search for stop times with departures within the specified number of seconds (in local time)"
   next: Int
-  "Search for stop times with service by routes with the specified route OnestopIDs"
+  "Search for stop times with service by routes with the specified route Onestop IDs"
   route_onestop_ids: [String!] # keep?
-  "Include previously used route OnestopIDs that match the same (feed,route_id)"
+  "Include previously used route Onestop IDs that match the same (feed,route_id)"
   allow_previous_route_onestop_ids: Boolean
   "Exclude the first stop_time in a trip"
   exclude_first: Boolean
@@ -2104,11 +2736,11 @@ input TripFilter {
   license: LicenseFilter
   "Search for trips associated with these route integer IDs. Deprecated."
   route_ids: [Int!]
-  "Search for trips associated with these route OnestopIDs"
+  "Search for trips associated with these route Onestop IDs"
   route_onestop_ids: [String!] # keep?
   "Search for trips with this feed version SHA1 hash"
   feed_version_sha1: String
-  "Search for trips with this feed OnestopID"
+  "Search for trips with this feed Onestop ID"
   feed_onestop_id: String
 }
 
