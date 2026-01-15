@@ -169,11 +169,39 @@ func TestFeedVersionExportRequest(t *testing.T) {
 		}
 	})
 
-	t.Run("export with lexicographic sort ascending", func(t *testing.T) {
+	t.Run("export without standardized sort", func(t *testing.T) {
+		reqBody := FeedVersionExportRequest{
+			FeedVersionKeys: []string{caltrainFv},
+			// Transforms: nil, should default to no sort
+		}
+		rr := makeExportRequest(t, reqBody, asAdmin)
+
+		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
+		// Verify stops are NOT sorted
+		if err := makeTempReader(t, rr.Body.Bytes(), func(t *testing.T, reader *tlcsv.Reader) {
+			var stopIds []string
+			for ent := range reader.Stops() {
+				stopIds = append(stopIds, ent.StopID.Val)
+			}
+			// Check that stops are NOT necessarily sorted ascending
+			isSorted := true
+			for i := 1; i < len(stopIds); i++ {
+				if stopIds[i-1] > stopIds[i] {
+					isSorted = false
+					break
+				}
+			}
+			assert.False(t, isSorted, "stops should not be automatically sorted")
+		}); err != nil {
+			t.Fatalf("test failed: %v", err)
+		}
+	})
+
+	t.Run("export with standardized sort ascending", func(t *testing.T) {
 		reqBody := FeedVersionExportRequest{
 			FeedVersionKeys: []string{caltrainFv},
 			Transforms: &ExportTransforms{
-				LexicographicSort: "asc",
+				StandardizedSort: "asc",
 			},
 		}
 		rr := makeExportRequest(t, reqBody, asAdmin)
@@ -191,7 +219,7 @@ func TestFeedVersionExportRequest(t *testing.T) {
 			"stops.txt":           64,
 			"trips.txt":           185,
 		})
-		// Verify stops are sorted lexicographically (ascending)
+		// Verify stops are sorted via standardized sort (ascending)
 		if err := makeTempReader(t, rr.Body.Bytes(), func(t *testing.T, reader *tlcsv.Reader) {
 			var stopIds []string
 			for ent := range reader.Stops() {
@@ -208,11 +236,11 @@ func TestFeedVersionExportRequest(t *testing.T) {
 		}
 	})
 
-	t.Run("export with lexicographic sort descending", func(t *testing.T) {
+	t.Run("export with standardized sort descending", func(t *testing.T) {
 		reqBody := FeedVersionExportRequest{
 			FeedVersionKeys: []string{caltrainFv},
 			Transforms: &ExportTransforms{
-				LexicographicSort: "desc",
+				StandardizedSort: "desc",
 			},
 		}
 		rr := makeExportRequest(t, reqBody, asAdmin)
@@ -230,7 +258,7 @@ func TestFeedVersionExportRequest(t *testing.T) {
 			"stops.txt":           64,
 			"trips.txt":           185,
 		})
-		// Verify stops are sorted lexicographically (descending)
+		// Verify stops are sorted via standardized sort (descending)
 		if err := makeTempReader(t, rr.Body.Bytes(), func(t *testing.T, reader *tlcsv.Reader) {
 			var stopIds []string
 			for ent := range reader.Stops() {
@@ -392,17 +420,17 @@ func TestFeedVersionExportRequest(t *testing.T) {
 		assert.Contains(t, rr.Body.String(), "does not allow redistribution", "error message")
 	})
 
-	t.Run("bad request - invalid lexicographic_sort value", func(t *testing.T) {
+	t.Run("bad request - invalid standardized_sort value", func(t *testing.T) {
 		reqBody := FeedVersionExportRequest{
 			FeedVersionKeys: []string{caltrainFv},
 			Transforms: &ExportTransforms{
-				LexicographicSort: "invalid",
+				StandardizedSort: "invalid",
 			},
 		}
 		rr := makeExportRequest(t, reqBody, asAdmin)
 
 		assert.Equal(t, 400, rr.Result().StatusCode, "should be bad request")
-		assert.Contains(t, rr.Body.String(), "invalid lexicographic_sort", "error message")
+		assert.Contains(t, rr.Body.String(), "invalid standardized_sort", "error message")
 	})
 
 	t.Run("bad request - feed version not imported", func(t *testing.T) {

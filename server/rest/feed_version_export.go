@@ -16,6 +16,7 @@ import (
 
 	oa "github.com/getkin/kin-openapi/openapi3"
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/internal/util"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -47,8 +48,10 @@ type ExportTransforms struct {
 	UseBasicRouteTypes bool `json:"use_basic_route_types,omitempty"`
 	// Entity value overrides (filename.entity_id.field = value)
 	SetValues map[string]string `json:"set_values,omitempty"`
-	// Lexicographic sort order for CSV files ("asc" or "desc"). If set, all CSV files will be sorted lexicographically before zipping.
-	LexicographicSort string `json:"lexicographic_sort,omitempty"`
+	// Standardized sort order for CSV files ("asc", "desc", or "none"). If set, all CSV files will be sorted before zipping.
+	StandardizedSort string `json:"standardized_sort,omitempty"`
+	// Optional specific columns to sort by. If empty, defaults are used based on file type.
+	StandardizedSortColumns []string `json:"standardized_sort_columns,omitempty"`
 }
 
 // FeedVersionExportOpenAPIRequest defines OpenAPI schema for export endpoint
@@ -147,11 +150,22 @@ func (r FeedVersionExportOpenAPIRequest) RequestInfo() RequestInfo {
 																},
 															},
 														},
-														"lexicographic_sort": &oa.SchemaRef{
+														"standardized_sort": &oa.SchemaRef{
 															Value: &oa.Schema{
 																Type:        &oa.Types{"string"},
-																Description: "Sort all CSV files lexicographically before zipping. Use 'asc' for ascending or 'desc' for descending order.",
-																Enum:        []any{"asc", "desc"},
+																Description: "Sort all CSV files before zipping. Use 'asc' (ascending), 'desc' (descending), or 'none' (default). This is an optional feature and is off by default. By default, transitland-lib's streaming architecture generally preserves input order, but may reorder some associated records (e.g., parent stations before children) to maintain integrity.",
+																Enum:        []any{"asc", "desc", "none"},
+															},
+														},
+														"standardized_sort_columns": &oa.SchemaRef{
+															Value: &oa.Schema{
+																Type:        &oa.Types{"array"},
+																Description: "Optional specific columns to sort by. If empty, defaults are used based on file type.",
+																Items: &oa.SchemaRef{
+																	Value: &oa.Schema{
+																		Type: &oa.Types{"string"},
+																	},
+																},
 															},
 														},
 													},
@@ -268,15 +282,12 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	}
 	_ = cpResult
 
-	// Apply lexicographic sort if requested
-	if req.Transforms != nil && req.Transforms.LexicographicSort != "" {
-		if zipAdapter, ok := csvWriter.WriterAdapter.(*tlcsv.ZipWriterAdapter); ok {
-			if err := zipAdapter.SortCSVFiles(req.Transforms.LexicographicSort); err != nil {
-				log.For(ctx).Error().Err(err).Msg("failed to sort CSV files")
-				util.WriteJsonError(w, "failed to sort CSV files", http.StatusInternalServerError)
-				return
-			}
-		}
+	// Apply sorting if requested
+	if req.Transforms != nil && req.Transforms.StandardizedSort != "" && req.Transforms.StandardizedSort != "none" {
+		csvWriter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{
+			StandardizedSort:        req.Transforms.StandardizedSort,
+			StandardizedSortColumns: req.Transforms.StandardizedSortColumns,
+		})
 	}
 
 	if err := csvWriter.Close(); err != nil {
@@ -369,10 +380,10 @@ func validateExportRequest(req *FeedVersionExportRequest) error {
 		return util.NewBadRequestError("only 'gtfs_zip' format is currently supported", nil)
 	}
 
-	// Validate lexicographic sort order if provided
-	if req.Transforms != nil && req.Transforms.LexicographicSort != "" {
-		if req.Transforms.LexicographicSort != "asc" && req.Transforms.LexicographicSort != "desc" {
-			return util.NewBadRequestError(fmt.Sprintf("invalid lexicographic_sort value: %s (must be 'asc' or 'desc')", req.Transforms.LexicographicSort), nil)
+	// Validate standardized sort order if provided
+	if req.Transforms != nil && req.Transforms.StandardizedSort != "" {
+		if req.Transforms.StandardizedSort != "asc" && req.Transforms.StandardizedSort != "desc" && req.Transforms.StandardizedSort != "none" {
+			return util.NewBadRequestError(fmt.Sprintf("invalid standardized_sort value: %s (must be 'asc', 'desc', or 'none')", req.Transforms.StandardizedSort), nil)
 		}
 	}
 

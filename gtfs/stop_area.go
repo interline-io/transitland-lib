@@ -6,8 +6,8 @@ import (
 
 // StopArea stop_areas.txt
 type StopArea struct {
-	AreaID tt.Key `csv:",required" target:"areas.txt"`
-	StopID tt.Key `csv:",required" target:"stops.txt"`
+	AreaID tt.Key `csv:",required" target:"areas.txt" standardized_sort:"1"`
+	StopID tt.Key `csv:",required" target:"stops.txt" standardized_sort:"2"`
 	tt.BaseEntity
 }
 

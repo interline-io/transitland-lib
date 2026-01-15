@@ -2711,14 +2711,6 @@
                   "transforms": {
                     "description": "Optional transformations to apply",
                     "properties": {
-                      "lexicographic_sort": {
-                        "description": "Sort all CSV files lexicographically before zipping. Use 'asc' for ascending or 'desc' for descending order.",
-                        "enum": [
-                          "asc",
-                          "desc"
-                        ],
-                        "type": "string"
-                      },
                       "normalize_timezones": {
                         "description": "Normalize timezone names (e.g., US/Pacific -\u003e America/Los_Angeles)",
                         "type": "boolean"
@@ -2756,6 +2748,22 @@
                       "simplify_shapes": {
                         "description": "Tolerance value for shape simplification (in meters)",
                         "type": "number"
+                      },
+                      "standardized_sort": {
+                        "description": "Sort all CSV files before zipping. Use 'asc' (ascending), 'desc' (descending), or 'none' (default). This is an optional feature and is off by default. By default, transitland-lib's streaming architecture generally preserves input order, but may reorder some associated records (e.g., parent stations before children) to maintain integrity.",
+                        "enum": [
+                          "asc",
+                          "desc",
+                          "none"
+                        ],
+                        "type": "string"
+                      },
+                      "standardized_sort_columns": {
+                        "description": "Optional specific columns to sort by. If empty, defaults are used based on file type.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
                       },
                       "use_basic_route_types": {
                         "description": "Convert extended route types to basic GTFS route types",

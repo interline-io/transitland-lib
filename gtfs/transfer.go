@@ -6,12 +6,12 @@ import (
 
 // Transfer transfers.txt
 type Transfer struct {
-	FromStopID      tt.Key `target:"stops.txt"`
-	ToStopID        tt.Key `target:"stops.txt"`
-	FromRouteID     tt.Key `target:"routes.txt"`
-	ToRouteID       tt.Key `target:"routes.txt"`
-	FromTripID      tt.Key `target:"trips.txt"`
-	ToTripID        tt.Key `target:"trips.txt"`
+	FromStopID      tt.Key `target:"stops.txt" standardized_sort:"1"`
+	ToStopID        tt.Key `target:"stops.txt" standardized_sort:"2"`
+	FromRouteID     tt.Key `target:"routes.txt" standardized_sort:"5"`
+	ToRouteID       tt.Key `target:"routes.txt" standardized_sort:"6"`
+	FromTripID      tt.Key `target:"trips.txt" standardized_sort:"3"`
+	ToTripID        tt.Key `target:"trips.txt" standardized_sort:"4"`
 	TransferType    tt.Int `enum:"0,1,2,3,4,5"`
 	MinTransferTime tt.Int `range:"0,"`
 	tt.BaseEntity

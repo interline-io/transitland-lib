@@ -7,7 +7,7 @@ import (
 
 // Route routes.txt
 type Route struct {
-	RouteID           tt.String `csv:",required"`
+	RouteID           tt.String `csv:",required" standardized_sort:"1"`
 	AgencyID          tt.Key    `target:"agency.txt"`
 	RouteShortName    tt.String
 	RouteLongName     tt.String

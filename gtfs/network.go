@@ -3,7 +3,7 @@ package gtfs
 import "github.com/interline-io/transitland-lib/tt"
 
 type Network struct {
-	NetworkID   tt.String `csv:",required"`
+	NetworkID   tt.String `csv:",required" standardized_sort:"1"`
 	NetworkName tt.String
 	tt.BaseEntity
 }

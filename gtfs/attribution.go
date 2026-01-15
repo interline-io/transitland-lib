@@ -6,14 +6,14 @@ import (
 )
 
 type Attribution struct {
-	OrganizationName tt.String `csv:",required"`
+	OrganizationName tt.String `csv:",required" standardized_sort:"2"`
 	AgencyID         tt.Key    `target:"agency.txt"`
 	RouteID          tt.Key    `target:"routes.txt"`
 	TripID           tt.Key    `target:"trips.txt"`
 	IsProducer       tt.Int    `enum:"0,1"`
 	IsOperator       tt.Int    `enum:"0,1"`
 	IsAuthority      tt.Int    `enum:"0,1"`
-	AttributionID    tt.String
+	AttributionID    tt.String `standardized_sort:"1"`
 	AttributionURL   tt.Url
 	AttributionEmail tt.Email
 	AttributionPhone tt.String

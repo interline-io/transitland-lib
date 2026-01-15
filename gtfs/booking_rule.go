@@ -7,7 +7,7 @@ import (
 
 // BookingRule booking_rules.txt
 type BookingRule struct {
-	BookingRuleID          tt.String `csv:",required"`
+	BookingRuleID          tt.String `csv:",required" standardized_sort:"1"`
 	BookingType            tt.Int    `csv:",required" enum:"0,1,2"`
 	PriorNoticeDurationMin tt.Int
 	PriorNoticeDurationMax tt.Int

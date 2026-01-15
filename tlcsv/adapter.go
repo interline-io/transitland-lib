@@ -16,8 +16,11 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/request"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
 
@@ -387,6 +390,7 @@ type DirAdapter struct {
 	path            string
 	files           map[string]*os.File
 	geojsonFeatures map[string][]*geojson.Feature
+	sortOptions     adapters.StandardizedSortOptions
 }
 
 // NewDirAdapter returns an initialized DirAdapter.
@@ -462,8 +466,232 @@ func (adapter *DirAdapter) Open() error {
 	return nil
 }
 
+func (adapter *DirAdapter) SetStandardizedSortOptions(opts adapters.StandardizedSortOptions) {
+	adapter.sortOptions = opts
+}
+
+func (adapter *DirAdapter) getDefaultSortColumns(filename string) []string {
+	var ent tt.Entity
+	switch filename {
+	case "agency.txt":
+		ent = &gtfs.Agency{}
+	case "stops.txt":
+		ent = &gtfs.Stop{}
+	case "routes.txt":
+		ent = &gtfs.Route{}
+	case "trips.txt":
+		ent = &gtfs.Trip{}
+	case "stop_times.txt":
+		ent = &gtfs.StopTime{}
+	case "shapes.txt":
+		ent = &gtfs.Shape{}
+	case "calendar.txt":
+		ent = &gtfs.Calendar{}
+	case "calendar_dates.txt":
+		ent = &gtfs.CalendarDate{}
+	case "fare_attributes.txt":
+		ent = &gtfs.FareAttribute{}
+	case "fare_rules.txt":
+		ent = &gtfs.FareRule{}
+	case "fare_media.txt":
+		ent = &gtfs.FareMedia{}
+	case "fare_products.txt":
+		ent = &gtfs.FareProduct{}
+	case "fare_leg_rules.txt":
+		ent = &gtfs.FareLegRule{}
+	case "fare_transfer_rules.txt":
+		ent = &gtfs.FareTransferRule{}
+	case "feed_info.txt":
+		ent = &gtfs.FeedInfo{}
+	case "frequencies.txt":
+		ent = &gtfs.Frequency{}
+	case "transfers.txt":
+		ent = &gtfs.Transfer{}
+	case "levels.txt":
+		ent = &gtfs.Level{}
+	case "pathways.txt":
+		ent = &gtfs.Pathway{}
+	case "areas.txt":
+		ent = &gtfs.Area{}
+	case "attributions.txt":
+		ent = &gtfs.Attribution{}
+	case "locations.geojson":
+		ent = &gtfs.Location{}
+	case "location_groups.txt":
+		ent = &gtfs.LocationGroup{}
+	case "location_group_stops.txt":
+		ent = &gtfs.LocationGroupStop{}
+	case "networks.txt":
+		ent = &gtfs.Network{}
+	case "route_networks.txt":
+		ent = &gtfs.RouteNetwork{}
+	case "stop_areas.txt":
+		ent = &gtfs.StopArea{}
+	case "timeframes.txt":
+		ent = &gtfs.Timeframe{}
+	case "translations.txt":
+		ent = &gtfs.Translation{}
+	case "booking_rules.txt":
+		ent = &gtfs.BookingRule{}
+	}
+
+	if ent == nil {
+		return nil
+	}
+
+	fmap := MapperCache.GetStructTagMap(ent)
+	type sortCol struct {
+		name  string
+		order int
+	}
+	var cols []sortCol
+	for name, info := range fmap {
+		if info.SortOrder > 0 {
+			cols = append(cols, sortCol{name, info.SortOrder})
+		}
+	}
+	sort.Slice(cols, func(i, j int) bool {
+		return cols[i].order < cols[j].order
+	})
+	var result []string
+	for _, c := range cols {
+		result = append(result, c.name)
+	}
+	return result
+}
+
+func (adapter *DirAdapter) StandardizedSortCSVFiles() error {
+	sortOrder := adapter.sortOptions.StandardizedSort
+	if sortOrder == "" {
+		return nil
+	}
+
+	// Collect .txt filenames and close only those files
+	var filenamesToSort []string
+	for filename, f := range adapter.files {
+		if strings.HasSuffix(filename, ".txt") {
+			filenamesToSort = append(filenamesToSort, filename)
+			// Close .txt files so we can read and rewrite them
+			if err := f.Close(); err != nil {
+				return fmt.Errorf("failed to close file %s: %w", filename, err)
+			}
+			delete(adapter.files, filename)
+		}
+	}
+
+	// Sort each CSV file that was written
+	for _, filename := range filenamesToSort {
+		fullPath := filepath.Join(adapter.path, filename)
+
+		// Read all rows
+		file, err := os.Open(fullPath)
+		if err != nil {
+			return fmt.Errorf("failed to open file %s: %w", filename, err)
+		}
+
+		reader := csv.NewReader(file)
+		allRows, err := reader.ReadAll()
+		file.Close()
+		if err != nil {
+			return fmt.Errorf("failed to read file %s: %w", filename, err)
+		}
+
+		if len(allRows) == 0 {
+			continue
+		}
+
+		// Separate header from data rows
+		header := allRows[0]
+		dataRows := allRows[1:]
+
+		// Determine columns to sort by
+		sortColumns := adapter.sortOptions.StandardizedSortColumns
+		if len(sortColumns) == 0 {
+			sortColumns = adapter.getDefaultSortColumns(filename)
+		}
+
+		// Sort data rows
+		if len(sortColumns) > 0 {
+			// Sort by specific columns
+			colIndices := make([]int, 0, len(sortColumns))
+			for _, colName := range sortColumns {
+				index := -1
+				for i, h := range header {
+					if h == colName {
+						index = i
+						break
+					}
+				}
+				if index != -1 {
+					colIndices = append(colIndices, index)
+				}
+			}
+
+			if sortOrder == "desc" {
+				sort.Slice(dataRows, func(i, j int) bool {
+					for _, idx := range colIndices {
+						if dataRows[i][idx] == dataRows[j][idx] {
+							continue
+						}
+						return dataRows[i][idx] > dataRows[j][idx]
+					}
+					return false
+				})
+			} else {
+				sort.Slice(dataRows, func(i, j int) bool {
+					for _, idx := range colIndices {
+						if dataRows[i][idx] == dataRows[j][idx] {
+							continue
+						}
+						return dataRows[i][idx] < dataRows[j][idx]
+					}
+					return false
+				})
+			}
+		}
+
+		// Write sorted rows back to file
+		file, err = os.Create(fullPath)
+		if err != nil {
+			return fmt.Errorf("failed to create file %s: %w", filename, err)
+		}
+
+		writer := csv.NewWriter(file)
+		if err := writer.Write(header); err != nil {
+			file.Close()
+			return fmt.Errorf("failed to write header to %s: %w", filename, err)
+		}
+		if err := writer.WriteAll(dataRows); err != nil {
+			file.Close()
+			return fmt.Errorf("failed to write rows to %s: %w", filename, err)
+		}
+		writer.Flush()
+		if err := writer.Error(); err != nil {
+			file.Close()
+			return fmt.Errorf("failed to flush writer for %s: %w", filename, err)
+		}
+		file.Close()
+
+		// Re-open the sorted file and add it back to the files map
+		reopenedFile, err := os.Open(fullPath)
+		if err != nil {
+			return fmt.Errorf("failed to re-open sorted file %s: %w", filename, err)
+		}
+		adapter.files[filename] = reopenedFile
+	}
+
+	return nil
+}
+
 // Close the adapter. Flushes any buffered GeoJSON files before closing.
 func (adapter *DirAdapter) Close() error {
+	// Sort files if requested
+	if adapter.sortOptions.StandardizedSort != "" {
+		if err := adapter.StandardizedSortCSVFiles(); err != nil {
+			return err
+		}
+	}
+
 	// Flush all buffered GeoJSON files
 	for filename, features := range adapter.geojsonFeatures {
 		if len(features) > 0 {
@@ -474,12 +702,17 @@ func (adapter *DirAdapter) Close() error {
 	}
 	adapter.geojsonFeatures = map[string][]*geojson.Feature{}
 
-	// Close all file handles
+	return adapter.CloseFiles()
+}
+
+// CloseFiles closes all open file handles.
+func (adapter *DirAdapter) CloseFiles() error {
 	for _, f := range adapter.files {
 		if err := f.Close(); err != nil {
 			return err
 		}
 	}
+	adapter.files = map[string]*os.File{}
 	return nil
 }
 
@@ -525,7 +758,6 @@ func (adapter *DirAdapter) ReadRows(filename string, cb func(Row)) error {
 
 // Exists checks if the specified directory exists.
 func (adapter *DirAdapter) Exists() bool {
-	// Is the path a directory
 	fi, err := os.Stat(adapter.path)
 	if err != nil {
 		return false
@@ -559,7 +791,6 @@ func (adapter *DirAdapter) WriteRows(filename string, rows [][]string) error {
 }
 
 // WriteFeatures buffers GeoJSON features to be written when the adapter is closed.
-// This mirrors how CSV rows are buffered and written.
 func (adapter *DirAdapter) WriteFeatures(filename string, features []*geojson.Feature) error {
 	if len(features) == 0 {
 		return nil
@@ -570,7 +801,7 @@ func (adapter *DirAdapter) WriteFeatures(filename string, features []*geojson.Fe
 
 // flushGeoJSON writes all buffered features for a file as a FeatureCollection.
 func (adapter *DirAdapter) flushGeoJSON(filename string, features []*geojson.Feature) error {
-	// Close existing file if open (we need to overwrite, not append)
+	// Close existing file if open
 	if in, ok := adapter.files[filename]; ok {
 		in.Close()
 		delete(adapter.files, filename)
@@ -612,122 +843,15 @@ func NewZipWriterAdapter(path string) *ZipWriterAdapter {
 	}
 }
 
-// SortCSVFiles sorts all CSV files in the temporary directory lexicographically.
-// sortOrder should be "asc" for ascending or "desc" for descending.
-// Only sorts .txt files that were actually written to the adapter.
-func (adapter *ZipWriterAdapter) SortCSVFiles(sortOrder string) error {
-	// Collect .txt filenames and close only those files
-	var filenamesToSort []string
-	for filename, f := range adapter.DirAdapter.files {
-		if strings.HasSuffix(filename, ".txt") {
-			filenamesToSort = append(filenamesToSort, filename)
-			// Close .txt files so we can read and rewrite them
-			if err := f.Close(); err != nil {
-				return fmt.Errorf("failed to close file %s: %w", filename, err)
-			}
-			delete(adapter.DirAdapter.files, filename)
-		}
-		// Non-.txt files (like GeoJSON) remain in the map and will be handled by Close()
-	}
-
-	// Sort each CSV file that was written
-	for _, filename := range filenamesToSort {
-
-		fullPath := filepath.Join(adapter.DirAdapter.path, filename)
-
-		// Read all rows
-		file, err := os.Open(fullPath)
-		if err != nil {
-			return fmt.Errorf("failed to open file %s: %w", filename, err)
-		}
-
-		reader := csv.NewReader(file)
-		allRows, err := reader.ReadAll()
-		file.Close()
-		if err != nil {
-			return fmt.Errorf("failed to read file %s: %w", filename, err)
-		}
-
-		if len(allRows) == 0 {
-			continue
-		}
-
-		// Separate header from data rows
-		header := allRows[0]
-		dataRows := allRows[1:]
-
-		// Sort data rows lexicographically (by first column, then second, etc.)
-		if sortOrder == "desc" {
-			sort.Slice(dataRows, func(i, j int) bool {
-				return compareRowsLexicographic(dataRows[j], dataRows[i]) < 0
-			})
-		} else {
-			sort.Slice(dataRows, func(i, j int) bool {
-				return compareRowsLexicographic(dataRows[i], dataRows[j]) < 0
-			})
-		}
-
-		// Write sorted rows back to file
-		file, err = os.Create(fullPath)
-		if err != nil {
-			return fmt.Errorf("failed to create file %s: %w", filename, err)
-		}
-
-		writer := csv.NewWriter(file)
-		if err := writer.Write(header); err != nil {
-			file.Close()
-			return fmt.Errorf("failed to write header to %s: %w", filename, err)
-		}
-		if err := writer.WriteAll(dataRows); err != nil {
-			file.Close()
-			return fmt.Errorf("failed to write rows to %s: %w", filename, err)
-		}
-		writer.Flush()
-		if err := writer.Error(); err != nil {
-			file.Close()
-			return fmt.Errorf("failed to flush writer for %s: %w", filename, err)
-		}
-		file.Close()
-
-		// Re-open the sorted file and add it back to the files map so Close() can zip it
-		reopenedFile, err := os.Open(fullPath)
-		if err != nil {
-			return fmt.Errorf("failed to re-open sorted file %s: %w", filename, err)
-		}
-		adapter.DirAdapter.files[filename] = reopenedFile
-	}
-
-	return nil
-}
-
-// compareRowsLexicographic compares two CSV rows lexicographically.
-// Returns -1 if row1 < row2, 0 if row1 == row2, 1 if row1 > row2.
-func compareRowsLexicographic(row1, row2 []string) int {
-	maxLen := len(row1)
-	if len(row2) > maxLen {
-		maxLen = len(row2)
-	}
-	for i := 0; i < maxLen; i++ {
-		val1 := ""
-		val2 := ""
-		if i < len(row1) {
-			val1 = row1[i]
-		}
-		if i < len(row2) {
-			val2 = row2[i]
-		}
-		if val1 < val2 {
-			return -1
-		}
-		if val1 > val2 {
-			return 1
-		}
-	}
-	return 0
-}
-
 // Close creates a zip archive of all the written files at the specified destination.
 func (adapter *ZipWriterAdapter) Close() error {
+	// Sort files if requested
+	if adapter.sortOptions.StandardizedSort != "" {
+		if err := adapter.DirAdapter.StandardizedSortCSVFiles(); err != nil {
+			return err
+		}
+	}
+
 	// Flush any buffered GeoJSON files first
 	for filename, features := range adapter.DirAdapter.geojsonFeatures {
 		if len(features) > 0 {
@@ -740,7 +864,7 @@ func (adapter *ZipWriterAdapter) Close() error {
 
 	out, err := os.Create(adapter.outpath)
 	if err != nil {
-		return nil
+		return err
 	}
 	w := zip.NewWriter(out)
 	defer w.Close()
