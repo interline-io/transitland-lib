@@ -1,5 +1,10 @@
 # GBFS
 
+"""
+General Bikeshare Feed Specification (GBFS) feed.
+
+See [Concepts: Micromobility](https://www.transit.land/documentation/concepts/micromobility).
+"""
 type GbfsFeed {
 	system_information:  GbfsSystemInformation
 	station_information: [GbfsStationInformation!]
@@ -138,6 +143,11 @@ type GbfsVehicleAssets {
 	icon_last_modified: Date
 }
 
+"""
+Real-time status of a vehicle (bike, scooter, etc.).
+
+See [Concepts: Micromobility](https://www.transit.land/documentation/concepts/micromobility).
+"""
 type GbfsFreeBikeStatus {
 	bike_id: String
 	lat: Float   
