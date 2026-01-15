@@ -1355,6 +1355,8 @@ type FeedInfo {
 
 """
 Record from a static GTFS [locations.geojson](https://gtfs.org/schedule/reference/#locationsgeojson) file.
+
+See [Concepts: Demand-Responsive Transit](https://www.transit.land/documentation/concepts/demand-responsive-transit).
 """
 type Location {
   "Internal integer ID"
@@ -1393,6 +1395,8 @@ type Location {
 
 """
 Record from a static GTFS [booking_rules.txt](https://gtfs.org/schedule/reference/#booking_rulestxt) file.
+
+See [Concepts: Demand-Responsive Transit](https://www.transit.land/documentation/concepts/demand-responsive-transit).
 """
 type BookingRule {
   "Internal integer ID"
@@ -1455,6 +1459,8 @@ type BookingRule {
 
 """
 Record from a static GTFS [location_groups.txt](https://gtfs.org/schedule/reference/#location_groupstxt) file.
+
+See [Concepts: Demand-Responsive Transit](https://www.transit.land/documentation/concepts/demand-responsive-transit).
 """
 type LocationGroup {
   "Internal integer ID"
@@ -2063,9 +2069,9 @@ If a TripUpdate is matched, but no StopTimeUpdate, the last available delay valu
 If the Trip is ADDED and does not match a static schedule StopTime, the scheduled times will be absent.
 
 See:
-- https://gtfs.org/realtime/reference/#message-tripupdate
-- https://gtfs.org/realtime/reference/#message-stoptimeupdate
 - https://gtfs.org/realtime/reference/#message-stoptimeevent
+
+See [Concepts: Realtime Updates](https://www.transit.land/documentation/concepts/realtime-updates).
 """
 type StopTimeEvent {
   "Local time for stop"
@@ -2120,7 +2126,11 @@ type VehiclePosition {
   congestion_level: String
 }
 
-"""[Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed."""
+"""
+[Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed.
+
+See [Concepts: Realtime Updates](https://www.transit.land/documentation/concepts/realtime-updates).
+"""
 type Alert {
   "GTFS-RT Alert active alert period. See https://gtfs.org/realtime/reference/#message-timerange"
   active_period: [RTTimeRange!]
