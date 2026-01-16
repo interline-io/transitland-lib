@@ -1464,6 +1464,7 @@ type SegmentResolver interface {
 type SegmentPatternResolver interface {
 	Route(ctx context.Context, obj *model.SegmentPattern) (*model.Route, error)
 
+	Shape(ctx context.Context, obj *model.SegmentPattern) (*model.Shape, error)
 	Segment(ctx context.Context, obj *model.SegmentPattern) (*model.Segment, error)
 }
 type StopResolver interface {
@@ -46694,7 +46695,7 @@ func (ec *executionContext) _SegmentPattern_shape(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Shape, nil
+		return ec.resolvers.SegmentPattern().Shape(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -46715,8 +46716,8 @@ func (ec *executionContext) fieldContext_SegmentPattern_shape(_ context.Context,
 	fc = &graphql.FieldContext{
 		Object:     "SegmentPattern",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -70358,10 +70359,41 @@ func (ec *executionContext) _SegmentPattern(ctx context.Context, sel ast.Selecti
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "shape":
-			out.Values[i] = ec._SegmentPattern_shape(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SegmentPattern_shape(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
 			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "segment":
 			field := field
 
@@ -75169,6 +75201,10 @@ func (ec *executionContext) marshalNSegmentPattern2ᚖgithubᚗcomᚋinterline�
 		return graphql.Null
 	}
 	return ec._SegmentPattern(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNShape2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v model.Shape) graphql.Marshaler {
+	return ec._Shape(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v *model.Shape) graphql.Marshaler {
