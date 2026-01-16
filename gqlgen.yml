@@ -190,6 +190,8 @@ models:
         resolver: true
       route:
         resolver: true
+      shape:
+        resolver: true
     extraFields:
       RouteID:
         type: int

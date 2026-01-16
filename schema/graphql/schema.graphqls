@@ -1236,6 +1236,16 @@ type SegmentPattern {
   route: Route!
   "Stop pattern for this segment pattern"
   stop_pattern_id: Int!
+  "Direction ID of the trip"
+  direction_id: Int!
+  "Sequence order of this segment within the pattern"
+  sequence_idx: Int!
+  "Shape ID for this segment pattern"
+  shape_id: Int!
+  "OSM Way ID, if any, associated with this segment pattern"
+  way_id: Int!
+  "Shape associated with this segment pattern"
+  shape: Shape!
   "Segment geometry for this pattern"
   segment: Segment!
 }
@@ -1245,7 +1255,7 @@ type Segment {
   "Internal integer ID"
   id: Int!
   "OSM Way ID, if any, associated with this segment"
-  way_id: Int!
+  way_id: Int! @deprecated(reason: "Use SegmentPattern.way_id instead")
   "Geometry for this segment"
   geometry: LineString!
   "Routes and stop patterns associated with this segment"

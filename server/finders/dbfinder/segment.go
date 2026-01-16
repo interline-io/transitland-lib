@@ -48,7 +48,13 @@ func (f *Finder) SegmentsByIDs(ctx context.Context, ids []int) ([]*model.Segment
 
 func (f *Finder) SegmentsByRouteIDs(ctx context.Context, limit *int, where *model.SegmentFilter, keys []int) ([][]*model.Segment, error) {
 	var ents []*model.Segment
-	q := sq.Select("s.id", "s.way_id", "s.geometry", "s.route_id", "s.route_id with_route_id").
+	q := sq.Select(
+		"s.id",
+		"s.way_id",
+		"s.geometry",
+		"s.route_id",
+		"s.route_id with_route_id",
+	).
 		From("gtfs_routes").
 		JoinClause(
 			`join lateral (select distinct on (tl_segments.id, tl_segment_patterns.route_id) tl_segments.id, tl_segments.way_id, tl_segments.geometry, tl_segment_patterns.route_id from tl_segments join tl_segment_patterns on tl_segment_patterns.segment_id = tl_segments.id where tl_segment_patterns.route_id = gtfs_routes.id limit ?) s on true`,

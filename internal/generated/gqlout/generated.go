@@ -1007,10 +1007,15 @@ type ComplexityRoot struct {
 	}
 
 	SegmentPattern struct {
+		DirectionID   func(childComplexity int) int
 		ID            func(childComplexity int) int
 		Route         func(childComplexity int) int
 		Segment       func(childComplexity int) int
+		SequenceIdx   func(childComplexity int) int
+		Shape         func(childComplexity int) int
+		ShapeID       func(childComplexity int) int
 		StopPatternID func(childComplexity int) int
+		WayID         func(childComplexity int) int
 	}
 
 	Shape struct {
@@ -1459,6 +1464,7 @@ type SegmentResolver interface {
 type SegmentPatternResolver interface {
 	Route(ctx context.Context, obj *model.SegmentPattern) (*model.Route, error)
 
+	Shape(ctx context.Context, obj *model.SegmentPattern) (*model.Shape, error)
 	Segment(ctx context.Context, obj *model.SegmentPattern) (*model.Segment, error)
 }
 type StopResolver interface {
@@ -6550,6 +6556,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Segment.WayID(childComplexity), true
 
+	case "SegmentPattern.direction_id":
+		if e.complexity.SegmentPattern.DirectionID == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.DirectionID(childComplexity), true
+
 	case "SegmentPattern.id":
 		if e.complexity.SegmentPattern.ID == nil {
 			break
@@ -6571,12 +6584,40 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.SegmentPattern.Segment(childComplexity), true
 
+	case "SegmentPattern.sequence_idx":
+		if e.complexity.SegmentPattern.SequenceIdx == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.SequenceIdx(childComplexity), true
+
+	case "SegmentPattern.shape":
+		if e.complexity.SegmentPattern.Shape == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.Shape(childComplexity), true
+
+	case "SegmentPattern.shape_id":
+		if e.complexity.SegmentPattern.ShapeID == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.ShapeID(childComplexity), true
+
 	case "SegmentPattern.stop_pattern_id":
 		if e.complexity.SegmentPattern.StopPatternID == nil {
 			break
 		}
 
 		return e.complexity.SegmentPattern.StopPatternID(childComplexity), true
+
+	case "SegmentPattern.way_id":
+		if e.complexity.SegmentPattern.WayID == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.WayID(childComplexity), true
 
 	case "Shape.generated":
 		if e.complexity.Shape.Generated == nil {
@@ -9889,6 +9930,16 @@ type SegmentPattern {
   route: Route!
   "Stop pattern for this segment pattern"
   stop_pattern_id: Int!
+  "Direction ID of the trip"
+  direction_id: Int!
+  "Sequence order of this segment within the pattern"
+  sequence_idx: Int!
+  "Shape ID for this segment pattern"
+  shape_id: Int!
+  "OSM Way ID, if any, associated with this segment pattern"
+  way_id: Int!
+  "Shape associated with this segment pattern"
+  shape: Shape!
   "Segment geometry for this pattern"
   segment: Segment!
 }
@@ -9898,7 +9949,7 @@ type Segment {
   "Internal integer ID"
   id: Int!
   "OSM Way ID, if any, associated with this segment"
-  way_id: Int!
+  way_id: Int! @deprecated(reason: "Use SegmentPattern.way_id instead")
   "Geometry for this segment"
   geometry: LineString!
   "Routes and stop patterns associated with this segment"
@@ -44460,6 +44511,16 @@ func (ec *executionContext) fieldContext_Route_segment_patterns(ctx context.Cont
 				return ec.fieldContext_SegmentPattern_route(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_SegmentPattern_stop_pattern_id(ctx, field)
+			case "direction_id":
+				return ec.fieldContext_SegmentPattern_direction_id(ctx, field)
+			case "sequence_idx":
+				return ec.fieldContext_SegmentPattern_sequence_idx(ctx, field)
+			case "shape_id":
+				return ec.fieldContext_SegmentPattern_shape_id(ctx, field)
+			case "way_id":
+				return ec.fieldContext_SegmentPattern_way_id(ctx, field)
+			case "shape":
+				return ec.fieldContext_SegmentPattern_shape(ctx, field)
 			case "segment":
 				return ec.fieldContext_SegmentPattern_segment(ctx, field)
 			}
@@ -46229,6 +46290,16 @@ func (ec *executionContext) fieldContext_Segment_segment_patterns(_ context.Cont
 				return ec.fieldContext_SegmentPattern_route(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_SegmentPattern_stop_pattern_id(ctx, field)
+			case "direction_id":
+				return ec.fieldContext_SegmentPattern_direction_id(ctx, field)
+			case "sequence_idx":
+				return ec.fieldContext_SegmentPattern_sequence_idx(ctx, field)
+			case "shape_id":
+				return ec.fieldContext_SegmentPattern_shape_id(ctx, field)
+			case "way_id":
+				return ec.fieldContext_SegmentPattern_way_id(ctx, field)
+			case "shape":
+				return ec.fieldContext_SegmentPattern_shape(ctx, field)
 			case "segment":
 				return ec.fieldContext_SegmentPattern_segment(ctx, field)
 			}
@@ -46429,6 +46500,236 @@ func (ec *executionContext) fieldContext_SegmentPattern_stop_pattern_id(_ contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_direction_id(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_direction_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DirectionID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_direction_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_sequence_idx(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_sequence_idx(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SequenceIdx, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_sequence_idx(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_shape_id(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_shape_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ShapeID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_shape_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_way_id(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_way_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WayID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_way_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_shape(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_shape(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.SegmentPattern().Shape(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Shape)
+	fc.Result = res
+	return ec.marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_shape(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Shape_id(ctx, field)
+			case "shape_id":
+				return ec.fieldContext_Shape_shape_id(ctx, field)
+			case "geometry":
+				return ec.fieldContext_Shape_geometry(ctx, field)
+			case "generated":
+				return ec.fieldContext_Shape_generated(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Shape", field.Name)
 		},
 	}
 	return fc, nil
@@ -70037,6 +70338,62 @@ func (ec *executionContext) _SegmentPattern(ctx context.Context, sel ast.Selecti
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "direction_id":
+			out.Values[i] = ec._SegmentPattern_direction_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "sequence_idx":
+			out.Values[i] = ec._SegmentPattern_sequence_idx(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "shape_id":
+			out.Values[i] = ec._SegmentPattern_shape_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "way_id":
+			out.Values[i] = ec._SegmentPattern_way_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "shape":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SegmentPattern_shape(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "segment":
 			field := field
 
@@ -74844,6 +75201,20 @@ func (ec *executionContext) marshalNSegmentPattern2ᚖgithubᚗcomᚋinterline�
 		return graphql.Null
 	}
 	return ec._SegmentPattern(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNShape2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v model.Shape) graphql.Marshaler {
+	return ec._Shape(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v *model.Shape) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Shape(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNStep2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStep(ctx context.Context, sel ast.SelectionSet, v *model.Step) graphql.Marshaler {

@@ -980,6 +980,16 @@ type SegmentPattern struct {
 	Route *Route `json:"route"`
 	// Stop pattern for this segment pattern
 	StopPatternID int `json:"stop_pattern_id"`
+	// Direction ID of the trip
+	DirectionID int `json:"direction_id"`
+	// Sequence order of this segment within the pattern
+	SequenceIdx int `json:"sequence_idx"`
+	// Shape ID for this segment pattern
+	ShapeID int `json:"shape_id"`
+	// OSM Way ID, if any, associated with this segment pattern
+	WayID int `json:"way_id"`
+	// Shape associated with this segment pattern
+	Shape *Shape `json:"shape"`
 	// Segment geometry for this pattern
 	Segment   *Segment `json:"segment"`
 	RouteID   int      `json:"-"`
