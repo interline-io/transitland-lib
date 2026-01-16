@@ -53,7 +53,7 @@ insert into tl_segments(id,feed_version_id,way_id,geometry) values
     );
 select setval('tl_segments_id_seq', (select max(id)+1 from tl_segments), false);
 
-insert into tl_segment_patterns(feed_version_id,segment_id,route_id,shape_id,stop_pattern_id,way_id,direction_id) values
+insert into tl_segment_patterns(feed_version_id,segment_id,route_id,shape_id,stop_pattern_id,way_id,direction_id,sequence_idx) values
     (
         (select feed_version_id from gtfs_agencies where agency_name = 'Hillsborough Area Regional Transit'), -- EG
         1418704,
@@ -61,6 +61,7 @@ insert into tl_segment_patterns(feed_version_id,segment_id,route_id,shape_id,sto
         (select id from gtfs_shapes where shape_id = '41698'),
         42,
         645693994,
+        0,
         0
     ),
     (
@@ -69,8 +70,9 @@ insert into tl_segment_patterns(feed_version_id,segment_id,route_id,shape_id,sto
         (select id from gtfs_routes where route_long_name = '22nd Street'),
         (select id from gtfs_shapes where shape_id = '41698'),
         42,
-        645693994,
-        0
+        90865590,
+        0,
+        1
     ),    
     (
         (select feed_version_id from gtfs_agencies where agency_name = 'Hillsborough Area Regional Transit'), -- EG
@@ -79,7 +81,8 @@ insert into tl_segment_patterns(feed_version_id,segment_id,route_id,shape_id,sto
         (select id from gtfs_shapes where shape_id = '41708'),
         40,
         645693994,
-        0
+        0,
+        2
     );    
 
 -- unactivate feed
