@@ -1286,7 +1286,7 @@ type CensusDataset {
   # Layers in this dataset
   layers: [CensusLayer!]
   """Census values in this dataset with cursor pagination. Query by geoid, geoid_prefix, or table."""
-  values(first: Int, after: String, where: CensusDatasetValueFilter): CensusValueConnection
+  values_relay(first: Int, after: String, where: CensusDatasetValueFilter): CensusValueConnection
 }
 
 type CensusSource {

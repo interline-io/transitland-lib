@@ -172,7 +172,7 @@ type ComplexityRoot struct {
 		Sources     func(childComplexity int, limit *int, where *model.CensusSourceFilter) int
 		Tables      func(childComplexity int, limit *int, where *model.CensusTableFilter) int
 		URL         func(childComplexity int) int
-		Values      func(childComplexity int, first *int, after *string, where *model.CensusDatasetValueFilter) int
+		ValuesRelay func(childComplexity int, first *int, after *string, where *model.CensusDatasetValueFilter) int
 		YearMax     func(childComplexity int) int
 		YearMin     func(childComplexity int) int
 	}
@@ -1306,6 +1306,7 @@ type CensusDatasetResolver interface {
 	Geographies(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusDatasetGeographyFilter) ([]*model.CensusGeography, error)
 	Tables(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusTableFilter) ([]*model.CensusTable, error)
 	Layers(ctx context.Context, obj *model.CensusDataset) ([]*model.CensusLayer, error)
+	ValuesRelay(ctx context.Context, obj *model.CensusDataset, first *int, after *string, where *model.CensusDatasetValueFilter) (*model.CensusValueConnection, error)
 }
 type CensusGeographyResolver interface {
 	Values(ctx context.Context, obj *model.CensusGeography, tableNames []string, dataset *string, limit *int) ([]*model.CensusValue, error)
@@ -2124,17 +2125,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CensusDataset.URL(childComplexity), true
 
-	case "CensusDataset.values":
-		if e.complexity.CensusDataset.Values == nil {
+	case "CensusDataset.values_relay":
+		if e.complexity.CensusDataset.ValuesRelay == nil {
 			break
 		}
 
-		args, err := ec.field_CensusDataset_values_args(ctx, rawArgs)
+		args, err := ec.field_CensusDataset_values_relay_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.CensusDataset.Values(childComplexity, args["first"].(*int), args["after"].(*string), args["where"].(*model.CensusDatasetValueFilter)), true
+		return e.complexity.CensusDataset.ValuesRelay(childComplexity, args["first"].(*int), args["after"].(*string), args["where"].(*model.CensusDatasetValueFilter)), true
 
 	case "CensusDataset.year_max":
 		if e.complexity.CensusDataset.YearMax == nil {
@@ -10026,7 +10027,7 @@ type CensusDataset {
   # Layers in this dataset
   layers: [CensusLayer!]
   """Census values in this dataset with cursor pagination. Query by geoid, geoid_prefix, or table."""
-  values(first: Int, after: String, where: CensusDatasetValueFilter): CensusValueConnection
+  values_relay(first: Int, after: String, where: CensusDatasetValueFilter): CensusValueConnection
 }
 
 type CensusSource {
@@ -11366,7 +11367,7 @@ func (ec *executionContext) field_CensusDataset_tables_args(ctx context.Context,
 	return args, nil
 }
 
-func (ec *executionContext) field_CensusDataset_values_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_CensusDataset_values_relay_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first", ec.unmarshalOInt2ᚖint)
@@ -16520,8 +16521,8 @@ func (ec *executionContext) fieldContext_CensusDataset_layers(_ context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _CensusDataset_values(ctx context.Context, field graphql.CollectedField, obj *model.CensusDataset) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_CensusDataset_values(ctx, field)
+func (ec *executionContext) _CensusDataset_values_relay(ctx context.Context, field graphql.CollectedField, obj *model.CensusDataset) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CensusDataset_values_relay(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -16534,7 +16535,7 @@ func (ec *executionContext) _CensusDataset_values(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Values, nil
+		return ec.resolvers.CensusDataset().ValuesRelay(rctx, obj, fc.Args["first"].(*int), fc.Args["after"].(*string), fc.Args["where"].(*model.CensusDatasetValueFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -16548,12 +16549,12 @@ func (ec *executionContext) _CensusDataset_values(ctx context.Context, field gra
 	return ec.marshalOCensusValueConnection2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueConnection(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_CensusDataset_values(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_CensusDataset_values_relay(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CensusDataset",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "edges":
@@ -16571,7 +16572,7 @@ func (ec *executionContext) fieldContext_CensusDataset_values(ctx context.Contex
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_CensusDataset_values_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_CensusDataset_values_relay_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -42588,8 +42589,8 @@ func (ec *executionContext) fieldContext_Query_census_datasets(ctx context.Conte
 				return ec.fieldContext_CensusDataset_tables(ctx, field)
 			case "layers":
 				return ec.fieldContext_CensusDataset_layers(ctx, field)
-			case "values":
-				return ec.fieldContext_CensusDataset_values(ctx, field)
+			case "values_relay":
+				return ec.fieldContext_CensusDataset_values_relay(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type CensusDataset", field.Name)
 		},
@@ -63134,8 +63135,39 @@ func (ec *executionContext) _CensusDataset(ctx context.Context, sel ast.Selectio
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "values":
-			out.Values[i] = ec._CensusDataset_values(ctx, field, obj)
+		case "values_relay":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CensusDataset_values_relay(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

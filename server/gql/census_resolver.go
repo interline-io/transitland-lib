@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/server/model"
@@ -27,7 +28,7 @@ func (r *censusDatasetResolver) Layers(ctx context.Context, obj *model.CensusDat
 	return LoaderFor(ctx).CensusDatasetLayersByDatasetIDs.Load(ctx, obj.ID)()
 }
 
-func (r *censusDatasetResolver) Values(ctx context.Context, obj *model.CensusDataset, first *int, after *string, where *model.CensusDatasetValueFilter) (*model.CensusValueConnection, error) {
+func (r *censusDatasetResolver) ValuesRelay(ctx context.Context, obj *model.CensusDataset, first *int, after *string, where *model.CensusDatasetValueFilter) (*model.CensusValueConnection, error) {
 	cfg := model.ForContext(ctx)
 
 	// Decode cursor if provided
@@ -44,6 +45,7 @@ func (r *censusDatasetResolver) Values(ctx context.Context, obj *model.CensusDat
 	limit := *resolverCheckLimit(first)
 	fetchLimit := limit + 1
 
+	fmt.Println("=========")
 	values, err := cfg.Finder.FindCensusValuesByDatasetID(ctx, &fetchLimit, cursor, obj.ID, where)
 	if err != nil {
 		return nil, err

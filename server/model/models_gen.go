@@ -149,7 +149,7 @@ type CensusDataset struct {
 	Tables      []*CensusTable     `json:"tables,omitempty"`
 	Layers      []*CensusLayer     `json:"layers,omitempty"`
 	// Census values in this dataset with cursor pagination. Query by geoid, geoid_prefix, or table.
-	Values *CensusValueConnection `json:"values,omitempty"`
+	ValuesRelay *CensusValueConnection `json:"values_relay,omitempty"`
 }
 
 // Search options for census datasets
