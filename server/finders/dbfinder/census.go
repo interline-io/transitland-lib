@@ -2,7 +2,6 @@ package dbfinder
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -306,7 +305,7 @@ func censusDatasetSelect(_ *int, _ *model.Cursor, _ []int, where *model.CensusDa
 			q = q.Where(sq.Eq{"name": *where.Name})
 		}
 		if where.Search != nil {
-			q = q.Where(sq.Like{"name": fmt.Sprintf("%%%s%%", *where.Search)})
+			q = q.Where(sq.Like{"name": dbutil.EscapeLike(*where.Search, true, true)})
 		}
 	}
 	return q
@@ -483,7 +482,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			q = q.Where(sq.Eq{"tlcl.name": where.Layer})
 		}
 		if where.Search != nil {
-			q = q.Where(sq.ILike{"tlcg.name": fmt.Sprintf("%%%s%%", *where.Search)})
+			q = q.Where(sq.ILike{"tlcg.name": dbutil.EscapeLike(*where.Search, true, true)})
 		}
 		if len(where.Ids) > 0 {
 			q = q.Where(sq.Eq{"tlcg.id": where.Ids})
@@ -541,7 +540,7 @@ func censusTableSelect(limit *int, where *model.CensusTableFilter) sq.SelectBuil
 	q := quickSelectOrder("tl_census_tables", limit, nil, nil, "id")
 	if where != nil {
 		if where.Search != nil {
-			q = q.Where(sq.ILike{"table_name": fmt.Sprintf("%%%s%%", *where.Search)})
+			q = q.Where(sq.ILike{"table_name": dbutil.EscapeLike(*where.Search, true, true)})
 		}
 	}
 	return q
@@ -585,7 +584,7 @@ func censusValueFilterSelect(limit *int, after model.CensusCursor, datasetID int
 			q = q.Where(sq.Eq{"tlcv.geoid": *where.Geoid})
 		}
 		if where.GeoidPrefix != nil {
-			q = q.Where(sq.Like{"tlcv.geoid": fmt.Sprintf("%s%%", *where.GeoidPrefix)})
+			q = q.Where(sq.Like{"tlcv.geoid": dbutil.EscapeLike(*where.GeoidPrefix, false, true)})
 		}
 	}
 	return q
