@@ -109,3 +109,19 @@ func Get(ctx context.Context, db sqlx.Ext, q sq.SelectBuilder, dest interface{})
 	}
 	return err
 }
+
+// EscapeLike escapes SQL LIKE/ILIKE wildcard characters (%, _, and \) in a string
+// and optionally adds prefix/suffix wildcards for pattern matching.
+func EscapeLike(s string, prefix bool, suffix bool) string {
+	// Escape backslash first, then the wildcards
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	if prefix {
+		s = "%" + s
+	}
+	if suffix {
+		s = s + "%"
+	}
+	return s
+}

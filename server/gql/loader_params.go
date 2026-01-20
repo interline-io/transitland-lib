@@ -191,6 +191,12 @@ type censusSourceLoaderParam struct {
 	Where     *model.CensusSourceFilter
 }
 
+type censusTableLoaderParam struct {
+	DatasetID int
+	Limit     *int
+	Where     *model.CensusTableFilter
+}
+
 type routeStopPatternLoaderParam struct {
 	RouteID int
 }

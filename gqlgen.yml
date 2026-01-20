@@ -233,6 +233,8 @@ models:
         resolver: true
       layers:
         resolver: true
+      values_relay:
+        resolver: true
   CensusLayer:
     fields:
       geographies:
