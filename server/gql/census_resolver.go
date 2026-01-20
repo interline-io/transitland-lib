@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/server/model"
@@ -45,7 +44,6 @@ func (r *censusDatasetResolver) ValuesRelay(ctx context.Context, obj *model.Cens
 	limit := *resolverCheckLimit(first)
 	fetchLimit := limit + 1
 
-	fmt.Println("=========")
 	values, err := cfg.Finder.FindCensusValuesByDatasetID(ctx, &fetchLimit, cursor, obj.ID, where)
 	if err != nil {
 		return nil, err
