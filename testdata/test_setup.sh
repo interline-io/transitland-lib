@@ -44,12 +44,6 @@ parse_pg_url() {
 }
 
 #########################
-# Rebuild binary
-#########################
-
-(cd cmd/transitland && go install .)
-
-#########################
 # Migrate and init base database
 #########################
 
