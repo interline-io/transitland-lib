@@ -1,0 +1,667 @@
+syntax = "proto3";
+
+/////////////
+// GTFS entities
+
+message FeedEntity {
+    Agency agency = 1;
+    Stop stop = 2;
+    Route route = 3;
+    Trip trip = 4;
+    StopTime stop_time = 5;
+    Shape shape = 6;
+    Service service = 7;
+}
+
+message Agency {
+    DatabaseEntity id = 1;
+    Key agency_id = 3;
+    String agency_name = 4;
+    Url agency_url = 5;
+    Timezone agency_timezone = 6;
+    Language agency_lang = 7;
+    Phone agency_phone = 8;
+    Url agency_fare_url = 9;
+    Email agency_email = 10;
+}
+
+message Stop {
+    DatabaseEntity id = 1;
+    Key stop_id = 3;
+    String stop_code = 4;
+    String stop_name = 5;
+    String tts_stop_name = 6;
+    String stop_desc = 7;
+    Float stop_lat = 8;
+    Float stop_lon = 9;
+    String zone_id = 10;
+    Url stop_url = 11;
+    StopLocationType location_type = 12;
+    Reference parent_station = 13;
+    Timezone stop_timezone = 14;
+    WheelchairAccess wheelchair_boarding = 15;
+    Reference level_id = 16;
+    String platform_code = 17;
+}
+
+message Route {
+    DatabaseEntity id = 1;
+    Key route_id = 3;
+    Reference agency_id = 4;
+    String route_short_name = 5;
+    String route_long_name = 6;
+    String route_desc = 7;
+    RouteType route_type = 8;
+    Url route_url = 9;
+    Color route_color = 10;
+    Color route_text_color = 11;
+    Int route_sort_order = 12;
+    PickupAccess continuous_pickup = 13;
+    PickupAccess continuous_drop_off = 14;
+    String network_id = 15;
+}
+
+message Trip {
+    DatabaseEntity id = 1;
+    Reference route_id = 3;
+    Reference service_id = 4;
+    Key trip_id = 5;
+    String trip_headsign = 6;
+    String trip_short_name = 7;
+    TripDirection direction_id = 8;
+    String block_id = 9;
+    Reference shape_id = 10;
+    WheelchairAccess wheelchair_accessible = 11;
+    BikeAccess bikes_allowed = 12;
+}
+
+message StopTime {
+    DatabaseEntity id = 1;
+    Reference trip_id = 3;
+    Seconds arrival_time = 4;
+    Seconds departure_time = 5;
+    Reference stop_id = 6;
+    Int stop_sequence = 7;
+    String stop_headsign = 8;
+    PickupAccess continuous_pickup = 9;
+    PickupAccess continuous_drop_off = 10;
+    Float shape_dist_traveled = 11;
+    StopTimepoint timepoint = 12;
+    Reference location_id = 13;
+    Reference location_group_id = 14;
+    Seconds start_pickup_drop_off_window = 15;
+    Seconds end_pickup_drop_off_window = 16;
+    PickupAccess pickup_type = 17;
+    PickupAccess drop_off_type = 18;
+    Reference pickup_booking_rule_id = 19;
+    Reference drop_off_booking_rule_id = 20;
+}
+
+message Calendar {
+    DatabaseEntity id = 1;
+    Key service_id = 3;
+    Date start_date = 4;
+    Date end_date = 5;
+    Bool monday = 6;
+    Bool tuesday = 7;
+    Bool wednesday = 8;
+    Bool thursday = 9;
+    Bool friday = 10;
+    Bool saturday = 11;
+    Bool sunday = 12;
+}
+
+message CalendarDate {
+    DatabaseEntity id = 1;
+    Reference service_id = 3;
+    Date date = 4;
+    CalendarExceptionType exception_type = 5;
+}
+
+message FareAttribute {
+    DatabaseEntity id = 1;
+    Key fare_id = 3;
+    Money price = 4;
+    Currency currency_type = 5;
+    PaymentMethod payment_method = 6;
+    FareAttributeTransferType transfers = 7;
+    Reference agency_id = 8;
+    Int transfer_duration = 9;
+}
+
+message FareRule {
+    DatabaseEntity id = 1;
+    Key fare_id = 3;
+    Reference route_id = 4;
+    Reference origin_id = 5;
+    Reference destination_id = 6;
+    Reference contains_id = 8;
+}
+
+message Timeframe {
+    DatabaseEntity id = 1;
+    Key timeframe_group_id = 3;
+    Seconds start_time = 4;
+    Seconds end_time = 5;
+    Reference service_id = 6;
+}
+
+message FareMedia {
+    DatabaseEntity id = 1;
+    Key fare_media_id = 3;
+    String fare_media_name = 4;
+    FareMediaType fare_media_type = 5;
+}
+
+message FareProduct {
+    DatabaseEntity id = 1;
+    Key fare_product_id = 3;
+    String fare_product_name = 4;
+    Reference fare_media_id = 5;
+    Money amount = 6;
+    Currency currency = 7;
+}
+
+message FareLegRule {
+    DatabaseEntity id = 1;
+    Key leg_group_id = 3;
+    Reference network_id = 4;
+    Reference from_area_id = 5;
+    Reference to_area_id = 6;
+    Reference from_timeframe_group_id = 7;
+    Reference to_timeframe_group_id = 8;
+    Reference fare_product_id = 9;
+    Int rule_proirity = 10;
+}
+
+message FareTransferRule {
+    DatabaseEntity id = 1;
+    Reference from_leg_group_id = 3;
+    Reference to_leg_group_id = 4;
+    Int transfer_count = 5;
+    DurationLimitType duration_limit_type = 6;
+    FareTransferType fare_transfer_type = 7;
+    Reference fare_product_id = 8;
+}
+
+message Area {
+    DatabaseEntity id = 1;
+    Key area_id = 3;
+    String area_name = 4;
+}
+
+message StopArea {
+    DatabaseEntity id = 1;
+    Reference area_id = 3;
+    Reference stop_id = 4;
+}
+
+message Network {
+    DatabaseEntity id = 1;
+    Key network_id = 3;
+    String network_name = 4;
+}
+
+message RouteNetwork {
+    DatabaseEntity id = 1;
+    Reference network_id = 3;
+    Reference route_id = 4;
+}
+
+message Frequency {
+    DatabaseEntity id = 1;
+    Reference trip_id = 3;
+    Seconds start_time = 4;
+    Seconds end_time = 5;
+    Int headway_secs = 6;
+    FrequencyExactTime exact_time = 7;
+}
+
+message Transfer {
+    DatabaseEntity id = 1;
+    Reference from_stop_id = 3;
+    Reference to_stop_id = 4;
+    Reference from_route_id = 5;
+    Reference to_route_id = 6;
+    Reference from_trip_id = 7;
+    Reference to_trip_id = 8;
+    TransferType transfer_type = 9;
+    Int min_transfer_time = 10;
+}
+
+message Pathway {
+    DatabaseEntity id = 1;
+    Key pathway_id = 3;
+    Reference from_stop_id = 4;
+    Reference to_stop_id = 5;
+    PathwayMode pathway_mode = 6;
+    PathwayDirectionality is_bidirectional = 7;
+    Float length = 8;
+    Int traversal_time = 9;
+    Int stair_count = 10;
+    Float max_slope = 11;
+    Float min_width = 12;
+    String signposted_as = 13;
+    String reverse_signposted_as = 14;
+}
+
+message Level {
+    DatabaseEntity id = 1;
+    Key level_id = 3;
+    Float level_index = 4;
+    String level_name = 5;
+}
+
+message LocationGroup {
+    DatabaseEntity id = 1;
+    Key location_group_id = 3;
+    String location_group_name = 4;
+}
+
+message LocationGroupStop {
+    DatabaseEntity id = 1;
+    Reference location_group_id = 3;
+    Reference stop_id = 4;
+}
+
+message BookingRule {
+    DatabaseEntity id = 1;
+    Key booking_rule_id = 3;
+    BookingRuleType booking_type = 4;
+    Int prior_notice_duration_min = 5;
+    Int prior_notice_duration_max = 6;
+    Int prior_notice_last_day = 7;
+    Seconds prior_notice_last_time = 8;
+    Int prior_notice_start_day = 9;
+    Seconds prior_notice_start_time = 10;
+    Reference prior_notice_service_id = 11;
+    String message = 12;
+    String pickup_message = 13;
+    String drop_off_message = 14;
+    String phone_number = 15;
+    Url info_url = 16;
+    Url booking_url = 17;
+}
+
+message Translation {
+    DatabaseEntity id = 1;
+    String table_name = 3; // a String enum, not supported in protobuf
+    String field_name = 4;
+    Language language = 5;
+    String translation = 6;
+    String record_id = 7; // technically a reference, but must be resolved manually
+    String record_sub_id = 8;
+    String field_value = 9;
+}
+
+message FeedInfo {
+    DatabaseEntity id = 1;
+    String feed_publisher_name = 3;
+    Url feed_publisher_url = 4;
+    Language feed_lang = 5;
+    Language default_lang = 6;
+    Date feed_start_date = 7;
+    Date feed_end_date = 8;
+    Email feed_contact_email = 9;
+    Url feed_contact_url = 10;
+}
+
+message Attribution {
+    DatabaseEntity id = 1;
+    Key attribution_id = 3;
+    Reference agency_id = 4;
+    Reference route_id = 5;
+    Reference trip_id = 6;
+    String organization_name = 7;
+    AttributionRole is_producer = 8;
+    AttributionRole is_operator = 9;
+    AttributionRole is_authority = 10;
+    Url attribution_url = 11;
+    Email attribution_email = 12;
+    Phone attribution_phone = 13;
+}
+
+message Shape {
+    Key shape_id = 1;
+    double shape_pt_lat = 2;
+    double shape_pt_lon = 3;
+    int32 shape_pt_sequence = 4;
+    double shape_dist_traveled = 5;
+}
+
+//////////
+// Helper types
+
+message Service {
+    DatabaseEntity id = 1;
+    Key service_id = 3;
+    Date start_date = 4;
+    Date end_date = 5;
+    repeated Date added = 6;
+    repeated Date removed = 7;
+    Bool monday = 8;
+    Bool tuesday = 9;
+    Bool wednesday = 10;
+    Bool thursday = 11;
+    Bool friday = 12;
+    Bool saturday = 13;
+    Bool sunday = 14;
+}
+
+message ShapeLine {
+    DatabaseEntity id = 1;
+    Key shape_id = 2;
+    LineString geometry = 3;
+}
+
+///////////
+// Shapes and geometries
+
+message Point {
+    double lon = 1;
+    double lat = 2;
+}
+
+message LineString {
+    uint32 stride = 1;
+    repeated double coordinates = 2;
+}
+
+/////////////
+// Base messages
+
+message DatabaseEntity {
+    int64 id = 1;
+    int64 feed_version_id = 2;
+}
+
+message Date {
+    int32 year = 1;
+    int32 month = 2;
+    int32 day = 3;
+}
+
+message Timestamp {
+    int64 val = 1;
+}
+
+message Seconds {
+    int64 val = 1;
+}
+
+message Key {
+    string val = 1;
+}
+
+message Timezone {
+    string val = 1;
+}
+
+message Reference {
+    string val = 1;
+}
+
+message Url {
+    string val = 1;
+}
+
+message Email {
+    string val = 1;
+}
+
+message Color {
+    string val = 1;
+}
+
+message Money {
+    int64 units = 1;
+    int64 nanos = 2;
+}
+
+message Currency {
+    string val = 1;
+}
+
+message Language {
+    string val = 1;
+}
+
+message Phone {
+    string val = 1;
+}
+
+message Float {
+    double val = 1;
+}
+
+message String {
+    string val = 1;
+}
+
+message Int {
+    int64 val = 1;
+}
+
+message Bool {
+    bool val = 1;
+}
+
+/////////////
+// Base enums
+
+message WheelchairAccess {
+    WheelchairAccessEnum val = 1;
+}
+
+enum WheelchairAccessEnum {
+    WheelchairUnknown = 0;
+    WheelchairAllowed = 1;
+    WheelchairDisallowed = 2;
+}
+
+message BikeAccess {
+    BikeAccessEnum val = 1;
+}
+
+enum BikeAccessEnum {
+    BikeUnknown = 0;
+    BikeAllowed = 1;
+    BikeDisallowed = 2;
+}
+
+message BoardAccess {
+    BoardAccessEnum val = 1;
+}
+
+enum BoardAccessEnum {
+    BoardUnknown = 0;
+    BoardDisallowed = 1;
+    BoardAllowed = 2;
+    BoardCoordinate = 3;
+}
+
+message PickupAccess {
+    PickupAccessEnum val = 1;
+}
+
+enum PickupAccessEnum {
+    PickupContinuous = 0;
+    PickupDisallowed = 1;
+    PickupMustPhone = 2;
+    PickupAskDriver = 3;
+}
+
+message StopLocationType {
+    StopLocationTypeEnum val = 1;
+}
+
+enum StopLocationTypeEnum {
+    LocationPlatform = 0;
+    LocationStation = 1;
+    LocationEntrance = 2;
+    LocationNode = 3;
+    LocationBoardingArea = 4;
+}
+
+message RouteType {
+    RouteTypeEnum val = 1;
+}
+
+enum RouteTypeEnum {
+    VehicleTram = 0;
+    VehicleSubway = 1;
+    VehicleRail = 2;
+    VehicleBus = 3;
+    VehicleFerry = 4;
+    VehicleCablecar = 5;
+    VehicleGondola = 6;
+    VehicleFunicular = 7;
+    VehicleTrollebus = 11;
+    VehicleMonorail = 12;
+}    
+
+message TripDirection {
+    TripDirectionEnum val = 1;
+}
+
+enum TripDirectionEnum {
+    TripDirectionOutbound = 0;
+    TripDirectionInbound = 1;
+} 
+
+message StopTimepoint {
+    StopTimepointEnum val = 1;
+}
+
+enum StopTimepointEnum {
+    Approximate = 0;
+    StopTimepointExact = 1;
+}
+
+message CalendarExceptionType {
+    CalendarExceptionTypeEnum val = 1;
+}
+
+enum CalendarExceptionTypeEnum {
+    CalendarUnknown = 0;
+    CalendarAdded = 1;
+    CalendarRemoved = 2;
+}
+
+message FrequencyExactTime {
+    FrequencyExactTimeEnum val = 1;
+}
+
+enum FrequencyExactTimeEnum {
+    FrequencyExactTimeFrequency = 0;
+    FrequencyExactTimeScheduled = 1;
+}
+
+message TransferType {
+    TransferTypeEnum val = 1;
+}
+
+enum TransferTypeEnum {
+    TransferTypeRecommended = 0;
+    TransferTypeTimed = 1;
+    TransferTypeMinTime = 2;
+    TransferTypeDisallowed = 3;
+    TransferTypeInSeat = 4;
+    TransferTypeMustExit = 5;
+}
+
+message PathwayDirectionality {
+    PathwayDirectionalityEnum val = 1;
+}
+
+enum PathwayDirectionalityEnum {
+    PathwayUnidirectional = 0;
+    PathwayBidirectional = 1;
+}
+
+message PathwayMode {
+    PathwayModeEnum val = 1;
+}
+
+enum PathwayModeEnum {
+    PathwayModeUnknown = 0;
+    PathwayModeWalkway = 1;
+    PathwayModeStairs = 2;
+    PathwayModeTravelator = 3;
+    PathwayModeEscalator = 4;
+    PathwayModeElevator = 5;
+    PatthwayModeFareGate = 6;
+    PathwayModeExitGate = 7;
+}
+
+message BookingRuleType {
+    BookingRuleTypeEnum val = 1;
+}
+
+enum BookingRuleTypeEnum {
+    BookingRuleTypeRealtime = 0;
+    BookingRuleTypeSameday = 1;
+    BookingRuleTypePriorday = 2;
+}
+
+message FareMediaType {
+    FareMediaTypeEnum val = 1;
+}
+
+enum FareMediaTypeEnum {
+    FareMediaNone = 0;
+    FareMediaPaper = 1;
+    FareMediaCard = 2;
+    FareMediaOpenLoop = 3;
+    FareMediaApp = 4;
+}
+
+message FareTransferType {
+    FareTransferTypeEnum val = 1;
+}
+
+enum FareTransferTypeEnum {
+    FareTransfer0 = 0;
+    FareTransfer1 = 1;
+    FareTransfer2 = 2;
+}
+
+message DurationLimitType {
+    DurationLimitTypeEnum val = 1;
+}
+
+enum DurationLimitTypeEnum {
+    DurationLimit0 = 0;
+    DurationLimit1 = 1;
+    DurationLimit2 = 2;
+    DurationLimit3 = 3;
+}
+
+message FareAttributeTransferType {
+    FareAttributeTransferTypeEnum val = 1;
+}
+
+enum FareAttributeTransferTypeEnum {
+    FareAttributeTransferTypeDisallowed = 0;
+    FareAttributeTransferTypeOnce = 1;
+    FareAttributeTransferTypeTwice = 2;
+}
+
+message PaymentMethod {
+    PaymentMethodEnum val = 1;
+}
+
+enum PaymentMethodEnum {
+    PaymentMethodOnboard = 0;
+    PaymentMethodOffboard = 1;
+}
+
+message AttributionRole {
+    AttributionRoleEnum val = 1;
+}
+
+enum AttributionRoleEnum {
+    AttributionRoleNotAssigned = 0;
+    AttributionRoleAssigned = 1;
+}
+

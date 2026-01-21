@@ -14,6 +14,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67
 	github.com/aws/aws-sdk-go-v2/service/location v1.44.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.3
+	github.com/bufbuild/protocompile v0.14.1
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/flopp/go-staticmaps v0.0.0-20220221183018-c226716bec53
