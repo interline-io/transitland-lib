@@ -999,7 +999,7 @@ type SegmentPattern struct {
 	// Shape ID for this segment pattern
 	ShapeID int `json:"shape_id"`
 	// OSM Way ID, if any, associated with this segment pattern
-	WayID int `json:"way_id"`
+	WayID *int `json:"way_id,omitempty"`
 	// Shape associated with this segment pattern
 	Shape *Shape `json:"shape"`
 	// Segment geometry for this pattern

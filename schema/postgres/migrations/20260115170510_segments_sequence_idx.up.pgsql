@@ -15,6 +15,9 @@ ADD COLUMN IF NOT EXISTS sequence_idx integer NOT NULL DEFAULT 0;
 ALTER TABLE tl_segment_patterns 
 ADD COLUMN IF NOT EXISTS way_id bigint;
 
+create index on tl_segment_patterns(way_id);
+create index on tl_segments(way_id);
+
 -- Populate way_id from existing segments data (cast from text to bigint)
 UPDATE tl_segment_patterns sp
 SET way_id = s.way_id::bigint
@@ -22,8 +25,8 @@ FROM tl_segments s
 WHERE sp.segment_id = s.id;
 
 -- Make way_id non-null after populating
-ALTER TABLE tl_segment_patterns 
-ALTER COLUMN way_id SET NOT NULL;
+-- ALTER TABLE tl_segment_patterns 
+-- ALTER COLUMN way_id SET NOT NULL;
 
 -- Drop old unique constraint that doesn't include sequence_idx
 -- Old: (segment_id, route_id, shape_id, stop_pattern_id)

@@ -1243,7 +1243,7 @@ type SegmentPattern {
   "Shape ID for this segment pattern"
   shape_id: Int!
   "OSM Way ID, if any, associated with this segment pattern"
-  way_id: Int!
+  way_id: Int
   "Shape associated with this segment pattern"
   shape: Shape!
   "Segment geometry for this pattern"
