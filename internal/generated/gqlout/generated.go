@@ -10025,7 +10025,7 @@ type SegmentPattern {
   "Shape ID for this segment pattern"
   shape_id: Int!
   "OSM Way ID, if any, associated with this segment pattern"
-  way_id: Int!
+  way_id: Int
   "Shape associated with this segment pattern"
   shape: Shape!
   "Segment geometry for this pattern"
@@ -47234,14 +47234,11 @@ func (ec *executionContext) _SegmentPattern_way_id(ctx context.Context, field gr
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(*int)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_SegmentPattern_way_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -71141,9 +71138,6 @@ func (ec *executionContext) _SegmentPattern(ctx context.Context, sel ast.Selecti
 			}
 		case "way_id":
 			out.Values[i] = ec._SegmentPattern_way_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "shape":
 			field := field
 
