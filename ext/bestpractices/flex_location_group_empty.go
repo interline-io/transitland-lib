@@ -25,7 +25,7 @@ type FlexLocationGroupEmptyCheck struct {
 	locationGroupStops map[string]int // location_group_id -> count of stops
 }
 
-func (e *FlexLocationGroupEmptyCheck) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (e *FlexLocationGroupEmptyCheck) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	if e.locationGroupStops == nil {
 		e.locationGroupStops = map[string]int{}
 	}
@@ -54,4 +54,3 @@ func (e *FlexLocationGroupEmptyCheck) Validate(ent tt.Entity) []error {
 
 	return nil
 }
-

@@ -59,7 +59,7 @@ func NewConvexHullBuilder() *ConvexHullBuilder {
 }
 
 // AfterWrite keeps track of which routes/agencies visit which stops
-func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Stop:
 		pp.stops[eid] = &stopGeom{

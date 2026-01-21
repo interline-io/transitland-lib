@@ -74,7 +74,7 @@ func (tx *TransformFilter) AddValue(filename string, eid string, key string, fun
 	tx.nodes[*n] = entv
 }
 
-func (tx *TransformFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (tx *TransformFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	v, ok := ent.(hasEntityKey)
 	if !ok {
 		return nil

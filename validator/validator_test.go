@@ -46,7 +46,7 @@ func (cr *testErrorHandler) HandleSourceErrors(fn string, errs []error, warns []
 func (cr *testErrorHandler) HandleEntityErrors(ent tt.Entity, errs []error, warns []error) {
 }
 
-func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	var errs []error
 	errs = append(errs, tt.CheckErrors(ent)...)
 	errs = append(errs, tt.CheckWarnings(ent)...)
