@@ -142,8 +142,10 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 	}
 
 	// Create a validation report
+	// Make sure to include feed version stats
 	validatorOptions := opts.ValidatorOptions
 	validatorOptions.ErrorLimit = 10
+	validatorOptions.IncludeStats = true
 	v, err := validator.NewValidator(reader, validatorOptions)
 	if err != nil {
 		// Fatal error
@@ -154,14 +156,7 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 		// Fatal error
 		return fetchValidationResult, err
 	}
-
-	// Generate feed version stats
-	// TODO: Integrate this with static validation, so only one pass is necessary?
-	feedVersionStats, err := stats.NewFeedStatsFromReader(reader)
-	if err != nil {
-		// Fatal error
-		return fetchValidationResult, err
-	}
+	feedVersionStats := validationResult.Details.FeedVersionStats
 
 	// Strict validation; do not save feed version
 	errCount := len(validationResult.Errors)
