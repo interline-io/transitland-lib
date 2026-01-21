@@ -9,12 +9,12 @@ import (
 // FareLegRule fare_leg_rules.txt
 type FareLegRule struct {
 	LegGroupID           tt.String
-	FromAreaID           tt.String `target:"areas.txt"`
-	ToAreaID             tt.String `target:"areas.txt"`
-	NetworkID            tt.String `target:"networks.txt"`
-	FareProductID        tt.String `csv:",required" target:"fare_products.txt:fare_product_id"`
-	FromTimeframeGroupID tt.String `target:"timeframes.txt:timeframe_group_id"`
-	ToTimeframeGroupID   tt.String `target:"timeframes.txt:timeframe_group_id"`
+	FromAreaID           tt.String `target:"areas.txt" standardized_sort:"2"`
+	ToAreaID             tt.String `target:"areas.txt" standardized_sort:"3"`
+	NetworkID            tt.String `target:"networks.txt" standardized_sort:"1"`
+	FareProductID        tt.String `csv:",required" target:"fare_products.txt:fare_product_id" standardized_sort:"6"`
+	FromTimeframeGroupID tt.String `target:"timeframes.txt:timeframe_group_id" standardized_sort:"4"`
+	ToTimeframeGroupID   tt.String `target:"timeframes.txt:timeframe_group_id" standardized_sort:"5"`
 	RulePriority         tt.Int    `range:"0,"`
 	TransferOnly         tt.Int    `enum:"0,1"` // interline ext
 	tt.BaseEntity

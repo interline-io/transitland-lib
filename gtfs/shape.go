@@ -9,10 +9,10 @@ import (
 
 // Shape shapes.txt
 type Shape struct {
-	ShapeID           tt.String `csv:",required"`
+	ShapeID           tt.String `csv:",required" standardized_sort:"1"`
 	ShapePtLat        tt.Float  `db:"-" csv:",required" range:"-90,90"`
 	ShapePtLon        tt.Float  `db:"-" csv:",required" range:"-180,180"`
-	ShapePtSequence   tt.Int    `db:"-" csv:",required" range:"0,"`
+	ShapePtSequence   tt.Int    `db:"-" csv:",required" range:"0," standardized_sort:"2"`
 	ShapeDistTraveled tt.Float  `db:"-" range:"0,"`
 	tt.BaseEntity
 }

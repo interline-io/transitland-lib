@@ -8,11 +8,11 @@ import (
 
 // FareRule fare_rules.txt
 type FareRule struct {
-	FareID        tt.String `csv:",required" target:"fare_attributes.txt"`
-	RouteID       tt.Key    `target:"routes.txt"`
-	OriginID      tt.String
-	DestinationID tt.String
-	ContainsID    tt.String
+	FareID        tt.String `csv:",required" target:"fare_attributes.txt" standardized_sort:"1"`
+	RouteID       tt.Key    `target:"routes.txt" standardized_sort:"2"`
+	OriginID      tt.String `standardized_sort:"3"`
+	DestinationID tt.String `standardized_sort:"4"`
+	ContainsID    tt.String `standardized_sort:"5"`
 	tt.BaseEntity
 }
 

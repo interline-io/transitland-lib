@@ -10,7 +10,7 @@ import (
 // where riders can request pickups or drop-offs for flexible services
 type Location struct {
 	// ID is the feature ID from the GeoJSON, shares namespace with stop_id
-	LocationID tt.String `json:"id" csv:",required"`
+	LocationID tt.String `json:"id" csv:",required" standardized_sort:"1"`
 	// Properties
 	StopName tt.String   `json:"stop_name"`
 	StopDesc tt.String   `json:"stop_desc"`

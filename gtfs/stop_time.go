@@ -9,11 +9,11 @@ import (
 
 // StopTime stop_times.txt
 type StopTime struct {
-	TripID            tt.String `csv:",required" target:"trips.txt"`
+	TripID            tt.String `csv:",required" target:"trips.txt" standardized_sort:"1"`
 	StopID            tt.Key    `target:"stops.txt"`
 	LocationGroupID   tt.Key    `target:"location_groups.txt"`
 	LocationID        tt.Key    `target:"locations.txt"`
-	StopSequence      tt.Int    `csv:",required"`
+	StopSequence      tt.Int    `csv:",required" standardized_sort:"2"`
 	StopHeadsign      tt.String
 	ArrivalTime       tt.Seconds
 	DepartureTime     tt.Seconds

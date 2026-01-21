@@ -6,8 +6,8 @@ import (
 
 // CalendarDate calendar_dates.txt
 type CalendarDate struct {
-	ServiceID     tt.Key  `csv:",required" target:"calendar.txt"`
-	Date          tt.Date `csv:",required"`
+	ServiceID     tt.Key  `csv:",required" target:"calendar.txt" standardized_sort:"1"`
+	Date          tt.Date `csv:",required" standardized_sort:"2"`
 	ExceptionType tt.Int  `csv:",required" enum:"1,2"`
 	tt.BaseEntity
 }

@@ -4,7 +4,7 @@ import "github.com/interline-io/transitland-lib/tt"
 
 // Level levels.txt
 type Level struct {
-	LevelID    tt.String `csv:",required"`
+	LevelID    tt.String `csv:",required" standardized_sort:"1"`
 	LevelIndex tt.Float  `csv:",required"`
 	LevelName  tt.String
 	tt.BaseEntity

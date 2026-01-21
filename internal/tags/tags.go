@@ -34,6 +34,7 @@ type FieldInfo struct {
 	GreaterOrEqual *float64
 	LessOrEqual    *float64
 	EnumValues     []int64
+	SortOrder      int
 }
 
 // FieldMap contains all the parsed tags for a struct.
@@ -148,6 +149,18 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 					} else {
 						mfi.EnumValues = append(mfi.EnumValues, optParse)
 					}
+				}
+			}
+			if optVal := fi.Field.Tag.Get("standardized_sort"); optVal != "" {
+				if optParse, err := strconv.Atoi(optVal); err != nil {
+					log.For(ctx).Error().Msgf(
+						"error constructing field map for type %T: could not parse tag 'standardized_sort' with value '%s' as int: %s",
+						ent,
+						optVal,
+						err.Error(),
+					)
+				} else {
+					mfi.SortOrder = optParse
 				}
 			}
 			m[fi.Name] = &mfi
