@@ -25,6 +25,7 @@ type Stop struct {
 	StopTimezone       tt.Timezone
 	WheelchairBoarding tt.Int   `enum:"0,1,2"`
 	LevelID            tt.Key   `target:"levels.txt"`
+	StopAccess         tt.Int   `enum:"0,1"`
 	Geometry           tt.Point `csv:"-" db:"geometry"`
 	tt.BaseEntity
 }
@@ -105,5 +106,18 @@ func (ent *Stop) ConditionalErrors() []error {
 	if (lt == 2 || lt == 3 || lt == 4) && ent.ParentStation.Val == "" {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("parent_station"))
 	}
+
+	// Validate stop_access field
+	if ent.StopAccess.Valid {
+		// Forbidden for stations, entrances, generic nodes, and boarding areas
+		if lt == 1 || lt == 2 || lt == 3 || lt == 4 {
+			errs = append(errs, causes.NewInvalidFieldError("stop_access", fmt.Sprint(ent.StopAccess.Val), fmt.Errorf("stop_access is forbidden for location_type %d", lt)))
+		}
+		// Forbidden when parent_station is empty
+		if ent.ParentStation.Val == "" {
+			errs = append(errs, causes.NewInvalidFieldError("stop_access", fmt.Sprint(ent.StopAccess.Val), fmt.Errorf("stop_access is forbidden when parent_station is empty")))
+		}
+	}
+
 	return errs
 }

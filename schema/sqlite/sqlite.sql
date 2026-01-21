@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_stops" (
   "level_id" integer,
   "tts_stop_name" text,
   "platform_code" text,
+  "stop_access" integer,
   "area_id" text,
   "geometry" BLOB,
   "textsearch" TEXT,
