@@ -2,6 +2,7 @@ package meters
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
@@ -46,13 +47,17 @@ func WithMeter(apiMeter MeterProvider, meterName string, meterValue float64, dim
 				return
 			}
 			// Call next handler
+			start := time.Now()
 			next.ServeHTTP(wr, r)
+			duration := time.Since(start)
 
 			// Create a new MeterEvent with the current time in UTC
 			event := NewMeterEvent(meterName, meterValue, dims)
 			event.RequestID = log.GetReqID(r.Context())
 			event.StatusCode = wr.statusCode
 			event.Success = wr.statusCode < 400
+			event.Duration = duration
+			event.ResponseSize = wr.responseSize
 			// Fetch meterer again from context
 			if err := ForContext(ctx).Meter(ctx, event); err != nil {
 				meterLog.Error().Err(err).Msg("failed to meter event")
@@ -62,11 +67,18 @@ func WithMeter(apiMeter MeterProvider, meterName string, meterValue float64, dim
 }
 
 type responseWriterWrapper struct {
-	statusCode int
+	statusCode   int
+	responseSize int64
 	http.ResponseWriter
 }
 
 func (w *responseWriterWrapper) WriteHeader(statusCode int) {
 	w.statusCode = statusCode
 	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (w *responseWriterWrapper) Write(b []byte) (int, error) {
+	n, err := w.ResponseWriter.Write(b)
+	w.responseSize += int64(n)
+	return n, err
 }
