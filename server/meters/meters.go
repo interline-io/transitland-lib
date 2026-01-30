@@ -10,14 +10,16 @@ import (
 
 // MeterEvent represents a metered event with a name, value, timestamp, dimensions, and request ID.
 type MeterEvent struct {
-	EventID    string
-	Name       string
-	Value      float64
-	Timestamp  time.Time
-	Dimensions Dimensions
-	RequestID  string // Request ID associated with the event, useful for tracing
-	StatusCode int    // HTTP status code of the request that generated this event
-	Success    bool   // Indicates if the event was successful (e.g., HTTP status < 400)
+	EventID      string
+	Name         string
+	Value        float64
+	Timestamp    time.Time
+	Dimensions   Dimensions
+	RequestID    string        // Request ID associated with the event, useful for tracing
+	StatusCode   int           // HTTP status code of the request that generated this event
+	Success      bool          // Indicates if the event was successful (e.g., HTTP status < 400)
+	Duration     time.Duration // Duration of the request
+	ResponseSize int64         // Size of the response body in bytes
 }
 
 // NewMeterEvent creates a new MeterEvent with the current time in UTC.
