@@ -7,8 +7,8 @@ import (
 )
 
 type RouteNetwork struct {
-	NetworkID tt.Key `csv:",required" target:"networks.txt"`
-	RouteID   tt.Key `csv:",required" target:"routes.txt"`
+	NetworkID tt.Key `csv:",required" target:"networks.txt" standardized_sort:"1"`
+	RouteID   tt.Key `csv:",required" target:"routes.txt" standardized_sort:"2"`
 	tt.BaseEntity
 }
 

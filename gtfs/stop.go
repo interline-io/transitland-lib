@@ -10,7 +10,7 @@ import (
 
 // Stop stops.txt
 type Stop struct {
-	StopID             tt.String `csv:",required" required:"true"`
+	StopID             tt.String `csv:",required" required:"true" standardized_sort:"1"`
 	StopName           tt.String
 	StopCode           tt.String
 	StopDesc           tt.String
@@ -20,7 +20,7 @@ type Stop struct {
 	StopURL            tt.Url
 	TtsStopName        tt.String
 	PlatformCode       tt.String
-	LocationType       tt.Int `enum:"0,1,2,3,4"`
+	LocationType       tt.Int `enum:"0,1,2,3,4" standardized_sort:"2"`
 	ParentStation      tt.Key `target:"stops.txt"`
 	StopTimezone       tt.Timezone
 	WheelchairBoarding tt.Int   `enum:"0,1,2"`
