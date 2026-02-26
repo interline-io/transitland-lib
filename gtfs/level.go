@@ -4,9 +4,10 @@ import "github.com/interline-io/transitland-lib/tt"
 
 // Level levels.txt
 type Level struct {
-	LevelID    tt.String `csv:",required"`
-	LevelIndex tt.Float  `csv:",required"`
+	LevelID    tt.String   `csv:",required"`
+	LevelIndex tt.Float    `csv:",required"`
 	LevelName  tt.String
+	Geometry   tt.Geometry `csv:"-" db:"geometry"` // From levels.geojson
 	tt.BaseEntity
 }
 
