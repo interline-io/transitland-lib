@@ -54,7 +54,7 @@ type hasEntityKey interface {
 }
 
 // Filter overrides values on entities.
-func (tx *SetterFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (tx *SetterFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	v, ok := ent.(hasEntityKey)
 	if !ok {
 		return nil
