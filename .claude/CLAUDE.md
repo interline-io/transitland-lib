@@ -140,3 +140,21 @@ Entity structs in `gtfs/` have filenames matching their GTFS source files (e.g.,
 - CSV reader tests use `internal/testreader.ReaderTester` with expected entity counts
 - GraphQL resolver tests use `testcase` structs with GraphQL queries and `queryTestcase()` helper
 - Test data lives in `testdata/` (GTFS fixtures, server test data, DMFR files)
+
+## PR Summary
+
+When asked to "generate PR summary", run `git diff main...HEAD` and `git log main..HEAD --oneline` to analyze all changes on the current branch, then output a GitHub-flavored markdown PR description wrapped in a fenced code block so it can be copy-pasted. No emojis, no checklists. Use this structure:
+
+```
+## Summary
+<high-level one paragraph description of the PR>
+
+### <theme 1>
+<bulleted details>
+
+### <theme 2>
+<bulleted details>
+
+## Test plan
+<manual verification steps relevant to the changes; do not include yarn test/lint/typecheck as those are handled by CI>
+```
