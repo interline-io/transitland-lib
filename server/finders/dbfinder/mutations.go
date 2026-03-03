@@ -2,6 +2,7 @@ package dbfinder
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -268,6 +269,9 @@ func createUpdateEnt[T hasTableName](
 		// Do not use the provided fvid value
 		baseEnt.SetID(*entId)
 		if err := atx.Find(ctx, baseEnt); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return 0, fmt.Errorf("record not found (id=%d)", *entId)
+			}
 			return 0, err
 		}
 	} else if fvid != nil {
@@ -326,6 +330,9 @@ func deleteEnt(ctx context.Context, ent hasTableName, deleteRefs ...deleteRef) e
 			Where(sq.Eq{"id": entId}),
 		&fvid,
 	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("record not found (id=%d)", entId)
+		}
 		return err
 	}
 
