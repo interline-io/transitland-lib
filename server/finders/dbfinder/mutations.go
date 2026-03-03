@@ -270,7 +270,7 @@ func createUpdateEnt[T hasTableName](
 		baseEnt.SetID(*entId)
 		if err := atx.Find(ctx, baseEnt); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return 0, fmt.Errorf("record not found (id=%d)", *entId)
+				return 0, fmt.Errorf("record not found (id=%d): %w", *entId, err)
 			}
 			return 0, err
 		}
@@ -331,7 +331,7 @@ func deleteEnt(ctx context.Context, ent hasTableName, deleteRefs ...deleteRef) e
 		&fvid,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("record not found (id=%d)", entId)
+			return fmt.Errorf("record not found (id=%d): %w", entId, err)
 		}
 		return err
 	}
