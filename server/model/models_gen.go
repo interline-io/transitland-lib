@@ -362,6 +362,7 @@ type DirectionRequest struct {
 	From     *WaypointInput `json:"from"`
 	Mode     StepMode       `json:"mode"`
 	DepartAt *time.Time     `json:"depart_at,omitempty"`
+	ArriveBy *bool          `json:"arrive_by,omitempty"`
 }
 
 type Directions struct {

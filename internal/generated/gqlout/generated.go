@@ -8378,6 +8378,7 @@ input DirectionRequest {
   from: WaypointInput!
   mode: StepMode!
   depart_at: Time
+  arrive_by: Boolean
 }
 
 input WaypointInput {
@@ -60353,7 +60354,7 @@ func (ec *executionContext) unmarshalInputDirectionRequest(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"to", "from", "mode", "depart_at"}
+	fieldsInOrder := [...]string{"to", "from", "mode", "depart_at", "arrive_by"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -60388,6 +60389,13 @@ func (ec *executionContext) unmarshalInputDirectionRequest(ctx context.Context, 
 				return it, err
 			}
 			it.DepartAt = data
+		case "arrive_by":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("arrive_by"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ArriveBy = data
 		}
 	}
 

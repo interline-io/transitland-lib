@@ -5,6 +5,7 @@ input DirectionRequest {
   from: WaypointInput!
   mode: StepMode!
   depart_at: Time
+  arrive_by: Boolean
 }
 
 input WaypointInput {

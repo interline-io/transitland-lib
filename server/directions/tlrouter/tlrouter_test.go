@@ -37,6 +37,13 @@ func TestRouter(t *testing.T) {
 			Distance: 4.4618,
 		},
 		{
+			Name:     "transit_arrive_by",
+			Req:      bt["transit_arrive_by"],
+			Success:  true,
+			Duration: 4116,
+			Distance: 4.1165,
+		},
+		{
 			Name:    "no_dest_fail",
 			Req:     bt["no_dest_fail"],
 			Success: false,
