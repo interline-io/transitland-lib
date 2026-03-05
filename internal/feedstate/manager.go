@@ -213,6 +213,11 @@ func (m *Manager) DematerializeFeedVersion(ctx context.Context, feedVersionID in
 
 // MaterializeFeedVersion inserts routes/stops/agencies for a feed version into materialized tables
 func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int) error {
+	// Clear any existing materialized data for this feed version first
+	if err := m.DematerializeFeedVersion(ctx, feedVersionID); err != nil {
+		return fmt.Errorf("failed to dematerialize feed version %d before materializing: %w", feedVersionID, err)
+	}
+
 	// Build route column mappings (destination column -> source expression)
 	routeFields := map[string]string{
 		"id":                  "gtfs_routes.id",
