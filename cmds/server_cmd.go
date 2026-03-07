@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"strings"
 	"time"
 	_ "time/tzdata"
 
@@ -240,12 +241,35 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// GraphQL Playground
 	root.Handle("/", playground.Handler("GraphQL playground", "/query"))
 
+	// WebSocket router — same config/auth middleware but no response writer wrapping
+	wsRoot := chi.NewRouter()
+	wsRoot.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"content-type", "apikey", "authorization"},
+		AllowCredentials: true,
+	}))
+	wsRoot.Use(model.AddConfig(cfg))
+	wsRoot.Use(usercheck.AdminDefaultMiddleware("admin"))
+	wsRoot.Use(log.RequestIDMiddleware)
+	wsRoot.Use(model.AddPerms(cfg.Checker))
+	wsRoot.Mount("/query", graphqlServer)
+
 	// Start server
 	timeOut := time.Duration(cmd.Timeout) * time.Second
 	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cmd.Port)
 	log.For(ctx).Info().Msgf("Listening on: %s", addr)
+	// Bypass timeout handler and response-writer-wrapping middleware for WebSocket upgrades
+	timeoutHandler := http.TimeoutHandler(root, timeOut, "timeout")
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+			wsRoot.ServeHTTP(w, r)
+		} else {
+			timeoutHandler.ServeHTTP(w, r)
+		}
+	})
 	srv := &http.Server{
-		Handler:      http.TimeoutHandler(root, timeOut, "timeout"),
+		Handler:      handler,
 		Addr:         addr,
 		WriteTimeout: 2 * timeOut,
 		ReadTimeout:  2 * timeOut,
