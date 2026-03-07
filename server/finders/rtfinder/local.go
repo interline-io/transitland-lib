@@ -8,13 +8,38 @@ import (
 )
 
 type LocalCache struct {
-	lock    sync.Mutex
-	sources map[string]*Source
+	lock        sync.Mutex
+	sources     map[string]*Source
+	subscribers map[chan string]struct{}
 }
 
 func NewLocalCache() *LocalCache {
 	return &LocalCache{
-		sources: map[string]*Source{},
+		sources:     map[string]*Source{},
+		subscribers: map[chan string]struct{}{},
+	}
+}
+
+func (f *LocalCache) Subscribe() (chan string, func()) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	ch := make(chan string, 100)
+	f.subscribers[ch] = struct{}{}
+	cancel := func() {
+		f.lock.Lock()
+		defer f.lock.Unlock()
+		delete(f.subscribers, ch)
+		close(ch)
+	}
+	return ch, cancel
+}
+
+func (f *LocalCache) notifySubscribers(topic string) {
+	for ch := range f.subscribers {
+		select {
+		case ch <- topic:
+		default:
+		}
 	}
 }
 
@@ -40,7 +65,11 @@ func (f *LocalCache) AddData(ctx context.Context, topic string, data []byte) err
 		s, _ = NewSource(topic)
 		f.sources[topic] = s
 	}
-	return s.process(ctx, data)
+	if err := s.process(ctx, data); err != nil {
+		return err
+	}
+	f.notifySubscribers(topic)
+	return nil
 }
 
 func (f *LocalCache) Close() error {

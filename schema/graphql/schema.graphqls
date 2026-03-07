@@ -135,6 +135,24 @@ type Mutation {
   pathway_delete(id: Int!): EntityDeleteResult!
 }
 
+# Root subscription
+type Subscription {
+  "Subscribe to vehicle position updates. Returns snapshots of matching vehicles on each RT update cycle."
+  vehicle_positions(where: VehiclePositionFilter): [VehiclePosition!]!
+}
+
+"""Filter for vehicle position subscriptions"""
+input VehiclePositionFilter {
+  "Bounding box to filter vehicle positions by geographic area"
+  bbox: BoundingBox
+  "Filter by feed OnestopIDs"
+  feed_onestop_ids: [String!]
+  "Filter by agency IDs"
+  agency_ids: [String!]
+  "Filter by route IDs"
+  route_ids: [String!]
+}
+
 """Result of entity delete operation"""
 type EntityDeleteResult {
   "ID of deleted entity"
@@ -1507,8 +1525,16 @@ type StopTimeEvent {
 type VehiclePosition {
   "GTFS-RT VehiclePosition vehicle. See https://gtfs.org/realtime/reference/#message-vehicledescriptor"
   vehicle: RTVehicleDescriptor
+  "GTFS-RT VehiclePosition trip. See https://gtfs.org/realtime/reference/#message-tripdescriptor"
+  trip: RTTripDescriptor
+  "Feed that provided this vehicle position"
+  feed_onestop_id: String
   "GTFS-RT VehiclePosition current vehicle position"
   position: Point
+  "GTFS-RT VehiclePosition bearing in degrees"
+  bearing: Float
+  "GTFS-RT VehiclePosition speed in meters per second"
+  speed: Float
   "GTFS-RT VehiclePosition current stop sequence in trip"
   current_stop_sequence: Int
   "GTFS-RT VehiclePosition current stop in trip"

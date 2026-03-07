@@ -19,6 +19,9 @@ type Cache interface {
 	AddFeedMessage(context.Context, string, *pb.FeedMessage) error
 	AddData(context.Context, string, []byte) error
 	GetSource(context.Context, string) (*Source, bool)
+	// Subscribe returns a channel that receives the topic name whenever that topic is updated.
+	// Call the returned cancel function to unsubscribe.
+	Subscribe() (chan string, func())
 	Close() error
 }
 
@@ -40,6 +43,18 @@ func NewFinder(cache Cache, db tldb.Ext) *Finder {
 
 func (f *Finder) AddData(ctx context.Context, topic string, data []byte) error {
 	return f.cache.AddData(ctx, topic, data)
+}
+
+func (f *Finder) Subscribe() (chan string, func()) {
+	return f.cache.Subscribe()
+}
+
+func (f *Finder) GetVehiclePositions(ctx context.Context, topic string) []*pb.VehiclePosition {
+	a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_vehicle_positions"))
+	if !ok || a == nil {
+		return nil
+	}
+	return a.GetVehiclePositions()
 }
 
 func (f *Finder) GetGtfsTripID(ctx context.Context, id int) (string, bool) {

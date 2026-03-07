@@ -156,6 +156,10 @@ type RTFinder interface {
 	FindAlertsForAgency(context.Context, *Agency, *int, *bool) []*Alert
 	GetAddedTripsForStop(context.Context, *Stop) []*pb.TripUpdate
 	FindStopTimeUpdate(context.Context, *Trip, *StopTime) (*RTStopTimeUpdate, bool)
+	// Vehicle positions
+	GetVehiclePositions(context.Context, string) []*pb.VehiclePosition
+	// Subscribe returns a channel notified when any RT topic is updated
+	Subscribe() (chan string, func())
 	// lookup cache methods
 	StopTimezone(context.Context, int, string) (*time.Location, bool)
 	FeedVersionTimezone(context.Context, int) (*time.Location, bool)

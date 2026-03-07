@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"strings"
 	"time"
 	_ "time/tzdata"
 
@@ -244,8 +245,17 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	timeOut := time.Duration(cmd.Timeout) * time.Second
 	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cmd.Port)
 	log.For(ctx).Info().Msgf("Listening on: %s", addr)
+	// Bypass timeout handler for WebSocket upgrade requests
+	timeoutHandler := http.TimeoutHandler(root, timeOut, "timeout")
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+			root.ServeHTTP(w, r)
+		} else {
+			timeoutHandler.ServeHTTP(w, r)
+		}
+	})
 	srv := &http.Server{
-		Handler:      http.TimeoutHandler(root, timeOut, "timeout"),
+		Handler:      handler,
 		Addr:         addr,
 		WriteTimeout: 2 * timeOut,
 		ReadTimeout:  2 * timeOut,

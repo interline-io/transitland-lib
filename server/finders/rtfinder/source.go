@@ -9,10 +9,11 @@ import (
 )
 
 type Source struct {
-	feed         string
-	msg          *pb.FeedMessage
-	entityByTrip map[string]*pb.TripUpdate
-	alerts       []*pb.Alert
+	feed             string
+	msg              *pb.FeedMessage
+	entityByTrip     map[string]*pb.TripUpdate
+	alerts           []*pb.Alert
+	vehiclePositions []*pb.VehiclePosition
 }
 
 func NewSource(feed string) (*Source, error) {
@@ -25,6 +26,10 @@ func NewSource(feed string) (*Source, error) {
 
 func (f *Source) GetTimestamp() uint64 {
 	return f.msg.GetHeader().GetTimestamp()
+}
+
+func (f *Source) GetVehiclePositions() []*pb.VehiclePosition {
+	return f.vehiclePositions
 }
 
 func (f *Source) GetTrip(tid string) (*pb.TripUpdate, bool) {
@@ -40,6 +45,7 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 	defaultTimestamp := rtmsg.GetHeader().GetTimestamp()
 	a := map[string]*pb.TripUpdate{}
 	var alerts []*pb.Alert
+	var vehiclePositions []*pb.VehiclePosition
 	for _, ent := range rtmsg.Entity {
 		if v := ent.TripUpdate; v != nil {
 			// Set default timestamp
@@ -52,11 +58,14 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 		if v := ent.Alert; v != nil {
 			alerts = append(alerts, v)
 		}
-		// todo: vehicle positions...
+		if v := ent.Vehicle; v != nil {
+			vehiclePositions = append(vehiclePositions, v)
+		}
 	}
-	log.For(ctx).Trace().Str("feed_id", f.feed).Int("trip_updates", len(a)).Int("alerts", len(alerts)).Msg("rtsource: processed data")
+	log.For(ctx).Trace().Str("feed_id", f.feed).Int("trip_updates", len(a)).Int("alerts", len(alerts)).Int("vehicle_positions", len(vehiclePositions)).Msg("rtsource: processed data")
 	f.entityByTrip = a
 	f.alerts = alerts
+	f.vehiclePositions = vehiclePositions
 	return nil
 }
 
