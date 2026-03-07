@@ -158,6 +158,8 @@ type RTFinder interface {
 	FindStopTimeUpdate(context.Context, *Trip, *StopTime) (*RTStopTimeUpdate, bool)
 	// Vehicle positions
 	GetVehiclePositions(context.Context, string) []*pb.VehiclePosition
+	// GetCachedFeedIDs returns feed IDs that have cached vehicle position data
+	GetCachedFeedIDs() []string
 	// Subscribe returns a channel notified when any RT topic is updated
 	Subscribe() (chan string, func())
 	// lookup cache methods

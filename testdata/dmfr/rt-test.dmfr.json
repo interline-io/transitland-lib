@@ -1,0 +1,12 @@
+{
+  "$schema": "https://dmfr.transit.land/json-schema/dmfr.schema.json",
+  "feeds": [
+    {
+      "id": "rt-test~rt",
+      "spec": "gtfs-rt",
+      "urls": {
+        "realtime_vehicle_positions": "http://localhost:8888/vehicle_positions.pb"
+      }
+    }
+  ]
+}

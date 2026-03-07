@@ -18,20 +18,34 @@ func (r *subscriptionResolver) VehiclePositions(ctx context.Context, where *mode
 
 	// Subscribe to cache update notifications
 	updateCh, cancelSub := cfg.RTFinder.Subscribe()
+	log.For(ctx).Info().Msg("subscription: client connected for vehicle_positions")
 
 	go func() {
 		defer close(ch)
 		defer cancelSub()
+		defer log.For(ctx).Info().Msg("subscription: client disconnected")
+
+		// Send initial snapshot from cache on connection
+		positions := r.collectVehiclePositions(ctx, cfg, where)
+		log.For(ctx).Info().Int("positions", len(positions)).Msg("subscription: sending initial snapshot")
+		select {
+		case ch <- positions:
+		case <-ctx.Done():
+			return
+		}
+
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case _, ok := <-updateCh:
+			case topic, ok := <-updateCh:
 				if !ok {
 					return
 				}
+				log.For(ctx).Trace().Str("topic", topic).Msg("subscription: cache update received")
 				// Collect vehicle positions from all known RT feeds
 				positions := r.collectVehiclePositions(ctx, cfg, where)
+				log.For(ctx).Trace().Int("positions", len(positions)).Msg("subscription: sending positions to client")
 				select {
 				case ch <- positions:
 				case <-ctx.Done():
@@ -45,16 +59,12 @@ func (r *subscriptionResolver) VehiclePositions(ctx context.Context, where *mode
 }
 
 func (r *subscriptionResolver) collectVehiclePositions(ctx context.Context, cfg model.Config, where *model.VehiclePositionFilter) []*model.VehiclePosition {
-	// Get all feeds to check for vehicle positions
-	feeds, err := cfg.Finder.FindFeeds(ctx, nil, nil, nil, nil)
-	if err != nil {
-		log.For(ctx).Error().Err(err).Msg("subscription: error finding feeds")
-		return nil
-	}
+	// Get feed IDs from cache (doesn't require database)
+	feedIDs := cfg.RTFinder.GetCachedFeedIDs()
+	log.For(ctx).Trace().Strs("feed_ids", feedIDs).Msg("subscription: collecting vehicle positions")
 
 	var result []*model.VehiclePosition
-	for _, feed := range feeds {
-		feedID := feed.FeedID
+	for _, feedID := range feedIDs {
 		// Filter by feed_onestop_ids if specified
 		if where != nil && len(where.FeedOnestopIds) > 0 {
 			if !containsString(where.FeedOnestopIds, feedID) {
