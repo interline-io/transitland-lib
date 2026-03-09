@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -72,6 +73,7 @@ type ResolverRoot interface {
 	Stop() StopResolver
 	StopExternalReference() StopExternalReferenceResolver
 	StopTime() StopTimeResolver
+	Subscription() SubscriptionResolver
 	Trip() TripResolver
 	ValidationReport() ValidationReportResolver
 	ValidationReportErrorGroup() ValidationReportErrorGroupResolver
@@ -1168,6 +1170,10 @@ type ComplexityRoot struct {
 		Uncertainty    func(childComplexity int) int
 	}
 
+	Subscription struct {
+		VehiclePositions func(childComplexity int, where *model.VehiclePositionFilter) int
+	}
+
 	Trip struct {
 		Alerts               func(childComplexity int, active *bool, limit *int) int
 		BikesAllowed         func(childComplexity int) int
@@ -1249,12 +1255,16 @@ type ComplexityRoot struct {
 	}
 
 	VehiclePosition struct {
+		Bearing             func(childComplexity int) int
 		CongestionLevel     func(childComplexity int) int
 		CurrentStatus       func(childComplexity int) int
 		CurrentStopSequence func(childComplexity int) int
+		FeedOnestopID       func(childComplexity int) int
 		Position            func(childComplexity int) int
+		Speed               func(childComplexity int) int
 		StopID              func(childComplexity int) int
 		Timestamp           func(childComplexity int) int
+		Trip                func(childComplexity int) int
 		Vehicle             func(childComplexity int) int
 	}
 
@@ -1520,6 +1530,9 @@ type StopTimeResolver interface {
 	Departure(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error)
 
 	ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error)
+}
+type SubscriptionResolver interface {
+	VehiclePositions(ctx context.Context, where *model.VehiclePositionFilter) (<-chan []*model.VehiclePosition, error)
 }
 type TripResolver interface {
 	Calendar(ctx context.Context, obj *model.Trip) (*model.Calendar, error)
@@ -7532,6 +7545,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.StopTimeEvent.Uncertainty(childComplexity), true
 
+	case "Subscription.vehicle_positions":
+		if e.complexity.Subscription.VehiclePositions == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_vehicle_positions_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.VehiclePositions(childComplexity, args["where"].(*model.VehiclePositionFilter)), true
+
 	case "Trip.alerts":
 		if e.complexity.Trip.Alerts == nil {
 			break
@@ -8026,6 +8051,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ValidationReportErrorGroup.GroupKey(childComplexity), true
 
+	case "VehiclePosition.bearing":
+		if e.complexity.VehiclePosition.Bearing == nil {
+			break
+		}
+
+		return e.complexity.VehiclePosition.Bearing(childComplexity), true
+
 	case "VehiclePosition.congestion_level":
 		if e.complexity.VehiclePosition.CongestionLevel == nil {
 			break
@@ -8047,12 +8079,26 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.VehiclePosition.CurrentStopSequence(childComplexity), true
 
+	case "VehiclePosition.feed_onestop_id":
+		if e.complexity.VehiclePosition.FeedOnestopID == nil {
+			break
+		}
+
+		return e.complexity.VehiclePosition.FeedOnestopID(childComplexity), true
+
 	case "VehiclePosition.position":
 		if e.complexity.VehiclePosition.Position == nil {
 			break
 		}
 
 		return e.complexity.VehiclePosition.Position(childComplexity), true
+
+	case "VehiclePosition.speed":
+		if e.complexity.VehiclePosition.Speed == nil {
+			break
+		}
+
+		return e.complexity.VehiclePosition.Speed(childComplexity), true
 
 	case "VehiclePosition.stop_id":
 		if e.complexity.VehiclePosition.StopID == nil {
@@ -8067,6 +8113,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.VehiclePosition.Timestamp(childComplexity), true
+
+	case "VehiclePosition.trip":
+		if e.complexity.VehiclePosition.Trip == nil {
+			break
+		}
+
+		return e.complexity.VehiclePosition.Trip(childComplexity), true
 
 	case "VehiclePosition.vehicle":
 		if e.complexity.VehiclePosition.Vehicle == nil {
@@ -8273,6 +8326,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputTripFilter,
 		ec.unmarshalInputTripStopTimeFilter,
 		ec.unmarshalInputValidationReportFilter,
+		ec.unmarshalInputVehiclePositionFilter,
 		ec.unmarshalInputWaypointInput,
 	)
 	first := true
@@ -8317,6 +8371,23 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
 			data := ec._Mutation(ctx, opCtx.Operation.SelectionSet)
 			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
+		}
+	case ast.Subscription:
+		next := ec._Subscription(ctx, opCtx.Operation.SelectionSet)
+
+		var buf bytes.Buffer
+		return func(ctx context.Context) *graphql.Response {
+			buf.Reset()
+			data := next(ctx)
+
+			if data == nil {
+				return nil
+			}
 			data.MarshalGQL(&buf)
 
 			return &graphql.Response{
@@ -8915,6 +8986,24 @@ type Mutation {
   pathway_update(set: PathwaySetInput!): Pathway!
   "Delete a pathway"
   pathway_delete(id: Int!): EntityDeleteResult!
+}
+
+# Root subscription
+type Subscription {
+  "Subscribe to vehicle position updates. Returns snapshots of matching vehicles on each RT update cycle."
+  vehicle_positions(where: VehiclePositionFilter): [VehiclePosition!]!
+}
+
+"""Filter for vehicle position subscriptions"""
+input VehiclePositionFilter {
+  "Bounding box to filter vehicle positions by geographic area"
+  bbox: BoundingBox
+  "Filter by feed OnestopIDs"
+  feed_onestop_ids: [String!]
+  "Filter by agency IDs"
+  agency_ids: [String!]
+  "Filter by route IDs"
+  route_ids: [String!]
 }
 
 """Result of entity delete operation"""
@@ -10289,8 +10378,16 @@ type StopTimeEvent {
 type VehiclePosition {
   "GTFS-RT VehiclePosition vehicle. See https://gtfs.org/realtime/reference/#message-vehicledescriptor"
   vehicle: RTVehicleDescriptor
+  "GTFS-RT VehiclePosition trip. See https://gtfs.org/realtime/reference/#message-tripdescriptor"
+  trip: RTTripDescriptor
+  "Feed that provided this vehicle position"
+  feed_onestop_id: String
   "GTFS-RT VehiclePosition current vehicle position"
   position: Point
+  "GTFS-RT VehiclePosition bearing in degrees"
+  bearing: Float
+  "GTFS-RT VehiclePosition speed in meters per second"
+  speed: Float
   "GTFS-RT VehiclePosition current stop sequence in trip"
   current_stop_sequence: Int
   "GTFS-RT VehiclePosition current stop in trip"
@@ -12596,6 +12693,17 @@ func (ec *executionContext) field_Stop_stop_times_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_vehicle_positions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOVehiclePositionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePositionFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg0
 	return args, nil
 }
 
@@ -53077,6 +53185,99 @@ func (ec *executionContext) fieldContext_StopTimeEvent_uncertainty(_ context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Subscription_vehicle_positions(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	fc, err := ec.fieldContext_Subscription_vehicle_positions(ctx, field)
+	if err != nil {
+		return nil
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().VehiclePositions(rctx, fc.Args["where"].(*model.VehiclePositionFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func(ctx context.Context) graphql.Marshaler {
+		select {
+		case res, ok := <-resTmp.(<-chan []*model.VehiclePosition):
+			if !ok {
+				return nil
+			}
+			return graphql.WriterFunc(func(w io.Writer) {
+				w.Write([]byte{'{'})
+				graphql.MarshalString(field.Alias).MarshalGQL(w)
+				w.Write([]byte{':'})
+				ec.marshalNVehiclePosition2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePositionᚄ(ctx, field.Selections, res).MarshalGQL(w)
+				w.Write([]byte{'}'})
+			})
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (ec *executionContext) fieldContext_Subscription_vehicle_positions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "vehicle":
+				return ec.fieldContext_VehiclePosition_vehicle(ctx, field)
+			case "trip":
+				return ec.fieldContext_VehiclePosition_trip(ctx, field)
+			case "feed_onestop_id":
+				return ec.fieldContext_VehiclePosition_feed_onestop_id(ctx, field)
+			case "position":
+				return ec.fieldContext_VehiclePosition_position(ctx, field)
+			case "bearing":
+				return ec.fieldContext_VehiclePosition_bearing(ctx, field)
+			case "speed":
+				return ec.fieldContext_VehiclePosition_speed(ctx, field)
+			case "current_stop_sequence":
+				return ec.fieldContext_VehiclePosition_current_stop_sequence(ctx, field)
+			case "stop_id":
+				return ec.fieldContext_VehiclePosition_stop_id(ctx, field)
+			case "current_status":
+				return ec.fieldContext_VehiclePosition_current_status(ctx, field)
+			case "timestamp":
+				return ec.fieldContext_VehiclePosition_timestamp(ctx, field)
+			case "congestion_level":
+				return ec.fieldContext_VehiclePosition_congestion_level(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type VehiclePosition", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_vehicle_positions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Trip_id(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Trip_id(ctx, field)
 	if err != nil {
@@ -56531,6 +56732,102 @@ func (ec *executionContext) fieldContext_VehiclePosition_vehicle(_ context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _VehiclePosition_trip(ctx context.Context, field graphql.CollectedField, obj *model.VehiclePosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VehiclePosition_trip(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Trip, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.RTTripDescriptor)
+	fc.Result = res
+	return ec.marshalORTTripDescriptor2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTTripDescriptor(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VehiclePosition_trip(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VehiclePosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "trip_id":
+				return ec.fieldContext_RTTripDescriptor_trip_id(ctx, field)
+			case "route_id":
+				return ec.fieldContext_RTTripDescriptor_route_id(ctx, field)
+			case "direction_id":
+				return ec.fieldContext_RTTripDescriptor_direction_id(ctx, field)
+			case "start_time":
+				return ec.fieldContext_RTTripDescriptor_start_time(ctx, field)
+			case "start_date":
+				return ec.fieldContext_RTTripDescriptor_start_date(ctx, field)
+			case "schedule_relationship":
+				return ec.fieldContext_RTTripDescriptor_schedule_relationship(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RTTripDescriptor", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VehiclePosition_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.VehiclePosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VehiclePosition_feed_onestop_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FeedOnestopID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VehiclePosition_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VehiclePosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _VehiclePosition_position(ctx context.Context, field graphql.CollectedField, obj *model.VehiclePosition) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_VehiclePosition_position(ctx, field)
 	if err != nil {
@@ -56567,6 +56864,88 @@ func (ec *executionContext) fieldContext_VehiclePosition_position(_ context.Cont
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Point does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VehiclePosition_bearing(ctx context.Context, field graphql.CollectedField, obj *model.VehiclePosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VehiclePosition_bearing(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Bearing, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VehiclePosition_bearing(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VehiclePosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VehiclePosition_speed(ctx context.Context, field graphql.CollectedField, obj *model.VehiclePosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VehiclePosition_speed(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Speed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VehiclePosition_speed(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VehiclePosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
 		},
 	}
 	return fc, nil
@@ -62516,6 +62895,54 @@ func (ec *executionContext) unmarshalInputValidationReportFilter(ctx context.Con
 				return it, err
 			}
 			it.IncludesStatic = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputVehiclePositionFilter(ctx context.Context, obj any) (model.VehiclePositionFilter, error) {
+	var it model.VehiclePositionFilter
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"bbox", "feed_onestop_ids", "agency_ids", "route_ids"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "bbox":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bbox"))
+			data, err := ec.unmarshalOBoundingBox2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBoundingBox(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Bbox = data
+		case "feed_onestop_ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("feed_onestop_ids"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.FeedOnestopIds = data
+		case "agency_ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agency_ids"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgencyIds = data
+		case "route_ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("route_ids"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RouteIds = data
 		}
 	}
 
@@ -72663,6 +73090,26 @@ func (ec *executionContext) _StopTimeEvent(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var subscriptionImplementors = []string{"Subscription"}
+
+func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func(ctx context.Context) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, subscriptionImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Subscription",
+	})
+	if len(fields) != 1 {
+		ec.Errorf(ctx, "must subscribe to exactly one stream")
+		return nil
+	}
+
+	switch fields[0].Name {
+	case "vehicle_positions":
+		return ec._Subscription_vehicle_positions(ctx, fields[0])
+	default:
+		panic("unknown field " + strconv.Quote(fields[0].Name))
+	}
+}
+
 var tripImplementors = []string{"Trip"}
 
 func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj *model.Trip) graphql.Marshaler {
@@ -73555,8 +74002,16 @@ func (ec *executionContext) _VehiclePosition(ctx context.Context, sel ast.Select
 			out.Values[i] = graphql.MarshalString("VehiclePosition")
 		case "vehicle":
 			out.Values[i] = ec._VehiclePosition_vehicle(ctx, field, obj)
+		case "trip":
+			out.Values[i] = ec._VehiclePosition_trip(ctx, field, obj)
+		case "feed_onestop_id":
+			out.Values[i] = ec._VehiclePosition_feed_onestop_id(ctx, field, obj)
 		case "position":
 			out.Values[i] = ec._VehiclePosition_position(ctx, field, obj)
+		case "bearing":
+			out.Values[i] = ec._VehiclePosition_bearing(ctx, field, obj)
+		case "speed":
+			out.Values[i] = ec._VehiclePosition_speed(ctx, field, obj)
 		case "current_stop_sequence":
 			out.Values[i] = ec._VehiclePosition_current_stop_sequence(ctx, field, obj)
 		case "stop_id":
@@ -76570,6 +77025,60 @@ func (ec *executionContext) marshalNValidationReportErrorGroup2ᚖgithubᚗcom�
 	return ec._ValidationReportErrorGroup(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNVehiclePosition2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePositionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.VehiclePosition) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNVehiclePosition2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePosition(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNVehiclePosition2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePosition(ctx context.Context, sel ast.SelectionSet, v *model.VehiclePosition) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._VehiclePosition(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNWaypoint2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐWaypoint(ctx context.Context, sel ast.SelectionSet, v *model.Waypoint) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -79210,6 +79719,13 @@ func (ec *executionContext) marshalORTTranslation2ᚕᚖgithubᚗcomᚋinterline
 	return ret
 }
 
+func (ec *executionContext) marshalORTTripDescriptor2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTTripDescriptor(ctx context.Context, sel ast.SelectionSet, v *model.RTTripDescriptor) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._RTTripDescriptor(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalORTVehicleDescriptor2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTVehicleDescriptor(ctx context.Context, sel ast.SelectionSet, v *model.RTVehicleDescriptor) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -80129,6 +80645,14 @@ func (ec *executionContext) unmarshalOValidationReportFilter2ᚖgithubᚗcomᚋi
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputValidationReportFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOVehiclePositionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePositionFilter(ctx context.Context, v any) (*model.VehiclePositionFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputVehiclePositionFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
