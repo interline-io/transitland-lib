@@ -26,7 +26,7 @@ type FlexZoneIDConditionalCheck struct {
 	checkedFiles bool
 }
 
-func (e *FlexZoneIDConditionalCheck) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (e *FlexZoneIDConditionalCheck) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	// Check if fare_rules.txt has any entries
 	if _, ok := ent.(*gtfs.FareRule); ok {
 		e.hasFareRules = true
@@ -54,4 +54,3 @@ func (e *FlexZoneIDConditionalCheck) Validate(ent tt.Entity) []error {
 
 	return nil
 }
-

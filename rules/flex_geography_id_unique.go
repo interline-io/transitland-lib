@@ -34,7 +34,7 @@ type FlexGeographyIDUniqueCheck struct {
 	geographyIDs map[string]string // geography_id -> filename
 }
 
-func (e *FlexGeographyIDUniqueCheck) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (e *FlexGeographyIDUniqueCheck) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	if e.geographyIDs == nil {
 		e.geographyIDs = map[string]string{}
 	}
@@ -99,4 +99,3 @@ func (e *FlexGeographyIDUniqueCheck) Validate(ent tt.Entity) []error {
 
 	return nil
 }
-
