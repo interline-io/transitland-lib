@@ -18,3 +18,15 @@ type WriterWithExtraColumns interface {
 	Writer
 	WriteExtraColumns(bool)
 }
+
+type SortOptions struct {
+	StandardizedSort        string   // "asc" or "desc"
+	StandardizedSortColumns []string // Optional: specific columns to sort by. If empty, defaults are used.
+}
+
+type StandardizedSortOptions = SortOptions
+
+type WriterWithStandardizedSort interface {
+	Writer
+	SetStandardizedSortOptions(StandardizedSortOptions)
+}

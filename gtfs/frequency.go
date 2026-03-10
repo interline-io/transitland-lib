@@ -9,9 +9,9 @@ import (
 
 // Frequency frequencies.txt
 type Frequency struct {
-	TripID      tt.String  `csv:",required" target:"trips.txt"`
+	TripID      tt.String  `csv:",required" target:"trips.txt" standardized_sort:"1"`
 	HeadwaySecs tt.Int     `csv:",required" range:"1,"`
-	StartTime   tt.Seconds `csv:",required"`
+	StartTime   tt.Seconds `csv:",required" standardized_sort:"2"`
 	EndTime     tt.Seconds `csv:",required"`
 	ExactTimes  tt.Int     `enum:"0,1"`
 	tt.BaseEntity

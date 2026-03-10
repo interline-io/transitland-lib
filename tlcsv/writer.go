@@ -218,6 +218,12 @@ func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]stri
 	return eids, nil
 }
 
+func (writer *Writer) SetStandardizedSortOptions(opts adapters.StandardizedSortOptions) {
+	if s, ok := writer.WriterAdapter.(adapters.WriterWithStandardizedSort); ok {
+		s.SetStandardizedSortOptions(opts)
+	}
+}
+
 type canFlatten interface {
 	Flatten() []tt.Entity
 }
