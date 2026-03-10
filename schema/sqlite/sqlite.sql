@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_levels" (
   "level_id" varchar(255),
   "level_index" real,
   "level_name" varchar(255),
+  "geometry" BLOB,
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
 CREATE TABLE IF NOT EXISTS "gtfs_shapes" (

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/tt"
+	geom "github.com/twpayne/go-geom"
 )
 
 func TestLevel_Errors(t *testing.T) {
@@ -77,5 +78,51 @@ func TestLevel_Methods(t *testing.T) {
 	}
 	if got := level.TableName(); got != "gtfs_levels" {
 		t.Errorf("TableName() = %v, want %v", got, "gtfs_levels")
+	}
+}
+
+func TestLevel_WithGeometry(t *testing.T) {
+	// Create a polygon geometry
+	polygon, err := geom.NewPolygon(geom.XY).SetCoords([][]geom.Coord{
+		{{-122.4194, 37.7749}, {-122.4094, 37.7749}, {-122.4094, 37.7649}, {-122.4194, 37.7649}, {-122.4194, 37.7749}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	polygon.SetSRID(4326)
+
+	level := &Level{
+		LevelID:    tt.NewString("L1"),
+		LevelIndex: tt.NewFloat(0),
+		LevelName:  tt.NewString("Ground Floor"),
+		Geometry:   tt.NewGeometry(polygon),
+	}
+
+	// Check that geometry is valid
+	if !level.Geometry.Valid {
+		t.Error("Geometry should be valid")
+	}
+
+	// Check that geometry can be retrieved
+	if level.Geometry.Val == nil {
+		t.Error("Geometry.Val should not be nil")
+	}
+
+	// Check that it's a Polygon
+	if _, ok := level.Geometry.Val.(*geom.Polygon); !ok {
+		t.Errorf("Geometry should be a Polygon, got %T", level.Geometry.Val)
+	}
+}
+
+func TestLevel_WithoutGeometry(t *testing.T) {
+	level := &Level{
+		LevelID:    tt.NewString("L1"),
+		LevelIndex: tt.NewFloat(0),
+		LevelName:  tt.NewString("Ground Floor"),
+	}
+
+	// Check that geometry is not valid when not set
+	if level.Geometry.Valid {
+		t.Error("Geometry should not be valid when not set")
 	}
 }
