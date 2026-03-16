@@ -10,6 +10,7 @@ import (
 	sq "github.com/irees/squirrel"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/tldb/querylogger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -70,6 +71,11 @@ func OpenDB(url string) (*sqlx.DB, error) {
 		return nil, err
 	}
 	return ConfigureDB(db.DB)
+}
+
+// WithQueryLogger wraps a database connection with a QueryLogger.
+func WithQueryLogger(db querylogger.Ext, trace bool, longQueryDuration time.Duration) *querylogger.QueryLogger {
+	return &querylogger.QueryLogger{Ext: db, Trace: trace, LongQueryDuration: longQueryDuration}
 }
 
 // Select runs a query and reads results into dest.
