@@ -64,7 +64,9 @@ func (adapter *SQLiteAdapter) Open() error {
 // Close the database.
 func (adapter *SQLiteAdapter) Close() error {
 	if a, ok := adapter.db.(tldb.CanClose); ok {
-		return a.Close()
+		err := a.Close()
+		adapter.db = nil
+		return err
 	}
 	return nil
 }
@@ -105,7 +107,6 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	var tx *sqlx.Tx
 	// Special check for wrapped connections
 	commit := false
-	_, wrapWithLogger := adapter.db.(*QueryLogger)
 	switch a := adapter.db.(type) {
 	case *sqlx.Tx:
 		tx = a
@@ -124,8 +125,8 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	}
 	// Re-wrap the transaction with QueryLogger only if the original connection was wrapped
 	var txdb Ext = tx
-	if wrapWithLogger {
-		txdb = &QueryLogger{Ext: tx}
+	if ql, ok := adapter.db.(*QueryLogger); ok {
+		txdb = &QueryLogger{Ext: tx, Trace: ql.Trace, LongQueryDuration: ql.LongQueryDuration}
 	}
 	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: txdb}); errTx != nil {
 		if commit {

@@ -94,7 +94,6 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	var tx *sqlx.Tx
 	// Special check for wrapped connections
 	commit := false
-	_, wrapWithLogger := adapter.db.(*QueryLogger)
 	switch a := adapter.db.(type) {
 	case *sqlx.Tx:
 		tx = a
@@ -113,8 +112,8 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	}
 	// Re-wrap the transaction with QueryLogger only if the original connection was wrapped
 	var txdb Ext = tx
-	if wrapWithLogger {
-		txdb = &QueryLogger{Ext: tx}
+	if ql, ok := adapter.db.(*QueryLogger); ok {
+		txdb = &QueryLogger{Ext: tx, Trace: ql.Trace, LongQueryDuration: ql.LongQueryDuration}
 	}
 	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: txdb}); err != nil {
 		if commit {
