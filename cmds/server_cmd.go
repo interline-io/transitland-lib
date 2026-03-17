@@ -22,7 +22,6 @@ import (
 	"github.com/interline-io/transitland-lib/server/meters"
 	localmeter "github.com/interline-io/transitland-lib/server/meters/local"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/querylogger"
 
 	"github.com/interline-io/transitland-lib/server/finders/actions"
 	"github.com/interline-io/transitland-lib/server/finders/dbfinder"
@@ -116,15 +115,13 @@ func (cmd *ServerCommand) Parse(args []string) error {
 
 func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// Open database
-	var db tldb.Ext
 	dbx, err := dbutil.OpenDB(cmd.DBURL)
 	if err != nil {
 		return err
 	}
-	db = dbx
-	if log.Logger.GetLevel() == zerolog.TraceLevel {
-		db = &querylogger.QueryLogger{Ext: dbx, Trace: true, LongQueryDuration: time.Duration(cmd.LongQueryDuration) * time.Millisecond}
-	}
+	trace := log.Logger.GetLevel() == zerolog.TraceLevel
+	longQueryDuration := time.Duration(cmd.LongQueryDuration) * time.Millisecond
+	var db tldb.Ext = dbutil.WithQueryLogger(dbx, trace, longQueryDuration)
 
 	// Open redis
 	var redisClient *redis.Client

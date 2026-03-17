@@ -67,6 +67,7 @@ func (adapter *PostgresAdapter) OpenDB() (*sqlx.DB, error) {
 
 // Close the adapter.
 func (adapter *PostgresAdapter) Close() error {
+	adapter.db = nil
 	return nil
 }
 
@@ -110,7 +111,12 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	if err != nil {
 		return err
 	}
-	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); err != nil {
+	// Re-wrap the transaction with QueryLogger only if the original connection was wrapped
+	var txdb Ext = tx
+	if ql, ok := adapter.db.(*QueryLogger); ok {
+		txdb = &QueryLogger{Ext: tx, Trace: ql.Trace, LongQueryDuration: ql.LongQueryDuration}
+	}
+	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: txdb}); err != nil {
 		if commit {
 			if errTx := tx.Rollback(); errTx != nil {
 				return errTx

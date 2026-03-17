@@ -17,11 +17,11 @@ import (
 	"github.com/interline-io/transitland-lib/server/finders/rtfinder"
 	"github.com/interline-io/transitland-lib/server/jobs"
 	localjobs "github.com/interline-io/transitland-lib/server/jobs/local"
+	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/querylogger"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -40,7 +40,7 @@ type Options struct {
 func Config(t testing.TB, opts Options) model.Config {
 	ctx := context.Background()
 	db := testutil.MustOpenTestDB(t)
-	return newTestConfig(t, ctx, &querylogger.QueryLogger{Ext: db}, opts)
+	return newTestConfig(t, ctx, db, opts)
 }
 
 func ConfigTx(t testing.TB, opts Options, cb func(model.Config) error) {
@@ -51,7 +51,7 @@ func ConfigTx(t testing.TB, opts Options, cb func(model.Config) error) {
 	defer tx.Rollback()
 
 	// Get finders
-	testEnv := newTestConfig(t, ctx, &querylogger.QueryLogger{Ext: tx}, opts)
+	testEnv := newTestConfig(t, ctx, tx, opts)
 
 	// Commit or rollback
 	if err := cb(testEnv); err != nil {
@@ -83,6 +83,8 @@ func DefaultRTJson() []RTJsonFile {
 }
 
 func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options) model.Config {
+	db = dbutil.WithQueryLogger(db, false, 0)
+
 	// Default time
 	if opts.WhenUtc == "" {
 		opts.WhenUtc = "2022-09-01T00:00:00Z"
