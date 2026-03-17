@@ -67,6 +67,7 @@ func (adapter *PostgresAdapter) OpenDB() (*sqlx.DB, error) {
 
 // Close the adapter.
 func (adapter *PostgresAdapter) Close() error {
+	adapter.db = nil
 	return nil
 }
 
