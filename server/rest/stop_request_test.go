@@ -158,6 +158,18 @@ func TestStopRequest(t *testing.T) {
 			expectSelect: []string{"19TH", "19TH_N"},
 		},
 		{
+			name:         "location_type=0",
+			h:            StopRequest{FeedOnestopID: "BA", LocationType: ptr(0), WithCursor: WithCursor{Limit: 100}},
+			selector:     "stops.#.stop_id",
+			expectLength: 50,
+		},
+		{
+			name:         "location_type=1",
+			h:            StopRequest{FeedOnestopID: "BA", LocationType: ptr(1), WithCursor: WithCursor{Limit: 100}},
+			selector:     "stops.#.stop_id",
+			expectLength: 0,
+		},
+		{
 			name:         "search",
 			h:            StopRequest{Search: "macarthur"},
 			selector:     "stops.#.stop_id",
