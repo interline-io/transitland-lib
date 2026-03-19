@@ -75,6 +75,18 @@ func TestRouteRequest(t *testing.T) {
 			expectSelect: []string{"01", "03", "05", "07", "11", "19"},
 		},
 		{
+			name:         "serves_stop_onestop_id",
+			h:            RouteRequest{ServesStopOnestopID: "s-9q8yyufxmv-sanfranciscocaltrain"},
+			selector:     "routes.#.route_id",
+			expectSelect: []string{"Bu-130", "Gi-130", "Li-130", "Lo-130", "Sp-130"},
+		},
+		{
+			name:         "serves_stop_onestop_id:none",
+			h:            RouteRequest{ServesStopOnestopID: "s-invalid-stop"},
+			selector:     "routes.#.route_id",
+			expectLength: 0,
+		},
+		{
 			name:         "lat,lon,radius 100m",
 			h:            RouteRequest{Lon: -122.407974, Lat: 37.784471, Radius: 100},
 			selector:     "routes.#.route_id",

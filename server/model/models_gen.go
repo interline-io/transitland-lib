@@ -860,6 +860,8 @@ type RouteFilter struct {
 	Search *string `json:"search,omitempty"`
 	// Search for routes operated by operators with this OnestopID
 	OperatorOnestopID *string `json:"operator_onestop_id,omitempty"`
+	// Search for routes that serve a stop with this OnestopID
+	ServesStopOnestopID *string `json:"serves_stop_onestop_id,omitempty"`
 	// Search for routes with these license details
 	License *LicenseFilter `json:"license,omitempty"`
 	// Search for routes with these agency integer IDs. Deprecated.

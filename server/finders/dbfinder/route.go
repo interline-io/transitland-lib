@@ -281,6 +281,15 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 				JoinClause("LEFT JOIN current_operators_in_feed coif ON coif.feed_id = feed_versions.feed_id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
 				Where(sq.Eq{"coif.resolved_onestop_id": *where.OperatorOnestopID})
 		}
+		if where.ServesStopOnestopID != nil {
+			q = q.JoinClause(`JOIN (
+				SELECT tlrs.route_id
+				FROM feed_version_stop_onestop_ids fvsoid
+				JOIN gtfs_stops gs ON gs.stop_id = fvsoid.entity_id AND gs.feed_version_id = fvsoid.feed_version_id
+				JOIN tl_route_stops tlrs ON tlrs.stop_id = gs.id
+				WHERE fvsoid.onestop_id = ?
+			) tlrs_stop ON tlrs_stop.route_id = gtfs_routes.id`, *where.ServesStopOnestopID)
+		}
 		// Handle license filtering
 		q = licenseFilter(where.License, q)
 

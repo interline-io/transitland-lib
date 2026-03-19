@@ -1977,6 +1977,8 @@ input RouteFilter {
   search: String
   "Search for routes operated by operators with this OnestopID"
   operator_onestop_id: String
+  "Search for routes that serve a stop with this OnestopID"
+  serves_stop_onestop_id: String
   "Search for routes with these license details"
   license: LicenseFilter
   "Search for routes with these agency integer IDs. Deprecated."
