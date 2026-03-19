@@ -5662,6 +5662,20 @@
             ]
           },
           {
+            "description": "Search for routes serving a stop with this OnestopID",
+            "in": "query",
+            "name": "serves_stop_onestop_id",
+            "schema": {
+              "type": "string"
+            },
+            "x-example-requests": [
+              {
+                "description": "serves_stop_onestop_id=s-9q8yyzcny3-embarcadero",
+                "url": "serves_stop_onestop_id=s-9q8yyzcny3-embarcadero"
+              }
+            ]
+          },
+          {
             "$ref": "#/components/parameters/includeAlertsParam"
           },
           {
