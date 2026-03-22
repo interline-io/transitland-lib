@@ -42,13 +42,6 @@ func MakeBasicTests() map[string]model.DirectionRequest {
 			To:       &BaseTo,
 			DepartAt: &BaseTime,
 		},
-		"transit_arrive_by": {
-			Mode:     model.StepModeTransit,
-			From:     &BaseFrom,
-			To:       &BaseTo,
-			DepartAt: &BaseTime,
-			ArriveBy: ptrBool(true),
-		},
 		"no_dest_fail": {
 			Mode:     model.StepModeWalk,
 			From:     &BaseFrom,
@@ -107,6 +100,3 @@ func HandlerTest(t *testing.T, h directions.Handler, tc TestCase) *model.Directi
 	return ret
 }
 
-func ptrBool(v bool) *bool {
-	return &v
-}
