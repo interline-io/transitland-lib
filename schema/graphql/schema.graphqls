@@ -672,25 +672,25 @@ type Agency {
   "Onestop ID for this agency (or its associated operator)"
   onestop_id: String!
   
-  "GTFS `agency.agency_email`"
+  "GTFS `agency.agency_email`; email address actively monitored by the agency's customer service department"
   agency_email: Email
   
-  "GTFS `agency.agency_fare_url`"
+  "GTFS `agency.agency_fare_url`; URL of a web page where a rider can purchase tickets or passes"
   agency_fare_url: Url
   
   "GTFS `agency.agency_id`"
   agency_id: String!
   
-  "GTFS `agency.agency_lang`"
+  "GTFS `agency.agency_lang`; primary language used by this transit agency, as a BCP 47 language tag"
   agency_lang: Language
   
   "GTFS `agency.agency_name`"
   agency_name: String!
   
-  "GTFS `agency.agency_phone`"
+  "GTFS `agency.agency_phone`; voice telephone number for the agency's customer service"
   agency_phone: String
   
-  "GTFS `agency.agency_timezone`"
+  "GTFS `agency.agency_timezone`; timezone where the transit agency is located; stop times use this timezone unless overridden by stop_timezone"
   agency_timezone: Timezone!
   
   "GTFS `agency.agency_url`"
@@ -742,34 +742,34 @@ type Route {
   "GTFS `routes.route_id`"
   route_id: String!
   
-  "GTFS `routes.route_short_name`"
+  "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation"
   route_short_name: String
   
-  "GTFS `routes.route_long_name`"
+  "GTFS `routes.route_long_name`; full descriptive name of a route"
   route_long_name: String
   
-  "GTFS `routes.route_type`"
+  "GTFS `routes.route_type`; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported"
   route_type: Int!
   
-  "GTFS `routes.route_color`"
+  "GTFS `routes.route_color`; color that corresponds to a route, as a six-digit hexadecimal number (e.g. `FF0000`)"
   route_color: Color
   
-  "GTFS `routes.route_text_color`"
+  "GTFS `routes.route_text_color`; legible color to use for text drawn against the route_color background, as a six-digit hexadecimal number"
   route_text_color: Color
   
-  "GTFS `routes.route_sort_order`"
+  "GTFS `routes.route_sort_order`; orders routes for display; routes with a lower value should be displayed first"
   route_sort_order: Int
   
-  "GTFS `routes.route_url`"
+  "GTFS `routes.route_url`; URL of a web page about the particular route"
   route_url: Url
   
-  "GTFS `routes.route_desc`"
+  "GTFS `routes.route_desc`; description of a route that provides useful, quality information"
   route_desc: String
   
-  "GTFS `routes.continuous_pickup`"
+  "GTFS `routes.continuous_pickup`; indicates whether a rider can board along the route between stops [0=continuous stopping pickup, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]"
   continuous_pickup: Int
   
-  "GTFS `routes.continuous_drop_off`"
+  "GTFS `routes.continuous_drop_off`; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
   
   "Representative geometry for this route"
@@ -839,10 +839,10 @@ type Stop {
   "Onestop ID for this stop, if available [example:s-dr5ruvgnyk-madisonav~e69st]"
   onestop_id: String!
   
-  "GTFS `stops.location_type`; this is optional in GTFS spec [enum:`0,1,2,3,4`]"
+  "GTFS `stops.location_type` [0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area]"
   location_type: Int!
   
-  "GTFS `stops.stop_code`"
+  "GTFS `stops.stop_code`; short text or number identifying the location for riders"
   stop_code: String
   
   "GTFS `stops.stop_desc` [example:NW Corner of Broadway and 14th]"
@@ -854,22 +854,22 @@ type Stop {
   "GTFS `stops.stop_name` [example:MADISON AV/E 68 ST]"
   stop_name: String
   
-  "GTFS `stops.stop_timezone`; if overriding agency/route timezone [example:America/Los_Angeles]"
+  "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty [example:America/Los_Angeles]"
   stop_timezone: Timezone
   
   "GTFS `stops.stop_url` [example:https://www.bart.gov/stations/ftvl]"
   stop_url: Url
   
-  "GTFS `stops.wheelchair_boarding` [enum:`0,1,2`]"
+  "GTFS `stops.wheelchair_boarding` [0=no information, 1=some accessible path exists, 2=no accessible path]"
   wheelchair_boarding: Int
   
-  "GTFS `stops.zone_id`"
+  "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules"
   zone_id: String
   
-  "GTFS `stops.platform_code`"
+  "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)"
   platform_code: String
   
-  "GTFS `stops.tts_stop_name`"
+  "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems"
   tts_stop_name: String
   
   "Stop geometry"
@@ -956,31 +956,31 @@ type Pathway {
   "GTFS `pathways.pathway_id`"
   pathway_id: String!
   
-  "GTFS `pathways.pathway_mode`"
+  "GTFS `pathways.pathway_mode` [1=walkway, 2=stairs, 3=moving sidewalk/travelator, 4=escalator, 5=elevator, 6=fare gate, 7=exit gate]"
   pathway_mode: Int!
   
-  "GTFS `pathways.is_bidirectional`"
+  "GTFS `pathways.is_bidirectional` [0=unidirectional, from_stop to to_stop only; 1=bidirectional]"
   is_bidirectional: Int!
   
-  "GTFS `pathways.length`"
+  "GTFS `pathways.length`; horizontal length of the pathway in meters"
   length: Float
   
-  "GTFS `pathways.traversal_time`"
+  "GTFS `pathways.traversal_time`; average time in seconds needed to traverse the pathway"
   traversal_time: Int
   
-  "GTFS `pathways.stair_count`"
+  "GTFS `pathways.stair_count`; number of stairs; positive for upward travel, negative for downward"
   stair_count: Int
   
-  "GTFS `pathways.max_slope`"
+  "GTFS `pathways.max_slope`; maximum slope ratio; positive for upward, negative for downward (e.g. 0.083 = 8.3%)"
   max_slope: Float
   
-  "GTFS `pathways.min_width`"
+  "GTFS `pathways.min_width`; minimum width of the pathway in meters"
   min_width: Float
   
-  "GTFS `pathways.signposted_as`"
+  "GTFS `pathways.signposted_as`; public signage text used for this pathway direction"
   signposted_as: String
   
-  "GTFS `pathways.reverse_signposted_as`"
+  "GTFS `pathways.reverse_signposted_as`; public signage text for the reverse (to_stop → from_stop) direction"
   reverse_signposted_as: String
   
   "Pathway begins at this stop"
@@ -1001,10 +1001,10 @@ type Level {
   "GTFS `levels.level_id`"
   level_id: String!
   
-  "GTFS `levels.level_index`"
+  "GTFS `levels.level_index`; numeric index of the level; higher values indicate upper levels, 0 is ground level, negative values for underground"
   level_index: Float!
   
-  "GTFS `levels.level_name`"
+  "GTFS `levels.level_name`; optional name of the level as seen by the rider (e.g. `Mezzanine`, `Upper Level`)"
   level_name: String
   
   "An optional geometry describing the footprint of this level"
@@ -1026,22 +1026,22 @@ type Trip {
   "GTFS `trips.trip_id`"
   trip_id: String!
   
-  "GTFS `trips.trip_headsign`"
+  "GTFS `trips.trip_headsign`; text that appears on signage identifying the trip's destination to riders"
   trip_headsign: String
   
-  "GTFS `trips.trip_short_name`"
+  "GTFS `trips.trip_short_name`; public-facing text used to identify the trip to riders, such as a train number"
   trip_short_name: String
   
-  "GTFS `trips.direction_id`"
+  "GTFS `trips.direction_id`; binary indicator of travel direction [0=outbound, 1=inbound]; meaning depends on the agency"
   direction_id: Int
   
-  "GTFS `trips.block_id`"
+  "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle"
   block_id: String
   
-  "GTFS `trips.wheelchair_accessible`"
+  "GTFS `trips.wheelchair_accessible` [0=no information, 1=vehicle can accommodate at least one rider in a wheelchair, 2=no riders in wheelchairs can be accommodated]"
   wheelchair_accessible: Int
   
-  "GTFS `trips.bikes_allowed`"
+  "GTFS `trips.bikes_allowed` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]"
   bikes_allowed: Int
   
   "Calculated stop pattern ID; an integer scoped to the feed version"
@@ -1100,25 +1100,25 @@ type Calendar {
   "GTFS `calendar.end_date`"
   end_date: Date!
   
-  "GTFS `calendar.monday`"
+  "GTFS `calendar.monday` [1=service runs on Mondays, 0=service does not run]"
   monday: Int!
   
-  "GTFS `calendar.tuesday`"
+  "GTFS `calendar.tuesday` [1=service runs on Tuesdays, 0=service does not run]"
   tuesday: Int!
   
-  "GTFS `calendar.wednesday`"
+  "GTFS `calendar.wednesday` [1=service runs on Wednesdays, 0=service does not run]"
   wednesday: Int!
   
-  "GTFS `calendar.thursday`"
+  "GTFS `calendar.thursday` [1=service runs on Thursdays, 0=service does not run]"
   thursday: Int!
   
-  "GTFS `calendar.friday`"
+  "GTFS `calendar.friday` [1=service runs on Fridays, 0=service does not run]"
   friday: Int!
   
-  "GTFS `calendar.saturday`"
+  "GTFS `calendar.saturday` [1=service runs on Saturdays, 0=service does not run]"
   saturday: Int!
   
-  "GTFS `calendar.sunday`"
+  "GTFS `calendar.sunday` [1=service runs on Sundays, 0=service does not run]"
   sunday: Int!
   
   "Added dates, derived from GTFS `calendar_dates`"
@@ -1158,10 +1158,10 @@ type Frequency {
   "GTFS `frequencies.end_time`"
   end_time: Seconds!
   
-  "GTFS `frequencies.headway_secs`"
+  "GTFS `frequencies.headway_secs`; time in seconds between departures from the same stop for this trip"
   headway_secs: Int!
   
-  "GTFS `frequencies.exact_times`"
+  "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]"
   exact_times: Int
 }
 
@@ -1175,43 +1175,43 @@ type StopTime {
   "GTFS `stop_times.departure_time`"
   departure_time: Seconds
   
-  "GTFS `stop_times.stop_sequence`"
+  "GTFS `stop_times.stop_sequence`; order of stops for this trip; values must increase along the trip but need not be consecutive"
   stop_sequence: Int!
   
-  "GTFS `stop_times.stop_headsign`"
+  "GTFS `stop_times.stop_headsign`; overrides the trip-level headsign for passengers boarding at this stop"
   stop_headsign: String
   
-  "GTFS `stop_times.pickup_type`"
+  "GTFS `stop_times.pickup_type` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]"
   pickup_type: Int
   
-  "GTFS `stop_times.drop_off_type`"
+  "GTFS `stop_times.drop_off_type` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]"
   drop_off_type: Int
   
-  "GTFS `stop_times.timepoint`"
+  "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]"
   timepoint: Int
   
-  "GTFS `stop_times.continuous_drop_off`"
+  "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
   
-  "GTFS `stop_times.continuous_pickup`"
+  "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_pickup: Int
   
-  "GTFS `stop_times.shape_dist_traveled`"
+  "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt"
   shape_dist_traveled: Float
   
   "Set if this arrival/departure time was interpolated during import"
   interpolated: Int
   
-  "GTFS `stop_times.start_pickup_drop_off_window`"
+  "GTFS `stop_times.start_pickup_drop_off_window`; earliest time a rider may request service at this location (GTFS Flex demand-responsive service)"
   start_pickup_drop_off_window: Seconds
   
-  "GTFS `stop_times.end_pickup_drop_off_window`"
+  "GTFS `stop_times.end_pickup_drop_off_window`; latest time a rider may request service at this location (GTFS Flex demand-responsive service)"
   end_pickup_drop_off_window: Seconds
   
-  "GTFS `stop_times.pickup_booking_rule_id`"
+  "GTFS `stop_times.pickup_booking_rule_id`; booking rule governing pickup at this stop (GTFS Flex)"
   pickup_booking_rule: BookingRule
   
-  "GTFS `stop_times.drop_off_booking_rule_id`"
+  "GTFS `stop_times.drop_off_booking_rule_id`; booking rule governing drop-off at this stop (GTFS Flex)"
   drop_off_booking_rule: BookingRule
   
   "Stop associated with this stop time"
@@ -1250,43 +1250,43 @@ type FlexStopTime {
   "GTFS `stop_times.departure_time`"
   departure_time: Seconds
   
-  "GTFS `stop_times.stop_sequence`"
+  "GTFS `stop_times.stop_sequence`; order of stops for this trip; values must increase along the trip but need not be consecutive"
   stop_sequence: Int!
   
-  "GTFS `stop_times.stop_headsign`"
+  "GTFS `stop_times.stop_headsign`; overrides the trip-level headsign for passengers boarding at this stop"
   stop_headsign: String
   
-  "GTFS `stop_times.pickup_type`"
+  "GTFS `stop_times.pickup_type` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]"
   pickup_type: Int
   
-  "GTFS `stop_times.drop_off_type`"
+  "GTFS `stop_times.drop_off_type` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]"
   drop_off_type: Int
   
-  "GTFS `stop_times.timepoint`"
+  "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]"
   timepoint: Int
   
-  "GTFS `stop_times.continuous_drop_off`"
+  "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
   
-  "GTFS `stop_times.continuous_pickup`"
+  "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_pickup: Int
   
-  "GTFS `stop_times.shape_dist_traveled`"
+  "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt"
   shape_dist_traveled: Float
   
   "Set if this arrival/departure time was interpolated during import"
   interpolated: Int
   
-  "GTFS `stop_times.start_pickup_drop_off_window`"
+  "GTFS `stop_times.start_pickup_drop_off_window`; earliest time a rider may request service at this location (GTFS Flex demand-responsive service)"
   start_pickup_drop_off_window: Seconds
   
-  "GTFS `stop_times.end_pickup_drop_off_window`"
+  "GTFS `stop_times.end_pickup_drop_off_window`; latest time a rider may request service at this location (GTFS Flex demand-responsive service)"
   end_pickup_drop_off_window: Seconds
   
-  "GTFS `stop_times.pickup_booking_rule_id`"
+  "GTFS `stop_times.pickup_booking_rule_id`; booking rule governing pickup at this stop (GTFS Flex)"
   pickup_booking_rule: BookingRule
   
-  "GTFS `stop_times.drop_off_booking_rule_id`"
+  "GTFS `stop_times.drop_off_booking_rule_id`; booking rule governing drop-off at this stop (GTFS Flex)"
   drop_off_booking_rule: BookingRule
   
   "Location associated with this stop time"
@@ -1401,46 +1401,46 @@ type BookingRule {
   "GTFS `booking_rules.booking_rule_id`"
   booking_rule_id: String!
   
-  "GTFS `booking_rules.booking_type`"
+  "GTFS `booking_rules.booking_type` [0=real-time booking, 1=same-day booking with prior notice, 2=advance booking with prior notice]"
   booking_type: Int!
   
-  "GTFS `booking_rules.prior_notice_duration_min`"
+  "GTFS `booking_rules.prior_notice_duration_min`; minimum number of minutes before travel when a booking request may be made"
   prior_notice_duration_min: Int
   
-  "GTFS `booking_rules.prior_notice_duration_max`"
+  "GTFS `booking_rules.prior_notice_duration_max`; maximum number of minutes before travel when a booking request may be made"
   prior_notice_duration_max: Int
   
-  "GTFS `booking_rules.prior_notice_last_day`"
+  "GTFS `booking_rules.prior_notice_last_day`; last day before travel when a booking may be made (e.g. 1 = must book by the day before)"
   prior_notice_last_day: Int
   
-  "GTFS `booking_rules.prior_notice_last_time`"
+  "GTFS `booking_rules.prior_notice_last_time`; latest time on prior_notice_last_day when a booking may be made"
   prior_notice_last_time: Seconds
   
-  "GTFS `booking_rules.prior_notice_start_day`"
+  "GTFS `booking_rules.prior_notice_start_day`; earliest day before travel when a booking may be made"
   prior_notice_start_day: Int
   
-  "GTFS `booking_rules.prior_notice_start_time`"
+  "GTFS `booking_rules.prior_notice_start_time`; earliest time on prior_notice_start_day when a booking may be made"
   prior_notice_start_time: Seconds
   
-  "Prior notice service calendar"
+  "GTFS `booking_rules.prior_notice_service_id`; calendar defining the days to which prior notice requirements apply"
   prior_notice_service: Calendar
   
-  "GTFS `booking_rules.message`"
+  "GTFS `booking_rules.message`; general message shown to riders when booking this service"
   message: String
   
-  "GTFS `booking_rules.pickup_message`"
+  "GTFS `booking_rules.pickup_message`; message shown to riders when booking a pickup at a specific stop"
   pickup_message: String
   
-  "GTFS `booking_rules.drop_off_message`"
+  "GTFS `booking_rules.drop_off_message`; message shown to riders when booking a drop-off at a specific stop"
   drop_off_message: String
   
-  "GTFS `booking_rules.phone_number`"
+  "GTFS `booking_rules.phone_number`; phone number to call to make a booking for this service"
   phone_number: String
   
-  "GTFS `booking_rules.info_url`"
+  "GTFS `booking_rules.info_url`; URL with more information about this booking rule"
   info_url: Url
   
-  "GTFS `booking_rules.booking_url`"
+  "GTFS `booking_rules.booking_url`; URL to the booking system or interface for this service"
   booking_url: Url
   
   "Feed version SHA1 identifier"
