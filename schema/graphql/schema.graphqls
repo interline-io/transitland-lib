@@ -1578,7 +1578,7 @@ type StopPlace {
   "Best-matched country name"
   adm0_name: String
   
-  "Best-mached country ISO code"
+  "Best-matched country ISO code"
   adm0_iso: String
 }
 

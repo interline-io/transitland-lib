@@ -1299,7 +1299,7 @@ type StopPlace struct {
 	Adm1Iso *string `json:"adm1_iso,omitempty"`
 	// Best-matched country name
 	Adm0Name *string `json:"adm0_name,omitempty"`
-	// Best-mached country ISO code
+	// Best-matched country ISO code
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
 }
 

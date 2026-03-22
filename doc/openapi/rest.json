@@ -563,7 +563,7 @@
                             "x-order": 10
                           },
                           "alerts": {
-                            "description": "GTFS-RT alerts for this agency",
+                            "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -969,7 +969,7 @@
                             "items": {
                               "properties": {
                                 "alerts": {
-                                  "description": "GTFS-RT alerts for this route",
+                                  "description": "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts",
                                   "items": {
                                     "properties": {
                                       "active_period": {
@@ -1394,7 +1394,7 @@
                             "x-order": 10
                           },
                           "alerts": {
-                            "description": "GTFS-RT alerts for this agency",
+                            "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -1800,7 +1800,7 @@
                             "items": {
                               "properties": {
                                 "alerts": {
-                                  "description": "GTFS-RT alerts for this route",
+                                  "description": "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts",
                                   "items": {
                                     "properties": {
                                       "active_period": {
@@ -4664,7 +4664,7 @@
                                   "x-order": 29
                                 },
                                 "alerts": {
-                                  "description": "GTFS-RT alerts for this agency",
+                                  "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                                   "items": {
                                     "properties": {
                                       "active_period": {
@@ -5167,7 +5167,7 @@
                                   "x-order": 29
                                 },
                                 "alerts": {
-                                  "description": "GTFS-RT alerts for this agency",
+                                  "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                                   "items": {
                                     "properties": {
                                       "active_period": {
@@ -5827,7 +5827,7 @@
                                 "x-order": 80
                               },
                               "alerts": {
-                                "description": "GTFS-RT alerts for this agency",
+                                "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -6056,7 +6056,7 @@
                             "x-order": 128
                           },
                           "alerts": {
-                            "description": "GTFS-RT alerts for this route",
+                            "description": "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -6392,14 +6392,14 @@
                             "x-order": 14
                           },
                           "route_stops": {
-                            "description": "Stops associated with this route",
+                            "description": "Stops that this route serves, as RouteStop associations (includes route and agency context alongside each stop)",
                             "items": {
                               "properties": {
                                 "stop": {
                                   "description": "Associated stop",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT Alerts for this stop",
+                                      "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -6797,7 +6797,7 @@
                                 "x-order": 80
                               },
                               "alerts": {
-                                "description": "GTFS-RT alerts for this agency",
+                                "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -7026,7 +7026,7 @@
                             "x-order": 128
                           },
                           "alerts": {
-                            "description": "GTFS-RT alerts for this route",
+                            "description": "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -7362,14 +7362,14 @@
                             "x-order": 14
                           },
                           "route_stops": {
-                            "description": "Stops associated with this route",
+                            "description": "Stops that this route serves, as RouteStop associations (includes route and agency context alongside each stop)",
                             "items": {
                               "properties": {
                                 "stop": {
                                   "description": "Associated stop",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT Alerts for this stop",
+                                      "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -7866,7 +7866,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT alerts for this trip",
+                            "description": "GTFS-RT service alerts for this trip; pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -8307,7 +8307,7 @@
                                     "x-order": 184
                                   },
                                   "alerts": {
-                                    "description": "GTFS-RT alerts for this agency",
+                                    "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                                     "items": {
                                       "properties": {
                                         "active_period": {
@@ -8536,7 +8536,7 @@
                                 "x-order": 232
                               },
                               "alerts": {
-                                "description": "GTFS-RT alerts for this route",
+                                "description": "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -8885,7 +8885,7 @@
                                   "description": "Stop associated with this stop time",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT Alerts for this stop",
+                                      "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -9334,7 +9334,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT alerts for this trip",
+                            "description": "GTFS-RT service alerts for this trip; pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -9775,7 +9775,7 @@
                                     "x-order": 184
                                   },
                                   "alerts": {
-                                    "description": "GTFS-RT alerts for this agency",
+                                    "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                                     "items": {
                                       "properties": {
                                         "active_period": {
@@ -10004,7 +10004,7 @@
                                 "x-order": 232
                               },
                               "alerts": {
-                                "description": "GTFS-RT alerts for this route",
+                                "description": "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -10353,7 +10353,7 @@
                                   "description": "Stop associated with this stop time",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT Alerts for this stop",
+                                      "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -10912,7 +10912,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT Alerts for this stop",
+                            "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -11231,7 +11231,7 @@
                             "nullable": true,
                             "properties": {
                               "alerts": {
-                                "description": "GTFS-RT Alerts for this stop",
+                                "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -11698,7 +11698,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT Alerts for this stop",
+                            "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -12017,7 +12017,7 @@
                             "nullable": true,
                             "properties": {
                               "alerts": {
-                                "description": "GTFS-RT Alerts for this stop",
+                                "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -12596,7 +12596,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT Alerts for this stop",
+                            "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -12811,7 +12811,7 @@
                             "items": {
                               "properties": {
                                 "alerts": {
-                                  "description": "GTFS-RT Alerts for this stop",
+                                  "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                                   "items": {
                                     "properties": {
                                       "active_period": {
@@ -13022,7 +13022,7 @@
                                   "x-order": 704
                                 },
                                 "departures": {
-                                  "description": "Departures from this stop for a given date and time",
+                                  "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use `StopTimeFilter` to specify a date and time range",
                                   "items": {
                                     "properties": {
                                       "arrival": {
@@ -13315,7 +13315,7 @@
                                         "description": "Trip associated with this stop time",
                                         "properties": {
                                           "alerts": {
-                                            "description": "GTFS-RT alerts for this trip",
+                                            "description": "GTFS-RT service alerts for this trip; pass `active: true` to return only currently active alerts",
                                             "items": {
                                               "properties": {
                                                 "active_period": {
@@ -13620,7 +13620,7 @@
                                                     "x-order": 543
                                                   },
                                                   "alerts": {
-                                                    "description": "GTFS-RT alerts for this agency",
+                                                    "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                                                     "items": {
                                                       "properties": {
                                                         "active_period": {
@@ -13849,7 +13849,7 @@
                                                 "x-order": 589
                                               },
                                               "alerts": {
-                                                "description": "GTFS-RT alerts for this route",
+                                                "description": "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts",
                                                 "items": {
                                                   "properties": {
                                                     "active_period": {
@@ -14366,7 +14366,7 @@
                             "x-order": 705
                           },
                           "departures": {
-                            "description": "Departures from this stop for a given date and time",
+                            "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use `StopTimeFilter` to specify a date and time range",
                             "items": {
                               "properties": {
                                 "arrival": {
@@ -14659,7 +14659,7 @@
                                   "description": "Trip associated with this stop time",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT alerts for this trip",
+                                      "description": "GTFS-RT service alerts for this trip; pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -14964,7 +14964,7 @@
                                               "x-order": 220
                                             },
                                             "alerts": {
-                                              "description": "GTFS-RT alerts for this agency",
+                                              "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                                               "items": {
                                                 "properties": {
                                                   "active_period": {
@@ -15193,7 +15193,7 @@
                                           "x-order": 266
                                         },
                                         "alerts": {
-                                          "description": "GTFS-RT alerts for this route",
+                                          "description": "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts",
                                           "items": {
                                             "properties": {
                                               "active_period": {
@@ -15681,7 +15681,7 @@
                             "nullable": true,
                             "properties": {
                               "alerts": {
-                                "description": "GTFS-RT Alerts for this stop",
+                                "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -15896,7 +15896,7 @@
                                 "items": {
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT Alerts for this stop",
+                                      "description": "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -16107,7 +16107,7 @@
                                       "x-order": 1103
                                     },
                                     "departures": {
-                                      "description": "Departures from this stop for a given date and time",
+                                      "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use `StopTimeFilter` to specify a date and time range",
                                       "items": {
                                         "properties": {
                                           "arrival": {
@@ -16400,7 +16400,7 @@
                                             "description": "Trip associated with this stop time",
                                             "properties": {
                                               "alerts": {
-                                                "description": "GTFS-RT alerts for this trip",
+                                                "description": "GTFS-RT service alerts for this trip; pass `active: true` to return only currently active alerts",
                                                 "items": {
                                                   "properties": {
                                                     "active_period": {
@@ -16705,7 +16705,7 @@
                                                         "x-order": 942
                                                       },
                                                       "alerts": {
-                                                        "description": "GTFS-RT alerts for this agency",
+                                                        "description": "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts",
                                                         "items": {
                                                           "properties": {
                                                             "active_period": {
@@ -16934,7 +16934,7 @@
                                                     "x-order": 988
                                                   },
                                                   "alerts": {
-                                                    "description": "GTFS-RT alerts for this route",
+                                                    "description": "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts",
                                                     "items": {
                                                       "properties": {
                                                         "active_period": {
