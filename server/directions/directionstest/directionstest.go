@@ -99,4 +99,3 @@ func HandlerTest(t *testing.T, h directions.Handler, tc TestCase) *model.Directi
 	}
 	return ret
 }
-
