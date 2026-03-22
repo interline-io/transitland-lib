@@ -1248,7 +1248,8 @@ type StopLocationFilter struct {
 	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
-// Measurements of observed arrival times based on GTFS-RT data.
+// An archived real-time arrival/departure measurement at a stop, derived from GTFS-RT TripUpdate or VehiclePosition data.
+// Compare `scheduled_arrival_time`/`scheduled_departure_time` against `observed_arrival_time`/`observed_departure_time` for on-time performance analysis.
 type StopObservation struct {
 	// GTFS-RT TripUpdate schedule relationship
 	ScheduleRelationship *string `json:"schedule_relationship,omitempty"`
@@ -1281,13 +1282,13 @@ type StopObservation struct {
 	StopID                int         `json:"-"`
 }
 
-// Search options for stop observations
+// Filters for querying archived stop observations. All three fields are required.
 type StopObservationFilter struct {
-	// Search for stop observations derived from the specified source
+	// Data source to filter by; typically `TripUpdate` or `VehiclePosition`
 	Source string `json:"source"`
-	// Search for stop observations associated with this feed version integer ID
+	// Feed version integer ID to filter by
 	FeedVersionID int `json:"feed_version_id"`
-	// Search for stop observations made on this trip start date
+	// Trip start date to filter by
 	TripStartDate tt.Date `json:"trip_start_date"`
 }
 

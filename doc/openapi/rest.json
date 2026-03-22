@@ -2289,7 +2289,7 @@
                             "x-order": 22
                           },
                           "feed_infos": {
-                            "description": "Feed infos associated with this feed version, if imported",
+                            "description": "Records from this feed version's `feed_info.txt`, containing publisher metadata and the declared service date range",
                             "items": {
                               "properties": {
                                 "default_lang": {
@@ -2885,7 +2885,7 @@
                             "x-order": 22
                           },
                           "feed_infos": {
-                            "description": "Feed infos associated with this feed version, if imported",
+                            "description": "Records from this feed version's `feed_info.txt`, containing publisher metadata and the declared service date range",
                             "items": {
                               "properties": {
                                 "default_lang": {
@@ -11185,7 +11185,7 @@
                             "x-order": 2
                           },
                           "level": {
-                            "description": "Stop level",
+                            "description": "Level within the station that this stop/platform belongs to (used in multi-level stations with pathways)",
                             "nullable": true,
                             "properties": {
                               "level_id": {
@@ -11227,7 +11227,7 @@
                             "x-order": 26
                           },
                           "parent": {
-                            "description": "Stop parent station",
+                            "description": "Parent station for this stop; for platforms and entrances (location_type 2, 3, 4), this is the enclosing station (location_type 1)",
                             "nullable": true,
                             "properties": {
                               "alerts": {
@@ -11478,7 +11478,7 @@
                             "nullable": true,
                             "properties": {
                               "adm0_iso": {
-                                "description": "Best-mached country ISO code",
+                                "description": "Best-matched country ISO code",
                                 "nullable": true,
                                 "title": "adm0_iso",
                                 "type": "string",
@@ -11971,7 +11971,7 @@
                             "x-order": 2
                           },
                           "level": {
-                            "description": "Stop level",
+                            "description": "Level within the station that this stop/platform belongs to (used in multi-level stations with pathways)",
                             "nullable": true,
                             "properties": {
                               "level_id": {
@@ -12013,7 +12013,7 @@
                             "x-order": 26
                           },
                           "parent": {
-                            "description": "Stop parent station",
+                            "description": "Parent station for this stop; for platforms and entrances (location_type 2, 3, 4), this is the enclosing station (location_type 1)",
                             "nullable": true,
                             "properties": {
                               "alerts": {
@@ -12264,7 +12264,7 @@
                             "nullable": true,
                             "properties": {
                               "adm0_iso": {
-                                "description": "Best-mached country ISO code",
+                                "description": "Best-matched country ISO code",
                                 "nullable": true,
                                 "title": "adm0_iso",
                                 "type": "string",
@@ -12807,7 +12807,7 @@
                             "x-order": 1195
                           },
                           "children": {
-                            "description": "Stop children",
+                            "description": "Child stops belonging to this station; for a station (location_type 1), returns its platforms, entrances, and nodes",
                             "items": {
                               "properties": {
                                 "alerts": {
@@ -15677,7 +15677,7 @@
                             "x-order": 5
                           },
                           "parent": {
-                            "description": "Stop parent station",
+                            "description": "Parent station for this stop; for platforms and entrances (location_type 2, 3, 4), this is the enclosing station (location_type 1)",
                             "nullable": true,
                             "properties": {
                               "alerts": {
@@ -15892,7 +15892,7 @@
                                 "x-order": 1149
                               },
                               "children": {
-                                "description": "Stop children",
+                                "description": "Child stops belonging to this station; for a station (location_type 1), returns its platforms, entrances, and nodes",
                                 "items": {
                                   "properties": {
                                     "alerts": {

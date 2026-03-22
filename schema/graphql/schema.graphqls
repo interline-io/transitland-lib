@@ -501,7 +501,7 @@ type FeedVersion {
   "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
   
-  "Feed infos associated with this feed version, if imported"
+  "Records from this feed version's `feed_info.txt`, containing publisher metadata and the declared service date range"
   feed_infos(limit: Int): [FeedInfo!]!
   
   "Validation reports associated with this feed version"
@@ -885,31 +885,31 @@ type Stop {
   "GTFS Flex location groups associated with this stop"
   location_groups(limit: Int): [LocationGroup!]!
   
-  "Stop level"
+  "Level within the station that this stop/platform belongs to (used in multi-level stations with pathways)"
   level: Level
   
-  "Stop parent station"
+  "Parent station for this stop; for platforms and entrances (location_type 2, 3, 4), this is the enclosing station (location_type 1)"
   parent: Stop
   
-  "Stop external reference"
+  "Cross-feed stop reference linking this stop to a stop in a different feed; used to identify the same physical stop across multiple data sources"
   external_reference: StopExternalReference
   
-  "Stop observations"
+  "Archived real-time arrival/departure observations at this stop derived from GTFS-RT; used for on-time performance analysis; requires `source`, `feed_version_id`, and `trip_start_date` filters"
   observations(limit: Int, where: StopObservationFilter): [StopObservation!]
   
-  "Stop children"
+  "Child stops belonging to this station; for a station (location_type 1), returns its platforms, entrances, and nodes"
   children(limit: Int): [Stop!]
   
   "Routes serving this stop, as RouteStop associations (includes route and agency context)"
   route_stops(limit: Int): [RouteStop!]!
   
-  "Dependent levels"
+  "Levels defined within this station (multi-level stations only)"
   child_levels(limit: Int): [Level!]!
   
-  "Pathways from this stop"
+  "Pathways that begin at this stop; traverse the full graph to map station accessibility (entrances, escalators, fare gates, etc.)"
   pathways_from_stop(limit: Int): [Pathway!]!
   
-  "Pathways to this stop"
+  "Pathways that end at this stop"
   pathways_to_stop(limit: Int): [Pathway!]!
   
   "Raw scheduled stop times for this stop from the GTFS schedule, without date or time filtering"
@@ -1497,7 +1497,8 @@ type LocationGroupStop {
 # Archived observed stop-times
 
 """
-Measurements of observed arrival times based on GTFS-RT data.
+An archived real-time arrival/departure measurement at a stop, derived from GTFS-RT TripUpdate or VehiclePosition data.
+Compare `scheduled_arrival_time`/`scheduled_departure_time` against `observed_arrival_time`/`observed_departure_time` for on-time performance analysis.
 """
 type StopObservation {
   "GTFS-RT TripUpdate schedule relationship"
@@ -1546,7 +1547,8 @@ type StopObservation {
 # GTFS Support Entities
 
 """
-Additional metadata for a stop to reference an externally defined stop.
+A cross-feed reference linking a stop in one feed to the same physical stop in a different feed.
+The `target_active_stop` field resolves the matched stop and its current routes, enabling cross-feed service lookups at shared stops (e.g. a bus stop that also appears in a rail feed).
 """
 type StopExternalReference {
   "Internal integer ID"
@@ -2769,13 +2771,13 @@ input TripStopTimeFilter {
   end: Seconds
 }
 
-"""Search options for stop observations"""
+"""Filters for querying archived stop observations. All three fields are required."""
 input StopObservationFilter {
-  "Search for stop observations derived from the specified source"
+  "Data source to filter by; typically `TripUpdate` or `VehiclePosition`"
   source: String!
-  "Search for stop observations associated with this feed version integer ID"
+  "Feed version integer ID to filter by"
   feed_version_id: Int!
-  "Search for stop observations made on this trip start date"
+  "Trip start date to filter by"
   trip_start_date: Date!
 }
 
