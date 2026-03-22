@@ -1,268 +1,513 @@
-# GBFS
+# GBFS - General Bikeshare Feed Specification
 
 """
-General Bikeshare Feed Specification (GBFS) feed.
+Top-level container for a [GBFS](https://gbfs.org) (General Bikeshare Feed Specification) feed.
 
-See [Concepts: Micromobility](https://www.transit.land/documentation/concepts/micromobility).
+GBFS is an open data standard for shared mobility (bikes, scooters, and other micromobility vehicles).
 """
 type GbfsFeed {
+	"System information for this feed."
 	system_information:  GbfsSystemInformation
+	"Station information for all stations in this system."
 	station_information: [GbfsStationInformation!]
+	"Hours of rental operation for this system."
 	rental_hours:  [GbfsSystemHour!]
+	"Seasonal or weekly service calendar for this system."
 	calendars: [GbfsSystemCalendar!]
+	"Active service alerts for this system."
 	alerts: [GbfsSystemAlert!]
 }
 
+"""
+System-level metadata for a GBFS feed, corresponding to the GBFS `system_information.json` file.
+"""
 type GbfsSystemInformation  {
+  "Globally unique identifier for the vehicle share system."
   system_id: String
+  "BCP 47 language tag for the language used in this feed."
   language: String
+  "Full name of the system, suitable for display to customers."
   name: String
+  "Short name or abbreviation for the system."
   short_name: String
+  "Name of the system operator."
   operator: String
+  "System website URL."
   url: String
+  "URL where customers can purchase memberships."
   purchase_url: String
+  "Date the system began operations."
   start_date: Date
+  "Customer service phone number."
   phone_number: String
+  "Customer service email address."
   email: String
+  "Contact email for feed consumers to report technical issues."
   feed_contact_email: String
+  "IANA timezone where the system is located (e.g. `America/Los_Angeles`)."
   timezone: String
+  "URL to the system's custom license terms."
   license_url: String
+  "URL to the system's terms of service."
   terms_url: String
+  "Date the terms of service were last updated."
   terms_last_updated: Date
+  "URL to the system's privacy policy."
   privacy_url: String
+  "Date the privacy policy was last updated."
   privacy_last_updated: Date
+  "Brand asset information including logos and colors."
   brand_assets: GbfsBrandAsset
+  "Deep links to the rental app for iOS and Android."
   rental_apps: GbfsRentalApps
 }
 
+"""
+Deep links to the operator's rental app for iOS and Android platforms.
+"""
 type GbfsRentalApps {
+	"iOS app information."
 	ios: GbfsRentalApp
+	"Android app information."
 	android: GbfsRentalApp
 }
 
+"""
+App store and discovery URIs for a rental app on a specific platform.
+"""
 type GbfsRentalApp {
+	"URI to the app in the relevant platform app store."
 	store_uri: String
+	"URI used to discover the app on the platform."
 	discovery_uri: String
 }
 
+"""
+Brand asset information for the system, including logo URLs and brand color.
+"""
 type GbfsBrandAsset {
+	"Date the brand assets were last updated."
 	brand_last_modified: Date
+	"URL to the brand's terms of use."
 	brand_terms_url: String
+	"URL to the brand's main logo image (SVG)."
 	brand_image_url: String
+	"URL to the dark-mode variant of the brand logo."
 	brand_image_url_dark: String
+	"Brand color as a 6-digit hex code (e.g. `FF0000`)."
 	color: String
 }
 
+"""
+Information about a single docking station, corresponding to a record in the GBFS `station_information.json` file.
+"""
 type GbfsStationInformation {
+	"Unique identifier for this station."
 	station_id: String
+	"Public name of the station."
 	name: String
+	"Short name or code for the station."
 	short_name: String
+	"Latitude of the station."
 	lat: Float
+	"Longitude of the station."
 	lon: Float
+	"Street address of the station."
 	address: String
+	"Cross street or nearby landmark."
 	cross_street: String
+	"Postal code of the station location."
 	post_code: String
+	"Payment methods accepted at this station (e.g. `KEY`, `CREDITCARD`)."
 	rental_methods: Strings
+	"True if this is a virtual station without physical smart-dock infrastructure."
 	is_virtual_station: Bool
+	"GeoJSON geometry describing the area of a virtual station."
 	station_area: Geometry
+	"Type of parking facility at this station (e.g. `parking_lot`, `street_parking`)."
 	parking_type: String
+	"True if parking hoops are present at this station."
 	parking_hoop: Int
+	"Contact phone number for this station."
 	contact_phone: String
+	"Total number of docking points installed at this station."
 	capacity: Int
+	"True if valet services are provided at this station."
 	is_valet_station: Bool
+	"True if this station supports charging of electric vehicles."
 	is_charging_station: Bool
-	# vehicle_capacity: map[string]int
+	"The GBFS feed this station belongs to."
 	feed: GbfsFeed
+	"Region this station belongs to, per `system_regions.json`."
 	region: GbfsSystemRegion
+	"Real-time status of this station."
 	status: GbfsStationStatus
 }
 
+"""
+Real-time status of a docking station, corresponding to the GBFS `station_status.json` file.
+"""
 type GbfsStationStatus  {
-	station_id: String                
-	num_bikes_available: Int                
-	num_bikes_disabled: Int                
-	num_docks_available: Int                
-	num_docks_disabled:  Int                
-	is_returning: Bool               
-	is_renting: Bool               
-	is_installed: Bool               
-	last_reported: Int               
+	"Station identifier, referencing `station_information.json`."
+	station_id: String
+	"Number of functional vehicles physically at the station and available for rental."
+	num_bikes_available: Int
+	"Number of disabled vehicles of any type at the station."
+	num_bikes_disabled: Int
+	"Number of functional docks able to accept vehicle returns."
+	num_docks_available: Int
+	"Number of disabled docking points at the station."
+	num_docks_disabled:  Int
+	"True if the station is currently accepting vehicle returns."
+	is_returning: Bool
+	"True if the station is currently renting vehicles."
+	is_renting: Bool
+	"True if the station is currently on the street."
+	is_installed: Bool
+	"Unix timestamp of the last time this station reported its status."
+	last_reported: Int
+	"Number of available vehicles broken down by vehicle type."
 	vehicle_types_available: [GbfsVehicleTypeAvailable!]
+	"Number of available docks broken down by vehicle type."
 	vehicle_docks_available: [GbfsVehicleDockAvailable!]
 }
 
+"""
+Count of available vehicles of a particular type at a station.
+"""
 type GbfsVehicleTypeAvailable  {
-	num_bikes_disabled: Int 
-	num_docks_available: Int 
-	count: Int 
+	"Number of disabled vehicles of this type."
+	num_bikes_disabled: Int
+	"Number of docks available for this vehicle type."
+	num_docks_available: Int
+	"Count of vehicles of this type currently available."
+	count: Int
+	"Vehicle type details."
 	vehicle_type: GbfsVehicleType
 }
 
+"""
+Count of available docks for a set of compatible vehicle types at a station.
+"""
 type GbfsVehicleDockAvailable  {
-	count: Int     
+	"Count of docks available for these vehicle types."
+	count: Int
+	"Vehicle types that can use these docks."
 	vehicle_types: [GbfsVehicleType!]
 }
 
+"""
+GBFS specification version information.
+"""
 type GbfsSystemVersion  {
-	version: String 
-	url: String 
+	"GBFS version string."
+	version: String
+	"URL to this version's feed."
+	url: String
 }
 
+"""
+Metadata describing a class of vehicle in the system, corresponding to the GBFS `vehicle_types.json` file.
+"""
 type GbfsVehicleType  {
-	vehicle_type_id: String     
-	form_factor: String  
-	rider_capacity: Int     
-	cargo_volume_capacity: Int     
-	cargo_load_capacity: Int     
-	propulsion_type: String  
-	eco_label: String  
-	country_code: String  
-	eco_sticker: String  
-	max_range_meters: Float   
-	name: String  
+	"Unique identifier for this vehicle type."
+	vehicle_type_id: String
+	"General form factor of the vehicle (e.g. `bicycle`, `scooter_standing`, `cargo_bicycle`, `moped`)."
+	form_factor: String
+	"Number of riders the vehicle can legally accommodate."
+	rider_capacity: Int
+	"Cargo volume available in the vehicle, in liters."
+	cargo_volume_capacity: Int
+	"Maximum cargo load capacity, in kilograms."
+	cargo_load_capacity: Int
+	"Primary propulsion type (e.g. `human`, `electric`, `electric_assist`, `combustion`)."
+	propulsion_type: String
+	"Eco label or air quality certificate name."
+	eco_label: String
+	"Country code where the eco label applies."
+	country_code: String
+	"Name of the eco sticker or certification."
+	eco_sticker: String
+	"Maximum distance the vehicle can travel on a full charge or tank, in meters."
+	max_range_meters: Float
+	"Customer-facing name for this vehicle type."
+	name: String
+	"List of accessories available on this vehicle."
 	vehicle_accessories: Strings
-	gco_2_km: Int     
-	vehicle_image: String  
-	make: String  
-	model: String  
-	color: String  
-	wheel_count: Int     
-	max_permitted_speed: Int     
-	rated_power: Int     
-	default_reserve_time: Int     
-	return_constraint: String  
+	"Maximum CO2 emitted per kilometer, in grams."
+	gco_2_km: Int
+	"URL to an image of the vehicle (JPEG or PNG)."
+	vehicle_image: String
+	"Manufacturer name."
+	make: String
+	"Model name."
+	model: String
+	"Vehicle color, as a lowercase string (e.g. `red`, `blue`)."
+	color: String
+	"Number of wheels on this vehicle type."
+	wheel_count: Int
+	"Maximum speed permitted for this vehicle type, in km/h."
+	max_permitted_speed: Int
+	"Rated motor power in watts."
+	rated_power: Int
+	"Maximum duration a vehicle can be reserved before the reservation expires, in minutes."
+	default_reserve_time: Int
+	"Return constraint for this vehicle type (e.g. `free_floating`, `roundtrip_station`, `any_station`)."
+	return_constraint: String
+	"Default pricing plan for this vehicle type."
 	default_pricing_plan: GbfsSystemPricingPlan
+	"All pricing plans applicable to this vehicle type."
 	pricing_plans: [GbfsSystemPricingPlan!]
+	"Deep links for renting this vehicle type."
 	rental_uris: GbfsRentalUris
+	"Brand asset information for this vehicle type."
 	vehicle_assets: GbfsVehicleAssets
 }
 
+"""
+Visual asset information for a vehicle type.
+"""
 type GbfsVehicleAssets {
+	"URL to the vehicle type icon (SVG)."
 	icon_url: String
+	"URL to the dark-mode variant of the vehicle type icon."
 	icon_url_dark: String
+	"Date the icon was last modified."
 	icon_last_modified: Date
 }
 
 """
-Real-time status of a vehicle (bike, scooter, etc.).
-
-See [Concepts: Micromobility](https://www.transit.land/documentation/concepts/micromobility).
+Real-time status of a single free-floating vehicle (bike, scooter, etc.), corresponding to the GBFS `free_bike_status.json` file.
 """
 type GbfsFreeBikeStatus {
+	"Unique identifier for this vehicle. May be rotated between trips for privacy."
 	bike_id: String
-	lat: Float   
-	lon: Float   
-	is_reserved: Bool    
-	is_disabled: Bool    
+	"Latitude of the vehicle."
+	lat: Float
+	"Longitude of the vehicle."
+	lon: Float
+	"True if the vehicle is currently reserved."
+	is_reserved: Bool
+	"True if the vehicle is currently disabled."
+	is_disabled: Bool
+	"Unix timestamp of the last time this vehicle reported its status."
 	last_reported: Int
-	current_range_meters: Float   
-	current_fuel_percent: Float   
+	"Furthest distance this vehicle can travel with its current charge or fuel, in meters."
+	current_range_meters: Float
+	"Current battery or fuel level as a percentage (0.0–1.0)."
+	current_fuel_percent: Float
+	"List of equipment present on this vehicle (e.g. `child_seat_a`, `cargo_hook`)."
 	vehicle_equipment: Strings
-	available_until: Int    
-	station: GbfsStationInformation    
-	home_station: GbfsStationInformation    
+	"Unix timestamp after which any active rental must be completed."
+	available_until: Int
+	"Station this vehicle is currently docked at, if any."
+	station: GbfsStationInformation
+	"Home station this vehicle must be returned to, if applicable."
+	home_station: GbfsStationInformation
+	"Pricing plan currently applicable to this vehicle."
 	pricing_plan: GbfsSystemPricingPlan
+	"Vehicle type of this vehicle."
 	vehicle_type: GbfsVehicleType
+	"Deep links for renting this vehicle."
 	rental_uris: GbfsRentalUris
+	"The GBFS feed this vehicle belongs to."
 	feed: GbfsFeed
 }
 
+"""
+Deep links for renting a vehicle or accessing a station, for Android, iOS, and web.
+"""
 type GbfsRentalUris {
+	"Android deep link URI for rental."
 	android: String
+	"iOS deep link URI for rental."
 	ios: String
+	"Web URL for rental information."
 	web: String
 }
 
+"""
+Hours of operation for the rental system on specific days.
+Corresponds to data in the GBFS `system_hours.json` file.
+"""
 type GbfsSystemHour  {
-	user_types: Strings 
+	"User types these hours apply to (e.g. `member`, `nonmember`)."
+	user_types: Strings
+	"Days of the week these hours apply to (e.g. `mon`, `tue`)."
 	days: Strings
-	start_time: String  
-	end_time: String  
+	"Opening time in `HH:MM:SS` format."
+	start_time: String
+	"Closing time in `HH:MM:SS` format."
+	end_time: String
 }
 
+"""
+Seasonal calendar dates when the system is open for operation.
+Corresponds to data in the GBFS `system_calendar.json` file.
+"""
 type GbfsSystemCalendar  {
-	start_month: Int 
-	start_day: Int 
-	start_year: Int 
-	end_month: Int 
-	end_day: Int 
-	end_year: Int 
+	"Month the system begins operation (1–12)."
+	start_month: Int
+	"Day of the month the system begins operation."
+	start_day: Int
+	"Year the system begins operation, if applicable."
+	start_year: Int
+	"Month the system ends operation (1–12)."
+	end_month: Int
+	"Day of the month the system ends operation."
+	end_day: Int
+	"Year the system ends operation, if applicable."
+	end_year: Int
 }
 
+"""
+A geographic region within the system, used to group stations.
+Corresponds to data in the GBFS `system_regions.json` file.
+"""
 type GbfsSystemRegion  {
-	region_id: String    
-	name: String 
+	"Unique identifier for this region."
+	region_id: String
+	"Public name of the region."
+	name: String
 }
 
+"""
+A pricing plan available in the system.
+Corresponds to data in the GBFS `system_pricing_plans.json` file.
+"""
 type GbfsSystemPricingPlan  {
-	plan_id: String      
-	url: String   
-	name: String   
-	currency: String   
-	price: Float    
-	is_taxable: Bool     
-	description: String   
-	surge_pricing: Bool     
-	per_km_pricing: [GbfsPlanPrice!] 
+	"Unique identifier for this pricing plan."
+	plan_id: String
+	"URL to a page describing this pricing plan."
+	url: String
+	"Customer-facing name of this plan."
+	name: String
+	"ISO 4217 currency code (e.g. `USD`, `EUR`)."
+	currency: String
+	"Unlock or base price for this plan."
+	price: Float
+	"True if this plan is subject to local taxation."
+	is_taxable: Bool
+	"Human-readable description of this pricing plan."
+	description: String
+	"True if surge pricing may apply."
+	surge_pricing: Bool
+	"Per-kilometer pricing tiers for this plan."
+	per_km_pricing: [GbfsPlanPrice!]
+	"Per-minute pricing tiers for this plan."
 	per_min_pricing: [GbfsPlanPrice!]
 }
 
+"""
+A single pricing tier, defining a rate that applies within a range of time or distance.
+"""
 type GbfsPlanPrice  {
-	start: Int 
-	rate: Float
-	interval: Int 
-	end: Int 
-}
-
-type GbfsSystemAlert  {
-	alert_id: String      
-	type: String   
-	url: String   
-	summary: String   
-	description: String   
-	last_updated: Int     
-	# station_ids: Strings
-	# region_ids: Strings
-	times: [GbfsAlertTime!]
-}
-
-type GbfsAlertTime  {
+	"Start of the range (in minutes or km) where this rate applies."
 	start: Int
+	"Price per unit (per minute or per km) in this tier."
+	rate: Float
+	"Interval size for this pricing tier (in minutes or km)."
+	interval: Int
+	"End of the range (in minutes or km); null means the rate continues indefinitely."
 	end: Int
 }
 
+"""
+A service alert for the system or specific stations.
+Corresponds to data in the GBFS `system_alerts.json` file.
+"""
+type GbfsSystemAlert  {
+	"Unique identifier for this alert."
+	alert_id: String
+	"Type of alert (e.g. `system_closure`, `station_closure`, `station_move`, `other`)."
+	type: String
+	"URL to a page with more details about this alert."
+	url: String
+	"Short summary of the alert."
+	summary: String
+	"Detailed description of the alert."
+	description: String
+	"Unix timestamp of the last time this alert was updated."
+	last_updated: Int
+	"Time ranges during which this alert is in effect."
+	times: [GbfsAlertTime!]
+}
+
+"""
+A time range during which a service alert is active.
+"""
+type GbfsAlertTime  {
+	"Unix timestamp for the start of the alert period."
+	start: Int
+	"Unix timestamp for the end of the alert period."
+	end: Int
+}
+
+"""
+A GeoJSON FeatureCollection representing geofencing zones in the system.
+Corresponds to data in the GBFS `geofencing_zones.json` file.
+"""
 type GbfsGeofenceZone  {
+	"GeoJSON type; always `FeatureCollection`."
 	type:     String
+	"Array of geofenced areas as GeoJSON features."
 	features: [GbfsGeofenceFeature!]
 }
 
+"""
+A GeoJSON Feature representing a single geofenced area.
+"""
 type GbfsGeofenceFeature  {
-	type: String           
-	geometry: Geometry         
-	# properties: map[string]GbfsGeofenceProperty 
+	"GeoJSON type; always `Feature`."
+	type: String
+	"GeoJSON MultiPolygon geometry defining the boundary of this zone."
+	geometry: Geometry
 }
 
+"""
+Properties associated with a geofenced area.
+"""
 type GbfsGeofenceProperty  {
-	name: String      
-	start: Int        
-	end: Int        
+	"Name of the geofencing zone."
+	name: String
+	"Unix timestamp for the start of the geofencing rule."
+	start: Int
+	"Unix timestamp for the end of the geofencing rule."
+	end: Int
+	"Rules governing vehicle behavior within this zone."
 	rules: [GbfsGeofenceRule]
 }
 
+"""
+Rules governing vehicle behavior within a geofenced zone.
+"""
 type GbfsGeofenceRule  {
-	ride_allowed: Bool    
-	ride_through_allowed: Bool    
-	maximum_speed_kph: Int     
-	station_parking: Bool    
+	"True if vehicles are allowed to begin a ride in this zone."
+	ride_allowed: Bool
+	"True if vehicles are allowed to pass through this zone without starting or ending a trip."
+	ride_through_allowed: Bool
+	"Maximum speed permitted in this zone, in km/h."
+	maximum_speed_kph: Int
+	"True if vehicles must be returned to a station within this zone."
+	station_parking: Bool
+	"Vehicle type subject to this rule."
 	vehicle_type: GbfsVehicleType
 }
 
 ########
 
+"""
+Request parameters for querying nearby free-floating bikes/scooters.
+"""
 input GbfsBikeRequest {
+	"Search for vehicles within this radius of a point."
 	near: PointRadius
 }
 
+"""
+Request parameters for querying nearby docking stations.
+"""
 input GbfsDockRequest {
+	"Search for stations within this radius of a point."
 	near: PointRadius
 }
