@@ -11,8 +11,15 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
+// Capabilities describes what a routing handler supports.
+type Capabilities struct {
+	SupportedModes   []model.StepMode
+	SupportsArriveBy bool
+}
+
 type Handler interface {
 	Request(context.Context, model.DirectionRequest) (*model.Directions, error)
+	Capabilities() Capabilities
 }
 
 type handlerFunc func() Handler
@@ -71,6 +78,13 @@ func HandleRequest(ctx context.Context, pref string, req model.DirectionRequest)
 	// If no handler found, return an error
 	if handler == nil {
 		a := "no routing handler found for mode"
+		return &model.Directions{Success: false, Exception: &a}, nil
+	}
+
+	// Validate request against handler capabilities
+	caps := handler.Capabilities()
+	if req.ArriveBy != nil && *req.ArriveBy && !caps.SupportsArriveBy {
+		a := "arrive_by is not supported by this routing provider"
 		return &model.Directions{Success: false, Exception: &a}, nil
 	}
 

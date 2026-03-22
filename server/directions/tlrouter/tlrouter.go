@@ -60,6 +60,13 @@ func NewRouter(client *http.Client, endpoint string, apikey string) *Router {
 	}
 }
 
+func (h *Router) Capabilities() directions.Capabilities {
+	return directions.Capabilities{
+		SupportedModes:   []model.StepMode{model.StepModeTransit, model.StepModeWalk, model.StepModeBicycle},
+		SupportsArriveBy: true,
+	}
+}
+
 func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*model.Directions, error) {
 	if err := directions.ValidateDirectionRequest(req); err != nil {
 		return &model.Directions{Success: false, Exception: aws.String("invalid input")}, nil

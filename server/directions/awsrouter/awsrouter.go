@@ -66,6 +66,13 @@ func NewRouter(lc LocationClient, calculator string) *Router {
 	}
 }
 
+func (h *Router) Capabilities() directions.Capabilities {
+	return directions.Capabilities{
+		SupportedModes:   []model.StepMode{model.StepModeAuto, model.StepModeWalk},
+		SupportsArriveBy: false,
+	}
+}
+
 func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*model.Directions, error) {
 	// Input validation
 	if err := directions.ValidateDirectionRequest(req); err != nil {

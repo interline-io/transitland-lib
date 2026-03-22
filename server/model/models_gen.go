@@ -363,7 +363,7 @@ type DirectionRequest struct {
 	Mode StepMode       `json:"mode"`
 	// Departure time; treated as arrival time when arrive_by is true. Defaults to now.
 	DepartAt *time.Time `json:"depart_at,omitempty"`
-	// If true, treat depart_at as the desired arrival time rather than departure time.
+	// If true, treat depart_at as the desired arrival time rather than departure time. Support depends on the configured routing provider.
 	ArriveBy *bool `json:"arrive_by,omitempty"`
 }
 

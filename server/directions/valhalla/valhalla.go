@@ -57,6 +57,13 @@ func NewRouter(client *http.Client, endpoint string, apikey string) *Router {
 	}
 }
 
+func (h *Router) Capabilities() directions.Capabilities {
+	return directions.Capabilities{
+		SupportedModes:   []model.StepMode{model.StepModeAuto, model.StepModeBicycle, model.StepModeWalk},
+		SupportsArriveBy: true,
+	}
+}
+
 func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*model.Directions, error) {
 	if err := directions.ValidateDirectionRequest(req); err != nil {
 		return &model.Directions{Success: false, Exception: aws.String("invalid input")}, nil
@@ -71,7 +78,7 @@ func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*mode
 		input.Costing = "auto"
 	case model.StepModeBicycle:
 		input.Costing = "bicycle"
-	case model.StepModeWalk, model.StepModeTransit:
+	case model.StepModeWalk:
 		input.Costing = "pedestrian"
 	default:
 		return &model.Directions{Success: false, Exception: aws.String("unsupported travel mode")}, nil
@@ -90,6 +97,19 @@ func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*mode
 	// Ensure we are in UTC
 	departAt = departAt.In(time.UTC)
 
+	// Set date_time for time-aware routing
+	arriveBy := req.ArriveBy != nil && *req.ArriveBy
+	if req.DepartAt != nil {
+		dtType := 1 // depart_at
+		if arriveBy {
+			dtType = 2 // arrive_by
+		}
+		input.DateTime = &DateTime{
+			Type:  dtType,
+			Value: departAt.Format("2006-01-02T15:04"),
+		}
+	}
+
 	// Make request
 	res, err := makeRequest(ctx, input, h.client, h.endpoint, h.apikey)
 	if err != nil || len(res.Trip.Legs) == 0 {
@@ -97,7 +117,7 @@ func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*mode
 		return &model.Directions{Success: false, Exception: aws.String("could not calculate route")}, nil
 	}
 	// Prepare response
-	ret := makeDirections(res, departAt)
+	ret := makeDirections(res, departAt, arriveBy)
 	ret.Origin = wpiWaypoint(req.From)
 	ret.Destination = wpiWaypoint(req.To)
 	ret.Success = true
@@ -134,7 +154,7 @@ func makeRequest(ctx context.Context, req Request, client *http.Client, endpoint
 	return &res, nil
 }
 
-func makeDirections(res *Response, departAt time.Time) *model.Directions {
+func makeDirections(res *Response, requestedTime time.Time, arriveBy bool) *model.Directions {
 	// Create itinerary summary
 	itin := model.Itinerary{}
 
@@ -146,8 +166,15 @@ func makeDirections(res *Response, departAt time.Time) *model.Directions {
 	ret.EndTime = &itin.EndTime
 	ret.DataSource = aws.String("OSM")
 
+	// When arrive_by is set, requestedTime is the desired arrival time;
+	// compute the actual start time by subtracting the total duration.
+	startAt := requestedTime
+	if arriveBy {
+		startAt = requestedTime.Add(-time.Duration(res.Trip.Summary.Time) * time.Second)
+	}
+
 	// Create legs for itinerary
-	prevLegDepartAt := departAt
+	prevLegDepartAt := startAt
 	for _, vleg := range res.Trip.Legs {
 		// Decode shape using custom 1e6 scale
 		shapeDecoder := polyline.Codec{
@@ -228,8 +255,8 @@ func makeDirections(res *Response, departAt time.Time) *model.Directions {
 	// Add summary
 	itin.Duration = makeDuration(res.Trip.Summary.Time)
 	itin.Distance = makeDistance(res.Trip.Summary.Length, res.Units)
-	itin.StartTime = departAt
-	itin.EndTime = departAt.Add(time.Duration(res.Trip.Summary.Time) * time.Second)
+	itin.StartTime = startAt
+	itin.EndTime = startAt.Add(time.Duration(res.Trip.Summary.Time) * time.Second)
 	itin.From = itin.Legs[0].From
 	itin.To = itin.Legs[0].To
 	ret.Duration = itin.Duration
@@ -242,6 +269,13 @@ func makeDirections(res *Response, departAt time.Time) *model.Directions {
 type Request struct {
 	Locations []RequestLocation `json:"locations"`
 	Costing   string            `json:"costing"`
+	DateTime  *DateTime         `json:"date_time,omitempty"`
+}
+
+type DateTime struct {
+	// Type: 0 = current depart, 1 = depart_at, 2 = arrive_by
+	Type  int    `json:"type"`
+	Value string `json:"value"`
 }
 
 type RequestLocation struct {
