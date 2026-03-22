@@ -45,6 +45,9 @@ type SQLiteAdapter struct {
 
 // Open the database.
 func (adapter *SQLiteAdapter) Open() error {
+	if adapter.db != nil {
+		return nil
+	}
 	dbname := strings.Split(adapter.DBURL, "://")
 	if len(dbname) != 2 {
 		return causes.NewSourceUnreadableError("no database filename provided", nil)
@@ -61,7 +64,9 @@ func (adapter *SQLiteAdapter) Open() error {
 // Close the database.
 func (adapter *SQLiteAdapter) Close() error {
 	if a, ok := adapter.db.(tldb.CanClose); ok {
-		return a.Close()
+		err := a.Close()
+		adapter.db = nil
+		return err
 	}
 	return nil
 }
@@ -100,19 +105,41 @@ func (adapter *SQLiteAdapter) Sqrl() sq.StatementBuilderType {
 func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	var err error
 	var tx *sqlx.Tx
-	if a, ok := adapter.db.(tldb.CanBeginx); ok {
+	// Special check for wrapped connections
+	commit := false
+	switch a := adapter.db.(type) {
+	case *sqlx.Tx:
+		tx = a
+	case *QueryLogger:
+		if b, ok := a.Ext.(*sqlx.Tx); ok {
+			tx = b
+		}
+	}
+	// If we aren't already in a transaction, begin one, and commit at end
+	if a, ok := adapter.db.(tldb.CanBeginx); tx == nil && ok {
 		tx, err = a.Beginx()
+		commit = true
 	}
 	if err != nil {
 		return err
 	}
-	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: &QueryLogger{Ext: tx}}); errTx != nil {
-		if err3 := tx.Rollback(); err3 != nil {
-			return err3
+	// Re-wrap the transaction with QueryLogger only if the original connection was wrapped
+	var txdb Ext = tx
+	if ql, ok := adapter.db.(*QueryLogger); ok {
+		txdb = &QueryLogger{Ext: tx, Trace: ql.Trace, LongQueryDuration: ql.LongQueryDuration}
+	}
+	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: txdb}); errTx != nil {
+		if commit {
+			if err3 := tx.Rollback(); err3 != nil {
+				return err3
+			}
 		}
 		return errTx
 	}
-	return tx.Commit()
+	if commit {
+		return tx.Commit()
+	}
+	return nil
 }
 
 // TableExists returns true if the requested table exists
