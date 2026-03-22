@@ -358,11 +358,13 @@ type CensusValue struct {
 }
 
 type DirectionRequest struct {
-	To       *WaypointInput `json:"to"`
-	From     *WaypointInput `json:"from"`
-	Mode     StepMode       `json:"mode"`
-	DepartAt *time.Time     `json:"depart_at,omitempty"`
-	ArriveBy *bool          `json:"arrive_by,omitempty"`
+	To   *WaypointInput `json:"to"`
+	From *WaypointInput `json:"from"`
+	Mode StepMode       `json:"mode"`
+	// Departure time; treated as arrival time when arrive_by is true. Defaults to now.
+	DepartAt *time.Time `json:"depart_at,omitempty"`
+	// If true, treat depart_at as the desired arrival time rather than departure time.
+	ArriveBy *bool `json:"arrive_by,omitempty"`
 }
 
 type Directions struct {

@@ -8377,7 +8377,9 @@ input DirectionRequest {
   to: WaypointInput!
   from: WaypointInput!
   mode: StepMode!
+  "Departure time; treated as arrival time when arrive_by is true. Defaults to now."
   depart_at: Time
+  "If true, treat depart_at as the desired arrival time rather than departure time."
   arrive_by: Boolean
 }
 
