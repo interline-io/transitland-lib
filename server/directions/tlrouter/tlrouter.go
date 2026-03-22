@@ -93,6 +93,11 @@ func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*mode
 	departAt = departAt.In(time.UTC)
 	input.UnixTime = departAt.Unix()
 
+	// Set arrive_by flag
+	if req.ArriveBy != nil && *req.ArriveBy {
+		input.ArriveBy = true
+	}
+
 	// Make request
 	res, err := makeRequest(ctx, input, h.client, h.endpoint, h.apikey)
 	if err != nil || len(res.Plan.Itineraries) == 0 {
@@ -119,6 +124,9 @@ func makeRequest(ctx context.Context, req Request, client *http.Client, endpoint
 	q.Add("unixTime", fmt.Sprintf("%d", req.UnixTime))
 	q.Add("mode", req.Mode)
 	q.Add("includeWalkingItinerary", "true")
+	if req.ArriveBy {
+		q.Add("arriveBy", "true")
+	}
 	if req.UseFallbackDates {
 		q.Add("useFallbackDates", "true")
 	}

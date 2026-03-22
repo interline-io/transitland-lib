@@ -148,6 +148,8 @@ type CensusDataset struct {
 	Geographies []*CensusGeography `json:"geographies,omitempty"`
 	Tables      []*CensusTable     `json:"tables,omitempty"`
 	Layers      []*CensusLayer     `json:"layers,omitempty"`
+	// Census values in this dataset with cursor pagination. Query by geoid, geoid_prefix, or table.
+	ValuesRelay *CensusValueConnection `json:"values_relay,omitempty"`
 }
 
 // Search options for census datasets
@@ -193,6 +195,16 @@ type CensusDatasetGeographyLocationFilter struct {
 	Focus *FocusPoint `json:"focus,omitempty"`
 	// Search based on a buffer around these stop ids
 	StopBuffer *StopBuffer `json:"stop_buffer,omitempty"`
+}
+
+// Search options for census values within a dataset
+type CensusDatasetValueFilter struct {
+	// Filter by table name
+	Table *string `json:"table,omitempty"`
+	// Filter by exact geoid
+	Geoid *string `json:"geoid,omitempty"`
+	// Filter by geoid prefix (e.g. 'ntd:00001' to find all values for NTD agency 00001)
+	GeoidPrefix *string `json:"geoid_prefix,omitempty"`
 }
 
 type CensusField struct {
@@ -346,10 +358,13 @@ type CensusValue struct {
 }
 
 type DirectionRequest struct {
-	To       *WaypointInput `json:"to"`
-	From     *WaypointInput `json:"from"`
-	Mode     StepMode       `json:"mode"`
-	DepartAt *time.Time     `json:"depart_at,omitempty"`
+	To   *WaypointInput `json:"to"`
+	From *WaypointInput `json:"from"`
+	Mode StepMode       `json:"mode"`
+	// Departure time; treated as arrival time when arrive_by is true. Defaults to now.
+	DepartAt *time.Time `json:"depart_at,omitempty"`
+	// If true, treat depart_at as the desired arrival time rather than departure time. Support depends on the configured routing provider.
+	ArriveBy *bool `json:"arrive_by,omitempty"`
 }
 
 type Directions struct {
@@ -980,6 +995,16 @@ type SegmentPattern struct {
 	Route *Route `json:"route"`
 	// Stop pattern for this segment pattern
 	StopPatternID int `json:"stop_pattern_id"`
+	// Direction ID of the trip
+	DirectionID int `json:"direction_id"`
+	// Sequence order of this segment within the pattern
+	SequenceIdx int `json:"sequence_idx"`
+	// Shape ID for this segment pattern
+	ShapeID int `json:"shape_id"`
+	// OSM Way ID, if any, associated with this segment pattern
+	WayID *int `json:"way_id,omitempty"`
+	// Shape associated with this segment pattern
+	Shape *Shape `json:"shape"`
 	// Segment geometry for this pattern
 	Segment   *Segment `json:"segment"`
 	RouteID   int      `json:"-"`

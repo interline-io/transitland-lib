@@ -1794,6 +1794,16 @@ type SegmentPattern {
   
   "Stop pattern for this segment pattern."
   stop_pattern_id: Int!
+  "Direction ID of the trip"
+  direction_id: Int!
+  "Sequence order of this segment within the pattern"
+  sequence_idx: Int!
+  "Shape ID for this segment pattern"
+  shape_id: Int!
+  "OSM Way ID, if any, associated with this segment pattern"
+  way_id: Int
+  "Shape associated with this segment pattern"
+  shape: Shape!
   
   "Segment geometry for this pattern."
   segment: Segment!
@@ -1805,11 +1815,9 @@ Normalized route segments.
 type Segment {
   "Internal integer ID"
   id: Int!
-  
-  "OSM Way ID, if any, associated with this segment."
+  "OSM Way ID, if any, associated with this segment"
   way_id: Int!
-  
-  "Geometry for this segment."
+  "Geometry for this segment"
   geometry: LineString!
   
   "Routes and stop patterns associated with this segment."
@@ -1863,9 +1871,9 @@ type CensusDataset {
   
   "Census tables in this dataset"
   tables(limit: Int, where: CensusTableFilter): [CensusTable!]
-  
-  "Layers in this dataset"
   layers: [CensusLayer!]
+  """Census values in this dataset with cursor pagination. Query by geoid, geoid_prefix, or table."""
+  values_relay(first: Int, after: String, where: CensusDatasetValueFilter): CensusValueConnection
 }
 
 """
@@ -1995,6 +2003,26 @@ type CensusValue {
   
   "GEOID of associated census geography"
   geoid: String!
+}
+
+"""Relay connection for census values"""
+type CensusValueConnection {
+  edges: [CensusValueEdge!]!
+  pageInfo: PageInfo!
+}
+
+"""Edge in census values connection"""
+type CensusValueEdge {
+  node: CensusValue!
+  cursor: String!
+}
+
+"""Pagination information"""
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
 }
 
 """
@@ -2836,6 +2864,16 @@ input StopBuffer {
 
 input CensusTableFilter {
   search: String
+}
+
+"""Search options for census values within a dataset"""
+input CensusDatasetValueFilter {
+  "Filter by table name"
+  table: String
+  "Filter by exact geoid"
+  geoid: String
+  "Filter by geoid prefix (e.g. 'ntd:00001' to find all values for NTD agency 00001)"
+  geoid_prefix: String
 }
 
 input CensusSourceFilter {

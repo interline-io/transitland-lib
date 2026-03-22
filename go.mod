@@ -28,7 +28,7 @@ require (
 	github.com/graph-gophers/dataloader/v7 v7.1.0
 	github.com/hypirion/go-filecache v0.0.0-20160810125507-e3e6ef6981f0
 	github.com/iancoleman/orderedmap v0.2.0
-	github.com/interline-io/log v0.0.0-20251225123935-444ca68b7bc8
+	github.com/interline-io/log v0.0.0-20260130001517-d932d48db9e4
 	github.com/irees/squirrel v0.0.0-20250822021440-28034b47d2f4
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/jellydator/ttlcache/v2 v2.11.1
@@ -51,8 +51,8 @@ require (
 	github.com/twpayne/go-polyline v1.1.1
 	github.com/twpayne/go-shapefile v0.0.6
 	github.com/vektah/gqlparser/v2 v2.5.30
-	google.golang.org/grpc v1.65.0
-	google.golang.org/protobuf v1.36.8
+	google.golang.org/grpc v1.79.3
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/dnaeon/go-vcr.v2 v2.3.0
 )
 
@@ -119,17 +119,17 @@ require (
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/image v0.18.0 // indirect
-	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/term v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
-	golang.org/x/tools v0.38.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
+	golang.org/x/mod v0.30.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/oauth2 v0.34.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/term v0.39.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/tools v0.39.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.5.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

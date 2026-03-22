@@ -25,3 +25,7 @@ func (r *segmentPatternResolver) Segment(ctx context.Context, obj *model.Segment
 func (r *segmentPatternResolver) Route(ctx context.Context, obj *model.SegmentPattern) (*model.Route, error) {
 	return LoaderFor(ctx).RoutesByIDs.Load(ctx, obj.RouteID)()
 }
+
+func (r *segmentPatternResolver) Shape(ctx context.Context, obj *model.SegmentPattern) (*model.Shape, error) {
+	return LoaderFor(ctx).ShapesByIDs.Load(ctx, obj.ShapeID)()
+}

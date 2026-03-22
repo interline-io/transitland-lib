@@ -2,7 +2,6 @@ package dbfinder
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -267,6 +266,36 @@ func (f *Finder) CensusFieldsByTableIDs(ctx context.Context, limit *int, keys []
 	return arrangeGroup(keys, ents, func(ent *model.CensusField) int { return ent.TableID }), err
 }
 
+func (f *Finder) CensusTablesByDatasetIDs(ctx context.Context, limit *int, where *model.CensusTableFilter, keys []int) ([][]*model.CensusTable, error) {
+	q := censusTableSelect(limit, where)
+	var ents []*model.CensusTable
+	err := dbutil.Select(ctx,
+		f.db,
+		lateralWrap(
+			q,
+			"tl_census_datasets",
+			"id",
+			"tl_census_tables",
+			"dataset_id",
+			keys,
+		),
+		&ents,
+	)
+	return arrangeGroup(keys, ents, func(ent *model.CensusTable) int { return ent.DatasetID }), err
+}
+
+// FindCensusValuesByDatasetID finds census values by dataset ID with optional filters.
+// Supports Relay-style cursor pagination for large result sets (e.g., querying all NTD agencies).
+// Cursor encodes composite key (geoid, table_id) to enable proper pagination.
+func (f *Finder) FindCensusValuesByDatasetID(ctx context.Context, limit *int, after model.CensusCursor, datasetID int, where *model.CensusDatasetValueFilter) ([]*model.CensusValue, error) {
+	var ents []*model.CensusValue
+	q := censusValueFilterSelect(limit, after, datasetID, where)
+	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
+		return nil, logErr(ctx, err)
+	}
+	return ents, nil
+}
+
 func censusDatasetSelect(_ *int, _ *model.Cursor, _ []int, where *model.CensusDatasetFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select("*").
@@ -276,7 +305,7 @@ func censusDatasetSelect(_ *int, _ *model.Cursor, _ []int, where *model.CensusDa
 			q = q.Where(sq.Eq{"name": *where.Name})
 		}
 		if where.Search != nil {
-			q = q.Where(sq.Like{"name": fmt.Sprintf("%%%s%%", *where.Search)})
+			q = q.Where(sq.Like{"name": dbutil.EscapeLike(*where.Search, true, true)})
 		}
 	}
 	return q
@@ -453,7 +482,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			q = q.Where(sq.Eq{"tlcl.name": where.Layer})
 		}
 		if where.Search != nil {
-			q = q.Where(sq.ILike{"tlcg.name": fmt.Sprintf("%%%s%%", *where.Search)})
+			q = q.Where(sq.ILike{"tlcg.name": dbutil.EscapeLike(*where.Search, true, true)})
 		}
 		if len(where.Ids) > 0 {
 			q = q.Where(sq.Eq{"tlcg.id": where.Ids})
@@ -503,6 +532,60 @@ func censusValueSelect(limit *int, datasetName string, tnames []string, geoids [
 		OrderBy("tlcv.table_id")
 	if datasetName != "" {
 		q = q.Where(sq.Eq{"tlcd.name": datasetName})
+	}
+	return q
+}
+
+func censusTableSelect(limit *int, where *model.CensusTableFilter) sq.SelectBuilder {
+	q := quickSelectOrder("tl_census_tables", limit, nil, nil, "id")
+	if where != nil {
+		if where.Search != nil {
+			q = q.Where(sq.ILike{"table_name": dbutil.EscapeLike(*where.Search, true, true)})
+		}
+	}
+	return q
+}
+
+func censusValueFilterSelect(limit *int, after model.CensusCursor, datasetID int, where *model.CensusDatasetValueFilter) sq.SelectBuilder {
+	q := sq.StatementBuilder.
+		Select(
+			"tlcv.table_values as values",
+			"tlcv.geoid",
+			"tlcv.table_id",
+			"tlcs.name as source_name",
+			"tlcd.name as dataset_name",
+		).
+		From("tl_census_values tlcv").
+		Limit(finderCheckLimit(limit)).
+		Join("tl_census_tables tlct ON tlct.id = tlcv.table_id").
+		Join("tl_census_sources tlcs on tlcs.id = tlcv.source_id").
+		Join("tl_census_datasets tlcd on tlcd.id = tlct.dataset_id").
+		Where(sq.Eq{"tlcd.id": datasetID}).
+		OrderBy("tlcv.geoid", "tlcv.table_id")
+
+	// Composite key cursor pagination using (geoid, table_id)
+	// Implements: WHERE (geoid, table_id) > (last_geoid, last_table_id)
+	// SQL: WHERE geoid > last_geoid OR (geoid = last_geoid AND table_id > last_table_id)
+	if after.Valid {
+		q = q.Where(sq.Or{
+			sq.Gt{"tlcv.geoid": after.Geoid},
+			sq.And{
+				sq.Eq{"tlcv.geoid": after.Geoid},
+				sq.Gt{"tlcv.table_id": after.TableID},
+			},
+		})
+	}
+
+	if where != nil {
+		if where.Table != nil {
+			q = q.Where(sq.Eq{"tlct.table_name": *where.Table})
+		}
+		if where.Geoid != nil {
+			q = q.Where(sq.Eq{"tlcv.geoid": *where.Geoid})
+		}
+		if where.GeoidPrefix != nil {
+			q = q.Where(sq.Like{"tlcv.geoid": dbutil.EscapeLike(*where.GeoidPrefix, false, true)})
+		}
 	}
 	return q
 }

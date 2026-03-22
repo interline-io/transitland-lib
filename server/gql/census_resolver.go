@@ -20,11 +20,68 @@ func (r *censusDatasetResolver) Sources(ctx context.Context, obj *model.CensusDa
 }
 
 func (r *censusDatasetResolver) Tables(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusTableFilter) ([]*model.CensusTable, error) {
-	return nil, nil
+	return LoaderFor(ctx).CensusTablesByDatasetIDs.Load(ctx, censusTableLoaderParam{DatasetID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
 func (r *censusDatasetResolver) Layers(ctx context.Context, obj *model.CensusDataset) (ret []*model.CensusLayer, err error) {
 	return LoaderFor(ctx).CensusDatasetLayersByDatasetIDs.Load(ctx, obj.ID)()
+}
+
+func (r *censusDatasetResolver) ValuesRelay(ctx context.Context, obj *model.CensusDataset, first *int, after *string, where *model.CensusDatasetValueFilter) (*model.CensusValueConnection, error) {
+	cfg := model.ForContext(ctx)
+
+	// Decode cursor if provided
+	var cursor model.CensusCursor
+	var err error
+	if after != nil && *after != "" {
+		cursor, err = model.DecodeCensusCursor(*after)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Fetch one extra to determine if there's a next page
+	limit := *resolverCheckLimit(first)
+	fetchLimit := limit + 1
+
+	values, err := cfg.Finder.FindCensusValuesByDatasetID(ctx, &fetchLimit, cursor, obj.ID, where)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine if there are more results
+	hasNextPage := len(values) > limit
+	if hasNextPage {
+		values = values[:limit]
+	}
+
+	// Build edges
+	edges := make([]*model.CensusValueEdge, len(values))
+	for i, value := range values {
+		valueCursor := model.NewCensusCursor(value.Geoid, value.TableID)
+		edges[i] = &model.CensusValueEdge{
+			Node:   value,
+			Cursor: valueCursor.Encode(),
+		}
+	}
+
+	// Build page info
+	pageInfo := &model.PageInfo{
+		HasNextPage:     hasNextPage,
+		HasPreviousPage: after != nil && *after != "",
+	}
+
+	if len(edges) > 0 {
+		start := edges[0].Cursor
+		end := edges[len(edges)-1].Cursor
+		pageInfo.StartCursor = &start
+		pageInfo.EndCursor = &end
+	}
+
+	return &model.CensusValueConnection{
+		Edges:    edges,
+		PageInfo: pageInfo,
+	}, nil
 }
 
 type censusSourceResolver struct{ *Resolver }

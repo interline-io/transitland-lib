@@ -190,6 +190,8 @@ models:
         resolver: true
       route:
         resolver: true
+      shape:
+        resolver: true
     extraFields:
       RouteID:
         type: int
@@ -230,6 +232,8 @@ models:
       tables:
         resolver: true
       layers:
+        resolver: true
+      values_relay:
         resolver: true
   CensusLayer:
     fields:
